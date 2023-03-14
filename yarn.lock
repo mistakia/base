@@ -2926,6 +2926,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"big-integer@npm:^1.6.48":
+  version: 1.6.51
+  resolution: "big-integer@npm:1.6.51"
+  checksum: 3d444173d1b2e20747e2c175568bedeebd8315b0637ea95d75fd27830d3b8e8ba36c6af40374f36bdaea7b5de376dcada1b07587cb2a79a928fccdb6e6e3c518
+  languageName: node
+  linkType: hard
+
 "binary-extensions@npm:^2.0.0":
   version: 2.2.0
   resolution: "binary-extensions@npm:2.2.0"
@@ -3309,7 +3316,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commander@npm:^2.20.0":
+"commander@npm:^2.19.0, commander@npm:^2.20.0":
   version: 2.20.3
   resolution: "commander@npm:2.20.3"
   checksum: ab8c07884e42c3a8dbc5dd9592c606176c7eb5c1ca5ff274bcf907039b2c41de3626f684ea75ccf4d361ba004bbaff1f577d5384c155f3871e456bdf27becf9e
@@ -3710,6 +3717,13 @@ __metadata:
   version: 2.1.0
   resolution: "detect-node@npm:2.1.0"
   checksum: 832184ec458353e41533ac9c622f16c19f7c02d8b10c303dfd3a756f56be93e903616c0bb2d4226183c9351c15fc0b3dba41a17a2308262afabcfa3776e6ae6e
+  languageName: node
+  linkType: hard
+
+"discontinuous-range@npm:1.0.0":
+  version: 1.0.0
+  resolution: "discontinuous-range@npm:1.0.0"
+  checksum: 8ee88d7082445b6eadc7c03bebe6dc978f96760c45e9f65d16ca66174d9e086a9e3855ee16acf65625e1a07a846a17de674f02a5964a6aebe5963662baf8b5c8
   languageName: node
   linkType: hard
 
@@ -6196,6 +6210,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"moo@npm:^0.5.0":
+  version: 0.5.2
+  resolution: "moo@npm:0.5.2"
+  checksum: 5a41ddf1059fd0feb674d917c4774e41c877f1ca980253be4d3aae1a37f4bc513f88815041243f36f5cf67a62fb39324f3f997cf7fb17b6cb00767c165e7c499
+  languageName: node
+  linkType: hard
+
 "ms@npm:2.0.0":
   version: 2.0.0
   resolution: "ms@npm:2.0.0"
@@ -6242,6 +6263,23 @@ __metadata:
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
   checksum: 23ad088b08f898fc9b53011d7bb78ec48e79de7627e01ab5518e806033861bef68d5b0cd0e2205c2f36690ac9571ff6bcb05eb777ced2eeda8d4ac5b44592c3d
+  languageName: node
+  linkType: hard
+
+"nearley@npm:^2.20.1":
+  version: 2.20.1
+  resolution: "nearley@npm:2.20.1"
+  dependencies:
+    commander: ^2.19.0
+    moo: ^0.5.0
+    railroad-diagrams: ^1.0.0
+    randexp: 0.4.6
+  bin:
+    nearley-railroad: bin/nearley-railroad.js
+    nearley-test: bin/nearley-test.js
+    nearley-unparse: bin/nearley-unparse.js
+    nearleyc: bin/nearleyc.js
+  checksum: 42c2c330c13c7991b48221c5df00f4352c2f8851636ae4d1f8ca3c8e193fc1b7668c78011d1cad88cca4c1c4dc087425420629c19cc286d7598ec15533aaef26
   languageName: node
   linkType: hard
 
@@ -6316,6 +6354,15 @@ __metadata:
   version: 2.0.10
   resolution: "node-releases@npm:2.0.10"
   checksum: d784ecde25696a15d449c4433077f5cce620ed30a1656c4abf31282bfc691a70d9618bae6868d247a67914d1be5cc4fde22f65a05f4398cdfb92e0fc83cadfbc
+  languageName: node
+  linkType: hard
+
+"node-sql-parser@npm:^4.4.0":
+  version: 4.6.5
+  resolution: "node-sql-parser@npm:4.6.5"
+  dependencies:
+    big-integer: ^1.6.48
+  checksum: d723b833c348113a07426ac2c5b5af135f91ceaf2863da4649e388bf4a1edb1fd068a2d704f4c1c9ed6d03791cc95d45366980773027cf482164106e90bf0960
   languageName: node
   linkType: hard
 
@@ -6825,7 +6872,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:2.8.4":
+"prettier-plugin-sql@npm:^0.13.0":
+  version: 0.13.0
+  resolution: "prettier-plugin-sql@npm:0.13.0"
+  dependencies:
+    node-sql-parser: ^4.4.0
+    sql-formatter: ^11.0.2
+    tslib: ^2.4.0
+  peerDependencies:
+    prettier: ^2.0.0
+  checksum: 9163f45021fe901ddfe2b6bf85bad52eb5944f10ea541eae410aa6fc98ee66f76903eaf1d5f5e0f272289241d3680144ea2ddf9e01d26c3947feea38571ffa9f
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.8.4":
   version: 2.8.4
   resolution: "prettier@npm:2.8.4"
   bin:
@@ -6927,6 +6987,23 @@ __metadata:
   version: 1.2.3
   resolution: "queue-microtask@npm:1.2.3"
   checksum: b676f8c040cdc5b12723ad2f91414d267605b26419d5c821ff03befa817ddd10e238d22b25d604920340fd73efd8ba795465a0377c4adf45a4a41e4234e42dc4
+  languageName: node
+  linkType: hard
+
+"railroad-diagrams@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "railroad-diagrams@npm:1.0.0"
+  checksum: 9e312af352b5ed89c2118edc0c06cef2cc039681817f65266719606e4e91ff6ae5374c707cc9033fe29a82c2703edf3c63471664f97f0167c85daf6f93496319
+  languageName: node
+  linkType: hard
+
+"randexp@npm:0.4.6":
+  version: 0.4.6
+  resolution: "randexp@npm:0.4.6"
+  dependencies:
+    discontinuous-range: 1.0.0
+    ret: ~0.1.10
+  checksum: 3c0d440a3f89d6d36844aa4dd57b5cdb0cab938a41956a16da743d3a3578ab32538fc41c16cc0984b6938f2ae4cbc0216967e9829e52191f70e32690d8e3445d
   languageName: node
   linkType: hard
 
@@ -7449,6 +7526,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ret@npm:~0.1.10":
+  version: 0.1.15
+  resolution: "ret@npm:0.1.15"
+  checksum: d76a9159eb8c946586567bd934358dfc08a36367b3257f7a3d7255fdd7b56597235af23c6afa0d7f0254159e8051f93c918809962ebd6df24ca2a83dbe4d4151
+  languageName: node
+  linkType: hard
+
 "retry@npm:^0.12.0":
   version: 0.12.0
   resolution: "retry@npm:0.12.0"
@@ -7518,7 +7602,8 @@ __metadata:
     immutable: 4.2.4
     merge-options: ^3.0.4
     nib: 1.2.0
-    prettier: 2.8.4
+    prettier: ^2.8.4
+    prettier-plugin-sql: ^0.13.0
     prop-types: ^15.8.1
     query-string: 8.1.0
     react: 18.2.0
@@ -7963,6 +8048,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sql-formatter@npm:^11.0.2":
+  version: 11.0.2
+  resolution: "sql-formatter@npm:11.0.2"
+  dependencies:
+    argparse: ^2.0.1
+    nearley: ^2.20.1
+  bin:
+    sql-formatter: bin/sql-formatter-cli.cjs
+  checksum: e00664a58fba5745e9181f3c330548f24d5bf51619b345f312496d42db7b974f4561d8d6b05481dc23f3566090de4b3522ad8498e9f976e35192db31c2c4a0dd
+  languageName: node
+  linkType: hard
+
 "ssri@npm:^9.0.0":
   version: 9.0.0
   resolution: "ssri@npm:9.0.0"
@@ -8318,7 +8415,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.1.0, tslib@npm:^2.4.1":
+"tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.4.1":
   version: 2.5.0
   resolution: "tslib@npm:2.5.0"
   checksum: ae3ed5f9ce29932d049908ebfdf21b3a003a85653a9a140d614da6b767a93ef94f460e52c3d787f0e4f383546981713f165037dc2274df212ea9f8a4541004e1
