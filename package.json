@@ -3,19 +3,24 @@
   "imports": {
     "#root/*": "./*",
     "#server/*": "./server/*",
-    "#config": "./config.mjs"
+    "#config": "./config.mjs",
+    "#db": "./db/index.mjs",
+    "#utils": "./utils/index.mjs"
   },
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
     "start": "webpack serve --mode=development --config webpack/webpack.dev.babel.mjs --port 8081 --history-api-fallback",
     "start:api": "NODE_ENV=development node server.mjs",
     "lint": "eslint . --ext js,mjs",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "test": "NODE_ENV=test TEST=all mocha --require test/global.mjs --exit"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "deep-extend": "^0.6.0",
     "express": "4.18.2",
+    "knex": "^2.4.2",
+    "mysql2": "^3.2.0",
     "ws": "8.12.1"
   },
   "devDependencies": {
@@ -31,6 +36,8 @@
     "@mui/material": "5.11.9",
     "babel-loader": "9.1.2",
     "babel-plugin-module-resolver": "5.0.0",
+    "chai": "^4.3.7",
+    "chai-http": "^4.3.0",
     "circular-dependency-plugin": "^5.2.2",
     "compression-webpack-plugin": "10.0.0",
     "concurrently": "7.6.0",
@@ -48,6 +55,7 @@
     "html-webpack-plugin": "^5.5.0",
     "immutable": "4.2.4",
     "merge-options": "^3.0.4",
+    "mocha": "^10.2.0",
     "nib": "1.2.0",
     "prettier": "^2.8.4",
     "prettier-plugin-sql": "^0.13.0",
