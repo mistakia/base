@@ -7,7 +7,7 @@ DROP TABLE
 CREATE TABLE
   `users` (
     `user_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `public_key` varchar(32) NOT NULL COMMENT 'public key of user (32 hex characters)',
+    `public_key` varchar(64) NOT NULL COMMENT 'public key of user (64 hex characters)',
     `username` varchar(255) NOT NULL,
     `email` varchar(255) DEFAULT NULL,
     `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
@@ -78,7 +78,8 @@ CREATE TABLE
         'Blocked'
       )
     ) COMMENT 'status of task',
-    `finish_by` int (11) DEFAULT NULL,
+    `deadline_text_input` text DEFAULT NULL COMMENT 'user text input for deadline',
+    `deadline` int (11) DEFAULT NULL,
     `estimated_total_duration` int (11) DEFAULT NULL,
     `estimated_preparation_duration` int (11) DEFAULT NULL,
     `estimated_execution_duration` int (11) DEFAULT NULL,
@@ -116,8 +117,8 @@ CREATE TABLE
       or estimated_total_duration >= estimated_preparation_duration + estimated_execution_duration + estimated_cleanup_duration
     ),
     check (
-      finish_by is null
-      or finish_by >= created_at
+      deadline is null
+      or deadline >= created_at
     ),
     PRIMARY KEY (`task_id`),
     FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)

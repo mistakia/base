@@ -14,6 +14,7 @@ import serveStatic from 'serve-static'
 
 import wss from '#server/websocket.mjs'
 import config from '#config'
+import routes from '#server/routes/index.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
@@ -31,6 +32,14 @@ api.use(
     credentials: true
   })
 )
+
+api.use('/api/users', routes.users)
+api.use('/api/:user_id/tasks', routes.tasks)
+// api.use('/api/:user_id/folders', routes.folders)
+// api.use('/api/:user_id/organizations', routes.organizations)
+// api.use('/api/:user_id/persons', routes.persons)
+// api.use('/api/:user_id/physical_items', routes.physical_items)
+// api.use('/api/digital_items', routes.digital_items)
 
 if (IS_DEV) {
   api.get('*', (req, res) => {

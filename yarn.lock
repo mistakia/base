@@ -2074,6 +2074,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@trashman/ed25519-blake2b@npm:^0.0.3":
+  version: 0.0.3
+  resolution: "@trashman/ed25519-blake2b@npm:0.0.3"
+  dependencies:
+    napi-macros: ^2.0.0
+    node-gyp: latest
+    node-gyp-build: ^4.4.0
+  checksum: 4a2b358350fe050e2b0779480e28ebf5b8f8ab7bc6905ad64820bc045eb5e0743129e5b4743301febe642e84908712f440ba711ff180de50953c3248b4cb3b1f
+  languageName: node
+  linkType: hard
+
 "@types/body-parser@npm:*":
   version: 1.19.2
   resolution: "@types/body-parser@npm:1.19.2"
@@ -2982,6 +2993,15 @@ __metadata:
   version: 2.2.0
   resolution: "binary-extensions@npm:2.2.0"
   checksum: ccd267956c58d2315f5d3ea6757cf09863c5fc703e50fbeb13a7dc849b812ef76e3cf9ca8f35a0c48498776a7478d7b4a0418e1e2b8cb9cb9731f2922aaad7f8
+  languageName: node
+  linkType: hard
+
+"binary-uuid@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "binary-uuid@npm:2.0.3"
+  dependencies:
+    uuid: ^7.0.3
+  checksum: 39c458931e32d228fc3aa52690addd5f48e2f6ad3c7e8050ce96dcee2a53eeab2244ddfd560069590888ca2b3358eeb25b0540d553078ba84c6666faf46ed067
   languageName: node
   linkType: hard
 
@@ -6688,6 +6708,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"napi-macros@npm:^2.0.0":
+  version: 2.2.2
+  resolution: "napi-macros@npm:2.2.2"
+  checksum: c6f9bd71cdbbc37ddc3535aa5be481238641d89585b8a3f4d301cb89abf459e2d294810432bb7d12056d1f9350b1a0899a5afcf460237a3da6c398cf0fec7629
+  languageName: node
+  linkType: hard
+
 "natural-compare@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
@@ -6749,6 +6776,17 @@ __metadata:
   version: 1.3.1
   resolution: "node-forge@npm:1.3.1"
   checksum: 08fb072d3d670599c89a1704b3e9c649ff1b998256737f0e06fbd1a5bf41cae4457ccaee32d95052d80bbafd9ffe01284e078c8071f0267dc9744e51c5ed42a9
+  languageName: node
+  linkType: hard
+
+"node-gyp-build@npm:^4.4.0":
+  version: 4.6.0
+  resolution: "node-gyp-build@npm:4.6.0"
+  bin:
+    node-gyp-build: bin.js
+    node-gyp-build-optional: optional.js
+    node-gyp-build-test: build-test.js
+  checksum: 25d78c5ef1f8c24291f4a370c47ba52fcea14f39272041a90a7894cd50d766f7c8cb8fb06c0f42bf6f69b204b49d9be3c8fc344aac09714d5bdb95965499eb15
   languageName: node
   linkType: hard
 
@@ -8046,8 +8084,10 @@ __metadata:
     "@emotion/styled": 11.10.5
     "@fingerprintjs/fingerprintjs": 3.4.0
     "@mui/material": 5.11.9
+    "@trashman/ed25519-blake2b": ^0.0.3
     babel-loader: 9.1.2
     babel-plugin-module-resolver: 5.0.0
+    binary-uuid: ^2.0.3
     chai: ^4.3.7
     chai-http: ^4.3.0
     circular-dependency-plugin: ^5.2.2
@@ -9146,6 +9186,15 @@ __metadata:
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: c81095493225ecfc28add49c106ca4f09cdf56bc66731aa8dabc2edbbccb1e1bfe2de6a115e5c6a380d3ea166d1636410b62ef216bb07b3feb1cfde1d95d5080
+  languageName: node
+  linkType: hard
+
+"uuid@npm:^7.0.3":
+  version: 7.0.3
+  resolution: "uuid@npm:7.0.3"
+  bin:
+    uuid: dist/bin/uuid
+  checksum: f5b7b5cc28accac68d5c083fd51cca64896639ebd4cca88c6cfb363801aaa83aa439c86dfc8446ea250a7a98d17afd2ad9e88d9d4958c79a412eccb93bae29de
   languageName: node
   linkType: hard
 
