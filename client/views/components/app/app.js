@@ -1,11 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Routes, Route } from 'react-router-dom'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
 
 import Dialog from '@components/dialog'
-import HomePage from '@pages/home'
+import Routes from '@views/routes'
 
 import '@styles/normalize.css'
 import '@styles/typography.styl'
@@ -31,9 +30,7 @@ export default class App extends React.Component {
 
     return (
       <>
-        <Routes>
-          <Route path='/' element={<HomePage />} />
-        </Routes>
+        <Routes />
         <Dialog />
       </>
     )
