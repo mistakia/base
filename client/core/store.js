@@ -8,7 +8,7 @@ import rootSaga from './sagas'
 import root_reducer from './reducers'
 
 const sagaMiddleware = createSagaMiddleware()
-const initialState = window.__INITIAL_STATE__
+const initial_state = window.__INITIAL_STATE__
 
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
 
@@ -33,7 +33,7 @@ const enhancers = [applyMiddleware(...middlewares)]
 // ======================================================
 export const store = createStore(
   root_reducer(routerReducer),
-  fromJS(initialState),
+  fromJS(initial_state),
   composeEnhancers(...enhancers)
 )
 

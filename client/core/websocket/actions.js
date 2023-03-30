@@ -1,18 +1,18 @@
-export const websocketActions = {
+export const websocket_actions = {
   WEBSOCKET_OPEN: 'WEBSOCKET_OPEN',
   WEBSOCKET_CLOSE: 'WEBSOCKET_CLOSE',
 
   WEBSOCKET_RECONNECTED: 'WEBSOCKET_RECONNECTED',
 
   reconnected: () => ({
-    type: websocketActions.WEBSOCKET_RECONNECTED
+    type: websocket_actions.WEBSOCKET_RECONNECTED
   }),
 
   close: () => ({
-    type: websocketActions.WEBSOCKET_CLOSE
+    type: websocket_actions.WEBSOCKET_CLOSE
   }),
 
   open: () => ({
-    type: websocketActions.WEBSOCKET_OPEN
+    type: websocket_actions.WEBSOCKET_OPEN
   })
 }

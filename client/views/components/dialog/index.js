@@ -1,16 +1,16 @@
 import { connect } from 'react-redux'
 import { createSelector } from 'reselect'
 
-import { dialogActions, getDialogInfo } from '@core/dialog'
+import { dialog_actions, get_dialog_info } from '@core/dialog'
 
 import Dialog from './dialog'
 
-const mapStateToProps = createSelector(getDialogInfo, (info) => ({
+const mapStateToProps = createSelector(get_dialog_info, (info) => ({
   info
 }))
 
 const mapDispatchToProps = {
-  cancel: dialogActions.cancel
+  cancel: dialog_actions.cancel
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Dialog)

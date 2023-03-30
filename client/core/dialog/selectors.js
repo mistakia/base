@@ -1,3 +1,3 @@
-export function getDialogInfo(state) {
+export function get_dialog_info(state) {
   return state.get('dialog')
 }

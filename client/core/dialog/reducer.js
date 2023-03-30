@@ -1,6 +1,6 @@
 import { Record } from 'immutable'
 
-import { dialogActions } from './actions'
+import { dialog_actions } from './actions'
 
 const DialogState = new Record({
   id: null,
@@ -13,10 +13,10 @@ const DialogState = new Record({
 
 export function dialog_reducer(state = new DialogState(), { payload, type }) {
   switch (type) {
-    case dialogActions.SHOW_DIALOG:
+    case dialog_actions.SHOW_DIALOG:
       return state.merge(payload)
 
-    case dialogActions.CANCEL_DIALOG:
+    case dialog_actions.CANCEL_DIALOG:
       return DialogState()
 
     default:

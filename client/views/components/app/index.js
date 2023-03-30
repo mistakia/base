@@ -6,7 +6,7 @@ import { get_app, app_actions } from '@core/app'
 import App from './app'
 
 const mapStateToProps = createSelector(get_app, (app) => ({
-  isLoaded: app.isLoaded
+  is_loaded: app.is_loaded
 }))
 
 const mapDispatchToProps = {

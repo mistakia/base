@@ -1,1 +1,1 @@
-export { localStorageAdapter } from './local-storage'
+export { local_storage_adapter } from './local-storage'

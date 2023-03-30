@@ -1,11 +1,11 @@
 import { call, put, cancelled } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
-import { api, apiRequest } from '@core/api/service'
+import { api, api_request } from '@core/api/service'
 import { get_tasks_request_actions } from '@core/tasks/actions'
 
 function* fetchAPI(apiFunction, actions, opts = {}) {
-  const { abort, request } = apiRequest(apiFunction, opts)
+  const { abort, request } = api_request(apiFunction, opts)
   try {
     yield put(actions.pending(opts))
     const data = yield call(request)

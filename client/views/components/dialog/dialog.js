@@ -3,35 +3,35 @@ import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import Button from '@mui/material/Button'
 import MuiDialog from '@mui/material/Dialog'
-import MuiDialogActions from '@mui/material/DialogActions'
+import MuidialogActions from '@mui/material/dialogActions'
 import MuiDialogContent from '@mui/material/DialogContent'
 import MuiDialogContentText from '@mui/material/DialogContentText'
 import MuiDialogTitle from '@mui/material/DialogTitle'
 
 export default class Dialog extends React.Component {
-  handleClick = (args) => {
+  handle_click = (args) => {
     this.props.info.onConfirm(args)
     this.props.cancel()
   }
 
-  handleClose = () => {
+  handle_close = () => {
     this.props.cancel()
   }
 
   render = () => {
     if (this.props.info.id) {
-      const getComponent = (id) => {
+      const get_component = (id) => {
         switch (id) {
           default:
             return null
         }
       }
-      const DialogComponent = getComponent(this.props.info.id)
+      const DialogComponent = get_component(this.props.info.id)
       const { data } = this.props.info
       return (
         <DialogComponent
-          onClose={this.handleClose}
-          onSubmit={this.handleClick}
+          onClose={this.handle_close}
+          onSubmit={this.handle_click}
           {...data}
         />
       )
@@ -40,21 +40,21 @@ export default class Dialog extends React.Component {
     return (
       <MuiDialog
         open={Boolean(this.props.info.title)}
-        onClose={this.handleClose}>
+        onClose={this.handle_close}>
         <MuiDialogTitle>{this.props.info.title}</MuiDialogTitle>
         <MuiDialogContent>
           <MuiDialogContentText>
             {this.props.info.description}
           </MuiDialogContentText>
         </MuiDialogContent>
-        <MuiDialogActions>
-          <Button onClick={this.handleClose} text>
+        <MuidialogActions>
+          <Button onClick={this.handle_close} text>
             Cancel
           </Button>
-          <Button onClick={this.handleClick} text>
+          <Button onClick={this.handle_click} text>
             Confirm
           </Button>
-        </MuiDialogActions>
+        </MuidialogActions>
       </MuiDialog>
     )
   }

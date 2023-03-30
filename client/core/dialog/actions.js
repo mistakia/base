@@ -1,9 +1,9 @@
-export const dialogActions = {
+export const dialog_actions = {
   SHOW_DIALOG: 'SHOW_DIALOG',
   CANCEL_DIALOG: 'CANCEL_DIALOG',
 
   show: ({ title, description, id, onConfirm, data }) => ({
-    type: dialogActions.SHOW_DIALOG,
+    type: dialog_actions.SHOW_DIALOG,
     payload: {
       title,
       data,
@@ -14,6 +14,6 @@ export const dialogActions = {
   }),
 
   cancel: () => ({
-    type: dialogActions.CANCEL_DIALOG
+    type: dialog_actions.CANCEL_DIALOG
   })
 }

@@ -15,7 +15,7 @@ import { API_URL } from '@core/constants'
  *  */
 
 export const api = {
-  getUser({ user_id }) {
+  get_user({ user_id }) {
     const url = `${API_URL}/users/${user_id}`
     return { url }
   },
@@ -25,18 +25,18 @@ export const api = {
   }
 }
 
-export const apiRequest = (apiFunction, opts) => {
+export const api_request = (apiFunction, opts) => {
   const controller = new AbortController()
   const abort = controller.abort.bind(controller)
   const defaultOptions = {}
   const options = merge(defaultOptions, apiFunction(opts), {
     signal: controller.signal
   })
-  const request = dispatchFetch.bind(null, options)
+  const request = dispatch_fetch.bind(null, options)
   return { abort, request }
 }
 
-export const dispatchFetch = async (options) => {
+export const dispatch_fetch = async (options) => {
   const response = await fetch(options.url, options)
   if (response.status >= 200 && response.status < 300) {
     return response.json()

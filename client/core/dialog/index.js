@@ -1,3 +1,3 @@
-export { dialogActions } from './actions'
+export { dialog_actions } from './actions'
 export { dialog_reducer } from './reducer'
-export { getDialogInfo } from './selectors'
+export { get_dialog_info } from './selectors'

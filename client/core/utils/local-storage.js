@@ -1,6 +1,6 @@
 /* global localStorage */
 
-export const localStorageAdapter = {
+export const local_storage_adapter = {
   getItem(key) {
     // return promise to match AsyncStorage usage on mobile
     return new Promise((resolve, reject) => {

@@ -6,7 +6,7 @@ import { get_app } from '@core/app'
 import HomePage from './home'
 
 const mapStateToProps = createSelector(get_app, (app) => ({
-  isLoaded: app.isLoaded
+  is_loaded: app.is_loaded
 }))
 
 export default connect(mapStateToProps)(HomePage)

@@ -7,15 +7,15 @@ import './home.styl'
 
 export default class HomePage extends React.Component {
   render() {
-    const { isLoaded } = this.props
+    const { is_loaded } = this.props
     return (
       <Container maxWidth='md' className='home__container'>
-        Loaded: {isLoaded.toString()}
+        Loaded: {is_loaded.toString()}
       </Container>
     )
   }
 }
 
 HomePage.propTypes = {
-  isLoaded: PropTypes.bool
+  is_loaded: PropTypes.bool
 }

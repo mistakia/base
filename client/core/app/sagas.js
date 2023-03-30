@@ -9,7 +9,7 @@ import { app_actions } from './actions'
 const fpPromise = FingerprintJS.load()
 
 // cookie-less / anonymous GA reporting
-async function pageView() {
+async function page_view() {
   if (!window.gtag) {
     return
   }
@@ -32,18 +32,18 @@ export function* load() {
 
 export function reset() {
   window.scrollTo(0, 0)
-  pageView()
+  page_view()
 }
 
 //= ====================================
 //  WATCHERS
 // -------------------------------------
 
-export function* watchInitApp() {
+export function* watch_init_app() {
   yield takeLatest(app_actions.APP_LOAD, load)
 }
 
-export function* watchLocationChange() {
+export function* watch_location_change() {
   yield takeLatest(LOCATION_CHANGE, reset)
 }
 
@@ -51,4 +51,4 @@ export function* watchLocationChange() {
 //  ROOT
 // -------------------------------------
 
-export const app_sagas = [fork(watchInitApp)]
+export const app_sagas = [fork(watch_init_app)]

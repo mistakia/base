@@ -18,8 +18,8 @@ export default class App extends React.Component {
   }
 
   render() {
-    const { isLoaded } = this.props
-    if (!isLoaded) {
+    const { is_loaded } = this.props
+    if (!is_loaded) {
       return (
         <div className='load__container'>
           <Box sx={{ width: '100px', paddingTop: '2em' }}>
@@ -42,5 +42,5 @@ export default class App extends React.Component {
 
 App.propTypes = {
   load: PropTypes.func,
-  isLoaded: PropTypes.bool
+  is_loaded: PropTypes.bool
 }
