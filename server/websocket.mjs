@@ -6,9 +6,9 @@ const wss = new WebSocketServer({ noServer: true })
 
 // sockets(wss)
 
-export const send = ({ publicKey, event }) => {
+export const send = ({ public_key, event }) => {
   wss.clients.forEach((c) => {
-    if (c.publicKey === publicKey) {
+    if (c.public_key === public_key) {
       if (c && c.readyState === WebSocket.OPEN) {
         c.send(JSON.stringify(event))
       }

@@ -1,15 +1,15 @@
 import { Record } from 'immutable'
 
-import { appActions } from './actions'
+import { app_actions } from './actions'
 
 const initialState = new Record({
   isLoaded: false,
-  publicKey: null
+  public_key: null
 })
 
-export function appReducer(state = initialState(), { payload, type }) {
+export function app_reducer(state = initialState(), { payload, type }) {
   switch (type) {
-    case appActions.APP_LOADED:
+    case app_actions.APP_LOADED:
       return state.merge({ isLoaded: true })
 
     default:

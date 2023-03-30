@@ -1,13 +1,15 @@
 import { combineReducers } from 'redux-immutable'
 
-import { appReducer } from './app'
-import { dialogReducer } from './dialog'
+import { app_reducer } from './app'
+import { dialog_reducer } from './dialog'
+import { tasks_reducer } from './tasks'
 
-const rootReducer = (router) =>
+const root_reducer = (router) =>
   combineReducers({
     router,
-    app: appReducer,
-    dialog: dialogReducer
+    app: app_reducer,
+    dialog: dialog_reducer,
+    tasks: tasks_reducer
   })
 
-export default rootReducer
+export default root_reducer

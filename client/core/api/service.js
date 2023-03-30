@@ -18,6 +18,10 @@ export const api = {
   getUser({ user_id }) {
     const url = `${API_URL}/users/${user_id}`
     return { url }
+  },
+  get_tasks({ public_key }) {
+    const url = `${API_URL}/${public_key}/tasks`
+    return { url }
   }
 }
 

@@ -4,7 +4,7 @@ import FingerprintJS from '@fingerprintjs/fingerprintjs'
 import { LOCATION_CHANGE } from 'redux-first-history'
 
 import history from '@core/history'
-import { appActions } from './actions'
+import { app_actions } from './actions'
 
 const fpPromise = FingerprintJS.load()
 
@@ -27,7 +27,7 @@ async function pageView() {
 
 export function* load() {
   // do stuff
-  yield put(appActions.loaded())
+  yield put(app_actions.loaded())
 }
 
 export function reset() {
@@ -40,7 +40,7 @@ export function reset() {
 // -------------------------------------
 
 export function* watchInitApp() {
-  yield takeLatest(appActions.APP_LOAD, load)
+  yield takeLatest(app_actions.APP_LOAD, load)
 }
 
 export function* watchLocationChange() {
@@ -51,4 +51,4 @@ export function* watchLocationChange() {
 //  ROOT
 // -------------------------------------
 
-export const appSagas = [fork(watchInitApp)]
+export const app_sagas = [fork(watchInitApp)]

@@ -1,3 +1,3 @@
 export { websocketActions } from './actions'
 export { send } from './service'
-export { websocketSagas } from './sagas'
+export { websocket_sagas } from './sagas'

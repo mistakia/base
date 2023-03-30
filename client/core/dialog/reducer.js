@@ -11,7 +11,7 @@ const DialogState = new Record({
   onConfirm: null
 })
 
-export function dialogReducer(state = new DialogState(), { payload, type }) {
+export function dialog_reducer(state = new DialogState(), { payload, type }) {
   switch (type) {
     case dialogActions.SHOW_DIALOG:
       return state.merge(payload)

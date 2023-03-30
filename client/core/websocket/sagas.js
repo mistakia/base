@@ -1,7 +1,7 @@
 import { call, takeLatest, select, fork, delay, put } from 'redux-saga/effects'
 
 import { websocketActions } from './actions'
-import { getApp } from '@core/app'
+import { get_app } from '@core/app'
 import { openWebsocket, closeWebsocket, isOpen } from './service'
 
 export function* disconnect() {
@@ -9,13 +9,13 @@ export function* disconnect() {
 }
 
 export function* connect() {
-  const { publicKey } = yield select(getApp)
-  yield call(openWebsocket, { publicKey })
+  const { public_key } = yield select(get_app)
+  yield call(openWebsocket, { public_key })
 }
 
 export function* reconnect() {
-  const { publicKey } = yield select(getApp)
-  if (publicKey) {
+  const { public_key } = yield select(get_app)
+  if (public_key) {
     while (!isOpen()) {
       yield call(connect)
       yield delay(2000) // TODO - increase delay each run
@@ -37,4 +37,4 @@ export function* watchWebSocketClose() {
 //  ROOT
 // -------------------------------------
 
-export const websocketSagas = [fork(watchWebSocketClose)]
+export const websocket_sagas = [fork(watchWebSocketClose)]

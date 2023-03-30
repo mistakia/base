@@ -1,11 +1,11 @@
 import { connect } from 'react-redux'
 import { createSelector } from 'reselect'
 
-import { getApp } from '@core/app'
+import { get_app } from '@core/app'
 
 import HomePage from './home'
 
-const mapStateToProps = createSelector(getApp, (app) => ({
+const mapStateToProps = createSelector(get_app, (app) => ({
   isLoaded: app.isLoaded
 }))
 

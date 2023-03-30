@@ -89,16 +89,16 @@ const server = createServer()
 server.on('upgrade', async (request, socket, head) => {
   const parsed = new url.URL(request.url, config.url)
   try {
-    const publicKey = parsed.searchParams.get('publicKey')
-    request.user = { publicKey }
+    const public_key = parsed.searchParams.get('public_key')
+    request.user = { public_key }
   } catch (error) {
     log(error)
     return socket.destroy()
   }
 
   wss.handleUpgrade(request, socket, head, function (ws) {
-    ws.publicKey = request.user.publicKey
-    log(`websocket connected: ${ws.publicKey}`)
+    ws.public_key = request.user.public_key
+    log(`websocket connected: ${ws.public_key}`)
     wss.emit('connection', ws, request)
   })
 })
