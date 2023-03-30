@@ -40,6 +40,7 @@
     "@mui/material": "5.11.9",
     "babel-loader": "9.1.2",
     "babel-plugin-module-resolver": "5.0.0",
+    "blakejs": "^1.2.1",
     "chai": "^4.3.7",
     "chai-http": "^4.3.0",
     "circular-dependency-plugin": "^5.2.2",

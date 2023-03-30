@@ -3,6 +3,10 @@ import { call, put, cancelled } from 'redux-saga/effects'
 
 import { api, api_request } from '@core/api/service'
 import { get_tasks_request_actions } from '@core/tasks/actions'
+import {
+  get_user_request_actions,
+  post_user_request_actions
+} from '@core/app/actions'
 
 function* fetchAPI(apiFunction, actions, opts = {}) {
   const { abort, request } = api_request(apiFunction, opts)
@@ -35,4 +39,10 @@ export const get_tasks = fetch.bind(
   null,
   api.get_tasks,
   get_tasks_request_actions
+)
+export const get_user = fetch.bind(null, api.get_user, get_user_request_actions)
+export const post_user = fetch.bind(
+  null,
+  api.post_user,
+  post_user_request_actions
 )

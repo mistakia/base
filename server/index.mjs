@@ -23,6 +23,8 @@ const log = debug('api')
 const api = express()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+api.locals.log = log
+
 api.disable('x-powered-by')
 api.use(compression())
 api.use(bodyParser.json())

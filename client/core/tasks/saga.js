@@ -4,11 +4,11 @@ import { app_actions, get_app } from '@core/app'
 import { get_tasks } from '@core/api'
 
 export function* load_tasks() {
-  const { public_key } = yield select(get_app)
-  if (!public_key) {
+  const { user_id } = yield select(get_app)
+  if (!user_id) {
     return
   }
-  yield call(get_tasks, { public_key })
+  yield call(get_tasks, { user_id })
 }
 
 //= ====================================

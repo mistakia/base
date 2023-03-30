@@ -3012,7 +3012,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"blakejs@npm:1.2.1":
+"blakejs@npm:1.2.1, blakejs@npm:^1.2.1":
   version: 1.2.1
   resolution: "blakejs@npm:1.2.1"
   checksum: d699ba116cfa21d0b01d12014a03e484dd76d483133e6dc9eb415aa70a119f08beb3bcefb8c71840106a00b542cba77383f8be60cd1f0d4589cb8afb922eefbe
@@ -8128,6 +8128,7 @@ __metadata:
     babel-loader: 9.1.2
     babel-plugin-module-resolver: 5.0.0
     binary-uuid: ^2.0.3
+    blakejs: ^1.2.1
     chai: ^4.3.7
     chai-http: ^4.3.0
     circular-dependency-plugin: ^5.2.2

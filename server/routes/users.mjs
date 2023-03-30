@@ -25,8 +25,20 @@ router.post('/?', async (req, res) => {
       return res.status(400).send({ error: 'invalid signature' })
     }
 
-    const [user_id] = await db('users').insert(data)
-    res.status(200).send({ user_id })
+    if (!data.username) {
+      data.username = `user_${data.public_key.slice(0, 8)}`
+    }
+
+    const [user_id] = await db('users')
+      .insert(data)
+      .onConflict('public_key')
+      .merge()
+    const user = await db('users')
+      .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
+      .where({ user_id })
+      .first()
+
+    res.status(200).send(user || {})
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -41,14 +53,14 @@ router.get('/:user_id', async (req, res) => {
       .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
       .where({ user_id })
       .first()
-    res.status(200).send(user)
+    res.status(200).send(user || {})
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
   }
 })
 
-router.get('/public_keys/:public_key', async (req, res) => {
+router.get('/public_key/:public_key', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { public_key } = req.params
@@ -56,7 +68,7 @@ router.get('/public_keys/:public_key', async (req, res) => {
       .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
       .where({ public_key })
       .first()
-    res.status(200).send(user)
+    res.status(200).send(user || {})
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

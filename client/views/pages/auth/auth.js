@@ -5,7 +5,7 @@ import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
-import Ed25519 from 'nanocurrency-web/dist/lib/Ed25519'
+import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
 import Convert from 'nanocurrency-web/dist/lib/util/convert'
 
 import './auth.styl'
