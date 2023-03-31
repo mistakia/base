@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 
 import db from '#db'
 import config from '#config'
+import tasks from './tasks.mjs'
 
 const router = express.Router()
 
@@ -107,5 +108,7 @@ router.get('/:username', async (req, res) => {
     res.status(500).send({ error: error.message })
   }
 })
+
+router.use('/:user_id/tasks', tasks)
 
 export default router

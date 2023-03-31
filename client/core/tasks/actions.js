@@ -3,6 +3,15 @@ export const task_actions = {
   GET_TASKS_PENDING: 'GET_TASKS_PENDING',
   GET_TASKS_FULFILLED: 'GET_TASKS_FULFILLED',
 
+  LOAD_USER_TASKS: 'LOAD_USER_TASKS',
+
+  load_user_tasks: ({ user_id }) => ({
+    type: task_actions.LOAD_USER_TASKS,
+    payload: {
+      user_id
+    }
+  }),
+
   getTasksPending: (opts) => ({
     type: task_actions.GET_TASKS_PENDING,
     payload: {

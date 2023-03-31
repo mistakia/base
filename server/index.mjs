@@ -36,7 +36,6 @@ api.use(
 )
 
 api.use('/api/users', routes.users)
-api.use('/api/:user_id/tasks', routes.tasks)
 // api.use('/api/:user_id/folders', routes.folders)
 // api.use('/api/:user_id/organizations', routes.organizations)
 // api.use('/api/:user_id/persons', routes.persons)

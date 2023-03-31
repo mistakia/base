@@ -1,13 +1,10 @@
-import { call, takeLatest, fork, select } from 'redux-saga/effects'
+import { call, takeLatest, fork } from 'redux-saga/effects'
 
-import { app_actions, get_app } from '@core/app'
 import { get_tasks } from '@core/api'
+import { task_actions } from './actions'
 
-export function* load_tasks() {
-  const { user_id } = yield select(get_app)
-  if (!user_id) {
-    return
-  }
+export function* load_user_tasks({ payload }) {
+  const { user_id } = payload
   yield call(get_tasks, { user_id })
 }
 
@@ -15,12 +12,12 @@ export function* load_tasks() {
 //  WATCHERS
 // -------------------------------------
 
-export function* watch_app_loaded() {
-  yield takeLatest(app_actions.APP_LOADED, load_tasks)
+export function* watch_load_user_tasks() {
+  yield takeLatest(task_actions.LOAD_USER_TASKS, load_user_tasks)
 }
 
 //= ====================================
 //  ROOT
 // -------------------------------------
 
-export const tasks_saga = [fork(watch_app_loaded)]
+export const tasks_saga = [fork(watch_load_user_tasks)]

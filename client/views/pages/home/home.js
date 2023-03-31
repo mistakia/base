@@ -8,7 +8,7 @@ import Container from '@mui/material/Container'
 
 import './home.styl'
 
-export default function HomePage({ is_loaded, load_user, users }) {
+export default function HomePage({ load_user, users, load_user_tasks }) {
   const { username } = useParams()
 
   React.useEffect(() => {
@@ -17,6 +17,13 @@ export default function HomePage({ is_loaded, load_user, users }) {
 
   const user = users.get(username, new Map())
   const not_found = user.get('is_loaded') && !user.get('user_id')
+
+  const user_id = user.get('user_id')
+  React.useEffect(() => {
+    if (user_id) {
+      load_user_tasks({ user_id })
+    }
+  }, [user_id])
 
   if (not_found) {
     return (
@@ -34,7 +41,7 @@ export default function HomePage({ is_loaded, load_user, users }) {
 }
 
 HomePage.propTypes = {
-  is_loaded: PropTypes.bool,
   load_user: PropTypes.func,
-  users: ImmutablePropTypes.map
+  users: ImmutablePropTypes.map,
+  load_user_tasks: PropTypes.func
 }
