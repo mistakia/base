@@ -7,7 +7,8 @@ const initial_state = new Record({
   user_id: null,
   username: null,
   public_key: null,
-  private_key: null
+  private_key: null,
+  token: null
 })
 
 export function app_reducer(state = initial_state(), { payload, type }) {
@@ -24,10 +25,11 @@ export function app_reducer(state = initial_state(), { payload, type }) {
       })
 
     case app_actions.POST_USER_FULFILLED:
-    case app_actions.GET_USER_FULFILLED:
+    case app_actions.POST_USER_SESSION_FULFILLED:
       return state.merge({
         user_id: payload.data.user_id,
-        username: payload.data.username
+        username: payload.data.username,
+        token: payload.data.token
       })
 
     default:

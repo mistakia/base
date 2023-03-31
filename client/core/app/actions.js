@@ -10,6 +10,10 @@ export const app_actions = {
   GET_USER_FAILED: 'GET_USER_FAILED',
   GET_USER_FULFILLED: 'GET_USER_FULFILLED',
 
+  POST_USER_SESSION_PENDING: 'POST_USER_SESSION_PENDING',
+  POST_USER_SESSION_FAILED: 'POST_USER_SESSION_FAILED',
+  POST_USER_SESSION_FULFILLED: 'POST_USER_SESSION_FULFILLED',
+
   POST_USER_PENDING: 'POST_USER_PENDING',
   POST_USER_FAILED: 'POST_USER_FAILED',
   POST_USER_FULFILLED: 'POST_USER_FULFILLED',
@@ -69,6 +73,29 @@ export const app_actions = {
     }
   }),
 
+  postUserSessionPending: (opts) => ({
+    type: app_actions.POST_USER_SESSION_PENDING,
+    payload: {
+      opts
+    }
+  }),
+
+  postUserSessionFailed: (opts, error) => ({
+    type: app_actions.POST_USER_SESSION_FAILED,
+    payload: {
+      opts,
+      error
+    }
+  }),
+
+  postUserSessionFullfilled: (opts, data) => ({
+    type: app_actions.POST_USER_SESSION_FULFILLED,
+    payload: {
+      opts,
+      data
+    }
+  }),
+
   postUserPending: (opts) => ({
     type: app_actions.POST_USER_PENDING,
     payload: {
@@ -97,6 +124,12 @@ export const get_user_request_actions = {
   pending: app_actions.getUserPending,
   failed: app_actions.getUserFailed,
   fulfilled: app_actions.getUserFullfilled
+}
+
+export const post_user_session_request_actions = {
+  pending: app_actions.postUserSessionPending,
+  failed: app_actions.postUserSessionFailed,
+  fulfilled: app_actions.postUserSessionFullfilled
 }
 
 export const post_user_request_actions = {

@@ -17,7 +17,8 @@ CREATE TABLE
       or updated_at >= created_at
     ),
     PRIMARY KEY (`user_id`),
-    UNIQUE KEY `public_key` (`public_key`)
+    UNIQUE KEY `public_key` (`public_key`),
+    UNIQUE KEY `username` (`username`),
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP

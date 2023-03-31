@@ -25,6 +25,10 @@ export const api = {
   post_user({ data, signature }) {
     const url = `${API_URL}/users`
     return { url, ...POST({ data, signature }) }
+  },
+  post_user_session({ data, signature }) {
+    const url = `${API_URL}/users/session`
+    return { url, ...POST({ data, signature }) }
   }
 }
 

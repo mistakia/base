@@ -9,10 +9,11 @@ import HomePage from '@pages/home'
 import AuthPage from '@pages/auth'
 
 const map_state_to_props = createSelector(get_app, (app) => ({
-  public_key: app.public_key
+  public_key: app.public_key,
+  username: app.username
 }))
 
-const Routes = ({ public_key }) => {
+const Routes = ({ public_key, username }) => {
   if (!public_key) {
     return (
       <RouterRoutes>
@@ -25,15 +26,19 @@ const Routes = ({ public_key }) => {
   return (
     <RouterRoutes>
       <Route path='/auth' element={<AuthPage />} />
-      <Route path='/home' element={<HomePage />} />
-      <Route path='*' element={<Navigate to='/home' replace={true} />} />
+      <Route path='/:username' element={<HomePage />} />
+      <Route
+        path='*'
+        element={<Navigate to={`/${username}`} replace={true} />}
+      />
     </RouterRoutes>
   )
 }
 
 Routes.propTypes = {
   is_loaded: PropTypes.bool,
-  public_key: PropTypes.string
+  public_key: PropTypes.string,
+  username: PropTypes.string
 }
 
 export default connect(map_state_to_props)(Routes)
