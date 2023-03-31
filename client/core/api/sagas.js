@@ -3,8 +3,8 @@ import { call, put, cancelled } from 'redux-saga/effects'
 
 import { api, api_request } from '@core/api/service'
 import { get_tasks_request_actions } from '@core/tasks/actions'
+import { get_user_request_actions } from '@core/users/actions'
 import {
-  get_user_request_actions,
   post_user_request_actions,
   post_user_session_request_actions
 } from '@core/app/actions'

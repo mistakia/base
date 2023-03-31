@@ -18,8 +18,8 @@ export const api = {
     const url = `${API_URL}/${user_id}/tasks`
     return { url }
   },
-  get_user({ public_key }) {
-    const url = `${API_URL}/users/public_key/${public_key}`
+  get_user({ username }) {
+    const url = `${API_URL}/users/${username}`
     return { url }
   },
   post_user({ data, signature }) {
