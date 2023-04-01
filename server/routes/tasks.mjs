@@ -12,7 +12,10 @@ router.get('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { user_id } = req.params
-    const tasks = await get_tasks({ user_id, ...req.query })
+    const tasks = await get_tasks({
+      user_id: toBinaryUUID(user_id),
+      ...req.query
+    })
     res.status(200).send(tasks)
   } catch (error) {
     log(error)
@@ -45,7 +48,8 @@ router.post('/?', async (req, res) => {
     }
 
     const task_id = await create_task({ ...task, user_id })
-    res.status(200).send({ task_id })
+    const task_result = await db('tasks').where('task_id', task_id).first()
+    res.status(200).send(task_result)
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

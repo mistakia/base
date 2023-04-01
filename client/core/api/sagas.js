@@ -2,7 +2,10 @@ import { call, put, cancelled } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
 import { api, api_request } from '@core/api/service'
-import { get_tasks_request_actions } from '@core/tasks/actions'
+import {
+  get_tasks_request_actions,
+  post_user_task_request_actions
+} from '@core/tasks/actions'
 import { get_user_request_actions } from '@core/users/actions'
 import {
   post_user_request_actions,
@@ -51,4 +54,9 @@ export const post_user = fetch.bind(
   null,
   api.post_user,
   post_user_request_actions
+)
+export const post_user_task = fetch.bind(
+  null,
+  api.post_user_task,
+  post_user_task_request_actions
 )

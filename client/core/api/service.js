@@ -29,6 +29,10 @@ export const api = {
   post_user_session({ data, signature }) {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
+  },
+  post_user_task({ user_id, task, signature }) {
+    const url = `${API_URL}/users/${user_id}/tasks`
+    return { url, ...POST({ task, signature }) }
   }
 }
 

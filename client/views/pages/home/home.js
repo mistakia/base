@@ -6,6 +6,8 @@ import { useParams } from 'react-router-dom'
 // import Grid from '@mui/material/Grid'
 import Container from '@mui/material/Container'
 
+import CreateTask from '@components/create-task'
+
 import './home.styl'
 
 export default function HomePage({ load_user, users, load_user_tasks }) {
@@ -36,6 +38,7 @@ export default function HomePage({ load_user, users, load_user_tasks }) {
   return (
     <Container maxWidth='md' className='home__container'>
       <div>Username: {username}</div>
+      <CreateTask />
     </Container>
   )
 }
