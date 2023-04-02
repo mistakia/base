@@ -11,6 +11,8 @@ import {
   post_user_request_actions,
   post_user_session_request_actions
 } from '@core/app/actions'
+import { get_path_views_request_actions } from '@core/path-views/actions'
+import { get_folder_path_request_actions } from '@core/folder-paths/actions'
 
 function* fetchAPI(apiFunction, actions, opts = {}) {
   const { abort, request } = api_request(apiFunction, opts)
@@ -59,4 +61,14 @@ export const post_user_task = fetch.bind(
   null,
   api.post_user_task,
   post_user_task_request_actions
+)
+export const get_path_views = fetch.bind(
+  null,
+  api.get_path_views,
+  get_path_views_request_actions
+)
+export const get_folder_path = fetch.bind(
+  null,
+  api.get_folder_path,
+  get_folder_path_request_actions
 )

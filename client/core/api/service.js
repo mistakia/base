@@ -33,6 +33,14 @@ export const api = {
   post_user_task({ user_id, task, signature }) {
     const url = `${API_URL}/users/${user_id}/tasks`
     return { url, ...POST({ task, signature }) }
+  },
+  get_path_views({ folder_path, user_id }) {
+    const url = `${API_URL}/users/${user_id}/views?folder_path=${folder_path}`
+    return { url }
+  },
+  get_folder_path({ folder_path }) {
+    const url = `${API_URL}/folders${folder_path}`
+    return { url }
   }
 }
 

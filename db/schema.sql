@@ -18,7 +18,7 @@ CREATE TABLE
     ),
     PRIMARY KEY (`user_id`),
     UNIQUE KEY `public_key` (`public_key`),
-    UNIQUE KEY `username` (`username`),
+    UNIQUE KEY `username` (`username`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP
@@ -35,7 +35,10 @@ DROP TABLE
 
 CREATE TABLE
   `folders` (
-    `folder_path` varchar(255) NOT NULL COMMENT 'format: /<user_id>/folders/<folder1>/<folder2>/<folder3>',
+    `folder_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
+    `folder_path` varchar(255) NOT NULL COMMENT 'format: /<user_id>/<folder1>/<folder2>/<folder3>',
+    `user_id` binary(16) NOT NULL,
+    `parent_folder_id` binary(16) DEFAULT NULL,
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
     `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
@@ -49,7 +52,10 @@ CREATE TABLE
       archived_at is null
       or archived_at >= updated_at
     ),
-    PRIMARY KEY (`folder_path`)
+    PRIMARY KEY (`folder_path`),
+    UNIQUE KEY (`folder_id`),
+    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP
@@ -122,7 +128,7 @@ CREATE TABLE
       or deadline >= created_at
     ),
     PRIMARY KEY (`task_id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -131,9 +137,9 @@ DROP TABLE
 CREATE TABLE
   `task_folders` (
     `task_id` binary(16) NOT NULL,
-    `folder_path` varchar(255) NOT NULL,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`),
-    FOREIGN KEY (`folder_path`) REFERENCES `folders` (`folder_path`)
+    `parent_folder_id` binary(16) NOT NULL,
+    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -143,8 +149,8 @@ CREATE TABLE
   `task_parents` (
     `parent_task_id` binary(16) NOT NULL,
     `child_task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_task_id`) REFERENCES `tasks` (`task_id`),
-    FOREIGN KEY (`child_task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`parent_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`child_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -154,8 +160,8 @@ CREATE TABLE
   `task_dependencies` (
     `task_id` binary(16) NOT NULL,
     `dependent_task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`),
-    FOREIGN KEY (`dependent_task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`dependent_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -177,8 +183,8 @@ CREATE TABLE
   `task_activities` (
     `activity_id` binary(16) NOT NULL,
     `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -201,8 +207,8 @@ CREATE TABLE
   `task_organizations` (
     `organization_id` binary(16) NOT NULL,
     `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`),
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -227,8 +233,8 @@ CREATE TABLE
   `organization_persons` (
     `person_id` binary(16) NOT NULL,
     `organization_id` binary(16) NOT NULL,
-    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`),
-    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`)
+    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -238,8 +244,8 @@ CREATE TABLE
   `task_persons` (
     `person_id` binary(16) NOT NULL,
     `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`),
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -261,7 +267,7 @@ CREATE TABLE
       updated_at is null
       or updated_at >= created_at
     ),
-    FOREIGN KEY (`location_id`) REFERENCES `physical_locations` (`location_id`),
+    FOREIGN KEY (`location_id`) REFERENCES `physical_locations` (`location_id`) ON DELETE SET NULL,
     PRIMARY KEY (`physical_item_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -272,8 +278,8 @@ CREATE TABLE
   `physical_item_child_items` (
     `parent_item_id` binary(16) NOT NULL,
     `child_item_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_item_id`) REFERENCES `physical_items` (`physical_item_id`),
-    FOREIGN KEY (`child_item_id`) REFERENCES `physical_items` (`physical_item_id`)
+    FOREIGN KEY (`parent_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`child_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -282,9 +288,9 @@ DROP TABLE
 CREATE TABLE
   `physical_item_folders` (
     `physical_item_id` binary(16) NOT NULL,
-    `folder_path` varchar(255) NOT NULL,
-    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`),
-    FOREIGN KEY (`folder_path`) REFERENCES `folders` (`folder_path`)
+    `parent_folder_id` binary(16) NOT NULL,
+    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -294,8 +300,8 @@ CREATE TABLE
   `task_physical_items` (
     `physical_item_id` binary(16) NOT NULL,
     `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`),
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -330,6 +336,7 @@ DROP TABLE
 
 CREATE TABLE
   `digital_items` (
+    `digital_item_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `ipfs_hash` varchar(100) NOT NULL COMMENT 'used as id',
     /* TODO figure out length */
     `text` text DEFAULT NULL,
@@ -337,7 +344,8 @@ CREATE TABLE
     `html` text DEFAULT NULL,
     `href` varchar(255) DEFAULT NULL,
     `created_at` int (11) DEFAULT NULL,
-    PRIMARY KEY (`ipfs_hash`)
+    PRIMARY KEY (`digital_item_id`),
+    UNIQUE KEY `ipfs_hash` (`ipfs_hash`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -345,10 +353,10 @@ DROP TABLE
 
 CREATE TABLE
   `digital_item_folders` (
-    `ipfs_hash` varchar(100) NOT NULL,
-    `folder_path` varchar(255) NOT NULL,
-    FOREIGN KEY (`ipfs_hash`) REFERENCES `digital_items` (`ipfs_hash`),
-    FOREIGN KEY (`folder_path`) REFERENCES `folders` (`folder_path`)
+    `digital_item_id` binary(16) NOT NULL,
+    `parent_folder_id` binary(16) NOT NULL,
+    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`digital_item_id`) REFERENCES `digital_items` (`digital_item_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 DROP TABLE
@@ -356,10 +364,10 @@ DROP TABLE
 
 CREATE TABLE
   `task_digital_items` (
-    `ipfs_hash` varchar(100) NOT NULL,
+    `digital_item_id` binary(16) NOT NULL,
     `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`ipfs_hash`) REFERENCES `digital_items` (`ipfs_hash`),
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+    FOREIGN KEY (`digital_item_id`) REFERENCES `digital_items` (`digital_item_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 SET

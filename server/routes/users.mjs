@@ -1,10 +1,12 @@
 import express from 'express'
 import ed25519 from '@trashman/ed25519-blake2b'
 import jwt from 'jsonwebtoken'
+import { toBinaryUUID } from 'binary-uuid'
 
 import db from '#db'
 import config from '#config'
 import tasks from './tasks.mjs'
+import views from './views.mjs'
 
 const router = express.Router()
 
@@ -31,16 +33,25 @@ router.post('/?', async (req, res) => {
       data.username = `user_${data.public_key.slice(0, 8)}`
     }
 
-    const [user_id] = await db('users')
-      .insert(data)
-      .onConflict('public_key')
-      .merge()
+    await db('users').insert(data).onConflict('public_key').merge()
+
     const user = await db('users')
       .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
-      .where({ user_id })
+      .where({ public_key: data.public_key })
       .first()
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt_secret)
+    const { user_id } = user
+
+    const user_root_folder = {
+      folder_path: `/${user_id}/`,
+      user_id: toBinaryUUID(user_id),
+      parent_folder_id: null,
+      name: '/',
+      description: 'user root folder'
+    }
+    await db('folders').insert(user_root_folder).onConflict().ignore()
+
+    const token = jwt.sign({ user_id }, config.jwt_secret)
     res.status(200).send({ token, ...(user || {}) })
   } catch (error) {
     log(error)
@@ -110,5 +121,7 @@ router.get('/:username', async (req, res) => {
 })
 
 router.use('/:user_id/tasks', tasks)
+
+router.use('/:user_id/views', views)
 
 export default router

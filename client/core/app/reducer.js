@@ -8,7 +8,9 @@ const initial_state = new Record({
   username: null,
   public_key: null,
   private_key: null,
-  token: null
+  token: null,
+  selected_path: null,
+  selected_path_view: null
 })
 
 export function app_reducer(state = initial_state(), { payload, type }) {
