@@ -10,17 +10,17 @@ export const folder_path_actions = {
     payload: { folder_path }
   }),
 
-  get_folder_path_pending: ({ opts }) => ({
+  get_folder_path_pending: (opts) => ({
     type: folder_path_actions.GET_FOLDER_PATH_PENDING,
     payload: { opts }
   }),
 
-  get_folder_path_failed: ({ opts, error }) => ({
+  get_folder_path_failed: (opts, error) => ({
     type: folder_path_actions.GET_FOLDER_PATH_FAILED,
     payload: { opts, error }
   }),
 
-  get_folder_path_fulfilled: ({ opts, data }) => ({
+  get_folder_path_fulfilled: (opts, data) => ({
     type: folder_path_actions.GET_FOLDER_PATH_FULFILLED,
     payload: { opts, data }
   })

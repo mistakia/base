@@ -10,17 +10,17 @@ export const path_view_actions = {
     payload: { view_id, table_state }
   }),
 
-  get_path_views_pending: ({ opts }) => ({
+  get_path_views_pending: (opts) => ({
     type: path_view_actions.GET_PATH_VIEWS_PENDING,
     payload: { opts }
   }),
 
-  get_path_views_failed: ({ opts, error }) => ({
+  get_path_views_failed: (opts, error) => ({
     type: path_view_actions.GET_PATH_VIEWS_FAILED,
     payload: { opts, error }
   }),
 
-  get_path_views_fulfilled: ({ opts, data }) => ({
+  get_path_views_fulfilled: (opts, data) => ({
     type: path_view_actions.GET_PATH_VIEWS_FULFILLED,
     payload: { opts, data }
   })
