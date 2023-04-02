@@ -13,6 +13,9 @@ router.get('/:folder_path*', async (req, res) => {
     // ensure folder_path ends with a slash and starts with a slash
     const formatted_folder_path = `/${folder_path.replace(/^\/|\/$/g, '')}/`
 
+    // get user_id from formatted_folder_path `/<user_id>/<folder_path>/`
+    const user_id = formatted_folder_path.split('/')[1]
+
     const folder = await db('folders')
       .select(
         '*',
@@ -78,7 +81,91 @@ router.get('/:folder_path*', async (req, res) => {
       )
       .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
 
-    res.send({ folder, folders, tasks, physical_items, digital_items })
+    // direct descendent database tables
+    const database_tables = await db('database_tables')
+      .select(
+        '*',
+        db.raw(
+          'BIN_TO_UUID(database_tables.database_table_id, true) as database_table_id'
+        ),
+        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+      )
+      .join(
+        'database_table_folders',
+        'database_tables.database_table_id',
+        'database_table_folders.database_table_id'
+      )
+      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+
+    // add default databases to root folder
+    if (!folder.parent_folder_id) {
+      const default_database_tables = [
+        {
+          table_id: 'DEFAULT_TASKS',
+          table_name: 'tasks',
+          table_description: 'A default database for all tasks for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_PHYSICAL_ITEMS',
+          table_name: 'physical_items',
+          table_description:
+            'A default database for all physical items for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_DIGITAL_ITEMS',
+          table_name: 'digital_items',
+          table_description:
+            'A default database for all digital items for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_FOLDERS',
+          table_name: 'folders',
+          table_description: 'A default database for all folders for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_ACTIVITIES',
+          table_name: 'activities',
+          table_description:
+            'A default database for all activities for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_ORGANIZATIONS',
+          table_name: 'organizations',
+          table_description:
+            'A default database for all organizations for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_PERSONS',
+          table_name: 'persons',
+          table_description: 'A default database for all persons for the user',
+          user_id
+        },
+        {
+          table_id: 'DEFAULT_PHYSICAL_LOCATIONS',
+          table_name: 'physical_locations',
+          table_descriptions:
+            'A default database for all physical locations for the user',
+          user_id
+        }
+      ]
+
+      database_tables.push(...default_database_tables)
+    }
+
+    res.send({
+      folder,
+      folders,
+      tasks,
+      physical_items,
+      digital_items,
+      database_tables
+    })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

@@ -370,5 +370,35 @@ CREATE TABLE
     FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
+DROP TABLE
+  IF EXISTS `database_tables`;
+
+CREATE TABLE
+  `database_tables` (
+    `database_table_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
+    `table_name` varchar(255) NOT NULL,
+    `table_description` text,
+    `user_id` binary(16) NOT NULL,
+    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    check (
+      updated_at is null
+      or updated_at >= created_at
+    ),
+    PRIMARY KEY (`database_table_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+
+DROP TABLE
+  IF EXISTS `database_table_folders`;
+
+CREATE TABLE
+  `database_table_folders` (
+    `database_table_id` binary(16) NOT NULL,
+    `parent_folder_id` binary(16) NOT NULL,
+    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`database_table_id`) REFERENCES `database_tables` (`database_table_id`) ON DELETE CASCADE
+  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+
 SET
   FOREIGN_KEY_CHECKS = 1;
