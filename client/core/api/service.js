@@ -41,6 +41,10 @@ export const api = {
   get_folder_path({ folder_path }) {
     const url = `${API_URL}/folders${folder_path}`
     return { url }
+  },
+  get_database({ user_id, database_table_name }) {
+    const url = `${API_URL}/users/${user_id}/databases/${database_table_name}`
+    return { url }
   }
 }
 

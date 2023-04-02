@@ -7,8 +7,6 @@ router.get('/?', async (req, res) => {
   try {
     const { folder_path } = req.query
 
-    console.log(folder_path)
-
     // TODO
 
     res.status(200).send({})

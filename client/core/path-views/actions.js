@@ -1,9 +1,16 @@
 export const path_view_actions = {
   SET_DATABASE_VIEW_TABLE_STATE: 'SET_DATABASE_VIEW_TABLE_STATE',
 
+  CREATE_PATH_VIEW: 'CREATE_PATH_VIEW',
+
   GET_PATH_VIEWS_PENDING: 'GET_PATH_VIEWS_PENDING',
   GET_PATH_VIEWS_FAILED: 'GET_PATH_VIEWS_FAILED',
   GET_PATH_VIEWS_FULFILLED: 'GET_PATH_VIEWS_FULFILLED',
+
+  create_path_view: (path_view) => ({
+    type: path_view_actions.CREATE_PATH_VIEW,
+    payload: { path_view }
+  }),
 
   set_database_view_table_state: ({ view_id, table_state }) => ({
     type: path_view_actions.SET_DATABASE_VIEW_TABLE_STATE,

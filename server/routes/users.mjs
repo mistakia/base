@@ -7,6 +7,7 @@ import db from '#db'
 import config from '#config'
 import tasks from './tasks.mjs'
 import views from './views.mjs'
+import databases from './databases.mjs'
 
 const router = express.Router()
 
@@ -120,8 +121,8 @@ router.get('/:username', async (req, res) => {
   }
 })
 
+router.use('/:user_id/databases', databases)
 router.use('/:user_id/tasks', tasks)
-
 router.use('/:user_id/views', views)
 
 export default router

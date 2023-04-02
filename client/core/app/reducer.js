@@ -9,8 +9,8 @@ const initial_state = new Record({
   public_key: null,
   private_key: null,
   token: null,
-  selected_path: null,
-  selected_path_view: null
+  selected_path: {},
+  selected_path_view_id: null
 })
 
 export function app_reducer(state = initial_state(), { payload, type }) {
@@ -32,6 +32,16 @@ export function app_reducer(state = initial_state(), { payload, type }) {
         user_id: payload.data.user_id,
         username: payload.data.username,
         token: payload.data.token
+      })
+
+    case app_actions.SET_SELECTED_PATH:
+      return state.merge({
+        selected_path: payload
+      })
+
+    case app_actions.SET_SELECTED_PATH_VIEW_ID:
+      return state.merge({
+        selected_path_view_id: payload.view_id
       })
 
     default:

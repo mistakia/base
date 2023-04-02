@@ -2,6 +2,9 @@ export const app_actions = {
   APP_LOAD: 'APP_LOAD',
   APP_LOADED: 'APP_LOADED',
 
+  SET_SELECTED_PATH: 'SET_SELECTED_PATH',
+  SET_SELECTED_PATH_VIEW_ID: 'SET_SELECTED_PATH_VIEW_ID',
+
   LOAD_FROM_NEW_KEYPAIR: 'LOAD_FROM_NEW_KEYPAIR',
   LOAD_FROM_PRIVATE_KEY: 'LOAD_FROM_PRIVATE_KEY',
   LOAD_KEYS: 'LOAD_KEYS',
@@ -20,6 +23,22 @@ export const app_actions = {
 
   loaded: () => ({
     type: app_actions.APP_LOADED
+  }),
+
+  set_selected_path: ({ username, user_folder_path, database_table_name }) => ({
+    type: app_actions.SET_SELECTED_PATH,
+    payload: {
+      username,
+      user_folder_path,
+      database_table_name
+    }
+  }),
+
+  set_selected_path_view_id: ({ view_id }) => ({
+    type: app_actions.SET_SELECTED_PATH_VIEW_ID,
+    payload: {
+      view_id
+    }
   }),
 
   load_keys: ({ public_key, private_key }) => ({

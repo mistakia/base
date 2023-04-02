@@ -14,16 +14,21 @@ import './home.styl'
 export default function HomePage({
   load_user,
   users,
-  load_user_tasks,
   load_folder_path,
+  load_database,
+  set_selected_path,
   selected_path_view,
   set_database_view_table_state
 }) {
-  const { username, user_folder_path } = useParams()
+  const { username, user_folder_path, database_table_name } = useParams()
 
   React.useEffect(() => {
     load_user({ username })
   }, [])
+
+  React.useEffect(() => {
+    set_selected_path({ username, user_folder_path, database_table_name })
+  }, [username, user_folder_path, database_table_name])
 
   const user = users.get(username, new Map())
   const not_found = user.get('is_loaded') && !user.get('user_id')
@@ -38,9 +43,12 @@ export default function HomePage({
   const user_id = user.get('user_id')
   React.useEffect(() => {
     if (user_id) {
-      const folder_path = `/${user_id}/${user_folder_path || ''}`
-      load_folder_path({ folder_path })
-      load_user_tasks({ user_id })
+      if (database_table_name) {
+        load_database({ user_id, database_table_name })
+      } else {
+        const folder_path = `/${user_id}/${user_folder_path || ''}`
+        load_folder_path({ folder_path })
+      }
     }
   }, [user_id])
 
@@ -63,7 +71,7 @@ export default function HomePage({
           data={[]}
           on_table_change={on_table_change}
           table_state={table_state}
-          all_columns={selected_path_view.get('all_table_columns')}
+          all_columns={selected_path_view.get('all_columns')}
         />
       )}
       <CreateTask />
@@ -73,9 +81,11 @@ export default function HomePage({
 
 HomePage.propTypes = {
   load_user: PropTypes.func,
+  load_database: PropTypes.func,
   users: ImmutablePropTypes.map,
   load_user_tasks: PropTypes.func,
   load_folder_path: PropTypes.func,
   selected_path_view: ImmutablePropTypes.map,
+  set_selected_path: PropTypes.func,
   set_database_view_table_state: PropTypes.func
 }

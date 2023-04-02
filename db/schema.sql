@@ -386,6 +386,7 @@ CREATE TABLE
       or updated_at >= created_at
     ),
     PRIMARY KEY (`database_table_id`),
+    UNIQUE KEY `table_name` (`table_name`, `user_id`),
     FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 

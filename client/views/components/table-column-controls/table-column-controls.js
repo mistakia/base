@@ -28,7 +28,7 @@ export default function TableColumnControls({
   const shown_column_items = []
   const hidden_column_items = []
 
-  for (const column of table_state.columns) {
+  for (const column of table_state.get('columns', [])) {
     if (
       filter_text_input &&
       !fuzzy_match(filter_text_input, column.accessorKey)
@@ -134,7 +134,7 @@ export default function TableColumnControls({
 }
 
 TableColumnControls.propTypes = {
-  table_state: ImmutablePropTypes.record,
+  table_state: ImmutablePropTypes.map,
   all_columns: ImmutablePropTypes.list,
   set_column_visible: PropTypes.func,
   set_column_hidden: PropTypes.func,

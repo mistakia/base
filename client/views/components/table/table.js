@@ -49,7 +49,7 @@ export default function Table({
 
     let is_new = true
 
-    for (const sort of table_state.sorting) {
+    for (const sort of table_state.get('sorting', [])) {
       if (sort.id === new_sort_item.id) {
         is_new = false
         const is_same = sort.desc === new_sort_item.desc
@@ -88,7 +88,7 @@ export default function Table({
   const set_column_hidden = (accessorKey) => {
     const columns = []
 
-    for (const column of table_state.columns) {
+    for (const column of table_state.get('columns', [])) {
       if (column.accessorKey === accessorKey) {
         continue
       }
@@ -101,7 +101,7 @@ export default function Table({
   const set_column_visible = (column) => {
     on_table_change({
       ...table_state.toJS(),
-      columns: [...table_state.columns, column]
+      columns: [...table_state.get('columns', []), column]
     })
   }
 
@@ -114,7 +114,7 @@ export default function Table({
       column_helper.display({
         id: 'column_index'
       }),
-      ...table_state.columns,
+      ...table_state.get('columns', []),
       column_helper.display({
         id: 'add_column_action'
       })
@@ -153,8 +153,9 @@ export default function Table({
 
   const state_items = []
 
-  if (table_state.sorting) {
-    for (const sort of table_state.sorting) {
+  const sorting = table_state.get('sorting', [])
+  if (sorting.length) {
+    for (const sort of sorting) {
       // get lable from column
       state_items.push(
         <div key={sort.id} className='state-item'>
@@ -239,6 +240,6 @@ export default function Table({
 Table.propTypes = {
   data: PropTypes.array,
   on_table_change: PropTypes.func,
-  table_state: ImmutablePropTypes.record,
+  table_state: ImmutablePropTypes.map,
   all_columns: ImmutablePropTypes.list
 }
