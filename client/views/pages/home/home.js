@@ -18,7 +18,8 @@ export default function HomePage({
   load_database,
   set_selected_path,
   selected_path_view,
-  set_database_view_table_state
+  set_database_view_table_state,
+  database_table_items
 }) {
   const { username, user_folder_path, database_table_name } = useParams()
 
@@ -68,13 +69,12 @@ export default function HomePage({
 
   const table_state = selected_path_view.get('table_state')
 
-  // TODO: need to figure out data for database views
   return (
     <Container maxWidth='md' className='home__container'>
       <div>Username: {username}</div>
       {table_state && (
         <Table
-          data={[]}
+          data={database_table_items.toJS()}
           on_table_change={on_table_change}
           table_state={table_state}
           all_columns={selected_path_view.get('all_columns')}
@@ -93,5 +93,6 @@ HomePage.propTypes = {
   load_folder_path: PropTypes.func,
   selected_path_view: ImmutablePropTypes.map,
   set_selected_path: PropTypes.func,
-  set_database_view_table_state: PropTypes.func
+  set_database_view_table_state: PropTypes.func,
+  database_table_items: ImmutablePropTypes.list
 }

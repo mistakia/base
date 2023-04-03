@@ -17,10 +17,13 @@ export function* load_database_items() {
   const table_state = selected_path_view.get('table_state', new Map())
   const params = table_state.toJS()
   if (params.columns) {
-    params.columns = params.columns.map(({ column_name, table_name }) => ({
-      column_name,
-      table_name
-    }))
+    params.columns = params.columns.map(
+      ({ column_name, table_name, data_type }) => ({
+        column_name,
+        table_name,
+        data_type
+      })
+    )
   }
   yield call(get_database_items, { user_id, database_table_name, ...params })
 }

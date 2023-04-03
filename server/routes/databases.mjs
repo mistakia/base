@@ -5,6 +5,7 @@ import * as table_constants from '/Users/trashman/Projects/react-table/src/const
 
 import db from '#db'
 import { constants } from '#utils'
+import config from '#config'
 
 const router = express.Router({ mergeParams: true })
 
@@ -42,7 +43,11 @@ router.get('/:table_name', async (req, res) => {
         'table_name as table_name',
         'data_type as data_type'
       )
-      .where('table_name', formatted_table_name)
+      .where({
+        table_name: formatted_table_name,
+        table_schema: config.mysql.connection.database
+      })
+      .orderBy('ordinal_position', 'asc')
 
     const formatted_table_columns = database_table_columns.map((column) => ({
       ...column,
@@ -118,7 +123,18 @@ router.get('/:table_name/items', async (req, res) => {
       for (const column of columns) {
         // TODO if we haven't joined this table yet, join it
 
-        database_query.select(`${column.table_name}.${column.column_name}`)
+        if (
+          Number(column.data_type) ===
+          table_constants.TABLE_DATA_TYPES.BINARY_UUID
+        ) {
+          database_query.select(
+            db.raw(
+              `BIN_TO_UUID(${column.table_name}.${column.column_name}, true) as ${column.column_name}`
+            )
+          )
+        } else {
+          database_query.select(`${column.table_name}.${column.column_name}`)
+        }
       }
     }
 
