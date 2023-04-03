@@ -1,6 +1,6 @@
 /* global AbortController, fetch */
 
-// import queryString from 'query-string'
+import qs from 'qs'
 import merge from 'merge-options'
 
 import { API_URL } from '@core/constants'
@@ -44,6 +44,12 @@ export const api = {
   },
   get_database({ user_id, database_table_name }) {
     const url = `${API_URL}/users/${user_id}/databases/${database_table_name}`
+    return { url }
+  },
+  get_database_items({ user_id, database_table_name, ...params }) {
+    const url = `${API_URL}/users/${user_id}/databases/${database_table_name}/items?${qs.stringify(
+      params
+    )}`
     return { url }
   }
 }

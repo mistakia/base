@@ -25,9 +25,15 @@ export const app_actions = {
     type: app_actions.APP_LOADED
   }),
 
-  set_selected_path: ({ username, user_folder_path, database_table_name }) => ({
+  set_selected_path: ({
+    user_id,
+    username,
+    user_folder_path,
+    database_table_name
+  }) => ({
     type: app_actions.SET_SELECTED_PATH,
     payload: {
+      user_id,
       username,
       user_folder_path,
       database_table_name

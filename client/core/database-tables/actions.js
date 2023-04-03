@@ -5,6 +5,10 @@ export const database_table_actions = {
   GET_DATABASE_FAILED: 'GET_DATABASE_FAILED',
   GET_DATABASE_FULFILLED: 'GET_DATABASE_FULFILLED',
 
+  GET_DATABASE_ITEMS_PENDING: 'GET_DATABASE_ITEMS_PENDING',
+  GET_DATABASE_ITEMS_FAILED: 'GET_DATABASE_ITEMS_FAILED',
+  GET_DATABASE_ITEMS_FULFILLED: 'GET_DATABASE_ITEMS_FULFILLED',
+
   load_database: ({ user_id, database_table_name }) => ({
     type: database_table_actions.LOAD_DATABASE,
     payload: {
@@ -34,6 +38,29 @@ export const database_table_actions = {
       opts,
       data
     }
+  }),
+
+  get_database_items_pending: (opts) => ({
+    type: database_table_actions.GET_DATABASE_ITEMS_PENDING,
+    payload: {
+      opts
+    }
+  }),
+
+  get_database_items_failed: (opts, error) => ({
+    type: database_table_actions.GET_DATABASE_ITEMS_FAILED,
+    payload: {
+      opts,
+      error
+    }
+  }),
+
+  get_database_items_fulfilled: (opts, data) => ({
+    type: database_table_actions.GET_DATABASE_ITEMS_FULFILLED,
+    payload: {
+      opts,
+      data
+    }
   })
 }
 
@@ -41,4 +68,10 @@ export const get_database_request_actions = {
   pending: database_table_actions.get_database_pending,
   failed: database_table_actions.get_database_failed,
   fulfilled: database_table_actions.get_database_fulfilled
+}
+
+export const get_database_items_request_actions = {
+  pending: database_table_actions.get_database_items_pending,
+  failed: database_table_actions.get_database_items_failed,
+  fulfilled: database_table_actions.get_database_items_fulfilled
 }

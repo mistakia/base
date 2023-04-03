@@ -13,7 +13,10 @@ import {
 } from '@core/app/actions'
 import { get_path_views_request_actions } from '@core/path-views/actions'
 import { get_folder_path_request_actions } from '@core/folder-paths/actions'
-import { get_database_request_actions } from '@core/database-tables/actions'
+import {
+  get_database_request_actions,
+  get_database_items_request_actions
+} from '@core/database-tables/actions'
 
 function* fetchAPI(apiFunction, actions, opts = {}) {
   const { abort, request } = api_request(apiFunction, opts)
@@ -77,4 +80,9 @@ export const get_database = fetch.bind(
   null,
   api.get_database,
   get_database_request_actions
+)
+export const get_database_items = fetch.bind(
+  null,
+  api.get_database_items,
+  get_database_items_request_actions
 )

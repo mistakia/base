@@ -2,12 +2,27 @@ import { Map, List } from 'immutable'
 import { call, takeLatest, fork, select, put } from 'redux-saga/effects'
 
 import { get_app, app_actions } from '@core/app'
-import { get_database } from '@core/api'
-import { path_view_actions } from '@core/path-views'
+import { get_database, get_database_items } from '@core/api'
+import { path_view_actions, get_selected_path_view } from '@core/path-views'
 import { database_table_actions } from './actions'
 
 export function* load_database({ payload }) {
   yield call(get_database, payload)
+}
+
+export function* load_database_items() {
+  const { selected_path } = yield select(get_app)
+  const { user_id, database_table_name } = selected_path
+  const selected_path_view = yield select(get_selected_path_view)
+  const table_state = selected_path_view.get('table_state', new Map())
+  const params = table_state.toJS()
+  if (params.columns) {
+    params.columns = params.columns.map(({ column_name, table_name }) => ({
+      column_name,
+      table_name
+    }))
+  }
+  yield call(get_database_items, { user_id, database_table_name, ...params })
 }
 
 export function* set_database_default_view({ payload }) {
@@ -41,6 +56,9 @@ export function* set_database_default_view({ payload }) {
         view_id: default_path_view.view_id
       })
     )
+
+    // load database items
+    yield call(load_database_items)
   }
 }
 

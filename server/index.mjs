@@ -11,6 +11,7 @@ import debug from 'debug'
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import serveStatic from 'serve-static'
+import qs from 'qs'
 
 import wss from '#server/websocket.mjs'
 import config from '#config'
@@ -22,6 +23,10 @@ const options = extend(defaults, config)
 const log = debug('api')
 const api = express()
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+api.set('query parser', function (str) {
+  return qs.parse(str, { arrayLimit: 1000 })
+})
 
 api.locals.log = log
 

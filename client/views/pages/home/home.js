@@ -43,6 +43,12 @@ export default function HomePage({
   const user_id = user.get('user_id')
   React.useEffect(() => {
     if (user_id) {
+      set_selected_path({
+        user_id,
+        username,
+        user_folder_path,
+        database_table_name
+      })
       if (database_table_name) {
         load_database({ user_id, database_table_name })
       } else {

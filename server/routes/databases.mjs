@@ -59,7 +59,7 @@ router.get('/:table_name', async (req, res) => {
   }
 })
 
-router.get('/:table_name/query', async (req, res) => {
+router.get('/:table_name/items', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { table_name, user_id } = req.params

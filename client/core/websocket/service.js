@@ -1,6 +1,6 @@
 /* global WebSocket, setInterval, clearInterval */
 
-import queryString from 'query-string'
+import qs from 'qs'
 
 import { WEBSOCKET_URL } from '@core/constants'
 import StoreRegistry from '@core/store-registry'
@@ -19,7 +19,7 @@ const keepalive = () => {
 export const open_websocket = (params) => {
   if (ws && ws.close) ws.close()
   console.log('connecting to websocket...')
-  ws = new WebSocket(`${WEBSOCKET_URL}?${queryString.stringify(params)}`)
+  ws = new WebSocket(`${WEBSOCKET_URL}?${qs.stringify(params)}`)
 
   ws.onopen = () => {
     const store = StoreRegistry.getStore()
