@@ -168,7 +168,7 @@ const base = (options) => ({
       '@emotion/react': path.resolve(
         __dirname,
         '../node_modules/@emotion/react'
-      ),
+      )
     }
   },
   devtool: options.devtool,

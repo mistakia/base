@@ -1,6 +1,8 @@
 import express from 'express'
 import { toBinaryUUID } from 'binary-uuid'
 
+import * as table_constants from '/Users/trashman/Projects/react-table/src/constants.mjs'
+
 import db from '#db'
 import { constants } from '#utils'
 
@@ -42,9 +44,14 @@ router.get('/:table_name', async (req, res) => {
       )
       .where('table_name', formatted_table_name)
 
+    const formatted_table_columns = database_table_columns.map((column) => ({
+      ...column,
+      data_type: table_constants.get_data_type(column.data_type)
+    }))
+
     res.status(200).send({
       database_table,
-      database_table_columns
+      database_table_columns: formatted_table_columns
     })
   } catch (error) {
     log(error)
