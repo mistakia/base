@@ -11,7 +11,7 @@ export default async function () {
   await db.raw('SET FOREIGN_KEY_CHECKS = 0')
 
   // truncate all tables
-  await Promise.all(tables.map((table) => db(table.TABLE_NAME).delete()))
+  await Promise.all(tables.map((table) => db(table.table_name).delete()))
 
   // enable foreign key checks
   await db.raw('SET FOREIGN_KEY_CHECKS = 1')

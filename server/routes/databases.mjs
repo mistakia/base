@@ -35,7 +35,11 @@ router.get('/:table_name', async (req, res) => {
       ? table_name
       : `${user_id}_${table_name}`
     const database_table_columns = await db('information_schema.columns')
-      .select('column_name', 'table_name', 'data_type')
+      .select(
+        'column_name as column_name',
+        'table_name as table_name',
+        'data_type as data_type'
+      )
       .where('table_name', formatted_table_name)
 
     res.status(200).send({

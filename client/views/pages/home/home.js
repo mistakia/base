@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom'
 // import Grid from '@mui/material/Grid'
 import Container from '@mui/material/Container'
 
-import Table from '@components/table/table'
+import Table from '/Users/trashman/Projects/react-table/index.js'
 import CreateTask from '@components/create-task'
 
 import './home.styl'

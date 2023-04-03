@@ -18,11 +18,11 @@ export function* set_database_default_view({ payload }) {
   ) {
     // create default view for database
     const columns = payload.data.database_table_columns.map((column) => ({
-      accessorKey: column.COLUMN_NAME,
-      header_label: column.COLUMN_NAME,
-      column_name: column.COLUMN_NAME,
-      table_name: column.TABLE_NAME,
-      data_type: column.DATA_TYPE
+      accessorKey: column.column_name,
+      header_label: column.column_name,
+      column_name: column.column_name,
+      table_name: column.table_name,
+      data_type: column.data_type
     }))
 
     const default_path_view = {
