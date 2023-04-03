@@ -14,10 +14,6 @@ const POST = (data) => ({
 })
 
 export const api = {
-  get_tasks({ user_id }) {
-    const url = `${API_URL}/users/${user_id}/tasks`
-    return { url }
-  },
   get_user({ username }) {
     const url = `${API_URL}/users/${username}`
     return { url }

@@ -4,24 +4,9 @@ import ed25519 from '@trashman/ed25519-blake2b'
 
 import db from '#db'
 
-import { get_tasks, create_task } from '#utils'
+import { create_task } from '#utils'
 
 const router = express.Router({ mergeParams: true })
-
-router.get('/?', async (req, res) => {
-  const { log } = req.app.locals
-  try {
-    const { user_id } = req.params
-    const tasks = await get_tasks({
-      user_id: toBinaryUUID(user_id),
-      ...req.query
-    })
-    res.status(200).send(tasks)
-  } catch (error) {
-    log(error)
-    res.status(500).send({ error: error.message })
-  }
-})
 
 router.post('/?', async (req, res) => {
   const { log } = req.app.locals
@@ -50,18 +35,6 @@ router.post('/?', async (req, res) => {
     const task_id = await create_task({ ...task, user_id })
     const task_result = await db('tasks').where('task_id', task_id).first()
     res.status(200).send(task_result)
-  } catch (error) {
-    log(error)
-    res.status(500).send({ error: error.message })
-  }
-})
-
-router.get('/:task_id', async (req, res) => {
-  const { log } = req.app.locals
-  try {
-    const { task_id } = req.params
-    const task = await db('tasks').where('task_id', task_id).first()
-    res.status(200).send(task)
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

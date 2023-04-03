@@ -7,7 +7,7 @@ router.get('/?', async (req, res) => {
   try {
     const { folder_path } = req.query
 
-    // TODO
+    // TODO finish this endpoint response
 
     res.status(200).send({})
   } catch (error) {

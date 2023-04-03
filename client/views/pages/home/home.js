@@ -89,7 +89,6 @@ HomePage.propTypes = {
   load_user: PropTypes.func,
   load_database: PropTypes.func,
   users: ImmutablePropTypes.map,
-  load_user_tasks: PropTypes.func,
   load_folder_path: PropTypes.func,
   selected_path_view: ImmutablePropTypes.map,
   set_selected_path: PropTypes.func,
