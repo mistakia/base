@@ -292,10 +292,9 @@ router.get('/:table_name/items', async (req, res) => {
       }
 
       for (const sort of sorting) {
+        database_query.orderByRaw(`ISNULL(${sort.id})`)
         sort.desc = sort.desc === 'true'
-        database_query.orderByRaw(
-          `${sort.id} ${sort.desc ? 'desc' : 'asc'} NULLS LAST`
-        )
+        database_query.orderByRaw(`${sort.id} ${sort.desc ? 'desc' : 'asc'}`)
       }
     }
 
