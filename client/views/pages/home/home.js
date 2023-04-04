@@ -4,7 +4,6 @@ import ImmutablePropTypes from 'react-immutable-proptypes'
 import PropTypes from 'prop-types'
 import { useParams } from 'react-router-dom'
 // import Grid from '@mui/material/Grid'
-import Container from '@mui/material/Container'
 
 import Table from '/Users/trashman/Projects/react-table/index.js'
 import CreateTask from '@components/create-task'
@@ -61,17 +60,16 @@ export default function HomePage({
   const not_found = user.get('is_loaded') && !user.get('user_id')
   if (not_found) {
     return (
-      <Container maxWidth='md' className='home__container'>
+      <div className='home-container'>
         <div>User [{username}] not found</div>
-      </Container>
+      </div>
     )
   }
 
   const table_state = selected_path_view.get('table_state')
 
   return (
-    <Container maxWidth='md' className='home__container'>
-      <div>Username: {username}</div>
+    <div className='home-container'>
       {table_state && (
         <Table
           data={database_table_items.toJS()}
@@ -86,7 +84,7 @@ export default function HomePage({
         />
       )}
       <CreateTask />
-    </Container>
+    </div>
   )
 }
 
