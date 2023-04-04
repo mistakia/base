@@ -401,5 +401,26 @@ CREATE TABLE
     FOREIGN KEY (`database_table_id`) REFERENCES `database_tables` (`database_table_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
+DROP TABLE
+  IF EXISTS `database_table_views`;
+
+CREATE TABLE
+  `database_table_views` (
+    `view_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
+    `view_name` varchar(30) NOT NULL,
+    `table_name` varchar(255) NOT NULL,
+    `table_state` json DEFAULT NULL,
+    `user_id` binary(16) NOT NULL,
+    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    check (
+      updated_at is null
+      or updated_at >= created_at
+    ),
+    PRIMARY KEY (`view_id`),
+    UNIQUE KEY `table_view` (`view_name`, `table_name`, `user_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+
 SET
   FOREIGN_KEY_CHECKS = 1;

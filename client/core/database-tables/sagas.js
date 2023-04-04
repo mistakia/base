@@ -32,7 +32,9 @@ export function* set_database_default_view({ payload }) {
   const { selected_path } = yield select(get_app)
 
   if (
-    selected_path.database_table_name === payload.data.database_table.table_name
+    selected_path.database_table_name ===
+      payload.data.database_table.table_name &&
+    payload.data.database_table_views.length === 0
   ) {
     // create default view for database
     const columns = payload.data.database_table_columns.map((column) => ({
@@ -45,6 +47,7 @@ export function* set_database_default_view({ payload }) {
 
     const default_path_view = {
       view_id: `${payload.data.database_table.table_id}_VIEW`,
+      view_name: 'Default',
       table_state: new Map({
         columns,
         sorting: []

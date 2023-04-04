@@ -32,15 +32,6 @@ export default function HomePage({
   }, [username, user_folder_path, database_table_name])
 
   const user = users.get(username, new Map())
-  const not_found = user.get('is_loaded') && !user.get('user_id')
-
-  const on_table_change = (table_state) => {
-    set_database_view_table_state({
-      view_id: selected_path_view.view_id,
-      table_state
-    })
-  }
-
   const user_id = user.get('user_id')
   React.useEffect(() => {
     if (user_id) {
@@ -59,6 +50,14 @@ export default function HomePage({
     }
   }, [user_id])
 
+  const on_table_change = (table_state) => {
+    set_database_view_table_state({
+      view_id: selected_path_view.view_id,
+      table_state
+    })
+  }
+
+  const not_found = user.get('is_loaded') && !user.get('user_id')
   if (not_found) {
     return (
       <Container maxWidth='md' className='home__container'>
