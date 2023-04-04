@@ -9,7 +9,6 @@ import {
   post_user_session_request_actions
 } from '@core/app/actions'
 import {
-  get_path_views_request_actions,
   put_database_view_request_actions,
   post_database_views_request_actions
 } from '@core/path-views/actions'
@@ -61,11 +60,6 @@ export const post_user_task = fetch.bind(
   null,
   api.post_user_task,
   post_user_task_request_actions
-)
-export const get_path_views = fetch.bind(
-  null,
-  api.get_path_views,
-  get_path_views_request_actions
 )
 export const get_folder_path = fetch.bind(
   null,
