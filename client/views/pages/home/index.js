@@ -3,7 +3,11 @@ import { createSelector } from 'reselect'
 
 import { user_actions, get_users } from '@core/users'
 import { app_actions } from '@core/app'
-import { get_selected_path_view, path_view_actions } from '@core/path-views'
+import {
+  get_selected_path_view,
+  get_selected_path_views,
+  path_view_actions
+} from '@core/path-views'
 import { folder_path_actions } from '@core/folder-paths'
 import {
   database_table_actions,
@@ -15,10 +19,12 @@ import HomePage from './home'
 const mapStateToProps = createSelector(
   get_users,
   get_selected_path_view,
+  get_selected_path_views,
   get_selected_path_database_table_items,
-  (users, selected_path_view, database_table_items) => ({
+  (users, selected_path_view, selected_path_views, database_table_items) => ({
     users,
     selected_path_view,
+    selected_path_views,
     database_table_items
   })
 )

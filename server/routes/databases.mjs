@@ -43,6 +43,14 @@ const view_name_schema = {
 }
 const view_name_validator = v.compile(view_name_schema)
 
+const view_description_schema = {
+  $$root: true,
+  type: 'string',
+  min: 1,
+  max: 400
+}
+const view_description_validator = v.compile(view_description_schema)
+
 const table_state_schema = {
   sort: sort_schema,
   columns: columns_schema
@@ -101,13 +109,21 @@ router.get('/:table_name', async (req, res) => {
 
     const formatted_table_columns = database_table_columns.map((column) => ({
       ...column,
+      accessorKey: column.column_name,
+      header_label: column.column_name,
       data_type: table_constants.get_data_type(column.data_type)
     }))
 
-    const database_table_views = await db('database_table_views').where({
-      table_name: formatted_table_name,
-      user_id: toBinaryUUID(user_id)
-    })
+    const database_table_views = await db('database_table_views')
+      .select(
+        '*',
+        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
+        db.raw('BIN_TO_UUID(view_id, true) as view_id')
+      )
+      .where({
+        table_name: formatted_table_name,
+        user_id: toBinaryUUID(user_id)
+      })
 
     res.status(200).send({
       database_table,
@@ -127,10 +143,14 @@ router.post('/:table_name/views', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { table_name, user_id } = req.params
-    const { view_name, table_state } = req.body
+    const { view_name, table_state, view_description } = req.body
 
     if (!view_name_validator(view_name)) {
       return res.status(400).send({ error: 'invalid view_name' })
+    }
+
+    if (!view_description_validator(view_description)) {
+      return res.status(400).send({ error: 'invalid view_description' })
     }
 
     if (!table_state_validator(table_state)) {
@@ -148,12 +168,18 @@ router.post('/:table_name/views', async (req, res) => {
 
     await db('database_table_views').insert({
       view_name,
-      table_state,
+      view_description,
+      table_state: JSON.stringify(table_state),
       table_name: formatted_table_name,
       user_id: toBinaryUUID(user_id)
     })
 
     const view = await db('database_table_views')
+      .select(
+        '*',
+        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
+        db.raw('BIN_TO_UUID(view_id, true) as view_id')
+      )
       .where({
         table_name: formatted_table_name,
         user_id: toBinaryUUID(user_id)
@@ -167,14 +193,18 @@ router.post('/:table_name/views', async (req, res) => {
   }
 })
 
-router.post('/:table_name/views/:view_id', async (req, res) => {
+router.put('/:table_name/views/:view_id', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { table_name, user_id, view_id } = req.params
-    const { view_name, table_state } = req.body
+    const { view_name, table_state, view_description } = req.body
 
     if (!view_name_validator(view_name)) {
       return res.status(400).send({ error: 'invalid view_name' })
+    }
+
+    if (!view_description_validator(view_description)) {
+      return res.status(400).send({ error: 'invalid view_description' })
     }
 
     if (!table_state_validator(table_state)) {
@@ -206,17 +236,23 @@ router.post('/:table_name/views/:view_id', async (req, res) => {
       .where({ view_id: toBinaryUUID(view_id) })
       .update({
         view_name,
-        table_state
+        view_description,
+        table_state: JSON.stringify(table_state)
       })
 
-    const view = await db('database_table_views')
+    const updated_view = await db('database_table_views')
+      .select(
+        '*',
+        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
+        db.raw('BIN_TO_UUID(view_id, true) as view_id')
+      )
       .where({
         table_name: formatted_table_name,
         user_id: toBinaryUUID(user_id)
       })
       .first()
 
-    res.status(200).send(view)
+    res.status(200).send(updated_view)
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

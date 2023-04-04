@@ -408,6 +408,7 @@ CREATE TABLE
   `database_table_views` (
     `view_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `view_name` varchar(30) NOT NULL,
+    `view_description` text DEFAULT NULL,
     `table_name` varchar(255) NOT NULL,
     `table_state` json DEFAULT NULL,
     `user_id` binary(16) NOT NULL,

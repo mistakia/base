@@ -13,6 +13,14 @@ const POST = (data) => ({
   }
 })
 
+const PUT = (data) => ({
+  method: 'PUT',
+  body: JSON.stringify(data),
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
 export const api = {
   get_user({ username }) {
     const url = `${API_URL}/users/${username}`
@@ -47,6 +55,14 @@ export const api = {
       params
     )}`
     return { url }
+  },
+  put_database_view({ user_id, table_name, view_id, ...params }) {
+    const url = `${API_URL}/users/${user_id}/databases/${table_name}/views/${view_id}`
+    return { url, ...PUT(params) }
+  },
+  post_database_views({ user_id, table_name, ...params }) {
+    const url = `${API_URL}/users/${user_id}/databases/${table_name}/views`
+    return { url, ...POST(params) }
   }
 }
 

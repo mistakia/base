@@ -6,5 +6,7 @@ export {
   get_path_views,
   get_folder_path,
   get_database,
-  get_database_items
+  get_database_items,
+  put_database_view,
+  post_database_views
 } from './sagas'

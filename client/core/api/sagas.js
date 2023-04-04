@@ -8,7 +8,11 @@ import {
   post_user_request_actions,
   post_user_session_request_actions
 } from '@core/app/actions'
-import { get_path_views_request_actions } from '@core/path-views/actions'
+import {
+  get_path_views_request_actions,
+  put_database_view_request_actions,
+  post_database_views_request_actions
+} from '@core/path-views/actions'
 import { get_folder_path_request_actions } from '@core/folder-paths/actions'
 import {
   get_database_request_actions,
@@ -77,4 +81,14 @@ export const get_database_items = fetch.bind(
   null,
   api.get_database_items,
   get_database_items_request_actions
+)
+export const put_database_view = fetch.bind(
+  null,
+  api.put_database_view,
+  put_database_view_request_actions
+)
+export const post_database_views = fetch.bind(
+  null,
+  api.post_database_views,
+  post_database_views_request_actions
 )

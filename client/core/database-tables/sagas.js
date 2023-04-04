@@ -3,7 +3,11 @@ import { call, takeLatest, fork, select, put } from 'redux-saga/effects'
 
 import { get_app, app_actions } from '@core/app'
 import { get_database, get_database_items } from '@core/api'
-import { path_view_actions, get_selected_path_view } from '@core/path-views'
+import {
+  path_view_actions,
+  get_selected_path_view,
+  get_selected_path_views
+} from '@core/path-views'
 import { database_table_actions } from './actions'
 
 export function* load_database({ payload }) {
@@ -48,6 +52,8 @@ export function* set_database_default_view({ payload }) {
     const default_path_view = {
       view_id: `${payload.data.database_table.table_id}_VIEW`,
       view_name: 'Default',
+      view_description: `default generated view for ${payload.data.database_table.table_name} table showing all columns and no filters`,
+      table_name: payload.data.database_table.table_name,
       table_state: new Map({
         columns,
         sorting: []
@@ -55,11 +61,16 @@ export function* set_database_default_view({ payload }) {
       all_columns: new List(payload.data.database_table_columns)
     }
     yield put(path_view_actions.create_path_view(default_path_view))
+  }
 
+  const views = yield select(get_selected_path_views)
+  const first_view = views.first()
+
+  if (first_view) {
     // set selected view to default view
     yield put(
       app_actions.set_selected_path_view_id({
-        view_id: default_path_view.view_id
+        view_id: first_view.get('view_id')
       })
     )
 
