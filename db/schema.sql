@@ -85,8 +85,8 @@ CREATE TABLE
         'Blocked'
       )
     ) COMMENT 'status of task',
-    `deadline_text_input` text DEFAULT NULL COMMENT 'user text input for deadline',
-    `deadline` int (11) DEFAULT NULL,
+    `start_by` int (11) DEFAULT NULL,
+    `finish_by` int (11) DEFAULT NULL,
     `estimated_total_duration` int (11) DEFAULT NULL,
     `estimated_preparation_duration` int (11) DEFAULT NULL,
     `estimated_execution_duration` int (11) DEFAULT NULL,
@@ -124,8 +124,8 @@ CREATE TABLE
       or estimated_total_duration >= estimated_preparation_duration + estimated_execution_duration + estimated_cleanup_duration
     ),
     check (
-      deadline is null
-      or deadline >= created_at
+      finish_by is null
+      or finish_by >= created_at
     ),
     PRIMARY KEY (`task_id`),
     FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE

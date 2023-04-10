@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { useParams } from 'react-router-dom'
 // import Grid from '@mui/material/Grid'
 
-import Table from '/Users/trashman/Projects/react-table/index.js'
+import Table from '../../../../../react-table/index.js'
 import CreateTask from '@components/create-task'
 
 import './home.styl'

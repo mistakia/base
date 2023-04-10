@@ -2,7 +2,7 @@ import express from 'express'
 import { toBinaryUUID } from 'binary-uuid'
 import Validator from 'fastest-validator'
 
-import * as table_constants from '/Users/trashman/Projects/react-table/src/constants.mjs'
+import * as table_constants from '../../../react-table/src/constants.mjs'
 
 import db from '#db'
 import { constants } from '#utils'

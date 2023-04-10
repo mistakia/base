@@ -161,8 +161,6 @@ const base = (options) => ({
     extensions: ['.js', '.jsx', '.react.js'],
     mainFields: ['browser', 'jsnext:main', 'main'],
     alias: {
-      crypto: 'crypto-browserify',
-      stream: 'stream-browserify',
       react: path.resolve(__dirname, '../node_modules/react'),
       'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
       '@emotion/react': path.resolve(
