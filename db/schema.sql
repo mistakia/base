@@ -10,8 +10,8 @@ CREATE TABLE
     `public_key` varchar(64) NOT NULL COMMENT 'public key of user (64 hex characters)',
     `username` varchar(255) NOT NULL,
     `email` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     check (
       updated_at is null
       or updated_at >= created_at
@@ -20,15 +20,6 @@ CREATE TABLE
     UNIQUE KEY `public_key` (`public_key`),
     UNIQUE KEY `username` (`username`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP
-  TRIGGER IF EXISTS `update_users_updated_at`;
-
-CREATE TRIGGER `update_users_updated_at` BEFORE
-UPDATE
-  ON `users` FOR EACH ROW
-SET
-  NEW.updated_at = (UNIX_TIMESTAMP ());
 
 DROP TABLE
   IF EXISTS `folders`;
@@ -41,8 +32,8 @@ CREATE TABLE
     `parent_folder_id` binary(16) DEFAULT NULL,
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `archived_at` timestamp DEFAULT NULL,
     check (
       updated_at is null
@@ -57,15 +48,6 @@ CREATE TABLE
     FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
     FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP
-  TRIGGER IF EXISTS `update_folders_updated_at`;
-
-CREATE TRIGGER `update_folders_updated_at` BEFORE
-UPDATE
-  ON `folders` FOR EACH ROW
-SET
-  NEW.updated_at = (UNIX_TIMESTAMP ());
 
 DROP TABLE
   IF EXISTS `tasks`;
@@ -96,8 +78,8 @@ CREATE TABLE
     `planned_finish` timestamp DEFAULT NULL,
     `started_at` timestamp DEFAULT NULL,
     `finished_at` timestamp DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `user_id` binary(16) NOT NULL,
     check (
       planned_start is null
@@ -172,7 +154,7 @@ CREATE TABLE
     `activity_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT NULL,
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`activity_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -196,7 +178,7 @@ CREATE TABLE
     `name` varchar(255) NOT NULL,
     `website_url` varchar(255) DEFAULT NULL,
     `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`organization_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -222,7 +204,7 @@ CREATE TABLE
     `email` varchar(255) DEFAULT NULL,
     `mobile_phone` varchar(255) DEFAULT NULL,
     `website_url` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`person_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -256,8 +238,8 @@ CREATE TABLE
     `physical_item_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `location_id` binary(16) DEFAULT NULL,
     `serial_number` varchar(255) DEFAULT NULL,
     `model_number` varchar(255) DEFAULT NULL,
@@ -343,7 +325,7 @@ CREATE TABLE
     `markdown` text DEFAULT NULL,
     `html` text DEFAULT NULL,
     `href` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT NULL,
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`digital_item_id`),
     UNIQUE KEY `ipfs_hash` (`ipfs_hash`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
@@ -379,8 +361,8 @@ CREATE TABLE
     `table_name` varchar(255) NOT NULL,
     `table_description` text,
     `user_id` binary(16) NOT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     check (
       updated_at is null
       or updated_at >= created_at
@@ -412,8 +394,8 @@ CREATE TABLE
     `table_name` varchar(255) NOT NULL,
     `table_state` json DEFAULT NULL,
     `user_id` binary(16) NOT NULL,
-    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     check (
       updated_at is null
       or updated_at >= created_at
