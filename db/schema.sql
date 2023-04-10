@@ -10,8 +10,8 @@ CREATE TABLE
     `public_key` varchar(64) NOT NULL COMMENT 'public key of user (64 hex characters)',
     `username` varchar(255) NOT NULL,
     `email` varchar(255) DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     check (
       updated_at is null
       or updated_at >= created_at
@@ -41,9 +41,9 @@ CREATE TABLE
     `parent_folder_id` binary(16) DEFAULT NULL,
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `archived_at` int (11) DEFAULT NULL,
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `archived_at` timestamp DEFAULT NULL,
     check (
       updated_at is null
       or updated_at >= created_at
@@ -85,19 +85,19 @@ CREATE TABLE
         'Blocked'
       )
     ) COMMENT 'status of task',
-    `start_by` int (11) DEFAULT NULL,
-    `finish_by` int (11) DEFAULT NULL,
+    `start_by` timestamp DEFAULT NULL,
+    `finish_by` timestamp DEFAULT NULL,
     `estimated_total_duration` int (11) DEFAULT NULL,
     `estimated_preparation_duration` int (11) DEFAULT NULL,
     `estimated_execution_duration` int (11) DEFAULT NULL,
     `estimated_cleanup_duration` int (11) DEFAULT NULL,
     `actual_duration` int (11) unsigned DEFAULT NULL,
-    `planned_start` int (11) DEFAULT NULL,
-    `planned_finish` int (11) DEFAULT NULL,
-    `started_at` int (11) DEFAULT NULL,
-    `finished_at` int (11) DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `planned_start` timestamp DEFAULT NULL,
+    `planned_finish` timestamp DEFAULT NULL,
+    `started_at` timestamp DEFAULT NULL,
+    `finished_at` timestamp DEFAULT NULL,
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     `user_id` binary(16) NOT NULL,
     check (
       planned_start is null
@@ -172,7 +172,7 @@ CREATE TABLE
     `activity_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` int (11) DEFAULT NULL,
+    `created_at` timestamp DEFAULT NULL,
     PRIMARY KEY (`activity_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -196,7 +196,7 @@ CREATE TABLE
     `name` varchar(255) NOT NULL,
     `website_url` varchar(255) DEFAULT NULL,
     `description` text DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     PRIMARY KEY (`organization_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -222,7 +222,7 @@ CREATE TABLE
     `email` varchar(255) DEFAULT NULL,
     `mobile_phone` varchar(255) DEFAULT NULL,
     `website_url` varchar(255) DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     PRIMARY KEY (`person_id`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
@@ -256,8 +256,8 @@ CREATE TABLE
     `physical_item_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
     `name` varchar(255) NOT NULL,
     `description` text DEFAULT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     `location_id` binary(16) DEFAULT NULL,
     `serial_number` varchar(255) DEFAULT NULL,
     `model_number` varchar(255) DEFAULT NULL,
@@ -343,7 +343,7 @@ CREATE TABLE
     `markdown` text DEFAULT NULL,
     `html` text DEFAULT NULL,
     `href` varchar(255) DEFAULT NULL,
-    `created_at` int (11) DEFAULT NULL,
+    `created_at` timestamp DEFAULT NULL,
     PRIMARY KEY (`digital_item_id`),
     UNIQUE KEY `ipfs_hash` (`ipfs_hash`)
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
@@ -379,8 +379,8 @@ CREATE TABLE
     `table_name` varchar(255) NOT NULL,
     `table_description` text,
     `user_id` binary(16) NOT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     check (
       updated_at is null
       or updated_at >= created_at
@@ -412,8 +412,8 @@ CREATE TABLE
     `table_name` varchar(255) NOT NULL,
     `table_state` json DEFAULT NULL,
     `user_id` binary(16) NOT NULL,
-    `created_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
-    `updated_at` int (11) DEFAULT (UNIX_TIMESTAMP ()),
+    `created_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
+    `updated_at` timestamp DEFAULT (UNIX_TIMESTAMP ()),
     check (
       updated_at is null
       or updated_at >= created_at
