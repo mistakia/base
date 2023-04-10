@@ -55,6 +55,8 @@ DROP TABLE
 CREATE TABLE
   `tasks` (
     `task_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
+    `external_id` varchar(255) DEFAULT NULL COMMENT 'id of task on external system',
+    `external_url` varchar(255) DEFAULT NULL COMMENT 'url of task on external system',
     `text_input` text NOT NULL COMMENT 'user text input',
     `status` varchar(255) DEFAULT 'Planned' check (
       status in (
@@ -110,6 +112,7 @@ CREATE TABLE
       or finish_by >= created_at
     ),
     PRIMARY KEY (`task_id`),
+    UNIQUE KEY `user_task` (`user_id`, `external_id`),
     FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
   ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 

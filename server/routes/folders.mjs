@@ -2,7 +2,7 @@ import express from 'express'
 import { toBinaryUUID } from 'binary-uuid'
 
 import db from '#db'
-import { constants } from '#utils'
+import { constants } from '#libs-server'
 
 const router = express.Router({ mergeParams: true })
 

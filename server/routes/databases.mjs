@@ -5,7 +5,7 @@ import Validator from 'fastest-validator'
 import * as table_constants from '../../../react-table/src/constants.mjs'
 
 import db from '#db'
-import { constants } from '#utils'
+import { constants } from '#libs-server'
 import config from '#config'
 
 const v = new Validator({ haltOnFirstError: true })

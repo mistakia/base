@@ -4,7 +4,7 @@ import debug from 'debug'
 
 // import db from '#db'
 // import config from '#config'
-import { isMain } from '#utils'
+import { isMain } from '#libs-server'
 
 // const argv = yargs(hideBin(process.argv)).argv
 // const log = debug('template')

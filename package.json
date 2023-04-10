@@ -6,7 +6,7 @@
     "#server/*": "./server/*",
     "#config": "./config.mjs",
     "#db": "./db/index.mjs",
-    "#utils": "./utils/index.mjs",
+    "#libs-server": "./libs-server/index.mjs",
     "#test/*": "./test/*"
   },
   "scripts": {
@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.0",
     "knex": "^2.4.2",
     "mysql2": "^3.2.0",
+    "node-fetch": "^3.3.1",
     "qs": "^6.11.1",
     "ws": "8.12.1"
   },
