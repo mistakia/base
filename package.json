@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@trashman/ed25519-blake2b": "^0.0.3",
+    "@tsmx/secure-config": "^2.0.2",
     "binary-uuid": "^2.0.3",
     "cors": "^2.8.5",
     "deep-extend": "^0.6.0",

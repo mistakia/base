@@ -20,4 +20,4 @@ yarn-error.log
 
 # App specific
 #
-config.*.mjs
+conf/config*

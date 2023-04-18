@@ -1,0 +1,25 @@
+{
+  "server_port": 8080,
+  "production_url": "https://example.com",
+  "production_wss": "wss://example.com",
+  "base_hostname": "example.com",
+  "cloudflare": {
+    "zone_id": "xxxxx",
+    "user_email": "xxxxx",
+    "token": "xxxxx"
+  },
+  "mysql": {
+    "client": "mysql2",
+    "connection": {
+      "host": "localhost",
+      "user": "root",
+      "database": "base_development",
+      "decimalNumbers": true
+    },
+    "pool": {
+      "min": 2,
+      "max": 10
+    }
+  },
+  "jwt_secret": "xxxxx"
+}
