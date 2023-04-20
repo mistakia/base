@@ -1,5 +1,6 @@
 import { connect } from 'react-redux'
 import { createSelector } from 'reselect'
+import { List, Map } from 'immutable'
 
 import { user_actions, get_users } from '@core/users'
 import { app_actions } from '@core/app'
@@ -23,9 +24,11 @@ const mapStateToProps = createSelector(
   get_selected_path_database_table_items,
   (users, selected_path_view, selected_path_views, database_table_items) => ({
     users,
-    selected_path_view,
-    selected_path_views,
-    database_table_items
+    selected_path_view: selected_path_view.toJS(),
+    selected_path_views: selected_path_views.toList().toJS(),
+    table_state: selected_path_view.get('table_state', new Map()).toJS(),
+    database_table_items: database_table_items.toJS(),
+    all_columns: selected_path_view.get('all_columns', new List()).toJS()
   })
 )
 

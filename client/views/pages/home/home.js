@@ -19,7 +19,9 @@ export default function HomePage({
   selected_path_view,
   selected_path_views,
   set_database_view_table_state,
-  database_table_items
+  database_table_items,
+  table_state,
+  all_columns
 }) {
   const { username, user_folder_path, database_table_name } = useParams()
 
@@ -52,7 +54,7 @@ export default function HomePage({
 
   const on_table_change = (table_state) => {
     set_database_view_table_state({
-      view_id: selected_path_view.get('view_id'),
+      view_id: selected_path_view.view_id,
       table_state
     })
   }
@@ -66,21 +68,19 @@ export default function HomePage({
     )
   }
 
-  const table_state = selected_path_view.get('table_state')
-
   return (
     <div className='home-container'>
       {table_state && (
         <Table
-          data={database_table_items.toJS()}
+          data={database_table_items}
           on_table_change={on_table_change}
           table_state={table_state}
-          all_columns={selected_path_view.get('all_columns')}
+          all_columns={all_columns}
           selected_view={selected_path_view}
           select_view={(view) => {
             console.log('select_view', view) // TODO: select view
           }}
-          views={selected_path_views.toList()}
+          views={selected_path_views}
         />
       )}
       <CreateTask />
@@ -93,9 +93,11 @@ HomePage.propTypes = {
   load_database: PropTypes.func,
   users: ImmutablePropTypes.map,
   load_folder_path: PropTypes.func,
-  selected_path_view: ImmutablePropTypes.map,
-  selected_path_views: ImmutablePropTypes.map,
+  selected_path_view: PropTypes.object,
+  selected_path_views: PropTypes.array,
   set_selected_path: PropTypes.func,
   set_database_view_table_state: PropTypes.func,
-  database_table_items: ImmutablePropTypes.list
+  database_table_items: PropTypes.array,
+  table_state: PropTypes.object,
+  all_columns: PropTypes.array
 }
