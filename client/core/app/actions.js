@@ -40,7 +40,7 @@ export const app_actions = {
     }
   }),
 
-  set_selected_path_view_id: ({ view_id }) => ({
+  set_selected_path_view_id: (view_id) => ({
     type: app_actions.SET_SELECTED_PATH_VIEW_ID,
     payload: {
       view_id

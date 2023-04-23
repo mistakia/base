@@ -18,10 +18,12 @@ export default function HomePage({
   set_selected_path,
   selected_path_view,
   selected_path_views,
-  set_database_view_table_state,
+  set_database_view,
   database_table_items,
   table_state,
-  all_columns
+  all_columns,
+  set_selected_path_view_id,
+  delete_database_view
 }) {
   const { username, user_folder_path, database_table_name } = useParams()
 
@@ -52,13 +54,6 @@ export default function HomePage({
     }
   }, [user_id])
 
-  const on_table_change = (table_state) => {
-    set_database_view_table_state({
-      view_id: selected_path_view.view_id,
-      table_state
-    })
-  }
-
   const not_found = user.get('is_loaded') && !user.get('user_id')
   if (not_found) {
     return (
@@ -73,14 +68,13 @@ export default function HomePage({
       {table_state && (
         <Table
           data={database_table_items}
-          on_table_change={on_table_change}
+          on_view_change={set_database_view}
           table_state={table_state}
           all_columns={all_columns}
           selected_view={selected_path_view}
-          select_view={(view) => {
-            console.log('select_view', view) // TODO: select view
-          }}
+          select_view={set_selected_path_view_id}
           views={selected_path_views}
+          delete_view={delete_database_view}
         />
       )}
       <CreateTask />
@@ -96,8 +90,10 @@ HomePage.propTypes = {
   selected_path_view: PropTypes.object,
   selected_path_views: PropTypes.array,
   set_selected_path: PropTypes.func,
-  set_database_view_table_state: PropTypes.func,
+  set_database_view: PropTypes.func,
   database_table_items: PropTypes.array,
   table_state: PropTypes.object,
-  all_columns: PropTypes.array
+  all_columns: PropTypes.array,
+  set_selected_path_view_id: PropTypes.func,
+  delete_database_view: PropTypes.func
 }

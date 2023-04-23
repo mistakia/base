@@ -30,7 +30,7 @@
     "mysql2": "^3.2.0",
     "node-fetch": "^3.3.1",
     "qs": "^6.11.1",
-    "react-table": "mistakia/react-table#3dfc0e682b9f51aea326854df0f782a560dfe5b9",
+    "react-table": "mistakia/react-table#afc246432d7829e63cd4255e5900d72f17c22571",
     "ws": "8.12.1"
   },
   "devDependencies": {

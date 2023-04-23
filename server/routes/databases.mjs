@@ -51,9 +51,42 @@ const view_description_schema = {
 }
 const view_description_validator = v.compile(view_description_schema)
 
+const where_operator_schema = {
+  type: 'string',
+  enum: [
+    '=',
+    '!=',
+    '>',
+    '>=',
+    '<',
+    '<=',
+    'LIKE',
+    'NOT LIKE',
+    'IS NULL',
+    'IS NOT NULL',
+    'IN',
+    'NOT IN'
+  ]
+}
+
+const where_schema = {
+  type: 'array',
+  items: {
+    type: 'object',
+    props: {
+      column_name: { type: 'string' },
+      operator: where_operator_schema,
+      value: { type: 'string' }
+    }
+  }
+}
+
+const where_validator = v.compile(where_schema)
+
 const table_state_schema = {
   sort: sort_schema,
-  columns: columns_schema
+  columns: columns_schema,
+  where: where_schema
 }
 const table_state_validator = v.compile(table_state_schema)
 
@@ -127,10 +160,7 @@ router.get('/:table_name', async (req, res) => {
 
     res.status(200).send({
       database_table,
-      database_table_views: database_table_views.map((view) => ({
-        ...view,
-        all_columns: formatted_table_columns
-      })),
+      database_table_views,
       database_table_columns: formatted_table_columns
     })
   } catch (error) {
@@ -143,7 +173,7 @@ router.post('/:table_name/views', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { table_name, user_id } = req.params
-    const { view_name, table_state, view_description } = req.body
+    const { view_id, view_name, table_state, view_description } = req.body
 
     if (!view_name_validator(view_name)) {
       return res.status(400).send({ error: 'invalid view_name' })
@@ -166,13 +196,25 @@ router.post('/:table_name/views', async (req, res) => {
       return res.status(404).send({ error: 'table not found' })
     }
 
-    await db('database_table_views').insert({
-      view_name,
-      view_description,
-      table_state: JSON.stringify(table_state),
-      table_name: formatted_table_name,
-      user_id: toBinaryUUID(user_id)
-    })
+    if (view_id) {
+      await db('database_table_views')
+        .update({
+          view_name,
+          view_description,
+          table_state: JSON.stringify(table_state)
+        })
+        .where({
+          view_id: toBinaryUUID(view_id)
+        })
+    } else {
+      await db('database_table_views').insert({
+        view_name,
+        view_description,
+        table_state: JSON.stringify(table_state),
+        table_name: formatted_table_name,
+        user_id: toBinaryUUID(user_id)
+      })
+    }
 
     const view = await db('database_table_views')
       .select(
@@ -181,6 +223,7 @@ router.post('/:table_name/views', async (req, res) => {
         db.raw('BIN_TO_UUID(view_id, true) as view_id')
       )
       .where({
+        view_name,
         table_name: formatted_table_name,
         user_id: toBinaryUUID(user_id)
       })
@@ -193,25 +236,12 @@ router.post('/:table_name/views', async (req, res) => {
   }
 })
 
-router.put('/:table_name/views/:view_id', async (req, res) => {
+router.delete('/:table_name/views/:view_id', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { table_name, user_id, view_id } = req.params
-    const { view_name, table_state, view_description } = req.body
 
-    if (!view_name_validator(view_name)) {
-      return res.status(400).send({ error: 'invalid view_name' })
-    }
-
-    if (!view_description_validator(view_description)) {
-      return res.status(400).send({ error: 'invalid view_description' })
-    }
-
-    if (!table_state_validator(table_state)) {
-      return res.status(400).send({ error: 'invalid table_state' })
-    }
-
-    const { database_table, formatted_table_name } = await get_database_table({
+    const { database_table } = await get_database_table({
       table_name,
       user_id
     })
@@ -220,39 +250,13 @@ router.put('/:table_name/views/:view_id', async (req, res) => {
       return res.status(404).send({ error: 'table not found' })
     }
 
-    const current_view = await db('database_table_views')
-      .where({
-        view_id: toBinaryUUID(view_id),
-        user_id: toBinaryUUID(user_id),
-        table_name: formatted_table_name
-      })
-      .first()
-
-    if (!current_view) {
-      return res.status(404).send({ error: 'view not found' })
-    }
-
     await db('database_table_views')
-      .where({ view_id: toBinaryUUID(view_id) })
-      .update({
-        view_name,
-        view_description,
-        table_state: JSON.stringify(table_state)
-      })
-
-    const updated_view = await db('database_table_views')
-      .select(
-        '*',
-        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
-        db.raw('BIN_TO_UUID(view_id, true) as view_id')
-      )
+      .delete()
       .where({
-        table_name: formatted_table_name,
-        user_id: toBinaryUUID(user_id)
+        view_id: toBinaryUUID(view_id)
       })
-      .first()
 
-    res.status(200).send(updated_view)
+    res.status(200).send({ success: true })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -276,7 +280,7 @@ router.get('/:table_name/items', async (req, res) => {
     const database_query = db(formatted_table_name)
     database_query.select('*')
 
-    const { limit, offset, sorting, columns } = req.query
+    const { limit, offset, sorting, columns, where } = req.query
 
     if (limit) {
       database_query.limit(limit)
@@ -318,6 +322,52 @@ router.get('/:table_name/items', async (req, res) => {
           )
         } else {
           database_query.select(`${column.table_name}.${column.column_name}`)
+        }
+      }
+    } else {
+      return res.status(200).send([])
+    }
+
+    if (where) {
+      if (!where_validator(req.query.where)) {
+        return res.status(400).send({ error: 'invalid where query param' })
+      }
+
+      for (const where of req.query.where) {
+        if (where.operator === 'IS NULL') {
+          database_query.whereNull(`${where.table_name}.${where.column_name}`)
+        } else if (where.operator === 'IS NOT NULL') {
+          database_query.whereNotNull(
+            `${where.table_name}.${where.column_name}`
+          )
+        } else if (where.operator === 'IN') {
+          database_query.whereIn(
+            `${where.table_name}.${where.column_name}`,
+            where.value
+          )
+        } else if (where.operator === 'NOT IN') {
+          database_query.whereNotIn(
+            `${where.table_name}.${where.column_name}`,
+            where.value
+          )
+        } else if (where.operator === 'LIKE') {
+          database_query.where(
+            `${where.table_name}.${where.column_name}`,
+            'LIKE',
+            `%${where.value}%`
+          )
+        } else if (where.operator === 'NOT LIKE') {
+          database_query.where(
+            `${where.table_name}.${where.column_name}`,
+            'NOT LIKE',
+            `%${where.value}%`
+          )
+        } else if (where.value) {
+          database_query.where(
+            `${where.table_name}.${where.column_name}`,
+            where.operator,
+            where.value
+          )
         }
       }
     }

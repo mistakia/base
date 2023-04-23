@@ -9,8 +9,8 @@ import {
   post_user_session_request_actions
 } from '@core/app/actions'
 import {
-  put_database_view_request_actions,
-  post_database_views_request_actions
+  post_database_view_request_actions,
+  delete_database_view_request_actions
 } from '@core/path-views/actions'
 import { get_folder_path_request_actions } from '@core/folder-paths/actions'
 import {
@@ -76,13 +76,13 @@ export const get_database_items = fetch.bind(
   api.get_database_items,
   get_database_items_request_actions
 )
-export const put_database_view = fetch.bind(
+export const post_database_view = fetch.bind(
   null,
-  api.put_database_view,
-  put_database_view_request_actions
+  api.post_database_view,
+  post_database_view_request_actions
 )
-export const post_database_views = fetch.bind(
+export const delete_database_view = fetch.bind(
   null,
-  api.post_database_views,
-  post_database_views_request_actions
+  api.delete_database_view,
+  delete_database_view_request_actions
 )

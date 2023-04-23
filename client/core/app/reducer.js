@@ -1,6 +1,8 @@
 import { Record } from 'immutable'
 
 import { app_actions } from './actions'
+import { database_table_actions } from '../database-tables/actions'
+import { path_view_actions } from '@core/path-views/actions'
 
 const initial_state = new Record({
   is_loaded: false,
@@ -43,6 +45,23 @@ export function app_reducer(state = initial_state(), { payload, type }) {
       return state.merge({
         selected_path_view_id: payload.view_id
       })
+
+    case database_table_actions.GET_DATABASE_FULFILLED:
+      return state.merge({
+        selected_path_view_id: payload.data.database_table_views.length
+          ? payload.data.database_table_views[0].view_id
+          : null
+      })
+
+    case path_view_actions.POST_DATABASE_VIEW_FULFILLED: {
+      if (state.get('selected_path_view_id')) {
+        return state
+      }
+
+      return state.merge({
+        selected_path_view_id: payload.data.view_id
+      })
+    }
 
     default:
       return state
