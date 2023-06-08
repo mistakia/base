@@ -82,6 +82,7 @@ CREATE TABLE
     `finished_at` timestamp DEFAULT NULL,
     `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
     `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `snooze_until` timestamp DEFAULT NULL,
     `user_id` binary(16) NOT NULL,
     check (
       planned_start is null
