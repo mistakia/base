@@ -142,6 +142,7 @@ router.get('/:table_name', async (req, res) => {
 
     const formatted_table_columns = database_table_columns.map((column) => ({
       ...column,
+      column_id: column.column_name,
       accessorKey: column.column_name,
       header_label: column.column_name,
       data_type: table_constants.get_data_type(column.data_type)

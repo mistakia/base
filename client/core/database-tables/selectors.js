@@ -1,4 +1,4 @@
-import { List } from 'immutable'
+import { List, Map } from 'immutable'
 import { get_app } from '@core/app'
 
 export function get_selected_path_database_table_items(state) {
@@ -15,6 +15,6 @@ export function get_selected_path_database_table_columns(state) {
   const { database_table_name } = selected_path
   return state.getIn(
     ['database_table_items', database_table_name, 'columns'],
-    new List()
+    new Map()
   )
 }

@@ -17,7 +17,12 @@ export function database_table_items_reducer(
         new Map({
           ...payload.data.database_table,
           items: new List(),
-          columns: new List(payload.data.database_table_columns)
+          columns: new Map(
+            payload.data.database_table_columns.reduce((acc, column) => {
+              acc[column.column_id] = column
+              return acc
+            }, {})
+          )
         })
       )
 

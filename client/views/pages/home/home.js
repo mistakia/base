@@ -93,7 +93,7 @@ HomePage.propTypes = {
   set_database_view: PropTypes.func,
   database_table_items: PropTypes.array,
   table_state: PropTypes.object,
-  all_columns: PropTypes.array,
+  all_columns: PropTypes.object,
   set_selected_path_view_id: PropTypes.func,
   delete_database_view: PropTypes.func
 }
