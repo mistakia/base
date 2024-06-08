@@ -5,6 +5,7 @@
     "#server": "./server/index.mjs",
     "#server/*": "./server/*",
     "#config": "./config.mjs",
+    "#config/*": "./conf/*",
     "#db": "./db/index.mjs",
     "#libs-server": "./libs-server/index.mjs",
     "#test/*": "./test/*"
@@ -28,7 +29,7 @@
     "jsonwebtoken": "^9.0.0",
     "knex": "^2.4.2",
     "mysql2": "^3.2.0",
-    "node-fetch": "^3.3.1",
+    "node-fetch": "^3.3.2",
     "qs": "^6.11.1",
     "react-table": "mistakia/react-table#afc246432d7829e63cd4255e5900d72f17c22571",
     "ws": "8.12.1"
@@ -90,5 +91,5 @@
     "webpack-cli": "5.0.1",
     "webpack-dev-server": "4.11.1"
   },
-  "packageManager": "yarn@3.2.0"
+  "packageManager": "yarn@4.2.2"
 }
