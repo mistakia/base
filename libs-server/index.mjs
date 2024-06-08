@@ -7,3 +7,4 @@ export * as constants from './constants.mjs'
 export * as github from './github.mjs'
 export * as cloudflare from './cloudflare.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
+export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
