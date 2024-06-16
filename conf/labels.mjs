@@ -45,6 +45,11 @@ export default [
     description: 'a net-new feature or improvement to an existing feature'
   },
   {
+    name: 'kind/performance',
+    color: 'c7def8',
+    description: 'improving the performance of the project'
+  },
+  {
     name: 'kind/maintenance',
     color: 'c7def8',
     description: "work required to maintain the project's status quo"
