@@ -8,7 +8,6 @@ import config from '#config'
 import labels from '#config/labels.mjs'
 
 const { github_access_token } = config
-const argv = yargs(hideBin(process.argv)).argv
 const logger = debug('create-github-labels')
 debug.enable('create-github-labels')
 
@@ -59,6 +58,13 @@ const create_label = async ({ repo, name, color, description }) => {
   })
 }
 
+/**
+ * Creates GitHub labels for a given repository.
+ * 
+ * @param {string} repo - The repository name in the format 'owner/repo'.
+ * @param {boolean} sync - If true, labels not in the default set will be removed from the repository.
+ */
+
 const create_github_labels_for_repo = async ({ repo, sync = false }) => {
   logger(`Creating labels in ${repo} (sync: ${sync})`)
 
@@ -99,17 +105,25 @@ const create_github_labels_for_repo = async ({ repo, sync = false }) => {
   }
 }
 
+const argv = yargs(hideBin(process.argv))
+  .usage('Usage: $0 --repo <repository> [--sync]')
+  .option('repo', {
+    describe: 'The GitHub repository in the format "owner/repo"',
+    type: 'string',
+    demandOption: true
+  })
+  .option('sync', {
+    describe: 'If provided, labels not in the default set will be removed from the repository',
+    type: 'boolean',
+    default: false
+  })
+  .help()
+  .alias('help', 'h')
+  .argv
+
 if (isMain(import.meta.url)) {
   const main = async () => {
-    try {
-      if (!argv.repo) {
-        console.log('missing --repo')
-        process.exit()
-      }
-      await create_github_labels_for_repo({ repo: argv.repo, sync: argv.sync })
-    } catch (err) {
-      console.log(err)
-    }
+    await create_github_labels_for_repo({ repo: argv.repo, sync: argv.sync })
     process.exit()
   }
 
