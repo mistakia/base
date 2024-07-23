@@ -35,6 +35,11 @@ export default [
     description: 'infrastructure related'
   },
   {
+    name: 'kind/data',
+    color: 'c7def8',
+    description: 'data related'
+  },
+  {
     name: 'kind/bug',
     color: 'fc2929',
     description: 'an unintended behavior'

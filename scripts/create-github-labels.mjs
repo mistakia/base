@@ -60,7 +60,7 @@ const create_label = async ({ repo, name, color, description }) => {
 
 /**
  * Creates GitHub labels for a given repository.
- * 
+ *
  * @param {string} repo - The repository name in the format 'owner/repo'.
  * @param {boolean} sync - If true, labels not in the default set will be removed from the repository.
  */
@@ -113,13 +113,13 @@ const argv = yargs(hideBin(process.argv))
     demandOption: true
   })
   .option('sync', {
-    describe: 'If provided, labels not in the default set will be removed from the repository',
+    describe:
+      'If provided, labels not in the default set will be removed from the repository',
     type: 'boolean',
     default: false
   })
   .help()
-  .alias('help', 'h')
-  .argv
+  .alias('help', 'h').argv
 
 if (isMain(import.meta.url)) {
   const main = async () => {
