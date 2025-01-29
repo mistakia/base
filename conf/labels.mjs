@@ -1,4 +1,13 @@
-export default [
+export const default_repos = [
+  'mistakia/nano-community',
+  'mistakia/league',
+  'mistakia/personal',
+  'mistakia/properties',
+  'mistakia/base',
+  'mistakia/parcels'
+]
+
+const task_labels = [
   {
     name: 'priority/critical',
     color: 'b60205',
@@ -127,3 +136,89 @@ export default [
     description: 'this issue or pull request already exists'
   }
 ]
+
+const project_labels = [
+  {
+    name: 'projects/home',
+    color: 'dcc8e0',
+    description: 'living space organization and design project',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'projects/land',
+    color: 'dcc8e0',
+    description: 'land research and purchase project',
+    repos: ['mistakia/personal', 'mistakia/parcels']
+  },
+  {
+    name: 'projects/homelab',
+    color: 'dcc8e0',
+    description: 'onsite server and network project',
+    repos: ['mistakia/personal', 'mistakia/base']
+  }
+]
+
+const location_labels = [
+  {
+    name: 'location/1 Alley Lot Place NW',
+    color: 'D48146',
+    description: '1 Alley Lot Place NW location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/14 N ST NW',
+    color: '7FBDD6',
+    description: '14 N ST NW location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/40 Rhode Island Unit A',
+    color: 'c5def5',
+    description: '40 Rhode Island Unit A location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/40 Rhode Island Unit B',
+    color: 'AE9C93',
+    description: '40 Rhode Island Unit B location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/55 U ST NW Unit A',
+    color: 'c5def5',
+    description: '55 U ST NW Unit A location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/55 U ST NW Unit B',
+    color: '357A9F',
+    description: '55 U ST NW Unit B location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/2914 Dawson Ave',
+    color: 'BF0E67',
+    description: '2914 Dawson Ave location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/9808 Betteker Lane',
+    color: '0CD772',
+    description: '9808 Betteker Lane location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/10719 Kings Riding Way #102',
+    color: '295FEE',
+    description: '10719 Kings Riding Way #102 location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  },
+  {
+    name: 'location/11510 Seven Locks Rd',
+    color: 'D9DE8A',
+    description: '11510 Seven Locks Rd location',
+    repos: ['mistakia/properties', 'mistakia/personal']
+  }
+]
+
+export const labels = [...task_labels, ...project_labels, ...location_labels]

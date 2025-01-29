@@ -5,7 +5,7 @@ import fetch from 'node-fetch'
 
 import { wait, isMain } from '#libs-server'
 import config from '#config'
-import labels from '#config/labels.mjs'
+import { default_repos, labels } from '#config/labels.mjs'
 
 const { github_access_token } = config
 const logger = debug('create-github-labels')
@@ -58,6 +58,14 @@ const create_label = async ({ repo, name, color, description }) => {
   })
 }
 
+const get_labels_for_repo = ({ repo }) => {
+  return labels.filter((label) => {
+    // Include label if it has no repos specified (global label)
+    // or if the repo is in its repos array
+    return !label.repos || label.repos.includes(repo)
+  })
+}
+
 /**
  * Creates GitHub labels for a given repository.
  *
@@ -70,10 +78,11 @@ const create_github_labels_for_repo = async ({ repo, sync = false }) => {
 
   const repo_labels = await list_labels({ repo })
   const repo_label_names = repo_labels.map((label) => label.name)
+  const labels_to_create = get_labels_for_repo({ repo })
 
   logger(`Found ${repo_label_names.length} existing labels in ${repo}`)
 
-  for (const label of labels) {
+  for (const label of labels_to_create) {
     if (repo_label_names.includes(label.name)) {
       continue
     }
@@ -81,8 +90,8 @@ const create_github_labels_for_repo = async ({ repo, sync = false }) => {
     let res
     try {
       res = await create_label({
-        repo,
-        ...label
+        ...label,
+        repo
       })
 
       logger(`Successfully created label: ${label.name}, id: ${res.id}`)
@@ -95,7 +104,7 @@ const create_github_labels_for_repo = async ({ repo, sync = false }) => {
   }
 
   if (sync) {
-    const base_label_names = labels.map((label) => label.name)
+    const base_label_names = labels_to_create.map((label) => label.name)
 
     for (const repo_label_name of repo_label_names) {
       if (!base_label_names.includes(repo_label_name)) {
@@ -105,12 +114,30 @@ const create_github_labels_for_repo = async ({ repo, sync = false }) => {
   }
 }
 
+const create_github_labels_for_repos = async ({ repos, sync = false }) => {
+  for (const repo of repos) {
+    await create_github_labels_for_repo({ repo, sync })
+  }
+}
+
 const argv = yargs(hideBin(process.argv))
-  .usage('Usage: $0 --repo <repository> [--sync]')
+  .usage(
+    'Usage: $0 (--repo <repository> | --repos <repository1,repository2,...> | --all) [--sync]'
+  )
   .option('repo', {
-    describe: 'The GitHub repository in the format "owner/repo"',
+    describe: 'Single GitHub repository in the format "owner/repo"',
     type: 'string',
-    demandOption: true
+    conflicts: ['repos', 'all']
+  })
+  .option('repos', {
+    describe: 'Comma-separated list of GitHub repositories',
+    type: 'string',
+    conflicts: ['repo', 'all']
+  })
+  .option('all', {
+    describe: 'Apply to all default repositories defined in labels.mjs',
+    type: 'boolean',
+    conflicts: ['repo', 'repos']
   })
   .option('sync', {
     describe:
@@ -118,12 +145,31 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
+  .check((argv) => {
+    if (!argv.repo && !argv.repos && !argv.all) {
+      throw new Error('Must provide either --repo, --repos, or --all')
+    }
+    return true
+  })
   .help()
   .alias('help', 'h').argv
 
 if (isMain(import.meta.url)) {
   const main = async () => {
-    await create_github_labels_for_repo({ repo: argv.repo, sync: argv.sync })
+    let repos_to_process = []
+
+    if (argv.all) {
+      repos_to_process = default_repos
+    } else if (argv.repos) {
+      repos_to_process = argv.repos.split(',').map((repo) => repo.trim())
+    } else if (argv.repo) {
+      repos_to_process = [argv.repo]
+    }
+
+    await create_github_labels_for_repos({
+      repos: repos_to_process,
+      sync: argv.sync
+    })
     process.exit()
   }
 
@@ -131,8 +177,8 @@ if (isMain(import.meta.url)) {
     main()
   } catch (err) {
     console.log(err)
-    process.exit()
+    process.exit(1)
   }
 }
 
-export default create_github_labels_for_repo
+export default create_github_labels_for_repos
