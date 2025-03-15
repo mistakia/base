@@ -1,0 +1,19 @@
+{
+  "logging": {
+    "level": "debug"
+  },
+  "server": {
+    "cors": {
+      "enabled": true,
+      "origin": "*"
+    }
+  },
+  "tasks": {
+    "scheduler": {
+      "cleanup_interval": "0 */12 * * *"
+    }
+  },
+  "git": {
+    "commit_interval": 1800000
+  }
+} 
