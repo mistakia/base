@@ -1,0 +1,26 @@
+{
+  "server_port": 8080,
+  "production_url": "https://example.com",
+  "production_wss": "wss://example.com",
+  "base_hostname": "ENCRYPTED|cbd599979035c5eb301fd738cd72f05d|27b7e9022e7fbf920d91922f3dd78775",
+  "github_access_toke": "ENCRYPTED|80da8055b248a0b2a8580e8c50e33d2f|4838f00862c3056cd74ba5b17d7a381fb68b88c4dc3ee06713989daf4a3ece09ecffd6be8b62817b5faec7176ceb7e0b9f21dd1adf058b9804ceb17cd96cf14abab23ae1a7fab451a1676caed3ce7ddbcf70758bd64a585afdd6b82c071703c8",
+  "cloudflare": {
+    "zone_id": "ENCRYPTED|9ea4b5379f4deb4b2fc705ec3c9376ec|3644791ceabdf2e152da279ad9295b2e9f2ec63da4f6fda0a17960b73841d5696980e31dd2e149f1bff4e5a61aa5253a",
+    "user_email": "ENCRYPTED|a3f8346af34798f6066181fa80e7d50e|dd2f8c13f2687784bc01ede56783e97fd107ce9740abe7186c3aba32a3e8dafa",
+    "token": "ENCRYPTED|d3247e8a3f721656c74f94d3870272cd|d05b23304e664a4d5b21122525b802b50f67ce2c8834003ce4207191b9dd8ea04d733436df0ed86ab2ca0c86fde0b69d"
+  },
+  "mysql": {
+    "client": "mysql2",
+    "connection": {
+      "host": "localhost",
+      "user": "root",
+      "database": "base_development",
+      "decimalNumbers": true
+    },
+    "pool": {
+      "min": 2,
+      "max": 10
+    }
+  },
+  "jwt_secret": "ENCRYPTED|3888e96d91f69c2570336acae0f400b5|4be4a270a4c75aa9b88acb3d02bde6dd80acda3057f663bf26626ae2fe087468"
+}

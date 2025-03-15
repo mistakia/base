@@ -15,11 +15,7 @@ This system creates a framework for AI agents and humans to collaborate effectiv
 
 ## Documentation
 
-- [System Design](docs/agent-system-design.md): Overall system architecture and components
-- [System Workflow](docs/system-workflow.md): High-level workflows and processes
-- [Activity and Guideline System](docs/activity-guideline-system.md): How activities and guidelines work
-- [Multi-Model Inference](docs/multi-model-inference.md): How multiple models process the same requests
-- [Self-Improvement System](docs/self-improvement-system.md): How the system improves itself
+- [System Design](docs/system-design.md): Overall system architecture and components
 - [Directory Structure](docs/directory-structure.md): Organization of code and resources
 - [Configuration System](docs/configuration-system.md): How configuration works
 
@@ -49,17 +45,19 @@ See the [Directory Structure](docs/directory-structure.md) document for more det
 ### Installation
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/mistakia/base.git
    cd base
    ```
 
 2. Install dependencies:
+
    ```
    yarn install
    ```
 
-4. Run the setup script:
+3. Run the setup script:
    ```
    yarn setup
    ```
@@ -67,12 +65,13 @@ See the [Directory Structure](docs/directory-structure.md) document for more det
 ### Running the System
 
 Start the development server:
+
 ```
 export CONFIG_ENCRYPTION_KEY=your_secret_encryption_key
 yarn dev
 ```
 
-See the [Configuration System](docs/configuration-system.md) document for more details on configuration.
+See the [Configuration System](docs/configuration.md) document for more details on configuration.
 
 ## Contributing
 
@@ -80,4 +79,4 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

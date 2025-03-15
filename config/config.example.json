@@ -1,0 +1,42 @@
+{
+  "api_keys": {
+    "openai": "your-openai-api-key",
+    "google": "your-google-api-key",
+    "github": "your-github-api-key"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "hitl_agent_db",
+    "user": "db_user",
+    "password": "your-secure-password"
+  },
+  "jwt": {
+    "secret": "your-jwt-secret-key",
+    "expiration": "24h"
+  },
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": true,
+    "auth": {
+      "user": "notifications@example.com",
+      "pass": "your-smtp-password"
+    }
+  },
+  "oauth": {
+    "google": {
+      "client_id": "your-google-client-id",
+      "client_secret": "your-google-client-secret"
+    },
+    "github": {
+      "client_id": "your-github-client-id",
+      "client_secret": "your-github-client-secret"
+    }
+  },
+  "encryption": {
+    "salt": "random-salt-value",
+    "iterations": 10000,
+    "key_length": 32
+  }
+}

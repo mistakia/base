@@ -36,16 +36,9 @@ The `docs/` directory contains system documentation:
 
 ```
 └── docs/
-    ├── agent-system-design.md
-    ├── system-workflow.md
-    ├── activity-guideline-system.md
-    ├── multi-model-inference.md
-    ├── self-improvement-system.md
+    ├── system-design.md
+    ├── configuration.md
     ├── directory-structure.md
-    ├── configuration-system.md
-    ├── api/            # API documentation
-    ├── guides/         # User and developer guides
-    └── examples/       # Example configurations and usage
 ```
 
 ### Configuration
@@ -67,12 +60,12 @@ The system uses the following directories for data storage:
 
 ```
 └── data/
-    ├── git/            # Git repositories for version control
-    ├── models/         # Stored model data
     ├── activities/     # Activity definitions
     ├── guidelines/     # Guideline definitions
+    ├── knowledge_base/ # Knowledge base
     ├── tasks/          # Task data
     ├── inference/      # Inference request history
+    ├── tags/           # Tags
     └── logs/           # System logs
 ```
 

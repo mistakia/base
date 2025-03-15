@@ -1,0 +1,2 @@
+- Guidelines MUST be named like `guideline_name.mjs`.
+- Guidelines MUST used RFC 2119 language.
