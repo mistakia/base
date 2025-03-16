@@ -6,7 +6,6 @@ import * as table_constants from '../../../react-table/src/constants.mjs'
 
 import db from '#db'
 import { constants } from '#libs-server'
-import config from '#config'
 
 const v = new Validator({ haltOnFirstError: true })
 const router = express.Router({ mergeParams: true })
@@ -136,7 +135,7 @@ router.get('/:table_name', async (req, res) => {
       )
       .where({
         table_name: formatted_table_name,
-        table_schema: config.mysql.connection.database
+        table_schema: 'public'
       })
       .orderBy('ordinal_position', 'asc')
 

@@ -8,11 +8,11 @@
     "user_email": "xxxxx",
     "token": "xxxxx"
   },
-  "mysql": {
-    "client": "mysql2",
+  "postgres": {
+    "client": "pg",
     "connection": {
       "host": "localhost",
-      "user": "root",
+      "user": "postgres",
       "database": "base_test",
       "decimalNumbers": true
     },

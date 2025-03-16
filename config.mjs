@@ -1,5 +1,11 @@
 import secure_config from '@tsmx/secure-config'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 
-const config = secure_config({ directory: './config' })
+const current_file_path = fileURLToPath(import.meta.url)
+const current_dir = dirname(current_file_path)
+const config_dir = join(current_dir, 'config')
+
+const config = secure_config({ directory: config_dir })
 
 export default config

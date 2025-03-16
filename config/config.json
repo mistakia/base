@@ -9,13 +9,16 @@
     "user_email": "ENCRYPTED|a3f8346af34798f6066181fa80e7d50e|dd2f8c13f2687784bc01ede56783e97fd107ce9740abe7186c3aba32a3e8dafa",
     "token": "ENCRYPTED|d3247e8a3f721656c74f94d3870272cd|d05b23304e664a4d5b21122525b802b50f67ce2c8834003ce4207191b9dd8ea04d733436df0ed86ab2ca0c86fde0b69d"
   },
-  "mysql": {
-    "client": "mysql2",
+  "notion": {
+    "api_key": "ENCRYPTED|b410f41af547e852a5a6251e4aeb2c8a|9644fd3f3e8fe9b7712eb7ca8ecab6c1b0085f3df4f7aaf379f55d06c920fa73f31a5d80fa68de491ffb69b5d2c99b9fff5e966a478eb470a0aae48ec17bf198"
+  },
+  "postgres": {
+    "client": "pg",
     "connection": {
-      "host": "localhost",
-      "user": "root",
-      "database": "base_development",
-      "decimalNumbers": true
+      "host": "database",
+      "user": "postgres",
+      "database": "base_production",
+      "password": "ENCRYPTED|99df89148a6e6ec4e22313a075998660|1c4ee11cfe20f59c128ab2b7d258b9db"
     },
     "pool": {
       "min": 2,

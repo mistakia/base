@@ -2,16 +2,14 @@
 
 ## 1. System Overview
 
-The system is designed to create a collaborative environment where AI agents and humans work together on tasks and knowledge management. It follows these key principles:
+The system is designed to create a collaborative environment where AI agents and humans work together to complete tasks, manage and build a knowledge base, manage data, and most importantly manage and build this system. It follows these key principles:
 
-- **Version Control for Everything**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
-- **Pull Request Model**: Agents propose changes rather than directly implementing them
-- **Data-Centric Architecture**: Almost everything is treated as versioned, classified data
+- **Version Control**: Everything is stored in git
+- **Pull Request Model**: Changes are proposed through git pull requests
 - **Activity-Based Organization**: Actions are classified by activity types for better context management
 - **Multi-Model Support**: Different models can process the same inference requests
-- **Self-Improvement**: System can recursively work on improving its own components
 - **Guidelines-Driven**: Activities follow established guidelines that evolve over time
-- **Access Control**: Tools have configurable permissions based on sensitivity
+- **Access Control**: Tools have configurable permissions
 - **Async Collaboration**: Support for asynchronous human-agent interaction
 
 ## 2. Core Components

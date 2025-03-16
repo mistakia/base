@@ -1,413 +1,378 @@
-SET
-  FOREIGN_KEY_CHECKS = 0;
+DROP TABLE
+  IF EXISTS database_table_views CASCADE;
 
 DROP TABLE
-  IF EXISTS `users`;
-
-CREATE TABLE
-  `users` (
-    `user_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `public_key` varchar(64) NOT NULL COMMENT 'public key of user (64 hex characters)',
-    `username` varchar(255) NOT NULL,
-    `email` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    check (
-      updated_at is null
-      or updated_at >= created_at
-    ),
-    PRIMARY KEY (`user_id`),
-    UNIQUE KEY `public_key` (`public_key`),
-    UNIQUE KEY `username` (`username`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+  IF EXISTS database_table_tags CASCADE;
 
 DROP TABLE
-  IF EXISTS `folders`;
-
-CREATE TABLE
-  `folders` (
-    `folder_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `folder_path` varchar(255) NOT NULL COMMENT 'format: /<user_id>/<folder1>/<folder2>/<folder3>',
-    `user_id` binary(16) NOT NULL,
-    `parent_folder_id` binary(16) DEFAULT NULL,
-    `name` varchar(255) NOT NULL,
-    `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `archived_at` timestamp DEFAULT NULL,
-    check (
-      updated_at is null
-      or updated_at >= created_at
-    ),
-    check (
-      archived_at is null
-      or archived_at >= updated_at
-    ),
-    PRIMARY KEY (`folder_path`),
-    UNIQUE KEY (`folder_id`),
-    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+  IF EXISTS database_tables CASCADE;
 
 DROP TABLE
-  IF EXISTS `tasks`;
+  IF EXISTS task_digital_items CASCADE;
+
+DROP TABLE
+  IF EXISTS digital_item_tags CASCADE;
+
+DROP TABLE
+  IF EXISTS digital_items CASCADE;
+
+DROP TABLE
+  IF EXISTS physical_item_tags CASCADE;
+
+DROP TABLE
+  IF EXISTS task_physical_items CASCADE;
+
+DROP TABLE
+  IF EXISTS physical_item_child_items CASCADE;
+
+DROP TABLE
+  IF EXISTS physical_items CASCADE;
+
+DROP TABLE
+  IF EXISTS physical_locations CASCADE;
+
+DROP TABLE
+  IF EXISTS task_persons CASCADE;
+
+DROP TABLE
+  IF EXISTS organization_persons CASCADE;
+
+DROP TABLE
+  IF EXISTS persons CASCADE;
+
+DROP TABLE
+  IF EXISTS task_organizations CASCADE;
+
+DROP TABLE
+  IF EXISTS organizations CASCADE;
+
+DROP TABLE
+  IF EXISTS task_activities CASCADE;
+
+DROP TABLE
+  IF EXISTS activities CASCADE;
+
+DROP TABLE
+  IF EXISTS task_dependencies CASCADE;
+
+DROP TABLE
+  IF EXISTS task_parents CASCADE;
+
+DROP TABLE
+  IF EXISTS task_tags CASCADE;
+
+DROP TABLE
+  IF EXISTS tasks CASCADE;
+
+DROP TABLE
+  IF EXISTS tags CASCADE;
+
+DROP TABLE
+  IF EXISTS users CASCADE;
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE
-  `tasks` (
-    `task_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `external_id` varchar(255) DEFAULT NULL COMMENT 'id of task on external system',
-    `external_url` varchar(255) DEFAULT NULL COMMENT 'url of task on external system',
-    `text_input` text NOT NULL COMMENT 'user text input',
-    `status` varchar(255) DEFAULT 'Planned' check (
-      status in (
+  users (
+    user_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    public_key VARCHAR(64) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
+    )
+  );
+
+CREATE TABLE
+  tags (
+    tag_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    tag_name VARCHAR(255) NOT NULL,
+    user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
+    ),
+    CONSTRAINT check_archived_at CHECK (
+      archived_at IS NULL
+      OR archived_at >= updated_at
+    ),
+    UNIQUE (tag_name, user_id)
+  );
+
+CREATE TABLE
+  tasks (
+    task_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    external_id VARCHAR(255),
+    external_url VARCHAR(255),
+    text_input TEXT NOT NULL,
+    status VARCHAR(255) DEFAULT 'No status' CHECK (
+      status IN (
+        'No status',
+        'Waiting',
+        'Paused',
         'Planned',
         'Started',
         'In Progress',
         'Completed',
         'Cancelled',
-        'On Hold',
         'Blocked'
       )
-    ) COMMENT 'status of task',
-    `start_by` timestamp DEFAULT NULL,
-    `finish_by` timestamp DEFAULT NULL,
-    `estimated_total_duration` int (11) DEFAULT NULL,
-    `estimated_preparation_duration` int (11) DEFAULT NULL,
-    `estimated_execution_duration` int (11) DEFAULT NULL,
-    `estimated_cleanup_duration` int (11) DEFAULT NULL,
-    `actual_duration` int (11) unsigned DEFAULT NULL,
-    `planned_start` timestamp DEFAULT NULL,
-    `planned_finish` timestamp DEFAULT NULL,
-    `started_at` timestamp DEFAULT NULL,
-    `finished_at` timestamp DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `snooze_until` timestamp DEFAULT NULL,
-    `user_id` binary(16) NOT NULL,
-    check (
-      planned_start is null
-      or planned_start >= created_at
     ),
-    check (
-      planned_finish is null
-      or planned_finish >= planned_start
+    start_by TIMESTAMP,
+    finish_by TIMESTAMP,
+    estimated_total_duration INTEGER,
+    estimated_preparation_duration INTEGER,
+    estimated_execution_duration INTEGER,
+    estimated_cleanup_duration INTEGER,
+    actual_duration INTEGER,
+    planned_start TIMESTAMP,
+    planned_finish TIMESTAMP,
+    started_at TIMESTAMP,
+    finished_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    snooze_until TIMESTAMP,
+    user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    CONSTRAINT check_planned_start CHECK (
+      planned_start IS NULL
+      OR planned_start >= created_at
     ),
-    check (
-      started_at is null
-      or started_at >= updated_at
+    CONSTRAINT check_planned_finish CHECK (
+      planned_finish IS NULL
+      OR planned_finish >= planned_start
     ),
-    check (
-      finished_at is null
-      or finished_at >= started_at
+    CONSTRAINT check_started_at CHECK (
+      started_at IS NULL
+      OR started_at >= updated_at
     ),
-    check (
-      updated_at is null
-      or updated_at >= created_at
+    CONSTRAINT check_finished_at CHECK (
+      finished_at IS NULL
+      OR finished_at >= started_at
     ),
-    check (
-      estimated_total_duration is null
-      or estimated_total_duration >= estimated_preparation_duration + estimated_execution_duration + estimated_cleanup_duration
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
     ),
-    check (
-      finish_by is null
-      or finish_by >= created_at
+    CONSTRAINT check_estimated_duration CHECK (
+      estimated_total_duration IS NULL
+      OR estimated_total_duration >= COALESCE(estimated_preparation_duration, 0) + COALESCE(estimated_execution_duration, 0) + COALESCE(estimated_cleanup_duration, 0)
     ),
-    PRIMARY KEY (`task_id`),
-    UNIQUE KEY `user_task` (`user_id`, `external_id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_folders`;
-
-CREATE TABLE
-  `task_folders` (
-    `task_id` binary(16) NOT NULL,
-    `parent_folder_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_parents`;
-
-CREATE TABLE
-  `task_parents` (
-    `parent_task_id` binary(16) NOT NULL,
-    `child_task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`child_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_dependencies`;
-
-CREATE TABLE
-  `task_dependencies` (
-    `task_id` binary(16) NOT NULL,
-    `dependent_task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`dependent_task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `activities`;
-
-CREATE TABLE
-  `activities` (
-    `activity_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `name` varchar(255) NOT NULL,
-    `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`activity_id`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_activities`;
-
-CREATE TABLE
-  `task_activities` (
-    `activity_id` binary(16) NOT NULL,
-    `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `organizations`;
-
-CREATE TABLE
-  `organizations` (
-    `organization_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `name` varchar(255) NOT NULL,
-    `website_url` varchar(255) DEFAULT NULL,
-    `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`organization_id`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_organizations`;
-
-CREATE TABLE
-  `task_organizations` (
-    `organization_id` binary(16) NOT NULL,
-    `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `persons`;
-
-CREATE TABLE
-  `persons` (
-    `person_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `first_name` varchar(255) NOT NULL,
-    `last_name` varchar(255) NOT NULL,
-    `email` varchar(255) DEFAULT NULL,
-    `mobile_phone` varchar(255) DEFAULT NULL,
-    `website_url` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`person_id`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `organization_persons`;
-
-CREATE TABLE
-  `organization_persons` (
-    `person_id` binary(16) NOT NULL,
-    `organization_id` binary(16) NOT NULL,
-    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`organization_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_persons`;
-
-CREATE TABLE
-  `task_persons` (
-    `person_id` binary(16) NOT NULL,
-    `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`person_id`) REFERENCES `persons` (`person_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `physical_items`;
-
-CREATE TABLE
-  `physical_items` (
-    `physical_item_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `name` varchar(255) NOT NULL,
-    `description` text DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `location_id` binary(16) DEFAULT NULL,
-    `serial_number` varchar(255) DEFAULT NULL,
-    `model_number` varchar(255) DEFAULT NULL,
-    `manufacturer` varchar(255) DEFAULT NULL,
-    `storage_location` varchar(255) DEFAULT NULL,
-    check (
-      updated_at is null
-      or updated_at >= created_at
+    CONSTRAINT check_finish_by CHECK (
+      finish_by IS NULL
+      OR finish_by >= created_at
     ),
-    FOREIGN KEY (`location_id`) REFERENCES `physical_locations` (`location_id`) ON DELETE SET NULL,
-    PRIMARY KEY (`physical_item_id`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `physical_item_child_items`;
+    UNIQUE (user_id, external_id)
+  );
 
 CREATE TABLE
-  `physical_item_child_items` (
-    `parent_item_id` binary(16) NOT NULL,
-    `child_item_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`child_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `physical_item_folders`;
+  task_tags (
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (task_id, tag_id)
+  );
 
 CREATE TABLE
-  `physical_item_folders` (
-    `physical_item_id` binary(16) NOT NULL,
-    `parent_folder_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_physical_items`;
+  task_parents (
+    parent_task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    child_task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (parent_task_id, child_task_id)
+  );
 
 CREATE TABLE
-  `task_physical_items` (
-    `physical_item_id` binary(16) NOT NULL,
-    `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`physical_item_id`) REFERENCES `physical_items` (`physical_item_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `physical_locations`;
+  task_dependencies (
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    dependent_task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (task_id, dependent_task_id)
+  );
 
 CREATE TABLE
-  `physical_locations` (
-    `location_id` binary(16) NOT NULL COMMENT 'format: xxhash(`/latitude/longitude`)',
-    `latitude` DECIMAL(10, 8) COMMENT 'latitude decimal coordinate',
-    `longitude` DECIMAL(11, 8) COMMENT 'longitude decimal coordinate',
-    `name` varchar(255),
-    `mail_address` text COMMENT 'Mailing Address',
-    `mail_address2` text COMMENT 'Mailing Address Second Line',
-    `mail_careof` text COMMENT 'Mailing Address Care of',
-    `mail_street_number` text COMMENT 'Mailing Address Street Number',
-    `mail_street_prefix` text COMMENT 'Mailing Address Street Prefix',
-    `mail_street_name` text COMMENT 'Mailing Address Street Name',
-    `mail_street_type` text COMMENT 'Mailing Address Street Type',
-    `mail_street_suffix` text COMMENT 'Mailing Address Street Suffix',
-    `mail_unit_number` text COMMENT 'Mailing Address Unit Number',
-    `mail_city` text COMMENT 'Mailing Address City',
-    `mail_state2` text COMMENT 'Mailing Address State',
-    `mail_zip` text COMMENT 'Mailing Address ZIP Code',
-    `mail_country` text COMMENT 'Mailing Address Country',
-    `mail_urbanization` text COMMENT 'Mailing Address Urbanizacion (Puerto Rico)',
-    PRIMARY KEY (`location_id`),
-    KEY `index_lat_lon` (`latitude`, `longitude`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `digital_items`;
+  activities (
+    activity_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
 
 CREATE TABLE
-  `digital_items` (
-    `digital_item_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `ipfs_hash` varchar(100) NOT NULL COMMENT 'used as id',
-    /* TODO figure out length */
-    `text` text DEFAULT NULL,
-    `markdown` text DEFAULT NULL,
-    `html` text DEFAULT NULL,
-    `href` varchar(255) DEFAULT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`digital_item_id`),
-    UNIQUE KEY `ipfs_hash` (`ipfs_hash`)
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `digital_item_folders`;
+  task_activities (
+    activity_id UUID NOT NULL REFERENCES activities (activity_id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (activity_id, task_id)
+  );
 
 CREATE TABLE
-  `digital_item_folders` (
-    `digital_item_id` binary(16) NOT NULL,
-    `parent_folder_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`digital_item_id`) REFERENCES `digital_items` (`digital_item_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `task_digital_items`;
+  organizations (
+    organization_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    website_url VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
 
 CREATE TABLE
-  `task_digital_items` (
-    `digital_item_id` binary(16) NOT NULL,
-    `task_id` binary(16) NOT NULL,
-    FOREIGN KEY (`digital_item_id`) REFERENCES `digital_items` (`digital_item_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `database_tables`;
+  task_organizations (
+    organization_id UUID NOT NULL REFERENCES organizations (organization_id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (organization_id, task_id)
+  );
 
 CREATE TABLE
-  `database_tables` (
-    `database_table_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `table_name` varchar(255) NOT NULL,
-    `table_description` text,
-    `user_id` binary(16) NOT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    check (
-      updated_at is null
-      or updated_at >= created_at
+  persons (
+    person_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    mobile_phone VARCHAR(255),
+    website_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+CREATE TABLE
+  organization_persons (
+    person_id UUID NOT NULL REFERENCES persons (person_id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES organizations (organization_id) ON DELETE CASCADE,
+    PRIMARY KEY (person_id, organization_id)
+  );
+
+CREATE TABLE
+  task_persons (
+    person_id UUID NOT NULL REFERENCES persons (person_id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (person_id, task_id)
+  );
+
+CREATE TABLE
+  physical_locations (
+    location_id UUID PRIMARY KEY,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    name VARCHAR(255),
+    mail_address TEXT,
+    mail_address2 TEXT,
+    mail_careof TEXT,
+    mail_street_number TEXT,
+    mail_street_prefix TEXT,
+    mail_street_name TEXT,
+    mail_street_type TEXT,
+    mail_street_suffix TEXT,
+    mail_unit_number TEXT,
+    mail_city TEXT,
+    mail_state2 TEXT,
+    mail_zip TEXT,
+    mail_country TEXT,
+    mail_urbanization TEXT
+  );
+
+CREATE INDEX index_lat_lon ON physical_locations (latitude, longitude);
+
+CREATE TABLE
+  physical_items (
+    physical_item_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    location_id UUID REFERENCES physical_locations (location_id) ON DELETE SET NULL,
+    serial_number VARCHAR(255),
+    model_number VARCHAR(255),
+    manufacturer VARCHAR(255),
+    storage_location VARCHAR(255),
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
+    )
+  );
+
+CREATE TABLE
+  physical_item_child_items (
+    parent_item_id UUID NOT NULL REFERENCES physical_items (physical_item_id) ON DELETE CASCADE,
+    child_item_id UUID NOT NULL REFERENCES physical_items (physical_item_id) ON DELETE CASCADE,
+    PRIMARY KEY (parent_item_id, child_item_id)
+  );
+
+CREATE TABLE
+  physical_item_tags (
+    physical_item_id UUID NOT NULL REFERENCES physical_items (physical_item_id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (physical_item_id, tag_id)
+  );
+
+CREATE TABLE
+  task_physical_items (
+    physical_item_id UUID NOT NULL REFERENCES physical_items (physical_item_id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (physical_item_id, task_id)
+  );
+
+CREATE TABLE
+  digital_items (
+    digital_item_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    ipfs_hash VARCHAR(100) NOT NULL UNIQUE,
+    text TEXT,
+    markdown TEXT,
+    html TEXT,
+    href VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+CREATE TABLE
+  digital_item_tags (
+    digital_item_id UUID NOT NULL REFERENCES digital_items (digital_item_id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (digital_item_id, tag_id)
+  );
+
+CREATE TABLE
+  task_digital_items (
+    digital_item_id UUID NOT NULL REFERENCES digital_items (digital_item_id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES tasks (task_id) ON DELETE CASCADE,
+    PRIMARY KEY (digital_item_id, task_id)
+  );
+
+CREATE TABLE
+  database_tables (
+    database_table_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    table_name VARCHAR(255) NOT NULL,
+    table_description TEXT,
+    user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
     ),
-    PRIMARY KEY (`database_table_id`),
-    UNIQUE KEY `table_name` (`table_name`, `user_id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `database_table_folders`;
+    UNIQUE (table_name, user_id)
+  );
 
 CREATE TABLE
-  `database_table_folders` (
-    `database_table_id` binary(16) NOT NULL,
-    `parent_folder_id` binary(16) NOT NULL,
-    FOREIGN KEY (`parent_folder_id`) REFERENCES `folders` (`folder_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`database_table_id`) REFERENCES `database_tables` (`database_table_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
-
-DROP TABLE
-  IF EXISTS `database_table_views`;
+  database_table_tags (
+    database_table_id UUID NOT NULL REFERENCES database_tables (database_table_id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (database_table_id, tag_id)
+  );
 
 CREATE TABLE
-  `database_table_views` (
-    `view_id` binary(16) DEFAULT (UUID_TO_BIN (UUID ())) COMMENT 'UUIDv1',
-    `view_name` varchar(30) NOT NULL,
-    `view_description` text DEFAULT NULL,
-    `table_name` varchar(255) NOT NULL,
-    `table_state` json DEFAULT NULL,
-    `user_id` binary(16) NOT NULL,
-    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    check (
-      updated_at is null
-      or updated_at >= created_at
+  database_table_views (
+    view_id UUID DEFAULT uuid_generate_v1 () PRIMARY KEY,
+    view_name VARCHAR(30) NOT NULL,
+    view_description TEXT,
+    table_name VARCHAR(255) NOT NULL,
+    table_state JSONB,
+    user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (
+      updated_at IS NULL
+      OR updated_at >= created_at
     ),
-    PRIMARY KEY (`view_id`),
-    UNIQUE KEY `table_view` (`view_name`, `table_name`, `user_id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+    UNIQUE (view_name, table_name, user_id)
+  );
 
-SET
-  FOREIGN_KEY_CHECKS = 1;
+CREATE INDEX idx_tag_name ON tags (tag_name);

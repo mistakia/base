@@ -7,7 +7,7 @@ This document outlines the directory structure for the human-in-the-loop agent s
 The system is organized into the following top-level directories:
 
 ```
-├── common/             # Shared code between client and server
+├── libs-shared/       # Shared code between client and server
 ├── libs-server/        # Server-specific code
 ├── static/             # Static resources (images, styles, etc.)
 ├── scripts/            # Executable command-line scripts
@@ -18,7 +18,9 @@ The system is organized into the following top-level directories:
 
 ## Detailed Structure
 
-### Common
+### Shared Libraries
+
+The `libs-shared/` directory contains shared code between client and server:
 
 ### Server Libraries
 

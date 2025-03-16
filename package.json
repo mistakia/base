@@ -5,9 +5,12 @@
     "#server": "./server/index.mjs",
     "#server/*": "./server/*",
     "#config": "./config.mjs",
-    "#config/*": "./conf/*",
+    "#config/*": "./config/*",
     "#db": "./db/index.mjs",
     "#libs-server": "./libs-server/index.mjs",
+    "#libs-server/*": "./libs-server/*",
+    "#libs-shared": "./libs-shared/index.mjs",
+    "#libs-shared/*": "./libs-shared/*",
     "#test/*": "./test/*"
   },
   "scripts": {
@@ -19,8 +22,10 @@
     "test": "NODE_ENV=test TEST=all mocha --require test/global.mjs --exit"
   },
   "dependencies": {
-    "@trashman/ed25519-blake2b": "^0.0.3",
-    "@tsmx/secure-config": "^2.0.2",
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@notionhq/client": "^2.3.0",
+    "@trashman/ed25519-blake2b": "^0.0.7",
+    "@tsmx/secure-config": "^2.3.0",
     "binary-uuid": "^2.0.3",
     "cors": "^2.8.5",
     "deep-extend": "^0.6.0",
@@ -28,8 +33,8 @@
     "fastest-validator": "^1.16.0",
     "jsonwebtoken": "^9.0.0",
     "knex": "^2.4.2",
-    "mysql2": "^3.2.0",
     "node-fetch": "^3.3.2",
+    "pg": "^8.14.0",
     "qs": "^6.11.1",
     "react-table": "mistakia/react-table#afc246432d7829e63cd4255e5900d72f17c22571",
     "ws": "8.12.1"

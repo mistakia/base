@@ -97,7 +97,7 @@ const initialize_data_submodule = () => {
     console.log(
       'Adding data directory as a submodule to the main repository...'
     )
-    execSync(`git submodule add ./data`, { cwd: root_dir })
+    execSync(`git submodule add ${data_path}`, { cwd: root_dir })
     execSync('git submodule init', { cwd: root_dir })
     console.log('Data directory added as a submodule')
   } catch (error) {

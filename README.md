@@ -24,7 +24,7 @@ This system creates a framework for AI agents and humans to collaborate effectiv
 The system is organized into the following top-level directories:
 
 ```
-├── common/             # Shared code between client and server
+├── libs-shared/       # Shared code between client and server
 ├── libs-server/        # Server-specific code
 ├── static/             # Static resources (images, styles, etc.)
 ├── scripts/            # Executable command-line scripts

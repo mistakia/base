@@ -4,15 +4,20 @@ import config from '#config'
 export default async function () {
   // get all tables
   const tables = await db('information_schema.tables')
-    .where('table_schema', config.mysql.connection.database)
+    .where('table_schema', config.postgres.connection.database)
     .select('table_name')
 
   // disable foreign key checks
-  await db.raw('SET FOREIGN_KEY_CHECKS = 0')
+  await db.raw('SET CONSTRAINTS ALL DEFERRED')
 
   // truncate all tables
-  await Promise.all(tables.map((table) => db(table.table_name).delete()))
+  await Promise.all(
+    tables.map((table) =>
+      // Using TRUNCATE is more efficient than DELETE in Postgres
+      db.raw('TRUNCATE TABLE ?? CASCADE', [table.table_name])
+    )
+  )
 
   // enable foreign key checks
-  await db.raw('SET FOREIGN_KEY_CHECKS = 1')
+  await db.raw('SET CONSTRAINTS ALL IMMEDIATE')
 }
