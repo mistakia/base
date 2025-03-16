@@ -1,5 +1,4 @@
 import express from 'express'
-import { toBinaryUUID } from 'binary-uuid'
 import Validator from 'fastest-validator'
 
 import * as table_constants from '../../../react-table/src/constants.mjs'
@@ -99,10 +98,10 @@ const get_database_table = async ({ table_name, user_id }) => {
     database_table = await db('database_tables')
       .select(
         '*',
-        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
-        db.raw('BIN_TO_UUID(database_id, true) as database_id')
+        'user_id::text as user_id',
+        'database_id::text as database_id'
       )
-      .where({ table_name, user_id: toBinaryUUID(user_id) })
+      .where({ table_name, user_id })
       .first()
   }
 
@@ -148,14 +147,10 @@ router.get('/:table_name', async (req, res) => {
     }))
 
     const database_table_views = await db('database_table_views')
-      .select(
-        '*',
-        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
-        db.raw('BIN_TO_UUID(view_id, true) as view_id')
-      )
+      .select('*', 'user_id::text as user_id', 'view_id::text as view_id')
       .where({
         table_name: formatted_table_name,
-        user_id: toBinaryUUID(user_id)
+        user_id
       })
 
     res.status(200).send({
@@ -204,7 +199,7 @@ router.post('/:table_name/views', async (req, res) => {
           table_state: JSON.stringify(table_state)
         })
         .where({
-          view_id: toBinaryUUID(view_id)
+          view_id
         })
     } else {
       await db('database_table_views').insert({
@@ -212,20 +207,16 @@ router.post('/:table_name/views', async (req, res) => {
         view_description,
         table_state: JSON.stringify(table_state),
         table_name: formatted_table_name,
-        user_id: toBinaryUUID(user_id)
+        user_id
       })
     }
 
     const view = await db('database_table_views')
-      .select(
-        '*',
-        db.raw('BIN_TO_UUID(user_id, true) as user_id'),
-        db.raw('BIN_TO_UUID(view_id, true) as view_id')
-      )
+      .select('*', 'user_id::text as user_id', 'view_id::text as view_id')
       .where({
         view_name,
         table_name: formatted_table_name,
-        user_id: toBinaryUUID(user_id)
+        user_id
       })
       .first()
 
@@ -250,11 +241,9 @@ router.delete('/:table_name/views/:view_id', async (req, res) => {
       return res.status(404).send({ error: 'table not found' })
     }
 
-    await db('database_table_views')
-      .delete()
-      .where({
-        view_id: toBinaryUUID(view_id)
-      })
+    await db('database_table_views').delete().where({
+      view_id
+    })
 
     res.status(200).send({ success: true })
   } catch (error) {
@@ -317,7 +306,7 @@ router.get('/:table_name/items', async (req, res) => {
         ) {
           database_query.select(
             db.raw(
-              `BIN_TO_UUID(${column.table_name}.${column.column_name}, true) as ${column.column_name}`
+              `${column.table_name}.${column.column_name}::text as ${column.column_name}`
             )
           )
         } else {

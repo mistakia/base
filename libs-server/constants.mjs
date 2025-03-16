@@ -15,9 +15,9 @@ export const DEFAULT_DATABASE_TABLES = [
     table_description: 'A default database for all digital items for the user'
   },
   {
-    table_id: 'DEFAULT_FOLDERS',
-    table_name: 'folders',
-    table_description: 'A default database for all folders for the user'
+    table_id: 'DEFAULT_TAGS',
+    table_name: 'tags',
+    table_description: 'A default database for all tags for the user'
   },
   {
     table_id: 'DEFAULT_ACTIVITIES',

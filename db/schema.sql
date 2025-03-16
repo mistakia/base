@@ -127,6 +127,7 @@ CREATE TABLE
     ),
     start_by TIMESTAMP,
     finish_by TIMESTAMP,
+    finish_by_text_input TEXT,
     estimated_total_duration INTEGER,
     estimated_preparation_duration INTEGER,
     estimated_execution_duration INTEGER,

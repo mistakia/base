@@ -2,12 +2,11 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
 import ed25519 from '@trashman/ed25519-blake2b'
-import { fromBinaryUUID } from 'binary-uuid'
 
 import db from '#db'
 import server from '#server'
-import { create_test_user } from '#test/utils/index.mjs'
-import reset_all_tables from './utils/reset_all_tables.mjs'
+import { create_test_user } from '#tests/utils/index.mjs'
+import reset_all_tables from '#tests/utils/reset_all_tables.mjs'
 
 chai.should()
 chai.use(chaiHttp)
@@ -21,17 +20,18 @@ describe('API /:user_id/tasks POST', () => {
     const user = await create_test_user()
     const task = {
       text_input: 'Test Task',
-      deadline_text_input: '2018-01-01'
+      finish_by_text_input: '2018-01-01'
     }
     const task_hash = ed25519.hash(JSON.stringify(task))
     const signature = ed25519.sign(task_hash, user.private_key, user.public_key)
 
     const res = await chai
       .request(server)
-      .post(`/api/${fromBinaryUUID(user.user_id)}/tasks`)
+      .post(`/api/users/${user.user_id}/tasks`)
       .send({
         task,
-        signature: signature.toString('hex')
+        signature: signature.toString('hex'),
+        user_id: user.user_id
       })
 
     res.should.have.status(200)
@@ -44,8 +44,8 @@ describe('API /:user_id/tasks POST', () => {
     task_from_db.should.have.property('task_id')
     task_from_db.should.have.property('user_id')
     task_from_db.should.have.property('text_input')
-    task_from_db.should.have.property('deadline_text_input')
-    task_from_db.should.have.property('deadline')
+    task_from_db.should.have.property('finish_by_text_input')
+    task_from_db.should.have.property('finish_by')
     task_from_db.should.have.property('created_at')
     task_from_db.should.have.property('updated_at')
     task_from_db.should.have.property('estimated_total_duration')

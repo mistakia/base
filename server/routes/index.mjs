@@ -1,7 +1,7 @@
 import users from './users.mjs'
-import folders from './folders.mjs'
+import tags from './tags.mjs'
 
 export default {
   users,
-  folders
+  tags
 }

@@ -3,11 +3,10 @@ import chai from 'chai'
 import chaiHttp from 'chai-http'
 import crypto from 'crypto'
 import ed25519 from '@trashman/ed25519-blake2b'
-import { fromBinaryUUID } from 'binary-uuid'
 
 import server from '#server'
 import db from '#db'
-import reset_all_tables from './utils/reset_all_tables.mjs'
+import reset_all_tables from '#tests/utils/reset_all_tables.mjs'
 
 chai.should()
 chai.use(chaiHttp)
@@ -18,7 +17,7 @@ describe('API /users', function () {
   })
 
   it('should create a new user', async () => {
-    const timestamp = Math.round(Date.now() / 1000) - 1000
+    const timestamp = new Date()
     const private_key = crypto.randomBytes(32)
     const public_key = ed25519.publicKey(private_key)
     const data = {
@@ -42,8 +41,7 @@ describe('API /users', function () {
     res.body.should.be.a('object')
     res.body.should.have.property('user_id')
 
-    const user_id = res.body.user_id
-    const user = await db('users').where('user_id', user_id).first()
+    const user = await db('users').where('user_id', res.body.user_id).first()
     user.should.be.a('object')
     user.should.have.property('user_id')
     user.should.have.property('public_key')
@@ -62,8 +60,7 @@ describe('API /users', function () {
 
   it('should get a user by user_id', async () => {
     const user = await db('users').first()
-    const user_id = fromBinaryUUID(user.user_id)
-    const res = await chai.request(server).get(`/api/users/${user_id}`)
+    const res = await chai.request(server).get(`/api/users/${user.username}`)
 
     res.should.have.status(200)
     res.body.should.be.a('object')
@@ -74,12 +71,17 @@ describe('API /users', function () {
     res.body.should.have.property('created_at')
     res.body.should.have.property('updated_at')
 
-    res.body.user_id.should.equal(user_id)
+    res.body.user_id.should.equal(user.user_id)
     res.body.public_key.should.equal(user.public_key)
     res.body.username.should.equal(user.username)
     res.body.email.should.equal(user.email)
-    res.body.created_at.should.equal(user.created_at)
-    res.body.updated_at.should.equal(user.updated_at)
+
+    new Date(res.body.created_at)
+      .getTime()
+      .should.equal(new Date(user.created_at).getTime())
+    new Date(res.body.updated_at)
+      .getTime()
+      .should.equal(new Date(user.updated_at).getTime())
   })
 
   it('should get a user by public_key', async () => {
@@ -97,11 +99,16 @@ describe('API /users', function () {
     res.body.should.have.property('created_at')
     res.body.should.have.property('updated_at')
 
-    res.body.user_id.should.equal(fromBinaryUUID(user.user_id))
+    res.body.user_id.should.equal(user.user_id)
     res.body.public_key.should.equal(user.public_key)
     res.body.username.should.equal(user.username)
     res.body.email.should.equal(user.email)
-    res.body.created_at.should.equal(user.created_at)
-    res.body.updated_at.should.equal(user.updated_at)
+
+    new Date(res.body.created_at)
+      .getTime()
+      .should.equal(new Date(user.created_at).getTime())
+    new Date(res.body.updated_at)
+      .getTime()
+      .should.equal(new Date(user.updated_at).getTime())
   })
 })

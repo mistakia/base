@@ -12,41 +12,61 @@ The system is designed to create a collaborative environment where AI agents and
 - **Access Control**: Tools have configurable permissions
 - **Async Collaboration**: Support for asynchronous human-agent interaction
 
-## 2. Core Components
+See [Directory Structure](./directory-structure.md) for the complete organization.
 
-The system is organized into a modular directory structure with clear separation of concerns. See [Directory Structure](./directory-structure.md) for the complete organization.
-
-## 3. Core Schema
-
-## 4. Workflows
-
-## 5. Security and Access Control
-
-### 5.1 Tool Permission Levels
+### 1.1 Tool Permission Levels
 
 - **Read-Only**: Can only read data, no modification
 - **Propose-Only**: Can propose changes but requires approval
 - **Auto-Approve-Low-Risk**: Can auto-approve changes deemed low-risk
 - **Full-Access**: Can make changes without approval (restricted)
 
-### 5.2 Human Confirmation Workflows
+### 1.2 Human Confirmation Workflows
 
 - Direct approval: Human explicitly approves each change
 - Batch approval: Group of changes approved together
 - Time-limited delegation: Auto-approve for a set period
 - Risk-based approval: Higher risk = higher approval requirements
 
-## 6. Glossary
+## 6. Data Storage System
 
-### 6.1 Key Terms
+### 6.1 Storage
+
+Data is stored in two places:
+
+- **Git Submodule Repository**
+
+  - Holds all files like docs, config, and templates
+  - Everything is version controlled and can be worked on offline
+  - This is our source of truth
+
+- **PostgreSQL Database**
+  - Stores structured data like users and tasks
+  - Handles relationships between data
+  - Keeps track of where files are stored
+
+### 6.2 External Connections
+
+Each external data connection has bidirectional sync and conflict resolution:
+
+- Google Drive
+- Notion
+- Apple Notes
+- Ubuntu servers
+- Github Projects
+- Other git repos
+
+## 7. Glossary
+
+### 7.1 Key Terms
 
 - **Activity**: A classification of actions that share common patterns, guidelines, and data requirements (e.g., "writing an email", "creating a task").
 - **Change Request**: A proposal for modifications to data or content that requires review and approval.
-- **Guideline**: A set of rules or recommendations associated with activities that MUST, SHOULD, or MAY be followed.
+- **Guideline**: A set of rules or recommendations associated with activities that MUST, SHOULD, or MAY be followed that will be included in relevant prompts.
 - **Inference Request**: The process of submitting a prompt to one or more AI models and receiving the generated outputs.
 - **Model**: A system capable of processing inference requests and generating outputs.
 - **Prompt**: A structured input provided to a model to guide its response generation.
 - **Task**: A discrete unit of work that can be assigned, tracked, and completed within the system.
 - **Tool**: A capability provided to agents that allows them to perform specific actions or access particular resources.
-- **Trigger**: An event or condition that activates building a prompt for an inference request.
+- **Trigger**: An event or condition that activates a prompt for an inference request.
 - **Tags**: Labels that can be added to activities, tasks, tools, and data items to help with organization and retrieval. An activity, task, tool, or data item can have multiple tags.

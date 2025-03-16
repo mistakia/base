@@ -3,7 +3,7 @@ import { Client } from '@notionhq/client'
 import debug from 'debug'
 import { z } from 'zod'
 
-import { register_provider } from '#libs-server/model_context_protocol/service.mjs'
+import { register_provider } from '#libs-server/mcp/service.mjs'
 import config from '#config'
 
 // Setup logger

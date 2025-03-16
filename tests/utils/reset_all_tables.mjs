@@ -1,10 +1,10 @@
 import db from '#db'
-import config from '#config'
 
 export default async function () {
   // get all tables
   const tables = await db('information_schema.tables')
-    .where('table_schema', config.postgres.connection.database)
+    .where('table_schema', 'public')
+    .where('table_type', 'BASE TABLE')
     .select('table_name')
 
   // disable foreign key checks

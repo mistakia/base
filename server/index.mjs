@@ -41,7 +41,7 @@ api.use(
 )
 
 api.use('/api/users', routes.users)
-api.use('/api/folders', routes.folders)
+api.use('/api/tags', routes.tags)
 
 if (IS_DEV) {
   api.get('*', (req, res) => {

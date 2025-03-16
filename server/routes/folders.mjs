@@ -1,5 +1,4 @@
 import express from 'express'
-import { toBinaryUUID } from 'binary-uuid'
 
 import db from '#db'
 import { constants } from '#libs-server'
@@ -20,9 +19,9 @@ router.get('/:folder_path*', async (req, res) => {
     const folder = await db('folders')
       .select(
         '*',
-        db.raw('BIN_TO_UUID(folder_id, true) as folder_id'),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id'),
-        db.raw('BIN_TO_UUID(user_id, true) as user_id')
+        'folder_id::text as folder_id',
+        'parent_folder_id::text as parent_folder_id',
+        'user_id::text as user_id'
       )
       .where({ folder_path: formatted_folder_path })
       .first()
@@ -35,68 +34,62 @@ router.get('/:folder_path*', async (req, res) => {
     const folders = await db('folders')
       .select(
         '*',
-        db.raw('BIN_TO_UUID(folder_id, true) as folder_id'),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+        'folder_id::text as folder_id',
+        'parent_folder_id::text as parent_folder_id'
       )
-      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+      .where({ parent_folder_id: folder.folder_id })
 
     // direct descendent tasks
     const tasks = await db('tasks')
       .select(
         '*',
-        db.raw('BIN_TO_UUID(tasks.task_id, true) as task_id'),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+        'tasks.task_id::text as task_id',
+        'parent_folder_id::text as parent_folder_id'
       )
       .join('task_folders', 'tasks.task_id', 'task_folders.task_id')
-      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+      .where({ parent_folder_id: folder.folder_id })
 
     // direct descendent physical items
     const physical_items = await db('physical_items')
       .select(
         '*',
-        db.raw(
-          'BIN_TO_UUID(physical_items.physical_item_id, true) as physical_item_id'
-        ),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+        'physical_items.physical_item_id::text as physical_item_id',
+        'parent_folder_id::text as parent_folder_id'
       )
       .join(
         'physical_item_folders',
         'physical_items.physical_item_id',
         'physical_item_folders.physical_item_id'
       )
-      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+      .where({ parent_folder_id: folder.folder_id })
 
     // direct descendent digital items
     const digital_items = await db('digital_items')
       .select(
         '*',
-        db.raw(
-          'BIN_TO_UUID(digital_items.digital_item_id, true) as digital_item_id'
-        ),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+        'digital_items.digital_item_id::text as digital_item_id',
+        'parent_folder_id::text as parent_folder_id'
       )
       .join(
         'digital_item_folders',
         'digital_items.digital_item_id',
         'digital_item_folders.digital_item_id'
       )
-      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+      .where({ parent_folder_id: folder.folder_id })
 
     // direct descendent database tables
     const database_tables = await db('database_tables')
       .select(
         '*',
-        db.raw(
-          'BIN_TO_UUID(database_tables.database_table_id, true) as database_table_id'
-        ),
-        db.raw('BIN_TO_UUID(parent_folder_id, true) as parent_folder_id')
+        'database_tables.database_table_id::text as database_table_id',
+        'parent_folder_id::text as parent_folder_id'
       )
       .join(
         'database_table_folders',
         'database_tables.database_table_id',
         'database_table_folders.database_table_id'
       )
-      .where({ parent_folder_id: toBinaryUUID(folder.folder_id) })
+      .where({ parent_folder_id: folder.folder_id })
 
     // add default databases to root folder
     if (!folder.parent_folder_id) {

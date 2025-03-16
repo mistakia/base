@@ -3,8 +3,8 @@ import db from '#db'
 export default async function ({
   text_input,
   user_id,
-  deadline_text_input,
-  deadline,
+  finish_by_text_input,
+  finish_by,
   planned_start,
   planned_finish,
   status,
@@ -14,21 +14,23 @@ export default async function ({
 
   parent_task_ids = [],
   child_task_ids = [],
-  task_folder_paths = [],
+  task_tag_ids = [],
   task_organization_ids = [],
   task_person_ids = [],
   task_physical_item_ids = [],
   task_digital_item_ids = []
 }) {
-  const [task_id] = await db('tasks').insert({
-    text_input,
-    user_id,
-    deadline_text_input,
-    deadline,
-    planned_start,
-    planned_finish,
-    status
-  })
+  const [{ task_id }] = await db('tasks')
+    .insert({
+      text_input,
+      user_id,
+      finish_by_text_input,
+      finish_by,
+      planned_start,
+      planned_finish,
+      status
+    })
+    .returning('task_id')
 
   if (dependent_on_task_ids.length || dependent_for_task_ids.length) {
     // new task is dependent on other tasks
@@ -64,21 +66,11 @@ export default async function ({
     await db('task_parents').insert([...children, ...parents])
   }
 
-  if (task_folder_paths.length) {
-    // make sure the folders exist
-    await db('folders')
-      .insert(
-        task_folder_paths.map((task_folder_path) => ({
-          folder_path: task_folder_path
-        }))
-      )
-      .onConflict('folder_path')
-      .ignore()
-
-    await db('task_folders').insert(
-      task_folder_paths.map((task_folder_path) => ({
+  if (task_tag_ids.length) {
+    await db('task_tags').insert(
+      task_tag_ids.map((tag_id) => ({
         task_id,
-        task_folder_path
+        tag_id
       }))
     )
   }

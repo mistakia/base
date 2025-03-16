@@ -7,12 +7,17 @@ This document outlines the directory structure for the human-in-the-loop agent s
 The system is organized into the following top-level directories:
 
 ```
-├── libs-shared/       # Shared code between client and server
-├── libs-server/        # Server-specific code
-├── static/             # Static resources (images, styles, etc.)
-├── scripts/            # Executable command-line scripts
-├── docs/               # Documentation
+├── client/             # Client-side code only
 ├── config/             # Configuration
+├── data/               # Data unique to the user
+├── db/                 # Database Schema
+├── docs/               # Documentation
+├── libs-server/        # Server-side code only
+├── libs-shared/        # Shared code (client & server)
+├── scripts/            # Executable command-line scripts
+├── server/             # Express API server
+├── static/             # Static resources (images, styles, etc.)
+├── system/             # Data & Prompts related to the core system
 └── tests/              # Test files
 ```
 
@@ -24,7 +29,16 @@ The `libs-shared/` directory contains shared code between client and server:
 
 ### Server Libraries
 
-The `libs-server/` directory contains server-specific code organized by the system components:
+The `libs-server/` directory contains server-specific code organized by functionality:
+
+```
+└── libs-server/
+    ├── index.mjs       # Main export file
+    ├── constants.mjs   # Shared constants
+    ├── tasks/          # Task management functionality
+    ├── integrations/   # External service integrations
+    └── mcp/            # Model Context Protocol service
+```
 
 ### Static Resources
 
@@ -40,7 +54,7 @@ The `docs/` directory contains system documentation:
 └── docs/
     ├── system-design.md
     ├── configuration.md
-    ├── directory-structure.md
+    └── directory-structure.md
 ```
 
 ### Configuration
@@ -58,7 +72,7 @@ The `tests/` directory contains test files organized by component:
 
 ## Data Storage
 
-The system uses the following directories for data storage:
+The following directories are used for user data storage (knowledge base, prompts, preferences, guidelines, and anything else unique to the user):
 
 ```
 └── data/
@@ -70,6 +84,8 @@ The system uses the following directories for data storage:
     ├── tags/           # Tags
     └── logs/           # System logs
 ```
+
+Non-user specific data, prompts, and guidelines are stored in the `system/` directory.
 
 ## Implementation Notes
 

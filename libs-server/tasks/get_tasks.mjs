@@ -3,8 +3,8 @@ import db from '#db'
 export default async function ({
   user_id,
   status,
-  min_deadline,
-  max_deadline,
+  min_finish_by,
+  max_finish_by,
   min_estimated_total_duration,
   max_estimated_total_duration,
   min_planned_start,
@@ -18,12 +18,12 @@ export default async function ({
     query.where({ status })
   }
 
-  if (min_deadline) {
-    query.where('deadline', '>=', min_deadline)
+  if (min_finish_by) {
+    query.where('finish_by', '>=', min_finish_by)
   }
 
-  if (max_deadline) {
-    query.where('deadline', '<=', max_deadline)
+  if (max_finish_by) {
+    query.where('finish_by', '<=', max_finish_by)
   }
 
   if (min_estimated_total_duration) {

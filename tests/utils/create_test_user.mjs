@@ -12,7 +12,7 @@ export default async function () {
     username: 'test_user',
     email: 'test@test.com'
   }
-  const [user_id] = await db('users').insert(data)
+  const [{ user_id }] = await db('users').insert(data).returning('user_id')
   const user = await db('users').where('user_id', user_id).first()
 
   return {

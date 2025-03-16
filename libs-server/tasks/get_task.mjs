@@ -23,9 +23,7 @@ export default async function ({ task_id }) {
     .where({ child_task_id: task_id })
     .select('parent_task_id')
 
-  const task_folders = await db('task_folders')
-    .where({ task_id })
-    .select('folder_path')
+  const task_tags = await db('task_tags').where({ task_id }).select('tag_id')
 
   const task_organizations = await db('task_organizations')
     .where({ task_id })
@@ -43,7 +41,7 @@ export default async function ({ task_id }) {
     ),
     children_task_ids: children.map(({ child_task_id }) => child_task_id),
     parents_task_ids: parents.map(({ parent_task_id }) => parent_task_id),
-    task_folder_ids: task_folders.map(({ folder_path }) => folder_path),
+    task_tag_ids: task_tags.map(({ tag_id }) => tag_id),
     task_organization_ids: task_organizations.map(
       ({ organization_id }) => organization_id
     ),

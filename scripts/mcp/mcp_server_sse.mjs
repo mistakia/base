@@ -7,7 +7,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { z } from 'zod'
 
-// import { mcp_server } from '#libs-server/model_context_protocol/index.mjs'
+// import { mcp_server } from '#libs-server/mcp/server.mjs'
 
 // Configure debug logging
 const logger = debug('mcp:standalone')

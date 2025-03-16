@@ -2,7 +2,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import debug from 'debug'
-import { mcp_server } from './libs-server/model_context_protocol/index.mjs'
+import { mcp_server } from '#libs-server/mcp/server.mjs'
 
 // Configure debug logging
 const logger = debug('mcp:stdio')

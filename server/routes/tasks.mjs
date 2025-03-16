@@ -1,5 +1,4 @@
 import express from 'express'
-import { toBinaryUUID } from 'binary-uuid'
 import ed25519 from '@trashman/ed25519-blake2b'
 
 import db from '#db'
@@ -11,7 +10,7 @@ const router = express.Router({ mergeParams: true })
 router.post('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { task, signature } = req.body
+    const { task, signature, user_id } = req.body
     if (!task) {
       return res.status(400).send({ error: 'missing task' })
     }
@@ -20,7 +19,6 @@ router.post('/?', async (req, res) => {
       return res.status(400).send({ error: 'missing signature' })
     }
 
-    const user_id = toBinaryUUID(req.params.user_id)
     const user = await db('users').where('user_id', user_id).first()
     if (!user) {
       return res.status(400).send({ error: 'invalid user_id' })

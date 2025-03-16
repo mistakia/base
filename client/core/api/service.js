@@ -30,8 +30,8 @@ export const api = {
     const url = `${API_URL}/users/${user_id}/tasks`
     return { url, ...POST({ task, signature }) }
   },
-  get_folder_path({ folder_path }) {
-    const url = `${API_URL}/folders${folder_path}`
+  get_tag({ tag_name, user_id }) {
+    const url = `${API_URL}/tags/${tag_name}?user_id=${user_id}`
     return { url }
   },
   get_database({ user_id, database_table_name }) {
