@@ -1,0 +1,1 @@
+- The priority of a task MUST be one of the following: 'No status', 'Waiting', 'Paused', 'Planned', 'Started', 'In Progress', 'Completed', 'Cancelled', 'Blocked'.

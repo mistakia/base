@@ -6,6 +6,12 @@ import { list_providers, process_request } from './service.mjs'
 
 // Import all providers
 import { NOTION_TOOLS } from './notion/index.mjs'
+// Import database tools and resources
+import {
+  DB_TOOLS,
+  DB_RESOURCES,
+  DB_RESOURCE_TEMPLATES
+} from './database/index.mjs'
 // Add more provider imports here as they become available
 
 const logger = debug('mcp')
@@ -23,7 +29,8 @@ const mcp_server = new Server(
   },
   {
     capabilities: {
-      tools: {}
+      tools: {},
+      resources: {}
     }
   }
 )
@@ -62,8 +69,20 @@ mcp_server.setRequestHandler(
 
 // Combine tools from all providers
 const ALL_TOOLS = [
-  ...NOTION_TOOLS
+  ...NOTION_TOOLS,
+  ...DB_TOOLS
   // Add more tools from other providers here
+]
+
+// Combine resources from all providers
+const ALL_RESOURCES = [
+  ...DB_RESOURCES
+  // Add more resources from other providers here
+]
+
+const ALL_RESOURCE_TEMPLATES = [
+  ...DB_RESOURCE_TEMPLATES
+  // Add more resource templates from other providers here
 ]
 
 // Convert tools array to capabilities format
@@ -88,6 +107,31 @@ mcp_server.setRequestHandler(
   }
 )
 
+// List resources handler
+mcp_server.setRequestHandler(
+  z.object({
+    method: z.literal('resources/list')
+  }),
+  async () => {
+    logger('Handling resources/list request')
+    return {
+      resources: ALL_RESOURCES
+    }
+  }
+)
+
+mcp_server.setRequestHandler(
+  z.object({
+    method: z.literal('resources/templates/list')
+  }),
+  async () => {
+    logger('Handling resources/templates/list request')
+    return {
+      resourceTemplates: ALL_RESOURCE_TEMPLATES
+    }
+  }
+)
+
 // Define a single handler for all tools
 mcp_server.setRequestHandler(
   z.object({
@@ -107,6 +151,8 @@ mcp_server.setRequestHandler(
     // Route the request to the appropriate provider
     if (name.startsWith('notion_')) {
       provider_name = 'notion'
+    } else if (name.startsWith('db_')) {
+      provider_name = 'database'
     }
     // Add more provider routing logic here
 
@@ -123,6 +169,38 @@ mcp_server.setRequestHandler(
       return result
     } catch (error) {
       logger('Error processing tool call: %O', error)
+      throw error
+    }
+  }
+)
+
+// Define a handler for reading resources
+mcp_server.setRequestHandler(
+  z.object({
+    method: z.literal('resources/read'),
+    params: z.object({
+      uri: z.string()
+    })
+  }),
+  async (request) => {
+    logger('Handling resources/read request: %O', request)
+    const { uri } = request.params
+
+    // Determine which provider should handle this resource
+    const provider_name = 'database' // Default to database for resources
+
+    // Process the request using the provider
+    try {
+      const result = await process_request(provider_name, {
+        method: 'resources/read',
+        params: {
+          uri
+        }
+      })
+      logger('Resource read result: %O', result)
+      return result
+    } catch (error) {
+      logger('Error processing resource read: %O', error)
       throw error
     }
   }
@@ -150,7 +228,10 @@ mcp_server.setRequestHandler(
         version: '1.0.0'
       },
       capabilities: {
-        tools: tools_capabilities
+        tools: tools_capabilities,
+        resources: {
+          // Resources don't need the same capabilities format as tools
+        }
       }
     }
   }
