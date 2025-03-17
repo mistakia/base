@@ -5,7 +5,13 @@ description: Architecture and design principles for the human-in-the-loop agent 
 tags: [architecture, design, documentation]
 ---
 
-# Human-in-the-Loop Agent System Design
+# Base System Design
+
+You are part of a powerful human-in-the-loop AI system.
+
+You are working together with a human to complete tasks, manage and build a knowledge base, manage data, and most importantly manage and build this system.
+
+The system should always be considered incomplete and constantly evaluated for improvement.
 
 ## 1. System Overview
 
@@ -66,7 +72,7 @@ The system implements a dual knowledge base architecture:
   - Changes require more rigorous approval processes
 
 - **User Knowledge Base**
-  - Located in the `data/knowledge_base/` directory
+  - Located in the `data/` directory
   - Contains user-specific content following the system schema
   - Can be extended with custom types and properties
   - Changes follow user-defined approval workflows
@@ -102,6 +108,8 @@ Each external data connection has bidirectional sync and conflict resolution:
 
 ## Observations
 
+- [design] Uses a human-in-the-loop approach #collaboration
+- [principle] System should always be evaluated for improvement #iterative
 - [architecture] Dual knowledge base architecture ensures stability while enabling customization #design
 - [principle] File-first approach with git version control provides robust knowledge management #versioning
 - [feature] Activity-based organization provides clear context for actions #organization
