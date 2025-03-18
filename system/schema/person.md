@@ -6,11 +6,11 @@ description: Persons represent individual people
 properties:
   - name: first_name
     type: string
-    required: false
+    required: true
     description: First name of the person
   - name: last_name
     type: string
-    required: false
+    required: true
     description: Last name of the person
   - name: email
     type: string

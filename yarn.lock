@@ -5556,6 +5556,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"get-stdin@npm:=8.0.0":
+  version: 8.0.0
+  resolution: "get-stdin@npm:8.0.0"
+  checksum: 10/40128b6cd25781ddbd233344f1a1e4006d4284906191ed0a7d55ec2c1a3e44d650f280b2c9eeab79c03ac3037da80257476c0e4e5af38ddfb902d6ff06282d77
+  languageName: node
+  linkType: hard
+
 "get-stream@npm:^6.0.0":
   version: 6.0.1
   resolution: "get-stream@npm:6.0.1"
@@ -6651,6 +6658,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jsox@npm:^1.2.119":
+  version: 1.2.121
+  resolution: "jsox@npm:1.2.121"
+  bin:
+    jsox: lib/cli.js
+  checksum: 10/a5a8cd9e94faede27f67a93002f8a5d0268774ef880878c8ef41ce80d20d7160b5b14d5a1618bf10c78f43f747e5cf87e52879b429faebb79f533ca4677a026d
+  languageName: node
+  linkType: hard
+
 "jsx-ast-utils@npm:^2.4.1 || ^3.0.0":
   version: 3.2.2
   resolution: "jsx-ast-utils@npm:3.2.2"
@@ -7414,12 +7430,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-sql-parser@npm:^4.4.0":
-  version: 4.6.5
-  resolution: "node-sql-parser@npm:4.6.5"
+"node-sql-parser@npm:^4.12.0":
+  version: 4.18.0
+  resolution: "node-sql-parser@npm:4.18.0"
   dependencies:
     big-integer: "npm:^1.6.48"
-  checksum: 10/40bf521ac6a607be7f7d1076d92a1347215a3e405f2f09a7f4b4eb9fdecb8d14d8dc7aa1d7dded966c5e8adf0eba118500e6ac6d3159b74d51d5fce0240092ab
+  checksum: 10/c3a799b14c6e1a22062900118c4dc3e2e81893d2d956aa1f49a7c525eac9f7fb019e0eb0a929944fc1d3fcc870768e5700da104c845ebd2d64cb4eb802449bcd
   languageName: node
   linkType: hard
 
@@ -8075,25 +8091,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-plugin-sql@npm:^0.13.0":
-  version: 0.13.0
-  resolution: "prettier-plugin-sql@npm:0.13.0"
+"prettier-plugin-sql@npm:^0.18.1":
+  version: 0.18.1
+  resolution: "prettier-plugin-sql@npm:0.18.1"
   dependencies:
-    node-sql-parser: "npm:^4.4.0"
-    sql-formatter: "npm:^11.0.2"
-    tslib: "npm:^2.4.0"
+    jsox: "npm:^1.2.119"
+    node-sql-parser: "npm:^4.12.0"
+    sql-formatter: "npm:^15.0.2"
+    tslib: "npm:^2.6.2"
   peerDependencies:
-    prettier: ^2.0.0
-  checksum: 10/1699372d9016b373149f6d19c42d467b86a164d0248e1f065c69c36ace32177be708ede469f0e86de62cfed9ab76bbc80e5c0e4322ee06b224ced83ca1832b51
+    prettier: ^3.0.3
+  checksum: 10/b55c78177127cac46306e99629636c09f33bb7f8393686c85e2703bef20b41228576abf4187d838a552020d9d60748de092197e28da988e31991e89027fe8e14
   languageName: node
   linkType: hard
 
-"prettier@npm:^2.8.4":
-  version: 2.8.4
-  resolution: "prettier@npm:2.8.4"
+"prettier@npm:^3.5.3":
+  version: 3.5.3
+  resolution: "prettier@npm:3.5.3"
   bin:
-    prettier: bin-prettier.js
-  checksum: 10/57aedf9eea2ea3a4091c7867c8192d268614c395826c323c1fee7841b3ebab6b299c034b5a083f908d8a995ba7fc5c633ecc4b90c8fd56615c0c054a73d8c6b3
+    prettier: bin/prettier.cjs
+  checksum: 10/7050c08f674d9e49fbd9a4c008291d0715471f64e94cc5e4b01729affce221dfc6875c8de7e66b728c64abc9352eefb7eaae071b5f79d30081be207b53774b78
   languageName: node
   linkType: hard
 
@@ -8883,8 +8900,8 @@ __metadata:
     nib: "npm:1.2.0"
     node-fetch: "npm:^3.3.2"
     pg: "npm:^8.14.0"
-    prettier: "npm:^2.8.4"
-    prettier-plugin-sql: "npm:^0.13.0"
+    prettier: "npm:^3.5.3"
+    prettier-plugin-sql: "npm:^0.18.1"
     prop-types: "npm:^15.8.1"
     qs: "npm:^6.11.1"
     react: "npm:18.2.0"
@@ -9421,15 +9438,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sql-formatter@npm:^11.0.2":
-  version: 11.0.2
-  resolution: "sql-formatter@npm:11.0.2"
+"sql-formatter@npm:^15.0.2":
+  version: 15.4.11
+  resolution: "sql-formatter@npm:15.4.11"
   dependencies:
     argparse: "npm:^2.0.1"
+    get-stdin: "npm:=8.0.0"
     nearley: "npm:^2.20.1"
   bin:
     sql-formatter: bin/sql-formatter-cli.cjs
-  checksum: 10/2cb9fc59e7a9a517ab421091ccee4fabb792b454c67e64fbeb02a66e2dfc9a48af137e6ce468f6b955e772b2654fde0072d5adae3a7acbd86d171bec1b8c312c
+  checksum: 10/44d0c3982a9796c4174ccb912b843a69629263e87e83ebb17cf8de02d3b28e4e7be211143fcfd8f136e06d10488057361342fb043ca726d2fb23231075d400b3
   languageName: node
   linkType: hard
 
@@ -9827,10 +9845,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.4.1":
+"tslib@npm:^2.1.0, tslib@npm:^2.4.1":
   version: 2.5.0
   resolution: "tslib@npm:2.5.0"
   checksum: 10/ea556fbdf396fe15dbd45e242754e86e7c36e0dce8644404a7c8a81ae1e940744dc639569aeca1ae370a7f804d82872f3fd8564eb23be9adb7618201d0314dac
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.6.2":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: 10/3e2e043d5c2316461cb54e5c7fe02c30ef6dccb3384717ca22ae5c6b5bc95232a6241df19c622d9c73b809bea33b187f6dbc73030963e29950c2141bc32a79f7
   languageName: node
   linkType: hard
 

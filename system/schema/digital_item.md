@@ -5,7 +5,7 @@ extends: base
 description: Digital items represent files, software, or digital artifacts
 properties:
   - name: file_type
-    type: string
+    type: enum
     enum: [Document, Image, Video, Software, Code]
     required: false
     description: Type of digital item
@@ -21,6 +21,18 @@ properties:
     type: string
     required: false
     description: Hash value for verification
+  - name: ipfs_hash
+    type: string
+    required: false
+    description: IPFS hash for decentralized storage
+  - name: text
+    type: string
+    required: false
+    description: Plain text content
+  - name: html
+    type: string
+    required: false
+    description: HTML content if applicable
 ---
 
 # Digital Item

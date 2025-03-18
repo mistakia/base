@@ -79,7 +79,7 @@ properties:
     type: number
     required: false
     description: Depth in inches
-  - name: weight_oz
+  - name: weight_ounces
     type: number
     required: false
     description: Weight in ounces

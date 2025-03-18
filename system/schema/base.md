@@ -35,6 +35,10 @@ properties:
     required: true
     auto_generated: true
     description: Last modified timestamp
+  - name: archived_at
+    type: date
+    required: false
+    description: Date when the item was archived
 ---
 
 # Base Schema

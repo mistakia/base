@@ -76,7 +76,7 @@ The system implements a dual knowledge base architecture:
     ├── schema/         # User schema extensions
     ├── activities/     # User activity definitions
     ├── guidelines/     # User guideline definitions
-    ├── knowledge_base/ # User-specific knowledge items
+    ├── text/           # User-specific knowledge items
     │   ├── tasks/      # User tasks
     │   ├── notes/      # User notes
     │   ├── projects/   # User projects
