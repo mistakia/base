@@ -1,6 +1,7 @@
 ---
-title: Digital Item
 type: type_definition
+type_name: digital_item
+title: Digital Item
 extends: base
 description: Digital items represent files, software, or digital artifacts
 properties:

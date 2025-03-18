@@ -1,6 +1,7 @@
 ---
-title: Organization
 type: type_definition
+type_name: organization
+title: Organization
 extends: base
 description: Organizations represent companies, departments, teams, or other organizational units
 properties:

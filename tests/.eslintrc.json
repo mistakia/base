@@ -1,0 +1,18 @@
+{
+  "env": {
+    "mocha": true,
+    "node": true
+  },
+  "globals": {
+    "describe": true,
+    "it": true,
+    "expect": true,
+    "beforeEach": true,
+    "before": true,
+    "after": true,
+    "afterEach": true
+  },
+  "rules": {
+    "no-unused-expressions": "off"
+  }
+}

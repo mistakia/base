@@ -1,6 +1,7 @@
 ---
-title: Physical Location
 type: type_definition
+type_name: physical_location
+title: Physical Location
 extends: base
 description: Physical locations represent places, addresses, or geographical points
 properties:

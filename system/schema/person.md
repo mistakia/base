@@ -1,6 +1,7 @@
 ---
-title: Person
 type: type_definition
+type_name: person
+title: Person
 extends: base
 description: Persons represent individual people
 properties:

@@ -3,6 +3,7 @@ title: Create Guideline
 type: guideline
 description: Guidelines for creating new guidelines
 guideline_status: Approved
+activities: [Create Guideline]
 tags: [guideline, creation, governance]
 ---
 

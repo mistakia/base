@@ -1,6 +1,7 @@
 ---
-title: Type Extension
 type: type_definition
+type_name: type_extension
+title: Type Extension
 extends: base
 description: Type extensions allow adding new properties to existing types
 properties:

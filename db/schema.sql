@@ -20,7 +20,15 @@ DROP TABLE IF EXISTS activities CASCADE;
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgvector";
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+DROP TYPE IF EXISTS entity_type CASCADE;
+DROP TYPE IF EXISTS task_status_type CASCADE;
+DROP TYPE IF EXISTS priority_type CASCADE;
+DROP TYPE IF EXISTS importance_type CASCADE;
+DROP TYPE IF EXISTS frequency_type CASCADE;
+DROP TYPE IF EXISTS file_type CASCADE;
+DROP TYPE IF EXISTS guideline_status_type CASCADE;
 
 -- Create custom enum types
 CREATE TYPE entity_type AS ENUM (
@@ -344,53 +352,6 @@ CREATE TABLE tags (
   parent_tag_id UUID REFERENCES entities (entity_id) ON DELETE SET NULL
 );
 
--- Create a unique index on entities for tags by type, title, and user_id
-CREATE UNIQUE INDEX idx_unique_tag_entities ON entities (title, user_id)
-WHERE type = 'tag';
-
--- Create indices to improve query performance
-CREATE INDEX idx_entities_type ON entities (type);
-CREATE INDEX idx_entities_user_id ON entities (user_id);
-CREATE INDEX idx_entities_created_at ON entities (created_at DESC);
-CREATE INDEX idx_entities_updated_at ON entities (updated_at DESC);
-CREATE INDEX idx_entities_archived_at ON entities (archived_at);
-CREATE INDEX idx_entities_git_sha ON entities (git_sha);
-CREATE INDEX idx_entity_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_tag_parent ON tags (parent_tag_id);
-CREATE INDEX idx_entity_tags_tag_id ON entity_tags (tag_entity_id);
-CREATE INDEX idx_entity_relations_source ON entity_relations (source_entity_id);
-CREATE INDEX idx_entity_relations_target ON entity_relations (target_entity_id);
-CREATE INDEX idx_entity_relations_type ON entity_relations (relation_type);
-CREATE INDEX idx_entity_relations_source_type ON entity_relations (source_entity_id, relation_type);
-CREATE INDEX idx_entity_relations_target_type ON entity_relations (target_entity_id, relation_type);
-CREATE INDEX idx_tasks_status ON tasks (status);
-CREATE INDEX idx_tasks_finish_by ON tasks (finish_by);
-CREATE INDEX idx_entities_file_path ON entities (file_path) WHERE type = 'text';
-CREATE INDEX idx_entities_frontmatter ON entities USING gin (frontmatter) WHERE type = 'text';
-CREATE INDEX idx_entities_markdown_gin ON entities USING gin(to_tsvector('english', markdown)) WHERE type = 'text';
-CREATE INDEX idx_entities_content_gin ON entities USING gin(to_tsvector('english', content)) WHERE type = 'text';
-CREATE INDEX idx_digital_items_search ON digital_items USING gin(search_vector);
-CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
-CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at DESC);
-CREATE INDEX idx_entity_metadata_key ON entity_metadata (key);
-CREATE INDEX idx_entity_observations_category ON entity_observations (category);
-CREATE INDEX idx_physical_location_coordinates ON physical_locations (latitude, longitude);
-CREATE INDEX idx_database_items_parent ON database_table_items (database_table_id);
-CREATE INDEX idx_guideline_status ON guidelines (guideline_status);
-CREATE INDEX idx_guideline_effective_date ON guidelines (effective_date);
-
--- Create a unique index for file paths by user (only for text types)
-CREATE UNIQUE INDEX idx_entities_file_path_user
-ON entities (file_path, user_id)
-WHERE type = 'text' AND file_path IS NOT NULL;
-
--- Add index for full-text search on description
-CREATE INDEX idx_entities_description_gin ON entities
-USING gin(to_tsvector('english', description))
-WHERE description IS NOT NULL;
-
-CREATE UNIQUE INDEX idx_activities_view_entity_id ON activities_view (entity_id);
-
 -- Create views for convenient access
 CREATE VIEW active_entities AS
 SELECT * FROM entities
@@ -406,7 +367,7 @@ WITH RECURSIVE tag_hierarchy AS (
     t.color,
     t.parent_tag_id,
     e.user_id,
-    ARRAY[e.title] AS path,
+    ARRAY[e.title]::varchar[] AS path,
     0 AS level
   FROM
     tags t
@@ -424,7 +385,7 @@ WITH RECURSIVE tag_hierarchy AS (
     t.color,
     t.parent_tag_id,
     e.user_id,
-    th.path || e.title,
+    (th.path || e.title)::varchar[] AS path,
     th.level + 1
   FROM
     tags t
@@ -660,6 +621,53 @@ SELECT entity_id, title, description, user_id, created_at, updated_at
 FROM entities
 WHERE type = 'activity' AND archived_at IS NULL;
 
+-- Create a unique index on entities for tags by type, title, and user_id
+CREATE UNIQUE INDEX idx_unique_tag_entities ON entities (title, user_id)
+WHERE type = 'tag';
+
+-- Create indices to improve query performance
+CREATE INDEX idx_entities_type ON entities (type);
+CREATE INDEX idx_entities_user_id ON entities (user_id);
+CREATE INDEX idx_entities_created_at ON entities (created_at DESC);
+CREATE INDEX idx_entities_updated_at ON entities (updated_at DESC);
+CREATE INDEX idx_entities_archived_at ON entities (archived_at);
+CREATE INDEX idx_entities_git_sha ON entities (git_sha);
+CREATE INDEX idx_entity_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_tag_parent ON tags (parent_tag_id);
+CREATE INDEX idx_entity_tags_tag_id ON entity_tags (tag_entity_id);
+CREATE INDEX idx_entity_relations_source ON entity_relations (source_entity_id);
+CREATE INDEX idx_entity_relations_target ON entity_relations (target_entity_id);
+CREATE INDEX idx_entity_relations_type ON entity_relations (relation_type);
+CREATE INDEX idx_entity_relations_source_type ON entity_relations (source_entity_id, relation_type);
+CREATE INDEX idx_entity_relations_target_type ON entity_relations (target_entity_id, relation_type);
+CREATE INDEX idx_tasks_status ON tasks (status);
+CREATE INDEX idx_tasks_finish_by ON tasks (finish_by);
+CREATE INDEX idx_entities_file_path ON entities (file_path) WHERE type = 'text';
+CREATE INDEX idx_entities_frontmatter ON entities USING gin (frontmatter) WHERE type = 'text';
+CREATE INDEX idx_entities_markdown_gin ON entities USING gin(to_tsvector('english', markdown)) WHERE type = 'text';
+CREATE INDEX idx_entities_content_gin ON entities USING gin(to_tsvector('english', content)) WHERE type = 'text';
+CREATE INDEX idx_digital_items_search ON digital_items USING gin(search_vector);
+CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
+CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at DESC);
+CREATE INDEX idx_entity_metadata_key ON entity_metadata (key);
+CREATE INDEX idx_entity_observations_category ON entity_observations (category);
+CREATE INDEX idx_physical_location_coordinates ON physical_locations (latitude, longitude);
+CREATE INDEX idx_database_items_parent ON database_table_items (database_table_id);
+CREATE INDEX idx_guideline_status ON guidelines (guideline_status);
+CREATE INDEX idx_guideline_effective_date ON guidelines (effective_date);
+
+-- Create a unique index for file paths by user (only for text types)
+CREATE UNIQUE INDEX idx_entities_file_path_user
+ON entities (file_path, user_id)
+WHERE type = 'text' AND file_path IS NOT NULL;
+
+-- Add index for full-text search on description
+CREATE INDEX idx_entities_description_gin ON entities
+USING gin(to_tsvector('english', description))
+WHERE description IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_activities_view_entity_id ON activities_view (entity_id);
+
 -- Function to refresh activities view
 CREATE OR REPLACE FUNCTION refresh_activities_view()
 RETURNS TRIGGER AS $$
@@ -673,7 +681,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER refresh_activities_view_trigger
 AFTER INSERT OR UPDATE OR DELETE ON entities
 FOR EACH ROW
-WHEN (NEW.type = 'activity' OR OLD.type = 'activity')
 EXECUTE FUNCTION refresh_activities_view();
 
 -- Create a function for semantic similarity search
@@ -745,540 +752,6 @@ BEFORE INSERT OR UPDATE ON digital_items
 FOR EACH ROW
 EXECUTE FUNCTION update_digital_items_search_vector();
 
--- Function to extract tags from frontmatter for any entity with frontmatter
-CREATE OR REPLACE FUNCTION extract_entity_tags()
-RETURNS TRIGGER AS $$
-DECLARE
-  tag_name TEXT;
-  tag_entity_id UUID;
-  parent_tag_name TEXT;
-  parent_tag_id UUID;
-  tag_parts TEXT[];
-  frontmatter_tags JSONB;
-  extracted_tag TEXT;
-BEGIN
-  -- Only process entities with frontmatter and markdown
-  IF NEW.frontmatter IS NOT NULL THEN
-    -- Extract tags from frontmatter
-    frontmatter_tags := NEW.frontmatter->'tags';
-
-    IF frontmatter_tags IS NOT NULL AND jsonb_typeof(frontmatter_tags) = 'array' THEN
-      FOR i IN 0..jsonb_array_length(frontmatter_tags)-1 LOOP
-        tag_name := frontmatter_tags->i;
-
-        -- Check if it's a hierarchical tag (parent/child format)
-        IF position('/' IN tag_name) > 0 THEN
-          tag_parts := string_to_array(tag_name, '/');
-          parent_tag_name := tag_parts[1];
-          tag_name := tag_parts[2];
-
-          -- Find parent tag entity
-          SELECT e.entity_id INTO parent_tag_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = parent_tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF parent_tag_id IS NULL THEN
-            -- Create parent tag entity first
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              parent_tag_name,
-              'tag',
-              'Tag: ' || parent_tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO parent_tag_id;
-
-            -- Now create the tag record
-            INSERT INTO tags (
-              entity_id,
-              color
-            ) VALUES (
-              parent_tag_id,
-              NULL
-            );
-          END IF;
-
-          -- Find child tag entity
-          SELECT e.entity_id INTO tag_entity_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF tag_entity_id IS NULL THEN
-            -- Create child tag entity
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              tag_name,
-              'tag',
-              'Tag: ' || tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO tag_entity_id;
-
-            -- Now create the tag record with parent reference
-            INSERT INTO tags (
-              entity_id,
-              parent_tag_id
-            ) VALUES (
-              tag_entity_id,
-              parent_tag_id
-            );
-          ELSE
-            -- Update parent if needed
-            UPDATE tags
-            SET parent_tag_id = parent_tag_id
-            WHERE entity_id = tag_entity_id;
-          END IF;
-        ELSE
-          -- Find simple tag entity
-          SELECT e.entity_id INTO tag_entity_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF tag_entity_id IS NULL THEN
-            -- Create tag entity
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              tag_name,
-              'tag',
-              'Tag: ' || tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO tag_entity_id;
-
-            -- Now create the tag record
-            INSERT INTO tags (
-              entity_id
-            ) VALUES (
-              tag_entity_id
-            );
-          END IF;
-        END IF;
-
-        -- Link tag to entity
-        INSERT INTO entity_tags (entity_id, tag_entity_id)
-        VALUES (NEW.entity_id, tag_entity_id)
-        ON CONFLICT DO NOTHING;
-      END LOOP;
-    END IF;
-
-    -- Extract hashtags from markdown if available
-    -- TODO check potential issue with hastags matching markdown headings
-    IF NEW.markdown IS NOT NULL THEN
-      FOR extracted_tag IN
-        SELECT regexp_matches(NEW.markdown, '(?<!^|\n)#([a-zA-Z0-9_/-]+)', 'g')
-      LOOP
-        tag_name := extracted_tag;
-
-        -- Check if it's a hierarchical tag (parent/child format)
-        IF position('/' IN tag_name) > 0 THEN
-          tag_parts := string_to_array(tag_name, '/');
-          parent_tag_name := tag_parts[1];
-          tag_name := tag_parts[2];
-
-          -- Find parent tag entity
-          SELECT e.entity_id INTO parent_tag_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = parent_tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF parent_tag_id IS NULL THEN
-            -- Create parent tag entity first
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              parent_tag_name,
-              'tag',
-              'Tag: ' || parent_tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO parent_tag_id;
-
-            -- Now create the tag record
-            INSERT INTO tags (
-              entity_id
-            ) VALUES (
-              parent_tag_id
-            );
-          END IF;
-
-          -- Find child tag entity
-          SELECT e.entity_id INTO tag_entity_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF tag_entity_id IS NULL THEN
-            -- Create child tag entity
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              tag_name,
-              'tag',
-              'Tag: ' || tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO tag_entity_id;
-
-            -- Now create the tag record with parent reference
-            INSERT INTO tags (
-              entity_id,
-              parent_tag_id
-            ) VALUES (
-              tag_entity_id,
-              parent_tag_id
-            );
-          ELSE
-            -- Update parent if needed
-            UPDATE tags
-            SET parent_tag_id = parent_tag_id
-            WHERE entity_id = tag_entity_id;
-          END IF;
-        ELSE
-          -- Find simple tag entity
-          SELECT e.entity_id INTO tag_entity_id
-          FROM entities e
-          JOIN tags t ON e.entity_id = t.entity_id
-          WHERE e.title = tag_name
-          AND e.user_id = NEW.user_id
-          AND e.type = 'tag';
-
-          IF tag_entity_id IS NULL THEN
-            -- Create tag entity
-            INSERT INTO entities (
-              title,
-              type,
-              description,
-              user_id
-            ) VALUES (
-              tag_name,
-              'tag',
-              'Tag: ' || tag_name,
-              NEW.user_id
-            )
-            RETURNING entity_id INTO tag_entity_id;
-
-            -- Now create the tag record
-            INSERT INTO tags (
-              entity_id
-            ) VALUES (
-              tag_entity_id
-            );
-          END IF;
-        END IF;
-
-        -- Link tag to entity
-        INSERT INTO entity_tags (entity_id, tag_entity_id)
-        VALUES (NEW.entity_id, tag_entity_id)
-        ON CONFLICT DO NOTHING;
-      END LOOP;
-    END IF;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER entity_extract_tags
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-WHEN (NEW.frontmatter IS NOT NULL)
-EXECUTE FUNCTION extract_entity_tags();
-
--- Function to extract observations from text content
-CREATE OR REPLACE FUNCTION extract_entity_observations()
-RETURNS TRIGGER AS $$
-DECLARE
-  observation_line TEXT;
-  category TEXT;
-  content TEXT;
-  context TEXT;
-  observation_match TEXT[];
-  markdown_lines TEXT[];
-  current_line TEXT;
-  in_observations_section BOOLEAN := false;
-BEGIN
-  -- Only process entities with markdown
-  IF NEW.markdown IS NOT NULL THEN
-    -- Split markdown into lines for better section handling
-    markdown_lines := string_to_array(NEW.markdown, E'\n');
-
-    -- Process line by line to handle sections
-    FOREACH current_line IN ARRAY markdown_lines LOOP
-      -- Check for observations section
-      IF current_line LIKE '## Observations' THEN
-        in_observations_section := true;
-        CONTINUE;
-      END IF;
-
-      -- End section if new section starts
-      IF current_line LIKE '## %' AND in_observations_section THEN
-        in_observations_section := false;
-      END IF;
-
-      -- Process observations in the Observations section
-      IF in_observations_section AND current_line LIKE '- [%]%' THEN
-        -- Extract parts using regex
-        SELECT regexp_matches(current_line,
-          '- \[(.*?)\] (.*?)( #([\w\-]+))?( \((.*?)\))?$') INTO observation_match;
-
-        IF observation_match IS NOT NULL THEN
-          -- Extract parts from match
-          category := observation_match[1];
-          content := observation_match[2];
-          context := observation_match[6];
-
-          -- Insert the observation
-          INSERT INTO entity_observations (
-            entity_id,
-            category,
-            content,
-            context
-          ) VALUES (
-            NEW.entity_id,
-            category,
-            content,
-            context
-          );
-        END IF;
-      END IF;
-    END LOOP;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER entity_extract_observations
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-WHEN (NEW.markdown IS NOT NULL)
-EXECUTE FUNCTION extract_entity_observations();
-
--- Function to extract relations from text content
-CREATE OR REPLACE FUNCTION extract_entity_relations()
-RETURNS TRIGGER AS $$
-DECLARE
-  relation_line TEXT;
-  relation_type TEXT;
-  target_title TEXT;
-  context TEXT;
-  relation_match TEXT[];
-  markdown_lines TEXT[];
-  current_line TEXT;
-  in_relations_section BOOLEAN := false;
-  target_entity_id UUID;
-  target_entity_type entity_type;
-  source_entity_type entity_type := NEW.type;
-BEGIN
-  -- Only process entities with markdown
-  IF NEW.markdown IS NOT NULL THEN
-    -- Split markdown into lines for better section handling
-    markdown_lines := string_to_array(NEW.markdown, E'\n');
-
-    -- Process line by line to handle sections
-    FOREACH current_line IN ARRAY markdown_lines LOOP
-      -- Check for relations section
-      IF current_line LIKE '## Relations' THEN
-        in_relations_section := true;
-        CONTINUE;
-      END IF;
-
-      -- End section if new section starts
-      IF current_line LIKE '## %' AND in_relations_section THEN
-        in_relations_section := false;
-      END IF;
-
-      -- Process relations in the Relations section
-      IF in_relations_section AND current_line LIKE '- %[[%]]%' THEN
-        -- Extract parts using regex
-        SELECT regexp_matches(current_line,
-          '- (.*?) \[\[(.*?)\]\]( \((.*?)\))?$') INTO relation_match;
-
-        IF relation_match IS NOT NULL THEN
-          -- Extract parts from match
-          relation_type := relation_match[1];
-          target_title := relation_match[2];
-          context := relation_match[4];
-
-          -- Look for matching target entity
-          SELECT entity_id, type INTO target_entity_id, target_entity_type
-          FROM entities
-          WHERE title = target_title AND user_id = NEW.user_id
-          LIMIT 1;
-
-          -- Insert the relation into entity_relations
-          IF target_entity_id IS NOT NULL THEN
-            INSERT INTO entity_relations (
-              source_entity_id,
-              target_entity_id,
-              target_title,
-              relation_type,
-              context
-            ) VALUES (
-              NEW.entity_id,
-              target_entity_id,
-              target_title,
-              relation_type,
-              context
-            );
-          ELSIF target_title IS NOT NULL THEN
-            -- Insert a relation with just the title when entity doesn't exist yet
-            INSERT INTO entity_relations (
-              source_entity_id,
-              target_title,
-              relation_type,
-              context
-            ) VALUES (
-              NEW.entity_id,
-              target_title,
-              relation_type,
-              context
-            );
-          END IF;
-        END IF;
-      END IF;
-    END LOOP;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER entity_extract_relations
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-WHEN (NEW.markdown IS NOT NULL)
-EXECUTE FUNCTION extract_entity_relations();
-
--- Function to extract guidelines from activity frontmatter
-CREATE OR REPLACE FUNCTION extract_activity_guidelines()
-RETURNS TRIGGER AS $$
-DECLARE
-  guideline_title TEXT;
-  guideline_id UUID;
-  guideline_refs JSONB;
-BEGIN
-  -- Only process for activity entities
-  IF NEW.type = 'activity' AND NEW.frontmatter->'guidelines' IS NOT NULL THEN
-    -- Delete existing guideline relationships
-    DELETE FROM entity_relations
-    WHERE source_entity_id = NEW.entity_id
-    AND relation_type = 'follows';
-
-    -- Extract guidelines from frontmatter
-    guideline_refs := NEW.frontmatter->'guidelines';
-
-    IF jsonb_typeof(guideline_refs) = 'array' THEN
-      FOR i IN 0..jsonb_array_length(guideline_refs)-1 LOOP
-        guideline_title := guideline_refs->i;
-
-        -- Find guideline entity by title
-        SELECT entity_id INTO guideline_id
-        FROM entities
-        WHERE title = guideline_title
-        AND type = 'guideline'
-        AND user_id = NEW.user_id
-        LIMIT 1;
-
-        -- Link guideline to activity if found
-        IF guideline_id IS NOT NULL THEN
-          INSERT INTO entity_relations (
-            source_entity_id,
-            target_entity_id,
-            target_title,
-            relation_type
-          ) VALUES (
-            NEW.entity_id,
-            guideline_id,
-            guideline_title,
-            'follows'
-          ) ON CONFLICT DO NOTHING;
-        END IF;
-      END LOOP;
-    END IF;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add trigger for activity guideline extraction
-CREATE TRIGGER activity_extract_guidelines
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-WHEN (NEW.type = 'activity')
-EXECUTE FUNCTION extract_activity_guidelines();
-
--- Function to extract guideline data from frontmatter
-CREATE OR REPLACE FUNCTION extract_guideline_data()
-RETURNS TRIGGER AS $$
-DECLARE
-  status TEXT;
-  effective_date DATE;
-BEGIN
-  -- Only process for guideline entities
-  IF NEW.type = 'guideline' AND NEW.frontmatter IS NOT NULL THEN
-    -- Extract guideline status from frontmatter
-    IF NEW.frontmatter->'guideline_status' IS NOT NULL THEN
-      status := NEW.frontmatter->>'guideline_status';
-    END IF;
-
-    -- Extract effective date from frontmatter
-    IF NEW.frontmatter->'effective_date' IS NOT NULL THEN
-      effective_date := (NEW.frontmatter->>'effective_date')::DATE;
-    END IF;
-
-    -- Insert or update guidelines table
-    INSERT INTO guidelines (entity_id, guideline_status, effective_date)
-    VALUES (NEW.entity_id, status, effective_date)
-    ON CONFLICT (entity_id) DO UPDATE
-    SET
-      guideline_status = EXCLUDED.guideline_status,
-      effective_date = EXCLUDED.effective_date;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add trigger for guideline data extraction
-CREATE TRIGGER guideline_extract_data
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-WHEN (NEW.type = 'guideline')
-EXECUTE FUNCTION extract_guideline_data();
-
 -- Function for audit logging
 CREATE OR REPLACE FUNCTION process_audit_log()
 RETURNS TRIGGER AS $$
@@ -1337,101 +810,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER entities_audit
 AFTER INSERT OR UPDATE OR DELETE ON entities
 FOR EACH ROW EXECUTE FUNCTION process_audit_log();
-
--- Function to extract from frontmatter (generalized)
-CREATE OR REPLACE FUNCTION extract_entity_frontmatter_relations()
-RETURNS TRIGGER AS $$
-DECLARE
-  property_keys TEXT[];
-  current_key TEXT;
-  frontmatter_array JSONB;
-  related_entity_title TEXT;
-  related_entity_id UUID;
-  related_entity_type entity_type;
-  relation_type TEXT;
-BEGIN
-  -- Only process entities with frontmatter
-  IF NEW.frontmatter IS NOT NULL THEN
-    -- Define which properties to process based on entity type
-    IF NEW.type = 'task' THEN
-      property_keys := ARRAY['persons', 'physical_items', 'digital_items', 'parent_tasks', 'dependent_tasks', 'activities', 'organizations'];
-    ELSIF NEW.type = 'physical_item' THEN
-      property_keys := ARRAY['parent_items', 'child_items'];
-    ELSIF NEW.type = 'person' THEN
-      property_keys := ARRAY['organizations'];
-    ELSIF NEW.type = 'organization' THEN
-      property_keys := ARRAY['members'];
-    ELSIF NEW.type = 'activity' THEN
-      property_keys := ARRAY['guidelines'];
-    END IF;
-
-    -- Process each property
-    FOREACH current_key IN ARRAY property_keys LOOP
-      IF NEW.frontmatter->current_key IS NOT NULL AND jsonb_typeof(NEW.frontmatter->current_key) = 'array' THEN
-        frontmatter_array := NEW.frontmatter->current_key;
-
-        -- Map property names to relation types
-        CASE
-          WHEN NEW.type = 'task' AND current_key = 'persons' THEN relation_type := 'assigned_to';
-          WHEN NEW.type = 'task' AND current_key = 'physical_items' THEN relation_type := 'requires';
-          WHEN NEW.type = 'task' AND current_key = 'digital_items' THEN relation_type := 'requires';
-          WHEN NEW.type = 'task' AND current_key = 'parent_tasks' THEN relation_type := 'child_of';
-          WHEN NEW.type = 'task' AND current_key = 'dependent_tasks' THEN relation_type := 'depends_on';
-          WHEN NEW.type = 'task' AND current_key = 'activities' THEN relation_type := 'executes';
-          WHEN NEW.type = 'task' AND current_key = 'organizations' THEN relation_type := 'involves';
-          WHEN NEW.type = 'physical_item' AND current_key = 'parent_items' THEN relation_type := 'part_of';
-          WHEN NEW.type = 'physical_item' AND current_key = 'child_items' THEN relation_type := 'contains';
-          WHEN NEW.type = 'person' AND current_key = 'organizations' THEN relation_type := 'member_of';
-          WHEN NEW.type = 'organization' AND current_key = 'members' THEN relation_type := 'has_member';
-          WHEN NEW.type = 'activity' AND current_key = 'guidelines' THEN relation_type := 'follows';
-          ELSE relation_type := 'relates_to';
-        END CASE;
-
-        -- Process array items
-        FOR i IN 0..jsonb_array_length(frontmatter_array)-1 LOOP
-          related_entity_title := frontmatter_array->i;
-
-          -- Find the related entity
-          SELECT entity_id, type INTO related_entity_id, related_entity_type
-          FROM entities
-          WHERE title = related_entity_title AND user_id = NEW.user_id;
-
-          -- Insert relation if entity found
-          IF related_entity_id IS NOT NULL THEN
-            INSERT INTO entity_relations (
-              source_entity_id,
-              target_entity_id,
-              target_title,
-              relation_type
-            ) VALUES (
-              NEW.entity_id,
-              related_entity_id,
-              related_entity_title,
-              relation_type
-            ) ON CONFLICT DO NOTHING;
-          ELSIF related_entity_title IS NOT NULL THEN
-            -- Insert a relation with just the title when entity doesn't exist yet
-            INSERT INTO entity_relations (
-              source_entity_id,
-              target_title,
-              relation_type
-            ) VALUES (
-              NEW.entity_id,
-              related_entity_title,
-              relation_type
-            );
-          END IF;
-        END LOOP;
-      END IF;
-    END LOOP;
-  END IF;
-
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add trigger for frontmatter relation extraction
-CREATE TRIGGER entity_extract_frontmatter_relations
-AFTER INSERT OR UPDATE ON entities
-FOR EACH ROW
-EXECUTE FUNCTION extract_entity_frontmatter_relations();

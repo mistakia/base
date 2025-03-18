@@ -1,6 +1,7 @@
 ---
-title: Guideline
 type: type_definition
+type_name: guideline
+title: Guideline
 extends: base
 description: Guidelines represent standards, procedures, or best practices
 properties:
@@ -11,13 +12,13 @@ properties:
     description: Current status of the guideline
   - name: effective_date
     type: date
-    required: false
+    optional: true
     description: Date when the guideline becomes effective
   - name: activities
     type: array
     items:
       type: string
-    required: false
+    required: true
     description: Activities this guideline applies to
 ---
 

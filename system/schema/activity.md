@@ -1,6 +1,7 @@
 ---
-title: Activity
 type: type_definition
+title: Activity
+type_name: activity
 extends: base
 description: Activities represent actions or processes
 properties:

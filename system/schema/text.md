@@ -1,6 +1,7 @@
 ---
-title: Text
 type: type_definition
+type_name: text
+title: Text
 extends: base
 description: Text represents general content, articles, or documentation
 ---

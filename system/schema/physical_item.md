@@ -1,6 +1,7 @@
 ---
-title: Physical Item
 type: type_definition
+type_name: physical_item
+title: Physical Item
 extends: base
 description: Physical items represent tangible objects, equipment, or materials
 properties:

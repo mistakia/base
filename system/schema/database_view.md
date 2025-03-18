@@ -1,6 +1,7 @@
 ---
-title: Database View
 type: type_definition
+type_name: database_view
+title: Database View
 extends: base
 description: Database views represent saved configurations of how to display database items
 properties:

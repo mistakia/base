@@ -1,6 +1,7 @@
 ---
-title: Tag
 type: type_definition
+type_name: tag
+title: Tag
 extends: base
 description: A tag type for categorizing and organizing content
 properties:

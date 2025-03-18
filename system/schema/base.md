@@ -1,6 +1,7 @@
 ---
-title: Base Schema
 type: type_definition
+type_name: base
+title: Base Schema
 description: The base schema that all other types inherit from
 properties:
   - name: title
@@ -25,6 +26,18 @@ properties:
       type: string
     required: false
     description: Array of categorization tags
+  - name: relations
+    type: array
+    items:
+      type: string
+    required: false
+    description: Array of relations to other entities in format "relation_type [[Entity Name]] (optional context)"
+  - name: observations
+    type: array
+    items:
+      type: string
+    required: false
+    description: Array of structured observations in format "[category] Observation text
   - name: created_at
     type: date
     required: true
@@ -53,45 +66,31 @@ The body of each markdown file follows this general structure:
 # Document Title
 
 Body contains any content relevant to the document.
-
-## Observations
-
-- [category] Fact or observation about the topic #tag1 (optional context)
-- [tech] Uses PostgreSQL for indexing #database #search
-- [decision] Selected markdown format for portability #storage (Based on user requirements)
-
-## Relations
-
-- relates_to [[Other Document]] (optional context)
-- implements [[Design Pattern]]
-- depends_on [[Database Schema]]
 ```
 
 ## Semantic Knowledge Graph
 
-Every knowledge item can include observations and relations to build a rich semantic knowledge graph:
+Every knowledge item can include observations and relations in the frontmatter to build a rich semantic knowledge graph:
 
 ### Observations
 
-Structured facts with semantic categorization:
+Structured facts with semantic categorization in frontmatter:
 
-```markdown
-## Observations
-
-- [category] Content with #tags (optional context)
-- [tech] Uses PostgreSQL for indexing #database
-- [decision] Selected markdown for storage #format (Based on team discussion)
+```yaml
+observations:
+  - '[category] Content with #tags (optional context)'
+  - '[tech] Uses PostgreSQL for indexing #database'
+  - '[decision] Selected markdown for storage #format (Based on team discussion)'
 ```
 
 ### Relations
 
-Connections to other knowledge items:
+Connections to other knowledge items in frontmatter:
 
-```markdown
-## Relations
-
-- relation_type [[Other Document]] (optional context)
-- implements [[Design Pattern]]
-- depends_on [[Database Schema]]
-- assigned_to [[Person Name]]
+```yaml
+relations:
+  - 'relation_type [[Other Document]] (optional context)'
+  - 'implements [[Design Pattern]]'
+  - 'depends_on [[Database Schema]]'
+  - 'assigned_to [[Person Name]]'
 ```

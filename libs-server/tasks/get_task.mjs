@@ -1,6 +1,7 @@
 import db from '#db'
+import PropTypes from 'prop-types'
 
-export default async function ({ task_id }) {
+export default async function GetTask({ task_id }) {
   const task = await db('tasks').where({ task_id }).first()
 
   if (!task) {
@@ -47,4 +48,8 @@ export default async function ({ task_id }) {
     ),
     task_person_ids: task_persons.map(({ person_id }) => person_id)
   }
+}
+
+GetTask.propTypes = {
+  task_id: PropTypes.string.isRequired
 }

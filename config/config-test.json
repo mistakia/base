@@ -2,7 +2,7 @@
   "server_port": 8080,
   "production_url": "https://example.com",
   "production_wss": "wss://example.com",
-  "base_hostname": "ENCRYPTED|cbd599979035c5eb301fd738cd72f05d|27b7e9022e7fbf920d91922f3dd78775",
+  "base_hostname": "",
   "cloudflare": {
     "zone_id": "xxxxx",
     "user_email": "xxxxx",
@@ -21,5 +21,5 @@
       "max": 10
     }
   },
-  "jwt_secret": "ENCRYPTED|3888e96d91f69c2570336acae0f400b5|4be4a270a4c75aa9b88acb3d02bde6dd80acda3057f663bf26626ae2fe087468"
+  "jwt_secret": ""
 }

@@ -1,6 +1,7 @@
 ---
-title: Database Item
 type: type_definition
+type_name: database_item
+title: Database Item
 extends: base
 description: Database items represent records within a database
 properties:

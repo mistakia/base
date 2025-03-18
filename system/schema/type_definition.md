@@ -1,14 +1,21 @@
 ---
-title: Type Definition
 type: type_definition
+type_name: type_definition
+title: Type Definition
 description: Type definitions define the structure of content types
 properties:
+  - name: type_name
+    type: string
+    required: true
+    description: The name of the type
   - name: extends
     type: string
-    required: false
+    optional: true
     description: The base type this type extends
   - name: properties
     type: array
+    description: The properties of the type
+    optional: true
     items:
       type: object
       properties:
@@ -17,25 +24,19 @@ properties:
           description: Name of the property
         type:
           type: string
-          enum: [string, number, boolean, date, datetime, array, object]
+          enum: [string, number, boolean, date, datetime, array, object, enum]
           description: Data type of the property
-        items:
-          type: object
-          description: For array types, defines the item structure
         required:
           type: boolean
           description: Whether the property is required
-        enum:
-          type: array
-          description: List of allowed values for the property
+          optional: true
+        optional:
+          type: boolean
+          description: Whether the property is optional
+          optional: true
         description:
           type: string
           description: Description of the property
-        auto_generated:
-          type: boolean
-          description: Whether the property is automatically generated
-    required: false
-    description: Properties that define this type
 ---
 
 # Type Definition

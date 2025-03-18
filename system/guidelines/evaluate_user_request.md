@@ -3,6 +3,7 @@ title: Initial User Request Handler
 type: guideline
 description: Guidelines for processing initial user requests
 guideline_status: Approved
+activities: [Evaluate User Request]
 tags: [request, handling, workflow]
 ---
 

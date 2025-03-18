@@ -1,6 +1,7 @@
 ---
-title: Task
 type: type_definition
+type_name: task
+title: Task
 extends: base
 description: Tasks represent discrete units of work that need to be completed
 properties:

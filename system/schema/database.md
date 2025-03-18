@@ -1,6 +1,7 @@
 ---
-title: Database
 type: type_definition
+type_name: database
+title: Database
 extends: base
 description: Database represents a collection of related database items
 properties:
