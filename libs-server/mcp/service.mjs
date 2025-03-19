@@ -81,3 +81,10 @@ export async function process_request(provider_name, request) {
     throw error
   }
 }
+
+export default {
+  register_provider,
+  get_provider,
+  list_providers,
+  process_request
+}

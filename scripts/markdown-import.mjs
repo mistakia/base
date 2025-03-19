@@ -5,7 +5,6 @@ import { hideBin } from 'yargs/helpers'
 import debug from 'debug'
 
 import { import_repositories } from '#libs-server/markdown/index.mjs'
-import { git } from '#libs-server'
 import postgres from '#db'
 
 const log = debug('markdown-import')
@@ -46,10 +45,6 @@ const argv = yargs(hideBin(process.argv))
 async function main() {
   try {
     console.log('Starting markdown import...')
-
-    // Get the current branch for the main repository
-    const current_system_branch = await git.get_current_branch()
-    const current_user_branch = await git.get_current_branch('./data')
 
     log('Configuration:', {
       system_branch: argv.systemBranch,

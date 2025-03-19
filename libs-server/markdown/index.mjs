@@ -5,6 +5,7 @@ import { parse_markdown, parse_schema_file } from './parser.mjs'
 import { validate_entity } from './validator.mjs'
 import { import_markdown_entity, remove_stale_entities } from './importer.mjs'
 import { load_schema_definitions, build_validation_schema } from './schema.mjs'
+import { git } from '#libs-server'
 import config from '#config'
 
 const log = debug('markdown')
@@ -254,6 +255,7 @@ export async function import_repositories(options, user_id) {
   }
 
   // Define default repositories if not provided
+  const current_system_branch = await git.get_current_branch()
   const system_branch =
     options.system_branch || config.system_main_branch || current_system_branch
   const system_repository = options.system_repository || {
@@ -262,6 +264,7 @@ export async function import_repositories(options, user_id) {
     is_submodule: false
   }
 
+  const current_user_branch = await git.get_current_branch('./data')
   const user_branch =
     options.user_branch || config.user_main_branch || current_user_branch
   const user_repository = options.user_repository || {

@@ -1,23 +1,19 @@
-// Model Context Protocol main entry point
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import debug from 'debug'
 import { z } from 'zod'
 import { list_providers, process_request } from './service.mjs'
 
-// Import all providers
 import { NOTION_TOOLS } from './notion/index.mjs'
-// Import database tools and resources
 import {
   DB_TOOLS,
   DB_RESOURCES,
   DB_RESOURCE_TEMPLATES
 } from './database/index.mjs'
-// Add more provider imports here as they become available
+import { GIT_TOOLS } from './git/index.mjs'
 
 const logger = debug('mcp')
 logger('Model Context Protocol initialized')
 
-// Log registered providers
 const providers = list_providers()
 logger(`Registered MCP providers: ${providers.join(', ') || 'none'}`)
 
@@ -67,12 +63,12 @@ mcp_server.setRequestHandler(
   { priority: -1 }
 )
 
-// Combine tools from all providers
-const ALL_TOOLS = [
+// Combine all tools and resources
+const ALL_TOOLS = {
   ...NOTION_TOOLS,
-  ...DB_TOOLS
-  // Add more tools from other providers here
-]
+  ...DB_TOOLS,
+  ...GIT_TOOLS
+}
 
 // Combine resources from all providers
 const ALL_RESOURCES = [
@@ -153,8 +149,9 @@ mcp_server.setRequestHandler(
       provider_name = 'notion'
     } else if (name.startsWith('db_')) {
       provider_name = 'database'
+    } else if (name.startsWith('knowledge_base_')) {
+      provider_name = 'git'
     }
-    // Add more provider routing logic here
 
     // Process the request using the provider
     try {

@@ -280,9 +280,7 @@ async function handle_tool_call(name, args) {
           search_params.start_cursor = start_cursor
         }
 
-        console.log(search_params)
         const response = await notion.search(search_params)
-        console.log(response)
         return format_response(response.results)
       }
 

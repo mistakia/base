@@ -19,10 +19,11 @@
     "start:api": "NODE_ENV=development node server.mjs",
     "lint": "eslint . --ext js,mjs",
     "prettier": "prettier --write .",
-    "test": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --require tests/unit/global.mjs --exit ./tests/unit/*.mjs ./tests/integration/*.mjs ./tests/unit/markdown/*.mjs ./tests/integration/markdown-import.test.mjs",
-    "test:unit": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/*.mjs ./tests/unit/markdown/*.mjs",
-    "test:integration": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/integration/*.mjs ./tests/integration/markdown-import.test.mjs",
-    "test:markdown": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/markdown/*.mjs ./tests/integration/markdown-import.test.mjs"
+    "test": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --require tests/unit/global.mjs --exit ./tests/unit/**/*.mjs ./tests/integration/**/*.mjs",
+    "test:unit": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/**/*.mjs",
+    "test:integration": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/integration/**/*.mjs",
+    "test:markdown": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/markdown/**/*.mjs ./tests/integration/markdown-import.test.mjs",
+    "test:git": "DEBUG='mcp:*,git' CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/git/**/*.mjs ./tests/integration/git/**/*.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
