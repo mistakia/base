@@ -3,6 +3,14 @@ title: Directory Structure
 type: text
 description: Documentation for the system directory structure and organization
 tags: [structure, organization, documentation]
+observations:
+  - '[architecture] Dual knowledge base separates system from user-specific content #organization'
+  - '[principle] Clear directory structure improves navigation and discoverability #organization'
+  - '[design] Organization follows separation of concerns principle #architecture'
+relations:
+  - 'relates_to [[System Design]]'
+  - 'part_of [[Documentation]]'
+  - 'implements [[Knowledge Base Schema]]'
 ---
 
 # Directory Structure
@@ -93,15 +101,3 @@ The `system/` directory contains core definitions that provide the foundation fo
 
 1. **Module System**: The system uses ES modules with the `.mjs` extension for clarity.
 2. **Path Aliases**: Configure path aliases in build tools to simplify imports.
-
-## Observations
-
-- [architecture] Dual knowledge base separates system from user-specific content #organization
-- [principle] Clear directory structure improves navigation and discoverability #organization
-- [design] Organization follows separation of concerns principle #architecture
-
-## Relations
-
-- relates_to [[System Design]]
-- part_of [[Documentation]]
-- implements [[Knowledge Base Schema]]
