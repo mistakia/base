@@ -21,5 +21,5 @@
       "max": 10
     }
   },
-  "jwt_secret": ""
+  "jwt_secret": "jwt_secret_test"
 }

@@ -39,13 +39,6 @@ router.post('/?', async (req, res) => {
       .where({ public_key: data.public_key })
       .first()
 
-    const user_root_tag = {
-      tag_name: 'root',
-      user_id: user.user_id,
-      description: 'user root tag'
-    }
-    await db('tags').insert(user_root_tag).onConflict().ignore()
-
     const token = jwt.sign({ user_id: user.user_id }, config.jwt_secret)
     res.status(200).send({ token, ...user })
   } catch (error) {

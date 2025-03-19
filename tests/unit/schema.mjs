@@ -18,6 +18,6 @@ describe('check schema', () => {
       })
       .select('table_name')
 
-    expect(tables).to.have.lengthOf(24)
+    expect(tables).to.have.lengthOf(32)
   })
 })

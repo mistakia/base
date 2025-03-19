@@ -5,7 +5,7 @@ import { hideBin } from 'yargs/helpers'
 import debug from 'debug'
 
 import { import_repositories } from '#libs-server/markdown/index.mjs'
-import { git } from '#libs-server/utils/index.mjs'
+import { git } from '#libs-server'
 import postgres from '#db'
 
 const log = debug('markdown-import')

@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import postgres from '#db'
 import { import_repositories } from '#libs-server/markdown/index.mjs'
-import { git } from '../../libs-server/utils/index.mjs'
+import { git } from '#libs-server'
 
 describe('Markdown Import Integration Tests', () => {
   const TEST_USER_ID = '00000000-0000-0000-0000-000000000001'
@@ -66,7 +66,7 @@ describe('Markdown Import Integration Tests', () => {
         .where({ user_id: TEST_USER_ID })
         .select('*')
 
-      expect(entities.length).to.equal(66)
+      expect(entities.length).to.equal(53)
     })
 
     it('should update existing entities when reimported', async () => {

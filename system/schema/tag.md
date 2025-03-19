@@ -9,10 +9,6 @@ properties:
     type: string
     required: false
     description: Optional color code for the tag (e.g., hex code)
-  - name: parent_tag
-    type: string
-    required: false
-    description: Optional reference to a parent tag for hierarchical organization
 observations:
   - '[design] Tags provide cross-cutting organization capability #organization'
   - '[feature] Tags can be referenced both in frontmatter and with hashtag syntax #usability'
@@ -31,16 +27,15 @@ Tags can be attached to any entity in the system, allowing for flexible categori
 1. In frontmatter with the `tags` array property
 2. Inline in markdown content with hashtag syntax (#tag_name)
 
-## Hierarchical Organization
+## Graphical Organization
 
-Tags can be organized hierarchically by specifying a parent tag, allowing for more sophisticated organization and navigation.
+Tags can be organized graphically by specifying relations between tags.
 
 ## Tag Properties
 
 Beyond basic categorization, tags can have additional properties:
 
 - **Color**: Visual identification in UIs
-- **Parent Tag**: Reference to a parent tag for hierarchical organization
 
 ## Relations
 

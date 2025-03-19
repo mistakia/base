@@ -29,10 +29,6 @@ properties:
     type: date
     required: false
     description: Due date for task completion
-  - name: finish_by_text_input
-    type: string
-    required: false
-    description: Text description of deadline
   - name: estimated_total_duration
     type: number
     required: false

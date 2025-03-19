@@ -250,7 +250,6 @@ CREATE TABLE tasks (
   assigned_to VARCHAR(255),
   start_by TIMESTAMP,
   finish_by TIMESTAMP,
-  finish_by_text_input TEXT,
   estimated_total_duration INTEGER,
   estimated_preparation_duration INTEGER,
   estimated_execution_duration INTEGER,
@@ -348,66 +347,13 @@ CREATE TABLE entity_metadata (
 -- Create tags table
 CREATE TABLE tags (
   entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  color VARCHAR(50),
-  parent_tag_id UUID REFERENCES entities (entity_id) ON DELETE SET NULL
+  color VARCHAR(50)
 );
 
 -- Create views for convenient access
 CREATE VIEW active_entities AS
 SELECT * FROM entities
 WHERE archived_at IS NULL;
-
-CREATE VIEW hierarchical_tags AS
-WITH RECURSIVE tag_hierarchy AS (
-  -- Base case: tags with no parent
-  SELECT
-    t.entity_id,
-    e.title,
-    e.description,
-    t.color,
-    t.parent_tag_id,
-    e.user_id,
-    ARRAY[e.title]::varchar[] AS path,
-    0 AS level
-  FROM
-    tags t
-    JOIN entities e ON t.entity_id = e.entity_id
-  WHERE
-    t.parent_tag_id IS NULL AND e.archived_at IS NULL
-
-  UNION ALL
-
-  -- Recursive case: tags with parent
-  SELECT
-    t.entity_id,
-    e.title,
-    e.description,
-    t.color,
-    t.parent_tag_id,
-    e.user_id,
-    (th.path || e.title)::varchar[] AS path,
-    th.level + 1
-  FROM
-    tags t
-    JOIN entities e ON t.entity_id = e.entity_id
-    JOIN tag_hierarchy th ON t.parent_tag_id = th.entity_id
-  WHERE
-    e.archived_at IS NULL
-)
-SELECT
-  entity_id,
-  title,
-  description,
-  color,
-  parent_tag_id,
-  user_id,
-  path,
-  level,
-  array_to_string(path, '/') AS full_path
-FROM
-  tag_hierarchy
-ORDER BY
-  path;
 
 CREATE VIEW text_document_view AS
 SELECT entity_id, title, type, permalink, description, user_id, embedding,
@@ -624,6 +570,7 @@ WHERE type = 'activity' AND archived_at IS NULL;
 -- Create a unique index on entities for tags by type, title, and user_id
 CREATE UNIQUE INDEX idx_unique_tag_entities ON entities (title, user_id)
 WHERE type = 'tag';
+CREATE UNIQUE INDEX idx_unique_entity_relations ON entity_relations (source_entity_id, target_entity_id, relation_type);
 
 -- Create indices to improve query performance
 CREATE INDEX idx_entities_type ON entities (type);
@@ -633,7 +580,6 @@ CREATE INDEX idx_entities_updated_at ON entities (updated_at DESC);
 CREATE INDEX idx_entities_archived_at ON entities (archived_at);
 CREATE INDEX idx_entities_git_sha ON entities (git_sha);
 CREATE INDEX idx_entity_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_tag_parent ON tags (parent_tag_id);
 CREATE INDEX idx_entity_tags_tag_id ON entity_tags (tag_entity_id);
 CREATE INDEX idx_entity_relations_source ON entity_relations (source_entity_id);
 CREATE INDEX idx_entity_relations_target ON entity_relations (target_entity_id);

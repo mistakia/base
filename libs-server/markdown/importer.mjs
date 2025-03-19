@@ -205,7 +205,6 @@ export async function import_markdown_entity(
               .whereRaw(
                 'entity_relations.source_entity_id = entity_relations.source_entity_id'
               )
-              .whereNotNull('source')
           })
           .delete()
 

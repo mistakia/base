@@ -19,8 +19,7 @@ describe('API /:user_id/tasks POST', () => {
   it('should create a new task', async () => {
     const user = await create_test_user()
     const task = {
-      text_input: 'Test Task',
-      finish_by_text_input: '2018-01-01'
+      text_input: 'Test Task finish by 2018-01-01'
     }
     const task_hash = ed25519.hash(JSON.stringify(task))
     const signature = ed25519.sign(task_hash, user.private_key, user.public_key)
@@ -39,20 +38,30 @@ describe('API /:user_id/tasks POST', () => {
     res.body.should.have.property('task_id')
 
     const task_id = res.body.task_id
-    const task_from_db = await db('tasks').where('task_id', task_id).first()
+    const task_from_db = await db('tasks').where('entity_id', task_id).first()
+
     task_from_db.should.be.a('object')
-    task_from_db.should.have.property('task_id')
-    task_from_db.should.have.property('user_id')
-    task_from_db.should.have.property('text_input')
-    task_from_db.should.have.property('finish_by_text_input')
+    task_from_db.should.have.property('entity_id')
     task_from_db.should.have.property('finish_by')
-    task_from_db.should.have.property('created_at')
-    task_from_db.should.have.property('updated_at')
     task_from_db.should.have.property('estimated_total_duration')
     task_from_db.should.have.property('estimated_preparation_duration')
     task_from_db.should.have.property('estimated_execution_duration')
     task_from_db.should.have.property('estimated_cleanup_duration')
     task_from_db.should.have.property('actual_duration')
     task_from_db.should.have.property('planned_start')
+
+    const entity_from_db = await db('entities')
+      .where('entity_id', task_id)
+      .first()
+
+    entity_from_db.should.have.property('created_at')
+    entity_from_db.should.have.property('updated_at')
+    entity_from_db.should.have.property('title')
+    entity_from_db.should.have.property('type')
+    entity_from_db.should.have.property('description')
+    entity_from_db.should.have.property('user_id')
+    entity_from_db.user_id.should.equal(user.user_id)
+    entity_from_db.type.should.equal('task')
+    entity_from_db.title.should.equal('Test Task finish by 2018-01-01')
   })
 })

@@ -3,6 +3,9 @@ import db from '#db'
 export default async function ({
   user_id,
   status,
+  tag_ids = [],
+  organization_ids = [],
+  person_ids = [],
   min_finish_by,
   max_finish_by,
   min_estimated_total_duration,
@@ -10,44 +13,118 @@ export default async function ({
   min_planned_start,
   max_planned_start,
   min_planned_finish,
-  max_planned_finish
+  max_planned_finish,
+  archived = false
 }) {
-  const query = db('tasks').where({ user_id })
+  // Start with a query joining entities and tasks
+  const query = db('entities as e')
+    .join('tasks as t', 'e.entity_id', 't.entity_id')
+    .where({ 'e.user_id': user_id, 'e.type': 'task' })
+    .select(
+      'e.entity_id as task_id',
+      'e.title',
+      'e.description',
+      'e.user_id',
+      'e.created_at',
+      'e.updated_at',
+      't.status',
+      't.priority',
+      't.assigned_to',
+      't.start_by',
+      't.finish_by',
+      't.estimated_total_duration',
+      't.estimated_preparation_duration',
+      't.estimated_execution_duration',
+      't.estimated_cleanup_duration',
+      't.actual_duration',
+      't.planned_start',
+      't.planned_finish',
+      't.started_at',
+      't.finished_at',
+      't.snooze_until'
+    )
 
-  if (status) {
-    query.where({ status })
+  // Filter by archived status
+  if (archived) {
+    query.whereNotNull('e.archived_at')
+  } else {
+    query.whereNull('e.archived_at')
   }
 
+  // Filter by task status
+  if (status) {
+    query.where({ 't.status': status })
+  }
+
+  // Apply time-based filters
   if (min_finish_by) {
-    query.where('finish_by', '>=', min_finish_by)
+    query.where('t.finish_by', '>=', min_finish_by)
   }
 
   if (max_finish_by) {
-    query.where('finish_by', '<=', max_finish_by)
+    query.where('t.finish_by', '<=', max_finish_by)
   }
 
   if (min_estimated_total_duration) {
-    query.where('estimated_total_duration', '>=', min_estimated_total_duration)
+    query.where(
+      't.estimated_total_duration',
+      '>=',
+      min_estimated_total_duration
+    )
   }
 
   if (max_estimated_total_duration) {
-    query.where('estimated_total_duration', '<=', max_estimated_total_duration)
+    query.where(
+      't.estimated_total_duration',
+      '<=',
+      max_estimated_total_duration
+    )
   }
 
   if (min_planned_start) {
-    query.where('planned_start', '>=', min_planned_start)
+    query.where('t.planned_start', '>=', min_planned_start)
   }
 
   if (max_planned_start) {
-    query.where('planned_start', '<=', max_planned_start)
+    query.where('t.planned_start', '<=', max_planned_start)
   }
 
   if (min_planned_finish) {
-    query.where('planned_finish', '>=', min_planned_finish)
+    query.where('t.planned_finish', '>=', min_planned_finish)
   }
 
   if (max_planned_finish) {
-    query.where('planned_finish', '<=', max_planned_finish)
+    query.where('t.planned_finish', '<=', max_planned_finish)
+  }
+
+  // Filter by tags using entity_tags junction table
+  if (tag_ids.length > 0) {
+    query.whereExists(function () {
+      this.select('*')
+        .from('entity_tags')
+        .whereRaw('entity_tags.entity_id = e.entity_id')
+        .whereIn('entity_tags.tag_entity_id', tag_ids)
+    })
+  }
+
+  // Filter by organizations using task_organizations_view
+  if (organization_ids.length > 0) {
+    query.whereExists(function () {
+      this.select('*')
+        .from('task_organizations_view')
+        .whereRaw('task_organizations_view.task_id = e.entity_id')
+        .whereIn('task_organizations_view.organization_id', organization_ids)
+    })
+  }
+
+  // Filter by persons using task_persons_view
+  if (person_ids.length > 0) {
+    query.whereExists(function () {
+      this.select('*')
+        .from('task_persons_view')
+        .whereRaw('task_persons_view.task_id = e.entity_id')
+        .whereIn('task_persons_view.person_id', person_ids)
+    })
   }
 
   return query
