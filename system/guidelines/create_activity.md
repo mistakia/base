@@ -5,6 +5,13 @@ description: Guidelines for creating new activities
 guideline_status: Approved
 activities: [Create Activity]
 tags: [activity, creation, governance]
+observations:
+  - '[governance] Proper activity location ensures system organization #structure'
+  - '[principle] Clear naming conventions improve discoverability #naming'
+  - '[organization] System vs user classification is based on scope of use #categorization'
+relations:
+  - 'guides [[Create Activity]]'
+  - 'implements [[System Design]]'
 ---
 
 # Create Activity Guideline
@@ -15,14 +22,3 @@ tags: [activity, creation, governance]
 - Activities MUST be named like `activity_name.md`.
 - Activities that are generic and would be used by every single user are considered system activities.
 - Activities that may be used by some users but not others are considered user activities.
-
-## Observations
-
-- [governance] Proper activity location ensures system organization #structure
-- [principle] Clear naming conventions improve discoverability #naming
-- [organization] System vs user classification is based on scope of use #categorization
-
-## Relations
-
-- guides [[Create Activity]]
-- implements [[System Design]]

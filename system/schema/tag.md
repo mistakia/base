@@ -13,6 +13,11 @@ properties:
     type: string
     required: false
     description: Optional reference to a parent tag for hierarchical organization
+observations:
+  - '[design] Tags provide cross-cutting organization capability #organization'
+  - '[feature] Tags can be referenced both in frontmatter and with hashtag syntax #usability'
+  - '[architecture] Tag hierarchy allows for more sophisticated organization #organization'
+  - '[usage] Proper noun tags help track project-specific content #project_management'
 ---
 
 # Tag
@@ -35,6 +40,7 @@ Tags can be organized hierarchically by specifying a parent tag, allowing for mo
 Beyond basic categorization, tags can have additional properties:
 
 - **Color**: Visual identification in UIs
+- **Parent Tag**: Reference to a parent tag for hierarchical organization
 
 ## Relations
 
@@ -45,8 +51,16 @@ Tags commonly relate to:
 - Tasks (for task categorization)
 - Activities (for activity categorization)
 
-## Observations
+## Proper Noun Representation
 
-- [design] Tags provide cross-cutting organization capability #organization
-- [feature] Tags can be referenced both in frontmatter and with hashtag syntax #usability
-- [architecture] Tag hierarchy allows for more sophisticated organization #organization
+Tags can effectively represent proper nouns such as specific projects, products, or entities:
+
+- **Project Tags**: Create dedicated tags for projects (e.g., #project_alpha) to collect all related content
+- **Entity Tags**: Use tags to track mentions of specific clients, tools, or systems
+- **Conventions**: Consider prefixing proper noun tags for clarity (e.g., #proj_alpha, #client_acme)
+
+These proper noun tags enable:
+
+- Aggregating all content related to a specific entity
+- Creating project-specific knowledge collections
+- Tracking mentions and references across the knowledge base

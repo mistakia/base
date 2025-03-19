@@ -5,6 +5,13 @@ description: Guidelines for processing initial user requests
 guideline_status: Approved
 activities: [Evaluate User Request]
 tags: [request, handling, workflow]
+observations:
+  - '[workflow] Initial request processing is the first step in the system pipeline #intake'
+  - '[principle] Breaking down large requests into discrete tasks improves manageability #task_management'
+  - '[strategy] Blockers should always be addressed before main tasks #prioritization'
+relations:
+  - 'implements [[System Design]]'
+  - 'related_to [[Task Management]]'
 ---
 
 # Initial User Request Handler
@@ -20,14 +27,3 @@ Identify any new activities, tools, guidelines, tags, and data items that are ne
 Make a list of blockers that need to be addressed before the task can be completed.
 
 Always work on the blocking tasks first.
-
-## Observations
-
-- [workflow] Initial request processing is the first step in the system pipeline #intake
-- [principle] Breaking down large requests into discrete tasks improves manageability #task_management
-- [strategy] Blockers should always be addressed before main tasks #prioritization
-
-## Relations
-
-- implements [[System Design]]
-- related_to [[Task Management]]

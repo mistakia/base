@@ -3,6 +3,17 @@ title: System Design
 type: text
 description: Architecture and design principles for the human-in-the-loop agent system
 tags: [architecture, design, documentation]
+observations:
+  - '[design] Uses a human-in-the-loop approach #collaboration'
+  - '[principle] System should always be evaluated for improvement #iterative'
+  - '[architecture] Dual knowledge base architecture ensures stability while enabling customization #design'
+  - '[principle] File-first approach with git version control provides robust knowledge management #versioning'
+  - '[feature] Activity-based organization provides clear context for actions #organization'
+  - '[principle] Guidelines-driven approach ensures consistency #governance'
+relations:
+  - 'relates_to [[Directory Structure]]'
+  - 'relates_to [[Knowledge Base Schema]]'
+  - 'part_of [[Documentation]]'
 ---
 
 # Base System Design
@@ -105,18 +116,3 @@ Each external data connection has bidirectional sync and conflict resolution:
 - **Tool**: A capability provided to agents that allows them to perform specific actions or access particular resources.
 - **Trigger**: An event or condition that activates a prompt for an inference request.
 - **Tags**: Labels that can be added to activities, tasks, tools, and data items to help with organization and retrieval. An activity, task, tool, or data item can have multiple tags.
-
-## Observations
-
-- [design] Uses a human-in-the-loop approach #collaboration
-- [principle] System should always be evaluated for improvement #iterative
-- [architecture] Dual knowledge base architecture ensures stability while enabling customization #design
-- [principle] File-first approach with git version control provides robust knowledge management #versioning
-- [feature] Activity-based organization provides clear context for actions #organization
-- [principle] Guidelines-driven approach ensures consistency #governance
-
-## Relations
-
-- relates_to [[Directory Structure]]
-- relates_to [[Knowledge Base Schema]]
-- part_of [[Documentation]]
