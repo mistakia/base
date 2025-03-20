@@ -64,11 +64,7 @@ mcp_server.setRequestHandler(
 )
 
 // Combine all tools and resources
-const ALL_TOOLS = {
-  ...NOTION_TOOLS,
-  ...DB_TOOLS,
-  ...GIT_TOOLS
-}
+const ALL_TOOLS = [...NOTION_TOOLS, ...DB_TOOLS, ...GIT_TOOLS]
 
 // Combine resources from all providers
 const ALL_RESOURCES = [

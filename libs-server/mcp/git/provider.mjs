@@ -3,8 +3,10 @@ import path from 'path'
 import fs from 'fs/promises'
 import { promisify } from 'util'
 import { exec } from 'child_process'
-import { register_provider } from '../service.mjs'
-import git from '../../git/index.mjs'
+
+import { register_provider } from '#libs-server/mcp/service.mjs'
+import git from '#libs-server/git/index.mjs'
+import config from '#config'
 
 const log = debug('mcp:git:provider')
 const execute = promisify(exec)
@@ -43,11 +45,11 @@ async function handle_tool_call(params) {
     case 'knowledge_base_get_diff':
       return handle_get_diff(args)
     case 'knowledge_base_read_file':
-      return handle_read_kb_file(args)
+      return handle_read_file(args)
     case 'knowledge_base_list_files':
-      return handle_list_kb_files(args)
+      return handle_list_files(args)
     case 'knowledge_base_search':
-      return handle_search_kb(args)
+      return handle_search(args)
     default:
       throw new Error(`Unknown tool: ${name}`)
   }
@@ -55,22 +57,31 @@ async function handle_tool_call(params) {
 
 /**
  * Get the repository path
- * @param {String} repo Repository name
+ * @param {String} repo_type Repository type (system or data)
  * @returns {String} Repository path
  */
-export function get_repo_path(repo) {
+export function get_repo_path(repo_type = 'system') {
+  log(`Getting repo path for ${repo_type}`)
   // Allow configuration of repository paths through environment variables
   // This makes testing much more flexible without needing to stub the function
-  if (process.env.MCP_REPO_SYSTEM_PATH && repo !== 'data') {
+  if (process.env.MCP_REPO_SYSTEM_PATH && repo_type === 'system') {
     return process.env.MCP_REPO_SYSTEM_PATH
   }
 
-  if (process.env.MCP_REPO_DATA_PATH && repo === 'data') {
+  if (process.env.MCP_REPO_DATA_PATH && repo_type === 'user') {
     return process.env.MCP_REPO_DATA_PATH
   }
 
+  if (config.system_repo_path && repo_type === 'system') {
+    return config.system_repo_path
+  }
+
+  if (config.user_repo_path && repo_type === 'user') {
+    return config.user_repo_path
+  }
+
   // Default paths (these will be overridden in tests)
-  return repo === 'data' ? './data' : '.'
+  return repo_type === 'user' ? './data' : '.'
 }
 
 /**
@@ -80,7 +91,7 @@ export function get_repo_path(repo) {
  */
 async function handle_apply_patch(args) {
   const {
-    repo,
+    repo_type,
     branch_name,
     base_branch = 'main',
     patches,
@@ -91,7 +102,7 @@ async function handle_apply_patch(args) {
   } = args
 
   try {
-    const repo_path = get_repo_path(repo)
+    const repo_path = get_repo_path(repo_type)
 
     // Check if branch exists, create if not
     const branch_exists = await git.branch_exists(repo_path, branch_name, {
@@ -196,10 +207,16 @@ async function handle_apply_patch(args) {
  * @returns {Object} Result
  */
 async function handle_get_diff(args) {
-  const { repo, branch, compare_with = 'main', path, format = 'unified' } = args
+  const {
+    repo_type,
+    branch,
+    compare_with = 'main',
+    path,
+    format = 'unified'
+  } = args
 
   try {
-    const repo_path = get_repo_path(repo)
+    const repo_path = get_repo_path(repo_type)
 
     // Get diff
     const diff = await git.get_diff(repo_path, compare_with, branch, {
@@ -230,11 +247,11 @@ async function handle_get_diff(args) {
  * @param {Object} args Tool arguments
  * @returns {Object} Result
  */
-async function handle_read_kb_file(args) {
-  const { repo, path: file_path, branch = 'main' } = args
+async function handle_read_file(args) {
+  const { repo_type, path: file_path, branch = 'main' } = args
 
   try {
-    const repo_path = get_repo_path(repo)
+    const repo_path = get_repo_path(repo_type)
 
     // Read file
     const content = await git.read_file_from_ref(repo_path, branch, file_path)
@@ -261,11 +278,11 @@ async function handle_read_kb_file(args) {
  * @param {Object} args Tool arguments
  * @returns {Object} Result
  */
-async function handle_list_kb_files(args) {
-  const { repo, path = '', branch = 'main', pattern = '*.md' } = args
+async function handle_list_files(args) {
+  const { repo_type, path = '', branch = 'main', pattern = '*.md' } = args
 
   try {
-    const repo_path = get_repo_path(repo)
+    const repo_path = get_repo_path(repo_type)
     log(`Listing files in ${repo_path} with path: ${path}`)
 
     // Get all files in the repo first
@@ -327,11 +344,17 @@ async function handle_list_kb_files(args) {
  * @param {Object} args Tool arguments
  * @returns {Object} Result
  */
-async function handle_search_kb(args) {
-  const { repo, query, branch = 'main', path, case_sensitive = false } = args
+async function handle_search(args) {
+  const {
+    repo_type,
+    query,
+    branch = 'main',
+    path,
+    case_sensitive = false
+  } = args
 
   try {
-    const repo_path = get_repo_path(repo)
+    const repo_path = get_repo_path(repo_type)
 
     // Search
     const results = await git.search_repository(repo_path, query, {

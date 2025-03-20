@@ -17,7 +17,7 @@ const expect = chai.expect
 describe('MCP Git Tools Integration', function () {
   let test_dir
   let system_repo_path
-  let data_repo_path
+  let user_repo_path
   let original_system_path
   let original_data_path
 
@@ -38,7 +38,7 @@ describe('MCP Git Tools Integration', function () {
       `mcp-git-test-${Date.now()}-${Math.floor(Math.random() * 10000)}`
     )
     system_repo_path = path.join(test_dir, 'system')
-    data_repo_path = path.join(test_dir, 'data')
+    user_repo_path = path.join(test_dir, 'data')
 
     console.log(`Setting up test in directory: ${test_dir}`)
 
@@ -65,43 +65,43 @@ describe('MCP Git Tools Integration', function () {
     await execute('git branch -M main', { cwd: system_repo_path })
 
     // Initialize data repository (simulating the data submodule)
-    await fs.mkdir(data_repo_path, { recursive: true })
-    await execute('git init', { cwd: data_repo_path })
-    await execute('git config user.name "Test User"', { cwd: data_repo_path })
+    await fs.mkdir(user_repo_path, { recursive: true })
+    await execute('git init', { cwd: user_repo_path })
+    await execute('git config user.name "Test User"', { cwd: user_repo_path })
     await execute('git config user.email "test@example.com"', {
-      cwd: data_repo_path
+      cwd: user_repo_path
     })
 
     // Create directory structure in data repo (similar to what we'd have in the real data repo)
-    await fs.mkdir(path.join(data_repo_path, 'concepts'), { recursive: true })
-    await fs.mkdir(path.join(data_repo_path, 'concepts/dir'), {
+    await fs.mkdir(path.join(user_repo_path, 'concepts'), { recursive: true })
+    await fs.mkdir(path.join(user_repo_path, 'concepts/dir'), {
       recursive: true
     })
 
     // Add some markdown files to test with
     await fs.writeFile(
-      path.join(data_repo_path, 'concepts/file1.md'),
+      path.join(user_repo_path, 'concepts/file1.md'),
       '# File 1\n\nThis is test file 1.'
     )
     await fs.writeFile(
-      path.join(data_repo_path, 'concepts/file2.md'),
+      path.join(user_repo_path, 'concepts/file2.md'),
       '# File 2\n\nThis is test file 2.'
     )
     await fs.writeFile(
-      path.join(data_repo_path, 'concepts/dir/file3.md'),
+      path.join(user_repo_path, 'concepts/dir/file3.md'),
       '# File 3\n\nThis is test file 3.'
     )
 
     // Commit the files to the data repo
-    await execute('git add .', { cwd: data_repo_path })
+    await execute('git add .', { cwd: user_repo_path })
     await execute('git commit -m "Initial data commit"', {
-      cwd: data_repo_path
+      cwd: user_repo_path
     })
-    await execute('git branch -M main', { cwd: data_repo_path })
+    await execute('git branch -M main', { cwd: user_repo_path })
 
     // Set up data as a submodule of system (simulating our real setup)
     // We'll use a relative path for the submodule to avoid absolute path issues
-    const data_dir_name = path.basename(data_repo_path)
+    const data_dir_name = path.basename(user_repo_path)
     await execute(`git submodule add -f ../${data_dir_name} data`, {
       cwd: system_repo_path
     })
@@ -111,7 +111,7 @@ describe('MCP Git Tools Integration', function () {
 
     // Set environment variables to point to our test repositories
     process.env.MCP_REPO_SYSTEM_PATH = system_repo_path
-    process.env.MCP_REPO_DATA_PATH = data_repo_path
+    process.env.MCP_REPO_DATA_PATH = user_repo_path
   })
 
   // Clean up after all tests
@@ -158,7 +158,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_apply_patch',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch_name: 'feature-branch',
           patches: [
             {
@@ -199,18 +199,18 @@ describe('MCP Git Tools Integration', function () {
     // Create a test file with specific content
     const test_content = '# Test Content\n\nThis is test content.'
     await fs.writeFile(
-      path.join(data_repo_path, 'concepts/test-file.md'),
+      path.join(user_repo_path, 'concepts/test-file.md'),
       test_content
     )
-    await execute('git add concepts/test-file.md', { cwd: data_repo_path })
-    await execute('git commit -m "Add test file"', { cwd: data_repo_path })
+    await execute('git add concepts/test-file.md', { cwd: user_repo_path })
+    await execute('git commit -m "Add test file"', { cwd: user_repo_path })
 
     const result = await service.process_request('git', {
       method: 'tools/call',
       params: {
         name: 'knowledge_base_read_file',
         arguments: {
-          repo: 'data',
+          repo_type: 'user',
           path: 'concepts/test-file.md',
           branch: 'main'
         }
@@ -228,7 +228,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_list_files',
         arguments: {
-          repo: 'data',
+          repo_type: 'user',
           path: 'concepts',
           branch: 'main'
         }
@@ -257,7 +257,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_get_diff',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch: 'feature-branch',
           compare_with: 'main'
         }
@@ -272,12 +272,12 @@ describe('MCP Git Tools Integration', function () {
     // Add a file with unique searchable content
     const unique_term = `unique-search-term-${Date.now()}`
     await fs.writeFile(
-      path.join(data_repo_path, 'concepts/searchable.md'),
+      path.join(user_repo_path, 'concepts/searchable.md'),
       `This file contains a ${unique_term} pattern`
     )
-    await execute('git add concepts/searchable.md', { cwd: data_repo_path })
+    await execute('git add concepts/searchable.md', { cwd: user_repo_path })
     await execute('git commit -m "Add searchable content"', {
-      cwd: data_repo_path
+      cwd: user_repo_path
     })
 
     const result = await service.process_request('git', {
@@ -285,7 +285,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_search',
         arguments: {
-          repo: 'data',
+          repo_type: 'user',
           query: unique_term
         }
       }
@@ -308,7 +308,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_apply_patch',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch_name: 'feature-branch',
           patches: [
             {
@@ -327,7 +327,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_apply_patch',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch_name: 'feature-branch',
           patches: [
             {
@@ -359,7 +359,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_apply_patch',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch_name: 'feature-branch',
           patches: [
             {
@@ -389,7 +389,7 @@ describe('MCP Git Tools Integration', function () {
       params: {
         name: 'knowledge_base_apply_patch',
         arguments: {
-          repo: 'main',
+          repo_type: 'system',
           branch_name: 'feature-branch',
           patches: [
             {

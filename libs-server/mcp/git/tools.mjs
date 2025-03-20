@@ -2,17 +2,17 @@
  * Git tool definitions for MCP
  */
 
-export const GIT_TOOLS = {
-  knowledge_base_apply_patch: {
+export const GIT_TOOLS = [
+  {
+    name: 'knowledge_base_apply_patch',
     description: 'Apply patches to create or modify files in a git branch',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
-        repo: {
+        repo_type: {
           type: 'string',
-          enum: ['main', 'data'],
-          description:
-            'Which repository to target (main repo or data submodule)'
+          enum: ['system', 'user'],
+          description: 'Which repository to target (system or user)'
         },
         branch_name: {
           type: 'string',
@@ -76,18 +76,17 @@ export const GIT_TOOLS = {
       required: ['repo', 'branch_name', 'patches', 'commit_message']
     }
   },
-
-  knowledge_base_get_diff: {
+  {
+    name: 'knowledge_base_get_diff',
     description:
       'Get the diff between branches or changes in a specific branch',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
-        repo: {
+        repo_type: {
           type: 'string',
-          enum: ['main', 'data'],
-          description:
-            'Which repository to examine (main repo or data submodule)'
+          enum: ['system', 'user'],
+          description: 'Which repository to examine (system or user)'
         },
         branch: {
           type: 'string',
@@ -112,17 +111,16 @@ export const GIT_TOOLS = {
       required: ['repo', 'branch']
     }
   },
-
-  knowledge_base_read_file: {
+  {
+    name: 'knowledge_base_read_file',
     description: 'Read a knowledge base file from a specific branch',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
-        repo: {
+        repo_type: {
           type: 'string',
-          enum: ['main', 'data'],
-          description:
-            'Which repository to read from (main repo or data submodule)'
+          enum: ['system', 'user'],
+          description: 'Which repository to read from (system or user)'
         },
         path: {
           type: 'string',
@@ -137,17 +135,16 @@ export const GIT_TOOLS = {
       required: ['repo', 'path']
     }
   },
-
-  knowledge_base_list_files: {
+  {
+    name: 'knowledge_base_list_files',
     description: 'List files in the knowledge base',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
-        repo: {
+        repo_type: {
           type: 'string',
-          enum: ['main', 'data'],
-          description:
-            'Which repository to list files from (main repo or data submodule)'
+          enum: ['system', 'user'],
+          description: 'Which repository to list files from (system or user)'
         },
         path: {
           type: 'string',
@@ -168,17 +165,16 @@ export const GIT_TOOLS = {
       required: ['repo']
     }
   },
-
-  knowledge_base_search: {
+  {
+    name: 'knowledge_base_search',
     description: 'Search for content in the knowledge base',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
-        repo: {
+        repo_type: {
           type: 'string',
-          enum: ['main', 'data'],
-          description:
-            'Which repository to search in (main repo or data submodule)'
+          enum: ['system', 'user'],
+          description: 'Which repository to search in (system or user)'
         },
         query: {
           type: 'string',
@@ -199,9 +195,9 @@ export const GIT_TOOLS = {
           default: false
         }
       },
-      required: ['repo', 'query']
+      required: ['repo_type', 'query']
     }
   }
-}
+]
 
 export default GIT_TOOLS
