@@ -5,6 +5,7 @@ import { promisify } from 'util'
 import { exec } from 'child_process'
 
 import { register_provider } from '#libs-server/mcp/service.mjs'
+import { format_response, format_error } from '#libs-server/mcp/utils.mjs'
 import git from '#libs-server/git/index.mjs'
 import config from '#config'
 
@@ -153,14 +154,12 @@ async function handle_apply_patch(args) {
       } catch (error) {
         // Check if there's nothing to commit
         if (error.stderr && error.stderr.includes('nothing to commit')) {
-          return {
-            result: {
-              success: true,
-              message: 'No changes to commit',
-              branch: branch_name,
-              pr_url: null
-            }
-          }
+          return format_response({
+            success: true,
+            message: 'No changes to commit',
+            branch: branch_name,
+            pr_url: null
+          })
         }
         throw error
       }
@@ -178,26 +177,20 @@ async function handle_apply_patch(args) {
         }
       }
 
-      return {
-        result: {
-          success: true,
-          branch: branch_name,
-          files: patches.map((p) => p.path),
-          commit_message,
-          pr_info
-        }
-      }
+      return format_response({
+        success: true,
+        branch: branch_name,
+        files: patches.map((p) => p.path),
+        commit_message,
+        pr_info
+      })
     } finally {
       // Clean up worktree
       await git.remove_worktree(repo_path, worktree_path)
     }
   } catch (error) {
     log('Error handling apply_patch:', error)
-    return {
-      error: {
-        message: error.message
-      }
-    }
+    return format_error('knowledge_base_apply_patch', error)
   }
 }
 
@@ -224,21 +217,15 @@ async function handle_get_diff(args) {
       format
     })
 
-    return {
-      result: {
-        diff,
-        branch,
-        compare_with,
-        format
-      }
-    }
+    return format_response({
+      diff,
+      branch,
+      compare_with,
+      format
+    })
   } catch (error) {
     log('Error handling get_diff:', error)
-    return {
-      error: {
-        message: error.message
-      }
-    }
+    return format_error('knowledge_base_get_diff', error)
   }
 }
 
@@ -256,20 +243,14 @@ async function handle_read_file(args) {
     // Read file
     const content = await git.read_file_from_ref(repo_path, branch, file_path)
 
-    return {
-      result: {
-        content,
-        path: file_path,
-        branch
-      }
-    }
+    return format_response({
+      content,
+      path: file_path,
+      branch
+    })
   } catch (error) {
     log('Error handling read_kb_file:', error)
-    return {
-      error: {
-        message: error.message
-      }
-    }
+    return format_error('knowledge_base_read_file', error)
   }
 }
 
@@ -321,21 +302,15 @@ async function handle_list_files(args) {
     log(
       `Found ${files.length} files matching path: ${path}, pattern: ${pattern}`
     )
-    return {
-      result: {
-        files,
-        path,
-        branch,
-        pattern
-      }
-    }
+    return format_response({
+      files,
+      path,
+      branch,
+      pattern
+    })
   } catch (error) {
     log('Error handling list_kb_files:', error)
-    return {
-      error: {
-        message: error.message
-      }
-    }
+    return format_error('knowledge_base_list_files', error)
   }
 }
 
@@ -363,21 +338,15 @@ async function handle_search(args) {
       case_sensitive
     })
 
-    return {
-      result: {
-        results,
-        query,
-        branch,
-        count: results.length
-      }
-    }
+    return format_response({
+      results,
+      query,
+      branch,
+      count: results.length
+    })
   } catch (error) {
     log('Error handling search_kb:', error)
-    return {
-      error: {
-        message: error.message
-      }
-    }
+    return format_error('knowledge_base_search', error)
   }
 }
 

@@ -27,6 +27,7 @@ export const GIT_TOOLS = [
         },
         patches: {
           type: 'array',
+          description: 'Collection of file contents or git file patches',
           items: {
             type: 'object',
             properties: {
@@ -73,7 +74,7 @@ export const GIT_TOOLS = [
           description: 'Description for the PR'
         }
       },
-      required: ['repo', 'branch_name', 'patches', 'commit_message']
+      required: ['repo_type', 'branch_name', 'patches', 'commit_message']
     }
   },
   {
@@ -108,7 +109,7 @@ export const GIT_TOOLS = [
           default: 'unified'
         }
       },
-      required: ['repo', 'branch']
+      required: ['repo_type', 'branch']
     }
   },
   {
@@ -132,7 +133,7 @@ export const GIT_TOOLS = [
           default: 'main'
         }
       },
-      required: ['repo', 'path']
+      required: ['repo_type', 'path']
     }
   },
   {
@@ -162,7 +163,7 @@ export const GIT_TOOLS = [
           default: '*.md'
         }
       },
-      required: ['repo']
+      required: ['repo_type']
     }
   },
   {

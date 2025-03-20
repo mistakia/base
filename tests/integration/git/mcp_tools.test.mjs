@@ -14,6 +14,14 @@ import '#libs-server/mcp/git/provider.mjs'
 const execute = promisify(exec)
 const expect = chai.expect
 
+// Helper function to parse MCP response content
+function parse_mcp_response(response) {
+  expect(response).to.have.property('content').that.is.an('array')
+  expect(response.content[0]).to.have.property('type', 'text')
+  expect(response.content[0]).to.have.property('text').that.is.a('string')
+  return JSON.parse(response.content[0].text)
+}
+
 describe('MCP Git Tools Integration', function () {
   let test_dir
   let system_repo_path
@@ -171,8 +179,10 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(result).to.have.nested.property('result.success', true)
-    expect(result).to.have.nested.property('result.branch', 'feature-branch')
+    expect(result).to.have.property('isError', false)
+    const parsed_result = parse_mcp_response(result)
+    expect(parsed_result).to.have.property('success', true)
+    expect(parsed_result).to.have.property('branch', 'feature-branch')
 
     // Verify the branch was created
     const branch_check = await execute('git branch', { cwd: system_repo_path })
@@ -217,9 +227,11 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(result).to.have.nested.property('result.content')
-    expect(result.result.content).to.include('Test Content')
-    expect(result.result.content).to.include('This is test content')
+    expect(result).to.have.property('isError', false)
+    const parsed_result = parse_mcp_response(result)
+    expect(parsed_result).to.have.property('content')
+    expect(parsed_result.content).to.include('Test Content')
+    expect(parsed_result.content).to.include('This is test content')
   })
 
   it('should list files in the knowledge base with knowledge_base_list_files', async function () {
@@ -235,10 +247,12 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(result).to.have.nested.property('result.files')
-    expect(result.result.files).to.include('concepts/file1.md')
-    expect(result.result.files).to.include('concepts/file2.md')
-    expect(result.result.files).to.include('concepts/dir/file3.md')
+    expect(result).to.have.property('isError', false)
+    const parsed_result = parse_mcp_response(result)
+    expect(parsed_result).to.have.property('files')
+    expect(parsed_result.files).to.include('concepts/file1.md')
+    expect(parsed_result.files).to.include('concepts/file2.md')
+    expect(parsed_result.files).to.include('concepts/dir/file3.md')
   })
 
   it('should return diff between branches with knowledge_base_get_diff', async function () {
@@ -264,8 +278,10 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(result).to.have.nested.property('result.diff')
-    expect(result.result.diff).to.include('Updated content')
+    expect(result).to.have.property('isError', false)
+    const parsed_result = parse_mcp_response(result)
+    expect(parsed_result).to.have.property('diff')
+    expect(parsed_result.diff).to.include('Updated content')
   })
 
   it('should search for content in the knowledge base with knowledge_base_search', async function () {
@@ -291,14 +307,17 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(result).to.have.nested.property('result.results')
-    expect(result.result.results.length).to.be.at.least(1)
-
+    expect(result).to.have.property('isError', false)
+    const parsed_result = parse_mcp_response(result)
+    expect(parsed_result).to.have.property('results').that.is.an('array')
+    expect(parsed_result).to.have.property('count').that.is.a('number')
+    expect(parsed_result.results.length).to.be.greaterThan(0)
     // Ensure the search results contain our term
-    const has_matching_result = result.result.results.some(
+    const has_matching_result = parsed_result.results.some(
       (result) => result.content && result.content.includes(unique_term)
     )
     expect(has_matching_result).to.be.true
+    expect(parsed_result.results[0]).to.have.property('content')
   })
 
   it('should handle modifications with knowledge_base_apply_patch', async function () {
@@ -340,7 +359,9 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(modify_result).to.have.nested.property('result.success', true)
+    expect(modify_result).to.have.property('isError', false)
+    const parsed_modify_result = parse_mcp_response(modify_result)
+    expect(parsed_modify_result).to.have.property('success', true)
 
     // Verify the file was modified
     await execute('git checkout feature-branch', { cwd: system_repo_path })
@@ -402,7 +423,9 @@ describe('MCP Git Tools Integration', function () {
       }
     })
 
-    expect(delete_result).to.have.nested.property('result.success', true)
+    expect(delete_result).to.have.property('isError', false)
+    const parsed_delete_result = parse_mcp_response(delete_result)
+    expect(parsed_delete_result).to.have.property('success', true)
 
     // Verify the file is gone
     await execute('git checkout feature-branch', { cwd: system_repo_path })

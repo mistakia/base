@@ -1,9 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { Client } from '@notionhq/client'
 import debug from 'debug'
-import { z } from 'zod'
 
 import { register_provider } from '#libs-server/mcp/service.mjs'
+import { format_response, format_error } from '#libs-server/mcp/utils.mjs'
 import config from '#config'
 
 // Setup logger
@@ -206,34 +205,6 @@ const NOTION_TOOLS = [
 // ===== Helper Functions =====
 
 /**
- * Format a response for the MCP protocol
- * @param {any} data - The data to format
- * @param {boolean} is_error - Whether this is an error response
- * @returns {object} Formatted response
- */
-function format_response(data, is_error = false) {
-  return {
-    isError: is_error,
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(data, null, 2)
-      }
-    ]
-  }
-}
-
-/**
- * Format an error response
- * @param {string} tool_name - The name of the tool that failed
- * @param {Error} error - The error object
- * @returns {object} Formatted error response
- */
-function format_error(tool_name, error) {
-  return format_response(`Error executing ${tool_name}: ${error.message}`, true)
-}
-
-/**
  * Clean an ID by removing dashes
  * @param {string} id - The ID to clean
  * @returns {string} Cleaned ID
@@ -389,104 +360,30 @@ async function handle_tool_call(name, args) {
   }
 }
 
-// ===== MCP Server Setup =====
+async function handle_request(request) {
+  logger('Handling HTTP request: %O', request)
 
-// Create MCP server
-const server = new Server(
-  {
-    name: 'notion-mcp',
-    version: '1.0.0'
-  },
-  {
-    capabilities: {
-      tools: {}
-    }
-  }
-)
-
-// Add handleRequest method to the server object
-server.handleRequest = async function (request) {
-  logger('Handling request: %O', request)
-
-  // Get the current request handler
-  const handler = this.requestHandler
-  if (!handler) {
-    throw new Error('No request handler registered')
-  }
-
-  // Call the handler with the request
-  return await handler(request)
-}
-
-// Add a request interceptor for debugging
-server.setRequestHandler(
-  z.object({
-    method: z.string(),
-    params: z.any()
-  }),
-  async (request) => {
-    logger('Received request: %O', request)
-    // Let the request continue to be handled by other handlers
-    return undefined
-  },
-  { priority: -1 }
-)
-
-// List tools handler
-server.setRequestHandler(
-  z.object({
-    method: z.literal('tools/list')
-  }),
-  async () => {
+  // Process the request based on method
+  if (request.method === 'tools/list') {
     return {
       tools: NOTION_TOOLS
     }
-  }
-)
-
-// Define a single handler for all tools
-server.setRequestHandler(
-  z.object({
-    method: z.literal('tools/call'),
-    params: z.object({
-      name: z.string(),
-      arguments: z.any()
-    })
-  }),
-  async (request) => {
+  } else if (request.method === 'tools/call') {
     const { name, arguments: args } = request.params
     return await handle_tool_call(name, args)
-  }
-)
-
-// ===== HTTP API Handler =====
-
-// Create a handler for HTTP API requests
-const http_handler = {
-  async handle_request(request) {
-    logger('Handling HTTP request: %O', request)
-
-    // Process the request based on method
-    if (request.method === 'tools/list') {
-      return {
-        tools: NOTION_TOOLS
-      }
-    } else if (request.method === 'tools/call') {
-      const { name, arguments: args } = request.params
-      return await handle_tool_call(name, args)
-    } else {
-      throw new Error(`Unknown method: ${request.method}`)
-    }
+  } else {
+    throw new Error(`Unknown method: ${request.method}`)
   }
 }
 
 // Register the Notion provider with the MCP service
-register_provider('notion', http_handler)
+register_provider('notion', {
+  handle_request
+})
 
 // Add error handling for unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
   logger('Unhandled Rejection at: %o, reason: %o', promise, reason)
 })
 
-// Export the server for direct access
-export { server, NOTION_TOOLS }
+export { NOTION_TOOLS }
