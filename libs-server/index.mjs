@@ -9,4 +9,4 @@ export * as cloudflare from './integrations/cloudflare.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as mcp_service from './mcp/service.mjs'
-export * as git from './git/index.mjs'
+export * as git from './git/git_operations.mjs'

@@ -7,7 +7,7 @@ import {
 import { format_repository } from '#libs-server/markdown/index.mjs'
 import scanner from '#libs-server/markdown/scanner.mjs'
 import parser from '#libs-server/markdown/parser.mjs'
-import { get_current_branch } from '#libs-server/git/index.mjs'
+import { get_current_branch } from '#libs-server/git/git_operations.mjs'
 
 describe('Schema Module', () => {
   // Store current branch

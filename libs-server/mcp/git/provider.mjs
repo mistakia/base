@@ -6,7 +6,7 @@ import { exec } from 'child_process'
 
 import { register_provider } from '#libs-server/mcp/service.mjs'
 import { format_response, format_error } from '#libs-server/mcp/utils.mjs'
-import git from '#libs-server/git/index.mjs'
+import git from '#libs-server/git/git_operations.mjs'
 import config from '#config'
 
 const log = debug('mcp:git:provider')
