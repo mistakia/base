@@ -1,3 +1,18 @@
+---
+type: text
+title: Block Schema
+description: Defines the schema for content blocks in our markdown-based system
+tags: [blocks, schema, markdown, content]
+observations:
+  - '[architecture] Content blocks provide granular control over document content #design'
+  - '[format] JSON structure allows for flexible block attributes and relationships #implementation'
+  - '[feature] Content addressing enables efficient versioning and deduplication #storage'
+  - '[principle] Block-based content facilitates modular document manipulation #flexibility'
+relations:
+  - 'part_of [[System Design]]'
+  - 'relates_to [[Knowledge Base Schema]]'
+---
+
 # Block Schema
 
 This document defines the schema for content blocks in our markdown-based system.

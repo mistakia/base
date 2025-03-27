@@ -8,7 +8,7 @@ import { promisify } from 'util'
 import sinon from 'sinon'
 
 // Import the module we want to test
-import git from '#libs-server/git/index.mjs'
+import git from '#libs-server/git/git_operations.mjs'
 
 const execute = promisify(exec)
 const expect = chai.expect
