@@ -5,14 +5,12 @@ import path from 'path'
 import os from 'os'
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import sinon from 'sinon'
 
 // Import the module we want to test
 import git from '#libs-server/git/git_operations.mjs'
 
 const execute = promisify(exec)
 const expect = chai.expect
-const sandbox = sinon.createSandbox()
 
 describe('Git Operations', function () {
   let test_repo_path
@@ -20,9 +18,6 @@ describe('Git Operations', function () {
 
   // Create test repositories before tests
   beforeEach(async function () {
-    // Reset any sinon stubs
-    sandbox.restore()
-
     // Create temporary directories for test repos
     const temp_dir = os.tmpdir()
     test_repo_path = path.join(
@@ -98,15 +93,39 @@ describe('Git Operations', function () {
   })
 
   it('should detect non-existing branches', async function () {
-    // TODO refactor to work without stubbing
-    // For this test, we need to stub the function to ensure it returns false for non-existent branches
-    const stub = sandbox.stub(git, 'branch_exists')
+    // Create a branch name that's guaranteed not to exist
     const non_existent_branch = `non-existent-branch-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 
-    stub.withArgs(test_repo_path, non_existent_branch).resolves(false)
+    const { stdout: branch_list } = await execute('git branch --list', {
+      cwd: test_repo_path
+    })
+    const branch_exists_directly = branch_list.includes(non_existent_branch)
+    expect(branch_exists_directly).to.be.false
 
-    const exists = await git.branch_exists(test_repo_path, non_existent_branch)
+    // Now test our function
+    const exists = await git.branch_exists(
+      test_repo_path,
+      non_existent_branch,
+      {
+        check_remote: false // Explicitly don't check remote to simplify test
+      }
+    )
     expect(exists).to.be.false
+
+    // Test with an existing branch
+    const existing_branch = 'feature-branch'
+    const exists_for_feature = await git.branch_exists(
+      test_repo_path,
+      existing_branch,
+      {
+        check_remote: false
+      }
+    )
+    expect(exists_for_feature).to.be.true
+
+    // Test return value types
+    expect(exists).to.be.a('boolean')
+    expect(exists_for_feature).to.be.a('boolean')
   })
 
   it('should create a branch', async function () {
@@ -196,38 +215,39 @@ describe('Git Operations', function () {
   })
 
   it('should search repository content', async function () {
-    // TODO refactor to work without stubbing
-    // For this test, we need to stub the search_repository function
-    // since it seems to be returning different results than expected
-    const unique_content = `unique search query pattern ${Date.now()}`
-    const search_term = unique_content.substring(0, 20)
-
-    // Create a stub for search_repository
-    const search_stub = sandbox.stub(git, 'search_repository')
-    search_stub.withArgs(test_repo_path, search_term).resolves([
-      {
-        file: 'searchable.md',
-        line_number: 1,
-        content: unique_content
-      }
-    ])
+    // Create a unique searchable content that will be easy to find
+    const unique_content = `UNIQUE_MARKER_${Date.now()}`
 
     // Create file with unique searchable content
+    const search_file_name = 'searchable.md'
     await fs.writeFile(
-      path.join(test_repo_path, 'searchable.md'),
+      path.join(test_repo_path, search_file_name),
       unique_content
     )
     await execute('git add searchable.md', { cwd: test_repo_path })
     await execute('git commit -m "Add searchable file"', {
       cwd: test_repo_path
     })
+    await execute('git push origin main', { cwd: test_repo_path })
 
     // Perform search with the unique content
-    const results = await git.search_repository(test_repo_path, search_term)
+    const results = await git.search_repository(test_repo_path, unique_content)
 
+    // Just verify we got results and content matches
     expect(results.length).to.be.at.least(1)
-    expect(results[0].file).to.equal('searchable.md')
-    expect(results[0].content).to.include(search_term)
+    expect(results[0].content).to.include(unique_content)
+
+    // Validate structure of search results
+    expect(results).to.be.an('array')
+    expect(results[0]).to.have.property('path')
+    expect(results[0]).to.have.property('content')
+
+    // Check content matches exactly
+    const first_result = results[0]
+    expect(first_result.content).to.include(unique_content)
+
+    // Check if line number is present (can be null in some implementations)
+    expect(first_result).to.have.property('line')
   })
 
   it('should parse repository info from remote URL', async function () {

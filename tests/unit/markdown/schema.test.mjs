@@ -1,134 +1,179 @@
 import { expect } from 'chai'
-import sinon from 'sinon'
+import fs from 'fs/promises'
+import path from 'path'
+import os from 'os'
+import { promisify } from 'util'
+import { exec } from 'child_process'
+
 import {
   load_schema_definitions,
   build_validation_schema
 } from '#libs-server/markdown/schema.mjs'
 import { format_repository } from '#libs-server/markdown/index.mjs'
-import scanner from '#libs-server/markdown/scanner.mjs'
-import parser from '#libs-server/markdown/parser.mjs'
 import { get_current_branch } from '#libs-server/git/git_operations.mjs'
 
+const execute = promisify(exec)
+
 describe('Schema Module', () => {
-  // Store current branch
+  // Store current branch and test repo paths
   let current_system_branch
   let current_user_branch
+  let system_repo_path
+  let user_repo_path
 
-  // Set up stubs
-  let scan_repositories_stub
-  let parse_schema_file_stub
-
+  // Set up test repositories with schema files
   before(async () => {
     // Get current branch
     current_system_branch = await get_current_branch('.')
-    current_user_branch = await get_current_branch('./data')
+
+    // Create temporary directories for test repos
+    const temp_dir = os.tmpdir()
+    system_repo_path = path.join(
+      temp_dir,
+      `schema-test-system-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+    )
+    user_repo_path = path.join(
+      temp_dir,
+      `schema-test-user-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+    )
+
+    // Create system repository with schema files
+    await fs.mkdir(path.join(system_repo_path, 'schema'), { recursive: true })
+    await execute('git init', { cwd: system_repo_path })
+    await execute('git config user.name "Test User"', { cwd: system_repo_path })
+    await execute('git config user.email "test@example.com"', {
+      cwd: system_repo_path
+    })
+
+    // Create task schema file
+    await fs.writeFile(
+      path.join(system_repo_path, 'schema', 'task.md'),
+      `---
+type: type_definition
+name: task
+properties:
+  status:
+    type: string
+    enum:
+      - In Progress
+      - Completed
+  priority:
+    type: string
+    enum:
+      - High
+      - Medium
+      - Low
+---
+# Task Schema Definition`
+    )
+
+    // Create person schema file
+    await fs.writeFile(
+      path.join(system_repo_path, 'schema', 'person.md'),
+      `---
+type: type_definition
+name: person
+properties:
+  first_name:
+    type: string
+    min: 2
+  last_name:
+    type: string
+    min: 2
+---
+# Person Schema Definition`
+    )
+
+    // Commit schema files
+    await execute('git add schema/task.md schema/person.md', {
+      cwd: system_repo_path
+    })
+    await execute('git commit -m "Add schema files"', { cwd: system_repo_path })
+    await execute('git branch -M main', { cwd: system_repo_path })
+    current_system_branch = 'main'
+
+    // Create user repository with extension schema
+    await fs.mkdir(path.join(user_repo_path, 'schema'), { recursive: true })
+    await execute('git init', { cwd: user_repo_path })
+    await execute('git config user.name "Test User"', { cwd: user_repo_path })
+    await execute('git config user.email "test@example.com"', {
+      cwd: user_repo_path
+    })
+
+    // Create task extension schema file
+    await fs.writeFile(
+      path.join(user_repo_path, 'schema', 'task_extension.md'),
+      `---
+type: type_extension
+extends: task
+name: task_extension
+properties:
+  custom_field:
+    type: string
+---
+# Task Extension Schema`
+    )
+
+    // Create a schema extension for an unknown type (for testing warnings)
+    await fs.writeFile(
+      path.join(user_repo_path, 'schema', 'unknown_extension.md'),
+      `---
+type: type_extension
+extends: unknown_type
+name: unknown_extension
+properties:
+  custom_field:
+    type: string
+---
+# Unknown Extension Schema`
+    )
+
+    // Commit schema files
+    await execute(
+      'git add schema/task_extension.md schema/unknown_extension.md',
+      { cwd: user_repo_path }
+    )
+    await execute('git commit -m "Add extension schemas"', {
+      cwd: user_repo_path
+    })
+    await execute('git branch -M main', { cwd: user_repo_path })
+    current_user_branch = 'main'
   })
 
-  beforeEach(() => {
-    // Create stubs
-    scan_repositories_stub = sinon.stub(scanner, 'scan_repositories')
-    parse_schema_file_stub = sinon.stub(parser, 'parse_schema_file')
-  })
-
-  afterEach(() => {
-    // Restore stubs
-    sinon.restore()
+  // Clean up after tests
+  after(async () => {
+    try {
+      await fs.rm(system_repo_path, { recursive: true, force: true })
+      await fs.rm(user_repo_path, { recursive: true, force: true })
+    } catch (error) {
+      console.error('Error cleaning up test repositories:', error)
+    }
   })
 
   describe('load_schema_definitions', () => {
     it('should load schema definitions from repositories', async () => {
-      // Set up mocks
-      scan_repositories_stub.resolves([
-        {
-          repo_type: 'system',
-          repo_path: './system',
-          file_path: 'schema/task.md',
-          git_path: 'system/schema/task.md',
-          absolute_path: '/Users/trashman/Projects/base/system/schema/task.md',
-          git_sha: 'abc123',
-          branch: current_system_branch,
-          is_submodule: false
-        },
-        {
-          repo_type: 'system',
-          repo_path: './system',
-          file_path: 'schema/person.md',
-          git_path: 'system/schema/person.md',
-          absolute_path:
-            '/Users/trashman/Projects/base/system/schema/person.md',
-          git_sha: 'def456',
-          branch: current_system_branch,
-          is_submodule: false
-        },
-        {
-          repo_type: 'user',
-          repo_path: './data',
-          file_path: 'schema/task_extension.md',
-          git_path: 'schema/task_extension.md',
-          absolute_path:
-            '/Users/trashman/Projects/base/data/schema/task_extension.md',
-          git_sha: 'ghi789',
-          branch: current_user_branch,
-          is_submodule: true
-        }
-      ])
+      // Setup temp repo paths for the test
+      const system_repository = {
+        type: 'system',
+        branch: current_system_branch,
+        path: system_repo_path,
+        is_submodule: false
+      }
 
-      // Mock parse_schema_file to return different parsed data for each file
-      parse_schema_file_stub.callsFake(async (file) => {
-        if (file.file_path === 'schema/task.md') {
-          return {
-            frontmatter: {
-              type: 'type_definition',
-              name: 'task',
-              properties: {
-                status: { type: 'string', enum: ['In Progress', 'Completed'] },
-                priority: { type: 'string', enum: ['High', 'Medium', 'Low'] }
-              }
-            }
-          }
-        } else if (file.file_path === 'schema/person.md') {
-          return {
-            frontmatter: {
-              type: 'type_definition',
-              name: 'person',
-              properties: {
-                first_name: { type: 'string', min: 2 },
-                last_name: { type: 'string', min: 2 }
-              }
-            }
-          }
-        } else if (file.file_path === 'schema/task_extension.md') {
-          return {
-            frontmatter: {
-              type: 'type_extension',
-              extends: 'task',
-              name: 'task_extension',
-              properties: {
-                custom_field: { type: 'string' }
-              }
-            }
-          }
-        }
-        return null
-      })
+      const user_repository = {
+        type: 'user',
+        branch: current_user_branch,
+        path: user_repo_path,
+        is_submodule: true
+      }
 
-      // Call the function with branch parameter
+      // Call the function with the test repositories
       const result = await load_schema_definitions({
-        system_repository: format_repository({
-          type: 'system',
-          branch: current_system_branch
-        }),
-        user_repository: format_repository({
-          type: 'user',
-          branch: current_user_branch
-        })
+        system_repository,
+        user_repository
       })
 
       // Verify results
-      expect(scan_repositories_stub.called).to.be.true
-      expect(parse_schema_file_stub.callCount).to.equal(3)
-
-      // Check the schema map contains the expected schemas
       expect(result).to.have.property('task')
       expect(result).to.have.property('person')
 
@@ -140,76 +185,151 @@ describe('Schema Module', () => {
       // Check that the person schema was loaded
       expect(result.person.properties).to.have.property('first_name')
       expect(result.person.properties).to.have.property('last_name')
+
+      // Check detailed structure of the task schema
+      expect(result.task).to.have.property('type', 'type_definition')
+      expect(result.task).to.have.property('name', 'task')
+      expect(result.task).to.have.property('source_file', 'schema/task.md')
+      expect(result.task.properties.status).to.have.property('type', 'string')
+      expect(result.task.properties.status.enum).to.include('In Progress')
+      expect(result.task.properties.status.enum).to.include('Completed')
+      expect(result.task.properties.priority).to.have.property('type', 'string')
+      expect(result.task.properties.priority.enum).to.deep.equal([
+        'High',
+        'Medium',
+        'Low'
+      ])
+      expect(result.task.properties.custom_field).to.have.property(
+        'type',
+        'string'
+      )
+
+      // Check extensions array for task
+      expect(result.task).to.have.property('extensions')
+      expect(result.task.extensions).to.be.an('array').with.lengthOf(1)
+      expect(result.task.extensions[0]).to.have.property(
+        'name',
+        'task_extension'
+      )
+      expect(result.task.extensions[0]).to.have.property(
+        'source_file',
+        'schema/task_extension.md'
+      )
+
+      // Check detailed structure of the person schema
+      expect(result.person).to.have.property('type', 'type_definition')
+      expect(result.person).to.have.property('name', 'person')
+      expect(result.person).to.have.property('source_file', 'schema/person.md')
+      expect(result.person.properties.first_name).to.have.property(
+        'type',
+        'string'
+      )
+      expect(result.person.properties.first_name).to.have.property('min', 2)
+      expect(result.person.properties.last_name).to.have.property(
+        'type',
+        'string'
+      )
+      expect(result.person.properties.last_name).to.have.property('min', 2)
+
+      // Verify schema count
+      expect(Object.keys(result)).to.have.lengthOf(2)
     })
 
     it('should handle errors during schema loading', async () => {
-      // Set up mocks
-      scan_repositories_stub.resolves([
-        {
-          repo_type: 'system',
-          repo_path: './system',
-          file_path: 'schema/task.md',
-          git_path: 'system/schema/task.md',
-          absolute_path: '/Users/trashman/Projects/base/system/schema/task.md',
-          git_sha: 'abc123',
-          branch: current_system_branch,
-          is_submodule: false
-        }
-      ])
-
-      // Mock parse_schema_file to throw an error
-      parse_schema_file_stub.rejects(new Error('Failed to parse schema file'))
-
-      // Call the function
-      const result = await load_schema_definitions({
-        system_repository: format_repository({ type: 'system' }),
-        user_repository: format_repository({ type: 'user' })
+      // Setup with invalid repository paths
+      const system_repository = format_repository({
+        type: 'system',
+        branch: 'nonexistent-branch',
+        path: '/path/does/not/exist'
       })
 
-      // Verify results - should return an empty object
+      const user_repository = format_repository({
+        type: 'user',
+        branch: 'nonexistent-branch',
+        path: '/path/does/not/exist'
+      })
+
+      // Call the function with invalid repositories
+      const result = await load_schema_definitions({
+        system_repository,
+        user_repository
+      })
+
+      // Verify results - should return an empty object on error
       expect(result).to.deep.equal({})
+
+      // Additional checks for the return value
+      expect(result).to.be.an('object')
+      expect(result).to.be.empty
+      expect(Object.keys(result)).to.have.lengthOf(0)
+      expect(result).to.not.have.property('task')
+      expect(result).to.not.have.property('person')
     })
 
     it('should warn about extensions for unknown base types', async () => {
-      // Set up spy for console.warn
-      const warn_spy = sinon.spy(console, 'warn')
+      // Setup to capture console warnings
+      const original_warn = console.warn
+      let warning_message = null
+      console.warn = (message) => {
+        warning_message = message
+      }
 
-      // Set up mocks
-      scan_repositories_stub.resolves([
-        {
-          repo_type: 'user',
-          repo_path: './data',
-          file_path: 'schema/unknown_extension.md',
-          git_path: 'schema/unknown_extension.md',
-          absolute_path:
-            '/Users/trashman/Projects/base/data/schema/unknown_extension.md',
-          git_sha: 'abc123',
-          branch: current_user_branch,
-          is_submodule: true
-        }
-      ])
+      // Setup repositories for the test
+      const system_repository = {
+        type: 'system',
+        branch: current_system_branch,
+        path: system_repo_path,
+        is_submodule: false
+      }
 
-      // Mock parse_schema_file to return an extension for an unknown type
-      parse_schema_file_stub.resolves({
-        frontmatter: {
-          type: 'type_extension',
-          extends: 'unknown_type',
-          name: 'unknown_extension',
-          properties: {
-            custom_field: { type: 'string' }
-          }
-        }
-      })
+      const user_repository = {
+        type: 'user',
+        branch: current_user_branch,
+        path: user_repo_path,
+        is_submodule: true
+      }
 
-      // Call the function
-      await load_schema_definitions({
-        system_repository: format_repository({ type: 'system' }),
-        user_repository: format_repository({ type: 'user' })
-      })
+      try {
+        // Call the function
+        const result = await load_schema_definitions({
+          system_repository,
+          user_repository
+        })
 
-      // Verify a warning was logged
-      expect(warn_spy.calledWith(sinon.match(/references unknown base type/)))
-        .to.be.true
+        // Verify a warning was logged
+        expect(warning_message).to.include('references unknown base type')
+
+        // Check the return value structure
+        expect(result).to.be.an('object')
+        expect(Object.keys(result).length).to.be.at.least(1)
+
+        // Verify the task schema is correct
+        expect(result).to.have.property('task')
+        expect(result.task).to.have.property('properties')
+        expect(result.task.properties).to.have.property('status')
+        expect(result.task.properties).to.have.property('priority')
+        expect(result.task.properties).to.have.property('custom_field')
+
+        // Verify task extension is correctly applied
+        expect(result.task).to.have.property('extensions')
+        expect(result.task.extensions).to.be.an('array')
+        expect(result.task.extensions[0]).to.have.property(
+          'name',
+          'task_extension'
+        )
+
+        // Verify the person schema is included
+        expect(result).to.have.property('person')
+        expect(result.person).to.have.property('properties')
+        expect(result.person.properties).to.have.property('first_name')
+        expect(result.person.properties).to.have.property('last_name')
+
+        // Verify unknown type was not added to schema
+        expect(result).to.not.have.property('unknown_type')
+      } finally {
+        // Restore console.warn
+        console.warn = original_warn
+      }
     })
   })
 
