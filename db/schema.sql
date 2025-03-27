@@ -33,7 +33,6 @@ DROP TYPE IF EXISTS task_status_type CASCADE;
 DROP TYPE IF EXISTS priority_type CASCADE;
 DROP TYPE IF EXISTS importance_type CASCADE;
 DROP TYPE IF EXISTS frequency_type CASCADE;
-DROP TYPE IF EXISTS file_type CASCADE;
 DROP TYPE IF EXISTS guideline_status_type CASCADE;
 DROP TYPE IF EXISTS block_type CASCADE;
 
@@ -87,14 +86,6 @@ CREATE TYPE frequency_type AS ENUM (
   'Daily',
   'Weekly',
   'Infrequent'
-);
-
-CREATE TYPE file_type AS ENUM (
-  'Document',
-  'Image',
-  'Video',
-  'Software',
-  'Code'
 );
 
 CREATE TYPE guideline_status_type AS ENUM (
@@ -325,7 +316,7 @@ CREATE TABLE physical_items (
 
 CREATE TABLE digital_items (
   entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  file_type file_type,
+  file_mime_type VARCHAR(255),
   file_uri VARCHAR(500),
   file_size VARCHAR(50),
   file_cid VARCHAR(100),

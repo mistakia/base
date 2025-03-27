@@ -5,11 +5,10 @@ title: Digital Item
 extends: base
 description: Digital items represent files, software, or digital artifacts
 properties:
-  - name: file_type
-    type: enum
-    enum: [Document, Image, Video, Software, Code]
+  - name: file_mime_type
+    type: string
     required: false
-    description: Type of digital item
+    description: MIME type of the file (e.g., 'application/pdf', 'image/jpeg', 'video/mp4', 'text/html')
   - name: file_uri
     type: string
     required: false
@@ -43,17 +42,17 @@ The digital item schema supports:
 - Basic file metadata
 - Location tracking (via URIs)
 - File integrity verification (via hashes)
-- Categorization by file type
+- Categorization by MIME type
 
 ## Common Digital Items
 
 Digital items might include:
 
-- Documents (reports, manuals, specifications)
-- Images (diagrams, photos, screenshots)
-- Videos (tutorials, recordings, presentations)
-- Software (applications, scripts, utilities)
-- Code (source files, libraries, modules)
+- Documents (application/pdf, application/msword, text/plain)
+- Images (image/jpeg, image/png, image/svg+xml)
+- Videos (video/mp4, video/webm, video/quicktime)
+- Software (application/octet-stream, application/x-executable)
+- Code (text/x-python, application/javascript, text/x-java)
 
 ## Relations
 
