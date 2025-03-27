@@ -2,6 +2,7 @@
 title: Create Activity Guideline
 type: guideline
 description: Guidelines for creating new activities
+globs: [system/activities/*.md, data/activities/*.md]
 guideline_status: Approved
 activities: [Create Activity]
 tags: [activity, creation, governance]

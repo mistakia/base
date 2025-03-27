@@ -22,3 +22,10 @@ yarn-error.log
 #
 config/config*
 .cursor/mcp.json
+
+# Ignore cursor rules
+.cursor/rules/*.mdc
+.cursor/rules/.last_sync
+
+# But keep the directory structure
+!.cursor/rules/.gitkeep

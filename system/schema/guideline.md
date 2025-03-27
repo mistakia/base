@@ -20,6 +20,16 @@ properties:
       type: string
     required: true
     description: Activities this guideline applies to
+  - name: globs
+    type: array
+    items:
+      type: string
+    optional: true
+    description: Glob patterns for files that this guideline applies to
+  - name: always_apply
+    type: boolean
+    optional: true
+    description: Whether this guideline should always be applied
 ---
 
 # Guideline
@@ -32,17 +42,9 @@ Guidelines serve to:
 
 - Standardize processes
 - Document best practices
-- Ensure compliance with regulations
+- Shape system behavior based on user preferences
 - Maintain quality standards
 - Provide consistency across operations
-
-## Lifecycle
-
-Guidelines typically follow a lifecycle:
-
-1. Draft - Initial creation and refinement
-2. Approved - Formally accepted and implemented
-3. Deprecated - No longer in use or replaced by newer guidelines
 
 ## Relations
 
