@@ -6,19 +6,24 @@ A collaborative environment where LLMs and humans work together on tasks and kno
 
 This system creates a framework for LLMs and humans to collaborate effectively, with the following key features:
 
-- **Version Control for Everything**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
+- **Version Controlled**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
+- **File-First Architecture**: Files are the source of truth for all knowledge
+- **Markdown Storage**: All knowledge items are stored as plain markdown files with YAML frontmatter
+- **Pull Request Style Workflow**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
 - **Activity-Based Organization**: Actions are classified by activity types for better context management
 - **Multi-Model Support**: Different models can process the same inference requests
-- **Self-Improvement**: The system can evaluate and improve itself through a built-in feedback loop
 - **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
-- **Human Oversight**: PR style review progress and control over what actions need review.
+- **Granular Action Control**: System actions have configurable permission levels to control autonomy
+- **Async Collaboration**: Support for asynchronous human-system interaction
+- **Knowledge Graph**: Builds and traverses relationships between knowledge items
 - **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control.
+- **Self-Improvement**: The system can evaluate and improve itself through a built-in feedback loop
 
 ## Documentation
 
-- [System Design](docs/system-design.md): Overall system architecture and components
-- [Directory Structure](docs/directory-structure.md): Organization of code and resources
-- [Configuration System](docs/configuration-system.md): How configuration works
+- [System Design](system/system-design.md): Overall system architecture and components
+- [Directory Structure](system/directory-structure.md): Organization of code and resources
+- [Configuration System](system/configuration-system.md): How configuration works
 
 ## Getting Started
 
