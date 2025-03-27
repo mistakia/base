@@ -18,14 +18,10 @@ properties:
     type: string
     required: false
     description: Size of the file
-  - name: file_hash
+  - name: file_cid
     type: string
     required: false
-    description: Hash value for verification
-  - name: ipfs_hash
-    type: string
-    required: false
-    description: IPFS hash for decentralized storage
+    description: Globally unique content-based identifier for the file
   - name: text
     type: string
     required: false

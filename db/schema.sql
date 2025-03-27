@@ -328,8 +328,7 @@ CREATE TABLE digital_items (
   file_type file_type,
   file_uri VARCHAR(500),
   file_size VARCHAR(50),
-  file_hash VARCHAR(100),
-  ipfs_hash VARCHAR(100),
+  file_cid VARCHAR(100),
   text TEXT,
   html TEXT,
   search_vector tsvector
