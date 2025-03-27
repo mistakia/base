@@ -22,7 +22,7 @@ describe('API /users', function () {
     const public_key = ed25519.publicKey(private_key)
     const data = {
       public_key: public_key.toString('hex'),
-      username: 'test_user',
+      username: `test_user_${Math.floor(Math.random() * 10000)}`,
       email: 'test@test.com'
     }
     const data_hash = ed25519.hash(JSON.stringify(data))

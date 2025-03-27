@@ -18,6 +18,12 @@ DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS guidelines CASCADE;
 DROP TABLE IF EXISTS activities CASCADE;
 
+-- Block tables
+DROP TABLE IF EXISTS entity_blocks CASCADE;
+DROP TABLE IF EXISTS block_relationships CASCADE;
+DROP TABLE IF EXISTS block_attributes CASCADE;
+DROP TABLE IF EXISTS blocks CASCADE;
+
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
@@ -29,6 +35,7 @@ DROP TYPE IF EXISTS importance_type CASCADE;
 DROP TYPE IF EXISTS frequency_type CASCADE;
 DROP TYPE IF EXISTS file_type CASCADE;
 DROP TYPE IF EXISTS guideline_status_type CASCADE;
+DROP TYPE IF EXISTS block_type CASCADE;
 
 -- Create custom enum types
 CREATE TYPE entity_type AS ENUM (
@@ -141,6 +148,105 @@ CHECK (
   type != 'text' OR
   (markdown IS NOT NULL AND frontmatter IS NOT NULL AND file_path IS NOT NULL)
 );
+
+-- Block types
+CREATE TYPE block_type AS ENUM (
+  'markdown_file',
+  'heading',
+  'paragraph',
+  'list',
+  'list_item',
+  'code',
+  'blockquote',
+  'table',
+  'table_row',
+  'table_cell',
+  'image',
+  'thematic_break',
+  'callout',
+  'bookmark',
+  'equation',
+  'file',
+  'video',
+  'html_block'
+);
+
+CREATE TABLE blocks (
+  block_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  block_cid TEXT NOT NULL UNIQUE,   -- Content ID (multihash)
+  type block_type NOT NULL,
+  content TEXT,
+  user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  -- Search capability
+  embedding vector(1536),
+  search_vector tsvector,
+
+  -- Block metadata fields
+  position_start_line INTEGER,
+  position_start_character INTEGER,
+  position_end_line INTEGER,
+  position_end_character INTEGER,
+
+  CONSTRAINT check_updated_at CHECK (
+    updated_at IS NULL OR updated_at >= created_at
+  )
+);
+
+-- Block attributes (type-specific properties)
+CREATE TABLE block_attributes (
+  attribute_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
+  key VARCHAR(255) NOT NULL,
+  value TEXT NOT NULL,
+  UNIQUE (block_id, key)
+);
+
+-- Block relationships
+CREATE TABLE block_relationships (
+  relationship_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  source_block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
+  target_block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
+  relationship_type VARCHAR(50) NOT NULL,
+  UNIQUE (source_block_id, target_block_id, relationship_type)
+);
+
+-- Join table connecting entities and blocks
+CREATE TABLE entity_blocks (
+  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
+  block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entity_id, block_id)
+);
+
+-- Indexes for block tables
+CREATE INDEX idx_blocks_block_cid ON blocks (block_cid);
+CREATE INDEX idx_blocks_type ON blocks (type);
+CREATE INDEX idx_blocks_user_id ON blocks (user_id);
+CREATE INDEX idx_blocks_created_at ON blocks (created_at DESC);
+CREATE INDEX idx_blocks_updated_at ON blocks (updated_at DESC);
+CREATE INDEX idx_entity_blocks_entity_id ON entity_blocks (entity_id);
+CREATE INDEX idx_entity_blocks_block_id ON entity_blocks (block_id);
+CREATE INDEX idx_block_relationships_source ON block_relationships (source_block_id);
+CREATE INDEX idx_block_relationships_target ON block_relationships (target_block_id);
+CREATE INDEX idx_block_relationships_type ON block_relationships (relationship_type);
+CREATE INDEX idx_blocks_search ON blocks USING gin(search_vector);
+CREATE INDEX idx_blocks_embedding ON blocks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Update search vector for full text search
+CREATE OR REPLACE FUNCTION update_block_search_vector()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_block_search_vector
+BEFORE INSERT OR UPDATE ON blocks
+FOR EACH ROW EXECUTE FUNCTION update_block_search_vector();
 
 -- Audit log for tracking changes
 CREATE TABLE audit_log (
@@ -752,7 +858,43 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply audit triggers to main tables
 CREATE TRIGGER entities_audit
 AFTER INSERT OR UPDATE OR DELETE ON entities
 FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+
+CREATE TRIGGER entity_blocks_audit
+AFTER INSERT OR UPDATE OR DELETE ON entity_blocks
+FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+
+-- Query function for block semantic search
+CREATE OR REPLACE FUNCTION block_similarity_search(
+  query_embedding vector(1536),
+  block_types block_type[] DEFAULT NULL,
+  similarity_threshold float DEFAULT 0.7,
+  max_results integer DEFAULT 10
+) RETURNS TABLE (
+  block_id UUID,
+  block_cid TEXT,
+  type block_type,
+  content TEXT,
+  similarity float
+) LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    b.block_id,
+    b.block_cid,
+    b.type,
+    b.content,
+    1 - (b.embedding <=> query_embedding) AS similarity
+  FROM
+    blocks b
+  WHERE
+    b.embedding IS NOT NULL
+    AND (block_types IS NULL OR b.type = ANY(block_types))
+    AND 1 - (b.embedding <=> query_embedding) > similarity_threshold
+  ORDER BY
+    b.embedding <=> query_embedding
+  LIMIT max_results;
+END;
+$$;

@@ -2,44 +2,35 @@ import { expect } from 'chai'
 import postgres from '#db'
 import { import_repositories } from '#libs-server/markdown/index.mjs'
 import { git } from '#libs-server'
+import { create_test_user } from '#tests/utils/index.mjs'
 
 describe('Markdown Import Integration Tests', () => {
-  const TEST_USER_ID = '00000000-0000-0000-0000-000000000001'
+  let test_user
   let current_system_branch
   let current_user_branch
 
   before(async () => {
+    test_user = await create_test_user()
     // Get current branch
     current_system_branch = await git.get_current_branch('.')
     current_user_branch = await git.get_current_branch('./data')
-
-    // Create a test user if it doesn't exist
-    await postgres('users')
-      .insert({
-        user_id: TEST_USER_ID,
-        public_key: 'test-key',
-        username: 'test-user',
-        email: 'test@example.com'
-      })
-      .onConflict('user_id')
-      .ignore()
   })
 
   after(async () => {
     // Clean up the database
-    await postgres('entities').where({ user_id: TEST_USER_ID }).delete()
+    await postgres('entities').where({ user_id: test_user.user_id }).delete()
     await postgres.destroy()
   })
 
   beforeEach(async () => {
     // Clear entities before each test
-    await postgres('entities').where({ user_id: TEST_USER_ID }).delete()
+    await postgres('entities').where({ user_id: test_user.user_id }).delete()
   })
 
   describe('import_repositories', () => {
     it('should import markdown files', async () => {
       // Clear database first
-      await postgres('entities').where({ user_id: TEST_USER_ID }).delete()
+      await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
       // Run the import using actual files in the system directory
       const result = await import_repositories(
@@ -54,7 +45,7 @@ describe('Markdown Import Integration Tests', () => {
           system_branch: current_system_branch,
           user_branch: current_user_branch
         },
-        TEST_USER_ID
+        test_user.user_id
       )
 
       // Check the results
@@ -63,7 +54,7 @@ describe('Markdown Import Integration Tests', () => {
 
       // Verify entities were created in the database
       const entities = await postgres('entities')
-        .where({ user_id: TEST_USER_ID })
+        .where({ user_id: test_user.user_id })
         .select('*')
 
       expect(entities.length).to.equal(53)
@@ -83,12 +74,12 @@ describe('Markdown Import Integration Tests', () => {
           system_branch: current_system_branch,
           user_branch: current_user_branch
         },
-        TEST_USER_ID
+        test_user.user_id
       )
 
       // Get the current entities
       const initial_entities = await postgres('entities')
-        .where({ user_id: TEST_USER_ID })
+        .where({ user_id: test_user.user_id })
         .select('*')
 
       // Store timestamps for comparison
@@ -114,12 +105,12 @@ describe('Markdown Import Integration Tests', () => {
           user_branch: current_user_branch,
           force_update: true // Force update even if git_sha is the same
         },
-        TEST_USER_ID
+        test_user.user_id
       )
 
       // Get updated entities
       const updated_entities = await postgres('entities')
-        .where({ user_id: TEST_USER_ID })
+        .where({ user_id: test_user.user_id })
         .select('*')
 
       // The count should be the same (no new entities created)
@@ -152,12 +143,12 @@ describe('Markdown Import Integration Tests', () => {
           system_branch: current_system_branch,
           user_branch: current_user_branch
         },
-        TEST_USER_ID
+        test_user.user_id
       )
 
       // Get the current entity count
       await postgres('entities')
-        .where({ user_id: TEST_USER_ID })
+        .where({ user_id: test_user.user_id })
         .count('* as count')
         .then((rows) => parseInt(rows[0].count))
 
@@ -167,7 +158,7 @@ describe('Markdown Import Integration Tests', () => {
           title: 'Temporary Entity',
           type: 'text',
           description: 'This entity will be archived',
-          user_id: TEST_USER_ID,
+          user_id: test_user.user_id,
           markdown: '# Temporary\n\nThis is temporary.',
           content: 'This is temporary.',
           frontmatter: JSON.stringify({
@@ -196,7 +187,7 @@ describe('Markdown Import Integration Tests', () => {
           system_branch: current_system_branch,
           user_branch: current_user_branch
         },
-        TEST_USER_ID
+        test_user.user_id
       )
 
       // Check that at least the temp entity was archived

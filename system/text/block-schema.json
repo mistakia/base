@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Block",
+  "description": "Schema for content blocks in the markdown-based system",
+  "type": "object",
+  "required": ["block_cid", "type", "content"],
+  "properties": {
+    "block_cid": {
+      "type": "string",
+      "description": "Content ID (multihash)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "heading",
+        "paragraph",
+        "list",
+        "list_item",
+        "code",
+        "blockquote",
+        "table",
+        "table_row",
+        "table_cell",
+        "image",
+        "thematic_break",
+        "callout",
+        "bookmark",
+        "equation",
+        "file",
+        "video"
+      ],
+      "description": "Block type"
+    },
+    "content": {
+      "type": "string",
+      "description": "Raw content"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation time (ISO timestamp)"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update time (ISO timestamp)"
+        },
+        "position": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "object",
+              "properties": {
+                "line": { "type": "integer" },
+                "character": { "type": "integer" }
+              },
+              "required": ["line", "character"]
+            },
+            "end": {
+              "type": "object",
+              "properties": {
+                "line": { "type": "integer" },
+                "character": { "type": "integer" }
+              },
+              "required": ["line", "character"]
+            }
+          },
+          "required": ["start", "end"],
+          "description": "Position in document"
+        }
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Type-specific attributes",
+      "additionalProperties": true,
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6,
+          "description": "Heading level (1-6)"
+        },
+        "is_toggleable": {
+          "type": "boolean",
+          "description": "Whether the heading is toggleable"
+        },
+        "color": {
+          "type": "string",
+          "description": "Block color",
+          "enum": [
+            "default",
+            "gray",
+            "brown",
+            "orange",
+            "yellow",
+            "green",
+            "blue",
+            "purple",
+            "pink",
+            "red",
+            "gray_background",
+            "brown_background",
+            "orange_background",
+            "yellow_background",
+            "green_background",
+            "blue_background",
+            "purple_background",
+            "pink_background",
+            "red_background"
+          ]
+        },
+        "indent_level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Indentation level for list items"
+        },
+        "list_type": {
+          "type": "string",
+          "enum": ["bullet", "numbered", "task"],
+          "description": "Type of list item"
+        },
+        "checked": {
+          "type": "boolean",
+          "description": "Whether a task list item is checked"
+        },
+        "language": {
+          "type": "string",
+          "description": "Programming language for code blocks"
+        },
+        "table_width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of columns in table"
+        },
+        "has_column_header": {
+          "type": "boolean",
+          "description": "Whether table has column headers"
+        },
+        "has_row_header": {
+          "type": "boolean",
+          "description": "Whether table has row headers"
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Rich text object"
+            }
+          },
+          "description": "Table row cells"
+        },
+        "alt_text": {
+          "type": "string",
+          "description": "Alternative text for images"
+        },
+        "uri": {
+          "type": "string",
+          "description": "URI for images, bookmarks, files, videos (can be http, ipfs, file system path)"
+        },
+        "caption": {
+          "type": "string",
+          "description": "Caption for images, bookmarks, files, videos"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["file", "external"],
+          "description": "Type of file reference"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon for callout blocks"
+        }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string",
+          "description": "Block CID of parent block"
+        },
+        "children": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Block CIDs of child blocks"
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Block CIDs of referenced blocks"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -9,7 +9,7 @@ export default async function () {
 
   const data = {
     public_key: public_key.toString('hex'),
-    username: 'test_user',
+    username: `test_user_${Math.floor(Math.random() * 10000)}`,
     email: 'test@test.com'
   }
   const [{ user_id }] = await db('users').insert(data).returning('user_id')
