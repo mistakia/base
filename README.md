@@ -1,39 +1,24 @@
-# Human-in-the-Loop Agent System
+# Human-in-the-Loop System
 
-A collaborative environment where AI agents and humans work together on tasks and knowledge management, with version control for everything and a focus on continuous improvement.
+A collaborative environment where LLMs and humans work together on tasks and knowledge management, with version control for everything and a focus on continuous improvement.
 
 ## Overview
 
-This system creates a framework for AI agents and humans to collaborate effectively, with the following key features:
+This system creates a framework for LLMs and humans to collaborate effectively, with the following key features:
 
 - **Version Control for Everything**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
 - **Activity-Based Organization**: Actions are classified by activity types for better context management
 - **Multi-Model Support**: Different models can process the same inference requests
-- **Self-Improvement**: System can recursively work on improving its own components
-- **Guidelines-Driven**: Activities follow established guidelines that evolve over time
-- **Human Oversight**: All significant changes require human approval
+- **Self-Improvement**: The system can evaluate and improve itself through a built-in feedback loop
+- **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
+- **Human Oversight**: PR style review progress and control over what actions need review.
+- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control.
 
 ## Documentation
 
 - [System Design](docs/system-design.md): Overall system architecture and components
 - [Directory Structure](docs/directory-structure.md): Organization of code and resources
 - [Configuration System](docs/configuration-system.md): How configuration works
-
-## Directory Structure
-
-The system is organized into the following top-level directories:
-
-```
-├── libs-shared/       # Shared code between client and server
-├── libs-server/        # Server-specific code
-├── static/             # Static resources (images, styles, etc.)
-├── scripts/            # Executable command-line scripts
-├── docs/               # Documentation
-├── config/             # Non-sensitive configuration (tracked by git)
-└── tests/              # Test files
-```
-
-See the [Directory Structure](docs/directory-structure.md) document for more details.
 
 ## Getting Started
 
