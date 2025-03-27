@@ -12,7 +12,6 @@ import {
   post_database_view_request_actions,
   delete_database_view_request_actions
 } from '@core/path-views/actions'
-import { get_folder_path_request_actions } from '@core/folder-paths/actions'
 import {
   get_database_request_actions,
   get_database_items_request_actions
@@ -60,11 +59,6 @@ export const post_user_task = fetch.bind(
   null,
   api.post_user_task,
   post_user_task_request_actions
-)
-export const get_folder_path = fetch.bind(
-  null,
-  api.get_folder_path,
-  get_folder_path_request_actions
 )
 export const get_database = fetch.bind(
   null,

@@ -31,7 +31,6 @@ const Routes = ({ public_key, username }) => {
         path='/:username/databases/:database_table_name'
         element={<HomePage />}
       />
-      <Route path='/:username/*user_folder_path' element={<HomePage />} />
       <Route
         path='*'
         element={<Navigate to={`/${username}`} replace={true} />}

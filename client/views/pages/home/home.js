@@ -13,7 +13,6 @@ import './home.styl'
 export default function HomePage({
   load_user,
   users,
-  load_folder_path,
   load_database,
   set_selected_path,
   selected_path_view,
@@ -25,15 +24,15 @@ export default function HomePage({
   set_selected_path_view_id,
   delete_database_view
 }) {
-  const { username, user_folder_path, database_table_name } = useParams()
+  const { username, database_table_name } = useParams()
 
   React.useEffect(() => {
     load_user({ username })
   }, [])
 
   React.useEffect(() => {
-    set_selected_path({ username, user_folder_path, database_table_name })
-  }, [username, user_folder_path, database_table_name])
+    set_selected_path({ username, database_table_name })
+  }, [username, database_table_name])
 
   const user = users.get(username, new Map())
   const user_id = user.get('user_id')
@@ -42,14 +41,10 @@ export default function HomePage({
       set_selected_path({
         user_id,
         username,
-        user_folder_path,
         database_table_name
       })
       if (database_table_name) {
         load_database({ user_id, database_table_name })
-      } else {
-        const folder_path = `/${user_id}/${user_folder_path || ''}`
-        load_folder_path({ folder_path })
       }
     }
   }, [user_id])
@@ -86,7 +81,6 @@ HomePage.propTypes = {
   load_user: PropTypes.func,
   load_database: PropTypes.func,
   users: ImmutablePropTypes.map,
-  load_folder_path: PropTypes.func,
   selected_path_view: PropTypes.object,
   selected_path_views: PropTypes.array,
   set_selected_path: PropTypes.func,

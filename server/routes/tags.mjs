@@ -1,7 +1,6 @@
 import express from 'express'
 
 import db from '#db'
-import { constants } from '#libs-server'
 
 const router = express.Router({ mergeParams: true })
 
@@ -63,15 +62,6 @@ router.get('/:tag_name*', async (req, res) => {
         'database_table_tags.database_table_id'
       )
       .where({ tag_id: tag.tag_id })
-
-    // add default databases to root tag
-    if (tag.tag_name === 'root') {
-      const default_tables = constants.DEFAULT_DATABASE_TABLES.map((d) => ({
-        ...d,
-        user_id
-      }))
-      database_tables.push(...default_tables)
-    }
 
     res.send({
       tag,
