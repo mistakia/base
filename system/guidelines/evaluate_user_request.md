@@ -17,10 +17,6 @@ relations:
 
 # Initial User Request Handler
 
-MUST evaluate the user's request to determine required information and next steps.
-
-MUST break down the user's request into discrete and specific tasks.
-
 MUST identify:
 
 - Existing resources (activities, tools, guidelines, tags, knowledge base) relevant to the request
