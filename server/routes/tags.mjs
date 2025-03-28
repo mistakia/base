@@ -1,75 +1,200 @@
 import express from 'express'
-
-import db from '#db'
+import {
+  create_tag,
+  delete_tag,
+  get_tag_by_name,
+  get_tag_by_id,
+  get_tags,
+  get_tagged_entities,
+  tag_entity,
+  untag_entity,
+  update_tag
+} from '#libs-server/tags/index.mjs'
 
 const router = express.Router({ mergeParams: true })
 
-router.get('/:tag_name*', async (req, res) => {
+// Get a list of all tags for the authenticated user
+router.get('/', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const user_id = req.auth.user_id
+    const { archived, search_term } = req.query
+
+    const tags = await get_tags({
+      user_id,
+      archived: archived === 'true',
+      search_term
+    })
+
+    res.send(tags)
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Create a new tag
+router.post('/', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { title, description, color } = req.body
+    const user_id = req.auth.user_id
+
+    if (!title) {
+      return res.status(400).send({ error: 'Tag title is required' })
+    }
+
+    // Check if tag with this name already exists
+    const existing_tag = await get_tag_by_name({
+      title,
+      user_id
+    })
+
+    if (existing_tag) {
+      return res.status(409).send({
+        error: 'Tag with this name already exists',
+        tag_id: existing_tag.tag_id
+      })
+    }
+
+    const tag_id = await create_tag({
+      title,
+      description,
+      user_id,
+      color
+    })
+
+    const tag = await get_tag_by_id({ tag_id, user_id })
+    res.status(201).send(tag)
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Get a specific tag by name
+router.get('/:tag_name', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { tag_name } = req.params
+    const user_id = req.auth.user_id
 
-    // get user_id from request
-    const user_id = req.user.user_id
-
-    const tag = await db('tags')
-      .select('*', 'tag_id::text as tag_id', 'user_id::text as user_id')
-      .where({
-        tag_name,
-        user_id
-      })
-      .first()
+    const tag = await get_tag_by_name({
+      title: tag_name,
+      user_id
+    })
 
     if (!tag) {
-      return res.status(404).send({ error: 'tag not found' })
+      return res.status(404).send({ error: 'Tag not found' })
     }
 
-    // direct descendent tasks
-    const tasks = await db('tasks')
-      .select('*', 'tasks.task_id::text as task_id')
-      .join('task_tags', 'tasks.task_id', 'task_tags.task_id')
-      .where({ tag_id: tag.tag_id })
-
-    // direct descendent physical items
-    const physical_items = await db('physical_items')
-      .select('*', 'physical_items.physical_item_id::text as physical_item_id')
-      .join(
-        'physical_item_tags',
-        'physical_items.physical_item_id',
-        'physical_item_tags.physical_item_id'
-      )
-      .where({ tag_id: tag.tag_id })
-
-    // direct descendent digital items
-    const digital_items = await db('digital_items')
-      .select('*', 'digital_items.digital_item_id::text as digital_item_id')
-      .join(
-        'digital_item_tags',
-        'digital_items.digital_item_id',
-        'digital_item_tags.digital_item_id'
-      )
-      .where({ tag_id: tag.tag_id })
-
-    // direct descendent database tables
-    const database_tables = await db('database_tables')
-      .select(
-        '*',
-        'database_tables.database_table_id::text as database_table_id'
-      )
-      .join(
-        'database_table_tags',
-        'database_tables.database_table_id',
-        'database_table_tags.database_table_id'
-      )
-      .where({ tag_id: tag.tag_id })
-
-    res.send({
-      tag,
-      tasks,
-      physical_items,
-      digital_items,
-      database_tables
+    // Get all entities associated with this tag
+    const tagged_entities = await get_tagged_entities({
+      tag_id: tag.tag_id,
+      user_id
     })
+
+    res.send(tagged_entities)
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Update a tag
+router.put('/:tag_id', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { tag_id } = req.params
+    const { title, description, color, archive } = req.body
+    const user_id = req.auth.user_id
+
+    const success = await update_tag({
+      tag_id,
+      user_id,
+      title,
+      description,
+      color,
+      archive
+    })
+
+    if (!success) {
+      return res.status(404).send({ error: 'Tag not found' })
+    }
+
+    const updated_tag = await get_tag_by_id({ tag_id, user_id })
+    res.send(updated_tag)
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Delete a tag
+router.delete('/:tag_id', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { tag_id } = req.params
+    const user_id = req.auth.user_id
+
+    const success = await delete_tag({
+      tag_id,
+      user_id
+    })
+
+    if (!success) {
+      return res.status(404).send({ error: 'Tag not found' })
+    }
+
+    res.status(204).send()
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Tag an entity
+router.post('/:tag_id/entities/:entity_id', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { tag_id, entity_id } = req.params
+    const user_id = req.auth.user_id
+
+    const success = await tag_entity({
+      tag_id,
+      entity_id,
+      user_id
+    })
+
+    if (!success) {
+      return res.status(404).send({ error: 'Tag or entity not found' })
+    }
+
+    res.status(204).send()
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+// Untag an entity
+router.delete('/:tag_id/entities/:entity_id', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { tag_id, entity_id } = req.params
+    const user_id = req.auth.user_id
+
+    const success = await untag_entity({
+      tag_id,
+      entity_id,
+      user_id
+    })
+
+    if (!success) {
+      return res.status(404).send({ error: 'Tag or entity not found' })
+    }
+
+    res.status(204).send()
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

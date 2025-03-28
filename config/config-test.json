@@ -21,5 +21,8 @@
       "max": 10
     }
   },
-  "jwt_secret": "jwt_secret_test"
+  "jwt": {
+    "secret": "jwt_secret_test",
+    "algorithms": ["HS256"]
+  }
 }

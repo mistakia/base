@@ -39,7 +39,7 @@ router.post('/?', async (req, res) => {
       .where({ public_key: data.public_key })
       .first()
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt_secret)
+    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
     res.status(200).send({ token, ...user })
   } catch (error) {
     log(error)
@@ -80,7 +80,7 @@ router.post('/session', async (req, res) => {
       return res.status(404).send({ error: 'user not found' })
     }
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt_secret)
+    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
     res.status(200).send({ token, ...user })
   } catch (error) {
     log(error)

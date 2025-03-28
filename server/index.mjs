@@ -12,6 +12,8 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import serveStatic from 'serve-static'
 import qs from 'qs'
+import { expressjwt } from 'express-jwt'
+import jwt from 'jsonwebtoken'
 
 import wss from '#server/websocket.mjs'
 import config from '#config'
@@ -38,6 +40,19 @@ api.use(
     origin: true,
     credentials: true
   })
+)
+
+api.use(
+  '/api/*',
+  expressjwt(config.jwt).unless({
+    path: ['/api/users', '/api/users/session']
+  }),
+  (err, req, res, next) => {
+    if (err.code === 'invalid_token' || err.code === 'credentials_required') {
+      return next()
+    }
+    return next(err)
+  }
 )
 
 api.use('/api/users', routes.users)
@@ -92,16 +107,30 @@ const server = createServer()
 server.on('upgrade', async (request, socket, head) => {
   const parsed = new url.URL(request.url, config.url)
   try {
-    const public_key = parsed.searchParams.get('public_key')
-    request.user = { public_key }
+    const token = parsed.searchParams.get('token')
+    if (token) {
+      const decoded = await jwt.verify(token, config.jwt.secret)
+      request.auth = decoded
+    } else {
+      const public_key = parsed.searchParams.get('public_key')
+      if (public_key) {
+        request.user = { public_key }
+      }
+    }
   } catch (error) {
     log(error)
-    return socket.destroy()
+    // Don't destroy the socket for invalid tokens, allow connection without auth
   }
 
   wss.handleUpgrade(request, socket, head, function (ws) {
-    ws.public_key = request.user.public_key
-    log(`websocket connected: ${ws.public_key}`)
+    if (request.user && request.user.public_key) {
+      ws.public_key = request.user.public_key
+      log(`websocket connected with public_key: ${ws.public_key}`)
+    }
+    if (request.auth) {
+      ws.user_id = request.auth.user_id
+      log(`websocket connected with user_id: ${ws.user_id}`)
+    }
     wss.emit('connection', ws, request)
   })
 })
