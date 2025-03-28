@@ -8,7 +8,6 @@ import server from '#server'
 import { create_test_user } from '#tests/utils/index.mjs'
 import reset_all_tables from '#tests/utils/reset_all_tables.mjs'
 
-const { expect } = chai
 chai.should()
 chai.use(chaiHttp)
 
