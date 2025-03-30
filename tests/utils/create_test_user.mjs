@@ -1,22 +1,13 @@
+import create_user from '#libs-server/users/create_user.mjs'
 import crypto from 'crypto'
-import ed25519 from '@trashman/ed25519-blake2b'
-
-import db from '#db'
-
-export default async function () {
-  const private_key = crypto.randomBytes(32)
-  const public_key = ed25519.publicKey(private_key)
-
-  const data = {
-    public_key: public_key.toString('hex'),
+/**
+ * Creates a test user with random credentials
+ * @returns {Object} Test user information
+ */
+export default async function create_test_user() {
+  return create_user({
     username: `test_user_${Math.floor(Math.random() * 10000)}`,
-    email: 'test@test.com'
-  }
-  const [{ user_id }] = await db('users').insert(data).returning('user_id')
-  const user = await db('users').where('user_id', user_id).first()
-
-  return {
-    private_key,
-    ...user
-  }
+    email: 'test@test.com',
+    private_key: crypto.randomBytes(32)
+  })
 }
