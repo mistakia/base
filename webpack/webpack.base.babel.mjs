@@ -161,12 +161,23 @@ const base = (options) => ({
     extensions: ['.js', '.jsx', '.react.js'],
     mainFields: ['browser', 'jsnext:main', 'main'],
     alias: {
+      dayjs: path.resolve(__dirname, '../node_modules/dayjs'),
       react: path.resolve(__dirname, '../node_modules/react'),
       'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
+      '@mui/x-date-pickers': path.resolve(
+        __dirname,
+        '../node_modules/@mui/x-date-pickers'
+      ),
       '@emotion/react': path.resolve(
         __dirname,
         '../node_modules/@emotion/react'
-      )
+      ),
+      'highcharts-react-official': path.resolve(
+        __dirname,
+        '../node_modules/highcharts-react-official'
+      ),
+      highcharts: path.resolve(__dirname, '../node_modules/highcharts'),
+      'timeago.js': path.resolve(__dirname, '../node_modules/timeago.js')
     }
   },
   devtool: options.devtool,
