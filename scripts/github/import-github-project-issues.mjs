@@ -3,112 +3,10 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import config from '#config'
-import { isMain, github, github_tasks } from '#libs-server'
+import { isMain, github, github_tasks, normalize_user_id } from '#libs-server'
 
 const log = debug('import-github-project-issues')
 debug.enable('import-github-project-issues,github-tasks,github')
-
-// Process issues for a single repository
-const process_repo_issues = async ({
-  repo_name,
-  issues,
-  project_items_by_issue,
-  user_id,
-  github_token,
-  bidirectional,
-  sync_existing
-}) => {
-  const [owner, repo] = repo_name.split('/')
-  const repo_results = {
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    synced_to_github: 0,
-    errors: 0,
-    processed_issues: []
-  }
-  const processed_issues = []
-
-  log(`Processing ${issues.length} issues from ${repo_name}`)
-
-  for (const issue of issues) {
-    try {
-      // Skip pull requests
-      if (issue.pull_request) {
-        log(`Skipping PR #${issue.number}`)
-        continue
-      }
-
-      // Get project item for this issue
-      const project_item = project_items_by_issue[repo_name][issue.number]
-
-      // Create or update task
-      const { action, entity_id, task_data } =
-        await github_tasks.create_or_update_task_from_github_issue({
-          issue,
-          repo_info: { owner, repo, github_token },
-          user_id,
-          force_update: sync_existing,
-          project_item
-        })
-
-      repo_results[action]++
-      repo_results.processed_issues.push({
-        issue_number: issue.number,
-        title: issue.title,
-        action,
-        entity_id,
-        task_data
-      })
-
-      const processed_issue = {
-        repo: repo_name,
-        issue_number: issue.number,
-        title: issue.title,
-        action,
-        entity_id,
-        project_fields: project_item
-          ? github_tasks.extract_project_issue_metadata(issue, project_item)
-          : null
-      }
-
-      processed_issues.push(processed_issue)
-
-      // If bidirectional sync is enabled, also sync back to GitHub
-      if (bidirectional && entity_id && action !== 'skipped') {
-        const synced = await github_tasks.sync_task_to_github(entity_id, {
-          owner,
-          repo,
-          github_token
-        })
-        if (synced) {
-          repo_results.synced_to_github++
-          processed_issue.synced_to_github = true
-        }
-      }
-    } catch (error) {
-      log(`Error processing issue #${issue.number}: ${error.message}`)
-      repo_results.errors++
-
-      const error_issue = {
-        repo: repo_name,
-        issue_number: issue.number,
-        title: issue.title,
-        error: error.message
-      }
-
-      repo_results.processed_issues.push({
-        issue_number: issue.number,
-        title: issue.title,
-        error: error.message
-      })
-
-      processed_issues.push(error_issue)
-    }
-  }
-
-  return { repo_results, processed_issues }
-}
 
 // Import issues from a GitHub project
 const import_github_project_issues = async ({
@@ -121,10 +19,8 @@ const import_github_project_issues = async ({
   sync_existing = false
 }) => {
   try {
-    // Convert user_id from hex if needed
-    if (typeof user_id === 'string' && /^[0-9a-f]+$/.test(user_id)) {
-      user_id = Buffer.from(user_id, 'hex')
-    }
+    // Convert user_id using the normalize helper
+    user_id = normalize_user_id(user_id)
 
     log(`Importing issues from GitHub project: ${username}/${project_number}`)
 
@@ -205,22 +101,41 @@ const import_github_project_issues = async ({
     let total_errors = 0
 
     for (const repo_name of repos) {
+      const [owner, repo] = repo_name.split('/')
       const repo_issues = issues_by_repo[repo_name]
+      const repo_info = { owner, repo, github_token }
 
-      // Process all issues for this repository
-      const { repo_results, processed_issues } = await process_repo_issues({
-        repo_name,
+      // Create project_items_map for this repository's issues
+      const project_items_map = {}
+      if (all_project_items_by_issue[repo_name]) {
+        for (const issue_number in all_project_items_by_issue[repo_name]) {
+          project_items_map[issue_number] =
+            all_project_items_by_issue[repo_name][issue_number]
+        }
+      }
+
+      // Process issues using github_tasks utility
+      const repo_results = await github_tasks.process_github_issues({
         issues: repo_issues,
-        project_items_by_issue: all_project_items_by_issue,
+        repo_info,
         user_id,
-        github_token,
         bidirectional,
-        sync_existing
+        sync_existing,
+        project_items_map
       })
 
       // Add to overall results
       results[repo_name] = repo_results
-      all_processed_issues.push(...processed_issues)
+
+      // Add repo field to each processed issue
+      const repo_processed_issues = repo_results.processed_issues.map(
+        (issue) => ({
+          ...issue,
+          repo: repo_name
+        })
+      )
+
+      all_processed_issues.push(...repo_processed_issues)
 
       // Update totals
       total_created += repo_results.created
@@ -314,7 +229,7 @@ const main = async () => {
       })
       .help().argv
 
-    await import_github_project_issues({
+    const results = await import_github_project_issues({
       username: argv.username,
       project_number: argv.project,
       github_token: argv.token || process.env.GITHUB_TOKEN,
@@ -324,6 +239,16 @@ const main = async () => {
       sync_existing: argv.sync,
       since_date: argv.since
     })
+
+    // Print concise result summary to console
+    console.log('GitHub project issues import summary:')
+    console.log(`- Project: ${argv.username}/${argv.project}`)
+    console.log(`- Created: ${results.totals.created}`)
+    console.log(`- Updated: ${results.totals.updated}`)
+    console.log(`- Skipped: ${results.totals.skipped}`)
+    console.log(`- Synced to GitHub: ${results.totals.synced_to_github}`)
+    console.log(`- Errors: ${results.totals.errors}`)
+    console.log(`- Repositories: ${Object.keys(results.results).length}`)
 
     process.exit(0)
   } catch (error) {

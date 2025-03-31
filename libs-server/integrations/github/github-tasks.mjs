@@ -1,7 +1,5 @@
 import db from '#db'
 import debug from 'debug'
-import fs from 'fs'
-import path from 'path'
 import crypto from 'crypto'
 import { github } from '#libs-server'
 
@@ -314,11 +312,6 @@ export const create_or_update_task_from_github_issue = async ({
   force_update = false,
   project_item = null
 }) => {
-  // Convert user_id from hex if needed
-  if (typeof user_id === 'string' && /^[0-9a-f]+$/.test(user_id)) {
-    user_id = Buffer.from(user_id, 'hex')
-  }
-
   const { owner, repo } = repo_info
   const {
     number,
@@ -539,7 +532,7 @@ export const sync_task_to_github = async (entity_id, repo_info) => {
     const github_state = github.map_task_status_to_github_state(task.status)
 
     // Prepare update data
-    const update_data = prepare_github_update_data(task, github_state)
+    const update_data = format_github_update_data(task, github_state)
 
     // Update the GitHub issue
     await github.update_github_issue({
@@ -600,7 +593,7 @@ const is_task_newer_than_github = (task, metadata) => {
 }
 
 // Helper to prepare update data for GitHub
-const prepare_github_update_data = (task, github_state) => {
+const format_github_update_data = (task, github_state) => {
   return {
     title: task.title,
     body: task.description,
@@ -665,6 +658,7 @@ export const process_github_issues = async ({
         title: issue.title,
         error: error.message
       })
+      console.error(error)
     }
   }
 
@@ -714,53 +708,6 @@ const process_single_issue = async ({
     action,
     processed_issue,
     synced
-  }
-}
-
-// Cache handling
-export const get_cached_issues = (cache_file, sync_existing) => {
-  if (!cache_file || sync_existing || !fs.existsSync(cache_file)) {
-    return null
-  }
-
-  try {
-    const cached_data = JSON.parse(fs.readFileSync(cache_file, 'utf8'))
-    const cache_time = new Date(cached_data.timestamp)
-    const one_hour_ago = new Date(Date.now() - 60 * 60 * 1000)
-
-    // Use cache if it's less than 1 hour old
-    if (cache_time > one_hour_ago) {
-      log(`Using cached issues from ${cache_file}`)
-      return cached_data.issues
-    }
-  } catch (error) {
-    log(`Error reading cache file: ${error.message}`)
-  }
-
-  return null
-}
-
-export const save_issues_to_cache = (cache_file, issues) => {
-  if (!cache_file || issues.length === 0) {
-    return
-  }
-
-  try {
-    const cache_dir = path.dirname(cache_file)
-    if (!fs.existsSync(cache_dir)) {
-      fs.mkdirSync(cache_dir, { recursive: true })
-    }
-
-    fs.writeFileSync(
-      cache_file,
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        issues
-      })
-    )
-    log(`Cached ${issues.length} issues to ${cache_file}`)
-  } catch (error) {
-    log(`Error writing cache file: ${error.message}`)
   }
 }
 

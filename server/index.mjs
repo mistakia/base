@@ -58,6 +58,7 @@ api.use(
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/tasks', routes.tasks)
+api.use('/api/github', routes.github)
 
 if (IS_DEV) {
   api.get('*', (req, res) => {
