@@ -5,6 +5,7 @@ import { dialog_reducer } from './dialog'
 import { users_reducer } from './users'
 import { path_views_reducer } from './path-views'
 import { database_table_items_reducer } from './database-tables'
+import { tasks_reducer } from './tasks'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -13,7 +14,8 @@ const root_reducer = (router) =>
     dialog: dialog_reducer,
     users: users_reducer,
     path_views: path_views_reducer,
-    database_table_items: database_table_items_reducer
+    database_table_items: database_table_items_reducer,
+    tasks: tasks_reducer
   })
 
 export default root_reducer

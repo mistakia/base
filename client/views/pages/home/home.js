@@ -4,7 +4,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes'
 import PropTypes from 'prop-types'
 import { useParams } from 'react-router-dom'
 
-import CreateTask from '@components/create-task'
+import HomePageTasksPreview from '@components/homepage-tasks-preview'
 
 import './home.styl'
 
@@ -41,7 +41,7 @@ export default function HomePage({ load_user, users, set_selected_path }) {
 
   return (
     <div className='home-container'>
-      <CreateTask />
+      <HomePageTasksPreview />
     </div>
   )
 }

@@ -2,7 +2,10 @@ import { call, put, cancelled } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
 import { api, api_request } from '@core/api/service'
-import { post_user_task_request_actions } from '@core/tasks/actions'
+import {
+  post_user_task_request_actions,
+  get_user_tasks_request_actions
+} from '@core/tasks/actions'
 import { get_user_request_actions } from '@core/users/actions'
 import {
   post_user_request_actions,
@@ -20,9 +23,9 @@ import {
 function* fetchAPI(apiFunction, actions, opts = {}) {
   const { abort, request } = api_request(apiFunction, opts)
   try {
-    yield put(actions.pending(opts))
+    yield put(actions.pending({ opts }))
     const data = yield call(request)
-    yield put(actions.fulfilled(opts, data))
+    yield put(actions.fulfilled({ opts, data }))
   } catch (err) {
     console.log(err)
     if (!opts.ignoreError) {
@@ -31,7 +34,7 @@ function* fetchAPI(apiFunction, actions, opts = {}) {
        *   event.addMetadata('options', opts)
        * }) */
     }
-    yield put(actions.failed(opts, err.toString()))
+    yield put(actions.failed({ opts, error: err.toString() }))
   } finally {
     if (yield cancelled()) {
       abort()
@@ -79,4 +82,9 @@ export const delete_database_view = fetch.bind(
   null,
   api.delete_database_view,
   delete_database_view_request_actions
+)
+export const get_user_tasks = fetch.bind(
+  null,
+  api.get_user_tasks,
+  get_user_tasks_request_actions
 )

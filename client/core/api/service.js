@@ -51,6 +51,10 @@ export const api = {
   delete_database_view({ user_id, table_name, view_id }) {
     const url = `${API_URL}/users/${user_id}/databases/${table_name}/views/${view_id}`
     return { url, method: 'DELETE' }
+  },
+  get_user_tasks({ user_id }) {
+    const url = `${API_URL}/users/${user_id}/tasks`
+    return { url }
   }
 }
 

@@ -1,0 +1,64 @@
+.homepage-tasks-preview-container
+  margin 20px 0
+  
+  .homepage-tasks-preview-header
+    display flex
+    justify-content space-between
+    align-items center
+    margin-bottom 15px
+    
+    h2
+      margin 0
+    
+    .view-all-link
+      text-decoration none
+      color $link_color
+      
+      &:hover
+        text-decoration underline
+  
+  .homepage-tasks-preview-list
+    .task-preview-item
+      padding 15px
+      border-bottom 1px solid $task_border_color
+      
+      &:last-child
+        border-bottom none
+
+      .task-preview-title
+        font-size 16px
+        font-weight 600
+        margin-bottom 8px
+        color $task_title_color
+
+      .task-preview-status,
+      .task-preview-priority
+        display inline-block
+        font-size 12px
+        padding 2px 8px
+        border-radius 12px
+        margin-right 10px
+        margin-bottom 8px
+
+      .task-preview-status
+        background-color $task_status_bg_color
+        color $task_status_text_color
+
+      .task-preview-priority
+        background-color $task_priority_bg_color
+        color $task_priority_text_color
+
+      .task-preview-description
+        font-size 14px
+        color $task_description_color
+        margin-top 8px
+        display -webkit-box
+        -webkit-line-clamp 2
+        -webkit-box-orient vertical
+        overflow hidden
+    
+    .no-tasks
+      color $task_description_color
+      font-style italic
+      padding 15px
+      text-align center 

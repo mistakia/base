@@ -7,6 +7,7 @@ import { Routes as RouterRoutes, Route, Navigate } from 'react-router-dom'
 import { get_app } from '@core/app'
 import HomePage from '@pages/home'
 import AuthPage from '@pages/auth'
+import TasksPage from '@pages/tasks'
 
 const map_state_to_props = createSelector(get_app, (app) => ({
   public_key: app.public_key,
@@ -26,6 +27,7 @@ const Routes = ({ public_key, username }) => {
   return (
     <RouterRoutes>
       <Route path='/auth' element={<AuthPage />} />
+      <Route path='/tasks' element={<TasksPage />} />
       <Route path='/:username' element={<HomePage />} />
       <Route
         path='*'

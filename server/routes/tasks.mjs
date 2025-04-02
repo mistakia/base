@@ -10,9 +10,9 @@ const router = express.Router({ mergeParams: true })
 // Get all tasks with optional filtering
 router.get('/', async (req, res) => {
   const { log } = req.app.locals
+  const { user_id } = req.params
   try {
     const {
-      user_id,
       status,
       tag_ids,
       organization_ids,
@@ -99,7 +99,8 @@ router.get('/:task_id', async (req, res) => {
 router.post('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { task, signature, user_id } = req.body
+    const { user_id } = req.params
+    const { task, signature } = req.body
     if (!task) {
       return res.status(400).send({ error: 'missing task' })
     }

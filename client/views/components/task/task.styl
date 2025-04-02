@@ -1,0 +1,63 @@
+.task-item
+  padding 15px
+  border 1px solid $task_border_color
+  border-radius 4px
+  margin-bottom 10px
+
+  .task-title
+    font-size 16px
+    font-weight 600
+    color $task_title_color
+    margin-bottom 8px
+
+  .task-status,
+  .task-priority
+    display inline-block
+    font-size 12px
+    padding 2px 8px
+    border-radius 12px
+    margin-right 10px
+    margin-bottom 8px
+
+  .task-status
+    background-color $task_status_bg_color
+    color $task_status_text_color
+
+  .task-priority
+    background-color $task_priority_bg_color
+    color $task_priority_text_color
+
+  .task-description
+    font-size 14px
+    color $task_description_color
+    line-height 1.4
+
+  // Preview variant
+  &.task-item-preview
+    border none
+    border-bottom 1px solid $task_border_color
+    border-radius 0
+    margin-bottom 0
+
+    &:last-child
+      border-bottom none
+
+    .task-description
+      display -webkit-box
+      -webkit-line-clamp 2
+      -webkit-box-orient vertical
+      overflow hidden
+
+  // Detailed variant
+  &.task-item-detailed
+    padding 20px
+    border 1px solid $border_color
+    box-shadow 0 1px 3px rgba(0, 0, 0, 0.1)
+
+    .task-title
+      font-size 20px
+      margin-bottom 12px
+
+    .task-description
+      margin-top 12px
+      white-space pre-wrap 
