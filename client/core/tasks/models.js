@@ -22,7 +22,17 @@ const TaskRecord = Record({
   planned_finish: null,
   started_at: null,
   finished_at: null,
-  snooze_until: null
+  snooze_until: null,
+  // Parent-child relationships
+  parent_task_ids: [],
+  child_task_ids: [],
+  // Entity relationships
+  tag_entity_ids: [],
+  observation_entity_ids: [],
+  metadata_entity_ids: [],
+  block_entity_ids: [],
+  blocked_task_ids: [],
+  blocking_task_ids: []
 })
 
 export function create_task(task_data = {}) {

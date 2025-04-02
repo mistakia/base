@@ -9,7 +9,9 @@ import {
   DB_RESOURCES,
   DB_RESOURCE_TEMPLATES
 } from './database/index.mjs'
-import { GIT_TOOLS } from './git/index.mjs'
+// TODO renable
+// import { GIT_TOOLS } from './git/index.mjs'
+import { TASK_TOOLS } from './tasks/index.mjs'
 
 const logger = debug('mcp')
 logger('Model Context Protocol initialized')
@@ -64,7 +66,7 @@ mcp_server.setRequestHandler(
 )
 
 // Combine all tools and resources
-const ALL_TOOLS = [...NOTION_TOOLS, ...DB_TOOLS, ...GIT_TOOLS]
+const ALL_TOOLS = [...NOTION_TOOLS, ...DB_TOOLS, ...TASK_TOOLS]
 
 // Combine resources from all providers
 const ALL_RESOURCES = [
@@ -147,6 +149,8 @@ mcp_server.setRequestHandler(
       provider_name = 'database'
     } else if (name.startsWith('knowledge_base_')) {
       provider_name = 'git'
+    } else if (name.startsWith('task_')) {
+      provider_name = 'tasks'
     }
 
     // Process the request using the provider

@@ -2,6 +2,7 @@ import debug from 'debug'
 
 import { register_provider } from '#libs-server/mcp/service.mjs'
 import db from '#db'
+import config from '#config'
 
 // Setup logger
 const logger = debug('mcp:database')
@@ -55,46 +56,6 @@ export const DB_TOOLS = [
       type: 'object',
       properties: {}
     }
-  },
-  {
-    name: 'db_get_task',
-    description: 'Get a task by ID with all related data',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        task_id: {
-          type: 'string',
-          description: 'The UUID of the task'
-        }
-      },
-      required: ['task_id']
-    }
-  },
-  {
-    name: 'db_search_tasks',
-    description: 'Search for tasks based on criteria',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        status: {
-          type: 'string',
-          description: 'Filter by task status'
-        },
-        tag_name: {
-          type: 'string',
-          description: 'Filter by tag name'
-        },
-        text_search: {
-          type: 'string',
-          description: 'Search in task text'
-        },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of tasks to return',
-          default: 20
-        }
-      }
-    }
   }
 ]
 
@@ -120,12 +81,6 @@ export const DB_RESOURCE_TEMPLATES = [
     uriTemplate: 'db://data/{table_name}',
     name: 'Table Data',
     description: 'Data from a specific table (limited to 100 rows)',
-    mimeType: 'application/json'
-  },
-  {
-    uriTemplate: 'db://data/tasks/{task_id}',
-    name: 'Task Data',
-    description: 'Complete data for a specific task including related entities',
     mimeType: 'application/json'
   }
 ]
@@ -168,10 +123,6 @@ async function handle_tool_call(params) {
       return await get_table_schema(args)
     case 'db_list_tables':
       return await list_tables()
-    case 'db_get_task':
-      return await get_task(args)
-    case 'db_search_tasks':
-      return await search_tasks(args)
     default:
       throw new Error(`Unknown tool: ${name}`)
   }
@@ -223,22 +174,6 @@ async function handle_resource_read(params) {
           uri,
           mimeType: 'application/json',
           text: JSON.stringify(data, null, 2)
-        }
-      ]
-    }
-  }
-
-  // Handle task data resource
-  const task_data_match = uri.match(/^db:\/\/data\/tasks\/(.+)$/)
-  if (task_data_match) {
-    const task_id = task_data_match[1]
-    const task_data = await get_task_data(task_id)
-    return {
-      contents: [
-        {
-          uri,
-          mimeType: 'application/json',
-          text: JSON.stringify(task_data, null, 2)
         }
       ]
     }
@@ -355,84 +290,7 @@ async function list_tables() {
       content: [
         {
           type: 'text',
-          text: `Error listing tables: ${error.message}`
-        }
-      ]
-    }
-  }
-}
-
-async function get_task({ task_id }) {
-  try {
-    const task_data = await get_task_data(task_id)
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(task_data, null, 2)
-        }
-      ]
-    }
-  } catch (error) {
-    return {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Error getting task: ${error.message}`
-        }
-      ]
-    }
-  }
-}
-
-async function search_tasks({ status, tag_name, text_search, limit = 20 }) {
-  try {
-    // Use knex query builder instead of raw SQL
-    let query = db('tasks')
-      .select('tasks.*')
-      .orderBy('tasks.created_at', 'desc')
-      .limit(limit)
-
-    if (status) {
-      query = query.where('tasks.status', status)
-    }
-
-    if (tag_name) {
-      query = query
-        .join('task_tags', 'tasks.task_id', 'task_tags.task_id')
-        .join('tags', 'task_tags.tag_id', 'tags.tag_id')
-        .where('tags.tag_name', tag_name)
-    }
-
-    if (text_search) {
-      query = query.where('tasks.text_input', 'ilike', `%${text_search}%`)
-    }
-
-    const result = await query
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(
-            {
-              tasks: result,
-              count: result.length
-            },
-            null,
-            2
-          )
-        }
-      ]
-    }
-  } catch (error) {
-    return {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Error searching tasks: ${error.message}`
+          text: `Error listing tables: ${error.message}, ${config.base_hostname}`
         }
       ]
     }
@@ -528,52 +386,6 @@ async function get_table_data(table_name) {
     table_name,
     rows: result,
     count: result.length
-  }
-}
-
-async function get_task_data(task_id) {
-  // Use knex query builder for all queries
-
-  // Get task basic info
-  const task_result = await db('tasks').where({ task_id }).select('*')
-
-  // Get task tags
-  const tags_result = await db('tags')
-    .join('task_tags', 'tags.tag_id', 'task_tags.tag_id')
-    .where('task_tags.task_id', task_id)
-    .select('tags.*')
-
-  // Get task dependencies
-  const dependencies_result = await db('tasks')
-    .join(
-      'task_dependencies',
-      'tasks.task_id',
-      'task_dependencies.dependent_task_id'
-    )
-    .where('task_dependencies.task_id', task_id)
-    .select('tasks.*')
-
-  // Get task parent/child relationships
-  const parent_tasks_result = await db('tasks')
-    .join('task_parents', 'tasks.task_id', 'task_parents.parent_task_id')
-    .where('task_parents.child_task_id', task_id)
-    .select('tasks.*')
-
-  const child_tasks_result = await db('tasks')
-    .join('task_parents', 'tasks.task_id', 'task_parents.child_task_id')
-    .where('task_parents.parent_task_id', task_id)
-    .select('tasks.*')
-
-  if (task_result.length === 0) {
-    throw new Error(`Task with ID ${task_id} not found`)
-  }
-
-  return {
-    task: task_result[0],
-    tags: tags_result,
-    dependencies: dependencies_result,
-    parent_tasks: parent_tasks_result,
-    child_tasks: child_tasks_result
   }
 }
 

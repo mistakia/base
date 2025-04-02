@@ -41,7 +41,55 @@ export default async function ({
       't.planned_finish',
       't.started_at',
       't.finished_at',
-      't.snooze_until'
+      't.snooze_until',
+      // Parent task IDs
+      db.raw(`(
+        SELECT array_agg(parent_task_id)
+        FROM task_parent_child_view
+        WHERE child_task_id = e.entity_id
+      ) as parent_task_ids`),
+      // Child task IDs
+      db.raw(`(
+        SELECT array_agg(child_task_id)
+        FROM task_parent_child_view
+        WHERE parent_task_id = e.entity_id
+      ) as child_task_ids`),
+      // Tag entity IDs
+      db.raw(`(
+        SELECT array_agg(tag_entity_id)
+        FROM entity_tags
+        WHERE entity_id = e.entity_id
+      ) as tag_entity_ids`),
+      // Observation entity IDs
+      db.raw(`(
+        SELECT array_agg(observation_id)
+        FROM entity_observations
+        WHERE entity_id = e.entity_id
+      ) as observation_entity_ids`),
+      // Metadata entity IDs
+      db.raw(`(
+        SELECT array_agg(metadata_id)
+        FROM entity_metadata
+        WHERE entity_id = e.entity_id
+      ) as metadata_entity_ids`),
+      // Block entity IDs
+      db.raw(`(
+        SELECT array_agg(block_id)
+        FROM entity_blocks
+        WHERE entity_id = e.entity_id
+      ) as block_entity_ids`),
+      // Blocked task IDs (tasks that cannot start until this task is completed)
+      db.raw(`(
+        SELECT array_agg(task_entity_id)
+        FROM task_dependencies_view
+        WHERE dependent_task_entity_id = e.entity_id
+      ) as blocked_task_ids`),
+      // Blocking task IDs (tasks that must be completed before this task can start)
+      db.raw(`(
+        SELECT array_agg(dependent_task_entity_id)
+        FROM task_dependencies_view
+        WHERE task_entity_id = e.entity_id
+      ) as blocking_task_ids`)
     )
 
   // Filter by archived status

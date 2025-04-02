@@ -6,16 +6,10 @@ import Task from '@components/task'
 
 import './homepage-tasks-preview.styl'
 
-export default function HomePageTasksPreview({
-  tasks = [],
-  max_display = 3,
-  load_tasks
-}) {
+export default function HomePageTasksPreview({ tasks = [], load_tasks }) {
   React.useEffect(() => {
     load_tasks()
   }, [])
-
-  const preview_tasks = tasks.slice(0, max_display)
 
   return (
     <div className='homepage-tasks-preview-container'>
@@ -26,10 +20,10 @@ export default function HomePageTasksPreview({
         </Link>
       </div>
       <div className='homepage-tasks-preview-list'>
-        {preview_tasks.map((task) => (
+        {tasks.map((task) => (
           <Task key={task.task_id} task={task} variant='preview' />
         ))}
-        {preview_tasks.length === 0 && (
+        {tasks.length === 0 && (
           <div className='no-tasks'>No tasks available</div>
         )}
       </div>
@@ -49,6 +43,5 @@ HomePageTasksPreview.propTypes = {
       updated_at: PropTypes.string
     })
   ),
-  max_display: PropTypes.number,
   load_tasks: PropTypes.func.isRequired
 }
