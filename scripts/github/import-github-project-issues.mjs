@@ -3,25 +3,23 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import config from '#config'
-import { isMain, github, github_tasks, normalize_user_id } from '#libs-server'
+import { isMain, github } from '#libs-server'
 
 const log = debug('import-github-project-issues')
-debug.enable('import-github-project-issues,github-tasks,github')
 
-// Import issues from a GitHub project
-const import_github_project_issues = async ({
+/**
+ * Import issues from a GitHub project
+ */
+export default async function import_github_project_issues({
   username,
   project_number,
   github_token,
   user_id,
-  bidirectional = false,
-  state = 'all',
-  sync_existing = false
-}) => {
+  import_history_base_directory = null,
+  // used to mock the get_github_project function for testing
+  get_github_project = github.get_github_project
+}) {
   try {
-    // Convert user_id using the normalize helper
-    user_id = normalize_user_id(user_id)
-
     log(`Importing issues from GitHub project: ${username}/${project_number}`)
 
     let all_issues = []
@@ -29,7 +27,7 @@ const import_github_project_issues = async ({
     let has_next_page = true
     let cursor = null
     let page_count = 0
-    let project
+    let project_id
 
     // Fetch all project items using pagination
     while (has_next_page) {
@@ -39,7 +37,7 @@ const import_github_project_issues = async ({
       )
 
       // Get project data with comprehensive issue information
-      const project_data = await github.get_github_project({
+      const project_data = await get_github_project({
         username,
         project_number,
         github_token,
@@ -47,7 +45,7 @@ const import_github_project_issues = async ({
       })
 
       if (page_count === 1) {
-        project = project_data.data.user.projectV2
+        project_id = project_data.data.user.projectV2.id
       }
 
       if (!project_data.data?.user?.projectV2) {
@@ -59,122 +57,103 @@ const import_github_project_issues = async ({
         project_data.data.user.projectV2.items.pageInfo.hasNextPage
       cursor = project_data.data.user.projectV2.items.pageInfo.endCursor
 
-      // Extract and normalize issues from the GraphQL response
+      // Extract issues from project data (with project items mapping)
       const { issues, project_items_by_issue } =
         github.extract_issues_from_project_graphql(project_data)
 
-      log(`Found ${issues.length} issues on page ${page_count}`)
+      // Add issues and project items from this page to the combined results
+      all_issues = all_issues.concat(issues)
 
-      // Add to our collections
-      all_issues = [...all_issues, ...issues]
-
-      // Merge project_items_by_issue into all_project_items_by_issue
-      for (const repo in project_items_by_issue) {
-        if (!all_project_items_by_issue[repo]) {
-          all_project_items_by_issue[repo] = {}
+      // Merge project items by issue
+      for (const repo_name in project_items_by_issue) {
+        if (!all_project_items_by_issue[repo_name]) {
+          all_project_items_by_issue[repo_name] = {}
         }
 
-        for (const issue_number in project_items_by_issue[repo]) {
-          all_project_items_by_issue[repo][issue_number] =
-            project_items_by_issue[repo][issue_number]
+        for (const issue_number in project_items_by_issue[repo_name]) {
+          all_project_items_by_issue[repo_name][issue_number] =
+            project_items_by_issue[repo_name][issue_number]
         }
       }
     }
 
-    log(
-      `Found a total of ${all_issues.length} issues in project across ${page_count} pages`
-    )
+    log(`Found ${all_issues.length} issues in project`)
 
     // Group issues by repository
     const issues_by_repo = github.group_issues_by_repo(all_issues)
-    const repos = Object.keys(issues_by_repo)
 
-    log(`Found issues from ${repos.length} repositories`)
-
-    // Process issues by repository
+    // For each repository, process its issues
     const results = {}
-    const all_processed_issues = []
-    let total_created = 0
-    let total_updated = 0
-    let total_skipped = 0
-    let total_synced = 0
-    let total_errors = 0
+    const totals = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      conflicts: 0,
+      errors: 0
+    }
 
-    for (const repo_name of repos) {
-      const [owner, repo] = repo_name.split('/')
-      const repo_issues = issues_by_repo[repo_name]
-      const repo_info = { owner, repo, github_token }
+    for (const [repo_full_name, repo_data] of Object.entries(issues_by_repo)) {
+      log(`Processing ${repo_data.issues.length} issues for ${repo_full_name}`)
 
-      // Create project_items_map for this repository's issues
+      // For each issue in the repo, find its project item
       const project_items_map = {}
-      if (all_project_items_by_issue[repo_name]) {
-        for (const issue_number in all_project_items_by_issue[repo_name]) {
-          project_items_map[issue_number] =
-            all_project_items_by_issue[repo_name][issue_number]
+      for (const issue of repo_data.issues) {
+        if (
+          all_project_items_by_issue[repo_full_name] &&
+          all_project_items_by_issue[repo_full_name][issue.number]
+        ) {
+          project_items_map[issue.number] =
+            all_project_items_by_issue[repo_full_name][issue.number]
         }
       }
 
-      // Process issues using github_tasks utility
-      const repo_results = await github_tasks.process_github_issues({
-        issues: repo_issues,
-        repo_info,
+      // Process issues for this repository
+      const repo_results = await github.process_github_issues({
+        issues: repo_data.issues,
+        repo_owner: repo_data.owner,
+        repo_name: repo_data.repo,
         user_id,
-        bidirectional,
-        sync_existing,
-        project_items_map
+        import_history_base_directory,
+        project_items_map,
+        github_token
       })
 
-      // Add to overall results
-      results[repo_name] = repo_results
+      // Add results to overall totals
+      totals.created += repo_results.created
+      totals.updated += repo_results.updated
+      totals.skipped += repo_results.skipped
+      totals.conflicts += repo_results.conflicts
+      totals.errors += repo_results.errors
 
-      // Add repo field to each processed issue
-      const repo_processed_issues = repo_results.processed_issues.map(
-        (issue) => ({
-          ...issue,
-          repo: repo_name
-        })
-      )
-
-      all_processed_issues.push(...repo_processed_issues)
-
-      // Update totals
-      total_created += repo_results.created
-      total_updated += repo_results.updated
-      total_skipped += repo_results.skipped
-      total_synced += repo_results.synced_to_github
-      total_errors += repo_results.errors
+      // Store detailed results for this repository
+      results[repo_full_name] = {
+        issues_count: repo_data.issues.length,
+        created: repo_results.created,
+        updated: repo_results.updated,
+        skipped: repo_results.skipped,
+        conflicts: repo_results.conflicts,
+        errors: repo_results.errors,
+        processed_issues: repo_results.processed_issues
+      }
     }
 
-    const summary = {
+    // Return combined results
+    return {
+      totals,
       project: {
         username,
         project_number,
-        id: project.id,
-        item_count: all_issues.length,
-        pages_fetched: page_count
+        id: project_id,
+        item_count: all_issues.length
       },
-      results,
-      totals: {
-        created: total_created,
-        updated: total_updated,
-        skipped: total_skipped,
-        synced_to_github: total_synced,
-        errors: total_errors,
-        processed: all_processed_issues.length
-      },
-      processed_issues: all_processed_issues
+      results
     }
-
-    log(`Project import complete: ${JSON.stringify(summary.totals, null, 2)}`)
-
-    return summary
   } catch (error) {
-    log(`Error importing GitHub project issues: ${error.message}`)
+    log(`Error importing GitHub project: ${error.message}`)
+    console.error(error)
     throw error
   }
 }
-
-export default import_github_project_issues
 
 // Command-line interface
 const main = async () => {
@@ -203,23 +182,11 @@ const main = async () => {
         type: 'string',
         default: config.github?.default_user_id
       })
-      .option('bidirectional', {
-        alias: 'b',
-        describe:
-          'Enable bidirectional sync (updates to tasks sync back to GitHub)',
-        type: 'boolean',
-        default: false
-      })
       .option('state', {
         alias: 's',
         describe: 'Issue state to import (all, open, closed)',
         choices: ['all', 'open', 'closed'],
         default: 'all'
-      })
-      .option('sync', {
-        describe: 'Force sync all issues even if they have not changed',
-        type: 'boolean',
-        default: false
       })
       .option('since', {
         alias: 'd',
@@ -234,10 +201,7 @@ const main = async () => {
       project_number: argv.project,
       github_token: argv.token || process.env.GITHUB_TOKEN,
       user_id: argv.userId,
-      bidirectional: argv.bidirectional,
-      state: argv.state,
-      sync_existing: argv.sync,
-      since_date: argv.since
+      import_history_base_directory: argv.since
     })
 
     // Print concise result summary to console
@@ -246,7 +210,7 @@ const main = async () => {
     console.log(`- Created: ${results.totals.created}`)
     console.log(`- Updated: ${results.totals.updated}`)
     console.log(`- Skipped: ${results.totals.skipped}`)
-    console.log(`- Synced to GitHub: ${results.totals.synced_to_github}`)
+    console.log(`- Conflicts: ${results.totals.conflicts}`)
     console.log(`- Errors: ${results.totals.errors}`)
     console.log(`- Repositories: ${Object.keys(results.results).length}`)
 
@@ -257,6 +221,7 @@ const main = async () => {
   }
 }
 
-if (isMain) {
+if (isMain(import.meta.url)) {
+  debug.enable('import-github-project-issues,github-sync,github-mapper,sync:*')
   main()
 }
