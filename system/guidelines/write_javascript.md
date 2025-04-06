@@ -9,6 +9,7 @@ observations:
   - '[standard] Consistent module imports improve code maintainability #code-style'
   - '[quality] Explicit file extensions prevent import resolution issues #debugging'
   - '[architecture] Functional paradigms promote immutability and testability #maintainability'
+  - '[readability] Named parameters improve code clarity and maintainability #code-style'
 relations:
   - 'implements [[System Design]]'
 ---
@@ -74,3 +75,9 @@ See `package.json` for the complete list of namespaces.
   - Complex state management would be simplified through encapsulation
 - Pure functions SHOULD be used wherever possible to minimize side effects
 - Higher-order functions SHOULD be used to enhance code reusability
+
+## Function Parameters
+
+- Functions with multiple parameters MUST use named parameters (object destructuring)
+- Functions with a single parameter MAY use positional arguments
+- Named parameters SHOULD have default values when appropriate
