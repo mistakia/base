@@ -1,12 +1,12 @@
 import express from 'express'
 import debug from 'debug'
+import crypto from 'crypto'
 
 import config from '#config'
-import { github, github_tasks } from '#libs-server'
+import { github } from '#libs-server'
 
 const router = express.Router()
 const log = debug('api:github')
-debug.enable('api:github,github-tasks')
 
 // Create a raw body parser middleware for GitHub webhook signature verification
 const rawBodyParser = (req, res, next) => {
@@ -34,6 +34,40 @@ const rawBodyParser = (req, res, next) => {
 // Add raw body parser middleware
 router.use(rawBodyParser)
 
+// Verify GitHub webhook signature
+const verify_github_signature = (req, secret) => {
+  const signature = req.headers['x-hub-signature-256']
+
+  if (!signature) {
+    log('No signature header found')
+    return false
+  }
+
+  if (!secret) {
+    log('No webhook secret provided')
+    return false
+  }
+
+  try {
+    const hmac = crypto.createHmac('sha256', secret)
+    const digest = 'sha256=' + hmac.update(req.raw_body).digest('hex')
+
+    const result = crypto.timingSafeEqual(
+      Buffer.from(digest),
+      Buffer.from(signature)
+    )
+
+    if (!result) {
+      log('Signature verification failed')
+    }
+
+    return result
+  } catch (error) {
+    log(`Error verifying signature: ${error.message}`)
+    return false
+  }
+}
+
 // GitHub webhook endpoint
 router.post('/webhooks', async (req, res) => {
   try {
@@ -59,7 +93,7 @@ router.post('/webhooks', async (req, res) => {
     // Verify GitHub signature if enabled
     const webhook_secret = config.github?.webhook_secret
     if (webhook_secret) {
-      const is_valid = github_tasks.verify_github_signature(req, webhook_secret)
+      const is_valid = verify_github_signature(req, webhook_secret)
 
       if (!is_valid) {
         log('Invalid webhook signature')
@@ -99,21 +133,14 @@ router.post('/webhooks', async (req, res) => {
           `Processing issue event: ${action} for ${repository.full_name}#${issue.number}`
         )
 
-        // Convert the repository data to the format expected by the library
-        const repo_info = {
-          owner: repository.owner.login,
-          repo: repository.name,
-          github_token
-        }
-
-        // Process the issue
-        const result =
-          await github_tasks.create_or_update_task_from_github_issue({
-            issue,
-            repo_info,
-            user_id: default_user_id,
-            force_update: true
-          })
+        // Process the issue using the new sync system
+        const result = await github.process_single_github_issue({
+          issue,
+          repo_owner: repository.owner.login,
+          repo_name: repository.name,
+          github_token,
+          user_id: default_user_id
+        })
 
         log(
           `Issue processed: ${repository.full_name}#${issue.number} - Action: ${result.action}`
@@ -123,7 +150,8 @@ router.post('/webhooks', async (req, res) => {
           ok: true,
           message: `Issue ${issue.number} processed`,
           action: result.action,
-          entity_id: result.entity_id ? result.entity_id.toString('hex') : null
+          entity_id: result.entity_id ? result.entity_id.toString('hex') : null,
+          conflicts_found: result.conflicts_found || false
         })
       }
 
@@ -169,15 +197,15 @@ router.post('/webhooks', async (req, res) => {
             github_token
           })
 
-          // Process the issue with project card data
-          const result =
-            await github_tasks.create_or_update_task_from_github_issue({
-              issue,
-              repo_info: { owner, repo, github_token },
-              user_id: default_user_id,
-              force_update: true,
-              project_item: card
-            })
+          // Process the issue with project card data using the new sync system
+          const result = await github.process_single_github_issue({
+            issue,
+            repo_owner: owner,
+            repo_name: repo,
+            github_token,
+            user_id: default_user_id,
+            project_item: card
+          })
 
           log(
             `Project card processed: ${owner}/${repo}#${issue_number} - Action: ${result.action}`
@@ -189,7 +217,8 @@ router.post('/webhooks', async (req, res) => {
             action: result.action,
             entity_id: result.entity_id
               ? result.entity_id.toString('hex')
-              : null
+              : null,
+            conflicts_found: result.conflicts_found || false
           })
         } catch (error) {
           log(`Error fetching issue for project card: ${error.message}`)

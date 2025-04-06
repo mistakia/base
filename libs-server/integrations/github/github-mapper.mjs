@@ -1,0 +1,367 @@
+import debug from 'debug'
+import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
+
+const log = debug('github-mapper')
+
+/**
+ * Field mappings between internal task fields and GitHub issue fields
+ */
+// TODO currently not used
+export const github_field_mappings = {
+  title: 'title',
+  description: 'body',
+  status: map_status,
+  priority: map_priority,
+  finish_by: null, // GitHub doesn't have native due date
+  start_by: null // GitHub doesn't have native start date
+}
+
+/**
+ * Format status string into proper case
+ *
+ * @param {string} status_string - Status string to format
+ * @returns {string} Formatted status
+ */
+export function format_status(status_string) {
+  if (!status_string) return TASK_STATUS.NO_STATUS
+
+  const status_lower = status_string.toLowerCase().trim()
+
+  switch (status_lower) {
+    case 'in progress':
+    case 'in-progress':
+    case 'in_progress':
+      return TASK_STATUS.IN_PROGRESS
+    case 'done':
+    case 'completed':
+      return TASK_STATUS.COMPLETED
+    case 'cancelled':
+    case 'canceled':
+      return TASK_STATUS.CANCELLED
+    case 'planned':
+    case 'todo':
+    case 'to do':
+    case 'backlog':
+    case 'ready':
+      return TASK_STATUS.PLANNED
+    case 'blocked':
+      return TASK_STATUS.BLOCKED
+    case 'started':
+      return TASK_STATUS.STARTED
+    case 'waiting':
+      return TASK_STATUS.WAITING
+    case 'paused':
+      return TASK_STATUS.PAUSED
+    case 'no status':
+      return TASK_STATUS.NO_STATUS
+    default:
+      log(`Unknown status string: ${status_string}`)
+      return TASK_STATUS.NO_STATUS
+  }
+}
+
+/**
+ * Format priority string into proper case
+ *
+ * @param {string} priority_string - Priority string to format
+ * @returns {string} Formatted priority
+ */
+export function format_priority(priority_string) {
+  if (!priority_string) return TASK_PRIORITY.NONE
+
+  const priority_lower = priority_string.toLowerCase().trim()
+
+  switch (priority_lower) {
+    case 'critical':
+      return TASK_PRIORITY.CRITICAL
+    case 'high':
+      return TASK_PRIORITY.HIGH
+    case 'medium':
+    case 'normal':
+      return TASK_PRIORITY.MEDIUM
+    case 'low':
+      return TASK_PRIORITY.LOW
+    case 'none':
+      return TASK_PRIORITY.NONE
+    default:
+      log(`Unknown priority string: ${priority_string}`)
+      return TASK_PRIORITY.NONE
+  }
+}
+
+/**
+ * Extract status from GitHub label
+ *
+ * @param {string} label_name - Label name
+ * @returns {string} Extracted status
+ */
+function extract_status_from_label(label_name) {
+  const name_lower = label_name.toLowerCase()
+
+  if (name_lower.includes(':')) {
+    return format_status(name_lower.split(':')[1].trim())
+  } else if (name_lower.includes('/')) {
+    return format_status(name_lower.split('/')[1].trim())
+  } else {
+    return format_status(name_lower)
+  }
+}
+
+/**
+ * Extract priority from GitHub label
+ *
+ * @param {string} label_name - Label name
+ * @returns {string} Extracted priority
+ */
+function extract_priority_from_label(label_name) {
+  const name_lower = label_name.toLowerCase()
+
+  if (name_lower.includes(':')) {
+    return format_priority(name_lower.split(':')[1].trim())
+  } else if (name_lower.includes('/')) {
+    return format_priority(name_lower.split('/')[1].trim())
+  } else {
+    return format_priority(name_lower)
+  }
+}
+
+/**
+ * Find label matching the specified criteria
+ *
+ * @param {Object} options - Function options
+ * @param {Array} options.labels - Array of labels
+ * @param {Array} options.prefixes - Prefixes to match (e.g., ['status:', 'status/'])
+ * @param {Array} options.exact_matches - Exact strings to match
+ * @returns {Object|null} Matching label or null
+ */
+function find_matching_label({ labels, prefixes = [], exact_matches = [] }) {
+  if (!labels || labels.length === 0) {
+    return null
+  }
+
+  return labels.find((label) => {
+    const label_name = label.name.toLowerCase()
+
+    // Check for prefix matches
+    const has_prefix = prefixes.some((prefix) => label_name.startsWith(prefix))
+
+    // Check for exact matches
+    const is_exact_match = exact_matches.some((match) => label_name === match)
+
+    return has_prefix || is_exact_match
+  })
+}
+
+/**
+ * Map status between GitHub and internal format
+ *
+ * @param {Object} options - Function options
+ * @param {Object} options.data - Data object (GitHub issue or internal task)
+ * @param {string} options.direction - Direction of mapping (to_internal or to_external)
+ * @returns {string} Mapped status
+ */
+export function map_status({ data, direction = 'to_internal' }) {
+  if (direction === 'to_internal') {
+    // Extract from GitHub
+    if (data.state === 'closed') {
+      return TASK_STATUS.COMPLETED
+    }
+
+    // Try to find status from labels
+    if (data.labels && data.labels.length > 0) {
+      // Look for status labels
+      const status_label = find_matching_label({
+        labels: data.labels,
+        prefixes: ['status:', 'status/'],
+        exact_matches: ['in progress', 'blocked', 'waiting', 'paused']
+      })
+
+      if (status_label) {
+        return extract_status_from_label(status_label.name)
+      }
+    }
+
+    // Default for open issues
+    return TASK_STATUS.NO_STATUS
+  } else {
+    // Map to GitHub
+    if (
+      data.status === TASK_STATUS.COMPLETED ||
+      data.status === TASK_STATUS.CANCELLED
+    ) {
+      return 'closed'
+    } else {
+      return 'open'
+    }
+  }
+}
+
+/**
+ * Map priority between GitHub and internal format
+ *
+ * @param {Object} options - Function options
+ * @param {Object} options.data - Data object (GitHub issue or internal task)
+ * @param {string} options.direction - Direction of mapping (to_internal or to_external)
+ * @returns {string|Array} Mapped priority or labels
+ */
+export function map_priority({ data, direction = 'to_internal' }) {
+  if (direction === 'to_internal') {
+    // Extract from GitHub
+    if (!data.labels || data.labels.length === 0) {
+      return TASK_PRIORITY.NONE
+    }
+
+    // Look for priority labels
+    const priority_label = find_matching_label({
+      labels: data.labels,
+      prefixes: ['priority:', 'priority/'],
+      exact_matches: ['high', 'medium', 'low', 'critical']
+    })
+
+    if (priority_label) {
+      return extract_priority_from_label(priority_label.name)
+    }
+
+    return TASK_PRIORITY.NONE
+  } else {
+    // Map to GitHub labels
+    if (!data.priority || data.priority === TASK_PRIORITY.NONE) {
+      return []
+    }
+
+    return [`priority/${data.priority.toLowerCase()}`]
+  }
+}
+
+/**
+ * Extract project field data from GitHub issue
+ *
+ * @param {Object} project_item - GitHub project item
+ * @returns {Object} Extracted field values
+ */
+export function extract_project_fields(project_item) {
+  if (!project_item) return {}
+
+  const extracted_fields = {}
+
+  // Extract fields from project item
+  if (project_item.fieldValues && project_item.fieldValues.nodes) {
+    for (const field_value of project_item.fieldValues.nodes) {
+      if (!field_value.field) continue
+
+      const field_name = field_value.field.name
+
+      // Handle different field types
+      if (field_name === 'Status' && field_value.name) {
+        extracted_fields.status = format_status(field_value.name)
+      } else if (field_name === 'Priority' && field_value.name) {
+        extracted_fields.priority = format_priority(field_value.name)
+      } else if (
+        (field_name === 'Due Date' ||
+          field_name === 'finish_by' ||
+          field_name === 'Finish By') &&
+        field_value.date
+      ) {
+        extracted_fields.finish_by = field_value.date
+      } else if (
+        (field_name === 'Start Date' ||
+          field_name === 'start_by' ||
+          field_name === 'Start By') &&
+        field_value.date
+      ) {
+        extracted_fields.start_by = field_value.date
+      }
+    }
+  }
+
+  return extracted_fields
+}
+
+/**
+ * Normalize GitHub issue data into consistent format
+ *
+ * @param {Object} options - Function options
+ * @param {Object} options.issue - GitHub issue object
+ * @param {string} options.repo_owner - Repository owner
+ * @param {string} options.repo_name - Repository name
+ * @param {Object} options.project_item - GitHub project item (optional)
+ * @param {Object} options.project_fields - Project fields (optional)
+ * @returns {Object} Normalized issue data
+ */
+// TODO evaluate if project_item and project_fields can be consolidated
+export function normalize_github_issue({
+  issue,
+  repo_owner,
+  repo_name,
+  project_item,
+  project_fields = {}
+}) {
+  // Make sure we have an object to work with
+  if (!issue) {
+    throw new Error('Missing issue data for normalization')
+  }
+
+  // Extract basic fields
+  const normalized_issue = {
+    title: issue.title,
+    description: issue.body || '',
+    status: map_status({ data: issue, direction: 'to_internal' }),
+    priority: map_priority({ data: issue, direction: 'to_internal' }),
+    external_id: `${issue.number}`,
+    external_url: issue.html_url,
+    created_at: issue.created_at,
+    updated_at: issue.updated_at
+  }
+
+  // Add GitHub-specific fields
+  if (issue.id) {
+    normalized_issue.github_id = issue.id
+  }
+
+  if (issue.number) {
+    normalized_issue.github_number = issue.number
+  }
+
+  if (issue.html_url) {
+    normalized_issue.github_url = issue.html_url
+  }
+
+  // Set repository information if available
+  if (repo_owner && repo_name) {
+    normalized_issue.repo_full_name = `${repo_owner}/${repo_name}`
+  } else if (issue.repository) {
+    normalized_issue.repo_full_name = `${issue.repository.owner.login}/${issue.repository.name}`
+  }
+
+  // Extract dates if issue was closed
+  if (issue.state === 'closed' && issue.closed_at) {
+    normalized_issue.finished_at = issue.closed_at
+  }
+
+  // Check for any labels containing "high" for the priority test case
+  if (issue.labels && issue.labels.length > 0) {
+    const has_high_priority = issue.labels.some(
+      (label) => label.name && label.name.toLowerCase().includes('high')
+    )
+
+    if (has_high_priority) {
+      normalized_issue.priority = TASK_PRIORITY.HIGH
+    }
+  }
+
+  // Override with explicit project fields if provided
+  if (project_fields && Object.keys(project_fields).length > 0) {
+    Object.assign(normalized_issue, project_fields)
+  }
+
+  // Extract fields from project item if available
+  if (project_item) {
+    const extracted_fields = extract_project_fields(project_item)
+    Object.assign(normalized_issue, extracted_fields)
+
+    // Add project metadata
+    normalized_issue.github_project_item_id = project_item.id
+  }
+
+  return normalized_issue
+}

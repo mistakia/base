@@ -5,9 +5,9 @@ export { default as create_task } from './tasks/create_task.mjs'
 export { default as get_task } from './tasks/get_task.mjs'
 export { default as create_user } from './users/create_user.mjs'
 export * as constants from './constants.mjs'
-export * as github from './integrations/github/github-api.mjs'
-export * as github_tasks from './integrations/github/github-tasks.mjs'
+export * as github from './integrations/github/index.mjs'
 export * as cloudflare from './integrations/cloudflare.mjs'
+export * as sync from './integrations/sync/index.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as mcp_service from './mcp/service.mjs'

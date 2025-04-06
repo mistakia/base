@@ -305,10 +305,14 @@ export const group_issues_by_repo = (issues) => {
     const repo_full_name = `${owner}/${repo}`
 
     if (!issues_by_repo[repo_full_name]) {
-      issues_by_repo[repo_full_name] = []
+      issues_by_repo[repo_full_name] = {
+        owner,
+        repo,
+        issues: []
+      }
     }
 
-    issues_by_repo[repo_full_name].push(issue)
+    issues_by_repo[repo_full_name].issues.push(issue)
   }
 
   return issues_by_repo

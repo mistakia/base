@@ -1,0 +1,402 @@
+{
+  "data": {
+    "user": {
+      "projectV2": {
+        "id": "PVT_kwHOTest123456789",
+        "items": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": null
+          },
+          "nodes": [
+            {
+              "fieldValues": {
+                "nodes": [
+                  {},
+                  {
+                    "id": "PVTFTV_lQHOTest123_zgWWvWnOEE2Y6Q",
+                    "text": "Fix login bug on mobile devices",
+                    "field": {
+                      "id": "PVTF_lAHOTest123_zgCVGU0",
+                      "name": "Title"
+                    },
+                    "item": {
+                      "id": "PVTI_lAHOTest123_zgWWvWk",
+                      "content": {
+                        "id": "I_kwDOTestAbc123456",
+                        "url": "https://github.com/test-org/test-repo/issues/101",
+                        "body": "When trying to login on mobile devices, the login form doesn't respond to touch events correctly.",
+                        "bodyHTML": "<p>When trying to login on mobile devices, the login form doesn't respond to touch events correctly.</p>",
+                        "bodyResourcePath": "/test-org/test-repo/issues/101#issue-12345678",
+                        "bodyText": "When trying to login on mobile devices, the login form doesn't respond to touch events correctly.",
+                        "bodyUrl": "https://github.com/test-org/test-repo/issues/101#issue-12345678",
+                        "title": "Fix login bug on mobile devices",
+                        "__typename": "Issue"
+                      }
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWWvWnOEE2ZEw",
+                    "name": "In Progress",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgCVGU8",
+                      "name": "Status"
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWWvWnOEE2ZHw",
+                    "name": "4 high",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgJLWuI",
+                      "name": "priority"
+                    }
+                  }
+                ]
+              },
+              "id": "PVTI_lAHOTest123_zgWWvWk",
+              "content": {
+                "id": "I_kwDOTestAbc123456",
+                "url": "https://github.com/test-org/test-repo/issues/101",
+                "number": 101,
+                "title": "Fix login bug on mobile devices",
+                "body": "When trying to login on mobile devices, the login form doesn't respond to touch events correctly.",
+                "bodyText": "When trying to login on mobile devices, the login form doesn't respond to touch events correctly.",
+                "state": "OPEN",
+                "createdAt": "2023-04-15T10:46:21Z",
+                "updatedAt": "2023-04-18T15:29:13Z",
+                "closedAt": null,
+                "labels": {
+                  "nodes": [
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txwsw",
+                      "name": "bug",
+                      "color": "d73a4a"
+                    }
+                  ]
+                },
+                "repository": {
+                  "name": "test-repo",
+                  "owner": {
+                    "login": "test-org"
+                  }
+                },
+                "__typename": "Issue"
+              }
+            },
+            {
+              "fieldValues": {
+                "nodes": [
+                  {},
+                  {},
+                  {
+                    "id": "PVTFTV_lQHOTest123_zgWkuYHOEHn6Hg",
+                    "text": "Implement dark mode toggle for dashboard",
+                    "field": {
+                      "id": "PVTF_lAHOTest123_zgCVGU0",
+                      "name": "Title"
+                    },
+                    "item": {
+                      "id": "PVTI_lAHOTest123_zgWkuYE",
+                      "content": {
+                        "id": "I_kwDOTestAbc234567",
+                        "url": "https://github.com/test-org/test-repo/issues/102",
+                        "body": "Users have requested a dark mode option for the dashboard. We should implement a toggle that respects system preferences but also allows manual override.",
+                        "bodyHTML": "<p>Users have requested a dark mode option for the dashboard. We should implement a toggle that respects system preferences but also allows manual override.</p>",
+                        "bodyResourcePath": "/test-org/test-repo/issues/102#issue-23456789",
+                        "bodyText": "Users have requested a dark mode option for the dashboard. We should implement a toggle that respects system preferences but also allows manual override.",
+                        "bodyUrl": "https://github.com/test-org/test-repo/issues/102#issue-23456789",
+                        "title": "Implement dark mode toggle for dashboard",
+                        "__typename": "Issue"
+                      }
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWkuYHOEHn6Hw",
+                    "name": "Ready",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgCVGU8",
+                      "name": "Status"
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWkuYHOEHn6rw",
+                    "name": "3 medium",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgJLWuI",
+                      "name": "priority"
+                    }
+                  }
+                ]
+              },
+              "id": "PVTI_lAHOTest123_zgWkuYE",
+              "content": {
+                "id": "I_kwDOTestAbc234567",
+                "url": "https://github.com/test-org/test-repo/issues/102",
+                "number": 102,
+                "title": "Implement dark mode toggle for dashboard",
+                "body": "Users have requested a dark mode option for the dashboard. We should implement a toggle that respects system preferences but also allows manual override.",
+                "bodyText": "Users have requested a dark mode option for the dashboard. We should implement a toggle that respects system preferences but also allows manual override.",
+                "state": "OPEN",
+                "createdAt": "2023-04-22T14:47:27Z",
+                "updatedAt": "2023-04-25T20:06:23Z",
+                "closedAt": null,
+                "labels": {
+                  "nodes": [
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txwsx",
+                      "name": "enhancement",
+                      "color": "a2eeef"
+                    },
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txwsy",
+                      "name": "ui",
+                      "color": "fbca04"
+                    }
+                  ]
+                },
+                "repository": {
+                  "name": "test-repo",
+                  "owner": {
+                    "login": "test-org"
+                  }
+                },
+                "__typename": "Issue"
+              }
+            },
+            {
+              "fieldValues": {
+                "nodes": [
+                  {},
+                  {},
+                  {
+                    "id": "PVTFTV_lQHOTest123_zgWkuTvOEHn5EA",
+                    "text": "Optimize database queries for reports page",
+                    "field": {
+                      "id": "PVTF_lAHOTest123_zgCVGU0",
+                      "name": "Title"
+                    },
+                    "item": {
+                      "id": "PVTI_lAHOTest123_zgWkuTs",
+                      "content": {
+                        "id": "I_kwDOTestAbc345678",
+                        "url": "https://github.com/test-org/test-repo/issues/103",
+                        "body": "The reports page is loading slowly due to inefficient database queries. We need to optimize these queries and implement caching where appropriate.",
+                        "bodyHTML": "<p>The reports page is loading slowly due to inefficient database queries. We need to optimize these queries and implement caching where appropriate.</p>",
+                        "bodyResourcePath": "/test-org/test-repo/issues/103#issue-34567890",
+                        "bodyText": "The reports page is loading slowly due to inefficient database queries. We need to optimize these queries and implement caching where appropriate.",
+                        "bodyUrl": "https://github.com/test-org/test-repo/issues/103#issue-34567890",
+                        "title": "Optimize database queries for reports page",
+                        "__typename": "Issue"
+                      }
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWkuTvOEHn5EQ",
+                    "name": "Completed",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgCVGU8",
+                      "name": "Status"
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgWkuTvOEHn68A",
+                    "name": "5 critical",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgJLWuI",
+                      "name": "priority"
+                    }
+                  }
+                ]
+              },
+              "id": "PVTI_lAHOTest123_zgWkuTs",
+              "content": {
+                "id": "I_kwDOTestAbc345678",
+                "url": "https://github.com/test-org/test-repo/issues/103",
+                "number": 103,
+                "title": "Optimize database queries for reports page",
+                "body": "The reports page is loading slowly due to inefficient database queries. We need to optimize these queries and implement caching where appropriate.",
+                "bodyText": "The reports page is loading slowly due to inefficient database queries. We need to optimize these queries and implement caching where appropriate.",
+                "state": "CLOSED",
+                "createdAt": "2023-05-01T09:46:22Z",
+                "updatedAt": "2023-05-10T18:09:01Z",
+                "closedAt": "2023-05-10T18:09:01Z",
+                "labels": {
+                  "nodes": [
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txwsz",
+                      "name": "performance",
+                      "color": "0e8a16"
+                    }
+                  ]
+                },
+                "repository": {
+                  "name": "test-repo",
+                  "owner": {
+                    "login": "test-org"
+                  }
+                },
+                "__typename": "Issue"
+              }
+            },
+            {
+              "fieldValues": {
+                "nodes": [
+                  {},
+                  {},
+                  {
+                    "id": "PVTFTV_lQHOTest123_zgYETZjOEaBkuQ",
+                    "text": "Setup automated backups for production databases",
+                    "field": {
+                      "id": "PVTF_lAHOTest123_zgCVGU0",
+                      "name": "Title"
+                    },
+                    "item": {
+                      "id": "PVTI_lAHOTest123_zgYETZg",
+                      "content": {
+                        "id": "I_kwDOTestAbc456789",
+                        "url": "https://github.com/test-org/test-repo/issues/104",
+                        "body": "- [ ] MongoDB\n- [ ] PostgreSQL\n- [ ] Redis\n- [ ] Elasticsearch\n\nAll databases should be backed up daily with retention policies in place.",
+                        "bodyHTML": "<ul class=\"contains-task-list\">\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> MongoDB</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> PostgreSQL</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Redis</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Elasticsearch</li>\n</ul>\n<p>All databases should be backed up daily with retention policies in place.</p>",
+                        "bodyResourcePath": "/test-org/test-repo/issues/104#issue-45678901",
+                        "bodyText": " MongoDB\n PostgreSQL\n Redis\n Elasticsearch\n\nAll databases should be backed up daily with retention policies in place.",
+                        "bodyUrl": "https://github.com/test-org/test-repo/issues/104#issue-45678901",
+                        "title": "Setup automated backups for production databases",
+                        "__typename": "Issue"
+                      }
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgYETZjOEaBkug",
+                    "name": "In Progress",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgCVGU8",
+                      "name": "Status"
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgYETZjOEaBk1A",
+                    "name": "4 high",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgJLWuI",
+                      "name": "priority"
+                    }
+                  }
+                ]
+              },
+              "id": "PVTI_lAHOTest123_zgYETZg",
+              "content": {
+                "id": "I_kwDOTestAbc456789",
+                "url": "https://github.com/test-org/test-repo/issues/104",
+                "number": 104,
+                "title": "Setup automated backups for production databases",
+                "body": "- [ ] MongoDB\n- [ ] PostgreSQL\n- [ ] Redis\n- [ ] Elasticsearch\n\nAll databases should be backed up daily with retention policies in place.",
+                "bodyText": " MongoDB\n PostgreSQL\n Redis\n Elasticsearch\n\nAll databases should be backed up daily with retention policies in place.",
+                "state": "OPEN",
+                "createdAt": "2023-05-15T12:53:52Z",
+                "updatedAt": "2023-05-15T13:17:11Z",
+                "closedAt": null,
+                "labels": {
+                  "nodes": [
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txws1",
+                      "name": "devops",
+                      "color": "c5def5"
+                    },
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txws2",
+                      "name": "priority/high",
+                      "color": "d93f0b"
+                    }
+                  ]
+                },
+                "repository": {
+                  "name": "test-repo",
+                  "owner": {
+                    "login": "test-org"
+                  }
+                },
+                "__typename": "Issue"
+              }
+            },
+            {
+              "fieldValues": {
+                "nodes": [
+                  {},
+                  {},
+                  {},
+                  {
+                    "id": "PVTFTV_lQHOTest123_zgHO13LOBPrIyw",
+                    "text": "Create API documentation with Swagger",
+                    "field": {
+                      "id": "PVTF_lAHOTest123_zgCVGU0",
+                      "name": "Title"
+                    },
+                    "item": {
+                      "id": "PVTI_lAHOTest123_zgHO13I",
+                      "content": {
+                        "id": "I_kwDOTestAbc567890",
+                        "url": "https://github.com/test-org/test-repo/issues/105",
+                        "body": "We need comprehensive API documentation for our endpoints. Implement Swagger/OpenAPI to document:\n\n- [ ] Authentication endpoints\n- [ ] User management\n- [ ] Product endpoints\n- [ ] Order processing\n- [ ] Reporting endpoints",
+                        "bodyHTML": "<p>We need comprehensive API documentation for our endpoints. Implement Swagger/OpenAPI to document:</p>\n<ul class=\"contains-task-list\">\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Authentication endpoints</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> User management</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Product endpoints</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Order processing</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\"> Reporting endpoints</li>\n</ul>",
+                        "bodyResourcePath": "/test-org/test-repo/issues/105#issue-56789012",
+                        "bodyText": "We need comprehensive API documentation for our endpoints. Implement Swagger/OpenAPI to document:\n\n Authentication endpoints\n User management\n Product endpoints\n Order processing\n Reporting endpoints",
+                        "bodyUrl": "https://github.com/test-org/test-repo/issues/105#issue-56789012",
+                        "title": "Create API documentation with Swagger",
+                        "__typename": "Issue"
+                      }
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgHO13LOBPrI0g",
+                    "name": "Planned",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgCVGU8",
+                      "name": "Status"
+                    }
+                  },
+                  {
+                    "id": "PVTFSV_lQHOTest123_zgHO13LOBPrI1A",
+                    "name": "3 medium",
+                    "field": {
+                      "id": "PVTSSF_lAHOTest123_zgJLWuI",
+                      "name": "priority"
+                    }
+                  }
+                ]
+              },
+              "id": "PVTI_lAHOTest123_zgHO13I",
+              "content": {
+                "id": "I_kwDOTestAbc567890",
+                "url": "https://github.com/test-org/test-repo/issues/105",
+                "number": 105,
+                "title": "Create API documentation with Swagger",
+                "body": "We need comprehensive API documentation for our endpoints. Implement Swagger/OpenAPI to document:\n\n- [ ] Authentication endpoints\n- [ ] User management\n- [ ] Product endpoints\n- [ ] Order processing\n- [ ] Reporting endpoints",
+                "bodyText": "We need comprehensive API documentation for our endpoints. Implement Swagger/OpenAPI to document:\n\n Authentication endpoints\n User management\n Product endpoints\n Order processing\n Reporting endpoints",
+                "state": "OPEN",
+                "createdAt": "2023-03-18T15:59:02Z",
+                "updatedAt": "2023-05-20T11:05:16Z",
+                "closedAt": null,
+                "labels": {
+                  "nodes": [
+                    {
+                      "id": "LA_kwDOTest123_AAAAB4Txws3",
+                      "name": "documentation",
+                      "color": "0075ca"
+                    }
+                  ]
+                },
+                "repository": {
+                  "name": "test-repo",
+                  "owner": {
+                    "login": "test-org"
+                  }
+                },
+                "__typename": "Issue"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

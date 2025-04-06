@@ -45,7 +45,6 @@ describe('API /:user_id/tasks GET', () => {
       const res = await chai
         .request(server)
         .get(`/api/users/${user.user_id}/tasks`)
-        .query({ user_id: user.user_id })
 
       res.should.have.status(200)
       res.body.should.be.an('array')
@@ -65,17 +64,6 @@ describe('API /:user_id/tasks GET', () => {
       task.user_id.should.equal(user.user_id)
     })
 
-    it('should return 400 when user_id is missing', async () => {
-      const res = await chai
-        .request(server)
-        .get(`/api/users/${user.user_id}/tasks`)
-      // Not sending user_id in query
-
-      res.should.have.status(400)
-      res.body.should.have.property('error')
-      res.body.error.should.equal('missing user_id')
-    })
-
     it('should filter tasks by status', async () => {
       // First, let's make sure our task has a specific status
       await db('tasks')
@@ -86,7 +74,6 @@ describe('API /:user_id/tasks GET', () => {
         .request(server)
         .get(`/api/users/${user.user_id}/tasks`)
         .query({
-          user_id: user.user_id,
           status: 'Waiting'
         })
 

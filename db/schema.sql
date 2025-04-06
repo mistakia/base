@@ -17,6 +17,9 @@ DROP TABLE IF EXISTS entities CASCADE;
 DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS guidelines CASCADE;
 DROP TABLE IF EXISTS activities CASCADE;
+DROP TABLE IF EXISTS external_syncs CASCADE;
+DROP TABLE IF EXISTS sync_configs CASCADE;
+DROP TABLE IF EXISTS sync_conflicts CASCADE;
 
 -- Block tables
 DROP TABLE IF EXISTS entity_blocks CASCADE;
@@ -446,6 +449,43 @@ CREATE TABLE tags (
   color VARCHAR(50)
 );
 
+-- Track external entity relationships
+CREATE TABLE external_syncs (
+  sync_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
+  external_system VARCHAR(50) NOT NULL,
+  external_id VARCHAR(255) NOT NULL,
+  last_sync_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_external_update_at TIMESTAMP,
+  last_internal_update_at TIMESTAMP,
+  field_last_updated JSONB,   -- Stores per-field update timestamps
+  sync_status VARCHAR(50) DEFAULT 'synced',
+  UNIQUE (entity_id, external_system, external_id)
+);
+
+-- Configure sync preferences
+CREATE TABLE sync_configs (
+  config_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  entity_id UUID REFERENCES entities (entity_id) ON DELETE CASCADE,
+  entity_type entity_type,
+  external_system VARCHAR(50) NOT NULL,
+  field_strategies JSONB NOT NULL, -- Stores strategies by field name
+  CHECK (entity_id IS NOT NULL OR entity_type IS NOT NULL)
+);
+
+-- Track conflicts and resolutions
+CREATE TABLE sync_conflicts (
+  conflict_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
+  sync_id UUID NOT NULL REFERENCES external_syncs (sync_id) ON DELETE CASCADE,
+  import_cid TEXT NOT NULL,               -- Content ID of import
+  conflicts JSONB NOT NULL,               -- All field conflicts
+  resolutions JSONB,                      -- Applied resolutions
+  status VARCHAR(50) DEFAULT 'pending',   -- pending/resolved
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  resolved_at TIMESTAMP,
+  resolved_by UUID REFERENCES users (user_id)
+);
+
 -- Create views for convenient access
 CREATE VIEW active_entities AS
 SELECT * FROM entities
@@ -697,6 +737,12 @@ CREATE INDEX idx_physical_location_coordinates ON physical_locations (latitude, 
 CREATE INDEX idx_database_items_parent ON database_table_items (database_table_id);
 CREATE INDEX idx_guideline_status ON guidelines (guideline_status);
 CREATE INDEX idx_guideline_effective_date ON guidelines (effective_date);
+CREATE INDEX idx_external_syncs_entity_id ON external_syncs (entity_id);
+CREATE INDEX idx_external_syncs_external ON external_syncs (external_system, external_id);
+CREATE INDEX idx_sync_configs_entity_id ON sync_configs (entity_id);
+CREATE INDEX idx_sync_configs_entity_type ON sync_configs (entity_type);
+CREATE INDEX idx_sync_conflicts_sync_id ON sync_conflicts (sync_id);
+CREATE INDEX idx_sync_conflicts_status ON sync_conflicts (status);
 
 -- Create a unique index for file paths by user (only for text types)
 CREATE UNIQUE INDEX idx_entities_file_path_user

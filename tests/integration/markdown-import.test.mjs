@@ -19,7 +19,6 @@ describe('Markdown Import Integration Tests', () => {
   after(async () => {
     // Clean up the database
     await postgres('entities').where({ user_id: test_user.user_id }).delete()
-    await postgres.destroy()
   })
 
   beforeEach(async () => {

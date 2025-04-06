@@ -2,67 +2,60 @@ import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { isMain, github, github_tasks, normalize_user_id } from '#libs-server'
+import { isMain, github } from '#libs-server'
 
 const log = debug('import-github-issues')
-debug.enable('import-github-issues,github-tasks')
 
 // Main function to import issues from a GitHub repository
-const import_github_issues = async ({
+export default async function import_github_issues({
   owner,
   repo,
   github_token,
   user_id,
-  bidirectional = false,
   state = 'all',
-  sync_existing = false,
   single_issue = null,
-  verbose = false
-}) => {
-  if (!owner) {
-    throw new Error('Missing required parameter: owner')
-  }
+  start_page = 1,
+  import_history_base_directory = null,
+  // used to mock the get_github_repo_issues function for testing
+  get_github_repo_issues = github.get_github_repo_issues
+}) {
+  try {
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      conflicts: 0,
+      errors: 0
+    }
 
-  if (!repo) {
-    throw new Error('Missing required parameter: repo')
-  }
+    log(`Starting GitHub import for ${owner}/${repo}`)
 
-  if (!github_token) {
-    throw new Error('Missing required parameter: github_token')
-  }
+    if (single_issue) {
+      // Process single issue directly
+      log(`Processing single issue #${single_issue.number}`)
 
-  if (!user_id) {
-    throw new Error('Missing required parameter: user_id')
-  }
+      const issue_result = await github.process_single_github_issue({
+        issue: single_issue,
+        repo_owner: owner,
+        repo_name: repo,
+        user_id,
+        import_history_base_directory
+      })
 
-  if (verbose) {
-    debug.enable('import-github-issues,github-tasks,*')
-  }
+      results[issue_result.action]++
 
-  // Convert user_id using the normalize helper
-  user_id = normalize_user_id(user_id)
+      if (issue_result.conflicts_found) {
+        results.conflicts++
+      }
 
-  log(`Importing GitHub issues from ${owner}/${repo}`)
+      return results
+    }
 
-  const repo_info = { owner, repo, github_token }
-  let page = 1
-  let has_next_page = true
-  let all_issues = []
-  const results = {
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    synced_to_github: 0,
-    errors: 0,
-    processed_issues: []
-  }
-
-  // If we have a single issue (from webhook), process just that one
-  if (single_issue) {
-    log(`Processing single issue #${single_issue.number}`)
-    all_issues = [single_issue]
-  } else {
     // Fetch all issues
+    let page = start_page
+    let has_next_page = true
+    let all_issues = []
+
     while (has_next_page) {
       try {
         log(
@@ -72,7 +65,7 @@ const import_github_issues = async ({
           issues,
           has_next_page: more_pages,
           next_page
-        } = await github.get_github_repo_issues({
+        } = await get_github_repo_issues({
           owner,
           repo,
           github_token,
@@ -90,37 +83,40 @@ const import_github_issues = async ({
         throw error
       }
     }
+
+    log(`Processing ${all_issues.length} issues`)
+
+    // Process issues using the new sync system
+    const processed_results = await github.process_github_issues({
+      issues: all_issues,
+      repo_owner: owner,
+      repo_name: repo,
+      user_id,
+      import_history_base_directory,
+      github_token
+    })
+
+    Object.assign(results, processed_results)
+
+    // Create summary of results
+    const summary = {
+      total_issues: all_issues.length,
+      created: results.created,
+      updated: results.updated,
+      skipped: results.skipped,
+      conflicts: results.conflicts,
+      errors: results.errors
+    }
+
+    log(`Import complete: ${JSON.stringify(summary, null, 2)}`)
+
+    return results
+  } catch (error) {
+    log(`Error in import_github_issues: ${error.message}`)
+    console.error(error)
+    throw error
   }
-
-  log(`Processing ${all_issues.length} issues`)
-
-  // Process issues using the github_tasks library
-  const processed_results = await github_tasks.process_github_issues({
-    issues: all_issues,
-    repo_info,
-    user_id,
-    bidirectional,
-    sync_existing
-  })
-
-  Object.assign(results, processed_results)
-
-  // Create summary of results
-  const summary = {
-    total_issues: all_issues.length,
-    created: results.created,
-    updated: results.updated,
-    skipped: results.skipped,
-    synced_to_github: results.synced_to_github,
-    errors: results.errors
-  }
-
-  log(`Import complete: ${JSON.stringify(summary, null, 2)}`)
-
-  return results
 }
-
-export default import_github_issues
 
 // Command-line interface
 const main = async () => {
@@ -150,22 +146,11 @@ const main = async () => {
         describe: 'User ID to associate with imported tasks',
         type: 'string'
       })
-      .option('bidirectional', {
-        alias: 'b',
-        describe: 'Enable bidirectional sync',
-        type: 'boolean',
-        default: false
-      })
       .option('state', {
         alias: 's',
         describe: 'GitHub issue state to import',
         choices: ['all', 'open', 'closed'],
         default: 'all'
-      })
-      .option('sync', {
-        describe: 'Force sync all issues even if not changed',
-        type: 'boolean',
-        default: false
       })
       .option('verbose', {
         alias: 'v',
@@ -180,9 +165,7 @@ const main = async () => {
       repo: args.repo,
       github_token: args.token || process.env.GITHUB_TOKEN,
       user_id: args.userId,
-      bidirectional: args.bidirectional,
       state: args.state,
-      sync_existing: args.sync,
       verbose: args.verbose
     })
 
@@ -192,7 +175,7 @@ const main = async () => {
     console.log(`- Created: ${results.created}`)
     console.log(`- Updated: ${results.updated}`)
     console.log(`- Skipped: ${results.skipped}`)
-    console.log(`- Synced to GitHub: ${results.synced_to_github}`)
+    console.log(`- Conflicts: ${results.conflicts}`)
     console.log(`- Errors: ${results.errors}`)
   } catch (err) {
     error = err
@@ -202,6 +185,7 @@ const main = async () => {
   process.exit(error ? 1 : 0)
 }
 
-if (isMain) {
+if (isMain(import.meta.url)) {
+  debug.enable('import-github-issues,github-sync,github-mapper,sync:*')
   main()
 }

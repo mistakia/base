@@ -48,8 +48,6 @@ describe('MCP Git Tools Integration', function () {
     system_repo_path = path.join(test_dir, 'system')
     user_repo_path = path.join(test_dir, 'data')
 
-    console.log(`Setting up test in directory: ${test_dir}`)
-
     // Create the base directory
     await fs.mkdir(test_dir, { recursive: true })
 
