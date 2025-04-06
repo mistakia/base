@@ -8,6 +8,7 @@ tags: [javascript]
 observations:
   - '[standard] Consistent module imports improve code maintainability #code-style'
   - '[quality] Explicit file extensions prevent import resolution issues #debugging'
+  - '[architecture] Functional paradigms promote immutability and testability #maintainability'
 relations:
   - 'implements [[System Design]]'
 ---
@@ -64,3 +65,12 @@ relations:
   - `#root` - Root-level resources
 
 See `package.json` for the complete list of namespaces.
+
+## Functional vs Object-Oriented Programming
+
+- Functions SHOULD be preferred over classes in most scenarios
+- Classes SHOULD only be used when:
+  - Inheritance provides clear organizational and simplification benefits
+  - Complex state management would be simplified through encapsulation
+- Pure functions SHOULD be used wherever possible to minimize side effects
+- Higher-order functions SHOULD be used to enhance code reusability
