@@ -12453,6 +12453,7 @@ __metadata:
     cors: "npm:^2.8.5"
     css-loader: "npm:6.11.0"
     dayjs: "npm:^1.11.13"
+    debug: "npm:^4.4.0"
     deep-extend: "npm:^0.6.0"
     eslint: "npm:8.57.1"
     eslint-config-standard: "npm:17.1.0"

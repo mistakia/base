@@ -106,15 +106,24 @@ async function handle_apply_patch(args) {
     const repo_path = get_repo_path(repo_type)
 
     // Check if branch exists, create if not
-    const branch_exists = await git.branch_exists(repo_path, branch_name, {
+    const branch_exists = await git.branch_exists({
+      repo_path,
+      branch_name,
       check_remote: false
     })
     if (!branch_exists) {
-      await git.create_branch(repo_path, branch_name, base_branch)
+      await git.create_branch({
+        repo_path,
+        branch_name,
+        base_branch
+      })
     }
 
     // Create worktree for branch
-    const worktree_path = await git.create_worktree(repo_path, branch_name)
+    const worktree_path = await git.create_worktree({
+      repo_path,
+      branch_name
+    })
 
     try {
       // Apply patches
@@ -138,7 +147,10 @@ async function handle_apply_patch(args) {
           await execute(`git add ${patch.path}`, { cwd: worktree_path })
         } else if (patch.patch_content) {
           // Apply patch
-          await git.apply_patch(worktree_path, patch.patch_content)
+          await git.apply_patch({
+            repo_path: worktree_path,
+            patch_content: patch.patch_content
+          })
         } else {
           throw new Error(
             `No content or patch_content provided for path: ${patch.path}`
@@ -186,7 +198,10 @@ async function handle_apply_patch(args) {
       })
     } finally {
       // Clean up worktree
-      await git.remove_worktree(repo_path, worktree_path)
+      await git.remove_worktree({
+        repo_path,
+        worktree_path
+      })
     }
   } catch (error) {
     log('Error handling apply_patch:', error)
@@ -212,9 +227,11 @@ async function handle_get_diff(args) {
     const repo_path = get_repo_path(repo_type)
 
     // Get diff
-    const diff = await git.get_diff(repo_path, compare_with, branch, {
-      path,
-      format
+    const diff = await git.get_diff({
+      repo_path,
+      from_ref: compare_with,
+      to_ref: branch,
+      path
     })
 
     return format_response({
@@ -241,7 +258,11 @@ async function handle_read_file(args) {
     const repo_path = get_repo_path(repo_type)
 
     // Read file
-    const content = await git.read_file_from_ref(repo_path, branch, file_path)
+    const content = await git.read_file_from_ref({
+      repo_path,
+      ref: branch,
+      file_path
+    })
 
     return format_response({
       content,
@@ -267,7 +288,10 @@ async function handle_list_files(args) {
     log(`Listing files in ${repo_path} with path: ${path}`)
 
     // Get all files in the repo first
-    const all_files = await git.list_files(repo_path, branch)
+    const all_files = await git.list_files({
+      repo_path,
+      ref: branch
+    })
 
     // Filter based on path and pattern
     const files = all_files.filter((file) => {
@@ -332,7 +356,9 @@ async function handle_search(args) {
     const repo_path = get_repo_path(repo_type)
 
     // Search
-    const results = await git.search_repository(repo_path, query, {
+    const results = await git.search_repository({
+      repo_path,
+      query,
       ref: branch,
       path,
       case_sensitive

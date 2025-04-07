@@ -4,35 +4,14 @@ import crypto from 'crypto'
 
 import config from '#config'
 import { github } from '#libs-server'
+import {
+  handle_pr_merged,
+  handle_pr_closed_without_merging,
+  handle_pr_reopened
+} from '#libs-server/change_requests/webhooks.mjs'
 
 const router = express.Router()
 const log = debug('api:github')
-
-// Create a raw body parser middleware for GitHub webhook signature verification
-const rawBodyParser = (req, res, next) => {
-  req.body_buffer = Buffer.from([])
-
-  req.on('data', (chunk) => {
-    req.body_buffer = Buffer.concat([req.body_buffer, chunk])
-  })
-
-  req.on('end', () => {
-    // Store the raw body
-    req.raw_body = req.body_buffer
-
-    // Parse as JSON if possible
-    try {
-      req.body = JSON.parse(req.body_buffer.toString('utf8'))
-    } catch (e) {
-      req.body = {}
-    }
-
-    next()
-  })
-}
-
-// Add raw body parser middleware
-router.use(rawBodyParser)
 
 // Verify GitHub webhook signature
 const verify_github_signature = (req, secret) => {
@@ -153,6 +132,97 @@ router.post('/webhooks', async (req, res) => {
           entity_id: result.entity_id ? result.entity_id.toString('hex') : null,
           conflicts_found: result.conflicts_found || false
         })
+      }
+
+      case 'pull_request': {
+        // Handle pull request events (merged, closed, reopened)
+        const action = req.body.action
+        const pull_request = req.body.pull_request
+        const repository = req.body.repository
+        const number = req.body.number
+        const sender = req.body.sender
+        let result = null
+
+        // Validate required fields according to schema
+        if (!action || !pull_request || !repository || !number || !sender) {
+          const missing_fields = []
+          if (!action) missing_fields.push('action')
+          if (!pull_request) missing_fields.push('pull_request')
+          if (!repository) missing_fields.push('repository')
+          if (!number) missing_fields.push('number')
+          if (!sender) missing_fields.push('sender')
+
+          log(
+            `Invalid pull_request event payload - missing required fields: ${missing_fields.join(', ')}`
+          )
+          return res.status(400).json({
+            error: 'Bad Request',
+            message: `Invalid pull_request event payload - missing required fields: ${missing_fields.join(', ')}`
+          })
+        }
+
+        // Validate repository object has required fields
+        const required_repo_fields = ['id', 'full_name', 'owner']
+        const missing_repo_fields = required_repo_fields.filter(
+          (field) => !repository[field]
+        )
+        if (missing_repo_fields.length > 0) {
+          log(
+            `Invalid repository object - missing required fields: ${missing_repo_fields.join(', ')}`
+          )
+          return res.status(400).json({
+            error: 'Bad Request',
+            message: `Invalid repository object - missing required fields: ${missing_repo_fields.join(', ')}`
+          })
+        }
+
+        // Validate repository owner has required fields
+        if (!repository.owner.id || !repository.owner.login) {
+          log(
+            'Invalid repository owner object - missing required fields: id and/or login'
+          )
+          return res.status(400).json({
+            error: 'Bad Request',
+            message:
+              'Invalid repository owner object - missing required fields: id and/or login'
+          })
+        }
+
+        log(
+          `Processing pull request event: ${action} for ${repository.full_name}#${number}`
+        )
+
+        // Call appropriate handler based on the action
+        if (action === 'closed' && pull_request.merged) {
+          // PR was merged
+          result = await handle_pr_merged(req.body)
+        } else if (action === 'closed' && !pull_request.merged) {
+          // PR was closed without merging
+          result = await handle_pr_closed_without_merging(req.body)
+        } else if (action === 'reopened') {
+          // PR was reopened
+          result = await handle_pr_reopened(req.body)
+        }
+
+        if (result) {
+          log(
+            `PR webhook processed: ${repository.full_name}#${number} - Status updated to ${result.status}`
+          )
+          return res.json({
+            ok: true,
+            message: `Pull request ${number} processed`,
+            change_request_id: result.change_request_id,
+            status: result.status
+          })
+        } else {
+          log(
+            `PR webhook: ${repository.full_name}#${number} - No action taken for ${action}`
+          )
+          return res.json({
+            ok: true,
+            message: `Pull request event '${action}' acknowledged but no action taken`
+          })
+        }
       }
 
       case 'project_card': {

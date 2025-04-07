@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS activities CASCADE;
 DROP TABLE IF EXISTS external_syncs CASCADE;
 DROP TABLE IF EXISTS sync_configs CASCADE;
 DROP TABLE IF EXISTS sync_conflicts CASCADE;
+DROP TABLE IF EXISTS change_requests CASCADE;
 
 -- Block tables
 DROP TABLE IF EXISTS entity_blocks CASCADE;
@@ -37,6 +38,7 @@ DROP TYPE IF EXISTS priority_type CASCADE;
 DROP TYPE IF EXISTS importance_type CASCADE;
 DROP TYPE IF EXISTS frequency_type CASCADE;
 DROP TYPE IF EXISTS guideline_status_type CASCADE;
+DROP TYPE IF EXISTS change_request_status_type CASCADE;
 DROP TYPE IF EXISTS block_type CASCADE;
 
 -- Create custom enum types
@@ -95,6 +97,16 @@ CREATE TYPE guideline_status_type AS ENUM (
   'Draft',
   'Approved',
   'Deprecated'
+);
+
+CREATE TYPE change_request_status_type AS ENUM (
+  'Draft',
+  'PendingReview',
+  'NeedsRevision',
+  'Approved',
+  'Rejected',
+  'Merged',
+  'Closed'
 );
 
 -- Create the users table (foundational)
@@ -443,6 +455,27 @@ CREATE TABLE entity_metadata (
   UNIQUE (entity_id, key)
 );
 
+-- Create change_requests table
+CREATE TABLE change_requests (
+  change_request_id UUID PRIMARY KEY DEFAULT uuid_generate_v1(),
+  status change_request_status_type NOT NULL DEFAULT 'Draft',
+  title TEXT NOT NULL,
+  creator_id TEXT NOT NULL, -- Can be user_id or system identifier
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  target_branch TEXT NOT NULL,
+  feature_branch TEXT NOT NULL UNIQUE,
+  github_pr_url TEXT,
+  github_pr_number INTEGER,
+  github_repo TEXT, -- Format: 'owner/repo'
+  related_thread_id UUID, -- Optional reference to worker thread
+  merged_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  CONSTRAINT check_change_requests_updated_at CHECK (updated_at >= created_at),
+  CONSTRAINT check_change_requests_merged_at CHECK (merged_at IS NULL OR merged_at >= created_at),
+  CONSTRAINT check_change_requests_closed_at CHECK (closed_at IS NULL OR closed_at >= created_at)
+);
+
 -- Create tags table
 CREATE TABLE tags (
   entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
@@ -743,6 +776,15 @@ CREATE INDEX idx_sync_configs_entity_id ON sync_configs (entity_id);
 CREATE INDEX idx_sync_configs_entity_type ON sync_configs (entity_type);
 CREATE INDEX idx_sync_conflicts_sync_id ON sync_conflicts (sync_id);
 CREATE INDEX idx_sync_conflicts_status ON sync_conflicts (status);
+
+-- Indexes for change_requests table
+CREATE INDEX idx_change_requests_status ON change_requests (status);
+CREATE INDEX idx_change_requests_creator_id ON change_requests (creator_id);
+CREATE INDEX idx_change_requests_target_branch ON change_requests (target_branch);
+CREATE INDEX idx_change_requests_github_repo ON change_requests (github_repo);
+CREATE INDEX idx_change_requests_github_pr_number ON change_requests (github_pr_number) WHERE github_pr_number IS NOT NULL;
+CREATE INDEX idx_change_requests_created_at ON change_requests (created_at DESC);
+CREATE INDEX idx_change_requests_updated_at ON change_requests (updated_at DESC);
 
 -- Create a unique index for file paths by user (only for text types)
 CREATE UNIQUE INDEX idx_entities_file_path_user

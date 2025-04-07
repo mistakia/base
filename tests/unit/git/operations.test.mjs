@@ -88,7 +88,10 @@ describe('Git Operations', function () {
   })
 
   it('should detect existing branches', async function () {
-    const exists = await git.branch_exists(test_repo_path, 'feature-branch')
+    const exists = await git.branch_exists({
+      repo_path: test_repo_path,
+      branch_name: 'feature-branch'
+    })
     expect(exists).to.be.true
   })
 
@@ -103,24 +106,19 @@ describe('Git Operations', function () {
     expect(branch_exists_directly).to.be.false
 
     // Now test our function
-    const exists = await git.branch_exists(
-      test_repo_path,
-      non_existent_branch,
-      {
-        check_remote: false // Explicitly don't check remote to simplify test
-      }
-    )
+    const exists = await git.branch_exists({
+      repo_path: test_repo_path,
+      branch_name: non_existent_branch,
+      check_remote: false
+    })
     expect(exists).to.be.false
 
     // Test with an existing branch
     const existing_branch = 'feature-branch'
-    const exists_for_feature = await git.branch_exists(
-      test_repo_path,
-      existing_branch,
-      {
-        check_remote: false
-      }
-    )
+    const exists_for_feature = await git.branch_exists({
+      repo_path: test_repo_path,
+      branch_name: existing_branch
+    })
     expect(exists_for_feature).to.be.true
 
     // Test return value types
@@ -129,18 +127,24 @@ describe('Git Operations', function () {
   })
 
   it('should create a branch', async function () {
-    await git.create_branch(test_repo_path, 'test-branch', 'main')
-    const exists = await git.branch_exists(test_repo_path, 'test-branch', {
+    await git.create_branch({
+      repo_path: test_repo_path,
+      branch_name: 'test-branch',
+      base_branch: 'main'
+    })
+    const exists = await git.branch_exists({
+      repo_path: test_repo_path,
+      branch_name: 'test-branch',
       check_remote: false
     })
     expect(exists).to.be.true
   })
 
   it('should create a worktree for a branch', async function () {
-    const worktree_path = await git.create_worktree(
-      test_repo_path,
-      'feature-branch'
-    )
+    const worktree_path = await git.create_worktree({
+      repo_path: test_repo_path,
+      branch_name: 'feature-branch'
+    })
 
     try {
       // Verify worktree exists
@@ -154,10 +158,18 @@ describe('Git Operations', function () {
       expect(stdout.trim()).to.equal('feature-branch')
 
       // Clean up
-      await git.remove_worktree(test_repo_path, worktree_path)
+      await git.remove_worktree({
+        repo_path: test_repo_path,
+        worktree_path
+      })
     } catch (error) {
       // Clean up even if test fails
-      await git.remove_worktree(test_repo_path, worktree_path).catch(() => {})
+      await git
+        .remove_worktree({
+          repo_path: test_repo_path,
+          worktree_path
+        })
+        .catch(() => {})
       throw error
     }
   })
@@ -172,11 +184,11 @@ describe('Git Operations', function () {
     await execute('git commit -m "Add test file"', { cwd: test_repo_path })
     await execute('git push origin main', { cwd: test_repo_path })
 
-    const content = await git.read_file_from_ref(
-      test_repo_path,
-      'main',
-      'test-file.md'
-    )
+    const content = await git.read_file_from_ref({
+      repo_path: test_repo_path,
+      ref: 'main',
+      file_path: 'test-file.md'
+    })
     expect(content).to.include('Test Content')
     expect(content).to.include('This is test content')
   })
@@ -191,7 +203,10 @@ describe('Git Operations', function () {
     await execute('git commit -m "Add multiple files"', { cwd: test_repo_path })
     await execute('git push origin main', { cwd: test_repo_path })
 
-    const files = await git.list_files(test_repo_path, 'main')
+    const files = await git.list_files({
+      repo_path: test_repo_path,
+      ref: 'main'
+    })
     expect(files).to.include('README.md')
     expect(files).to.include('file1.md')
     expect(files).to.include('file2.md')
@@ -210,7 +225,11 @@ describe('Git Operations', function () {
     await execute('git push origin feature-branch', { cwd: test_repo_path })
 
     // Get diff
-    const diff = await git.get_diff(test_repo_path, 'main', 'feature-branch')
+    const diff = await git.get_diff({
+      repo_path: test_repo_path,
+      from_ref: 'main',
+      to_ref: 'feature-branch'
+    })
     expect(diff).to.include('Updated content')
   })
 
@@ -231,7 +250,10 @@ describe('Git Operations', function () {
     await execute('git push origin main', { cwd: test_repo_path })
 
     // Perform search with the unique content
-    const results = await git.search_repository(test_repo_path, unique_content)
+    const results = await git.search_repository({
+      repo_path: test_repo_path,
+      query: unique_content
+    })
 
     // Just verify we got results and content matches
     expect(results.length).to.be.at.least(1)
@@ -266,7 +288,11 @@ describe('Git Operations', function () {
     const original = 'Old content\nMid content\nMore content'
     const modified = 'New content\nMid content\nMore content'
 
-    const patch = await git.generate_patch('test.md', original, modified)
+    const patch = await git.generate_patch({
+      file_path: 'test.md',
+      original_content: original,
+      modified_content: modified
+    })
     expect(patch).to.include('@@ -1,')
     expect(patch).to.include('-Old content')
     expect(patch).to.include('+New content')
@@ -290,7 +316,10 @@ describe('Git Operations', function () {
 `
 
     // Apply the patch
-    await git.apply_patch(test_repo_path, patch_content)
+    await git.apply_patch({
+      repo_path: test_repo_path,
+      patch_content
+    })
 
     // Verify the patch was applied
     const { stdout } = await execute('git diff --cached', {

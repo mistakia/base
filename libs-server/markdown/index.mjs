@@ -1,4 +1,6 @@
 import debug from 'debug'
+import fs from 'fs/promises'
+import path from 'path'
 
 import { scan_repositories, get_file_content } from './scanner.mjs'
 import { parse_markdown, parse_schema_file } from './parser.mjs'
@@ -28,7 +30,7 @@ export {
  * @param {String} content Raw markdown content with frontmatter
  * @param {Object} file_info File information object
  * @param {Object} schemas Schema definitions for validation
- * @param {Object} options Processing options
+
  * @returns {Object} Processed entity with validation results and extracted data
  */
 export async function process_markdown_entity(
@@ -225,20 +227,6 @@ export function extract_frontmatter_relations(parsed) {
 }
 
 /**
- * Utility function to extract all metadata from a markdown string
- * Useful for CLI tools, tests, and immediate feedback
- *
- * @param {String} markdown_content Raw markdown content with frontmatter
- * @returns {Object} Processed markdown with all metadata extracted
- */
-export async function extract_from_markdown(markdown_content) {
-  // Parse with minimal file info
-  return await process_markdown_entity(markdown_content, {
-    file_path: 'content.md'
-  })
-}
-
-/**
  * Import markdown files from repositories
  * @param {Object} options Configuration options
  * @param {String} user_id User ID
@@ -345,5 +333,141 @@ export function format_repository({ type = 'system', branch = 'main' }) {
       branch,
       is_submodule: true
     }
+  }
+}
+
+/**
+ * Read a markdown entity from a file with frontmatter
+ * @param {String} file_path Relative path to the markdown file
+ * @returns {Promise<Object>} Parsed markdown with frontmatter and content
+ */
+export async function read_markdown_entity(file_path) {
+  try {
+    log(`Reading markdown entity from ${file_path}`)
+
+    // For test safety, see if the file can be read directly without requiring absolute path
+    try {
+      const content = await fs.readFile(file_path, 'utf8')
+      const processed = await parse_markdown({ file_path, content })
+      return {
+        frontmatter: processed.frontmatter || {},
+        content: processed.content || processed.markdown || ''
+      }
+    } catch (direct_read_error) {
+      // If direct read failed, try with get_file_content
+      log(
+        `Direct file read failed, trying with file object: ${direct_read_error.message}`
+      )
+      const content = await get_file_content({
+        file_path,
+        absolute_path: path.resolve(file_path)
+      })
+
+      if (!content) {
+        throw new Error(`File not found or empty: ${file_path}`)
+      }
+
+      // Use the existing process_markdown_entity function
+      const processed = await process_markdown_entity(content, { file_path })
+
+      return {
+        frontmatter: processed.frontmatter || {},
+        content: processed.content || processed.markdown || ''
+      }
+    }
+  } catch (error) {
+    log(`Error reading markdown entity ${file_path}:`, error)
+    throw error
+  }
+}
+
+/**
+ * Write a markdown entity to a file with frontmatter
+ * @param {String} file_path Relative path to the markdown file
+ * @param {Object} frontmatter Frontmatter object
+ * @param {String} content Markdown content
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function write_markdown_entity(
+  file_path,
+  frontmatter,
+  content = ''
+) {
+  try {
+    log(`Writing markdown entity to ${file_path}`)
+
+    // Ensure frontmatter is valid
+    if (!frontmatter || typeof frontmatter !== 'object') {
+      throw new Error('Frontmatter must be a valid object')
+    }
+
+    // Create frontmatter block
+    const yaml_lines = ['---']
+
+    // Sort keys for consistent output, with 'title', 'type', and 'status' first
+    const sorted_keys = Object.keys(frontmatter).sort((a, b) => {
+      if (a === 'title') return -1
+      if (b === 'title') return 1
+      if (a === 'type') return -1
+      if (b === 'type') return 1
+      if (a === 'status') return -1
+      if (b === 'status') return 1
+      return a.localeCompare(b)
+    })
+
+    for (const key of sorted_keys) {
+      const value = frontmatter[key]
+
+      // Handle different value types
+      if (value === null || value === undefined) {
+        continue
+      } else if (Array.isArray(value)) {
+        yaml_lines.push(`${key}:`)
+        value.forEach((item) => {
+          yaml_lines.push(
+            `  - ${typeof item === 'string' ? JSON.stringify(item) : JSON.stringify(item)}`
+          )
+        })
+      } else if (typeof value === 'object') {
+        // Simple one-level object serialization
+        yaml_lines.push(`${key}:`)
+        Object.entries(value).forEach(([k, v]) => {
+          yaml_lines.push(
+            `  ${k}: ${typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v)}`
+          )
+        })
+      } else if (typeof value === 'string') {
+        // For key status values, don't add quotes
+        if (key === 'status') {
+          yaml_lines.push(`${key}: ${value}`)
+        } else {
+          // For other strings, ensure proper quoting
+          yaml_lines.push(`${key}: ${JSON.stringify(value)}`)
+        }
+      } else {
+        // For non-strings like numbers, booleans
+        yaml_lines.push(`${key}: ${value}`)
+      }
+    }
+
+    yaml_lines.push('---')
+
+    // Combine frontmatter and content
+    const full_content = `${yaml_lines.join('\n')}\n\n${content.trim()}`
+
+    // Ensure directory exists
+    const dir_path = file_path.substring(0, file_path.lastIndexOf('/'))
+    if (dir_path) {
+      await fs.mkdir(dir_path, { recursive: true })
+    }
+
+    // Write the file
+    await fs.writeFile(file_path, full_content)
+
+    log(`Successfully wrote markdown entity to ${file_path}`)
+    return true
+  } catch (error) {
+    log(`Error writing markdown entity ${file_path}:`, error)
+    throw error
   }
 }

@@ -46,16 +46,17 @@ export async function is_submodule(repo_path) {
 
 /**
  * Check if a branch exists locally or remotely
- * @param {String} repo_path Path to the repository
- * @param {String} branch_name Branch name to check
- * @param {Boolean} check_remote Whether to check remote branches
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_name Branch name to check
+ * @param {Boolean} [params.check_remote=true] Whether to check remote branches
  * @returns {Boolean} True if the branch exists
  */
-export async function branch_exists(
+export async function branch_exists({
   repo_path,
   branch_name,
-  { check_remote = true } = {}
-) {
+  check_remote = true
+}) {
   try {
     // Check local branches
     log(`Checking local branches for ${repo_path}`)
@@ -90,23 +91,26 @@ export async function branch_exists(
 
 /**
  * Create a new branch
- * @param {String} repo_path Path to the repository
- * @param {String} branch_name Branch name to create
- * @param {String} base_branch Base branch to create from
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_name Branch name to create
+ * @param {String} [params.base_branch='main'] Base branch to create from
  * @returns {Boolean} True if the branch was created
  */
-export async function create_branch(
+export async function create_branch({
   repo_path,
   branch_name,
   base_branch = 'main'
-) {
+}) {
   try {
     log(
       `Attempting to create branch ${branch_name} from ${base_branch} in ${repo_path}`
     )
 
     // Check if the branch already exists
-    const branch_already_exists = await branch_exists(repo_path, branch_name, {
+    const branch_already_exists = await branch_exists({
+      repo_path,
+      branch_name,
       check_remote: false
     })
     if (branch_already_exists) {
@@ -166,11 +170,12 @@ export async function create_branch(
 
 /**
  * Create a git worktree for a branch
- * @param {String} repo_path Path to the repository
- * @param {String} branch_name Branch to create worktree for
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_name Branch to create worktree for
  * @returns {String} Path to the created worktree
  */
-export async function create_worktree(repo_path, branch_name) {
+export async function create_worktree({ repo_path, branch_name }) {
   try {
     // Create a unique worktree path
     const worktree_base = path.join(os.tmpdir(), 'git-worktrees')
@@ -324,10 +329,11 @@ export async function create_worktree(repo_path, branch_name) {
 
 /**
  * Remove a git worktree
- * @param {String} repo_path Path to the repository
- * @param {String} worktree_path Path to the worktree
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.worktree_path Path to the worktree
  */
-export async function remove_worktree(repo_path, worktree_path) {
+export async function remove_worktree({ repo_path, worktree_path }) {
   try {
     // If the worktree path is the same as the repo path, it's likely
     // the main working tree which can't be removed with git worktree remove
@@ -410,11 +416,12 @@ export async function get_repo_info(repo_path) {
 
 /**
  * Apply a patch to a file
- * @param {String} repo_path Path to the repository
- * @param {String} patch_content Patch content
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.patch_content Patch content
  * @returns {Boolean} True if the patch was applied successfully
  */
-export async function apply_patch(repo_path, patch_content) {
+export async function apply_patch({ repo_path, patch_content }) {
   try {
     // Create a temporary patch file
     const patch_file = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`)
@@ -436,16 +443,17 @@ export async function apply_patch(repo_path, patch_content) {
 
 /**
  * Generate a patch between two versions of a file
- * @param {String} file_path Path to the file (for reference)
- * @param {String} original_content Original file content
- * @param {String} modified_content Modified file content
+ * @param {Object} params Parameters
+ * @param {String} params.file_path Path to the file (for reference)
+ * @param {String} params.original_content Original file content
+ * @param {String} params.modified_content Modified file content
  * @returns {String} Patch content
  */
-export async function generate_patch(
+export async function generate_patch({
   file_path,
   original_content,
   modified_content
-) {
+}) {
   const temp_dir = path.join(os.tmpdir(), `git-patch-${Date.now()}`)
   await fs.mkdir(temp_dir, { recursive: true })
 
@@ -479,13 +487,69 @@ export async function generate_patch(
 }
 
 /**
+ * Stage files in the repository/worktree
+ * @param {Object} params Parameters
+ * @param {String} params.worktree_path Path to the worktree or repository
+ * @param {Array<String>|String} params.files_to_add Path(s) of files to stage relative to worktree_path
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function add_files({ worktree_path, files_to_add }) {
+  try {
+    const files_string = Array.isArray(files_to_add)
+      ? files_to_add.join(' ')
+      : files_to_add
+    log(`Staging files: ${files_string} in ${worktree_path}`)
+    await execute(`git add ${files_string}`, { cwd: worktree_path })
+    return true
+  } catch (error) {
+    log(`Failed to stage files in ${worktree_path}:`, error)
+    throw new Error(`Failed to stage files: ${error.message}`)
+  }
+}
+
+/**
+ * Commit staged changes in the repository/worktree
+ * @param {String} worktree_path Path to the worktree or repository
+ * @param {String} commit_message Commit message
+ * @param {Object} [options] Options like author
+ * @param {String} [options.author] Author string in format "Name <email@example.com>"
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function commit_changes({
+  worktree_path,
+  commit_message,
+  author
+}) {
+  try {
+    log(
+      `Committing changes in ${worktree_path} with message: "${commit_message}"`
+    )
+    let command = `git commit -m "${commit_message.replace(/"/g, '\\"')}"` // Escape double quotes in message
+    if (author) {
+      command += ` --author="${author.replace(/"/g, '\\"')}"` // Escape double quotes in author
+    }
+    await execute(command, { cwd: worktree_path })
+    return true
+  } catch (error) {
+    // Check if the error is because there's nothing to commit
+    if (error.stderr && error.stderr.includes('nothing to commit')) {
+      log('No changes to commit.')
+      return true // Consider this a success in this context
+    }
+    log(`Failed to commit changes in ${worktree_path}:`, error)
+    throw new Error(`Failed to commit changes: ${error.message}`)
+  }
+}
+
+/**
  * Read a file from a specific git reference
- * @param {String} repo_path Path to the repository
- * @param {String} ref Git reference (branch, commit, etc.)
- * @param {String} file_path Path to the file relative to repo root
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.ref Git reference (branch, commit, etc.)
+ * @param {String} params.file_path Path to the file relative to repo root
  * @returns {String} File content
  */
-export async function read_file_from_ref(repo_path, ref, file_path) {
+export async function read_file_from_ref({ repo_path, ref, file_path }) {
   try {
     log(`Reading file ${file_path} from ${ref} in ${repo_path}`)
     const { stdout } = await execute(`git show ${ref}:${file_path}`, {
@@ -502,12 +566,17 @@ export async function read_file_from_ref(repo_path, ref, file_path) {
 
 /**
  * List files in a git repository at a specific reference
- * @param {String} repo_path Path to the repository
- * @param {String} ref Git reference (branch, commit, etc.)
- * @param {String} path_pattern Path pattern to filter files
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} [params.ref='HEAD'] Git reference (branch, commit, etc.)
+ * @param {String} [params.path_pattern=''] Path pattern to filter files
  * @returns {Array<String>} List of file paths
  */
-export async function list_files(repo_path, ref = 'HEAD', path_pattern = '') {
+export async function list_files({
+  repo_path,
+  ref = 'HEAD',
+  path_pattern = ''
+}) {
   try {
     const pattern = path_pattern ? `-- ${path_pattern}` : ''
     log(`Listing files for ${ref} in ${repo_path} with pattern ${path_pattern}`)
@@ -597,18 +666,21 @@ async function list_files_recursive(base_path, path_pattern = '') {
 
 /**
  * Get diff between two git references
- * @param {String} repo_path Path to the repository
- * @param {String} from_ref From reference
- * @param {String} to_ref To reference
- * @param {Object} options Options for diff
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.from_ref From reference
+ * @param {String} params.to_ref To reference
+ * @param {String} [params.path] Path filter
+ * @param {String} [params.format='unified'] Output format ('unified', 'name-only', 'stat')
  * @returns {String} Diff output
  */
-export async function get_diff(
+export async function get_diff({
   repo_path,
   from_ref,
   to_ref,
-  { path, format = 'unified' } = {}
-) {
+  path,
+  format = 'unified'
+}) {
   try {
     let format_option = ''
     switch (format) {
@@ -642,16 +714,21 @@ export async function get_diff(
 
 /**
  * Search in git repository
- * @param {String} repo_path Path to the repository
- * @param {String} query Search query
- * @param {Object} options Search options
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.query Search query
+ * @param {String} [params.ref='HEAD'] Git reference
+ * @param {String} [params.path] Path filter
+ * @param {Boolean} [params.case_sensitive=false] Whether search is case sensitive
  * @returns {Array<Object>} Search results
  */
-export async function search_repository(
+export async function search_repository({
   repo_path,
   query,
-  { ref = 'HEAD', path, case_sensitive = false } = {}
-) {
+  ref = 'HEAD',
+  path,
+  case_sensitive = false
+}) {
   try {
     const case_option = case_sensitive ? '' : '-i'
     const path_filter = path ? `-- ${path}` : ''
@@ -754,6 +831,125 @@ async function search_files_directly(
   return results
 }
 
+/**
+ * Checkout a branch in the repository
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_name Branch name to checkout
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function checkout_branch({ repo_path, branch_name }) {
+  try {
+    log(`Checking out branch ${branch_name} in ${repo_path}`)
+    await execute(`git checkout ${branch_name}`, { cwd: repo_path })
+    return true
+  } catch (error) {
+    log(`Failed to checkout branch ${branch_name}:`, error)
+    throw new Error(
+      `Failed to checkout branch ${branch_name}: ${error.message}`
+    )
+  }
+}
+
+/**
+ * Merge a branch into the current branch
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_to_merge Branch to merge into the current branch
+ * @param {String} params.merge_message Custom merge message
+ * @returns {Promise<Boolean>} True if the merge was successful
+ */
+export async function merge_branch({
+  repo_path,
+  branch_to_merge,
+  merge_message
+}) {
+  try {
+    log(`Merging ${branch_to_merge} into current branch`)
+
+    // Use a temporary file for the merge message to handle multi-line messages
+    const temp_msg_file = path.join(os.tmpdir(), `git-merge-msg-${Date.now()}`)
+    await fs.writeFile(temp_msg_file, merge_message)
+
+    // Execute the merge with the message file
+    await execute(
+      `git merge --no-ff -F "${temp_msg_file}" ${branch_to_merge}`,
+      {
+        cwd: repo_path
+      }
+    )
+
+    // Clean up the temporary file
+    await fs.unlink(temp_msg_file).catch(() => {})
+
+    return true
+  } catch (error) {
+    log(`Failed to merge branch ${branch_to_merge}:`, error)
+    throw new Error(
+      `Failed to merge branch ${branch_to_merge}: ${error.message}`
+    )
+  }
+}
+
+/**
+ * Delete a branch from the repository
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.branch_name Branch name to delete
+ * @param {Boolean} [params.force=false] Force delete even if not merged
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function delete_branch({ repo_path, branch_name, force = false }) {
+  try {
+    const force_option = force ? '-D' : '-d'
+    log(`Deleting branch ${branch_name} from ${repo_path}`)
+    await execute(`git branch ${force_option} ${branch_name}`, {
+      cwd: repo_path
+    })
+    return true
+  } catch (error) {
+    log(`Failed to delete branch ${branch_name}:`, error)
+
+    // If deletion fails because branch is not fully merged, and force=false
+    if (error.stderr && error.stderr.includes('not fully merged') && !force) {
+      log(
+        `Branch ${branch_name} is not fully merged, use force=true to delete anyway`
+      )
+      return false
+    }
+
+    throw new Error(`Failed to delete branch ${branch_name}: ${error.message}`)
+  }
+}
+
+/**
+ * Push a branch to a remote repository
+ * @param {Object} params - Parameters for pushing the branch
+ * @param {String} params.repo_path - Path to the repository
+ * @param {String} params.branch_name - Branch name to push
+ * @param {String} [params.remote='origin'] - Remote name
+ * @param {Boolean} [params.force=false] - Whether to force push
+ * @returns {Promise<Boolean>} True if successful
+ */
+export async function push_branch({
+  repo_path,
+  branch_name,
+  remote = 'origin',
+  force = false
+}) {
+  try {
+    const force_option = force ? '--force' : ''
+    log(`Pushing branch ${branch_name} to ${remote} from ${repo_path}`)
+    await execute(`git push ${force_option} ${remote} ${branch_name}`, {
+      cwd: repo_path
+    })
+    return true
+  } catch (error) {
+    log(`Failed to push branch ${branch_name}:`, error)
+    throw new Error(`Failed to push branch ${branch_name}: ${error.message}`)
+  }
+}
+
 export default {
   get_current_branch,
   is_submodule,
@@ -768,5 +964,11 @@ export default {
   read_file_from_ref,
   list_files,
   get_diff,
-  search_repository
+  search_repository,
+  add_files,
+  commit_changes,
+  checkout_branch,
+  merge_branch,
+  delete_branch,
+  push_branch
 }

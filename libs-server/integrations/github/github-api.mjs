@@ -317,3 +317,143 @@ export const group_issues_by_repo = (issues) => {
 
   return issues_by_repo
 }
+
+/**
+ * Create a new pull request on GitHub
+ * @param {Object} params - Parameters for creating the pull request
+ * @param {string} params.repo - Repository in owner/repo format
+ * @param {string} params.title - Title of the pull request
+ * @param {string} params.head - The name of the branch where changes are implemented
+ * @param {string} params.base - The name of the branch you want the changes pulled into
+ * @param {string} params.body - The contents of the pull request
+ * @param {string} params.github_token - GitHub API token
+ * @returns {Promise<Object>} Pull request data including number and html_url
+ */
+export async function create_pull_request({
+  repo,
+  title,
+  head,
+  base,
+  body,
+  github_token
+}) {
+  const [owner, repo_name] = repo.split('/')
+
+  if (!owner || !repo_name) {
+    throw new Error('Repository must be in the format owner/repo')
+  }
+
+  log(`Creating PR in ${repo}: ${title} (${head} → ${base})`)
+
+  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `Bearer ${github_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title,
+      head,
+      base,
+      body,
+      draft: false
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`GitHub API error creating PR: ${error.message}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Get a specific pull request from GitHub
+ * @param {Object} params - Parameters for fetching the pull request
+ * @param {string} params.repo - Repository in owner/repo format
+ * @param {number} params.pull_number - The number of the pull request
+ * @param {string} params.github_token - GitHub API token
+ * @returns {Promise<Object>} Pull request data
+ */
+export async function get_pull_request({ repo, pull_number, github_token }) {
+  const [owner, repo_name] = repo.split('/')
+
+  if (!owner || !repo_name) {
+    throw new Error('Repository must be in the format owner/repo')
+  }
+
+  log(`Getting PR #${pull_number} from ${repo}`)
+
+  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls/${pull_number}`
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `Bearer ${github_token}`
+    }
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`GitHub API error fetching PR: ${error.message}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Update an existing pull request on GitHub
+ * @param {Object} params - Parameters for updating the pull request
+ * @param {string} params.repo - Repository in owner/repo format
+ * @param {number} params.pull_number - The number of the pull request
+ * @param {string} [params.title] - New title for the pull request
+ * @param {string} [params.body] - New body for the pull request
+ * @param {string} [params.state] - State of the pull request: open, closed
+ * @param {string} params.github_token - GitHub API token
+ * @returns {Promise<Object>} Updated pull request data
+ */
+export async function update_pull_request({
+  repo,
+  pull_number,
+  title,
+  body,
+  state,
+  github_token
+}) {
+  const [owner, repo_name] = repo.split('/')
+
+  if (!owner || !repo_name) {
+    throw new Error('Repository must be in the format owner/repo')
+  }
+
+  log(`Updating PR #${pull_number} in ${repo}`)
+
+  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls/${pull_number}`
+
+  const data = {}
+  if (title !== undefined) data.title = title
+  if (body !== undefined) data.body = body
+  if (state !== undefined) data.state = state
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `Bearer ${github_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`GitHub API error updating PR: ${error.message}`)
+  }
+
+  return response.json()
+}

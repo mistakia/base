@@ -34,7 +34,16 @@ api.locals.log = log
 
 api.disable('x-powered-by')
 api.use(compression())
-api.use(bodyParser.json())
+api.use(
+  bodyParser.json({
+    verify: (req, res, buf) => {
+      // Store raw body for GitHub webhook signature verification
+      if (req.url === '/api/github/webhooks') {
+        req.raw_body = buf
+      }
+    }
+  })
+)
 api.use(
   cors({
     origin: true,
@@ -58,6 +67,7 @@ api.use(
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
+api.use('/api/change-requests', routes.change_requests)
 
 if (IS_DEV) {
   api.get('*', (req, res) => {
