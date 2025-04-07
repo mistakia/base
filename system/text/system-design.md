@@ -55,9 +55,9 @@ The system is designed to create a collaborative environment where LLMs and huma
 - Time-limited delegation: Auto-approve for a set period
 - Risk-based approval: Higher risk = higher approval requirements
 
-## 6. Data Storage System
+## 2. Data Storage System
 
-### 6.1 Storage
+### 3.1 Storage
 
 Data is stored in two places:
 
@@ -73,7 +73,7 @@ Data is stored in two places:
   - Keeps track of where files are stored
   - Indexes data to support fast and semantic retrieval
 
-### 6.2 Knowledge Base Architecture
+### 3.2 Knowledge Base Architecture
 
 The system separates knowledge into two types:
 
@@ -90,7 +90,7 @@ The system separates knowledge into two types:
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while the user knowledge base extends and implements it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to user preferences and workflows.
 
-### 6.3 External Connections
+### 3.3 External Connections
 
 Each external data connection has bidirectional sync and conflict resolution:
 
@@ -101,12 +101,12 @@ Each external data connection has bidirectional sync and conflict resolution:
 - Github Projects
 - Other git repos
 
-## 7. Glossary
+## 4. Glossary
 
-### 7.1 Key Terms
+### 4.1 Key Terms
 
 - **Activity**: A classification of actions that share common patterns, guidelines, and data requirements (e.g., "writing an email", "creating a task").
-- **Change Request**: A proposal for modifications to data or content that requires review and approval.
+- **Change Request**: A proposal for modifications to the knowledge base that requires review and approval.
 - **Guideline**: A set of rules or recommendations associated with activities that MUST, SHOULD, or MAY be followed that will be included in relevant prompts.
 - **Inference Request**: The process of submitting a `Prompt` to one or more `Models` and receiving the generated outputs.
 - **Model**: A system capable of processing `Inference Requests` and generating outputs.

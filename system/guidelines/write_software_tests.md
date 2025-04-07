@@ -30,11 +30,11 @@ The codebase currently uses the following testing structure and tools:
 
 ## Guidelines
 
-1. **Avoid Stubbing When Possible**
+1. **Do Not Use Mocks or Stubs**
 
-   - Write tests that interact with real implementations instead of stubs/mocks
+   - Always write tests that interact with real implementations
    - Use the actual database with proper setup/teardown instead of in-memory or fake databases
-   - Only mock external services that cannot be reliably tested (third-party APIs, etc.)
+   - For external services that cannot be directly tested (third-party APIs, etc.), create test doubles that simulate the real behavior rather than using mocks/stubs
 
 2. **Test Structure**
 
