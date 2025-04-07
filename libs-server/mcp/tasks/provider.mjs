@@ -3,8 +3,7 @@ import debug from 'debug'
 import config from '#config'
 import { register_provider } from '#libs-server/mcp/service.mjs'
 import { format_response, format_error } from '#libs-server/mcp/utils.mjs'
-import get_tasks from '#libs-server/tasks/get_tasks.mjs'
-import get_task from '#libs-server/tasks/get_task.mjs'
+import { tasks as task_service } from '#libs-server'
 import {
   filter_displayable_tasks,
   sort_tasks_by_importance
@@ -154,7 +153,7 @@ async function handle_get_filtered_tasks(args) {
 
   try {
     // Get all tasks for the user with the provided filters
-    const tasks = await get_tasks({
+    const tasks = await task_service.get_tasks({
       user_id,
       tag_ids,
       organization_ids,
@@ -196,7 +195,7 @@ async function handle_get_task(args) {
   const { task_id, user_id } = args
 
   try {
-    const task = await get_task({ task_id })
+    const task = await task_service.get_task({ task_id })
 
     // Verify the user has access to this task
     if (!task || task.user_id !== user_id) {

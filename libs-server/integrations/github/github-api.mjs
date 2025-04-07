@@ -1,5 +1,6 @@
 import fetch from 'node-fetch'
 import debug from 'debug'
+import { GraphQLClient, gql } from 'graphql-request'
 
 const log = debug('github')
 
@@ -13,6 +14,15 @@ export const map_task_status_to_github_state = (status) => {
   }
 }
 
+const create_github_client = ({ github_token }) => {
+  return new GraphQLClient({
+    url: 'https://api.github.com/graphql',
+    headers: {
+      Authorization: `Bearer ${github_token}`
+    }
+  })
+}
+
 export const get_github_project = async ({
   username,
   project_number,
@@ -23,13 +33,16 @@ export const get_github_project = async ({
     `Getting GitHub project ${username}/${project_number}${cursor ? ' (with cursor)' : ''}`
   )
 
-  const after_cursor = cursor ? `, after: "${cursor}"` : ''
-  const query = `
-    query {
-      user(login: "${username}") {
-        projectV2(number: ${project_number}) {
+  const query = gql`
+    query GetProject(
+      $username: String!
+      $project_number: Int!
+      $after_cursor: String
+    ) {
+      user(login: $username) {
+        projectV2(number: $project_number) {
           id
-          items(first: 100${after_cursor}) {
+          items(first: 100, after: $after_cursor) {
             pageInfo {
               hasNextPage
               endCursor
@@ -131,19 +144,34 @@ export const get_github_project = async ({
           }
         }
       }
-    }`
+    }
+  `
 
-  const response = await fetch('https://api.github.com/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${github_token}`
-    },
-    body: JSON.stringify({ query })
-  })
-  const data = await response.json()
+  const variables = {
+    username,
+    project_number,
+    after_cursor: cursor
+  }
 
-  return data
+  try {
+    const client = create_github_client({ github_token })
+    const { data, errors } = await client.request({
+      document: query,
+      variables,
+      errorPolicy: 'all'
+    })
+
+    if (errors?.length > 0) {
+      const error_messages = errors.map((e) => e.message).join(', ')
+      log(`GitHub GraphQL API errors: ${error_messages}`)
+      throw new Error(`GitHub GraphQL API errors: ${error_messages}`)
+    }
+
+    return data
+  } catch (error) {
+    log(`GitHub GraphQL API error: ${error.message}`)
+    throw error
+  }
 }
 
 export const get_github_repo_issues = async ({
@@ -166,14 +194,15 @@ export const get_github_repo_issues = async ({
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(`GitHub API error: ${error.message}`)
+    throw new Error(`GitHub API error: ${error.status} - ${error.message}`)
   }
 
   const issues = await response.json()
 
   // Check if there are more pages
   const link_header = response.headers.get('link')
-  const has_next_page = link_header && link_header.includes('rel="next"')
+  const has_next_page =
+    link_header && link_header !== '' && link_header.includes('rel="next"')
 
   return {
     issues,
@@ -200,7 +229,7 @@ export const get_github_issue = async ({
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(`GitHub API error: ${error.message}`)
+    throw new Error(`GitHub API error: ${error.status} - ${error.message}`)
   }
 
   return response.json()
@@ -452,7 +481,9 @@ export async function update_pull_request({
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(`GitHub API error updating PR: ${error.message}`)
+    throw new Error(
+      `GitHub API error updating PR: ${error.status} - ${error.message}`
+    )
   }
 
   return response.json()

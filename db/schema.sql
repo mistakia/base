@@ -420,11 +420,9 @@ CREATE TABLE entity_relations (
   relation_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
   source_entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
   target_entity_id UUID REFERENCES entities (entity_id) ON DELETE CASCADE,
-  target_title VARCHAR(255), -- Used when target entity doesn't exist in db yet
   relation_type VARCHAR(50) NOT NULL,
   context TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CHECK (target_entity_id IS NOT NULL OR target_title IS NOT NULL)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE entity_tags (

@@ -227,26 +227,21 @@ export async function import_markdown_entity(
 
         // Prepare batched inserts
         const relations_with_targets = []
-        const relations_without_targets = []
 
         processed_data.extracted.relations.forEach((relation) => {
           if (entity_map[relation.target_title]) {
             relations_with_targets.push({
               source_entity_id: entity_id,
               target_entity_id: entity_map[relation.target_title],
-              target_title: relation.target_title,
               relation_type: relation.relation_type,
               context: relation.context,
               created_at: new Date()
             })
           } else {
-            relations_without_targets.push({
-              source_entity_id: entity_id,
-              target_title: relation.target_title,
-              relation_type: relation.relation_type,
-              context: relation.context,
-              created_at: new Date()
-            })
+            // Skip relations without target entities since we can't store them without target_entity_id
+            log(
+              `Warning: Could not find target entity with title: ${relation.target_title}`
+            )
           }
         })
 
@@ -260,11 +255,6 @@ export async function import_markdown_entity(
               'relation_type'
             ])
             .merge()
-        }
-
-        // Batch insert relations without targets
-        if (relations_without_targets.length > 0) {
-          await trx('entity_relations').insert(relations_without_targets)
         }
       }
 
@@ -308,24 +298,20 @@ export async function import_markdown_entity(
 
         // Prepare batched inserts
         const relations_with_targets = []
-        const relations_without_targets = []
 
         processed_data.extracted.frontmatter_relations.forEach((relation) => {
           if (entity_map[relation.target_title]) {
             relations_with_targets.push({
               source_entity_id: entity_id,
               target_entity_id: entity_map[relation.target_title],
-              target_title: relation.target_title,
               relation_type: relation.relation_type,
               created_at: new Date()
             })
           } else {
-            relations_without_targets.push({
-              source_entity_id: entity_id,
-              target_title: relation.target_title,
-              relation_type: relation.relation_type,
-              created_at: new Date()
-            })
+            // Skip relations without target entities since we can't store them without target_entity_id
+            log(
+              `Warning: Could not find target entity with title: ${relation.target_title}`
+            )
           }
         })
 
@@ -339,11 +325,6 @@ export async function import_markdown_entity(
               'relation_type'
             ])
             .merge()
-        }
-
-        // Batch insert relations without targets
-        if (relations_without_targets.length > 0) {
-          await trx('entity_relations').insert(relations_without_targets)
         }
       }
     }

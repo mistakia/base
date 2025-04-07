@@ -3,7 +3,7 @@ import ed25519 from '@trashman/ed25519-blake2b'
 
 import db from '#db'
 
-import { create_task, get_task, get_tasks } from '#libs-server'
+import { tasks as tasks_service } from '#libs-server'
 
 const router = express.Router({ mergeParams: true })
 
@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
         : [person_ids]
       : []
 
-    const tasks = await get_tasks({
+    const tasks = await tasks_service.get_tasks({
       user_id,
       status,
       tag_ids: parsed_tag_ids,
@@ -83,7 +83,7 @@ router.get('/:task_id', async (req, res) => {
       return res.status(400).send({ error: 'missing task_id' })
     }
 
-    const task = await get_task({ task_id })
+    const task = await tasks_service.get_task({ task_id })
 
     if (!task) {
       return res.status(404).send({ error: 'task not found' })
@@ -120,14 +120,14 @@ router.post('/?', async (req, res) => {
       return res.status(400).send({ error: 'invalid signature' })
     }
 
-    const entity_id = await create_task({
+    const entity_id = await tasks_service.create_task({
       user_id,
       title: task.title || task.text_input || 'Untitled Task',
       description: task.description || ''
     })
 
     // Use get_task function to retrieve the created task for consistency
-    const task_result = await get_task({ task_id: entity_id })
+    const task_result = await tasks_service.get_task({ task_id: entity_id })
 
     res.status(200).send(task_result)
   } catch (error) {

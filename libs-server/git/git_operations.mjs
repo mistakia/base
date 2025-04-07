@@ -164,7 +164,9 @@ export async function create_branch({
     }
   } catch (error) {
     log(`Failed to create branch ${branch_name}:`, error)
-    throw new Error(`Failed to create branch ${branch_name}: ${error.message}`)
+    throw new Error(
+      `Failed to create branch ${branch_name}: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -322,7 +324,7 @@ export async function create_worktree({ repo_path, branch_name }) {
     }
 
     throw new Error(
-      `Failed to create worktree for ${branch_name}: ${error.message}`
+      `Failed to create worktree for ${branch_name}: ${error.message} - ${error.stderr || error.stdout || error}`
     )
   }
 }
@@ -437,7 +439,9 @@ export async function apply_patch({ repo_path, patch_content }) {
     }
   } catch (error) {
     log('Failed to apply patch:', error)
-    throw new Error(`Failed to apply patch: ${error.message}`)
+    throw new Error(
+      `Failed to apply patch: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -503,7 +507,9 @@ export async function add_files({ worktree_path, files_to_add }) {
     return true
   } catch (error) {
     log(`Failed to stage files in ${worktree_path}:`, error)
-    throw new Error(`Failed to stage files: ${error.message}`)
+    throw new Error(
+      `Failed to stage files: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -537,7 +543,9 @@ export async function commit_changes({
       return true // Consider this a success in this context
     }
     log(`Failed to commit changes in ${worktree_path}:`, error)
-    throw new Error(`Failed to commit changes: ${error.message}`)
+    throw new Error(
+      `Failed to commit changes: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -559,7 +567,7 @@ export async function read_file_from_ref({ repo_path, ref, file_path }) {
   } catch (error) {
     log(`Failed to read file ${file_path} from ${ref}:`, error)
     throw new Error(
-      `Failed to read file ${file_path} from ${ref}: ${error.message}`
+      `Failed to read file ${file_path} from ${ref}: ${error.message} - ${error.stderr || error.stdout || error}`
     )
   }
 }
@@ -599,10 +607,14 @@ export async function list_files({
         return await list_files_recursive(repo_path, path_pattern)
       } catch (fallback_error) {
         log(`Fallback method also failed: ${fallback_error.message}`)
-        throw new Error(`Failed to list files for ${ref}: ${error.message}`)
+        throw new Error(
+          `Failed to list files for ${ref}: ${fallback_error.message} - ${fallback_error.stderr || fallback_error.stdout || fallback_error}`
+        )
       }
     } else {
-      throw new Error(`Failed to list files for ${ref}: ${error.message}`)
+      throw new Error(
+        `Failed to list files for ${ref}: ${error.message} - ${error.stderr || error.stdout || error}`
+      )
     }
   }
 }
@@ -708,7 +720,9 @@ export async function get_diff({
     return stdout
   } catch (error) {
     log(`Failed to get diff between ${from_ref} and ${to_ref}:`, error)
-    throw new Error(`Failed to get diff: ${error.message}`)
+    throw new Error(
+      `Failed to get diff: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -846,7 +860,7 @@ export async function checkout_branch({ repo_path, branch_name }) {
   } catch (error) {
     log(`Failed to checkout branch ${branch_name}:`, error)
     throw new Error(
-      `Failed to checkout branch ${branch_name}: ${error.message}`
+      `Failed to checkout branch ${branch_name}: ${error.message} - ${error.stderr || error.stdout || error}`
     )
   }
 }
@@ -886,7 +900,7 @@ export async function merge_branch({
   } catch (error) {
     log(`Failed to merge branch ${branch_to_merge}:`, error)
     throw new Error(
-      `Failed to merge branch ${branch_to_merge}: ${error.message}`
+      `Failed to merge branch ${branch_to_merge}: ${error.message} - ${error.stderr || error.stdout || error}`
     )
   }
 }
@@ -918,7 +932,9 @@ export async function delete_branch({ repo_path, branch_name, force = false }) {
       return false
     }
 
-    throw new Error(`Failed to delete branch ${branch_name}: ${error.message}`)
+    throw new Error(
+      `Failed to delete branch ${branch_name}: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
@@ -946,7 +962,9 @@ export async function push_branch({
     return true
   } catch (error) {
     log(`Failed to push branch ${branch_name}:`, error)
-    throw new Error(`Failed to push branch ${branch_name}: ${error.message}`)
+    throw new Error(
+      `Failed to push branch ${branch_name}: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
   }
 }
 
