@@ -100,7 +100,7 @@ mcp_server.setRequestHandler(
 )
 
 // Set the port for the MCP server
-const mcp_port = process.env.MCP_PORT || 3100
+const mcp_port = 3100
 
 // Create a standalone Express app for MCP
 const app = express()

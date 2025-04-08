@@ -14,9 +14,6 @@ import { get_fixture_path } from '#tests/utils/fixture-paths.mjs'
 // Set up temp directory for imports
 const temp_dir = create_temp_test_directory('github-sync-test-')
 
-// Before tests begin, set environment variable to use our temp directory
-process.env.IMPORT_HISTORY_DIR = temp_dir.path
-
 describe('GitHub Sync Integration Tests', () => {
   let test_user
   let test_issue_data
@@ -77,9 +74,6 @@ describe('GitHub Sync Integration Tests', () => {
     if (temp_dir) {
       temp_dir.cleanup()
     }
-
-    // Reset environment variable
-    delete process.env.IMPORT_HISTORY_DIR
   })
 
   describe('process_single_github_issue', () => {

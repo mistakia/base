@@ -73,12 +73,12 @@ export function get_repo_path(repo_type = 'system') {
     return process.env.MCP_REPO_DATA_PATH
   }
 
-  if (config.system_repo_path && repo_type === 'system') {
-    return config.system_repo_path
+  if (config.system_base_directory && repo_type === 'system') {
+    return config.system_base_directory
   }
 
-  if (config.user_repo_path && repo_type === 'user') {
-    return config.user_repo_path
+  if (config.user_base_directory && repo_type === 'user') {
+    return config.user_base_directory
   }
 
   // Default paths (these will be overridden in tests)

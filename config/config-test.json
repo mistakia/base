@@ -3,6 +3,7 @@
   "production_url": "https://example.com",
   "production_wss": "wss://example.com",
   "base_hostname": "",
+  "user_base_directory": "/tmp/base_data_test",
   "cloudflare": {
     "zone_id": "xxxxx",
     "user_email": "xxxxx",

@@ -9,6 +9,7 @@ import debug from 'debug'
 import db from '#db'
 import * as git_ops from '#libs-server/git/git_operations.mjs'
 import * as github_integration from '#libs-server/integrations/github/index.mjs'
+import config from '#config'
 import {
   write_markdown_entity,
   read_markdown_entity
@@ -124,7 +125,7 @@ export async function create_change_request({
         })
 
         // Get GitHub token from environment or configuration
-        const github_token = process.env.GITHUB_TOKEN
+        const github_token = config.github_access_token
         if (!github_token) {
           log(
             'Warning: GITHUB_TOKEN not found in environment, skipping PR creation'

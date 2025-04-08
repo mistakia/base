@@ -9,6 +9,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import debug from 'debug'
 
+import config from '#config'
 import db from '#db'
 import {
   import_file,
@@ -23,8 +24,7 @@ dotenv.config()
 const log = debug('block-cli')
 
 // Default user ID (for testing purposes)
-const DEFAULT_USER_ID =
-  process.env.DEFAULT_USER_ID || '00000000-0000-0000-0000-000000000000'
+const DEFAULT_USER_ID = config.user_id
 
 /**
  * Format output based on format type

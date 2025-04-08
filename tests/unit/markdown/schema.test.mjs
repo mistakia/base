@@ -18,8 +18,8 @@ describe('Schema Module', () => {
   // Store current branch and test repo paths
   let current_system_branch
   let current_user_branch
-  let system_repo_path
-  let user_repo_path
+  let system_base_directory
+  let user_base_directory
 
   // Set up test repositories with schema files
   before(async () => {
@@ -28,26 +28,30 @@ describe('Schema Module', () => {
 
     // Create temporary directories for test repos
     const temp_dir = os.tmpdir()
-    system_repo_path = path.join(
+    system_base_directory = path.join(
       temp_dir,
       `schema-test-system-${Date.now()}-${Math.floor(Math.random() * 10000)}`
     )
-    user_repo_path = path.join(
+    user_base_directory = path.join(
       temp_dir,
       `schema-test-user-${Date.now()}-${Math.floor(Math.random() * 10000)}`
     )
 
     // Create system repository with schema files
-    await fs.mkdir(path.join(system_repo_path, 'schema'), { recursive: true })
-    await execute('git init', { cwd: system_repo_path })
-    await execute('git config user.name "Test User"', { cwd: system_repo_path })
+    await fs.mkdir(path.join(system_base_directory, 'schema'), {
+      recursive: true
+    })
+    await execute('git init', { cwd: system_base_directory })
+    await execute('git config user.name "Test User"', {
+      cwd: system_base_directory
+    })
     await execute('git config user.email "test@example.com"', {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
 
     // Create task schema file
     await fs.writeFile(
-      path.join(system_repo_path, 'schema', 'task.md'),
+      path.join(system_base_directory, 'schema', 'task.md'),
       `---
 type: type_definition
 name: task
@@ -69,7 +73,7 @@ properties:
 
     // Create person schema file
     await fs.writeFile(
-      path.join(system_repo_path, 'schema', 'person.md'),
+      path.join(system_base_directory, 'schema', 'person.md'),
       `---
 type: type_definition
 name: person
@@ -86,23 +90,29 @@ properties:
 
     // Commit schema files
     await execute('git add schema/task.md schema/person.md', {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
-    await execute('git commit -m "Add schema files"', { cwd: system_repo_path })
-    await execute('git branch -M main', { cwd: system_repo_path })
+    await execute('git commit -m "Add schema files"', {
+      cwd: system_base_directory
+    })
+    await execute('git branch -M main', { cwd: system_base_directory })
     current_system_branch = 'main'
 
     // Create user repository with extension schema
-    await fs.mkdir(path.join(user_repo_path, 'schema'), { recursive: true })
-    await execute('git init', { cwd: user_repo_path })
-    await execute('git config user.name "Test User"', { cwd: user_repo_path })
+    await fs.mkdir(path.join(user_base_directory, 'schema'), {
+      recursive: true
+    })
+    await execute('git init', { cwd: user_base_directory })
+    await execute('git config user.name "Test User"', {
+      cwd: user_base_directory
+    })
     await execute('git config user.email "test@example.com"', {
-      cwd: user_repo_path
+      cwd: user_base_directory
     })
 
     // Create task extension schema file
     await fs.writeFile(
-      path.join(user_repo_path, 'schema', 'task_extension.md'),
+      path.join(user_base_directory, 'schema', 'task_extension.md'),
       `---
 type: type_extension
 extends: task
@@ -116,7 +126,7 @@ properties:
 
     // Create a schema extension for an unknown type (for testing warnings)
     await fs.writeFile(
-      path.join(user_repo_path, 'schema', 'unknown_extension.md'),
+      path.join(user_base_directory, 'schema', 'unknown_extension.md'),
       `---
 type: type_extension
 extends: unknown_type
@@ -131,20 +141,20 @@ properties:
     // Commit schema files
     await execute(
       'git add schema/task_extension.md schema/unknown_extension.md',
-      { cwd: user_repo_path }
+      { cwd: user_base_directory }
     )
     await execute('git commit -m "Add extension schemas"', {
-      cwd: user_repo_path
+      cwd: user_base_directory
     })
-    await execute('git branch -M main', { cwd: user_repo_path })
+    await execute('git branch -M main', { cwd: user_base_directory })
     current_user_branch = 'main'
   })
 
   // Clean up after tests
   after(async () => {
     try {
-      await fs.rm(system_repo_path, { recursive: true, force: true })
-      await fs.rm(user_repo_path, { recursive: true, force: true })
+      await fs.rm(system_base_directory, { recursive: true, force: true })
+      await fs.rm(user_base_directory, { recursive: true, force: true })
     } catch (error) {
       console.error('Error cleaning up test repositories:', error)
     }
@@ -156,14 +166,14 @@ properties:
       const system_repository = {
         type: 'system',
         branch: current_system_branch,
-        path: system_repo_path,
+        path: system_base_directory,
         is_submodule: false
       }
 
       const user_repository = {
         type: 'user',
         branch: current_user_branch,
-        path: user_repo_path,
+        path: user_base_directory,
         is_submodule: true
       }
 
@@ -278,14 +288,14 @@ properties:
       const system_repository = {
         type: 'system',
         branch: current_system_branch,
-        path: system_repo_path,
+        path: system_base_directory,
         is_submodule: false
       }
 
       const user_repository = {
         type: 'user',
         branch: current_user_branch,
-        path: user_repo_path,
+        path: user_base_directory,
         is_submodule: true
       }
 

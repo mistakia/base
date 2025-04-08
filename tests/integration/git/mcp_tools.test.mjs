@@ -24,8 +24,8 @@ function parse_mcp_response(response) {
 
 describe('MCP Git Tools Integration', function () {
   let test_dir
-  let system_repo_path
-  let user_repo_path
+  let system_base_directory
+  let user_base_directory
   let original_system_path
   let original_data_path
 
@@ -45,79 +45,85 @@ describe('MCP Git Tools Integration', function () {
       os.tmpdir(),
       `mcp-git-test-${Date.now()}-${Math.floor(Math.random() * 10000)}`
     )
-    system_repo_path = path.join(test_dir, 'system')
-    user_repo_path = path.join(test_dir, 'data')
+    system_base_directory = path.join(test_dir, 'system')
+    user_base_directory = path.join(test_dir, 'data')
 
     // Create the base directory
     await fs.mkdir(test_dir, { recursive: true })
 
     // Initialize system repository (simulating the main repo)
-    await fs.mkdir(system_repo_path, { recursive: true })
-    await execute('git init', { cwd: system_repo_path })
-    await execute('git config user.name "Test User"', { cwd: system_repo_path })
+    await fs.mkdir(system_base_directory, { recursive: true })
+    await execute('git init', { cwd: system_base_directory })
+    await execute('git config user.name "Test User"', {
+      cwd: system_base_directory
+    })
     await execute('git config user.email "test@example.com"', {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
 
     // Create a README file in the system repo
     await fs.writeFile(
-      path.join(system_repo_path, 'README.md'),
+      path.join(system_base_directory, 'README.md'),
       '# Test System Repository'
     )
-    await execute('git add README.md', { cwd: system_repo_path })
+    await execute('git add README.md', { cwd: system_base_directory })
     await execute('git commit -m "Initial system commit"', {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
-    await execute('git branch -M main', { cwd: system_repo_path })
+    await execute('git branch -M main', { cwd: system_base_directory })
 
     // Initialize data repository (simulating the data submodule)
-    await fs.mkdir(user_repo_path, { recursive: true })
-    await execute('git init', { cwd: user_repo_path })
-    await execute('git config user.name "Test User"', { cwd: user_repo_path })
+    await fs.mkdir(user_base_directory, { recursive: true })
+    await execute('git init', { cwd: user_base_directory })
+    await execute('git config user.name "Test User"', {
+      cwd: user_base_directory
+    })
     await execute('git config user.email "test@example.com"', {
-      cwd: user_repo_path
+      cwd: user_base_directory
     })
 
     // Create directory structure in data repo (similar to what we'd have in the real data repo)
-    await fs.mkdir(path.join(user_repo_path, 'concepts'), { recursive: true })
-    await fs.mkdir(path.join(user_repo_path, 'concepts/dir'), {
+    await fs.mkdir(path.join(user_base_directory, 'concepts'), {
+      recursive: true
+    })
+    await fs.mkdir(path.join(user_base_directory, 'concepts/dir'), {
       recursive: true
     })
 
     // Add some markdown files to test with
     await fs.writeFile(
-      path.join(user_repo_path, 'concepts/file1.md'),
+      path.join(user_base_directory, 'concepts/file1.md'),
       '# File 1\n\nThis is test file 1.'
     )
     await fs.writeFile(
-      path.join(user_repo_path, 'concepts/file2.md'),
+      path.join(user_base_directory, 'concepts/file2.md'),
       '# File 2\n\nThis is test file 2.'
     )
     await fs.writeFile(
-      path.join(user_repo_path, 'concepts/dir/file3.md'),
+      path.join(user_base_directory, 'concepts/dir/file3.md'),
       '# File 3\n\nThis is test file 3.'
     )
 
     // Commit the files to the data repo
-    await execute('git add .', { cwd: user_repo_path })
+    await execute('git add .', { cwd: user_base_directory })
     await execute('git commit -m "Initial data commit"', {
-      cwd: user_repo_path
+      cwd: user_base_directory
     })
-    await execute('git branch -M main', { cwd: user_repo_path })
+    await execute('git branch -M main', { cwd: user_base_directory })
 
     // Set up data as a submodule of system (simulating our real setup)
     // We'll use a relative path for the submodule to avoid absolute path issues
-    const data_dir_name = path.basename(user_repo_path)
+    const data_dir_name = path.basename(user_base_directory)
     await execute(`git submodule add -f ../${data_dir_name} data`, {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
     await execute('git commit -m "Add data submodule"', {
-      cwd: system_repo_path
+      cwd: system_base_directory
     })
 
     // Set environment variables to point to our test repositories
-    process.env.MCP_REPO_SYSTEM_PATH = system_repo_path
-    process.env.MCP_REPO_DATA_PATH = user_repo_path
+    process.env.MCP_REPO_SYSTEM_PATH = system_base_directory
+    process.env.MCP_REPO_DATA_PATH = user_base_directory
   })
 
   // Clean up after all tests
@@ -183,20 +189,22 @@ describe('MCP Git Tools Integration', function () {
     expect(parsed_result).to.have.property('branch', 'feature-branch')
 
     // Verify the branch was created
-    const branch_check = await execute('git branch', { cwd: system_repo_path })
+    const branch_check = await execute('git branch', {
+      cwd: system_base_directory
+    })
     expect(branch_check.stdout).to.include('feature-branch')
 
     // Checkout the branch and verify file content
-    await execute('git checkout feature-branch', { cwd: system_repo_path })
+    await execute('git checkout feature-branch', { cwd: system_base_directory })
     const file_exists = await fs
-      .access(path.join(system_repo_path, 'new-file.md'))
+      .access(path.join(system_base_directory, 'new-file.md'))
       .then(() => true)
       .catch(() => false)
     expect(file_exists).to.be.true
 
     if (file_exists) {
       const content = await fs.readFile(
-        path.join(system_repo_path, 'new-file.md'),
+        path.join(system_base_directory, 'new-file.md'),
         'utf8'
       )
       expect(content).to.equal('# New content')
@@ -207,11 +215,11 @@ describe('MCP Git Tools Integration', function () {
     // Create a test file with specific content
     const test_content = '# Test Content\n\nThis is test content.'
     await fs.writeFile(
-      path.join(user_repo_path, 'concepts/test-file.md'),
+      path.join(user_base_directory, 'concepts/test-file.md'),
       test_content
     )
-    await execute('git add concepts/test-file.md', { cwd: user_repo_path })
-    await execute('git commit -m "Add test file"', { cwd: user_repo_path })
+    await execute('git add concepts/test-file.md', { cwd: user_base_directory })
+    await execute('git commit -m "Add test file"', { cwd: user_base_directory })
 
     const result = await service.process_request('git', {
       method: 'tools/call',
@@ -255,14 +263,18 @@ describe('MCP Git Tools Integration', function () {
 
   it('should return diff between branches with knowledge_base_get_diff', async function () {
     // Create a branch with changes
-    await execute('git checkout -b feature-branch', { cwd: system_repo_path })
+    await execute('git checkout -b feature-branch', {
+      cwd: system_base_directory
+    })
     await fs.writeFile(
-      path.join(system_repo_path, 'README.md'),
+      path.join(system_base_directory, 'README.md'),
       '# Test System Repository\n\nUpdated content'
     )
-    await execute('git add README.md', { cwd: system_repo_path })
-    await execute('git commit -m "Update README"', { cwd: system_repo_path })
-    await execute('git checkout main', { cwd: system_repo_path })
+    await execute('git add README.md', { cwd: system_base_directory })
+    await execute('git commit -m "Update README"', {
+      cwd: system_base_directory
+    })
+    await execute('git checkout main', { cwd: system_base_directory })
 
     const result = await service.process_request('git', {
       method: 'tools/call',
@@ -286,12 +298,14 @@ describe('MCP Git Tools Integration', function () {
     // Add a file with unique searchable content
     const unique_term = `unique-search-term-${Date.now()}`
     await fs.writeFile(
-      path.join(user_repo_path, 'concepts/searchable.md'),
+      path.join(user_base_directory, 'concepts/searchable.md'),
       `This file contains a ${unique_term} pattern`
     )
-    await execute('git add concepts/searchable.md', { cwd: user_repo_path })
+    await execute('git add concepts/searchable.md', {
+      cwd: user_base_directory
+    })
     await execute('git commit -m "Add searchable content"', {
-      cwd: user_repo_path
+      cwd: user_base_directory
     })
 
     const result = await service.process_request('git', {
@@ -362,9 +376,9 @@ describe('MCP Git Tools Integration', function () {
     expect(parsed_modify_result).to.have.property('success', true)
 
     // Verify the file was modified
-    await execute('git checkout feature-branch', { cwd: system_repo_path })
+    await execute('git checkout feature-branch', { cwd: system_base_directory })
     const file_content = await fs.readFile(
-      path.join(system_repo_path, 'file-to-modify.md'),
+      path.join(system_base_directory, 'file-to-modify.md'),
       'utf8'
     )
     expect(file_content).to.include('Modified Content')
@@ -392,15 +406,15 @@ describe('MCP Git Tools Integration', function () {
     })
 
     // Verify the file exists
-    await execute('git checkout feature-branch', { cwd: system_repo_path })
+    await execute('git checkout feature-branch', { cwd: system_base_directory })
     const file_exists_before = await fs
-      .access(path.join(system_repo_path, 'file-to-delete.md'))
+      .access(path.join(system_base_directory, 'file-to-delete.md'))
       .then(() => true)
       .catch(() => false)
     expect(file_exists_before).to.be.true
 
     // Go back to main branch
-    await execute('git checkout main', { cwd: system_repo_path })
+    await execute('git checkout main', { cwd: system_base_directory })
 
     // Then delete it
     const delete_result = await service.process_request('git', {
@@ -426,9 +440,9 @@ describe('MCP Git Tools Integration', function () {
     expect(parsed_delete_result).to.have.property('success', true)
 
     // Verify the file is gone
-    await execute('git checkout feature-branch', { cwd: system_repo_path })
+    await execute('git checkout feature-branch', { cwd: system_base_directory })
     const file_exists_after = await fs
-      .access(path.join(system_repo_path, 'file-to-delete.md'))
+      .access(path.join(system_base_directory, 'file-to-delete.md'))
       .then(() => true)
       .catch(() => false)
     expect(file_exists_after).to.be.false

@@ -4,6 +4,13 @@ import path from 'path'
 import db from '#db'
 import { create_content_identifier } from './sync-core.mjs'
 
+import config from '#config'
+
+const default_import_history_base_directory = path.join(
+  config.user_base_directory,
+  'import_history'
+)
+
 const log = debug('sync:import-manager')
 
 /**
@@ -21,9 +28,7 @@ export function get_import_directory_paths({
   import_history_base_directory
 }) {
   const base_dir =
-    import_history_base_directory ||
-    process.env.IMPORT_HISTORY_DIR ||
-    './data/import_history'
+    import_history_base_directory || default_import_history_base_directory
   const system_dir = path.join(base_dir, external_system)
   const entity_dir = path.join(system_dir, entity_id)
 

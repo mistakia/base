@@ -1,0 +1,129 @@
+[
+  {
+    "name": "user_message",
+    "entry": {
+      "id": "msg_001",
+      "timestamp": "2023-05-10T14:30:00Z",
+      "type": "message",
+      "role": "user",
+      "content": "Hello, can you help me with a programming question?"
+    }
+  },
+  {
+    "name": "assistant_message",
+    "entry": {
+      "id": "msg_002",
+      "timestamp": "2023-05-10T14:30:10Z",
+      "type": "message",
+      "role": "assistant",
+      "content": "I'd be happy to help with your programming question. What would you like to know?"
+    }
+  },
+  {
+    "name": "tool_call",
+    "entry": {
+      "id": "tool_001",
+      "timestamp": "2023-05-10T14:30:20Z",
+      "type": "tool_call",
+      "tool_name": "web_search",
+      "parameters": {
+        "query": "JavaScript async await examples"
+      }
+    }
+  },
+  {
+    "name": "tool_result",
+    "entry": {
+      "id": "tool_result_001",
+      "timestamp": "2023-05-10T14:30:25Z",
+      "type": "tool_result",
+      "tool_call_id": "tool_001",
+      "result": {
+        "status": "success",
+        "data": [
+          {
+            "title": "JavaScript Async/Await Tutorial",
+            "url": "https://example.com/async-await-tutorial",
+            "snippet": "Learn how to use async/await in JavaScript with practical examples."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "state_change",
+    "entry": {
+      "id": "state_001",
+      "timestamp": "2023-05-10T14:31:00Z",
+      "type": "state_change",
+      "previous_state": "active",
+      "new_state": "paused",
+      "reason": "waiting_for_human_input"
+    }
+  },
+  {
+    "name": "error_entry",
+    "entry": {
+      "id": "error_001",
+      "timestamp": "2023-05-10T14:32:00Z",
+      "type": "error",
+      "error_type": "tool_execution_failed",
+      "tool_call_id": "tool_002",
+      "message": "Failed to execute tool: Invalid parameters",
+      "details": {
+        "stack": "Error: Invalid parameters\n    at executeToolCall (/path/to/file.js:123:45)"
+      }
+    }
+  },
+  {
+    "name": "conversation_sample",
+    "entries": [
+      {
+        "id": "msg_101",
+        "timestamp": "2023-05-10T15:00:00Z",
+        "type": "message",
+        "role": "user",
+        "content": "How do I calculate the area of a circle?"
+      },
+      {
+        "id": "msg_102",
+        "timestamp": "2023-05-10T15:00:10Z",
+        "type": "message",
+        "role": "assistant",
+        "content": "To calculate the area of a circle, you can use the formula: Area = π × r², where r is the radius of the circle. Would you like me to help you calculate an example?"
+      },
+      {
+        "id": "msg_103",
+        "timestamp": "2023-05-10T15:00:20Z",
+        "type": "message",
+        "role": "user",
+        "content": "Yes, if the radius is 5 cm, what's the area?"
+      },
+      {
+        "id": "tool_104",
+        "timestamp": "2023-05-10T15:00:25Z",
+        "type": "tool_call",
+        "tool_name": "calculator",
+        "parameters": {
+          "expression": "3.14159 * 5 * 5"
+        }
+      },
+      {
+        "id": "tool_result_105",
+        "timestamp": "2023-05-10T15:00:26Z",
+        "type": "tool_result",
+        "tool_call_id": "tool_104",
+        "result": {
+          "value": 78.53975
+        }
+      },
+      {
+        "id": "msg_106",
+        "timestamp": "2023-05-10T15:00:30Z",
+        "type": "message",
+        "role": "assistant",
+        "content": "For a circle with a radius of 5 cm, the area is approximately 78.54 square centimeters (calculated as π × 5² = 3.14159 × 25 ≈ 78.54)."
+      }
+    ]
+  }
+]

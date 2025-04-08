@@ -7,16 +7,7 @@ import {
   update_entity_from_normalized_issue
 } from '#libs-server/integrations/github/github-sync.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
-import {
-  create_test_user,
-  create_temp_test_directory
-} from '#tests/utils/index.mjs'
-
-// Set up temp directory for imports
-const temp_dir = create_temp_test_directory('github-sync-helpers-test-')
-
-// Before tests begin, set environment variable to use our temp directory
-process.env.IMPORT_HISTORY_DIR = temp_dir.path
+import { create_test_user } from '#tests/utils/index.mjs'
 
 describe('GitHub Sync Helper Functions Unit Tests', () => {
   let test_user
@@ -59,14 +50,6 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
   after(async () => {
     // Clean up all test entities for the test user
     await db('entities').where({ user_id: test_user.user_id }).delete()
-
-    // Clean up temporary directory
-    if (temp_dir) {
-      temp_dir.cleanup()
-    }
-
-    // Reset environment variable
-    delete process.env.IMPORT_HISTORY_DIR
   })
 
   describe('create_github_metadata_entries', () => {

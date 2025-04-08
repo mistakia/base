@@ -10,7 +10,7 @@ const logger = debug('mcp:notion')
 
 // Initialize Notion client
 const notion = new Client({
-  auth: config.notion?.api_key || process.env.NOTION_API_KEY
+  auth: config.notion?.api_key
 })
 
 // ===== Tool Definitions =====

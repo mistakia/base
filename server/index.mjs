@@ -19,6 +19,10 @@ import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
 
+// Initialize inference providers
+import OllamaProvider from '#libs-server/inference_providers/ollama.mjs'
+import { provider_registry } from '#libs-server/inference_providers/index.mjs'
+
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
 const options = extend(defaults, config)
@@ -76,10 +80,16 @@ api.use(
   }
 )
 
+// Register API routes
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
 api.use('/api/change-requests', routes.change_requests)
+api.use('/api/threads', routes.threads)
+api.use('/api/inference-providers', routes.inference_providers)
+
+// Register Ollama provider
+provider_registry.register('ollama', new OllamaProvider())
 
 if (IS_DEV) {
   api.get('*', (req, res) => {

@@ -199,7 +199,7 @@ const main = async () => {
     const results = await import_github_project_issues({
       username: argv.username,
       project_number: argv.project,
-      github_token: argv.token || process.env.GITHUB_TOKEN,
+      github_token: argv.token || config.github_access_token,
       user_id: argv.userId,
       import_history_base_directory: argv.since
     })

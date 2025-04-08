@@ -3,7 +3,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain, github } from '#libs-server'
-
+import config from '#config'
 const log = debug('import-github-issues')
 
 // Main function to import issues from a GitHub repository
@@ -163,7 +163,7 @@ const main = async () => {
     const results = await import_github_issues({
       owner: args.owner,
       repo: args.repo,
-      github_token: args.token || process.env.GITHUB_TOKEN,
+      github_token: args.token || config.github_access_token,
       user_id: args.userId,
       state: args.state,
       verbose: args.verbose

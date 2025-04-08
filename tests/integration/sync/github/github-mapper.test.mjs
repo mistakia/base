@@ -1,8 +1,5 @@
 import { expect } from 'chai'
-import {
-  create_test_user,
-  create_temp_test_directory
-} from '#tests/utils/index.mjs'
+import { create_test_user } from '#tests/utils/index.mjs'
 import db from '#db'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import {
@@ -11,12 +8,6 @@ import {
   extract_project_fields,
   normalize_github_issue
 } from '#libs-server/integrations/github/github-mapper.mjs'
-
-// Set up temp directory for imports
-const temp_dir = create_temp_test_directory('github-mapper-test-')
-
-// Before tests begin, set environment variable to use our temp directory
-process.env.IMPORT_HISTORY_DIR = temp_dir.path
 
 describe('GitHub Mapper Integration Tests', () => {
   let test_user
@@ -31,14 +22,6 @@ describe('GitHub Mapper Integration Tests', () => {
   after(async () => {
     // Clean up all test entities for the test user
     await db('entities').where({ user_id: test_user.user_id }).delete()
-
-    // Clean up temporary directory
-    if (temp_dir) {
-      temp_dir.cleanup()
-    }
-
-    // Reset environment variable
-    delete process.env.IMPORT_HISTORY_DIR
   })
 
   describe('map_status', () => {
