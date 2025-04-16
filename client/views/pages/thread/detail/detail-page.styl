@@ -1,0 +1,53 @@
+.page-container
+  display flex
+  flex-direction column
+  height 100%
+  overflow hidden
+
+.header
+  display flex
+  align-items center
+  padding 16px
+  border-bottom 1px solid $color_border
+  background $color_header_background
+
+.back-button
+  display inline-flex
+  align-items center
+  color $color_text
+  text-decoration none
+  font-size 14px
+  margin-right 16px
+
+  &:hover
+    color $color_primary
+
+  svg
+    margin-right 8px
+
+.title
+  font-size 18px
+  font-weight 600
+  margin 0
+  flex 1
+
+.chat-container
+  flex 1
+  overflow hidden
+
+.loading-state
+  display flex
+  align-items center
+  justify-content center
+  height 100%
+  color $color_text_secondary
+
+.error-state
+  display flex
+  flex-direction column
+  align-items center
+  justify-content center
+  height 100%
+  padding 24px
+  color $color_danger
+  text-align center 

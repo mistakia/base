@@ -8,6 +8,9 @@ import {
   create_test_user,
   create_temp_test_directory
 } from '#tests/utils/index.mjs'
+import { thread_constants } from '#libs-shared'
+
+const { THREAD_STATUS } = thread_constants
 
 // set up temp directory for threads
 const temp_dir = create_temp_test_directory('create_thread_test_')
@@ -58,7 +61,7 @@ describe('create_thread', () => {
     expect(metadata.user_id).to.equal(test_user.user_id)
     expect(metadata.inference_provider).to.equal('ollama')
     expect(metadata.model).to.equal('llama2')
-    expect(metadata.state).to.equal('active')
+    expect(metadata.state).to.equal(THREAD_STATUS.ACTIVE)
     expect(metadata.created_at).to.be.a('string')
 
     // Check timeline file
@@ -123,7 +126,7 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      state: 'paused',
+      state: THREAD_STATUS.PAUSED,
       pause_reason: 'waiting_for_user_input',
       thread_base_directory: temp_dir.path
     }
@@ -134,7 +137,7 @@ describe('create_thread', () => {
     const metadata_path = path.join(thread.context_dir, 'metadata.json')
     const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
 
-    expect(metadata.state).to.equal('paused')
+    expect(metadata.state).to.equal(THREAD_STATUS.PAUSED)
     expect(metadata.pause_reason).to.equal('waiting_for_user_input')
   })
 

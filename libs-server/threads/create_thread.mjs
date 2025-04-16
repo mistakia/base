@@ -4,9 +4,10 @@ import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
 import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
+import { thread_constants } from '#libs-shared'
 
+const { THREAD_STATUS, validate_thread_state } = thread_constants
 const log = debug('threads:create')
-const VALID_STATES = ['active', 'paused', 'terminated']
 
 /**
  * Create a new thread with proper structure
@@ -15,7 +16,7 @@ const VALID_STATES = ['active', 'paused', 'terminated']
  * @param {string} params.user_id ID of the user who owns the thread
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
- * @param {string} [params.state='active'] Thread state
+ * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
  * @param {string} [params.initial_message] Initial user message to add to timeline
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {Object} [params.metadata={}] Additional metadata
@@ -25,7 +26,7 @@ export default async function create_thread({
   user_id,
   inference_provider,
   model,
-  state = 'active',
+  state = THREAD_STATUS.ACTIVE,
   initial_message,
   tools = [],
   thread_base_directory = THREAD_BASE_DIRECTORY,
@@ -44,12 +45,8 @@ export default async function create_thread({
     throw new Error('model is required')
   }
 
-  // Validate state
-  if (!VALID_STATES.includes(state)) {
-    throw new Error(
-      `Invalid state: ${state}. Must be one of: ${VALID_STATES.join(', ')}`
-    )
-  }
+  // Validate state using shared function
+  validate_thread_state(state)
 
   // Generate thread ID
   const thread_id = uuid()

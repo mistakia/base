@@ -6,6 +6,7 @@ import { users_reducer } from './users'
 import { path_views_reducer } from './path-views'
 import { database_table_items_reducer } from './database-tables'
 import { tasks_reducer } from './tasks'
+import { thread_reducer } from './thread'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -15,7 +16,8 @@ const root_reducer = (router) =>
     users: users_reducer,
     path_views: path_views_reducer,
     database_table_items: database_table_items_reducer,
-    tasks: tasks_reducer
+    tasks: tasks_reducer,
+    thread: thread_reducer
   })
 
 export default root_reducer

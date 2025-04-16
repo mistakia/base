@@ -234,7 +234,7 @@ router.put(
 
 // Execute a tool called by the model
 router.post(
-  '/:thread_id/execute_tool',
+  '/:thread_id/execute-tool',
   require_auth,
   check_thread_ownership,
   async (req, res) => {

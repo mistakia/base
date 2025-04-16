@@ -3,7 +3,7 @@ import debug from 'debug'
 import { InferenceProvider } from './index.mjs'
 
 const log = debug('ollama')
-const OLLAMA_API_BASE_URL = 'http://localhost:11434'
+const OLLAMA_API_BASE_URL = 'http://127.0.0.1:11434'
 
 /**
  * Ollama inference provider implementation
@@ -11,6 +11,7 @@ const OLLAMA_API_BASE_URL = 'http://localhost:11434'
 export default class OllamaProvider extends InferenceProvider {
   constructor(options = {}) {
     super()
+    this.display_name = 'Ollama'
     this.api_base_url = options.api_base_url || OLLAMA_API_BASE_URL
   }
 

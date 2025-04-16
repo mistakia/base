@@ -55,14 +55,68 @@ export const api = {
   get_user_tasks({ user_id }) {
     const url = `${API_URL}/users/${user_id}/tasks`
     return { url }
+  },
+
+  // Thread API endpoints
+  get_threads({ user_id, state, limit, offset }) {
+    const params = { user_id, state, limit, offset }
+    const url = `${API_URL}/threads?${qs.stringify(params)}`
+    return { url }
+  },
+
+  get_thread({ thread_id }) {
+    const url = `${API_URL}/threads/${thread_id}`
+    return { url }
+  },
+
+  post_thread({ inference_provider, model, initial_message, tools, state }) {
+    const url = `${API_URL}/threads`
+    return {
+      url,
+      ...POST({ inference_provider, model, initial_message, tools, state })
+    }
+  },
+
+  post_thread_message({ thread_id, content, generate_response, stream }) {
+    const url = `${API_URL}/threads/${thread_id}/messages`
+    return {
+      url,
+      ...POST({ content, generate_response, stream })
+    }
+  },
+
+  put_thread_state({ thread_id, state, reason }) {
+    const url = `${API_URL}/threads/${thread_id}/state`
+    return {
+      url,
+      method: 'PUT',
+      body: JSON.stringify({ state, reason }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  },
+
+  post_thread_execute_tool({ thread_id, tool_name, parameters }) {
+    const url = `${API_URL}/threads/${thread_id}/execute-tool`
+    return {
+      url,
+      ...POST({ tool_name, parameters })
+    }
+  },
+
+  get_inference_providers() {
+    const url = `${API_URL}/inference-providers`
+    return { url }
   }
 }
 
-export const api_request = (apiFunction, opts) => {
+export const api_request = (api_function, opts, token) => {
   const controller = new AbortController()
   const abort = controller.abort.bind(controller)
-  const defaultOptions = {}
-  const options = merge(defaultOptions, apiFunction(opts), {
+  const headers = { Authorization: `Bearer ${token}` }
+  const default_options = { headers, credentials: 'include' }
+  const options = merge(default_options, api_function(opts), {
     signal: controller.signal
   })
   const request = dispatch_fetch.bind(null, options)

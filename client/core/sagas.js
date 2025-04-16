@@ -6,6 +6,7 @@ import { tasks_sagas } from './tasks'
 import { websocket_sagas } from './websocket'
 import { users_saga } from './users'
 import { path_views_sagas } from './path-views'
+import { thread_sagas } from './thread'
 
 export default function* rootSage() {
   yield all([
@@ -14,6 +15,7 @@ export default function* rootSage() {
     ...tasks_sagas,
     ...websocket_sagas,
     ...users_saga,
-    ...path_views_sagas
+    ...path_views_sagas,
+    ...thread_sagas
   ])
 }

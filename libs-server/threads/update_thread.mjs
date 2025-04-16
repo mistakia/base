@@ -4,9 +4,10 @@ import debug from 'debug'
 
 import get_thread from './get_thread.mjs'
 import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
+import { thread_constants } from '#libs-shared'
 
+const { THREAD_STATUS, validate_thread_state } = thread_constants
 const log = debug('threads:update')
-const VALID_STATES = ['active', 'paused', 'terminated']
 
 /**
  * Update thread state
@@ -32,11 +33,8 @@ export async function update_thread_state({
     throw new Error('state is required')
   }
 
-  if (!VALID_STATES.includes(state)) {
-    throw new Error(
-      `Invalid state: ${state}. Must be one of: ${VALID_STATES.join(', ')}`
-    )
-  }
+  // Validate state using shared function
+  validate_thread_state(state)
 
   log(`Updating thread ${thread_id} state to ${state}`)
 
@@ -60,18 +58,18 @@ export async function update_thread_state({
   metadata.updated_at = new Date().toISOString()
 
   // Add state-specific fields
-  if (state === 'paused' && reason) {
+  if (state === THREAD_STATUS.PAUSED && reason) {
     metadata.pause_reason = reason
-  } else if (state === 'terminated' && reason) {
+  } else if (state === THREAD_STATUS.TERMINATED && reason) {
     metadata.termination_reason = reason
   }
 
   // Remove state-specific fields if no longer applicable
-  if (state !== 'paused') {
+  if (state !== THREAD_STATUS.PAUSED) {
     delete metadata.pause_reason
   }
 
-  if (state !== 'terminated') {
+  if (state !== THREAD_STATUS.TERMINATED) {
     delete metadata.termination_reason
   }
 
