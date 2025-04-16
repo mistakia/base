@@ -1,5 +1,5 @@
 import { Record, List, Map } from 'immutable'
-import { thread_constants } from '@libs-shared'
+import { thread_constants } from '@libs-shared/index.mjs'
 
 const { THREAD_STATUS, is_valid_thread_state } = thread_constants
 

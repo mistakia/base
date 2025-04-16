@@ -2,7 +2,7 @@ import {
   create_api_actions,
   create_api_action_types
 } from '../utils/actions-utils'
-import { thread_constants } from '@libs-shared'
+import { thread_constants } from '@libs-shared/index.mjs'
 
 const { THREAD_STATUS } = thread_constants
 

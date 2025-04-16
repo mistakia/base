@@ -8,7 +8,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { Link } from 'react-router-dom'
 
-import { thread_constants } from '@libs-shared'
+import { thread_constants } from '@libs-shared/index.mjs'
 import MessageBubble from '@components/thread/message-bubble'
 import MessageInput from '@components/thread/message-input'
 import ErrorBoundary from '@components/error-boundary'

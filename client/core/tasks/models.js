@@ -1,5 +1,5 @@
 import { Record } from 'immutable'
-import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
+import { TASK_STATUS, TASK_PRIORITY } from '@libs-shared/task-constants.mjs'
 
 const TaskRecord = Record({
   task_id: null,

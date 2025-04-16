@@ -5,7 +5,7 @@ import { get_tasks, task_actions } from '@core/tasks'
 import {
   filter_displayable_tasks,
   sort_tasks_by_importance
-} from '#libs-shared/task-filters.mjs'
+} from '@libs-shared/task-filters.mjs'
 
 import HomePageTasksPreview from './homepage-tasks-preview'
 
