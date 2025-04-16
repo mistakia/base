@@ -1,0 +1,113 @@
+.bubble-container
+  display flex
+  flex-direction column
+  max-width 90%
+  margin-bottom 16px
+  
+  &.user
+    align-self flex-end
+  
+  &.assistant
+    align-self flex-start
+
+.message-content
+  padding 12px 16px
+  border-radius 12px
+  font-size 14px
+  line-height 1.5
+  word-break break-word
+  white-space pre-wrap
+  
+  &.user
+    background $color_primary
+    color white
+    border-bottom-right-radius 4px
+  
+  &.assistant
+    background $color_surface
+    color $color_text
+    border 1px solid $color_border
+    border-bottom-left-radius 4px
+  
+  // Markdown styling
+  p
+    margin 0 0 12px 0
+    
+    &:last-child
+      margin-bottom 0
+  
+  ul, ol
+    margin 0 0 12px 0
+    padding-left 24px
+  
+  li
+    margin-bottom 4px
+  
+  code
+    font-family monospace
+    background rgba(0, 0, 0, 0.1)
+    padding 2px 4px
+    border-radius 4px
+    font-size 0.9em
+  
+  pre
+    margin 8px 0
+    
+    code
+      background none
+      padding 0
+  
+  h1, h2, h3, h4, h5, h6
+    margin 16px 0 8px
+    font-weight 600
+    line-height 1.25
+  
+  h1
+    font-size 1.5em
+  
+  h2
+    font-size 1.3em
+  
+  h3
+    font-size 1.2em
+  
+  hr
+    margin 12px 0
+    border none
+    border-top 1px solid rgba(0, 0, 0, 0.1)
+  
+  blockquote
+    margin 8px 0
+    padding-left 12px
+    border-left 3px solid rgba(0, 0, 0, 0.2)
+    color rgba(0, 0, 0, 0.7)
+  
+  a
+    color $color_link
+    text-decoration none
+    
+    &:hover
+      text-decoration underline
+  
+  table
+    border-collapse collapse
+    margin 12px 0
+    width 100%
+  
+  th, td
+    border 1px solid rgba(0, 0, 0, 0.1)
+    padding 6px 8px
+    text-align left
+  
+  th
+    background rgba(0, 0, 0, 0.05)
+    font-weight 600
+
+.message-metadata
+  font-size 11px
+  color $color_text_secondary
+  margin-top 4px
+  padding 0 8px
+  
+  &.user
+    text-align right 

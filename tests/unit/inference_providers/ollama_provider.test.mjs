@@ -12,7 +12,7 @@ describe('OllamaProvider', () => {
   let test_user
   let test_thread
   let ollama_provider
-  const OLLAMA_API_BASE_URL = 'http://localhost:11434'
+  const OLLAMA_API_BASE_URL = 'http://127.0.0.1:11434'
 
   before(async () => {
     await reset_all_tables()

@@ -177,7 +177,12 @@ const base = (options) => ({
         '../node_modules/highcharts-react-official'
       ),
       highcharts: path.resolve(__dirname, '../node_modules/highcharts'),
-      'timeago.js': path.resolve(__dirname, '../node_modules/timeago.js')
+      'timeago.js': path.resolve(__dirname, '../node_modules/timeago.js'),
+      '@components': path.resolve(__dirname, '../client/views/components'),
+      '@views': path.resolve(__dirname, '../client/views'),
+      '@pages': path.resolve(__dirname, '../client/views/pages'),
+      '@core': path.resolve(__dirname, '../client/core'),
+      '@styles': path.resolve(__dirname, '../client/styles')
     }
   },
   devtool: options.devtool,

@@ -8769,6 +8769,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"highlight.js@npm:^11.11.1, highlight.js@npm:^11.9.0":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10/205272f12f2c8ab1760452a75c58b043b11129cf3a5d2a9c0c90d43993580d0f5c385a73a4b8aba197eef20c0ec37d64000e6b35c4ed5991324f4c2dc78f4e43
+  languageName: node
+  linkType: hard
+
 "history@npm:^5.3.0":
   version: 5.3.0
   resolution: "history@npm:5.3.0"
@@ -10269,6 +10276,15 @@ __metadata:
     socks-proxy-agent: "npm:^6.1.1"
     ssri: "npm:^9.0.0"
   checksum: 10/febfe1e944f3f89ab844f7cf84e935800d8bb70bd85e67657e9bc89de03f7f70b2b29b646a99d25ff89713acc81be120f74c8c75464a346102ecca118af0432f
+  languageName: node
+  linkType: hard
+
+"markdown-it-highlightjs@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "markdown-it-highlightjs@npm:4.2.0"
+  dependencies:
+    highlight.js: "npm:^11.9.0"
+  checksum: 10/3ad59e209190ea85f0e488f52cc5c0990d561a0568b0e8524abc3f3767c70891a866900ef3781f08c69d428b96911c83c065edd41a8bcf2aaaa85d55f545f99a
   languageName: node
   linkType: hard
 
@@ -12768,6 +12784,7 @@ __metadata:
     graphql-request: "npm:^7.1.2"
     highcharts: "npm:^12.1.2"
     highcharts-react-official: "npm:^3.2.1"
+    highlight.js: "npm:^11.11.1"
     history: "npm:^5.3.0"
     html-inline-script-webpack-plugin: "npm:3.2.1"
     html-loader: "npm:4.2.0"
@@ -12776,6 +12793,7 @@ __metadata:
     jsonwebtoken: "npm:^9.0.2"
     knex: "npm:^3.1.0"
     markdown-it: "npm:^14.1.0"
+    markdown-it-highlightjs: "npm:^4.2.0"
     merge-options: "npm:^3.0.4"
     mocha: "npm:^10.8.2"
     multiformats: "npm:^13.3.2"

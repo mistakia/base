@@ -8,6 +8,7 @@ import { get_app } from '@core/app'
 import HomePage from '@pages/home'
 import AuthPage from '@pages/auth'
 import TasksPage from '@pages/tasks'
+import { ThreadsPage, ThreadDetailPage, NewThreadPage } from '@pages/thread'
 
 const map_state_to_props = createSelector(get_app, (app) => ({
   public_key: app.public_key,
@@ -28,6 +29,12 @@ const Routes = ({ public_key, username }) => {
     <RouterRoutes>
       <Route path='/auth' element={<AuthPage />} />
       <Route path='/tasks' element={<TasksPage />} />
+
+      {/* Thread routes */}
+      <Route path='/threads' element={<ThreadsPage />} />
+      <Route path='/threads/new' element={<NewThreadPage />} />
+      <Route path='/threads/:thread_id' element={<ThreadDetailPage />} />
+
       <Route path='/:username' element={<HomePage />} />
       <Route
         path='*'

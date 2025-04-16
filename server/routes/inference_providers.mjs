@@ -18,6 +18,7 @@ router.get('/', async (req, res) => {
 
         result.push({
           name: provider_name,
+          display_name: provider.display_name,
           models
         })
       } catch (error) {

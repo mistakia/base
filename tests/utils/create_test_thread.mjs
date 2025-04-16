@@ -4,6 +4,9 @@ import { v4 as uuid } from 'uuid'
 
 import { create_test_user } from './index.mjs'
 import create_temp_test_directory from './create_temp_test_directory.mjs'
+import { thread_constants } from '#libs-shared'
+
+const { THREAD_STATUS } = thread_constants
 
 /**
  * Creates a test thread with specified parameters
@@ -12,7 +15,7 @@ import create_temp_test_directory from './create_temp_test_directory.mjs'
  * @param {string} [options.user_id] User ID (creates test user if not provided)
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
- * @param {string} [options.state='active'] Thread state (active, paused, terminated)
+ * @param {string} [options.state=THREAD_STATUS.ACTIVE] Thread state (active, paused, terminated)
  * @param {string} [options.user_base_directory] User base directory
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
  * @param {Object} [options.metadata={}] Additional metadata
@@ -49,7 +52,7 @@ export default async function create_test_thread(options = {}) {
     user_id: user.user_id,
     inference_provider: options.inference_provider || 'ollama',
     model: options.model || 'llama2',
-    state: options.state || 'active',
+    state: options.state || THREAD_STATUS.ACTIVE,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     current_stage: null,
