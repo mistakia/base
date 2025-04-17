@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import MarkdownContent from '@components/markdown-content'
 
@@ -19,26 +19,11 @@ const TaskDetailPage = ({ tasks, load_task }) => {
     return (
       <div className='page-container'>
         <div className='header'>
-          <Link to='/tasks' className='back-button'>
-            <svg
-              width='16'
-              height='16'
-              viewBox='0 0 16 16'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'>
-              <path
-                d='M10.5 12.5L5.5 8L10.5 3.5'
-                stroke='currentColor'
-                strokeWidth='1.5'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              />
-            </svg>
-            Back to tasks
-          </Link>
           <h1 className='title'>Task</h1>
         </div>
-        <div className='loading-state'>Loading task...</div>
+        <div className='content-container'>
+          <div className='loading-state'>Loading task...</div>
+        </div>
       </div>
     )
   }
@@ -49,44 +34,28 @@ const TaskDetailPage = ({ tasks, load_task }) => {
   return (
     <div className='page-container'>
       <div className='header'>
-        <Link to='/tasks' className='back-button'>
-          <svg
-            width='16'
-            height='16'
-            viewBox='0 0 16 16'
-            fill='none'
-            xmlns='http://www.w3.org/2000/svg'>
-            <path
-              d='M10.5 12.5L5.5 8L10.5 3.5'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
-          Back to tasks
-        </Link>
         <h1 className='title'>{task_data.title}</h1>
       </div>
-
-      <div className='task-detail-container'>
-        <div className='task-detail-header'>
-          {task_data.status && (
-            <div className='task-status'>{task_data.status}</div>
-          )}
-          {task_data.priority && (
-            <div className='task-priority'>{task_data.priority}</div>
-          )}
-        </div>
-
-        {task_data.description && (
-          <div className='task-description'>
-            <MarkdownContent content={task_data.description} />
+      <div className='content-container'>
+        <div className='task-detail-container'>
+          <div className='task-detail-header'>
+            {task_data.status && (
+              <div className='task-status'>{task_data.status}</div>
+            )}
+            {task_data.priority && (
+              <div className='task-priority'>{task_data.priority}</div>
+            )}
           </div>
-        )}
 
-        <div className='task-actions'>
-          {/* Additional actions can be added here */}
+          {task_data.description && (
+            <div className='task-description'>
+              <MarkdownContent content={task_data.description} />
+            </div>
+          )}
+
+          <div className='task-actions'>
+            {/* Additional actions can be added here */}
+          </div>
         </div>
       </div>
     </div>

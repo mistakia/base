@@ -33,9 +33,10 @@ const ThreadsListPage = ({ load_threads }) => {
           </svg>
         </Link>
       </div>
-
-      <div className='list-container'>
-        <ThreadList />
+      <div className='content-container'>
+        <div className='list-container'>
+          <ThreadList />
+        </div>
       </div>
     </div>
   )

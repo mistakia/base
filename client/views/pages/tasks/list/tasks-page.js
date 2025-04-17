@@ -16,19 +16,20 @@ const TasksListPage = ({ tasks = [], load_tasks }) => {
       <div className='header'>
         <h1 className='title'>Tasks</h1>
       </div>
-
-      <div className='list-container'>
-        {tasks.map((task) => (
-          <Link
-            key={task.task_id}
-            to={`/tasks/${task.task_id}`}
-            className='task-link'>
-            <Task task={task} variant='preview' />
-          </Link>
-        ))}
-        {tasks.length === 0 && (
-          <div className='no-tasks'>No tasks available</div>
-        )}
+      <div className='content-container'>
+        <div className='list-container'>
+          {tasks.map((task) => (
+            <Link
+              key={task.task_id}
+              to={`/tasks/${task.task_id}`}
+              className='task-link'>
+              <Task task={task} variant='preview' />
+            </Link>
+          ))}
+          {tasks.length === 0 && (
+            <div className='no-tasks'>No tasks available</div>
+          )}
+        </div>
       </div>
     </div>
   )
