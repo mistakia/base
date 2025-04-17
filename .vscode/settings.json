@@ -1,6 +1,7 @@
 {
   "search.exclude": {
     "**/.yarn": true,
-    "yarn.lock": true
+    "yarn.lock": true,
+    "data/import_history/*": true
   }
 }
