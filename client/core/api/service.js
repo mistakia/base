@@ -56,6 +56,10 @@ export const api = {
     const url = `${API_URL}/users/${user_id}/tasks`
     return { url }
   },
+  get_task({ task_id, user_id }) {
+    const url = `${API_URL}/users/${user_id}/tasks/${task_id}`
+    return { url }
+  },
 
   // Thread API endpoints
   get_threads({ user_id, state, limit, offset }) {

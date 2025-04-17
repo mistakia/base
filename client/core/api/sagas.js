@@ -4,7 +4,8 @@ import { call, put, cancelled, select } from 'redux-saga/effects'
 import { api, api_request } from '@core/api/service'
 import {
   post_user_task_request_actions,
-  get_user_tasks_request_actions
+  get_user_tasks_request_actions,
+  get_task_request_actions
 } from '@core/tasks/actions'
 import { get_user_request_actions } from '@core/users/actions'
 import {
@@ -99,6 +100,8 @@ export const get_user_tasks = fetch.bind(
   api.get_user_tasks,
   get_user_tasks_request_actions
 )
+
+export const get_task = fetch.bind(null, api.get_task, get_task_request_actions)
 
 // Thread API saga functions
 export const get_threads = fetch.bind(

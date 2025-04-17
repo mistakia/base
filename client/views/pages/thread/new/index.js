@@ -1,3 +1,3 @@
-import NewThreadPage from './new-page'
+import NewThreadPage from './new-thread-page'
 
 export default NewThreadPage

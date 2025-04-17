@@ -13,6 +13,10 @@ export default function tasks_reducer(state = initial_state, action) {
         data.forEach((task) => map.set(task.task_id, create_task(task)))
       })
     }
+    case task_actions.GET_TASK_FULFILLED: {
+      const { data } = action.payload
+      return state.set(data.task_id, create_task(data))
+    }
     default:
       return state
   }

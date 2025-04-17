@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 
 import ThreadList from '@components/thread/thread-list'
 
-import './list-page.styl'
+import './threads-list-page.styl'
 
 const ThreadsListPage = ({ load_threads }) => {
   useEffect(() => {

@@ -18,7 +18,9 @@ export default function Task({
       <div className='task-title'>{title}</div>
       {status && <div className='task-status'>{status}</div>}
       {priority && <div className='task-priority'>{priority}</div>}
-      {description && <div className='task-description'>{description}</div>}
+      {variant === 'detailed' && description && (
+        <div className='task-description'>{description}</div>
+      )}
       {children}
     </div>
   )

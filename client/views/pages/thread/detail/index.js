@@ -1,1 +1,1 @@
-export { default } from './detail-page'
+export { default } from './thread-detail-page'

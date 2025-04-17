@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
 
@@ -7,9 +7,9 @@ import Task from '@components/task'
 import './homepage-tasks-preview.styl'
 
 export default function HomePageTasksPreview({ tasks = [], load_tasks }) {
-  React.useEffect(() => {
+  useEffect(() => {
     load_tasks()
-  }, [])
+  }, [load_tasks])
 
   return (
     <div className='homepage-tasks-preview-container'>
@@ -21,7 +21,12 @@ export default function HomePageTasksPreview({ tasks = [], load_tasks }) {
       </div>
       <div className='homepage-tasks-preview-list'>
         {tasks.map((task) => (
-          <Task key={task.task_id} task={task} variant='preview' />
+          <Link
+            key={task.task_id}
+            to={`/tasks/${task.task_id}`}
+            className='task-link'>
+            <Task task={task} variant='preview' />
+          </Link>
         ))}
         {tasks.length === 0 && (
           <div className='no-tasks'>No tasks available</div>

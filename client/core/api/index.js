@@ -8,6 +8,7 @@ export {
   post_database_view,
   delete_database_view,
   get_user_tasks,
+  get_task,
   // Thread API functions
   get_threads,
   get_thread,

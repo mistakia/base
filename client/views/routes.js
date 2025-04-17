@@ -7,7 +7,7 @@ import { Routes as RouterRoutes, Route, Navigate } from 'react-router-dom'
 import { get_app } from '@core/app'
 import HomePage from '@pages/home'
 import AuthPage from '@pages/auth'
-import TasksPage from '@pages/tasks'
+import { TasksPage, TaskDetailPage } from '@pages/tasks'
 import { ThreadsPage, ThreadDetailPage, NewThreadPage } from '@pages/thread'
 
 const map_state_to_props = createSelector(get_app, (app) => ({
@@ -28,7 +28,10 @@ const Routes = ({ public_key, username }) => {
   return (
     <RouterRoutes>
       <Route path='/auth' element={<AuthPage />} />
+
+      {/* Tasks routes */}
       <Route path='/tasks' element={<TasksPage />} />
+      <Route path='/tasks/:task_id' element={<TaskDetailPage />} />
 
       {/* Thread routes */}
       <Route path='/threads' element={<ThreadsPage />} />

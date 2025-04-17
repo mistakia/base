@@ -1,13 +1,11 @@
 import React from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
-import ThreadChat from '@components/thread/thread-chat'
+import ThreadForm from '@components/thread/thread-form'
 
-import './detail-page.styl'
+import './new-thread-page.styl'
 
-const ThreadDetailPage = () => {
-  const { thread_id } = useParams()
-
+const NewThreadPage = () => {
   return (
     <div className='page-container'>
       <div className='header'>
@@ -28,14 +26,14 @@ const ThreadDetailPage = () => {
           </svg>
           Back to threads
         </Link>
-        <h1 className='title'>Thread</h1>
+        <h1 className='title'>New Thread</h1>
       </div>
 
-      <div className='chat-container'>
-        <ThreadChat thread_id={thread_id} />
+      <div className='form-container'>
+        <ThreadForm onCancel={() => window.history.back()} />
       </div>
     </div>
   )
 }
 
-export default ThreadDetailPage
+export default NewThreadPage
