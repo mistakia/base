@@ -35,18 +35,18 @@ export default async function get_task({ entity_id, user_id }) {
 
   // Process relations into appropriate arrays
   const relations_by_type = {}
-  
+
   // Process outgoing relations
-  outgoing_relations.forEach(relation => {
+  outgoing_relations.forEach((relation) => {
     const key = `${relation.relation_type}_${relation.target_type}_ids`
     if (!relations_by_type[key]) {
       relations_by_type[key] = []
     }
     relations_by_type[key].push(relation.target_entity_id)
   })
-  
+
   // Process incoming relations (reversed)
-  incoming_relations.forEach(relation => {
+  incoming_relations.forEach((relation) => {
     const key = `incoming_${relation.relation_type}_${relation.source_type}_ids`
     if (!relations_by_type[key]) {
       relations_by_type[key] = []
@@ -56,42 +56,54 @@ export default async function get_task({ entity_id, user_id }) {
 
   // Extract common relation patterns for backward compatibility
   const dependent_on = outgoing_relations
-    .filter(r => r.relation_type === 'depends_on' && r.target_type === 'task')
-    .map(r => r.target_entity_id)
-    
+    .filter((r) => r.relation_type === 'depends_on' && r.target_type === 'task')
+    .map((r) => r.target_entity_id)
+
   const dependent_for = incoming_relations
-    .filter(r => r.relation_type === 'depends_on' && r.source_type === 'task')
-    .map(r => r.source_entity_id)
-    
+    .filter((r) => r.relation_type === 'depends_on' && r.source_type === 'task')
+    .map((r) => r.source_entity_id)
+
   const children_task_ids = incoming_relations
-    .filter(r => r.relation_type === 'child_of' && r.source_type === 'task')
-    .map(r => r.source_entity_id)
-    
+    .filter((r) => r.relation_type === 'child_of' && r.source_type === 'task')
+    .map((r) => r.source_entity_id)
+
   const parents_task_ids = outgoing_relations
-    .filter(r => r.relation_type === 'child_of' && r.target_type === 'task')
-    .map(r => r.target_entity_id)
-    
+    .filter((r) => r.relation_type === 'child_of' && r.target_type === 'task')
+    .map((r) => r.target_entity_id)
+
   const organization_ids = outgoing_relations
-    .filter(r => (r.relation_type === 'involves' || r.relation_type === 'assigned_to') && 
-           r.target_type === 'organization')
-    .map(r => r.target_entity_id)
-    
+    .filter(
+      (r) =>
+        (r.relation_type === 'involves' || r.relation_type === 'assigned_to') &&
+        r.target_type === 'organization'
+    )
+    .map((r) => r.target_entity_id)
+
   const person_ids = outgoing_relations
-    .filter(r => (r.relation_type === 'assigned_to' || r.relation_type === 'involves') && 
-           r.target_type === 'person')
-    .map(r => r.target_entity_id)
-    
+    .filter(
+      (r) =>
+        (r.relation_type === 'assigned_to' || r.relation_type === 'involves') &&
+        r.target_type === 'person'
+    )
+    .map((r) => r.target_entity_id)
+
   const physical_item_ids = outgoing_relations
-    .filter(r => r.relation_type === 'requires' && r.target_type === 'physical_item')
-    .map(r => r.target_entity_id)
-    
+    .filter(
+      (r) => r.relation_type === 'requires' && r.target_type === 'physical_item'
+    )
+    .map((r) => r.target_entity_id)
+
   const digital_item_ids = outgoing_relations
-    .filter(r => r.relation_type === 'requires' && r.target_type === 'digital_item')
-    .map(r => r.target_entity_id)
-    
+    .filter(
+      (r) => r.relation_type === 'requires' && r.target_type === 'digital_item'
+    )
+    .map((r) => r.target_entity_id)
+
   const activity_ids = outgoing_relations
-    .filter(r => r.relation_type === 'executes' && r.target_type === 'activity')
-    .map(r => r.target_entity_id)
+    .filter(
+      (r) => r.relation_type === 'executes' && r.target_type === 'activity'
+    )
+    .map((r) => r.target_entity_id)
 
   return {
     task_id: entity.entity_id,
@@ -121,7 +133,7 @@ export default async function get_task({ entity_id, user_id }) {
     dependent_for,
     children_task_ids,
     parents_task_ids,
-    tag_ids: tags.map(tag => tag.tag_id),
+    tag_ids: tags.map((tag) => tag.tag_id),
     organization_ids,
     person_ids,
     physical_item_ids,
