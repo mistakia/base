@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 
-import './thread-form.styl'
+import './floating-thread-form.styl'
 
-const ThreadForm = ({
+const FloatingThreadForm = ({
   providers,
   providers_loading,
   providers_error,
@@ -11,8 +11,7 @@ const ThreadForm = ({
   thread_error,
   user_id,
   load_providers,
-  create_thread,
-  onCancel
+  create_thread
 }) => {
   const [form_state, set_form_state] = useState({
     provider: '',
@@ -22,6 +21,8 @@ const ThreadForm = ({
   })
 
   const [available_models, set_available_models] = useState([])
+  const [context_items, set_context_items] = useState([])
+  const textarea_ref = useRef(null)
 
   // Load providers on mount
   useEffect(() => {
@@ -56,6 +57,22 @@ const ThreadForm = ({
     }
   }, [form_state.provider, form_state.model, providers])
 
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const adjust_textarea_height = () => {
+      const textarea = textarea_ref.current
+      if (textarea) {
+        // Reset height to auto to get the correct scrollHeight
+        textarea.style.height = 'auto'
+        console.log(textarea.scrollHeight)
+        // Set height to scrollHeight to fit content
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
+      }
+    }
+
+    adjust_textarea_height()
+  }, [form_state.initial_message])
+
   // Handle input changes
   const handle_change = (e) => {
     const { name, value } = e.target
@@ -74,26 +91,68 @@ const ThreadForm = ({
       initial_message: form_state.initial_message,
       tools: form_state.tools
     })
+    // Clear form after submission
+    set_form_state({
+      ...form_state,
+      initial_message: ''
+    })
   }
 
-  if (providers_loading) {
-    return <div className='loading'>Loading providers...</div>
+  // Handle key down events
+  const handle_key_down = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handle_submit(e)
+    }
   }
 
-  if (providers_error) {
-    return <div className='error-message'>{providers_error}</div>
+  // Add context item
+  // const add_context_item = (item) => {
+  //   set_context_items([...context_items, item])
+  // }
+
+  // Remove context item
+  const remove_context_item = (index) => {
+    set_context_items(context_items.filter((_, i) => i !== index))
   }
 
   return (
-    <div className='form-container'>
-      <form onSubmit={handle_submit}>
-        <div className='form-group'>
-          <label className='label' htmlFor='provider'>
-            Provider
-          </label>
+    <div className='floating-thread-form'>
+      <div className='form-header'>
+        <div className='context-chips'>
+          {context_items.map((item, index) => (
+            <div key={index} className='context-chip'>
+              <span>{item.label}</span>
+              <button
+                type='button'
+                className='remove-chip'
+                onClick={() => remove_context_item(index)}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className='message-area'>
+        <textarea
+          ref={textarea_ref}
+          className='message-input'
+          name='initial_message'
+          value={form_state.initial_message}
+          onChange={handle_change}
+          onKeyDown={handle_key_down}
+          placeholder='Enter your message to the AI...'
+          disabled={thread_loading}
+          rows={1}
+          autoFocus
+        />
+      </div>
+
+      <div className='form-footer'>
+        <div className='model-selection'>
           <select
-            className='select'
-            id='provider'
+            className='provider-select'
             name='provider'
             value={form_state.provider}
             onChange={handle_change}
@@ -106,18 +165,9 @@ const ThreadForm = ({
                 </option>
               ))}
           </select>
-          {providers_error && (
-            <div className='error-message'>{providers_error}</div>
-          )}
-        </div>
 
-        <div className='form-group'>
-          <label className='label' htmlFor='model'>
-            Model
-          </label>
           <select
-            className='select'
-            id='model'
+            className='model-select'
             name='model'
             value={form_state.model}
             onChange={handle_change}
@@ -125,60 +175,32 @@ const ThreadForm = ({
             <option value=''>Select a model</option>
             {available_models.map((model) => (
               <option key={model.name} value={model.name}>
-                {model.name}{' '}
-                {model.modified_at &&
-                  `(Updated: ${new Date(model.modified_at).toLocaleDateString()})`}
+                {model.name}
               </option>
             ))}
           </select>
         </div>
 
-        <div className='form-group'>
-          <label className='label' htmlFor='initial_message'>
-            Initial Message
-          </label>
-          <textarea
-            className='textarea'
-            id='initial_message'
-            name='initial_message'
-            value={form_state.initial_message}
-            onChange={handle_change}
-            placeholder='Enter your initial message to the AI...'
-            disabled={thread_loading}
-          />
-          <div className='help-text'>
-            This message will start the conversation with the AI
-          </div>
-        </div>
+        <button
+          type='button'
+          className='submit-button'
+          onClick={handle_submit}
+          disabled={
+            !form_state.provider ||
+            !form_state.model ||
+            !form_state.initial_message ||
+            thread_loading
+          }>
+          {thread_loading ? 'Sending...' : 'Send'}
+        </button>
+      </div>
 
-        {thread_error && <div className='error-message'>{thread_error}</div>}
-
-        <div className='button-group'>
-          <button
-            type='submit'
-            className='submit-button'
-            disabled={
-              !form_state.provider ||
-              !form_state.model ||
-              !form_state.initial_message ||
-              thread_loading
-            }>
-            {thread_loading ? 'Creating...' : 'Create Thread'}
-          </button>
-          <button
-            type='button'
-            className='cancel-button'
-            onClick={onCancel}
-            disabled={thread_loading}>
-            Cancel
-          </button>
-        </div>
-      </form>
+      {thread_error && <div className='error-message'>{thread_error}</div>}
     </div>
   )
 }
 
-ThreadForm.propTypes = {
+FloatingThreadForm.propTypes = {
   providers: PropTypes.object,
   providers_loading: PropTypes.bool,
   providers_error: PropTypes.any,
@@ -186,8 +208,7 @@ ThreadForm.propTypes = {
   thread_error: PropTypes.any,
   user_id: PropTypes.string,
   load_providers: PropTypes.func.isRequired,
-  create_thread: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired
+  create_thread: PropTypes.func.isRequired
 }
 
-export default ThreadForm
+export default FloatingThreadForm

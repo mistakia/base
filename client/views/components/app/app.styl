@@ -34,6 +34,8 @@
   overflow-y scroll
   border 1px solid $border_color
   transition margin 0.3s cubic-bezier(0.4,0,0.2,1), border-radius 0.3s cubic-bezier(0.4,0,0.2,1)
+  position relative
+  padding-bottom 300px
 
 .app__main--drawer-closed
   margin 0
@@ -44,3 +46,20 @@
   border-radius 2em
   height 98vh
   margin-left 240px
+
+.thread-form-wrapper
+  position fixed
+  bottom 24px
+  left 0
+  right 0
+  display flex
+  justify-content center
+  z-index 1000
+
+  // When drawer is closed, adjust for full width
+  .app__main--drawer-closed &
+    left 0
+
+  // When drawer is open, adjust for drawer width
+  .app__main--drawer-open &
+    left 240px

@@ -188,7 +188,6 @@ export const create_state_change = (
  * Helper function to parse timeline entries from the server
  */
 export const parse_timeline_entry = (entry) => {
-  console.log({ entry })
   switch (entry.type) {
     case 'message':
       return new MessageEntryRecord({
@@ -247,8 +246,6 @@ export const parse_thread = (thread_data) => {
   const timeline = thread_data.timeline
     ? List(thread_data.timeline.map(parse_timeline_entry))
     : List()
-
-  console.log({ timeline: timeline.toJS() })
 
   return new ThreadRecord({
     ...thread_data,

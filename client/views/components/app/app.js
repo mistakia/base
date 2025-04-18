@@ -7,6 +7,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import Dialog from '@components/dialog'
 import Routes from '@views/routes'
 import Menu from '@components/menu'
+import FloatingThreadForm from '@components/thread/floating-thread-form'
 
 import '@styles/normalize.css'
 import '@styles/typography.styl'
@@ -49,6 +50,9 @@ export default function App(props) {
         className={`app__main${drawer_open ? ' app__main--drawer-open' : ' app__main--drawer-closed'}`}>
         <Routes />
         <Dialog />
+        <div className='thread-form-wrapper'>
+          <FloatingThreadForm />
+        </div>
       </div>
     </div>
   )
