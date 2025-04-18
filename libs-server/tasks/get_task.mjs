@@ -1,107 +1,133 @@
 import db from '#db'
-import PropTypes from 'prop-types'
+import {
+  fetch_entity_data,
+  fetch_entity_tags
+} from '#libs-server/entities/index.mjs'
 
-export default async function GetTask({ task_id }) {
-  // Get the task from the entities and tasks tables
-  const task = await db('entities as e')
-    .join('tasks as t', 'e.entity_id', 't.entity_id')
-    .where('e.entity_id', task_id)
-    .select(
-      'e.entity_id as task_id',
-      'e.title',
-      'e.description',
-      'e.user_id',
-      'e.created_at',
-      'e.updated_at',
-      't.status',
-      't.priority',
-      't.assigned_to',
-      't.start_by',
-      't.finish_by',
-      't.estimated_total_duration',
-      't.estimated_preparation_duration',
-      't.estimated_execution_duration',
-      't.estimated_cleanup_duration',
-      't.actual_duration',
-      't.planned_start',
-      't.planned_finish',
-      't.started_at',
-      't.finished_at',
-      't.snooze_until'
-    )
-    .first()
+export default async function get_task({ entity_id, user_id }) {
+  // Get the task entity with type data
+  const entity = await fetch_entity_data({
+    entity_id,
+    user_id,
+    include_type_data: true
+  })
 
-  if (!task) {
+  if (!entity || entity.type !== 'task') {
     return null
   }
 
-  // Get dependencies using task_dependencies_view
-  const dependent_on = await db('task_dependencies_view')
-    .where({ task_entity_id: task_id })
-    .select('dependent_task_entity_id as task_id')
+  // Get tags
+  const tags = await fetch_entity_tags({ entity_id: entity_id })
 
-  // Get tasks that depend on this task
-  const dependent_for = await db('task_dependencies_view')
-    .where({ dependent_task_entity_id: task_id })
-    .select('task_entity_id as task_id')
+  // Get all relations from entity_relations
+  const outgoing_relations = await db('entity_relations')
+    .where('source_entity_id', entity_id)
+    .select('relation_type', 'target_entity_id')
+    .join('entities', 'entities.entity_id', 'entity_relations.target_entity_id')
+    .select('entities.type as target_type')
 
-  // Get child tasks using task_parent_child_view
-  const children = await db('task_parent_child_view')
-    .where({ parent_task_id: task_id })
-    .select('child_task_id as task_id')
+  // Get all relations where task is the target
+  const incoming_relations = await db('entity_relations')
+    .where('target_entity_id', entity_id)
+    .select('relation_type', 'source_entity_id')
+    .join('entities', 'entities.entity_id', 'entity_relations.source_entity_id')
+    .select('entities.type as source_type')
 
-  // Get parent tasks using task_parent_child_view
-  const parents = await db('task_parent_child_view')
-    .where({ child_task_id: task_id })
-    .select('parent_task_id as task_id')
+  // Process relations into appropriate arrays
+  const relations_by_type = {}
+  
+  // Process outgoing relations
+  outgoing_relations.forEach(relation => {
+    const key = `${relation.relation_type}_${relation.target_type}_ids`
+    if (!relations_by_type[key]) {
+      relations_by_type[key] = []
+    }
+    relations_by_type[key].push(relation.target_entity_id)
+  })
+  
+  // Process incoming relations (reversed)
+  incoming_relations.forEach(relation => {
+    const key = `incoming_${relation.relation_type}_${relation.source_type}_ids`
+    if (!relations_by_type[key]) {
+      relations_by_type[key] = []
+    }
+    relations_by_type[key].push(relation.source_entity_id)
+  })
 
-  // Get tags using entity_tags table
-  const task_tags = await db('entity_tags')
-    .where({ entity_id: task_id })
-    .select('tag_entity_id as tag_id')
-
-  // Get organizations using task_organizations_view
-  const task_organizations = await db('task_organizations_view')
-    .where({ task_id })
-    .select('organization_id')
-
-  // Get persons using task_persons_view
-  const task_persons = await db('task_persons_view')
-    .where({ task_id })
-    .select('person_id')
-
-  // Get physical items using task_physical_items_view
-  const task_physical_items = await db('task_physical_items_view')
-    .where({ task_id })
-    .select('physical_item_id')
-
-  // Get digital items using task_digital_items_view
-  const task_digital_items = await db('task_digital_items_view')
-    .where({ task_id })
-    .select('digital_item_id')
+  // Extract common relation patterns for backward compatibility
+  const dependent_on = outgoing_relations
+    .filter(r => r.relation_type === 'depends_on' && r.target_type === 'task')
+    .map(r => r.target_entity_id)
+    
+  const dependent_for = incoming_relations
+    .filter(r => r.relation_type === 'depends_on' && r.source_type === 'task')
+    .map(r => r.source_entity_id)
+    
+  const children_task_ids = incoming_relations
+    .filter(r => r.relation_type === 'child_of' && r.source_type === 'task')
+    .map(r => r.source_entity_id)
+    
+  const parents_task_ids = outgoing_relations
+    .filter(r => r.relation_type === 'child_of' && r.target_type === 'task')
+    .map(r => r.target_entity_id)
+    
+  const organization_ids = outgoing_relations
+    .filter(r => (r.relation_type === 'involves' || r.relation_type === 'assigned_to') && 
+           r.target_type === 'organization')
+    .map(r => r.target_entity_id)
+    
+  const person_ids = outgoing_relations
+    .filter(r => (r.relation_type === 'assigned_to' || r.relation_type === 'involves') && 
+           r.target_type === 'person')
+    .map(r => r.target_entity_id)
+    
+  const physical_item_ids = outgoing_relations
+    .filter(r => r.relation_type === 'requires' && r.target_type === 'physical_item')
+    .map(r => r.target_entity_id)
+    
+  const digital_item_ids = outgoing_relations
+    .filter(r => r.relation_type === 'requires' && r.target_type === 'digital_item')
+    .map(r => r.target_entity_id)
+    
+  const activity_ids = outgoing_relations
+    .filter(r => r.relation_type === 'executes' && r.target_type === 'activity')
+    .map(r => r.target_entity_id)
 
   return {
-    ...task,
-    dependent_on: dependent_on.map(
-      ({ dependent_task_entity_id }) => dependent_task_entity_id
-    ),
-    dependent_for: dependent_for.map(({ task_entity_id }) => task_entity_id),
-    children_task_ids: children.map(({ child_task_id }) => child_task_id),
-    parents_task_ids: parents.map(({ parent_task_id }) => parent_task_id),
-    tag_ids: task_tags.map(({ tag_entity_id }) => tag_entity_id),
-    organization_ids: task_organizations.map(
-      ({ organization_id }) => organization_id
-    ),
-    person_ids: task_persons.map(({ person_id }) => person_id),
-    physical_item_ids: task_physical_items.map(
-      ({ physical_item_id }) => physical_item_id
-    ),
-    digital_item_ids: task_digital_items.map(
-      ({ digital_item_id }) => digital_item_id
-    )
+    task_id: entity.entity_id,
+    title: entity.title,
+    description: entity.description,
+    user_id: entity.user_id,
+    created_at: entity.created_at,
+    updated_at: entity.updated_at,
+    // Task-specific data
+    status: entity.status,
+    priority: entity.priority,
+    assigned_to: entity.assigned_to,
+    start_by: entity.start_by,
+    finish_by: entity.finish_by,
+    estimated_total_duration: entity.estimated_total_duration,
+    estimated_preparation_duration: entity.estimated_preparation_duration,
+    estimated_execution_duration: entity.estimated_execution_duration,
+    estimated_cleanup_duration: entity.estimated_cleanup_duration,
+    actual_duration: entity.actual_duration,
+    planned_start: entity.planned_start,
+    planned_finish: entity.planned_finish,
+    started_at: entity.started_at,
+    finished_at: entity.finished_at,
+    snooze_until: entity.snooze_until,
+    // Canonical relations (for backward compatibility)
+    dependent_on,
+    dependent_for,
+    children_task_ids,
+    parents_task_ids,
+    tag_ids: tags.map(tag => tag.tag_id),
+    organization_ids,
+    person_ids,
+    physical_item_ids,
+    digital_item_ids,
+    activity_ids,
+    // All relation types
+    ...relations_by_type
   }
-}
-
-GetTask.propTypes = {
-  task_id: PropTypes.string.isRequired
 }

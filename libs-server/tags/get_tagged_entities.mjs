@@ -1,4 +1,5 @@
 import db from '#db'
+import { fetch_entity_data } from '#libs-server/entities/index.mjs'
 
 /**
  * Get all entities associated with a specific tag
@@ -17,67 +18,100 @@ export default async function get_tagged_entities({
   entity_types = null
 }) {
   // Make sure the tag exists and belongs to this user
-  const tag = await db('entities')
-    .where({
-      entity_id: tag_id,
-      user_id,
-      type: 'tag'
-    })
-    .first()
+  const tag = await fetch_entity_data({
+    entity_id: tag_id,
+    user_id,
+    include_type_data: true
+  })
 
-  if (!tag) {
+  if (!tag || tag.type !== 'tag') {
     return null
   }
 
-  // Base query to get all entities with this tag
-  const base_query = db('entities as e')
-    .join('entity_tags as et', 'e.entity_id', 'et.entity_id')
+  // Get all entity IDs with this tag
+  let query = db('entity_tags as et')
+    .join('entities as e', 'et.entity_id', 'e.entity_id')
     .where({
       'et.tag_entity_id': tag_id,
       'e.user_id': user_id
     })
-    .select('e.*', 'e.entity_id as entity_id')
+    .select('e.entity_id', 'e.type')
 
   // Filter by archived status
   if (archived) {
-    base_query.whereNotNull('e.archived_at')
+    query.whereNotNull('e.archived_at')
   } else {
-    base_query.whereNull('e.archived_at')
+    query.whereNull('e.archived_at')
   }
 
   // Filter by entity types if specified
   if (entity_types && entity_types.length > 0) {
-    base_query.whereIn('e.type', entity_types)
+    query.whereIn('e.type', entity_types)
   }
 
-  // Get all entities with this tag
-  const entities = await base_query
+  // Get all entity IDs with this tag
+  const tagged_entities = await query
 
-  // Fetch specific data for each entity type
-  const tasks = await get_task_details(
-    entities.filter((e) => e.type === 'task').map((e) => e.entity_id)
-  )
-  const physical_items = await get_physical_item_details(
-    entities.filter((e) => e.type === 'physical_item').map((e) => e.entity_id)
-  )
-  const digital_items = await get_digital_item_details(
-    entities.filter((e) => e.type === 'digital_item').map((e) => e.entity_id)
-  )
-  const database_tables = await get_database_table_details(
-    entities.filter((e) => e.type === 'database').map((e) => e.entity_id)
-  )
+  // Group by type for parallel processing
+  const entity_ids_by_type = {}
+  tagged_entities.forEach((entity) => {
+    if (!entity_ids_by_type[entity.type]) {
+      entity_ids_by_type[entity.type] = []
+    }
+    entity_ids_by_type[entity.type].push(entity.entity_id)
+  })
 
-  return {
-    tag,
-    tasks,
-    physical_items,
-    digital_items,
-    database_tables,
-    other_entities: entities.filter(
-      (e) =>
-        !['task', 'physical_item', 'digital_item', 'database'].includes(e.type)
-    )
+  // Initialize result with tag data
+  const result = {
+    tag
   }
+
+  // Type mapping
+  const type_mapping = {
+    task: 'tasks',
+    physical_item: 'physical_items',
+    digital_item: 'digital_items',
+    database: 'databases',
+    person: 'persons',
+    organization: 'organizations',
+    tag: 'tags',
+    activity: 'activities',
+    database_item: 'database_items',
+    database_view: 'database_views',
+    guideline: 'guidelines',
+    physical_location: 'physical_locations',
+    text: 'texts',
+    type_definition: 'type_definitions',
+    type_extension: 'type_extensions'
+  }
+
+  // Initialize empty arrays for common entity types
+  Object.values(type_mapping).forEach((plural_type) => {
+    result[plural_type] = []
+  })
+
+  // Fetch entities by type in parallel
+  const fetch_promises = Object.entries(entity_ids_by_type).map(
+    async ([type, ids]) => {
+      const entities = await Promise.all(
+        ids.map((id) =>
+          fetch_entity_data({
+            entity_id: id,
+            user_id,
+            include_type_data: true
+          })
+        )
+      )
+
+      const result_key = type_mapping[type]
+      result[result_key] = entities.filter((e) => e !== null)
+    }
+  )
+
+  // Wait for all fetches to complete
+  await Promise.all(fetch_promises)
+
+  return result
 }
 
 /**

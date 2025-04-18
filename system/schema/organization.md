@@ -13,12 +13,6 @@ properties:
     type: string
     required: false
     description: Detailed description of the organization
-  - name: members
-    type: array
-    items:
-      type: string
-    required: false
-    description: People who are part of this organization
 ---
 
 # Organization
@@ -43,16 +37,29 @@ Organizations can have hierarchical relationships:
 
 - Parent organizations (represented through relations)
 - Departments or sub-teams (represented through relations)
-- Members (represented through the members property)
+- Members (represented through relations)
 
 ## Relations
 
-Organizations commonly relate to:
+Organizations commonly use these relation types:
 
-- persons (members of the organization)
-- tasks (work the organization is responsible for)
-- activities (processes the organization participates in)
-- guidelines (procedures the organization follows)
-- physical_items (assets owned by the organization)
-- digital_items (files owned by the organization)
-- other organizations (partners, parent/child relationships)
+- `has_member`: Persons who are members of the organization (formerly members)
+- `part_of`: Parent organizations this organization belongs to
+- `contains`: Sub-organizations or departments
+- `involves`: Tasks the organization is responsible for
+- `executes`: Activities the organization participates in
+- `follows`: Guidelines the organization follows
+- `requires`: Physical or digital assets owned by the organization
+
+Example:
+
+```yaml
+relations:
+  - 'has_member [[Person Name]]'
+  - 'part_of [[Parent Organization]]'
+  - 'contains [[Department Name]]'
+  - 'involves [[Task Name]]'
+  - 'executes [[Activity Name]]'
+  - 'follows [[Guideline Name]]'
+  - 'requires [[Physical Item]]'
+```

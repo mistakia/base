@@ -7,8 +7,13 @@ import { parse_markdown, parse_schema_file } from './parser.mjs'
 import { validate_entity } from './validator.mjs'
 import { import_markdown_entity, remove_stale_entities } from './importer.mjs'
 import { load_schema_definitions, build_validation_schema } from './schema.mjs'
+import {
+  generate_database_from_entity_file,
+  generate_entity_file_from_database
+} from './entity-converter/index.mjs'
 import { git } from '#libs-server'
 import config from '#config'
+import { entity_relations } from '#libs-shared'
 
 const log = debug('markdown')
 
@@ -21,7 +26,9 @@ export {
   import_markdown_entity,
   remove_stale_entities,
   load_schema_definitions,
-  build_validation_schema
+  build_validation_schema,
+  generate_database_from_entity_file,
+  generate_entity_file_from_database
 }
 
 /**
@@ -63,8 +70,7 @@ export async function process_markdown_entity(
     const extracted = {
       tags: extract_tags(parsed),
       relations: extract_relations(parsed),
-      observations: extract_observations(parsed),
-      frontmatter_relations: extract_frontmatter_relations(parsed)
+      observations: extract_observations(parsed)
     }
 
     return {
@@ -168,62 +174,6 @@ export function extract_observations(parsed) {
   }
 
   return observations
-}
-
-/**
- * Extract relations from frontmatter based on entity type
- * @param {Object} parsed Parsed markdown entity
- * @returns {Array} Extracted frontmatter relations
- */
-export function extract_frontmatter_relations(parsed) {
-  const relations = []
-  const frontmatter = parsed.frontmatter || {}
-  const entity_type = frontmatter.type
-
-  if (!entity_type) return relations
-
-  // Define mapping of frontmatter keys to relation types based on entity type
-  const relation_mappings = {
-    task: {
-      persons: 'assigned_to',
-      physical_items: 'requires',
-      digital_items: 'requires',
-      parent_tasks: 'child_of',
-      dependent_tasks: 'depends_on',
-      activities: 'executes',
-      organizations: 'involves'
-    },
-    physical_item: {
-      parent_items: 'part_of',
-      child_items: 'contains'
-    },
-    person: {
-      organizations: 'member_of'
-    },
-    organization: {
-      members: 'has_member'
-    },
-    activity: {
-      guidelines: 'follows'
-    }
-  }
-
-  // Get the appropriate relation mapping for this entity type
-  const entity_mappings = relation_mappings[entity_type] || {}
-
-  // Process each mapped property
-  Object.keys(entity_mappings).forEach((property_key) => {
-    if (frontmatter[property_key] && Array.isArray(frontmatter[property_key])) {
-      frontmatter[property_key].forEach((target_title) => {
-        relations.push({
-          relation_type: entity_mappings[property_key],
-          target_title
-        })
-      })
-    }
-  })
-
-  return relations
 }
 
 /**

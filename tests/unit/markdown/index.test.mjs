@@ -3,8 +3,7 @@ import {
   process_markdown_entity,
   extract_tags,
   extract_relations,
-  extract_observations,
-  extract_frontmatter_relations
+  extract_observations
 } from '#libs-server/markdown/index.mjs'
 
 describe('Markdown Index Module', () => {
@@ -295,173 +294,6 @@ describe('Markdown Index Module', () => {
     })
   })
 
-  describe('extract_frontmatter_relations', () => {
-    it('should extract task relations from frontmatter', () => {
-      const parsed = {
-        frontmatter: {
-          type: 'task',
-          persons: ['John Doe', 'Jane Smith'],
-          physical_items: ['Server Hardware', 'Network Equipment'],
-          digital_items: ['Configuration File', 'Database Backup'],
-          parent_tasks: ['Project Setup'],
-          dependent_tasks: ['Deploy Application'],
-          activities: ['Server Maintenance'],
-          organizations: ['IT Department']
-        }
-      }
-
-      const relations = extract_frontmatter_relations(parsed)
-
-      expect(relations).to.be.an('array')
-      expect(relations).to.have.lengthOf(10)
-
-      expect(relations).to.deep.include({
-        relation_type: 'assigned_to',
-        target_title: 'John Doe'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'assigned_to',
-        target_title: 'Jane Smith'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'requires',
-        target_title: 'Server Hardware'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'requires',
-        target_title: 'Network Equipment'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'requires',
-        target_title: 'Configuration File'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'requires',
-        target_title: 'Database Backup'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'child_of',
-        target_title: 'Project Setup'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'depends_on',
-        target_title: 'Deploy Application'
-      })
-    })
-
-    it('should extract physical_item relations from frontmatter', () => {
-      const parsed = {
-        frontmatter: {
-          type: 'physical_item',
-          parent_items: ['Server Rack'],
-          child_items: ['CPU', 'RAM', 'Hard Drive']
-        }
-      }
-
-      const relations = extract_frontmatter_relations(parsed)
-
-      expect(relations).to.be.an('array')
-      expect(relations).to.have.lengthOf(4)
-
-      expect(relations).to.deep.include({
-        relation_type: 'part_of',
-        target_title: 'Server Rack'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'contains',
-        target_title: 'CPU'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'contains',
-        target_title: 'RAM'
-      })
-
-      expect(relations).to.deep.include({
-        relation_type: 'contains',
-        target_title: 'Hard Drive'
-      })
-    })
-
-    it('should extract person and organization relations from frontmatter', () => {
-      const parsed_person = {
-        frontmatter: {
-          type: 'person',
-          organizations: ['Engineering', 'Product Team']
-        }
-      }
-
-      const parsed_org = {
-        frontmatter: {
-          type: 'organization',
-          members: ['John Doe', 'Jane Smith']
-        }
-      }
-
-      const person_relations = extract_frontmatter_relations(parsed_person)
-      const org_relations = extract_frontmatter_relations(parsed_org)
-
-      expect(person_relations).to.be.an('array')
-      expect(person_relations).to.have.lengthOf(2)
-      expect(person_relations).to.deep.include({
-        relation_type: 'member_of',
-        target_title: 'Engineering'
-      })
-      expect(person_relations).to.deep.include({
-        relation_type: 'member_of',
-        target_title: 'Product Team'
-      })
-
-      expect(org_relations).to.be.an('array')
-      expect(org_relations).to.have.lengthOf(2)
-      expect(org_relations).to.deep.include({
-        relation_type: 'has_member',
-        target_title: 'John Doe'
-      })
-      expect(org_relations).to.deep.include({
-        relation_type: 'has_member',
-        target_title: 'Jane Smith'
-      })
-    })
-
-    it('should handle unknown entity types properly', () => {
-      const parsed = {
-        frontmatter: {
-          type: 'unknown_type',
-          persons: ['John Doe'],
-          organizations: ['IT Department']
-        }
-      }
-
-      const relations = extract_frontmatter_relations(parsed)
-
-      expect(relations).to.be.an('array')
-      expect(relations).to.have.lengthOf(0) // No relations for unknown type
-    })
-
-    it('should handle missing properties properly', () => {
-      const parsed = {
-        frontmatter: {
-          type: 'task'
-          // No relation properties
-        }
-      }
-
-      const relations = extract_frontmatter_relations(parsed)
-
-      expect(relations).to.be.an('array')
-      expect(relations).to.have.lengthOf(0)
-    })
-  })
-
   describe('process_markdown_entity', () => {
     it('should process a markdown entity and extract all metadata', async () => {
       const content = `---
@@ -517,22 +349,6 @@ This is a #test task for #development purposes.
         target_title: 'Server Configuration',
         context: 'awaiting approval'
       })
-
-      // Check frontmatter relations
-      expect(result.extracted.frontmatter_relations).to.be.an('array')
-      expect(result.extracted.frontmatter_relations.length).to.be.at.least(3)
-      expect(result.extracted.frontmatter_relations).to.deep.include({
-        relation_type: 'assigned_to',
-        target_title: 'John Doe'
-      })
-      expect(result.extracted.frontmatter_relations).to.deep.include({
-        relation_type: 'assigned_to',
-        target_title: 'Jane Smith'
-      })
-      expect(result.extracted.frontmatter_relations).to.deep.include({
-        relation_type: 'child_of',
-        target_title: 'Project Setup'
-      })
     })
 
     it('should handle validation against schema', async () => {
@@ -574,7 +390,6 @@ This is a test task.
       expect(result.extracted).to.be.an('object')
       expect(result.extracted.tags).to.be.an('array')
       expect(result.extracted.relations).to.be.an('array')
-      expect(result.extracted.frontmatter_relations).to.be.an('array')
     })
   })
 })

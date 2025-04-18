@@ -124,7 +124,7 @@ describe('Tags API', () => {
       expect(res.body.tasks).to.be.an('array')
       expect(res.body.physical_items).to.be.an('array')
       expect(res.body.digital_items).to.be.an('array')
-      expect(res.body.database_tables).to.be.an('array')
+      expect(res.body.databases).to.be.an('array')
     })
 
     it('should return 404 for non-existent tag', async () => {
@@ -226,7 +226,7 @@ describe('Tags API', () => {
       expect(res).to.have.status(200)
       expect(res.body.tasks).to.be.an('array')
       expect(res.body.tasks).to.have.length(1)
-      expect(res.body.tasks[0].task_id).to.equal(test_entity_id)
+      expect(res.body.tasks[0].entity_id).to.equal(test_entity_id)
     })
   })
 

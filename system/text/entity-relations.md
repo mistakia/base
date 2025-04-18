@@ -62,35 +62,49 @@ The following standard relation types are defined in the system and centralized 
 
 - `involves`: Indicates involvement with an entity
 
-## Entity-Specific Relation Mappings
+## Canonical Relation Usage
 
-Different entity types use specific relation types that map to frontmatter properties:
+All entity relationships are managed through the `relations` property in the frontmatter using canonical relation types.
+
+```yaml
+relations:
+  - 'child_of [[Parent Task]]'
+  - 'depends_on [[Dependent Task]]'
+  - 'assigned_to [[Person Name]]'
+```
+
+## Common Entity Relation Patterns
+
+While any entity can use any relation type, certain patterns are common:
 
 ### Task Relations
 
-- `assigned_to` → `persons`: Assigned persons
-- `requires` → `physical_items`/`digital_items`: Required resources
-- `child_of` → `parent_tasks`: Parent tasks
-- `depends_on` → `dependent_tasks`: Task dependencies
-- `executes` → `activities`: Activities executed by the task
-- `involves` → `organizations`: Organizations involved
+- `assigned_to`: Assigned persons
+- `requires`: Required resources
+- `child_of`: Parent tasks
+- `depends_on`: Task dependencies
+- `executes`: Activities executed by the task
+- `involves`: Organizations involved
 
 ### Physical Item Relations
 
-- `part_of` → `parent_items`: Parent items
-- `contains` → `child_items`: Child items
+- `part_of`: Items this is a component of
+- `contains`: Components that make up this item
 
 ### Person Relations
 
-- `member_of` → `organizations`: Organizations the person belongs to
+- `member_of`: Organizations the person belongs to
+- `assigned_to`: Tasks assigned to the person
 
 ### Organization Relations
 
-- `has_member` → `members`: Members of the organization
+- `has_member`: Members of the organization
+- `part_of`: Parent organizations
+- `contains`: Sub-organizations
 
 ### Activity Relations
 
-- `follows` → `guidelines`: Guidelines followed by the activity
+- `follows`: Guidelines followed by the activity
 
 ## Relation Storage
 
@@ -101,11 +115,18 @@ Relations are stored in the database in the `entity_relations` table with the fo
 - `relation_type`: The type of relation
 - `context`: Optional context for the relation
 
+## Functions
+
+The following functions are available in the `entity-relations` module:
+
+- `get_canonical_relation_type(relation_type)`: Normalizes a relation type to its canonical form
+- `get_all_standard_relation_types()`: Returns all standard relation types
+
 ## Observations
 
 - [design] Standardized relation types create a consistent semantic graph #knowledge-graph
-- [implementation] Relations are stored in both frontmatter and database for different use cases #storage
-- [feature] Entity-specific relation mappings allow for specialized property access #usability
+- [implementation] Relations use a single canonical format #consistency
+- [feature] Entity relationships are handled through a single mechanism #simplification
 
 ## Relations
 

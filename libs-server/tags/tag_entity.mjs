@@ -1,4 +1,5 @@
 import db from '#db'
+import { create_entity_tags } from '#libs-server/entities/index.mjs'
 
 /**
  * Associates an entity with a tag
@@ -44,10 +45,11 @@ export async function tag_entity({ entity_id, tag_id, user_id }) {
       return true // Already tagged, no need to create duplicate
     }
 
-    // Create the tag relationship
-    await trx('entity_tags').insert({
+    // Create the tag relationship using entity service
+    await create_entity_tags({
       entity_id,
-      tag_entity_id: tag_id
+      tag_entity_ids: [tag_id],
+      trx
     })
 
     return true

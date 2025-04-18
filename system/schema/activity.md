@@ -4,13 +4,6 @@ title: Activity
 type_name: activity
 extends: base
 description: Activities represent actions or processes
-properties:
-  - name: guidelines
-    type: array
-    items:
-      type: string
-    required: false
-    description: Guidelines related to this activity
 ---
 
 # Activity
@@ -28,9 +21,17 @@ Activities might include:
 
 ## Relations
 
-Activities commonly relate to:
+Activities commonly use these relation types:
 
-- guidelines (Instructions for how to perform the activity)
-- tasks (Specific instances of the activity being performed)
-- persons (People who typically perform the activity)
-- organizations (Teams/groups that are responsible for the activity)
+- `follows`: Guidelines related to this activity (formerly guidelines)
+- `assigned_to`: People who typically perform the activity
+- `involves`: Organizations responsible for the activity
+
+Example:
+
+```yaml
+relations:
+  - 'follows [[Guideline Name]]'
+  - 'assigned_to [[Person Name]]'
+  - 'involves [[Organization Name]]'
+```

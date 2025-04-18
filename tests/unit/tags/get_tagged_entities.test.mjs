@@ -170,40 +170,34 @@ describe('get_tagged_entities', () => {
 
     expect(result.tasks).to.be.an('array')
     expect(result.tasks).to.have.length(1)
-    expect(result.tasks[0].task_id).to.equal(test_task_id)
+    expect(result.tasks[0].entity_id).to.equal(test_task_id)
     expect(result.tasks[0].title).to.equal('Test Task')
     expect(result.tasks[0].status).to.equal('No status')
 
     expect(result.physical_items).to.be.an('array')
     expect(result.physical_items).to.have.length(1)
-    expect(result.physical_items[0].physical_item_id).to.equal(
-      test_physical_item_id
-    )
+    expect(result.physical_items[0].entity_id).to.equal(test_physical_item_id)
     expect(result.physical_items[0].title).to.equal('Test Physical Item')
     expect(result.physical_items[0].storage_location).to.equal('Test Location')
 
     expect(result.digital_items).to.be.an('array')
     expect(result.digital_items).to.have.length(1)
-    expect(result.digital_items[0].digital_item_id).to.equal(
-      test_digital_item_id
-    )
+    expect(result.digital_items[0].entity_id).to.equal(test_digital_item_id)
     expect(result.digital_items[0].title).to.equal('Test Digital Item')
     expect(result.digital_items[0].file_mime_type).to.equal('text/plain')
 
-    expect(result.database_tables).to.be.an('array')
-    expect(result.database_tables).to.have.length(1)
-    expect(result.database_tables[0].database_table_id).to.equal(
-      test_database_table_id
-    )
-    expect(result.database_tables[0].title).to.equal('Test Database Table')
-    expect(result.database_tables[0].table_name).to.equal('test_table')
+    expect(result.databases).to.be.an('array')
+    expect(result.databases).to.have.length(1)
+    expect(result.databases[0].entity_id).to.equal(test_database_table_id)
+    expect(result.databases[0].title).to.equal('Test Database Table')
+    expect(result.databases[0].table_name).to.equal('test_table')
 
     // No archived entities should be included
     const all_entities = [
-      ...result.tasks.map((t) => t.task_id),
-      ...result.physical_items.map((p) => p.physical_item_id),
-      ...result.digital_items.map((d) => d.digital_item_id),
-      ...result.database_tables.map((d) => d.database_table_id),
+      ...result.tasks.map((t) => t.entity_id),
+      ...result.physical_items.map((p) => p.entity_id),
+      ...result.digital_items.map((d) => d.entity_id),
+      ...result.databases.map((d) => d.entity_id),
       ...(result.other_entities || []).map((e) => e.entity_id)
     ]
 
@@ -221,7 +215,7 @@ describe('get_tagged_entities', () => {
 
     expect(result.tasks).to.be.an('array')
     expect(result.tasks).to.have.length(1)
-    expect(result.tasks[0].task_id).to.equal(archived_entity_id)
+    expect(result.tasks[0].entity_id).to.equal(archived_entity_id)
     expect(result.tasks[0].title).to.equal('Archived Entity')
     expect(result.tasks[0].status).to.equal('Completed')
   })
@@ -237,19 +231,17 @@ describe('get_tagged_entities', () => {
 
     expect(result.tasks).to.be.an('array')
     expect(result.tasks).to.have.length(1)
-    expect(result.tasks[0].task_id).to.equal(test_task_id)
+    expect(result.tasks[0].entity_id).to.equal(test_task_id)
 
     expect(result.digital_items).to.be.an('array')
     expect(result.digital_items).to.have.length(1)
-    expect(result.digital_items[0].digital_item_id).to.equal(
-      test_digital_item_id
-    )
+    expect(result.digital_items[0].entity_id).to.equal(test_digital_item_id)
 
     expect(result.physical_items).to.be.an('array')
     expect(result.physical_items).to.have.length(0)
 
-    expect(result.database_tables).to.be.an('array')
-    expect(result.database_tables).to.have.length(0)
+    expect(result.databases).to.be.an('array')
+    expect(result.databases).to.have.length(0)
   })
 
   it('should return null when tag does not exist', async () => {

@@ -195,7 +195,7 @@ async function handle_get_task(args) {
   const { task_id, user_id } = args
 
   try {
-    const task = await task_service.get_task({ task_id })
+    const task = await task_service.get_task({ entity_id: task_id, user_id })
 
     // Verify the user has access to this task
     if (!task || task.user_id !== user_id) {

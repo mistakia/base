@@ -78,48 +78,6 @@ properties:
     enum: [None, Low, Medium, High, Critical]
     required: false
     description: Priority level of the task
-  - name: parent_tasks
-    type: array
-    items:
-      type: string
-    required: false
-    description: Tasks that this task is a subtask of
-  - name: dependent_tasks
-    type: array
-    items:
-      type: string
-    required: false
-    description: Tasks that depend on this task
-  - name: activities
-    type: array
-    items:
-      type: string
-    required: false
-    description: Activities related to this task
-  - name: organizations
-    type: array
-    items:
-      type: string
-    required: false
-    description: Organizations involved in this task
-  - name: persons
-    type: array
-    items:
-      type: string
-    required: false
-    description: People involved in this task
-  - name: physical_items
-    type: array
-    items:
-      type: string
-    required: false
-    description: Physical items needed for this task
-  - name: digital_items
-    type: array
-    items:
-      type: string
-    required: false
-    description: Digital items needed for this task
 ---
 
 # Task
@@ -138,11 +96,24 @@ Tasks support a complete workflow lifecycle:
 
 ## Relations
 
-Tasks commonly relate to:
+Tasks commonly use these relation types:
 
-- other tasks (parent/dependent relationships)
-- activities (processes being executed)
-- persons (who perform the task)
-- organizations (teams responsible for the task)
-- physical_items (tools or materials needed)
-- digital_items (files or software needed)
+- `child_of`: Tasks that this task is a subtask of (formerly parent_tasks)
+- `depends_on`: Tasks that depend on this task (formerly dependent_tasks)
+- `executes`: Activities related to this task (formerly activities)
+- `involves`: Organizations involved in this task (formerly organizations)
+- `assigned_to`: People assigned to this task (formerly persons)
+- `requires`: Physical and digital items needed for this task (formerly physical_items/digital_items)
+
+Example:
+
+```yaml
+relations:
+  - 'child_of [[Parent Task]]'
+  - 'depends_on [[Dependent Task]]'
+  - 'executes [[Activity Name]]'
+  - 'involves [[Organization Name]]'
+  - 'assigned_to [[Person Name]]'
+  - 'requires [[Physical Item]] (quantity: 2)'
+  - 'requires [[Digital Item]]'
+```

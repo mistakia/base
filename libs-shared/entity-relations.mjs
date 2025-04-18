@@ -1,6 +1,6 @@
 /**
- * Standard entity relation type mappings
- * Centralized constants file for relation mappings used across the application
+ * Standard entity relation type definitions
+ * Centralized constants file for relation types used across the application
  */
 
 /**
@@ -37,52 +37,12 @@ export const RELATION_INVOLVES = 'involves'
 /**
  * Canonical relation types mapping
  * Maps non-standard relation types to their canonical equivalents
- * Used for backward compatibility
  */
 export const canonical_relation_map = {
   subtask_of: RELATION_CHILD_OF,
   uses: RELATION_REQUIRES,
   belongs_to: RELATION_MEMBER_OF,
   includes: RELATION_HAS_MEMBER
-}
-
-/**
- * Maps relation types to frontmatter properties for each entity type
- * Used for converting database relations to frontmatter properties
- */
-export const relation_mappings = {
-  task: {
-    [RELATION_ASSIGNED_TO]: 'persons',
-    [RELATION_REQUIRES]: {
-      physical_item: 'physical_items',
-      digital_item: 'digital_items'
-    },
-    [RELATION_CHILD_OF]: 'parent_tasks',
-    [RELATION_DEPENDS_ON]: 'dependent_tasks',
-    [RELATION_EXECUTES]: 'activities',
-    [RELATION_INVOLVES]: 'organizations'
-  },
-  physical_item: {
-    [RELATION_PART_OF]: 'parent_items',
-    [RELATION_CONTAINS]: 'child_items',
-    [RELATION_PARENT_OF]: 'child_items'
-  },
-  person: {
-    [RELATION_MEMBER_OF]: 'organizations'
-  },
-  organization: {
-    [RELATION_HAS_MEMBER]: 'members'
-  },
-  activity: {
-    [RELATION_FOLLOWS]: 'guidelines'
-  },
-  guideline: {},
-  digital_item: {},
-  physical_location: {},
-  tag: {},
-  database: {},
-  database_item: {},
-  database_view: {}
 }
 
 /**
@@ -124,21 +84,11 @@ export const relation_type_categories = {
 }
 
 /**
- * Get all standard relation types from the mappings
+ * Get all standard relation types
  * @returns {Array} Array of standard relation types
  */
 export function get_all_standard_relation_types() {
-  const standard_relation_types = []
-
-  Object.values(relation_mappings).forEach((type_map) => {
-    Object.keys(type_map).forEach((rel_type) => {
-      if (!standard_relation_types.includes(rel_type)) {
-        standard_relation_types.push(rel_type)
-      }
-    })
-  })
-
-  return standard_relation_types
+  return [...common_relation_types]
 }
 
 /**

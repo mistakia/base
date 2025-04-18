@@ -25,12 +25,6 @@ properties:
     type: string
     required: false
     description: Personal website
-  - name: organizations
-    type: array
-    items:
-      type: string
-    required: false
-    description: Organizations the person belongs to
 ---
 
 # Person
@@ -43,7 +37,7 @@ The person schema captures:
 
 - Basic identity information
 - Contact details
-- Organizational affiliations
+- Organizational affiliations (through relations)
 
 ## Privacy Considerations
 
@@ -56,11 +50,21 @@ When creating person records, consider:
 
 ## Relations
 
-Persons commonly relate to:
+Persons commonly use these relation types:
 
-- tasks (work they're assigned to)
-- activities (processes they participate in)
-- organizations (groups they belong to)
-- guidelines (procedures they follow or create)
-- physical_items (objects they use or manage)
-- digital_items (files they create or access)
+- `member_of`: Organizations the person belongs to (formerly organizations)
+- `assigned_to`: Tasks assigned to the person
+- `executes`: Activities the person participates in
+- `follows`: Guidelines the person follows or creates
+- `requires`: Physical or digital items the person uses or manages
+
+Example:
+
+```yaml
+relations:
+  - 'member_of [[Organization Name]]'
+  - 'assigned_to [[Task Name]]'
+  - 'executes [[Activity Name]]'
+  - 'follows [[Guideline Name]]'
+  - 'requires [[Physical Item]]'
+```

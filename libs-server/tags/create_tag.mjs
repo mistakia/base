@@ -1,4 +1,5 @@
 import db from '#db'
+import { create_entity } from '#libs-server/entities/index.mjs'
 
 /**
  * Creates a new tag entity
@@ -18,18 +19,14 @@ export default async function create_tag({
 }) {
   // Start a transaction for consistency
   return db.transaction(async (trx) => {
-    // 1. Create the entity record first
-    const [entity] = await trx('entities')
-      .insert({
-        title,
-        description,
-        user_id,
-        type: 'tag',
-        permalink: null // Can be generated if needed
-      })
-      .returning('entity_id')
-
-    const entity_id = entity.entity_id
+    // 1. Create the entity record using the entity service
+    const entity_id = await create_entity({
+      title,
+      description,
+      type: 'tag',
+      user_id,
+      trx
+    })
 
     // 2. Create the tag record with the entity_id
     await trx('tags').insert({

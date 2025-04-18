@@ -26,18 +26,6 @@ properties:
     type: date
     required: false
     description: When the item was acquired
-  - name: parent_items
-    type: array
-    items:
-      type: string
-    required: false
-    description: Items this is a component of
-  - name: child_items
-    type: array
-    items:
-      type: string
-    required: false
-    description: Components that make up this item
 
   # Additional location properties
   - name: target_location
@@ -198,23 +186,21 @@ properties:
 
 Physical items represent tangible objects, equipment, or materials that exist in the real world. They can be tracked for inventory, maintenance, and usage purposes.
 
-## Item Management
-
-The physical item schema supports:
-
-- Inventory tracking (quantities, locations)
-- Organizational hierarchy (parent/child relationships)
-- Technical specifications
-- Physical characteristics
-- Storage requirements
-- Usage patterns
-
 ## Relations
 
-Physical items commonly relate to:
+Physical items commonly use these relation types:
 
-- other physical_items (components or containers)
-- activities (processes they're used in)
-- tasks (work that requires these items)
-- persons (who use or maintain the items)
-- organizations (groups that own or use the items)
+- `part_of`: Items this is a component of (formerly parent_items)
+- `contains`: Components that make up this item (formerly child_items)
+- `requires`: Resources needed for this item
+- `executes`: Activities this item is used for
+
+Example:
+
+```yaml
+relations:
+  - 'part_of [[Parent Item]]'
+  - 'contains [[Component Item]]'
+  - 'requires [[Power Supply]]'
+  - 'executes [[Activity Name]]'
+```

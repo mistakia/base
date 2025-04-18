@@ -77,13 +77,13 @@ router.get('/', async (req, res) => {
 router.get('/:task_id', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { task_id } = req.params
+    const { task_id, user_id } = req.params
 
     if (!task_id) {
       return res.status(400).send({ error: 'missing task_id' })
     }
 
-    const task = await tasks_service.get_task({ task_id })
+    const task = await tasks_service.get_task({ entity_id: task_id, user_id })
 
     if (!task) {
       return res.status(404).send({ error: 'task not found' })
@@ -127,7 +127,7 @@ router.post('/?', async (req, res) => {
     })
 
     // Use get_task function to retrieve the created task for consistency
-    const task_result = await tasks_service.get_task({ task_id: entity_id })
+    const task_result = await tasks_service.get_task({ entity_id, user_id })
 
     res.status(200).send(task_result)
   } catch (error) {
