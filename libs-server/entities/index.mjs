@@ -1,0 +1,41 @@
+import {
+  create_entity,
+  create_entity_relations,
+  create_entity_tags
+} from './create_entity.mjs'
+
+import {
+  fetch_entity_data,
+  fetch_entity_tags,
+  fetch_entity_relations,
+  fetch_entity_type_data
+} from './fetch_entity_data.mjs'
+
+// Re-export with clear namespaces
+export {
+  // Creation functions
+  create_entity,
+  create_entity_relations,
+  create_entity_tags,
+
+  // Fetching functions
+  fetch_entity_data,
+  fetch_entity_tags,
+  fetch_entity_relations,
+  fetch_entity_type_data
+}
+
+// Default export
+export default {
+  create: {
+    entity: create_entity,
+    relations: create_entity_relations,
+    tags: create_entity_tags
+  },
+  fetch: {
+    entity: fetch_entity_data,
+    tags: fetch_entity_tags,
+    relations: fetch_entity_relations,
+    type_data: fetch_entity_type_data
+  }
+}
