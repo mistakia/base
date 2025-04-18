@@ -29,7 +29,7 @@ export default async function get_tagged_entities({
   }
 
   // Get all entity IDs with this tag
-  let query = db('entity_tags as et')
+  const query = db('entity_tags as et')
     .join('entities as e', 'et.entity_id', 'e.entity_id')
     .where({
       'et.tag_entity_id': tag_id,
@@ -112,95 +112,4 @@ export default async function get_tagged_entities({
   await Promise.all(fetch_promises)
 
   return result
-}
-
-/**
- * Helper function to get task details
- */
-async function get_task_details(task_ids) {
-  if (!task_ids.length) return []
-
-  return db('entities as e')
-    .join('tasks as t', 'e.entity_id', 't.entity_id')
-    .whereIn('e.entity_id', task_ids)
-    .select(
-      'e.entity_id as task_id',
-      'e.title',
-      'e.description',
-      'e.user_id',
-      'e.created_at',
-      'e.updated_at',
-      't.status',
-      't.priority',
-      't.finish_by',
-      't.planned_start',
-      't.planned_finish'
-    )
-}
-
-/**
- * Helper function to get physical item details
- */
-async function get_physical_item_details(item_ids) {
-  if (!item_ids.length) return []
-
-  return db('entities as e')
-    .join('physical_items as p', 'e.entity_id', 'p.entity_id')
-    .whereIn('e.entity_id', item_ids)
-    .select(
-      'e.entity_id as physical_item_id',
-      'e.title',
-      'e.description',
-      'e.user_id',
-      'e.created_at',
-      'e.updated_at',
-      'p.storage_location',
-      'p.current_location',
-      'p.target_location',
-      'p.importance',
-      'p.frequency_of_use'
-    )
-}
-
-/**
- * Helper function to get digital item details
- */
-async function get_digital_item_details(item_ids) {
-  if (!item_ids.length) return []
-
-  return db('entities as e')
-    .join('digital_items as d', 'e.entity_id', 'd.entity_id')
-    .whereIn('e.entity_id', item_ids)
-    .select(
-      'e.entity_id as digital_item_id',
-      'e.title',
-      'e.description',
-      'e.user_id',
-      'e.created_at',
-      'e.updated_at',
-      'd.file_mime_type',
-      'd.file_uri',
-      'd.file_size'
-    )
-}
-
-/**
- * Helper function to get database table details
- */
-async function get_database_table_details(table_ids) {
-  if (!table_ids.length) return []
-
-  return db('entities as e')
-    .join('database_tables as dt', 'e.entity_id', 'dt.entity_id')
-    .whereIn('e.entity_id', table_ids)
-    .select(
-      'e.entity_id as database_table_id',
-      'e.title',
-      'e.description',
-      'e.user_id',
-      'e.created_at',
-      'e.updated_at',
-      'dt.table_name',
-      'dt.table_description'
-    )
 }

@@ -13,7 +13,6 @@ import {
 } from './entity-converter/index.mjs'
 import { git } from '#libs-server'
 import config from '#config'
-import { entity_relations } from '#libs-shared'
 
 const log = debug('markdown')
 

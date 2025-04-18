@@ -17,7 +17,7 @@ export default async function get_task({ entity_id, user_id }) {
   }
 
   // Get tags
-  const tags = await fetch_entity_tags({ entity_id: entity_id })
+  const tags = await fetch_entity_tags({ entity_id })
 
   // Get all relations from entity_relations
   const outgoing_relations = await db('entity_relations')

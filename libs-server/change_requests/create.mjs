@@ -64,7 +64,7 @@ export async function create_change_request({
     log(`Created or found worktree at ${worktree_path}`)
 
     if (file_changes.length > 0) {
-      await _apply_file_changes({
+      await apply_file_changes({
         worktree_path,
         file_changes,
         change_request_id,
@@ -76,7 +76,7 @@ export async function create_change_request({
 
     // --- GitHub Integration (Optional) ---
     if (create_github_pr) {
-      const github_result = await _create_github_pr({
+      const github_result = await create_github_pull_request({
         github_repo,
         title,
         feature_branch,
@@ -92,7 +92,7 @@ export async function create_change_request({
     // --- Database and File Operations (Transaction) ---
     log(`Starting DB transaction for change request ${change_request_id}`)
     await db.transaction(async (trx) => {
-      await _save_to_database({
+      await save_to_database({
         trx,
         change_request_id,
         status: 'PendingReview',
@@ -107,7 +107,7 @@ export async function create_change_request({
         related_thread_id
       })
 
-      await _create_markdown_file({
+      await create_markdown_file({
         change_request_id,
         title,
         description,
@@ -141,7 +141,7 @@ export async function create_change_request({
 }
 
 // Helper function to apply file changes to the worktree
-async function _apply_file_changes({
+async function apply_file_changes({
   worktree_path,
   file_changes,
   change_request_id,
@@ -167,11 +167,11 @@ async function _apply_file_changes({
 
   const commit_message = `feat: Apply changes for change request ${change_request_id}\n\n${title}`
   await git_ops.commit_changes({ worktree_path, commit_message })
-  log(`Committed changes to feature branch`)
+  log('Committed changes to feature branch')
 }
 
 // Helper function to create a GitHub PR
-async function _create_github_pr({
+async function create_github_pull_request({
   github_repo,
   title,
   feature_branch,
@@ -220,7 +220,7 @@ async function _create_github_pr({
 }
 
 // Helper function to save change request to database
-async function _save_to_database({
+async function save_to_database({
   trx,
   change_request_id,
   status,
@@ -259,7 +259,7 @@ async function _save_to_database({
 }
 
 // Helper function to create markdown file for change request
-async function _create_markdown_file({
+async function create_markdown_file({
   change_request_id,
   title,
   description,
