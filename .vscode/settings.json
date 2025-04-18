@@ -2,6 +2,7 @@
   "search.exclude": {
     "**/.yarn": true,
     "yarn.lock": true,
-    "data/import_history/*": true
+    "data/import_history/*": true,
+    "data/task/*": true
   }
 }
