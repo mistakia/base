@@ -66,28 +66,50 @@
   ul.task-list
     list-style-type none
     padding-left 0
+    width 100%
+    margin 0
+
+    // Base styles for lists
+    &.base-list-item, ul.base-list-item
+      list-style-type none
+      margin 0
+      padding 0
+
+    // Nested task list
+    &.nested-task-list
+      padding-left 0
+      margin-top 8px
+      margin-bottom 4px
+      margin-left 12px
     
     li.task-list-item
       position relative
       display flex
+      flex-direction column
       align-items flex-start
       margin-bottom 12px
       padding-left 0
+      width 100%
       
-      // Hide native checkboxes and labels when they've been replaced
-      input[type="checkbox"].mui-checkbox
-        display none
-        
-      label.task-checkbox-label
-        display none
+      // Nested list styling
+      &.has-nested-items
+        margin-bottom 4px
         
       // MUI checkbox styling
       .mui-checkbox-wrapper
-        margin-right 4px
+        width 100%
         
-        .mui-task-checkbox
+        .task-list-item-content
+          display flex
+          align-items flex-start
+          width 100%
+          position relative
+
+        .MuiFormControlLabel-root
           margin 0
           align-items flex-start
+          display flex
+          width 100%
           
           .MuiFormControlLabel-label
             font-size 14px
@@ -97,4 +119,9 @@
             
           .MuiCheckbox-root
             padding 0 8px 0 0
-            margin-top 0 
+            margin-top 0
+            flex-shrink 0
+
+      // Hide native checkboxes when they've been replaced
+      input[type="checkbox"].mui-checkbox
+        display none
