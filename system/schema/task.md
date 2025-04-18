@@ -22,11 +22,11 @@ properties:
     required: false
     description: Current status of the task
   - name: start_by
-    type: date
+    type: datetime
     required: false
     description: Date by which the task should be started
   - name: finish_by
-    type: date
+    type: datetime
     required: false
     description: Due date for task completion
   - name: estimated_total_duration

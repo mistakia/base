@@ -20,6 +20,11 @@ properties:
     type: string
     required: true
     description: Short description of the content
+  - name: user_id
+    type: string
+    format: uuid
+    required: true
+    description: Owning user ID
   - name: tags
     type: array
     items:

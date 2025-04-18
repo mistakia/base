@@ -1,4 +1,11 @@
 import db from '#db'
+import {
+  RELATION_DEPENDS_ON,
+  RELATION_CHILD_OF,
+  RELATION_INVOLVES,
+  RELATION_ASSIGNED_TO,
+  RELATION_REQUIRES
+} from '#libs-shared'
 
 export default async function ({
   title,
@@ -57,7 +64,7 @@ export default async function ({
         (dependent_task_id) => ({
           source_entity_id: entity_id,
           target_entity_id: dependent_task_id,
-          relation_type: 'depends_on'
+          relation_type: RELATION_DEPENDS_ON
         })
       )
 
@@ -69,7 +76,7 @@ export default async function ({
       const parent_relations = parent_task_ids.map((parent_task_id) => ({
         source_entity_id: entity_id,
         target_entity_id: parent_task_id,
-        relation_type: 'child_of'
+        relation_type: RELATION_CHILD_OF
       }))
 
       await trx('entity_relations').insert(parent_relations)
@@ -90,7 +97,7 @@ export default async function ({
       const org_relations = organization_ids.map((organization_id) => ({
         source_entity_id: entity_id,
         target_entity_id: organization_id,
-        relation_type: 'involves'
+        relation_type: RELATION_INVOLVES
       }))
 
       await trx('entity_relations').insert(org_relations)
@@ -101,7 +108,7 @@ export default async function ({
       const person_relations = person_ids.map((person_id) => ({
         source_entity_id: entity_id,
         target_entity_id: person_id,
-        relation_type: 'assigned_to'
+        relation_type: RELATION_ASSIGNED_TO
       }))
 
       await trx('entity_relations').insert(person_relations)
@@ -113,7 +120,7 @@ export default async function ({
         (physical_item_id) => ({
           source_entity_id: entity_id,
           target_entity_id: physical_item_id,
-          relation_type: 'requires'
+          relation_type: RELATION_REQUIRES
         })
       )
 
@@ -126,7 +133,7 @@ export default async function ({
         (digital_item_id) => ({
           source_entity_id: entity_id,
           target_entity_id: digital_item_id,
-          relation_type: 'requires'
+          relation_type: RELATION_REQUIRES
         })
       )
 

@@ -128,7 +128,7 @@ CREATE TABLE entities (
   title VARCHAR(255) NOT NULL,
   type entity_type NOT NULL,
   permalink VARCHAR(255),
-  description TEXT,
+  description TEXT NOT NULL,
   user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
   embedding vector(1536),
   git_sha VARCHAR(40),  -- Git commit hash for markdown files
@@ -614,7 +614,7 @@ SELECT
 FROM
   entity_relations
 WHERE
-  relation_type IN ('requires', 'uses')
+  relation_type = 'requires'
 AND
   EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
 AND
@@ -628,7 +628,7 @@ SELECT
 FROM
   entity_relations
 WHERE
-  relation_type IN ('requires', 'uses')
+  relation_type = 'requires'
 AND
   EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
 AND
@@ -642,7 +642,7 @@ SELECT
 FROM
   entity_relations
 WHERE
-  relation_type IN ('has_member', 'includes')
+  relation_type = 'has_member'
 AND
   EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'organization')
 AND
@@ -656,7 +656,7 @@ SELECT
 FROM
   entity_relations
 WHERE
-  relation_type IN ('member_of', 'belongs_to')
+  relation_type = 'member_of'
 AND
   EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'person')
 AND
@@ -684,7 +684,7 @@ SELECT
 FROM
   entity_relations
 WHERE
-  relation_type IN ('child_of', 'subtask_of')
+  relation_type = 'child_of'
 AND
   EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
 AND

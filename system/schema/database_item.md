@@ -5,10 +5,10 @@ title: Database Item
 extends: base
 description: Database items represent records within a database
 properties:
-  - name: database_id
+  - name: database_table_id
     type: string
     required: true
-    description: Reference to the parent database
+    description: Reference to the parent database table
 ---
 
 # Database Item
@@ -19,7 +19,7 @@ Database items represent records within a database. They follow the schema defin
 
 The properties of a database item are determined by the parent database:
 
-- The `database_id` property points to the parent database
+- The `database_table_id` property points to the parent database table
 - Required fields from the parent database schema must be included
 - Additional fields beyond the required set are allowed
 
@@ -50,7 +50,7 @@ A valid database item would be:
 ---
 title: Project Alpha
 type: database_item
-database_id: project_database
+database_table_id: project_database_entity_id # Example assumes the parent database entity ID is used here
 project_code: PRJ-001
 start_date: 2023-01-15
 budget: 50000

@@ -69,48 +69,49 @@ The body of each markdown file follows this general structure:
 # Document Title
 
 Body contains any content relevant to the document.
-
-## Observations
-
-- [category] Fact or observation about the topic #tag1 (optional context)
-- [tech] Uses PostgreSQL for indexing #database #search
-- [decision] Selected markdown format for portability #storage (Based on user requirements)
-
-## Relations
-
-- relates_to [[Other Document]] (optional context)
-- implements [[Design Pattern]]
-- depends_on [[Database Schema]]
 ```
 
 ## Observations and Relations
 
-Every knowledge item can include observations and relations to build a rich semantic knowledge graph:
+Every knowledge item can include observations and relations in the frontmatter to build a rich semantic knowledge graph:
 
 ### Observations
 
-Structured facts with semantic categorization:
+Structured facts with semantic categorization in frontmatter:
 
-```markdown
-## Observations
-
-- [category] Content with #tags (optional context)
-- [tech] Uses PostgreSQL for indexing #database
-- [decision] Selected markdown for storage #format (Based on team discussion)
+```yaml
+observations:
+  - '[category] Content with #tags (optional context)'
+  - '[tech] Uses PostgreSQL for indexing #database'
+  - '[decision] Selected markdown for storage #format (Based on team discussion)'
 ```
 
 ### Relations
 
-Connections to other knowledge items:
+Relations must be defined in the frontmatter as an array of strings following a specific format:
 
-```markdown
-## Relations
-
-- relation_type [[Other Document]] (optional context)
-- implements [[Design Pattern]]
-- depends_on [[Database Schema]]
-- assigned_to [[Person Name]]
+```yaml
+relations:
+  - 'relation_type [[Other Document]] (optional context)'
+  - 'implements [[Design Pattern]]'
+  - 'depends_on [[Database Schema]]'
+  - 'assigned_to [[Person Name]]'
 ```
+
+Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
+
+- `relates_to`: General relationship between items
+- `implements`: Implements a pattern, guideline, or design
+- `depends_on`: Dependency relationship
+- `assigned_to`: Assignment relationship
+- `part_of`: Hierarchical relationship (item is part of a larger whole)
+- `contains`: Contains other items
+- `child_of`: Parent-child relationship
+- `follows`: Follows a guideline or process
+- `requires`: Requires a resource or item
+- `member_of`: Membership relationship
+- `has_member`: Organization-member relationship
+- `involves`: Involvement relationship
 
 ## Permalinks and Referencing
 

@@ -27,7 +27,7 @@ properties:
     description: Fields that define the database schema
   - name: table_name
     type: string
-    required: false
+    required: true
     description: Name of the table
   - name: table_description
     type: string
