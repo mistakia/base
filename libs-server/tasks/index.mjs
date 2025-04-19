@@ -1,3 +1,5 @@
 export { default as create_task } from './create_task.mjs'
 export { default as get_task } from './get_task.mjs'
 export { default as get_tasks } from './get_tasks.mjs'
+export { default as update_task } from './update_task.mjs'
+export { default as delete_task } from './delete_task.mjs'

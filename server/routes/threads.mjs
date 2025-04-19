@@ -5,7 +5,7 @@ import {
   execute_tool,
   has_tool,
   list_tools
-} from '#libs-server/threads/tool_executor.mjs'
+} from '#libs-server/tools/index.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -18,39 +18,38 @@ const require_auth = (req, res, next) => {
   next()
 }
 
-// Middleware for thread ownership check
+// Middleware to check thread ownership
 const check_thread_ownership = async (req, res, next) => {
   try {
     const { thread_id } = req.params
     const thread = await threads.get_thread({ thread_id })
 
-    // Store thread in request for later use
-    req.thread = thread
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' })
+    }
 
     if (thread.user_id !== req.auth.user_id) {
-      return res.status(403).json({
-        error: 'Not authorized to access this thread'
-      })
+      return res
+        .status(403)
+        .json({ error: 'Not authorized to access this thread' })
     }
+
+    // Add thread to request for use in route handlers
+    req.thread = thread
     next()
   } catch (error) {
-    log('Error checking thread ownership:', error)
-    if (error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message })
-    }
-    return res.status(500).json({ error: error.message })
+    log('Error checking thread ownership: %o', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
 
-// Error handler helper
-const handle_errors = (res, error, context) => {
-  log(`Error ${context}:`, error)
-  if (error.message.includes('not found')) {
-    return res.status(404).json({ error: error.message })
-  } else if (error.message.includes('Invalid state')) {
-    return res.status(400).json({ error: error.message })
-  }
-  return res.status(500).json({ error: error.message })
+// Helper to handle common errors
+const handle_errors = (res, error, action) => {
+  log(`Error ${action}: %o`, error)
+  res.status(500).json({
+    error: `Error ${action}`,
+    message: error.message
+  })
 }
 
 // Get all threads with optional filtering
@@ -258,7 +257,7 @@ router.post(
       }
 
       // Check if the tool exists
-      if (!has_tool(tool_name)) {
+      if (!has_tool({ tool_name })) {
         return res
           .status(400)
           .json({ error: `Tool '${tool_name}' is not registered` })

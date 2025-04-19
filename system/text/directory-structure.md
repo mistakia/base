@@ -47,11 +47,20 @@ The `libs-server/` directory contains server-specific code organized by function
 
 ```
 └── libs-server/
-    ├── index.mjs       # Main export file
-    ├── constants.mjs   # Shared constants
-    ├── tasks/          # Task management functionality
-    ├── integrations/   # External service integrations
-    └── mcp/            # Model Context Protocol service
+    ├── index.mjs               # Main export file
+    ├── blocks/                 # Block-related functionality
+    ├── change_requests/        # Change request management
+    ├── entities/               # Entity management
+    ├── git/                    # Git integration functionality
+    ├── inference_providers/    # Inference service providers
+    ├── integrations/           # External service integrations
+    ├── markdown/               # Markdown processing
+    ├── mcp/                    # Model Context Protocol service
+    ├── normalize_user_id.mjs   # User ID normalization utilities
+    ├── tags/                   # Tag management functionality
+    ├── tasks/                  # Task management functionality
+    ├── threads/                # Thread management functionality
+    └── users/                  # User management functionality
 ```
 
 ### Scripts

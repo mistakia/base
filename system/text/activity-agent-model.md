@@ -43,4 +43,4 @@ Base Thread Agent
 
 ## Implementation Notes
 
-This design pattern enables modular agent capabilities that can evolve independently while maintaining a consistent orchestration layer. 
+This design pattern enables modular agent capabilities that can evolve independently while maintaining a consistent orchestration layer.

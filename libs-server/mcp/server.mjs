@@ -1,25 +1,13 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import debug from 'debug'
 import { z } from 'zod'
-import { list_providers, process_request } from './service.mjs'
-
-import { NOTION_TOOLS } from './notion/index.mjs'
-import {
-  DB_TOOLS,
-  DB_RESOURCES,
-  DB_RESOURCE_TEMPLATES
-} from './database/index.mjs'
-// TODO renable
-// import { GIT_TOOLS } from './git/index.mjs'
-import { TASK_TOOLS } from './tasks/index.mjs'
+import { list_tools, execute_tool } from '#libs-server/tools/index.mjs'
+import { format_response, format_error } from '#libs-server/mcp/utils.mjs'
 
 const logger = debug('mcp')
 logger('Model Context Protocol initialized')
 
-const providers = list_providers()
-logger(`Registered MCP providers: ${providers.join(', ') || 'none'}`)
-
-// Create a single MCP server that combines all providers
+// Create a single MCP server
 const mcp_server = new Server(
   {
     name: 'mcp-server',
@@ -65,19 +53,12 @@ mcp_server.setRequestHandler(
   { priority: -1 }
 )
 
-// Combine all tools and resources
-const ALL_TOOLS = [...NOTION_TOOLS, ...DB_TOOLS, ...TASK_TOOLS]
+// Get all registered tools
+const ALL_TOOLS = list_tools()
 
 // Combine resources from all providers
-const ALL_RESOURCES = [
-  ...DB_RESOURCES
-  // Add more resources from other providers here
-]
-
-const ALL_RESOURCE_TEMPLATES = [
-  ...DB_RESOURCE_TEMPLATES
-  // Add more resource templates from other providers here
-]
+const ALL_RESOURCES = []
+const ALL_RESOURCE_TEMPLATES = []
 
 // Convert tools array to capabilities format
 const tools_capabilities = {}
@@ -135,70 +116,27 @@ mcp_server.setRequestHandler(
       arguments: z.any()
     })
   }),
-  async (request) => {
+  async (request, extra) => {
     logger('Handling tools/call request: %O', request)
-    const { name, arguments: args } = request.params
+    const { name, arguments: parameters } = request.params
 
-    // Determine which provider should handle this tool
-    let provider_name = 'notion' // Default to notion
-
-    // Route the request to the appropriate provider
-    if (name.startsWith('notion_')) {
-      provider_name = 'notion'
-    } else if (name.startsWith('db_')) {
-      provider_name = 'database'
-    } else if (name.startsWith('knowledge_base_')) {
-      provider_name = 'git'
-    } else if (name.startsWith('task_')) {
-      provider_name = 'tasks'
-    }
-
-    // Process the request using the provider
     try {
-      const result = await process_request(provider_name, {
-        method: 'tools/call',
-        params: {
-          name,
-          arguments: args
-        }
+      const result = await execute_tool({
+        tool_name: name,
+        parameters,
+        context: extra // Pass the extra object as context to the tool
       })
       logger('Tool call result: %O', result)
-      return result
+
+      // Format the response for MCP
+      if (result.status === 'error') {
+        return format_error(name, new Error(result.error))
+      } else {
+        return format_response(result.data)
+      }
     } catch (error) {
       logger('Error processing tool call: %O', error)
-      throw error
-    }
-  }
-)
-
-// Define a handler for reading resources
-mcp_server.setRequestHandler(
-  z.object({
-    method: z.literal('resources/read'),
-    params: z.object({
-      uri: z.string()
-    })
-  }),
-  async (request) => {
-    logger('Handling resources/read request: %O', request)
-    const { uri } = request.params
-
-    // Determine which provider should handle this resource
-    const provider_name = 'database' // Default to database for resources
-
-    // Process the request using the provider
-    try {
-      const result = await process_request(provider_name, {
-        method: 'resources/read',
-        params: {
-          uri
-        }
-      })
-      logger('Resource read result: %O', result)
-      return result
-    } catch (error) {
-      logger('Error processing resource read: %O', error)
-      throw error
+      return format_error(name, error)
     }
   }
 )
