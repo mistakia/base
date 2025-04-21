@@ -15,39 +15,34 @@ export function register_file_search_tool() {
   register_tool({
     tool_name: 'file_search',
     tool_definition: {
-      description:
-        'Searches for content within files in a specific thread branch or change request branch.',
+      description: 'Search for content in files within a specific branch',
       inputSchema: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
-            description: 'The text or regex pattern to search for.'
-          },
-          path: {
-            type: 'string',
-            description:
-              'Optional: Restrict the search to files within this path relative to the repository root.'
-          },
-          case_sensitive: {
-            type: 'boolean',
-            description: 'Whether the search should be case-sensitive.',
-            default: false
-          },
-          thread_id: {
-            type: 'string',
-            description:
-              "Optional: Explicitly target this thread's branch (e.g., thread/{thread_id}). Overrides context thread_id."
-          },
-          branch_name: {
-            type: 'string',
-            description:
-              'Optional: Explicitly target this branch by name. Takes precedence over thread_id.'
+            description: 'The text to search for'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'Repository path to search in'
+          },
+          path: {
+            type: 'string',
+            description: 'Optional path within repo to limit search'
+          },
+          case_sensitive: {
+            type: 'boolean',
+            description: 'Whether search is case sensitive',
+            default: false
+          },
+          branch_name: {
+            type: 'string',
+            description: 'Branch name to use (takes precedence over thread_id)'
+          },
+          thread_id: {
+            type: 'string',
+            description: 'Optional thread ID to determine branch'
           }
         },
         required: ['query']
@@ -58,11 +53,11 @@ export function register_file_search_tool() {
         // Delegate to the base-files implementation
         const results = await search_files({
           query: parameters.query,
+          repo_path: parameters.repo_path,
           path: parameters.path,
           case_sensitive: parameters.case_sensitive || false,
-          thread_id: parameters.thread_id,
           branch_name: parameters.branch_name,
-          repo_path: parameters.repo_path,
+          thread_id: parameters.thread_id,
           context
         })
 

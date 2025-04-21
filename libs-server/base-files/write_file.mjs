@@ -10,7 +10,7 @@ import path from 'path'
 import debug from 'debug'
 
 import * as git from '#libs-server/git/index.mjs'
-import { get_target_branch } from '../utils/branch.mjs'
+import { get_target_branch } from './branch_utils.mjs'
 
 const log = debug('files:write')
 
@@ -26,7 +26,6 @@ const log = debug('files:write')
  * @param {string} [params.thread_id] - Thread ID to infer branch if branch_name not provided
  * @param {string} [params.branch_name] - Explicit branch name to use
  * @param {string} [params.commit_message] - Commit message for the change
- * @param {Object} [params.context={}] - Context object that may contain thread_id
  * @returns {Promise<Object>} Result of the operation
  */
 export async function write_file({
@@ -37,8 +36,7 @@ export async function write_file({
   repo_path,
   thread_id,
   branch_name,
-  commit_message,
-  context = {}
+  commit_message
 }) {
   if (!file_path) {
     throw new Error('File path is required')
@@ -61,8 +59,7 @@ export async function write_file({
     if (!target_branch) {
       const branch_info = await get_target_branch({
         thread_id,
-        repo_path,
-        context
+        repo_path
       })
 
       target_branch = branch_info.branch_name
@@ -170,4 +167,9 @@ export async function write_file({
       file_path
     }
   }
+}
+
+// Default export for convenient importing
+export default {
+  write_file
 }

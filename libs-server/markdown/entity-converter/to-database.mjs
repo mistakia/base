@@ -50,9 +50,9 @@ export async function generate_database_from_entity_file({
 
     const processed_data = await process_markdown_entity(content, file_info)
 
-    if (!processed_data.validation.valid) {
+    if (!processed_data.valid) {
       throw new Error(
-        `Invalid entity file: ${processed_data.validation.errors.join(', ')}`
+        `Invalid entity file: ${processed_data.errors.join(', ')}`
       )
     }
 

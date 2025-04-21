@@ -16,48 +16,45 @@ export function register_file_write_tool() {
     tool_name: 'file_write',
     tool_definition: {
       description:
-        'Writes content to a file within a specific thread branch. Supports creating new files, updating existing files, or deleting files.',
+        'Writes content to a file within a Git repository branch. Supports creating new files, updating existing files, or applying patches.',
       inputSchema: {
         type: 'object',
         properties: {
           path: {
             type: 'string',
-            description: 'Path to the file relative to the repository root.'
+            description: 'The file path relative to the repository root'
           },
           content: {
             type: 'string',
             description:
-              'The full content to write to the file. Required for create or update operations.'
+              'The full content of the file (for new files or complete replacements)'
           },
           patch_content: {
             type: 'string',
-            description:
-              'Git patch content to apply for partial updates. Alternative to content for update operations.'
+            description: 'Git patch content to apply (for partial updates)'
           },
           operation: {
             type: 'string',
             enum: ['create', 'update', 'delete'],
             description:
-              'Operation type. Defaults to "update" if not specified.'
-          },
-          branch_name: {
-            type: 'string',
-            description:
-              'Optional: Explicitly target this branch. If omitted, will attempt to infer from thread_id.'
-          },
-          thread_id: {
-            type: 'string',
-            description:
-              'Optional: Thread ID to infer branch if branch_name not provided. Overrides context thread_id.'
-          },
-          commit_message: {
-            type: 'string',
-            description: 'Optional: Custom commit message for the change.'
+              "Operation type: 'create', 'update', or 'delete'. Defaults to 'update'",
+            default: 'update'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'The path to the repository'
+          },
+          thread_id: {
+            type: 'string',
+            description: 'Thread ID to infer branch if branch_name not provided'
+          },
+          branch_name: {
+            type: 'string',
+            description: 'Explicit branch name to use'
+          },
+          commit_message: {
+            type: 'string',
+            description: 'Commit message for the change'
           }
         },
         required: ['path']

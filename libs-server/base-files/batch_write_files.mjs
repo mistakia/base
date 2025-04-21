@@ -10,7 +10,7 @@ import path from 'path'
 import fs from 'fs/promises'
 
 import * as git from '#libs-server/git/index.mjs'
-import { get_target_branch } from '../utils/branch.mjs'
+import { get_target_branch } from './branch_utils.mjs'
 
 const log = debug('files:write:batch')
 
@@ -28,7 +28,6 @@ const log = debug('files:write:batch')
  * @param {string} [params.branch_name] - Explicit branch name to use
  * @param {string} [params.commit_message] - Single commit message for all changes
  * @param {boolean} [params.commit_per_file=false] - Whether to commit each file separately
- * @param {Object} [params.context={}] - Context object that may contain thread_id
  * @returns {Promise<Object>} Result of the batch operation
  */
 export async function batch_write_files({
@@ -37,8 +36,7 @@ export async function batch_write_files({
   thread_id,
   branch_name,
   commit_message,
-  commit_per_file = false,
-  context = {}
+  commit_per_file = false
 }) {
   if (!files || !Array.isArray(files) || files.length === 0) {
     throw new Error('At least one file operation must be provided')
@@ -55,8 +53,7 @@ export async function batch_write_files({
     if (!target_branch) {
       const branch_info = await get_target_branch({
         thread_id,
-        repo_path,
-        context
+        repo_path
       })
 
       target_branch = branch_info.branch_name
@@ -227,4 +224,9 @@ export async function batch_write_files({
       error: error.message
     }
   }
+}
+
+// Default export for convenient importing
+export default {
+  batch_write_files
 }

@@ -6,7 +6,10 @@ import { mcp_server } from '#libs-server/mcp/server.mjs'
 
 // Configure debug logging
 const logger = debug('mcp:stdio')
-debug.enable('*')
+
+if (process.env.NODE_ENV !== 'test') {
+  debug.enable('*')
+}
 
 // Create a stdio transport
 const transport = new StdioServerTransport()

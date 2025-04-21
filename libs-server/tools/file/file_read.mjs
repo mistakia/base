@@ -16,7 +16,7 @@ export function register_file_read_tool() {
     tool_name: 'file_read',
     tool_definition: {
       description:
-        'Reads the content of a file from a specific thread branch or change request branch.',
+        'Reads the content of a file from a specific branch in a Git repository.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -26,18 +26,16 @@ export function register_file_read_tool() {
           },
           thread_id: {
             type: 'string',
-            description:
-              "Optional: Explicitly target this thread's branch (e.g., thread/{thread_id}). Overrides context thread_id."
+            description: 'Optional: Thread ID to determine branch'
           },
           branch_name: {
             type: 'string',
             description:
-              'Optional: Explicitly target this branch by name. Takes precedence over thread_id.'
+              'Optional: Branch name to use (takes precedence over thread_id)'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'Optional: Repository path (for testing)'
           }
         },
         required: ['path']

@@ -116,7 +116,8 @@ export async function create_change_request({
         github_pr_number: pr_number,
         github_repo,
         thread_id,
-        tags
+        tags,
+        repo_path
       })
     })
 
@@ -217,9 +218,13 @@ async function create_markdown_file({
   github_pr_number,
   github_repo,
   thread_id,
-  tags
+  tags,
+  repo_path
 }) {
-  const file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+  const file_path = path.join(
+    repo_path,
+    `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+  )
   const iso_date = now.toISOString()
 
   // Create the frontmatter

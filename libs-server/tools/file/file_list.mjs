@@ -15,37 +15,32 @@ export function register_file_list_tool() {
   register_tool({
     tool_name: 'file_list',
     tool_definition: {
-      description:
-        'Lists files within a specific directory of a thread branch or change request branch.',
+      description: 'Lists files within a directory in a specific branch.',
       inputSchema: {
         type: 'object',
         properties: {
           path: {
             type: 'string',
-            description:
-              'Optional: Directory path relative to the repository root to list files from. Defaults to root.',
+            description: 'Optional: Directory path to list files from',
             default: ''
           },
           pattern: {
             type: 'string',
-            description:
-              "Optional: Glob pattern to filter files (e.g., '*.md', 'data/tasks/*'). Defaults to all files ('*').",
+            description: 'Optional: Glob pattern to filter files',
             default: '*'
           },
           thread_id: {
             type: 'string',
-            description:
-              "Optional: Explicitly target this thread's branch (e.g., thread/{thread_id}). Overrides context thread_id."
+            description: 'Optional: Thread ID to determine branch'
           },
           branch_name: {
             type: 'string',
             description:
-              'Optional: Explicitly target this branch by name. Takes precedence over thread_id.'
+              'Optional: Branch name to use (takes precedence over thread_id)'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'Optional: Repository path (for testing)'
           }
         }
         // No required properties, path and pattern have defaults

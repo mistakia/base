@@ -15,42 +15,37 @@ export function register_file_diff_tool() {
   register_tool({
     tool_name: 'file_diff',
     tool_definition: {
-      description:
-        'Gets the diff for a specific path within a thread branch or change request branch, compared to a base branch (defaults to main).',
+      description: 'Gets the diff for a file or directory between branches',
       inputSchema: {
         type: 'object',
         properties: {
           path: {
             type: 'string',
             description:
-              'Optional: Path relative to the repository root to get the diff for. If omitted, shows diff for the entire branch.'
+              'Path to get diff for (if omitted, shows diff for entire branch)'
           },
           compare_with: {
             type: 'string',
-            description:
-              'Optional: The base branch or commit to compare against.',
+            description: 'The base branch to compare against',
             default: 'main'
           },
           format: {
             type: 'string',
             enum: ['unified', 'name-only', 'stat'],
-            description: 'Diff format to return.',
+            description: 'Diff format (unified, name-only, stat)',
             default: 'unified'
           },
           thread_id: {
             type: 'string',
-            description:
-              "Optional: Explicitly target this thread's branch (e.g., thread/{thread_id}). Overrides context thread_id."
+            description: 'Thread ID to determine branch'
           },
           branch_name: {
             type: 'string',
-            description:
-              'Optional: Explicitly target this branch by name. Takes precedence over thread_id.'
+            description: 'Branch name to use (takes precedence over thread_id)'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'Repository path (for testing)'
           }
         }
         // No required properties

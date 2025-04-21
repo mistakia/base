@@ -21,16 +21,12 @@ const expect = chai.expect
 
 describe('Change Requests', function () {
   let test_user
-  let orig_cwd
   let test_thread
 
   // Set longer timeout for Git operations
   this.timeout(30000)
 
   beforeEach(async function () {
-    // Save original working directory
-    orig_cwd = process.cwd()
-
     // Reset database tables
     await reset_all_tables()
 
@@ -44,23 +40,9 @@ describe('Change Requests', function () {
     test_thread = await create_test_thread({
       user_id: test_user.user_id
     })
-
-    // Create the change_requests directory
-    await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'data/change_requests'),
-      {
-        recursive: true
-      }
-    )
-
-    // Change to the test repo directory so git operations use this path
-    process.chdir(test_thread.user_base_directory)
   })
 
   afterEach(async function () {
-    // Restore original working directory
-    process.chdir(orig_cwd)
-
     // Clean up
     test_thread.cleanup()
   })

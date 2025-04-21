@@ -74,7 +74,7 @@ export async function process_markdown_entity(
 
     return {
       ...parsed,
-      validation,
+      ...validation,
       extracted
     }
   } catch (error) {
@@ -241,7 +241,7 @@ export async function import_repositories(options, user_id) {
       // Process the markdown entity with centralized function
       const processed = await process_markdown_entity(content, file, schemas)
 
-      if (processed.validation.valid) {
+      if (processed.valid) {
         // Pass schemas and force_update option if specified
         await import_markdown_entity(processed, file, user_id, {
           force_update: options.force_update,
@@ -249,13 +249,11 @@ export async function import_repositories(options, user_id) {
         })
         imported++
       } else {
-        log(
-          `Validation failed for ${file.file_path}:`,
-          processed.validation.errors
-        )
+        log(`Validation failed for ${file.file_path}:`, processed.errors)
         skipped++
       }
     } catch (error) {
+      console.log({ error })
       log(`Error processing file ${file.file_path}:`, error)
       errors++
     }

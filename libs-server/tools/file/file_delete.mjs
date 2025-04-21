@@ -15,61 +15,49 @@ export function register_file_delete_tool() {
   register_tool({
     tool_name: 'file_delete',
     tool_definition: {
-      description:
-        'Deletes a file within a specific thread branch or change request branch. Creates a new change request if one is not specified.',
+      description: 'Deletes a file within a specific thread or feature branch',
       inputSchema: {
         type: 'object',
         properties: {
           path: {
             type: 'string',
-            description: 'Path to the file relative to the repository root.'
-          },
-          change_request_id: {
-            type: 'string',
-            description:
-              "Optional: Explicitly target this change request's feature branch. If provided, the file change will be added as a new commit to this existing branch. If omitted, a new change request and branch will be created."
-          },
-          thread_id: {
-            type: 'string',
-            description:
-              "Optional: Explicitly target this thread's branch when creating a *new* change request. Overrides context thread_id. Ignored if change_request_id is provided."
-          },
-          commit_message: {
-            type: 'string',
-            description:
-              'Optional: Custom commit message. Defaults to an automatic message. Used only when modifying an existing change_request_id.'
-          },
-          change_request_title: {
-            type: 'string',
-            description:
-              'Optional: Title for the new change request if one is created. Defaults to an automatic title.'
-          },
-          change_request_description: {
-            type: 'string',
-            description:
-              'Optional: Description for the new change request if one is created.'
+            description: 'The file path relative to the repository root'
           },
           repo_path: {
             type: 'string',
-            description:
-              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+            description: 'The path to the repository'
+          },
+          thread_id: {
+            type: 'string',
+            description: 'Thread ID to infer branch if branch_name not provided'
+          },
+          branch_name: {
+            type: 'string',
+            description: 'Explicit branch name to use'
+          },
+          commit_message: {
+            type: 'string',
+            description: 'Commit message for the deletion'
+          },
+          force: {
+            type: 'boolean',
+            description: 'Force removal even if file has local modifications',
+            default: false
           }
         },
         required: ['path']
       }
     },
-    implementation: async (parameters, context = {}) => {
+    implementation: async (parameters) => {
       try {
         // Delegate to the base-files implementation
         return await delete_file({
           path: parameters.path,
-          change_request_id: parameters.change_request_id,
-          thread_id: parameters.thread_id,
-          commit_message: parameters.commit_message,
-          change_request_title: parameters.change_request_title,
-          change_request_description: parameters.change_request_description,
           repo_path: parameters.repo_path,
-          context
+          thread_id: parameters.thread_id,
+          branch_name: parameters.branch_name,
+          commit_message: parameters.commit_message,
+          force: parameters.force
         })
       } catch (error) {
         log(`Error deleting file ${parameters.path}:`, error)

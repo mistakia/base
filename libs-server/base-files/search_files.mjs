@@ -5,8 +5,8 @@
  */
 import debug from 'debug'
 
-import { search_repository } from '../../git/index.mjs'
-import { get_target_branch } from '../utils/branch.mjs'
+import { search_repository } from '#libs-server/git/index.mjs'
+import { get_target_branch } from './branch_utils.mjs'
 
 const log = debug('files:search')
 
@@ -20,7 +20,6 @@ const log = debug('files:search')
  * @param {boolean} [params.case_sensitive=false] - Whether search is case sensitive
  * @param {string} [params.branch_name] - Branch name to use (takes precedence over thread_id)
  * @param {string} [params.thread_id] - Optional thread ID to determine branch
- * @param {Object} [params.context] - Optional request context
  * @returns {Promise<Object>} Search results grouped by repository
  */
 export async function search_files({
@@ -29,8 +28,7 @@ export async function search_files({
   path,
   case_sensitive = false,
   branch_name,
-  thread_id,
-  context
+  thread_id
 }) {
   if (!query || query.trim() === '') {
     throw new Error('Search query cannot be empty')
@@ -40,12 +38,10 @@ export async function search_files({
     `search_files: Searching for "${query}" in repo ${repo_path || 'all repos'}`
   )
 
-  // Determine target branch based on context
   const { branch_name: target_branch_name } = await get_target_branch({
     branch_name,
     thread_id,
-    repo_path,
-    context
+    repo_path
   })
 
   // Perform the search
@@ -63,4 +59,9 @@ export async function search_files({
     query,
     results
   }
+}
+
+// Default export for convenient importing
+export default {
+  search_files
 }

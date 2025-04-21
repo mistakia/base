@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 import * as git_ops from '#libs-server/git/index.mjs'
-import { get_target_branch } from '../utils/branch.mjs'
+import { get_target_branch } from './branch_utils.mjs'
 
 // Setup logger
 const log = debug('files:read')
@@ -19,22 +19,19 @@ const log = debug('files:read')
  * @param {string} [params.thread_id] - Thread ID to determine branch
  * @param {string} [params.branch_name] - Branch name to use (takes precedence over thread_id)
  * @param {string} [params.repo_path] - Repository path (for testing)
- * @param {Object} [params.context={}] - Context object that may contain thread_id
  * @returns {Promise<Object>} Object containing file content
  */
 export async function read_file({
   path: file_path,
   thread_id,
   branch_name,
-  repo_path,
-  context = {}
+  repo_path
 }) {
   try {
     const { branch_name: target_branch_name, repo_path: target_repo_path } =
       await get_target_branch({
         thread_id,
         branch_name,
-        context,
         repo_path
       })
 
@@ -64,4 +61,9 @@ export async function read_file({
 
     throw new Error(`Failed to read file: ${error.message}`)
   }
+}
+
+// Default export for convenient importing
+export default {
+  read_file
 }
