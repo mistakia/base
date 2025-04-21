@@ -1,7 +1,5 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
-import path from 'path'
-import fs from 'fs'
 
 import server from '#server'
 import {
@@ -11,8 +9,6 @@ import {
   authenticate_request
 } from '#tests/utils/index.mjs'
 
-import config from '#config'
-
 const { expect } = chai
 chai.use(chaiHttp)
 
@@ -20,6 +16,7 @@ describe('Threads API', () => {
   let test_user
   let test_threads = []
   let test_user_base_directory
+  let test_system_base_directory
 
   before(async () => {
     await reset_all_tables()
@@ -33,13 +30,6 @@ describe('Threads API', () => {
     })
   })
 
-  afterEach(async () => {
-    const thread_dir = path.join(config.user_base_directory, 'threads')
-    if (fs.existsSync(thread_dir)) {
-      fs.rmSync(thread_dir, { recursive: true, force: true })
-    }
-  })
-
   describe('GET /api/threads', () => {
     beforeEach(async () => {
       // Create some test threads
@@ -49,11 +39,12 @@ describe('Threads API', () => {
       })
 
       test_user_base_directory = thread1.user_base_directory
-
+      test_system_base_directory = thread1.system_base_directory
       const thread2 = await create_test_thread({
         user_id: test_user.user_id,
         state: 'paused',
-        user_base_directory: test_user_base_directory
+        user_base_directory: test_user_base_directory,
+        system_base_directory: test_system_base_directory
       })
 
       test_threads.push(thread1, thread2)
@@ -185,12 +176,33 @@ describe('Threads API', () => {
   })
 
   describe('POST /api/threads', () => {
+    beforeEach(async () => {
+      // Create some test threads
+      const thread1 = await create_test_thread({
+        user_id: test_user.user_id,
+        state: 'active'
+      })
+
+      test_user_base_directory = thread1.user_base_directory
+      test_system_base_directory = thread1.system_base_directory
+
+      test_threads.push(thread1)
+    })
+
+    afterEach(async () => {
+      test_threads.forEach((thread) => {
+        thread.cleanup()
+      })
+      test_threads = []
+    })
+
     it('should create a new thread', async () => {
       const thread_data = {
         inference_provider: 'ollama',
         model: 'llama2',
         initial_message: 'Hello, this is a new thread',
-        user_base_directory: test_user_base_directory
+        user_base_directory: test_user_base_directory,
+        system_base_directory: test_system_base_directory
       }
 
       const response = await authenticate_request(

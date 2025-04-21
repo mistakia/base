@@ -3,10 +3,14 @@ import path from 'path'
 import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
-import { get_thread_base_directory } from './threads_constants.mjs'
+import {
+  get_thread_base_directory,
+  THREAD_DEFAULT_ACTIVITY_ID
+} from './threads_constants.mjs'
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_change_request } from '#libs-server/change_requests/index.mjs'
+import { activity_exists } from '#libs-server/activities/index.mjs'
 
 const { THREAD_STATUS, validate_thread_state } = thread_constants
 const log = debug('threads:create')
@@ -100,6 +104,7 @@ async function initialize_memory_repository({ memory_dir }) {
  *
  * @param {Object} params Thread creation parameters
  * @param {string} params.user_id ID of the user who owns the thread
+ * @param {string} params.activity_id Activity ID in format [system|user]/<file_path>.md (e.g., system/create_activity.md)
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
  * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
@@ -112,6 +117,7 @@ async function initialize_memory_repository({ memory_dir }) {
  */
 export default async function create_thread({
   user_id,
+  activity_id = THREAD_DEFAULT_ACTIVITY_ID,
   inference_provider,
   model,
   state = THREAD_STATUS.ACTIVE,
@@ -127,6 +133,10 @@ export default async function create_thread({
     throw new Error('user_id is required')
   }
 
+  if (!activity_id) {
+    throw new Error('activity_id is required')
+  }
+
   if (!inference_provider) {
     throw new Error('inference_provider is required')
   }
@@ -138,9 +148,22 @@ export default async function create_thread({
   // Validate state using shared function
   validate_thread_state(state)
 
+  // Validate that the activity exists
+  const activity_file_exists = await activity_exists({
+    activity_id,
+    system_base_directory,
+    user_base_directory
+  })
+
+  if (!activity_file_exists) {
+    throw new Error(`Activity '${activity_id}' does not exist`)
+  }
+
   // Generate thread ID
   const thread_id = uuid()
-  log(`Creating thread ${thread_id} for user ${user_id}`)
+  log(
+    `Creating thread ${thread_id} for user ${user_id} with activity ${activity_id}`
+  )
 
   // Create thread directory structure
   const thread_base_directory = get_thread_base_directory({
@@ -159,6 +182,7 @@ export default async function create_thread({
   const metadata = {
     thread_id,
     user_id,
+    activity_id,
     inference_provider,
     model,
     state,

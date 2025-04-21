@@ -2,6 +2,7 @@ import path from 'path'
 import config from '#config'
 
 export const THREAD_CONTEXT_DIR = 'threads'
+export const THREAD_DEFAULT_ACTIVITY_ID = 'system/default-base-activity.md'
 
 /**
  * Get the base directory for thread storage

@@ -7,6 +7,7 @@ observations:
   - '[design] Threads manage execution through distinct stages #workflow'
   - '[design] Threads support human interaction via blocking/non-blocking requests #collaboration'
   - '[architecture] Threads utilize a tiered memory system (Universal and Context) #memory'
+  - '[design] Each thread is associated with a specific activity #organization'
 relations:
   - 'relates_to [[System Design]]'
   - 'part_of [[Documentation]]'
@@ -24,6 +25,7 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 
 - `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`data/thread_context/{thread_id}/`).
 - `user_id`: Identifier of the user who owns the thread.
+- `activity_id`: Reference to the specific activity this thread is associated with and executing. Format: `[system|user]/<file_path>.md` (e.g., `system/activities/create_activity.md` or `user/activities/custom_activity.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
 - `state`: The current lifecycle state:
@@ -48,6 +50,7 @@ When a new thread is created:
 5. Memory directory is set up with a git repository
 6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
 7. A default change request is created to track changes made in the thread branch relative to main
+8. The thread is associated with a specific activity that it will execute
 
 ## Base Thread Stages (within `Active` State)
 
@@ -156,6 +159,13 @@ data/
       memory/           # Thread-specific memory & working files (git subdirectory)
         .gitignore      # Configured to ignore temporary and binary files
 ```
+
+The `metadata.json` file contains the thread's configuration and state, including:
+
+- Basic thread properties (`thread_id`, `user_id`, `activity_id`, etc.)
+- Current execution state and stage
+- Timestamps for thread lifecycle events
+- Reference to associated change request
 
 The `timeline.json` file contains an array of entries with a consistent structure:
 
