@@ -466,9 +466,10 @@ CREATE TABLE change_requests (
   github_pr_url TEXT,
   github_pr_number INTEGER,
   github_repo TEXT, -- Format: 'owner/repo'
-  related_thread_id UUID, -- Optional reference to worker thread
+  thread_id UUID, -- Optional reference to worker thread
   merged_at TIMESTAMPTZ,
   closed_at TIMESTAMPTZ,
+  merge_commit_hash TEXT, -- Hash of the merge commit when branch is merged
   CONSTRAINT check_change_requests_updated_at CHECK (updated_at >= created_at),
   CONSTRAINT check_change_requests_merged_at CHECK (merged_at IS NULL OR merged_at >= created_at),
   CONSTRAINT check_change_requests_closed_at CHECK (closed_at IS NULL OR closed_at >= created_at)

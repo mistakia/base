@@ -11,7 +11,14 @@ import add_timeline_entry, {
   add_tool_result,
   add_error
 } from './add_timeline_entry.mjs'
-import tools from '#libs-server/tools/index.mjs'
+import {
+  register_tool,
+  has_tool,
+  get_tool,
+  get_tool_metadata,
+  list_tools,
+  execute_tool
+} from '#libs-server/tools/registry.mjs'
 
 // Export all thread-related functions
 export {
@@ -32,11 +39,11 @@ export {
 }
 
 // Re-export tool operations directly from centralized tools implementation
-export const {
+export {
   register_tool,
   has_tool,
   get_tool,
   get_tool_metadata,
   list_tools,
   execute_tool
-} = tools
+}

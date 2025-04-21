@@ -23,13 +23,31 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 **Key Properties:**
 
 - `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`data/thread_context/{thread_id}/`).
+- `user_id`: Identifier of the user who owns the thread.
+- `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
+- `model`: The specific model to use from the provider.
 - `state`: The current lifecycle state:
   - `Active`: The thread is currently processing its objective.
   - `Paused`: The thread is temporarily halted, usually awaiting external input.
   - `Terminated`: The thread has finished its work (successfully or unsuccessfully) and ceased execution.
 - `current_stage`: The current internal stage within the `Active` state (see below).
 - `created_at`: Timestamp of initiation.
+- `updated_at`: Timestamp of last update.
 - `terminated_at`: Timestamp of termination (if applicable).
+- `tools`: Array of tools available to this thread.
+- `thread_change_request_id`: Reference to the change request that tracks all changes made in the thread's branch.
+
+## Thread Creation Process
+
+When a new thread is created:
+
+1. A unique `thread_id` is generated (UUID)
+2. Directory structure is created at `data/thread_context/{thread_id}/`
+3. Thread metadata is written to `metadata.json` file
+4. Timeline is initialized in `timeline.json`
+5. Memory directory is set up with a git repository
+6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
+7. A default change request is created to track changes made in the thread branch relative to main
 
 ## Base Thread Stages (within `Active` State)
 
@@ -62,12 +80,11 @@ Base Threads utilize a tiered memory system:
 
     - **Purpose:** System-wide, persistent knowledge, guidelines, schemas.
     - **Location:** `system/` and `data/` directories (Markdown files, version controlled).
-    - **Access:** Read-mostly by threads. Writes require Change Requests.
 
 2.  **Context Memory (Thread Context):**
-    - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, and a detailed execution history.
+    - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, a detailed execution history, and working files.
     - **Location:** Disk-based, deterministic path: `data/thread_context/{thread_id}/`.
-    - **Access:** Read/Write access for the associated thread while `Active` or `Paused`.
+    - **Git Repository:** Each thread's memory directory is initialized as a git repository with an initial commit containing a `.gitignore` file.
 
 ## Timeline Structure
 
@@ -80,6 +97,38 @@ Threads maintain a chronological timeline of interactions and events, structured
 - **StateChangeEntry:** Records of thread state transitions
 
 Timeline entries are immutable and provide a complete audit trail of thread activities, enabling seamless resumption after pauses and comprehensive post-execution analysis.
+
+## Git Branch Structure
+
+For source control operations, each thread uses dedicated Git branches:
+
+- **Format:** `thread/{thread_id}`
+- **Repositories:** Created in both system and user knowledge base repositories
+- **Purpose:** Isolates file modifications associated with specific threads
+- **Workflow:**
+  - Thread-specific file operations are performed within the thread's branch
+  - Changes can be reviewed, merged, or discarded based on thread outcomes
+  - Maintains separation between concurrent thread activities
+- **Creation:** Branches are automatically created during thread initialization
+
+## Thread Change Request
+
+Each Base Thread automatically creates a thread change request as part of its initialization:
+
+- **Purpose:** Tracks all changes made in the thread's branch relative to the main branch
+- **Format:** Stored as a regular change request with a reference to the originating thread
+- **Properties:**
+  - `title`: Defaults to `Thread {thread_id} changes`
+  - `description`: Describes that it contains changes made in the thread branch
+  - `target_branch`: Main branch (typically 'main')
+  - `feature_branch`: The thread's branch (`thread/{thread_id}`)
+  - `thread_id`: Reference to the originating thread
+  - `tags`: Includes 'thread-changes' and 'auto-generated' to indicate its purpose
+- **Storage:** Indexed in the database and stored as a Markdown file like other change requests
+- **Workflow:**
+  - Created automatically during thread initialization
+  - Referenced in thread metadata via `thread_change_request_id`
+  - Can be used to review, approve, and merge thread-specific changes back to main
 
 ## Tool Calling
 
@@ -96,7 +145,7 @@ Base Threads support tool calling capabilities, allowing them to interact with s
 
 ## Filesystem Structure
 
-Each thread's context is stored in a dedicated directory structure:
+Each thread's context is stored in a dedicated directory structure within the user's `data/` directory:
 
 ```
 data/
@@ -104,7 +153,8 @@ data/
     {thread_id}/
       metadata.json     # Thread metadata (state, inference_provider, model, etc.)
       timeline.json     # Consolidated chronological timeline of all thread activity
-      memory/           # Thread-specific memory storage
+      memory/           # Thread-specific memory & working files (git subdirectory)
+        .gitignore      # Configured to ignore temporary and binary files
 ```
 
 The `timeline.json` file contains an array of entries with a consistent structure:

@@ -1,8 +1,6 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
 import nock from 'nock'
-import path from 'path'
-import fs from 'fs'
 
 import server from '#server'
 import {
@@ -11,7 +9,6 @@ import {
   create_test_thread,
   authenticate_request
 } from '#tests/utils/index.mjs'
-import config from '#config'
 
 const { expect } = chai
 chai.use(chaiHttp)
@@ -20,6 +17,7 @@ describe('Thread Messages API', () => {
   let test_user
   let test_thread
   let test_threads = []
+  let test_user_base_directory
   const OLLAMA_API_BASE_URL = 'http://127.0.0.1:11434'
 
   before(async () => {
@@ -35,11 +33,10 @@ describe('Thread Messages API', () => {
   beforeEach(async () => {
     // Create a fresh thread for each test
     test_thread = await create_test_thread({
-      user_id: test_user.user_id,
-      inference_provider: 'ollama',
-      model: 'llama2',
-      user_base_directory: config.user_base_directory
+      user_id: test_user.user_id
     })
+
+    test_user_base_directory = test_thread.user_base_directory
     test_threads.push(test_thread)
   })
 
@@ -49,11 +46,6 @@ describe('Thread Messages API', () => {
       thread.cleanup()
     })
     test_threads = []
-
-    const thread_dir = path.join(config.user_base_directory, 'threads')
-    if (fs.existsSync(thread_dir)) {
-      fs.rmSync(thread_dir, { recursive: true, force: true })
-    }
   })
 
   after(async () => {
@@ -65,7 +57,8 @@ describe('Thread Messages API', () => {
     it('should add a message without generating a response', async () => {
       const message_data = {
         content: 'Hello, this is a test message',
-        generate_response: false
+        generate_response: false,
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(
@@ -103,7 +96,8 @@ describe('Thread Messages API', () => {
 
       const message_data = {
         content: 'Hello AI, can you help me?',
-        generate_response: true
+        generate_response: true,
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(
@@ -145,7 +139,8 @@ describe('Thread Messages API', () => {
 
       const message_data = {
         content: 'Hello AI, can you help me?',
-        generate_response: true
+        generate_response: true,
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(
@@ -178,7 +173,8 @@ describe('Thread Messages API', () => {
     it('should reject invalid message data', async () => {
       const invalid_message_data = {
         // Missing content
-        generate_response: true
+        generate_response: true,
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(
@@ -194,7 +190,8 @@ describe('Thread Messages API', () => {
 
     it('should require authentication', async () => {
       const message_data = {
-        content: 'Hello, this is a test message'
+        content: 'Hello, this is a test message',
+        user_base_directory: test_user_base_directory
       }
 
       const response = await chai
@@ -208,7 +205,8 @@ describe('Thread Messages API', () => {
 
     it('should return 404 for non-existent thread', async () => {
       const message_data = {
-        content: 'Hello, this is a test message'
+        content: 'Hello, this is a test message',
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(

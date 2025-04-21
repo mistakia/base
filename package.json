@@ -20,6 +20,7 @@
     "start:api": "node scripts/server.mjs",
     "lint": "eslint . --ext js,mjs",
     "prettier": "prettier --write .",
+    "find-large-files": "node scripts/find-large-files.mjs",
     "test": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --require tests/unit/global.mjs --exit ./tests/unit/**/*.mjs ./tests/integration/**/*.mjs",
     "test:unit": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/**/*.mjs",
     "test:integration": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/integration/**/*.mjs",

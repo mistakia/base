@@ -3,11 +3,97 @@ import path from 'path'
 import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
-import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
+import { get_thread_base_directory } from './threads_constants.mjs'
 import { thread_constants } from '#libs-shared'
+import git_operations from '#libs-server/git/index.mjs'
+import { create_change_request } from '#libs-server/change_requests/index.mjs'
 
 const { THREAD_STATUS, validate_thread_state } = thread_constants
 const log = debug('threads:create')
+
+/**
+ * Create a thread branch in the knowledge base repositories
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.thread_id - Thread ID
+ * @param {string} params.system_base_directory - Path to system knowledge base repo
+ * @param {string} params.user_base_directory - Path to user knowledge base repo
+ * @returns {Promise<void>}
+ */
+async function create_thread_branch({
+  thread_id,
+  system_base_directory,
+  user_base_directory
+}) {
+  const branch_name = `thread/${thread_id}`
+
+  // Create branch in system knowledge base
+  log(`Creating branch ${branch_name} in system repo`)
+  await git_operations.checkout_branch({
+    repo_path: system_base_directory,
+    branch_name: 'main'
+  })
+  await git_operations.create_branch({
+    repo_path: system_base_directory,
+    branch_name,
+    base_branch: 'main'
+  })
+
+  // Create branch in user knowledge base
+  log(`Creating branch ${branch_name} in user repo`)
+  await git_operations.checkout_branch({
+    repo_path: user_base_directory,
+    branch_name: 'main'
+  })
+  await git_operations.create_branch({
+    repo_path: user_base_directory,
+    branch_name,
+    base_branch: 'main'
+  })
+}
+
+/**
+ * Initialize a git repository in the memory directory
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.memory_dir - Path to memory directory
+ * @returns {Promise<void>}
+ */
+async function initialize_memory_repository({ memory_dir }) {
+  log(`Initializing git repository in ${memory_dir}`)
+
+  // Initialize git repository using git_operations
+  await git_operations.git_init({
+    directory: memory_dir
+  })
+
+  // Create .gitignore file
+  const gitignore_content = `
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Large binary files
+*.bin
+*.dat
+`
+  await fs.writeFile(
+    path.join(memory_dir, '.gitignore'),
+    gitignore_content.trim(),
+    'utf-8'
+  )
+
+  // Initial commit
+  await git_operations.add_files({
+    worktree_path: memory_dir,
+    files_to_add: '.gitignore'
+  })
+  await git_operations.commit_changes({
+    worktree_path: memory_dir,
+    commit_message: 'Initialize thread memory repository'
+  })
+}
 
 /**
  * Create a new thread with proper structure
@@ -19,6 +105,8 @@ const log = debug('threads:create')
  * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
  * @param {string} [params.initial_message] Initial user message to add to timeline
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
+ * @param {string} [params.system_base_directory] Path to system knowledge base repository
+ * @param {string} [params.user_base_directory] Path to user knowledge base repository
  * @param {Object} [params.metadata={}] Additional metadata
  * @returns {Promise<Object>} Created thread object
  */
@@ -29,7 +117,9 @@ export default async function create_thread({
   state = THREAD_STATUS.ACTIVE,
   initial_message,
   tools = [],
-  thread_base_directory = THREAD_BASE_DIRECTORY,
+  user_base_directory,
+  system_base_directory,
+  // TODO cleanup
   ...additional_metadata
 }) {
   // Validate required parameters
@@ -53,6 +143,9 @@ export default async function create_thread({
   log(`Creating thread ${thread_id} for user ${user_id}`)
 
   // Create thread directory structure
+  const thread_base_directory = get_thread_base_directory({
+    user_base_directory
+  })
   const thread_dir = path.join(thread_base_directory, thread_id)
   const memory_dir = path.join(thread_dir, 'memory')
 
@@ -80,13 +173,6 @@ export default async function create_thread({
     metadata.tools = tools
   }
 
-  // Write metadata to file
-  await fs.writeFile(
-    path.join(thread_dir, 'metadata.json'),
-    JSON.stringify(metadata, null, 2),
-    'utf-8'
-  )
-
   // Initialize timeline
   const timeline = []
 
@@ -107,6 +193,66 @@ export default async function create_thread({
     JSON.stringify(timeline, null, 2),
     'utf-8'
   )
+
+  // Create git branches if requested and paths provided
+  if (system_base_directory && user_base_directory) {
+    try {
+      await create_thread_branch({
+        thread_id,
+        system_base_directory,
+        user_base_directory
+      })
+
+      // Add branch information to metadata
+      metadata.git_branch = `thread/${thread_id}`
+
+      // Create a default change request for this thread if requested
+      try {
+        const change_request_id = await create_change_request({
+          title: `Thread ${thread_id} changes`,
+          description: `Default change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
+          creator_id: user_id,
+          target_branch: 'main',
+          feature_branch: `thread/${thread_id}`,
+          thread_id,
+          tags: ['thread-changes', 'auto-generated'],
+          repo_path: user_base_directory
+        })
+
+        // Add change request information to metadata
+        metadata.thread_change_request_id = change_request_id
+        log(
+          `Created default change request ${change_request_id} for thread ${thread_id}`
+        )
+      } catch (error) {
+        log(`Failed to create default change request: ${error.message}`)
+        // Continue thread creation even if change request creation fails
+      }
+    } catch (error) {
+      log(`Failed to create git branches: ${error.message}`)
+      // Continue thread creation even if branch creation fails
+    }
+  }
+
+  // Write metadata to file
+  await fs.writeFile(
+    path.join(thread_dir, 'metadata.json'),
+    JSON.stringify(metadata, null, 2),
+    'utf-8'
+  )
+
+  // Initialize git repository in memory directory if requested
+  try {
+    await initialize_memory_repository({
+      memory_dir
+    })
+
+    // Add memory repo information to metadata
+    metadata.memory_repo_initialized = true
+  } catch (error) {
+    log(`Failed to initialize memory repository: ${error.message}`)
+    // Continue thread creation even if repo initialization fails
+  }
 
   // Return thread information
   return {

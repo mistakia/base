@@ -1,19 +1,26 @@
 import debug from 'debug'
+import path from 'path'
 
+import config from '#config'
 import db from '#db'
 import { read_markdown_entity } from '#libs-server/markdown/index.mjs'
+import { build_change_request_from_git } from './utils.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
 
 /**
- * Retrieves a change request by ID, combining database and markdown file information.
+ * Retrieves a change request by ID, combining database, markdown file, and Git information.
  *
  * @param {object} params - Parameters for retrieving the change request.
  * @param {string} params.change_request_id - The ID of the change request to retrieve.
+ * @param {string} [params.repo_path] - Optional repository path to use for operations.
  * @returns {Promise<object|null>} The change request object with all properties, or null if not found.
  */
-export async function get_change_request({ change_request_id }) {
+export async function get_change_request({
+  change_request_id,
+  repo_path = config.user_base_directory
+}) {
   log(`Retrieving change request ${change_request_id}`)
 
   // Get the database record
@@ -31,7 +38,10 @@ export async function get_change_request({ change_request_id }) {
     const result = format_change_request(db_record)
 
     // Get the markdown file content
-    const file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+    const file_path = path.join(
+      repo_path,
+      `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+    )
     try {
       const markdown_data = await read_markdown_entity(file_path)
 
@@ -47,6 +57,25 @@ export async function get_change_request({ change_request_id }) {
       result.description = ''
       result.tags = []
       result.content = ''
+    }
+
+    // Enhance with Git information
+    try {
+      const { feature_branch, target_branch, merge_commit_hash } = result
+      if (feature_branch && target_branch) {
+        const git_data = await build_change_request_from_git({
+          feature_branch,
+          target_branch,
+          merge_commit_hash,
+          repo_path
+        })
+        result.git_data = git_data
+      }
+    } catch (error) {
+      log(
+        `Warning: Could not retrieve Git data for ${change_request_id}: ${error.message}`
+      )
+      result.git_data = { commits: [] }
     }
 
     return result
@@ -72,6 +101,8 @@ export async function get_change_request({ change_request_id }) {
  * @param {number} [params.offset=0] - Offset for pagination.
  * @param {string} [params.sort_by='updated_at'] - Field to sort by.
  * @param {string} [params.sort_order='desc'] - Sort order ('asc' or 'desc').
+ * @param {boolean} [params.include_git_data=false] - Whether to include Git data.
+ * @param {string} [params.repo_path] - Optional repository path to use for operations.
  * @returns {Promise<Array<object>>} Array of change request objects.
  */
 export async function list_change_requests({
@@ -84,7 +115,9 @@ export async function list_change_requests({
   limit = 100,
   offset = 0,
   sort_by = 'updated_at',
-  sort_order = 'desc'
+  sort_order = 'desc',
+  include_git_data = false,
+  repo_path = config.user_base_directory
 }) {
   log('Listing change requests with filters')
 
@@ -106,11 +139,20 @@ export async function list_change_requests({
 
   // If tags were provided, filter by tags from markdown files
   if (tags && tags.length > 0) {
-    return filter_by_tags(formatted_results, tags)
+    return filter_by_tags({
+      results: formatted_results,
+      tags,
+      include_git_data,
+      repo_path
+    })
   }
 
   // Otherwise, enhance all results with markdown data
-  return enhance_with_markdown(formatted_results)
+  return enhance_with_markdown({
+    results: formatted_results,
+    include_git_data,
+    repo_path
+  })
 }
 
 // Helper function to build the base query with filters
@@ -164,7 +206,12 @@ function format_change_request(record) {
 }
 
 // Helper function to filter results by tags
-async function filter_by_tags(results, tags) {
+async function filter_by_tags({
+  results,
+  tags,
+  include_git_data = false,
+  repo_path
+}) {
   const filtered_results = []
 
   for (const record of results) {
@@ -191,6 +238,14 @@ async function filter_by_tags(results, tags) {
         record.tags = file_tags
         record.content = markdown_data.content || ''
 
+        // Add Git data if requested
+        if (include_git_data) {
+          await add_git_data({
+            record,
+            repo_path
+          })
+        }
+
         filtered_results.push(record)
       }
     } catch (error) {
@@ -205,27 +260,59 @@ async function filter_by_tags(results, tags) {
 }
 
 // Helper function to enhance results with markdown data
-async function enhance_with_markdown(results) {
-  const enhanced_results = []
-
+async function enhance_with_markdown({
+  results,
+  include_git_data = false,
+  repo_path
+}) {
   for (const record of results) {
     try {
       const file_path = `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
       const markdown_data = await read_markdown_entity(file_path)
 
+      // Add markdown data to the record
       record.description = markdown_data.frontmatter.description || ''
       record.tags = markdown_data.frontmatter.tags || []
       record.content = markdown_data.content || ''
     } catch (error) {
+      log(
+        `Warning: Could not read markdown file for ${record.change_request_id}: ${error.message}`
+      )
+      // Set empty values if markdown file can't be read
       record.description = ''
       record.tags = []
       record.content = ''
-      log(
-        `Warning: Error reading markdown for ${record.change_request_id}: ${error.message}`
-      )
     }
-    enhanced_results.push(record)
+
+    // Add Git data if requested
+    if (include_git_data) {
+      await add_git_data({
+        record,
+        repo_path
+      })
+    }
   }
 
-  return enhanced_results
+  return results
+}
+
+// Helper function to add Git data to a record
+async function add_git_data({ record, repo_path }) {
+  try {
+    const { feature_branch, target_branch, merge_commit_hash } = record
+    if (feature_branch && target_branch) {
+      const git_data = await build_change_request_from_git({
+        feature_branch,
+        target_branch,
+        merge_commit_hash,
+        repo_path
+      })
+      record.git_data = git_data
+    }
+  } catch (error) {
+    log(
+      `Warning: Could not retrieve Git data for ${record.change_request_id}: ${error.message}`
+    )
+    record.git_data = { commits: [] }
+  }
 }

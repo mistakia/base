@@ -3,7 +3,6 @@ import path from 'path'
 import debug from 'debug'
 
 import get_thread from './get_thread.mjs'
-import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
 import { thread_constants } from '#libs-shared'
 
 const { THREAD_STATUS, validate_thread_state } = thread_constants
@@ -16,14 +15,14 @@ const log = debug('threads:update')
  * @param {string} params.thread_id Thread ID to update
  * @param {string} params.state New thread state
  * @param {string} [params.reason] Reason for state change
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_state({
   thread_id,
   state,
   reason,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
@@ -39,7 +38,10 @@ export async function update_thread_state({
   log(`Updating thread ${thread_id} state to ${state}`)
 
   // Get current thread data
-  const thread = await get_thread({ thread_id, thread_base_directory })
+  const thread = await get_thread({
+    thread_id,
+    user_base_directory
+  })
 
   // No change if state is already set
   if (thread.state === state) {
@@ -112,13 +114,13 @@ export async function update_thread_state({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
  * @param {Object} params.metadata Metadata fields to update
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_metadata({
   thread_id,
   metadata = {},
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
@@ -131,7 +133,10 @@ export async function update_thread_metadata({
   log(`Updating thread ${thread_id} metadata`)
 
   // Get current thread data
-  const thread = await get_thread({ thread_id, thread_base_directory })
+  const thread = await get_thread({
+    thread_id,
+    user_base_directory
+  })
 
   // Update metadata
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
@@ -156,7 +161,7 @@ export async function update_thread_metadata({
       thread_id,
       state: metadata.state,
       reason: metadata.reason,
-      thread_base_directory
+      user_base_directory
     })
   }
 

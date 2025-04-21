@@ -4,7 +4,7 @@ import path from 'path'
 import debug from 'debug'
 
 import db from '#db'
-import * as git_ops from '#libs-server/git/git_operations.mjs'
+import { build_change_request_from_git } from './utils.mjs'
 import * as github_integration from '#libs-server/integrations/github/index.mjs'
 import config from '#config'
 import { write_markdown_entity } from '#libs-server/markdown/index.mjs'
@@ -13,18 +13,21 @@ import { CHANGE_REQUEST_DIR } from './constants.mjs'
 const log = debug('change-requests')
 
 /**
- * Creates a new change request.
+ * Creates a new change request based on an existing Git branch.
  *
  * @param {object} params - Parameters for creating the change request.
  * @param {string} params.title - The title of the change request.
  * @param {string} params.description - The description of the change request.
  * @param {string} params.creator_id - The ID of the user or system entity creating the request.
  * @param {string} params.target_branch - The target branch for the changes (e.g., 'main').
- * @param {Array<{path: string, content: string}>} params.file_changes - Array of file modifications.
+ * @param {string} params.feature_branch - The branch containing the commits.
  * @param {boolean} [params.create_github_pr=false] - Whether to create a GitHub PR.
  * @param {string} [params.github_repo] - Required if create_github_pr is true (format: 'owner/repo').
- * @param {string} [params.related_thread_id] - Optional ID of the related worker thread.
+ * @param {string} [params.github_pr_number] - Optional GitHub PR number if PR already exists.
+ * @param {string} [params.github_pr_url] - Optional GitHub PR URL if PR already exists.
+ * @param {string} [params.thread_id] - Optional ID of the related thread.
  * @param {Array<string>} [params.tags] - Optional tags.
+ * @param {string} [params.repo_path] - Path to the repository. Defaults to config.user_base_directory.
  * @returns {Promise<string>} The ID of the newly created change request.
  */
 export async function create_change_request({
@@ -32,46 +35,39 @@ export async function create_change_request({
   description,
   creator_id,
   target_branch,
-  file_changes = [],
+  feature_branch,
   create_github_pr = false,
   github_repo,
-  related_thread_id,
-  tags = []
+  github_pr_number,
+  github_pr_url,
+  thread_id,
+  tags = [],
+  repo_path = config.user_base_directory
 }) {
   const change_request_id = uuidv4()
-  const feature_branch = `cr/${change_request_id}`
   const now = new Date()
-  const repo_path = '.' // Assuming operations run from the root of the repo
-  let worktree_path = null
-  let github_pr_url = null
-  let github_pr_number = null
+
+  // Initialize GitHub PR variables, may be provided or created
+  let pr_number = github_pr_number
+  let pr_url = github_pr_url
 
   try {
-    // --- Git Operations ---
-    log(`Starting Git operations for change request ${change_request_id}`)
+    // --- Validate Git Branch Exists ---
+    log(
+      `Creating change request ${change_request_id} from branch ${feature_branch}`
+    )
 
-    await git_ops.create_branch({
-      repo_path,
-      branch_name: feature_branch,
-      base_branch: target_branch
+    // Extract Git data to build the change request
+    const git_data = await build_change_request_from_git({
+      feature_branch,
+      target_branch,
+      repo_path
     })
-    log(`Created branch ${feature_branch}`)
 
-    worktree_path = await git_ops.create_worktree({
-      repo_path,
-      branch_name: feature_branch
-    })
-    log(`Created or found worktree at ${worktree_path}`)
-
-    if (file_changes.length > 0) {
-      await apply_file_changes({
-        worktree_path,
-        file_changes,
-        change_request_id,
-        title
-      })
-    } else {
-      log('No file changes provided, skipping git add/commit.')
+    if (!git_data || !git_data.exists) {
+      throw new Error(
+        git_data?.error || `Branch ${feature_branch} doesn't exist`
+      )
     }
 
     // --- GitHub Integration (Optional) ---
@@ -82,11 +78,11 @@ export async function create_change_request({
         feature_branch,
         target_branch,
         description,
-        worktree_path
+        repo_path
       })
 
-      github_pr_url = github_result?.pr_url
-      github_pr_number = github_result?.pr_number
+      pr_url = github_result?.pr_url
+      pr_number = github_result?.pr_number
     }
 
     // --- Database and File Operations (Transaction) ---
@@ -101,10 +97,10 @@ export async function create_change_request({
         now,
         target_branch,
         feature_branch,
-        github_pr_url,
-        github_pr_number,
+        github_pr_url: pr_url,
+        github_pr_number: pr_number,
         github_repo,
-        related_thread_id
+        thread_id
       })
 
       await create_markdown_file({
@@ -116,10 +112,10 @@ export async function create_change_request({
         target_branch,
         feature_branch,
         status: 'PendingReview',
-        github_pr_url,
-        github_pr_number,
+        github_pr_url: pr_url,
+        github_pr_number: pr_number,
         github_repo,
-        related_thread_id,
+        thread_id,
         tags
       })
     })
@@ -129,45 +125,7 @@ export async function create_change_request({
   } catch (error) {
     log(`Error creating change request ${change_request_id}:`, error)
     throw error
-  } finally {
-    if (worktree_path) {
-      log(`Cleaning up worktree ${worktree_path}`)
-      await git_ops.remove_worktree({
-        repo_path,
-        worktree_path
-      })
-    }
   }
-}
-
-// Helper function to apply file changes to the worktree
-async function apply_file_changes({
-  worktree_path,
-  file_changes,
-  change_request_id,
-  title
-}) {
-  const changed_file_paths = []
-
-  for (const change of file_changes) {
-    const full_file_path = path.resolve(worktree_path, change.path)
-    const dir_name = path.dirname(full_file_path)
-
-    await fs.mkdir(dir_name, { recursive: true })
-    await fs.writeFile(full_file_path, change.content)
-    changed_file_paths.push(change.path)
-    log(`Wrote file ${change.path} in worktree`)
-  }
-
-  await git_ops.add_files({
-    worktree_path,
-    files_to_add: changed_file_paths
-  })
-  log(`Staged ${changed_file_paths.length} files`)
-
-  const commit_message = `feat: Apply changes for change request ${change_request_id}\n\n${title}`
-  await git_ops.commit_changes({ worktree_path, commit_message })
-  log('Committed changes to feature branch')
 }
 
 // Helper function to create a GitHub PR
@@ -177,19 +135,14 @@ async function create_github_pull_request({
   feature_branch,
   target_branch,
   description,
-  worktree_path
+  repo_path = config.user_base_directory
 }) {
   if (!github_repo) {
     throw new Error('github_repo is required when create_github_pr is true.')
   }
 
-  log(`Pushing branch ${feature_branch} to GitHub for PR creation`)
+  log(`Creating PR for branch ${feature_branch} on GitHub`)
   try {
-    await git_ops.push_branch({
-      repo_path: worktree_path,
-      branch_name: feature_branch
-    })
-
     const github_token = config.github_access_token
     if (!github_token) {
       log(
@@ -198,28 +151,28 @@ async function create_github_pull_request({
       return {}
     }
 
-    log(`Creating GitHub PR in ${github_repo}`)
     const pr_result = await github_integration.create_pull_request({
+      token: github_token,
       repo: github_repo,
       title,
       head: feature_branch,
       base: target_branch,
-      body: description || '',
-      github_token
+      body: description,
+      repo_path
     })
 
-    log(`Created GitHub PR #${pr_result.number}: ${pr_result.html_url}`)
     return {
       pr_url: pr_result.html_url,
       pr_number: pr_result.number
     }
-  } catch (github_error) {
-    log(`Warning: GitHub integration error: ${github_error.message}`)
+  } catch (error) {
+    log(`Error creating GitHub PR: ${error.message}`)
+    // Don't throw here, PR creation is optional
     return {}
   }
 }
 
-// Helper function to save change request to database
+// Helper function to save to database
 async function save_to_database({
   trx,
   change_request_id,
@@ -232,33 +185,25 @@ async function save_to_database({
   github_pr_url,
   github_pr_number,
   github_repo,
-  related_thread_id
+  thread_id
 }) {
-  const [inserted_record] = await trx('change_requests')
-    .insert({
-      change_request_id,
-      status,
-      title,
-      creator_id,
-      created_at: now,
-      updated_at: now,
-      target_branch,
-      feature_branch,
-      github_pr_url,
-      github_pr_number,
-      github_repo,
-      related_thread_id
-    })
-    .returning('change_request_id')
-
-  if (!inserted_record || !inserted_record.change_request_id) {
-    throw new Error('Failed to insert change request into database.')
-  }
-
-  log(`Inserted DB record for ${change_request_id}`)
+  await trx('change_requests').insert({
+    change_request_id,
+    title,
+    creator_id,
+    created_at: now,
+    updated_at: now,
+    status,
+    target_branch,
+    feature_branch,
+    github_pr_url,
+    github_pr_number,
+    github_repo,
+    thread_id
+  })
 }
 
-// Helper function to create markdown file for change request
+// Helper function to create markdown file
 async function create_markdown_file({
   change_request_id,
   title,
@@ -271,27 +216,38 @@ async function create_markdown_file({
   github_pr_url,
   github_pr_number,
   github_repo,
-  related_thread_id,
+  thread_id,
   tags
 }) {
+  const file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+  const iso_date = now.toISOString()
+
+  // Create the frontmatter
   const frontmatter = {
     change_request_id,
     title,
-    description: description || '',
+    description,
     creator_id,
-    created_at: now.toISOString(),
+    created_at: iso_date,
+    updated_at: iso_date,
+    status,
     target_branch,
     feature_branch,
-    status,
     github_pr_url,
     github_pr_number,
     github_repo,
-    related_thread_id,
+    thread_id,
     tags,
     type: 'change_request'
   }
 
-  const file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-  await write_markdown_entity(file_path, frontmatter, description || '')
-  log(`Created markdown file ${file_path}`)
+  // Create the content
+  const content = `# ${title}\n\n${description || ''}`
+
+  // Ensure directory exists
+  const dir_path = path.dirname(file_path)
+  await fs.mkdir(dir_path, { recursive: true })
+
+  // Write the file
+  await write_markdown_entity({ file_path, frontmatter, content })
 }

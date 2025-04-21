@@ -1,14 +1,10 @@
 import debug from 'debug'
 import db from '#db'
-import {
-  read_markdown_entity,
-  write_markdown_entity
-} from '#libs-server/markdown/index.mjs'
-import { CHANGE_REQUEST_DIR } from './constants.mjs'
 import { get_change_request } from './retrieve.mjs'
 import { update_change_request_status } from './update.mjs'
+import { update_markdown_file } from './utils.mjs'
 
-const log = debug('change-requests')
+const log = debug('change-requests:webhooks')
 
 /**
  * Validate the base webhook payload structure according to schema
@@ -58,9 +54,11 @@ function validate_base_payload(webhook_payload) {
  * Update the change request status to 'Merged' when the corresponding PR is merged on GitHub
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
+ * @param {string} [repo_path] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_merged(webhook_payload) {
+export async function handle_pr_merged(webhook_payload, repo_path) {
+  let change_request_id
   try {
     const validation_error = validate_base_payload(webhook_payload)
     if (validation_error) {
@@ -83,6 +81,8 @@ export async function handle_pr_merged(webhook_payload) {
       .where({ github_pr_number: pr_number, github_repo })
       .first()
 
+    change_request_id = change_request.change_request_id
+
     if (!change_request) {
       log(
         `No matching change request found for PR #${pr_number} in ${github_repo}`
@@ -90,24 +90,35 @@ export async function handle_pr_merged(webhook_payload) {
       return null
     }
 
-    // Update the change request status to Merged
-    const now = new Date()
-    const updated_cr = await db('change_requests')
-      .where({ change_request_id: change_request.change_request_id })
-      .update({
-        status: 'Merged',
-        merged_at: now,
-        updated_at: now
-      })
-      .returning('*')
+    const updated_cr = await update_change_request_status({
+      change_request_id,
+      status: 'Merged',
+      updater_id: 'system:github',
+      comment: `GitHub PR #${pr_number} was merged.`,
+      repo_path
+    })
 
     log(
       `Updated change request ${change_request.change_request_id} status to Merged`
     )
-    return updated_cr[0]
+    return updated_cr
   } catch (error) {
     log(`Error handling PR merged webhook: ${error.message}`)
-    throw error
+
+    // Handle special case for PRs merged externally
+    try {
+      log(`Attempting to force merge status for PR #${webhook_payload.number}`)
+      const result = await force_merge_status(
+        change_request_id,
+        webhook_payload.number,
+        `GitHub PR #${webhook_payload.number} was merged.`,
+        repo_path
+      )
+      return result
+    } catch (force_error) {
+      log(`Error forcing merge status: ${force_error.message}`)
+      throw error
+    }
   }
 }
 
@@ -116,9 +127,13 @@ export async function handle_pr_merged(webhook_payload) {
  * Update the change request status to 'Closed' when the corresponding PR is closed without merging
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
+ * @param {string} [repo_path] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_closed_without_merging(webhook_payload) {
+export async function handle_pr_closed_without_merging(
+  webhook_payload,
+  repo_path
+) {
   try {
     const validation_error = validate_base_payload(webhook_payload)
     if (validation_error) {
@@ -149,20 +164,18 @@ export async function handle_pr_closed_without_merging(webhook_payload) {
     }
 
     // Update the change request status to Closed
-    const now = new Date()
-    const updated_cr = await db('change_requests')
-      .where({ change_request_id: change_request.change_request_id })
-      .update({
-        status: 'Closed',
-        closed_at: now,
-        updated_at: now
-      })
-      .returning('*')
+    const updated_cr = await update_change_request_status({
+      change_request_id: change_request.change_request_id,
+      status: 'Closed',
+      updater_id: 'system:github',
+      comment: `GitHub PR #${pr_number} was closed without merging.`,
+      repo_path
+    })
 
     log(
       `Updated change request ${change_request.change_request_id} status to Closed`
     )
-    return updated_cr[0]
+    return updated_cr
   } catch (error) {
     log(`Error handling PR closed webhook: ${error.message}`)
     throw error
@@ -174,9 +187,10 @@ export async function handle_pr_closed_without_merging(webhook_payload) {
  * Update the change request status to 'PendingReview' when the corresponding PR is reopened
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
+ * @param {string} [repo_path] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_reopened(webhook_payload) {
+export async function handle_pr_reopened(webhook_payload, repo_path) {
   try {
     const validation_error = validate_base_payload(webhook_payload)
     if (validation_error) {
@@ -202,20 +216,18 @@ export async function handle_pr_reopened(webhook_payload) {
     }
 
     // Update the change request status to PendingReview
-    const now = new Date()
-    const updated_cr = await db('change_requests')
-      .where({ change_request_id: change_request.change_request_id })
-      .update({
-        status: 'PendingReview',
-        closed_at: null, // Clear the closed date since it's reopened
-        updated_at: now
-      })
-      .returning('*')
+    const updated_cr = await update_change_request_status({
+      change_request_id: change_request.change_request_id,
+      status: 'PendingReview',
+      updater_id: 'system:github',
+      comment: `GitHub PR #${pr_number} was reopened.`,
+      repo_path
+    })
 
     log(
       `Updated change request ${change_request.change_request_id} status to PendingReview`
     )
-    return updated_cr[0]
+    return updated_cr
   } catch (error) {
     log(`Error handling PR reopened webhook: ${error.message}`)
     throw error
@@ -227,9 +239,10 @@ export async function handle_pr_reopened(webhook_payload) {
  *
  * @param {object} params - Parameters for handling the webhook.
  * @param {object} params.payload - The GitHub webhook payload.
+ * @param {string} [params.repo_path] - Optional repository path to use for operations.
  * @returns {Promise<object|null>} The updated change request object, or null if no action was taken.
  */
-export async function handle_github_webhook({ payload }) {
+export async function handle_github_webhook({ payload, repo_path }) {
   if (!payload || !payload.action || !payload.pull_request) {
     log('Invalid GitHub webhook payload')
     return null
@@ -243,12 +256,25 @@ export async function handle_github_webhook({ payload }) {
 
   log(`Processing GitHub webhook: ${action} on PR #${pr_number}`)
 
-  // Find the corresponding change request
+  // Dispatch to appropriate handler based on action
+  if (action === 'closed' && pull_request.merged) {
+    return await handle_pr_merged(payload, repo_path)
+  } else if (action === 'closed' && !pull_request.merged) {
+    return await handle_pr_closed_without_merging(payload, repo_path)
+  } else if (action === 'reopened') {
+    return await handle_pr_reopened(payload, repo_path)
+  }
+
+  // If no specific handler, use the generic approach
   const change_request = await find_matching_change_request(
     pr_number,
-    github_repo
+    github_repo,
+    repo_path
   )
   if (!change_request) {
+    log(
+      `No matching change request found for PR #${pr_number} in ${github_repo}`
+    )
     return null
   }
 
@@ -260,8 +286,21 @@ export async function handle_github_webhook({ payload }) {
     pr_number,
     pull_request.merged
   )
+
   if (!new_status) {
+    log(
+      `No status update determined for webhook: ${action} on PR #${pr_number}`
+    )
     return null
+  }
+
+  // Special case for comments - return the change request without updating status
+  if (new_status === 'comment') {
+    log(`Received comment on PR #${pr_number}, not changing status`)
+    return await get_change_request({
+      change_request_id,
+      repo_path
+    })
   }
 
   try {
@@ -270,13 +309,19 @@ export async function handle_github_webhook({ payload }) {
       change_request_id,
       status: new_status,
       updater_id: 'system:github',
-      comment
+      comment,
+      repo_path
     })
     return updated_cr
   } catch (error) {
     // Handle special case for PRs merged externally
     if (new_status === 'Merged' && pull_request.merged) {
-      return await force_merge_status(change_request_id, pr_number, comment)
+      return await force_merge_status(
+        change_request_id,
+        pr_number,
+        comment,
+        repo_path
+      )
     }
 
     // For other transitions that fail, just log and return null
@@ -285,105 +330,106 @@ export async function handle_github_webhook({ payload }) {
   }
 }
 
-// Helper function to find the matching change request for a GitHub PR
-async function find_matching_change_request(pr_number, github_repo) {
-  const change_requests = await db('change_requests')
-    .where({ github_pr_number: pr_number })
-    .andWhere({ github_repo })
-    .limit(1)
-
-  if (change_requests.length === 0) {
-    log(
-      `No matching change request found for PR #${pr_number} in ${github_repo}`
-    )
+// Helper function to find the matching change request for a PR
+async function find_matching_change_request(pr_number, github_repo, repo_path) {
+  if (!pr_number || !github_repo) {
+    log('Missing PR number or GitHub repo')
     return null
   }
 
-  return change_requests[0]
+  try {
+    // Find the corresponding change request
+    const change_request = await db('change_requests')
+      .where({ github_pr_number: pr_number, github_repo })
+      .first()
+
+    if (!change_request) {
+      log(
+        `No matching change request found for PR #${pr_number} in ${github_repo}`
+      )
+      return null
+    }
+
+    return change_request
+  } catch (error) {
+    log(`Error finding matching change request: ${error.message}`)
+    return null
+  }
 }
 
-// Helper function to determine the appropriate status update based on GitHub action
-function determine_status_update(action, pr_number, pr_merged) {
+// Helper function to determine status update from webhook action
+function determine_status_update(action, pr_number, is_merged) {
   let new_status = null
-  let comment = null
+  let comment = ''
 
-  switch (action) {
-    case 'closed':
-      if (pr_merged) {
-        new_status = 'Merged'
-        comment = `GitHub PR #${pr_number} was merged on GitHub.`
-      } else {
-        new_status = 'Closed'
-        comment = `GitHub PR #${pr_number} was closed without merging.`
-      }
-      break
-    case 'reopened':
-      new_status = 'PendingReview'
-      comment = `GitHub PR #${pr_number} was reopened.`
-      break
-    // Add more cases as needed for other GitHub events
-    default:
-      log(`No status update needed for action: ${action}`)
+  if (action === 'closed' && is_merged) {
+    // PR was merged
+    new_status = 'Merged'
+    comment = `GitHub PR #${pr_number} was merged.`
+  } else if (action === 'closed' && !is_merged) {
+    // PR was closed without merging
+    new_status = 'Closed'
+    comment = `GitHub PR #${pr_number} was closed without merging.`
+  } else if (action === 'reopened') {
+    // PR was reopened
+    new_status = 'PendingReview'
+    comment = `GitHub PR #${pr_number} was reopened for review.`
+  } else if (
+    action === 'created' ||
+    action === 'edited' ||
+    action === 'submitted'
+  ) {
+    // PR comment or review event
+    // For comments, we don't change the status, just return 'comment' as status
+    // to indicate we found the PR but aren't changing its status
+    new_status = 'comment'
+    comment = `A comment was added to GitHub PR #${pr_number}.`
   }
 
   return { new_status, comment }
 }
 
 // Helper function to force merge status for PRs merged externally
-async function force_merge_status(change_request_id, pr_number, comment) {
+async function force_merge_status(
+  change_request_id,
+  pr_number,
+  comment,
+  repo_path
+) {
   log(
     `Forcing status update to Merged for PR ${pr_number} that was merged on GitHub`
   )
 
-  const now = new Date()
-
-  // Update directly in the database to bypass transition validation
-  await db.transaction(async (trx) => {
-    // Update the database record
-    await trx('change_requests').where({ change_request_id }).update({
-      status: 'Merged',
-      updated_at: now,
-      merged_at: now
-    })
-
-    // Update the markdown file too
-    try {
-      const file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-      const markdown_data = await read_markdown_entity(file_path)
-
-      // Update frontmatter
-      markdown_data.frontmatter.status = 'Merged'
-      markdown_data.frontmatter.updated_at = now.toISOString()
-      markdown_data.frontmatter.merged_at = now.toISOString()
-
-      // Add comment about forced merge
-      let content = markdown_data.content || ''
-      const force_comment = `${comment}\n\n(Status forced due to external merge on GitHub)`
-      const comment_block = `\n\n## Status Update: Merged\n\n${force_comment}\n\n_Updated by system:github on ${now.toISOString()}_`
-      content += comment_block
-
-      // Write back to file
-      await write_markdown_entity(file_path, markdown_data.frontmatter, content)
-    } catch (markdown_error) {
-      log(`Warning: Could not update markdown file: ${markdown_error.message}`)
-      // Continue even if markdown update fails
-    }
-  })
-
-  // Return the updated change request
   try {
-    const updated_cr = await get_change_request({ change_request_id })
-    if (!updated_cr) {
-      log(
-        `Warning: Change request ${change_request_id} not found after forced merge update`
-      )
-      return null
+    const now = new Date()
+
+    // First update the database directly
+    const updated_cr = await db('change_requests')
+      .where({ change_request_id })
+      .update({
+        status: 'Merged',
+        merged_at: now,
+        updated_at: now
+      })
+      .returning('*')
+
+    // Then try to update the markdown file
+    try {
+      await update_markdown_file({
+        change_request_id,
+        status: 'Merged',
+        now,
+        updater_id: 'system:github',
+        comment: comment || 'Merged externally via GitHub',
+        repo_path
+      })
+    } catch (md_error) {
+      log(`Warning: Couldn't update markdown file: ${md_error.message}`)
     }
-    return updated_cr
+
+    return updated_cr[0]
   } catch (error) {
-    log(
-      `Error retrieving updated change request after forced merge: ${error.message}`
-    )
+    log(`Error forcing merge status: ${error.message}`)
     return null
   }
 }

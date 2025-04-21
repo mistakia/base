@@ -7,7 +7,7 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 
 // Import the module we want to test
-import git from '#libs-server/git/git_operations.mjs'
+import git from '#libs-server/git/index.mjs'
 
 const execute = promisify(exec)
 const expect = chai.expect
@@ -261,15 +261,25 @@ describe('Git Operations', function () {
 
     // Validate structure of search results
     expect(results).to.be.an('array')
-    expect(results[0]).to.have.property('path')
+    expect(results[0]).to.have.property('file')
     expect(results[0]).to.have.property('content')
 
     // Check content matches exactly
     const first_result = results[0]
     expect(first_result.content).to.include(unique_content)
 
-    // Check if line number is present (can be null in some implementations)
-    expect(first_result).to.have.property('line')
+    // Check file path is correct
+    expect(first_result.file).to.equal(search_file_name)
+
+    // Check ref value
+    expect(first_result).to.have.property('ref')
+    expect(first_result.ref).to.equal('HEAD')
+
+    // Check if line number is present and correctly parsed
+    expect(first_result).to.have.property('line_number')
+    expect(first_result.line_number).to.be.a('number')
+    expect(first_result.line_number).to.equal(1) // We know it's on line 1
+    expect(Number.isNaN(first_result.line_number)).to.be.false
   })
 
   it('should parse repository info from remote URL', async function () {

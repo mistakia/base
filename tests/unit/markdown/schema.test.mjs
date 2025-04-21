@@ -10,7 +10,7 @@ import {
   build_validation_schema
 } from '#libs-server/markdown/schema.mjs'
 import { format_repository } from '#libs-server/markdown/index.mjs'
-import { get_current_branch } from '#libs-server/git/git_operations.mjs'
+import { get_current_branch } from '#libs-server/git/index.mjs'
 
 const execute = promisify(exec)
 

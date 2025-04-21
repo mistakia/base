@@ -2,7 +2,7 @@ import debug from 'debug'
 import path from 'path'
 import db from '#db'
 import { process_markdown_entity } from '../index.mjs'
-import { read_file_from_ref } from '../../git/git_operations.mjs'
+import { read_file_from_ref } from '../../git/index.mjs'
 import { entity_registry, relation_handlers } from './index.mjs'
 
 const log = debug('markdown:entity_converter:to_database')

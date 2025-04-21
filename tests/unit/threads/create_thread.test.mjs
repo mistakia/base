@@ -6,28 +6,42 @@ import create_thread from '#libs-server/threads/create_thread.mjs'
 import {
   reset_all_tables,
   create_test_user,
-  create_temp_test_directory
+  create_temp_test_repo
 } from '#tests/utils/index.mjs'
 import { thread_constants } from '#libs-shared'
+import git_operations from '#libs-server/git/index.mjs'
 
 const { THREAD_STATUS } = thread_constants
 
-// set up temp directory for threads
-const temp_dir = create_temp_test_directory('create_thread_test_')
-
 describe('create_thread', () => {
   let test_user
+  let system_repo
+  let user_repo
 
   before(async () => {
     await reset_all_tables()
     test_user = await create_test_user()
+
+    // Create test git repositories
+    system_repo = await create_temp_test_repo({
+      prefix: 'system-repo-test-'
+    })
+
+    user_repo = await create_temp_test_repo({
+      prefix: 'user-repo-test-'
+    })
   })
 
   after(async () => {
     await reset_all_tables()
 
-    if (temp_dir) {
-      temp_dir.cleanup()
+    // Clean up git repositories
+    if (system_repo) {
+      system_repo.cleanup()
+    }
+
+    if (user_repo) {
+      user_repo.cleanup()
     }
   })
 
@@ -36,7 +50,8 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     const thread = await create_thread(thread_data)
@@ -44,6 +59,7 @@ describe('create_thread', () => {
     // Verify thread was created with proper structure
     expect(thread).to.be.an('object')
     expect(thread.thread_id).to.be.a('string')
+    expect(thread.git_branch).to.equal(`thread/${thread.thread_id}`)
 
     // Check that thread context directory exists
     const thread_dir = path.join(thread.context_dir)
@@ -63,6 +79,7 @@ describe('create_thread', () => {
     expect(metadata.model).to.equal('llama2')
     expect(metadata.state).to.equal(THREAD_STATUS.ACTIVE)
     expect(metadata.created_at).to.be.a('string')
+    expect(metadata.git_branch).to.equal(`thread/${thread.thread_id}`)
 
     // Check timeline file
     const timeline_path = path.join(thread_dir, 'timeline.json')
@@ -78,6 +95,21 @@ describe('create_thread', () => {
       .then(() => true)
       .catch(() => false)
     expect(memory_dir_exists).to.be.true
+
+    // Verify git branches were created in both repos
+    const branch_name = `thread/${thread.thread_id}`
+
+    // Check system repo branch
+    await git_operations.checkout_branch({
+      repo_path: system_repo.path,
+      branch_name
+    })
+
+    // Check user repo branch
+    await git_operations.checkout_branch({
+      repo_path: user_repo.path,
+      branch_name
+    })
   })
 
   it('should create a thread with an initial message', async () => {
@@ -86,7 +118,8 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       initial_message: 'Hello, this is my first message',
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     const thread = await create_thread(thread_data)
@@ -108,7 +141,8 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       tools: ['web_search', 'calculator'],
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     const thread = await create_thread(thread_data)
@@ -128,7 +162,8 @@ describe('create_thread', () => {
       model: 'llama2',
       state: THREAD_STATUS.PAUSED,
       pause_reason: 'waiting_for_user_input',
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     const thread = await create_thread(thread_data)
@@ -146,7 +181,8 @@ describe('create_thread', () => {
       // Missing user_id
       inference_provider: 'ollama',
       model: 'llama2',
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     try {
@@ -165,7 +201,8 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       state: 'invalid_state', // Invalid state value
-      thread_base_directory: temp_dir.path
+      system_base_directory: system_repo.path,
+      user_base_directory: user_repo.path
     }
 
     try {

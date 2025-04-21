@@ -30,9 +30,7 @@ describe('OllamaProvider', () => {
   beforeEach(async () => {
     // Create a fresh thread for each test
     test_thread = await create_test_thread({
-      user_id: test_user.user_id,
-      inference_provider: 'ollama',
-      model: 'llama2'
+      user_id: test_user.user_id
     })
   })
 

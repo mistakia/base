@@ -19,6 +19,7 @@ chai.use(chaiHttp)
 describe('Threads API', () => {
   let test_user
   let test_threads = []
+  let test_user_base_directory
 
   before(async () => {
     await reset_all_tables()
@@ -44,18 +45,15 @@ describe('Threads API', () => {
       // Create some test threads
       const thread1 = await create_test_thread({
         user_id: test_user.user_id,
-        inference_provider: 'ollama',
-        model: 'llama2',
-        state: 'active',
-        user_base_directory: config.user_base_directory
+        state: 'active'
       })
+
+      test_user_base_directory = thread1.user_base_directory
 
       const thread2 = await create_test_thread({
         user_id: test_user.user_id,
-        inference_provider: 'ollama',
-        model: 'mistral',
         state: 'paused',
-        user_base_directory: config.user_base_directory
+        user_base_directory: test_user_base_directory
       })
 
       test_threads.push(thread1, thread2)
@@ -72,7 +70,10 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai.request(server).get('/api/threads'),
         test_user
-      ).query({ user_id: test_user.user_id })
+      ).query({
+        user_id: test_user.user_id,
+        user_base_directory: test_user_base_directory
+      })
 
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('array')
@@ -94,6 +95,7 @@ describe('Threads API', () => {
         test_user
       ).query({
         user_id: test_user.user_id,
+        user_base_directory: test_user_base_directory,
         state: 'active'
       })
 
@@ -118,8 +120,6 @@ describe('Threads API', () => {
       // Create a test thread with initial message
       test_thread = await create_test_thread({
         user_id: test_user.user_id,
-        inference_provider: 'ollama',
-        model: 'llama2',
         initial_timeline: [
           {
             id: 'msg_001',
@@ -128,9 +128,10 @@ describe('Threads API', () => {
             role: 'user',
             content: 'Hello, this is a test message'
           }
-        ],
-        user_base_directory: config.user_base_directory
+        ]
       })
+
+      test_user_base_directory = test_thread.user_base_directory
 
       test_threads.push(test_thread)
     })
@@ -146,7 +147,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai.request(server).get(`/api/threads/${test_thread.thread_id}`),
         test_user
-      )
+      ).query({ user_base_directory: test_user_base_directory })
 
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('object')
@@ -188,7 +189,8 @@ describe('Threads API', () => {
       const thread_data = {
         inference_provider: 'ollama',
         model: 'llama2',
-        initial_message: 'Hello, this is a new thread'
+        initial_message: 'Hello, this is a new thread',
+        user_base_directory: test_user_base_directory
       }
 
       const response = await authenticate_request(

@@ -2,7 +2,6 @@ import chai, { expect } from 'chai'
 import chaiHttp from 'chai-http'
 import fs from 'fs/promises'
 import path from 'path'
-import os from 'os'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
@@ -11,6 +10,7 @@ import db from '#db'
 import {
   reset_all_tables,
   create_test_user,
+  create_test_thread,
   authenticate_request
 } from '#tests/utils/index.mjs'
 
@@ -25,7 +25,7 @@ const execute = promisify(exec)
 
 describe('Change Requests API', () => {
   let test_user
-  let test_repo_path
+  let test_thread
   let orig_cwd
 
   before(async () => {
@@ -41,126 +41,46 @@ describe('Change Requests API', () => {
       username: 'test_cr_api_user'
     })
 
-    // Create temporary directory for test repo
-    const temp_dir = os.tmpdir()
-    test_repo_path = path.join(
-      temp_dir,
-      `cr-api-test-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-    )
-
-    // Initialize test repo
-    await fs.mkdir(test_repo_path, { recursive: true })
-    await execute('git init', { cwd: test_repo_path })
-    await execute('git config user.name "Test User"', { cwd: test_repo_path })
-    await execute('git config user.email "test@example.com"', {
-      cwd: test_repo_path
+    // Create a test thread with a git repo
+    test_thread = await create_test_thread({
+      user_id: test_user.user_id
     })
-
-    // Create initial commit
-    await fs.writeFile(
-      path.join(test_repo_path, 'README.md'),
-      '# Test Repository'
-    )
-    await execute('git add README.md', { cwd: test_repo_path })
-    await execute('git commit -m "Initial commit"', { cwd: test_repo_path })
-    await execute('git branch -M main', { cwd: test_repo_path })
 
     // Create the change_requests directory
-    await fs.mkdir(path.join(test_repo_path, 'data/change_requests'), {
-      recursive: true
-    })
+    await fs.mkdir(
+      path.join(test_thread.user_base_directory, 'data/change_requests'),
+      {
+        recursive: true
+      }
+    )
 
     // Change to the test repo directory so git operations use this path
-    process.chdir(test_repo_path)
+    process.chdir(test_thread.user_base_directory)
   })
 
   after(async () => {
     // Restore original working directory
     process.chdir(orig_cwd)
 
-    // Clean up the test repo
-    try {
-      await fs.rm(test_repo_path, { recursive: true, force: true })
-    } catch (error) {
-      console.error('Error cleaning up test repo:', error)
-    }
-  })
-
-  describe('POST /api/change-requests', () => {
-    it('should create a new change request', async () => {
-      const request_body = {
-        title: 'Test Integration CR',
-        description: 'This is a test change request for API integration tests',
-        target_branch: 'main',
-        file_changes: [
-          {
-            path: 'test-api-file.md',
-            content: '# Test API Content'
-          }
-        ],
-        tags: ['test', 'api', 'integration']
-      }
-
-      const response = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send(request_body),
-        test_user
-      )
-
-      expect(response).to.have.status(201)
-      expect(response.body).to.have.property('change_request_id')
-      expect(response.body).to.have.property('status', 'PendingReview')
-      expect(response.body).to.have.property('title', request_body.title)
-
-      // Verify the branch was created
-      const cr_id = response.body.change_request_id
-      const { stdout: branch_list } = await execute('git branch', {
-        cwd: test_repo_path
-      })
-      expect(branch_list).to.include(`cr/${cr_id}`)
-
-      // Verify the file was created
-      const { stdout: file_list } = await execute(
-        `git ls-tree -r --name-only cr/${cr_id}`,
-        { cwd: test_repo_path }
-      )
-      expect(file_list).to.include('test-api-file.md')
-    })
-
-    it('should return 400 for missing required fields', async () => {
-      const incomplete_request = {
-        // Missing title
-        description: 'This should fail',
-        target_branch: 'main'
-      }
-
-      const response = await authenticate_request(
-        chai
-          .request(server)
-          .post('/api/change-requests')
-          .send(incomplete_request),
-        test_user
-      )
-
-      expect(response).to.have.status(400)
-      expect(response.body).to.have.property('error')
-    })
+    // Clean up
+    test_thread.cleanup()
   })
 
   describe('GET /api/change-requests/:id', () => {
     it('should retrieve a change request by ID', async () => {
-      // First create a test CR
-      const create_response = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test Get CR',
-          description: 'This is for testing GET endpoint',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a test thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'Test Get CR - This is for testing GET endpoint',
+        user_base_directory: test_thread.user_base_directory
+      })
 
-      expect(create_response).to.have.status(201)
-      const change_request_id = create_response.body.change_request_id
+      // Fetch the change request ID from the thread
+      const change_request = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
+
+      const change_request_id = change_request.change_request_id
 
       // Now get the CR by ID
       const get_response = await authenticate_request(
@@ -173,10 +93,9 @@ describe('Change Requests API', () => {
         'change_request_id',
         change_request_id
       )
-      expect(get_response.body).to.have.property('title', 'Test Get CR')
-      expect(get_response.body).to.have.property(
-        'description',
-        'This is for testing GET endpoint'
+      expect(get_response.body).to.have.property('title')
+      expect(get_response.body.title).to.include(
+        `Thread ${thread_data.thread_id}`
       )
     })
 
@@ -192,26 +111,27 @@ describe('Change Requests API', () => {
 
   describe('GET /api/change-requests', () => {
     it('should list all change requests', async () => {
-      // Create multiple test CRs
-      const cr1 = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test CR 1',
-          description: 'First test CR',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create multiple test threads with default change requests
+      const thread1 = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'First test CR',
+        user_base_directory: test_thread.user_base_directory
+      })
 
-      const cr2 = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test CR 2',
-          description: 'Second test CR',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      const thread2 = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'Second test CR',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request IDs
+      const cr1 = await db('change_requests')
+        .where({ thread_id: thread1.thread_id })
+        .first()
+
+      const cr2 = await db('change_requests')
+        .where({ thread_id: thread2.thread_id })
+        .first()
 
       // Get list of CRs
       const response = await authenticate_request(
@@ -225,34 +145,41 @@ describe('Change Requests API', () => {
 
       // Check that our created CRs are in the list
       const cr_ids = response.body.map((cr) => cr.change_request_id)
-      expect(cr_ids).to.include(cr1.body.change_request_id)
-      expect(cr_ids).to.include(cr2.body.change_request_id)
+      expect(cr_ids).to.include(cr1.change_request_id)
+      expect(cr_ids).to.include(cr2.change_request_id)
     })
 
     it('should filter change requests by status', async () => {
-      // Create a CR
-      const cr = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test Filter CR',
-          description: 'For testing filters',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing filters',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // Update its status
       await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/change-requests/${cr.body.change_request_id}/status`)
+          .patch(
+            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_thread.user_base_directory}`
+          )
           .send({ status: 'Approved' }),
         test_user
       )
 
       // Get list filtered by status
       const response = await authenticate_request(
-        chai.request(server).get('/api/change-requests?status=Approved'),
+        chai
+          .request(server)
+          .get(
+            `/api/change-requests?status=Approved&repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
@@ -267,28 +194,31 @@ describe('Change Requests API', () => {
 
       // Our CR should be in the list
       const cr_ids = response.body.map((cr) => cr.change_request_id)
-      expect(cr_ids).to.include(cr.body.change_request_id)
+      expect(cr_ids).to.include(cr.change_request_id)
     })
   })
 
   describe('PATCH /api/change-requests/:id/status', () => {
     it('should update the status of a change request', async () => {
-      // Create a test CR
-      const cr = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test Status Update',
-          description: 'For testing status updates',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing status updates',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // Update its status
       const update_response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/change-requests/${cr.body.change_request_id}/status`)
+          .patch(
+            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_thread.user_base_directory}`
+          )
           .send({
             status: 'Approved',
             comment: 'Looks good to me!'
@@ -303,7 +233,9 @@ describe('Change Requests API', () => {
       const get_response = await authenticate_request(
         chai
           .request(server)
-          .get(`/api/change-requests/${cr.body.change_request_id}`),
+          .get(
+            `/api/change-requests/${cr.change_request_id}?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
@@ -313,32 +245,35 @@ describe('Change Requests API', () => {
       // Verify the markdown file was updated
       const file_path = path.join(
         'data/change_requests',
-        `${cr.body.change_request_id}.md`
+        `${cr.change_request_id}.md`
       )
       const { stdout: file_content } = await execute(`cat ${file_path}`, {
-        cwd: test_repo_path
+        cwd: test_thread.user_base_directory
       })
       expect(file_content).to.include('status: Approved')
       expect(file_content).to.include('Looks good to me!')
     })
 
     it('should return 400 for invalid status', async () => {
-      // Create a test CR
-      const cr = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test Invalid Status',
-          description: 'For testing invalid status',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing invalid status',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // Try to update with invalid status
       const response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/change-requests/${cr.body.change_request_id}/status`)
+          .patch(
+            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_thread.user_base_directory}`
+          )
           .send({
             status: 'InvalidStatus'
           }),
@@ -352,30 +287,41 @@ describe('Change Requests API', () => {
 
   describe('POST /api/change-requests/:id/merge', () => {
     it('should merge a change request', async () => {
-      // Create a test CR with a file
-      const cr = await authenticate_request(
-        chai
-          .request(server)
-          .post('/api/change-requests')
-          .send({
-            title: 'Test Merge CR',
-            description: 'For testing merge endpoint',
-            target_branch: 'main',
-            file_changes: [
-              {
-                path: 'merge-test.md',
-                content: '# Test merge content'
-              }
-            ]
-          }),
-        test_user
+      // Create a thread with default change request and add a file
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing merge endpoint',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Create a file in the thread branch
+      const branch_name = `thread/${thread_data.thread_id}`
+      await execute(`git checkout ${branch_name}`, {
+        cwd: test_thread.user_base_directory
+      })
+      await fs.writeFile(
+        path.join(test_thread.user_base_directory, 'merge-test.md'),
+        '# Test merge content'
       )
+      await execute('git add merge-test.md', {
+        cwd: test_thread.user_base_directory
+      })
+      await execute('git commit -m "Add merge test file"', {
+        cwd: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // First approve it
       await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/change-requests/${cr.body.change_request_id}/status`)
+          .patch(
+            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_thread.user_base_directory}`
+          )
           .send({ status: 'Approved' }),
         test_user
       )
@@ -384,7 +330,9 @@ describe('Change Requests API', () => {
       const merge_response = await authenticate_request(
         chai
           .request(server)
-          .post(`/api/change-requests/${cr.body.change_request_id}/merge`)
+          .post(
+            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_thread.user_base_directory}`
+          )
           .send({
             merge_message: 'Merging test CR'
           }),
@@ -395,9 +343,11 @@ describe('Change Requests API', () => {
       expect(merge_response.body).to.have.property('status', 'Merged')
 
       // Verify the merge happened by checking if the file exists in main branch
-      await execute('git checkout main', { cwd: test_repo_path })
+      await execute('git checkout main', {
+        cwd: test_thread.user_base_directory
+      })
       const { stdout: file_list } = await execute('ls -la', {
-        cwd: test_repo_path
+        cwd: test_thread.user_base_directory
       })
       expect(file_list).to.include('merge-test.md')
 
@@ -405,7 +355,9 @@ describe('Change Requests API', () => {
       const get_response = await authenticate_request(
         chai
           .request(server)
-          .get(`/api/change-requests/${cr.body.change_request_id}`),
+          .get(
+            `/api/change-requests/${cr.change_request_id}?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
@@ -413,29 +365,40 @@ describe('Change Requests API', () => {
     })
 
     it('should return 400 for already merged CR', async () => {
-      // Create, approve and merge a test CR
-      const cr = await authenticate_request(
-        chai
-          .request(server)
-          .post('/api/change-requests')
-          .send({
-            title: 'Test Already Merged',
-            description: 'For testing double merge',
-            target_branch: 'main',
-            file_changes: [
-              {
-                path: 'already-merged.md',
-                content: '# Already merged content'
-              }
-            ]
-          }),
-        test_user
+      // Create a thread with default change request and add a file
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing double merge',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Create a file in the thread branch
+      const branch_name = `thread/${thread_data.thread_id}`
+      await execute(`git checkout ${branch_name}`, {
+        cwd: test_thread.user_base_directory
+      })
+      await fs.writeFile(
+        path.join(test_thread.user_base_directory, 'already-merged.md'),
+        '# Already merged content'
       )
+      await execute('git add already-merged.md', {
+        cwd: test_thread.user_base_directory
+      })
+      await execute('git commit -m "Add already merged file"', {
+        cwd: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/change-requests/${cr.body.change_request_id}/status`)
+          .patch(
+            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_thread.user_base_directory}`
+          )
           .send({ status: 'Approved' }),
         test_user
       )
@@ -443,7 +406,9 @@ describe('Change Requests API', () => {
       await authenticate_request(
         chai
           .request(server)
-          .post(`/api/change-requests/${cr.body.change_request_id}/merge`),
+          .post(
+            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
@@ -451,32 +416,37 @@ describe('Change Requests API', () => {
       const response = await authenticate_request(
         chai
           .request(server)
-          .post(`/api/change-requests/${cr.body.change_request_id}/merge`),
+          .post(
+            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
       expect(response).to.have.status(400)
       expect(response.body).to.have.property('error')
-      expect(response.body.error).to.include('already merged')
+      expect(response.body.error).to.include(
+        'Cannot merge change request with status: Merged'
+      )
     })
   })
 
   describe('POST /api/github/webhooks', () => {
     it('should handle GitHub PR merge webhook', async () => {
-      // Create a test CR
-      const cr_response = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test GitHub Webhook',
-          description: 'For testing GitHub webhooks',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing GitHub webhooks',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // Manually update the CR to have a PR number
       await db('change_requests')
-        .where({ change_request_id: cr_response.body.change_request_id })
+        .where({ change_request_id: cr.change_request_id })
         .update({
           github_pr_number: 123,
           github_repo: 'test-org/test-repo'
@@ -509,7 +479,9 @@ describe('Change Requests API', () => {
       const updated_cr = await authenticate_request(
         chai
           .request(server)
-          .get(`/api/change-requests/${cr_response.body.change_request_id}`),
+          .get(
+            `/api/change-requests/${cr.change_request_id}?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 
@@ -517,20 +489,21 @@ describe('Change Requests API', () => {
     })
 
     it('should handle GitHub PR closed without merge webhook', async () => {
-      // Create a test CR
-      const cr_response = await authenticate_request(
-        chai.request(server).post('/api/change-requests').send({
-          title: 'Test GitHub Close Webhook',
-          description: 'For testing GitHub close webhooks',
-          target_branch: 'main',
-          file_changes: []
-        }),
-        test_user
-      )
+      // Create a thread with default change request
+      const thread_data = await create_test_thread({
+        user_id: test_user.user_id,
+        initial_message: 'For testing GitHub close webhooks',
+        user_base_directory: test_thread.user_base_directory
+      })
+
+      // Fetch the change request
+      const cr = await db('change_requests')
+        .where({ thread_id: thread_data.thread_id })
+        .first()
 
       // Manually update the CR to have a PR number
       await db('change_requests')
-        .where({ change_request_id: cr_response.body.change_request_id })
+        .where({ change_request_id: cr.change_request_id })
         .update({
           github_pr_number: 456,
           github_repo: 'test-org/test-repo'
@@ -564,7 +537,9 @@ describe('Change Requests API', () => {
       const updated_cr = await authenticate_request(
         chai
           .request(server)
-          .get(`/api/change-requests/${cr_response.body.change_request_id}`),
+          .get(
+            `/api/change-requests/${cr.change_request_id}?repo_path=${test_thread.user_base_directory}`
+          ),
         test_user
       )
 

@@ -2,20 +2,20 @@
 import chai from 'chai'
 import fs from 'fs/promises'
 import path from 'path'
-import os from 'os'
-import { exec } from 'child_process'
+import { v4 as uuid } from 'uuid'
 import { promisify } from 'util'
+import { exec } from 'child_process'
 
 // Import the actual git operations to test
-import * as git_ops from '#libs-server/git/git_operations.mjs'
+import * as change_request_utils from '#libs-server/change_requests/utils.mjs'
+import { create_temp_test_repo } from '#tests/utils/index.mjs'
 
 const expect = chai.expect
 const execute = promisify(exec)
 
 describe('Change Request Git Operations', function () {
-  let test_repo_path
+  let test_repo
   let orig_cwd
-  let worktrees_to_clean = []
 
   // Set longer timeout for Git operations
   this.timeout(30000)
@@ -24,364 +24,229 @@ describe('Change Request Git Operations', function () {
     // Save original working directory
     orig_cwd = process.cwd()
 
-    // Create temporary directory for test repo
-    const temp_dir = os.tmpdir()
-    test_repo_path = path.join(
-      temp_dir,
-      `git-ops-test-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-    )
-
-    // Initialize test repo
-    await fs.mkdir(test_repo_path, { recursive: true })
-    await execute('git init', { cwd: test_repo_path })
-    await execute('git config user.name "Test User"', { cwd: test_repo_path })
-    await execute('git config user.email "test@example.com"', {
-      cwd: test_repo_path
-    })
-
-    // Create initial commit
-    await fs.writeFile(
-      path.join(test_repo_path, 'README.md'),
-      '# Test Repository'
-    )
-    await execute('git add README.md', { cwd: test_repo_path })
-    await execute('git commit -m "Initial commit"', { cwd: test_repo_path })
-    await execute('git branch -M main', { cwd: test_repo_path })
+    // Create temporary repository for testing
+    test_repo = await create_temp_test_repo()
 
     // Change to the test repo directory so git operations use this path
-    process.chdir(test_repo_path)
-
-    // Reset worktrees tracking
-    worktrees_to_clean = []
+    process.chdir(test_repo.path)
   })
 
   afterEach(async function () {
     // Restore original working directory
     process.chdir(orig_cwd)
 
-    // Cleanup any worktrees created during the test
-    for (const worktree of worktrees_to_clean) {
-      try {
-        await execute(`git worktree remove --force "${worktree}"`, {
-          cwd: test_repo_path
-        })
-      } catch (error) {
-        console.error(`Error removing worktree ${worktree}:`, error)
-      }
-    }
-
     // Clean up the test repo
-    try {
-      await fs.rm(test_repo_path, { recursive: true, force: true })
-    } catch (error) {
-      console.error('Error cleaning up test repo:', error)
-    }
+    test_repo.cleanup()
   })
 
-  // Helper function to create a unique worktree for tests
-  async function create_test_worktree(branch_name) {
-    const unique_id = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
-    const worktree_path = path.join(
-      os.tmpdir(),
-      `worktree-test-${branch_name}-${unique_id}`
-    )
+  // Helper to create a feature branch with some changes
+  async function create_feature_branch(branch_name) {
+    // Create and checkout branch
+    await execute(`git checkout -b ${branch_name}`, { cwd: test_repo.path })
 
-    // Create the branch if it doesn't exist
-    try {
-      await execute(`git checkout -b ${branch_name}`, { cwd: test_repo_path })
-      await execute('git checkout main', { cwd: test_repo_path })
-    } catch (error) {
-      if (!error.message.includes('already exists')) {
-        throw error
-      }
-    }
+    // Create a test file with unique content
+    const file_name = `test-file-${uuid().substring(0, 8)}.md`
+    const content = `# Test Content for ${branch_name}\n\nCreated at ${new Date().toISOString()}`
 
-    await execute(`git worktree add "${worktree_path}" ${branch_name}`, {
-      cwd: test_repo_path
+    await fs.writeFile(path.join(test_repo.path, file_name), content)
+
+    // Commit the changes
+    await execute(`git add ${file_name}`, { cwd: test_repo.path })
+    await execute(`git commit -m "Add test file for ${branch_name}"`, {
+      cwd: test_repo.path
     })
 
-    // Add to cleanup list
-    worktrees_to_clean.push(worktree_path)
+    // Return to main branch
+    await execute('git checkout main', { cwd: test_repo.path })
 
-    return worktree_path
+    return { branch_name, file_name, content }
   }
 
-  describe('create_change_request_branch', function () {
-    it('should create a branch with the correct naming convention', async function () {
-      const change_request_id = 'test-cr-456'
-      const branch_name = `cr/${change_request_id}`
-      const target_branch = 'main'
+  describe('get_change_request_commits', function () {
+    it('should return commits specific to the feature branch', async function () {
+      // Create a feature branch with changes
+      const { branch_name, file_name } = await create_feature_branch(
+        'feature/commits-test'
+      )
 
-      // Use the direct git_ops function that's actually used in production
-      await git_ops.create_branch({
-        repo_path: test_repo_path,
-        branch_name,
-        base_branch: target_branch
+      // Get the commits using the utility function
+      const commits = await change_request_utils.get_change_request_commits({
+        feature_branch: branch_name,
+        target_branch: 'main',
+        repo_path: test_repo.path
       })
 
-      // Verify the branch was created with the correct name
-      const { stdout: branch_list } = await execute('git branch', {
-        cwd: test_repo_path
-      })
-      expect(branch_list).to.include(branch_name)
+      // Verify we got the expected commits
+      expect(commits).to.be.an('array')
+      expect(commits.length).to.equal(1)
+      expect(commits[0].message).to.include(`Add test file for ${branch_name}`)
+
+      // Verify we have file diffs
+      expect(commits[0].files).to.be.an('array')
+      expect(commits[0].files.length).to.equal(1)
+      expect(commits[0].files[0].path).to.equal(file_name)
+      expect(commits[0].files[0].status).to.equal('added')
+      expect(commits[0].files[0].diff).to.be.a('string')
+      expect(commits[0].files[0].diff).to.include(
+        `Test Content for ${branch_name}`
+      )
     })
 
-    it('should handle errors during branch creation', async function () {
-      try {
-        // Try to create a branch from a non-existent target branch
-        const change_request_id = 'test-cr-456'
-        const branch_name = `cr/${change_request_id}`
-        const nonexistent_branch = 'non_existent_branch'
+    it('should return empty array if no commits exist', async function () {
+      // Create an empty branch with no unique commits
+      await execute('git checkout -b empty-branch', { cwd: test_repo.path })
+      await execute('git checkout main', { cwd: test_repo.path })
 
-        await git_ops.create_branch({
-          repo_path: test_repo_path,
-          branch_name,
-          base_branch: nonexistent_branch
-        })
+      // Get the commits using the utility function
+      const commits = await change_request_utils.get_change_request_commits({
+        feature_branch: 'empty-branch',
+        target_branch: 'main',
+        repo_path: test_repo.path
+      })
 
-        // Should not reach here
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        // Expect an error since the target branch doesn't exist
-        expect(error).to.exist
-      }
+      // Verify we got no commits
+      expect(commits).to.be.an('array')
+      expect(commits.length).to.equal(0)
     })
   })
 
-  describe('apply_file_changes', function () {
-    it('should apply file changes to the worktree', async function () {
-      // Create a worktree for testing with unique name
-      const worktree_path = await create_test_worktree('main-apply')
+  describe('build_change_request_from_git', function () {
+    it('should build change request data from Git information', async function () {
+      // Create a feature branch with changes
+      const { branch_name, file_name } = await create_feature_branch(
+        'feature/build-cr-test'
+      )
 
-      try {
-        const file_changes = [
-          {
-            path: 'test-file-1.md',
-            content: '# Test Content 1'
-          },
-          {
-            path: 'test-file-2.md',
-            content: '# Test Content 2'
-          }
-        ]
+      // Build change request from git
+      const cr_data = await change_request_utils.build_change_request_from_git({
+        feature_branch: branch_name,
+        target_branch: 'main',
+        repo_path: test_repo.path
+      })
 
-        // Apply file changes manually as this is how it's done in the change_requests module
-        for (const change of file_changes) {
-          const full_file_path = path.resolve(worktree_path, change.path)
-          const dir_name = path.dirname(full_file_path)
-          // Ensure directory exists before writing file
-          await fs.mkdir(dir_name, { recursive: true })
-          await fs.writeFile(full_file_path, change.content)
-        }
+      // Verify the data
+      expect(cr_data).to.be.an('object')
+      expect(cr_data.feature_branch).to.equal(branch_name)
+      expect(cr_data.target_branch).to.equal('main')
+      expect(cr_data.commits).to.be.an('array')
+      expect(cr_data.commits.length).to.equal(1)
+      expect(cr_data.branch_info).to.be.an('object')
+      expect(cr_data.branch_info.name).to.equal(branch_name)
+      expect(cr_data.branch_info.target).to.equal('main')
+      expect(cr_data.branch_info.commits).to.equal(1)
 
-        // Stage the changes using git_ops function
-        const changed_file_paths = file_changes.map((change) => change.path)
-        await git_ops.add_files({
-          worktree_path,
-          files_to_add: changed_file_paths
-        })
-
-        // Verify files were written
-        for (const file of file_changes) {
-          const file_path = path.join(worktree_path, file.path)
-          const content = await fs.readFile(file_path, 'utf8')
-          expect(content).to.equal(file.content)
-        }
-
-        // Verify files were staged
-        const { stdout: git_status } = await execute('git status --porcelain', {
-          cwd: worktree_path
-        })
-        expect(git_status).to.include('A  test-file-1.md')
-        expect(git_status).to.include('A  test-file-2.md')
-      } finally {
-        // Let the afterEach clean up worktrees
-      }
+      // Verify the file diffs in the commits
+      expect(cr_data.commits[0].files).to.be.an('array')
+      expect(cr_data.commits[0].files.length).to.equal(1)
+      expect(cr_data.commits[0].files[0].path).to.equal(file_name)
+      expect(cr_data.commits[0].files[0].status).to.equal('added')
+      expect(cr_data.commits[0].files[0].diff).to.be.a('string')
     })
 
-    it('should create directories as needed', async function () {
-      // Create a worktree for testing with unique name
-      const worktree_path = await create_test_worktree('main-nested')
+    it('should return data with empty commits for branch with no unique commits', async function () {
+      // Create an empty branch
+      await execute('git checkout -b empty-branch-for-build', {
+        cwd: test_repo.path
+      })
+      await execute('git checkout main', { cwd: test_repo.path })
 
-      try {
-        const nested_path = 'nested/directory/test-file.md'
-        const content = '# Nested Content'
+      // Build change request from git
+      const cr_data = await change_request_utils.build_change_request_from_git({
+        feature_branch: 'empty-branch-for-build',
+        target_branch: 'main',
+        repo_path: test_repo.path
+      })
 
-        // Apply file change manually as this is how it's done in the change_requests module
-        const full_file_path = path.resolve(worktree_path, nested_path)
-        const dir_name = path.dirname(full_file_path)
-        await fs.mkdir(dir_name, { recursive: true })
-        await fs.writeFile(full_file_path, content)
-
-        // Stage the change using git_ops function
-        await git_ops.add_files({
-          worktree_path,
-          files_to_add: nested_path
-        })
-
-        // Verify the nested directory and file were created
-        const file_path = path.join(worktree_path, nested_path)
-        const file_content = await fs.readFile(file_path, 'utf8')
-        expect(file_content).to.equal(content)
-
-        // Verify file was staged
-        const { stdout: git_status } = await execute('git status --porcelain', {
-          cwd: worktree_path
-        })
-        expect(git_status).to.include('A  nested/directory/test-file.md')
-      } finally {
-        // Let the afterEach clean up worktrees
-      }
-    })
-
-    it('should handle file deletion when content is null', async function () {
-      // Create a worktree for testing with unique name
-      const worktree_path = await create_test_worktree('main-delete')
-
-      try {
-        // First create a file
-        const file_to_delete_path = 'to-be-deleted.md'
-        const file_to_delete = path.join(worktree_path, file_to_delete_path)
-        await fs.writeFile(file_to_delete, '# File to delete')
-
-        // Stage and commit the file
-        await git_ops.add_files({
-          worktree_path,
-          files_to_add: file_to_delete_path
-        })
-        await git_ops.commit_changes({
-          worktree_path,
-          commit_message: 'Add file to delete'
-        })
-
-        // Then delete it (simulating a null content change)
-        await fs.unlink(file_to_delete)
-
-        // Stage the deletion using git_ops function
-        await git_ops.add_files({
-          worktree_path,
-          files_to_add: file_to_delete_path
-        })
-
-        // Verify the file was deleted
-        try {
-          await fs.access(file_to_delete)
-          expect.fail('File should have been deleted')
-        } catch (error) {
-          // Expected error since file should be gone
-          expect(error.code).to.equal('ENOENT')
-        }
-
-        // Verify deletion was staged
-        const { stdout: git_status } = await execute('git status --porcelain', {
-          cwd: worktree_path
-        })
-        expect(git_status).to.include('D  to-be-deleted.md')
-      } finally {
-        // Let the afterEach clean up worktrees
-      }
+      // Verify the data
+      expect(cr_data).to.be.an('object')
+      expect(cr_data.feature_branch).to.equal('empty-branch-for-build')
+      expect(cr_data.target_branch).to.equal('main')
+      expect(cr_data.commits).to.be.an('array')
+      expect(cr_data.commits.length).to.equal(0)
+      expect(cr_data.branch_info.commits).to.equal(0)
     })
   })
 
-  describe('merge_change_request', function () {
-    it('should merge a feature branch into target branch', async function () {
-      const change_request_id = 'test-cr-789'
-      const feature_branch = `cr/${change_request_id}`
-      const target_branch = 'main'
+  describe('merge_branch_for_change_request', function () {
+    it('should merge feature branch into target branch', async function () {
+      // Create a feature branch with changes
+      const { branch_name, file_name } =
+        await create_feature_branch('feature/merge-test')
 
-      // Create a feature branch with a change
-      await execute(`git checkout -b ${feature_branch}`, {
-        cwd: test_repo_path
-      })
-      await fs.writeFile(
-        path.join(test_repo_path, 'merge-test-file.md'),
-        '# Merge Test Content'
+      // Merge the feature branch
+      const result = await change_request_utils.merge_branch_for_change_request(
+        {
+          target_branch: 'main',
+          feature_branch: branch_name,
+          merge_message: 'Merging test branch',
+          delete_branch: false, // Keep branch for verification
+          repo_path: test_repo.path
+        }
       )
-      await execute('git add merge-test-file.md', { cwd: test_repo_path })
-      await execute('git commit -m "Add merge test file"', {
-        cwd: test_repo_path
-      })
-      await execute('git checkout main', { cwd: test_repo_path })
 
-      // Merge using the git operations functions
-      await git_ops.checkout_branch({
-        repo_path: test_repo_path,
-        branch_name: target_branch
-      })
-      await git_ops.merge_branch({
-        repo_path: test_repo_path,
-        branch_to_merge: feature_branch,
-        merge_message: 'Test merge'
-      })
+      // Verify the merge was successful
+      expect(result).to.be.an('object')
+      expect(result.success).to.be.true
+      expect(result.merge_commit_hash).to.be.a('string')
 
-      // Verify we're on the target branch
-      const { stdout: current_branch } = await execute(
-        'git rev-parse --abbrev-ref HEAD',
-        { cwd: test_repo_path }
-      )
-      expect(current_branch.trim()).to.equal(target_branch)
-
-      // Verify the changes were merged
-      const merge_file_path = path.join(test_repo_path, 'merge-test-file.md')
+      // Verify the file is now in the main branch
+      await execute('git checkout main', { cwd: test_repo.path })
+      const file_path = path.join(test_repo.path, file_name)
       const file_exists = await fs
-        .access(merge_file_path)
+        .access(file_path)
         .then(() => true)
         .catch(() => false)
-      expect(file_exists).to.be.true
 
-      // Verify the merge commit message
-      const { stdout: commit_msg } = await execute('git log -1 --pretty=%B', {
-        cwd: test_repo_path
-      })
-      expect(commit_msg).to.include('Test merge')
+      expect(file_exists).to.be.true
     })
 
-    it('should optionally delete the source branch after merging', async function () {
-      const change_request_id = 'test-cr-delete'
-      const feature_branch = `cr/${change_request_id}`
-      const target_branch = 'main'
+    it('should throw error if branches do not exist', async function () {
+      try {
+        // Try to merge with non-existent branch
+        await change_request_utils.merge_branch_for_change_request({
+          target_branch: 'main',
+          feature_branch: 'non-existent-branch',
+          merge_message: 'This should fail',
+          repo_path: test_repo.path
+        })
 
-      // Create a feature branch with a change
-      await execute(`git checkout -b ${feature_branch}`, {
-        cwd: test_repo_path
-      })
-      await fs.writeFile(
-        path.join(test_repo_path, 'delete-branch-test.md'),
-        '# Delete Branch Test'
+        // If we get here, the test should fail
+        expect.fail('Expected an error but none was thrown')
+      } catch (error) {
+        expect(error.message).to.include('Branch not found')
+      }
+    })
+
+    it('should delete the feature branch after merging if specified', async function () {
+      // Create a feature branch with changes
+      const { branch_name, file_name } = await create_feature_branch(
+        'feature/delete-after-merge'
       )
-      await execute('git add delete-branch-test.md', { cwd: test_repo_path })
-      await execute('git commit -m "Add delete branch test file"', {
-        cwd: test_repo_path
-      })
-      await execute('git checkout main', { cwd: test_repo_path })
 
-      // Merge and delete branch using git operations functions
-      await git_ops.checkout_branch({
-        repo_path: test_repo_path,
-        branch_name: target_branch
-      })
-      await git_ops.merge_branch({
-        repo_path: test_repo_path,
-        branch_to_merge: feature_branch,
-        merge_message: 'Test merge'
-      })
-      await git_ops.delete_branch({
-        repo_path: test_repo_path,
-        branch_name: feature_branch
+      // Merge the feature branch with delete_branch=true
+      await change_request_utils.merge_branch_for_change_request({
+        target_branch: 'main',
+        feature_branch: branch_name,
+        merge_message: 'Merge and delete test',
+        delete_branch: true, // Delete branch after merging
+        repo_path: test_repo.path
       })
 
       // Verify the branch was deleted
       const { stdout: branch_list } = await execute('git branch', {
-        cwd: test_repo_path
+        cwd: test_repo.path
       })
-      expect(branch_list).to.not.include(feature_branch)
 
-      // Verify the changes were still merged
-      const test_file_path = path.join(test_repo_path, 'delete-branch-test.md')
+      expect(branch_list).to.not.include(branch_name)
+
+      // Verify the changes were merged successfully
+      await execute('git checkout main', { cwd: test_repo.path })
+      const file_path = path.join(test_repo.path, file_name)
       const file_exists = await fs
-        .access(test_file_path)
+        .access(file_path)
         .then(() => true)
         .catch(() => false)
+
       expect(file_exists).to.be.true
     })
   })

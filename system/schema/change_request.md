@@ -47,7 +47,7 @@ properties:
     type: string
     required: false
     description: The GitHub repository associated with the PR (format 'owner/repo').
-  - name: related_thread_id
+  - name: thread_id
     type: string
     format: uuid
     required: false

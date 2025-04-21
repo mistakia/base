@@ -7,8 +7,7 @@ export * as cloudflare from './integrations/cloudflare.mjs'
 export * as sync from './integrations/sync/index.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-export * as mcp_service from './mcp/service.mjs'
-export * as git from './git/git_operations.mjs'
+export * as git from './git/index.mjs'
 export { default as normalize_user_id } from './normalize_user_id.mjs'
 export * as markdown from './markdown/index.mjs'
 export * as blocks from './blocks/index.mjs'

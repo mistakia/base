@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
-import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
+import { get_thread_base_directory } from './threads_constants.mjs'
 
 const log = debug('threads:get')
 
@@ -11,19 +11,20 @@ const log = debug('threads:get')
  *
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to retrieve
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Thread data object
  * @throws {Error} If thread is not found
  */
-export default async function get_thread({
-  thread_id,
-  thread_base_directory = THREAD_BASE_DIRECTORY
-}) {
+export default async function get_thread({ thread_id, user_base_directory }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
   }
 
   log(`Getting thread ${thread_id}`)
 
+  const thread_base_directory = get_thread_base_directory({
+    user_base_directory
+  })
   const thread_dir = path.join(thread_base_directory, thread_id)
 
   try {
@@ -61,6 +62,7 @@ export default async function get_thread({
  * @param {string} [params.state] Filter by thread state
  * @param {number} [params.limit=50] Maximum number of threads to return
  * @param {number} [params.offset=0] Number of threads to skip
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Array>} Array of thread summary objects
  */
 export async function list_threads({
@@ -68,13 +70,13 @@ export async function list_threads({
   state,
   limit = 50,
   offset = 0,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   log(
     `Listing threads${user_id ? ` for user ${user_id}` : ''}${state ? ` with state ${state}` : ''}`
   )
 
-  const threads_dir = thread_base_directory
+  const threads_dir = get_thread_base_directory({ user_base_directory })
 
   try {
     // Create threads directory if it doesn't exist

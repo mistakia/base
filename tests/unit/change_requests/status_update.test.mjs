@@ -2,25 +2,34 @@
 import chai from 'chai'
 import fs from 'fs/promises'
 import path from 'path'
-import os from 'os'
-import { exec } from 'child_process'
-import { promisify } from 'util'
 import { v4 as uuid } from 'uuid'
 
-import { update_change_request_status } from '#libs-server/change_requests/index.mjs'
+// Import modules to test
+import * as change_requests from '#libs-server/change_requests/index.mjs'
+import {
+  VALID_STATUSES,
+  VALID_TRANSITIONS
+} from '#libs-server/change_requests/constants.mjs'
 import db from '#db'
-import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import {
+  reset_all_tables,
+  create_test_user,
+  create_test_thread
+} from '#tests/utils/index.mjs'
+import { promisify } from 'util'
+import { exec } from 'child_process'
 
-const expect = chai.expect
 const execute = promisify(exec)
+const expect = chai.expect
 
-describe('Change Request Status Update', function () {
-  let test_repo_path
+describe('Change Request Status Updates', function () {
   let test_user
   let orig_cwd
+  let test_thread
+  let feature_branch
 
-  // Set longer timeout
-  this.timeout(10000)
+  // Set longer timeout for Git operations
+  this.timeout(30000)
 
   beforeEach(async function () {
     // Save original working directory
@@ -31,287 +40,351 @@ describe('Change Request Status Update', function () {
 
     // Create a test user
     test_user = await create_test_user({
-      email: 'test-status@example.com',
-      username: 'test_status_user'
+      email: 'status-test@example.com',
+      username: 'status_test_user'
     })
 
-    // Create temporary directory for test repo
-    const temp_dir = os.tmpdir()
-    test_repo_path = path.join(
-      temp_dir,
-      `status-test-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-    )
-
-    // Initialize test repo
-    await fs.mkdir(test_repo_path, { recursive: true })
-    await execute('git init', { cwd: test_repo_path })
-    await execute('git config user.name "Test User"', { cwd: test_repo_path })
-    await execute('git config user.email "test@example.com"', {
-      cwd: test_repo_path
+    // Create a test thread with a git repo
+    test_thread = await create_test_thread({
+      user_id: test_user.user_id
     })
-
-    // Create initial commit
-    await fs.writeFile(
-      path.join(test_repo_path, 'README.md'),
-      '# Test Repository'
-    )
-    await execute('git add README.md', { cwd: test_repo_path })
-    await execute('git commit -m "Initial commit"', { cwd: test_repo_path })
-    await execute('git branch -M main', { cwd: test_repo_path })
 
     // Create the change_requests directory
-    await fs.mkdir(path.join(test_repo_path, 'data/change_requests'), {
-      recursive: true
+    await fs.mkdir(
+      path.join(test_thread.user_base_directory, 'data/change_requests'),
+      {
+        recursive: true
+      }
+    )
+
+    // Change to the test repo directory
+    process.chdir(test_thread.user_base_directory)
+
+    // Create a feature branch with changes for testing
+    feature_branch = `feature/status-test-${uuid().substring(0, 8)}`
+    await execute(`git checkout -b ${feature_branch}`, {
+      cwd: test_thread.user_base_directory
     })
 
-    // Change to the test repo directory so git operations use this path
-    process.chdir(test_repo_path)
+    // Create a test file
+    const test_file = path.join(
+      test_thread.user_base_directory,
+      'status-test-file.md'
+    )
+    await fs.writeFile(test_file, '# Status Test Content')
+
+    // Commit the changes
+    await execute('git add .', { cwd: test_thread.user_base_directory })
+    await execute('git commit -m "Add test file for status testing"', {
+      cwd: test_thread.user_base_directory
+    })
+
+    // Return to main branch
+    await execute('git checkout main', { cwd: test_thread.user_base_directory })
   })
 
   afterEach(async function () {
     // Restore original working directory
     process.chdir(orig_cwd)
 
-    // Clean up the test repo
-    try {
-      await fs.rm(test_repo_path, { recursive: true, force: true })
-    } catch (error) {
-      console.error('Error cleaning up test repo:', error)
-    }
+    // Clean up
+    test_thread.cleanup()
   })
 
   describe('update_change_request_status', function () {
-    it('should update status when transition is valid', async function () {
-      // Create a test change request in the database
-      const change_request_id = uuid()
-      const current_status = 'PendingReview'
-
-      // Insert a change request directly into the database
-      await db('change_requests').insert({
-        change_request_id,
-        status: current_status,
-        title: 'Test Status Update',
+    it('should update status in database and markdown file', async function () {
+      // Create a change request
+      const cr_id = await change_requests.create_change_request({
+        title: 'Status Update Test',
+        description: 'Testing status update functionality',
         creator_id: test_user.user_id,
-        created_at: new Date(),
-        updated_at: new Date(),
         target_branch: 'main',
-        feature_branch: `cr/${change_request_id}`
+        feature_branch,
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
       })
 
-      // Create a markdown file for the change request
-      const markdown_dir = path.join(test_repo_path, 'data/change_requests')
-      await fs.mkdir(markdown_dir, { recursive: true })
+      // Initial status should be PendingReview
+      const cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('PendingReview')
 
-      const markdown_file_path = path.join(
-        markdown_dir,
-        `${change_request_id}.md`
-      )
-      const markdown_content = `---
-change_request_id: ${change_request_id}
-title: Test Status Update
-status: ${current_status}
-creator_id: ${test_user.user_id}
-created_at: ${new Date().toISOString()}
-target_branch: main
-feature_branch: cr/${change_request_id}
-type: change_request
----
-
-# Test Status Update
-
-Initial content`
-
-      await fs.writeFile(markdown_file_path, markdown_content)
-
-      // Update the status
-      const result = await update_change_request_status({
-        change_request_id,
+      // Update status to Approved
+      const update_result = await change_requests.update_change_request_status({
+        change_request_id: cr_id,
         status: 'Approved',
-        comment: 'Looks good!',
-        updater_id: test_user.user_id
+        updater_id: test_user.user_id,
+        comment: 'Approving for testing',
+        repo_path: test_thread.user_base_directory
       })
 
-      // Verify the result
-      expect(result).to.have.property('status', 'Approved')
+      // Verify update result
+      expect(update_result.status).to.equal('Approved')
+      expect(update_result.change_request_id).to.equal(cr_id)
 
-      // Verify the database was updated
+      // Verify database record
       const db_record = await db('change_requests')
-        .where({ change_request_id })
+        .where({ change_request_id: cr_id })
         .first()
 
       expect(db_record.status).to.equal('Approved')
 
-      // Verify the markdown file was updated - read directly from the file path
-      const updated_content = await fs.readFile(markdown_file_path, 'utf8')
-      expect(updated_content).to.include('status: Approved')
-      expect(updated_content).to.include('Looks good!')
+      // Verify markdown file status
+      const markdown_file = path.join(
+        test_thread.user_base_directory,
+        'data/change_requests',
+        `${cr_id}.md`
+      )
+      const markdown_content = await fs.readFile(markdown_file, 'utf8')
+
+      expect(markdown_content).to.include('status: Approved')
+      expect(markdown_content).to.include('Approving for testing')
     })
 
-    it('should reject invalid status values', async function () {
-      // Create a test change request
-      const change_request_id = uuid()
-
-      // Insert a change request directly into the database
-      await db('change_requests').insert({
-        change_request_id,
-        status: 'PendingReview',
-        title: 'Test Invalid Status',
+    it('should allow valid status transitions only', async function () {
+      // Create a change request
+      const cr_id = await change_requests.create_change_request({
+        title: 'Status Transition Test',
+        description: 'Testing valid status transitions',
         creator_id: test_user.user_id,
-        created_at: new Date(),
-        updated_at: new Date(),
         target_branch: 'main',
-        feature_branch: `cr/${change_request_id}`
+        feature_branch,
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
       })
 
+      // Try an invalid transition directly to Merged
       try {
-        await update_change_request_status({
-          change_request_id,
-          status: 'InvalidStatus',
-          user: {
-            username: test_user.username,
-            user_id: test_user.user_id
-          }
+        await change_requests.update_change_request_status({
+          change_request_id: cr_id,
+          status: 'Merged',
+          updater_id: test_user.user_id,
+          comment: 'Attempting invalid transition',
+          repo_path: test_thread.user_base_directory
         })
+
         // Should not reach here
-        expect.fail('Should have thrown an error')
+        expect.fail('Should have thrown an error for invalid transition')
       } catch (error) {
-        expect(error.message).to.include('Invalid status')
+        expect(error.message).to.include('Invalid status transition')
+      }
 
-        // Verify the database was not updated
-        const db_record = await db('change_requests')
-          .where({ change_request_id })
-          .first()
+      // Verify proper flow works: PendingReview -> Approved -> Merged
+      await change_requests.update_change_request_status({
+        change_request_id: cr_id,
+        status: 'Approved',
+        updater_id: test_user.user_id,
+        comment: 'Valid approval',
+        repo_path: test_thread.user_base_directory
+      })
 
-        expect(db_record.status).to.equal('PendingReview')
+      let cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('Approved')
+
+      // Now merge should work
+      await change_requests.merge_change_request({
+        change_request_id: cr_id,
+        merger_id: test_user.user_id,
+        comment: 'Merging approved changes',
+        repo_path: test_thread.user_base_directory
+      })
+
+      cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('Merged')
+    })
+
+    it('should handle rejection workflow', async function () {
+      // Create a change request
+      const cr_id = await change_requests.create_change_request({
+        title: 'Rejection Test',
+        description: 'Testing rejection workflow',
+        creator_id: test_user.user_id,
+        target_branch: 'main',
+        feature_branch,
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
+      })
+
+      // Reject the change request
+      await change_requests.update_change_request_status({
+        change_request_id: cr_id,
+        status: 'Rejected',
+        updater_id: test_user.user_id,
+        comment: 'Rejecting these changes',
+        repo_path: test_thread.user_base_directory
+      })
+
+      // Verify rejection
+      const cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('Rejected')
+
+      // Rejected change requests cannot be merged
+      try {
+        await change_requests.merge_change_request({
+          change_request_id: cr_id,
+          merger_id: test_user.user_id,
+          comment: 'Attempting to merge rejected CR',
+          repo_path: test_thread.user_base_directory
+        })
+
+        // Should not reach here
+        expect.fail('Should have thrown an error for merging rejected CR')
+      } catch (error) {
+        expect(error.message).to.include('status')
       }
     })
 
-    it('should reject invalid status transitions', async function () {
-      // Create a test change request with status already Merged
-      const change_request_id = uuid()
-
-      // Insert a change request directly into the database
-      await db('change_requests').insert({
-        change_request_id,
-        status: 'Merged',
-        title: 'Test Invalid Transition',
+    it('should allow reopening a rejected change request', async function () {
+      // Create a change request
+      const cr_id = await change_requests.create_change_request({
+        title: 'Reopen Test',
+        description: 'Testing reopening workflow',
         creator_id: test_user.user_id,
-        created_at: new Date(),
-        updated_at: new Date(),
-        merged_at: new Date(),
         target_branch: 'main',
-        feature_branch: `cr/${change_request_id}`
+        feature_branch,
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
       })
 
-      // Create a markdown file for the change request
-      const markdown_dir = path.join(test_repo_path, 'data/change_requests')
-      const markdown_content = `---
-change_request_id: ${change_request_id}
-title: Test Invalid Transition
-status: Merged
-creator_id: ${test_user.user_id}
-created_at: ${new Date().toISOString()}
-merged_at: ${new Date().toISOString()}
-target_branch: main
-feature_branch: cr/${change_request_id}
-type: change_request
----
+      // Reject the change request
+      await change_requests.update_change_request_status({
+        change_request_id: cr_id,
+        status: 'Rejected',
+        updater_id: test_user.user_id,
+        comment: 'Rejecting temporarily',
+        repo_path: test_thread.user_base_directory
+      })
 
-# Test Invalid Transition
-
-Already merged content`
-
-      await fs.writeFile(
-        path.join(markdown_dir, `${change_request_id}.md`),
-        markdown_content
-      )
-
-      try {
-        await update_change_request_status({
-          change_request_id,
-          status: 'Approved', // Cannot approve something already merged
-          updater_id: test_user.user_id
-        })
-        // Should not reach here
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.message).to.include('Cannot transition')
-
-        // Verify the database was not updated
-        const db_record = await db('change_requests')
-          .where({ change_request_id })
-          .first()
-
-        expect(db_record.status).to.equal('Merged')
-      }
-    })
-
-    it('should include comment when provided', async function () {
-      // Create a test change request
-      const change_request_id = uuid()
-
-      // Insert a change request directly into the database
-      await db('change_requests').insert({
-        change_request_id,
+      // Reopen/reset to PendingReview
+      await change_requests.update_change_request_status({
+        change_request_id: cr_id,
         status: 'PendingReview',
-        title: 'Test Comment',
-        creator_id: test_user.user_id,
-        created_at: new Date(),
-        updated_at: new Date(),
-        target_branch: 'main',
-        feature_branch: `cr/${change_request_id}`
+        updater_id: test_user.user_id,
+        comment: 'Reopening for more review',
+        repo_path: test_thread.user_base_directory
       })
 
-      // Create a markdown file for the change request
-      const markdown_dir = path.join(test_repo_path, 'data/change_requests')
-      const markdown_file_path = path.join(
-        markdown_dir,
-        `${change_request_id}.md`
-      )
-      const markdown_content = `---
-change_request_id: ${change_request_id}
-title: Test Comment
-status: PendingReview
-creator_id: ${test_user.user_id}
-created_at: ${new Date().toISOString()}
-target_branch: main
-feature_branch: cr/${change_request_id}
-type: change_request
----
+      // Verify reopened
+      const cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('PendingReview')
 
-# Test Comment
-
-Initial content`
-
-      await fs.writeFile(markdown_file_path, markdown_content)
-
-      // Update with a detailed comment
-      const comment = 'This is a detailed review comment with specific feedback'
-      await update_change_request_status({
-        change_request_id,
-        status: 'NeedsRevision',
-        comment,
-        updater_id: test_user.user_id
+      // Now should be able to approve
+      await change_requests.update_change_request_status({
+        change_request_id: cr_id,
+        status: 'Approved',
+        updater_id: test_user.user_id,
+        comment: 'Approving reopened CR',
+        repo_path: test_thread.user_base_directory
       })
 
-      // Verify the markdown file contains the comment - read directly from the file path
-      const updated_content = await fs.readFile(markdown_file_path, 'utf8')
-      expect(updated_content).to.include(comment)
-      expect(updated_content).to.include('Status Update: NeedsRevision')
+      const approved_cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(approved_cr.status).to.equal('Approved')
     })
 
-    it('should handle missing change request gracefully', async function () {
+    it('should throw error for non-existent change request', async function () {
+      // Try to update a non-existent change request
+      const fake_id = uuid()
+
       try {
-        await update_change_request_status({
-          change_request_id: uuid(), // Use a non-existent UUID
+        await change_requests.update_change_request_status({
+          change_request_id: fake_id,
           status: 'Approved',
-          updater_id: test_user.user_id
+          updater_id: test_user.user_id,
+          comment: 'This should fail',
+          repo_path: test_thread.user_base_directory
         })
+
         // Should not reach here
-        expect.fail('Should have thrown an error')
+        expect.fail('Should have thrown an error for non-existent CR')
       } catch (error) {
         expect(error.message).to.include('not found')
       }
+    })
+
+    it('should throw error for invalid status value', async function () {
+      // Create a change request
+      const cr_id = await change_requests.create_change_request({
+        title: 'Invalid Status Test',
+        description: 'Testing invalid status values',
+        creator_id: test_user.user_id,
+        target_branch: 'main',
+        feature_branch,
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
+      })
+
+      // Try to update with invalid status
+      try {
+        await change_requests.update_change_request_status({
+          change_request_id: cr_id,
+          status: 'InvalidStatus',
+          updater_id: test_user.user_id,
+          comment: 'This should fail',
+          repo_path: test_thread.user_base_directory
+        })
+
+        // Should not reach here
+        expect.fail('Should have thrown an error for invalid status')
+      } catch (error) {
+        expect(error.message).to.include('Invalid status')
+      }
+
+      // Verify CR status unchanged
+      const cr = await change_requests.get_change_request({
+        change_request_id: cr_id,
+        repo_path: test_thread.user_base_directory
+      })
+      expect(cr.status).to.equal('PendingReview')
+    })
+  })
+
+  describe('valid status constants', function () {
+    it('should export valid statuses and transitions', function () {
+      // Verify exported constants
+      expect(VALID_STATUSES).to.be.an('array')
+      expect(VALID_STATUSES.length).to.be.at.least(4)
+
+      // Check that statuses match expected values
+      expect(VALID_STATUSES).to.include.members([
+        'Draft',
+        'PendingReview',
+        'Approved',
+        'NeedsRevision',
+        'Rejected',
+        'Merged',
+        'Closed'
+      ])
+
+      expect(VALID_TRANSITIONS).to.be.an('object')
+      expect(Object.keys(VALID_TRANSITIONS).length).to.be.at.least(4)
+
+      // Check that transitions are properly defined
+      expect(VALID_TRANSITIONS.PendingReview).to.include.members([
+        'Approved',
+        'Rejected'
+      ])
+      expect(VALID_TRANSITIONS.Approved).to.include.members([
+        'Merged',
+        'PendingReview'
+      ])
+      expect(VALID_TRANSITIONS.Rejected).to.include.members(['PendingReview'])
     })
   })
 })

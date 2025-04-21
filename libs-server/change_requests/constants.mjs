@@ -24,5 +24,5 @@ export const VALID_TRANSITIONS = {
   Approved: ['Merged', 'PendingReview', 'Closed'],
   Rejected: ['PendingReview', 'Closed'],
   Merged: ['Closed'], // Only allow closing a merged CR
-  Closed: [] // No transitions from closed
+  Closed: ['Draft', 'PendingReview'] // Closed CRs can be reopened
 }

@@ -332,16 +332,17 @@ export async function read_markdown_entity(file_path) {
 
 /**
  * Write a markdown entity to a file with frontmatter
- * @param {String} file_path Relative path to the markdown file
- * @param {Object} frontmatter Frontmatter object
- * @param {String} content Markdown content
+ * @param {Object} params - Parameters for writing markdown entity
+ * @param {String} params.file_path - Relative path to the markdown file
+ * @param {Object} params.frontmatter - Frontmatter object
+ * @param {String} [params.content=''] - Markdown content
  * @returns {Promise<Boolean>} True if successful
  */
-export async function write_markdown_entity(
+export async function write_markdown_entity({
   file_path,
   frontmatter,
   content = ''
-) {
+}) {
   try {
     log(`Writing markdown entity to ${file_path}`)
 

@@ -1,0 +1,62 @@
+/**
+ * File read tool implementation
+ */
+
+import debug from 'debug'
+import { register_tool } from '#libs-server/tools/registry.mjs'
+import { read_file } from '#libs-server/base-files/index.mjs'
+
+// Setup logger
+const log = debug('tools:file:read')
+
+export function register_file_read_tool() {
+  log('Registering file_read tool')
+
+  register_tool({
+    tool_name: 'file_read',
+    tool_definition: {
+      description:
+        'Reads the content of a file from a specific thread branch or change request branch.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Path to the file relative to the repository root.'
+          },
+          thread_id: {
+            type: 'string',
+            description:
+              "Optional: Explicitly target this thread's branch (e.g., thread/{thread_id}). Overrides context thread_id."
+          },
+          branch_name: {
+            type: 'string',
+            description:
+              'Optional: Explicitly target this branch by name. Takes precedence over thread_id.'
+          },
+          repo_path: {
+            type: 'string',
+            description:
+              'Optional: Path to the repository root. Used in testing to specify a different repository.'
+          }
+        },
+        required: ['path']
+      }
+    },
+    implementation: async (parameters, context = {}) => {
+      try {
+        // Delegate to the base-files implementation
+        return await read_file({
+          path: parameters.path,
+          thread_id: parameters.thread_id,
+          branch_name: parameters.branch_name,
+          repo_path: parameters.repo_path,
+          context
+        })
+      } catch (error) {
+        log(`Error reading file ${parameters.path}:`, error)
+        throw error // Pass through the error from the base implementation
+      }
+    }
+  })
+}

@@ -4,7 +4,6 @@ import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
 import get_thread from './get_thread.mjs'
-import { THREAD_BASE_DIRECTORY } from './threads_constants.mjs'
 const log = debug('threads:timeline')
 
 // Valid timeline entry types
@@ -59,13 +58,13 @@ const entry_validators = {
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {Object} params.entry Timeline entry to add
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
 export default async function add_timeline_entry({
   thread_id,
   entry,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
@@ -86,7 +85,10 @@ export default async function add_timeline_entry({
   }
 
   // Get the thread
-  const thread = await get_thread({ thread_id, thread_base_directory })
+  const thread = await get_thread({
+    thread_id,
+    user_base_directory
+  })
 
   // Clone the entry to avoid modifying the original
   const new_entry = { ...entry }
@@ -149,13 +151,13 @@ export default async function add_timeline_entry({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} params.content Message content
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the new message
  */
 export async function add_user_message({
   thread_id,
   content,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!content) {
     throw new Error('content is required')
@@ -168,7 +170,7 @@ export async function add_user_message({
       role: 'user',
       content
     },
-    thread_base_directory
+    user_base_directory
   })
 }
 
@@ -178,13 +180,13 @@ export async function add_user_message({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} params.content Message content
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the new message
  */
 export async function add_assistant_message({
   thread_id,
   content,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!content) {
     throw new Error('content is required')
@@ -197,7 +199,7 @@ export async function add_assistant_message({
       role: 'assistant',
       content
     },
-    thread_base_directory
+    user_base_directory
   })
 }
 
@@ -208,14 +210,14 @@ export async function add_assistant_message({
  * @param {string} params.thread_id Thread ID
  * @param {string} params.tool_name Name of the tool
  * @param {Object} params.parameters Tool parameters
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the tool call
  */
 export async function add_tool_call({
   thread_id,
   tool_name,
   parameters,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!tool_name) {
     throw new Error('tool_name is required')
@@ -232,7 +234,7 @@ export async function add_tool_call({
       tool_name,
       parameters
     },
-    thread_base_directory
+    user_base_directory
   })
 }
 
@@ -243,14 +245,14 @@ export async function add_tool_call({
  * @param {string} params.thread_id Thread ID
  * @param {string} params.tool_call_id ID of the tool call
  * @param {Object} params.result Tool execution result
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the tool result
  */
 export async function add_tool_result({
   thread_id,
   tool_call_id,
   result,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!tool_call_id) {
     throw new Error('tool_call_id is required')
@@ -267,7 +269,7 @@ export async function add_tool_result({
       tool_call_id,
       result
     },
-    thread_base_directory
+    user_base_directory
   })
 }
 
@@ -279,7 +281,7 @@ export async function add_tool_result({
  * @param {string} params.error_type Type of error
  * @param {string} params.message Error message
  * @param {Object} [params.details] Additional error details
- * @param {string} [params.thread_base_directory] Base directory for threads
+ * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the error
  */
 export async function add_error({
@@ -287,7 +289,7 @@ export async function add_error({
   error_type,
   message,
   details,
-  thread_base_directory = THREAD_BASE_DIRECTORY
+  user_base_directory
 }) {
   if (!error_type) {
     throw new Error('error_type is required')
@@ -305,6 +307,6 @@ export async function add_error({
       message,
       ...(details ? { details } : {})
     },
-    thread_base_directory
+    user_base_directory
   })
 }
