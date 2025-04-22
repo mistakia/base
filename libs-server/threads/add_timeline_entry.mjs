@@ -12,7 +12,8 @@ const VALID_ENTRY_TYPES = [
   'tool_call',
   'tool_result',
   'state_change',
-  'error'
+  'error',
+  'thread_main_request'
 ]
 
 // Validation functions for different entry types
@@ -23,6 +24,11 @@ const entry_validators = {
       throw new Error('message role must be user, assistant, or system')
     }
     if (!entry.content) throw new Error('message entry must have content')
+  },
+
+  thread_main_request: (entry) => {
+    if (!entry.content)
+      throw new Error('thread_main_request entry must have content')
   },
 
   tool_call: (entry) => {
@@ -306,6 +312,34 @@ export async function add_error({
       error_type,
       message,
       ...(details ? { details } : {})
+    },
+    user_base_directory
+  })
+}
+
+/**
+ * Add a thread main request to a thread
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.thread_id Thread ID
+ * @param {string} params.content Main request content
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<Object>} Updated thread data with the new thread main request
+ */
+export async function add_thread_main_request({
+  thread_id,
+  content,
+  user_base_directory
+}) {
+  if (!content) {
+    throw new Error('content is required')
+  }
+
+  return add_timeline_entry({
+    thread_id,
+    entry: {
+      type: 'thread_main_request',
+      content
     },
     user_base_directory
   })

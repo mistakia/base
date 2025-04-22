@@ -42,11 +42,11 @@ export function* load_inference_providers() {
 
 export function* create_thread({ payload }) {
   const { user_id } = yield select(get_app)
-  const { inference_provider, model, initial_message, tools } = payload
+  const { inference_provider, model, thread_main_request, tools } = payload
   yield call(post_thread, {
     inference_provider,
     model,
-    initial_message,
+    thread_main_request,
     tools,
     user_id
   })

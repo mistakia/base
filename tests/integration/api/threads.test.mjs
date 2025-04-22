@@ -108,15 +108,14 @@ describe('Threads API', () => {
     let test_thread
 
     beforeEach(async () => {
-      // Create a test thread with initial message
+      // Create a test thread with a main request
       test_thread = await create_test_thread({
         user_id: test_user.user_id,
         initial_timeline: [
           {
-            id: 'msg_001',
+            id: 'req_001',
             timestamp: new Date().toISOString(),
-            type: 'message',
-            role: 'user',
+            type: 'thread_main_request',
             content: 'Hello, this is a test message'
           }
         ]
@@ -150,7 +149,7 @@ describe('Threads API', () => {
       // Verify timeline is returned
       expect(response.body.timeline).to.be.an('array')
       expect(response.body.timeline).to.have.lengthOf(1)
-      expect(response.body.timeline[0].type).to.equal('message')
+      expect(response.body.timeline[0].type).to.equal('thread_main_request')
       expect(response.body.timeline[0].content).to.equal(
         'Hello, this is a test message'
       )
@@ -200,7 +199,7 @@ describe('Threads API', () => {
       const thread_data = {
         inference_provider: 'ollama',
         model: 'llama2',
-        initial_message: 'Hello, this is a new thread',
+        thread_main_request: 'Hello, this is a new thread',
         user_base_directory: test_user_base_directory,
         system_base_directory: test_system_base_directory
       }

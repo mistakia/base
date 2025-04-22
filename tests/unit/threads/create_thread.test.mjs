@@ -112,12 +112,12 @@ describe('create_thread', () => {
     })
   })
 
-  it('should create a thread with an initial message', async () => {
+  it('should create a thread with a main request', async () => {
     const thread_data = {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      initial_message: 'Hello, this is my first message',
+      thread_main_request: 'Hello, this is my first message',
       system_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
@@ -130,8 +130,7 @@ describe('create_thread', () => {
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
-    expect(timeline[0].type).to.equal('message')
-    expect(timeline[0].role).to.equal('user')
+    expect(timeline[0].type).to.equal('thread_main_request')
     expect(timeline[0].content).to.equal('Hello, this is my first message')
   })
 

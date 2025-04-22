@@ -108,7 +108,7 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
  * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
- * @param {string} [params.initial_message] Initial user message to add to timeline
+ * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {string} [params.system_base_directory] Path to system knowledge base repository
  * @param {string} [params.user_base_directory] Path to user knowledge base repository
@@ -121,7 +121,7 @@ export default async function create_thread({
   inference_provider,
   model,
   state = THREAD_STATUS.ACTIVE,
-  initial_message,
+  thread_main_request,
   tools = [],
   user_base_directory,
   system_base_directory,
@@ -200,14 +200,13 @@ export default async function create_thread({
   // Initialize timeline
   const timeline = []
 
-  // Add initial message if provided
-  if (initial_message) {
+  // Add thread main request if provided
+  if (thread_main_request) {
     timeline.push({
-      id: `msg_${uuid().split('-')[0]}`,
+      id: `req_${uuid().split('-')[0]}`,
       timestamp: now,
-      type: 'message',
-      role: 'user',
-      content: initial_message
+      type: 'thread_main_request',
+      content: thread_main_request
     })
   }
 

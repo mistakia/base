@@ -71,7 +71,7 @@ describe('Change Requests API', () => {
       // Create a test thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'Test Get CR - This is for testing GET endpoint',
+        thread_main_request: 'Test Get CR - This is for testing GET endpoint',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -114,13 +114,13 @@ describe('Change Requests API', () => {
       // Create multiple test threads with default change requests
       const thread1 = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'First test CR',
+        thread_main_request: 'First test CR',
         user_base_directory: test_thread.user_base_directory
       })
 
       const thread2 = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'Second test CR',
+        thread_main_request: 'Second test CR',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -153,7 +153,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing filters',
+        thread_main_request: 'For testing filters',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -203,7 +203,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing status updates',
+        thread_main_request: 'For testing status updates',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -258,7 +258,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing invalid status',
+        thread_main_request: 'For testing invalid status',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -290,7 +290,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request and add a file
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing merge endpoint',
+        thread_main_request: 'For testing merge endpoint',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -368,7 +368,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request and add a file
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing double merge',
+        thread_main_request: 'For testing double merge',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -435,7 +435,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing GitHub webhooks',
+        thread_main_request: 'For testing GitHub webhooks',
         user_base_directory: test_thread.user_base_directory
       })
 
@@ -492,7 +492,7 @@ describe('Change Requests API', () => {
       // Create a thread with default change request
       const thread_data = await create_test_thread({
         user_id: test_user.user_id,
-        initial_message: 'For testing GitHub close webhooks',
+        thread_main_request: 'For testing GitHub close webhooks',
         user_base_directory: test_thread.user_base_directory
       })
 

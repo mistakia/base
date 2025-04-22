@@ -17,7 +17,7 @@ const ThreadForm = ({
   const [form_state, set_form_state] = useState({
     provider: '',
     model: '',
-    initial_message: '',
+    thread_main_request: '',
     tools: []
   })
 
@@ -71,7 +71,7 @@ const ThreadForm = ({
     create_thread({
       inference_provider: form_state.provider,
       model: form_state.model,
-      initial_message: form_state.initial_message,
+      thread_main_request: form_state.thread_main_request,
       tools: form_state.tools
     })
   }
@@ -134,20 +134,20 @@ const ThreadForm = ({
         </div>
 
         <div className='form-group'>
-          <label className='label' htmlFor='initial_message'>
-            Initial Message
+          <label className='label' htmlFor='thread_main_request'>
+            Main Request
           </label>
           <textarea
             className='textarea'
-            id='initial_message'
-            name='initial_message'
-            value={form_state.initial_message}
+            id='thread_main_request'
+            name='thread_main_request'
+            value={form_state.thread_main_request}
             onChange={handle_change}
-            placeholder='Enter your initial message to the AI...'
+            placeholder='Enter your request...'
             disabled={thread_loading}
           />
           <div className='help-text'>
-            This message will start the conversation with the AI
+            This request defines what you want this thread to accomplish
           </div>
         </div>
 
@@ -160,7 +160,7 @@ const ThreadForm = ({
             disabled={
               !form_state.provider ||
               !form_state.model ||
-              !form_state.initial_message ||
+              !form_state.thread_main_request ||
               thread_loading
             }>
             {thread_loading ? 'Creating...' : 'Create Thread'}

@@ -11,6 +11,7 @@ import add_timeline_entry, {
   add_tool_result,
   add_error
 } from './add_timeline_entry.mjs'
+import generate_prompt from './generate_prompt.mjs'
 import {
   register_tool,
   has_tool,
@@ -35,7 +36,10 @@ export {
   add_assistant_message,
   add_tool_call,
   add_tool_result,
-  add_error
+  add_error,
+
+  // Prompt generation
+  generate_prompt
 }
 
 // Re-export tool operations directly from centralized tools implementation

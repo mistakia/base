@@ -119,7 +119,7 @@ router.post('/', require_auth, async (req, res) => {
     const {
       inference_provider,
       model,
-      initial_message,
+      thread_main_request,
       tools,
       state,
       user_base_directory,
@@ -140,7 +140,7 @@ router.post('/', require_auth, async (req, res) => {
       user_id: req.auth.user_id,
       inference_provider,
       model,
-      initial_message,
+      thread_main_request,
       tools,
       state,
       user_base_directory,

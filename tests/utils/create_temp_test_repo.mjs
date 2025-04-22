@@ -14,7 +14,7 @@ const default_base_activity_path = path.join(
   '..',
   'system',
   'activities',
-  'default_base_activity.md'
+  'default-base-activity.md'
 )
 
 /**

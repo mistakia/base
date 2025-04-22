@@ -104,6 +104,34 @@ export function list_tools() {
 }
 
 /**
+ * Convert tool metadata to prompt function text format
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.tool_name - Name of the tool to convert
+ * @returns {Object} Prompt function representation of the tool or null if not found
+ */
+export function tool_to_prompt_function({ tool_name }) {
+  const tool = tool_registry.get(tool_name)
+
+  if (!tool) {
+    return null
+  }
+
+  // Convert inputSchema to parameters format
+  const parameters = {
+    properties: { ...tool.inputSchema.properties },
+    required: tool.inputSchema.required || []
+  }
+
+  // Create function representation
+  return {
+    name: tool.name,
+    description: tool.description,
+    parameters
+  }
+}
+
+/**
  * Execute a registered tool
  *
  * @param {Object} params - Execution parameters

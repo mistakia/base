@@ -16,7 +16,7 @@ const { THREAD_STATUS } = thread_constants
  * @param {string} [options.system_base_directory] System knowledge base directory
  * @param {string} [options.user_base_directory] User knowledge base directory
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
- * @param {string} [options.initial_message] Initial user message to add to timeline
+ * @param {string} [options.thread_main_request] Main request for the thread
  * @returns {Promise<Object>} Created thread info including thread_id, context_dir, and user
  */
 export default async function create_test_thread({
@@ -27,7 +27,7 @@ export default async function create_test_thread({
   system_base_directory,
   user_base_directory,
   initial_timeline,
-  initial_message
+  thread_main_request
 }) {
   // Create test user if not provided
   const user = user_id ? { user_id } : await create_test_user()
@@ -46,10 +46,10 @@ export default async function create_test_thread({
     user_base_directory = user_repo.path
   }
 
-  // Convert initial_timeline to initial_message if provided
-  if (initial_timeline && initial_timeline.length > 0) {
-    initial_message = initial_timeline.find(
-      (entry) => entry.role === 'user'
+  // Extract thread_main_request from initial_timeline if provided and no explicit thread_main_request
+  if (!thread_main_request && initial_timeline && initial_timeline.length > 0) {
+    thread_main_request = initial_timeline.find(
+      (entry) => entry.type === 'thread_main_request'
     )?.content
   }
 
@@ -59,7 +59,7 @@ export default async function create_test_thread({
     inference_provider,
     model,
     state,
-    initial_message,
+    thread_main_request,
     system_base_directory,
     user_base_directory
   })

@@ -120,7 +120,7 @@ describe('MCP File Tools Integration', function () {
     test_thread = await create_test_thread({
       system_base_directory: system_repo.path,
       user_base_directory: user_repo.path,
-      initial_message: 'Initial test message'
+      thread_main_request: 'Initial test message'
     })
   })
 
