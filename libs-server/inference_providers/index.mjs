@@ -176,7 +176,8 @@ export class InferenceProvider {
 
         // Find all tool call patterns
         // Check for both ```tool_call and JSON bracket formats
-        const tool_call_regex = /```tool_call\s*([\s\S]*?)```|\{([^{}]*)\}|\[\[([^[]*)\]\]/g
+        const tool_call_regex =
+          /```tool_call\s*([\s\S]*?)```|\{([^{}]*)\}|\[\[([^[]*)\]\]/g
         let match
         let last_index = 0
         const formatted_parts = []
@@ -190,7 +191,9 @@ export class InferenceProvider {
 
           try {
             // Try to parse as JSON
-            const tool_data = JSON.parse(match[1] ? match[1] : `{${tool_call_text}}`)
+            const tool_data = JSON.parse(
+              match[1] ? match[1] : `{${tool_call_text}}`
+            )
 
             // Check if it looks like a tool call
             if (tool_data.name || tool_data.tool) {
@@ -239,7 +242,7 @@ export class InferenceProvider {
    * @param {NodeJS.ReadableStream} stream - The Node.js stream to parse
    * @returns {AsyncGenerator<any>} - The parsed JSON objects
    */
-  async* parse_json_stream(stream) {
+  async *parse_json_stream(stream) {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 

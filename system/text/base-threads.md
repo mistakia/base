@@ -39,6 +39,8 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 - `tools`: Array of tools available to this thread.
 - `thread_change_request_id`: Reference to the change request that tracks all changes made in the thread's branch.
 
+**Note:** The thread's "role" as presented in prompts or user interfaces is always derived from its assigned `activity`. The `activity_id` is the canonical reference for the thread's objective and specialization. The term "role" is never used as a separate identifier in backend or schema logic.
+
 ## Thread Creation Process
 
 When a new thread is created:
