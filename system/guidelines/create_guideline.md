@@ -10,9 +10,9 @@ observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
 relations:
-  - 'related_to [[Create Activity Guideline]]'
-  - 'implements [[System Design]]'
-  - 'implements [[system/schema/guideline.md]]'
+  - 'related_to [[system/guidelines/create_activity]]'
+  - 'implements [[system/text/system-design]]'
+  - 'implements [[system/schema/guideline]]'
 ---
 
 # Create Guideline
@@ -50,13 +50,13 @@ relations:
   - `activities`: Related activities this guideline supports
   - `observations`: Key insights or principles behind the guideline
   - `relations`: Connections to other system elements using the wikilink format with relationship type:
-    - Format: `'relationship_type [[target_element]]'` (e.g., `'implements [[System Design]]'`)
+    - Format: `'relationship_type [[target_element]]'` (e.g., `'implements [[system/text/system-design]]'`)
     - Common relationship types: `implements`, `related_to`, `depends_on`, `extends`, `supersedes`
     - Common targets: guidelines, activities, schemas, design documents
     - Examples:
-      - `'implements [[system/schema/guideline.md]]'`
-      - `'related_to [[Create Activity Guideline]]'`
-      - `'supersedes [[Old Guideline]]'`
+      - `'implements [[system/schema/guideline]]'`
+      - `'related_to [[system/guidelines/create_activity]]'`
+      - `'supersedes [[system/guidelines/old-guideline]]'`
 
 ### Content Requirements
 

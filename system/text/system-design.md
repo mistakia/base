@@ -11,9 +11,9 @@ observations:
   - '[feature] Activity-based organization provides clear context for actions #organization'
   - '[principle] Guidelines-driven approach ensures consistency #governance'
 relations:
-  - 'relates_to [[Directory Structure]]'
-  - 'relates_to [[Knowledge Base Schema]]'
-  - 'part_of [[Documentation]]'
+  - 'relates_to [[system/text/directory-structure]]'
+  - 'relates_to [[system/text/knowledge-base-schema]]'
+  - 'part_of [[system/text/documentation]]'
 ---
 
 # Base System Design

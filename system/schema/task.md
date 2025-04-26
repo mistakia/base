@@ -109,11 +109,11 @@ Example:
 
 ```yaml
 relations:
-  - 'child_of [[Parent Task]]'
-  - 'depends_on [[Dependent Task]]'
-  - 'executes [[Activity Name]]'
-  - 'involves [[Organization Name]]'
-  - 'assigned_to [[Person Name]]'
-  - 'requires [[Physical Item]] (quantity: 2)'
-  - 'requires [[Digital Item]]'
+  - 'child_of [[data/tasks/parent-task]]'
+  - 'depends_on [[data/tasks/dependent-task]]'
+  - 'executes [[system/activities/activity-name]]'
+  - 'involves [[system/organization/org-name]]'
+  - 'assigned_to [[data/person/jane-doe]]'
+  - 'requires [[system/physical_item/item-name]] (quantity: 2)'
+  - 'requires [[system/digital_item/item-name]]'
 ```

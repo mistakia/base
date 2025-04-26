@@ -4,8 +4,8 @@ type: type_definition
 type_name: prompt
 description: Schema for prompt entities used in the system
 relations:
-  - 'implements [[Knowledge Base Schema]]'
-  - 'extends [[base.md]]'
+  - 'implements [[system/text/knowledge-base-schema]]'
+  - 'extends [[system/schema/base]]'
 ---
 
 # Prompt Schema

@@ -8,9 +8,9 @@ observations:
   - '[design] Base Thread agents can create and delegate to activity-based agents #workflow'
   - '[principle] Agent specialization follows activity boundaries #organization'
 relations:
-  - 'relates_to [[System Design]]'
-  - 'relates_to [[Base Threads]]'
-  - 'relates_to [[Knowledge Base Schema]]'
+  - 'relates_to [[system/text/system-design]]'
+  - 'relates_to [[system/text/base-threads]]'
+  - 'relates_to [[system/text/knowledge-base-schema]]'
 ---
 
 # Activity-Agent Model

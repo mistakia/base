@@ -9,8 +9,8 @@ observations:
   - '[organization] Activities must be properly categorized as system or user #structure'
   - '[governance] Each activity should follow established guidelines #compliance'
 relations:
-  - 'follows [[Create Activity Guideline]]'
-  - 'implements [[System Design]]'
+  - 'follows [[system/guidelines/create_activity]]'
+  - 'implements [[system/text/system-design]]'
 ---
 
 # Create Activity

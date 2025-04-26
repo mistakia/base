@@ -92,10 +92,10 @@ Relations must be defined in the frontmatter as an array of strings following a 
 
 ```yaml
 relations:
-  - 'relation_type [[Other Document]] (optional context)'
-  - 'implements [[Design Pattern]]'
-  - 'depends_on [[Database Schema]]'
-  - 'assigned_to [[Person Name]]'
+  - 'relates_to [[system/text/system-design]]'
+  - 'implements [[system/schema/design-pattern]]'
+  - 'depends_on [[system/schema/database]]'
+  - 'assigned_to [[data/schema/person/jane-doe]]'
 ```
 
 Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
@@ -120,13 +120,14 @@ Each document has a unique permalink that serves as its stable identifier. These
 - Auto-generated from the title if not specified
 - Can be customized in frontmatter
 - Used in memory:// URLs for direct references
+- The canonical reference for relations is the file path (relative to the knowledge base root) without the `.md` extension, e.g. `[[system/text/system-design]]`.
 
 Example reference using memory:// URLs:
 
 ```
-memory://project/requirements-doc
-memory://Person Name
-memory://docs/format
+memory://system/text/system-design
+memory://data/person/jane-doe
+memory://system/schema/database
 ```
 
 ## Available Content Types
@@ -158,6 +159,6 @@ The knowledge base supports the following content types. See the actual schema f
 
 ## Relations
 
-- implements [[Knowledge Format]]
-- relates_to [[System Design]]
-- part_of [[Documentation]]
+- implements [[system/text/knowledge-format]]
+- relates_to [[system/text/system-design]]
+- part_of [[system/text/documentation]]

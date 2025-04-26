@@ -36,7 +36,7 @@ properties:
     items:
       type: string
     required: false
-    description: Array of relations to other entities in format "relation_type [[Entity Name]] (optional context)"
+    description: Array of relations to other entities in format "relation_type [[path/to/entity-file]] (optional context)"
   - name: observations
     type: array
     items:
@@ -94,8 +94,8 @@ Connections to other knowledge items in frontmatter:
 
 ```yaml
 relations:
-  - 'relation_type [[Other Document]] (optional context)'
-  - 'implements [[Design Pattern]]'
-  - 'depends_on [[Database Schema]]'
-  - 'assigned_to [[Person Name]]'
+  - 'relates_to [[system/text/system-design]]'
+  - 'implements [[system/schema/base]]'
+  - 'depends_on [[system/schema/database]]'
+  - 'assigned_to [[data/schema/person/jane-doe]]'
 ```

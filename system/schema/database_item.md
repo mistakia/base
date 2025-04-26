@@ -75,3 +75,14 @@ Database items commonly relate to:
 - activities (processes related to the item)
 - persons (people related to the item)
 - organizations (groups related to the item)
+
+Example:
+
+```yaml
+relations:
+  - 'belongs_to [[system/database/database-name]]'
+  - 'related_task [[data/tasks/task-name]]'
+  - 'related_activity [[system/activities/activity-name]]'
+  - 'related_person [[data/person/jane-doe]]'
+  - 'related_organization [[system/organization/org-name]]'
+```

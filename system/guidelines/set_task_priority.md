@@ -10,8 +10,8 @@ observations:
   - '[governance] Limited set of priorities helps with workflow automation #automation'
   - '[organization] Clear status values improve task tracking and reporting #tracking'
 relations:
-  - 'guides [[Set Task Priority]]'
-  - 'part_of [[Task Management]]'
+  - 'guides [[system/activities/set_task_priority]]'
+  - 'part_of [[system/text/task-management]]'
 ---
 
 # Set Task Priority Guideline

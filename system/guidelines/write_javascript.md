@@ -11,7 +11,7 @@ observations:
   - '[architecture] Functional paradigms promote immutability and testability #maintainability'
   - '[readability] Named parameters improve code clarity and maintainability #code-style'
 relations:
-  - 'implements [[System Design]]'
+  - 'implements [[system/text/system-design]]'
 ---
 
 # JavaScript ES Module Imports

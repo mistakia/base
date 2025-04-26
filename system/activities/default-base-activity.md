@@ -7,8 +7,8 @@ tags: [activity, role, general-purpose]
 observations:
   - '[workflow] General purpose role handles general purpose inquiries and instructions #core'
 relations:
-  - 'follows [[General Purpose Role Guideline]]'
-  - 'implements [[System Design]]'
+  - 'follows [[system/guidelines/general-purpose-role]]'
+  - 'implements [[system/text/system-design]]'
 ---
 
 - understand the request, gather information, and clear up ambiguity

@@ -199,8 +199,8 @@ Example:
 
 ```yaml
 relations:
-  - 'part_of [[Parent Item]]'
-  - 'contains [[Component Item]]'
-  - 'requires [[Power Supply]]'
-  - 'executes [[Activity Name]]'
+  - 'part_of [[system/physical_item/parent-item]]'
+  - 'contains [[system/physical_item/component-item]]'
+  - 'requires [[system/physical_item/resource-item]]'
+  - 'executes [[system/activities/activity-name]]'
 ```

@@ -9,8 +9,8 @@ observations:
   - '[architecture] Threads utilize a tiered memory system (Universal and Context) #memory'
   - '[design] Each thread is associated with a specific activity #organization'
 relations:
-  - 'relates_to [[System Design]]'
-  - 'part_of [[Documentation]]'
+  - 'relates_to [[system/text/system-design]]'
+  - 'part_of [[system/text/documentation]]'
 ---
 
 # Execution Model: Base Threads
