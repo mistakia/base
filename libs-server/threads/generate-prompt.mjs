@@ -92,7 +92,7 @@ export default async function generate_prompt({
 
     // Add the tool_call prompt when tools are present
     const tool_call_prompt = await load_prompt({
-      prompt_path: 'system/prompts/tool-call.md'
+      prompt_path: 'system/prompt/tool-call.md'
     })
     tool_call_guideline = tool_call_prompt.content
 

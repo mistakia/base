@@ -1,6 +1,6 @@
 import load_prompt from './load-prompt.mjs'
 
-const DEFAULT_SYSTEM_PROMPT_PATH = 'system/prompts/default-system-prompt.md'
+const DEFAULT_SYSTEM_PROMPT_PATH = 'system/prompt/default-system-prompt.md'
 
 /**
  * Generate a system prompt component

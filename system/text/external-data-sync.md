@@ -42,7 +42,7 @@ The system consists of:
 ## Directory Structure
 
 ```
-/data/import_history
+/data/import-history
   /{external_system}
     /{entity_id}
       /raw

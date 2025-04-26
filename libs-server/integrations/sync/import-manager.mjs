@@ -8,7 +8,7 @@ import config from '#config'
 
 const default_import_history_base_directory = path.join(
   config.user_base_directory,
-  'import_history'
+  'import-history'
 )
 
 const log = debug('sync:import-manager')

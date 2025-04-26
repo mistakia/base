@@ -13,7 +13,7 @@ const default_base_activity_path = path.join(
   '..',
   '..',
   'system',
-  'activities',
+  'activity',
   'default-base-activity.md'
 )
 
@@ -42,9 +42,9 @@ export async function create_temp_test_repo({
     await fs.writeFile(readme_path, initial_content)
     await exec('git add README.md', { cwd: repo.path })
 
-    // Create system/activities directory
-    const activities_dir = path.join(repo.path, 'system', 'activities')
-    await fs.mkdir(activities_dir, { recursive: true })
+    // Create system/activity directory
+    const activity_dir = path.join(repo.path, 'system', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     // Read the default base activity file
     const activity_content = await fs.readFile(
@@ -53,11 +53,11 @@ export async function create_temp_test_repo({
     )
 
     // Write to the test repo
-    const activity_path = path.join(activities_dir, 'default-base-activity.md')
+    const activity_path = path.join(activity_dir, 'default-base-activity.md')
     await fs.writeFile(activity_path, activity_content)
 
     // Add to git
-    await exec('git add system/activities/default-base-activity.md', {
+    await exec('git add system/activity/default-base-activity.md', {
       cwd: repo.path
     })
 

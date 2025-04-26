@@ -4,7 +4,7 @@ This directory contains Cursor rules (`.mdc` files) that provide guidance and en
 
 ## Guidelines as Cursor Rules
 
-Our project guidelines (located in `/system/guidelines` and `/data/guidelines`) are automatically converted to Cursor rules. This approach:
+Our project guidelines (located in `/system/guideline` and `/data/guideline`) are automatically converted to Cursor rules. This approach:
 
 1. Prevents duplication of content
 2. Ensures guidelines and Cursor rules remain in sync
@@ -20,9 +20,9 @@ The system automatically:
   - Converts `always_apply` to `alwaysApply`
   - Changes `globs: [item1, item2]` to `globs: item1, item2` (removing brackets and quotes)
 - Saves them as formatted `.mdc` files in `.cursor/rules/` with prefixes:
-  - `system_` prefix for files from `/system/guidelines/`
-  - `user_` prefix for files from `/data/guidelines/`
-- The `scripts/sync_guidelines_cursor_rules.sh` script maintains these files automatically
+  - `system-` prefix for files from `/system/guideline/`
+  - `user-` prefix for files from `/data/guideline/`
+- The `scripts/sync-guidelines-cursor-rules.sh` script maintains these files automatically
 
 ## Updating Rules
 
@@ -32,7 +32,7 @@ When new guidelines are added or existing ones are modified:
 
    ```bash
    # From the project root
-   ./scripts/sync_guidelines_cursor_rules.sh
+   ./scripts/sync-guidelines-cursor-rules.sh
    ```
 
 2. The script will:
@@ -47,13 +47,13 @@ The generated cursor rule files are git-ignored to avoid cluttering the reposito
 
 - All `.mdc` files in this directory are excluded from git
 - The `.gitkeep` file maintains the directory structure
-- The `.last_sync` timestamp file is also ignored
+- The `.last-sync` timestamp file is also ignored
 
 Each developer should run the sync script locally after pulling changes to the guidelines.
 
 ## Last Sync
 
-The `.cursor/rules/.last_sync` file contains a timestamp of when the rules were last synced with the guidelines.
+The `.cursor/rules/.last-sync` file contains a timestamp of when the rules were last synced with the guidelines.
 
 ## Manual Verification
 

@@ -10,25 +10,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const root_dir = path.resolve(__dirname, '..')
 
-// Define the directory structure based on base_prompt.md
-const directory_structure = {
-  system: {
-    activities: {}, // System activities
-    tools: {}, // System tools
-    guidelines: {} // System guidelines
-  }
-}
-
 // Data directory structure to be created in the submodule
 const data_structure = {
-  activities: {}, // Activity definitions
-  guidelines: {}, // Guideline definitions
-  knowledge_base: {}, // Knowledge base
-  tasks: {}, // Task data
-  inference: {}, // Inference request history
-  tags: {}, // Tags
-  tools: {}, // Tools
-  logs: {} // System logs
+  activity: {}, // Activity definitions
+  guideline: {}, // Guideline definitions
+  tag: {} // Tags
 }
 
 // Function to create directory structure recursively
@@ -109,9 +95,6 @@ const initialize_data_submodule = () => {
 
 // Main function
 const setup_system = () => {
-  console.log('Setting up system directory structure...')
-  create_directory_structure(root_dir, directory_structure)
-
   console.log('Initializing data directory as a git submodule...')
   initialize_data_submodule()
 

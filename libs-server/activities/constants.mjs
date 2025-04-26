@@ -2,8 +2,8 @@ import path from 'path'
 import config from '#config'
 
 // Constants for activity directories
-export const SYSTEM_ACTIVITIES_DIR = 'system/activities'
-export const USER_ACTIVITIES_DIR = 'activities'
+export const SYSTEM_ACTIVITY_DIR = 'system/activity'
+export const USER_ACTIVITY_DIR = 'activity'
 
 /**
  * Get the base directory for system activities
@@ -12,10 +12,10 @@ export const USER_ACTIVITIES_DIR = 'activities'
  * @param {string} [params.system_base_directory] Custom system base directory
  * @returns {string} Full path to system activities directory
  */
-export function get_system_activities_directory({
+export function get_system_activity_directory({
   system_base_directory = config.system_base_directory
 } = {}) {
-  return path.join(system_base_directory, SYSTEM_ACTIVITIES_DIR)
+  return path.join(system_base_directory, SYSTEM_ACTIVITY_DIR)
 }
 
 /**
@@ -25,10 +25,10 @@ export function get_system_activities_directory({
  * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {string} Full path to user activities directory
  */
-export function get_user_activities_directory({
+export function get_user_activity_directory({
   user_base_directory = config.user_base_directory
 } = {}) {
-  return path.join(user_base_directory, USER_ACTIVITIES_DIR)
+  return path.join(user_base_directory, USER_ACTIVITY_DIR)
 }
 
 /**
@@ -61,25 +61,25 @@ export function resolve_activity_path({
 
   // Determine the base directory and activities directory based on type
   let base_directory
-  let activities_dir
+  let activity_dir
 
   if (type === 'system') {
     base_directory = system_base_directory
-    activities_dir = SYSTEM_ACTIVITIES_DIR
+    activity_dir = SYSTEM_ACTIVITY_DIR
   } else if (type === 'user') {
     base_directory = user_base_directory
-    activities_dir = USER_ACTIVITIES_DIR
+    activity_dir = USER_ACTIVITY_DIR
   } else {
     throw new Error('activity_id type must be either "system" or "user"')
   }
 
   // Always insert the activities directory between the base and the file path
-  const file_path = path.join(base_directory, activities_dir, ...path_parts)
+  const file_path = path.join(base_directory, activity_dir, ...path_parts)
 
   return {
     type,
     base_directory,
-    activities_dir,
+    activity_dir,
     path_parts,
     file_path
   }

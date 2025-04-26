@@ -150,7 +150,7 @@ data_changes=$?
 total_changes=$((system_changes + data_changes))
 
 # Create a marker file with timestamp to track last sync
-date > "${CURSOR_RULES_DIR}/.last_sync"
+date > "${CURSOR_RULES_DIR}/.last-sync"
 
 # Get list of current guidelines
 current_guidelines=$(find_guideline_files)

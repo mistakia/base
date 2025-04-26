@@ -16,10 +16,10 @@ describe('generate_guidelines_prompt', () => {
     test_user_dir = await create_temp_test_directory('user-guidelines-test')
 
     // Create guidelines directories with proper structure
-    fs.mkdirSync(path.join(test_system_dir.path, 'system', 'guidelines'), {
+    fs.mkdirSync(path.join(test_system_dir.path, 'system', 'guideline'), {
       recursive: true
     })
-    fs.mkdirSync(path.join(test_user_dir.path, 'guidelines'), {
+    fs.mkdirSync(path.join(test_user_dir.path, 'guideline'), {
       recursive: true
     })
   })
@@ -43,12 +43,12 @@ describe('generate_guidelines_prompt', () => {
     file_name,
     content
   }) => {
-    // For system guidelines: base_dir/system/guidelines/file_name
-    // For user guidelines: base_dir/guidelines/file_name
+    // For system guidelines: base_dir/system/guideline/file_name
+    // For user guidelines: base_dir/guideline/file_name
     const file_path =
       guideline_directory_type === 'system'
-        ? path.join(base_dir, guideline_directory_type, 'guidelines', file_name)
-        : path.join(base_dir, 'guidelines', file_name)
+        ? path.join(base_dir, guideline_directory_type, 'guideline', file_name)
+        : path.join(base_dir, 'guideline', file_name)
     fs.writeFileSync(file_path, content, 'utf8')
     return file_path
   }
@@ -80,9 +80,9 @@ describe('generate_guidelines_prompt', () => {
       const system_guidelines_dir = path.join(
         test_system_dir.path,
         'system',
-        'guidelines'
+        'guideline'
       )
-      const user_guidelines_dir = path.join(test_user_dir.path, 'guidelines')
+      const user_guidelines_dir = path.join(test_user_dir.path, 'guideline')
 
       if (fs.existsSync(system_guidelines_dir)) {
         fs.readdirSync(system_guidelines_dir).forEach((file) => {
@@ -254,9 +254,9 @@ describe('generate_guidelines_prompt', () => {
       const system_guidelines_dir = path.join(
         test_system_dir.path,
         'system',
-        'guidelines'
+        'guideline'
       )
-      const user_guidelines_dir = path.join(test_user_dir.path, 'guidelines')
+      const user_guidelines_dir = path.join(test_user_dir.path, 'guideline')
 
       if (fs.existsSync(system_guidelines_dir)) {
         fs.readdirSync(system_guidelines_dir).forEach((file) => {
@@ -373,9 +373,9 @@ describe('generate_guidelines_prompt', () => {
       const system_guidelines_dir = path.join(
         test_system_dir.path,
         'system',
-        'guidelines'
+        'guideline'
       )
-      const user_guidelines_dir = path.join(test_user_dir.path, 'guidelines')
+      const user_guidelines_dir = path.join(test_user_dir.path, 'guideline')
 
       if (fs.existsSync(system_guidelines_dir)) {
         fs.readdirSync(system_guidelines_dir).forEach((file) => {
@@ -459,7 +459,7 @@ describe('generate_guidelines_prompt', () => {
 
       // Clean up
       fs.unlinkSync(
-        path.join(test_system_dir.path, 'system', 'guidelines', 'no-title.md')
+        path.join(test_system_dir.path, 'system', 'guideline', 'no-title.md')
       )
     })
 

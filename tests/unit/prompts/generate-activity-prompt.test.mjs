@@ -16,10 +16,10 @@ describe('generate_activity_prompt', () => {
     test_user_dir = await create_temp_test_directory('user-activities-test')
 
     // Create activities directories with proper structure
-    fs.mkdirSync(path.join(test_system_dir.path, 'system', 'activities'), {
+    fs.mkdirSync(path.join(test_system_dir.path, 'system', 'activity'), {
       recursive: true
     })
-    fs.mkdirSync(path.join(test_user_dir.path, 'activities'), {
+    fs.mkdirSync(path.join(test_user_dir.path, 'activity'), {
       recursive: true
     })
   })
@@ -43,12 +43,12 @@ describe('generate_activity_prompt', () => {
     file_name,
     content
   }) => {
-    // For system activities: base_dir/system/activities/file_name
-    // For user activities: base_dir/activities/file_name
+    // For system activities: base_dir/system/activity/file_name
+    // For user activities: base_dir/activity/file_name
     const file_path =
       activity_directory_type === 'system'
-        ? path.join(base_dir, activity_directory_type, 'activities', file_name)
-        : path.join(base_dir, 'activities', file_name)
+        ? path.join(base_dir, activity_directory_type, 'activity', file_name)
+        : path.join(base_dir, 'activity', file_name)
     fs.writeFileSync(file_path, content, 'utf8')
     return file_path
   }
@@ -84,26 +84,26 @@ describe('generate_activity_prompt', () => {
 
     // Clean up files after each test
     afterEach(() => {
-      // Remove all files from the activities directories
-      const system_activities_dir = path.join(
+      // Remove all files from the activity directories
+      const system_activity_dir = path.join(
         test_system_dir.path,
         'system',
-        'activities'
+        'activity'
       )
-      const user_activities_dir = path.join(test_user_dir.path, 'activities')
+      const user_activity_dir = path.join(test_user_dir.path, 'activity')
 
-      if (fs.existsSync(system_activities_dir)) {
-        fs.readdirSync(system_activities_dir).forEach((file) => {
-          fs.unlinkSync(path.join(system_activities_dir, file))
+      if (fs.existsSync(system_activity_dir)) {
+        fs.readdirSync(system_activity_dir).forEach((file) => {
+          fs.unlinkSync(path.join(system_activity_dir, file))
         })
       }
 
       if (
-        fs.existsSync(user_activities_dir) &&
-        fs.readdirSync(user_activities_dir).length > 0
+        fs.existsSync(user_activity_dir) &&
+        fs.readdirSync(user_activity_dir).length > 0
       ) {
-        fs.readdirSync(user_activities_dir).forEach((file) => {
-          fs.unlinkSync(path.join(user_activities_dir, file))
+        fs.readdirSync(user_activity_dir).forEach((file) => {
+          fs.unlinkSync(path.join(user_activity_dir, file))
         })
       }
     })

@@ -23,9 +23,9 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 
 **Key Properties:**
 
-- `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`data/thread_context/{thread_id}/`).
+- `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`data/threads/{thread_id}/`).
 - `user_id`: Identifier of the user who owns the thread.
-- `activity_id`: Reference to the specific activity this thread is associated with and executing. Format: `[system|user]/<file_path>.md` (e.g., `system/activities/create_activity.md` or `user/activities/custom_activity.md`).
+- `activity_id`: Reference to the specific activity this thread is associated with and executing. Format: `[system|user]/<file_path>.md` (e.g., `system/activity/create-activity.md` or `user/activity/custom-activity.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
 - `state`: The current lifecycle state:
@@ -46,7 +46,7 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 When a new thread is created:
 
 1. A unique `thread_id` is generated (UUID)
-2. Directory structure is created at `data/thread_context/{thread_id}/`
+2. Directory structure is created at `data/threads/{thread_id}/`
 3. Thread metadata is written to `metadata.json` file
 4. Timeline is initialized in `timeline.json`
 5. Memory directory is set up with a git repository

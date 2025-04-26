@@ -1,5 +1,5 @@
 yarn.lock
 .cursor/mcp.json
-data/import_history/*
+data/import-history/*
 data/task/*
 .git/*

@@ -2,8 +2,8 @@ import path from 'path'
 import config from '#config'
 
 // Constants for guideline directories
-export const SYSTEM_GUIDELINES_DIR = 'system/guidelines'
-export const USER_GUIDELINES_DIR = 'guidelines'
+export const SYSTEM_GUIDELINES_DIR = 'system/guideline'
+export const USER_GUIDELINES_DIR = 'guideline'
 
 /**
  * Get the base directory for system guidelines

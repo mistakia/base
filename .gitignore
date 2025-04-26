@@ -25,7 +25,7 @@ config/config*
 
 # Ignore cursor rules
 .cursor/rules/*.mdc
-.cursor/rules/.last_sync
+.cursor/rules/.last-sync
 
 # But keep the directory structure
 !.cursor/rules/.gitkeep
