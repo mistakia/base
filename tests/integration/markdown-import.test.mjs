@@ -68,7 +68,7 @@ describe('Markdown Import Integration Tests', () => {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(81)
+      expect(entities.length).to.equal(82)
     })
 
     it('should update existing entities when reimported', async () => {

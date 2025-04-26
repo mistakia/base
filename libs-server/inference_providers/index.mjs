@@ -175,7 +175,8 @@ export class InferenceProvider {
         formatted_text = buffer
 
         // Find all tool call patterns
-        const tool_call_regex = /\{([^{}]*)\}|\[\[([^\[\]]*)\]\]/g
+        // Check for both ```tool_call and JSON bracket formats
+        const tool_call_regex = /```tool_call\s*([\s\S]*?)```|\{([^{}]*)\}|\[\[([^[]*)\]\]/g
         let match
         let last_index = 0
         const formatted_parts = []
@@ -185,11 +186,11 @@ export class InferenceProvider {
 
         while ((match = tool_call_regex.exec(buffer)) !== null) {
           const match_text = match[0]
-          const tool_call_text = match[1] || match[2]
+          const tool_call_text = match[1] || match[2] || match[3]
 
           try {
             // Try to parse as JSON
-            const tool_data = JSON.parse(`{${tool_call_text}}`)
+            const tool_data = JSON.parse(match[1] ? match[1] : `{${tool_call_text}}`)
 
             // Check if it looks like a tool call
             if (tool_data.name || tool_data.tool) {
@@ -238,7 +239,7 @@ export class InferenceProvider {
    * @param {NodeJS.ReadableStream} stream - The Node.js stream to parse
    * @returns {AsyncGenerator<any>} - The parsed JSON objects
    */
-  async *parse_json_stream(stream) {
+  async* parse_json_stream(stream) {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
@@ -301,7 +302,16 @@ export class InferenceProvider {
   find_tool_calls(text, id_counter = 0) {
     const tool_calls = []
 
-    // Look for the newer ```tool_call format
+    // Look for the ```tool_call format
+    // Example:
+    // ```tool_call
+    // {
+    //   "name": "search_web",
+    //   "arguments": {
+    //     "query": "latest AI developments"
+    //   }
+    // }
+    // ```
     const tool_call_code_regex = /```tool_call\s*([\s\S]*?)```/g
     let code_match
 
@@ -320,27 +330,10 @@ export class InferenceProvider {
       }
     }
 
-    // Also try the <tool_call> format as fallback
-    const tool_call_tag_regex = /<tool_call>\s*(\{[\s\S]*?\})\s*<\/tool_call>/g
-    let tag_match
-
-    while ((tag_match = tool_call_tag_regex.exec(text)) !== null) {
-      try {
-        const tool_data = JSON.parse(tag_match[1])
-        if (tool_data.name) {
-          tool_calls.push({
-            id: `tool_call_${id_counter++}`,
-            tool_name: tool_data.name,
-            tool_params: tool_data.arguments || {}
-          })
-        }
-      } catch (e) {
-        // Not a valid JSON in tool call, continue
-      }
-    }
-
-    // Also try the older JSON and bracket formats as fallback
-    const legacy_tool_call_regex = /\{([^{}]*)\}|\[\[([^\[\]]*)\]\]/g
+    // Also try the JSON bracket formats
+    // Example: {"name": "search_web", "arguments": {"query": "latest AI developments"}}
+    // Example: [["search_web", {"query": "latest AI developments"}]]
+    const legacy_tool_call_regex = /\{([^{}]*)\}|\[\[([^[]*)\]\]/g
     let match
 
     while ((match = legacy_tool_call_regex.exec(text)) !== null) {

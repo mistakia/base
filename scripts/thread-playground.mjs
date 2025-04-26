@@ -8,7 +8,6 @@ import { isMain } from '#libs-server'
 import config from '#config'
 import { create_thread, get_thread } from '#libs-server/threads/index.mjs'
 import generate_prompt from '#libs-server/threads/generate_prompt.mjs'
-import { list_tools } from '#libs-server/tools/index.mjs'
 import OllamaProvider from '#libs-server/inference_providers/ollama.mjs'
 import {
   get_provider,
@@ -107,8 +106,8 @@ const output_prompt = async ({ thread_id, user_base_directory }) => {
 const process_stream = async (structured_stream) => {
   let full_response = ''
   let formatted_response = ''
-  let tool_calls = []
-  let processed_tool_call_ids = new Set()
+  const tool_calls = []
+  const processed_tool_call_ids = new Set()
 
   try {
     const reader = structured_stream.getReader()
@@ -294,18 +293,12 @@ const run = async () => {
     // Create new thread
     const thread_main_request = argv.request || ''
 
-    const tools = list_tools()
-    if (tools.length > 0) {
-      log(`Including ${tools.length} available tools`)
-    }
-
     thread = await create_new_thread({
       user_id: argv['user-id'],
       inference_provider: argv.provider,
       model: argv.model,
       thread_main_request,
-      user_base_directory,
-      tools: tools.map((tool) => tool.name)
+      user_base_directory
     })
   }
 

@@ -12,7 +12,8 @@ import git_operations from '#libs-server/git/index.mjs'
 import { create_change_request } from '#libs-server/change_requests/index.mjs'
 import { activity_exists } from '#libs-server/activities/index.mjs'
 
-const { THREAD_STATUS, validate_thread_state } = thread_constants
+const { THREAD_STATUS, validate_thread_state, DEFAULT_THREAD_TOOLS } =
+  thread_constants
 const log = debug('threads:create')
 
 /**
@@ -122,7 +123,7 @@ export default async function create_thread({
   model,
   state = THREAD_STATUS.ACTIVE,
   thread_main_request,
-  tools = [],
+  tools = DEFAULT_THREAD_TOOLS,
   user_base_directory,
   system_base_directory,
   // TODO cleanup

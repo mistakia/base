@@ -25,7 +25,7 @@ describe('Tool Call Detection', () => {
 \`\`\`
 And some text after.`
 
-      const { tool_calls, next_id } = provider.find_tool_calls(text)
+      const { tool_calls } = provider.find_tool_calls(text)
 
       expect(tool_calls).to.be.an('array')
       expect(tool_calls.length).to.equal(1)
@@ -59,30 +59,12 @@ Second tool:
 \`\`\`
 Some text between`
 
-      const { tool_calls, next_id } = provider.find_tool_calls(text)
+      const { tool_calls } = provider.find_tool_calls(text)
 
       expect(tool_calls).to.be.an('array')
       expect(tool_calls.length).to.equal(2)
       expect(tool_calls[0].tool_name).to.equal('first_function')
       expect(tool_calls[1].tool_name).to.equal('second_function')
-    })
-
-    it('should still detect legacy <tool_call> format', () => {
-      const text = `Legacy format: 
-<tool_call>
-{
-  "name": "legacy_function",
-  "arguments": {
-    "param": "value"
-  }
-}
-</tool_call>`
-
-      const { tool_calls, next_id } = provider.find_tool_calls(text)
-
-      expect(tool_calls).to.be.an('array')
-      expect(tool_calls.length).to.equal(1)
-      expect(tool_calls[0].tool_name).to.equal('legacy_function')
     })
 
     it('should properly continue ID counting across multiple calls', () => {
