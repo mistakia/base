@@ -74,6 +74,16 @@ const initialize_data_submodule = () => {
     // Create the directory structure in the data directory
     create_directory_structure(data_path, data_structure)
 
+    // Write .gitignore file
+    const gitignore_content = [
+      '.DS_Store',
+      '',
+      'import-history/*',
+      'threads/*',
+      ''
+    ].join('\n')
+    fs.writeFileSync(path.join(data_path, '.gitignore'), gitignore_content)
+
     // Add and commit the initial structure
     execSync('git add .', { cwd: data_path })
     execSync('git commit -m "Initial data structure"', { cwd: data_path })
