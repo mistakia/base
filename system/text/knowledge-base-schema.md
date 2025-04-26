@@ -148,6 +148,7 @@ The knowledge base supports the following content types. See the actual schema f
 - [Database View](../schema/database_view.md) - Saved display configurations for databases
 - [Type Definition](../schema/type_definition.md) - Defines structure of content types
 - [Type Extension](../schema/type_extension.md) - Adds properties to existing types
+- [Prompt](../schema/prompt.md) - Structured input for models, used to guide response generation
 
 ## Observations
 

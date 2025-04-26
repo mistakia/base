@@ -6,7 +6,8 @@ import {
   generate_system_prompt,
   generate_activity_prompt,
   generate_tools_prompt,
-  generate_guidelines_prompt
+  generate_guidelines_prompt,
+  load_prompt
 } from '#libs-server/prompts/index.mjs'
 
 const log = debug('threads:generate_prompt')
@@ -89,16 +90,15 @@ export default async function generate_prompt({
       format: 'json'
     })
 
-    // Add the tool_call guideline when tools are present
-    tool_call_guideline = await generate_guidelines_prompt({
-      guideline_ids: ['system/tool_call.md'],
-      system_base_directory,
-      user_base_directory
+    // Add the tool_call prompt when tools are present
+    const tool_call_prompt = await load_prompt({
+      prompt_path: 'system/prompts/tool_call.md'
     })
+    tool_call_guideline = tool_call_prompt.content
 
     // Combine with any existing guidelines
     if (guidelines_prompt && tool_call_guideline) {
-      guidelines_prompt = `${guidelines_prompt}\n\n${tool_call_guideline}`
+      guidelines_prompt = `${tool_call_guideline}\n\n${guidelines_prompt}`
     } else if (tool_call_guideline) {
       guidelines_prompt = tool_call_guideline
     }

@@ -19,3 +19,5 @@ export default {
   generate_tools_prompt,
   build_prompt
 }
+
+export { default as load_prompt } from './load_prompt.mjs'

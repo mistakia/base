@@ -1,14 +1,6 @@
-import debug from 'debug'
+import load_prompt from './load_prompt.mjs'
 
-const log = debug('prompts:system')
-
-/**
- * Default base system prompt
- */
-const DEFAULT_SYSTEM_PROMPT = `You are a Base Thread Agent working in your own thread workspace. You have been assigned a specific role.
-You work alongside other agents and humans to respond to inquiries and fulfill instructions.
-You can create new thread agents and assign them specific roles to help you fulfill your responsibilities.
-Follow instructions carefully and use the available tools to complete your tasks.`
+const DEFAULT_SYSTEM_PROMPT_PATH = 'system/prompts/default_system_prompt.md'
 
 /**
  * Generate a system prompt component
@@ -16,6 +8,8 @@ Follow instructions carefully and use the available tools to complete your tasks
  * @returns {Promise<string>} Generated system prompt component
  */
 export default async function generate_system_prompt() {
-  log('Using default system prompt')
-  return DEFAULT_SYSTEM_PROMPT
+  const { content } = await load_prompt({
+    prompt_path: DEFAULT_SYSTEM_PROMPT_PATH
+  })
+  return content
 }
