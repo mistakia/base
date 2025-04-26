@@ -73,11 +73,23 @@ export const api = {
     return { url }
   },
 
-  post_thread({ inference_provider, model, initial_message, tools, state }) {
+  post_thread({
+    inference_provider,
+    model,
+    thread_main_request,
+    tools,
+    state
+  }) {
     const url = `${API_URL}/threads`
     return {
       url,
-      ...POST({ inference_provider, model, initial_message, tools, state })
+      ...POST({
+        inference_provider,
+        model,
+        thread_main_request,
+        tools,
+        state
+      })
     }
   },
 

@@ -104,7 +104,7 @@ export async function generate_entity_file_from_database({
 
     // Write the file
     const content = entity.markdown || entity.content || ''
-    await write_markdown_entity(full_path, frontmatter, content)
+    await write_markdown_entity({ file_path: full_path, frontmatter, content })
 
     return {
       success: true,

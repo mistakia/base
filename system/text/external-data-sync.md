@@ -8,7 +8,7 @@ observations:
   - '[feature] Raw import data saved with IPFS content identifiers #storage'
   - '[principle] Compare current import to previous imports for precise change detection #accuracy'
 relations:
-  - 'part_of [[System Design]]'
+  - 'part_of [[system/text/system-design]]'
 ---
 
 # External Data Sync System

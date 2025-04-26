@@ -12,16 +12,16 @@ tags: [knowledge, relations, documentation]
 Entity relations in the knowledge base follow a specific format:
 
 ```
-relation_type [[Target Entity]] (optional context)
+relation_type [[path/to/entity-file]] (optional context)
 ```
 
 Relations are defined in the frontmatter of markdown files as an array:
 
 ```yaml
 relations:
-  - 'implements [[System Design]]'
-  - 'relates_to [[Other Document]] (provides context)'
-  - 'depends_on [[Dependency]]'
+  - 'implements [[system/text/system-design]]'
+  - 'relates_to [[system/text/other-document]] (provides context)'
+  - 'depends_on [[system/schema/dependency]]'
 ```
 
 ## Standard Relation Types
@@ -68,9 +68,9 @@ All entity relationships are managed through the `relations` property in the fro
 
 ```yaml
 relations:
-  - 'child_of [[Parent Task]]'
-  - 'depends_on [[Dependent Task]]'
-  - 'assigned_to [[Person Name]]'
+  - 'child_of [[data/tasks/parent-task]]'
+  - 'depends_on [[data/tasks/dependent-task]]'
+  - 'assigned_to [[data/person/jane-doe]]'
 ```
 
 ## Common Entity Relation Patterns
@@ -130,6 +130,6 @@ The following functions are available in the `entity-relations` module:
 
 ## Relations
 
-- relates_to [[Knowledge Base Schema]]
-- part_of [[System Design]]
-- implements [[Knowledge Graph]]
+- relates_to [[system/text/knowledge-base-schema]]
+- part_of [[system/text/system-design]]
+- implements [[system/text/knowledge-graph]]

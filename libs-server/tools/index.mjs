@@ -7,164 +7,28 @@
  * 2. By internal Base threads
  */
 
-import debug from 'debug'
+// Import and re-export all registry functions
+import {
+  register_tool,
+  get_tool,
+  get_tool_metadata,
+  has_tool,
+  list_tools,
+  execute_tool
+} from './registry.mjs'
 
 // Import tool implementations
 import './notion/index.mjs'
 import './tasks/index.mjs'
-import './file/index.mjs' // Import the new file tools
+import './file/index.mjs'
 
-const log = debug('base:tools')
-
-// Registry to store all tool definitions
-const tool_registry = new Map()
-
-/**
- * Register a tool with the central registry
- *
- * @param {string} tool_name - Unique name of the tool
- * @param {Object} tool_definition - Tool schema and metadata
- * @param {Object} tool_definition.description - Human-readable description
- * @param {Object} tool_definition.inputSchema - JSON Schema for input parameters
- * @param {Function} implementation - Function that implements the tool
- */
-export function register_tool({ tool_name, tool_definition, implementation }) {
-  if (tool_registry.has(tool_name)) {
-    log(`Warning: Tool "${tool_name}" already registered, overwriting`)
-  }
-
-  // Validate required fields
-  if (!tool_definition.description) {
-    throw new Error(`Tool "${tool_name}" missing required description`)
-  }
-
-  if (!tool_definition.inputSchema) {
-    throw new Error(`Tool "${tool_name}" missing required inputSchema`)
-  }
-
-  if (implementation && typeof implementation !== 'function') {
-    throw new Error(`Tool "${tool_name}" implementation must be a function`)
-  }
-
-  // Store the tool definition
-  tool_registry.set(tool_name, {
-    name: tool_name,
-    description: tool_definition.description,
-    inputSchema: tool_definition.inputSchema,
-    implementation
-  })
-
-  log(`Registered tool: ${tool_name}`)
-  return true
-}
-
-/**
- * Get a tool definition by name
- *
- * @param {Object} params - Parameters
- * @param {string} params.tool_name - Name of the tool to retrieve
- * @returns {Object|null} Tool definition or null if not found
- */
-export function get_tool({ tool_name }) {
-  return tool_registry.get(tool_name) || null
-}
-
-/**
- * Get metadata for a registered tool
- *
- * @param {Object} params - Parameters
- * @param {string} params.tool_name - Name of the tool
- * @returns {Object|null} Tool metadata or null if not found
- */
-export function get_tool_metadata({ tool_name }) {
-  const tool = tool_registry.get(tool_name)
-  return tool
-    ? {
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema
-      }
-    : null
-}
-
-/**
- * Check if a tool exists
- *
- * @param {Object} params - Parameters
- * @param {string} params.tool_name - Name of the tool to check
- * @returns {boolean} Whether the tool exists
- */
-export function has_tool({ tool_name }) {
-  return tool_registry.has(tool_name)
-}
-
-/**
- * List all registered tools
- *
- * @returns {Array<Object>} Array of tool definitions
- */
-export function list_tools() {
-  return Array.from(tool_registry.values()).map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.inputSchema
-  }))
-}
-
-/**
- * Execute a registered tool
- *
- * @param {Object} params - Execution parameters
- * @param {string} params.tool_name - Name of the tool to execute
- * @param {Object} params.parameters - Input parameters for the tool
- * @param {string} [params.thread_id] - Optional thread ID for context
- * @param {Object} [params.context={}] - Additional execution context
- * @returns {Promise<Object>} Tool execution result
- */
-export async function execute_tool({
-  tool_name,
-  parameters,
-  thread_id,
-  context = {}
-}) {
-  const tool = tool_registry.get(tool_name)
-
-  if (!tool) {
-    throw new Error(`Tool not found: ${tool_name}`)
-  }
-
-  if (!tool.implementation) {
-    throw new Error(`Tool "${tool_name}" has no implementation`)
-  }
-
-  log(`Executing tool: ${tool_name}`)
-
-  try {
-    const start_time = Date.now()
-
-    // Execute the tool
-    const result = await tool.implementation(parameters, {
-      thread_id,
-      ...context
-    })
-
-    const duration = Date.now() - start_time
-    log(`Tool ${tool_name} executed in ${duration}ms`)
-
-    return {
-      status: 'success',
-      data: result,
-      execution_time: duration
-    }
-  } catch (error) {
-    log(`Error executing tool ${tool_name}: ${error.message}`)
-
-    return {
-      status: 'error',
-      error: error.message,
-      details: error.stack
-    }
-  }
+export {
+  register_tool,
+  get_tool,
+  get_tool_metadata,
+  has_tool,
+  list_tools,
+  execute_tool
 }
 
 // Export a default object with all functions
@@ -194,5 +58,80 @@ register_tool({
   },
   implementation: async (parameters) => {
     return parameters
+  }
+})
+
+// Register messaging tools
+register_tool({
+  tool_name: 'message_notify_creator',
+  tool_definition: {
+    description:
+      'Send a message to creator without requiring a response. Use for acknowledging receipt of messages, providing progress updates, reporting task completion, or explaining changes in approach.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Message text to display to creator'
+        },
+        attachments: {
+          anyOf: [
+            { type: 'string' },
+            { items: { type: 'string' }, type: 'array' }
+          ],
+          description:
+            '(Optional) List of attachments to show to creator, can be file paths or URLs'
+        }
+      },
+      required: ['text']
+    }
+  },
+  implementation: async (parameters) => {
+    // Placeholder implementation
+    return {
+      success: true,
+      message: 'Notification sent to creator',
+      data: parameters
+    }
+  }
+})
+
+register_tool({
+  tool_name: 'message_ask_creator',
+  tool_definition: {
+    description:
+      'Ask creator a question and wait for response. Use for requesting clarification, asking for confirmation, or gathering additional information.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Question text to present to creator'
+        },
+        attachments: {
+          anyOf: [
+            { type: 'string' },
+            { items: { type: 'string' }, type: 'array' }
+          ],
+          description:
+            '(Optional) List of question-related files or reference materials'
+        },
+        suggest_creator_takeover: {
+          type: 'string',
+          enum: ['none', 'browser'],
+          description: '(Optional) Suggested operation for creator takeover'
+        }
+      },
+      required: ['text']
+    }
+  },
+  implementation: async (parameters) => {
+    // Placeholder implementation
+    return {
+      success: true,
+      message: 'Question sent to creator',
+      waiting_for_response: true,
+      data: parameters
+    }
   }
 })

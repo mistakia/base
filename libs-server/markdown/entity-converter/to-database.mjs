@@ -2,7 +2,7 @@ import debug from 'debug'
 import path from 'path'
 import db from '#db'
 import { process_markdown_entity } from '../index.mjs'
-import { read_file_from_ref } from '../../git/git_operations.mjs'
+import { read_file_from_ref } from '../../git/index.mjs'
 import { entity_registry, relation_handlers } from './index.mjs'
 
 const log = debug('markdown:entity_converter:to_database')
@@ -50,9 +50,9 @@ export async function generate_database_from_entity_file({
 
     const processed_data = await process_markdown_entity(content, file_info)
 
-    if (!processed_data.validation.valid) {
+    if (!processed_data.valid) {
       throw new Error(
-        `Invalid entity file: ${processed_data.validation.errors.join(', ')}`
+        `Invalid entity file: ${processed_data.errors.join(', ')}`
       )
     }
 

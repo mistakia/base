@@ -382,9 +382,9 @@ This is a test task.
       const result = await process_markdown_entity(content, file_info, schemas)
 
       // Check validation results
-      expect(result.validation).to.be.an('object')
-      expect(result.validation.valid).to.be.false
-      expect(result.validation.errors).to.be.an('array')
+      expect(result).to.be.an('object')
+      expect(result.valid).to.be.false
+      expect(result.errors).to.be.an('array')
 
       // Still extracts metadata even if validation fails
       expect(result.extracted).to.be.an('object')

@@ -16,7 +16,7 @@ const FloatingThreadForm = ({
   const [form_state, set_form_state] = useState({
     provider: '',
     model: '',
-    initial_message: '',
+    thread_main_request: '',
     tools: []
   })
 
@@ -71,7 +71,7 @@ const FloatingThreadForm = ({
     }
 
     adjust_textarea_height()
-  }, [form_state.initial_message])
+  }, [form_state.thread_main_request])
 
   // Handle input changes
   const handle_change = (e) => {
@@ -88,13 +88,13 @@ const FloatingThreadForm = ({
     create_thread({
       inference_provider: form_state.provider,
       model: form_state.model,
-      initial_message: form_state.initial_message,
+      thread_main_request: form_state.thread_main_request,
       tools: form_state.tools
     })
     // Clear form after submission
     set_form_state({
       ...form_state,
-      initial_message: ''
+      thread_main_request: ''
     })
   }
 
@@ -138,11 +138,11 @@ const FloatingThreadForm = ({
         <textarea
           ref={textarea_ref}
           className='message-input'
-          name='initial_message'
-          value={form_state.initial_message}
+          name='thread_main_request'
+          value={form_state.thread_main_request}
           onChange={handle_change}
           onKeyDown={handle_key_down}
-          placeholder='Enter your message to the AI...'
+          placeholder='Enter your request...'
           disabled={thread_loading}
           rows={1}
           autoFocus
@@ -188,7 +188,7 @@ const FloatingThreadForm = ({
           disabled={
             !form_state.provider ||
             !form_state.model ||
-            !form_state.initial_message ||
+            !form_state.thread_main_request ||
             thread_loading
           }>
           {thread_loading ? 'Sending...' : 'Send'}

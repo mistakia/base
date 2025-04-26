@@ -22,7 +22,10 @@ const require_auth = (req, res, next) => {
 const check_thread_ownership = async (req, res, next) => {
   try {
     const { thread_id } = req.params
-    const thread = await threads.get_thread({ thread_id })
+    const user_base_directory =
+      req.body?.user_base_directory || req.query?.user_base_directory
+
+    const thread = await threads.get_thread({ thread_id, user_base_directory })
 
     if (!thread) {
       return res.status(404).json({ error: 'Thread not found' })
@@ -39,6 +42,12 @@ const check_thread_ownership = async (req, res, next) => {
     next()
   } catch (error) {
     log('Error checking thread ownership: %o', error)
+
+    // Handle thread not found errors specifically
+    if (error.message && error.message.includes('Thread not found')) {
+      return res.status(404).json({ error: 'Thread not found' })
+    }
+
     res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -46,6 +55,15 @@ const check_thread_ownership = async (req, res, next) => {
 // Helper to handle common errors
 const handle_errors = (res, error, action) => {
   log(`Error ${action}: %o`, error)
+
+  // Check if this is a thread not found error
+  if (error.message && error.message.includes('Thread not found')) {
+    return res.status(404).json({
+      error: 'Thread not found',
+      message: error.message
+    })
+  }
+
   res.status(500).json({
     error: `Error ${action}`,
     message: error.message
@@ -58,6 +76,7 @@ router.get('/', require_auth, async (req, res) => {
     const { user_id, state } = req.query
     const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
+    const user_base_directory = req.query.user_base_directory
 
     // Default to the authenticated user if no user_id is provided
     const query_user_id = user_id || req.auth.user_id
@@ -73,7 +92,8 @@ router.get('/', require_auth, async (req, res) => {
       user_id: query_user_id,
       state,
       limit,
-      offset
+      offset,
+      user_base_directory
     })
 
     res.json(thread_list)
@@ -96,8 +116,15 @@ router.get(
 // Create a new thread
 router.post('/', require_auth, async (req, res) => {
   try {
-    const { inference_provider, model, initial_message, tools, state } =
-      req.body
+    const {
+      inference_provider,
+      model,
+      thread_main_request,
+      tools,
+      state,
+      user_base_directory,
+      system_base_directory
+    } = req.body
 
     // Validate required fields
     if (!inference_provider) {
@@ -113,9 +140,11 @@ router.post('/', require_auth, async (req, res) => {
       user_id: req.auth.user_id,
       inference_provider,
       model,
-      initial_message,
+      thread_main_request,
       tools,
-      state
+      state,
+      user_base_directory,
+      system_base_directory
     })
 
     res.status(201).json(thread)
@@ -132,7 +161,12 @@ router.post(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { content, generate_response = true, stream = false } = req.body
+      const {
+        content,
+        generate_response = true,
+        stream = false,
+        user_base_directory
+      } = req.body
 
       if (!content) {
         return res.status(400).json({ error: 'message content is required' })
@@ -141,7 +175,8 @@ router.post(
       // Add user message
       let updated_thread = await threads.add_user_message({
         thread_id,
-        content
+        content,
+        user_base_directory
       })
 
       // If generate_response is true, generate an AI response
@@ -177,7 +212,8 @@ router.post(
             // Add assistant message to timeline
             updated_thread = await threads.add_assistant_message({
               thread_id,
-              content: response.message.content
+              content: response.message.content,
+              user_base_directory
             })
           }
         } catch (error) {
@@ -188,11 +224,15 @@ router.post(
             thread_id,
             error_type: 'generate_response_failed',
             message: error.message,
-            details: { stack: error.stack }
+            details: { stack: error.stack },
+            user_base_directory
           })
 
           // Re-fetch the thread to include the error entry
-          updated_thread = await threads.get_thread({ thread_id })
+          updated_thread = await threads.get_thread({
+            thread_id,
+            user_base_directory
+          })
         }
       }
 
@@ -211,7 +251,7 @@ router.put(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { state, reason } = req.body
+      const { state, reason, user_base_directory } = req.body
 
       if (!state) {
         return res.status(400).json({ error: 'state is required' })
@@ -221,7 +261,8 @@ router.put(
       const updated_thread = await threads.update_thread_state({
         thread_id,
         state,
-        reason
+        reason,
+        user_base_directory
       })
 
       res.json(updated_thread)
@@ -239,7 +280,7 @@ router.post(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { tool_name, parameters } = req.body
+      const { tool_name, parameters, user_base_directory } = req.body
 
       if (!tool_name) {
         return res.status(400).json({ error: 'tool_name is required' })
@@ -267,7 +308,8 @@ router.post(
       const updated_thread = await threads.add_tool_call({
         thread_id,
         tool_name,
-        parameters
+        parameters,
+        user_base_directory
       })
 
       // Get the tool call ID from the last entry
@@ -279,14 +321,16 @@ router.post(
         tool_name,
         parameters,
         thread_id,
-        context: { user_id: req.auth.user_id }
+        context: { user_id: req.auth.user_id },
+        user_base_directory
       })
 
       // Add tool result to timeline
       const result_thread = await threads.add_tool_result({
         thread_id,
         tool_call_id: tool_call.id,
-        result
+        result,
+        user_base_directory
       })
 
       res.json(result_thread)

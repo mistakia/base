@@ -54,3 +54,13 @@ Guidelines commonly relate to:
 - tasks (work that follows these guidelines)
 - organizations (groups that adopt these guidelines)
 - persons (individuals who create or follow guidelines)
+
+Example:
+
+```yaml
+relations:
+  - 'follows [[system/activities/activity-name]]'
+  - 'applies_to [[data/tasks/task-name]]'
+  - 'adopted_by [[system/organization/org-name]]'
+  - 'created_by [[data/person/jane-doe]]'
+```

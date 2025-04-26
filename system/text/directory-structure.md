@@ -8,9 +8,9 @@ observations:
   - '[principle] Clear directory structure improves navigation and discoverability #organization'
   - '[design] Organization follows separation of concerns principle #architecture'
 relations:
-  - 'relates_to [[System Design]]'
-  - 'part_of [[Documentation]]'
-  - 'implements [[Knowledge Base Schema]]'
+  - 'relates_to [[system/text/system-design]]'
+  - 'part_of [[system/text/documentation]]'
+  - 'implements [[system/text/knowledge-base-schema]]'
 ---
 
 # Directory Structure

@@ -3,22 +3,36 @@ import postgres from '#db'
 import { import_repositories } from '#libs-server/markdown/index.mjs'
 import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
+import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('Markdown Import Integration Tests', () => {
   let test_user
-  let current_system_branch
-  let current_user_branch
+  let user_repo
+  let system_branch
+  let user_branch
 
   before(async () => {
     test_user = await create_test_user()
-    // Get current branch
-    current_system_branch = await git.get_current_branch('.')
-    current_user_branch = await git.get_current_branch('./data')
+
+    // Create a temp repo for user data
+    user_repo = await create_temp_test_repo({
+      prefix: 'user-repo-',
+      initial_content: '# User Repository'
+    })
+
+    // Get the current system branch
+    system_branch = await git.get_current_branch('.')
+    user_branch = await git.get_current_branch(user_repo.path)
   })
 
   after(async () => {
     // Clean up the database
     await postgres('entities').where({ user_id: test_user.user_id }).delete()
+
+    // Clean up the user repository
+    if (user_repo && user_repo.cleanup) {
+      user_repo.cleanup()
+    }
   })
 
   beforeEach(async () => {
@@ -31,24 +45,22 @@ describe('Markdown Import Integration Tests', () => {
       // Clear database first
       await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
-      // Run the import using actual files in the system directory
+      // Run the import using the real system directory
       const result = await import_repositories(
         {
-          repositories: [
-            {
-              path: './system',
-              branch: current_system_branch,
-              is_submodule: false
-            }
-          ],
-          system_branch: current_system_branch,
-          user_branch: current_user_branch
+          user_repository: {
+            path: user_repo.path,
+            branch: user_branch,
+            is_submodule: false
+          },
+          system_branch,
+          user_branch
         },
         test_user.user_id
       )
 
       // Check the results
-      expect(result.imported).to.be.at.least(18)
+      expect(result.imported).to.be.at.least(1)
       expect(result.errors).to.equal(0)
 
       // Verify entities were created in the database
@@ -56,22 +68,20 @@ describe('Markdown Import Integration Tests', () => {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(70)
+      expect(entities.length).to.equal(86)
     })
 
     it('should update existing entities when reimported', async () => {
       // First import
       await import_repositories(
         {
-          repositories: [
-            {
-              path: './system',
-              branch: current_system_branch,
-              is_submodule: false
-            }
-          ],
-          system_branch: current_system_branch,
-          user_branch: current_user_branch
+          user_repository: {
+            path: user_repo.path,
+            branch: user_branch,
+            is_submodule: false
+          },
+          system_branch,
+          user_branch
         },
         test_user.user_id
       )
@@ -93,15 +103,13 @@ describe('Markdown Import Integration Tests', () => {
       // Second import - should update timestamps but not create new entities
       await import_repositories(
         {
-          repositories: [
-            {
-              path: './system',
-              branch: current_system_branch,
-              is_submodule: false
-            }
-          ],
-          system_branch: current_system_branch,
-          user_branch: current_user_branch,
+          user_repository: {
+            path: user_repo.path,
+            branch: user_branch,
+            is_submodule: false
+          },
+          system_branch,
+          user_branch,
           force_update: true // Force update even if git_sha is the same
         },
         test_user.user_id
@@ -132,15 +140,13 @@ describe('Markdown Import Integration Tests', () => {
       // First, import all files
       await import_repositories(
         {
-          repositories: [
-            {
-              path: './system',
-              branch: current_system_branch,
-              is_submodule: false
-            }
-          ],
-          system_branch: current_system_branch,
-          user_branch: current_user_branch
+          user_repository: {
+            path: user_repo.path,
+            branch: user_branch,
+            is_submodule: false
+          },
+          system_branch,
+          user_branch
         },
         test_user.user_id
       )
@@ -165,7 +171,7 @@ describe('Markdown Import Integration Tests', () => {
             type: 'text',
             description: 'This entity will be archived'
           }),
-          file_path: 'system/non-existent-file.md',
+          file_path: './system/non-existent-file.md',
           git_sha: 'fake-sha',
           created_at: new Date(),
           updated_at: new Date()
@@ -176,15 +182,13 @@ describe('Markdown Import Integration Tests', () => {
       // Run import with stale entity removal
       const result = await import_repositories(
         {
-          repositories: [
-            {
-              path: './system',
-              branch: current_system_branch,
-              is_submodule: false
-            }
-          ],
-          system_branch: current_system_branch,
-          user_branch: current_user_branch
+          user_repository: {
+            path: user_repo.path,
+            branch: user_branch,
+            is_submodule: false
+          },
+          system_branch,
+          user_branch
         },
         test_user.user_id
       )

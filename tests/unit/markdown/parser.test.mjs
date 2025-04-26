@@ -3,7 +3,7 @@ import {
   parse_markdown,
   parse_schema_file
 } from '#libs-server/markdown/parser.mjs'
-import { get_current_branch } from '#libs-server/git/git_operations.mjs'
+import { get_current_branch } from '#libs-server/git/index.mjs'
 import path from 'path'
 
 describe('Markdown Parser', () => {
@@ -44,9 +44,9 @@ describe('Markdown Parser', () => {
     it('should throw error if type is not specified', async () => {
       const file_info = {
         repo_path: '.',
-        file_path: 'tests/fixtures/no_type.md',
-        git_path: 'tests/fixtures/no_type.md',
-        absolute_path: path.resolve('tests/fixtures/no_type.md'),
+        file_path: 'tests/fixtures/no-type.md',
+        git_path: 'tests/fixtures/no-type.md',
+        absolute_path: path.resolve('tests/fixtures/no-type.md'),
         git_sha: 'test-sha',
         branch: current_system_branch
       }
@@ -137,9 +137,9 @@ describe('Markdown Parser', () => {
     it('should handle type extension schema files correctly', async () => {
       const file_info = {
         repo_path: '.',
-        file_path: 'system/schema/type_extension.md',
-        git_path: 'system/schema/type_extension.md',
-        absolute_path: path.resolve('system/schema/type_extension.md'),
+        file_path: 'system/schema/type-extension.md',
+        git_path: 'system/schema/type-extension.md',
+        absolute_path: path.resolve('system/schema/type-extension.md'),
         git_sha: 'test-sha',
         branch: current_system_branch
       }

@@ -31,7 +31,7 @@ Example:
 
 ```yaml
 relations:
-  - 'follows [[Guideline Name]]'
-  - 'assigned_to [[Person Name]]'
-  - 'involves [[Organization Name]]'
+  - 'follows [[system/guidelines/guideline-name]]'
+  - 'assigned_to [[data/person/jane-doe]]'
+  - 'involves [[system/organization/org-name]]'
 ```

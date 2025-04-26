@@ -3,7 +3,7 @@
  */
 
 import debug from 'debug'
-import { register_tool } from '#libs-server/tools/index.mjs'
+import { register_tool } from '#libs-server/tools/registry.mjs'
 import config from '#config'
 import { tasks as task_service } from '#libs-server/index.mjs' // Assuming tasks service is exported from here
 import {

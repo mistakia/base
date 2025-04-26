@@ -1,3 +1,5 @@
+yarn.lock
 .cursor/mcp.json
 data/import_history/*
 data/task/*
+.git/*

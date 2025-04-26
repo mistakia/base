@@ -9,8 +9,8 @@ observations:
   - '[feature] Content addressing enables efficient versioning and deduplication #storage'
   - '[principle] Block-based content facilitates modular document manipulation #flexibility'
 relations:
-  - 'part_of [[System Design]]'
-  - 'relates_to [[Knowledge Base Schema]]'
+  - 'part_of [[system/text/system-design]]'
+  - 'relates_to [[system/text/knowledge-base-schema]]'
 ---
 
 # Block Schema

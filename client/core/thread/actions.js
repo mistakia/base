@@ -31,9 +31,19 @@ export const thread_actions = {
     type: thread_actions.LOAD_INFERENCE_PROVIDERS
   }),
 
-  create_thread: ({ inference_provider, model, initial_message, tools }) => ({
+  create_thread: ({
+    inference_provider,
+    model,
+    thread_main_request,
+    tools
+  }) => ({
     type: thread_actions.CREATE_THREAD,
-    payload: { inference_provider, model, initial_message, tools }
+    payload: {
+      inference_provider,
+      model,
+      thread_main_request,
+      tools
+    }
   }),
 
   add_message: (message_data) => ({

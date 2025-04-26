@@ -4,7 +4,7 @@
 
 import { Client } from '@notionhq/client'
 import debug from 'debug'
-import { register_tool } from '#libs-server/tools/index.mjs'
+import { register_tool } from '#libs-server/tools/registry.mjs'
 import config from '#config'
 
 // Setup logger

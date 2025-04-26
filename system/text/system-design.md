@@ -11,9 +11,9 @@ observations:
   - '[feature] Activity-based organization provides clear context for actions #organization'
   - '[principle] Guidelines-driven approach ensures consistency #governance'
 relations:
-  - 'relates_to [[Directory Structure]]'
-  - 'relates_to [[Knowledge Base Schema]]'
-  - 'part_of [[Documentation]]'
+  - 'relates_to [[system/text/directory-structure]]'
+  - 'relates_to [[system/text/knowledge-base-schema]]'
+  - 'part_of [[system/text/documentation]]'
 ---
 
 # Base System Design
@@ -106,6 +106,7 @@ Each external data connection has bidirectional sync and conflict resolution:
 ### 4.1 Key Terms
 
 - **Activity**: A classification of actions that share common patterns, guidelines, and data requirements (e.g., "writing an email", "creating a task").
+- **Role**: A presentation term used in prompts and user interfaces to describe the persona or function of an agent. The role is always derived from the assigned activity's title and description. The canonical system entity for agent objectives is `activity` (see above); `role` is never used as a separate identifier in backend, schema, or thread metadata.
 - **Change Request**: A proposal for modifications to the knowledge base that requires review and approval.
 - **Guideline**: A set of rules or recommendations associated with activities that MUST, SHOULD, or MAY be followed that will be included in relevant prompts.
 - **Inference Request**: The process of submitting a `Prompt` to one or more `Models` and receiving the generated outputs.
