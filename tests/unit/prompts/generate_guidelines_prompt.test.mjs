@@ -110,9 +110,9 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<test_guideline1>')
+      expect(result).to.include('<test_guideline1_rules>')
       expect(result).to.include('This is test content for guideline 1')
-      expect(result).to.include('</test_guideline1>')
+      expect(result).to.include('</test_guideline1_rules>')
     })
 
     it('should generate prompt for multiple guidelines', async () => {
@@ -128,12 +128,12 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<test_guideline1>')
+      expect(result).to.include('<test_guideline1_rules>')
       expect(result).to.include('This is test content for guideline 1')
-      expect(result).to.include('</test_guideline1>')
-      expect(result).to.include('<test_guideline2>')
+      expect(result).to.include('</test_guideline1_rules>')
+      expect(result).to.include('<test_guideline2_rules>')
       expect(result).to.include('This is test content for guideline 2')
-      expect(result).to.include('</test_guideline2>')
+      expect(result).to.include('</test_guideline2_rules>')
     })
 
     it('should handle duplicate guideline IDs', async () => {
@@ -149,11 +149,12 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<test_guideline1>')
+      expect(result).to.include('<test_guideline1_rules>')
       expect(result).to.include('This is test content for guideline 1')
+      expect(result).to.include('</test_guideline1_rules>')
 
       // The guideline should only appear once
-      const matches = result.match(/<test_guideline1>/g)
+      const matches = result.match(/<test_guideline1_rules>/g)
       expect(matches).to.have.lengthOf(1)
     })
 
@@ -167,8 +168,9 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<test_guideline1>')
+      expect(result).to.include('<test_guideline1_rules>')
       expect(result).to.include('This is test content for guideline 1')
+      expect(result).to.include('</test_guideline1_rules>')
     })
 
     it('should return empty string when no guidelines are found', async () => {
@@ -282,13 +284,15 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<js_guideline>')
+      expect(result).to.include('<js_guideline_rules>')
       expect(result).to.include('This is JavaScript guideline content')
-      expect(result).to.include('</js_guideline>')
-      expect(result).to.include('<wildcard_guideline>')
+      expect(result).to.include('</js_guideline_rules>')
+      expect(result).to.include('<wildcard_guideline_rules>')
       expect(result).to.include('This guideline matches all files')
-      expect(result).to.include('<user_js_guideline>')
+      expect(result).to.include('</wildcard_guideline_rules>')
+      expect(result).to.include('<user_js_guideline_rules>')
       expect(result).to.include('This is user JavaScript guideline content')
+      expect(result).to.include('</user_js_guideline_rules>')
     })
 
     it('should find only guidelines matching the file extension', async () => {
@@ -301,15 +305,16 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<md_guideline>')
+      expect(result).to.include('<md_guideline_rules>')
       expect(result).to.include('This is Markdown guideline content')
-      expect(result).to.include('<wildcard_guideline>')
+      expect(result).to.include('</md_guideline_rules>')
+      expect(result).to.include('<wildcard_guideline_rules>')
       expect(result).to.include('This guideline matches all files')
 
       // Should not include other guidelines
-      expect(result).to.not.include('<js_guideline>')
-      expect(result).to.not.include('<txt_guideline>')
-      expect(result).to.not.include('<user_js_guideline>')
+      expect(result).to.not.include('<js_guideline_rules>')
+      expect(result).to.not.include('<txt_guideline_rules>')
+      expect(result).to.not.include('<user_js_guideline_rules>')
     })
 
     it('should not include guidelines not matching the file path', async () => {
@@ -322,14 +327,14 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<wildcard_guideline>')
+      expect(result).to.include('<wildcard_guideline_rules>')
       expect(result).to.include('This guideline matches all files')
 
       // Should not include other guidelines
-      expect(result).to.not.include('<js_guideline>')
-      expect(result).to.not.include('<md_guideline>')
-      expect(result).to.not.include('<txt_guideline>')
-      expect(result).to.not.include('<user_js_guideline>')
+      expect(result).to.not.include('<js_guideline_rules>')
+      expect(result).to.not.include('<md_guideline_rules>')
+      expect(result).to.not.include('<txt_guideline_rules>')
+      expect(result).to.not.include('<user_js_guideline_rules>')
     })
   })
 
@@ -399,10 +404,12 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<test_guideline1>')
+      expect(result).to.include('<test_guideline1_rules>')
       expect(result).to.include('This is test content for guideline 1')
-      expect(result).to.include('<js_guideline>')
+      expect(result).to.include('</test_guideline1_rules>')
+      expect(result).to.include('<js_guideline_rules>')
       expect(result).to.include('This is JavaScript guideline content')
+      expect(result).to.include('</js_guideline_rules>')
     })
 
     it('should deduplicate guidelines found in both sources', async () => {
@@ -416,10 +423,12 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<both_guideline>')
+      expect(result).to.include('<both_guideline_rules>')
+      expect(result).to.include('This guideline should match both ways')
+      expect(result).to.include('</both_guideline_rules>')
 
       // The guideline should only appear once
-      const matches = result.match(/<both_guideline>/g)
+      const matches = result.match(/<both_guideline_rules>/g)
       expect(matches).to.have.lengthOf(1)
     })
   })
@@ -444,8 +453,9 @@ describe('generate_guidelines_prompt', () => {
 
       // Assert
       expect(result).to.be.a('string')
-      expect(result).to.include('<no_title>')
+      expect(result).to.include('<no_title_rules>')
       expect(result).to.include('Content without title')
+      expect(result).to.include('</no_title_rules>')
 
       // Clean up
       fs.unlinkSync(

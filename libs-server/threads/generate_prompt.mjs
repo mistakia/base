@@ -82,11 +82,26 @@ export default async function generate_prompt({
 
   // Generate tools prompt if thread has tools
   let tools_prompt = ''
+  let tool_call_guideline = ''
   if (thread.tools && thread.tools.length > 0) {
     tools_prompt = await generate_tools_prompt({
       tool_names: thread.tools,
       format: 'json'
     })
+
+    // Add the tool_call guideline when tools are present
+    tool_call_guideline = await generate_guidelines_prompt({
+      guideline_ids: ['system/tool_call.md'],
+      system_base_directory,
+      user_base_directory
+    })
+
+    // Combine with any existing guidelines
+    if (guidelines_prompt && tool_call_guideline) {
+      guidelines_prompt = `${guidelines_prompt}\n\n${tool_call_guideline}`
+    } else if (tool_call_guideline) {
+      guidelines_prompt = tool_call_guideline
+    }
   }
 
   // Find the thread_main_request entry in the timeline

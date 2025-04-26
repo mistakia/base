@@ -112,7 +112,7 @@ function format_prompt_text(prompt_object) {
   // Main request
   if (prompt_object.main_request) {
     prompt_parts.main_request = prompt_object.main_request.content
-    prompt_text += `${prompt_object.main_request.content}\n\n`
+    prompt_text += `<main_request>\n${prompt_object.main_request.content}\n</main_request>\n\n`
   }
 
   return {

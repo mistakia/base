@@ -113,13 +113,13 @@ export default async function generate_guidelines_prompt({
     }
 
     // Opening tag with guideline name
-    prompt += `<${guideline_name}>\n\n`
+    prompt += `<${guideline_name}_rules>\n\n`
 
     // Add the raw content
     prompt += `${content}\n\n`
 
     // Closing tag with guideline name
-    prompt += `</${guideline_name}>\n\n`
+    prompt += `</${guideline_name}_rules>\n\n`
   }
 
   return prompt.trim()
