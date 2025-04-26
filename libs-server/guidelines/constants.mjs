@@ -55,7 +55,7 @@ export function resolve_guideline_path({
 
   if (!type || !path_parts.length) {
     throw new Error(
-      'guideline_id must be in format [system|user]/<file_path>.md'
+      'guideline_id must be in format [system|user]/<file-path>.md'
     )
   }
 

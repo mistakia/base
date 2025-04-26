@@ -7,12 +7,12 @@ import chalk from 'chalk'
 import { isMain } from '#libs-server'
 import config from '#config'
 import { create_thread, get_thread } from '#libs-server/threads/index.mjs'
-import generate_prompt from '#libs-server/threads/generate_prompt.mjs'
-import OllamaProvider from '#libs-server/inference_providers/ollama.mjs'
+import generate_prompt from '#libs-server/threads/generate-prompt.mjs'
+import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
 import {
   get_provider,
   provider_registry
-} from '#libs-server/inference_providers/index.mjs'
+} from '#libs-server/inference-providers/index.mjs'
 
 const log = debug('agent-playground')
 debug.enable('agent-playground')

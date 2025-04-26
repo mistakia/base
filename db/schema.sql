@@ -53,6 +53,7 @@ CREATE TYPE entity_type AS ENUM (
   'person',
   'physical_item',
   'physical_location',
+  'prompt',
   'tag',
   'task',
   'text',

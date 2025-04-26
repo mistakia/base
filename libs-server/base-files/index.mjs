@@ -5,14 +5,14 @@
  * repositories, primarily focused on change request and thread management.
  */
 
-import { read_file } from './read_file.mjs'
-import { list_files } from './list_files.mjs'
-import { write_file } from './write_file.mjs'
-import { delete_file } from './delete_file.mjs'
-import { get_file_diff } from './file_diff.mjs'
-import { search_files } from './search_files.mjs'
-import { get_target_branch, MAIN_BRANCH_NAME } from './branch_utils.mjs'
-import { batch_write_files } from './batch_write_files.mjs'
+import { read_file } from './read-file.mjs'
+import { list_files } from './list-files.mjs'
+import { write_file } from './write-file.mjs'
+import { delete_file } from './delete-file.mjs'
+import { get_file_diff } from './file-diff.mjs'
+import { search_files } from './search-files.mjs'
+import { get_target_branch, MAIN_BRANCH_NAME } from './branch-utils.mjs'
+import { batch_write_files } from './batch-write-files.mjs'
 
 // Export all file operations
 export {

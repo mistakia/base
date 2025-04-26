@@ -1,10 +1,10 @@
 // Main git operations index module
-import branch_operations from './branch_operations.mjs'
-import worktree_operations from './worktree_operations.mjs'
-import file_operations from './file_operations.mjs'
-import search_operations from './search_operations.mjs'
-import commit_operations from './commit_operations.mjs'
-import core_operations from './core_operations.mjs'
+import branch_operations from './branch-operations.mjs'
+import worktree_operations from './worktree-operations.mjs'
+import file_operations from './file-operations.mjs'
+import search_operations from './search-operations.mjs'
+import commit_operations from './commit-operations.mjs'
+import core_operations from './core-operations.mjs'
 
 // Export all operations
 export const {

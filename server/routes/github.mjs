@@ -8,7 +8,7 @@ import {
   handle_pr_merged,
   handle_pr_closed_without_merging,
   handle_pr_reopened
-} from '#libs-server/change_requests/webhooks.mjs'
+} from '#libs-server/change-requests/webhooks.mjs'
 
 const router = express.Router()
 const log = debug('api:github')

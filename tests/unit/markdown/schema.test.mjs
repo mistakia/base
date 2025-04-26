@@ -112,7 +112,7 @@ properties:
 
     // Create task extension schema file
     await fs.writeFile(
-      path.join(user_base_directory, 'schema', 'task_extension.md'),
+      path.join(user_base_directory, 'schema', 'task-extension.md'),
       `---
 type: type_extension
 extends: task
@@ -126,7 +126,7 @@ properties:
 
     // Create a schema extension for an unknown type (for testing warnings)
     await fs.writeFile(
-      path.join(user_base_directory, 'schema', 'unknown_extension.md'),
+      path.join(user_base_directory, 'schema', 'unknown-extension.md'),
       `---
 type: type_extension
 extends: unknown_type
@@ -140,7 +140,7 @@ properties:
 
     // Commit schema files
     await execute(
-      'git add schema/task_extension.md schema/unknown_extension.md',
+      'git add schema/task-extension.md schema/unknown-extension.md',
       { cwd: user_base_directory }
     )
     await execute('git commit -m "Add extension schemas"', {
@@ -223,7 +223,7 @@ properties:
       )
       expect(result.task.extensions[0]).to.have.property(
         'source_file',
-        'schema/task_extension.md'
+        'schema/task-extension.md'
       )
 
       // Check detailed structure of the person schema

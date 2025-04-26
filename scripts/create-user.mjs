@@ -3,7 +3,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import crypto from 'crypto'
 import { isMain } from '#libs-server'
-import create_user from '#libs-server/users/create_user.mjs'
+import create_user from '#libs-server/users/create-user.mjs'
 
 const argv = yargs(hideBin(process.argv))
   .option('username', {

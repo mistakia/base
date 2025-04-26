@@ -1,5 +1,5 @@
-import activity_exists from './activity_exists.mjs'
-import get_activity_file from './get_activity_file.mjs'
+import activity_exists from './activity-exists.mjs'
+import get_activity_file from './get-activity-file.mjs'
 import {
   SYSTEM_ACTIVITIES_DIR,
   USER_ACTIVITIES_DIR,

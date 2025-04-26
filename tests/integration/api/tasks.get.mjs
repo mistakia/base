@@ -6,7 +6,7 @@ import ed25519 from '@trashman/ed25519-blake2b'
 import db from '#db'
 import server from '#server'
 import { create_test_user } from '#tests/utils/index.mjs'
-import reset_all_tables from '#tests/utils/reset_all_tables.mjs'
+import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 
 chai.should()
 chai.use(chaiHttp)

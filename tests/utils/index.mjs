@@ -1,11 +1,11 @@
 import jwt from 'jsonwebtoken'
 import config from '#config'
 
-export { default as create_test_user } from './create_test_user.mjs'
-export { default as reset_all_tables } from './reset_all_tables.mjs'
-export { default as create_temp_test_directory } from './create_temp_test_directory.mjs'
-export { default as create_temp_test_repo } from './create_temp_test_repo.mjs'
-export { default as create_test_thread } from './create_test_thread.mjs'
+export { default as create_test_user } from './create-test-user.mjs'
+export { default as reset_all_tables } from './reset-all-tables.mjs'
+export { default as create_temp_test_directory } from './create-temp-test-directory.mjs'
+export { default as create_temp_test_repo } from './create-temp-test-repo.mjs'
+export { default as create_test_thread } from './create-test-thread.mjs'
 
 // Create a JWT authentication token for test purposes
 export const create_auth_token = (user) => {
