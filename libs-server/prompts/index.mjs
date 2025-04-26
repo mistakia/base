@@ -1,8 +1,8 @@
-import generate_system_prompt from './generate_system_prompt.mjs'
-import generate_activity_prompt from './generate_activity_prompt.mjs'
-import generate_guidelines_prompt from './generate_guidelines_prompt.mjs'
-import generate_tools_prompt from './generate_tools_prompt.mjs'
-import build_prompt from './build_prompt.mjs'
+import generate_system_prompt from './generate-system-prompt.mjs'
+import generate_activity_prompt from './generate-activity-prompt.mjs'
+import generate_guidelines_prompt from './generate-guidelines-prompt.mjs'
+import generate_tools_prompt from './generate-tools-prompt.mjs'
+import build_prompt from './build-prompt.mjs'
 
 export {
   generate_system_prompt,
@@ -20,4 +20,4 @@ export default {
   build_prompt
 }
 
-export { default as load_prompt } from './load_prompt.mjs'
+export { default as load_prompt } from './load-prompt.mjs'

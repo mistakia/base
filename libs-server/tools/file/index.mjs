@@ -5,12 +5,12 @@
 import debug from 'debug'
 
 // Import individual tool implementations
-import { register_file_read_tool } from './file_read.mjs'
-import { register_file_list_tool } from './file_list.mjs'
-import { register_file_write_tool } from './file_write.mjs'
-import { register_file_delete_tool } from './file_delete.mjs'
-import { register_file_diff_tool } from './file_diff.mjs'
-import { register_file_search_tool } from './file_search.mjs'
+import { register_file_read_tool } from './file-read.mjs'
+import { register_file_list_tool } from './file-list.mjs'
+import { register_file_write_tool } from './file-write.mjs'
+import { register_file_delete_tool } from './file-delete.mjs'
+import { register_file_diff_tool } from './file-diff.mjs'
+import { register_file_search_tool } from './file-search.mjs'
 
 // Setup logger
 const log = debug('tools:file')

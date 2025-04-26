@@ -55,7 +55,7 @@ export function resolve_activity_path({
 
   if (!type || !path_parts.length) {
     throw new Error(
-      'activity_id must be in format [system|user]/<file_path>.md'
+      'activity_id must be in format [system|user]/<file-path>.md'
     )
   }
 

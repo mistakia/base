@@ -1,5 +1,5 @@
-import guideline_exists from './guideline_exists.mjs'
-import get_guideline_file from './get_guideline_file.mjs'
+import guideline_exists from './guideline-exists.mjs'
+import get_guideline_file from './get-guideline-file.mjs'
 import {
   SYSTEM_GUIDELINES_DIR,
   USER_GUIDELINES_DIR,

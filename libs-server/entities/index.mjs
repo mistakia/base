@@ -2,20 +2,20 @@ import {
   create_entity,
   create_entity_relations,
   create_entity_tags
-} from './create_entity.mjs'
+} from './create-entity.mjs'
 
 import {
   fetch_entity_data,
   fetch_entity_tags,
   fetch_entity_relations,
   fetch_entity_type_data
-} from './fetch_entity_data.mjs'
+} from './fetch-entity-data.mjs'
 
 import {
   delete_entity_relations,
   delete_entity_tags,
   update_entity
-} from './delete_entity.mjs'
+} from './delete-entity.mjs'
 
 // Re-export with clear namespaces
 export {

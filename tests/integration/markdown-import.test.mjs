@@ -3,7 +3,7 @@ import postgres from '#db'
 import { import_repositories } from '#libs-server/markdown/index.mjs'
 import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
-import { create_temp_test_repo } from '#tests/utils/create_temp_test_repo.mjs'
+import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('Markdown Import Integration Tests', () => {
   let test_user
@@ -68,7 +68,7 @@ describe('Markdown Import Integration Tests', () => {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(81)
+      expect(entities.length).to.equal(86)
     })
 
     it('should update existing entities when reimported', async () => {

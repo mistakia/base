@@ -20,8 +20,8 @@ import config from '#config'
 import routes from '#server/routes/index.mjs'
 
 // Initialize inference providers
-import OllamaProvider from '#libs-server/inference_providers/ollama.mjs'
-import { provider_registry } from '#libs-server/inference_providers/index.mjs'
+import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
+import { provider_registry } from '#libs-server/inference-providers/index.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}

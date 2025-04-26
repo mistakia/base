@@ -1,17 +1,17 @@
-import create_thread from './create_thread.mjs'
-import get_thread, { list_threads } from './get_thread.mjs'
+import create_thread from './create-thread.mjs'
+import get_thread, { list_threads } from './get-thread.mjs'
 import {
   update_thread_state,
   update_thread_metadata
-} from './update_thread.mjs'
+} from './update-thread.mjs'
 import add_timeline_entry, {
   add_user_message,
   add_assistant_message,
   add_tool_call,
   add_tool_result,
   add_error
-} from './add_timeline_entry.mjs'
-import generate_prompt from './generate_prompt.mjs'
+} from './add-timeline-entry.mjs'
+import generate_prompt from './generate-prompt.mjs'
 import {
   register_tool,
   has_tool,
