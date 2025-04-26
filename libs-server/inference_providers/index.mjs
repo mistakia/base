@@ -242,6 +242,7 @@ export class InferenceProvider {
    * @param {NodeJS.ReadableStream} stream - The Node.js stream to parse
    * @returns {AsyncGenerator<any>} - The parsed JSON objects
    */
+  // eslint-disable-next-line generator-star-spacing
   async *parse_json_stream(stream) {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
