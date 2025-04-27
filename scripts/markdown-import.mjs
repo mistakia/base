@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import debug from 'debug'
 
-import { import_repositories } from '#libs-server/markdown/index.mjs'
+import { import_repositories_from_git } from '#libs-server/markdown/index.mjs'
 import postgres from '#db'
 
 const log = debug('markdown-import')
@@ -69,7 +69,10 @@ async function main() {
     if (argv.dryRun) {
       await postgres
         .transaction(async () => {
-          const result = await import_repositories(import_options, argv.userId)
+          const result = await import_repositories_from_git(
+            import_options,
+            argv.userId
+          )
           console.log(`Import simulation complete:
 - Imported: ${result.imported} files
 - Skipped: ${result.skipped} files
@@ -87,7 +90,10 @@ async function main() {
         })
     } else {
       // Regular execution
-      const result = await import_repositories(import_options, argv.userId)
+      const result = await import_repositories_from_git(
+        import_options,
+        argv.userId
+      )
       console.log(`Import complete:
 - Imported: ${result.imported} files
 - Skipped: ${result.skipped} files

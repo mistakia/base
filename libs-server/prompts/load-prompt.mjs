@@ -1,6 +1,7 @@
-import { parse_markdown } from '#libs-server/markdown/parser.mjs'
 import { promises as fs } from 'fs'
 import path from 'path'
+
+import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 
 /**
  * Load a prompt from a markdown entity file
@@ -12,7 +13,10 @@ import path from 'path'
 export default async function load_prompt({ prompt_path }) {
   const resolved_path = path.resolve(prompt_path)
   const file_content = await fs.readFile(resolved_path, 'utf8')
-  const { frontmatter, content } = parse_markdown({ markdown: file_content })
+  const { frontmatter, content } = parse_markdown_content({
+    content: file_content,
+    file_path: prompt_path
+  })
   return {
     content: content.trim(),
     metadata: frontmatter

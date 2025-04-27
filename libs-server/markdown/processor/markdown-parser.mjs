@@ -1,6 +1,5 @@
 import MarkdownIt from 'markdown-it'
 import frontMatter from 'front-matter'
-import scanner from './scanner.mjs'
 import path from 'path'
 import debug from 'debug'
 
@@ -13,49 +12,39 @@ const md = new MarkdownIt({
 })
 
 /**
- * Parse markdown file content with frontmatter
- * @param {Object} file File metadata object or content string
+ * Parse markdown content with frontmatter
+ * @param {Object} params - Parameters object
+ * @param {string} params.file_path - Path of the markdown file
+ * @param {string} params.content - Content of the markdown file
  * @returns {Object} Parsed markdown data
  */
-export async function parse_markdown(file) {
+export async function parse_markdown_content({ file_path, content }) {
   // Validate input
-  if (!file) {
-    throw new Error('file is required')
+  if (!content) {
+    throw new Error('content is required')
+  }
+
+  if (!file_path) {
+    throw new Error('file_path is required')
   }
 
   try {
-    let content
-    let file_info
-
-    // Handle direct content passed in file object
-    if (typeof file === 'string') {
-      content = file
-      file_info = { file_path: 'unknown.md' }
-    } else if (file.content) {
-      content = file.content
-      file_info = file
-    } else {
-      // Get file content from git
-      content = await scanner.get_file_content(file)
-      file_info = file
-    }
-
     // Extract frontmatter
     const { attributes, body } = frontMatter(content)
 
     // Ensure frontmatter has basic required fields
     if (!attributes.title) {
-      attributes.title = path.basename(file_info.file_path, '.md')
+      attributes.title = path.basename(file_path, '.md')
     }
 
     // Infer type from path for schema files
     // Check both schema/file.md and system/schema/file.md patterns
     if (
-      (file_info.file_path.startsWith('schema/') ||
-        file_info.file_path.startsWith('system/schema/')) &&
+      (file_path.startsWith('schema/') ||
+        file_path.startsWith('system/schema/')) &&
       !attributes.type
     ) {
-      const filename = path.basename(file_info.file_path, '.md')
+      const filename = path.basename(file_path, '.md')
       if (filename === 'type_definition' || filename === 'type_extension') {
         attributes.type = filename
       } else {
@@ -66,9 +55,7 @@ export async function parse_markdown(file) {
 
     // Throw error if type is not specified in frontmatter
     if (!attributes.type) {
-      throw new Error(
-        `Type not specified in frontmatter for ${file_info.file_path}`
-      )
+      throw new Error(`Type not specified in frontmatter for ${file_path}`)
     }
 
     // Render markdown to HTML
@@ -89,7 +76,7 @@ export async function parse_markdown(file) {
     }
 
     return {
-      file_info,
+      file_path,
       markdown: body.startsWith('\n') ? body : '\n' + body,
       frontmatter: attributes,
       html,
@@ -97,47 +84,56 @@ export async function parse_markdown(file) {
       type: attributes.type
     }
   } catch (error) {
-    log(`Error parsing markdown file: ${file.file_path || 'unknown'}`, error)
+    log(`Error parsing markdown file: ${file_path}`, error)
     throw error
   }
 }
 
 /**
  * Parse a schema definition file
- * @param {Object} file File metadata object
+ * @param {Object} params - Parameters object
+ * @param {string} params.file_path - Path of the markdown file
+ * @param {string} params.content - Content of the markdown file
  * @returns {Object} Parsed schema definition
  */
-export async function parse_schema_file(file) {
+export async function parse_markdown_schema_content({ file_path, content }) {
   // Validate input
-  if (!file || typeof file !== 'object') {
-    throw new Error('file must be an object')
+  if (!content) {
+    throw new Error('content is required')
   }
 
-  const parsed = await parse_markdown(file)
+  if (!file_path) {
+    throw new Error('file_path is required')
+  }
+
+  const parsed_markdown = await parse_markdown_content({ file_path, content })
 
   // For files in schema directory, set appropriate type and properties
-  if (parsed.frontmatter.type === 'type_definition') {
+  if (parsed_markdown.frontmatter.type === 'type_definition') {
     // Ensure name is set for type definitions
-    if (!parsed.frontmatter.name) {
-      parsed.frontmatter.name = path.basename(parsed.file_info.file_path, '.md')
-    }
-
-    return parsed
-  } else if (parsed.frontmatter.type === 'type_extension') {
-    // Ensure extends is set for type extensions
-    if (!parsed.frontmatter.extends) {
-      log(
-        `Type extension in ${parsed.file_info.file_path} doesn't specify which type it extends`
+    if (!parsed_markdown.frontmatter.name) {
+      parsed_markdown.frontmatter.name = path.basename(
+        parsed_markdown.file_path,
+        '.md'
       )
     }
 
-    return parsed
+    return parsed_markdown
+  } else if (parsed_markdown.frontmatter.type === 'type_extension') {
+    // Ensure extends is set for type extensions
+    if (!parsed_markdown.frontmatter.extends) {
+      log(
+        `Type extension in ${parsed_markdown.file_path} doesn't specify which type it extends`
+      )
+    }
+
+    return parsed_markdown
   }
 
-  return parsed
+  return parsed_markdown
 }
 
 export default {
-  parse_markdown,
-  parse_schema_file
+  parse_markdown_content,
+  parse_markdown_schema_content
 }

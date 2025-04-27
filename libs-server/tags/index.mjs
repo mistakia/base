@@ -5,6 +5,8 @@ import get_tags from './get-tags.mjs'
 import get_tagged_entities from './get-tagged-entities.mjs'
 import update_tag from './update-tag.mjs'
 import { tag_entity, untag_entity } from './tag-entity.mjs'
+import tag_exists from './tag-exists.mjs'
+import { resolve_tag_path } from './path-utils.mjs'
 
 export {
   create_tag,
@@ -14,6 +16,8 @@ export {
   get_tags,
   get_tagged_entities,
   tag_entity,
+  tag_exists,
   untag_entity,
-  update_tag
+  update_tag,
+  resolve_tag_path
 }

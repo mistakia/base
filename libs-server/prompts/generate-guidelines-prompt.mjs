@@ -1,6 +1,6 @@
 import debug from 'debug'
 import fs from 'fs'
-import { parse_markdown } from '#libs-server/markdown/index.mjs'
+import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 import {
   get_guideline_file,
   get_system_guidelines_directory,
@@ -51,12 +51,15 @@ export default async function generate_guidelines_prompt({
           user_base_directory
         })
 
-        const parsed = await parse_markdown(guideline_file.content)
+        const parsed_markdown = await parse_markdown_content({
+          content: guideline_file.content,
+          file_path: guideline_file.file_path
+        })
 
         // Store the original guideline_id with the parsed content for reference
-        parsed.guideline_id = guideline_id
+        parsed_markdown.guideline_id = guideline_id
 
-        guidelines_content.push(parsed)
+        guidelines_content.push(parsed_markdown)
         processed_ids.add(guideline_id)
       } catch (error) {
         log(`Error loading guideline ${guideline_id}: ${error.message}`)
@@ -176,20 +179,23 @@ async function find_matching_guidelines({
         user_base_directory
       })
 
-      const parsed = await parse_markdown(file_result.content)
+      const parsed_markdown = await parse_markdown_content({
+        content: file_result.content,
+        file_path: file_result.file_path
+      })
 
       // Store the guideline_id for reference
-      parsed.guideline_id = guideline_id
+      parsed_markdown.guideline_id = guideline_id
 
       // Check if this guideline applies to the file path
       if (
-        parsed.frontmatter &&
-        parsed.frontmatter.globs &&
-        Array.isArray(parsed.frontmatter.globs)
+        parsed_markdown.frontmatter &&
+        parsed_markdown.frontmatter.globs &&
+        Array.isArray(parsed_markdown.frontmatter.globs)
       ) {
-        for (const pattern of parsed.frontmatter.globs) {
+        for (const pattern of parsed_markdown.frontmatter.globs) {
           if (matches_glob(file_path, pattern)) {
-            matching_guidelines.push(parsed)
+            matching_guidelines.push(parsed_markdown)
             break
           }
         }
@@ -210,20 +216,23 @@ async function find_matching_guidelines({
         user_base_directory
       })
 
-      const parsed = await parse_markdown(file_result.content)
+      const parsed_markdown = await parse_markdown_content({
+        content: file_result.content,
+        file_path: file_result.file_path
+      })
 
       // Store the guideline_id for reference
-      parsed.guideline_id = guideline_id
+      parsed_markdown.guideline_id = guideline_id
 
       // Check if this guideline applies to the file path
       if (
-        parsed.frontmatter &&
-        parsed.frontmatter.globs &&
-        Array.isArray(parsed.frontmatter.globs)
+        parsed_markdown.frontmatter &&
+        parsed_markdown.frontmatter.globs &&
+        Array.isArray(parsed_markdown.frontmatter.globs)
       ) {
-        for (const pattern of parsed.frontmatter.globs) {
+        for (const pattern of parsed_markdown.frontmatter.globs) {
           if (matches_glob(file_path, pattern)) {
-            matching_guidelines.push(parsed)
+            matching_guidelines.push(parsed_markdown)
             break
           }
         }

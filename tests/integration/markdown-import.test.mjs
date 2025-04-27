@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import postgres from '#db'
-import { import_repositories } from '#libs-server/markdown/index.mjs'
+import { import_repositories_from_git } from '#libs-server/markdown/index.mjs'
 import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
@@ -40,13 +40,13 @@ describe('Markdown Import Integration Tests', () => {
     await postgres('entities').where({ user_id: test_user.user_id }).delete()
   })
 
-  describe('import_repositories', () => {
+  describe('import_repositories_from_git', () => {
     it('should import markdown files', async () => {
       // Clear database first
       await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
       // Run the import using the real system directory
-      const result = await import_repositories(
+      const result = await import_repositories_from_git(
         {
           user_repository: {
             path: user_repo.path,
@@ -58,6 +58,8 @@ describe('Markdown Import Integration Tests', () => {
         },
         test_user.user_id
       )
+
+      console.log(result)
 
       // Check the results
       expect(result.imported).to.be.at.least(1)
@@ -73,7 +75,7 @@ describe('Markdown Import Integration Tests', () => {
 
     it('should update existing entities when reimported', async () => {
       // First import
-      await import_repositories(
+      await import_repositories_from_git(
         {
           user_repository: {
             path: user_repo.path,
@@ -101,7 +103,7 @@ describe('Markdown Import Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Second import - should update timestamps but not create new entities
-      await import_repositories(
+      await import_repositories_from_git(
         {
           user_repository: {
             path: user_repo.path,
@@ -138,7 +140,7 @@ describe('Markdown Import Integration Tests', () => {
 
     it('should mark removed entities as archived', async () => {
       // First, import all files
-      await import_repositories(
+      await import_repositories_from_git(
         {
           user_repository: {
             path: user_repo.path,
@@ -180,7 +182,7 @@ describe('Markdown Import Integration Tests', () => {
         .then((rows) => rows[0].entity_id)
 
       // Run import with stale entity removal
-      const result = await import_repositories(
+      const result = await import_repositories_from_git(
         {
           user_repository: {
             path: user_repo.path,

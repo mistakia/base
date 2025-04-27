@@ -3,7 +3,7 @@ import path from 'path'
 
 import config from '#config'
 import db from '#db'
-import { read_markdown_entity } from '#libs-server/markdown/index.mjs'
+import { process_markdown_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
 import { build_change_request_from_git } from './utils.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
@@ -38,12 +38,14 @@ export async function get_change_request({
     const result = format_change_request(db_record)
 
     // Get the markdown file content
-    const file_path = path.join(
+    const absolute_path = path.join(
       repo_path,
       `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
     )
     try {
-      const markdown_data = await read_markdown_entity(file_path)
+      const markdown_data = await process_markdown_from_file({
+        absolute_path
+      })
 
       // Add markdown content
       result.description = markdown_data.frontmatter.description || ''
@@ -216,8 +218,13 @@ async function filter_by_tags({
 
   for (const record of results) {
     try {
-      const file_path = `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
-      const markdown_data = await read_markdown_entity(file_path)
+      const absolute_path = path.join(
+        repo_path,
+        `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
+      )
+      const markdown_data = await process_markdown_from_file({
+        absolute_path
+      })
       const file_tags = markdown_data.frontmatter.tags || []
 
       // Check if any of the requested tags are in the file's tags
@@ -267,8 +274,13 @@ async function enhance_with_markdown({
 }) {
   for (const record of results) {
     try {
-      const file_path = `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
-      const markdown_data = await read_markdown_entity(file_path)
+      const absolute_path = path.join(
+        repo_path,
+        `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
+      )
+      const markdown_data = await process_markdown_from_file({
+        absolute_path
+      })
 
       // Add markdown data to the record
       record.description = markdown_data.frontmatter.description || ''

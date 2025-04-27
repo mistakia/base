@@ -1,27 +1,27 @@
 import { expect } from 'chai'
 import {
-  process_markdown_entity,
-  extract_tags,
-  extract_relations,
-  extract_observations
-} from '#libs-server/markdown/index.mjs'
+  process_markdown_content,
+  extract_entity_tags,
+  extract_entity_relations,
+  extract_entity_observations
+} from '#libs-server/markdown/processor/index.mjs'
 
 describe('Markdown Index Module', () => {
-  describe('extract_tags', () => {
+  describe('extract_entity_tags', () => {
     it('should extract tags from frontmatter', () => {
       const parsed = {
         frontmatter: {
-          tags: ['development', 'javascript', 'testing']
+          tags: ['system/development', 'system/javascript', 'system/testing']
         }
       }
 
-      const tags = extract_tags(parsed)
+      const tags = extract_entity_tags(parsed)
 
       expect(tags).to.be.an('array')
       expect(tags).to.have.lengthOf(3)
-      expect(tags[0]).to.deep.include({ name: 'development' })
-      expect(tags[1]).to.deep.include({ name: 'javascript' })
-      expect(tags[2]).to.deep.include({ name: 'testing' })
+      expect(tags[0]).to.deep.include({ tag_id: 'system/development' })
+      expect(tags[1]).to.deep.include({ tag_id: 'system/javascript' })
+      expect(tags[2]).to.deep.include({ tag_id: 'system/testing' })
     })
 
     it('should extract hashtags from markdown content', () => {
@@ -29,44 +29,44 @@ describe('Markdown Index Module', () => {
         markdown: `
           # Test Document
 
-          This is a test #javascript document for #testing purposes.
+          This is a test #system/javascript document for #system/testing purposes.
 
-          Multiple hashtags #one #two #three should all be detected.
+          Multiple hashtags #system/one #system/two #system/three should all be detected.
         `,
         frontmatter: {}
       }
 
-      const tags = extract_tags(parsed)
+      const tags = extract_entity_tags(parsed)
 
       expect(tags).to.be.an('array')
       expect(tags).to.have.lengthOf(5)
-      expect(tags).to.deep.include({ name: 'javascript' })
-      expect(tags).to.deep.include({ name: 'testing' })
-      expect(tags).to.deep.include({ name: 'one' })
-      expect(tags).to.deep.include({ name: 'two' })
-      expect(tags).to.deep.include({ name: 'three' })
+      expect(tags).to.deep.include({ tag_id: 'system/javascript' })
+      expect(tags).to.deep.include({ tag_id: 'system/testing' })
+      expect(tags).to.deep.include({ tag_id: 'system/one' })
+      expect(tags).to.deep.include({ tag_id: 'system/two' })
+      expect(tags).to.deep.include({ tag_id: 'system/three' })
     })
 
     it('should combine tags from frontmatter and markdown content', () => {
       const parsed = {
         frontmatter: {
-          tags: ['frontend', 'development']
+          tags: ['system/frontend', 'system/development']
         },
         markdown: `
           # Frontend Development
 
-          Working on #javascript and #react components.
+          Working on #system/javascript and #system/react components.
         `
       }
 
-      const tags = extract_tags(parsed)
+      const tags = extract_entity_tags(parsed)
 
       expect(tags).to.be.an('array')
       expect(tags).to.have.lengthOf(4)
-      expect(tags).to.deep.include({ name: 'frontend' })
-      expect(tags).to.deep.include({ name: 'development' })
-      expect(tags).to.deep.include({ name: 'javascript' })
-      expect(tags).to.deep.include({ name: 'react' })
+      expect(tags).to.deep.include({ tag_id: 'system/frontend' })
+      expect(tags).to.deep.include({ tag_id: 'system/development' })
+      expect(tags).to.deep.include({ tag_id: 'system/javascript' })
+      expect(tags).to.deep.include({ tag_id: 'system/react' })
     })
 
     it('should handle empty tags properly', () => {
@@ -75,45 +75,45 @@ describe('Markdown Index Module', () => {
         markdown: 'Just some plain text without hashtags.'
       }
 
-      const tags = extract_tags(parsed)
+      const tags = extract_entity_tags(parsed)
 
       expect(tags).to.be.an('array')
       expect(tags).to.have.lengthOf(0)
     })
   })
 
-  describe('extract_relations', () => {
+  describe('extract_entity_relations', () => {
     it('should extract basic relations from frontmatter', () => {
       const parsed = {
         frontmatter: {
           relations: [
-            'depends_on [[Project Setup]]',
-            'blocked_by [[Server Configuration]]',
-            'related_to [[API Documentation]]'
+            'depends_on [[system/project-setup]]',
+            'blocked_by [[system/server-configuration]]',
+            'related_to [[system/api-documentation]]'
           ]
         }
       }
 
-      const relations = extract_relations(parsed)
+      const relations = extract_entity_relations(parsed)
 
       expect(relations).to.be.an('array')
       expect(relations).to.have.lengthOf(3)
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'depends_on',
-        target_title: 'Project Setup',
+        entity_path: 'system/project-setup',
         context: null
       })
 
       expect(relations[1]).to.deep.equal({
         relation_type: 'blocked_by',
-        target_title: 'Server Configuration',
+        entity_path: 'system/server-configuration',
         context: null
       })
 
       expect(relations[2]).to.deep.equal({
         relation_type: 'related_to',
-        target_title: 'API Documentation',
+        entity_path: 'system/api-documentation',
         context: null
       })
     })
@@ -122,33 +122,33 @@ describe('Markdown Index Module', () => {
       const parsed = {
         frontmatter: {
           relations: [
-            'depends_on [[Project Setup]] (phase 1)',
-            'blocked_by [[Server Configuration]] (awaiting IT approval)',
-            'related_to [[API Documentation]] (needs updated examples)'
+            'depends_on [[system/project-setup]] (phase 1)',
+            'blocked_by [[system/server-configuration]] (awaiting IT approval)',
+            'related_to [[system/api-documentation]] (needs updated examples)'
           ]
         }
       }
 
-      const relations = extract_relations(parsed)
+      const relations = extract_entity_relations(parsed)
 
       expect(relations).to.be.an('array')
       expect(relations).to.have.lengthOf(3)
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'depends_on',
-        target_title: 'Project Setup',
+        entity_path: 'system/project-setup',
         context: 'phase 1'
       })
 
       expect(relations[1]).to.deep.equal({
         relation_type: 'blocked_by',
-        target_title: 'Server Configuration',
+        entity_path: 'system/server-configuration',
         context: 'awaiting IT approval'
       })
 
       expect(relations[2]).to.deep.equal({
         relation_type: 'related_to',
-        target_title: 'API Documentation',
+        entity_path: 'system/api-documentation',
         context: 'needs updated examples'
       })
     })
@@ -158,7 +158,7 @@ describe('Markdown Index Module', () => {
         frontmatter: {}
       }
 
-      const relations = extract_relations(parsed)
+      const relations = extract_entity_relations(parsed)
 
       expect(relations).to.be.an('array')
       expect(relations).to.have.lengthOf(0)
@@ -168,27 +168,27 @@ describe('Markdown Index Module', () => {
       const parsed = {
         frontmatter: {
           relations: [
-            'depends_on Project Setup', // Missing brackets
-            'blocked_by [[Server Configuration]]', // Correctly formatted
-            'related_to API Documentation' // Missing brackets
+            'depends_on system/project-setup', // Missing brackets
+            'blocked_by [[system/server-configuration]]', // Correctly formatted
+            'related_to system/api-documentation' // Missing brackets
           ]
         }
       }
 
-      const relations = extract_relations(parsed)
+      const relations = extract_entity_relations(parsed)
 
       expect(relations).to.be.an('array')
       expect(relations).to.have.lengthOf(1) // Only one valid relation
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'blocked_by',
-        target_title: 'Server Configuration',
+        entity_path: 'system/server-configuration',
         context: null
       })
     })
   })
 
-  describe('extract_observations', () => {
+  describe('extract_entity_observations', () => {
     it('should extract basic observations from frontmatter', () => {
       const parsed = {
         frontmatter: {
@@ -200,7 +200,7 @@ describe('Markdown Index Module', () => {
         }
       }
 
-      const observations = extract_observations(parsed)
+      const observations = extract_entity_observations(parsed)
 
       expect(observations).to.be.an('array')
       expect(observations).to.have.lengthOf(3)
@@ -235,7 +235,7 @@ describe('Markdown Index Module', () => {
         }
       }
 
-      const observations = extract_observations(parsed)
+      const observations = extract_entity_observations(parsed)
 
       expect(observations).to.be.an('array')
       expect(observations).to.have.lengthOf(3)
@@ -264,7 +264,7 @@ describe('Markdown Index Module', () => {
         frontmatter: {}
       }
 
-      const observations = extract_observations(parsed)
+      const observations = extract_entity_observations(parsed)
 
       expect(observations).to.be.an('array')
       expect(observations).to.have.lengthOf(0)
@@ -281,7 +281,7 @@ describe('Markdown Index Module', () => {
         }
       }
 
-      const observations = extract_observations(parsed)
+      const observations = extract_entity_observations(parsed)
 
       expect(observations).to.be.an('array')
       expect(observations).to.have.lengthOf(1) // Only one valid observation
@@ -294,7 +294,7 @@ describe('Markdown Index Module', () => {
     })
   })
 
-  describe('process_markdown_entity', () => {
+  describe('process_markdown_content', () => {
     it('should process a markdown entity and extract all metadata', async () => {
       const content = `---
 title: Test Task
@@ -307,46 +307,49 @@ persons:
 parent_tasks:
   - Project Setup
 tags:
-  - important
-  - development
+  - system/important
+  - system/development
 relations:
-  - blocked_by [[Server Configuration]] (awaiting approval)
+  - blocked_by [[system/server-configuration]] (awaiting approval)
 ---
 
 # Test Task
 
-This is a #test task for #development purposes.
+This is a #system/test task for #system/development purposes.
 `
 
-      const file_info = {
-        file_path: 'tasks/test-task.md',
-        git_sha: 'abc123',
-        absolute_path: '/path/to/tasks/test-task.md'
-      }
-
-      const result = await process_markdown_entity(content, file_info)
+      const result = await process_markdown_content({
+        content,
+        file_path: 'tasks/test-task.md'
+      })
 
       // Check basic parsing
       expect(result.frontmatter.title).to.equal('Test Task')
       expect(result.frontmatter.type).to.equal('task')
       expect(result.frontmatter.status).to.equal('In Progress')
 
-      // Check extracted metadata
-      expect(result.extracted).to.be.an('object')
+      // Check extracted entity metadata
+      expect(result.entity_metadata).to.be.an('object')
 
       // Check tags (from both frontmatter and content)
-      expect(result.extracted.tags).to.be.an('array')
-      expect(result.extracted.tags).to.have.lengthOf(4)
-      expect(result.extracted.tags).to.deep.include({ name: 'important' })
-      expect(result.extracted.tags).to.deep.include({ name: 'development' })
-      expect(result.extracted.tags).to.deep.include({ name: 'test' })
+      expect(result.entity_metadata.tags).to.be.an('array')
+      expect(result.entity_metadata.tags).to.have.lengthOf(4)
+      expect(result.entity_metadata.tags).to.deep.include({
+        tag_id: 'system/important'
+      })
+      expect(result.entity_metadata.tags).to.deep.include({
+        tag_id: 'system/development'
+      })
+      expect(result.entity_metadata.tags).to.deep.include({
+        tag_id: 'system/test'
+      })
 
       // Check explicit relations
-      expect(result.extracted.relations).to.be.an('array')
-      expect(result.extracted.relations).to.have.lengthOf(1)
-      expect(result.extracted.relations[0]).to.deep.equal({
+      expect(result.entity_metadata.relations).to.be.an('array')
+      expect(result.entity_metadata.relations).to.have.lengthOf(1)
+      expect(result.entity_metadata.relations[0]).to.deep.equal({
         relation_type: 'blocked_by',
-        target_title: 'Server Configuration',
+        entity_path: 'system/server-configuration',
         context: 'awaiting approval'
       })
     })
@@ -364,12 +367,6 @@ priority: High
 This is a test task.
 `
 
-      const file_info = {
-        file_path: 'tasks/test-task.md',
-        git_sha: 'abc123',
-        absolute_path: '/path/to/tasks/test-task.md'
-      }
-
       const schemas = {
         task: {
           properties: {
@@ -379,7 +376,11 @@ This is a test task.
         }
       }
 
-      const result = await process_markdown_entity(content, file_info, schemas)
+      const result = await process_markdown_content({
+        content,
+        file_path: 'tasks/test-task.md',
+        schemas
+      })
 
       // Check validation results
       expect(result).to.be.an('object')
@@ -387,9 +388,9 @@ This is a test task.
       expect(result.errors).to.be.an('array')
 
       // Still extracts metadata even if validation fails
-      expect(result.extracted).to.be.an('object')
-      expect(result.extracted.tags).to.be.an('array')
-      expect(result.extracted.relations).to.be.an('array')
+      expect(result.entity_metadata).to.be.an('object')
+      expect(result.entity_metadata.tags).to.be.an('array')
+      expect(result.entity_metadata.relations).to.be.an('array')
     })
   })
 })
