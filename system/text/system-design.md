@@ -13,7 +13,6 @@ observations:
 relations:
   - 'relates_to [[system/text/directory-structure]]'
   - 'relates_to [[system/text/knowledge-base-schema]]'
-  - 'part_of [[system/text/documentation]]'
 ---
 
 # Base System Design

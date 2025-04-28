@@ -3,6 +3,13 @@ title: Entity Relations
 type: text
 description: Documentation for standard entity relation types and their usage
 tags: [knowledge, relations, documentation]
+observations:
+  - '[design] Standardized relation types create a consistent semantic graph #knowledge-graph'
+  - '[implementation] Relations use a single canonical format #consistency'
+  - '[feature] Entity relationships are handled through a single mechanism #simplification'
+relations:
+  - 'relates_to [[system/text/knowledge-base-schema]]'
+  - 'part_of [[system/text/system-design]]'
 ---
 
 # Entity Relations
@@ -121,15 +128,3 @@ The following functions are available in the `entity-relations` module:
 
 - `get_canonical_relation_type(relation_type)`: Normalizes a relation type to its canonical form
 - `get_all_standard_relation_types()`: Returns all standard relation types
-
-## Observations
-
-- [design] Standardized relation types create a consistent semantic graph #knowledge-graph
-- [implementation] Relations use a single canonical format #consistency
-- [feature] Entity relationships are handled through a single mechanism #simplification
-
-## Relations
-
-- relates_to [[system/text/knowledge-base-schema]]
-- part_of [[system/text/system-design]]
-- implements [[system/text/knowledge-graph]]

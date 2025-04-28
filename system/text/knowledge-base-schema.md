@@ -3,6 +3,12 @@ title: Knowledge Base Schema
 type: text
 description: Documentation for the knowledge base schema architecture and extension mechanisms
 tags: [knowledge, schema, documentation]
+observations:
+  - '[design] Knowledge base schema is a dual-system architecture #design'
+  - '[implementation] System schema is in system/schema and user schema is in data/schema #implementation'
+  - '[feature] Schema extensions allow for user-specific customization #customization'
+relations:
+  - 'relates_to [[system/text/system-design]]'
 ---
 
 # Knowledge Base Schema
@@ -150,15 +156,3 @@ The knowledge base supports the following content types. See the actual schema f
 - [Type Definition](../schema/type_definition.md) - Defines structure of content types
 - [Type Extension](../schema/type_extension.md) - Adds properties to existing types
 - [Prompt](../schema/prompt.md) - Structured input for models, used to guide response generation
-
-## Observations
-
-- [architecture] Dual knowledge base system separates core schema from user extensions #design
-- [format] Markdown with YAML frontmatter provides a balance of structure and readability #implementation
-- [feature] Semantic observations and relations create a rich knowledge graph #connectivity
-
-## Relations
-
-- implements [[system/text/knowledge-format]]
-- relates_to [[system/text/system-design]]
-- part_of [[system/text/documentation]]

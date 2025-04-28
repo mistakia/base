@@ -10,7 +10,7 @@ observations:
 relations:
   - 'relates_to [[system/text/system-design]]'
   - 'relates_to [[system/text/knowledge-base-schema]]'
-  - 'defines [[system/schema/change_request]]'
+  - 'implements [[system/schema/change-request]]'
 ---
 
 # Change Request System Design

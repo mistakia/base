@@ -9,7 +9,6 @@ observations:
   - '[design] Organization follows separation of concerns principle #architecture'
 relations:
   - 'relates_to [[system/text/system-design]]'
-  - 'part_of [[system/text/documentation]]'
   - 'implements [[system/text/knowledge-base-schema]]'
 ---
 

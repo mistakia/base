@@ -30,7 +30,7 @@ export async function validate_relations_exist({
   const validation_results = await Promise.all(
     relations.map(async (relation) => {
       const exists = await entity_exists({
-        entity_path: relation.entity_path,
+        entity_path: `${relation.entity_path}.md`,
         user_branch,
         system_branch
       })

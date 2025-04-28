@@ -10,7 +10,6 @@ observations:
   - '[design] Each thread is associated with a specific activity #organization'
 relations:
   - 'relates_to [[system/text/system-design]]'
-  - 'part_of [[system/text/documentation]]'
 ---
 
 # Execution Model: Base Threads

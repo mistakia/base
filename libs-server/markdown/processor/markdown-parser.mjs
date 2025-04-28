@@ -58,6 +58,18 @@ export async function parse_markdown_content({ file_path, content }) {
       throw new Error(`Type not specified in frontmatter for ${file_path}`)
     }
 
+    // Parse markdown content into tokens for reliable processing
+    const tokens = md.parse(body, {})
+
+    // Ensure parent references are set up correctly
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].children) {
+        for (let j = 0; j < tokens[i].children.length; j++) {
+          tokens[i].children[j].parent = tokens[i]
+        }
+      }
+    }
+
     // Render markdown to HTML
     const html = md.render(body)
 
@@ -81,7 +93,8 @@ export async function parse_markdown_content({ file_path, content }) {
       frontmatter: attributes,
       html,
       content: cleaned_content,
-      type: attributes.type
+      type: attributes.type,
+      tokens // Include tokens for accurate reference extraction
     }
   } catch (error) {
     log(`Error parsing markdown file: ${file_path}`, error)
