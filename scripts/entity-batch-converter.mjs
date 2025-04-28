@@ -5,10 +5,10 @@ import fs from 'fs/promises'
 import db from '#db'
 import config from '#config'
 import { isMain } from '#libs-server'
-import { generate_entity_file_from_database } from '#libs-server/markdown/entity-converter/index.mjs'
+import { batch_export_markdown_entities } from '#libs-server/markdown/entity-export/index.mjs'
 
 const log = debug('entity-batch-converter')
-debug.enable('entity-batch-converter,markdown:entity_converter:*')
+debug.enable('entity-batch-converter,markdown:entity_export:*')
 
 /**
  * Run the entity batch converter to export all entities from database to files
@@ -24,59 +24,29 @@ const run = async () => {
     const user_base_directory = config.user_base_directory
     await fs.mkdir(user_base_directory, { recursive: true })
 
-    const results = { success: [], failed: [] }
+    // Extract entity IDs for batch processing
+    const entity_ids = entities.map((entity) => entity.entity_id)
 
-    // Process each entity
-    for (const entity of entities) {
-      try {
-        log(`Processing entity: ${entity.entity_id} (${entity.title})`)
-
-        const result = await generate_entity_file_from_database({
-          entity_id: entity.entity_id,
-          user_base_directory,
-          overwrite: false
-        })
-
-        if (result.success) {
-          results.success.push({
-            entity_id: entity.entity_id,
-            file_path: result.file_path
-          })
-        } else {
-          results.failed.push({
-            entity_id: entity.entity_id,
-            error: result.message
-          })
-        }
-      } catch (error) {
-        log(`Error processing entity ${entity.entity_id}: ${error.message}`)
-        results.failed.push({
-          entity_id: entity.entity_id,
-          error: error.message
-        })
-      }
-    }
+    // Process entities in batch
+    const results = await batch_export_markdown_entities({
+      entity_ids,
+      user_base_directory,
+      overwrite: false
+    })
 
     // Output results
     log('Batch conversion completed')
     console.log('-----------------------------')
-    console.log(`Total entities processed: ${entities.length}`)
-    console.log(`Successfully converted: ${results.success.length}`)
-    console.log(`Failed: ${results.failed.length}`)
-
-    // Show success details
-    if (results.success.length > 0) {
-      log('Successfully converted entities:')
-      results.success.forEach((success) => {
-        log(`- ${success.entity_id}: ${success.file_path}`)
-      })
-    }
+    console.log(`Total entities processed: ${results.total}`)
+    console.log(`Successfully converted: ${results.success}`)
+    console.log(`Skipped (already exist): ${results.skipped}`)
+    console.log(`Failed: ${results.errors.length}`)
 
     // Show failure details
-    if (results.failed.length > 0) {
+    if (results.errors.length > 0) {
       console.log('\nFailed conversions:')
-      results.failed.forEach((failure) => {
-        console.log(`- ${failure.entity_id}: ${failure.error}`)
+      results.errors.forEach((failure) => {
+        console.log(`- ${failure.entity_id}: ${failure.message}`)
       })
     }
   } catch (error) {

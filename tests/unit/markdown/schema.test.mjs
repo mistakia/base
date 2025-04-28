@@ -6,10 +6,10 @@ import { promisify } from 'util'
 import { exec } from 'child_process'
 
 import {
-  load_schema_definitions,
+  load_schema_definitions_from_git,
   build_validation_schema
-} from '#libs-server/markdown/schema.mjs'
-import { format_repository } from '#libs-server/markdown/index.mjs'
+} from '#libs-server/markdown/markdown-schema.mjs'
+import { format_repository } from '#libs-server/markdown/repository/index.mjs'
 import { get_current_branch } from '#libs-server/git/index.mjs'
 
 const execute = promisify(exec)
@@ -160,7 +160,7 @@ properties:
     }
   })
 
-  describe('load_schema_definitions', () => {
+  describe('load_schema_definitions_from_git', () => {
     it('should load schema definitions from repositories', async () => {
       // Setup temp repo paths for the test
       const system_repository = {
@@ -178,7 +178,7 @@ properties:
       }
 
       // Call the function with the test repositories
-      const result = await load_schema_definitions({
+      const result = await load_schema_definitions_from_git({
         system_repository,
         user_repository
       })
@@ -199,7 +199,10 @@ properties:
       // Check detailed structure of the task schema
       expect(result.task).to.have.property('type', 'type_definition')
       expect(result.task).to.have.property('name', 'task')
-      expect(result.task).to.have.property('source_file', 'schema/task.md')
+      expect(result.task).to.have.property(
+        'git_relative_path',
+        'schema/task.md'
+      )
       expect(result.task.properties.status).to.have.property('type', 'string')
       expect(result.task.properties.status.enum).to.include('In Progress')
       expect(result.task.properties.status.enum).to.include('Completed')
@@ -222,14 +225,17 @@ properties:
         'task_extension'
       )
       expect(result.task.extensions[0]).to.have.property(
-        'source_file',
+        'git_relative_path',
         'schema/task-extension.md'
       )
 
       // Check detailed structure of the person schema
       expect(result.person).to.have.property('type', 'type_definition')
       expect(result.person).to.have.property('name', 'person')
-      expect(result.person).to.have.property('source_file', 'schema/person.md')
+      expect(result.person).to.have.property(
+        'git_relative_path',
+        'schema/person.md'
+      )
       expect(result.person.properties.first_name).to.have.property(
         'type',
         'string'
@@ -260,7 +266,7 @@ properties:
       })
 
       // Call the function with invalid repositories
-      const result = await load_schema_definitions({
+      const result = await load_schema_definitions_from_git({
         system_repository,
         user_repository
       })
@@ -301,7 +307,7 @@ properties:
 
       try {
         // Call the function
-        const result = await load_schema_definitions({
+        const result = await load_schema_definitions_from_git({
           system_repository,
           user_repository
         })

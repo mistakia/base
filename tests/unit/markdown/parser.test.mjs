@@ -1,10 +1,9 @@
 import { expect } from 'chai'
-import {
-  parse_markdown,
-  parse_schema_file
-} from '#libs-server/markdown/parser.mjs'
+import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
+import { process_markdown_schema_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
 import { get_current_branch } from '#libs-server/git/index.mjs'
 import path from 'path'
+import fs from 'fs/promises'
 
 describe('Markdown Parser', () => {
   // Store current branch
@@ -15,19 +14,15 @@ describe('Markdown Parser', () => {
     current_system_branch = await get_current_branch('.')
   })
 
-  describe('parse_markdown', () => {
+  describe('parse_markdown_content', () => {
     it('should parse markdown with frontmatter correctly', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'system/schema/task.md',
-        git_path: 'system/schema/task.md',
-        absolute_path: path.resolve('system/schema/task.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
+      const file_path = 'system/schema/task.md'
 
-      // Call function
-      const result = await parse_markdown(file_info)
+      // Read file content
+      const content = await fs.readFile(file_path, 'utf-8')
+
+      // Call function with content and file_path
+      const result = await parse_markdown_content({ content, file_path })
 
       // Verify results
       expect(result.frontmatter.title).to.equal('Task')
@@ -38,22 +33,18 @@ describe('Markdown Parser', () => {
         'Tasks represent discrete units of work'
       )
       expect(result.type).to.equal('type_definition')
-      expect(result.file_info).to.equal(file_info)
+      expect(result.file_path).to.equal(file_path)
     })
 
     it('should throw error if type is not specified', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'tests/fixtures/no-type.md',
-        git_path: 'tests/fixtures/no-type.md',
-        absolute_path: path.resolve('tests/fixtures/no-type.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
+      const file_path = 'tests/fixtures/no-type.md'
+
+      // Read file content
+      const content = await fs.readFile(file_path, 'utf-8')
 
       // Call function and expect it to throw
       try {
-        await parse_markdown(file_info)
+        await parse_markdown_content({ content, file_path })
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error.message).to.include('Type not specified in frontmatter')
@@ -61,57 +52,27 @@ describe('Markdown Parser', () => {
     })
 
     it('should infer type for schema files', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'system/schema/person.md',
-        git_path: 'system/schema/person.md',
-        absolute_path: path.resolve('system/schema/person.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
+      const file_path = 'system/schema/person.md'
 
-      // Call function
-      const result = await parse_markdown(file_info)
+      // Read file content
+      const content = await fs.readFile(file_path, 'utf-8')
+
+      // Call function with content and file_path
+      const result = await parse_markdown_content({ content, file_path })
 
       // Verify results
       expect(result.frontmatter.type).to.equal('type_definition')
       expect(result.frontmatter.title).to.equal('Person')
       expect(result.type).to.equal('type_definition')
     })
-
-    it('should handle errors from file content retrieval', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'system/non-existent-file.md',
-        git_path: 'system/non-existent-file.md',
-        absolute_path: path.resolve('system/non-existent-file.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
-
-      // Call function and expect it to throw
-      try {
-        await parse_markdown(file_info)
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.message).to.equal('Failed to get file content')
-      }
-    })
   })
 
-  describe('parse_schema_file', () => {
+  describe('process_markdown_schema_from_file', () => {
     it('should parse a type definition schema file correctly', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'system/schema/task.md',
-        git_path: 'system/schema/task.md',
-        absolute_path: path.resolve('system/schema/task.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
-
       // Call function
-      const result = await parse_schema_file(file_info)
+      const result = await process_markdown_schema_from_file({
+        absolute_path: path.resolve('system/schema/task.md')
+      })
 
       // Verify results
       expect(result.frontmatter.type).to.equal('type_definition')
@@ -135,17 +96,10 @@ describe('Markdown Parser', () => {
     })
 
     it('should handle type extension schema files correctly', async () => {
-      const file_info = {
-        repo_path: '.',
-        file_path: 'system/schema/type-extension.md',
-        git_path: 'system/schema/type-extension.md',
-        absolute_path: path.resolve('system/schema/type-extension.md'),
-        git_sha: 'test-sha',
-        branch: current_system_branch
-      }
-
       // Call function
-      const result = await parse_schema_file(file_info)
+      const result = await process_markdown_schema_from_file({
+        absolute_path: path.resolve('system/schema/type-extension.md')
+      })
 
       // Verify results
       expect(result.frontmatter.type).to.equal('type_definition')

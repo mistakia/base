@@ -17,6 +17,8 @@ import {
   update_entity
 } from './delete-entity.mjs'
 
+import entity_exists from './entity-exists.mjs'
+
 // Re-export with clear namespaces
 export {
   // Creation functions
@@ -35,7 +37,10 @@ export {
   delete_entity_tags,
 
   // Update functions
-  update_entity
+  update_entity,
+
+  // Entity existence functions
+  entity_exists
 }
 
 // Default export

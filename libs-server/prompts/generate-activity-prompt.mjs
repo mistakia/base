@@ -1,6 +1,6 @@
 import debug from 'debug'
 import fs from 'fs/promises'
-import { parse_markdown } from '#libs-server/markdown/index.mjs'
+import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 import { resolve_activity_path } from '#libs-server/activities/index.mjs'
 
 const log = debug('prompts:activity')
@@ -35,10 +35,13 @@ export default async function generate_activity_prompt({
 
     // Read and parse the activity markdown file
     const activity_content = await fs.readFile(file_path, 'utf-8')
-    const parsed_activity = await parse_markdown(activity_content)
+    const parsed_markdown = await parse_markdown_content({
+      content: activity_content,
+      file_path
+    })
 
     // Extract activity frontmatter and content
-    const { frontmatter, content } = parsed_activity
+    const { frontmatter, content } = parsed_markdown
 
     // Format as a structured activity prompt
     let prompt = `Role: ${frontmatter.title}\n\n`

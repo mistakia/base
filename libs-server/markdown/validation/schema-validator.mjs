@@ -1,8 +1,9 @@
 import Validator from 'fastest-validator'
-import schema_module from './schema.mjs'
 import debug from 'debug'
 
-const log = debug('markdown:validator')
+import { build_validation_schema } from '#libs-server/markdown/markdown-schema.mjs'
+
+const log = debug('markdown:schema-validator')
 
 const v = new Validator({
   useNewCustomCheckerFunction: true, // Enable new custom validator feature
@@ -15,18 +16,28 @@ const v = new Validator({
 
 /**
  * Validate entity against schema
- * @param {Object} parsed_data Parsed markdown data
- * @param {Object} schemas Schema definitions map
+ * @param {Object} params - Parameters
+ * @param {Object} params.formatted_markdown_entity - Formatted markdown data
+ * @param {Object} params.schemas - Schema definitions map
  * @returns {Object} Validation result {valid, errors?}
  */
-export function validate_entity(parsed_data, schemas) {
+export function validate_markdown_entity_schema({
+  formatted_markdown_entity,
+  schemas
+}) {
   // Validate inputs
-  if (!parsed_data || typeof parsed_data !== 'object') {
-    throw new Error('parsed_data must be an object')
+  if (
+    !formatted_markdown_entity ||
+    typeof formatted_markdown_entity !== 'object'
+  ) {
+    throw new Error('formatted_markdown_entity must be an object')
   }
 
-  if (!parsed_data.frontmatter || typeof parsed_data.frontmatter !== 'object') {
-    throw new Error('parsed_data must contain frontmatter object')
+  if (
+    !formatted_markdown_entity.frontmatter ||
+    typeof formatted_markdown_entity.frontmatter !== 'object'
+  ) {
+    throw new Error('formatted_markdown_entity must contain frontmatter object')
   }
 
   if (!schemas || typeof schemas !== 'object') {
@@ -34,14 +45,11 @@ export function validate_entity(parsed_data, schemas) {
     return { valid: true }
   }
 
-  const entity_type = parsed_data.frontmatter.type
-  const type_name = parsed_data.frontmatter.type_name
+  const entity_type = formatted_markdown_entity.frontmatter.type
+  const type_name = formatted_markdown_entity.frontmatter.type_name
 
   // Build validation schema
-  const validation_schema = schema_module.build_validation_schema(
-    entity_type,
-    schemas
-  )
+  const validation_schema = build_validation_schema(entity_type, schemas)
 
   if (!validation_schema) {
     log(`No schema found for entity type: ${entity_type}`)
@@ -85,7 +93,7 @@ export function validate_entity(parsed_data, schemas) {
 
   // Prepare data to validate
   const data_to_validate = {
-    ...parsed_data.frontmatter
+    ...formatted_markdown_entity.frontmatter
   }
 
   // Run validation
@@ -103,8 +111,4 @@ export function validate_entity(parsed_data, schemas) {
   }
 
   return { valid: true }
-}
-
-export default {
-  validate_entity
 }

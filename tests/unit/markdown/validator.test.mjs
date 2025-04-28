@@ -1,11 +1,11 @@
 import { expect } from 'chai'
-import { validate_entity } from '#libs-server/markdown/validator.mjs'
+import { validate_markdown_entity_schema } from '#libs-server/markdown/validation/schema-validator.mjs'
 
 describe('Markdown Validator', () => {
-  describe('validate_entity', () => {
+  describe('validate_markdown_entity_schema', () => {
     it('should validate a valid entity', () => {
       // Set up test data
-      const parsed_data = {
+      const formatted_markdown_entity = {
         frontmatter: {
           title: 'Test Task',
           type: 'task',
@@ -24,7 +24,10 @@ describe('Markdown Validator', () => {
       }
 
       // Call the function
-      const result = validate_entity(parsed_data, schemas)
+      const result = validate_markdown_entity_schema({
+        formatted_markdown_entity,
+        schemas
+      })
 
       // Verify results
       expect(result.valid).to.be.true
@@ -32,7 +35,7 @@ describe('Markdown Validator', () => {
 
     it('should return validation errors for an invalid entity', () => {
       // Set up test data
-      const parsed_data = {
+      const formatted_markdown_entity = {
         frontmatter: {
           title: 'Test Task',
           type: 'task',
@@ -51,7 +54,10 @@ describe('Markdown Validator', () => {
       }
 
       // Call the function
-      const result = validate_entity(parsed_data, schemas)
+      const result = validate_markdown_entity_schema({
+        formatted_markdown_entity,
+        schemas
+      })
 
       // Verify results
       expect(result.valid).to.be.false
@@ -69,7 +75,7 @@ describe('Markdown Validator', () => {
 
     it('should allow entity if no schema exists for its type', () => {
       // Set up test data
-      const parsed_data = {
+      const formatted_markdown_entity = {
         frontmatter: {
           title: 'Test Unknown Type',
           type: 'unknown_type',
@@ -86,7 +92,10 @@ describe('Markdown Validator', () => {
       }
 
       // Call the function
-      const result = validate_entity(parsed_data, schemas)
+      const result = validate_markdown_entity_schema({
+        formatted_markdown_entity,
+        schemas
+      })
 
       // Verify results - no schema for unknown_type, so should pass validation
       expect(result.valid).to.be.true

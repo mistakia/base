@@ -221,7 +221,7 @@ async function create_markdown_file({
   tags,
   repo_path
 }) {
-  const file_path = path.join(
+  const absolute_path = path.join(
     repo_path,
     `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
   )
@@ -250,9 +250,13 @@ async function create_markdown_file({
   const content = `# ${title}\n\n${description || ''}`
 
   // Ensure directory exists
-  const dir_path = path.dirname(file_path)
+  const dir_path = path.dirname(absolute_path)
   await fs.mkdir(dir_path, { recursive: true })
 
   // Write the file
-  await write_markdown_entity({ file_path, frontmatter, content })
+  await write_markdown_entity({
+    absolute_path,
+    frontmatter,
+    content
+  })
 }

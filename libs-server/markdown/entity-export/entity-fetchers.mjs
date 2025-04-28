@@ -1,8 +1,8 @@
 import debug from 'debug'
 import db from '#db'
-import { entity_registry } from './index.mjs'
+import { parse_json_if_possible } from '../shared/frontmatter-utils.mjs'
 
-const log = debug('markdown:entity_converter:data_fetchers')
+const log = debug('markdown:entity_export:data_fetchers')
 
 /**
  * Generic entity data fetcher to reduce duplication
@@ -10,32 +10,28 @@ const log = debug('markdown:entity_converter:data_fetchers')
  * @param {Object} params Fetcher parameters
  * @param {String} params.entity_id Entity ID
  * @param {Object} params.frontmatter Frontmatter object to populate
- * @param {String} params.entity_type Entity type for registry lookup
- * @param {String} [params.table_name] Optional override for table name
+ * @param {String} params.table_name Table name to query
  * @param {Array} [params.exclude_fields] Fields to exclude from frontmatter
  * @param {Function} [params.transformer] Optional function to transform values
  */
 export async function fetch_generic_entity_data({
   entity_id,
   frontmatter,
-  entity_type,
-  table_name = null,
+  table_name,
   exclude_fields = ['entity_id', 'search_vector'],
   transformer = null
 }) {
-  // Get table name from registry if not provided explicitly
-  const actual_table =
-    table_name ||
-    (entity_registry[entity_type] ? entity_registry[entity_type].table : null)
-
-  if (!actual_table) {
-    log(`No table name found for entity type: ${entity_type}`)
+  if (!table_name) {
+    log('No table name provided for entity data fetching')
     return false
   }
 
-  const entity_data = await db(actual_table).where({ entity_id }).first()
+  const entity_data = await db(table_name).where({ entity_id }).first()
 
-  if (!entity_data) return false
+  if (!entity_data) {
+    log(`No data found for entity ${entity_id} in table ${table_name}`)
+    return false
+  }
 
   // Add entity-specific fields to frontmatter
   Object.entries(entity_data).forEach(([key, value]) => {
@@ -53,26 +49,6 @@ export async function fetch_generic_entity_data({
 }
 
 /**
- * Parse JSON string value if possible
- * @param {String} key Field key
- * @param {any} value Field value
- * @returns {any} Parsed value or original
- */
-function json_parser(key, value) {
-  if (
-    typeof value === 'string' &&
-    (key === 'fields' || key === 'field_values' || key === 'table_state')
-  ) {
-    try {
-      return JSON.parse(value)
-    } catch (err) {
-      return value
-    }
-  }
-  return value
-}
-
-/**
  * Fetch task-specific data from database
  * @param {String} entity_id Entity ID
  * @param {Object} frontmatter Frontmatter object to populate
@@ -81,7 +57,7 @@ export async function fetch_task_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'task'
+    table_name: 'tasks'
   })
 }
 
@@ -94,7 +70,7 @@ export async function fetch_person_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'person'
+    table_name: 'persons'
   })
 }
 
@@ -107,7 +83,7 @@ export async function fetch_organization_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'organization'
+    table_name: 'organizations'
   })
 }
 
@@ -120,7 +96,7 @@ export async function fetch_physical_item_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'physical_item'
+    table_name: 'physical_items'
   })
 }
 
@@ -133,7 +109,7 @@ export async function fetch_physical_location_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'physical_location'
+    table_name: 'physical_locations'
   })
 }
 
@@ -146,7 +122,7 @@ export async function fetch_digital_item_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'digital_item'
+    table_name: 'digital_items'
   })
 }
 
@@ -159,7 +135,7 @@ export async function fetch_guideline_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'guideline'
+    table_name: 'guidelines'
   })
 }
 
@@ -169,12 +145,10 @@ export async function fetch_guideline_data(entity_id, frontmatter) {
  * @param {Object} frontmatter Frontmatter object to populate
  */
 export async function fetch_activity_data(entity_id, frontmatter) {
-  // Activity table doesn't have specific fields beyond entity_id
-  // Just verify the record exists
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'activity'
+    table_name: 'activities'
   })
 }
 
@@ -187,7 +161,7 @@ export async function fetch_tag_data(entity_id, frontmatter) {
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: 'tag'
+    table_name: 'tags'
   })
 }
 
@@ -198,10 +172,42 @@ export async function fetch_tag_data(entity_id, frontmatter) {
  * @param {String} type Specific database type (database, database_item, database_view)
  */
 export async function fetch_database_data(entity_id, frontmatter, type) {
+  // Determine table name based on type
+  let table_name
+
+  switch (type) {
+    case 'database':
+      table_name = 'database_tables'
+      break
+    case 'database_item':
+      table_name = 'database_table_items'
+      break
+    case 'database_view':
+      table_name = 'database_table_views'
+      break
+    default:
+      throw new Error(`Unknown database type: ${type}`)
+  }
+
+  // Use JSON parser transformer for specific fields
   await fetch_generic_entity_data({
     entity_id,
     frontmatter,
-    entity_type: type,
-    transformer: json_parser
+    table_name,
+    transformer: parse_json_if_possible
   })
+}
+
+export default {
+  fetch_generic_entity_data,
+  fetch_task_data,
+  fetch_person_data,
+  fetch_organization_data,
+  fetch_physical_item_data,
+  fetch_physical_location_data,
+  fetch_digital_item_data,
+  fetch_guideline_data,
+  fetch_activity_data,
+  fetch_tag_data,
+  fetch_database_data
 }

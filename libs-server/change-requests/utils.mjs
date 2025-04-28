@@ -8,10 +8,8 @@
 import * as git_ops from '#libs-server/git/index.mjs'
 import config from '#config'
 import debug from 'debug'
-import {
-  read_markdown_entity,
-  write_markdown_entity
-} from '#libs-server/markdown/index.mjs'
+import { write_markdown_entity } from '#libs-server/markdown/file-operations/write.mjs'
+import { process_markdown_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -230,12 +228,14 @@ export async function update_markdown_file({
 
   // Build the file path using repo_path if provided
   const relative_file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-  const file_path = repo_path
+  const absolute_path = repo_path
     ? path.join(repo_path, relative_file_path)
     : relative_file_path
 
   try {
-    const markdown_data = await read_markdown_entity(file_path)
+    const markdown_data = await process_markdown_from_file({
+      absolute_path
+    })
 
     // Update frontmatter explicitly
     const new_frontmatter = {
@@ -266,7 +266,7 @@ export async function update_markdown_file({
 
     // Write updated content
     await write_markdown_entity({
-      file_path,
+      absolute_path,
       frontmatter: new_frontmatter,
       content
     })

@@ -18,8 +18,8 @@ properties:
     type: array
     items:
       type: string
-    required: true
-    description: Activities this guideline applies to
+    optional: true
+    description: List of activity_ids that this guideline applies to
   - name: globs
     type: array
     items:

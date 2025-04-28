@@ -126,8 +126,9 @@ describe('Change Requests', function () {
       expect(file_exists).to.be.true
 
       // Check markdown content
-      const markdown_content =
-        await markdown.read_markdown_entity(markdown_file_path)
+      const markdown_content = await markdown.process_markdown_from_file({
+        absolute_path: markdown_file_path
+      })
       expect(markdown_content.frontmatter.title).to.equal(
         'Test Change Request From Existing Branch'
       )

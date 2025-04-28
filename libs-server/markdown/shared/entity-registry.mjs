@@ -1,5 +1,3 @@
-import { generate_database_from_entity_file } from './to-database.mjs'
-import { generate_entity_file_from_database } from './from-database.mjs'
 import {
   handle_generic_entity_type,
   handle_task_type,
@@ -12,7 +10,7 @@ import {
   handle_activity_type,
   handle_tag_type,
   handle_database_type
-} from './entity-type-handlers.mjs'
+} from '../entity-import/entity-handlers.mjs'
 
 import {
   fetch_generic_entity_data,
@@ -26,15 +24,7 @@ import {
   fetch_activity_data,
   fetch_tag_data,
   fetch_database_data
-} from './entity-data-fetchers.mjs'
-
-import { handle_relations, add_entity_relations } from './relation-handler.mjs'
-
-// Main conversion functions
-export {
-  generate_database_from_entity_file,
-  generate_entity_file_from_database
-}
+} from '../entity-export/entity-fetchers.mjs'
 
 // Comprehensive entity type registry
 export const entity_registry = {
@@ -107,34 +97,4 @@ export const entity_registry = {
   }
 }
 
-// Entity type handlers (for backward compatibility)
-export const entity_type_handlers = Object.entries(entity_registry).reduce(
-  (handlers, [type, config]) => ({
-    ...handlers,
-    [type]: config.handle
-  }),
-  { relations: handle_relations }
-)
-
-// Entity data fetchers (for backward compatibility)
-export const entity_data_fetchers = Object.entries(entity_registry).reduce(
-  (fetchers, [type, config]) => ({
-    ...fetchers,
-    [type]: config.fetch
-  }),
-  {}
-)
-
-// Relation handlers
-export const relation_handlers = {
-  handle: handle_relations,
-  add: add_entity_relations
-}
-
-// Default export with organized structure
-export default {
-  to_database: generate_database_from_entity_file,
-  from_database: generate_entity_file_from_database,
-  entity_registry,
-  relation_handlers
-}
+export default entity_registry
