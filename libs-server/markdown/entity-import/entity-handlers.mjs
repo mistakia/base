@@ -1,4 +1,5 @@
 import debug from 'debug'
+import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 const log = debug('markdown:entity_import:type_handlers')
 
@@ -23,11 +24,23 @@ export async function handle_task_type(trx, entity_id, frontmatter) {
   // Handle task-specific fields
   const task_data = {
     entity_id,
-    status: frontmatter.status || 'not_started',
-    priority: frontmatter.priority || 'medium',
-    due_date: frontmatter.due_date || null,
+    status: frontmatter.status || TASK_STATUS.NO_STATUS,
+    priority: frontmatter.priority || TASK_PRIORITY.MEDIUM,
     assigned_to: frontmatter.assigned_to || null,
-    completion_date: frontmatter.completion_date || null
+    start_by: frontmatter.start_by || null,
+    finish_by: frontmatter.finish_by || null,
+    estimated_total_duration: frontmatter.estimated_total_duration || null,
+    estimated_preparation_duration:
+      frontmatter.estimated_preparation_duration || null,
+    estimated_execution_duration:
+      frontmatter.estimated_execution_duration || null,
+    estimated_cleanup_duration: frontmatter.estimated_cleanup_duration || null,
+    actual_duration: frontmatter.actual_duration || null,
+    planned_start: frontmatter.planned_start || null,
+    planned_finish: frontmatter.planned_finish || null,
+    started_at: frontmatter.started_at || null,
+    finished_at: frontmatter.finished_at || null,
+    snooze_until: frontmatter.snooze_until || null
   }
 
   // Upsert task data
@@ -44,10 +57,11 @@ export async function handle_person_type(trx, entity_id, frontmatter) {
   // Handle person-specific fields
   const person_data = {
     entity_id,
+    first_name: frontmatter.first_name || '',
+    last_name: frontmatter.last_name || '',
     email: frontmatter.email || null,
-    phone: frontmatter.phone || null,
-    role: frontmatter.role || null,
-    organization: frontmatter.organization || null
+    mobile_phone: frontmatter.mobile_phone || null,
+    website_url: frontmatter.website_url || null
   }
 
   // Upsert person data
@@ -64,10 +78,7 @@ export async function handle_organization_type(trx, entity_id, frontmatter) {
   // Handle organization-specific fields
   const organization_data = {
     entity_id,
-    website: frontmatter.website || null,
-    contact_email: frontmatter.contact_email || null,
-    contact_phone: frontmatter.contact_phone || null,
-    address: frontmatter.address || null
+    website_url: frontmatter.website_url || null
   }
 
   // Upsert organization data
@@ -87,10 +98,56 @@ export async function handle_physical_item_type(trx, entity_id, frontmatter) {
   // Handle physical item-specific fields
   const physical_item_data = {
     entity_id,
-    location: frontmatter.location || null,
     serial_number: frontmatter.serial_number || null,
-    purchase_date: frontmatter.purchase_date || null,
-    warranty_info: frontmatter.warranty_info || null
+    model_number: frontmatter.model_number || null,
+    manufacturer: frontmatter.manufacturer || null,
+    storage_location: frontmatter.storage_location || null,
+    acquisition_date: frontmatter.acquisition_date || null,
+    target_location: frontmatter.target_location || null,
+    current_location: frontmatter.current_location || null,
+    home_areas: Array.isArray(frontmatter.home_areas)
+      ? frontmatter.home_areas
+      : null,
+    home_attribute: Array.isArray(frontmatter.home_attribute)
+      ? frontmatter.home_attribute
+      : null,
+    activities: Array.isArray(frontmatter.activities)
+      ? frontmatter.activities
+      : null,
+    importance: frontmatter.importance || null,
+    frequency_of_use: frontmatter.frequency_of_use || null,
+    height_inches: frontmatter.height_inches || null,
+    width_inches: frontmatter.width_inches || null,
+    depth_inches: frontmatter.depth_inches || null,
+    weight_ounces: frontmatter.weight_ounces || null,
+    volume_cubic_inches: frontmatter.volume_cubic_inches || null,
+    voltage: frontmatter.voltage || null,
+    wattage: frontmatter.wattage || null,
+    outlets_used: frontmatter.outlets_used || null,
+    water_connection: frontmatter.water_connection || null,
+    drain_connection: frontmatter.drain_connection || null,
+    ethernet_connected: frontmatter.ethernet_connected || null,
+    min_storage_temperature_celsius:
+      frontmatter.min_storage_temperature_celsius || null,
+    max_storage_temperature_celsius:
+      frontmatter.max_storage_temperature_celsius || null,
+    min_storage_humidity_percent:
+      frontmatter.min_storage_humidity_percent || null,
+    max_storage_humidity_percent:
+      frontmatter.max_storage_humidity_percent || null,
+    exist: frontmatter.exist,
+    current_quantity: frontmatter.current_quantity || null,
+    target_quantity: frontmatter.target_quantity || null,
+    consumable: frontmatter.consumable,
+    perishable: frontmatter.perishable,
+    kit_name: frontmatter.kit_name || null,
+    kit_items: Array.isArray(frontmatter.kit_items)
+      ? frontmatter.kit_items
+      : null,
+    large_drawer_units: frontmatter.large_drawer_units || null,
+    standard_drawer_units: frontmatter.standard_drawer_units || null,
+    storage_notes: frontmatter.storage_notes || null,
+    misc_notes: frontmatter.misc_notes || null
   }
 
   // Upsert physical item data
@@ -114,10 +171,22 @@ export async function handle_physical_location_type(
   // Handle physical location-specific fields
   const physical_location_data = {
     entity_id,
-    address: frontmatter.address || null,
-    coordinates: frontmatter.coordinates || null,
-    hours: frontmatter.hours || null,
-    contact_info: frontmatter.contact_info || null
+    latitude: frontmatter.latitude || null,
+    longitude: frontmatter.longitude || null,
+    mail_address: frontmatter.mail_address || null,
+    mail_address2: frontmatter.mail_address2 || null,
+    mail_careof: frontmatter.mail_careof || null,
+    mail_street_number: frontmatter.mail_street_number || null,
+    mail_street_prefix: frontmatter.mail_street_prefix || null,
+    mail_street_name: frontmatter.mail_street_name || null,
+    mail_street_type: frontmatter.mail_street_type || null,
+    mail_street_suffix: frontmatter.mail_street_suffix || null,
+    mail_unit_number: frontmatter.mail_unit_number || null,
+    mail_city: frontmatter.mail_city || null,
+    mail_state: frontmatter.mail_state || null,
+    mail_zip: frontmatter.mail_zip || null,
+    mail_country: frontmatter.mail_country || null,
+    mail_urbanization: frontmatter.mail_urbanization || null
   }
 
   // Upsert physical location data
@@ -137,10 +206,12 @@ export async function handle_digital_item_type(trx, entity_id, frontmatter) {
   // Handle digital item-specific fields
   const digital_item_data = {
     entity_id,
-    url: frontmatter.url || null,
-    access_info: frontmatter.access_info || null,
-    version: frontmatter.version || null,
-    created_date: frontmatter.created_date || null
+    file_mime_type: frontmatter.file_mime_type || null,
+    file_uri: frontmatter.file_uri || null,
+    file_size: frontmatter.file_size || null,
+    file_cid: frontmatter.file_cid || null,
+    text: frontmatter.text || null,
+    html: frontmatter.html || null
   }
 
   // Upsert digital item data
@@ -160,10 +231,8 @@ export async function handle_guideline_type(trx, entity_id, frontmatter) {
   // Handle guideline-specific fields
   const guideline_data = {
     entity_id,
-    domain: frontmatter.domain || null,
-    category: frontmatter.category || null,
-    status: frontmatter.status || 'draft',
-    version: frontmatter.version || '1.0'
+    guideline_status: frontmatter.guideline_status || null,
+    effective_date: frontmatter.effective_date || null
   }
 
   // Upsert guideline data
@@ -179,11 +248,7 @@ export async function handle_guideline_type(trx, entity_id, frontmatter) {
 export async function handle_activity_type(trx, entity_id, frontmatter) {
   // Handle activity-specific fields
   const activity_data = {
-    entity_id,
-    start_date: frontmatter.start_date || null,
-    end_date: frontmatter.end_date || null,
-    location: frontmatter.location || null,
-    status: frontmatter.status || 'planned'
+    entity_id
   }
 
   // Upsert activity data

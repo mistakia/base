@@ -66,10 +66,9 @@ export async function import_markdown_entity(
     git_sha: file_info.git_sha
   }
 
-  // Use transaction wrapper to handle the database operations
-  return await with_transaction(async (trx) => {
-    let entity_id
-
+  // Step 1: Insert/update entity in its own transaction
+  let entity_id
+  await with_transaction(async (trx) => {
     // Insert or update based on whether it exists
     if (existing) {
       // Only update if git sha is different or force_update is true
@@ -84,6 +83,7 @@ export async function import_markdown_entity(
       } else {
         entity_id = existing.entity_id
         log(`Entity unchanged: ${entity_data.title}`)
+        // Early return, nothing else to do
         return entity_id
       }
     } else {
@@ -98,9 +98,11 @@ export async function import_markdown_entity(
       entity_id = new_entity.entity_id
       log(`Created new entity: ${entity_data.title}`)
     }
+  })
 
-    // If we have entity metadata from the JS processor, use it instead of relying on DB triggers
-    if (entity_metadata) {
+  // Step 2: Call handler and process relations in a new transaction
+  if (entity_metadata) {
+    await with_transaction(async (trx) => {
       // Handle type-specific data using entity registry
       if (entity_registry[type]) {
         const handler = entity_registry[type].handle
@@ -115,10 +117,10 @@ export async function import_markdown_entity(
 
       // Process relations, tags, and observations
       await process_entity_relations(trx, entity_id, user_id, entity_metadata)
-    }
+    })
+  }
 
-    return entity_id
-  })
+  return entity_id
 }
 
 /**

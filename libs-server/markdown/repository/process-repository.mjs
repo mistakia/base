@@ -110,7 +110,11 @@ export async function process_repositories_from_git(options = {}) {
 
       // Run custom file processor if provided
       if (options.process_file) {
-        const result = await options.process_file(formatted_markdown_entity)
+        const result = await options.process_file({
+          formatted_markdown_entity,
+          file,
+          schemas
+        })
         if (result === false) {
           skipped++
         } else {
@@ -120,6 +124,8 @@ export async function process_repositories_from_git(options = {}) {
         processed++
       }
     } catch (error) {
+      console.log(error)
+      console.log(file)
       file.errors.push(error.message)
       has_errors = true
     }

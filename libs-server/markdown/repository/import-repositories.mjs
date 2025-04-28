@@ -26,7 +26,7 @@ export async function import_repositories_from_git(options, user_id) {
 
   const result = await process_repositories_from_git({
     ...options,
-    process_file: async (formatted_markdown_entity) => {
+    process_file: async ({ formatted_markdown_entity, schemas }) => {
       // Check if entity processing was successful
       if (formatted_markdown_entity.valid) {
         // Import the processed entity to the database
@@ -36,7 +36,7 @@ export async function import_repositories_from_git(options, user_id) {
           user_id,
           {
             force_update: options.force_update,
-            schemas: result.schemas
+            schemas
           }
         )
         return true
@@ -50,6 +50,12 @@ export async function import_repositories_from_git(options, user_id) {
     }
   })
 
+  result.files.forEach((file) => {
+    file.errors.forEach((error) => {
+      console.log(error)
+    })
+  })
+
   // Archive entities that no longer exist if enabled
   const removed = await remove_stale_entities(
     result.files, // Pass all scanned files for cleanup
@@ -59,7 +65,7 @@ export async function import_repositories_from_git(options, user_id) {
   return {
     imported: result.processed,
     skipped: result.skipped,
-    errors: result.errors.length,
+    errors: result.errors,
     removed
   }
 }

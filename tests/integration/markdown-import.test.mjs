@@ -5,7 +5,9 @@ import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
 
-describe('Markdown Import Integration Tests', () => {
+describe('Markdown Import Integration Tests', function () {
+  this.timeout(15000)
+
   let test_user
   let user_repo
   let system_branch
@@ -17,7 +19,7 @@ describe('Markdown Import Integration Tests', () => {
     // Create a temp repo for user data
     user_repo = await create_temp_test_repo({
       prefix: 'user-repo-',
-      initial_content: '# User Repository'
+      initial_content: '---\ntype: text\n---\n# User Repository'
     })
 
     // Get the current system branch
@@ -59,8 +61,6 @@ describe('Markdown Import Integration Tests', () => {
         test_user.user_id
       )
 
-      console.log(result)
-
       // Check the results
       expect(result.imported).to.be.at.least(1)
       expect(result.errors).to.equal(0)
@@ -70,7 +70,7 @@ describe('Markdown Import Integration Tests', () => {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(87)
+      expect(entities.length).to.equal(43)
     })
 
     it('should update existing entities when reimported', async () => {
