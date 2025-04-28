@@ -84,7 +84,12 @@ describe('Change Requests API', () => {
 
       // Now get the CR by ID
       const get_response = await authenticate_request(
-        chai.request(server).get(`/api/change-requests/${change_request_id}`),
+        chai
+          .request(server)
+          .get(`/api/change-requests/${change_request_id}`)
+          .query({
+            repo_path: test_thread.user_base_directory
+          }),
         test_user
       )
 
@@ -135,7 +140,9 @@ describe('Change Requests API', () => {
 
       // Get list of CRs
       const response = await authenticate_request(
-        chai.request(server).get('/api/change-requests'),
+        chai.request(server).get('/api/change-requests').query({
+          repo_path: test_thread.user_base_directory
+        }),
         test_user
       )
 
