@@ -1,13 +1,10 @@
 import { promisify } from 'util'
 import { exec } from 'child_process'
-import debug from 'debug'
 import fs from 'fs'
 import path from 'path'
 
-export const log = debug('git')
-
 // Explicitly provide the shell path in the options and verify the working directory exists
-export const execute = (cmd, options = {}) => {
+export const execute_shell_command = (cmd, options = {}) => {
   // Check if cwd exists
   if (options.cwd) {
     const cwd_path = path.resolve(options.cwd)
@@ -19,9 +16,4 @@ export const execute = (cmd, options = {}) => {
   return promisify(exec)(cmd, {
     ...options
   })
-}
-
-export default {
-  log,
-  execute
 }

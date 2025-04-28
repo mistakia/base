@@ -11,6 +11,7 @@ import debug from 'debug'
 
 import * as git from '#libs-server/git/index.mjs'
 import { get_target_branch } from '#libs-server/base-files/branch-utils.mjs'
+import { ensure_directory } from '#libs-server/filesystem/ensure-directory.mjs'
 
 const log = debug('files:write')
 
@@ -108,7 +109,7 @@ export async function write_file({
       } else if (content !== undefined) {
         // Handle file creation or complete replacement
         const full_file_path = path.join(worktree_path, file_path)
-        await git.ensure_directory(path.dirname(full_file_path))
+        await ensure_directory(path.dirname(full_file_path))
         await fs.writeFile(full_file_path, content)
         await git.add_files({
           worktree_path,

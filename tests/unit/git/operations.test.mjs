@@ -356,12 +356,4 @@ describe('Git Operations', function () {
     const is_sub = await git.is_submodule('data')
     expect(is_sub).to.be.true
   })
-
-  it('should ensure a directory exists', async function () {
-    const test_dir = path.join(test_repo_path, 'nested/test/dir')
-    await git.ensure_directory(test_dir)
-
-    const stats = await fs.stat(test_dir)
-    expect(stats.isDirectory()).to.be.true
-  })
 })

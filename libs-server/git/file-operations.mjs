@@ -1,7 +1,11 @@
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:file-operations')
 
 /**
  * Apply a patch to a file
@@ -18,7 +22,9 @@ export async function apply_patch({ repo_path, patch_content }) {
 
     try {
       log(`Applying patch ${patch_file} to ${repo_path}`)
-      await execute(`git apply --index ${patch_file}`, { cwd: repo_path })
+      await execute_shell_command(`git apply --index ${patch_file}`, {
+        cwd: repo_path
+      })
       return true
     } finally {
       // Clean up the patch file
@@ -46,7 +52,9 @@ export async function delete_file({ repo_path, file_path, force = false }) {
     log(`Deleting file ${file_path} in ${repo_path}${force ? ' (forced)' : ''}`)
 
     // Use git rm to both delete the file and stage the deletion
-    await execute(`git rm${force_flag} ${file_path}`, { cwd: repo_path })
+    await execute_shell_command(`git rm${force_flag} ${file_path}`, {
+      cwd: repo_path
+    })
     return true
   } catch (error) {
     log(`Failed to delete file ${file_path}:`, error)
@@ -83,7 +91,7 @@ export async function generate_patch({
     // Generate diff
     try {
       log(`Generating diff for ${file_path} in ${temp_dir}`)
-      const { stdout } = await execute(
+      const { stdout } = await execute_shell_command(
         `diff -u --label "a/${file_path}" --label "b/${file_path}" original modified`,
         { cwd: temp_dir }
       )
@@ -112,9 +120,12 @@ export async function generate_patch({
 export async function read_file_from_ref({ repo_path, ref, file_path }) {
   try {
     log(`Reading file ${file_path} from ${ref} in ${repo_path}`)
-    const { stdout } = await execute(`git show ${ref}:${file_path}`, {
-      cwd: repo_path
-    })
+    const { stdout } = await execute_shell_command(
+      `git show ${ref}:${file_path}`,
+      {
+        cwd: repo_path
+      }
+    )
     return stdout
   } catch (error) {
     log(`Failed to read file ${file_path} from ${ref}:`, error)
@@ -140,7 +151,7 @@ export async function list_files({
   try {
     const pattern = path_pattern ? `-- ${path_pattern}` : ''
     log(`Listing files for ${ref} in ${repo_path} with pattern ${path_pattern}`)
-    const { stdout } = await execute(
+    const { stdout } = await execute_shell_command(
       `git ls-tree -r --name-only ${ref} ${pattern}`,
       {
         cwd: repo_path

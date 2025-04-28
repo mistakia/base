@@ -1,4 +1,8 @@
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:commit-operations')
 
 /**
  * Stage files in the repository/worktree
@@ -13,7 +17,9 @@ export async function add_files({ worktree_path, files_to_add }) {
       ? files_to_add.join(' ')
       : files_to_add
     log(`Staging files: ${files_string} in ${worktree_path}`)
-    await execute(`git add ${files_string}`, { cwd: worktree_path })
+    await execute_shell_command(`git add ${files_string}`, {
+      cwd: worktree_path
+    })
     return true
   } catch (error) {
     log(`Failed to stage files in ${worktree_path}:`, error)
@@ -44,7 +50,7 @@ export async function commit_changes({
     if (author) {
       command += ` --author="${author.replace(/"/g, '\\"')}"` // Escape double quotes in author
     }
-    await execute(command, { cwd: worktree_path })
+    await execute_shell_command(command, { cwd: worktree_path })
     return true
   } catch (error) {
     // Check if the error is because there's nothing to commit

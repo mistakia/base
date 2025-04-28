@@ -1,6 +1,10 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:search-operations')
 
 /**
  * Get diff between two git references
@@ -38,7 +42,7 @@ export async function get_diff({
     log(
       `Getting diff between ${from_ref} and ${to_ref} in ${repo_path} with path filter ${path_filter}`
     )
-    const { stdout } = await execute(
+    const { stdout } = await execute_shell_command(
       `git diff ${format_option} ${from_ref} ${to_ref} ${path_filter}`,
       { cwd: repo_path }
     )
@@ -77,7 +81,7 @@ export async function search_repository({
       `Searching for "${query}" in reference "${git_ref}" in ${repo_path} ${path_filter ? `with path filter ${path_filter}` : ''}`
     )
 
-    const { stdout } = await execute(
+    const { stdout } = await execute_shell_command(
       `git grep ${case_option} -n -I --no-color "${query}" ${git_ref} ${path_filter}`,
       {
         cwd: repo_path,
@@ -193,7 +197,7 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
     // Check if both references exist
     try {
       // Try to get commit hashes in reverse chronological order
-      const { stdout: commit_output } = await execute(
+      const { stdout: commit_output } = await execute_shell_command(
         `git log --pretty=format:"%H|%an|%ae|%ad|%s" ${from_ref}..${to_ref}`,
         { cwd: repo_path }
       )
@@ -218,7 +222,7 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
       // For each commit, get the file changes
       for (const commit of commits) {
         // Get file changes for this specific commit
-        const { stdout: file_output } = await execute(
+        const { stdout: file_output } = await execute_shell_command(
           `git show --name-status ${commit.hash} --format=""`,
           { cwd: repo_path }
         )
@@ -240,7 +244,7 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
 
           // Get the actual diff for each file
           for (const file of files) {
-            const { stdout: diff_output } = await execute(
+            const { stdout: diff_output } = await execute_shell_command(
               `git show ${commit.hash} -- "${file.path}"`,
               { cwd: repo_path }
             )
@@ -306,7 +310,7 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
     }
 
     // Get commit details
-    const { stdout: commit_details } = await execute(
+    const { stdout: commit_details } = await execute_shell_command(
       `git show --format="%H|%an|%ae|%ad|%s" --no-patch ${commit_hash}`,
       { cwd: repo_path }
     )
@@ -330,7 +334,7 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
     }
 
     // Get file changes for this merge commit
-    const { stdout: file_output } = await execute(
+    const { stdout: file_output } = await execute_shell_command(
       `git show --name-status ${commit_hash} --format=""`,
       { cwd: repo_path }
     )
@@ -352,7 +356,7 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
 
       // Get the actual diff for each file
       for (const file of files) {
-        const { stdout: diff_output } = await execute(
+        const { stdout: diff_output } = await execute_shell_command(
           `git show ${commit_hash} -- "${file.path}"`,
           { cwd: repo_path }
         )

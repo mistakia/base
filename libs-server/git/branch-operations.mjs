@@ -1,4 +1,8 @@
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:branch-operations')
 
 /**
  * Get the current branch for a repository
@@ -8,9 +12,12 @@ import { log, execute } from './utils.mjs'
 export async function get_current_branch(repo_path = '.') {
   try {
     log(`Getting current branch for ${repo_path}`)
-    const { stdout } = await execute('git rev-parse --abbrev-ref HEAD', {
-      cwd: repo_path
-    })
+    const { stdout } = await execute_shell_command(
+      'git rev-parse --abbrev-ref HEAD',
+      {
+        cwd: repo_path
+      }
+    )
     return stdout.trim()
   } catch (error) {
     log(`Failed to get current branch for ${repo_path}:`, error)
@@ -34,9 +41,12 @@ export async function branch_exists({
   try {
     // Check local branches
     log(`Checking local branches for ${repo_path}`)
-    const { stdout: local_branches } = await execute('git branch --list', {
-      cwd: repo_path
-    })
+    const { stdout: local_branches } = await execute_shell_command(
+      'git branch --list',
+      {
+        cwd: repo_path
+      }
+    )
 
     const branch_pattern = new RegExp(`\\b${branch_name}\\b`)
     if (branch_pattern.test(local_branches)) {
@@ -46,9 +56,12 @@ export async function branch_exists({
     // Check remote branches if requested
     if (check_remote) {
       try {
-        await execute(`git ls-remote --heads origin ${branch_name}`, {
-          cwd: repo_path
-        })
+        await execute_shell_command(
+          `git ls-remote --heads origin ${branch_name}`,
+          {
+            cwd: repo_path
+          }
+        )
         return true
       } catch (error) {
         // If the command fails, the branch doesn't exist remotely
@@ -95,9 +108,12 @@ export async function create_branch({
     // First try to use the local branch directly
     try {
       log(`Creating branch ${branch_name} from local branch ${base_branch}`)
-      await execute(`git checkout -b ${branch_name} ${base_branch}`, {
-        cwd: repo_path
-      })
+      await execute_shell_command(
+        `git checkout -b ${branch_name} ${base_branch}`,
+        {
+          cwd: repo_path
+        }
+      )
       return true
     } catch (local_error) {
       log(`Failed to create from local branch: ${local_error.message}`)
@@ -105,16 +121,19 @@ export async function create_branch({
       // If local branch creation failed, try to see if we can access the remote
       try {
         // Check if remote exists and is accessible
-        const { stdout: remote_url } = await execute(
+        const { stdout: remote_url } = await execute_shell_command(
           'git remote get-url origin',
           { cwd: repo_path }
         )
         if (remote_url) {
           log(`Using remote origin to create branch ${branch_name}`)
-          await execute(`git fetch origin ${base_branch}`, { cwd: repo_path })
-          await execute(`git branch ${branch_name} origin/${base_branch}`, {
+          await execute_shell_command(`git fetch origin ${base_branch}`, {
             cwd: repo_path
           })
+          await execute_shell_command(
+            `git branch ${branch_name} origin/${base_branch}`,
+            { cwd: repo_path }
+          )
           return true
         }
       } catch (remote_error) {
@@ -126,7 +145,9 @@ export async function create_branch({
       if (base_branch !== 'HEAD') {
         try {
           log('Creating branch from HEAD as last resort')
-          await execute(`git checkout -b ${branch_name}`, { cwd: repo_path })
+          await execute_shell_command(`git checkout -b ${branch_name}`, {
+            cwd: repo_path
+          })
           return true
         } catch (head_error) {
           log(`Failed to create from HEAD: ${head_error.message}`)
@@ -154,7 +175,9 @@ export async function create_branch({
 export async function checkout_branch({ repo_path, branch_name }) {
   try {
     log(`Checking out branch ${branch_name} in ${repo_path}`)
-    await execute(`git checkout ${branch_name}`, { cwd: repo_path })
+    await execute_shell_command(`git checkout ${branch_name}`, {
+      cwd: repo_path
+    })
     return true
   } catch (error) {
     log(`Failed to checkout branch ${branch_name}:`, error)
@@ -186,7 +209,7 @@ export async function merge_branch({
     )
 
     // Execute the merge with the message file
-    await execute(
+    await execute_shell_command(
       `git merge --no-ff -F "${temp_msg_file}" ${branch_to_merge}`,
       {
         cwd: repo_path
@@ -199,9 +222,12 @@ export async function merge_branch({
     )
 
     // Get the hash of the merge commit (HEAD after merge)
-    const { stdout: commit_hash } = await execute('git rev-parse HEAD', {
-      cwd: repo_path
-    })
+    const { stdout: commit_hash } = await execute_shell_command(
+      'git rev-parse HEAD',
+      {
+        cwd: repo_path
+      }
+    )
 
     return {
       success: true,
@@ -227,7 +253,7 @@ export async function delete_branch({ repo_path, branch_name, force = false }) {
   try {
     const force_option = force ? '-D' : '-d'
     log(`Deleting branch ${branch_name} from ${repo_path}`)
-    await execute(`git branch ${force_option} ${branch_name}`, {
+    await execute_shell_command(`git branch ${force_option} ${branch_name}`, {
       cwd: repo_path
     })
     return true
@@ -266,9 +292,12 @@ export async function push_branch({
   try {
     const force_option = force ? '--force' : ''
     log(`Pushing branch ${branch_name} to ${remote} from ${repo_path}`)
-    await execute(`git push ${force_option} ${remote} ${branch_name}`, {
-      cwd: repo_path
-    })
+    await execute_shell_command(
+      `git push ${force_option} ${remote} ${branch_name}`,
+      {
+        cwd: repo_path
+      }
+    )
     return true
   } catch (error) {
     log(`Failed to push branch ${branch_name}:`, error)

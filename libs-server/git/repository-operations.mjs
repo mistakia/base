@@ -1,5 +1,8 @@
-import fs from 'fs/promises'
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:repository-operations')
 
 /**
  * Check if a repository is a git submodule
@@ -9,23 +12,17 @@ import { log, execute } from './utils.mjs'
 export async function is_submodule(repo_path) {
   try {
     log(`Checking if ${repo_path} is a submodule`)
-    const { stdout } = await execute('git config --get-regexp ^submodule', {
-      cwd: '.' // Run from parent repo directory
-    })
+    const { stdout } = await execute_shell_command(
+      'git config --get-regexp ^submodule',
+      {
+        cwd: '.' // Run from parent repo directory
+      }
+    )
     return stdout.includes(repo_path.replace(/^\.\//g, ''))
   } catch (error) {
     // If command fails, likely no submodules
     return false
   }
-}
-
-/**
- * Ensure a directory exists
- * @param {String} dir_path Path to ensure exists
- */
-export async function ensure_directory(dir_path) {
-  log(`Ensuring directory ${dir_path} exists`)
-  await fs.mkdir(dir_path, { recursive: true })
 }
 
 /**
@@ -36,7 +33,7 @@ export async function ensure_directory(dir_path) {
 export async function get_repo_info(repo_path) {
   try {
     log(`Getting remote URL for ${repo_path}`)
-    const { stdout: remote_url } = await execute(
+    const { stdout: remote_url } = await execute_shell_command(
       'git config --get remote.origin.url',
       {
         cwd: repo_path
@@ -84,7 +81,9 @@ export async function git_init({ directory, bare = false }) {
   try {
     const bare_option = bare ? '--bare' : ''
     log(`Initializing git repository in ${directory}`)
-    await execute(`git init ${bare_option}`, { cwd: directory })
+    await execute_shell_command(`git init ${bare_option}`, {
+      cwd: directory
+    })
     return true
   } catch (error) {
     log(`Failed to initialize git repository in ${directory}:`, error)
@@ -96,7 +95,6 @@ export async function git_init({ directory, bare = false }) {
 
 export default {
   is_submodule,
-  ensure_directory,
   get_repo_info,
   git_init
 }

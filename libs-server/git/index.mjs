@@ -4,7 +4,7 @@ import worktree_operations from './worktree-operations.mjs'
 import file_operations from './file-operations.mjs'
 import search_operations from './search-operations.mjs'
 import commit_operations from './commit-operations.mjs'
-import core_operations from './core-operations.mjs'
+import repository_operations from './repository-operations.mjs'
 
 // Export all operations
 export const {
@@ -37,8 +37,7 @@ export const {
 
 export const { add_files, commit_changes } = commit_operations
 
-export const { is_submodule, ensure_directory, get_repo_info, git_init } =
-  core_operations
+export const { is_submodule, get_repo_info, git_init } = repository_operations
 
 // Export default as a single object with all operations
 export default {
@@ -73,7 +72,6 @@ export default {
 
   // Core operations
   is_submodule,
-  ensure_directory,
   get_repo_info,
   git_init
 }

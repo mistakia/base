@@ -1,7 +1,11 @@
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import { log, execute } from './utils.mjs'
+import debug from 'debug'
+
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+
+const log = debug('git:worktree-operations')
 
 /**
  * Create a git worktree for a branch
@@ -27,9 +31,12 @@ export async function create_worktree({ repo_path, branch_name }) {
 
     // First, check if the branch is already checked out somewhere
     try {
-      const { stdout: worktree_list } = await execute('git worktree list', {
-        cwd: repo_path
-      })
+      const { stdout: worktree_list } = await execute_shell_command(
+        'git worktree list',
+        {
+          cwd: repo_path
+        }
+      )
 
       // Check if this branch is already checked out in the main working tree
       const main_worktree_match = worktree_list
@@ -64,9 +71,12 @@ export async function create_worktree({ repo_path, branch_name }) {
       }
 
       // If we get here, the branch is not checked out anywhere, create a new worktree
-      await execute(`git worktree add ${worktree_path} ${branch_name}`, {
-        cwd: repo_path
-      })
+      await execute_shell_command(
+        `git worktree add ${worktree_path} ${branch_name}`,
+        {
+          cwd: repo_path
+        }
+      )
       return worktree_path
     } catch (worktree_error) {
       // If worktree list command failed, try the direct approach
@@ -96,7 +106,7 @@ export async function create_worktree({ repo_path, branch_name }) {
 
             // Try to checkout the branch in the main working tree if needed
             try {
-              const { stdout: current_branch } = await execute(
+              const { stdout: current_branch } = await execute_shell_command(
                 'git rev-parse --abbrev-ref HEAD',
                 {
                   cwd: repo_path
@@ -105,7 +115,9 @@ export async function create_worktree({ repo_path, branch_name }) {
 
               if (current_branch.trim() !== branch_name) {
                 log(`Checking out branch ${branch_name} in main working tree`)
-                await execute(`git checkout ${branch_name}`, { cwd: repo_path })
+                await execute_shell_command(`git checkout ${branch_name}`, {
+                  cwd: repo_path
+                })
               }
             } catch (checkout_error) {
               log(
@@ -124,9 +136,12 @@ export async function create_worktree({ repo_path, branch_name }) {
 
       // If worktree list failed, try the direct approach
       try {
-        await execute(`git worktree add ${worktree_path} ${branch_name}`, {
-          cwd: repo_path
-        })
+        await execute_shell_command(
+          `git worktree add ${worktree_path} ${branch_name}`,
+          {
+            cwd: repo_path
+          }
+        )
         return worktree_path
       } catch (direct_error) {
         // If this also fails, check if the error indicates the branch is already checked out
@@ -178,9 +193,12 @@ export async function remove_worktree({ repo_path, worktree_path }) {
     }
 
     log(`Removing worktree ${worktree_path} from ${repo_path}`)
-    await execute(`git worktree remove --force ${worktree_path}`, {
-      cwd: repo_path
-    })
+    await execute_shell_command(
+      `git worktree remove --force ${worktree_path}`,
+      {
+        cwd: repo_path
+      }
+    )
     return true
   } catch (error) {
     log(`Failed to remove worktree ${worktree_path}:`, error)
