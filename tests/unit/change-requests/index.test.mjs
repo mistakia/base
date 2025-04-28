@@ -376,19 +376,23 @@ describe('Change Requests', function () {
       })
 
       // List all change requests
-      const all_crs = await change_requests.list_change_requests({})
+      const all_crs = await change_requests.list_change_requests({
+        repo_path: test_thread.user_base_directory
+      })
       expect(all_crs.length).to.be.at.least(2)
 
       // Filter by status
       const approved_crs = await change_requests.list_change_requests({
-        status: 'Approved'
+        status: 'Approved',
+        repo_path: test_thread.user_base_directory
       })
       expect(approved_crs.length).to.equal(1)
       expect(approved_crs[0].change_request_id).to.equal(cr_id1)
 
       // Filter by thread
       const thread_crs = await change_requests.list_change_requests({
-        thread_id: test_thread.thread_id
+        thread_id: test_thread.thread_id,
+        repo_path: test_thread.user_base_directory
       })
       expect(thread_crs.length).to.be.at.least(2)
     })
