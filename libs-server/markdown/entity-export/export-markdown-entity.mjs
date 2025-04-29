@@ -8,6 +8,7 @@ import { with_transaction } from '../shared/db-utils.mjs'
 import { parse_json_if_possible } from '../shared/frontmatter-utils.mjs'
 import { add_all_entity_relationships } from './relation-formatter.mjs'
 import { write_markdown_entity } from '../file-operations/write.mjs'
+import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 
 const log = debug('markdown:entity_export')
 
@@ -51,17 +52,13 @@ export async function export_markdown_entity({
     const absolute_path = path.join(type_dir, file_name)
 
     // Check if file exists and handle overwrite
-    try {
-      await fs.access(absolute_path)
-      if (!overwrite) {
-        return {
-          success: false,
-          message: `File already exists: ${absolute_path}`,
-          file_path: absolute_path
-        }
+    const file_exists = await file_exists_in_filesystem({ absolute_path })
+    if (file_exists && !overwrite) {
+      return {
+        success: false,
+        message: `File already exists: ${absolute_path}`,
+        file_path: absolute_path
       }
-    } catch (err) {
-      // File does not exist, we can proceed
     }
 
     // Prepare frontmatter

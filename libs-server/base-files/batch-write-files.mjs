@@ -7,7 +7,6 @@
 
 import debug from 'debug'
 import path from 'path'
-import fs from 'fs/promises'
 
 import * as git from '#libs-server/git/index.mjs'
 import { get_target_branch } from '#libs-server/base-files/branch-utils.mjs'

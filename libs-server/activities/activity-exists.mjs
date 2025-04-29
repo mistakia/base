@@ -1,6 +1,6 @@
-import fs from 'fs/promises'
 import debug from 'debug'
 import { resolve_activity_path } from './constants.mjs'
+import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 
 const log = debug('activities:exists')
 
@@ -18,7 +18,6 @@ export default async function activity_exists({
   system_base_directory,
   user_base_directory
 }) {
-  try {
     // Use the shared path resolution helper
     const { file_path } = resolve_activity_path({
       activity_id,
@@ -29,14 +28,7 @@ export default async function activity_exists({
     log(`Checking if activity exists at ${file_path}`)
 
     // Check if file exists and is readable
-    await fs.access(file_path, fs.constants.R_OK)
-    return true
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      log(`Activity file not found or not readable: ${error.message}`)
-      return false
-    }
-    // Re-throw any errors that aren't about the file not existing
-    throw error
-  }
+    return await file_exists_in_filesystem({
+      absolute_path: file_path
+    })
 }

@@ -4,7 +4,6 @@
  * and can be used by CLI tools or other parts of the application
  */
 
-import fs from 'fs/promises'
 import debug from 'debug'
 import { BlockStore } from './block-store.mjs'
 import {

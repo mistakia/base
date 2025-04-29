@@ -1,4 +1,3 @@
-import fs from 'fs/promises'
 import debug from 'debug'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 

@@ -1,6 +1,6 @@
-import fs from 'fs/promises'
 import debug from 'debug'
 import { read_file_from_ref } from '#libs-server/git/index.mjs'
+import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 import config from '#config'
 
 const log = debug('entities:exists')
@@ -23,7 +23,6 @@ export default async function entity_exists({
   system_base_directory = config.system_base_directory,
   user_base_directory = config.user_base_directory
 }) {
-  try {
     if (!entity_path) {
       throw new Error('entity_path is required')
     }
@@ -53,14 +52,7 @@ export default async function entity_exists({
     }
 
     // Check if file exists and is readable in filesystem
-    await fs.access(`${repo_path}/${entity_path}`, fs.constants.R_OK)
-    return true
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      log(`Entity file not found or not readable: ${error.message}`)
-      return false
-    }
-    // Re-throw any errors that aren't about the file not existing
-    throw error
-  }
+    return await file_exists_in_filesystem({
+      absolute_path: `${repo_path}/${entity_path}`
+    })
 }

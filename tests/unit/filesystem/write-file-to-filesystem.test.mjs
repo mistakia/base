@@ -51,7 +51,10 @@ describe('write_file_to_filesystem', () => {
     const absolute_path = path.join(temp_dir, 'file.txt')
     await fs.writeFile(absolute_path, 'old content', 'utf8')
 
-    await write_file_to_filesystem({ absolute_path, file_content: 'new content' })
+    await write_file_to_filesystem({
+      absolute_path,
+      file_content: 'new content'
+    })
     const written_content = await fs.readFile(absolute_path, 'utf8')
     expect(written_content).to.equal('new content')
   })
@@ -60,7 +63,10 @@ describe('write_file_to_filesystem', () => {
     // Try to write to a path that cannot be created (simulate by using an invalid path)
     const invalid_path = path.join('/dev/null', 'file.txt')
     try {
-      await write_file_to_filesystem({ absolute_path: invalid_path, file_content: 'content' })
+      await write_file_to_filesystem({
+        absolute_path: invalid_path,
+        file_content: 'content'
+      })
       expect.fail('Should have thrown an error')
     } catch (err) {
       expect(err).to.be.an('error')

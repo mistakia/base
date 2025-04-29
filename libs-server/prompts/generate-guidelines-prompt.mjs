@@ -1,5 +1,4 @@
 import debug from 'debug'
-import fs from 'fs'
 import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 import {
   get_guideline_file,
@@ -7,6 +6,7 @@ import {
   get_user_guidelines_directory
 } from '#libs-server/guidelines/index.mjs'
 import glob from 'glob'
+import { directory_exists_in_filesystem_sync } from '#libs-server/filesystem/directory-exists-in-filesystem-sync.mjs'
 
 const log = debug('prompts:guidelines')
 
@@ -153,10 +153,15 @@ async function find_matching_guidelines({
   })
 
   // Check if directories exist
-  if (
-    !fs.existsSync(system_guidelines_dir) ||
-    !fs.existsSync(user_guidelines_dir)
-  ) {
+  const system_dir_exists = directory_exists_in_filesystem_sync({
+    absolute_path: system_guidelines_dir
+  })
+
+  const user_dir_exists = directory_exists_in_filesystem_sync({
+    absolute_path: user_guidelines_dir
+  })
+
+  if (!system_dir_exists || !user_dir_exists) {
     log('Guidelines directories not found')
     return matching_guidelines
   }
