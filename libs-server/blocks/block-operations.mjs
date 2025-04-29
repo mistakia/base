@@ -12,6 +12,7 @@ import {
   markdown_file_to_blocks
 } from './block-converter.mjs'
 import { BLOCK_TYPES } from './block-schemas.mjs'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
 const log = debug('block-operations')
 
@@ -52,7 +53,10 @@ export async function export_file({ block_cid, file_path, user_id }) {
     const doc_structure = await store.get_document(block_cid)
     const markdown = await blocks_to_markdown(doc_structure)
 
-    await fs.writeFile(file_path, markdown, 'utf-8')
+    await write_file_to_filesystem({
+      absolute_path: file_path,
+      file_content: markdown
+    })
 
     return {
       success: true,

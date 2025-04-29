@@ -4,6 +4,7 @@ import debug from 'debug'
 
 import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
 const { THREAD_STATUS, validate_thread_state } = thread_constants
 const log = debug('threads:update')
@@ -76,7 +77,10 @@ export async function update_thread_state({
   }
 
   // Write updated metadata
-  await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
+  await write_file_to_filesystem({
+    absolute_path: metadata_path,
+    file_content: JSON.stringify(metadata, null, 2)
+  })
 
   // Add state change entry to timeline
   const timeline_entry = {
@@ -94,11 +98,10 @@ export async function update_thread_state({
   const timeline = [...thread.timeline, timeline_entry]
 
   // Write updated timeline
-  await fs.writeFile(
-    path.join(thread.context_dir, 'timeline.json'),
-    JSON.stringify(timeline, null, 2),
-    'utf-8'
-  )
+  await write_file_to_filesystem({
+    absolute_path: path.join(thread.context_dir, 'timeline.json'),
+    file_content: JSON.stringify(timeline, null, 2)
+  })
 
   // Return updated thread data
   return {
@@ -173,11 +176,10 @@ export async function update_thread_metadata({
   }
 
   // Write updated metadata
-  await fs.writeFile(
-    metadata_path,
-    JSON.stringify(updated_metadata, null, 2),
-    'utf-8'
-  )
+  await write_file_to_filesystem({
+    absolute_path: metadata_path,
+    file_content: JSON.stringify(updated_metadata, null, 2)
+  })
 
   // Return updated thread data
   return {

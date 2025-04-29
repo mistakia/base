@@ -3,6 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import db from '#db'
 import { create_content_identifier } from './sync-core.mjs'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+import fs_promises from 'fs/promises'
 
 import config from '#config'
 
@@ -68,9 +70,9 @@ export async function save_import_data({
     })
 
     // Create directories if they don't exist
-    fs.mkdirSync(dir_paths.raw_path, { recursive: true })
+    await fs_promises.mkdir(dir_paths.raw_path, { recursive: true })
     if (processed_data) {
-      fs.mkdirSync(dir_paths.processed_path, { recursive: true })
+      await fs_promises.mkdir(dir_paths.processed_path, { recursive: true })
     }
 
     // Generate content identifiers
@@ -82,7 +84,10 @@ export async function save_import_data({
     const raw_filepath = path.join(dir_paths.raw_path, raw_filename)
 
     // Write raw data to file
-    fs.writeFileSync(raw_filepath, JSON.stringify(raw_data, null, 2))
+    await write_file_to_filesystem({
+      absolute_path: raw_filepath,
+      file_content: JSON.stringify(raw_data, null, 2)
+    })
     log(`Saved raw import data to ${raw_filepath}`)
 
     let processed_filepath = null
@@ -95,10 +100,10 @@ export async function save_import_data({
       )
 
       // Write processed data to file
-      fs.writeFileSync(
-        processed_filepath,
-        JSON.stringify(processed_data, null, 2)
-      )
+      await write_file_to_filesystem({
+        absolute_path: processed_filepath,
+        file_content: JSON.stringify(processed_data, null, 2)
+      })
       log(`Saved processed import data to ${processed_filepath}`)
     }
 

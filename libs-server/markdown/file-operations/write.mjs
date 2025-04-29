@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import debug from 'debug'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
 const log = debug('markdown:file-operations:write')
 
@@ -78,14 +79,11 @@ export async function write_markdown_entity({
     // Combine frontmatter and content
     const full_content = `${yaml_lines.join('\n')}\n\n${content.trim()}`
 
-    // Ensure directory exists
-    const dir_path = absolute_path.substring(0, absolute_path.lastIndexOf('/'))
-    if (dir_path) {
-      await fs.mkdir(dir_path, { recursive: true })
-    }
-
     // Write the file
-    await fs.writeFile(absolute_path, full_content)
+    await write_file_to_filesystem({
+      absolute_path,
+      file_content: full_content
+    })
 
     log(`Successfully wrote markdown entity to ${absolute_path}`)
     return true
