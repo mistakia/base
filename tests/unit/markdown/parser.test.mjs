@@ -1,19 +1,10 @@
 import { expect } from 'chai'
 import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 import { process_markdown_schema_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
-import { get_current_branch } from '#libs-server/git/index.mjs'
 import path from 'path'
 import fs from 'fs/promises'
 
 describe('Markdown Parser', () => {
-  // Store current branch
-  let current_system_branch
-
-  before(async () => {
-    // Get current branch
-    current_system_branch = await get_current_branch('.')
-  })
-
   describe('parse_markdown_content', () => {
     it('should parse markdown with frontmatter correctly', async () => {
       const file_path = 'system/schema/task.md'

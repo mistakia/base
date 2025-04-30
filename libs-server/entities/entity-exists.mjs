@@ -23,36 +23,36 @@ export default async function entity_exists({
   system_base_directory = config.system_base_directory,
   user_base_directory = config.user_base_directory
 }) {
-    if (!entity_path) {
-      throw new Error('entity_path is required')
-    }
+  if (!entity_path) {
+    throw new Error('entity_path is required')
+  }
 
-    // Determine if this is a system or user entity
-    const is_system = entity_path.startsWith('system/')
-    const repo_path = is_system ? system_base_directory : user_base_directory
-    const branch = is_system ? system_branch : user_branch
+  // Determine if this is a system or user entity
+  const is_system = entity_path.startsWith('system/')
+  const repo_path = is_system ? system_base_directory : user_base_directory
+  const branch = is_system ? system_branch : user_branch
 
-    log(`Checking if entity exists at ${entity_path}`)
+  log(`Checking if entity exists at ${entity_path}`)
 
-    if (branch) {
-      try {
-        await read_file_from_ref({
-          file_path: entity_path,
-          ref: branch,
-          repo_path
-        })
-        return true
-      } catch (error) {
-        // Handle git "does not exist" errors
-        if (error.message.includes('does not exist')) {
-          return false
-        }
-        throw error
+  if (branch) {
+    try {
+      await read_file_from_ref({
+        file_path: entity_path,
+        ref: branch,
+        repo_path
+      })
+      return true
+    } catch (error) {
+      // Handle git "does not exist" errors
+      if (error.message.includes('does not exist')) {
+        return false
       }
+      throw error
     }
+  }
 
-    // Check if file exists and is readable in filesystem
-    return await file_exists_in_filesystem({
-      absolute_path: `${repo_path}/${entity_path}`
-    })
+  // Check if file exists and is readable in filesystem
+  return await file_exists_in_filesystem({
+    absolute_path: `${repo_path}/${entity_path}`
+  })
 }

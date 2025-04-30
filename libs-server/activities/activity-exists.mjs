@@ -18,17 +18,17 @@ export default async function activity_exists({
   system_base_directory,
   user_base_directory
 }) {
-    // Use the shared path resolution helper
-    const { file_path } = resolve_activity_path({
-      activity_id,
-      system_base_directory,
-      user_base_directory
-    })
+  // Use the shared path resolution helper
+  const { file_path } = resolve_activity_path({
+    activity_id,
+    system_base_directory,
+    user_base_directory
+  })
 
-    log(`Checking if activity exists at ${file_path}`)
+  log(`Checking if activity exists at ${file_path}`)
 
-    // Check if file exists and is readable
-    return await file_exists_in_filesystem({
-      absolute_path: file_path
-    })
+  // Check if file exists and is readable
+  return await file_exists_in_filesystem({
+    absolute_path: file_path
+  })
 }

@@ -18,17 +18,17 @@ export default async function guideline_exists({
   system_base_directory,
   user_base_directory
 }) {
-    // Use the shared path resolution helper
-    const { file_path } = resolve_guideline_path({
-      guideline_id,
-      system_base_directory,
-      user_base_directory
-    })
+  // Use the shared path resolution helper
+  const { file_path } = resolve_guideline_path({
+    guideline_id,
+    system_base_directory,
+    user_base_directory
+  })
 
-    log(`Checking if guideline exists at ${file_path}`)
+  log(`Checking if guideline exists at ${file_path}`)
 
-    // Check if file exists and is readable
-    return await file_exists_in_filesystem({
-      absolute_path: file_path
-    })
+  // Check if file exists and is readable
+  return await file_exists_in_filesystem({
+    absolute_path: file_path
+  })
 }
