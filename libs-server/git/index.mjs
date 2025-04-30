@@ -5,6 +5,7 @@ import file_operations from './file-operations.mjs'
 import search_operations from './search-operations.mjs'
 import commit_operations from './commit-operations.mjs'
 import repository_operations from './repository-operations.mjs'
+import git_files from './git-files/index.mjs'
 
 // Export all operations
 export const {
@@ -39,6 +40,8 @@ export const { add_files, commit_changes } = commit_operations
 
 export const { is_submodule, get_repo_info, git_init } = repository_operations
 
+export const { write_file_to_git, delete_file_from_git } = git_files
+
 // Export default as a single object with all operations
 export default {
   // Branch operations
@@ -60,6 +63,10 @@ export default {
   read_file_from_ref,
   list_files,
   delete_file,
+
+  // Git files operations
+  write_file_to_git,
+  delete_file_from_git,
 
   // Search operations
   get_diff,
