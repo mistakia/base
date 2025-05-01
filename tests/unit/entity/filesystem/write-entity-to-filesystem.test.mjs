@@ -84,7 +84,11 @@ describe('write_entity_to_filesystem', () => {
   it('should throw error if absolute_path is missing', async () => {
     try {
       await write_entity_to_filesystem({
-        entity_properties: { title: 'Test', description: 'Test', user_id: '123' },
+        entity_properties: {
+          title: 'Test',
+          description: 'Test',
+          user_id: '123'
+        },
         entity_type: 'test'
       })
       expect.fail('Should have thrown an error')
@@ -109,7 +113,11 @@ describe('write_entity_to_filesystem', () => {
     try {
       await write_entity_to_filesystem({
         absolute_path: path.join(temp_dir, 'test.md'),
-        entity_properties: { title: 'Test', description: 'Test', user_id: '123' }
+        entity_properties: {
+          title: 'Test',
+          description: 'Test',
+          user_id: '123'
+        }
       })
       expect.fail('Should have thrown an error')
     } catch (error) {

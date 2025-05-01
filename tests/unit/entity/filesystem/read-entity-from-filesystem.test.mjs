@@ -155,7 +155,7 @@ This entity has no type.
 
   it('should return error if absolute_path is missing', async () => {
     const result = await read_entity_from_filesystem({})
-    
+
     expect(result.success).to.be.false
     expect(result.error).to.equal('Absolute path is required')
   })

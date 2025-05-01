@@ -179,7 +179,7 @@ describe('read_entity_from_git', () => {
       file_path: entity_path,
       branch
     })
-    
+
     expect(result.success).to.be.false
     expect(result.error).to.equal('Repository path is required')
   })
@@ -189,7 +189,7 @@ describe('read_entity_from_git', () => {
       repo_path: repo.path,
       branch
     })
-    
+
     expect(result.success).to.be.false
     expect(result.error).to.equal('File path is required')
   })
@@ -199,7 +199,7 @@ describe('read_entity_from_git', () => {
       repo_path: repo.path,
       file_path: entity_path
     })
-    
+
     expect(result.success).to.be.false
     expect(result.error).to.equal('Branch name is required')
   })
