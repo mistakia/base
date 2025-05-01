@@ -12,11 +12,7 @@ const log = debug('libs-server:git:read-file-from-git')
  * @param {string} params.branch - The branch to read from
  * @returns {Promise<Object>} - Returns an object with success status and file content
  */
-export async function read_file_from_git({
-  repo_path,
-  file_path,
-  branch
-}) {
+export async function read_file_from_git({ repo_path, file_path, branch }) {
   if (!repo_path) {
     throw new Error('Repository path is required')
   }
@@ -66,4 +62,4 @@ export async function read_file_from_git({
       file_path
     }
   }
-} 
+}

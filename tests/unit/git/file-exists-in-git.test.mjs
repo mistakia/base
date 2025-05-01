@@ -9,13 +9,13 @@ import { promisify } from 'util'
 // Import the functions we want to test
 import {
   write_file_to_git,
-  read_file_from_git
+  file_exists_in_git
 } from '#libs-server/git/git-files/index.mjs'
 
 const execute = promisify(exec)
 const expect = chai.expect
 
-describe('read_file_from_git', function () {
+describe('file_exists_in_git', function () {
   let test_repo_path
   let remote_repo_path
 
@@ -85,13 +85,13 @@ describe('read_file_from_git', function () {
     }
   })
 
-  it('should read a file from a specific branch', async function () {
-    const file_path = 'test-read-file.md'
-    const content = '# Test File Content\n\nThis is a test file.'
+  it('should return true for existing files in a branch', async function () {
+    const file_path = 'test-exists-file.md'
+    const content = '# Test File Content'
     const branch = 'main'
-    const commit_message = 'Add test file for reading'
+    const commit_message = 'Add test file for existence check'
 
-    // First write a file to read
+    // First write a file to check
     await write_file_to_git({
       repo_path: test_repo_path,
       file_path,
@@ -100,8 +100,8 @@ describe('read_file_from_git', function () {
       commit_message
     })
 
-    // Read the file using our function
-    const result = await read_file_from_git({
+    // Check if file exists
+    const result = await file_exists_in_git({
       repo_path: test_repo_path,
       file_path,
       branch
@@ -109,16 +109,32 @@ describe('read_file_from_git', function () {
 
     // Validate result
     expect(result.success).to.be.true
-    expect(result.content).to.equal(content)
+    expect(result.exists).to.be.true
     expect(result.file_path).to.equal(file_path)
     expect(result.branch).to.equal(branch)
   })
 
-  it('should read a file from a different branch', async function () {
-    const file_path = 'feature-specific-file.md'
-    const content = '# Feature Branch Content'
+  it('should return false for non-existent files in a branch', async function () {
+    const file_path = 'non-existent-file.md'
+    const branch = 'main'
+
+    const result = await file_exists_in_git({
+      repo_path: test_repo_path,
+      file_path,
+      branch
+    })
+
+    expect(result.success).to.be.true
+    expect(result.exists).to.be.false
+    expect(result.file_path).to.equal(file_path)
+    expect(result.branch).to.equal(branch)
+  })
+
+  it('should check files in different branches correctly', async function () {
+    const file_path = 'branch-specific-file.md'
+    const content = '# Branch Specific Content'
     const branch = 'feature-branch'
-    const commit_message = 'Add feature-specific file'
+    const commit_message = 'Add branch-specific file'
 
     // Write file to feature branch
     await execute('git checkout feature-branch', { cwd: test_repo_path })
@@ -131,40 +147,31 @@ describe('read_file_from_git', function () {
     })
     await execute('git checkout main', { cwd: test_repo_path })
 
-    // Read the file from feature branch while on main
-    const result = await read_file_from_git({
+    // Check file exists in feature branch
+    const feature_result = await file_exists_in_git({
       repo_path: test_repo_path,
       file_path,
-      branch
+      branch: 'feature-branch'
     })
 
-    // Validate result
-    expect(result.success).to.be.true
-    expect(result.content).to.equal(content)
-    expect(result.file_path).to.equal(file_path)
-    expect(result.branch).to.equal(branch)
-  })
-
-  it('should handle non-existent files gracefully', async function () {
-    const file_path = 'non-existent-file.md'
-    const branch = 'main'
-
-    const result = await read_file_from_git({
+    // Check file doesn't exist in main branch
+    const main_result = await file_exists_in_git({
       repo_path: test_repo_path,
       file_path,
-      branch
+      branch: 'main'
     })
 
-    expect(result.success).to.be.false
-    expect(result.error).to.include('Failed to read file')
-    expect(result.file_path).to.equal(file_path)
+    expect(feature_result.success).to.be.true
+    expect(feature_result.exists).to.be.true
+    expect(main_result.success).to.be.true
+    expect(main_result.exists).to.be.false
   })
 
   it('should handle non-existent branches gracefully', async function () {
     const file_path = 'test-file.md'
     const branch = 'non-existent-branch'
 
-    const result = await read_file_from_git({
+    const result = await file_exists_in_git({
       repo_path: test_repo_path,
       file_path,
       branch
@@ -178,7 +185,7 @@ describe('read_file_from_git', function () {
   it('should validate required parameters', async function () {
     // Test missing repo_path
     try {
-      await read_file_from_git({
+      await file_exists_in_git({
         file_path: 'test.md',
         branch: 'main'
       })
@@ -189,7 +196,7 @@ describe('read_file_from_git', function () {
 
     // Test missing file_path
     try {
-      await read_file_from_git({
+      await file_exists_in_git({
         repo_path: test_repo_path,
         branch: 'main'
       })
@@ -200,7 +207,7 @@ describe('read_file_from_git', function () {
 
     // Test missing branch
     try {
-      await read_file_from_git({
+      await file_exists_in_git({
         repo_path: test_repo_path,
         file_path: 'test.md'
       })
