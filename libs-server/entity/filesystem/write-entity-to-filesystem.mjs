@@ -2,9 +2,9 @@ import debug from 'debug'
 
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 import {
-  format_entity_file_content,
-  format_entity_frontmatter
-} from '../format-entity-content.mjs'
+  format_entity_to_file_content,
+  format_entity_properties_to_frontmatter
+} from '#libs-server/entity/format/index.mjs'
 
 const log = debug('write-entity-to-filesystem')
 
@@ -13,16 +13,16 @@ const log = debug('write-entity-to-filesystem')
  *
  * @param {Object} options - Function options
  * @param {string} options.absolute_path - The absolute path where the entity will be written
- * @param {Object} options.entity_data - The entity data to write
+ * @param {Object} options.entity_properties - The entity properties to write
  * @param {string} options.entity_type - The type of entity being written
- * @param {string} [options.content=''] - The markdown content to include after the frontmatter
+ * @param {string} [options.entity_content=''] - The markdown content to include after the frontmatter
  * @returns {Promise<boolean>} - Whether the write was successful
  */
 export async function write_entity_to_filesystem({
   absolute_path,
-  entity_data,
+  entity_properties,
   entity_type,
-  content = ''
+  entity_content = ''
 }) {
   try {
     log(`Writing ${entity_type} entity to filesystem at ${absolute_path}`)
@@ -31,8 +31,8 @@ export async function write_entity_to_filesystem({
       throw new Error('Absolute path is required')
     }
 
-    if (!entity_data || typeof entity_data !== 'object') {
-      throw new Error('Entity data must be a valid object')
+    if (!entity_properties || typeof entity_properties !== 'object') {
+      throw new Error('Entity properties must be a valid object')
     }
 
     if (!entity_type) {
@@ -40,15 +40,15 @@ export async function write_entity_to_filesystem({
     }
 
     // Prepare the frontmatter with base entity fields
-    const frontmatter = format_entity_frontmatter({
-      entity_data,
+    const frontmatter = format_entity_properties_to_frontmatter({
+      entity_properties,
       entity_type
     })
 
     // Format the entire file content with frontmatter
-    const file_content = format_entity_file_content({
+    const file_content = format_entity_to_file_content({
       frontmatter,
-      content
+      file_content: entity_content
     })
 
     // Write the formatted content to the filesystem

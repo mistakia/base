@@ -1,23 +1,23 @@
 import { expect } from 'chai'
 import {
-  format_entity_file_content,
-  format_entity_frontmatter
-} from '#libs-server/entity/format-entity-content.mjs'
+  format_entity_to_file_content,
+  format_entity_properties_to_frontmatter
+} from '#libs-server/entity/format/index.mjs'
 
 describe('Entity Content Formatting', () => {
-  describe('format_entity_file_content', () => {
+  describe('format_entity_to_file_content', () => {
     it('should format frontmatter and content correctly', () => {
-      const frontmatter = {
+      const entity_properties = {
         title: 'Test Entity',
         type: 'test',
         description: 'Test description',
         tags: ['tag1', 'tag2']
       }
-      const content = 'This is the content'
+      const entity_content = 'This is the content'
 
-      const result = format_entity_file_content({
-        frontmatter,
-        content
+      const result = format_entity_to_file_content({
+        frontmatter: entity_properties,
+        file_content: entity_content
       })
 
       expect(result).to.include('---')
@@ -31,15 +31,15 @@ describe('Entity Content Formatting', () => {
     })
 
     it('should handle empty content', () => {
-      const frontmatter = {
+      const entity_properties = {
         title: 'Test Entity',
         type: 'test',
         description: 'Test description'
       }
 
-      const result = format_entity_file_content({
-        frontmatter,
-        content: ''
+      const result = format_entity_to_file_content({
+        frontmatter: entity_properties,
+        file_content: ''
       })
 
       expect(result).to.include('---')
@@ -48,7 +48,7 @@ describe('Entity Content Formatting', () => {
     })
 
     it('should handle arrays and objects in frontmatter', () => {
-      const frontmatter = {
+      const entity_properties = {
         title: 'Test Entity',
         type: 'test',
         description: 'Test description',
@@ -56,9 +56,9 @@ describe('Entity Content Formatting', () => {
         metadata: { key1: 'value1', key2: 'value2' }
       }
 
-      const result = format_entity_file_content({
-        frontmatter,
-        content: 'Content'
+      const result = format_entity_to_file_content({
+        frontmatter: entity_properties,
+        file_content: 'Content'
       })
 
       expect(result).to.include('tags:')
@@ -70,16 +70,16 @@ describe('Entity Content Formatting', () => {
     })
 
     it('should handle status field without quotes', () => {
-      const frontmatter = {
+      const entity_properties = {
         title: 'Test Entity',
         type: 'test',
         description: 'Test description',
         status: 'In Progress'
       }
 
-      const result = format_entity_file_content({
-        frontmatter,
-        content: 'Content'
+      const result = format_entity_to_file_content({
+        frontmatter: entity_properties,
+        file_content: 'Content'
       })
 
       expect(result).to.include('status: In Progress') // No quotes
@@ -88,24 +88,24 @@ describe('Entity Content Formatting', () => {
 
     it('should throw error if frontmatter is invalid', () => {
       expect(() =>
-        format_entity_file_content({
+        format_entity_to_file_content({
           frontmatter: null,
-          content: 'Content'
+          file_content: 'Content'
         })
       ).to.throw('Frontmatter must be a valid object')
 
       expect(() =>
-        format_entity_file_content({
+        format_entity_to_file_content({
           frontmatter: 'not an object',
-          content: 'Content'
+          file_content: 'Content'
         })
       ).to.throw('Frontmatter must be a valid object')
     })
   })
 
-  describe('format_entity_frontmatter', () => {
+  describe('format_entity_properties_to_frontmatter', () => {
     it('should format base entity fields correctly', () => {
-      const entity_data = {
+      const entity_properties = {
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
@@ -113,8 +113,8 @@ describe('Entity Content Formatting', () => {
         permalink: '/test'
       }
 
-      const result = format_entity_frontmatter({
-        entity_data,
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
         entity_type: 'test'
       })
 
@@ -129,25 +129,25 @@ describe('Entity Content Formatting', () => {
     })
 
     it('should use existing created_at when provided', () => {
-      const created_time = '2023-01-01T00:00:00.000Z'
-      const entity_data = {
+      const created_at = '2023-01-01T00:00:00.000Z'
+      const entity_properties = {
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
-        created_at: created_time
+        created_at
       }
 
-      const result = format_entity_frontmatter({
-        entity_data,
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
         entity_type: 'test'
       })
 
-      expect(result.created_at).to.equal(created_time)
-      expect(result.updated_at).to.not.equal(created_time) // Should be current time
+      expect(result.created_at).to.equal(created_at)
+      expect(result.updated_at).to.not.equal(created_at) // Should be current time
     })
 
     it('should include all optional base fields when provided', () => {
-      const entity_data = {
+      const entity_properties = {
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
@@ -158,8 +158,8 @@ describe('Entity Content Formatting', () => {
         archived_at: '2023-02-01T00:00:00.000Z'
       }
 
-      const result = format_entity_frontmatter({
-        entity_data,
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
         entity_type: 'test'
       })
 
@@ -171,7 +171,7 @@ describe('Entity Content Formatting', () => {
     })
 
     it('should include custom fields for extended entity types', () => {
-      const entity_data = {
+      const entity_properties = {
         title: 'Test Task',
         description: 'Test description',
         user_id: '123456',
@@ -182,8 +182,8 @@ describe('Entity Content Formatting', () => {
         custom_field: 'custom value'
       }
 
-      const result = format_entity_frontmatter({
-        entity_data,
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
         entity_type: 'task'
       })
 
@@ -199,8 +199,8 @@ describe('Entity Content Formatting', () => {
     it('should throw error if required fields are missing', () => {
       // Missing title
       expect(() =>
-        format_entity_frontmatter({
-          entity_data: {
+        format_entity_properties_to_frontmatter({
+          entity_properties: {
             description: 'Test description',
             user_id: '123456'
           },
@@ -210,8 +210,8 @@ describe('Entity Content Formatting', () => {
 
       // Missing description
       expect(() =>
-        format_entity_frontmatter({
-          entity_data: {
+        format_entity_properties_to_frontmatter({
+          entity_properties: {
             title: 'Test Entity',
             user_id: '123456'
           },
@@ -221,8 +221,8 @@ describe('Entity Content Formatting', () => {
 
       // Missing user_id
       expect(() =>
-        format_entity_frontmatter({
-          entity_data: {
+        format_entity_properties_to_frontmatter({
+          entity_properties: {
             title: 'Test Entity',
             description: 'Test description'
           },

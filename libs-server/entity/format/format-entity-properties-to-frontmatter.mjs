@@ -1,0 +1,109 @@
+/**
+ * Maps of base fields that are required according to the base schema
+ */
+const BASE_REQUIRED_FIELDS = ['title', 'type', 'description', 'user_id']
+
+/**
+ * Maps of base fields that are optional according to the base schema
+ */
+const BASE_OPTIONAL_FIELDS = [
+  'permalink',
+  'tags',
+  'relations',
+  'observations',
+  'archived_at'
+]
+
+/**
+ * Maps of base fields that are auto-generated according to the base schema
+ */
+const BASE_AUTO_GENERATED_FIELDS = ['created_at', 'updated_at']
+
+/**
+ * Prepares base entity frontmatter fields based on the base schema
+ *
+ * @param {Object} options - Function options
+ * @param {Object} options.entity_properties - The entity properties to prepare
+ * @param {string} options.entity_type - The entity type
+ * @returns {Object} - The prepared frontmatter object
+ */
+export function format_entity_properties_to_frontmatter({
+  entity_properties,
+  entity_type
+}) {
+  const now = new Date().toISOString()
+
+  // Initialize frontmatter object
+  const frontmatter = {}
+
+  // Validate required base fields
+  if (!entity_properties.title) {
+    throw new Error('Entity title is required')
+  }
+
+  if (!entity_properties.description) {
+    throw new Error('Entity description is required')
+  }
+
+  if (!entity_properties.user_id) {
+    throw new Error('Entity user_id is required')
+  }
+
+  // Add required fields
+  frontmatter.type = entity_type
+  frontmatter.title = entity_properties.title
+  frontmatter.description = entity_properties.description
+  frontmatter.user_id = entity_properties.user_id
+
+  // Add auto-generated timestamp fields
+  frontmatter.created_at = entity_properties.created_at || now
+  frontmatter.updated_at = now
+
+  // Add optional base fields if present
+  if (entity_properties.permalink !== undefined) {
+    frontmatter.permalink = entity_properties.permalink
+  }
+
+  if (entity_properties.tags && Array.isArray(entity_properties.tags)) {
+    frontmatter.tags = entity_properties.tags
+  }
+
+  if (
+    entity_properties.relations &&
+    Array.isArray(entity_properties.relations)
+  ) {
+    frontmatter.relations = entity_properties.relations
+  }
+
+  if (
+    entity_properties.observations &&
+    Array.isArray(entity_properties.observations)
+  ) {
+    frontmatter.observations = entity_properties.observations
+  }
+
+  if (entity_properties.archived_at !== undefined) {
+    frontmatter.archived_at = entity_properties.archived_at
+  }
+
+  // Add all other custom fields from the entity_properties
+  // This allows the function to support extended types like task.md
+  Object.entries(entity_properties).forEach(([key, value]) => {
+    // Skip fields we've already processed
+    const all_base_fields = [
+      ...BASE_REQUIRED_FIELDS,
+      ...BASE_OPTIONAL_FIELDS,
+      ...BASE_AUTO_GENERATED_FIELDS
+    ]
+
+    if (
+      !all_base_fields.includes(key) &&
+      value !== undefined &&
+      value !== null
+    ) {
+      frontmatter[key] = value
+    }
+  })
+
+  return frontmatter
+}

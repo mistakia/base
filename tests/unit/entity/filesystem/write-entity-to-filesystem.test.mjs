@@ -20,20 +20,20 @@ describe('write_entity_to_filesystem', () => {
 
   it('should write entity to filesystem successfully', async () => {
     const absolute_path = path.join(temp_dir, 'test-entity.md')
-    const entity_data = {
+    const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
       user_id: '123456',
       tags: ['tag1', 'tag2']
     }
     const entity_type = 'test'
-    const content = '# Test Entity\n\nContent body'
+    const entity_content = '# Test Entity\n\nContent body'
 
     const result = await write_entity_to_filesystem({
       absolute_path,
-      entity_data,
+      entity_properties,
       entity_type,
-      content
+      entity_content
     })
 
     expect(result).to.be.true
@@ -58,17 +58,17 @@ describe('write_entity_to_filesystem', () => {
 
   it('should write a minimal entity with defaults', async () => {
     const absolute_path = path.join(temp_dir, 'minimal-entity.md')
-    const entity_data = {
+    const entity_properties = {
       title: 'Minimal Entity',
       description: 'Minimal description',
       user_id: '123456'
     }
     const entity_type = 'minimal'
 
-    // Call without content parameter to use default
+    // Call without entity_content parameter to use default
     const result = await write_entity_to_filesystem({
       absolute_path,
-      entity_data,
+      entity_properties,
       entity_type
     })
 
@@ -84,7 +84,7 @@ describe('write_entity_to_filesystem', () => {
   it('should throw error if absolute_path is missing', async () => {
     try {
       await write_entity_to_filesystem({
-        entity_data: { title: 'Test', description: 'Test', user_id: '123' },
+        entity_properties: { title: 'Test', description: 'Test', user_id: '123' },
         entity_type: 'test'
       })
       expect.fail('Should have thrown an error')
@@ -93,7 +93,7 @@ describe('write_entity_to_filesystem', () => {
     }
   })
 
-  it('should throw error if entity_data is missing', async () => {
+  it('should throw error if entity_properties is missing', async () => {
     try {
       await write_entity_to_filesystem({
         absolute_path: path.join(temp_dir, 'test.md'),
@@ -101,7 +101,7 @@ describe('write_entity_to_filesystem', () => {
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
-      expect(error.message).to.equal('Entity data must be a valid object')
+      expect(error.message).to.equal('Entity properties must be a valid object')
     }
   })
 
@@ -109,7 +109,7 @@ describe('write_entity_to_filesystem', () => {
     try {
       await write_entity_to_filesystem({
         absolute_path: path.join(temp_dir, 'test.md'),
-        entity_data: { title: 'Test', description: 'Test', user_id: '123' }
+        entity_properties: { title: 'Test', description: 'Test', user_id: '123' }
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
@@ -119,7 +119,7 @@ describe('write_entity_to_filesystem', () => {
 
   it('should handle extended entity types', async () => {
     const absolute_path = path.join(temp_dir, 'test-task.md')
-    const entity_data = {
+    const entity_properties = {
       title: 'Test Task',
       description: 'Test task description',
       user_id: '123456',
@@ -132,7 +132,7 @@ describe('write_entity_to_filesystem', () => {
 
     await write_entity_to_filesystem({
       absolute_path,
-      entity_data,
+      entity_properties,
       entity_type
     })
 
@@ -147,7 +147,7 @@ describe('write_entity_to_filesystem', () => {
 
   it('should create a file with properly formatted frontmatter and content', async () => {
     const absolute_path = path.join(temp_dir, 'full-entity.md')
-    const entity_data = {
+    const entity_properties = {
       title: 'Full Entity',
       description: 'Complete entity with all base fields',
       user_id: 'user-123',
@@ -164,14 +164,14 @@ describe('write_entity_to_filesystem', () => {
       archived_at: '2023-05-01T12:00:00.000Z'
     }
     const entity_type = 'complete'
-    const content =
+    const entity_content =
       '# Full Entity\n\nThis is a complete entity with all base fields.\n\n## Section\n\nContent with multiple paragraphs and sections.'
 
     await write_entity_to_filesystem({
       absolute_path,
-      entity_data,
+      entity_properties,
       entity_type,
-      content
+      entity_content
     })
 
     const file_content = await fs.readFile(absolute_path, 'utf8')

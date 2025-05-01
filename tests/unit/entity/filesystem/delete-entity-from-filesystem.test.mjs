@@ -21,7 +21,7 @@ describe('delete_entity_from_filesystem', () => {
 
   it('should delete an entity from the filesystem successfully', async () => {
     const absolute_path = path.join(temp_dir, 'test-entity.md')
-    const entity_data = {
+    const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
       user_id: '123456'
@@ -31,7 +31,7 @@ describe('delete_entity_from_filesystem', () => {
     // First write an entity to delete
     await write_entity_to_filesystem({
       absolute_path,
-      entity_data,
+      entity_properties,
       entity_type
     })
 
@@ -91,5 +91,17 @@ describe('delete_entity_from_filesystem', () => {
       // so we just check that an error is thrown
       expect(error).to.exist
     }
+  })
+
+  it('should return false when trying to delete a directory', async () => {
+    // Create a directory with the same name to test directory deletion
+    const dir_path = path.join(temp_dir, 'entity-dir')
+    await fs.mkdir(dir_path)
+
+    const result = await delete_entity_from_filesystem({
+      absolute_path: dir_path
+    })
+
+    expect(result).to.be.false
   })
 })
