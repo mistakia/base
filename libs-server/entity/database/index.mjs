@@ -4,14 +4,15 @@ import { write_entity_tags_to_database } from './write/write-entity-tags-to-data
 import write_task_to_database from './write/write-task-to-database.mjs'
 import write_activity_to_database from './write/write-activity-to-database.mjs'
 import write_guideline_to_database from './write/write-guideline-to-database.mjs'
+import { read_entity_from_database } from './read/read-entity-from-database.mjs'
 
 /**
  * Entity Database Module
  *
- * This module exports functions for writing entities to the database,
- * organized into three categories:
+ * This module exports functions for reading and writing entities to the database,
+ * organized into categories:
  *
- * 1. Base entity writer - Handles core entity properties shared across all types
+ * 1. Base entity reader/writer - Handles core entity properties shared across all types
  * 2. Entity type-specific writers - Handle properties specific to each entity type
  * 3. Relation handlers - Handle relationships between entities
  *
@@ -19,7 +20,8 @@ import write_guideline_to_database from './write/write-guideline-to-database.mjs
  * handle their own type-specific database operations.
  */
 export {
-  // Base entity writer
+  // Base entity reader/writer
+  read_entity_from_database,
   write_entity_to_database,
 
   // Entity type-specific writers
@@ -33,6 +35,7 @@ export {
 }
 
 export default {
+  read_entity_from_database,
   write_entity_to_database,
   write_task_to_database,
   write_activity_to_database,
