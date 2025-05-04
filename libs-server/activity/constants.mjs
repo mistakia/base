@@ -1,0 +1,89 @@
+import path from 'path'
+import config from '#config'
+
+// Constants for activity directories
+export const SYSTEM_ACTIVITY_DIR = 'system/activity'
+export const USER_ACTIVITY_DIR = 'activity'
+
+/**
+ * Get the base directory for system activities
+ *
+ * @param {Object} params Parameters
+ * @param {string} [params.system_base_directory] Custom system base directory
+ * @returns {string} Full path to system activities directory
+ */
+export function get_system_activity_directory({
+  system_base_directory = config.system_base_directory
+} = {}) {
+  return path.join(system_base_directory, SYSTEM_ACTIVITY_DIR)
+}
+
+/**
+ * Get the base directory for user activities
+ *
+ * @param {Object} params Parameters
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {string} Full path to user activities directory
+ */
+export function get_user_activity_directory({
+  user_base_directory = config.user_base_directory
+} = {}) {
+  return path.join(user_base_directory, USER_ACTIVITY_DIR)
+}
+
+/**
+ * Resolve an activity ID to its file path
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.activity_id Activity ID in format [system|user]/<file_path>.md
+ * @param {string} [params.system_base_directory] Custom system base directory
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Object} Resolved path information
+ * @throws {Error} If activity_id is invalid
+ */
+export function resolve_activity_path({
+  activity_id,
+  system_base_directory = config.system_base_directory,
+  user_base_directory = config.user_base_directory
+}) {
+  if (!activity_id) {
+    throw new Error('activity_id is required')
+  }
+
+  // Split the activity_id into type and path components
+  const [type, ...path_parts] = activity_id.split('/')
+
+  if (!type || !path_parts.length) {
+    throw new Error(
+      'activity_id must be in format [system|user]/<file-path>.md'
+    )
+  }
+
+  // Determine the base directory and activities directory based on type
+  let base_directory
+  let activity_dir
+
+  if (type === 'system') {
+    base_directory = system_base_directory
+    activity_dir = SYSTEM_ACTIVITY_DIR
+  } else if (type === 'user') {
+    base_directory = user_base_directory
+    activity_dir = USER_ACTIVITY_DIR
+  } else {
+    throw new Error('activity_id type must be either "system" or "user"')
+  }
+
+  const base_relative_path = path.join(activity_dir, ...path_parts)
+
+  // Always insert the activities directory between the base and the file path
+  const file_path = path.join(base_directory, base_relative_path)
+
+  return {
+    type,
+    base_directory,
+    base_relative_path,
+    activity_dir,
+    path_parts,
+    file_path
+  }
+}
