@@ -18,4 +18,16 @@ export default async function () {
 
   // enable foreign key checks
   await db.raw('SET CONSTRAINTS ALL IMMEDIATE')
+
+  // Find all materialized views in the database
+  const materialized_views = await db.raw(`
+    SELECT matviewname 
+    FROM pg_matviews 
+    WHERE schemaname = 'public'
+  `)
+
+  // Refresh all materialized views (without CONCURRENTLY since they're empty)
+  for (const view of materialized_views.rows) {
+    await db.raw(`REFRESH MATERIALIZED VIEW public.${view.matviewname}`)
+  }
 }

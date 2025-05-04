@@ -1,831 +1,431 @@
-DROP TABLE IF EXISTS database_table_views CASCADE;
-DROP TABLE IF EXISTS database_tables CASCADE;
-DROP TABLE IF EXISTS database_table_items CASCADE;
-DROP TABLE IF EXISTS digital_items CASCADE;
-DROP TABLE IF EXISTS physical_items CASCADE;
-DROP TABLE IF EXISTS physical_locations CASCADE;
-DROP TABLE IF EXISTS persons CASCADE;
-DROP TABLE IF EXISTS organizations CASCADE;
-DROP TABLE IF EXISTS tasks CASCADE;
-DROP TABLE IF EXISTS tags CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS entity_relations CASCADE;
-DROP TABLE IF EXISTS entity_tags CASCADE;
-DROP TABLE IF EXISTS entity_observations CASCADE;
-DROP TABLE IF EXISTS entity_metadata CASCADE;
-DROP TABLE IF EXISTS entities CASCADE;
-DROP TABLE IF EXISTS audit_log CASCADE;
-DROP TABLE IF EXISTS guidelines CASCADE;
-DROP TABLE IF EXISTS activities CASCADE;
-DROP TABLE IF EXISTS external_syncs CASCADE;
-DROP TABLE IF EXISTS sync_configs CASCADE;
-DROP TABLE IF EXISTS sync_conflicts CASCADE;
-DROP TABLE IF EXISTS change_requests CASCADE;
+--
+-- PostgreSQL database dump
+--
 
--- Block tables
-DROP TABLE IF EXISTS entity_blocks CASCADE;
-DROP TABLE IF EXISTS block_relationships CASCADE;
-DROP TABLE IF EXISTS block_attributes CASCADE;
-DROP TABLE IF EXISTS blocks CASCADE;
+-- Dumped from database version 15.12 (Ubuntu 15.12-1.pgdg24.04+1)
+-- Dumped by pg_dump version 15.12 (Ubuntu 15.12-1.pgdg24.04+1)
 
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "vector";
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+SET search_path = public;
 
-DROP TYPE IF EXISTS entity_type CASCADE;
-DROP TYPE IF EXISTS task_status_type CASCADE;
-DROP TYPE IF EXISTS priority_type CASCADE;
-DROP TYPE IF EXISTS importance_type CASCADE;
-DROP TYPE IF EXISTS frequency_type CASCADE;
-DROP TYPE IF EXISTS guideline_status_type CASCADE;
-DROP TYPE IF EXISTS change_request_status_type CASCADE;
-DROP TYPE IF EXISTS block_type CASCADE;
+ALTER TABLE IF EXISTS ONLY public.tasks DROP CONSTRAINT IF EXISTS tasks_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.sync_conflicts DROP CONSTRAINT IF EXISTS sync_conflicts_sync_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.sync_conflicts DROP CONSTRAINT IF EXISTS sync_conflicts_resolved_by_fkey;
+ALTER TABLE IF EXISTS ONLY public.sync_configs DROP CONSTRAINT IF EXISTS sync_configs_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.physical_locations DROP CONSTRAINT IF EXISTS physical_locations_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.physical_items DROP CONSTRAINT IF EXISTS physical_items_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_tag_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_target_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_source_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_observations DROP CONSTRAINT IF EXISTS entity_observations_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_metadata DROP CONSTRAINT IF EXISTS entity_metadata_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_blocks DROP CONSTRAINT IF EXISTS entity_blocks_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_blocks DROP CONSTRAINT IF EXISTS entity_blocks_block_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entities DROP CONSTRAINT IF EXISTS entities_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.digital_items DROP CONSTRAINT IF EXISTS digital_items_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.database_tables DROP CONSTRAINT IF EXISTS database_tables_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS database_table_views_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS database_table_views_database_table_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_items DROP CONSTRAINT IF EXISTS database_table_items_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_items DROP CONSTRAINT IF EXISTS database_table_items_database_table_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_target_block_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_source_block_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_block_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.activities DROP CONSTRAINT IF EXISTS activities_entity_id_fkey;
+DROP TRIGGER IF EXISTS trigger_update_digital_items_search_vector ON public.digital_items;
+DROP TRIGGER IF EXISTS trigger_update_block_search_vector ON public.blocks;
+DROP TRIGGER IF EXISTS refresh_activities_view_trigger ON public.entities;
+DROP TRIGGER IF EXISTS entity_blocks_audit ON public.entity_blocks;
+DROP TRIGGER IF EXISTS entities_audit ON public.entities;
+DROP INDEX IF EXISTS public.idx_unique_tag_entities;
+DROP INDEX IF EXISTS public.idx_unique_entity_relations;
+DROP INDEX IF EXISTS public.idx_tasks_status;
+DROP INDEX IF EXISTS public.idx_tasks_finish_by;
+DROP INDEX IF EXISTS public.idx_sync_conflicts_sync_id;
+DROP INDEX IF EXISTS public.idx_sync_conflicts_status;
+DROP INDEX IF EXISTS public.idx_sync_configs_entity_type;
+DROP INDEX IF EXISTS public.idx_sync_configs_entity_id;
+DROP INDEX IF EXISTS public.idx_physical_location_coordinates;
+DROP INDEX IF EXISTS public.idx_guideline_status;
+DROP INDEX IF EXISTS public.idx_guideline_effective_date;
+DROP INDEX IF EXISTS public.idx_external_syncs_external;
+DROP INDEX IF EXISTS public.idx_external_syncs_entity_id;
+DROP INDEX IF EXISTS public.idx_entity_tags_tag_id;
+DROP INDEX IF EXISTS public.idx_entity_relations_type;
+DROP INDEX IF EXISTS public.idx_entity_relations_target_type;
+DROP INDEX IF EXISTS public.idx_entity_relations_target;
+DROP INDEX IF EXISTS public.idx_entity_relations_source_type;
+DROP INDEX IF EXISTS public.idx_entity_relations_source;
+DROP INDEX IF EXISTS public.idx_entity_observations_category;
+DROP INDEX IF EXISTS public.idx_entity_metadata_key;
+DROP INDEX IF EXISTS public.idx_entity_embedding;
+DROP INDEX IF EXISTS public.idx_entity_blocks_entity_id;
+DROP INDEX IF EXISTS public.idx_entity_blocks_block_id;
+DROP INDEX IF EXISTS public.idx_entities_user_id;
+DROP INDEX IF EXISTS public.idx_entities_updated_at;
+DROP INDEX IF EXISTS public.idx_entities_type;
+DROP INDEX IF EXISTS public.idx_entities_markdown_gin;
+DROP INDEX IF EXISTS public.idx_entities_git_sha;
+DROP INDEX IF EXISTS public.idx_entities_frontmatter;
+DROP INDEX IF EXISTS public.idx_entities_file_path_user;
+DROP INDEX IF EXISTS public.idx_entities_file_path;
+DROP INDEX IF EXISTS public.idx_entities_description_gin;
+DROP INDEX IF EXISTS public.idx_entities_created_at;
+DROP INDEX IF EXISTS public.idx_entities_content_gin;
+DROP INDEX IF EXISTS public.idx_entities_archived_at;
+DROP INDEX IF EXISTS public.idx_digital_items_search;
+DROP INDEX IF EXISTS public.idx_database_items_parent;
+DROP INDEX IF EXISTS public.idx_change_requests_updated_at;
+DROP INDEX IF EXISTS public.idx_change_requests_target_branch;
+DROP INDEX IF EXISTS public.idx_change_requests_status;
+DROP INDEX IF EXISTS public.idx_change_requests_github_repo;
+DROP INDEX IF EXISTS public.idx_change_requests_github_pr_number;
+DROP INDEX IF EXISTS public.idx_change_requests_creator_id;
+DROP INDEX IF EXISTS public.idx_change_requests_created_at;
+DROP INDEX IF EXISTS public.idx_blocks_user_id;
+DROP INDEX IF EXISTS public.idx_blocks_updated_at;
+DROP INDEX IF EXISTS public.idx_blocks_type;
+DROP INDEX IF EXISTS public.idx_blocks_search;
+DROP INDEX IF EXISTS public.idx_blocks_embedding;
+DROP INDEX IF EXISTS public.idx_blocks_created_at;
+DROP INDEX IF EXISTS public.idx_blocks_block_cid;
+DROP INDEX IF EXISTS public.idx_block_relationships_type;
+DROP INDEX IF EXISTS public.idx_block_relationships_target;
+DROP INDEX IF EXISTS public.idx_block_relationships_source;
+DROP INDEX IF EXISTS public.idx_audit_log_table_record;
+DROP INDEX IF EXISTS public.idx_audit_log_changed_at;
+DROP INDEX IF EXISTS public.idx_activities_view_entity_id;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_username_key;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_public_key_key;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.tasks DROP CONSTRAINT IF EXISTS tasks_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_tags DROP CONSTRAINT IF EXISTS task_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_physical_items DROP CONSTRAINT IF EXISTS task_physical_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_persons DROP CONSTRAINT IF EXISTS task_persons_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_parents DROP CONSTRAINT IF EXISTS task_parents_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_organizations DROP CONSTRAINT IF EXISTS task_organizations_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_digital_items DROP CONSTRAINT IF EXISTS task_digital_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_dependencies DROP CONSTRAINT IF EXISTS task_dependencies_pkey;
+ALTER TABLE IF EXISTS ONLY public.task_activities DROP CONSTRAINT IF EXISTS task_activities_pkey;
+ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.sync_conflicts DROP CONSTRAINT IF EXISTS sync_conflicts_pkey;
+ALTER TABLE IF EXISTS ONLY public.sync_configs DROP CONSTRAINT IF EXISTS sync_configs_pkey;
+ALTER TABLE IF EXISTS ONLY public.physical_locations DROP CONSTRAINT IF EXISTS physical_locations_pkey;
+ALTER TABLE IF EXISTS ONLY public.physical_items DROP CONSTRAINT IF EXISTS physical_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.physical_item_tags DROP CONSTRAINT IF EXISTS physical_item_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.physical_item_child_items DROP CONSTRAINT IF EXISTS physical_item_child_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_pkey;
+ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
+ALTER TABLE IF EXISTS ONLY public.organization_persons DROP CONSTRAINT IF EXISTS organization_persons_pkey;
+ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_pkey;
+ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_pkey;
+ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_entity_id_external_system_external_id_key;
+ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_observations DROP CONSTRAINT IF EXISTS entity_observations_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_metadata DROP CONSTRAINT IF EXISTS entity_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_metadata DROP CONSTRAINT IF EXISTS entity_metadata_entity_id_key_key;
+ALTER TABLE IF EXISTS ONLY public.entity_blocks DROP CONSTRAINT IF EXISTS entity_blocks_pkey;
+ALTER TABLE IF EXISTS ONLY public.entities DROP CONSTRAINT IF EXISTS entities_pkey;
+ALTER TABLE IF EXISTS ONLY public.digital_items DROP CONSTRAINT IF EXISTS digital_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.digital_item_tags DROP CONSTRAINT IF EXISTS digital_item_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.database_tables DROP CONSTRAINT IF EXISTS database_tables_table_name_entity_id_key;
+ALTER TABLE IF EXISTS ONLY public.database_tables DROP CONSTRAINT IF EXISTS database_tables_pkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS database_table_views_view_name_entity_id_key;
+ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS database_table_views_pkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_tags DROP CONSTRAINT IF EXISTS database_table_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.database_table_items DROP CONSTRAINT IF EXISTS database_table_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.change_requests DROP CONSTRAINT IF EXISTS change_requests_pkey;
+ALTER TABLE IF EXISTS ONLY public.change_requests DROP CONSTRAINT IF EXISTS change_requests_feature_branch_key;
+ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_pkey;
+ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_block_cid_key;
+ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_source_block_id_target_block_id_relatio_key;
+ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_pkey;
+ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_pkey;
+ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_block_id_key_key;
+ALTER TABLE IF EXISTS ONLY public.audit_log DROP CONSTRAINT IF EXISTS audit_log_pkey;
+ALTER TABLE IF EXISTS ONLY public.activities DROP CONSTRAINT IF EXISTS activities_pkey;
+DROP TABLE IF EXISTS public.users;
+DROP VIEW IF EXISTS public.text_document_view;
+DROP TABLE IF EXISTS public.tasks;
+DROP TABLE IF EXISTS public.task_tags;
+DROP VIEW IF EXISTS public.task_physical_items_view;
+DROP TABLE IF EXISTS public.task_physical_items;
+DROP VIEW IF EXISTS public.task_persons_view;
+DROP TABLE IF EXISTS public.task_persons;
+DROP TABLE IF EXISTS public.task_parents;
+DROP VIEW IF EXISTS public.task_parent_child_view;
+DROP VIEW IF EXISTS public.task_organizations_view;
+DROP TABLE IF EXISTS public.task_organizations;
+DROP VIEW IF EXISTS public.task_digital_items_view;
+DROP TABLE IF EXISTS public.task_digital_items;
+DROP VIEW IF EXISTS public.task_dependencies_view;
+DROP TABLE IF EXISTS public.task_dependencies;
+DROP TABLE IF EXISTS public.task_activities;
+DROP TABLE IF EXISTS public.tags;
+DROP TABLE IF EXISTS public.sync_conflicts;
+DROP TABLE IF EXISTS public.sync_configs;
+DROP TABLE IF EXISTS public.physical_locations;
+DROP TABLE IF EXISTS public.physical_items;
+DROP TABLE IF EXISTS public.physical_item_tags;
+DROP VIEW IF EXISTS public.physical_item_hierarchy_view;
+DROP TABLE IF EXISTS public.physical_item_child_items;
+DROP TABLE IF EXISTS public.persons;
+DROP VIEW IF EXISTS public.person_organizations_view;
+DROP TABLE IF EXISTS public.organizations;
+DROP TABLE IF EXISTS public.organization_persons;
+DROP VIEW IF EXISTS public.organization_members_view;
+DROP VIEW IF EXISTS public.guideline_with_activities;
+DROP TABLE IF EXISTS public.guidelines;
+DROP TABLE IF EXISTS public.external_syncs;
+DROP VIEW IF EXISTS public.entity_stats;
+DROP TABLE IF EXISTS public.entity_tags;
+DROP TABLE IF EXISTS public.entity_observations;
+DROP TABLE IF EXISTS public.entity_metadata;
+DROP VIEW IF EXISTS public.entity_hierarchies_view;
+DROP TABLE IF EXISTS public.entity_blocks;
+DROP TABLE IF EXISTS public.digital_items;
+DROP TABLE IF EXISTS public.digital_item_tags;
+DROP TABLE IF EXISTS public.database_tables;
+DROP TABLE IF EXISTS public.database_table_views;
+DROP TABLE IF EXISTS public.database_table_tags;
+DROP TABLE IF EXISTS public.database_table_items;
+DROP TABLE IF EXISTS public.change_requests;
+DROP TABLE IF EXISTS public.blocks;
+DROP TABLE IF EXISTS public.block_relationships;
+DROP TABLE IF EXISTS public.block_attributes;
+DROP TABLE IF EXISTS public.audit_log;
+DROP VIEW IF EXISTS public.activity_guidelines_view;
+DROP TABLE IF EXISTS public.entity_relations;
+DROP MATERIALIZED VIEW IF EXISTS public.activities_view;
+DROP TABLE IF EXISTS public.activities;
+DROP VIEW IF EXISTS public.active_entities;
+DROP TABLE IF EXISTS public.entities;
+DROP FUNCTION IF EXISTS public.update_digital_items_search_vector();
+DROP FUNCTION IF EXISTS public.update_block_search_vector();
+DROP FUNCTION IF EXISTS public.refresh_activities_view();
+DROP FUNCTION IF EXISTS public.process_audit_log();
+DROP FUNCTION IF EXISTS public.is_entity_synced_with_git(p_entity_id uuid, p_git_sha character varying);
+DROP FUNCTION IF EXISTS public.entity_similarity_search(query_embedding public.vector, entity_types public.entity_type[], similarity_threshold double precision, max_results integer);
+DROP FUNCTION IF EXISTS public.block_similarity_search(query_embedding public.vector, block_types public.block_type[], similarity_threshold double precision, max_results integer);
+DROP TYPE IF EXISTS public.task_status_type;
+DROP TYPE IF EXISTS public.priority_type;
+DROP TYPE IF EXISTS public.importance_type;
+DROP TYPE IF EXISTS public.guideline_status_type;
+DROP TYPE IF EXISTS public.frequency_type;
+DROP TYPE IF EXISTS public.entity_type;
+DROP TYPE IF EXISTS public.change_request_status_type;
+DROP TYPE IF EXISTS public.block_type;
+DROP EXTENSION IF EXISTS vector;
+DROP EXTENSION IF EXISTS "uuid-ossp";
+--
+-- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
+--
 
--- Create custom enum types
-CREATE TYPE entity_type AS ENUM (
-  'activity',
-  'database',
-  'database_item',
-  'database_view',
-  'digital_item',
-  'guideline',
-  'organization',
-  'person',
-  'physical_item',
-  'physical_location',
-  'prompt',
-  'tag',
-  'task',
-  'text',
-  'type_definition',
-  'type_extension'
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
+-- Name: vector; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
+
+
+--
+-- Name: block_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.block_type AS ENUM (
+    'markdown_file',
+    'heading',
+    'paragraph',
+    'list',
+    'list_item',
+    'code',
+    'blockquote',
+    'table',
+    'table_row',
+    'table_cell',
+    'image',
+    'thematic_break',
+    'callout',
+    'bookmark',
+    'equation',
+    'file',
+    'video',
+    'html_block'
 );
 
-CREATE TYPE task_status_type AS ENUM (
-  'No status',
-  'Waiting',
-  'Paused',
-  'Planned',
-  'Started',
-  'In Progress',
-  'Completed',
-  'Cancelled',
-  'Blocked'
+
+--
+-- Name: change_request_status_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.change_request_status_type AS ENUM (
+    'Draft',
+    'PendingReview',
+    'NeedsRevision',
+    'Approved',
+    'Rejected',
+    'Merged',
+    'Closed'
 );
 
-CREATE TYPE priority_type AS ENUM (
-  'None',
-  'Low',
-  'Medium',
-  'High',
-  'Critical'
+
+--
+-- Name: entity_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.entity_type AS ENUM (
+    'activity',
+    'database',
+    'database_item',
+    'database_view',
+    'digital_item',
+    'guideline',
+    'organization',
+    'person',
+    'physical_item',
+    'physical_location',
+    'prompt',
+    'tag',
+    'task',
+    'text',
+    'type_definition',
+    'type_extension'
 );
 
-CREATE TYPE importance_type AS ENUM (
-  'Core',
-  'Standard',
-  'Premium',
-  'Potential'
+
+--
+-- Name: frequency_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.frequency_type AS ENUM (
+    'Daily',
+    'Weekly',
+    'Infrequent'
 );
 
-CREATE TYPE frequency_type AS ENUM (
-  'Daily',
-  'Weekly',
-  'Infrequent'
+
+--
+-- Name: guideline_status_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.guideline_status_type AS ENUM (
+    'Draft',
+    'Approved',
+    'Deprecated'
 );
 
-CREATE TYPE guideline_status_type AS ENUM (
-  'Draft',
-  'Approved',
-  'Deprecated'
+
+--
+-- Name: importance_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.importance_type AS ENUM (
+    'Core',
+    'Standard',
+    'Premium',
+    'Potential'
 );
 
-CREATE TYPE change_request_status_type AS ENUM (
-  'Draft',
-  'PendingReview',
-  'NeedsRevision',
-  'Approved',
-  'Rejected',
-  'Merged',
-  'Closed'
+
+--
+-- Name: priority_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.priority_type AS ENUM (
+    'None',
+    'Low',
+    'Medium',
+    'High',
+    'Critical'
 );
 
--- Create the users table (foundational)
-CREATE TABLE users (
-  user_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  public_key VARCHAR(64) NOT NULL UNIQUE,
-  username VARCHAR(255) NOT NULL UNIQUE,
-  email VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT check_updated_at CHECK (
-    updated_at IS NULL
-    OR updated_at >= created_at
-  )
-);
--- Create the unified entity table (core of the model with content fields integrated)
-CREATE TABLE entities (
-  entity_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  type entity_type NOT NULL,
-  permalink VARCHAR(255),
-  description TEXT NOT NULL,
-  user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
-  embedding vector(1536),
-  git_sha VARCHAR(40),  -- Git commit hash for markdown files
-  content TEXT,
-  markdown TEXT,
-  frontmatter JSONB,
-  file_path VARCHAR(500),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  archived_at TIMESTAMP,
-  CONSTRAINT check_updated_at CHECK (
-    updated_at IS NULL OR updated_at >= created_at
-  ),
-  CONSTRAINT check_archived_at CHECK (
-    archived_at IS NULL OR archived_at >= updated_at
-  )
+
+--
+-- Name: task_status_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.task_status_type AS ENUM (
+    'No status',
+    'Waiting',
+    'Paused',
+    'Planned',
+    'Started',
+    'In Progress',
+    'Completed',
+    'Cancelled',
+    'Blocked'
 );
 
--- Add constraint for text type to require markdown and frontmatter
-ALTER TABLE entities
-ADD CONSTRAINT check_text_fields
-CHECK (
-  type != 'text' OR
-  (markdown IS NOT NULL AND frontmatter IS NOT NULL AND file_path IS NOT NULL)
-);
 
--- Block types
-CREATE TYPE block_type AS ENUM (
-  'markdown_file',
-  'heading',
-  'paragraph',
-  'list',
-  'list_item',
-  'code',
-  'blockquote',
-  'table',
-  'table_row',
-  'table_cell',
-  'image',
-  'thematic_break',
-  'callout',
-  'bookmark',
-  'equation',
-  'file',
-  'video',
-  'html_block'
-);
+--
+-- Name: block_similarity_search(public.vector, public.block_type[], double precision, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
-CREATE TABLE blocks (
-  block_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  block_cid TEXT NOT NULL UNIQUE,   -- Content ID (multihash)
-  type block_type NOT NULL,
-  content TEXT,
-  user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  -- Search capability
-  embedding vector(1536),
-  search_vector tsvector,
-
-  -- Block metadata fields
-  position_start_line INTEGER,
-  position_start_character INTEGER,
-  position_end_line INTEGER,
-  position_end_character INTEGER,
-
-  CONSTRAINT check_updated_at CHECK (
-    updated_at IS NULL OR updated_at >= created_at
-  )
-);
-
--- Block attributes (type-specific properties)
-CREATE TABLE block_attributes (
-  attribute_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
-  key VARCHAR(255) NOT NULL,
-  value TEXT NOT NULL,
-  UNIQUE (block_id, key)
-);
-
--- Block relationships
-CREATE TABLE block_relationships (
-  relationship_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  source_block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
-  target_block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
-  relationship_type VARCHAR(50) NOT NULL,
-  UNIQUE (source_block_id, target_block_id, relationship_type)
-);
-
--- Join table connecting entities and blocks
-CREATE TABLE entity_blocks (
-  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  block_id UUID NOT NULL REFERENCES blocks (block_id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (entity_id, block_id)
-);
-
--- Indexes for block tables
-CREATE INDEX idx_blocks_block_cid ON blocks (block_cid);
-CREATE INDEX idx_blocks_type ON blocks (type);
-CREATE INDEX idx_blocks_user_id ON blocks (user_id);
-CREATE INDEX idx_blocks_created_at ON blocks (created_at DESC);
-CREATE INDEX idx_blocks_updated_at ON blocks (updated_at DESC);
-CREATE INDEX idx_entity_blocks_entity_id ON entity_blocks (entity_id);
-CREATE INDEX idx_entity_blocks_block_id ON entity_blocks (block_id);
-CREATE INDEX idx_block_relationships_source ON block_relationships (source_block_id);
-CREATE INDEX idx_block_relationships_target ON block_relationships (target_block_id);
-CREATE INDEX idx_block_relationships_type ON block_relationships (relationship_type);
-CREATE INDEX idx_blocks_search ON blocks USING gin(search_vector);
-CREATE INDEX idx_blocks_embedding ON blocks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- Update search vector for full text search
-CREATE OR REPLACE FUNCTION update_block_search_vector()
-RETURNS TRIGGER AS $$
+CREATE FUNCTION public.block_similarity_search(query_embedding public.vector, block_types public.block_type[] DEFAULT NULL::public.block_type[], similarity_threshold double precision DEFAULT 0.7, max_results integer DEFAULT 10) RETURNS TABLE(block_id uuid, block_cid text, type public.block_type, content text, similarity double precision)
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
-  NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
-  RETURN NEW;
+  RETURN QUERY
+  SELECT
+    b.block_id,
+    b.block_cid,
+    b.type,
+    b.content,
+    1 - (b.embedding <=> query_embedding) AS similarity
+  FROM
+    blocks b
+  WHERE
+    b.embedding IS NOT NULL
+    AND (block_types IS NULL OR b.type = ANY(block_types))
+    AND 1 - (b.embedding <=> query_embedding) > similarity_threshold
+  ORDER BY
+    b.embedding <=> query_embedding
+  LIMIT max_results;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-CREATE TRIGGER trigger_update_block_search_vector
-BEFORE INSERT OR UPDATE ON blocks
-FOR EACH ROW EXECUTE FUNCTION update_block_search_vector();
 
--- Audit log for tracking changes
-CREATE TABLE audit_log (
-  audit_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  table_name VARCHAR(255) NOT NULL,
-  record_id UUID NOT NULL,
-  operation CHAR(1) NOT NULL CHECK (operation IN ('I', 'U', 'D')),
-  old_data JSONB,
-  new_data JSONB,
-  changed_by UUID,
-  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+--
+-- Name: entity_similarity_search(public.vector, public.entity_type[], double precision, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
--- Create entity extension tables
-CREATE TABLE physical_locations (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  mail_address TEXT,
-  mail_address2 TEXT,
-  mail_careof TEXT,
-  mail_street_number TEXT,
-  mail_street_prefix TEXT,
-  mail_street_name TEXT,
-  mail_street_type TEXT,
-  mail_street_suffix TEXT,
-  mail_unit_number TEXT,
-  mail_city TEXT,
-  mail_state TEXT,
-  mail_zip TEXT,
-  mail_country TEXT,
-  mail_urbanization TEXT
-);
-
-CREATE TABLE physical_items (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  serial_number VARCHAR(255),
-  model_number VARCHAR(255),
-  manufacturer VARCHAR(255),
-  storage_location VARCHAR(255),
-  acquisition_date DATE,
-  target_location VARCHAR(255), -- TODO should maybe refer to an entity
-  current_location VARCHAR(255), -- TODO should maybe refer to an entity
-  home_areas TEXT[],
-  home_attribute TEXT[],
-  activities TEXT[],
-  importance importance_type,
-  frequency_of_use frequency_type,
-  height_inches DECIMAL(10, 2),
-  width_inches DECIMAL(10, 2),
-  depth_inches DECIMAL(10, 2),
-  weight_ounces DECIMAL(10, 2),
-  volume_cubic_inches DECIMAL(10, 2),
-  voltage VARCHAR(20),
-  wattage DECIMAL(10, 2),
-  outlets_used INTEGER,
-  water_connection BOOLEAN,
-  drain_connection BOOLEAN,
-  ethernet_connected BOOLEAN,
-  min_storage_temperature_celsius DECIMAL(5, 2),
-  max_storage_temperature_celsius DECIMAL(5, 2),
-  min_storage_humidity_percent DECIMAL(5, 2),
-  max_storage_humidity_percent DECIMAL(5, 2),
-  exist BOOLEAN,
-  current_quantity INTEGER,
-  target_quantity INTEGER,
-  consumable BOOLEAN,
-  perishable BOOLEAN,
-  kit_name VARCHAR(255),
-  kit_items TEXT[],
-  large_drawer_units INTEGER,
-  standard_drawer_units INTEGER,
-  storage_notes TEXT,
-  misc_notes TEXT
-);
-
-CREATE TABLE digital_items (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  file_mime_type VARCHAR(255),
-  file_uri VARCHAR(500),
-  file_size VARCHAR(50),
-  file_cid VARCHAR(100),
-  text TEXT,
-  html TEXT,
-  search_vector tsvector
-);
-
-CREATE TABLE persons (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  first_name VARCHAR(255) NOT NULL,
-  last_name VARCHAR(255) NOT NULL,
-  email VARCHAR(255),
-  mobile_phone VARCHAR(255),
-  website_url VARCHAR(255)
-);
-
-CREATE TABLE organizations (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  website_url VARCHAR(255)
-);
-
-CREATE TABLE tasks (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  status task_status_type DEFAULT 'No status',
-  priority priority_type,
-  assigned_to VARCHAR(255),
-  start_by TIMESTAMP,
-  finish_by TIMESTAMP,
-  estimated_total_duration INTEGER,
-  estimated_preparation_duration INTEGER,
-  estimated_execution_duration INTEGER,
-  estimated_cleanup_duration INTEGER,
-  actual_duration INTEGER,
-  planned_start TIMESTAMP,
-  planned_finish TIMESTAMP,
-  started_at TIMESTAMP,
-  finished_at TIMESTAMP,
-  snooze_until TIMESTAMP,
-  CONSTRAINT check_estimated_duration CHECK (
-    estimated_total_duration IS NULL
-    OR estimated_total_duration >= COALESCE(estimated_preparation_duration, 0) + COALESCE(estimated_execution_duration, 0) + COALESCE(estimated_cleanup_duration, 0)
-  )
-);
-
--- Create guidelines table
-CREATE TABLE guidelines (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  guideline_status guideline_status_type,
-  effective_date DATE
-);
-
--- Activities table with guidelines reference
-CREATE TABLE activities (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE
-);
-
--- Create database_tables table
-CREATE TABLE database_tables (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  table_name VARCHAR(255) NOT NULL,
-  table_description TEXT,
-  fields JSONB NOT NULL,
-  UNIQUE (table_name, entity_id)
-);
-
--- Create database_table_items table
-CREATE TABLE database_table_items (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  database_table_id UUID NOT NULL REFERENCES database_tables (entity_id) ON DELETE CASCADE,
-  field_values JSONB NOT NULL
-);
-
-CREATE TABLE database_table_views (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  view_name VARCHAR(255) NOT NULL,
-  view_description TEXT,
-  database_table_name VARCHAR(255) NOT NULL,
-  database_table_entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  table_state JSONB,
-  UNIQUE (view_name, entity_id)
-);
-
--- Create unified relationship tables
-CREATE TABLE entity_relations (
-  relation_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  source_entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  target_entity_id UUID REFERENCES entities (entity_id) ON DELETE CASCADE,
-  relation_type VARCHAR(50) NOT NULL,
-  context TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE entity_tags (
-  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  tag_entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  PRIMARY KEY (entity_id, tag_entity_id)
-);
-
-CREATE TABLE entity_observations (
-  observation_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  category VARCHAR(50) NOT NULL,
-  content TEXT NOT NULL,
-  context TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE entity_metadata (
-  metadata_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  key VARCHAR(100) NOT NULL,
-  value TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT check_updated_at CHECK (
-    updated_at IS NULL OR updated_at >= created_at
-  ),
-  UNIQUE (entity_id, key)
-);
-
--- Create change_requests table
-CREATE TABLE change_requests (
-  change_request_id UUID PRIMARY KEY DEFAULT uuid_generate_v1(),
-  status change_request_status_type NOT NULL DEFAULT 'Draft',
-  title TEXT NOT NULL,
-  creator_id TEXT NOT NULL, -- Can be user_id or system identifier
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  target_branch TEXT NOT NULL,
-  feature_branch TEXT NOT NULL UNIQUE,
-  github_pr_url TEXT,
-  github_pr_number INTEGER,
-  github_repo TEXT, -- Format: 'owner/repo'
-  thread_id UUID, -- Optional reference to worker thread
-  merged_at TIMESTAMPTZ,
-  closed_at TIMESTAMPTZ,
-  merge_commit_hash TEXT, -- Hash of the merge commit when branch is merged
-  CONSTRAINT check_change_requests_updated_at CHECK (updated_at >= created_at),
-  CONSTRAINT check_change_requests_merged_at CHECK (merged_at IS NULL OR merged_at >= created_at),
-  CONSTRAINT check_change_requests_closed_at CHECK (closed_at IS NULL OR closed_at >= created_at)
-);
-
--- Create tags table
-CREATE TABLE tags (
-  entity_id UUID PRIMARY KEY REFERENCES entities (entity_id) ON DELETE CASCADE,
-  color VARCHAR(50)
-);
-
--- Track external entity relationships
-CREATE TABLE external_syncs (
-  sync_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  entity_id UUID NOT NULL REFERENCES entities (entity_id) ON DELETE CASCADE,
-  external_system VARCHAR(50) NOT NULL,
-  external_id VARCHAR(255) NOT NULL,
-  last_sync_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  last_external_update_at TIMESTAMP,
-  last_internal_update_at TIMESTAMP,
-  field_last_updated JSONB,   -- Stores per-field update timestamps
-  sync_status VARCHAR(50) DEFAULT 'synced',
-  UNIQUE (entity_id, external_system, external_id)
-);
-
--- Configure sync preferences
-CREATE TABLE sync_configs (
-  config_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  entity_id UUID REFERENCES entities (entity_id) ON DELETE CASCADE,
-  entity_type entity_type,
-  external_system VARCHAR(50) NOT NULL,
-  field_strategies JSONB NOT NULL, -- Stores strategies by field name
-  CHECK (entity_id IS NOT NULL OR entity_type IS NOT NULL)
-);
-
--- Track conflicts and resolutions
-CREATE TABLE sync_conflicts (
-  conflict_id UUID DEFAULT uuid_generate_v1() PRIMARY KEY,
-  sync_id UUID NOT NULL REFERENCES external_syncs (sync_id) ON DELETE CASCADE,
-  import_cid TEXT NOT NULL,               -- Content ID of import
-  conflicts JSONB NOT NULL,               -- All field conflicts
-  resolutions JSONB,                      -- Applied resolutions
-  status VARCHAR(50) DEFAULT 'pending',   -- pending/resolved
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  resolved_at TIMESTAMP,
-  resolved_by UUID REFERENCES users (user_id)
-);
-
--- Create views for convenient access
-CREATE VIEW active_entities AS
-SELECT * FROM entities
-WHERE archived_at IS NULL;
-
-CREATE VIEW text_document_view AS
-SELECT entity_id, title, type, permalink, description, user_id, embedding,
-       git_sha, content, markdown, frontmatter, file_path,
-       created_at, updated_at
-FROM entities
-WHERE archived_at IS NULL AND type = 'text';
-
--- Create a view for entity statistics and analytics
-CREATE VIEW entity_stats AS
-SELECT
-  e.entity_id,
-  e.title,
-  e.type,
-  COUNT(DISTINCT r.relation_id) AS relation_count,
-  COUNT(DISTINCT o.observation_id) AS observation_count,
-  COUNT(DISTINCT et.tag_entity_id) AS tag_count,
-  COUNT(DISTINCT m.metadata_id) AS metadata_count,
-  e.created_at,
-  e.updated_at
-FROM
-  entities e
-LEFT JOIN
-  entity_relations r ON e.entity_id = r.source_entity_id
-LEFT JOIN
-  entity_observations o ON e.entity_id = o.entity_id
-LEFT JOIN
-  entity_tags et ON e.entity_id = et.entity_id
-LEFT JOIN
-  entity_metadata m ON e.entity_id = m.entity_id
-WHERE
-  e.archived_at IS NULL
-GROUP BY
-  e.entity_id, e.title, e.type, e.created_at, e.updated_at;
-
--- Create view for guidelines with activities that follow them
-CREATE VIEW guideline_with_activities AS
-SELECT
-  g.entity_id,
-  e.title,
-  e.description,
-  g.guideline_status,
-  g.effective_date,
-  array_agg(DISTINCT r.source_entity_id) AS activity_ids,
-  array_agg(DISTINCT ae.title) AS activity_titles
-FROM
-  guidelines g
-JOIN
-  entities e ON g.entity_id = e.entity_id
-LEFT JOIN
-  entity_relations r ON g.entity_id = r.target_entity_id AND r.relation_type = 'follows'
-LEFT JOIN
-  entities ae ON r.source_entity_id = ae.entity_id AND ae.type = 'activity'
-WHERE
-  e.archived_at IS NULL
-GROUP BY
-  g.entity_id, e.title, e.description, g.guideline_status, g.effective_date;
-
-CREATE VIEW task_persons_view AS
-SELECT
-  source_entity_id AS task_id,
-  target_entity_id AS person_id
-FROM
-  entity_relations
-WHERE
-  relation_type IN ('assigned_to', 'involves')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'person');
-
--- Create view for task organizations
-CREATE VIEW task_organizations_view AS
-SELECT
-  source_entity_id AS task_id,
-  target_entity_id AS organization_id
-FROM
-  entity_relations
-WHERE
-  relation_type IN ('assigned_to', 'involves')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'organization');
-
--- Create view for task physical items
-CREATE VIEW task_physical_items_view AS
-SELECT
-  source_entity_id AS task_id,
-  target_entity_id AS physical_item_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'requires'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'physical_item');
-
--- Create view for task digital items
-CREATE VIEW task_digital_items_view AS
-SELECT
-  source_entity_id AS task_id,
-  target_entity_id AS digital_item_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'requires'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'digital_item');
-
--- Create view for organization members
-CREATE VIEW organization_members_view AS
-SELECT
-  source_entity_id AS organization_id,
-  target_entity_id AS person_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'has_member'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'organization')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'person');
-
--- Create view for person organizations
-CREATE VIEW person_organizations_view AS
-SELECT
-  source_entity_id AS person_id,
-  target_entity_id AS organization_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'member_of'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'person')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'organization');
-
--- Create view for activity guidelines
-CREATE VIEW activity_guidelines_view AS
-SELECT
-  source_entity_id AS activity_id,
-  target_entity_id AS guideline_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'follows'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'activity')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'guideline');
-
--- Create view for task parent-child relationships
-CREATE VIEW task_parent_child_view AS
-SELECT
-  target_entity_id AS parent_task_id,
-  source_entity_id AS child_task_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'child_of'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'task');
-
--- Create view for task dependencies
-CREATE VIEW task_dependencies_view AS
-SELECT
-  source_entity_id AS task_entity_id,
-  target_entity_id AS dependent_task_entity_id
-FROM
-  entity_relations
-WHERE
-  relation_type = 'depends_on'
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'task')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'task');
-
--- Create view for physical item parent-child relationships
-CREATE VIEW physical_item_hierarchy_view AS
-SELECT
-  source_entity_id AS parent_item_id,
-  target_entity_id AS child_item_id
-FROM
-  entity_relations
-WHERE
-  relation_type IN ('contains', 'parent_of')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = source_entity_id AND type = 'physical_item')
-AND
-  EXISTS (SELECT 1 FROM entities WHERE entity_id = target_entity_id AND type = 'physical_item');
-
--- Create view for entity hierarchies (generic parent-child)
-CREATE VIEW entity_hierarchies_view AS
-SELECT
-  source_entity_id AS parent_entity_id,
-  target_entity_id AS child_entity_id
-FROM
-  entity_relations
-WHERE
-  relation_type IN ('parent_of', 'contains');
-
--- Create a materialized view for activities
-CREATE MATERIALIZED VIEW activities_view AS
-SELECT entity_id, title, description, user_id, created_at, updated_at
-FROM entities
-WHERE type = 'activity' AND archived_at IS NULL;
-
--- Create a unique index on entities for tags by type, title, and user_id
-CREATE UNIQUE INDEX idx_unique_tag_entities ON entities (title, user_id)
-WHERE type = 'tag';
-CREATE UNIQUE INDEX idx_unique_entity_relations ON entity_relations (source_entity_id, target_entity_id, relation_type);
-
--- Create indices to improve query performance
-CREATE INDEX idx_entities_type ON entities (type);
-CREATE INDEX idx_entities_user_id ON entities (user_id);
-CREATE INDEX idx_entities_created_at ON entities (created_at DESC);
-CREATE INDEX idx_entities_updated_at ON entities (updated_at DESC);
-CREATE INDEX idx_entities_archived_at ON entities (archived_at);
-CREATE INDEX idx_entities_git_sha ON entities (git_sha);
-CREATE INDEX idx_entity_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX idx_entity_tags_tag_id ON entity_tags (tag_entity_id);
-CREATE INDEX idx_entity_relations_source ON entity_relations (source_entity_id);
-CREATE INDEX idx_entity_relations_target ON entity_relations (target_entity_id);
-CREATE INDEX idx_entity_relations_type ON entity_relations (relation_type);
-CREATE INDEX idx_entity_relations_source_type ON entity_relations (source_entity_id, relation_type);
-CREATE INDEX idx_entity_relations_target_type ON entity_relations (target_entity_id, relation_type);
-CREATE INDEX idx_tasks_status ON tasks (status);
-CREATE INDEX idx_tasks_finish_by ON tasks (finish_by);
-CREATE INDEX idx_entities_file_path ON entities (file_path) WHERE type = 'text';
-CREATE INDEX idx_entities_frontmatter ON entities USING gin (frontmatter) WHERE type = 'text';
-CREATE INDEX idx_entities_markdown_gin ON entities USING gin(to_tsvector('english', markdown)) WHERE type = 'text';
-CREATE INDEX idx_entities_content_gin ON entities USING gin(to_tsvector('english', content)) WHERE type = 'text';
-CREATE INDEX idx_digital_items_search ON digital_items USING gin(search_vector);
-CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
-CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at DESC);
-CREATE INDEX idx_entity_metadata_key ON entity_metadata (key);
-CREATE INDEX idx_entity_observations_category ON entity_observations (category);
-CREATE INDEX idx_physical_location_coordinates ON physical_locations (latitude, longitude);
-CREATE INDEX idx_database_items_parent ON database_table_items (database_table_id);
-CREATE INDEX idx_guideline_status ON guidelines (guideline_status);
-CREATE INDEX idx_guideline_effective_date ON guidelines (effective_date);
-CREATE INDEX idx_external_syncs_entity_id ON external_syncs (entity_id);
-CREATE INDEX idx_external_syncs_external ON external_syncs (external_system, external_id);
-CREATE INDEX idx_sync_configs_entity_id ON sync_configs (entity_id);
-CREATE INDEX idx_sync_configs_entity_type ON sync_configs (entity_type);
-CREATE INDEX idx_sync_conflicts_sync_id ON sync_conflicts (sync_id);
-CREATE INDEX idx_sync_conflicts_status ON sync_conflicts (status);
-
--- Indexes for change_requests table
-CREATE INDEX idx_change_requests_status ON change_requests (status);
-CREATE INDEX idx_change_requests_creator_id ON change_requests (creator_id);
-CREATE INDEX idx_change_requests_target_branch ON change_requests (target_branch);
-CREATE INDEX idx_change_requests_github_repo ON change_requests (github_repo);
-CREATE INDEX idx_change_requests_github_pr_number ON change_requests (github_pr_number) WHERE github_pr_number IS NOT NULL;
-CREATE INDEX idx_change_requests_created_at ON change_requests (created_at DESC);
-CREATE INDEX idx_change_requests_updated_at ON change_requests (updated_at DESC);
-
--- Create a unique index for file paths by user (only for text types)
-CREATE UNIQUE INDEX idx_entities_file_path_user
-ON entities (file_path, user_id)
-WHERE type = 'text' AND file_path IS NOT NULL;
-
--- Add index for full-text search on description
-CREATE INDEX idx_entities_description_gin ON entities
-USING gin(to_tsvector('english', description))
-WHERE description IS NOT NULL;
-
-CREATE UNIQUE INDEX idx_activities_view_entity_id ON activities_view (entity_id);
-
--- Function to refresh activities view
-CREATE OR REPLACE FUNCTION refresh_activities_view()
-RETURNS TRIGGER AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY activities_view;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add trigger to refresh the activities view when entities change
-CREATE TRIGGER refresh_activities_view_trigger
-AFTER INSERT OR UPDATE OR DELETE ON entities
-FOR EACH ROW
-EXECUTE FUNCTION refresh_activities_view();
-
--- Create a function for semantic similarity search
-CREATE OR REPLACE FUNCTION entity_similarity_search(
-  query_embedding vector(1536),
-  entity_types entity_type[] DEFAULT NULL,
-  similarity_threshold float DEFAULT 0.7,
-  max_results integer DEFAULT 10
-) RETURNS TABLE (
-  entity_id UUID,
-  title VARCHAR,
-  type entity_type,
-  description TEXT,
-  similarity float
-) LANGUAGE plpgsql AS $$
+CREATE FUNCTION public.entity_similarity_search(query_embedding public.vector, entity_types public.entity_type[] DEFAULT NULL::public.entity_type[], similarity_threshold double precision DEFAULT 0.7, max_results integer DEFAULT 10) RETURNS TABLE(entity_id uuid, title character varying, type public.entity_type, description text, similarity double precision)
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
   RETURN QUERY
   SELECT
@@ -847,11 +447,14 @@ BEGIN
 END;
 $$;
 
--- Create a function to check if entity is synced with git
-CREATE OR REPLACE FUNCTION is_entity_synced_with_git(
-  p_entity_id UUID,
-  p_git_sha VARCHAR
-) RETURNS BOOLEAN AS $$
+
+--
+-- Name: is_entity_synced_with_git(uuid, character varying); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_entity_synced_with_git(p_entity_id uuid, p_git_sha character varying) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
 DECLARE
   current_sha VARCHAR;
 BEGIN
@@ -861,30 +464,16 @@ BEGIN
 
   RETURN current_sha = p_git_sha;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Create triggers and functions
 
--- Function for text search vector updates
-CREATE OR REPLACE FUNCTION update_digital_items_search_vector()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.search_vector :=
-    setweight(to_tsvector('english', COALESCE(NEW.text, '')), 'A') ||
-    setweight(to_tsvector('english', COALESCE((SELECT markdown FROM entities WHERE entity_id = NEW.entity_id), '')), 'B') ||
-    setweight(to_tsvector('english', COALESCE(NEW.html, '')), 'C');
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--
+-- Name: process_audit_log(); Type: FUNCTION; Schema: public; Owner: -
+--
 
-CREATE TRIGGER trigger_update_digital_items_search_vector
-BEFORE INSERT OR UPDATE ON digital_items
-FOR EACH ROW
-EXECUTE FUNCTION update_digital_items_search_vector();
-
--- Function for audit logging
-CREATE OR REPLACE FUNCTION process_audit_log()
-RETURNS TRIGGER AS $$
+CREATE FUNCTION public.process_audit_log() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
 DECLARE
   audit_row audit_log;
   entity_user_id UUID;
@@ -934,45 +523,2005 @@ BEGIN
   INSERT INTO audit_log VALUES (audit_row.*);
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-CREATE TRIGGER entities_audit
-AFTER INSERT OR UPDATE OR DELETE ON entities
-FOR EACH ROW EXECUTE FUNCTION process_audit_log();
 
-CREATE TRIGGER entity_blocks_audit
-AFTER INSERT OR UPDATE OR DELETE ON entity_blocks
-FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+--
+-- Name: refresh_activities_view(); Type: FUNCTION; Schema: public; Owner: -
+--
 
--- Query function for block semantic search
-CREATE OR REPLACE FUNCTION block_similarity_search(
-  query_embedding vector(1536),
-  block_types block_type[] DEFAULT NULL,
-  similarity_threshold float DEFAULT 0.7,
-  max_results integer DEFAULT 10
-) RETURNS TABLE (
-  block_id UUID,
-  block_cid TEXT,
-  type block_type,
-  content TEXT,
-  similarity float
-) LANGUAGE plpgsql AS $$
+CREATE FUNCTION public.refresh_activities_view() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
-  RETURN QUERY
-  SELECT
-    b.block_id,
-    b.block_cid,
-    b.type,
-    b.content,
-    1 - (b.embedding <=> query_embedding) AS similarity
-  FROM
-    blocks b
-  WHERE
-    b.embedding IS NOT NULL
-    AND (block_types IS NULL OR b.type = ANY(block_types))
-    AND 1 - (b.embedding <=> query_embedding) > similarity_threshold
-  ORDER BY
-    b.embedding <=> query_embedding
-  LIMIT max_results;
+  REFRESH MATERIALIZED VIEW CONCURRENTLY activities_view;
+  RETURN NULL;
 END;
 $$;
+
+
+--
+-- Name: update_block_search_vector(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_block_search_vector() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: update_digital_items_search_vector(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_digital_items_search_vector() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.search_vector :=
+    setweight(to_tsvector('english', COALESCE(NEW.text, '')), 'A') ||
+    setweight(to_tsvector('english', COALESCE((SELECT markdown FROM entities WHERE entity_id = NEW.entity_id), '')), 'B') ||
+    setweight(to_tsvector('english', COALESCE(NEW.html, '')), 'C');
+  RETURN NEW;
+END;
+$$;
+
+
+SET default_table_access_method = heap;
+
+--
+-- Name: entities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entities (
+    entity_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    title character varying(255) NOT NULL,
+    type public.entity_type NOT NULL,
+    permalink character varying(255),
+    description text NOT NULL,
+    user_id uuid NOT NULL,
+    embedding public.vector(1536),
+    git_sha character varying(40),
+    content text,
+    markdown text,
+    frontmatter jsonb,
+    file_path character varying(500),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    archived_at timestamp without time zone,
+    CONSTRAINT check_archived_at CHECK (((archived_at IS NULL) OR (archived_at >= updated_at))),
+    CONSTRAINT check_text_fields CHECK (((type <> 'text'::public.entity_type) OR ((markdown IS NOT NULL) AND (frontmatter IS NOT NULL) AND (file_path IS NOT NULL)))),
+    CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))
+);
+
+
+--
+-- Name: active_entities; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.active_entities AS
+ SELECT entities.entity_id,
+    entities.title,
+    entities.type,
+    entities.permalink,
+    entities.description,
+    entities.user_id,
+    entities.embedding,
+    entities.git_sha,
+    entities.content,
+    entities.markdown,
+    entities.frontmatter,
+    entities.file_path,
+    entities.created_at,
+    entities.updated_at,
+    entities.archived_at
+   FROM public.entities
+  WHERE (entities.archived_at IS NULL);
+
+
+--
+-- Name: activities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.activities (
+    entity_id uuid NOT NULL
+);
+
+
+--
+-- Name: activities_view; Type: MATERIALIZED VIEW; Schema: public; Owner: -
+--
+
+CREATE MATERIALIZED VIEW public.activities_view AS
+ SELECT entities.entity_id,
+    entities.title,
+    entities.description,
+    entities.user_id,
+    entities.created_at,
+    entities.updated_at
+   FROM public.entities
+  WHERE ((entities.type = 'activity'::public.entity_type) AND (entities.archived_at IS NULL))
+  WITH NO DATA;
+
+
+--
+-- Name: entity_relations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_relations (
+    relation_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    source_entity_id uuid NOT NULL,
+    target_entity_id uuid,
+    relation_type character varying(50) NOT NULL,
+    context text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: activity_guidelines_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.activity_guidelines_view AS
+ SELECT entity_relations.source_entity_id AS activity_id,
+    entity_relations.target_entity_id AS guideline_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'follows'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'activity'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'guideline'::public.entity_type)))));
+
+
+--
+-- Name: audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_log (
+    audit_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    table_name character varying(255) NOT NULL,
+    record_id uuid NOT NULL,
+    operation character(1) NOT NULL,
+    old_data jsonb,
+    new_data jsonb,
+    changed_by uuid,
+    changed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT audit_log_operation_check CHECK ((operation = ANY (ARRAY['I'::bpchar, 'U'::bpchar, 'D'::bpchar])))
+);
+
+
+--
+-- Name: block_attributes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.block_attributes (
+    attribute_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    block_id uuid NOT NULL,
+    key character varying(255) NOT NULL,
+    value text NOT NULL
+);
+
+
+--
+-- Name: block_relationships; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.block_relationships (
+    relationship_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    source_block_id uuid NOT NULL,
+    target_block_id uuid NOT NULL,
+    relationship_type character varying(50) NOT NULL
+);
+
+
+--
+-- Name: blocks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.blocks (
+    block_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    block_cid text NOT NULL,
+    type public.block_type NOT NULL,
+    content text,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    embedding public.vector(1536),
+    search_vector tsvector,
+    position_start_line integer,
+    position_start_character integer,
+    position_end_line integer,
+    position_end_character integer,
+    CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))
+);
+
+
+--
+-- Name: change_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.change_requests (
+    change_request_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    status public.change_request_status_type DEFAULT 'Draft'::public.change_request_status_type NOT NULL,
+    title text NOT NULL,
+    creator_id text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    target_branch text NOT NULL,
+    feature_branch text NOT NULL,
+    github_pr_url text,
+    github_pr_number integer,
+    github_repo text,
+    thread_id uuid,
+    merged_at timestamp with time zone,
+    closed_at timestamp with time zone,
+    merge_commit_hash text,
+    CONSTRAINT check_change_requests_closed_at CHECK (((closed_at IS NULL) OR (closed_at >= created_at))),
+    CONSTRAINT check_change_requests_merged_at CHECK (((merged_at IS NULL) OR (merged_at >= created_at))),
+    CONSTRAINT check_change_requests_updated_at CHECK ((updated_at >= created_at))
+);
+
+
+--
+-- Name: database_table_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_table_items (
+    entity_id uuid NOT NULL,
+    database_table_id uuid NOT NULL,
+    field_values jsonb NOT NULL
+);
+
+
+--
+-- Name: database_table_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_table_tags (
+    database_table_id uuid NOT NULL,
+    tag_id uuid NOT NULL
+);
+
+
+--
+-- Name: database_table_views; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_table_views (
+    entity_id uuid NOT NULL,
+    view_name character varying(255) NOT NULL,
+    view_description text,
+    database_table_name character varying(255) NOT NULL,
+    database_table_entity_id uuid NOT NULL,
+    table_state jsonb
+);
+
+
+--
+-- Name: database_tables; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_tables (
+    entity_id uuid NOT NULL,
+    table_name character varying(255) NOT NULL,
+    table_description text,
+    fields jsonb NOT NULL
+);
+
+
+--
+-- Name: digital_item_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.digital_item_tags (
+    digital_item_id uuid NOT NULL,
+    tag_id uuid NOT NULL
+);
+
+
+--
+-- Name: digital_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.digital_items (
+    entity_id uuid NOT NULL,
+    file_mime_type character varying(255),
+    file_uri character varying(500),
+    file_size character varying(50),
+    file_cid character varying(100),
+    text text,
+    html text,
+    search_vector tsvector
+);
+
+
+--
+-- Name: entity_blocks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_blocks (
+    entity_id uuid NOT NULL,
+    block_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: entity_hierarchies_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.entity_hierarchies_view AS
+ SELECT entity_relations.source_entity_id AS parent_entity_id,
+    entity_relations.target_entity_id AS child_entity_id
+   FROM public.entity_relations
+  WHERE ((entity_relations.relation_type)::text = ANY (ARRAY[('parent_of'::character varying)::text, ('contains'::character varying)::text]));
+
+
+--
+-- Name: entity_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_metadata (
+    metadata_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    entity_id uuid NOT NULL,
+    key character varying(100) NOT NULL,
+    value text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))
+);
+
+
+--
+-- Name: entity_observations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_observations (
+    observation_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    entity_id uuid NOT NULL,
+    category character varying(50) NOT NULL,
+    content text NOT NULL,
+    context text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: entity_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_tags (
+    entity_id uuid NOT NULL,
+    tag_entity_id uuid NOT NULL
+);
+
+
+--
+-- Name: entity_stats; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.entity_stats AS
+ SELECT e.entity_id,
+    e.title,
+    e.type,
+    count(DISTINCT r.relation_id) AS relation_count,
+    count(DISTINCT o.observation_id) AS observation_count,
+    count(DISTINCT et.tag_entity_id) AS tag_count,
+    count(DISTINCT m.metadata_id) AS metadata_count,
+    e.created_at,
+    e.updated_at
+   FROM ((((public.entities e
+     LEFT JOIN public.entity_relations r ON ((e.entity_id = r.source_entity_id)))
+     LEFT JOIN public.entity_observations o ON ((e.entity_id = o.entity_id)))
+     LEFT JOIN public.entity_tags et ON ((e.entity_id = et.entity_id)))
+     LEFT JOIN public.entity_metadata m ON ((e.entity_id = m.entity_id)))
+  WHERE (e.archived_at IS NULL)
+  GROUP BY e.entity_id, e.title, e.type, e.created_at, e.updated_at;
+
+
+--
+-- Name: external_syncs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.external_syncs (
+    sync_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    entity_id uuid NOT NULL,
+    external_system character varying(50) NOT NULL,
+    external_id character varying(255) NOT NULL,
+    last_sync_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_external_update_at timestamp without time zone,
+    last_internal_update_at timestamp without time zone,
+    field_last_updated jsonb,
+    sync_status character varying(50) DEFAULT 'synced'::character varying
+);
+
+
+--
+-- Name: guidelines; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.guidelines (
+    entity_id uuid NOT NULL,
+    guideline_status public.guideline_status_type,
+    effective_date timestamp without time zone,
+    globs jsonb DEFAULT '[]'::jsonb,
+    always_apply boolean DEFAULT false
+);
+
+
+--
+-- Name: COLUMN guidelines.globs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.guidelines.globs IS 'Glob patterns for files that this guideline applies to';
+
+
+--
+-- Name: COLUMN guidelines.always_apply; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.guidelines.always_apply IS 'Whether this guideline should always be applied';
+
+
+--
+-- Name: guideline_with_activities; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.guideline_with_activities AS
+ SELECT g.entity_id,
+    e.title,
+    e.description,
+    g.guideline_status,
+    g.effective_date,
+    array_agg(DISTINCT r.source_entity_id) AS activity_ids,
+    array_agg(DISTINCT ae.title) AS activity_titles
+   FROM (((public.guidelines g
+     JOIN public.entities e ON ((g.entity_id = e.entity_id)))
+     LEFT JOIN public.entity_relations r ON (((g.entity_id = r.target_entity_id) AND ((r.relation_type)::text = 'follows'::text))))
+     LEFT JOIN public.entities ae ON (((r.source_entity_id = ae.entity_id) AND (ae.type = 'activity'::public.entity_type))))
+  WHERE (e.archived_at IS NULL)
+  GROUP BY g.entity_id, e.title, e.description, g.guideline_status, g.effective_date;
+
+
+--
+-- Name: organization_members_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.organization_members_view AS
+ SELECT entity_relations.source_entity_id AS organization_id,
+    entity_relations.target_entity_id AS person_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'has_member'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'organization'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'person'::public.entity_type)))));
+
+
+--
+-- Name: organization_persons; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.organization_persons (
+    person_id uuid NOT NULL,
+    organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: organizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.organizations (
+    entity_id uuid NOT NULL,
+    website_url character varying(255)
+);
+
+
+--
+-- Name: person_organizations_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.person_organizations_view AS
+ SELECT entity_relations.source_entity_id AS person_id,
+    entity_relations.target_entity_id AS organization_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'member_of'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'person'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'organization'::public.entity_type)))));
+
+
+--
+-- Name: persons; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.persons (
+    entity_id uuid NOT NULL,
+    first_name character varying(255) NOT NULL,
+    last_name character varying(255) NOT NULL,
+    email character varying(255),
+    mobile_phone character varying(255),
+    website_url character varying(255)
+);
+
+
+--
+-- Name: physical_item_child_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.physical_item_child_items (
+    parent_item_id uuid NOT NULL,
+    child_item_id uuid NOT NULL
+);
+
+
+--
+-- Name: physical_item_hierarchy_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.physical_item_hierarchy_view AS
+ SELECT entity_relations.source_entity_id AS parent_item_id,
+    entity_relations.target_entity_id AS child_item_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = ANY (ARRAY[('contains'::character varying)::text, ('parent_of'::character varying)::text])) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'physical_item'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'physical_item'::public.entity_type)))));
+
+
+--
+-- Name: physical_item_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.physical_item_tags (
+    physical_item_id uuid NOT NULL,
+    tag_id uuid NOT NULL
+);
+
+
+--
+-- Name: physical_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.physical_items (
+    entity_id uuid NOT NULL,
+    serial_number character varying(255),
+    model_number character varying(255),
+    manufacturer character varying(255),
+    storage_location character varying(255),
+    acquisition_date date,
+    target_location character varying(255),
+    current_location character varying(255),
+    home_areas text[],
+    home_attribute text[],
+    activities text[],
+    importance public.importance_type,
+    frequency_of_use public.frequency_type,
+    height_inches numeric(10,2),
+    width_inches numeric(10,2),
+    depth_inches numeric(10,2),
+    weight_ounces numeric(10,2),
+    volume_cubic_inches numeric(10,2),
+    voltage character varying(20),
+    wattage numeric(10,2),
+    outlets_used integer,
+    water_connection boolean,
+    drain_connection boolean,
+    ethernet_connected boolean,
+    min_storage_temperature_celsius numeric(5,2),
+    max_storage_temperature_celsius numeric(5,2),
+    min_storage_humidity_percent numeric(5,2),
+    max_storage_humidity_percent numeric(5,2),
+    exist boolean,
+    current_quantity integer,
+    target_quantity integer,
+    consumable boolean,
+    perishable boolean,
+    kit_name character varying(255),
+    kit_items text[],
+    large_drawer_units integer,
+    standard_drawer_units integer,
+    storage_notes text,
+    misc_notes text
+);
+
+
+--
+-- Name: physical_locations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.physical_locations (
+    entity_id uuid NOT NULL,
+    latitude numeric(10,8),
+    longitude numeric(11,8),
+    mail_address text,
+    mail_address2 text,
+    mail_careof text,
+    mail_street_number text,
+    mail_street_prefix text,
+    mail_street_name text,
+    mail_street_type text,
+    mail_street_suffix text,
+    mail_unit_number text,
+    mail_city text,
+    mail_state text,
+    mail_zip text,
+    mail_country text,
+    mail_urbanization text
+);
+
+
+--
+-- Name: sync_configs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sync_configs (
+    config_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    entity_id uuid,
+    entity_type public.entity_type,
+    external_system character varying(50) NOT NULL,
+    field_strategies jsonb NOT NULL,
+    CONSTRAINT sync_configs_check CHECK (((entity_id IS NOT NULL) OR (entity_type IS NOT NULL)))
+);
+
+
+--
+-- Name: sync_conflicts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sync_conflicts (
+    conflict_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    sync_id uuid NOT NULL,
+    import_cid text NOT NULL,
+    conflicts jsonb NOT NULL,
+    resolutions jsonb,
+    status character varying(50) DEFAULT 'pending'::character varying,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    resolved_at timestamp without time zone,
+    resolved_by uuid
+);
+
+
+--
+-- Name: tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tags (
+    entity_id uuid NOT NULL,
+    color character varying(50)
+);
+
+
+--
+-- Name: task_activities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_activities (
+    activity_id uuid NOT NULL,
+    task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_dependencies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_dependencies (
+    task_id uuid NOT NULL,
+    dependent_task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_dependencies_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_dependencies_view AS
+ SELECT entity_relations.source_entity_id AS task_entity_id,
+    entity_relations.target_entity_id AS dependent_task_entity_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'depends_on'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'task'::public.entity_type)))));
+
+
+--
+-- Name: task_digital_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_digital_items (
+    digital_item_id uuid NOT NULL,
+    task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_digital_items_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_digital_items_view AS
+ SELECT entity_relations.source_entity_id AS task_id,
+    entity_relations.target_entity_id AS digital_item_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'requires'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'digital_item'::public.entity_type)))));
+
+
+--
+-- Name: task_organizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_organizations (
+    organization_id uuid NOT NULL,
+    task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_organizations_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_organizations_view AS
+ SELECT entity_relations.source_entity_id AS task_id,
+    entity_relations.target_entity_id AS organization_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = ANY (ARRAY[('assigned_to'::character varying)::text, ('involves'::character varying)::text])) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'organization'::public.entity_type)))));
+
+
+--
+-- Name: task_parent_child_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_parent_child_view AS
+ SELECT entity_relations.target_entity_id AS parent_task_id,
+    entity_relations.source_entity_id AS child_task_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'child_of'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'task'::public.entity_type)))));
+
+
+--
+-- Name: task_parents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_parents (
+    parent_task_id uuid NOT NULL,
+    child_task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_persons; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_persons (
+    person_id uuid NOT NULL,
+    task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_persons_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_persons_view AS
+ SELECT entity_relations.source_entity_id AS task_id,
+    entity_relations.target_entity_id AS person_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = ANY (ARRAY[('assigned_to'::character varying)::text, ('involves'::character varying)::text])) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'person'::public.entity_type)))));
+
+
+--
+-- Name: task_physical_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_physical_items (
+    physical_item_id uuid NOT NULL,
+    task_id uuid NOT NULL
+);
+
+
+--
+-- Name: task_physical_items_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.task_physical_items_view AS
+ SELECT entity_relations.source_entity_id AS task_id,
+    entity_relations.target_entity_id AS physical_item_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'requires'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'physical_item'::public.entity_type)))));
+
+
+--
+-- Name: task_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_tags (
+    task_id uuid NOT NULL,
+    tag_id uuid NOT NULL
+);
+
+
+--
+-- Name: tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tasks (
+    entity_id uuid NOT NULL,
+    status public.task_status_type DEFAULT 'No status'::public.task_status_type,
+    priority public.priority_type,
+    assigned_to character varying(255),
+    start_by timestamp without time zone,
+    finish_by timestamp without time zone,
+    estimated_total_duration integer,
+    estimated_preparation_duration integer,
+    estimated_execution_duration integer,
+    estimated_cleanup_duration integer,
+    actual_duration integer,
+    planned_start timestamp without time zone,
+    planned_finish timestamp without time zone,
+    started_at timestamp without time zone,
+    finished_at timestamp without time zone,
+    snooze_until timestamp without time zone,
+    CONSTRAINT check_estimated_duration CHECK (((estimated_total_duration IS NULL) OR (estimated_total_duration >= ((COALESCE(estimated_preparation_duration, 0) + COALESCE(estimated_execution_duration, 0)) + COALESCE(estimated_cleanup_duration, 0)))))
+);
+
+
+--
+-- Name: text_document_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.text_document_view AS
+ SELECT entities.entity_id,
+    entities.title,
+    entities.type,
+    entities.permalink,
+    entities.description,
+    entities.user_id,
+    entities.embedding,
+    entities.git_sha,
+    entities.content,
+    entities.markdown,
+    entities.frontmatter,
+    entities.file_path,
+    entities.created_at,
+    entities.updated_at
+   FROM public.entities
+  WHERE ((entities.archived_at IS NULL) AND (entities.type = 'text'::public.entity_type));
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    user_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    public_key character varying(64) NOT NULL,
+    username character varying(255) NOT NULL,
+    email character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))
+);
+
+
+--
+-- Name: activities activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.activities
+    ADD CONSTRAINT activities_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (audit_id);
+
+
+--
+-- Name: block_attributes block_attributes_block_id_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_attributes
+    ADD CONSTRAINT block_attributes_block_id_key_key UNIQUE (block_id, key);
+
+
+--
+-- Name: block_attributes block_attributes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_attributes
+    ADD CONSTRAINT block_attributes_pkey PRIMARY KEY (attribute_id);
+
+
+--
+-- Name: block_relationships block_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_relationships
+    ADD CONSTRAINT block_relationships_pkey PRIMARY KEY (relationship_id);
+
+
+--
+-- Name: block_relationships block_relationships_source_block_id_target_block_id_relatio_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_relationships
+    ADD CONSTRAINT block_relationships_source_block_id_target_block_id_relatio_key UNIQUE (source_block_id, target_block_id, relationship_type);
+
+
+--
+-- Name: blocks blocks_block_cid_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT blocks_block_cid_key UNIQUE (block_cid);
+
+
+--
+-- Name: blocks blocks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT blocks_pkey PRIMARY KEY (block_id);
+
+
+--
+-- Name: change_requests change_requests_feature_branch_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.change_requests
+    ADD CONSTRAINT change_requests_feature_branch_key UNIQUE (feature_branch);
+
+
+--
+-- Name: change_requests change_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.change_requests
+    ADD CONSTRAINT change_requests_pkey PRIMARY KEY (change_request_id);
+
+
+--
+-- Name: database_table_items database_table_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_items
+    ADD CONSTRAINT database_table_items_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: database_table_tags database_table_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_tags
+    ADD CONSTRAINT database_table_tags_pkey PRIMARY KEY (database_table_id, tag_id);
+
+
+--
+-- Name: database_table_views database_table_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_views
+    ADD CONSTRAINT database_table_views_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: database_table_views database_table_views_view_name_entity_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_views
+    ADD CONSTRAINT database_table_views_view_name_entity_id_key UNIQUE (view_name, entity_id);
+
+
+--
+-- Name: database_tables database_tables_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_tables
+    ADD CONSTRAINT database_tables_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: database_tables database_tables_table_name_entity_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_tables
+    ADD CONSTRAINT database_tables_table_name_entity_id_key UNIQUE (table_name, entity_id);
+
+
+--
+-- Name: digital_item_tags digital_item_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.digital_item_tags
+    ADD CONSTRAINT digital_item_tags_pkey PRIMARY KEY (digital_item_id, tag_id);
+
+
+--
+-- Name: digital_items digital_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.digital_items
+    ADD CONSTRAINT digital_items_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: entity_blocks entity_blocks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_blocks
+    ADD CONSTRAINT entity_blocks_pkey PRIMARY KEY (entity_id, block_id);
+
+
+--
+-- Name: entity_metadata entity_metadata_entity_id_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_metadata
+    ADD CONSTRAINT entity_metadata_entity_id_key_key UNIQUE (entity_id, key);
+
+
+--
+-- Name: entity_metadata entity_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_metadata
+    ADD CONSTRAINT entity_metadata_pkey PRIMARY KEY (metadata_id);
+
+
+--
+-- Name: entity_observations entity_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_observations
+    ADD CONSTRAINT entity_observations_pkey PRIMARY KEY (observation_id);
+
+
+--
+-- Name: entity_relations entity_relations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_relations
+    ADD CONSTRAINT entity_relations_pkey PRIMARY KEY (relation_id);
+
+
+--
+-- Name: entity_tags entity_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_tags
+    ADD CONSTRAINT entity_tags_pkey PRIMARY KEY (entity_id, tag_entity_id);
+
+
+--
+-- Name: external_syncs external_syncs_entity_id_external_system_external_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.external_syncs
+    ADD CONSTRAINT external_syncs_entity_id_external_system_external_id_key UNIQUE (entity_id, external_system, external_id);
+
+
+--
+-- Name: external_syncs external_syncs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.external_syncs
+    ADD CONSTRAINT external_syncs_pkey PRIMARY KEY (sync_id);
+
+
+--
+-- Name: guidelines guidelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.guidelines
+    ADD CONSTRAINT guidelines_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: organization_persons organization_persons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organization_persons
+    ADD CONSTRAINT organization_persons_pkey PRIMARY KEY (person_id, organization_id);
+
+
+--
+-- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: persons persons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.persons
+    ADD CONSTRAINT persons_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: physical_item_child_items physical_item_child_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_item_child_items
+    ADD CONSTRAINT physical_item_child_items_pkey PRIMARY KEY (parent_item_id, child_item_id);
+
+
+--
+-- Name: physical_item_tags physical_item_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_item_tags
+    ADD CONSTRAINT physical_item_tags_pkey PRIMARY KEY (physical_item_id, tag_id);
+
+
+--
+-- Name: physical_items physical_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_items
+    ADD CONSTRAINT physical_items_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: physical_locations physical_locations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_locations
+    ADD CONSTRAINT physical_locations_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: sync_configs sync_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_configs
+    ADD CONSTRAINT sync_configs_pkey PRIMARY KEY (config_id);
+
+
+--
+-- Name: sync_conflicts sync_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_conflicts
+    ADD CONSTRAINT sync_conflicts_pkey PRIMARY KEY (conflict_id);
+
+
+--
+-- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: task_activities task_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_activities
+    ADD CONSTRAINT task_activities_pkey PRIMARY KEY (activity_id, task_id);
+
+
+--
+-- Name: task_dependencies task_dependencies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_dependencies
+    ADD CONSTRAINT task_dependencies_pkey PRIMARY KEY (task_id, dependent_task_id);
+
+
+--
+-- Name: task_digital_items task_digital_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_digital_items
+    ADD CONSTRAINT task_digital_items_pkey PRIMARY KEY (digital_item_id, task_id);
+
+
+--
+-- Name: task_organizations task_organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_organizations
+    ADD CONSTRAINT task_organizations_pkey PRIMARY KEY (organization_id, task_id);
+
+
+--
+-- Name: task_parents task_parents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_parents
+    ADD CONSTRAINT task_parents_pkey PRIMARY KEY (parent_task_id, child_task_id);
+
+
+--
+-- Name: task_persons task_persons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_persons
+    ADD CONSTRAINT task_persons_pkey PRIMARY KEY (person_id, task_id);
+
+
+--
+-- Name: task_physical_items task_physical_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_physical_items
+    ADD CONSTRAINT task_physical_items_pkey PRIMARY KEY (physical_item_id, task_id);
+
+
+--
+-- Name: task_tags task_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.task_tags
+    ADD CONSTRAINT task_tags_pkey PRIMARY KEY (task_id, tag_id);
+
+
+--
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_pkey PRIMARY KEY (entity_id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: users users_public_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_public_key_key UNIQUE (public_key);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: idx_activities_view_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_activities_view_entity_id ON public.activities_view USING btree (entity_id);
+
+
+--
+-- Name: idx_audit_log_changed_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_log_changed_at ON public.audit_log USING btree (changed_at DESC);
+
+
+--
+-- Name: idx_audit_log_table_record; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_log_table_record ON public.audit_log USING btree (table_name, record_id);
+
+
+--
+-- Name: idx_block_relationships_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_block_relationships_source ON public.block_relationships USING btree (source_block_id);
+
+
+--
+-- Name: idx_block_relationships_target; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_block_relationships_target ON public.block_relationships USING btree (target_block_id);
+
+
+--
+-- Name: idx_block_relationships_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_block_relationships_type ON public.block_relationships USING btree (relationship_type);
+
+
+--
+-- Name: idx_blocks_block_cid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_block_cid ON public.blocks USING btree (block_cid);
+
+
+--
+-- Name: idx_blocks_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_created_at ON public.blocks USING btree (created_at DESC);
+
+
+--
+-- Name: idx_blocks_embedding; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_embedding ON public.blocks USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+
+--
+-- Name: idx_blocks_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_search ON public.blocks USING gin (search_vector);
+
+
+--
+-- Name: idx_blocks_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_type ON public.blocks USING btree (type);
+
+
+--
+-- Name: idx_blocks_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_updated_at ON public.blocks USING btree (updated_at DESC);
+
+
+--
+-- Name: idx_blocks_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_blocks_user_id ON public.blocks USING btree (user_id);
+
+
+--
+-- Name: idx_change_requests_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_created_at ON public.change_requests USING btree (created_at DESC);
+
+
+--
+-- Name: idx_change_requests_creator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_creator_id ON public.change_requests USING btree (creator_id);
+
+
+--
+-- Name: idx_change_requests_github_pr_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_github_pr_number ON public.change_requests USING btree (github_pr_number) WHERE (github_pr_number IS NOT NULL);
+
+
+--
+-- Name: idx_change_requests_github_repo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_github_repo ON public.change_requests USING btree (github_repo);
+
+
+--
+-- Name: idx_change_requests_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_status ON public.change_requests USING btree (status);
+
+
+--
+-- Name: idx_change_requests_target_branch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_target_branch ON public.change_requests USING btree (target_branch);
+
+
+--
+-- Name: idx_change_requests_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_change_requests_updated_at ON public.change_requests USING btree (updated_at DESC);
+
+
+--
+-- Name: idx_database_items_parent; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_database_items_parent ON public.database_table_items USING btree (database_table_id);
+
+
+--
+-- Name: idx_digital_items_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_digital_items_search ON public.digital_items USING gin (search_vector);
+
+
+--
+-- Name: idx_entities_archived_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_archived_at ON public.entities USING btree (archived_at);
+
+
+--
+-- Name: idx_entities_content_gin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_content_gin ON public.entities USING gin (to_tsvector('english'::regconfig, content)) WHERE (type = 'text'::public.entity_type);
+
+
+--
+-- Name: idx_entities_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_created_at ON public.entities USING btree (created_at DESC);
+
+
+--
+-- Name: idx_entities_description_gin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_description_gin ON public.entities USING gin (to_tsvector('english'::regconfig, description)) WHERE (description IS NOT NULL);
+
+
+--
+-- Name: idx_entities_file_path; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_file_path ON public.entities USING btree (file_path) WHERE (type = 'text'::public.entity_type);
+
+
+--
+-- Name: idx_entities_file_path_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_entities_file_path_user ON public.entities USING btree (file_path, user_id) WHERE ((type = 'text'::public.entity_type) AND (file_path IS NOT NULL));
+
+
+--
+-- Name: idx_entities_frontmatter; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_frontmatter ON public.entities USING gin (frontmatter) WHERE (type = 'text'::public.entity_type);
+
+
+--
+-- Name: idx_entities_git_sha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_git_sha ON public.entities USING btree (git_sha);
+
+
+--
+-- Name: idx_entities_markdown_gin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_markdown_gin ON public.entities USING gin (to_tsvector('english'::regconfig, markdown)) WHERE (type = 'text'::public.entity_type);
+
+
+--
+-- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_type ON public.entities USING btree (type);
+
+
+--
+-- Name: idx_entities_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_updated_at ON public.entities USING btree (updated_at DESC);
+
+
+--
+-- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id);
+
+
+--
+-- Name: idx_entity_blocks_block_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_blocks_block_id ON public.entity_blocks USING btree (block_id);
+
+
+--
+-- Name: idx_entity_blocks_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_blocks_entity_id ON public.entity_blocks USING btree (entity_id);
+
+
+--
+-- Name: idx_entity_embedding; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_embedding ON public.entities USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+
+--
+-- Name: idx_entity_metadata_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_metadata_key ON public.entity_metadata USING btree (key);
+
+
+--
+-- Name: idx_entity_observations_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_observations_category ON public.entity_observations USING btree (category);
+
+
+--
+-- Name: idx_entity_relations_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_relations_source ON public.entity_relations USING btree (source_entity_id);
+
+
+--
+-- Name: idx_entity_relations_source_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_relations_source_type ON public.entity_relations USING btree (source_entity_id, relation_type);
+
+
+--
+-- Name: idx_entity_relations_target; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_relations_target ON public.entity_relations USING btree (target_entity_id);
+
+
+--
+-- Name: idx_entity_relations_target_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_relations_target_type ON public.entity_relations USING btree (target_entity_id, relation_type);
+
+
+--
+-- Name: idx_entity_relations_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_relations_type ON public.entity_relations USING btree (relation_type);
+
+
+--
+-- Name: idx_entity_tags_tag_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_tags_tag_id ON public.entity_tags USING btree (tag_entity_id);
+
+
+--
+-- Name: idx_external_syncs_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_external_syncs_entity_id ON public.external_syncs USING btree (entity_id);
+
+
+--
+-- Name: idx_external_syncs_external; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_external_syncs_external ON public.external_syncs USING btree (external_system, external_id);
+
+
+--
+-- Name: idx_guideline_effective_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_guideline_effective_date ON public.guidelines USING btree (effective_date);
+
+
+--
+-- Name: idx_guideline_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_guideline_status ON public.guidelines USING btree (guideline_status);
+
+
+--
+-- Name: idx_physical_location_coordinates; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_physical_location_coordinates ON public.physical_locations USING btree (latitude, longitude);
+
+
+--
+-- Name: idx_sync_configs_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sync_configs_entity_id ON public.sync_configs USING btree (entity_id);
+
+
+--
+-- Name: idx_sync_configs_entity_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sync_configs_entity_type ON public.sync_configs USING btree (entity_type);
+
+
+--
+-- Name: idx_sync_conflicts_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sync_conflicts_status ON public.sync_conflicts USING btree (status);
+
+
+--
+-- Name: idx_sync_conflicts_sync_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sync_conflicts_sync_id ON public.sync_conflicts USING btree (sync_id);
+
+
+--
+-- Name: idx_tasks_finish_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tasks_finish_by ON public.tasks USING btree (finish_by);
+
+
+--
+-- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
+
+
+--
+-- Name: idx_unique_entity_relations; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_entity_relations ON public.entity_relations USING btree (source_entity_id, target_entity_id, relation_type);
+
+
+--
+-- Name: idx_unique_tag_entities; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_tag_entities ON public.entities USING btree (title, user_id) WHERE (type = 'tag'::public.entity_type);
+
+
+--
+-- Name: entities entities_audit; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER entities_audit AFTER INSERT OR DELETE OR UPDATE ON public.entities FOR EACH ROW EXECUTE FUNCTION public.process_audit_log();
+
+
+--
+-- Name: entity_blocks entity_blocks_audit; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER entity_blocks_audit AFTER INSERT OR DELETE OR UPDATE ON public.entity_blocks FOR EACH ROW EXECUTE FUNCTION public.process_audit_log();
+
+
+--
+-- Name: entities refresh_activities_view_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER refresh_activities_view_trigger AFTER INSERT OR DELETE OR UPDATE ON public.entities FOR EACH ROW EXECUTE FUNCTION public.refresh_activities_view();
+
+
+--
+-- Name: blocks trigger_update_block_search_vector; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_block_search_vector BEFORE INSERT OR UPDATE ON public.blocks FOR EACH ROW EXECUTE FUNCTION public.update_block_search_vector();
+
+
+--
+-- Name: digital_items trigger_update_digital_items_search_vector; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_digital_items_search_vector BEFORE INSERT OR UPDATE ON public.digital_items FOR EACH ROW EXECUTE FUNCTION public.update_digital_items_search_vector();
+
+
+--
+-- Name: activities activities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.activities
+    ADD CONSTRAINT activities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: block_attributes block_attributes_block_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_attributes
+    ADD CONSTRAINT block_attributes_block_id_fkey FOREIGN KEY (block_id) REFERENCES public.blocks(block_id) ON DELETE CASCADE;
+
+
+--
+-- Name: block_relationships block_relationships_source_block_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_relationships
+    ADD CONSTRAINT block_relationships_source_block_id_fkey FOREIGN KEY (source_block_id) REFERENCES public.blocks(block_id) ON DELETE CASCADE;
+
+
+--
+-- Name: block_relationships block_relationships_target_block_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.block_relationships
+    ADD CONSTRAINT block_relationships_target_block_id_fkey FOREIGN KEY (target_block_id) REFERENCES public.blocks(block_id) ON DELETE CASCADE;
+
+
+--
+-- Name: blocks blocks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blocks
+    ADD CONSTRAINT blocks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_table_items database_table_items_database_table_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_items
+    ADD CONSTRAINT database_table_items_database_table_id_fkey FOREIGN KEY (database_table_id) REFERENCES public.database_tables(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_table_items database_table_items_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_items
+    ADD CONSTRAINT database_table_items_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_table_views database_table_views_database_table_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_views
+    ADD CONSTRAINT database_table_views_database_table_entity_id_fkey FOREIGN KEY (database_table_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_table_views database_table_views_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_table_views
+    ADD CONSTRAINT database_table_views_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: database_tables database_tables_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_tables
+    ADD CONSTRAINT database_tables_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: digital_items digital_items_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.digital_items
+    ADD CONSTRAINT digital_items_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entities entities_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_blocks entity_blocks_block_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_blocks
+    ADD CONSTRAINT entity_blocks_block_id_fkey FOREIGN KEY (block_id) REFERENCES public.blocks(block_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_blocks entity_blocks_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_blocks
+    ADD CONSTRAINT entity_blocks_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_metadata entity_metadata_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_metadata
+    ADD CONSTRAINT entity_metadata_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_observations entity_observations_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_observations
+    ADD CONSTRAINT entity_observations_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_relations entity_relations_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_relations
+    ADD CONSTRAINT entity_relations_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_relations entity_relations_target_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_relations
+    ADD CONSTRAINT entity_relations_target_entity_id_fkey FOREIGN KEY (target_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_tags entity_tags_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_tags
+    ADD CONSTRAINT entity_tags_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_tags entity_tags_tag_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_tags
+    ADD CONSTRAINT entity_tags_tag_entity_id_fkey FOREIGN KEY (tag_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: external_syncs external_syncs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.external_syncs
+    ADD CONSTRAINT external_syncs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: guidelines guidelines_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.guidelines
+    ADD CONSTRAINT guidelines_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: organizations organizations_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: persons persons_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.persons
+    ADD CONSTRAINT persons_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: physical_items physical_items_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_items
+    ADD CONSTRAINT physical_items_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: physical_locations physical_locations_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.physical_locations
+    ADD CONSTRAINT physical_locations_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: sync_configs sync_configs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_configs
+    ADD CONSTRAINT sync_configs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: sync_conflicts sync_conflicts_resolved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_conflicts
+    ADD CONSTRAINT sync_conflicts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: sync_conflicts sync_conflicts_sync_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_conflicts
+    ADD CONSTRAINT sync_conflicts_sync_id_fkey FOREIGN KEY (sync_id) REFERENCES public.external_syncs(sync_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tags tags_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
