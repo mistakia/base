@@ -149,16 +149,69 @@ export async function list_files({
   path_pattern = ''
 }) {
   try {
-    const pattern = path_pattern ? `-- ${path_pattern}` : ''
-    log(`Listing files for ${ref} in ${repo_path} with pattern ${path_pattern}`)
-    const { stdout } = await execute_shell_command(
-      `git ls-tree -r --name-only ${ref} ${pattern}`,
-      {
-        cwd: repo_path
-      }
+    log(
+      `Listing files for ${ref} in ${repo_path}${path_pattern ? ` with pattern ${path_pattern}` : ''}`
     )
 
-    return stdout.trim().split('\n').filter(Boolean)
+    // For wildcard patterns, we get all files and filter in JS
+    if (
+      path_pattern &&
+      (path_pattern.includes('*') || path_pattern.includes('?'))
+    ) {
+      log('Pattern contains wildcards, using JS filtering')
+
+      // Get all files first
+      const { stdout } = await execute_shell_command(
+        `git ls-tree -r --name-only ${ref}`,
+        { cwd: repo_path }
+      )
+
+      const all_files = stdout.trim().split('\n').filter(Boolean)
+
+      // Handle wildcard patterns
+      const pattern_regex = path_pattern
+        .replace(/\./g, '\\.') // Escape dots
+        .replace(/\*/g, '.*') // Convert * to .*
+        .replace(/\?/g, '.') // Convert ? to .
+
+      const regex = new RegExp(`^${pattern_regex}$`)
+
+      // Filter files with regex
+      return all_files.filter((file) => regex.test(file))
+    } else if (path_pattern && !path_pattern.includes('/')) {
+      // For directory patterns without wildcards (e.g., 'docs')
+      log(
+        'Pattern appears to be a directory name, listing all files in directory'
+      )
+
+      // Get all files first
+      const { stdout } = await execute_shell_command(
+        `git ls-tree -r --name-only ${ref}`,
+        { cwd: repo_path }
+      )
+
+      const all_files = stdout.trim().split('\n').filter(Boolean)
+
+      // Filter files by directory prefix
+      const dir_prefix = path_pattern.endsWith('/')
+        ? path_pattern
+        : `${path_pattern}/`
+
+      return all_files.filter(
+        (file) => file === path_pattern || file.startsWith(dir_prefix)
+      )
+    } else {
+      // Use git's native pattern matching for exact paths or simple patterns
+      const pattern = path_pattern ? `-- ${path_pattern}` : ''
+      log(`Using git native pattern: ${pattern}`)
+
+      const { stdout } = await execute_shell_command(
+        `git ls-tree -r --name-only ${ref} ${pattern}`,
+        { cwd: repo_path }
+      )
+
+      return stdout.trim().split('\n').filter(Boolean)
+    }
   } catch (error) {
     log(`Failed to list files for ${ref} using git ls-tree: ${error.message}`)
 
