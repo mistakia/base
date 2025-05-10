@@ -5,6 +5,7 @@ import config from '#config'
 
 import { read_activity_from_filesystem } from '#libs-server/activity/filesystem/read-activity-from-filesystem.mjs'
 import { create_temp_test_directory } from '#tests/utils/index.mjs'
+import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('read_activity_from_filesystem', () => {
   let temp_dir
@@ -278,5 +279,61 @@ description: "This is a custom user activity"
     expect(result.success).to.be.true
     expect(result.entity_properties.title).to.equal('Custom User Activity')
     expect(result.file_path).to.include(custom_dir)
+  })
+})
+
+// Add tests using git repository approach from the old activities-test.mjs
+describe('read_activity_from_filesystem with git repository', () => {
+  let test_repo
+
+  before(async () => {
+    // Create a temporary git repository with test activities
+    test_repo = await create_temp_test_repo()
+  })
+
+  after(() => {
+    // Clean up the test repository
+    if (test_repo) {
+      test_repo.cleanup()
+    }
+  })
+
+  it('should retrieve an existing activity file from git repo', async () => {
+    // Arrange
+    const system_activity_path = 'system/default-base-activity.md'
+
+    // Act
+    const activity_file = await read_activity_from_filesystem({
+      activity_id: system_activity_path,
+      system_base_directory: test_repo.path,
+      user_base_directory: test_repo.path
+    })
+
+    // Assert
+    expect(activity_file).to.be.an('object')
+    expect(activity_file.success).to.be.true
+    expect(activity_file.activity_id).to.equal(system_activity_path)
+    expect(activity_file.file_path).to.be.a('string')
+    expect(activity_file.entity_content).to.be.a('string')
+    expect(activity_file.entity_content.length).to.be.greaterThan(0)
+  })
+
+  it('should return error object for non-existent activity files in git repo', async () => {
+    // Arrange
+    const non_existent_path = 'system/nonexistent-activity.md'
+
+    // Act
+    const result = await read_activity_from_filesystem({
+      activity_id: non_existent_path,
+      system_base_directory: test_repo.path,
+      user_base_directory: test_repo.path
+    })
+
+    // Assert
+    expect(result).to.be.an('object')
+    expect(result.success).to.equal(false)
+    expect(result.error).to.include(
+      "Activity 'system/nonexistent-activity.md' does not exist"
+    )
   })
 })

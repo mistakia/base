@@ -1,7 +1,7 @@
 import debug from 'debug'
 import fs from 'fs/promises'
 import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
-import { resolve_activity_path } from '#libs-server/activities/index.mjs'
+import { resolve_activity_path } from '#libs-server/activity/index.mjs'
 
 const log = debug('prompts:activity')
 

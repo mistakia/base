@@ -5,6 +5,7 @@ import config from '#config'
 
 import { activity_exists_in_filesystem } from '#libs-server/activity/filesystem/activity-exists-in-filesystem.mjs'
 import { create_temp_test_directory } from '#tests/utils/index.mjs'
+import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('activity_exists_in_filesystem', () => {
   let temp_dir
@@ -145,5 +146,49 @@ describe('activity_exists_in_filesystem', () => {
 
     // Assert
     expect(exists).to.be.true
+  })
+})
+
+// Add tests using git repository approach from the old activities-test.mjs
+describe('activity_exists_in_filesystem with git repository', () => {
+  let test_repo
+
+  before(async () => {
+    // Create a temporary git repository with test activities
+    test_repo = await create_temp_test_repo()
+  })
+
+  after(() => {
+    // Clean up the test repository
+    if (test_repo) {
+      test_repo.cleanup()
+    }
+  })
+
+  it('should return true for existing activities in git repo', async () => {
+    // Act
+    const system_activity_exists = await activity_exists_in_filesystem({
+      activity_id: 'system/default-base-activity.md',
+      system_base_directory: test_repo.path,
+      user_base_directory: test_repo.path
+    })
+
+    // Assert
+    expect(system_activity_exists).to.be.true
+  })
+
+  it('should return false for non-existent activities in git repo', async () => {
+    // Arrange
+    const non_existent_path = 'system/nonexistent-activity.md'
+
+    // Act
+    const activity_exists_result = await activity_exists_in_filesystem({
+      activity_id: non_existent_path,
+      system_base_directory: test_repo.path,
+      user_base_directory: test_repo.path
+    })
+
+    // Assert
+    expect(activity_exists_result).to.be.false
   })
 })

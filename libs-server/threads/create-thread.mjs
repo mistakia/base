@@ -10,7 +10,7 @@ import {
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_change_request } from '#libs-server/change-requests/index.mjs'
-import { activity_exists } from '#libs-server/activities/index.mjs'
+import { activity_exists_in_filesystem } from '#libs-server/activity/index.mjs'
 
 const { THREAD_STATUS, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
@@ -150,7 +150,8 @@ export default async function create_thread({
   validate_thread_state(state)
 
   // Validate that the activity exists
-  const activity_file_exists = await activity_exists({
+  // TODO consider using activity_exists_in_git instead
+  const activity_file_exists = await activity_exists_in_filesystem({
     activity_id,
     system_base_directory,
     user_base_directory
