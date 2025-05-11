@@ -13,4 +13,16 @@ export {
 } from './filesystem/index.mjs'
 
 // Re-export git functions
-export { write_entity_to_git, read_entity_from_git } from './git/index.mjs'
+export {
+  write_entity_to_git,
+  read_entity_from_git,
+  delete_entity_from_git
+} from './git/index.mjs'
+
+// Re-export database functions
+export {
+  read_entity_from_database,
+  write_entity_to_database,
+  delete_entity_from_database,
+  entity_exists_in_database
+} from './database/index.mjs'

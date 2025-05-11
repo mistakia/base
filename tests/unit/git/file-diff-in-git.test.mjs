@@ -6,9 +6,7 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 
 // Import the functions we want to test
-import {
-  file_diff_in_git
-} from '#libs-server/git/git-files/index.mjs'
+import { file_diff_in_git } from '#libs-server/git/git-files/index.mjs'
 
 // Import test utilities
 import {

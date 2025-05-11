@@ -5,6 +5,8 @@ import write_task_to_database from './write/write-task-to-database.mjs'
 import write_activity_to_database from './write/write-activity-to-database.mjs'
 import write_guideline_to_database from './write/write-guideline-to-database.mjs'
 import { read_entity_from_database } from './read/read-entity-from-database.mjs'
+import delete_entity_from_database from './delete-entity-from-database.mjs'
+import entity_exists_in_database from './entity-exists-in-database.mjs'
 
 /**
  * Entity Database Module
@@ -23,6 +25,8 @@ export {
   // Base entity reader/writer
   read_entity_from_database,
   write_entity_to_database,
+  delete_entity_from_database,
+  entity_exists_in_database,
 
   // Entity type-specific writers
   write_task_to_database,
@@ -37,6 +41,8 @@ export {
 export default {
   read_entity_from_database,
   write_entity_to_database,
+  delete_entity_from_database,
+  entity_exists_in_database,
   write_task_to_database,
   write_activity_to_database,
   write_guideline_to_database,
