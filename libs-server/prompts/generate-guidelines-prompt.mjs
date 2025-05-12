@@ -1,10 +1,10 @@
 import debug from 'debug'
 import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
 import {
-  get_guideline_file,
   get_system_guidelines_directory,
   get_user_guidelines_directory
-} from '#libs-server/guidelines/index.mjs'
+} from '#libs-server/guideline/constants.mjs'
+import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import glob from 'glob'
 import { directory_exists_in_filesystem_sync } from '#libs-server/filesystem/directory-exists-in-filesystem-sync.mjs'
 
@@ -45,15 +45,21 @@ export default async function generate_guidelines_prompt({
           continue
         }
 
-        const guideline_file = await get_guideline_file({
+        const result = await read_guideline_from_filesystem({
           guideline_id,
           system_base_directory,
           user_base_directory
         })
 
+        if (!result.success) {
+          throw new Error(
+            result.error || `Failed to read guideline ${guideline_id}`
+          )
+        }
+
         const parsed_markdown = await parse_markdown_content({
-          content: guideline_file.content,
-          file_path: guideline_file.file_path
+          content: result.content,
+          file_path: result.file_path
         })
 
         // Store the original guideline_id with the parsed content for reference
@@ -178,15 +184,21 @@ async function find_matching_guidelines({
   for (const guideline_file of system_guideline_files) {
     const guideline_id = `system/${guideline_file}`
     try {
-      const file_result = await get_guideline_file({
+      const result = await read_guideline_from_filesystem({
         guideline_id,
         system_base_directory,
         user_base_directory
       })
 
+      if (!result.success) {
+        throw new Error(
+          result.error || `Failed to read guideline ${guideline_id}`
+        )
+      }
+
       const parsed_markdown = await parse_markdown_content({
-        content: file_result.content,
-        file_path: file_result.file_path
+        content: result.content,
+        file_path: result.file_path
       })
 
       // Store the guideline_id for reference
@@ -215,15 +227,21 @@ async function find_matching_guidelines({
   for (const guideline_file of user_guideline_files) {
     const guideline_id = `user/${guideline_file}`
     try {
-      const file_result = await get_guideline_file({
+      const result = await read_guideline_from_filesystem({
         guideline_id,
         system_base_directory,
         user_base_directory
       })
 
+      if (!result.success) {
+        throw new Error(
+          result.error || `Failed to read guideline ${guideline_id}`
+        )
+      }
+
       const parsed_markdown = await parse_markdown_content({
-        content: file_result.content,
-        file_path: file_result.file_path
+        content: result.content,
+        file_path: result.file_path
       })
 
       // Store the guideline_id for reference

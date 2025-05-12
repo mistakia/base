@@ -73,14 +73,19 @@ export function resolve_guideline_path({
     throw new Error('guideline_id type must be either "system" or "user"')
   }
 
-  // Always insert the guidelines directory between the base and the file path
-  const file_path = path.join(base_directory, guidelines_dir, ...path_parts)
+  // For git operations, we need the relative path within the repo
+  // This is the path without the base directory
+  const base_relative_path = path.join(guidelines_dir, ...path_parts)
+
+  // Get the full file path
+  const file_path = path.join(base_directory, base_relative_path)
 
   return {
     type,
     base_directory,
     guidelines_dir,
     path_parts,
-    file_path
+    file_path,
+    base_relative_path
   }
 }
