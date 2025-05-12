@@ -1,7 +1,7 @@
 import express from 'express'
 import Validator from 'fastest-validator'
 
-import { fetch_entity_data } from '#libs-server/entities/index.mjs'
+import { read_entity_from_database } from '#libs-server/entity/index.mjs'
 
 const v = new Validator({ haltOnFirstError: true })
 const router = express.Router({ mergeParams: true })
@@ -149,10 +149,9 @@ router.delete('/:table_name/views/:view_id', async (req, res) => {
     }
 
     // Fetch the database view entity to verify ownership
-    const database_view = await fetch_entity_data({
+    const database_view = await read_entity_from_database({
       entity_id: view_id,
-      user_id: req.auth.user_id,
-      include_type_data: true
+      user_id: req.auth.user_id
     })
 
     // Check if view exists and belongs to the authenticated user
@@ -188,10 +187,11 @@ router.get('/:table_name/views/:view_id', async (req, res) => {
     }
 
     // Fetch the database view entity
-    const database_view = await fetch_entity_data({
+    const database_view = await read_entity_from_database({
       entity_id: view_id,
       user_id: req.auth.user_id,
-      include_type_data: true
+      include_relations: true,
+      include_tags: true
     })
 
     // Check if view exists and belongs to the authenticated user
