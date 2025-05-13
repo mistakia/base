@@ -3,6 +3,7 @@ import { exec } from 'child_process'
 import path from 'path'
 import debug from 'debug'
 import fs from 'fs/promises'
+import { get_file_git_sha } from '#libs-server/git/file-operations.mjs'
 
 const log = debug('markdown:scanner')
 const execute = promisify(exec)
@@ -71,17 +72,25 @@ export async function list_markdown_files_from_git(repos) {
         // }
 
         // Get file hash in the specified branch
-        const { stdout: git_sha } = await execute(
-          `git rev-parse ${repo.branch}:${git_relative_path}`,
-          { cwd: repo_path }
-        )
+        const git_sha = await get_file_git_sha({
+          repo_path,
+          file_path: git_relative_path,
+          branch: repo.branch
+        })
+
+        if (!git_sha) {
+          log(
+            `Failed to get git SHA for ${git_relative_path} in ${repo.branch}, skipping`
+          )
+          continue
+        }
 
         const file_info = {
           repo_type: repo.repo_type,
           repo_path: repo.path,
           git_relative_path,
           absolute_path,
-          git_sha: git_sha.trim(),
+          git_sha,
           branch: repo.branch,
           is_submodule: repo.is_submodule
         }

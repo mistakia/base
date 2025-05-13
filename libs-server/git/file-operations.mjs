@@ -292,11 +292,35 @@ export async function list_files_recursive(base_path, path_pattern = '') {
   return files
 }
 
+/**
+ * Gets the git SHA for a specific file in a branch
+ *
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @param {String} params.file_path Path to the file relative to repository root
+ * @param {String} params.branch The branch name
+ * @returns {Promise<string|null>} The git SHA for the file or null if not found
+ */
+export async function get_file_git_sha({ repo_path, file_path, branch }) {
+  try {
+    log(`Getting git SHA for file ${file_path} in branch ${branch}`)
+    const { stdout } = await execute_shell_command(
+      `git rev-parse ${branch}:${file_path}`,
+      { cwd: repo_path }
+    )
+    return stdout.trim()
+  } catch (error) {
+    log(`Failed to get git SHA for ${file_path} in ${branch}:`, error)
+    return null
+  }
+}
+
 export default {
   apply_patch,
   generate_patch,
   read_file_from_ref,
   list_files,
   list_files_recursive,
-  delete_file
+  delete_file,
+  get_file_git_sha
 }

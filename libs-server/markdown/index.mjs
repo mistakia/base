@@ -21,10 +21,6 @@ export {
   import_markdown_entity,
   remove_stale_entities
 } from './entity-import/index.mjs'
-export {
-  export_markdown_entity,
-  batch_export_markdown_entities
-} from './entity-export/index.mjs'
 
 // Schema functionality
 export {

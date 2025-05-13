@@ -26,7 +26,8 @@ export const {
   read_file_from_ref,
   list_files,
   list_files_recursive,
-  delete_file
+  delete_file,
+  get_file_git_sha
 } = file_operations
 
 export const {
@@ -63,6 +64,7 @@ export default {
   read_file_from_ref,
   list_files,
   delete_file,
+  get_file_git_sha,
 
   // Git files operations
   write_file_to_git,

@@ -12,20 +12,6 @@ import {
   handle_database_type
 } from '../entity-import/entity-handlers.mjs'
 
-import {
-  fetch_generic_entity_data,
-  fetch_task_data,
-  fetch_person_data,
-  fetch_organization_data,
-  fetch_physical_item_data,
-  fetch_physical_location_data,
-  fetch_digital_item_data,
-  fetch_guideline_data,
-  fetch_activity_data,
-  fetch_tag_data,
-  fetch_database_data
-} from '../entity-export/entity-fetchers.mjs'
-
 // Comprehensive entity type registry
 export const entity_registry = {
   // Generic handlers
