@@ -53,7 +53,7 @@ describe('generate_activity_prompt', () => {
     return file_path
   }
 
-  describe('with activity_id parameter', () => {
+  describe('with base_relative_path parameter', () => {
     // Create test activity files before each test in this group
     beforeEach(() => {
       // Create system activity files
@@ -111,9 +111,8 @@ describe('generate_activity_prompt', () => {
     it('should generate prompt for a system activity with guidelines', async () => {
       // Act
       const result = await generate_activity_prompt({
-        activity_id: 'system/test-activity1.md',
-        system_base_directory: test_system_dir.path,
-        user_base_directory: test_user_dir.path
+        base_relative_path: 'system/activity/test-activity1.md',
+        root_base_directory: test_system_dir.path
       })
 
       // Assert
@@ -123,18 +122,21 @@ describe('generate_activity_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is test content for activity 1</role>'
       )
-      expect(result.guideline_ids).to.be.an('array')
-      expect(result.guideline_ids).to.have.lengthOf(2)
-      expect(result.guideline_ids).to.include('system/guideline1.md')
-      expect(result.guideline_ids).to.include('system/guideline2.md')
+      expect(result.guideline_base_relative_paths).to.be.an('array')
+      expect(result.guideline_base_relative_paths).to.have.lengthOf(2)
+      expect(result.guideline_base_relative_paths).to.include(
+        'system/guideline1.md'
+      )
+      expect(result.guideline_base_relative_paths).to.include(
+        'system/guideline2.md'
+      )
     })
 
     it('should generate prompt for a system activity without guidelines', async () => {
       // Act
       const result = await generate_activity_prompt({
-        activity_id: 'system/test-activity2.md',
-        system_base_directory: test_system_dir.path,
-        user_base_directory: test_user_dir.path
+        base_relative_path: 'system/activity/test-activity2.md',
+        root_base_directory: test_system_dir.path
       })
 
       // Assert
@@ -144,16 +146,15 @@ describe('generate_activity_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is test content for activity 2</role>'
       )
-      expect(result.guideline_ids).to.be.an('array')
-      expect(result.guideline_ids).to.have.lengthOf(0)
+      expect(result.guideline_base_relative_paths).to.be.an('array')
+      expect(result.guideline_base_relative_paths).to.have.lengthOf(0)
     })
 
     it('should generate prompt for a user activity', async () => {
       // Act
       const result = await generate_activity_prompt({
-        activity_id: 'user/user-activity1.md',
-        system_base_directory: test_system_dir.path,
-        user_base_directory: test_user_dir.path
+        base_relative_path: 'activity/user-activity1.md',
+        root_base_directory: test_user_dir.path
       })
 
       // Assert
@@ -163,18 +164,19 @@ describe('generate_activity_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is user activity content</role>'
       )
-      expect(result.guideline_ids).to.be.an('array')
-      expect(result.guideline_ids).to.have.lengthOf(1)
-      expect(result.guideline_ids).to.include('user/user-guideline1.md')
+      expect(result.guideline_base_relative_paths).to.be.an('array')
+      expect(result.guideline_base_relative_paths).to.have.lengthOf(1)
+      expect(result.guideline_base_relative_paths).to.include(
+        'user/user-guideline1.md'
+      )
     })
 
     it('should throw an error for non-existent activity', async () => {
       try {
         // Act
         await generate_activity_prompt({
-          activity_id: 'system/nonexistent.md',
-          system_base_directory: test_system_dir.path,
-          user_base_directory: test_user_dir.path
+          base_relative_path: 'system/activity/nonexistent.md',
+          root_base_directory: test_system_dir.path
         })
         // If we get here, fail the test
         expect.fail('Expected to throw an error but did not')
@@ -185,19 +187,18 @@ describe('generate_activity_prompt', () => {
       }
     })
 
-    it('should throw an error when activity_id is not provided', async () => {
+    it('should throw an error when base_relative_path is not provided', async () => {
       try {
         // Act
         await generate_activity_prompt({
-          system_base_directory: test_system_dir.path,
-          user_base_directory: test_user_dir.path
+          root_base_directory: test_system_dir.path
         })
         // If we get here, fail the test
         expect.fail('Expected to throw an error but did not')
       } catch (error) {
         // Assert
         expect(error).to.be.an('error')
-        expect(error.message).to.equal('activity_id is required')
+        expect(error.message).to.equal('base_relative_path is required')
       }
     })
   })

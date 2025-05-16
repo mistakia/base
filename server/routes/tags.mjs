@@ -12,11 +12,11 @@ router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
     const user_id = req.auth.user_id
-    const { archived, search_term } = req.query
+    const { include_archived, search_term } = req.query
 
     const tags = await list_tags_from_database({
       user_id,
-      archived: archived === 'true',
+      include_archived: include_archived === 'true',
       search_term
     })
 
@@ -27,24 +27,24 @@ router.get('/', async (req, res) => {
   }
 })
 
-// Get a specific tag by tag_id
-router.get('/:tag_id(*)', async (req, res) => {
+// Get a specific tag by tag base_relative_path
+router.get('/:base_relative_path(*)', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { tag_id } = req.params
+    const { base_relative_path } = req.params
     const user_id = req.auth.user_id
 
     try {
-      // Read the tag directly from filesystem using the provided tag_id
-      // tag_id format is expected to be either "system/<tag-title>" or "user/<tag-title>"
+      // Read the tag directly from filesystem using the provided tag_base_relative_path
+      // tag_base_relative_path format is expected to be either "system/<tag-title>" or "user/<tag-title>"
       const tag = await read_tag_from_filesystem({
-        tag_id
+        base_relative_path
       })
 
-      // Get all entities associated with this tag
+      // Get all entities associated with this tag using base_relative_path
       const tagged_entities = await search_entities({
         user_id,
-        tag_ids: [tag_id]
+        tag_base_relative_paths: [tag.base_relative_path]
       })
 
       // Return both the tag and the tagged entities directly
@@ -53,9 +53,9 @@ router.get('/:tag_id(*)', async (req, res) => {
         entities: tagged_entities
       })
     } catch (error) {
-      return res
-        .status(404)
-        .send({ error: `Tag ${tag_id} not found: ${error.message}` })
+      return res.status(404).send({
+        error: `Tag ${base_relative_path} not found: ${error.message}`
+      })
     }
   } catch (error) {
     log(error)

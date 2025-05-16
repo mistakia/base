@@ -1,61 +1,58 @@
-import { read_file_from_filesystem } from '../../filesystem/read-file-from-filesystem.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { tag_exists_in_filesystem } from './tag-exists-in-filesystem.mjs'
-import { resolve_tag_path } from '../constants.mjs'
+import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import config from '#config'
 
 /**
  * Read a tag from the filesystem
  *
  * @param {Object} params Parameters
- * @param {string} params.tag_id Tag ID to read in format [system|user]/<tag-title>
- * @param {string} [params.system_base_directory] Custom system base directory
- * @param {string} [params.user_base_directory] Custom user base directory
+ * @param {string} params.base_relative_path Path relative to Base root, e.g., 'system/tag/<tag-title>.json' or 'tag/<tag-title>.json'
+ * @param {string} [params.root_base_directory] Custom root base directory
  * @returns {Promise<Object>} Tag data
  * @throws {Error} If tag doesn't exist or reading fails
  */
 export async function read_tag_from_filesystem({
-  tag_id,
-  system_base_directory,
-  user_base_directory
+  base_relative_path,
+  root_base_directory = config.root_base_directory
 } = {}) {
-  if (!tag_id) {
-    throw new Error('tag_id is required')
+  if (!base_relative_path) {
+    throw new Error('base_relative_path is required')
   }
 
   // Check if tag exists before trying to read
-  const tag_exists = tag_exists_in_filesystem({
-    tag_id,
-    system_base_directory,
-    user_base_directory
+  const tag_exists = await tag_exists_in_filesystem({
+    base_relative_path,
+    root_base_directory
   })
 
   if (!tag_exists) {
-    throw new Error(`Tag ${tag_id} does not exist in filesystem`)
+    throw new Error(`Tag at ${base_relative_path} does not exist in filesystem`)
   }
 
-  // Resolve the tag path
-  const { file_path, tag_title, type } = resolve_tag_path({
-    tag_id,
-    system_base_directory,
-    user_base_directory
+  // Get file info
+  const { absolute_path } = await get_base_file_info({
+    base_relative_path,
+    root_base_directory
   })
 
   try {
     // Read and parse the tag file
-    const tag_content = await read_file_from_filesystem({
-      file_path
+    const result = await read_entity_from_filesystem({
+      absolute_path
     })
 
-    // Parse the JSON content
-    const tag_data = JSON.parse(tag_content)
+    if (!result.success) {
+      throw new Error(result.error)
+    }
 
-    // Add the type and tag_id properties if they're not already present
     return {
-      ...tag_data,
-      type: tag_data.type || type,
-      tag_id: tag_data.tag_id || tag_id,
-      title: tag_data.title || tag_title
+      tag_content: result.raw_content,
+      base_relative_path
     }
   } catch (error) {
-    throw new Error(`Failed to read tag ${tag_id}: ${error.message}`)
+    throw new Error(
+      `Failed to read tag at ${base_relative_path}: ${error.message}`
+    )
   }
 }

@@ -39,6 +39,7 @@ const log = debug('entity:database:write-task')
  * @param {Object} [params.file_info=null] Optional file information
  * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {string} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} [params.file_info.base_relative_path=null] Base relative path of the task
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The task_id (same as entity_id)
  */

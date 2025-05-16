@@ -7,8 +7,8 @@ describe('write_entity_tags_to_database', () => {
   let test_user
   let test_user_id
   let entity_id
-  let tag_id1
-  let tag_id2
+  let tag_entity_id1
+  let tag_entity_id2
 
   beforeEach(async () => {
     await reset_all_tables()
@@ -39,10 +39,10 @@ describe('write_entity_tags_to_database', () => {
         updated_at: new Date()
       })
       .returning('entity_id')
-    tag_id1 = tag1[0].entity_id
+    tag_entity_id1 = tag1[0].entity_id
 
     // Insert into tags table
-    await db('tags').insert({ entity_id: tag_id1 })
+    await db('tags').insert({ entity_id: tag_entity_id1 })
 
     const tag2 = await db('entities')
       .insert({
@@ -54,10 +54,10 @@ describe('write_entity_tags_to_database', () => {
         updated_at: new Date()
       })
       .returning('entity_id')
-    tag_id2 = tag2[0].entity_id
+    tag_entity_id2 = tag2[0].entity_id
 
     // Insert into tags table
-    await db('tags').insert({ entity_id: tag_id2 })
+    await db('tags').insert({ entity_id: tag_entity_id2 })
   })
 
   afterEach(async () => {
@@ -66,7 +66,7 @@ describe('write_entity_tags_to_database', () => {
 
   it('should write entity tags to the database', async () => {
     // Arrange
-    const tags = [tag_id1, tag_id2]
+    const tags = [tag_entity_id1, tag_entity_id2]
 
     // Act
     await write_entity_tags_to_database({
@@ -81,13 +81,13 @@ describe('write_entity_tags_to_database', () => {
       .orderBy('tag_entity_id')
 
     expect(stored_tags).to.have.lengthOf(2)
-    expect(stored_tags[0].tag_entity_id).to.equal(tag_id1)
-    expect(stored_tags[1].tag_entity_id).to.equal(tag_id2)
+    expect(stored_tags[0].tag_entity_id).to.equal(tag_entity_id1)
+    expect(stored_tags[1].tag_entity_id).to.equal(tag_entity_id2)
   })
 
   it('should delete existing tags when writing new ones', async () => {
     // Arrange - first write some tags
-    const initial_tags = [tag_id1]
+    const initial_tags = [tag_entity_id1]
 
     await write_entity_tags_to_database({
       entity_id,
@@ -100,7 +100,7 @@ describe('write_entity_tags_to_database', () => {
     expect(initial_stored_tags).to.have.lengthOf(1)
 
     // Act - write new tags
-    const new_tags = [tag_id2]
+    const new_tags = [tag_entity_id2]
 
     await write_entity_tags_to_database({
       entity_id,
@@ -112,14 +112,15 @@ describe('write_entity_tags_to_database', () => {
     const final_stored_tags = await db('entity_tags').where({ entity_id })
 
     expect(final_stored_tags).to.have.lengthOf(1)
-    expect(final_stored_tags[0].tag_entity_id).to.equal(tag_id2)
+    expect(final_stored_tags[0].tag_entity_id).to.equal(tag_entity_id2)
   })
 
   it('should handle empty tags array', async () => {
     // First add some tags
     await write_entity_tags_to_database({
       entity_id,
-      tags: [tag_id1, tag_id2],
+      // TODO should probably be base_relative_path
+      tags: [tag_entity_id1, tag_entity_id2],
       db_client: db
     })
 
@@ -168,7 +169,8 @@ describe('write_entity_tags_to_database', () => {
 
   it('should work with a transaction', async () => {
     // Arrange
-    const tags = [tag_id1, tag_id2]
+    // TODO should probably be base_relative_path
+    const tags = [tag_entity_id1, tag_entity_id2]
 
     // Start a transaction
     const trx = await db.transaction()

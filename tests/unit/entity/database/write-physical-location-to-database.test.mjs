@@ -250,7 +250,7 @@ describe('write_physical_location_to_database', () => {
       .where({ entity_id: physical_location_id })
       .first()
     expect(entity).to.exist
-    expect(entity.file_path).to.equal(file_info.absolute_path)
+    expect(entity.absolute_path).to.equal(file_info.absolute_path)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 
@@ -267,7 +267,7 @@ describe('write_physical_location_to_database', () => {
       updated_at: later
     }
 
-    const tag_id = await db('entities')
+    const tag_entity_id = await db('entities')
       .insert({
         title: tag_properties.title,
         description: tag_properties.description,
@@ -280,7 +280,7 @@ describe('write_physical_location_to_database', () => {
       .returning('entity_id')
       .then((rows) => rows[0].entity_id)
 
-    await db('tags').insert({ entity_id: tag_id })
+    await db('tags').insert({ entity_id: tag_entity_id })
 
     // Create location with tag
     const physical_location_properties = {
@@ -288,7 +288,7 @@ describe('write_physical_location_to_database', () => {
       description: 'Location with tags',
       latitude: 51.5074,
       longitude: -0.1278,
-      tags: [tag_id],
+      tags: [tag_entity_id],
       created_at: now,
       updated_at: later
     }
@@ -303,7 +303,7 @@ describe('write_physical_location_to_database', () => {
     const tag_relation = await db('entity_tags')
       .where({
         entity_id: physical_location_id,
-        tag_entity_id: tag_id
+        tag_entity_id
       })
       .first()
 

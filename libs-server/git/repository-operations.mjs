@@ -93,8 +93,49 @@ export async function git_init({ directory, bare = false }) {
   }
 }
 
+/**
+ * List all submodules in a repository
+ *
+ * @param {Object} params Parameters
+ * @param {String} params.repo_path Path to the repository
+ * @returns {Promise<Array>} List of submodules with path, commit and branch
+ */
+export async function list_submodules({ repo_path = '.' }) {
+  try {
+    log(`Listing submodules in ${repo_path}`)
+    const { stdout } = await execute_shell_command('git submodule', {
+      cwd: repo_path
+    })
+
+    if (!stdout.trim()) {
+      return []
+    }
+
+    const submodules = []
+    const lines = stdout.trim().split('\n')
+
+    for (const line of lines) {
+      const match = line.match(/^[\s]*([^\s]+)\s+([^\s]+)(?:\s+\(([^)]+)\))?/)
+      if (match) {
+        submodules.push({
+          commit: match[1],
+          path: match[2],
+          branch: match[3] || null
+        })
+      }
+    }
+
+    return submodules
+  } catch (error) {
+    log(`Failed to list submodules in ${repo_path}:`, error)
+    // If command fails, likely no submodules or not a git repo
+    return []
+  }
+}
+
 export default {
   is_submodule,
   get_repo_info,
-  git_init
+  git_init,
+  list_submodules
 }

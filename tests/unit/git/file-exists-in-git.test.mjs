@@ -86,7 +86,7 @@ describe('file_exists_in_git', function () {
   })
 
   it('should return true for existing files in a branch', async function () {
-    const file_path = 'test-exists-file.md'
+    const git_relative_path = 'test-exists-file.md'
     const content = '# Test File Content'
     const branch = 'main'
     const commit_message = 'Add test file for existence check'
@@ -94,7 +94,7 @@ describe('file_exists_in_git', function () {
     // First write a file to check
     await write_file_to_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       content,
       branch,
       commit_message
@@ -103,35 +103,35 @@ describe('file_exists_in_git', function () {
     // Check if file exists
     const result = await file_exists_in_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     // Validate result
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should return false for non-existent files in a branch', async function () {
-    const file_path = 'non-existent-file.md'
+    const git_relative_path = 'non-existent-file.md'
     const branch = 'main'
 
     const result = await file_exists_in_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     expect(result.success).to.be.true
     expect(result.exists).to.be.false
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should check files in different branches correctly', async function () {
-    const file_path = 'branch-specific-file.md'
+    const git_relative_path = 'branch-specific-file.md'
     const content = '# Branch Specific Content'
     const branch = 'feature-branch'
     const commit_message = 'Add branch-specific file'
@@ -140,7 +140,7 @@ describe('file_exists_in_git', function () {
     await execute('git checkout feature-branch', { cwd: test_repo_path })
     await write_file_to_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       content,
       branch,
       commit_message
@@ -150,14 +150,14 @@ describe('file_exists_in_git', function () {
     // Check file exists in feature branch
     const feature_result = await file_exists_in_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch: 'feature-branch'
     })
 
     // Check file doesn't exist in main branch
     const main_result = await file_exists_in_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch: 'main'
     })
 
@@ -168,25 +168,25 @@ describe('file_exists_in_git', function () {
   })
 
   it('should handle non-existent branches gracefully', async function () {
-    const file_path = 'test-file.md'
+    const git_relative_path = 'test-file.md'
     const branch = 'non-existent-branch'
 
     const result = await file_exists_in_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     expect(result.success).to.be.false
     expect(result.error).to.include('Branch non-existent-branch does not exist')
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
   })
 
   it('should validate required parameters', async function () {
     // Test missing repo_path
     try {
       await file_exists_in_git({
-        file_path: 'test.md',
+        git_relative_path: 'test.md',
         branch: 'main'
       })
       expect.fail('Should have thrown an error')
@@ -194,7 +194,7 @@ describe('file_exists_in_git', function () {
       expect(error.message).to.equal('Repository path is required')
     }
 
-    // Test missing file_path
+    // Test missing git_relative_path
     try {
       await file_exists_in_git({
         repo_path: test_repo_path,
@@ -202,14 +202,14 @@ describe('file_exists_in_git', function () {
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
-      expect(error.message).to.equal('File path is required')
+      expect(error.message).to.equal('Git relative path is required')
     }
 
     // Test missing branch
     try {
       await file_exists_in_git({
         repo_path: test_repo_path,
-        file_path: 'test.md'
+        git_relative_path: 'test.md'
       })
       expect.fail('Should have thrown an error')
     } catch (error) {

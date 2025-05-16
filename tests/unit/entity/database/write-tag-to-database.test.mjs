@@ -32,17 +32,19 @@ describe('write_tag_to_database', () => {
     const tag_content = '# Test Tag\n\nTag body content'
 
     // Act
-    const tag_id = await write_tag_to_database({
+    const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id,
       tag_content
     })
 
     // Assert
-    expect(tag_id).to.be.a('string')
+    expect(tag_entity_id).to.be.a('string')
 
     // Verify entity was created in database
-    const entity = await db('entities').where({ entity_id: tag_id }).first()
+    const entity = await db('entities')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(entity).to.exist
     expect(entity.title).to.equal(tag_properties.title)
     expect(entity.description).to.equal(tag_properties.description)
@@ -65,7 +67,9 @@ describe('write_tag_to_database', () => {
     )
 
     // Verify tag-specific data was created
-    const tag_data = await db('tags').where({ entity_id: tag_id }).first()
+    const tag_data = await db('tags')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(tag_data).to.exist
     expect(tag_data.color).to.equal(tag_properties.color)
   })
@@ -84,7 +88,7 @@ describe('write_tag_to_database', () => {
     }
     const original_content = 'Original tag content'
 
-    const tag_id = await write_tag_to_database({
+    const tag_entity_id = await write_tag_to_database({
       tag_properties: original_properties,
       user_id: test_user_id,
       tag_content: original_content
@@ -106,11 +110,13 @@ describe('write_tag_to_database', () => {
       tag_properties: updated_properties,
       user_id: test_user_id,
       tag_content: updated_content,
-      tag_id
+      entity_id: tag_entity_id
     })
 
     // Assert - verify entity was updated
-    const entity = await db('entities').where({ entity_id: tag_id }).first()
+    const entity = await db('entities')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(entity).to.exist
     expect(entity.title).to.equal(updated_properties.title)
     expect(entity.description).to.equal(updated_properties.description)
@@ -131,7 +137,9 @@ describe('write_tag_to_database', () => {
     )
 
     // Verify tag-specific data was updated
-    const tag_data = await db('tags').where({ entity_id: tag_id }).first()
+    const tag_data = await db('tags')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(tag_data).to.exist
     expect(tag_data.color).to.equal(updated_properties.color)
   })
@@ -154,16 +162,18 @@ describe('write_tag_to_database', () => {
     }
 
     // Act
-    const tag_id = await write_tag_to_database({
+    const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id,
       file_info
     })
 
     // Assert
-    const entity = await db('entities').where({ entity_id: tag_id }).first()
+    const entity = await db('entities')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(entity).to.exist
-    expect(entity.file_path).to.equal(file_info.absolute_path)
+    expect(entity.absolute_path).to.equal(file_info.absolute_path)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 
@@ -175,19 +185,23 @@ describe('write_tag_to_database', () => {
     }
 
     // Act
-    const tag_id = await write_tag_to_database({
+    const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id
     })
 
     // Assert
-    const entity = await db('entities').where({ entity_id: tag_id }).first()
+    const entity = await db('entities')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(entity).to.exist
     expect(entity.title).to.equal(tag_properties.title)
     expect(entity.type).to.equal('tag')
 
     // Verify optional fields in tags table are null
-    const tag_data = await db('tags').where({ entity_id: tag_id }).first()
+    const tag_data = await db('tags')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(tag_data).to.exist
     expect(tag_data.color).to.be.null
   })
@@ -236,7 +250,7 @@ describe('write_tag_to_database', () => {
     }
 
     // Act
-    const child_tag_id = await write_tag_to_database({
+    const child_tag_entity_id = await write_tag_to_database({
       tag_properties: child_tag_properties,
       user_id: test_user_id
     })
@@ -245,7 +259,7 @@ describe('write_tag_to_database', () => {
     // Verify first parent tag relation
     const tag_relation1 = await db('entity_tags')
       .where({
-        entity_id: child_tag_id,
+        entity_id: child_tag_entity_id,
         tag_entity_id: parent_tag1_id
       })
       .first()
@@ -255,7 +269,7 @@ describe('write_tag_to_database', () => {
     // Verify second parent tag relation
     const tag_relation2 = await db('entity_tags')
       .where({
-        entity_id: child_tag_id,
+        entity_id: child_tag_entity_id,
         tag_entity_id: parent_tag2_id
       })
       .first()
@@ -278,13 +292,15 @@ describe('write_tag_to_database', () => {
     }
 
     // Act
-    const tag_id = await write_tag_to_database({
+    const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id
     })
 
     // Assert
-    const entity = await db('entities').where({ entity_id: tag_id }).first()
+    const entity = await db('entities')
+      .where({ entity_id: tag_entity_id })
+      .first()
     expect(entity).to.exist
     expect(entity.archived_at).to.not.be.null
     expect(new Date(entity.archived_at).getTime()).to.be.closeTo(

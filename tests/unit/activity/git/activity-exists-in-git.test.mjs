@@ -16,17 +16,15 @@ describe('activity_exists_in_git', () => {
   // System activity paths in the repo
   const system_activity_dir = 'system/activity'
   const system_activity_filename = 'test-activity.md'
-  const system_activity_path = `${system_activity_dir}/${system_activity_filename}`
+  const system_activity_base_relative_path = `${system_activity_dir}/${system_activity_filename}`
 
   // User activity paths in the repo
   const user_activity_dir = 'activity'
   const user_activity_filename = 'test-user-activity.md'
-  const user_activity_path = `${user_activity_dir}/${user_activity_filename}`
+  const user_activity_base_relative_path = `${user_activity_dir}/${user_activity_filename}`
 
-  // Activity IDs as used by the API functions
-  const system_activity_id = `system/${system_activity_filename}`
-  const user_activity_id = `user/${user_activity_filename}`
-  const non_existent_activity_id = 'system/non-existent.md'
+  // Activity paths relative to the repo root, used as base_relative_path for the API
+  const non_existent_activity_base_relative_path = 'system/non-existent.md'
 
   before(async () => {
     // Create a temporary git repository
@@ -52,7 +50,7 @@ description: "This is a test activity"
 This is a test activity for Git.
 `
     await fs.writeFile(
-      path.join(repo.path, system_activity_path),
+      path.join(repo.path, system_activity_base_relative_path),
       system_activity_content
     )
 
@@ -68,7 +66,7 @@ description: "This is a user activity"
 This is a user activity for Git.
 `
     await fs.writeFile(
-      path.join(repo.path, user_activity_path),
+      path.join(repo.path, user_activity_base_relative_path),
       user_activity_content
     )
 
@@ -97,71 +95,71 @@ This is a user activity for Git.
   it('should return exists=true when system activity exists in git', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: system_activity_id,
+      base_relative_path: system_activity_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.activity_id).to.equal(system_activity_id)
+    expect(result.base_relative_path).to.equal(
+      system_activity_base_relative_path
+    )
     expect(result.branch).to.equal(branch)
   })
 
   it('should return exists=true when user activity exists in git', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: user_activity_id,
+      base_relative_path: user_activity_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.activity_id).to.equal(user_activity_id)
+    expect(result.base_relative_path).to.equal(user_activity_base_relative_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should return exists=false when activity does not exist', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: non_existent_activity_id,
+      base_relative_path: non_existent_activity_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.false
-    expect(result.activity_id).to.equal(non_existent_activity_id)
+    expect(result.base_relative_path).to.equal(
+      non_existent_activity_base_relative_path
+    )
     expect(result.branch).to.equal(branch)
   })
 
-  it('should return error when activity_id is invalid', async () => {
+  it('should return error when activity_base_relative_path is invalid', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: 'invalid-path',
+      base_relative_path: 'invalid-path',
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
-    expect(result.success).to.be.false
-    expect(result.error).to.be.a('string')
+    expect(result.success).to.be.true
+    expect(result.exists).to.be.false
+    expect(result.error).to.be.undefined
   })
 
-  it('should return error when activity_id is not provided', async () => {
+  it('should return error when activity_base_relative_path is not provided', async () => {
     // Act
     const result = await activity_exists_in_git({
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -172,9 +170,8 @@ This is a user activity for Git.
   it('should return error when branch is not provided', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: system_activity_id,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      base_relative_path: system_activity_base_relative_path,
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -185,10 +182,9 @@ This is a user activity for Git.
   it('should return error when branch does not exist', async () => {
     // Act
     const result = await activity_exists_in_git({
-      activity_id: system_activity_id,
+      base_relative_path: system_activity_base_relative_path,
       branch: 'non-existent-branch',
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert

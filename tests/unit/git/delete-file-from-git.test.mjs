@@ -109,7 +109,7 @@ describe('delete_file_from_git', function () {
   })
 
   it('should delete a file from a git repository with commit', async function () {
-    const file_path = 'main-delete.md'
+    const git_relative_path = 'main-delete.md'
     const branch = 'main'
     const commit_message = 'Delete test file'
 
@@ -118,7 +118,7 @@ describe('delete_file_from_git', function () {
       .read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       .then(() => true)
       .catch(() => false)
@@ -128,14 +128,14 @@ describe('delete_file_from_git', function () {
     // Delete the file using our function
     const result = await delete_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch,
       commit_message
     })
 
     // Validate result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
 
     // Verify the file was deleted from git
@@ -143,7 +143,7 @@ describe('delete_file_from_git', function () {
       await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect.fail('File should be deleted from git')
     } catch (error) {
@@ -158,21 +158,21 @@ describe('delete_file_from_git', function () {
   })
 
   it('should delete a file from a different branch', async function () {
-    const file_path = 'test-delete.md'
+    const git_relative_path = 'test-delete.md'
     const branch = 'feature-branch'
     const commit_message = 'Delete feature branch file'
 
     // Delete the file from feature-branch
     const result = await delete_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch,
       commit_message
     })
 
     // Validate result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
 
     // Verify the file is deleted from the feature branch
@@ -180,7 +180,7 @@ describe('delete_file_from_git', function () {
       await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect.fail('File should be deleted from git')
     } catch (error) {
@@ -198,23 +198,23 @@ describe('delete_file_from_git', function () {
   })
 
   it('should stage deletion without committing when no commit message is provided', async function () {
-    const file_path = 'main-delete.md'
+    const git_relative_path = 'main-delete.md'
     const branch = 'main'
 
     // Delete the file without a commit message
     const result = await delete_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     // Validate result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
 
     // Verify the file is physically deleted
-    const full_file_path = path.join(test_repo_path, file_path)
+    const full_file_path = path.join(test_repo_path, git_relative_path)
     const file_exists = await fs
       .access(full_file_path)
       .then(() => true)
@@ -225,13 +225,13 @@ describe('delete_file_from_git', function () {
     const { stdout: git_status } = await execute('git status --porcelain', {
       cwd: test_repo_path
     })
-    expect(git_status).to.include('D  ' + file_path)
+    expect(git_status).to.include('D  ' + git_relative_path)
 
     // Verify the file is still in the git history
     const file_content = await git.read_file_from_ref({
       repo_path: test_repo_path,
       ref: branch,
-      file_path
+      file_path: git_relative_path
     })
     expect(file_content).to.include('# Main file to be deleted')
 
@@ -244,7 +244,7 @@ describe('delete_file_from_git', function () {
       await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect.fail('File should be deleted from git history')
     } catch (error) {
@@ -253,13 +253,13 @@ describe('delete_file_from_git', function () {
   })
 
   it('should fail if the branch does not exist', async function () {
-    const file_path = 'test-delete.md'
+    const git_relative_path = 'test-delete.md'
     const branch = 'non-existent-branch'
 
     // Attempt to delete from a non-existent branch
     const result = await delete_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch,
       commit_message: 'This should fail'
     })
@@ -277,7 +277,7 @@ describe('delete_file_from_git', function () {
     // Create the nested file first
     await write_file_to_git({
       repo_path: test_repo_path,
-      file_path: nested_path,
+      git_relative_path: nested_path,
       content,
       branch: 'main',
       commit_message: 'Add nested file to be deleted'
@@ -286,14 +286,14 @@ describe('delete_file_from_git', function () {
     // Now delete it
     const result = await delete_file_from_git({
       repo_path: test_repo_path,
-      file_path: nested_path,
+      git_relative_path: nested_path,
       branch: 'main',
       commit_message: 'Delete nested file'
     })
 
     // Validate result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(nested_path)
+    expect(result.git_relative_path).to.equal(nested_path)
 
     // Verify the file was deleted
     try {

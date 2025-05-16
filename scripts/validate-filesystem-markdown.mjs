@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
-import { process_repositories_from_filesystem } from '#libs-server/markdown/repository/process-repository.mjs'
+import { process_repositories_from_filesystem } from '#libs-server/repository/process-repository.mjs'
 
 const log = debug('validate-filesystem-markdown')
 debug.enable(
@@ -21,8 +21,7 @@ const validate_filesystem = async ({ system_branch, user_branch }) => {
   log('Processing repositories from filesystem...')
   const result = await process_repositories_from_filesystem({
     system_branch,
-    user_branch,
-    validate_content: true
+    user_branch
   })
 
   // Report results

@@ -21,18 +21,18 @@ const log = debug('entity:database:write-tag')
  * @param {Date} [params.tag_properties.archived_at=null] Date when the tag was archived
  * @param {string} params.user_id User ID who owns the tag entity
  * @param {string} [params.tag_content=''] Optional tag content/markdown
- * @param {string} [params.tag_id=null] Optional tag ID for updates
+ * @param {string} [params.entity_id=null] Optional tag ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {string} [params.file_info.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The tag_id (same as entity_id)
+ * @returns {Promise<string>} The entity_id of the tag
  */
 export async function write_tag_to_database({
   tag_properties,
   user_id,
   tag_content = '',
-  tag_id = null,
+  entity_id = null,
   file_info = null,
   trx = null
 }) {
@@ -41,25 +41,25 @@ export async function write_tag_to_database({
     const db_client = trx || db
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const returned_entity_id = await write_entity_to_database({
       entity_properties: tag_properties,
       entity_type: 'tag',
       user_id,
       entity_content: tag_content,
-      entity_id: tag_id,
+      entity_id,
       file_info,
       trx: db_client
     })
 
     // Process tag-specific data directly
     await write_tag_data_to_database({
-      entity_id,
+      entity_id: returned_entity_id,
       color: tag_properties.color,
       db_client
     })
 
-    log(`Tag successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Tag successfully written with ID: ${returned_entity_id}`)
+    return returned_entity_id
   } catch (error) {
     log('Error writing tag to database:', error)
     throw error

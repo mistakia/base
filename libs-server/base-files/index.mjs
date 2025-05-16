@@ -13,6 +13,7 @@ import { get_file_diff } from './file-diff.mjs'
 import { search_files } from './search-files.mjs'
 import { get_target_branch, MAIN_BRANCH_NAME } from './branch-utils.mjs'
 import { batch_write_files } from './batch-write-files.mjs'
+import { get_base_file_info } from './get-base-file-info.mjs'
 
 // Export all file operations
 export {
@@ -24,6 +25,7 @@ export {
   get_file_diff,
   search_files,
   batch_write_files,
+  get_base_file_info,
 
   // Utility functions
   get_target_branch,
@@ -39,6 +41,7 @@ export default {
   get_file_diff,
   search_files,
   batch_write_files,
+  get_base_file_info,
   get_target_branch,
   MAIN_BRANCH_NAME
 }

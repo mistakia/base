@@ -3,7 +3,7 @@ import path from 'path'
 
 import config from '#config'
 import db from '#db'
-import { process_markdown_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { build_change_request_from_git } from './utils.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
@@ -43,14 +43,14 @@ export async function get_change_request({
       `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
     )
     try {
-      const markdown_data = await process_markdown_from_file({
+      const markdown_data = await read_entity_from_filesystem({
         absolute_path
       })
 
       // Add markdown content
-      result.description = markdown_data.frontmatter.description || ''
-      result.tags = markdown_data.frontmatter.tags || []
-      result.content = markdown_data.content || ''
+      result.description = markdown_data.entity_properties.description || ''
+      result.tags = markdown_data.entity_properties.tags || []
+      result.content = markdown_data.entity_content || ''
     } catch (error) {
       log(
         `Warning: Could not read markdown file for ${change_request_id}: ${error.message}`
@@ -222,10 +222,10 @@ async function filter_by_tags({
         repo_path,
         `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
       )
-      const markdown_data = await process_markdown_from_file({
+      const markdown_data = await read_entity_from_filesystem({
         absolute_path
       })
-      const file_tags = markdown_data.frontmatter.tags || []
+      const file_tags = markdown_data.entity_properties.tags || []
 
       // Check if any of the requested tags are in the file's tags
       const has_matching_tag = tags.some(
@@ -241,9 +241,9 @@ async function filter_by_tags({
 
       if (has_matching_tag) {
         // Add markdown data to the record
-        record.description = markdown_data.frontmatter.description || ''
+        record.description = markdown_data.entity_properties.description || ''
         record.tags = file_tags
-        record.content = markdown_data.content || ''
+        record.content = markdown_data.entity_content || ''
 
         // Add Git data if requested
         if (include_git_data) {
@@ -278,14 +278,14 @@ async function enhance_with_markdown({
         repo_path,
         `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
       )
-      const markdown_data = await process_markdown_from_file({
+      const markdown_data = await read_entity_from_filesystem({
         absolute_path
       })
 
       // Add markdown data to the record
-      record.description = markdown_data.frontmatter.description || ''
-      record.tags = markdown_data.frontmatter.tags || []
-      record.content = markdown_data.content || ''
+      record.description = markdown_data.entity_properties.description || ''
+      record.tags = markdown_data.entity_properties.tags || []
+      record.content = markdown_data.entity_content || ''
     } catch (error) {
       log(
         `Warning: Could not read markdown file for ${record.change_request_id}: ${error.message}`

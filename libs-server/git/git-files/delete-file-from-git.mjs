@@ -11,7 +11,7 @@ const log = debug('git:delete-file-from-git')
  * Deletes a file from a git repository
  * @param {Object} params - Parameters
  * @param {string} params.repo_path - Path to the repository
- * @param {string} params.file_path - Path to the file relative to repo root
+ * @param {string} params.git_relative_path - Path to the file relative to repo root
  * @param {string} params.branch - Branch to delete from
  * @param {string} [params.commit_message] - Optional commit message
  * @param {boolean} [params.force=false] - Force removal even if file has local modifications
@@ -19,7 +19,7 @@ const log = debug('git:delete-file-from-git')
  */
 export async function delete_file_from_git({
   repo_path,
-  file_path,
+  git_relative_path,
   branch,
   commit_message,
   force = false
@@ -28,8 +28,8 @@ export async function delete_file_from_git({
     throw new Error('Repository path is required')
   }
 
-  if (!file_path) {
-    throw new Error('File path is required')
+  if (!git_relative_path) {
+    throw new Error('Git relative path is required')
   }
 
   if (!branch) {
@@ -37,7 +37,9 @@ export async function delete_file_from_git({
   }
 
   try {
-    log(`Deleting file ${file_path} in branch ${branch} at ${repo_path}`)
+    log(
+      `Deleting file ${git_relative_path} in branch ${branch} at ${repo_path}`
+    )
 
     // Check if branch exists - fail if it doesn't
     const branch_check = await branch_exists({
@@ -62,11 +64,11 @@ export async function delete_file_from_git({
       // Delete the file from the worktree
       await delete_file({
         repo_path: worktree_path,
-        file_path,
+        file_path: git_relative_path,
         force
       })
 
-      log(`Deleted file ${file_path} and staged deletion`)
+      log(`Deleted file ${git_relative_path} and staged deletion`)
 
       // Commit changes if a commit message is provided
       if (commit_message) {
@@ -83,7 +85,7 @@ export async function delete_file_from_git({
             success: true,
             message: 'No changes to commit',
             branch,
-            file_path
+            git_relative_path
           }
         }
       }
@@ -92,7 +94,7 @@ export async function delete_file_from_git({
         success: true,
         message: 'File deletion completed successfully',
         branch,
-        file_path
+        git_relative_path
       }
     } finally {
       // Clean up worktree
@@ -103,11 +105,11 @@ export async function delete_file_from_git({
       log(`Cleaned up worktree at ${worktree_path}`)
     }
   } catch (error) {
-    log(`Error deleting file ${file_path}:`, error)
+    log(`Error deleting file ${git_relative_path}:`, error)
     return {
       success: false,
       error: error.message,
-      file_path
+      git_relative_path
     }
   }
 }

@@ -1,10 +1,7 @@
 import debug from 'debug'
 
-import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
-import {
-  format_entity_to_file_content,
-  format_entity_properties_to_frontmatter
-} from '#libs-server/entity/format/index.mjs'
+import { write_document_to_filesystem } from '#libs-server/markdown/write-document-to-filesystem.mjs'
+import { format_entity_properties_to_frontmatter } from '#libs-server/entity/format/index.mjs'
 
 const log = debug('write-entity-to-filesystem')
 
@@ -45,16 +42,11 @@ export async function write_entity_to_filesystem({
       entity_type
     })
 
-    // Format the entire file content with frontmatter
-    const file_content = format_entity_to_file_content({
-      frontmatter,
-      file_content: entity_content
-    })
-
-    // Write the formatted content to the filesystem
-    await write_file_to_filesystem({
+    // Use the new document writer function with the formatted frontmatter
+    await write_document_to_filesystem({
       absolute_path,
-      file_content
+      document_properties: frontmatter,
+      document_content: entity_content
     })
 
     log(`Successfully wrote ${entity_type} entity to ${absolute_path}`)

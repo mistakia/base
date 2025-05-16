@@ -8,8 +8,8 @@
 import * as git_ops from '#libs-server/git/index.mjs'
 import config from '#config'
 import debug from 'debug'
-import { write_markdown_entity } from '#libs-server/markdown/file-operations/write.mjs'
-import { process_markdown_from_file } from '#libs-server/markdown/processor/markdown-processor.mjs'
+import { write_document_to_filesystem } from '#libs-server/markdown/index.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -233,13 +233,13 @@ export async function update_markdown_file({
     : relative_file_path
 
   try {
-    const markdown_data = await process_markdown_from_file({
+    const markdown_data = await read_entity_from_filesystem({
       absolute_path
     })
 
     // Update frontmatter explicitly
     const new_frontmatter = {
-      ...markdown_data.frontmatter,
+      ...markdown_data.entity_properties,
       status,
       updated_at: now.toISOString()
     }
@@ -251,7 +251,7 @@ export async function update_markdown_file({
     }
 
     // Add comment to content if provided
-    let content = markdown_data.content || ''
+    let content = markdown_data.entity_content || ''
     if (comment) {
       const timestamp = now.toISOString()
       const update_block = `\n\n## Status Update: ${status} (${timestamp})\n`
@@ -265,10 +265,10 @@ export async function update_markdown_file({
     }
 
     // Write updated content
-    await write_markdown_entity({
+    await write_document_to_filesystem({
       absolute_path,
-      frontmatter: new_frontmatter,
-      content
+      document_properties: new_frontmatter,
+      document_content: content
     })
   } catch (error) {
     log(`Error updating markdown file: ${error.message}`)

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url'
 
-export * as tasks from './tasks/index.mjs'
+export * as task from './task/index.mjs'
 export * as users from './users/index.mjs'
 export * as github from './integrations/github/index.mjs'
 export * as cloudflare from './integrations/cloudflare.mjs'
@@ -17,3 +17,4 @@ export * as inference_providers from './inference-providers/index.mjs'
 export * as prompts from './prompts/index.mjs'
 export * as activity from './activity/index.mjs'
 export * as guideline from './guideline/index.mjs'
+export * as tag from './tag/index.mjs'

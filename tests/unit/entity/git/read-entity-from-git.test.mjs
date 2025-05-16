@@ -32,7 +32,7 @@ describe('read_entity_from_git', () => {
 
     await write_entity_to_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       entity_properties: simple_entity_properties,
       entity_type: simple_entity_type,
       entity_content: simple_entity_content,
@@ -63,7 +63,7 @@ describe('read_entity_from_git', () => {
 
     await write_entity_to_git({
       repo_path: repo.path,
-      file_path: complex_entity_path,
+      git_relative_path: complex_entity_path,
       entity_properties: complex_entity_properties,
       entity_type: complex_entity_type,
       branch
@@ -80,13 +80,13 @@ describe('read_entity_from_git', () => {
   it('should read an entity from git successfully', async () => {
     const result = await read_entity_from_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
     // Verify result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(entity_path)
+    expect(result.git_relative_path).to.equal(entity_path)
     expect(result.branch).to.equal(branch)
     expect(result.entity_properties).to.include({
       title: 'Test Git Entity',
@@ -113,7 +113,7 @@ describe('read_entity_from_git', () => {
   it('should handle an entity with complex frontmatter', async () => {
     const result = await read_entity_from_git({
       repo_path: repo.path,
-      file_path: complex_entity_path,
+      git_relative_path: complex_entity_path,
       branch
     })
 
@@ -141,19 +141,19 @@ describe('read_entity_from_git', () => {
 
     const result = await read_entity_from_git({
       repo_path: repo.path,
-      file_path: non_existent_path,
+      git_relative_path: non_existent_path,
       branch
     })
 
     expect(result.success).to.be.false
     expect(result.error).to.be.a('string')
-    expect(result.file_path).to.equal(non_existent_path)
+    expect(result.git_relative_path).to.equal(non_existent_path)
   })
 
   it('should return error when repository does not exist', async () => {
     const result = await read_entity_from_git({
       repo_path: '/non/existent/repo',
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
@@ -166,7 +166,7 @@ describe('read_entity_from_git', () => {
 
     const result = await read_entity_from_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch: non_existent_branch
     })
 
@@ -176,7 +176,7 @@ describe('read_entity_from_git', () => {
 
   it('should return error if repo_path is missing', async () => {
     const result = await read_entity_from_git({
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
@@ -191,13 +191,13 @@ describe('read_entity_from_git', () => {
     })
 
     expect(result.success).to.be.false
-    expect(result.error).to.equal('File path is required')
+    expect(result.error).to.equal('Git relative path is required')
   })
 
   it('should return error if branch is missing', async () => {
     const result = await read_entity_from_git({
       repo_path: repo.path,
-      file_path: entity_path
+      git_relative_path: entity_path
     })
 
     expect(result.success).to.be.false

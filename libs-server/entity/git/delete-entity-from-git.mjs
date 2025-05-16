@@ -9,7 +9,7 @@ const log = debug('delete-entity-from-git')
  *
  * @param {Object} options - Function options
  * @param {string} options.repo_path - The absolute path to the Git repository
- * @param {string} options.file_path - The relative path within the repository to the entity file
+ * @param {string} options.git_relative_path - The relative path within the repository to the entity file
  * @param {string} options.branch - The Git branch to delete from
  * @param {string} [options.commit_message] - Optional commit message to use when committing changes
  * @param {boolean} [options.force=false] - Force deletion even if the file has local modifications
@@ -17,21 +17,21 @@ const log = debug('delete-entity-from-git')
  */
 export async function delete_entity_from_git({
   repo_path,
-  file_path,
+  git_relative_path,
   branch,
   commit_message,
   force = false
 }) {
   try {
-    log(`Deleting entity at ${file_path} in branch ${branch}`)
+    log(`Deleting entity at ${git_relative_path} in branch ${branch}`)
 
     // Validate required parameters
     if (!repo_path) {
       throw new Error('Repository path is required')
     }
 
-    if (!file_path) {
-      throw new Error('File path is required')
+    if (!git_relative_path) {
+      throw new Error('Git relative path is required')
     }
 
     if (!branch) {
@@ -40,30 +40,32 @@ export async function delete_entity_from_git({
 
     // Generate default commit message if not provided
     const default_commit_message =
-      commit_message || `Delete entity at ${file_path}`
+      commit_message || `Delete entity at ${git_relative_path}`
 
     // Delete the file from Git
     const result = await delete_file_from_git({
       repo_path,
-      file_path,
+      git_relative_path,
       branch,
       commit_message: default_commit_message,
       force
     })
 
     if (result.success) {
-      log(`Successfully deleted entity at ${file_path} in branch ${branch}`)
+      log(
+        `Successfully deleted entity at ${git_relative_path} in branch ${branch}`
+      )
     } else {
-      log(`Failed to delete entity at ${file_path}:`, result.error)
+      log(`Failed to delete entity at ${git_relative_path}:`, result.error)
     }
 
     return result
   } catch (error) {
-    log(`Error deleting entity from Git at ${file_path}:`, error)
+    log(`Error deleting entity from Git at ${git_relative_path}:`, error)
     return {
       success: false,
       error: error.message,
-      file_path,
+      git_relative_path,
       branch
     }
   }

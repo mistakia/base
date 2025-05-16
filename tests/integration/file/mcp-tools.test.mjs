@@ -39,8 +39,7 @@ function parse_mcp_response(response) {
 
 describe('MCP File Tools Integration', function () {
   let test_dir
-  let system_repo
-  let user_repo
+  let test_repo
   let mcp_client
   let test_thread
 
@@ -76,50 +75,43 @@ describe('MCP File Tools Integration', function () {
     // Create a unique temporary directory for our test repositories
     test_dir = create_temp_test_directory('mcp-git-test-')
 
-    // Initialize system repository (simulating the main repo)
-    system_repo = await create_temp_test_repo({
-      prefix: 'system-repo-',
-      initial_content: '# Test System Repository'
+    // Create a test repo with both system and user repos
+    test_repo = await create_temp_test_repo({
+      prefix: 'mcp-test-repo-',
+      initial_content: '# Test MCP Repository'
     })
 
-    // Initialize data repository (simulating the data submodule)
-    user_repo = await create_temp_test_repo({
-      prefix: 'user-repo-',
-      initial_content: '# Test User Repository'
-    })
-
-    // Create directory structure in data repo (similar to what we'd have in the real data repo)
-    await fs.mkdir(path.join(user_repo.path, 'concepts'), {
+    // Create directory structure in user repo
+    await fs.mkdir(path.join(test_repo.user_path, 'concepts'), {
       recursive: true
     })
-    await fs.mkdir(path.join(user_repo.path, 'concepts/dir'), {
+    await fs.mkdir(path.join(test_repo.user_path, 'concepts/dir'), {
       recursive: true
     })
 
     // Add some markdown files to test with
     await fs.writeFile(
-      path.join(user_repo.path, 'concepts/file1.md'),
+      path.join(test_repo.user_path, 'concepts/file1.md'),
       '# File 1\n\nThis is test file 1.'
     )
     await fs.writeFile(
-      path.join(user_repo.path, 'concepts/file2.md'),
+      path.join(test_repo.user_path, 'concepts/file2.md'),
       '# File 2\n\nThis is test file 2.'
     )
     await fs.writeFile(
-      path.join(user_repo.path, 'concepts/dir/file3.md'),
+      path.join(test_repo.user_path, 'concepts/dir/file3.md'),
       '# File 3\n\nThis is test file 3.'
     )
 
-    // Commit the files to the data repo
-    await execute('git add .', { cwd: user_repo.path })
+    // Commit the files to the user repo
+    await execute('git add .', { cwd: test_repo.user_path })
     await execute('git commit -m "Initial data commit"', {
-      cwd: user_repo.path
+      cwd: test_repo.user_path
     })
 
     // Create a test thread that will use our repositories
     test_thread = await create_test_thread({
-      system_base_directory: system_repo.path,
-      user_base_directory: user_repo.path,
+      root_base_repo: test_repo,
       thread_main_request: 'Initial test message'
     })
   })
@@ -133,8 +125,7 @@ describe('MCP File Tools Integration', function () {
       }
 
       // Clean up temporary directories
-      if (system_repo) system_repo.cleanup()
-      if (user_repo) user_repo.cleanup()
+      if (test_repo) test_repo.cleanup()
       if (test_dir) test_dir.cleanup()
     } catch (error) {
       console.error('Error cleaning up test directories:', error)
@@ -155,7 +146,7 @@ describe('MCP File Tools Integration', function () {
         path: 'new-file.md',
         content: '# New content',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Add new content'
       }
     })
@@ -187,7 +178,7 @@ describe('MCP File Tools Integration', function () {
         path: 'thread-test-file.md',
         content: test_content,
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path,
+        repo_path: test_repo.user_path,
         commit_message: 'Add test file to thread branch'
       }
     })
@@ -198,7 +189,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'thread-test-file.md',
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path
+        repo_path: test_repo.user_path
       }
     })
 
@@ -216,7 +207,7 @@ describe('MCP File Tools Integration', function () {
         path: 'concepts/thread-specific-file.md',
         content: '# Thread Specific File',
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path,
+        repo_path: test_repo.user_path,
         commit_message: 'Add thread-specific file'
       }
     })
@@ -226,7 +217,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'concepts',
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path
+        repo_path: test_repo.user_path
       }
     })
 
@@ -246,7 +237,7 @@ describe('MCP File Tools Integration', function () {
         path: 'README.md',
         content: '# Test System Repository\n\nThread branch content',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Update README in thread branch'
       }
     })
@@ -257,7 +248,7 @@ describe('MCP File Tools Integration', function () {
         path: 'README.md',
         thread_id: test_thread.thread_id,
         compare_with: 'main', // Compare thread branch against main
-        repo_path: system_repo.path
+        repo_path: test_repo.path
       }
     })
 
@@ -277,7 +268,7 @@ describe('MCP File Tools Integration', function () {
         path: 'concepts/thread-searchable.md',
         content: `This file contains a ${unique_term} pattern`,
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path,
+        repo_path: test_repo.user_path,
         commit_message: 'Add searchable content to thread branch'
       }
     })
@@ -287,7 +278,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         query: unique_term,
         thread_id: test_thread.thread_id,
-        repo_path: user_repo.path
+        repo_path: test_repo.user_path
       }
     })
 
@@ -310,7 +301,7 @@ describe('MCP File Tools Integration', function () {
         path: 'thread-file-to-modify.md',
         content: '# Original Thread Content\n\nThis will be modified.',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Add file to thread branch'
       }
     })
@@ -326,7 +317,7 @@ describe('MCP File Tools Integration', function () {
         content:
           '# Modified Thread Content\n\nThis has been modified in the thread.',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Modify file in thread branch'
       }
     })
@@ -340,7 +331,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'thread-file-to-modify.md',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path
+        repo_path: test_repo.path
       }
     })
 
@@ -358,7 +349,7 @@ describe('MCP File Tools Integration', function () {
         path: 'thread-file-to-delete.md',
         content: '# Thread file to delete',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Add file to thread for deletion'
       }
     })
@@ -369,7 +360,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'thread-file-to-delete.md',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path
+        repo_path: test_repo.path
       }
     })
 
@@ -383,7 +374,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'thread-file-to-delete.md',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Delete file from thread branch'
       }
     })
@@ -398,7 +389,7 @@ describe('MCP File Tools Integration', function () {
         arguments: {
           path: 'thread-file-to-delete.md',
           thread_id: test_thread.thread_id,
-          repo_path: system_repo.path
+          repo_path: test_repo.path
         }
       })
 
@@ -421,7 +412,7 @@ describe('MCP File Tools Integration', function () {
         path: 'patch-test-file.md',
         content: initial_content,
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Add file for patch testing'
       }
     })
@@ -432,7 +423,7 @@ describe('MCP File Tools Integration', function () {
       arguments: {
         path: 'patch-test-file.md',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path
+        repo_path: test_repo.path
       }
     })
 
@@ -462,7 +453,7 @@ index abcdef123..987654321 100644
         path: 'patch-test-file.md',
         patch_content,
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path,
+        repo_path: test_repo.path,
         commit_message: 'Apply patch to test file'
       }
     })
@@ -476,7 +467,7 @@ index abcdef123..987654321 100644
       arguments: {
         path: 'patch-test-file.md',
         thread_id: test_thread.thread_id,
-        repo_path: system_repo.path
+        repo_path: test_repo.path
       }
     })
 

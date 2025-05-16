@@ -192,7 +192,7 @@ describe('list_files_in_git', function () {
     // Add a file to use in the test
     await write_file_to_git({
       repo_path: test_repo.path,
-      file_path: 'test.txt',
+      git_relative_path: 'test.txt',
       content: 'Test content',
       branch: 'main',
       commit_message: 'Add test file'

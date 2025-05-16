@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import postgres from '#db'
-import { import_repositories_from_git } from '#libs-server/markdown/index.mjs'
+import { import_repository_from_git } from '#libs-server/entity/database/import/import-repository-from-git.mjs'
 import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
@@ -42,24 +42,31 @@ describe('Markdown Import Integration Tests', function () {
     await postgres('entities').where({ user_id: test_user.user_id }).delete()
   })
 
-  describe('import_repositories_from_git', () => {
+  describe('import_repository_from_git', () => {
     it('should import markdown files', async () => {
       // Clear database first
       await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
       // Run the import using the real system directory
-      const result = await import_repositories_from_git(
-        {
-          user_repository: {
+      const result = await import_repository_from_git({
+        repositories: [
+          {
+            repo_type: 'system',
+            path: '.',
+            branch: system_branch,
+            is_submodule: false
+          },
+          {
+            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
-          },
-          system_branch,
-          user_branch
-        },
-        test_user.user_id
-      )
+          }
+        ],
+        user_id: test_user.user_id,
+        system_branch,
+        user_branch
+      })
 
       // Check the results
       expect(result.imported).to.be.at.least(1)
@@ -75,18 +82,25 @@ describe('Markdown Import Integration Tests', function () {
 
     it('should update existing entities when reimported', async () => {
       // First import
-      await import_repositories_from_git(
-        {
-          user_repository: {
+      await import_repository_from_git({
+        repositories: [
+          {
+            repo_type: 'system',
+            path: '.',
+            branch: system_branch,
+            is_submodule: false
+          },
+          {
+            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
-          },
-          system_branch,
-          user_branch
-        },
-        test_user.user_id
-      )
+          }
+        ],
+        user_id: test_user.user_id,
+        system_branch,
+        user_branch
+      })
 
       // Get the current entities
       const initial_entities = await postgres('entities')
@@ -103,19 +117,26 @@ describe('Markdown Import Integration Tests', function () {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Second import - should update timestamps but not create new entities
-      await import_repositories_from_git(
-        {
-          user_repository: {
+      await import_repository_from_git({
+        repositories: [
+          {
+            repo_type: 'system',
+            path: '.',
+            branch: system_branch,
+            is_submodule: false
+          },
+          {
+            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
-          },
-          system_branch,
-          user_branch,
-          force_update: true // Force update even if git_sha is the same
-        },
-        test_user.user_id
-      )
+          }
+        ],
+        user_id: test_user.user_id,
+        system_branch,
+        user_branch,
+        force_update: true // Force update even if git_sha is the same
+      })
 
       // Get updated entities
       const updated_entities = await postgres('entities')
@@ -140,18 +161,25 @@ describe('Markdown Import Integration Tests', function () {
 
     it('should mark removed entities as archived', async () => {
       // First, import all files
-      await import_repositories_from_git(
-        {
-          user_repository: {
+      await import_repository_from_git({
+        repositories: [
+          {
+            repo_type: 'system',
+            path: '.',
+            branch: system_branch,
+            is_submodule: false
+          },
+          {
+            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
-          },
-          system_branch,
-          user_branch
-        },
-        test_user.user_id
-      )
+          }
+        ],
+        user_id: test_user.user_id,
+        system_branch,
+        user_branch
+      })
 
       // Get the current entity count
       await postgres('entities')
@@ -182,18 +210,26 @@ describe('Markdown Import Integration Tests', function () {
         .then((rows) => rows[0].entity_id)
 
       // Run import with stale entity removal
-      const result = await import_repositories_from_git(
-        {
-          user_repository: {
+      const result = await import_repository_from_git({
+        repositories: [
+          {
+            repo_type: 'system',
+            path: '.',
+            branch: system_branch,
+            is_submodule: false
+          },
+          {
+            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
-          },
-          system_branch,
-          user_branch
-        },
-        test_user.user_id
-      )
+          }
+        ],
+        user_id: test_user.user_id,
+        system_branch,
+        user_branch,
+        archive_missing: true
+      })
 
       // Check that at least the temp entity was archived
       expect(result.removed).to.be.at.least(1)

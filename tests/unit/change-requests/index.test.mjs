@@ -8,7 +8,7 @@ import { v4 as uuid } from 'uuid'
 
 // Import the modules we want to test
 import * as change_requests from '#libs-server/change-requests/index.mjs'
-import { markdown } from '#libs-server'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import db from '#db'
 import {
   reset_all_tables,
@@ -126,21 +126,23 @@ describe('Change Requests', function () {
       expect(file_exists).to.be.true
 
       // Check markdown content
-      const markdown_content = await markdown.process_markdown_from_file({
+      const markdown_data = await read_entity_from_filesystem({
         absolute_path: markdown_file_path
       })
-      expect(markdown_content.frontmatter.title).to.equal(
+      expect(markdown_data.entity_properties.title).to.equal(
         'Test Change Request From Existing Branch'
       )
-      expect(markdown_content.frontmatter.description).to.include(
+      expect(markdown_data.entity_properties.description).to.include(
         'Using an existing Git branch'
       )
-      expect(markdown_content.frontmatter.feature_branch).to.equal(branch_name)
-      expect(markdown_content.frontmatter.target_branch).to.equal('main')
-      expect(markdown_content.frontmatter.thread_id).to.equal(
+      expect(markdown_data.entity_properties.feature_branch).to.equal(
+        branch_name
+      )
+      expect(markdown_data.entity_properties.target_branch).to.equal('main')
+      expect(markdown_data.entity_properties.thread_id).to.equal(
         test_thread.thread_id
       )
-      expect(markdown_content.frontmatter.tags).to.include.members([
+      expect(markdown_data.entity_properties.tags).to.include.members([
         'test',
         'existing-branch'
       ])

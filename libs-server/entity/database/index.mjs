@@ -7,6 +7,7 @@ import write_guideline_to_database from './write/write-guideline-to-database.mjs
 import { read_entity_from_database } from './read/read-entity-from-database.mjs'
 import delete_entity_from_database from './delete-entity-from-database.mjs'
 import entity_exists_in_database from './entity-exists-in-database.mjs'
+import search_entities from './search-entities.mjs'
 
 /**
  * Entity Database Module
@@ -17,6 +18,7 @@ import entity_exists_in_database from './entity-exists-in-database.mjs'
  * 1. Base entity reader/writer - Handles core entity properties shared across all types
  * 2. Entity type-specific writers - Handle properties specific to each entity type
  * 3. Relation handlers - Handle relationships between entities
+ * 4. Search functions - Find entities based on search criteria
  *
  * All type-specific writers are built on top of the base entity writer and
  * handle their own type-specific database operations.
@@ -35,7 +37,10 @@ export {
 
   // Relation handlers
   write_entity_relations_to_database,
-  write_entity_tags_to_database
+  write_entity_tags_to_database,
+
+  // Search functions
+  search_entities
 }
 
 export default {
@@ -47,5 +52,6 @@ export default {
   write_activity_to_database,
   write_guideline_to_database,
   write_entity_relations_to_database,
-  write_entity_tags_to_database
+  write_entity_tags_to_database,
+  search_entities
 }

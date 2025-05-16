@@ -55,28 +55,27 @@ export default async function generate_prompt({
   // Generate system prompt component
   const system_prompt = await generate_system_prompt()
 
-  // Generate activity prompt if thread has an activity ID
+  // Generate activity prompt if thread has an activity (base relative path)
   let activity_prompt = ''
   let guidelines_prompt = ''
 
-  if (thread.activity_id) {
+  if (thread.activity_base_relative_path) {
     const activity_result = await generate_activity_prompt({
-      activity_id: thread.activity_id,
-      system_base_directory,
-      user_base_directory
+      base_relative_path: thread.activity_base_relative_path,
+      root_base_directory: system_base_directory
     })
 
     activity_prompt = activity_result.prompt
 
-    // Generate guidelines prompt from the activity's guideline_ids
+    // Generate guidelines prompt from the activity's guideline paths
     if (
-      activity_result.guideline_ids &&
-      activity_result.guideline_ids.length > 0
+      activity_result.guideline_base_relative_paths &&
+      activity_result.guideline_base_relative_paths.length > 0
     ) {
       guidelines_prompt = await generate_guidelines_prompt({
-        guideline_ids: activity_result.guideline_ids,
-        system_base_directory,
-        user_base_directory
+        guideline_base_relative_paths:
+          activity_result.guideline_base_relative_paths,
+        root_base_directory: system_base_directory
       })
     }
   }
@@ -129,14 +128,14 @@ export default async function generate_prompt({
       thread_id,
       model: thread.model,
       inference_provider: thread.inference_provider,
-      activity_id: thread.activity_id
+      activity_base_relative_path: thread.activity_base_relative_path
     }
   })
 
   return {
     ...prompt,
     thread_id,
-    activity_id: thread.activity_id,
+    activity_base_relative_path: thread.activity_base_relative_path,
     model: thread.model
   }
 }

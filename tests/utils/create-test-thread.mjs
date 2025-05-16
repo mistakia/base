@@ -13,8 +13,7 @@ const { THREAD_STATUS } = thread_constants
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
  * @param {string} [options.state=THREAD_STATUS.ACTIVE] Thread state (active, paused, terminated)
- * @param {string} [options.system_base_directory] System knowledge base directory
- * @param {string} [options.user_base_directory] User knowledge base directory
+ * @param {Object} [options.root_base_repo] Root base repository object with path and user_path
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
  * @param {string} [options.thread_main_request] Main request for the thread
  * @returns {Promise<Object>} Created thread info including thread_id, context_dir, and user
@@ -24,26 +23,18 @@ export default async function create_test_thread({
   inference_provider = 'ollama',
   model = 'llama2',
   state = THREAD_STATUS.ACTIVE,
-  system_base_directory,
-  user_base_directory,
+  root_base_repo,
   initial_timeline,
   thread_main_request
 }) {
   // Create test user if not provided
   const user = user_id ? { user_id } : await create_test_user()
 
-  // Create temporary repos if not provided
-  let system_repo
-  let user_repo
-
-  if (!system_base_directory) {
-    system_repo = await create_temp_test_repo({ prefix: 'system-repo-' })
-    system_base_directory = system_repo.path
-  }
-
-  if (!user_base_directory) {
-    user_repo = await create_temp_test_repo({ prefix: 'user-repo-' })
-    user_base_directory = user_repo.path
+  // Create temporary repo if not provided
+  let temp_repo
+  if (!root_base_repo) {
+    temp_repo = await create_temp_test_repo({ prefix: 'base-repo-' })
+    root_base_repo = temp_repo
   }
 
   // Extract thread_main_request from initial_timeline if provided and no explicit thread_main_request
@@ -60,16 +51,13 @@ export default async function create_test_thread({
     model,
     state,
     thread_main_request,
-    system_base_directory,
-    user_base_directory
+    system_base_directory: root_base_repo.path,
+    user_base_directory: root_base_repo.user_path
   })
 
   const cleanup = () => {
-    if (system_repo) {
-      system_repo.cleanup()
-    }
-    if (user_repo) {
-      user_repo.cleanup()
+    if (temp_repo) {
+      temp_repo.cleanup()
     }
   }
 
@@ -77,8 +65,8 @@ export default async function create_test_thread({
     thread_id: thread.thread_id,
     user,
     context_dir: thread.context_dir,
-    system_base_directory,
-    user_base_directory,
+    system_base_directory: root_base_repo.path,
+    user_base_directory: root_base_repo.user_path,
     thread,
     cleanup
   }

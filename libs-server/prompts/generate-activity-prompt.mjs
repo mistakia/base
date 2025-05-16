@@ -1,7 +1,8 @@
 import debug from 'debug'
 import fs from 'fs/promises'
-import { parse_markdown_content } from '#libs-server/markdown/processor/markdown-parser.mjs'
-import { resolve_activity_path } from '#libs-server/activity/index.mjs'
+import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
+import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import config from '#config'
 
 const log = debug('prompts:activity')
 
@@ -9,47 +10,42 @@ const log = debug('prompts:activity')
  * Generate an activity prompt component from an activity file
  *
  * @param {Object} params Parameters
- * @param {string} params.activity_id Activity ID in format [system|user]/<file_path>.md
- * @param {string} [params.system_base_directory] System base directory
- * @param {string} [params.user_base_directory] User base directory
- * @returns {Promise<Object>} Object containing prompt text and guideline IDs
+ * @param {string} params.base_relative_path Activity path relative to Base root, e.g., 'system/activity/<file_path>.md' or 'user/activity/<file_path>.md'
+ * @param {string} [params.root_base_directory] Custom root base directory
+ * @returns {Promise<Object>} Object containing prompt text and guideline paths
  */
 export default async function generate_activity_prompt({
-  activity_id,
-  system_base_directory,
-  user_base_directory
+  base_relative_path,
+  root_base_directory = config.root_base_directory
 }) {
-  if (!activity_id) {
-    throw new Error('activity_id is required')
+  if (!base_relative_path) {
+    throw new Error('base_relative_path is required')
   }
 
-  log(`Generating activity prompt for activity ${activity_id}`)
+  log(`Generating activity prompt for activity ${base_relative_path}`)
 
   try {
-    // Get the file path using the shared activity path resolver
-    const { file_path } = resolve_activity_path({
-      activity_id,
-      system_base_directory,
-      user_base_directory
+    // Get the file path using the shared helper
+    const { absolute_path } = await get_base_file_info({
+      base_relative_path,
+      root_base_directory
     })
 
     // Read and parse the activity markdown file
-    const activity_content = await fs.readFile(file_path, 'utf-8')
-    const parsed_markdown = await parse_markdown_content({
-      content: activity_content,
-      file_path
-    })
-
-    // Extract activity frontmatter and content
-    const { frontmatter, content } = parsed_markdown
+    const activity_content = await fs.readFile(absolute_path, 'utf-8')
+    const { document_properties, document_content } =
+      format_document_from_file_content({
+        file_content: activity_content,
+        file_path: absolute_path
+      })
 
     // Format as a structured activity prompt
-    let prompt = `Role: ${frontmatter.title}\n\n`
-    prompt += `<role>\n${content}</role>`
+    let prompt = `Role: ${document_properties.title}\n\n`
+    prompt += `<role>\n${document_content}</role>`
 
     return {
       prompt: prompt.trim(),
-      guideline_ids: frontmatter.guidelines || []
+      guideline_base_relative_paths: document_properties.guidelines || []
     }
   } catch (error) {
     console.log(error)

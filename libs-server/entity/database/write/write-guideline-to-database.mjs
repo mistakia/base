@@ -20,23 +20,23 @@ const log = debug('entity:database:write-guideline')
  * @param {Date} [params.guideline_properties.archived_at=null] Date when the guideline was archived
  * @param {string} [params.guideline_properties.guideline_status='Draft'] Status of the guideline (Draft, Approved, Deprecated)
  * @param {Date} [params.guideline_properties.effective_date=null] Date when the guideline becomes effective
- * @param {string[]} [params.guideline_properties.activities=[]] List of activity_ids that this guideline applies to
+ * @param {string[]} [params.guideline_properties.activities=[]] List of activity base_relative_paths that this guideline applies to
  * @param {string[]} [params.guideline_properties.globs=[]] Glob patterns for files that this guideline applies to
  * @param {boolean} [params.guideline_properties.always_apply=false] Whether this guideline should always be applied
  * @param {string} params.user_id User ID who owns the guideline
  * @param {string} [params.guideline_content=''] Optional guideline content/markdown
- * @param {string} [params.guideline_id=null] Optional guideline ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {string} [params.file_info.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The guideline_id (same as entity_id)
+ * @returns {Promise<string>} The entity_id of the guideline
  */
 export async function write_guideline_to_database({
   guideline_properties,
   user_id,
   guideline_content = '',
-  guideline_id = null,
+  entity_id = null,
   file_info = null,
   trx = null
 }) {
@@ -45,19 +45,19 @@ export async function write_guideline_to_database({
     const db_client = trx || db
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const returned_entity_id = await write_entity_to_database({
       entity_properties: guideline_properties,
       entity_type: 'guideline',
       user_id,
       entity_content: guideline_content,
-      entity_id: guideline_id,
+      entity_id,
       file_info,
       trx: db_client
     })
 
     // Process guideline-specific data directly
     await write_guideline_data_to_database({
-      entity_id,
+      entity_id: returned_entity_id,
       guideline_status: guideline_properties.guideline_status,
       effective_date: guideline_properties.effective_date,
       globs: guideline_properties.globs,
@@ -65,8 +65,8 @@ export async function write_guideline_to_database({
       db_client
     })
 
-    log(`Guideline successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Guideline successfully written with ID: ${returned_entity_id}`)
+    return returned_entity_id
   } catch (error) {
     log('Error writing guideline to database:', error)
     throw error

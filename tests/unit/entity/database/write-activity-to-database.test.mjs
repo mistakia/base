@@ -31,18 +31,18 @@ describe('write_activity_to_database', () => {
     const activity_content = '# Test Activity\n\nActivity body content'
 
     // Act
-    const activity_id = await write_activity_to_database({
+    const activity_entity_id = await write_activity_to_database({
       activity_properties,
       user_id: test_user_id,
       activity_content
     })
 
     // Assert
-    expect(activity_id).to.be.a('string')
+    expect(activity_entity_id).to.be.a('string')
 
     // Verify entity was created in database
     const entity = await db('entities')
-      .where({ entity_id: activity_id })
+      .where({ entity_id: activity_entity_id })
       .first()
     expect(entity).to.exist
     expect(entity.title).to.equal(activity_properties.title)
@@ -66,7 +66,7 @@ describe('write_activity_to_database', () => {
 
     // Verify activity-specific data was created
     const activity_data = await db('activities')
-      .where({ entity_id: activity_id })
+      .where({ entity_id: activity_entity_id })
       .first()
     expect(activity_data).to.exist
   })
@@ -84,7 +84,7 @@ describe('write_activity_to_database', () => {
     }
     const original_content = 'Original activity content'
 
-    const activity_id = await write_activity_to_database({
+    const activity_entity_id = await write_activity_to_database({
       activity_properties: original_properties,
       user_id: test_user_id,
       activity_content: original_content
@@ -105,12 +105,12 @@ describe('write_activity_to_database', () => {
       activity_properties: updated_properties,
       user_id: test_user_id,
       activity_content: updated_content,
-      activity_id
+      entity_id: activity_entity_id
     })
 
     // Assert - verify entity was updated
     const entity = await db('entities')
-      .where({ entity_id: activity_id })
+      .where({ entity_id: activity_entity_id })
       .first()
     expect(entity).to.exist
     expect(entity.title).to.equal(updated_properties.title)
@@ -148,7 +148,7 @@ describe('write_activity_to_database', () => {
     }
 
     // Act
-    const activity_id = await write_activity_to_database({
+    const activity_entity_id = await write_activity_to_database({
       activity_properties,
       user_id: test_user_id,
       file_info
@@ -156,10 +156,10 @@ describe('write_activity_to_database', () => {
 
     // Assert
     const entity = await db('entities')
-      .where({ entity_id: activity_id })
+      .where({ entity_id: activity_entity_id })
       .first()
     expect(entity).to.exist
-    expect(entity.file_path).to.equal(file_info.absolute_path)
+    expect(entity.absolute_path).to.equal(file_info.absolute_path)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 
@@ -176,7 +176,7 @@ describe('write_activity_to_database', () => {
       updated_at: later
     }
 
-    const tag_id = await db('entities')
+    const tag_entity_id = await db('entities')
       .insert({
         title: tag_properties.title,
         description: tag_properties.description,
@@ -189,7 +189,7 @@ describe('write_activity_to_database', () => {
       .returning('entity_id')
       .then((rows) => rows[0].entity_id)
 
-    await db('tags').insert({ entity_id: tag_id })
+    await db('tags').insert({ entity_id: tag_entity_id })
 
     // Create a related task entity for relation testing
     const task_properties = {
@@ -200,7 +200,7 @@ describe('write_activity_to_database', () => {
       updated_at: later
     }
 
-    const task_id = await db('entities')
+    const task_entity_id = await db('entities')
       .insert({
         title: task_properties.title,
         description: task_properties.description,
@@ -213,22 +213,22 @@ describe('write_activity_to_database', () => {
       .returning('entity_id')
       .then((rows) => rows[0].entity_id)
 
-    await db('tasks').insert({ entity_id: task_id, status: 'Planned' })
+    await db('tasks').insert({ entity_id: task_entity_id, status: 'Planned' })
 
     // Create activity with tag and relation
     const activity_properties = {
       title: 'Related Activity',
       description: 'Activity with tags and relations',
-      tags: [tag_id],
+      tags: [tag_entity_id],
       relations: {
-        contains: [task_id]
+        contains: [task_entity_id]
       },
       created_at: now,
       updated_at: later
     }
 
     // Act
-    const activity_id = await write_activity_to_database({
+    const activity_entity_id = await write_activity_to_database({
       activity_properties,
       user_id: test_user_id
     })
@@ -236,8 +236,8 @@ describe('write_activity_to_database', () => {
     // Assert tag relationship
     const tag_relation = await db('entity_tags')
       .where({
-        entity_id: activity_id,
-        tag_entity_id: tag_id
+        entity_id: activity_entity_id,
+        tag_entity_id
       })
       .first()
 
@@ -246,8 +246,8 @@ describe('write_activity_to_database', () => {
     // Assert entity relationship
     const entity_relation = await db('entity_relations')
       .where({
-        source_entity_id: activity_id,
-        target_entity_id: task_id,
+        source_entity_id: activity_entity_id,
+        target_entity_id: task_entity_id,
         relation_type: 'contains'
       })
       .first()

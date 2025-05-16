@@ -1,9 +1,9 @@
 import express from 'express'
-import ed25519 from '@trashman/ed25519-blake2b'
 
-import db from '#db'
-
-import { tasks as tasks_service } from '#libs-server'
+import {
+  list_tasks_from_database,
+  read_task_from_filesystem
+} from '#libs-server/task/index.mjs'
 
 const router = express.Router({ mergeParams: true })
 
@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   try {
     const {
       status,
-      tag_ids,
+      tag_entity_ids,
       organization_ids,
       person_ids,
       min_finish_by,
@@ -33,10 +33,10 @@ router.get('/', async (req, res) => {
     }
 
     // Convert array parameters from query strings
-    const parsed_tag_ids = tag_ids
-      ? Array.isArray(tag_ids)
-        ? tag_ids
-        : [tag_ids]
+    const parsed_tag_entity_ids = tag_entity_ids
+      ? Array.isArray(tag_entity_ids)
+        ? tag_entity_ids
+        : [tag_entity_ids]
       : []
     const parsed_organization_ids = organization_ids
       ? Array.isArray(organization_ids)
@@ -49,10 +49,10 @@ router.get('/', async (req, res) => {
         : [person_ids]
       : []
 
-    const tasks = await tasks_service.get_tasks({
+    const tasks = await list_tasks_from_database({
       user_id,
       status,
-      tag_ids: parsed_tag_ids,
+      tag_entity_ids: parsed_tag_entity_ids,
       organization_ids: parsed_organization_ids,
       person_ids: parsed_person_ids,
       min_finish_by,
@@ -73,63 +73,38 @@ router.get('/', async (req, res) => {
   }
 })
 
-// Get a task by ID
-router.get('/:task_id', async (req, res) => {
+// Get a task by base_relative_path
+router.get('/:base_relative_path(*)', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { task_id, user_id } = req.params
+    const { base_relative_path } = req.params
+    const { root_base_directory } = req.query
 
-    if (!task_id) {
-      return res.status(400).send({ error: 'missing task_id' })
+    if (!base_relative_path) {
+      return res.status(400).send({ error: 'missing base_relative_path' })
     }
 
-    const task = await tasks_service.get_task({ entity_id: task_id, user_id })
+    try {
+      // Read task from filesystem
+      const task = await read_task_from_filesystem({
+        base_relative_path,
+        root_base_directory
+      })
 
-    if (!task) {
-      return res.status(404).send({ error: 'task not found' })
+      if (!task.success) {
+        return res.status(404).send({ error: task.error || 'Task not found' })
+      }
+
+      res.status(200).send({
+        base_relative_path,
+        ...task.entity_properties,
+        content: task.entity_content
+      })
+    } catch (error) {
+      return res.status(404).send({
+        error: `Task ${base_relative_path} not found: ${error.message}`
+      })
     }
-
-    res.status(200).send(task)
-  } catch (error) {
-    log(error)
-    res.status(500).send({ error: error.message })
-  }
-})
-
-router.post('/?', async (req, res) => {
-  const { log } = req.app.locals
-  try {
-    const { user_id } = req.params
-    const { task, signature } = req.body
-    if (!task) {
-      return res.status(400).send({ error: 'missing task' })
-    }
-
-    if (!signature) {
-      return res.status(400).send({ error: 'missing signature' })
-    }
-
-    const user = await db('users').where('user_id', user_id).first()
-    if (!user) {
-      return res.status(400).send({ error: 'invalid user_id' })
-    }
-
-    const task_hash = ed25519.hash(JSON.stringify(task))
-    const is_valid = ed25519.verify(signature, task_hash, user.public_key)
-    if (!is_valid) {
-      return res.status(400).send({ error: 'invalid signature' })
-    }
-
-    const entity_id = await tasks_service.create_task({
-      user_id,
-      title: task.title || task.text_input || 'Untitled Task',
-      description: task.description || ''
-    })
-
-    // Use get_task function to retrieve the created task for consistency
-    const task_result = await tasks_service.get_task({ entity_id, user_id })
-
-    res.status(200).send(task_result)
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

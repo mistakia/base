@@ -1,7 +1,6 @@
 // Re-export format functions
 export {
   format_entity_properties_to_frontmatter,
-  format_entity_to_file_content,
   format_entity_from_file_content
 } from './format/index.mjs'
 
@@ -24,5 +23,6 @@ export {
   read_entity_from_database,
   write_entity_to_database,
   delete_entity_from_database,
-  entity_exists_in_database
+  entity_exists_in_database,
+  search_entities
 } from './database/index.mjs'

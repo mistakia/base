@@ -85,7 +85,7 @@ describe('Git Files Operations', function () {
 
   describe('write_file_to_git', function () {
     it('should write a file to a git repository', async function () {
-      const file_path = 'test-write-file.md'
+      const git_relative_path = 'test-write-file.md'
       const content = '# Test File Content\n\nThis is a test file.'
       const branch = 'main'
       const commit_message = 'Add test file'
@@ -93,7 +93,7 @@ describe('Git Files Operations', function () {
       // Write the file using our function
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch,
         commit_message
@@ -101,21 +101,21 @@ describe('Git Files Operations', function () {
 
       // Validate result
       expect(result.success).to.be.true
-      expect(result.file_path).to.equal(file_path)
+      expect(result.git_relative_path).to.equal(git_relative_path)
       expect(result.branch).to.equal(branch)
 
       // Verify the file was written and committed to git
       const file_content = await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
 
       expect(file_content).to.equal(content)
     })
 
     it('should stage changes without committing when no commit message is provided', async function () {
-      const file_path = 'test-staged-file.md'
+      const git_relative_path = 'test-staged-file.md'
       const content =
         '# Test Staged Content\n\nThis should be staged but not committed.'
       const branch = 'main'
@@ -123,18 +123,18 @@ describe('Git Files Operations', function () {
       // Write the file without a commit message
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch
       })
 
       // Validate result
       expect(result.success).to.be.true
-      expect(result.file_path).to.equal(file_path)
+      expect(result.git_relative_path).to.equal(git_relative_path)
       expect(result.branch).to.equal(branch)
 
       // Verify the file is present on disk
-      const full_file_path = path.join(test_repo_path, file_path)
+      const full_file_path = path.join(test_repo_path, git_relative_path)
       const file_exists = await fs
         .access(full_file_path)
         .then(() => true)
@@ -145,14 +145,14 @@ describe('Git Files Operations', function () {
       const { stdout: git_status } = await execute('git status --porcelain', {
         cwd: test_repo_path
       })
-      expect(git_status).to.include(file_path)
+      expect(git_status).to.include(git_relative_path)
 
       // Verify the file is not yet in the git history
       try {
         await git.read_file_from_ref({
           repo_path: test_repo_path,
           ref: branch,
-          file_path
+          file_path: git_relative_path
         })
         expect.fail('File should not be in git history yet')
       } catch (error) {
@@ -167,13 +167,13 @@ describe('Git Files Operations', function () {
       const committed_content = await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect(committed_content).to.equal(content)
     })
 
     it('should write a file and commit changes', async function () {
-      const file_path = 'test-committed-file.md'
+      const git_relative_path = 'test-committed-file.md'
       const content = '# Committed Test Content\n\nThis will be committed.'
       const branch = 'main'
       const commit_message = 'Add test committed file'
@@ -181,7 +181,7 @@ describe('Git Files Operations', function () {
       // Write and commit the file
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch,
         commit_message
@@ -189,7 +189,7 @@ describe('Git Files Operations', function () {
 
       // Validate result
       expect(result.success).to.be.true
-      expect(result.file_path).to.equal(file_path)
+      expect(result.git_relative_path).to.equal(git_relative_path)
       expect(result.branch).to.equal(branch)
 
       // Verify the file was committed with the correct message
@@ -202,20 +202,20 @@ describe('Git Files Operations', function () {
       const file_content = await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect(file_content).to.equal(content)
     })
 
     it('should create nested directories as needed', async function () {
-      const file_path = 'nested/directory/structure/test-file.md'
+      const git_relative_path = 'nested/directory/structure/test-file.md'
       const content = '# Nested File Content'
       const branch = 'main'
 
       // Write the file using our function
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch,
         commit_message: 'Add nested file'
@@ -223,26 +223,26 @@ describe('Git Files Operations', function () {
 
       // Validate result
       expect(result.success).to.be.true
-      expect(result.file_path).to.equal(file_path)
+      expect(result.git_relative_path).to.equal(git_relative_path)
 
       // Verify the file was written
       const file_content = await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect(file_content).to.equal(content)
     })
 
     it('should write to a different branch', async function () {
-      const file_path = 'branch-specific-file.md'
+      const git_relative_path = 'branch-specific-file.md'
       const content = '# Branch Specific Content'
       const branch = 'feature-branch'
 
       // Write the file to feature-branch
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch,
         commit_message: 'Add branch specific file'
@@ -250,14 +250,14 @@ describe('Git Files Operations', function () {
 
       // Validate result
       expect(result.success).to.be.true
-      expect(result.file_path).to.equal(file_path)
+      expect(result.git_relative_path).to.equal(git_relative_path)
       expect(result.branch).to.equal(branch)
 
       // Verify file exists in feature-branch
       const file_content = await git.read_file_from_ref({
         repo_path: test_repo_path,
         ref: branch,
-        file_path
+        file_path: git_relative_path
       })
       expect(file_content).to.equal(content)
 
@@ -266,7 +266,7 @@ describe('Git Files Operations', function () {
         await git.read_file_from_ref({
           repo_path: test_repo_path,
           ref: 'main',
-          file_path
+          file_path: git_relative_path
         })
         // Should not reach here
         expect.fail('File should not exist in main branch')
@@ -277,14 +277,14 @@ describe('Git Files Operations', function () {
     })
 
     it('should handle errors when branch does not exist', async function () {
-      const file_path = 'error-test-file.md'
+      const git_relative_path = 'error-test-file.md'
       const content = '# Error Test Content'
       const non_existent_branch = `non-existent-branch-${Date.now()}`
 
       // Try to write to non-existent branch
       const result = await write_file_to_git({
         repo_path: test_repo_path,
-        file_path,
+        git_relative_path,
         content,
         branch: non_existent_branch
       })
@@ -300,7 +300,7 @@ describe('Git Files Operations', function () {
       // Test missing repo_path
       try {
         await write_file_to_git({
-          file_path: 'test.md',
+          git_relative_path: 'test.md',
           content: 'content',
           branch: 'main'
         })
@@ -309,23 +309,23 @@ describe('Git Files Operations', function () {
         expect(error.message).to.include('Repository path is required')
       }
 
-      // Test missing file_path
+      // Test missing git_relative_path
       try {
         await write_file_to_git({
           repo_path: test_repo_path,
           content: 'content',
           branch: 'main'
         })
-        expect.fail('Should have thrown an error for missing file_path')
+        expect.fail('Should have thrown an error for missing git_relative_path')
       } catch (error) {
-        expect(error.message).to.include('File path is required')
+        expect(error.message).to.include('Git relative path is required')
       }
 
       // Test missing content
       try {
         await write_file_to_git({
           repo_path: test_repo_path,
-          file_path: 'test.md',
+          git_relative_path: 'test.md',
           branch: 'main'
         })
         expect.fail('Should have thrown an error for missing content')
@@ -337,7 +337,7 @@ describe('Git Files Operations', function () {
       try {
         await write_file_to_git({
           repo_path: test_repo_path,
-          file_path: 'test.md',
+          git_relative_path: 'test.md',
           content: 'content'
         })
         expect.fail('Should have thrown an error for missing branch')

@@ -324,7 +324,7 @@ describe('write_physical_item_to_database', () => {
       .where({ entity_id: physical_item_id })
       .first()
     expect(entity).to.exist
-    expect(entity.file_path).to.equal(file_info.absolute_path)
+    expect(entity.absolute_path).to.equal(file_info.absolute_path)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 
@@ -491,7 +491,7 @@ describe('write_physical_item_to_database', () => {
       updated_at: later
     }
 
-    const tag_id = await db('entities')
+    const tag_entity_id = await db('entities')
       .insert({
         title: tag_properties.title,
         description: tag_properties.description,
@@ -505,7 +505,7 @@ describe('write_physical_item_to_database', () => {
       .then((rows) => rows[0].entity_id)
 
     await db('tags').insert({
-      entity_id: tag_id,
+      entity_id: tag_entity_id,
       color: tag_properties.color
     })
 
@@ -514,7 +514,8 @@ describe('write_physical_item_to_database', () => {
       title: 'Tagged Physical Item',
       description: 'Physical item with tags',
       manufacturer: 'Tag Corp',
-      tags: [tag_id],
+      // TODO should be base_relative_path
+      tags: [tag_entity_id],
       created_at: now,
       updated_at: later
     }
@@ -529,7 +530,7 @@ describe('write_physical_item_to_database', () => {
     const tag_relation = await db('entity_tags')
       .where({
         entity_id: physical_item_id,
-        tag_entity_id: tag_id
+        tag_entity_id
       })
       .first()
 

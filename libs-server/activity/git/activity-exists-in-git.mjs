@@ -1,6 +1,7 @@
 import debug from 'debug'
 import { file_exists_in_git } from '#libs-server/git/git-files/file-exists-in-git.mjs'
-import { resolve_activity_path } from '../constants.mjs'
+import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import config from '#config'
 
 const log = debug('activity:exists-in-git')
 
@@ -8,28 +9,26 @@ const log = debug('activity:exists-in-git')
  * Check if an activity file exists in a git branch
  *
  * @param {Object} params - Parameters
- * @param {string} params.activity_id - Activity ID in format [system|user]/<file_path>.md
+ * @param {string} params.base_relative_path - Activity ID in format [system|user]/<file_path>.md
  * @param {string} params.branch - Git branch to check in
- * @param {string} [params.system_base_directory] - Custom system base directory
- * @param {string} [params.user_base_directory] - Custom user base directory
+ * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Object with success and exists properties
  */
 export async function activity_exists_in_git({
-  activity_id,
+  base_relative_path,
   branch,
-  system_base_directory,
-  user_base_directory
+  root_base_directory = config.root_base_directory
 }) {
   try {
     log(
-      `Checking if activity exists in git: ${activity_id} (branch: ${branch})`
+      `Checking if activity exists in git: ${base_relative_path} (branch: ${branch})`
     )
 
-    if (!activity_id) {
+    if (!base_relative_path) {
       return {
         success: false,
         error: 'Activity ID is required',
-        activity_id,
+        base_relative_path,
         branch
       }
     }
@@ -38,15 +37,14 @@ export async function activity_exists_in_git({
       return {
         success: false,
         error: 'Branch name is required',
-        activity_id
+        base_relative_path
       }
     }
 
-    // Use the shared path resolution helper to get path components
-    const { base_directory, base_relative_path } = resolve_activity_path({
-      activity_id,
-      system_base_directory,
-      user_base_directory
+    // Use the shared helper to get file info
+    const { repo_path, git_relative_path } = await get_base_file_info({
+      base_relative_path,
+      root_base_directory
     })
 
     // For git operations, we need:
@@ -54,13 +52,13 @@ export async function activity_exists_in_git({
     // 2. The relative path within the repository that matches git's structure
 
     log(
-      `Checking activity in git at path: ${base_relative_path} in repo: ${base_directory}`
+      `Checking activity in git at path: ${git_relative_path} in repo: ${repo_path}`
     )
 
     // Check if file exists in git
     const result = await file_exists_in_git({
-      repo_path: base_directory,
-      file_path: base_relative_path,
+      repo_path,
+      git_relative_path,
       branch
     })
 
@@ -68,7 +66,7 @@ export async function activity_exists_in_git({
       return {
         success: false,
         error: result.error || 'Failed to check if activity exists in git',
-        activity_id,
+        base_relative_path,
         branch
       }
     }
@@ -76,7 +74,7 @@ export async function activity_exists_in_git({
     return {
       success: true,
       exists: result.exists,
-      activity_id,
+      base_relative_path,
       branch
     }
   } catch (error) {
@@ -84,7 +82,7 @@ export async function activity_exists_in_git({
     return {
       success: false,
       error: error.message,
-      activity_id,
+      base_relative_path,
       branch
     }
   }

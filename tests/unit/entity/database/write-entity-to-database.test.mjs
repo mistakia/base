@@ -98,6 +98,7 @@ describe('write_entity_to_database', () => {
     const entity_type = 'task'
     const file_info = {
       absolute_path: '/path/to/file.md',
+      base_relative_path: 'system/text/file',
       git_sha: '12345abcdef'
     }
 
@@ -112,7 +113,8 @@ describe('write_entity_to_database', () => {
     // Assert
     const entity = await db('entities').where({ entity_id }).first()
     expect(entity).to.exist
-    expect(entity.file_path).to.equal(file_info.absolute_path)
+    expect(entity.absolute_path).to.equal(file_info.absolute_path)
+    expect(entity.base_relative_path).to.equal(file_info.base_relative_path)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 

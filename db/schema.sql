@@ -589,12 +589,13 @@ CREATE TABLE public.entities (
     content text,
     markdown text,
     frontmatter jsonb,
-    file_path character varying(500),
+    absolute_path character varying(500),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     archived_at timestamp without time zone,
+    base_relative_path character varying(500),
     CONSTRAINT check_archived_at CHECK (((archived_at IS NULL) OR (archived_at >= updated_at))),
-    CONSTRAINT check_text_fields CHECK (((type <> 'text'::public.entity_type) OR ((markdown IS NOT NULL) AND (frontmatter IS NOT NULL) AND (file_path IS NOT NULL)))),
+    CONSTRAINT check_text_fields CHECK (((type <> 'text'::public.entity_type) OR ((markdown IS NOT NULL) AND (frontmatter IS NOT NULL) AND (absolute_path IS NOT NULL)))),
     CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))
 );
 
@@ -615,7 +616,7 @@ CREATE VIEW public.active_entities AS
     entities.content,
     entities.markdown,
     entities.frontmatter,
-    entities.file_path,
+    entities.absolute_path AS file_path,
     entities.created_at,
     entities.updated_at,
     entities.archived_at
@@ -667,8 +668,8 @@ CREATE TABLE public.entity_relations (
 --
 
 CREATE VIEW public.activity_guidelines_view AS
- SELECT entity_relations.source_entity_id AS activity_id,
-    entity_relations.target_entity_id AS guideline_id
+ SELECT entity_relations.source_entity_id AS activity_entity_id,
+    entity_relations.target_entity_id AS guideline_entity_id
    FROM public.entity_relations
   WHERE (((entity_relations.relation_type)::text = 'follows'::text) AND (EXISTS ( SELECT 1
            FROM public.entities
@@ -977,7 +978,7 @@ CREATE VIEW public.guideline_with_activities AS
     e.description,
     g.guideline_status,
     g.effective_date,
-    array_agg(DISTINCT r.source_entity_id) AS activity_ids,
+    array_agg(DISTINCT r.source_entity_id) AS activity_entity_ids,
     array_agg(DISTINCT ae.title) AS activity_titles
    FROM (((public.guidelines g
      JOIN public.entities e ON ((g.entity_id = e.entity_id)))
@@ -1410,7 +1411,7 @@ CREATE VIEW public.text_document_view AS
     entities.content,
     entities.markdown,
     entities.frontmatter,
-    entities.file_path,
+    entities.absolute_path AS file_path,
     entities.created_at,
     entities.updated_at
    FROM public.entities
@@ -2018,14 +2019,14 @@ CREATE INDEX idx_entities_description_gin ON public.entities USING gin (to_tsvec
 -- Name: idx_entities_file_path; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_entities_file_path ON public.entities USING btree (file_path) WHERE (type = 'text'::public.entity_type);
+CREATE INDEX idx_entities_file_path ON public.entities USING btree (absolute_path) WHERE (type = 'text'::public.entity_type);
 
 
 --
 -- Name: idx_entities_file_path_user; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_entities_file_path_user ON public.entities USING btree (file_path, user_id) WHERE ((type = 'text'::public.entity_type) AND (file_path IS NOT NULL));
+CREATE UNIQUE INDEX idx_entities_file_path_user ON public.entities USING btree (absolute_path, user_id) WHERE ((type = 'text'::public.entity_type) AND (absolute_path IS NOT NULL));
 
 
 --

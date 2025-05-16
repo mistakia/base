@@ -12,7 +12,7 @@ const log = debug('git:write-file-to-git')
  * Writes content to a file in a git repository
  * @param {Object} params - Parameters
  * @param {string} params.repo_path - Path to the repository
- * @param {string} params.file_path - Path to the file relative to repo root
+ * @param {string} params.git_relative_path - Path to the file relative to repo root
  * @param {string} params.content - Content to write to the file
  * @param {string} params.branch - Branch to write to
  * @param {string} [params.commit_message] - Optional commit message
@@ -20,7 +20,7 @@ const log = debug('git:write-file-to-git')
  */
 export async function write_file_to_git({
   repo_path,
-  file_path,
+  git_relative_path,
   content,
   branch,
   commit_message
@@ -29,8 +29,8 @@ export async function write_file_to_git({
     throw new Error('Repository path is required')
   }
 
-  if (!file_path) {
-    throw new Error('File path is required')
+  if (!git_relative_path) {
+    throw new Error('Git relative path is required')
   }
 
   if (content === undefined) {
@@ -42,7 +42,9 @@ export async function write_file_to_git({
   }
 
   try {
-    log(`Writing to file ${file_path} in branch ${branch} at ${repo_path}`)
+    log(
+      `Writing to file ${git_relative_path} in branch ${branch} at ${repo_path}`
+    )
 
     // Check if branch exists - fail if it doesn't
     const branch_check = await branch_exists({
@@ -65,7 +67,7 @@ export async function write_file_to_git({
 
     try {
       // Write the file to the worktree using write_file_to_filesystem
-      const full_file_path = path.join(worktree_path, file_path)
+      const full_file_path = path.join(worktree_path, git_relative_path)
       await write_file_to_filesystem({
         absolute_path: full_file_path,
         file_content: content
@@ -74,10 +76,10 @@ export async function write_file_to_git({
       // Stage the changes
       await add_files({
         worktree_path,
-        files_to_add: file_path
+        files_to_add: git_relative_path
       })
 
-      log(`Wrote content to ${file_path} and staged changes`)
+      log(`Wrote content to ${git_relative_path} and staged changes`)
 
       // Commit changes if a commit message is provided
       if (commit_message) {
@@ -94,7 +96,7 @@ export async function write_file_to_git({
             success: true,
             message: 'No changes to commit',
             branch,
-            file_path
+            git_relative_path
           }
         }
       }
@@ -103,7 +105,7 @@ export async function write_file_to_git({
         success: true,
         message: 'File operation completed successfully',
         branch,
-        file_path
+        git_relative_path
       }
     } finally {
       // Clean up worktree
@@ -114,11 +116,11 @@ export async function write_file_to_git({
       log(`Cleaned up worktree at ${worktree_path}`)
     }
   } catch (error) {
-    log(`Error writing file ${file_path}:`, error)
+    log(`Error writing file ${git_relative_path}:`, error)
     return {
       success: false,
       error: error.message,
-      file_path
+      git_relative_path
     }
   }
 }

@@ -86,7 +86,7 @@ describe('read_file_from_git', function () {
   })
 
   it('should read a file from a specific branch', async function () {
-    const file_path = 'test-read-file.md'
+    const git_relative_path = 'test-read-file.md'
     const content = '# Test File Content\n\nThis is a test file.'
     const branch = 'main'
     const commit_message = 'Add test file for reading'
@@ -94,7 +94,7 @@ describe('read_file_from_git', function () {
     // First write a file to read
     await write_file_to_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       content,
       branch,
       commit_message
@@ -103,19 +103,19 @@ describe('read_file_from_git', function () {
     // Read the file using our function
     const result = await read_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     // Validate result
     expect(result.success).to.be.true
     expect(result.content).to.equal(content)
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should read a file from a different branch', async function () {
-    const file_path = 'feature-specific-file.md'
+    const git_relative_path = 'feature-specific-file.md'
     const content = '# Feature Branch Content'
     const branch = 'feature-branch'
     const commit_message = 'Add feature-specific file'
@@ -124,7 +124,7 @@ describe('read_file_from_git', function () {
     await execute('git checkout feature-branch', { cwd: test_repo_path })
     await write_file_to_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       content,
       branch,
       commit_message
@@ -134,52 +134,52 @@ describe('read_file_from_git', function () {
     // Read the file from feature branch while on main
     const result = await read_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     // Validate result
     expect(result.success).to.be.true
     expect(result.content).to.equal(content)
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should handle non-existent files gracefully', async function () {
-    const file_path = 'non-existent-file.md'
+    const git_relative_path = 'non-existent-file.md'
     const branch = 'main'
 
     const result = await read_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     expect(result.success).to.be.false
     expect(result.error).to.include('Failed to read file')
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
   })
 
   it('should handle non-existent branches gracefully', async function () {
-    const file_path = 'test-file.md'
+    const git_relative_path = 'test-file.md'
     const branch = 'non-existent-branch'
 
     const result = await read_file_from_git({
       repo_path: test_repo_path,
-      file_path,
+      git_relative_path,
       branch
     })
 
     expect(result.success).to.be.false
     expect(result.error).to.include('Branch non-existent-branch does not exist')
-    expect(result.file_path).to.equal(file_path)
+    expect(result.git_relative_path).to.equal(git_relative_path)
   })
 
   it('should validate required parameters', async function () {
     // Test missing repo_path
     try {
       await read_file_from_git({
-        file_path: 'test.md',
+        git_relative_path: 'test.md',
         branch: 'main'
       })
       expect.fail('Should have thrown an error')
@@ -187,7 +187,7 @@ describe('read_file_from_git', function () {
       expect(error.message).to.equal('Repository path is required')
     }
 
-    // Test missing file_path
+    // Test missing git_relative_path
     try {
       await read_file_from_git({
         repo_path: test_repo_path,
@@ -195,14 +195,14 @@ describe('read_file_from_git', function () {
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
-      expect(error.message).to.equal('File path is required')
+      expect(error.message).to.equal('Git relative path is required')
     }
 
     // Test missing branch
     try {
       await read_file_from_git({
         repo_path: test_repo_path,
-        file_path: 'test.md'
+        git_relative_path: 'test.md'
       })
       expect.fail('Should have thrown an error')
     } catch (error) {

@@ -31,7 +31,7 @@ describe('entity_exists_in_git', () => {
 
     await write_entity_to_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       entity_properties,
       entity_type,
       entity_content,
@@ -49,33 +49,33 @@ describe('entity_exists_in_git', () => {
   it('should return exists=true when entity exists', async () => {
     const result = await entity_exists_in_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.file_path).to.equal(entity_path)
+    expect(result.git_relative_path).to.equal(entity_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should return exists=false when entity does not exist', async () => {
     const result = await entity_exists_in_git({
       repo_path: repo.path,
-      file_path: non_existent_path,
+      git_relative_path: non_existent_path,
       branch
     })
 
     expect(result.success).to.be.true
     expect(result.exists).to.be.false
-    expect(result.file_path).to.equal(non_existent_path)
+    expect(result.git_relative_path).to.equal(non_existent_path)
     expect(result.branch).to.equal(branch)
   })
 
   it('should return error when repository does not exist', async () => {
     const result = await entity_exists_in_git({
       repo_path: '/non/existent/repo',
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
@@ -88,7 +88,7 @@ describe('entity_exists_in_git', () => {
 
     const result = await entity_exists_in_git({
       repo_path: repo.path,
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch: non_existent_branch
     })
 
@@ -98,7 +98,7 @@ describe('entity_exists_in_git', () => {
 
   it('should return error when repo_path is missing', async () => {
     const result = await entity_exists_in_git({
-      file_path: entity_path,
+      git_relative_path: entity_path,
       branch
     })
 
@@ -113,13 +113,13 @@ describe('entity_exists_in_git', () => {
     })
 
     expect(result.success).to.be.false
-    expect(result.error).to.equal('File path is required')
+    expect(result.error).to.equal('Git relative path is required')
   })
 
   it('should return error when branch is missing', async () => {
     const result = await entity_exists_in_git({
       repo_path: repo.path,
-      file_path: entity_path
+      git_relative_path: entity_path
     })
 
     expect(result.success).to.be.false

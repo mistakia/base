@@ -7,7 +7,7 @@ import db from '#db'
 import { build_change_request_from_git } from './utils.mjs'
 import * as github_integration from '#libs-server/integrations/github/index.mjs'
 import config from '#config'
-import { write_markdown_entity } from '#libs-server/markdown/index.mjs'
+import { write_document_to_filesystem } from '#libs-server/markdown/index.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -254,9 +254,9 @@ async function create_markdown_file({
   await fs.mkdir(dir_path, { recursive: true })
 
   // Write the file
-  await write_markdown_entity({
+  await write_document_to_filesystem({
     absolute_path,
-    frontmatter,
-    content
+    document_properties: frontmatter,
+    document_content: content
   })
 }

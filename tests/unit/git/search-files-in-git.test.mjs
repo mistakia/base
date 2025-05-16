@@ -167,11 +167,11 @@ describe('search_files_in_git', function () {
 
   it('should respect case sensitivity when specified', async function () {
     // Write a new file with mixed case
-    const file_path = 'case-test.md'
+    const git_relative_path = 'case-test.md'
     const content = 'This file has both searchable and SEARCHABLE text.'
     await write_file_to_git({
       repo_path: test_repo.path,
-      file_path,
+      git_relative_path,
       content,
       branch: 'main',
       commit_message: 'Add case test file'
@@ -188,8 +188,8 @@ describe('search_files_in_git', function () {
     // Validate only lowercase matches
     expect(lowercase_result.success).to.be.true
     expect(lowercase_result.results.length).to.be.at.least(1)
-    expect(lowercase_result.results.some((r) => r.file === 'case-test.md')).to
-      .be.true
+    expect(lowercase_result.results.some((r) => r.file === git_relative_path))
+      .to.be.true
 
     // Test case-sensitive search for uppercase
     const uppercase_result = await search_files_in_git({

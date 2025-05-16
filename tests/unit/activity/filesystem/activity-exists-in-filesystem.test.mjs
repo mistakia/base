@@ -10,28 +10,24 @@ import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 describe('activity_exists_in_filesystem', () => {
   let temp_dir
   let cleanup
-  let original_system_base_directory
-  let original_user_base_directory
+  let original_root_base_directory
 
   beforeEach(() => {
     // Save original config values
-    original_system_base_directory = config.system_base_directory
-    original_user_base_directory = config.user_base_directory
+    original_root_base_directory = config.root_base_directory
 
     // Create temporary directory for tests
     const temp_directory = create_temp_test_directory('activity-exists-test-')
     temp_dir = temp_directory.path
     cleanup = temp_directory.cleanup
 
-    // Set config directories to our test directory
-    config.system_base_directory = temp_dir
-    config.user_base_directory = temp_dir
+    // Set config directory to our test directory
+    config.root_base_directory = temp_dir
   })
 
   afterEach(() => {
     // Restore original config values
-    config.system_base_directory = original_system_base_directory
-    config.user_base_directory = original_user_base_directory
+    config.root_base_directory = original_root_base_directory
 
     // Clean up temporary directory
     if (cleanup) {
@@ -39,19 +35,20 @@ describe('activity_exists_in_filesystem', () => {
     }
   })
 
-  it('should return true when system activity exists', async () => {
+  it('should return true when activity file exists', async () => {
     // Arrange
-    const activity_id = 'system/test-activity.md'
-    const system_dir = path.join(temp_dir, 'system', 'activity')
-    await fs.mkdir(system_dir, { recursive: true })
+    const base_relative_path = 'system/activity/test-activity.md'
+    const file_dir = path.join(temp_dir, 'system/activity')
+    await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(system_dir, 'test-activity.md'),
+      path.join(temp_dir, base_relative_path),
       '# Test Activity'
     )
 
     // Act
     const exists = await activity_exists_in_filesystem({
-      activity_id
+      base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
@@ -60,17 +57,18 @@ describe('activity_exists_in_filesystem', () => {
 
   it('should return true when user activity exists', async () => {
     // Arrange
-    const activity_id = 'user/test-activity.md'
-    const user_dir = path.join(temp_dir, 'activity')
-    await fs.mkdir(user_dir, { recursive: true })
+    const base_relative_path = 'activity/test-activity.md'
+    const file_dir = path.join(temp_dir, 'activity')
+    await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(user_dir, 'test-activity.md'),
+      path.join(temp_dir, base_relative_path),
       '# Test Activity'
     )
 
     // Act
     const exists = await activity_exists_in_filesystem({
-      activity_id
+      base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
@@ -79,11 +77,11 @@ describe('activity_exists_in_filesystem', () => {
 
   it('should return false when activity does not exist', async () => {
     // Arrange
-    const activity_id = 'system/non-existent-activity.md'
+    const base_relative_path = 'system/activity/non-existent-activity.md'
 
     // Act
     const exists = await activity_exists_in_filesystem({
-      activity_id
+      base_relative_path
     })
 
     // Assert
@@ -93,14 +91,14 @@ describe('activity_exists_in_filesystem', () => {
   it('should return false when activity path is invalid', async () => {
     // Act
     const exists = await activity_exists_in_filesystem({
-      activity_id: 'invalid-path'
+      base_relative_path: ''
     })
 
     // Assert
     expect(exists).to.be.false
   })
 
-  it('should return false when activity_id is not provided', async () => {
+  it('should return false when base_relative_path is not provided', async () => {
     // Act
     const exists = await activity_exists_in_filesystem({})
 
@@ -108,40 +106,21 @@ describe('activity_exists_in_filesystem', () => {
     expect(exists).to.be.false
   })
 
-  it('should use custom system_base_directory when provided', async () => {
+  it('should use custom root_base_directory when provided', async () => {
     // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-system')
-    const system_dir = path.join(custom_dir, 'system', 'activity')
-    await fs.mkdir(system_dir, { recursive: true })
+    const custom_dir = path.join(temp_dir, 'custom-base')
+    const base_relative_path = 'system/activity/custom-activity.md'
+    const file_dir = path.join(custom_dir, 'system/activity')
+    await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(system_dir, 'custom-activity.md'),
+      path.join(custom_dir, base_relative_path),
       '# Custom Activity'
     )
 
     // Act
     const exists = await activity_exists_in_filesystem({
-      activity_id: 'system/custom-activity.md',
-      system_base_directory: custom_dir
-    })
-
-    // Assert
-    expect(exists).to.be.true
-  })
-
-  it('should use custom user_base_directory when provided', async () => {
-    // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-user')
-    const user_dir = path.join(custom_dir, 'activity')
-    await fs.mkdir(user_dir, { recursive: true })
-    await fs.writeFile(
-      path.join(user_dir, 'custom-activity.md'),
-      '# Custom Activity'
-    )
-
-    // Act
-    const exists = await activity_exists_in_filesystem({
-      activity_id: 'user/custom-activity.md',
-      user_base_directory: custom_dir
+      base_relative_path,
+      root_base_directory: custom_dir
     })
 
     // Assert
@@ -149,7 +128,7 @@ describe('activity_exists_in_filesystem', () => {
   })
 })
 
-// Add tests using git repository approach from the old activities-test.mjs
+// Add tests using git repository approach
 describe('activity_exists_in_filesystem with git repository', () => {
   let test_repo
 
@@ -167,25 +146,23 @@ describe('activity_exists_in_filesystem with git repository', () => {
 
   it('should return true for existing activities in git repo', async () => {
     // Act
-    const system_activity_exists = await activity_exists_in_filesystem({
-      activity_id: 'system/default-base-activity.md',
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
+    const activity_exists = await activity_exists_in_filesystem({
+      base_relative_path: 'system/activity/default-base-activity.md',
+      root_base_directory: test_repo.path
     })
 
     // Assert
-    expect(system_activity_exists).to.be.true
+    expect(activity_exists).to.be.true
   })
 
   it('should return false for non-existent activities in git repo', async () => {
     // Arrange
-    const non_existent_path = 'system/nonexistent-activity.md'
+    const non_existent_path = 'system/activity/nonexistent-activity.md'
 
     // Act
     const activity_exists_result = await activity_exists_in_filesystem({
-      activity_id: non_existent_path,
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
+      base_relative_path: non_existent_path,
+      root_base_directory: test_repo.path
     })
 
     // Assert

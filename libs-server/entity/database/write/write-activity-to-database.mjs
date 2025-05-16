@@ -20,18 +20,18 @@ const log = debug('entity:database:write-activity')
  * @param {Date} [params.activity_properties.archived_at=null] Date when the activity was archived
  * @param {string} params.user_id User ID who owns the activity
  * @param {string} [params.activity_content=''] Optional activity content/markdown
- * @param {string} [params.activity_id=null] Optional activity ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {string} [params.file_info.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The activity_id (same as entity_id)
+ * @returns {Promise<string>} The entity_id of the activity
  */
 export async function write_activity_to_database({
   activity_properties,
   user_id,
   activity_content = '',
-  activity_id = null,
+  entity_id = null,
   file_info = null,
   trx = null
 }) {
@@ -40,24 +40,24 @@ export async function write_activity_to_database({
     const db_client = trx || db
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const returned_entity_id = await write_entity_to_database({
       entity_properties: activity_properties,
       entity_type: 'activity',
       user_id,
       entity_content: activity_content,
-      entity_id: activity_id,
+      entity_id,
       file_info,
       trx: db_client
     })
 
     // Process activity-specific data directly
     await write_activity_data_to_database({
-      entity_id,
+      entity_id: returned_entity_id,
       db_client
     })
 
-    log(`Activity successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Activity successfully written with ID: ${returned_entity_id}`)
+    return returned_entity_id
   } catch (error) {
     log('Error writing activity to database:', error)
     throw error

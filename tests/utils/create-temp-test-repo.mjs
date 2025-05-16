@@ -18,32 +18,35 @@ const default_base_activity_path = path.join(
 )
 
 /**
- * Creates a temporary git repository for testing purposes
+ * Creates a temporary base repository with a user submodule for testing purposes
  *
  * @param {Object} params - Parameters
- * @param {string} [params.prefix='git-repo-'] - Optional prefix for the repo directory
- * @param {string} [params.initial_content='# Test Repository'] - Initial content for README.md
+ * @param {string} [params.prefix='base-repo-'] - Optional prefix for the repo directory
+ * @param {string} [params.initial_content='# Test Base Repository'] - Initial content for README.md
  * @returns {Promise<Object>} Object with repo path and cleanup function
  */
 export async function create_temp_test_repo({
-  prefix = 'git-repo-',
-  initial_content = '# Test Repository'
+  prefix = 'base-repo-',
+  initial_content = '# Test Base Repository'
 } = {}) {
-  const repo = create_temp_test_directory(prefix)
+  const base_repo = create_temp_test_directory(prefix)
+  const user_repo = create_temp_test_directory('user-repo-')
 
   try {
-    // Initialize git repository
-    await exec('git init', { cwd: repo.path })
-    await exec('git config user.name "Test User"', { cwd: repo.path })
-    await exec('git config user.email "test@example.com"', { cwd: repo.path })
+    // Initialize base git repository
+    await exec('git init', { cwd: base_repo.path })
+    await exec('git config user.name "Test User"', { cwd: base_repo.path })
+    await exec('git config user.email "test@example.com"', {
+      cwd: base_repo.path
+    })
 
     // Create initial commit with README
-    const readme_path = path.join(repo.path, 'README.md')
+    const readme_path = path.join(base_repo.path, 'README.md')
     await fs.writeFile(readme_path, initial_content)
-    await exec('git add README.md', { cwd: repo.path })
+    await exec('git add README.md', { cwd: base_repo.path })
 
     // Create system/activity directory
-    const activity_dir = path.join(repo.path, 'system', 'activity')
+    const activity_dir = path.join(base_repo.path, 'system', 'activity')
     await fs.mkdir(activity_dir, { recursive: true })
 
     // Read the default base activity file
@@ -58,17 +61,48 @@ export async function create_temp_test_repo({
 
     // Add to git
     await exec('git add system/activity/default-base-activity.md', {
-      cwd: repo.path
+      cwd: base_repo.path
     })
 
-    // Commit all added files
-    await exec('git commit -m "Initial commit"', { cwd: repo.path })
-    await exec('git branch -M main', { cwd: repo.path })
+    // Initialize user submodule repository
+    await exec('git init', { cwd: user_repo.path })
+    await exec('git config user.name "Test User"', { cwd: user_repo.path })
+    await exec('git config user.email "test@example.com"', {
+      cwd: user_repo.path
+    })
 
-    return repo
+    // Create user README
+    const user_readme_path = path.join(user_repo.path, 'README.md')
+    await fs.writeFile(user_readme_path, '# Test User Repository')
+    await exec('git add README.md', { cwd: user_repo.path })
+    await exec('git commit -m "Initial commit"', { cwd: user_repo.path })
+
+    // Add user submodule to base repo
+    await exec(`git submodule add ${user_repo.path} user`, {
+      cwd: base_repo.path
+    })
+
+    // Commit all added files in base repo
+    await exec('git commit -m "Initial commit with user submodule"', {
+      cwd: base_repo.path
+    })
+    await exec('git branch -M main', { cwd: base_repo.path })
+
+    // Create a combined cleanup function
+    const cleanup = () => {
+      base_repo.cleanup()
+      user_repo.cleanup()
+    }
+
+    return {
+      path: base_repo.path,
+      user_path: user_repo.path,
+      cleanup
+    }
   } catch (error) {
     // Clean up on failure
-    repo.cleanup()
+    base_repo.cleanup()
+    user_repo.cleanup()
     throw error
   }
 }

@@ -3,7 +3,7 @@ import path from 'path'
 import debug from 'debug'
 
 import { clean_frontmatter } from '../shared/frontmatter-utils.mjs'
-import { with_transaction } from '../shared/db-utils.mjs'
+import { with_transaction } from '#libs-server/utils/with-transaction.mjs'
 import { entity_registry } from '../shared/entity-registry.mjs'
 import { process_entity_relations } from './relation-handler.mjs'
 

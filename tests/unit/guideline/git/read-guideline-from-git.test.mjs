@@ -16,23 +16,22 @@ describe('read_guideline_from_git', () => {
   // System guideline paths in the repo
   const system_guideline_dir = 'system/guideline'
   const system_guideline_filename = 'test-guideline.md'
-  const system_guideline_path = `${system_guideline_dir}/${system_guideline_filename}`
+  const system_guideline_base_relative_path = `${system_guideline_dir}/${system_guideline_filename}`
 
   // User guideline paths in the repo
   const user_guideline_dir = 'guideline'
   const user_guideline_filename = 'test-user-guideline.md'
-  const user_guideline_path = `${user_guideline_dir}/${user_guideline_filename}`
+  const user_guideline_base_relative_path = `${user_guideline_dir}/${user_guideline_filename}`
 
-  // Guideline IDs as used by the API functions
-  const system_guideline_id = `system/${system_guideline_filename}`
-  const user_guideline_id = `user/${user_guideline_filename}`
-  const non_existent_guideline_id = 'system/non-existent.md'
+  const non_existent_guideline_base_relative_path =
+    'system/guideline/non-existent.md'
 
   // Test content
   const system_guideline_content = `---
 title: "Test Guideline"
 type: "guideline"
 description: "This is a test guideline"
+tags: ["test", "git"]
 ---
 
 # Test Guideline
@@ -44,6 +43,7 @@ This is a test guideline for Git.
 title: "User Guideline"
 type: "guideline"
 description: "This is a user guideline"
+tags: ["user", "git"]
 ---
 
 # User Guideline
@@ -67,12 +67,12 @@ This is a user guideline for Git.
 
     // Write test guidelines
     await fs.writeFile(
-      path.join(repo.path, system_guideline_path),
+      path.join(repo.path, system_guideline_base_relative_path),
       system_guideline_content
     )
 
     await fs.writeFile(
-      path.join(repo.path, user_guideline_path),
+      path.join(repo.path, user_guideline_base_relative_path),
       user_guideline_content
     )
 
@@ -80,10 +80,6 @@ This is a user guideline for Git.
     await fs.appendFile(
       path.join(repo.path, 'README.md'),
       '\n\nUpdated for guideline read tests'
-    )
-    await fs.writeFile(
-      path.join(repo.path, '.gitignore'),
-      'node_modules\n.DS_Store\n'
     )
 
     // Execute git commands to add and commit the files
@@ -103,46 +99,51 @@ This is a user guideline for Git.
   it('should successfully read a system guideline from git', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: system_guideline_id,
+      base_relative_path: system_guideline_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.guideline_id).to.equal(system_guideline_id)
+    expect(result.base_relative_path).to.equal(
+      system_guideline_base_relative_path
+    )
     expect(result.branch).to.equal(branch)
     expect(result.content).to.equal(system_guideline_content)
-    expect(result.file_path).to.include(system_guideline_path)
+    expect(result.absolute_path).to.equal(
+      path.join(repo.path, system_guideline_base_relative_path)
+    )
   })
 
   it('should successfully read a user guideline from git', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: user_guideline_id,
+      base_relative_path: user_guideline_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.guideline_id).to.equal(user_guideline_id)
+    expect(result.base_relative_path).to.equal(
+      user_guideline_base_relative_path
+    )
     expect(result.branch).to.equal(branch)
     expect(result.content).to.equal(user_guideline_content)
-    expect(result.file_path).to.include(user_guideline_path)
+    expect(result.absolute_path).to.equal(
+      path.join(repo.path, user_guideline_base_relative_path)
+    )
   })
 
   it('should return error when guideline does not exist in git', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: non_existent_guideline_id,
+      base_relative_path: non_existent_guideline_base_relative_path,
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -151,13 +152,12 @@ This is a user guideline for Git.
     expect(result.error).to.include('does not exist in git branch')
   })
 
-  it('should return error when guideline_id is invalid', async () => {
+  it('should return error when base_relative_path is invalid', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: 'invalid-path',
+      base_relative_path: 'invalid-path',
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -165,25 +165,23 @@ This is a user guideline for Git.
     expect(result.error).to.be.a('string')
   })
 
-  it('should return error when guideline_id is not provided', async () => {
+  it('should return error when base_relative_path is not provided', async () => {
     // Act
     const result = await read_guideline_from_git({
       branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.false
-    expect(result.error).to.equal('Guideline ID is required')
+    expect(result.error).to.equal('Guideline base relative path is required')
   })
 
   it('should return error when branch is not provided', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: system_guideline_id,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      base_relative_path: system_guideline_base_relative_path,
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -194,10 +192,9 @@ This is a user guideline for Git.
   it('should return error when branch does not exist', async () => {
     // Act
     const result = await read_guideline_from_git({
-      guideline_id: system_guideline_id,
+      base_relative_path: system_guideline_base_relative_path,
       branch: 'non-existent-branch',
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -213,7 +210,7 @@ This is a user guideline for Git.
     // Modify guideline in the feature branch
     const updated_content = `${system_guideline_content}\n\nUpdated in feature branch.`
     await fs.writeFile(
-      path.join(repo.path, system_guideline_path),
+      path.join(repo.path, system_guideline_base_relative_path),
       updated_content
     )
 
@@ -227,10 +224,9 @@ This is a user guideline for Git.
 
     // Act: Read from feature branch
     const result = await read_guideline_from_git({
-      guideline_id: system_guideline_id,
+      base_relative_path: system_guideline_base_relative_path,
       branch: feature_branch,
-      system_base_directory: repo.path,
-      user_base_directory: repo.path
+      root_base_directory: repo.path
     })
 
     // Assert

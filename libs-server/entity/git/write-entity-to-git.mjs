@@ -1,10 +1,8 @@
 import debug from 'debug'
 
 import { write_file_to_git } from '#libs-server/git/git-files/write-file-to-git.mjs'
-import {
-  format_entity_to_file_content,
-  format_entity_properties_to_frontmatter
-} from '#libs-server/entity/format/index.mjs'
+import { format_entity_properties_to_frontmatter } from '#libs-server/entity/format/index.mjs'
+import { format_document_to_file_content } from '#libs-server/markdown/format-document-to-file-content.mjs'
 
 const log = debug('write-entity-to-git')
 
@@ -13,7 +11,7 @@ const log = debug('write-entity-to-git')
  *
  * @param {Object} options - Function options
  * @param {string} options.repo_path - The absolute path to the Git repository
- * @param {string} options.file_path - The relative path within the repository where the entity will be written
+ * @param {string} options.git_relative_path - The relative path within the repository where the entity will be written
  * @param {Object} options.entity_properties - The entity properties to write
  * @param {string} options.entity_type - The type of entity being written
  * @param {string} options.branch - The Git branch to write to
@@ -23,7 +21,7 @@ const log = debug('write-entity-to-git')
  */
 export async function write_entity_to_git({
   repo_path,
-  file_path,
+  git_relative_path,
   entity_properties,
   entity_type,
   branch,
@@ -32,7 +30,7 @@ export async function write_entity_to_git({
 }) {
   try {
     log(
-      `Writing ${entity_type} entity to Git at ${file_path} in branch ${branch}`
+      `Writing ${entity_type} entity to Git at ${git_relative_path} in branch ${branch}`
     )
 
     // Validate required parameters
@@ -40,8 +38,8 @@ export async function write_entity_to_git({
       throw new Error('Repository path is required')
     }
 
-    if (!file_path) {
-      throw new Error('File path is required')
+    if (!git_relative_path) {
+      throw new Error('Git relative path is required')
     }
 
     if (!entity_properties || typeof entity_properties !== 'object') {
@@ -63,9 +61,9 @@ export async function write_entity_to_git({
     })
 
     // Format the entire file content with frontmatter
-    const formatted_content = format_entity_to_file_content({
-      frontmatter,
-      file_content: entity_content
+    const formatted_content = format_document_to_file_content({
+      document_properties: frontmatter,
+      document_content: entity_content
     })
 
     // Generate default commit message if not provided
@@ -76,7 +74,7 @@ export async function write_entity_to_git({
     // Write the formatted content to Git
     const result = await write_file_to_git({
       repo_path,
-      file_path,
+      git_relative_path,
       content: formatted_content,
       branch,
       commit_message: default_commit_message
@@ -84,22 +82,22 @@ export async function write_entity_to_git({
 
     if (result.success) {
       log(
-        `Successfully wrote ${entity_type} entity to ${file_path} in branch ${branch}`
+        `Successfully wrote ${entity_type} entity to ${git_relative_path} in branch ${branch}`
       )
     } else {
       log(
-        `Failed to write ${entity_type} entity to ${file_path}:`,
+        `Failed to write ${entity_type} entity to ${git_relative_path}:`,
         result.error
       )
     }
 
     return result
   } catch (error) {
-    log(`Error writing entity to Git at ${file_path}:`, error)
+    log(`Error writing entity to Git at ${git_relative_path}:`, error)
     return {
       success: false,
       error: error.message,
-      file_path
+      git_relative_path
     }
   }
 }

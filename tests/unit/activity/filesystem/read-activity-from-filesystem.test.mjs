@@ -41,9 +41,9 @@ describe('read_activity_from_filesystem', () => {
 
   it('should successfully read a system activity', async () => {
     // Arrange
-    const activity_id = 'system/test-activity.md'
-    const system_dir = path.join(temp_dir, 'system', 'activity')
-    await fs.mkdir(system_dir, { recursive: true })
+    const activity_base_relative_path = 'system/activity/test-activity.md'
+    const activity_dir = path.join(temp_dir, 'system', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     const activity_content = `---
 title: "Test Activity"
@@ -58,19 +58,22 @@ This is a test activity content.
 `
 
     await fs.writeFile(
-      path.join(system_dir, 'test-activity.md'),
+      path.join(activity_dir, 'test-activity.md'),
       activity_content
     )
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.activity_id).to.equal(activity_id)
-    expect(result.file_path).to.include('system/activity/test-activity.md')
+    expect(result.base_relative_path).to.equal(activity_base_relative_path)
+    expect(result.absolute_path).to.equal(
+      path.join(temp_dir, activity_base_relative_path)
+    )
     expect(result.entity_properties).to.include({
       title: 'Test Activity',
       type: 'activity',
@@ -84,9 +87,9 @@ This is a test activity content.
 
   it('should successfully read a user activity', async () => {
     // Arrange
-    const activity_id = 'user/test-user-activity.md'
-    const user_dir = path.join(temp_dir, 'activity')
-    await fs.mkdir(user_dir, { recursive: true })
+    const activity_base_relative_path = 'user/activity/test-user-activity.md'
+    const activity_dir = path.join(temp_dir, 'user', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     const activity_content = `---
 title: "User Activity"
@@ -101,19 +104,22 @@ This is user activity content.
 `
 
     await fs.writeFile(
-      path.join(user_dir, 'test-user-activity.md'),
+      path.join(activity_dir, 'test-user-activity.md'),
       activity_content
     )
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.activity_id).to.equal(activity_id)
-    expect(result.file_path).to.include('activity/test-user-activity.md')
+    expect(result.base_relative_path).to.equal(activity_base_relative_path)
+    expect(result.absolute_path).to.equal(
+      path.join(temp_dir, activity_base_relative_path)
+    )
     expect(result.entity_properties).to.include({
       title: 'User Activity',
       type: 'activity',
@@ -126,23 +132,25 @@ This is user activity content.
 
   it('should return error when activity does not exist', async () => {
     // Arrange
-    const activity_id = 'system/non-existent-activity.md'
+    const activity_base_relative_path = 'system/non-existent-activity.md'
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.error).to.include('does not exist')
-    expect(result.activity_id).to.equal(activity_id)
+    expect(result.base_relative_path).to.equal(activity_base_relative_path)
   })
 
-  it('should return error when activity_id is invalid', async () => {
+  it('should return error when activity_base_relative_path is invalid', async () => {
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id: 'invalid-path'
+      base_relative_path: 'invalid-path',
+      root_base_directory: temp_dir
     })
 
     // Assert
@@ -150,7 +158,7 @@ This is user activity content.
     expect(result.error).to.be.a('string')
   })
 
-  it('should return error when activity_id is not provided', async () => {
+  it('should return error when activity_base_relative_path is not provided', async () => {
     // Act
     const result = await read_activity_from_filesystem({})
 
@@ -161,7 +169,7 @@ This is user activity content.
 
   it('should handle malformed frontmatter gracefully', async () => {
     // Arrange
-    const activity_id = 'system/malformed-activity.md'
+    const activity_base_relative_path = 'system/malformed-activity.md'
     const system_dir = path.join(temp_dir, 'system', 'activity')
     await fs.mkdir(system_dir, { recursive: true })
 
@@ -180,7 +188,8 @@ description: Missing closing quote
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
@@ -190,9 +199,9 @@ description: Missing closing quote
 
   it('should handle activity without type property', async () => {
     // Arrange
-    const activity_id = 'system/no-type-activity.md'
-    const system_dir = path.join(temp_dir, 'system', 'activity')
-    await fs.mkdir(system_dir, { recursive: true })
+    const activity_base_relative_path = 'system/activity/no-type-activity.md'
+    const activity_dir = path.join(temp_dir, 'system', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     const no_type_content = `---
 title: "No Type Activity"
@@ -203,13 +212,14 @@ description: "Activity without type"
 `
 
     await fs.writeFile(
-      path.join(system_dir, 'no-type-activity.md'),
+      path.join(activity_dir, 'no-type-activity.md'),
       no_type_content
     )
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: temp_dir
     })
 
     // Assert
@@ -219,9 +229,10 @@ description: "Activity without type"
 
   it('should use custom system_base_directory when provided', async () => {
     // Arrange
+    const activity_base_relative_path = 'system/activity/custom-activity.md'
     const custom_dir = path.join(temp_dir, 'custom-system')
-    const system_dir = path.join(custom_dir, 'system', 'activity')
-    await fs.mkdir(system_dir, { recursive: true })
+    const activity_dir = path.join(custom_dir, 'system', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     const activity_content = `---
 title: "Custom System Activity"
@@ -233,27 +244,30 @@ description: "This is a custom system activity"
 `
 
     await fs.writeFile(
-      path.join(system_dir, 'custom-activity.md'),
+      path.join(activity_dir, 'custom-activity.md'),
       activity_content
     )
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id: 'system/custom-activity.md',
-      system_base_directory: custom_dir
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: custom_dir
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.entity_properties.title).to.equal('Custom System Activity')
-    expect(result.file_path).to.include(custom_dir)
+    expect(result.absolute_path).to.equal(
+      path.join(custom_dir, activity_base_relative_path)
+    )
   })
 
   it('should use custom user_base_directory when provided', async () => {
     // Arrange
+    const activity_base_relative_path = 'user/activity/custom-activity.md'
     const custom_dir = path.join(temp_dir, 'custom-user')
-    const user_dir = path.join(custom_dir, 'activity')
-    await fs.mkdir(user_dir, { recursive: true })
+    const activity_dir = path.join(custom_dir, 'user', 'activity')
+    await fs.mkdir(activity_dir, { recursive: true })
 
     const activity_content = `---
 title: "Custom User Activity"
@@ -265,20 +279,22 @@ description: "This is a custom user activity"
 `
 
     await fs.writeFile(
-      path.join(user_dir, 'custom-activity.md'),
+      path.join(activity_dir, 'custom-activity.md'),
       activity_content
     )
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id: 'user/custom-activity.md',
-      user_base_directory: custom_dir
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: custom_dir
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.entity_properties.title).to.equal('Custom User Activity')
-    expect(result.file_path).to.include(custom_dir)
+    expect(result.absolute_path).to.equal(
+      path.join(custom_dir, activity_base_relative_path)
+    )
   })
 })
 
@@ -300,40 +316,43 @@ describe('read_activity_from_filesystem with git repository', () => {
 
   it('should retrieve an existing activity file from git repo', async () => {
     // Arrange
-    const system_activity_path = 'system/default-base-activity.md'
+    const activity_base_relative_path =
+      'system/activity/default-base-activity.md'
 
     // Act
     const activity_file = await read_activity_from_filesystem({
-      activity_id: system_activity_path,
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: test_repo.path
     })
-
     // Assert
     expect(activity_file).to.be.an('object')
     expect(activity_file.success).to.be.true
-    expect(activity_file.activity_id).to.equal(system_activity_path)
-    expect(activity_file.file_path).to.be.a('string')
+    expect(activity_file.base_relative_path).to.equal(
+      activity_base_relative_path
+    )
+    expect(activity_file.absolute_path).to.equal(
+      path.join(test_repo.path, activity_base_relative_path)
+    )
     expect(activity_file.entity_content).to.be.a('string')
     expect(activity_file.entity_content.length).to.be.greaterThan(0)
   })
 
   it('should return error object for non-existent activity files in git repo', async () => {
     // Arrange
-    const non_existent_path = 'system/nonexistent-activity.md'
+    const activity_base_relative_path =
+      'system/activity/nonexistent-activity.md'
 
     // Act
     const result = await read_activity_from_filesystem({
-      activity_id: non_existent_path,
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
+      base_relative_path: activity_base_relative_path,
+      root_base_directory: test_repo.path
     })
 
     // Assert
     expect(result).to.be.an('object')
     expect(result.success).to.equal(false)
     expect(result.error).to.include(
-      "Activity 'system/nonexistent-activity.md' does not exist"
+      "Activity 'system/activity/nonexistent-activity.md' does not exist"
     )
   })
 })

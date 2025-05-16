@@ -1,7 +1,7 @@
 import db from '#db'
 import debug from 'debug'
 import { write_entity_relations_to_database } from './write-entity-relations-to-database.mjs'
-import { write_entity_tags_to_database } from './write-entity-tags-to-database.mjs'
+// import { write_entity_tags_to_database } from './write-entity-tags-to-database.mjs'
 
 const log = debug('entity:database:write')
 
@@ -22,6 +22,7 @@ const log = debug('entity:database:write')
  * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {Object} [params.file_info.absolute_path=null] Absolute path to the file
+ * @param {Object} [params.file_info.base_relative_path=null] Path relative to repository base
  * @param {Object} [params.file_info.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The entity_id
@@ -60,7 +61,7 @@ export async function write_entity_to_database({
       user_id,
       markdown: entity_content || null,
       frontmatter: JSON.stringify(entity_properties),
-      updated_at: new Date()
+      updated_at: entity_properties.updated_at || new Date()
     }
 
     // Add permalink if provided
@@ -70,8 +71,14 @@ export async function write_entity_to_database({
 
     // Add file path and git SHA if provided
     if (file_info) {
+      // TODO should be required
       if (file_info.absolute_path) {
-        entity_data.file_path = file_info.absolute_path
+        entity_data.absolute_path = file_info.absolute_path
+      }
+
+      // TODO should be required
+      if (file_info.base_relative_path) {
+        entity_data.base_relative_path = file_info.base_relative_path
       }
 
       if (file_info.git_sha) {
@@ -113,11 +120,12 @@ export async function write_entity_to_database({
 
     // Process tags if present in entity_properties
     if (entity_properties.tags) {
-      await write_entity_tags_to_database({
-        entity_id: result_entity_id,
-        tags: entity_properties.tags,
-        db_client
-      })
+      // TODO convert base_relative_path to tag_entity_id
+      // await write_entity_tags_to_database({
+      //   entity_id: result_entity_id,
+      //   tag_entity_ids,
+      //   db_client
+      // })
     }
 
     // Handle archived status if present

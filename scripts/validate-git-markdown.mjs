@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
-import { process_repositories_from_git } from '#libs-server/markdown/repository/process-repository.mjs'
+import { process_repositories_from_git } from '#libs-server/repository/process-repository.mjs'
 
 const log = debug('validate-git-markdown')
 debug.enable(
@@ -21,8 +21,7 @@ const validate_git = async ({ system_branch, user_branch }) => {
   log('Processing repositories from git...')
   const result = await process_repositories_from_git({
     system_branch,
-    user_branch,
-    validate_content: true
+    user_branch
   })
 
   // Report results
