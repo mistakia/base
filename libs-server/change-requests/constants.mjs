@@ -3,7 +3,7 @@
  */
 
 // Directory where change request markdown files are stored
-export const CHANGE_REQUEST_DIR = 'data/change-requests'
+export const CHANGE_REQUEST_DIR = 'user/change-requests'
 
 // Valid change request statuses
 export const VALID_STATUSES = [

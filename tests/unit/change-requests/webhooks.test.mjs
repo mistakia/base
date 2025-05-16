@@ -54,7 +54,7 @@ describe('Change Request Webhooks', function () {
 
     // Create change_requests directory in the user repo
     await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'data/change-requests'),
+      path.join(test_thread.user_base_directory, 'user/change-requests'),
       {
         recursive: true
       }

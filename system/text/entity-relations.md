@@ -75,9 +75,9 @@ All entity relationships are managed through the `relations` property in the fro
 
 ```yaml
 relations:
-  - 'child_of [[data/tasks/parent-task]]'
-  - 'depends_on [[data/tasks/dependent-task]]'
-  - 'assigned_to [[data/person/jane-doe]]'
+  - 'child_of [[user/tasks/parent-task]]'
+  - 'depends_on [[user/tasks/dependent-task]]'
+  - 'assigned_to [[user/person/jane-doe]]'
 ```
 
 ## Common Entity Relation Patterns

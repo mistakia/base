@@ -83,7 +83,7 @@ This schema defines the structure for `change_request` items within the knowledg
 
 ## Usage
 
-Change request items are typically created automatically by tools or worker threads when proposing modifications to knowledge base files. They are stored as Markdown files in `data/change-requests/` and have corresponding records in the `change_requests` database table for status tracking and querying.
+Change request items are typically created automatically by tools or worker threads when proposing modifications to knowledge base files. They are stored as Markdown files in `user/change-requests/` and have corresponding records in the `change_requests` database table for status tracking and querying.
 
 ### Example Frontmatter
 

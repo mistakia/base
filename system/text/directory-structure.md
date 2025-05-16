@@ -23,7 +23,6 @@ The system is organized into the following top-level directories:
 ```
 ├── client/             # Client-side code only
 ├── config/             # Configuration
-├── data/               # Data unique to the user
 ├── db/                 # Database Schema
 ├── libs-server/        # Server-side code only
 ├── libs-shared/        # Shared code (client & server)
@@ -31,6 +30,7 @@ The system is organized into the following top-level directories:
 ├── server/             # Express API server
 ├── static/             # Static resources (images, styles, etc.)
 ├── system/             # System Knowledge Base
+├── user/               # Default user submodule (git submodule)
 └── tests/              # Test files
 ```
 
@@ -82,13 +82,13 @@ The `tests/` directory contains test files organized by component:
 The system implements a dual knowledge base architecture:
 
 ```
-├── system/             # System Knowledge Base
+├── system/             # System Knowledge Base (in root repository)
 │   ├── schema/         # Core schema definitions
 │   ├── activities/     # System activities
 │   ├── guidelines/     # System guidelines
 │   └── text/           # System documentation
 │
-└── data/               # User Knowledge Base
+└── user/               # Default User Knowledge Base (submodule)
     ├── schema/         # User schema extensions
     ├── activities/     # User activity definitions
     ├── guidelines/     # User guideline definitions
@@ -103,9 +103,12 @@ The system implements a dual knowledge base architecture:
     └── logs/           # System logs
 ```
 
-The `system/` directory contains core definitions that provide the foundation for all knowledge items, while the `data/` directory contains user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for each user's specific needs.
+Additional user submodules can be added as git submodules and will be automatically recognized and processed by the system. Each submodule is treated as a separate user repository and follows the same structure as the default `user/` submodule.
+
+The `system/` directory in the root repository contains core definitions that provide the foundation for all knowledge items, while user submodules contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
 
 ## Implementation Notes
 
 1. **Module System**: The system uses ES modules with the `.mjs` extension for clarity.
 2. **Path Aliases**: Configure path aliases in build tools to simplify imports.
+3. **Multiple Users**: Multiple user repositories can be attached as git submodules and will be processed independently.

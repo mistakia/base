@@ -19,7 +19,7 @@ properties:
     items:
       type: string
     optional: true
-    description: List of activity_ids that this guideline applies to
+    description: List of activity base_relative_paths that this guideline applies to
   - name: globs
     type: array
     items:
@@ -60,7 +60,7 @@ Example:
 ```yaml
 relations:
   - 'follows [[system/activities/activity-name]]'
-  - 'applies_to [[data/tasks/task-name]]'
+  - 'applies_to [[user/tasks/task-name]]'
   - 'adopted_by [[system/organization/org-name]]'
-  - 'created_by [[data/person/jane-doe]]'
+  - 'created_by [[user/person/jane-doe]]'
 ```

@@ -2,7 +2,7 @@
 title: Create Guideline
 type: guideline
 description: Guidelines for creating new guidelines
-globs: [system/guideline/*.md, data/guideline/*.md]
+globs: [system/guideline/*.md, user/guideline/*.md]
 guideline_status: Approved
 activities: [Create Guideline]
 tags: [guideline, creation, governance]
@@ -23,7 +23,7 @@ relations:
 
 - Guidelines MUST be stored in the appropriate location:
   - System guidelines MUST be stored in `system/guideline/`
-  - User guidelines MUST be stored in `data/guideline/`
+  - User guidelines MUST be stored in `user/guideline/`
 - Guidelines MUST be named following action-based patterns:
   - For specific activities, use the format: `verb-object.md` (e.g., `create-guideline.md`, `write-unit-tests.md`)
   - For categories of activities, use the format: `category-descriptor.md` (e.g., `code-review-standards.md`, `documentation-practices.md`)

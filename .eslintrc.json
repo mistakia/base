@@ -22,6 +22,7 @@
     "curly": ["off"],
     "indent": ["off"],
     "multiline-ternary": ["off", "always"],
+    "brace-style": ["off"],
     "generator-star-spacing": [
       "error",
       {

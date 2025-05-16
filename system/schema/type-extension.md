@@ -39,8 +39,8 @@ review_cycle: weekly
 
 ## Usage
 
-Type extensions should be stored in the `data/schema/` directory to maintain separation from content items. This keeps schema extensions organized and discoverable.
+Type extensions should be stored in the `user/schema/` directory to maintain separation from content items. This keeps schema extensions organized and discoverable.
 
-Example path: `data/schema/custom_task_extension.md`
+Example path: `user/schema/custom_task_extension.md`
 
 All extensions maintain compatibility with the base system while allowing flexibility for specific use cases.

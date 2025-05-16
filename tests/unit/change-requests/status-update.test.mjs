@@ -51,7 +51,7 @@ describe('Change Request Status Updates', function () {
 
     // Create the change_requests directory
     await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'data/change-requests'),
+      path.join(test_thread.user_base_directory, 'user/change-requests'),
       {
         recursive: true
       }
@@ -134,7 +134,7 @@ describe('Change Request Status Updates', function () {
       // Verify markdown file status
       const markdown_file = path.join(
         test_thread.user_base_directory,
-        'data/change-requests',
+        'user/change-requests',
         `${cr_id}.md`
       )
       const markdown_content = await fs.readFile(markdown_file, 'utf8')

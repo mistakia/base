@@ -55,10 +55,10 @@ Example:
 
 ```yaml
 relations:
-  - 'has_member [[data/person/jane-doe]]'
+  - 'has_member [[user/person/jane-doe]]'
   - 'part_of [[system/organization/parent-org]]'
   - 'contains [[system/organization/department-name]]'
-  - 'involves [[data/tasks/task-name]]'
+  - 'involves [[user/tasks/task-name]]'
   - 'executes [[system/activities/activity-name]]'
   - 'follows [[system/guidelines/guideline-name]]'
   - 'requires [[system/physical_item/item-name]]'

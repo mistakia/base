@@ -112,7 +112,7 @@ describe('Change Requests', function () {
       // Verify markdown file was created
       const markdown_dir = path.join(
         test_thread.user_base_directory,
-        'data/change-requests'
+        'user/change-requests'
       )
       const markdown_file_path = path.join(
         markdown_dir,

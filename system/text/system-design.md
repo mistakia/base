@@ -60,9 +60,10 @@ The system is designed to create a collaborative environment where LLMs and huma
 
 Data is stored in two places:
 
-- **Git Submodule Repository**
+- **Git Repositories**
 
-  - Holds all files like docs, config, and templates
+  - Root repository holds system files and configuration
+  - User-specific content stored in git submodules
   - Everything is version controlled and can be worked on offline
   - This is our source of truth
 
@@ -78,16 +79,17 @@ The system separates knowledge into two types:
 
 - **System Knowledge Base**
 
-  - Located in the `system/` directory
+  - Located in the `system/` directory of the root repository
   - Contains core system definitions, schemas, and templates
   - Relevant to core system functionality and relevant to all users
 
-- **User Knowledge Base**
-  - Located in the `data/` directory
+- **User Knowledge Bases**
+  - Located in git submodules (with `user/` as the default submodule name)
+  - Each submodule belongs to a different user and contains their specific content
   - Contains user-specific data, content, and configurations
   - Relevant to specific users and their workflows
 
-The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while the user knowledge base extends and implements it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to user preferences and workflows.
+The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 
 ### 3.3 External Connections
 

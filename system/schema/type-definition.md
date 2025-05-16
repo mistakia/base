@@ -48,7 +48,7 @@ Type definitions define the structure of content types in the knowledge base. Th
 Type definitions exist in two categories:
 
 - System types (in the `system/schema/` directory)
-- User-defined types (in the `data/schema/` directory)
+- User-defined types (in the `user/schema/` directory)
 
 User-defined types can extend system types to create customized content structures.
 

@@ -22,9 +22,9 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 
 **Key Properties:**
 
-- `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`data/threads/{thread_id}/`).
+- `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`user/threads/{thread_id}/`).
 - `user_id`: Identifier of the user who owns the thread.
-- `activity_id`: Reference to the specific activity this thread is associated with and executing. Format: `[system|user]/<file_path>.md` (e.g., `system/activity/create-activity.md` or `user/activity/custom-activity.md`).
+- `activity_base_relative_path`: Reference to the specific activity this thread is associated with and executing. (e.g., `system/activity/create-activity.md` or `user/activity/custom-activity.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
 - `state`: The current lifecycle state:
@@ -38,14 +38,14 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 - `tools`: Array of tools available to this thread.
 - `thread_change_request_id`: Reference to the change request that tracks all changes made in the thread's branch.
 
-**Note:** The thread's "role" as presented in prompts or user interfaces is always derived from its assigned `activity`. The `activity_id` is the canonical reference for the thread's objective and specialization. The term "role" is never used as a separate identifier in backend or schema logic.
+**Note:** The thread's "role" as presented in prompts or user interfaces is always derived from its assigned `activity`. The `activity_base_relative_path` is the canonical reference for the thread's objective and specialization. The term "role" is never used as a separate identifier in backend or schema logic.
 
 ## Thread Creation Process
 
 When a new thread is created:
 
 1. A unique `thread_id` is generated (UUID)
-2. Directory structure is created at `data/threads/{thread_id}/`
+2. Directory structure is created at `user/threads/{thread_id}/`
 3. Thread metadata is written to `metadata.json` file
 4. Timeline is initialized in `timeline.json`
 5. Memory directory is set up with a git repository
@@ -83,11 +83,11 @@ Base Threads utilize a tiered memory system:
 1.  **Universal Memory (Knowledge Base):**
 
     - **Purpose:** System-wide, persistent knowledge, guidelines, schemas.
-    - **Location:** `system/` and `data/` directories (Markdown files, version controlled).
+    - **Location:** `system/` and `user/` directories (Markdown files, version controlled).
 
 2.  **Context Memory (Thread Context):**
     - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, a detailed execution history, and working files.
-    - **Location:** Disk-based, deterministic path: `data/thread_context/{thread_id}/`.
+    - **Location:** Disk-based, deterministic path: `user/thread_context/{thread_id}/`.
     - **Git Repository:** Each thread's memory directory is initialized as a git repository with an initial commit containing a `.gitignore` file.
 
 ## Timeline Structure
@@ -149,10 +149,10 @@ Base Threads support tool calling capabilities, allowing them to interact with s
 
 ## Filesystem Structure
 
-Each thread's context is stored in a dedicated directory structure within the user's `data/` directory:
+Each thread's context is stored in a dedicated directory structure within the user's `user/` directory:
 
 ```
-data/
+user/
   thread_context/
     {thread_id}/
       metadata.json     # Thread metadata (state, inference_provider, model, etc.)
@@ -163,7 +163,7 @@ data/
 
 The `metadata.json` file contains the thread's configuration and state, including:
 
-- Basic thread properties (`thread_id`, `user_id`, `activity_id`, etc.)
+- Basic thread properties (`thread_id`, `user_id`, `activity_base_relative_path`, etc.)
 - Current execution state and stage
 - Timestamps for thread lifecycle events
 - Reference to associated change request

@@ -97,5 +97,5 @@ relations:
   - 'relates_to [[system/text/system-design]]'
   - 'implements [[system/schema/base]]'
   - 'depends_on [[system/schema/database]]'
-  - 'assigned_to [[data/schema/person/jane-doe]]'
+  - 'assigned_to [[user/schema/person/jane-doe]]'
 ```

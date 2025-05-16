@@ -5,7 +5,7 @@ description: Documentation for the knowledge base schema architecture and extens
 tags: [knowledge, schema, documentation]
 observations:
   - '[design] Knowledge base schema is a dual-system architecture #design'
-  - '[implementation] System schema is in system/schema and user schema is in data/schema #implementation'
+  - '[implementation] System schema is in system/schema and user schema is in submodules #implementation'
   - '[feature] Schema extensions allow for user-specific customization #customization'
 relations:
   - 'relates_to [[system/text/system-design]]'
@@ -20,12 +20,13 @@ The knowledge base architecture consists of two complementary components:
 ### System Knowledge Base
 
 - Defines the core schema structure and base types
-- Located in the `system/` directory
+- Located in the `system/` directory of the root repository
 - Provides the foundation that user knowledge builds upon
 
 ### User Knowledge Base
 
-- Located in the `data/` directory
+- Located in submodules (with `user/` as the default submodule name)
+- Each submodule belongs to a different user and contains their specific content
 - Implements and extends the system schema for user-specific needs
 - Can customize and add properties to existing types
 - Can define new types that inherit from system types
@@ -63,9 +64,9 @@ Users can extend the knowledge base schema in several ways:
    ---
    ```
 
-All schema extensions should be stored in the `data/schema/` directory to maintain separation from content items. This keeps schema definitions organized and discoverable.
+All schema extensions should be stored in the `schema/` directory within the user's submodule to maintain separation from content items. This keeps schema definitions organized and discoverable.
 
-Example path: `data/schema/custom_task_extension.md`
+Example path: `user/schema/custom_task_extension.md`
 
 ## Content Structure
 
@@ -101,7 +102,7 @@ relations:
   - 'relates_to [[system/text/system-design]]'
   - 'implements [[system/schema/design-pattern]]'
   - 'depends_on [[system/schema/database]]'
-  - 'assigned_to [[data/schema/person/jane-doe]]'
+  - 'assigned_to [[user/schema/person/jane-doe]]'
 ```
 
 Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
@@ -132,9 +133,20 @@ Example reference using memory:// URLs:
 
 ```
 memory://system/text/system-design
-memory://data/person/jane-doe
+memory://user/person/jane-doe
 memory://system/schema/database
 ```
+
+## File Path Storage
+
+Entity files are stored in the database with two path references:
+
+- `absolute_path`: The full filesystem path to the file (e.g., `/Users/username/Projects/base/system/text/base-threads.md`)
+- `base_relative_path`: A standardized reference path that follows these conventions:
+  - For root repository files: `system/text/base-threads.md`
+  - For submodule files: `<submodule_name>/<relative_path>.md` (e.g., `user/guidelines/write-text.md`)
+
+The `base_relative_path` format is designed to be used for canonical references across the knowledge base and is the format used in wikilinks.
 
 ## Available Content Types
 

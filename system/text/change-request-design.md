@@ -26,7 +26,7 @@ This document outlines the design for the `change_request` system, which facilit
 
 2. **Source of Truth:** Git and the filesystem serve as the source of truth for all changes. The database functions solely as an index for efficient querying and status tracking.
 
-3. **Markdown File:** A file (`data/change-requests/{change_request_id}.md`) stores descriptive information and acts as a discoverable artifact within the file-based knowledge system.
+3. **Markdown File:** A file (`user/change-requests/{change_request_id}.md`) stores descriptive information and acts as a discoverable artifact within the file-based knowledge system.
 
 4. **Optional GitHub Integration:** The system can optionally synchronize with GitHub Pull Requests for file changes, leveraging GitHub's UI for reviews, comments, and merging.
 
@@ -36,7 +36,7 @@ This document outlines the design for the `change_request` system, which facilit
 
 ## Data Model
 
-### 1. File (`data/change-requests/{change_request_id}.md`)
+### 1. File (`user/change-requests/{change_request_id}.md`)
 
 - **Purpose:** Stores descriptive metadata and content for discoverability and human readability.
 - **Schema:** Defined in `system/schema/change_request.md`.

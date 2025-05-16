@@ -57,7 +57,7 @@ describe('Change Requests API', () => {
 
     // Create the change_requests directory
     await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'data/change-requests'),
+      path.join(test_thread.user_base_directory, 'user/change-requests'),
       {
         recursive: true
       }
@@ -261,7 +261,7 @@ describe('Change Requests API', () => {
 
       // Verify the markdown file was updated
       const file_path = path.join(
-        'data/change-requests',
+        'user/change-requests',
         `${cr.change_request_id}.md`
       )
       const { stdout: file_content } = await execute(`cat ${file_path}`, {

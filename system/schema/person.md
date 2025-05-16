@@ -63,7 +63,7 @@ Example:
 ```yaml
 relations:
   - 'member_of [[system/organization/org-name]]'
-  - 'assigned_to [[data/tasks/task-name]]'
+  - 'assigned_to [[user/tasks/task-name]]'
   - 'executes [[system/activities/activity-name]]'
   - 'follows [[system/guidelines/guideline-name]]'
   - 'requires [[system/physical_item/item-name]]'

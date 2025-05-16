@@ -4,7 +4,7 @@ This directory contains Cursor rules (`.mdc` files) that provide guidance and en
 
 ## Guidelines as Cursor Rules
 
-Our project guidelines (located in `/system/guideline` and `/data/guideline`) are automatically converted to Cursor rules. This approach:
+Our project guidelines (located in `/system/guideline` and `/user/guideline`) are automatically converted to Cursor rules. This approach:
 
 1. Prevents duplication of content
 2. Ensures guidelines and Cursor rules remain in sync
@@ -21,7 +21,7 @@ The system automatically:
   - Changes `globs: [item1, item2]` to `globs: item1, item2` (removing brackets and quotes)
 - Saves them as formatted `.mdc` files in `.cursor/rules/` with prefixes:
   - `system-` prefix for files from `/system/guideline/`
-  - `user-` prefix for files from `/data/guideline/`
+  - `user-` prefix for files from `/user/guideline/`
 - The `scripts/sync-guidelines-cursor-rules.sh` script maintains these files automatically
 
 ## Updating Rules
