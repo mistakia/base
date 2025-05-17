@@ -32,6 +32,7 @@ export async function load_schema_definitions_from_git({
   try {
     // Collect all schema files from repositories
     log('Scanning repositories for schema files')
+    // TODO should use list_entity_files_from_git instead
     const all_files = await list_markdown_files_from_git([
       system_repository,
       user_repository

@@ -2,7 +2,7 @@ import path from 'path'
 import debug from 'debug'
 import glob from 'glob'
 
-import { create_file_info } from '#libs-server/repository/common/file-utils.mjs'
+import { create_file_info } from '#root/libs-server/repository/create-file-info.mjs'
 import git from '#libs-server/git/index.mjs'
 
 const log = debug('markdown:scanner:filesystem')
@@ -63,7 +63,6 @@ export async function list_markdown_files_from_filesystem({
       }
 
       const file_info = create_file_info({
-        repo_type: 'system',
         repo_path: root_base_directory,
         relative_path,
         absolute_path,
@@ -95,7 +94,6 @@ export async function list_markdown_files_from_filesystem({
         }
 
         const file_info = create_file_info({
-          repo_type: 'user',
           repo_path: submodule_path,
           relative_path,
           absolute_path,

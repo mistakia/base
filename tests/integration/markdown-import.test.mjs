@@ -51,13 +51,11 @@ describe('Markdown Import Integration Tests', function () {
       const result = await import_repository_from_git({
         repositories: [
           {
-            repo_type: 'system',
             path: '.',
             branch: system_branch,
             is_submodule: false
           },
           {
-            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
@@ -85,13 +83,11 @@ describe('Markdown Import Integration Tests', function () {
       await import_repository_from_git({
         repositories: [
           {
-            repo_type: 'system',
             path: '.',
             branch: system_branch,
             is_submodule: false
           },
           {
-            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
@@ -120,13 +116,11 @@ describe('Markdown Import Integration Tests', function () {
       await import_repository_from_git({
         repositories: [
           {
-            repo_type: 'system',
             path: '.',
             branch: system_branch,
             is_submodule: false
           },
           {
-            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
@@ -164,13 +158,11 @@ describe('Markdown Import Integration Tests', function () {
       await import_repository_from_git({
         repositories: [
           {
-            repo_type: 'system',
             path: '.',
             branch: system_branch,
             is_submodule: false
           },
           {
-            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false
@@ -213,13 +205,11 @@ describe('Markdown Import Integration Tests', function () {
       const result = await import_repository_from_git({
         repositories: [
           {
-            repo_type: 'system',
             path: '.',
             branch: system_branch,
             is_submodule: false
           },
           {
-            repo_type: 'user',
             path: user_repo.path,
             branch: user_branch,
             is_submodule: false

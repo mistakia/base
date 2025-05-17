@@ -11,18 +11,12 @@ const log = debug('repository:list-entity-files')
  * @param {Array<string>} [params.include_entity_types] - Entity types to include (e.g., ['guideline', 'rule'])
  * @param {Array<string>} [params.exclude_entity_types] - Entity types to exclude
  * @param {string} params.root_base_directory - The root base directory to search in
- * @param {Array<string>} [params.include_patterns] - Glob patterns to include
- * @param {Array<string>} [params.exclude_patterns] - Glob patterns to exclude
- * @param {string} [params.repo_type] - Repository type (e.g., 'system', 'user')
  * @returns {Promise<Array>} - Array of entities that match the types
  */
 export async function list_entity_files_from_filesystem({
   include_entity_types = [],
   exclude_entity_types = [],
-  root_base_directory,
-  include_patterns = ['**/*.md'],
-  exclude_patterns = [],
-  repo_type = 'user'
+  root_base_directory
 }) {
   try {
     log(`Listing entities from filesystem in '${root_base_directory}'`)
@@ -33,10 +27,7 @@ export async function list_entity_files_from_filesystem({
 
     // Find all markdown files using list_markdown_files_from_filesystem
     const markdown_files = await list_markdown_files_from_filesystem({
-      root_base_directory,
-      include_patterns,
-      exclude_patterns,
-      repo_type
+      root_base_directory
     })
 
     log(`Found ${markdown_files.length} markdown files`)

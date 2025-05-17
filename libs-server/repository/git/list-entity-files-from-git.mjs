@@ -13,7 +13,6 @@ const log = debug('repository:list-entity-files')
  * @param {string} params.repo_path - Path to the git repository
  * @param {string} params.branch - Git branch to scan
  * @param {string} [params.path_pattern] - Pattern for files to include (default: '*.md')
- * @param {string} [params.repo_type] - Repository type (e.g., 'system', 'user')
  * @param {boolean} [params.is_submodule] - Whether the repository is a submodule
  * @param {Object} [params.repository] - Additional repository metadata
  * @returns {Promise<Array>} - Array of entities that match the types
@@ -24,7 +23,6 @@ export async function list_entity_files_from_git({
   repo_path,
   branch,
   path_pattern = '*.md',
-  repo_type = 'user',
   is_submodule = false,
   repository = null
 }) {
@@ -44,7 +42,6 @@ export async function list_entity_files_from_git({
       repo_path,
       branch,
       path_pattern,
-      repo_type,
       is_submodule
     })
 
@@ -81,15 +78,11 @@ export async function list_entity_files_from_git({
 
           // Calculate base_relative_path if it doesn't exist
           if (!entity_result.base_relative_path) {
-            // For root repository
-            if (repository && repository.repository_type === 'root') {
-              entity_result.base_relative_path = file_info.git_relative_path
-            }
             // For submodules
-            else if (repository && repository.submodule_base_path) {
+            if (repository && repository.submodule_base_path) {
               entity_result.base_relative_path = `${repository.submodule_base_path}/${file_info.git_relative_path}`
             }
-            // Default
+            // For root repository
             else {
               entity_result.base_relative_path = file_info.git_relative_path
             }

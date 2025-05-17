@@ -13,12 +13,6 @@ import path from 'path'
 
 const log = debug('markdown:process-repository')
 
-// Repository types
-const REPOSITORY_TYPE = {
-  ROOT: 'root', // Root repository (system)
-  SUBMODULE: 'submodule' // All submodules are treated as user repos
-}
-
 /**
  * Process a single markdown file from git
  * @param {Object} options Processing options
@@ -131,7 +125,6 @@ export async function process_repositories_from_git(options = {}) {
   const root_repo = {
     path: root_base_directory,
     branch,
-    repository_type: REPOSITORY_TYPE.ROOT,
     submodule_base_path: null
   }
 
@@ -151,18 +144,18 @@ export async function process_repositories_from_git(options = {}) {
     repositories.push({
       path: submodule_path,
       branch: submodule_branch,
-      repository_type: REPOSITORY_TYPE.SUBMODULE,
       submodule_base_path: submodule.path
     })
   }
 
   log(
     'Processing repositories:',
-    repositories.map((r) => `${r.path} (${r.repository_type})`)
+    repositories.map((r) => r.path)
   )
 
   // Load schemas from git
   log('Loading schema definitions from git...')
+  // TODO
   // const schemas = await load_schema_definitions_from_git({
   //   system_repository: repositories.find(
   //     (r) => r.repository_type === REPOSITORY_TYPE.ROOT
@@ -178,11 +171,10 @@ export async function process_repositories_from_git(options = {}) {
   let all_files = []
 
   for (const repository of repositories) {
+    // TODO should use list_entity_files_from_git instead
     const repo_files = await list_markdown_files_from_git({
       repo_path: repository.path,
       branch: repository.branch,
-      repo_type:
-        repository.repository_type === REPOSITORY_TYPE.ROOT ? 'system' : 'user',
       submodule_base_path: repository.submodule_base_path
     })
 

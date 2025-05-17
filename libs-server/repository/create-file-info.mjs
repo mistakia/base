@@ -1,7 +1,6 @@
 /**
  * Creates a file info object with common properties
  * @param {Object} params - Parameters
- * @param {string} params.repo_type - The repository type
  * @param {string} params.repo_path - The repository path
  * @param {string} params.relative_path - The relative path within the repository
  * @param {string} params.absolute_path - The absolute path of the file
@@ -10,7 +9,6 @@
  * @returns {Object} File info object
  */
 export function create_file_info({
-  repo_type,
   repo_path,
   relative_path,
   absolute_path,
@@ -24,7 +22,6 @@ export function create_file_info({
     : relative_path
 
   return {
-    repo_type,
     repo_path,
     git_relative_path: relative_path,
     absolute_path,

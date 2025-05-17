@@ -2,10 +2,9 @@ import debug from 'debug'
 import path from 'path'
 
 import { list_markdown_files_from_git } from './list-markdown-files-from-git.mjs'
-import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
+// import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { validate_entity_from_git } from '#libs-server/entity/git/validate-entity-from-git.mjs'
-import { REPOSITORY_TYPE, to_legacy_repository } from '../types.mjs'
 import config from '#config'
 import git from '#libs-server/git/index.mjs'
 
@@ -121,7 +120,6 @@ export async function process_repositories_from_git(options = {}) {
   const root_repo = {
     path: root_base_directory,
     branch,
-    repository_type: REPOSITORY_TYPE.ROOT,
     submodule_base_path: null
   }
 
@@ -141,48 +139,41 @@ export async function process_repositories_from_git(options = {}) {
     repositories.push({
       path: submodule_path,
       branch: submodule_branch,
-      repository_type: REPOSITORY_TYPE.SUBMODULE,
       submodule_base_path: submodule.path
     })
   }
 
   log(
     'Processing repositories:',
-    repositories.map((r) => `${r.path} (${r.repository_type})`)
+    repositories.map((r) => r.path)
   )
 
   // Load schemas from git
   log('Loading schema definitions from git...')
-  const schemas = await load_schema_definitions_from_git({
-    system_repository: repositories.find(
-      (r) => r.repository_type === REPOSITORY_TYPE.ROOT
-    ),
-    user_repository:
-      repositories.find(
-        (r) => r.repository_type === REPOSITORY_TYPE.SUBMODULE
-      ) || null
-  })
+  // TODO
+  // const schemas = await load_schema_definitions_from_git({
+  //   system_repository: repositories.find(
+  //     (r) => r.repository_type === REPOSITORY_TYPE.ROOT
+  //   ),
+  //   user_repository:
+  //     repositories.find(
+  //       (r) => r.repository_type === REPOSITORY_TYPE.SUBMODULE
+  //     ) || null
+  // })
 
   // Scan for markdown files across all repositories
   log('Scanning git repositories...')
   let all_files = []
 
   for (const repository of repositories) {
-    const repo_files = await list_markdown_files_from_git([
-      to_legacy_repository(repository)
-    ])
-    log(`Found ${repo_files.length} markdown files in ${repository.path}`)
-
-    // Add repository info and base path to each file
-    repo_files.forEach((file) => {
-      file.repository = repository
-      file.base_relative_path =
-        repository.repository_type !== REPOSITORY_TYPE.ROOT &&
-        repository.submodule_base_path
-          ? `${repository.submodule_base_path}/${file.git_relative_path}`
-          : file.git_relative_path
+    // TODO should use list_entity_files_from_git instead
+    const repo_files = await list_markdown_files_from_git({
+      repo_path: repository.path,
+      branch: repository.branch,
+      submodule_base_path: repository.submodule_base_path
     })
 
+    log(`Found ${repo_files.length} markdown files in ${repository.path}`)
     all_files = all_files.concat(repo_files)
   }
 
@@ -210,7 +201,8 @@ export async function process_repositories_from_git(options = {}) {
     const result = await process_git_file({
       file,
       repository,
-      schemas,
+      // TODO add schemas back in
+      // schemas,
       branch: repository?.branch || branch,
       entity_processor: options.entity_processor,
       base_relative_path: file.base_relative_path
@@ -226,7 +218,8 @@ export async function process_repositories_from_git(options = {}) {
     skipped,
     errors,
     total: all_files.length,
-    schemas,
+    // TODO add schemas back in
+    // schemas,
     files: all_files,
     repositories
   }
