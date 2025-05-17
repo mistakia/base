@@ -1,5 +1,5 @@
 import debug from 'debug'
-
+import { v4 as uuid } from 'uuid'
 import { write_document_to_filesystem } from '#libs-server/markdown/write-document-to-filesystem.mjs'
 import { format_entity_properties_to_frontmatter } from '#libs-server/entity/format/index.mjs'
 
@@ -13,7 +13,7 @@ const log = debug('write-entity-to-filesystem')
  * @param {Object} options.entity_properties - The entity properties to write
  * @param {string} options.entity_type - The type of entity being written
  * @param {string} [options.entity_content=''] - The markdown content to include after the frontmatter
- * @returns {Promise<boolean>} - Whether the write was successful
+ * @returns {Promise<Object>} - Result object with success status and entity_id
  */
 export async function write_entity_to_filesystem({
   absolute_path,
@@ -36,6 +36,12 @@ export async function write_entity_to_filesystem({
       throw new Error('Entity type is required')
     }
 
+    // Ensure entity_id exists - critical for database synchronization
+    if (!entity_properties.entity_id) {
+      entity_properties.entity_id = uuid()
+      log(`Generated new entity_id: ${entity_properties.entity_id}`)
+    }
+
     // Prepare the frontmatter with base entity fields
     const frontmatter = format_entity_properties_to_frontmatter({
       entity_properties,
@@ -50,7 +56,10 @@ export async function write_entity_to_filesystem({
     })
 
     log(`Successfully wrote ${entity_type} entity to ${absolute_path}`)
-    return true
+    return {
+      success: true,
+      entity_id: entity_properties.entity_id
+    }
   } catch (error) {
     log(`Error writing entity to filesystem at ${absolute_path}:`, error)
     throw error
