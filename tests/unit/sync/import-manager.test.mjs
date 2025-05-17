@@ -4,13 +4,15 @@ import path from 'path'
 import { v4 as uuid } from 'uuid'
 
 import {
-  get_import_directory_paths,
   save_import_data,
-  find_previous_import_files,
   record_import_history,
   get_sync_history,
   find_recent_conflicts
 } from '#libs-server/integrations/sync/import-manager.mjs'
+import {
+  get_import_directory_paths,
+  find_previous_import_files
+} from '#libs-server/sync/index.mjs'
 import {
   create_temp_test_directory,
   reset_all_tables,

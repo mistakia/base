@@ -54,7 +54,7 @@ export async function list_markdown_files_from_git({
       }
 
       // Check if file should be processed based on repo type
-      if (repo_type === 'system' && !file_path.startsWith('system/')) {
+      if (!submodule_base_path && file_path.startsWith('system/')) {
         continue
       }
 

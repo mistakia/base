@@ -1,8 +1,13 @@
 import debug from 'debug'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { list_markdown_files_from_filesystem } from './list-markdown-files-from-filesystem.mjs'
+import { list_markdown_files_in_filesystem } from '#root/libs-server/repository/filesystem/list-markdown-files-in-filesystem.mjs'
+import is_main from '#libs-server/utils/is-main.mjs'
+import config from '#config'
 
 const log = debug('repository:list-entity-files')
+debug.enable('repository:list-entity-files')
 
 /**
  * List entities from the filesystem
@@ -13,7 +18,7 @@ const log = debug('repository:list-entity-files')
  * @param {string} params.root_base_directory - The root base directory to search in
  * @returns {Promise<Array>} - Array of entities that match the types
  */
-export async function list_entity_files_from_filesystem({
+export async function list_entity_files_in_filesystem({
   include_entity_types = [],
   exclude_entity_types = [],
   root_base_directory
@@ -25,8 +30,7 @@ export async function list_entity_files_from_filesystem({
       throw new Error('root_base_directory is required')
     }
 
-    // Find all markdown files using list_markdown_files_from_filesystem
-    const markdown_files = await list_markdown_files_from_filesystem({
+    const markdown_files = await list_markdown_files_in_filesystem({
       root_base_directory
     })
 
@@ -73,4 +77,51 @@ export async function list_entity_files_from_filesystem({
     log(`Error listing entities: ${error.message}`)
     throw error
   }
+}
+
+if (is_main(import.meta.url)) {
+  const argv = yargs(hideBin(process.argv))
+    .option('root_base_directory', {
+      alias: 'r',
+      description: 'Root base directory to search in',
+      type: 'string',
+      demandOption: true,
+      default: config.system_base_directory
+    })
+    .option('include_entity_types', {
+      alias: 'i',
+      description: 'Entity types to include (e.g., guideline,rule)',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .option('exclude_entity_types', {
+      alias: 'e',
+      description: 'Entity types to exclude (e.g., guideline,rule)',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .help().argv
+
+  const main = async () => {
+    let error
+    try {
+      const entities = await list_entity_files_in_filesystem({
+        root_base_directory: argv.root_base_directory,
+        include_entity_types: argv.include_entity_types,
+        exclude_entity_types: argv.exclude_entity_types
+      })
+      console.log(`Found ${entities.length} matching entities`)
+      console.log(JSON.stringify(entities, null, 2))
+
+      const entity_types = entities.map((e) => e.entity_properties.type)
+      const unique_entity_types = [...new Set(entity_types)]
+      console.log(`Unique entity types: ${unique_entity_types.join(', ')}`)
+    } catch (err) {
+      error = err
+      console.error('Error:', error.message)
+    }
+    process.exit(error ? 1 : 0)
+  }
+
+  main()
 }

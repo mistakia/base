@@ -25,9 +25,7 @@ export const {
 } = conflict_resolver
 
 export const {
-  get_import_directory_paths,
   record_import_history,
-  find_previous_import_files,
   get_sync_history,
   find_recent_conflicts
 } = import_manager

@@ -10,10 +10,10 @@ import {
   get_sync_record,
   update_sync_record,
   save_import_data,
-  find_previous_import_files,
   resolve_entity_conflicts,
   apply_resolutions
 } from './index.mjs'
+import { find_previous_import_files } from './history/index.mjs'
 
 const log = debug('sync:update-external')
 

@@ -1,7 +1,7 @@
 import debug from 'debug'
 
 import { list_markdown_files_from_git } from './git/list-markdown-files-from-git.mjs'
-import { list_markdown_files_from_filesystem } from './filesystem/list-markdown-files-from-filesystem.mjs'
+import { list_markdown_files_in_filesystem } from './filesystem/list-markdown-files-in-filesystem.mjs'
 // import { load_schema_definitions_from_git } from './git/load-schema-definitions-from-git.mjs'
 import { load_schema_definitions_from_filesystem } from './filesystem/load-schema-definitions-from-filesystem.mjs'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
@@ -172,7 +172,7 @@ export async function process_repositories_from_git(options = {}) {
 
   for (const repository of repositories) {
     // TODO should use list_entity_files_from_git instead
-    const repo_files = await list_markdown_files_from_git({
+    const repo_files = await list_markdown_files_in_git({
       repo_path: repository.path,
       branch: repository.branch,
       submodule_base_path: repository.submodule_base_path
@@ -334,7 +334,7 @@ export async function process_repositories_from_filesystem(options = {}) {
 
   // Scan for all markdown files from filesystem across all repositories
   log('Scanning filesystem repositories...')
-  const all_files = await list_markdown_files_from_filesystem({
+  const all_files = await list_markdown_files_in_filesystem({
     root_base_directory
   })
 

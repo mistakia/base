@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { list_markdown_files_from_filesystem } from './list-markdown-files-from-filesystem.mjs'
+import { list_markdown_files_in_filesystem } from './list-markdown-files-in-filesystem.mjs'
 import { load_schema_definitions_from_filesystem } from './load-schema-definitions-from-filesystem.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 
@@ -97,7 +97,7 @@ export async function process_repositories_from_filesystem(options = {}) {
 
   // Scan for markdown files
   log('Scanning filesystem repositories...')
-  const all_files = await list_markdown_files_from_filesystem({
+  const all_files = await list_markdown_files_in_filesystem({
     root_base_directory
   })
 

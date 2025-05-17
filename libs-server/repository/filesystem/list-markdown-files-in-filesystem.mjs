@@ -1,11 +1,16 @@
 import path from 'path'
 import debug from 'debug'
 import glob from 'glob'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 
 import { create_file_info } from '#root/libs-server/repository/create-file-info.mjs'
 import git from '#libs-server/git/index.mjs'
+import is_main from '#libs-server/utils/is-main.mjs'
+import config from '#config'
 
 const log = debug('markdown:scanner:filesystem')
+debug.enable('markdown:scanner:filesystem')
 
 /**
  * Checks if a file is a markdown file
@@ -22,7 +27,7 @@ function is_markdown_file(file_name) {
  * @param {string} params.root_base_directory - The root base directory to search in
  * @returns {Promise<Array>} Array of file metadata objects
  */
-export async function list_markdown_files_from_filesystem({
+export async function list_markdown_files_in_filesystem({
   root_base_directory
 }) {
   // Validate required parameters
@@ -112,4 +117,33 @@ export async function list_markdown_files_from_filesystem({
     log(`Error scanning directory ${root_base_directory}:`, error)
     throw error
   }
+}
+
+if (is_main(import.meta.url)) {
+  const argv = yargs(hideBin(process.argv))
+    .option('root_base_directory', {
+      alias: 'r',
+      description: 'Root base directory to search in',
+      type: 'string',
+      demandOption: true,
+      default: config.system_base_directory
+    })
+    .help().argv
+
+  const main = async () => {
+    let error
+    try {
+      const files = await list_markdown_files_in_filesystem({
+        root_base_directory: argv.root_base_directory
+      })
+      console.log(`Found ${files.length} markdown files`)
+      console.log(JSON.stringify(files, null, 2))
+    } catch (err) {
+      error = err
+      console.error('Error:', error.message)
+    }
+    process.exit(error ? 1 : 0)
+  }
+
+  main()
 }

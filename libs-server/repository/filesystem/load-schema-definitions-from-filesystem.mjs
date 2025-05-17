@@ -1,5 +1,5 @@
 import debug from 'debug'
-// import { list_markdown_files_from_filesystem } from './list-markdown-files-from-filesystem.mjs'
+// import { list_markdown_files_in_filesystem } from './list-markdown-files-in-filesystem.mjs'
 
 const log = debug('markdown:schema:filesystem')
 
