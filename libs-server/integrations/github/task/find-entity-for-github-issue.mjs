@@ -2,9 +2,9 @@ import debug from 'debug'
 import fs from 'fs/promises'
 import path from 'path'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
-import { 
+import {
   format_entity_absolute_path_for_github_issue,
-  format_entity_directory_for_github_issue 
+  format_entity_directory_for_github_issue
 } from './format-task-path-for-github-issue.mjs'
 
 const log = debug('github:task')
@@ -65,11 +65,11 @@ export async function find_entity_for_github_issue({
       })
 
       log(`Attempting direct file lookup at ${absolute_path}`)
-      
+
       const result = await read_entity_from_filesystem({
         absolute_path
       })
-      
+
       if (result.success) {
         return {
           entity_id: result.entity_properties.entity_id,
@@ -85,9 +85,9 @@ export async function find_entity_for_github_issue({
       github_repository_name,
       user_base_directory
     })
-    
+
     log(`Searching for files in ${directory_path}`)
-    
+
     try {
       // Check if directory exists
       try {
@@ -98,22 +98,26 @@ export async function find_entity_for_github_issue({
       }
 
       const files = await fs.readdir(directory_path)
-      
+
       // Find markdown files starting with the issue number
-      const potential_files = files.filter(file => 
-        file.startsWith(`${github_issue_number}-`) && file.endsWith('.md')
+      const potential_files = files.filter(
+        (file) =>
+          file.startsWith(`${github_issue_number}-`) && file.endsWith('.md')
       )
-      
+
       // Check each potential file
       for (const file of potential_files) {
         const absolute_path = path.join(directory_path, file)
-        
+
         const result = await read_entity_from_filesystem({
           absolute_path
         })
-        
+
         // Check if this file has the external_id we're looking for
-        if (result.success && result.entity_properties.external_id === external_id) {
+        if (
+          result.success &&
+          result.entity_properties.external_id === external_id
+        ) {
           return {
             entity_id: result.entity_properties.entity_id,
             absolute_path,
@@ -121,22 +125,25 @@ export async function find_entity_for_github_issue({
           }
         }
       }
-      
+
       // If we didn't find by issue number prefix, check all markdown files
-      const all_markdown_files = files.filter(file => file.endsWith('.md'))
-      
+      const all_markdown_files = files.filter((file) => file.endsWith('.md'))
+
       for (const file of all_markdown_files) {
         // Skip files we already checked
         if (potential_files.includes(file)) continue
-        
+
         const absolute_path = path.join(directory_path, file)
-        
+
         const result = await read_entity_from_filesystem({
           absolute_path
         })
-        
+
         // Check if this file has the external_id we're looking for
-        if (result.success && result.entity_properties.external_id === external_id) {
+        if (
+          result.success &&
+          result.entity_properties.external_id === external_id
+        ) {
           return {
             entity_id: result.entity_properties.entity_id,
             absolute_path,

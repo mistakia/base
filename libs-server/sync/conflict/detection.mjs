@@ -2,7 +2,7 @@ import debug from 'debug'
 import {
   get_sync_record,
   has_entity_changed_since_sync
-} from '../database/index.mjs'
+} from '../sync-record/index.mjs'
 import { detect_field_changes } from '../core/index.mjs'
 
 const log = debug('sync:conflict:detection')

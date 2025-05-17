@@ -4,7 +4,6 @@ import { format_entity_absolute_path_for_github_issue } from './format-task-path
 
 const log = debug('github:task')
 
-
 /**
  * Creates a new task in the filesystem from a GitHub issue and records sync info in the database
  *

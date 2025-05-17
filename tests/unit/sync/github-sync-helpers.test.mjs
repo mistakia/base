@@ -54,8 +54,8 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
 
   describe('create_github_metadata_entries', () => {
     it('should create basic metadata entries for GitHub issue', () => {
-      const repo_owner = 'test-owner'
-      const repo_name = 'test-repo'
+      const github_repository_owner = 'test-owner'
+      const github_repository_name = 'test-repo'
 
       const normalized_issue = {
         external_url: 'https://github.com/test-owner/test-repo/issues/123',
@@ -66,8 +66,8 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
         entity_id: test_entity_id,
         issue: test_issue_data,
         normalized_issue,
-        repo_owner,
-        repo_name
+        github_repository_owner,
+        github_repository_name
       })
 
       // Verify base metadata entries
@@ -80,7 +80,7 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
       )
       expect(external_id_entry).to.exist
       expect(external_id_entry.value).to.equal(
-        `github:${repo_owner}/${repo_name}:${test_issue_data.number}`
+        `github:${github_repository_owner}/${github_repository_name}:${test_issue_data.number}`
       )
 
       const external_url_entry = metadata_entries.find(
@@ -91,12 +91,14 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
 
       const repo_entry = metadata_entries.find((e) => e.key === 'github_repo')
       expect(repo_entry).to.exist
-      expect(repo_entry.value).to.equal(`${repo_owner}/${repo_name}`)
+      expect(repo_entry.value).to.equal(
+        `${github_repository_owner}/${github_repository_name}`
+      )
     })
 
     it('should add labels metadata when issue has labels', () => {
-      const repo_owner = 'test-owner'
-      const repo_name = 'test-repo'
+      const github_repository_owner = 'test-owner'
+      const github_repository_name = 'test-repo'
 
       const issue_with_labels = {
         ...test_issue_data,
@@ -115,8 +117,8 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
         entity_id: test_entity_id,
         issue: issue_with_labels,
         normalized_issue,
-        repo_owner,
-        repo_name
+        github_repository_owner,
+        github_repository_name
       })
 
       // Find labels metadata entry
@@ -133,8 +135,8 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
     })
 
     it('should add project item ID when available', () => {
-      const repo_owner = 'test-owner'
-      const repo_name = 'test-repo'
+      const github_repository_owner = 'test-owner'
+      const github_repository_name = 'test-repo'
 
       const normalized_issue = {
         external_url: 'https://github.com/test-owner/test-repo/issues/123',
@@ -146,8 +148,8 @@ describe('GitHub Sync Helper Functions Unit Tests', () => {
         entity_id: test_entity_id,
         issue: test_issue_data,
         normalized_issue,
-        repo_owner,
-        repo_name
+        github_repository_owner,
+        github_repository_name
       })
 
       // Find project item metadata entry

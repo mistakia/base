@@ -70,7 +70,7 @@ export function format_entity_absolute_path_for_github_issue({
   github_repository_name,
   github_issue_number,
   user_base_directory,
-  github_issue_title 
+  github_issue_title
 }) {
   // Generate slug from title
   const github_issue_title_slug = slugify(github_issue_title, {
@@ -79,11 +79,12 @@ export function format_entity_absolute_path_for_github_issue({
     remove: /[*+~.()'"!:@]/g
   })
 
-  const github_entity_directory_for_github_issue = format_entity_directory_for_github_issue({
-    github_repository_owner,
-    github_repository_name,
-    user_base_directory
-  })
+  const github_entity_directory_for_github_issue =
+    format_entity_directory_for_github_issue({
+      github_repository_owner,
+      github_repository_name,
+      user_base_directory
+    })
 
   return path.join(
     github_entity_directory_for_github_issue,

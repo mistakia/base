@@ -254,7 +254,6 @@ describe('GitHub Mapper Integration Tests', () => {
         'github_url',
         'https://github.com/test/repo/issues/42'
       )
-      expect(normalized).to.have.property('repo_full_name', 'test/repo')
       expect(normalized).to.have.property('created_at')
     })
 
@@ -371,9 +370,10 @@ describe('GitHub Mapper Integration Tests', () => {
       })
 
       expect(normalized).to.have.property(
-        'repo_full_name',
-        'repo-owner/repo-name'
+        'github_repository_owner',
+        'repo-owner'
       )
+      expect(normalized).to.have.property('github_repository_name', 'repo-name')
     })
 
     it('should handle project item fields', () => {

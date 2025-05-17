@@ -119,7 +119,9 @@ export async function create_entity_from_external_item({
       absolute_path
     }
   } catch (error) {
-    log(`Error creating ${entity_type} from ${external_system} item: ${error.message}`)
+    log(
+      `Error creating ${entity_type} from ${external_system} item: ${error.message}`
+    )
     throw error
   }
 }
