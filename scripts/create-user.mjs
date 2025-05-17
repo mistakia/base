@@ -5,6 +5,8 @@ import crypto from 'crypto'
 import { isMain } from '#libs-server'
 import create_user from '#libs-server/users/create-user.mjs'
 
+// TODO change the system to have the user id be derived from the private key
+
 const argv = yargs(hideBin(process.argv))
   .option('username', {
     alias: 'u',
