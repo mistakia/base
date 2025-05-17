@@ -47,8 +47,6 @@ export default async function import_github_project_issues({
         cursor
       })
 
-      console.log({ project_data })
-
       if (page_count === 1) {
         project_id = project_data.data.user.projectV2.id
       }
