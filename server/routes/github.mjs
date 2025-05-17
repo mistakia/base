@@ -85,8 +85,8 @@ router.post('/webhooks', async (req, res) => {
 
     // Get the event name and process accordingly
     const event_name = req.headers['x-github-event']
-    const github_token = config.github?.access_token
-    const default_user_id = config.github?.default_user_id
+    const github_token = config.github_access_token
+    const default_user_id = config.user_id
 
     // Process different event types
     switch (event_name) {
@@ -115,8 +115,8 @@ router.post('/webhooks', async (req, res) => {
         // Process the issue using the new sync system
         const result = await github.process_single_github_issue({
           issue,
-          repo_owner: repository.owner.login,
-          repo_name: repository.name,
+          github_repository_owner: repository.owner.login,
+          github_repository_name: repository.name,
           github_token,
           user_id: default_user_id
         })
@@ -263,16 +263,16 @@ router.post('/webhooks', async (req, res) => {
           })
         }
 
-        const [, owner, repo, issue_number] = issue_url_match
+        const [, github_repository_owner, github_repository_name, issue_number] = issue_url_match
         log(
-          `Processing project card event for ${owner}/${repo}#${issue_number}`
+          `Processing project card event for ${github_repository_owner}/${github_repository_name}#${issue_number}`
         )
 
         // Fetch the issue
         try {
           const issue = await github.get_github_issue({
-            owner,
-            repo,
+            github_repository_owner,
+            github_repository_name,
             issue_number: parseInt(issue_number, 10),
             github_token
           })
@@ -280,15 +280,15 @@ router.post('/webhooks', async (req, res) => {
           // Process the issue with project card data using the new sync system
           const result = await github.process_single_github_issue({
             issue,
-            repo_owner: owner,
-            repo_name: repo,
+            github_repository_owner,
+            github_repository_name,
             github_token,
             user_id: default_user_id,
             project_item: card
           })
 
           log(
-            `Project card processed: ${owner}/${repo}#${issue_number} - Action: ${result.action}`
+            `Project card processed: ${github_repository_owner}/${github_repository_name}#${issue_number} - Action: ${result.action}`
           )
 
           return res.json({

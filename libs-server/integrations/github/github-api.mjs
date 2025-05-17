@@ -15,8 +15,7 @@ export const map_task_status_to_github_state = (status) => {
 }
 
 const create_github_client = ({ github_token }) => {
-  return new GraphQLClient({
-    url: 'https://api.github.com/graphql',
+  return new GraphQLClient('https://api.github.com/graphql', {
     headers: {
       Authorization: `Bearer ${github_token}`
     }
@@ -155,19 +154,9 @@ export const get_github_project = async ({
 
   try {
     const client = create_github_client({ github_token })
-    const { data, errors } = await client.request({
-      document: query,
-      variables,
-      errorPolicy: 'all'
-    })
+    const data = await client.request(query, variables)
 
-    if (errors?.length > 0) {
-      const error_messages = errors.map((e) => e.message).join(', ')
-      log(`GitHub GraphQL API errors: ${error_messages}`)
-      throw new Error(`GitHub GraphQL API errors: ${error_messages}`)
-    }
-
-    return data
+    return { data }
   } catch (error) {
     log(`GitHub GraphQL API error: ${error.message}`)
     throw error
@@ -175,14 +164,14 @@ export const get_github_project = async ({
 }
 
 export const get_github_repo_issues = async ({
-  owner,
-  repo,
+  github_repository_owner,
+  github_repository_name,
   github_token,
   state = 'all',
   per_page = 100,
   page = 1
 }) => {
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues?state=${state}&per_page=${per_page}&page=${page}`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/issues?state=${state}&per_page=${per_page}&page=${page}`
 
   const response = await fetch(url, {
     method: 'GET',
@@ -212,12 +201,12 @@ export const get_github_repo_issues = async ({
 }
 
 export const get_github_issue = async ({
-  owner,
-  repo,
+  github_repository_owner,
+  github_repository_name,
   issue_number,
   github_token
 }) => {
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/issues/${issue_number}`
 
   const response = await fetch(url, {
     method: 'GET',
@@ -236,13 +225,13 @@ export const get_github_issue = async ({
 }
 
 export const update_github_issue = async ({
-  owner,
-  repo,
-  issue_number,
+  github_repository_owner,
+  github_repository_name,
+  github_issue_number,
   github_token,
   data
 }) => {
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/issues/${github_issue_number}`
 
   const response = await fetch(url, {
     method: 'PATCH',
@@ -280,10 +269,10 @@ export const extract_issues_from_project_graphql = (project_data) => {
     }
 
     const issue = item.content
-    const owner = issue.repository.owner.login
-    const repo = issue.repository.name
+    const github_repository_owner = issue.repository.owner.login
+    const github_repository_name = issue.repository.name
     const issue_number = issue.number
-    const repo_full_name = `${owner}/${repo}`
+    const repo_full_name = `${github_repository_owner}/${github_repository_name}`
 
     // Convert GraphQL issue format to REST API format for compatibility
     const normalized_issue = {
@@ -304,9 +293,9 @@ export const extract_issues_from_project_graphql = (project_data) => {
           color: label.color
         })) || [],
       repository: {
-        name: repo,
+        name: github_repository_name,
         owner: {
-          login: owner
+          login: github_repository_owner
         }
       }
     }
@@ -329,14 +318,14 @@ export const group_issues_by_repo = (issues) => {
   const issues_by_repo = {}
 
   for (const issue of issues) {
-    const owner = issue.repository.owner.login
-    const repo = issue.repository.name
-    const repo_full_name = `${owner}/${repo}`
+    const github_repository_owner = issue.repository.owner.login
+    const github_repository_name = issue.repository.name
+    const repo_full_name = `${github_repository_owner}/${github_repository_name}`
 
     if (!issues_by_repo[repo_full_name]) {
       issues_by_repo[repo_full_name] = {
-        owner,
-        repo,
+        github_repository_owner,
+        github_repository_name,
         issues: []
       }
     }
@@ -366,15 +355,15 @@ export async function create_pull_request({
   body,
   github_token
 }) {
-  const [owner, repo_name] = repo.split('/')
+  const [github_repository_owner, github_repository_name] = repo.split('/')
 
-  if (!owner || !repo_name) {
+  if (!github_repository_owner || !github_repository_name) {
     throw new Error('Repository must be in the format owner/repo')
   }
 
   log(`Creating PR in ${repo}: ${title} (${head} → ${base})`)
 
-  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/pulls`
 
   const response = await fetch(url, {
     method: 'POST',
@@ -409,15 +398,15 @@ export async function create_pull_request({
  * @returns {Promise<Object>} Pull request data
  */
 export async function get_pull_request({ repo, pull_number, github_token }) {
-  const [owner, repo_name] = repo.split('/')
+  const [github_repository_owner, github_repository_name] = repo.split('/')
 
-  if (!owner || !repo_name) {
+  if (!github_repository_owner || !github_repository_name) {
     throw new Error('Repository must be in the format owner/repo')
   }
 
   log(`Getting PR #${pull_number} from ${repo}`)
 
-  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls/${pull_number}`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/pulls/${pull_number}`
 
   const response = await fetch(url, {
     method: 'GET',
@@ -454,15 +443,15 @@ export async function update_pull_request({
   state,
   github_token
 }) {
-  const [owner, repo_name] = repo.split('/')
+  const [github_repository_owner, github_repository_name] = repo.split('/')
 
-  if (!owner || !repo_name) {
+  if (!github_repository_owner || !github_repository_name) {
     throw new Error('Repository must be in the format owner/repo')
   }
 
   log(`Updating PR #${pull_number} in ${repo}`)
 
-  const url = `https://api.github.com/repos/${owner}/${repo_name}/pulls/${pull_number}`
+  const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/pulls/${pull_number}`
 
   const data = {}
   if (title !== undefined) data.title = title

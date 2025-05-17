@@ -1,7 +1,31 @@
 import debug from 'debug'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
+import { format_external_id } from '#libs-server/sync/format-external-id.mjs'
 
 const log = debug('github-mapper')
+
+/**
+ * Format external ID specifically for GitHub issues
+ *
+ * @param {object} params - Parameters
+ * @param {string} params.github_repository_owner - GitHub repository owner
+ * @param {string} params.github_repository_name - GitHub repository name
+ * @param {string} params.github_issue_number - GitHub issue number
+ * @returns {string} Formatted external ID for GitHub issue
+ */
+export function format_external_id_for_github_issue({
+  github_repository_owner,
+  github_repository_name,
+  github_issue_number
+}) {
+  const external_system = 'github'
+  const external_item_id = `${github_repository_owner}/${github_repository_name}:${github_issue_number}`
+
+  return format_external_id({
+    external_system,
+    external_item_id
+  })
+}
 
 /**
  * Field mappings between internal task fields and GitHub issue fields
@@ -282,32 +306,41 @@ export function extract_project_fields(project_item) {
  *
  * @param {Object} options - Function options
  * @param {Object} options.issue - GitHub issue object
- * @param {string} options.repo_owner - Repository owner
- * @param {string} options.repo_name - Repository name
+ * @param {string} options.external_id - External ID of the issue
+ * @param {string} options.github_repository_owner - Repository owner
+ * @param {string} options.github_repository_name - Repository name
  * @param {Object} options.project_item - GitHub project item (optional)
  * @param {Object} options.project_fields - Project fields (optional)
+ * @param {string} options.user_id - User ID
  * @returns {Object} Normalized issue data
  */
 // TODO evaluate if project_item and project_fields can be consolidated
 export function normalize_github_issue({
   issue,
-  repo_owner,
-  repo_name,
+  external_id,
+  github_repository_owner,
+  github_repository_name,
   project_item,
-  project_fields = {}
+  project_fields = {},
+  user_id
 }) {
   // Make sure we have an object to work with
   if (!issue) {
     throw new Error('Missing issue data for normalization')
   }
 
+  if (!user_id) {
+    throw new Error('Missing user ID for normalization')
+  }
+
   // Extract basic fields
-  const normalized_issue = {
+  const normalized_github_issue = {
+    user_id,
     title: issue.title,
-    description: issue.body || '',
+    description: issue.body || 'No description provided',
     status: map_status({ data: issue, direction: 'to_internal' }),
     priority: map_priority({ data: issue, direction: 'to_internal' }),
-    external_id: `${issue.number}`,
+    external_id,
     external_url: issue.html_url,
     created_at: issue.created_at,
     updated_at: issue.updated_at
@@ -315,27 +348,27 @@ export function normalize_github_issue({
 
   // Add GitHub-specific fields
   if (issue.id) {
-    normalized_issue.github_id = issue.id
+    normalized_github_issue.github_id = issue.id
   }
 
   if (issue.number) {
-    normalized_issue.github_number = issue.number
+    normalized_github_issue.github_number = issue.number
   }
 
   if (issue.html_url) {
-    normalized_issue.github_url = issue.html_url
+    normalized_github_issue.github_url = issue.html_url
   }
 
   // Set repository information if available
-  if (repo_owner && repo_name) {
-    normalized_issue.repo_full_name = `${repo_owner}/${repo_name}`
+  if (github_repository_owner && github_repository_name) {
+    normalized_github_issue.repo_full_name = `${github_repository_owner}/${github_repository_name}`
   } else if (issue.repository) {
-    normalized_issue.repo_full_name = `${issue.repository.owner.login}/${issue.repository.name}`
+    normalized_github_issue.repo_full_name = `${issue.repository.owner.login}/${issue.repository.name}`
   }
 
   // Extract dates if issue was closed
   if (issue.state === 'closed' && issue.closed_at) {
-    normalized_issue.finished_at = issue.closed_at
+    normalized_github_issue.finished_at = issue.closed_at
   }
 
   // Check for any labels containing "high" for the priority test case
@@ -345,23 +378,23 @@ export function normalize_github_issue({
     )
 
     if (has_high_priority) {
-      normalized_issue.priority = TASK_PRIORITY.HIGH
+      normalized_github_issue.priority = TASK_PRIORITY.HIGH
     }
   }
 
   // Override with explicit project fields if provided
   if (project_fields && Object.keys(project_fields).length > 0) {
-    Object.assign(normalized_issue, project_fields)
+    Object.assign(normalized_github_issue, project_fields)
   }
 
   // Extract fields from project item if available
   if (project_item) {
     const extracted_fields = extract_project_fields(project_item)
-    Object.assign(normalized_issue, extracted_fields)
+    Object.assign(normalized_github_issue, extracted_fields)
 
     // Add project metadata
-    normalized_issue.github_project_item_id = project_item.id
+    normalized_github_issue.github_project_item_id = project_item.id
   }
 
-  return normalized_issue
+  return normalized_github_issue
 }

@@ -8,8 +8,8 @@ const log = debug('import-github-issues')
 
 // Main function to import issues from a GitHub repository
 export default async function import_github_issues({
-  owner,
-  repo,
+  github_repository_owner,
+  github_repository_name,
   github_token,
   user_id,
   state = 'all',
@@ -28,7 +28,9 @@ export default async function import_github_issues({
       errors: 0
     }
 
-    log(`Starting GitHub import for ${owner}/${repo}`)
+    log(
+      `Starting GitHub import for ${github_repository_owner}/${github_repository_name}`
+    )
 
     if (single_issue) {
       // Process single issue directly
@@ -36,8 +38,8 @@ export default async function import_github_issues({
 
       const issue_result = await github.process_single_github_issue({
         issue: single_issue,
-        repo_owner: owner,
-        repo_name: repo,
+        github_repository_owner,
+        github_repository_name,
         user_id,
         import_history_base_directory
       })
@@ -59,15 +61,15 @@ export default async function import_github_issues({
     while (has_next_page) {
       try {
         log(
-          `Fetching issues from ${owner}/${repo} (page ${page}, state=${state})`
+          `Fetching issues from ${github_repository_owner}/${github_repository_name} (page ${page}, state=${state})`
         )
         const {
           issues,
           has_next_page: more_pages,
           next_page
         } = await get_github_repo_issues({
-          owner,
-          repo,
+          github_repository_owner,
+          github_repository_name,
           github_token,
           state,
           page
@@ -89,8 +91,8 @@ export default async function import_github_issues({
     // Process issues using the new sync system
     const processed_results = await github.process_github_issues({
       issues: all_issues,
-      repo_owner: owner,
-      repo_name: repo,
+      github_repository_owner,
+      github_repository_name,
       user_id,
       import_history_base_directory,
       github_token
@@ -161,8 +163,8 @@ const main = async () => {
       .help().argv
 
     const results = await import_github_issues({
-      owner: args.owner,
-      repo: args.repo,
+      github_repository_owner: args.owner,
+      github_repository_name: args.repo,
       github_token: args.token || config.github_access_token,
       user_id: args.userId,
       state: args.state,
