@@ -7,7 +7,6 @@ export const {
   create_content_identifier,
   detect_field_changes,
   format_value_for_comparison,
-  get_or_create_sync_record,
   get_entity_sync_config,
   find_entity_by_external_id,
   update_field_last_updated_timestamps,
@@ -28,7 +27,6 @@ export const {
 
 export const {
   get_import_directory_paths,
-  save_import_data,
   record_import_history,
   find_previous_import_files,
   get_sync_history,

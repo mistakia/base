@@ -16,8 +16,8 @@ const temp_dir = create_temp_test_directory('github-sync-edge-cases-test-')
 describe('GitHub Sync Edge Cases and Error Handling', () => {
   let test_user
   let test_issue_data
-  let test_repo_owner
-  let test_repo_name
+  let test_github_repository_owner
+  let test_github_repository_name
   let test_entity_id
 
   // Set up test environment
@@ -28,8 +28,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
     test_user = await create_test_user()
 
     // Set up test repository info
-    test_repo_owner = 'test-owner'
-    test_repo_name = 'test-repo'
+    test_github_repository_owner = 'test-owner'
+    test_github_repository_name = 'test-repo'
 
     // Read test fixture data
     const fixture_path = get_fixture_path('github/github-issue.json')
@@ -53,7 +53,7 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       try {
         await github.process_single_github_issue({
           issue: test_issue_data,
-          repo_name: test_repo_name,
+          github_repository_name: test_github_repository_name,
           user_id: test_user.user_id,
           import_history_base_directory: temp_dir.path
         })
@@ -67,7 +67,7 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       try {
         await github.process_single_github_issue({
           issue: test_issue_data,
-          repo_owner: test_repo_owner,
+          github_repository_owner: test_github_repository_owner,
           user_id: test_user.user_id,
           import_history_base_directory: temp_dir.path
         })
@@ -89,8 +89,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       try {
         await github.process_single_github_issue({
           issue: malformed_issue,
-          repo_owner: test_repo_owner,
-          repo_name: test_repo_name,
+          github_repository_owner: test_github_repository_owner,
+          github_repository_name: test_github_repository_name,
           user_id: test_user.user_id,
           import_history_base_directory: temp_dir.path
         })
@@ -141,8 +141,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       // Process the batch
       const results = await github.process_github_issues({
         issues: test_issues,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         user_id: test_user.user_id,
         import_history_base_directory: temp_dir.path
       })
@@ -195,8 +195,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       // Process the batch
       const results = await github.process_github_issues({
         issues: test_issues,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         user_id: test_user.user_id,
         import_history_base_directory: temp_dir.path
       })
@@ -244,7 +244,7 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
         {
           entity_id: test_entity_id,
           key: 'external_id',
-          value: `github:${test_repo_owner}/${test_repo_name}:${test_issue_data.number}`
+          value: `github:${test_github_repository_owner}/${test_github_repository_name}:${test_issue_data.number}`
         },
         {
           entity_id: test_entity_id,
@@ -254,7 +254,7 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
         {
           entity_id: test_entity_id,
           key: 'github_repo',
-          value: `${test_repo_owner}/${test_repo_name}`
+          value: `${test_github_repository_owner}/${test_github_repository_name}`
         }
       ])
 
@@ -262,7 +262,7 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       await sync.get_or_create_sync_record({
         entity_id: test_entity_id,
         external_system: 'github',
-        external_id: `${test_repo_owner}/${test_repo_name}:${test_issue_data.number}`
+        external_id: `${test_github_repository_owner}/${test_github_repository_name}:${test_issue_data.number}`
       })
     })
 
@@ -281,11 +281,11 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
           issue: test_issue_data,
           normalized_issue: github.normalize_github_issue({
             issue: test_issue_data,
-            repo_owner: test_repo_owner,
-            repo_name: test_repo_name
+            github_repository_owner: test_github_repository_owner,
+            github_repository_name: test_github_repository_name
           }),
-          repo_owner: test_repo_owner,
-          repo_name: test_repo_name,
+          github_repository_owner: test_github_repository_owner,
+          github_repository_name: test_github_repository_name,
           import_cid: 'test-cid',
           import_history_base_directory: temp_dir.path
         })
@@ -299,8 +299,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
       // First create an import history to compare against
       const normalized_issue = github.normalize_github_issue({
         issue: test_issue_data,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       await sync.save_import_data({
@@ -316,8 +316,8 @@ describe('GitHub Sync Edge Cases and Error Handling', () => {
         entity_id: test_entity_id,
         issue: test_issue_data,
         normalized_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         import_cid: 'test-cid',
         import_history_base_directory: temp_dir.path
       })

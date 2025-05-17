@@ -7,6 +7,8 @@ import { isMain, github } from '#libs-server'
 
 const log = debug('import-github-project-issues')
 
+debug.enable('import-github-project-issues,github')
+
 /**
  * Import issues from a GitHub project
  */
@@ -15,6 +17,7 @@ export default async function import_github_project_issues({
   project_number,
   github_token,
   user_id,
+  user_base_directory = config.user_base_directory,
   import_history_base_directory = null,
   // used to mock the get_github_project function for testing
   get_github_project = github.get_github_project
@@ -44,6 +47,8 @@ export default async function import_github_project_issues({
         cursor
       })
 
+      console.log({ project_data })
+
       if (page_count === 1) {
         project_id = project_data.data.user.projectV2.id
       }
@@ -65,14 +70,16 @@ export default async function import_github_project_issues({
       all_issues = all_issues.concat(issues)
 
       // Merge project items by issue
-      for (const repo_name in project_items_by_issue) {
-        if (!all_project_items_by_issue[repo_name]) {
-          all_project_items_by_issue[repo_name] = {}
+      for (const github_repository_name in project_items_by_issue) {
+        if (!all_project_items_by_issue[github_repository_name]) {
+          all_project_items_by_issue[github_repository_name] = {}
         }
 
-        for (const issue_number in project_items_by_issue[repo_name]) {
-          all_project_items_by_issue[repo_name][issue_number] =
-            project_items_by_issue[repo_name][issue_number]
+        for (const issue_number in project_items_by_issue[
+          github_repository_name
+        ]) {
+          all_project_items_by_issue[github_repository_name][issue_number] =
+            project_items_by_issue[github_repository_name][issue_number]
         }
       }
     }
@@ -110,9 +117,10 @@ export default async function import_github_project_issues({
       // Process issues for this repository
       const repo_results = await github.process_github_issues({
         issues: repo_data.issues,
-        repo_owner: repo_data.owner,
-        repo_name: repo_data.repo,
+        github_repository_owner: repo_data.github_repository_owner,
+        github_repository_name: repo_data.github_repository_name,
         user_id,
+        user_base_directory,
         import_history_base_directory,
         project_items_map,
         github_token
@@ -177,10 +185,11 @@ const main = async () => {
         type: 'string',
         default: config.github_access_token
       })
-      .option('user-id', {
+      .option('user_id', {
         describe: 'User ID to associate with imported tasks',
         type: 'string',
-        default: config.github?.default_user_id
+        default: config.user_id,
+        demandOption: true
       })
       .option('state', {
         alias: 's',
@@ -196,11 +205,17 @@ const main = async () => {
       })
       .help().argv
 
+    // Validate required parameters
+    if (!argv.user_id) {
+      throw new Error('Missing required parameter: user_id')
+    }
+
     const results = await import_github_project_issues({
       username: argv.username,
       project_number: argv.project,
       github_token: argv.token || config.github_access_token,
-      user_id: argv.userId,
+      user_id: argv.user_id,
+      user_base_directory: config.user_base_directory,
       import_history_base_directory: argv.since
     })
 

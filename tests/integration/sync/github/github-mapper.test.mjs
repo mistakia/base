@@ -240,8 +240,8 @@ describe('GitHub Mapper Integration Tests', () => {
 
       const normalized = normalize_github_issue({
         issue,
-        repo_owner: 'test',
-        repo_name: 'repo'
+        github_repository_owner: 'test',
+        github_repository_name: 'repo'
       })
 
       expect(normalized).to.be.an('object')
@@ -274,8 +274,8 @@ describe('GitHub Mapper Integration Tests', () => {
 
       const normalized = normalize_github_issue({
         issue: closed_issue,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo'
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo'
       })
 
       expect(normalized).to.have.property('status', TASK_STATUS.COMPLETED)
@@ -302,8 +302,8 @@ describe('GitHub Mapper Integration Tests', () => {
 
       const normalized = normalize_github_issue({
         issue: issue_with_labels,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo'
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo'
       })
 
       expect(normalized).to.have.property('status', TASK_STATUS.BLOCKED)
@@ -331,8 +331,8 @@ describe('GitHub Mapper Integration Tests', () => {
 
       const normalized = normalize_github_issue({
         issue,
-        repo_owner: 'test',
-        repo_name: 'repo',
+        github_repository_owner: 'test',
+        github_repository_name: 'repo',
         project_fields
       })
 
@@ -411,8 +411,8 @@ describe('GitHub Mapper Integration Tests', () => {
 
       const normalized = normalize_github_issue({
         issue,
-        repo_owner: 'test',
-        repo_name: 'repo',
+        github_repository_owner: 'test',
+        github_repository_name: 'repo',
         project_item
       })
 

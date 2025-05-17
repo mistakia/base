@@ -17,8 +17,8 @@ const temp_dir = create_temp_test_directory('github-conflict-resolution-test-')
 describe('GitHub Sync Conflict Resolution Tests', () => {
   let test_user
   let test_issue_data
-  let test_repo_owner
-  let test_repo_name
+  let test_github_repository_owner
+  let test_github_repository_name
 
   // Set up test environment
   before(async () => {
@@ -26,8 +26,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
     test_user = await create_test_user()
 
     // Set up test repository info
-    test_repo_owner = 'test-owner'
-    test_repo_name = 'test-repo'
+    test_github_repository_owner = 'test-owner'
+    test_github_repository_name = 'test-repo'
 
     // Read test fixture data
     const fixture_path = get_fixture_path('github/github-issue.json')
@@ -89,7 +89,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         {
           entity_id: test_entity_id,
           key: 'external_id',
-          value: `github:${test_repo_owner}/${test_repo_name}:${original_issue.number}`
+          value: `github:${test_github_repository_owner}/${test_github_repository_name}:${original_issue.number}`
         },
         {
           entity_id: test_entity_id,
@@ -99,7 +99,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         {
           entity_id: test_entity_id,
           key: 'github_repo',
-          value: `${test_repo_owner}/${test_repo_name}`
+          value: `${test_github_repository_owner}/${test_github_repository_name}`
         },
         {
           entity_id: test_entity_id,
@@ -109,7 +109,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
       ])
 
       // Create sync record
-      const external_id = `${test_repo_owner}/${test_repo_name}:${original_issue.number}`
+      const external_id = `${test_github_repository_owner}/${test_github_repository_name}:${original_issue.number}`
       sync_record = await sync.get_or_create_sync_record({
         entity_id: test_entity_id,
         external_system: 'github',
@@ -119,8 +119,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
       // Create initial import history
       const normalized_issue = github.normalize_github_issue({
         issue: original_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       const import_cid = await sync.create_content_identifier(normalized_issue)
@@ -157,8 +157,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
 
       const normalized_issue = github.normalize_github_issue({
         issue: modified_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       const import_cid = await sync.create_content_identifier(normalized_issue)
@@ -168,8 +168,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         entity_id: test_entity_id,
         issue: modified_issue,
         normalized_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         import_cid,
         import_history_base_directory: temp_dir.path
       })
@@ -200,8 +200,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
 
       const normalized_issue = github.normalize_github_issue({
         issue: modified_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       const import_cid = await sync.create_content_identifier(normalized_issue)
@@ -211,8 +211,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         entity_id: test_entity_id,
         issue: modified_issue,
         normalized_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         import_cid,
         import_history_base_directory: temp_dir.path
       })
@@ -268,7 +268,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         {
           entity_id: test_entity_id,
           key: 'external_id',
-          value: `github:${test_repo_owner}/${test_repo_name}:${original_issue.number}`
+          value: `github:${test_github_repository_owner}/${test_github_repository_name}:${original_issue.number}`
         },
         {
           entity_id: test_entity_id,
@@ -278,7 +278,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         {
           entity_id: test_entity_id,
           key: 'github_repo',
-          value: `${test_repo_owner}/${test_repo_name}`
+          value: `${test_github_repository_owner}/${test_github_repository_name}`
         },
         {
           entity_id: test_entity_id,
@@ -288,7 +288,7 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
       ])
 
       // Create sync record
-      const external_id = `${test_repo_owner}/${test_repo_name}:${original_issue.number}`
+      const external_id = `${test_github_repository_owner}/${test_github_repository_name}:${original_issue.number}`
       sync_record = await sync.get_or_create_sync_record({
         entity_id: test_entity_id,
         external_system: 'github',
@@ -298,8 +298,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
       // Create initial import history with open state
       const normalized_issue = github.normalize_github_issue({
         issue: original_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       const import_cid = await sync.create_content_identifier(normalized_issue)
@@ -343,8 +343,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
 
       const normalized_issue = github.normalize_github_issue({
         issue: modified_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       const import_cid = await sync.create_content_identifier(normalized_issue)
@@ -354,8 +354,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         entity_id: test_entity_id,
         issue: modified_issue,
         normalized_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         import_cid,
         import_history_base_directory: temp_dir.path
       })
@@ -394,8 +394,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
 
       const normalized_issue = github.normalize_github_issue({
         issue: modified_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name
       })
 
       // Check that normalized issue has status = COMPLETED
@@ -408,8 +408,8 @@ describe('GitHub Sync Conflict Resolution Tests', () => {
         entity_id: test_entity_id,
         issue: modified_issue,
         normalized_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         import_cid,
         import_history_base_directory: temp_dir.path
       })

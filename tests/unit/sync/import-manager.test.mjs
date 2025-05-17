@@ -58,7 +58,7 @@ describe('Import Manager Unit Tests', () => {
       entity_id: test_entity_id,
       external_system: test_external_system,
       external_id: 'ext-123',
-      last_sync_at: new Date().toISOString()
+      last_synced_at: new Date().toISOString()
     })
   })
 
@@ -444,7 +444,7 @@ describe('Import Manager Unit Tests', () => {
         entity_id: no_conflicts_entity_id,
         external_system: test_external_system,
         external_id: 'ext-no-conflicts',
-        last_sync_at: new Date().toISOString()
+        last_synced_at: new Date().toISOString()
       })
 
       const result = await find_recent_conflicts({

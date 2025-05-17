@@ -17,8 +17,8 @@ const temp_dir = create_temp_test_directory('github-sync-test-')
 describe('GitHub Sync Integration Tests', () => {
   let test_user
   let test_issue_data
-  let test_repo_owner
-  let test_repo_name
+  let test_github_repository_owner
+  let test_github_repository_name
   let test_entity_id
 
   // Set up test environment
@@ -28,8 +28,8 @@ describe('GitHub Sync Integration Tests', () => {
     test_user = await create_test_user()
 
     // Set up test repository info
-    test_repo_owner = 'test-owner'
-    test_repo_name = 'test-repo'
+    test_github_repository_owner = 'test-owner'
+    test_github_repository_name = 'test-repo'
 
     // Read test fixture data
     const fixture_path = get_fixture_path('github/github-issue.json')
@@ -39,18 +39,18 @@ describe('GitHub Sync Integration Tests', () => {
     // Create a test entity using the create_new_task_from_github_issue function
     const normalized_issue = github.normalize_github_issue({
       issue: test_issue_data,
-      repo_owner: test_repo_owner,
-      repo_name: test_repo_name
+      github_repository_owner: test_github_repository_owner,
+      github_repository_name: test_github_repository_name
     })
 
-    const external_id = `${test_repo_owner}/${test_repo_name}:${test_issue_data.number}`
+    const external_id = `${test_github_repository_owner}/${test_github_repository_name}:${test_issue_data.number}`
     const import_cid = await sync.create_content_identifier(normalized_issue)
 
     const result = await github.create_new_task_from_github_issue({
       issue: test_issue_data,
       normalized_issue,
-      repo_owner: test_repo_owner,
-      repo_name: test_repo_name,
+      github_repository_owner: test_github_repository_owner,
+      github_repository_name: test_github_repository_name,
       user_id: test_user.user_id,
       external_id,
       import_cid,
@@ -92,8 +92,8 @@ describe('GitHub Sync Integration Tests', () => {
 
       const result = await github.process_single_github_issue({
         issue,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo',
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo',
         import_history_base_directory: temp_dir.path,
         user_id: test_user.user_id,
         github_token: 'test-token'
@@ -154,8 +154,8 @@ describe('GitHub Sync Integration Tests', () => {
       // Process the updated issue
       const result = await github.process_single_github_issue({
         issue: updated_issue,
-        repo_owner: test_repo_owner,
-        repo_name: test_repo_name,
+        github_repository_owner: test_github_repository_owner,
+        github_repository_name: test_github_repository_name,
         user_id: test_user.user_id,
         import_history_base_directory: temp_dir.path
       })
@@ -220,8 +220,8 @@ describe('GitHub Sync Integration Tests', () => {
       // First import to create the task
       const initial_result = await github.process_single_github_issue({
         issue: initial_issue,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo',
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo',
         user_id: test_user.user_id,
         github_token: 'test-token',
         import_history_base_directory: temp_dir.path
@@ -266,8 +266,8 @@ describe('GitHub Sync Integration Tests', () => {
 
       const result = await github.process_single_github_issue({
         issue: modified_issue,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo',
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo',
         user_id: test_user.user_id,
         github_token: 'test-token',
         import_history_base_directory: temp_dir.path
@@ -325,8 +325,8 @@ describe('GitHub Sync Integration Tests', () => {
       // Process the batch
       const results = await github.process_github_issues({
         issues: test_issues,
-        repo_owner: 'test-owner',
-        repo_name: 'test-repo',
+        github_repository_owner: 'test-owner',
+        github_repository_name: 'test-repo',
         user_id: test_user.user_id,
         import_history_base_directory: temp_dir.path,
         github_token: 'test-token'
@@ -438,7 +438,7 @@ describe('GitHub Sync Integration Tests', () => {
         String(test_issue_data.number)
       )
       expect(metadata.github_repo).to.equal(
-        `${test_repo_owner}/${test_repo_name}`
+        `${test_github_repository_owner}/${test_github_repository_name}`
       )
     })
   })

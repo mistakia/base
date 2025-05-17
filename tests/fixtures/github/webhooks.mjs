@@ -187,14 +187,14 @@ export function create_pr_merged_webhook({
   title = 'Test Pull Request',
   branch = 'feature/test-branch'
 }) {
-  const [owner, repo_name] = repo.split('/')
+  const [github_repository_owner, github_repository_name] = repo.split('/')
   const custom_repository = {
     ...base_repository,
-    name: repo_name,
+    name: github_repository_name,
     full_name: repo,
     owner: {
       ...base_repository.owner,
-      login: owner
+      login: github_repository_owner
     },
     html_url: `https://github.com/${repo}`,
     url: `https://api.github.com/repos/${repo}`,
