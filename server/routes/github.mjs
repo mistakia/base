@@ -263,7 +263,12 @@ router.post('/webhooks', async (req, res) => {
           })
         }
 
-        const [, github_repository_owner, github_repository_name, issue_number] = issue_url_match
+        const [
+          ,
+          github_repository_owner,
+          github_repository_name,
+          issue_number
+        ] = issue_url_match
         log(
           `Processing project card event for ${github_repository_owner}/${github_repository_name}#${issue_number}`
         )
