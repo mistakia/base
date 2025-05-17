@@ -11,6 +11,7 @@ const log = debug('entity:database:write')
  * @param {Object} params Entity creation parameters
  * @param {Object} params.entity_properties Properties of the entity
  * @param {string} params.entity_properties.title Title of the entity
+ * @param {string} params.entity_properties.entity_id ID of the entity
  * @param {string} [params.entity_properties.description=''] Description of the entity
  * @param {string} [params.entity_properties.permalink=null] Custom URL path
  * @param {string[]} [params.entity_properties.tags=[]] Array of categorization tags
@@ -19,7 +20,6 @@ const log = debug('entity:database:write')
  * @param {string} params.entity_type Type of entity (task, guideline, activity, etc.)
  * @param {string} params.user_id User who owns the entity
  * @param {string} [params.entity_content=''] Optional entity content/markdown
- * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {Object} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {Object} [params.file_info.base_relative_path=null] Path relative to repository base
@@ -32,7 +32,6 @@ export async function write_entity_to_database({
   entity_type,
   user_id,
   entity_content = '',
-  entity_id = null,
   file_info = null,
   trx = null
 }) {
@@ -49,6 +48,10 @@ export async function write_entity_to_database({
 
     if (!user_id) {
       throw new Error('User ID is required')
+    }
+
+    if (!entity_properties.entity_id) {
+      throw new Error('entity_properties.entity_id is required')
     }
 
     const db_client = trx || db
@@ -88,25 +91,31 @@ export async function write_entity_to_database({
 
     let result_entity_id
 
-    // Update or insert based on whether entity_id exists
-    if (entity_id) {
-      // Update existing entity
-      await db_client('entities').where({ entity_id }).update(entity_data)
+    // Check if entity exists in database
+    const existing_entity = await db_client('entities')
+      .where({ entity_id: entity_properties.entity_id })
+      .first()
 
-      result_entity_id = entity_id
-      log(`Updated entity in database: ${entity_id}`)
+    if (existing_entity) {
+      // Update existing entity
+      await db_client('entities')
+        .where({ entity_id: entity_properties.entity_id })
+        .update(entity_data)
+
+      log(`Updated entity in database: ${entity_properties.entity_id}`)
     } else {
-      // Insert new entity
+      // Insert with provided entity_id
       // Use created_at from entity_properties if it exists, otherwise use current time
       entity_data.created_at = entity_properties.created_at || new Date()
+      entity_data.entity_id = entity_properties.entity_id
 
-      const [new_entity] = await db_client('entities')
-        .insert(entity_data)
-        .returning('entity_id')
-
-      result_entity_id = new_entity.entity_id
-      log(`Created new entity in database: ${result_entity_id}`)
+      await db_client('entities').insert(entity_data)
+      log(
+        `Created new entity in database with provided ID: ${entity_properties.entity_id}`
+      )
     }
+
+    result_entity_id = entity_properties.entity_id
 
     // Process relations if present in entity_properties
     if (entity_properties.relations) {

@@ -27,7 +27,7 @@ ALTER TABLE IF EXISTS ONLY public.physical_items DROP CONSTRAINT IF EXISTS physi
 ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_entity_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_entity_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_tag_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_target_entity_id_fkey;
@@ -64,8 +64,8 @@ DROP INDEX IF EXISTS public.idx_sync_configs_entity_id;
 DROP INDEX IF EXISTS public.idx_physical_location_coordinates;
 DROP INDEX IF EXISTS public.idx_guideline_status;
 DROP INDEX IF EXISTS public.idx_guideline_effective_date;
-DROP INDEX IF EXISTS public.idx_external_syncs_external;
-DROP INDEX IF EXISTS public.idx_external_syncs_entity_id;
+DROP INDEX IF EXISTS public.idx_entity_sync_records_external;
+DROP INDEX IF EXISTS public.idx_entity_sync_records_entity_id;
 DROP INDEX IF EXISTS public.idx_entity_tags_tag_id;
 DROP INDEX IF EXISTS public.idx_entity_relations_type;
 DROP INDEX IF EXISTS public.idx_entity_relations_target_type;
@@ -134,8 +134,8 @@ ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_pkey
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.organization_persons DROP CONSTRAINT IF EXISTS organization_persons_pkey;
 ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_pkey;
-ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_pkey;
-ALTER TABLE IF EXISTS ONLY public.external_syncs DROP CONSTRAINT IF EXISTS external_syncs_entity_id_external_system_external_id_key;
+ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_entity_id_external_system_external_id_key;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_observations DROP CONSTRAINT IF EXISTS entity_observations_pkey;
@@ -193,7 +193,7 @@ DROP TABLE IF EXISTS public.organization_persons;
 DROP VIEW IF EXISTS public.organization_members_view;
 DROP VIEW IF EXISTS public.guideline_with_activities;
 DROP TABLE IF EXISTS public.guidelines;
-DROP TABLE IF EXISTS public.external_syncs;
+DROP TABLE IF EXISTS public.entity_sync_records;
 DROP VIEW IF EXISTS public.entity_stats;
 DROP TABLE IF EXISTS public.entity_tags;
 DROP TABLE IF EXISTS public.entity_observations;
@@ -928,12 +928,12 @@ CREATE VIEW public.entity_stats AS
 -- Name: external_syncs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.external_syncs (
+CREATE TABLE public.entity_sync_records (
     sync_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
     entity_id uuid NOT NULL,
     external_system character varying(50) NOT NULL,
     external_id character varying(255) NOT NULL,
-    last_sync_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_synced_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     last_external_update_at timestamp without time zone,
     last_internal_update_at timestamp without time zone,
     field_last_updated jsonb,
@@ -1637,16 +1637,16 @@ ALTER TABLE ONLY public.entity_tags
 -- Name: external_syncs external_syncs_entity_id_external_system_external_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.external_syncs
-    ADD CONSTRAINT external_syncs_entity_id_external_system_external_id_key UNIQUE (entity_id, external_system, external_id);
+ALTER TABLE ONLY public.entity_sync_records
+    ADD CONSTRAINT entity_sync_records_entity_id_external_system_external_id_key UNIQUE (entity_id, external_system, external_id);
 
 
 --
 -- Name: external_syncs external_syncs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.external_syncs
-    ADD CONSTRAINT external_syncs_pkey PRIMARY KEY (sync_id);
+ALTER TABLE ONLY public.entity_sync_records
+    ADD CONSTRAINT entity_sync_records_pkey PRIMARY KEY (sync_id);
 
 
 --
@@ -2152,14 +2152,14 @@ CREATE INDEX idx_entity_tags_tag_id ON public.entity_tags USING btree (tag_entit
 -- Name: idx_external_syncs_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_external_syncs_entity_id ON public.external_syncs USING btree (entity_id);
+CREATE INDEX idx_entity_sync_records_entity_id ON public.entity_sync_records USING btree (entity_id);
 
 
 --
 -- Name: idx_external_syncs_external; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_external_syncs_external ON public.external_syncs USING btree (external_system, external_id);
+CREATE INDEX idx_entity_sync_records_external ON public.entity_sync_records USING btree (external_system, external_id);
 
 
 --
@@ -2435,14 +2435,6 @@ ALTER TABLE ONLY public.entity_tags
 
 
 --
--- Name: external_syncs external_syncs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.external_syncs
-    ADD CONSTRAINT external_syncs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
-
-
---
 -- Name: guidelines guidelines_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2503,7 +2495,7 @@ ALTER TABLE ONLY public.sync_conflicts
 --
 
 ALTER TABLE ONLY public.sync_conflicts
-    ADD CONSTRAINT sync_conflicts_sync_id_fkey FOREIGN KEY (sync_id) REFERENCES public.external_syncs(sync_id) ON DELETE CASCADE;
+    ADD CONSTRAINT sync_conflicts_sync_id_fkey FOREIGN KEY (sync_id) REFERENCES public.entity_sync_records(sync_id) ON DELETE CASCADE;
 
 
 --

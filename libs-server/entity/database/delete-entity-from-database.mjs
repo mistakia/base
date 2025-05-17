@@ -116,7 +116,7 @@ async function delete_entity_relationships(client, entity_id) {
 
   // External syncs
   log(`Deleting external syncs for entity: ${entity_id}`)
-  await client('external_syncs').where({ entity_id }).delete()
+  await client('entity_sync_records').where({ entity_id }).delete()
 }
 
 /**
