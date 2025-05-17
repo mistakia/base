@@ -55,7 +55,7 @@ The system consists of:
 
 External sync tables track relationships, configurations, and conflicts:
 
-- `external_syncs`: Links entities to external records
+- `entity_sync_records`: Links entities to external records
 - `sync_configs`: Per-entity or per-type sync strategies
 - `sync_conflicts`: Tracks conflicts and resolutions
 
