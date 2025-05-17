@@ -8,3 +8,4 @@ export { file_exists_in_filesystem_sync } from './file-exists-in-filesystem-sync
 export { directory_exists_in_filesystem } from './directory-exists-in-filesystem.mjs'
 export { directory_exists_in_filesystem_sync } from './directory-exists-in-filesystem-sync.mjs'
 export { read_file_from_filesystem } from './read-file-from-filesystem.mjs'
+export { delete_file_in_filesystem } from './delete-file-in-filesystem.mjs'

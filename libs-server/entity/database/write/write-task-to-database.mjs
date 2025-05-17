@@ -10,6 +10,7 @@ const log = debug('entity:database:write-task')
  * @param {Object} params Parameters
  * @param {Object} params.task_properties Task properties object
  * @param {string} params.task_properties.title Task title (required)
+ * @param {string} params.task_properties.entity_id Entity ID (required)
  * @param {string} [params.task_properties.description=''] Task description
  * @param {string} [params.task_properties.permalink=null] Custom URL path (auto-generated if omitted)
  * @param {Object} [params.task_properties.relations={}] Relations object with relation types as keys and arrays of target IDs as values
@@ -35,19 +36,17 @@ const log = debug('entity:database:write-task')
  * @param {string} [params.task_properties.assigned_to=null] Person or team responsible for the task
  * @param {string} params.user_id User ID who owns the task
  * @param {string} [params.task_content=''] Optional task content/markdown
- * @param {string} [params.task_id=null] Optional task ID for updates
  * @param {Object} [params.file_info=null] Optional file information
  * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
  * @param {string} [params.file_info.git_sha=null] Git SHA of the file
  * @param {string} [params.file_info.base_relative_path=null] Base relative path of the task
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The task_id (same as entity_id)
+ * @returns {Promise<string>} The entity_id
  */
 export async function write_task_to_database({
   task_properties,
   user_id,
   task_content = '',
-  task_id = null,
   file_info = null,
   trx = null
 }) {
@@ -61,7 +60,6 @@ export async function write_task_to_database({
       entity_type: 'task',
       user_id,
       entity_content: task_content,
-      entity_id: task_id,
       file_info,
       trx: db_client
     })

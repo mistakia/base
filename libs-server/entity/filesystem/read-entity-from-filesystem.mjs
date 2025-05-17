@@ -61,7 +61,7 @@ export async function read_entity_from_filesystem({ absolute_path } = {}) {
       entity_properties,
       entity_content,
       raw_content: file_content,
-      file_path: absolute_path
+      absolute_path
     }
 
     log(`Successfully read ${entity_type} entity from ${absolute_path}`)
