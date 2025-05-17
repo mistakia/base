@@ -137,36 +137,6 @@ export async function get_entity_sync_config({ entity_id, external_system }) {
 }
 
 /**
- * Find entity by external ID
- *
- * @param {Object} options - Function options
- * @param {string} options.external_system - Name of external system
- * @param {string} options.external_id - ID in external system
- * @returns {Object|null} Entity object or null
- */
-export async function find_entity_by_external_id({
-  external_system,
-  external_id
-}) {
-  const formatted_external_id = `${external_system}:${external_id}`
-
-  const metadata_record = await db('entity_metadata')
-    .where({
-      key: 'external_id',
-      value: formatted_external_id
-    })
-    .first()
-
-  if (!metadata_record) return null
-
-  const entity = await db('entities')
-    .where({ entity_id: metadata_record.entity_id })
-    .first()
-
-  return entity
-}
-
-/**
  * Update field last updated timestamps
  *
  * @param {Object} options - Function options

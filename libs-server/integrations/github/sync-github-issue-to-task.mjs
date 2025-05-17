@@ -3,7 +3,7 @@ import db from '#db'
 import {
   create_task_from_github_issue,
   update_task_from_github_issue,
-  find_task_by_github_issue
+  find_entity_for_github_issue
 } from './task/index.mjs'
 import {
   normalize_github_issue,
@@ -85,9 +85,12 @@ export async function sync_github_issue_to_task({
     const import_cid = await create_content_identifier(normalized_github_issue)
 
     // Find if the task already exists
-    const existing_task = await find_task_by_github_issue({
+    const existing_task = await find_entity_for_github_issue({
       external_id,
       github_issue_number: github_issue.number,
+      github_repository_owner,
+      github_repository_name,
+      github_issue_title: github_issue.title,
       user_base_directory,
       trx
     })
@@ -114,7 +117,7 @@ export async function sync_github_issue_to_task({
       return {
         action: 'created',
         entity_id: result.entity_id,
-        task_path: result.task_path,
+        absolute_path: result.absolute_path,
         conflict: false
       }
     } else {
@@ -124,12 +127,12 @@ export async function sync_github_issue_to_task({
         normalized_github_issue,
         github_repository_owner,
         github_repository_name,
-        task_path: existing_task.task_path,
+        external_id,
+        absolute_path: existing_task.absolute_path,
         user_base_directory,
         force_update,
         import_cid,
         import_history_base_directory,
-        external_id,
         trx
       })
 
@@ -140,7 +143,7 @@ export async function sync_github_issue_to_task({
         return {
           action: 'conflict_detected',
           entity_id: result.entity_id,
-          task_path: result.task_path,
+          absolute_path: result.absolute_path,
           conflict: true,
           github_update_time: result.github_update_time,
           local_update_time: result.local_update_time
@@ -151,7 +154,7 @@ export async function sync_github_issue_to_task({
         return {
           action: 'updated',
           entity_id: result.entity_id,
-          task_path: result.task_path,
+          absolute_path: result.absolute_path,
           conflict: result.conflict,
           force_applied: result.force_applied
         }
@@ -159,7 +162,7 @@ export async function sync_github_issue_to_task({
         return {
           action: 'no_changes',
           entity_id: result.entity_id,
-          task_path: result.task_path,
+          absolute_path: result.absolute_path,
           conflict: false
         }
       }

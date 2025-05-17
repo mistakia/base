@@ -18,7 +18,4 @@ export {
 } from './sync-config.mjs'
 
 // Entity lookups
-export {
-  find_entity_by_external_id,
-  get_entity_data_with_extensions
-} from './entity-finder.mjs'
+export { get_entity_data_with_extensions } from './entity-finder.mjs'

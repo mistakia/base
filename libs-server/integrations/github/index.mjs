@@ -9,5 +9,5 @@ export { sync_github_issue_to_task } from './sync-github-issue-to-task.mjs'
 export {
   create_task_from_github_issue,
   update_task_from_github_issue,
-  find_task_by_github_issue
+  find_entity_for_github_issue
 } from './task/index.mjs'

@@ -359,11 +359,12 @@ export function normalize_github_issue({
     normalized_github_issue.github_url = issue.html_url
   }
 
-  // Set repository information if available
-  if (github_repository_owner && github_repository_name) {
-    normalized_github_issue.repo_full_name = `${github_repository_owner}/${github_repository_name}`
-  } else if (issue.repository) {
-    normalized_github_issue.repo_full_name = `${issue.repository.owner.login}/${issue.repository.name}`
+  if (github_repository_owner) {
+    normalized_github_issue.github_repository_owner = github_repository_owner
+  }
+
+  if (github_repository_name) {
+    normalized_github_issue.github_repository_name = github_repository_name
   }
 
   // Extract dates if issue was closed

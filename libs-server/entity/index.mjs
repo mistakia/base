@@ -26,3 +26,6 @@ export {
   entity_exists_in_database,
   search_entities
 } from './database/index.mjs'
+
+// Export entity creation from external sources
+export { create_entity_from_external_item } from './create-entity-from-external-item.mjs'

@@ -1,6 +1,6 @@
 import debug from 'debug'
 import { update_github_issue } from './github-api.mjs'
-import { find_task_by_github_issue } from './task/index.mjs'
+import { find_entity_for_github_issue } from './task/index.mjs'
 import { sync_github_issue_to_task } from './sync-github-issue-to-task.mjs'
 import { format_external_id_for_github_issue } from './github-mapper.mjs'
 
@@ -154,7 +154,7 @@ export async function sync_task_back_to_github({
     })
 
     // Read task from filesystem
-    const task = await find_task_by_github_issue({
+    const task = await find_entity_for_github_issue({
       external_id,
       github_issue_number: parseInt(updates.github_issue_number || 0)
     })

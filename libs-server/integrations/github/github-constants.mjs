@@ -1,3 +1,3 @@
-export const format_github_task_path = ({ user_base_directory }) => {
+export const format_entity_directory_for_github_tasks = ({ user_base_directory }) => {
   return `${user_base_directory}/task/github`
 }

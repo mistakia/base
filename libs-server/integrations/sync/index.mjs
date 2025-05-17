@@ -8,7 +8,6 @@ export const {
   detect_field_changes,
   format_value_for_comparison,
   get_entity_sync_config,
-  find_entity_by_external_id,
   update_field_last_updated_timestamps,
   get_entity_data_with_extensions
 } = sync_core
