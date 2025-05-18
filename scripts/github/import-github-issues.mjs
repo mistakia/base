@@ -94,8 +94,7 @@ export default async function import_github_issues({
       github_repository_owner,
       github_repository_name,
       user_id,
-      import_history_base_directory,
-      github_token
+      import_history_base_directory
     })
 
     Object.assign(results, processed_results)

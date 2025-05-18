@@ -32,7 +32,6 @@ const log = debug('github-sync')
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {Object} [options.project_items_map] - Project items map (optional)
  * @param {string} [options.import_history_base_directory] - Import history base directory (optional)
- * @param {string} [options.github_token] - GitHub token (optional)
  * @returns {Object} Import results
  */
 export async function process_github_issues({
@@ -42,8 +41,7 @@ export async function process_github_issues({
   user_id,
   user_base_directory,
   project_items_map,
-  import_history_base_directory,
-  github_token
+  import_history_base_directory
 }) {
   const import_results = {
     created: 0,

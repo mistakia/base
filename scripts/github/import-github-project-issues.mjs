@@ -18,7 +18,6 @@ export default async function import_github_project_issues({
   github_token,
   user_id,
   user_base_directory = config.user_base_directory,
-  import_history_base_directory = null,
   // used to mock the get_github_project function for testing
   get_github_project = github.get_github_project
 }) {
@@ -119,9 +118,7 @@ export default async function import_github_project_issues({
         github_repository_name: repo_data.github_repository_name,
         user_id,
         user_base_directory,
-        import_history_base_directory,
-        project_items_map,
-        github_token
+        project_items_map
       })
 
       // Add results to overall totals
@@ -177,24 +174,6 @@ const main = async () => {
         type: 'number',
         demandOption: true
       })
-      .option('token', {
-        alias: 't',
-        describe: 'GitHub personal access token',
-        type: 'string',
-        default: config.github_access_token
-      })
-      .option('user_id', {
-        describe: 'User ID to associate with imported tasks',
-        type: 'string',
-        default: config.user_id,
-        demandOption: true
-      })
-      .option('state', {
-        alias: 's',
-        describe: 'Issue state to import (all, open, closed)',
-        choices: ['all', 'open', 'closed'],
-        default: 'all'
-      })
       .option('since', {
         alias: 'd',
         describe:
@@ -203,18 +182,12 @@ const main = async () => {
       })
       .help().argv
 
-    // Validate required parameters
-    if (!argv.user_id) {
-      throw new Error('Missing required parameter: user_id')
-    }
-
     const results = await import_github_project_issues({
       username: argv.username,
       project_number: argv.project,
-      github_token: argv.token || config.github_access_token,
-      user_id: argv.user_id,
-      user_base_directory: config.user_base_directory,
-      import_history_base_directory: argv.since
+      github_token: config.github_access_token,
+      user_id: config.user_id,
+      user_base_directory: config.user_base_directory
     })
 
     // Print concise result summary to console
