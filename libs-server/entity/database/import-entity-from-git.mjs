@@ -15,15 +15,13 @@ const log = debug('entity:database:import-from-git')
  * @param {string} options.root_base_directory - The absolute path to the root base directory
  * @param {string} options.branch - The git branch to read from
  * @param {string} options.user_id - The user ID to associate with the entity
- * @param {boolean} [options.force_update=false] - Whether to force update even if git_sha matches
  * @returns {Promise<Object>} - Result object with entity_id and status information
  */
 export async function import_entity_from_git({
   base_relative_path,
   root_base_directory,
   branch,
-  user_id,
-  force_update = false
+  user_id
 }) {
   try {
     log(`Importing entity from git: ${base_relative_path} (branch: ${branch})`)
@@ -119,8 +117,8 @@ export async function import_entity_from_git({
         })
         .first()
 
-      // If entity exists and git SHA matches, skip update unless forced
-      if (existing && existing.git_sha === git_sha && !force_update) {
+      // If entity exists and git SHA matches, skip update
+      if (existing && existing.git_sha === git_sha) {
         result_entity_id = existing.entity_id
         log(`Entity unchanged: ${git_relative_path} (SHA: ${git_sha})`)
       } else {

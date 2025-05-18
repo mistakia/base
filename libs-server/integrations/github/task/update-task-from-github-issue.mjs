@@ -15,7 +15,6 @@ const log = debug('github:task')
  * @param {string} options.external_id - The external ID of the task
  * @param {string} options.absolute_path - Absolute path to the task file
  * @param {string} options.user_base_directory - Base directory for user data
- * @param {boolean} [options.force_update=false] - Whether to force update regardless of conflicts
  * @param {Object} [options.trx=null] - Optional database transaction
  * @param {string} [options.import_cid=null] - Optional import correlation ID
  * @param {string} [options.import_history_base_directory=null] - Optional base directory for import history
@@ -29,7 +28,6 @@ export async function update_task_from_github_issue({
   external_id,
   absolute_path,
   user_base_directory,
-  force_update = false,
   trx = null,
   import_cid = null,
   import_history_base_directory = null
@@ -75,7 +73,6 @@ export async function update_task_from_github_issue({
       external_update_time,
       import_cid,
       import_history_base_directory,
-      force_update,
       trx
     })
   } catch (error) {

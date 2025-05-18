@@ -71,8 +71,8 @@ export async function import_markdown_entity(
   await with_transaction(async (trx) => {
     // Insert or update based on whether it exists
     if (existing) {
-      // Only update if git sha is different or force_update is true
-      if (existing.git_sha !== file_info.git_sha || options.force_update) {
+      // Only update if git sha is different
+      if (existing.git_sha !== file_info.git_sha) {
         entity_data.updated_at = new Date()
         await trx('entities')
           .where({ entity_id: existing.entity_id })

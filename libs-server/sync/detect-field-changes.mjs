@@ -1,32 +1,10 @@
-import debug from 'debug'
-import { CID } from 'multiformats/cid'
-import { sha256 } from 'multiformats/hashes/sha2'
-import * as json from 'multiformats/codecs/json'
-
-const log = debug('sync:core:content-identifier')
-
-/**
- * Create a CID (Content Identifier) for data object
- * Uses SHA-256 hash and JSON codec
- *
- * @param {Object} data_object - Data to create CID for
- * @returns {string} CID string
- */
-export async function create_content_identifier(data_object) {
-  const bytes = json.encode(data_object)
-  const hash = await sha256.digest(bytes)
-  const content_id = CID.create(1, json.code, hash)
-  log(`Created content identifier for object: ${content_id}`)
-  return content_id.toString()
-}
-
 /**
  * Format value for consistent comparison
  *
  * @param {any} value - Value to format
  * @returns {string} Formatted value
  */
-export function format_value_for_comparison(value) {
+function format_value_for_comparison(value) {
   if (value === null || value === undefined) return ''
   return String(value).trim()
 }
@@ -37,20 +15,36 @@ export function format_value_for_comparison(value) {
  * @param {Object} options - Function options
  * @param {Object} options.current_data - Current data object
  * @param {Object} options.previous_data - Previous data object
+ * @param {boolean} [options.compare_only_previous_fields=false] - If true, only compare fields present in previous_data
+ * @param {Array<string>} [options.ignore_fields=[]] - Fields to ignore during comparison
  * @returns {Object|null} Changes object or null if no changes
  */
-export function detect_field_changes({ current_data, previous_data }) {
+export function detect_field_changes({
+  current_data,
+  previous_data,
+  compare_only_previous_fields = false,
+  ignore_fields = []
+}) {
   if (!previous_data) return null
 
   const detected_changes = {}
 
-  // Compare all fields directly
-  const all_fields = new Set([
-    ...Object.keys(current_data),
-    ...Object.keys(previous_data)
-  ])
+  // Determine which fields to compare
+  let fields_to_compare
+  if (compare_only_previous_fields) {
+    fields_to_compare = Object.keys(previous_data)
+  } else {
+    fields_to_compare = Array.from(
+      new Set([...Object.keys(current_data), ...Object.keys(previous_data)])
+    )
+  }
 
-  for (const field of all_fields) {
+  // Remove ignored fields
+  fields_to_compare = fields_to_compare.filter(
+    (field) => !ignore_fields.includes(field)
+  )
+
+  for (const field of fields_to_compare) {
     const current_value = current_data[field]
     const previous_value = previous_data[field]
 

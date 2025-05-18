@@ -9,7 +9,7 @@ import {
   normalize_github_issue,
   format_external_id_for_github_issue
 } from './github-mapper.mjs'
-import { create_content_identifier } from '../sync/sync-core.mjs'
+import { create_content_identifier } from '#libs-server/utils/create-content-identifier.mjs'
 
 const log = debug('github:sync-github-issue-to-task')
 
@@ -24,7 +24,6 @@ const log = debug('github:sync-github-issue-to-task')
  * @param {string} options.github_repository_name - Repository name
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {string} options.user_id - User ID for task ownership
- * @param {boolean} [options.force_update=false] - Whether to force update regardless of conflicts
  * @param {string} [options.import_history_base_directory] - Base directory for import history
  * @returns {Promise<Object>} - The sync result
  */
@@ -35,7 +34,6 @@ export async function sync_github_issue_to_task({
   github_repository_name,
   user_base_directory,
   user_id,
-  force_update = false,
   import_history_base_directory = null
 }) {
   let trx
@@ -117,8 +115,7 @@ export async function sync_github_issue_to_task({
       return {
         action: 'created',
         entity_id: result.entity_id,
-        absolute_path: result.absolute_path,
-        conflict: false
+        absolute_path: result.absolute_path
       }
     } else {
       // Update existing task
@@ -130,7 +127,6 @@ export async function sync_github_issue_to_task({
         external_id,
         absolute_path: existing_task.absolute_path,
         user_base_directory,
-        force_update,
         import_cid,
         import_history_base_directory,
         trx
@@ -138,34 +134,7 @@ export async function sync_github_issue_to_task({
 
       await trx.commit()
 
-      // Return appropriate result based on update outcome
-      if (result.conflict && !force_update) {
-        return {
-          action: 'conflict_detected',
-          entity_id: result.entity_id,
-          absolute_path: result.absolute_path,
-          conflict: true,
-          github_update_time: result.github_update_time,
-          local_update_time: result.local_update_time
-        }
-      }
-
-      if (result.updated) {
-        return {
-          action: 'updated',
-          entity_id: result.entity_id,
-          absolute_path: result.absolute_path,
-          conflict: result.conflict,
-          force_applied: result.force_applied
-        }
-      } else {
-        return {
-          action: 'no_changes',
-          entity_id: result.entity_id,
-          absolute_path: result.absolute_path,
-          conflict: false
-        }
-      }
+      return result
     }
   } catch (error) {
     log(`Error syncing GitHub issue to task: ${error.message}`)

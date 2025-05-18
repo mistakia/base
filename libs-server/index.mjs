@@ -4,7 +4,6 @@ export * as task from './task/index.mjs'
 export * as users from './users/index.mjs'
 export * as github from './integrations/github/index.mjs'
 export * as cloudflare from './integrations/cloudflare.mjs'
-export * as sync from './integrations/sync/index.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as git from './git/index.mjs'
@@ -18,3 +17,4 @@ export * as prompts from './prompts/index.mjs'
 export * as activity from './activity/index.mjs'
 export * as guideline from './guideline/index.mjs'
 export * as tag from './tag/index.mjs'
+export * as sync from './sync/index.mjs'

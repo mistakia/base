@@ -1,9 +1,6 @@
 import debug from 'debug'
 import { write_entity_to_filesystem } from './filesystem/index.mjs'
-import {
-  create_sync_record,
-  save_import_data
-} from '#libs-server/sync/index.mjs'
+import { save_import_data } from '#libs-server/sync/index.mjs'
 
 const log = debug('entity:external')
 
@@ -91,14 +88,6 @@ export async function create_entity_from_external_item({
         `Failed to write ${entity_type} for ${external_system} item ${external_id} to filesystem`
       )
     }
-
-    // Create sync record in database
-    await create_sync_record({
-      entity_id,
-      external_system,
-      external_id,
-      trx
-    })
 
     log(
       `Successfully created ${entity_type} with entity_id ${entity_id} for ${external_system} item ${external_id}`

@@ -9,7 +9,6 @@ const log = debug('entity:database:import:repository')
  *
  * @param {Object} options - Import options
  * @param {string} options.user_id - User ID to associate with imported entities
- * @param {boolean} [options.force_update=false] - Whether to force update entities even if git SHA matches
  * @param {boolean} [options.archive_missing=true] - Whether to archive entities that no longer exist
  * @param {string} [options.branch] - Branch for validation
  * @param {string} [options.root_base_directory] - Root base directory
@@ -17,7 +16,6 @@ const log = debug('entity:database:import:repository')
  */
 export async function import_repository_from_git({
   user_id,
-  force_update = false,
   archive_missing = true,
   branch,
   root_base_directory = process.cwd()
@@ -48,8 +46,7 @@ export async function import_repository_from_git({
             base_relative_path: file.base_relative_path,
             root_base_directory,
             branch: file.branch,
-            user_id,
-            force_update
+            user_id
           })
 
           if (import_result.success) {

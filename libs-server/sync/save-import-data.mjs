@@ -1,45 +1,12 @@
 import debug from 'debug'
-import path from 'path'
-import db from '#db'
 import fs_promises from 'fs/promises'
+import path from 'path'
+
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
-import { create_content_identifier } from '../core/content-identifier.mjs'
-import config from '#config'
+import { create_content_identifier } from '#libs-server/utils/create-content-identifier.mjs'
+import { get_import_directory_paths } from '#libs-server/sync/get-import-directory-paths.mjs'
 
-const default_import_history_base_directory = path.join(
-  config.user_base_directory || process.cwd(),
-  'import-history'
-)
-
-const log = debug('sync:history:import-manager')
-
-/**
- * Get the directory path for storing import data
- *
- * @param {Object} options - Function options
- * @param {string} options.external_system - Name of external system
- * @param {string} options.entity_id - Entity UUID
- * @param {string} [options.import_history_base_directory] - Optional override for base directory
- * @returns {Object} Object with raw and processed paths
- */
-export function get_import_directory_paths({
-  external_system,
-  entity_id,
-  import_history_base_directory
-}) {
-  const base_dir =
-    import_history_base_directory || default_import_history_base_directory
-  const system_dir = path.join(base_dir, external_system)
-  const entity_dir = path.join(system_dir, entity_id)
-
-  return {
-    base_path: base_dir,
-    system_path: system_dir,
-    entity_path: entity_dir,
-    raw_path: path.join(entity_dir, 'raw'),
-    processed_path: path.join(entity_dir, 'processed')
-  }
-}
+const log = debug('sync:save-import-data')
 
 /**
  * Save raw import data to disk and record the import
@@ -118,40 +85,4 @@ export async function save_import_data({
     log(`Error saving import data: ${error.message}`)
     throw error
   }
-}
-
-/**
- * Record import in database history
- *
- * @param {Object} options - Function options
- * @param {string} options.sync_id - Sync record UUID
- * @param {Object} options.raw_data - Raw import data
- * @param {string} options.import_cid - Content ID of import
- * @returns {Promise<Object>} History record
- */
-export async function record_import_history({ sync_id, raw_data, import_cid }) {
-  // Check if we already have this import
-  const existing_history = await db('sync_conflicts')
-    .where({
-      sync_id,
-      import_cid
-    })
-    .first()
-
-  if (existing_history) {
-    log(`Import ${import_cid} already recorded for sync ${sync_id}`)
-    return existing_history
-  }
-
-  // Create history record
-  const [history_record] = await db('sync_conflicts')
-    .insert({
-      sync_id,
-      import_cid,
-      conflicts: {}, // Empty initially
-      status: 'new' // New import, not yet processed for conflicts
-    })
-    .returning('*')
-
-  return history_record
 }
