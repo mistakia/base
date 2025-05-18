@@ -89,8 +89,6 @@ export async function write_entity_to_database({
       }
     }
 
-    let result_entity_id
-
     // Check if entity exists in database
     const existing_entity = await db_client('entities')
       .where({ entity_id: entity_properties.entity_id })
@@ -115,12 +113,10 @@ export async function write_entity_to_database({
       )
     }
 
-    result_entity_id = entity_properties.entity_id
-
     // Process relations if present in entity_properties
     if (entity_properties.relations) {
       await write_entity_relations_to_database({
-        entity_id: result_entity_id,
+        entity_id: entity_properties.entity_id,
         relations: entity_properties.relations,
         user_id,
         db_client
@@ -131,7 +127,7 @@ export async function write_entity_to_database({
     if (entity_properties.tags) {
       // TODO convert base_relative_path to tag_entity_id
       // await write_entity_tags_to_database({
-      //   entity_id: result_entity_id,
+      //   entity_id: entity_properties.entity_id,
       //   tag_entity_ids,
       //   db_client
       // })
@@ -140,11 +136,11 @@ export async function write_entity_to_database({
     // Handle archived status if present
     if (entity_properties.archived_at) {
       await db_client('entities')
-        .where({ entity_id: result_entity_id })
+        .where({ entity_id: entity_properties.entity_id })
         .update({ archived_at: entity_properties.archived_at })
     }
 
-    return result_entity_id
+    return entity_properties.entity_id
   } catch (error) {
     log('Error writing entity to database:', error)
     throw error
