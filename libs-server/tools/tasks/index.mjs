@@ -6,7 +6,7 @@ import debug from 'debug'
 
 // Import all task tools
 import './get-task.mjs'
-import './get-filtered-tasks.mjs'
+import './list-tasks.mjs'
 import './create-task.mjs'
 import './update-task.mjs'
 import './delete-task.mjs'

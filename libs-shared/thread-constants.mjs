@@ -12,7 +12,7 @@ export const THREAD_STATUS = {
  */
 export const DEFAULT_THREAD_TOOLS = [
   'task_get',
-  'task_get_filtered',
+  'list_tasks',
   'task_create',
   'task_update',
   'task_delete',

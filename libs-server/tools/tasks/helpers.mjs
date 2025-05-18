@@ -73,12 +73,7 @@ export const helpers = {
 export function format_task(task) {
   if (!task) return null
 
-  const {
-    entity_properties,
-    entity_content,
-    file_info,
-    raw_content
-  } = task
+  const { entity_properties, entity_content, file_info, raw_content } = task
 
   if (!entity_properties) return null
 

@@ -43,7 +43,7 @@ register_tool({
         }
       }
 
-      return { task: format_task(task) }
+      return { task }
     } catch (error) {
       log(`Error getting task ${parameters.base_relative_path}:`, error)
       return helpers.error_response('get task', error.message)

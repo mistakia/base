@@ -6,9 +6,8 @@ import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
 
 const log = debug('tools:tasks')
 
-// 2. Get Filtered Tasks
 register_tool({
-  tool_name: 'task_get_filtered',
+  tool_name: 'list_tasks',
   tool_definition: {
     description:
       'Retrieves a list of tasks from the filesystem filtered by various criteria.',
