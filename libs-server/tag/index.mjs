@@ -1,6 +1,5 @@
 // Re-export filesystem functions
 export {
-  tag_exists_in_filesystem,
   read_tag_from_filesystem
 } from './filesystem/index.mjs'
 

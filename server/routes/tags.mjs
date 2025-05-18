@@ -32,13 +32,14 @@ router.get('/:base_relative_path(*)', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { base_relative_path } = req.params
+    const { root_base_directory } = req.query
     const user_id = req.auth.user_id
 
     try {
       // Read the tag directly from filesystem using the provided tag_base_relative_path
-      // tag_base_relative_path format is expected to be either "system/<tag-title>" or "user/<tag-title>"
       const tag = await read_tag_from_filesystem({
-        base_relative_path
+        base_relative_path,
+        root_base_directory
       })
 
       // Get all entities associated with this tag using base_relative_path

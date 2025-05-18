@@ -13,14 +13,14 @@ import db from '#db'
  *    These tags are referenced in the entity_tags table via the tag_entity_id column (UUID).
  *
  * 2. Filesystem tag: Stored as markdown files in the filesystem with a path based on base_relative_path.
- *    The base_relative_path is a string in the format "system/tag-name" or "user/tag-name".
+ *    The base_relative_path is a string in the format "system/tag-name.md" or "user/tag-name.md".
  *
  * @param {Object} options - Test options
  * @param {string} options.user_id - User ID
  * @param {string} [options.title='Test Tag'] - Tag title
  * @param {string} [options.description='A tag for testing'] - Tag description
  * @param {string} [options.color='#FF0000'] - Tag color
- * @param {string} [options.base_relative_path] - Tag base_relative_path in format [system|user]/<tag-title>
+ * @param {string} [options.base_relative_path] - Tag base_relative_path in format [system|user]/<tag-title>.md
  * @param {string} [options.root_base_directory] - Custom root base directory for tests
  * @returns {Promise<Object>} Object containing tag_entity_id, base_relative_path, root_base_directory, and cleanup function
  */
@@ -47,7 +47,10 @@ export default async function create_test_tag({
 
   // Generate base_relative_path if not provided
   if (!base_relative_path) {
-    base_relative_path = `user/${title.replace(/\s+/g, '-')}`
+    base_relative_path = `user/${title.replace(/\s+/g, '-')}.md`
+  } else if (!base_relative_path.endsWith('.md')) {
+    // Ensure the base_relative_path has the .md extension
+    base_relative_path = `${base_relative_path}.md`
   }
 
   // Create temp directory if not provided
