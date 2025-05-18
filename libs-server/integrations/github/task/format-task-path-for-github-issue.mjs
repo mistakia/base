@@ -9,12 +9,11 @@ import { format_entity_directory_for_github_tasks } from '../github-constants.mj
  * @param {string} text - The text to slugify
  * @param {Object} options - Slugify options
  * @param {boolean} [options.lower=true] - Convert to lowercase
- * @param {boolean} [options.strict=false] - Remove characters that don't match the allowed pattern
  * @param {RegExp} [options.remove=/[*+~.()'"!:@]/g] - Characters to remove
  * @returns {string} - Slugified string
  */
 function slugify(text, options = {}) {
-  const { lower = true, strict = false, remove = /[*+~.()'"!:@]/g } = options
+  const { lower = true, remove = /[*+~.()'"!:@]/g } = options
 
   let result = text.toString()
 
@@ -32,7 +31,7 @@ function slugify(text, options = {}) {
   result = result
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/&/g, '-and-') // Replace & with 'and'
-    .replace(/[^\w\-]+/g, '') // Remove all non-word characters except hyphens
+    .replace(/[^\w-]+/g, '') // Remove all non-word characters except hyphens
     .replace(/--+/g, '-') // Replace multiple hyphens with single hyphen
     .replace(/^-+/, '') // Trim hyphens from start
     .replace(/-+$/, '') // Trim hyphens from end
@@ -75,7 +74,6 @@ export function format_entity_absolute_path_for_github_issue({
   // Generate slug from title
   const github_issue_title_slug = slugify(github_issue_title, {
     lower: true,
-    strict: true,
     remove: /[*+~.()'"!:@]/g
   })
 

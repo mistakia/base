@@ -1,6 +1,5 @@
 import * as sync_core from './sync-core.mjs'
 import * as conflict_resolver from './conflict-resolver.mjs'
-import * as import_manager from './import-manager.mjs'
 
 // Re-export all functions from the individual modules
 export const {
@@ -23,9 +22,3 @@ export const {
   apply_resolutions,
   manual_resolve_conflicts
 } = conflict_resolver
-
-export const {
-  record_import_history,
-  get_sync_history,
-  find_recent_conflicts
-} = import_manager
