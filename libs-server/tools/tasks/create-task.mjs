@@ -4,7 +4,6 @@ import { helpers, format_task } from './helpers.mjs'
 import { write_task_to_filesystem } from '#libs-server/task/filesystem/write-task-to-filesystem.mjs'
 import { read_task_from_filesystem } from '#libs-server/task/filesystem/read-task-from-filesystem.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
-import config from '#config'
 
 const log = debug('tools:tasks')
 

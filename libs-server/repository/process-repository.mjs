@@ -172,7 +172,7 @@ export async function process_repositories_from_git(options = {}) {
 
   for (const repository of repositories) {
     // TODO should use list_entity_files_from_git instead
-    const repo_files = await list_markdown_files_in_git({
+    const repo_files = await list_markdown_files_from_git({
       repo_path: repository.path,
       branch: repository.branch,
       submodule_base_path: repository.submodule_base_path

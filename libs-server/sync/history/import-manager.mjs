@@ -1,5 +1,4 @@
 import debug from 'debug'
-import fs from 'fs'
 import path from 'path'
 import db from '#db'
 import fs_promises from 'fs/promises'

@@ -1,6 +1,6 @@
 import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
-import { helpers, format_task } from './helpers.mjs'
+import { helpers } from './helpers.mjs'
 
 const log = debug('tools:tasks')
 

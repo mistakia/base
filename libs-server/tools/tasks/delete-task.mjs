@@ -1,9 +1,9 @@
 import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
 import { helpers } from './helpers.mjs'
-import { delete_file_in_filesystem } from '#libs-server/filesystem/delete-file-in-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-import config from '#config'
+// import { delete_file_in_filesystem } from '#libs-server/filesystem/delete-file-in-filesystem.mjs'
+// import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+// import config from '#config'
 
 const log = debug('tools:tasks')
 
@@ -64,10 +64,10 @@ register_tool({
       }
 
       // Get the absolute path for deletion
-      const { absolute_path } = await get_base_file_info({
-        base_relative_path,
-        root_base_directory: config.root_base_directory
-      })
+      // const { absolute_path } = await get_base_file_info({
+      //   base_relative_path,
+      //   root_base_directory: config.root_base_directory
+      // })
 
       // Delete the file
       //   const result = await delete_file_in_filesystem({ file_path: absolute_path })

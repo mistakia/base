@@ -1,6 +1,5 @@
 import debug from 'debug'
 
-import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import config from '#config'
 import { read_task_from_filesystem } from '#libs-server/task/index.mjs'
 
@@ -73,7 +72,7 @@ export const helpers = {
 export function format_task(task) {
   if (!task) return null
 
-  const { entity_properties, entity_content, file_info, raw_content } = task
+  const { entity_properties, file_info } = task
 
   if (!entity_properties) return null
 
@@ -88,9 +87,6 @@ export function format_task(task) {
     created_at,
     updated_at
   } = entity_properties
-
-  const format_date = (date) =>
-    date ? new Date(date).toISOString().split('T')[0] : null
 
   return {
     base_relative_path: file_info?.base_relative_path,

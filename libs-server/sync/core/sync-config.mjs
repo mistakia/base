@@ -1,7 +1,4 @@
-import debug from 'debug'
 import db from '#db'
-
-const log = debug('sync:core:sync-config')
 
 /**
  * Get sync configuration for an entity and external system
