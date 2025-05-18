@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_organization_to_database from '#libs-server/entity/database/write/write-organization-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_organization_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const organization_properties = {
+      entity_id: uuid(),
       title: 'Test Organization',
       description: 'Test organization description',
       website_url: 'https://example.org',
@@ -85,8 +87,10 @@ describe('write_organization_to_database', () => {
     // Arrange - first create an organization
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Organization',
       description: 'Original description',
       website_url: 'https://old-example.org',
@@ -104,6 +108,7 @@ describe('write_organization_to_database', () => {
     // Create updated organization properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Organization',
       description: 'Updated description',
       website_url: 'https://new-example.org',
@@ -159,6 +164,7 @@ describe('write_organization_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const organization_properties = {
+      entity_id: uuid(),
       title: 'File Info Organization',
       description: 'Organization with file info',
       website_url: 'https://file-example.org',
@@ -189,6 +195,7 @@ describe('write_organization_to_database', () => {
   it('should handle partial organization properties', async () => {
     // Arrange - minimal properties
     const organization_properties = {
+      entity_id: uuid(),
       title: 'Minimal Organization'
       // Only providing title, all other fields should be handled as null or defaults
     }
@@ -222,6 +229,7 @@ describe('write_organization_to_database', () => {
 
     // Create a tag to use for the organization
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Organization Tag',
       description: 'A tag for organizations',
       created_at: now,
@@ -245,6 +253,7 @@ describe('write_organization_to_database', () => {
 
     // Create organization with tag
     const organization_properties = {
+      entity_id: uuid(),
       title: 'Tagged Organization',
       description: 'Organization with tags',
       website_url: 'https://tagged-org.example.org',
@@ -277,6 +286,7 @@ describe('write_organization_to_database', () => {
     const archive_date = new Date(now.getTime() + 86400000) // 1 day later
 
     const organization_properties = {
+      entity_id: uuid(),
       title: 'Archived Organization',
       description: 'This organization is archived',
       website_url: 'https://archived.example.org',

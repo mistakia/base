@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_physical_location_to_database from '#libs-server/entity/database/write/write-physical-location-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_physical_location_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const physical_location_properties = {
+      entity_id: uuid(),
       title: 'Test Location',
       description: 'Test location description',
       latitude: 37.7749,
@@ -132,8 +134,10 @@ describe('write_physical_location_to_database', () => {
     // Arrange - first create a location
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Location',
       description: 'Original description',
       latitude: 37.7749,
@@ -156,6 +160,7 @@ describe('write_physical_location_to_database', () => {
     // Create updated location properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Location',
       description: 'Updated description',
       latitude: 34.0522,
@@ -226,6 +231,7 @@ describe('write_physical_location_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const physical_location_properties = {
+      entity_id: uuid(),
       title: 'File Location',
       description: 'Location with file info',
       latitude: 40.7128,
@@ -261,6 +267,7 @@ describe('write_physical_location_to_database', () => {
 
     // Create a tag to use for the location
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Location Tag',
       description: 'A tag for locations',
       created_at: now,
@@ -284,6 +291,7 @@ describe('write_physical_location_to_database', () => {
 
     // Create location with tag
     const physical_location_properties = {
+      entity_id: uuid(),
       title: 'Tagged Location',
       description: 'Location with tags',
       latitude: 51.5074,
@@ -313,6 +321,7 @@ describe('write_physical_location_to_database', () => {
   it('should create a location with minimal information', async () => {
     // Arrange
     const physical_location_properties = {
+      entity_id: uuid(),
       title: 'Minimal Location'
       // Only title is provided, all other fields are optional
     }
@@ -345,6 +354,7 @@ describe('write_physical_location_to_database', () => {
   it('should handle transaction parameter correctly', async () => {
     // Arrange
     const physical_location_properties = {
+      entity_id: uuid(),
       title: 'Transaction Location',
       description: 'Testing transaction handling',
       latitude: 48.8566,

@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_activity_to_database from '#libs-server/entity/database/write/write-activity-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_activity_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const activity_properties = {
+      entity_id: uuid(),
       title: 'Test Activity',
       description: 'Test activity description',
       created_at: now,
@@ -75,8 +77,10 @@ describe('write_activity_to_database', () => {
     // Arrange - first create an activity
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Activity',
       description: 'Original description',
       created_at: now,
@@ -93,6 +97,7 @@ describe('write_activity_to_database', () => {
     // Create updated activity properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Activity',
       description: 'Updated description',
       created_at: now, // keep original created_at
@@ -137,6 +142,7 @@ describe('write_activity_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const activity_properties = {
+      entity_id: uuid(),
       title: 'File Activity',
       description: 'Activity with file info',
       created_at: now,
@@ -170,6 +176,7 @@ describe('write_activity_to_database', () => {
 
     // Create a tag to use for the activity
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Activity Tag',
       description: 'A tag for activities',
       created_at: now,
@@ -193,6 +200,7 @@ describe('write_activity_to_database', () => {
 
     // Create a related task entity for relation testing
     const task_properties = {
+      entity_id: uuid(),
       title: 'Related Task',
       description: 'A task related to the activity',
       type: 'task',
@@ -217,6 +225,7 @@ describe('write_activity_to_database', () => {
 
     // Create activity with tag and relation
     const activity_properties = {
+      entity_id: uuid(),
       title: 'Related Activity',
       description: 'Activity with tags and relations',
       tags: [tag_entity_id],

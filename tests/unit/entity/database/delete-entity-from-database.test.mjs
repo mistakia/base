@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import db from '#db'
-import { v1 as uuid } from 'uuid'
+import { v4 as uuid } from 'uuid'
 
 import { delete_entity_from_database } from '#libs-server/entity/database/delete-entity-from-database.mjs'
 import { read_entity_from_database } from '#libs-server/entity/database/read/read-entity-from-database.mjs'
@@ -29,7 +29,8 @@ describe('delete_entity_from_database', () => {
       entity_properties: {
         title: 'Test Entity for Deletion',
         description: 'Entity to test deletion functionality',
-        user_id: test_user_id
+        user_id: test_user_id,
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id
@@ -40,7 +41,8 @@ describe('delete_entity_from_database', () => {
       entity_properties: {
         title: 'Related Entity',
         description: 'Entity related to test entity',
-        user_id: test_user_id
+        user_id: test_user_id,
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id
@@ -51,7 +53,8 @@ describe('delete_entity_from_database', () => {
       entity_properties: {
         title: 'Test Tag',
         description: 'Tag for testing',
-        user_id: test_user_id
+        user_id: test_user_id,
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TAG,
       user_id: test_user_id
@@ -71,7 +74,8 @@ describe('delete_entity_from_database', () => {
         title: 'Test Text Entity',
         description: 'Text entity for testing',
         user_id: test_user_id,
-        frontmatter: text_frontmatter
+        frontmatter: text_frontmatter,
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TEXT,
       entity_content: text_content,
@@ -94,7 +98,7 @@ describe('delete_entity_from_database', () => {
     // Add tag to entity
     await write_entity_tags_to_database({
       entity_id,
-      tags: [tag_entity_id],
+      tag_entity_ids: [tag_entity_id],
       db_client: db
     })
   })

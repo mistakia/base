@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import db from '#db'
-import { v1 as uuid } from 'uuid'
+import { v4 as uuid } from 'uuid'
 
 import entity_exists_in_database from '#libs-server/entity/database/entity-exists-in-database.mjs'
 import write_entity_to_database from '#libs-server/entity/database/write/write-entity-to-database.mjs'
@@ -24,7 +24,8 @@ describe('entity_exists_in_database', () => {
       entity_properties: {
         title: 'Test Entity for Existence Check',
         description: 'Entity to test existence check functionality',
-        user_id: test_user_id
+        user_id: test_user_id,
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id
@@ -36,7 +37,8 @@ describe('entity_exists_in_database', () => {
         title: 'Archived Entity',
         description: 'Archived entity for testing',
         user_id: test_user_id,
-        archived_at: new Date()
+        archived_at: new Date(),
+        entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id
@@ -107,7 +109,8 @@ describe('entity_exists_in_database', () => {
         entity_properties: {
           title: 'Transaction Entity',
           description: 'Entity created within a transaction',
-          user_id: test_user_id
+          user_id: test_user_id,
+          entity_id: uuid()
         },
         entity_type: ENTITY_TYPES.TASK,
         user_id: test_user_id,

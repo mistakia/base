@@ -45,7 +45,7 @@ describe('read_entity_from_filesystem', () => {
 
     // Verify result
     expect(result.success).to.be.true
-    expect(result.file_path).to.equal(absolute_path)
+    expect(result.absolute_path).to.equal(absolute_path)
     expect(result.entity_properties).to.include({
       title: 'Test Entity',
       type: 'test',

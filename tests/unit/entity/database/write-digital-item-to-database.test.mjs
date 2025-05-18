@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_digital_item_to_database from '#libs-server/entity/database/write/write-digital-item-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_digital_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const digital_item_properties = {
+      entity_id: uuid(),
       title: 'Test Digital Item',
       description: 'Test digital item description',
       file_mime_type: 'application/pdf',
@@ -100,8 +102,10 @@ describe('write_digital_item_to_database', () => {
     // Arrange - first create a digital item
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Digital Item',
       description: 'Original description',
       file_mime_type: 'text/plain',
@@ -122,6 +126,7 @@ describe('write_digital_item_to_database', () => {
     // Create updated digital item properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Digital Item',
       description: 'Updated description',
       file_mime_type: 'image/jpeg',
@@ -194,6 +199,7 @@ describe('write_digital_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const digital_item_properties = {
+      entity_id: uuid(),
       title: 'File Info Digital Item',
       description: 'Digital item with file info',
       file_mime_type: 'application/json',
@@ -224,6 +230,7 @@ describe('write_digital_item_to_database', () => {
   it('should handle partial digital item properties', async () => {
     // Arrange - minimal properties
     const digital_item_properties = {
+      entity_id: uuid(),
       title: 'Minimal Digital Item'
       // Only providing title, all other fields should be handled as null or defaults
     }
@@ -258,6 +265,7 @@ describe('write_digital_item_to_database', () => {
   it('should store digital item with text and html content', async () => {
     // Arrange
     const digital_item_properties = {
+      entity_id: uuid(),
       title: 'Text and HTML Digital Item',
       description: 'Digital item with text and HTML content',
       text: 'This is plain text extracted from a document',
@@ -309,6 +317,7 @@ describe('write_digital_item_to_database', () => {
 
     // Create digital item with tag
     const digital_item_properties = {
+      entity_id: uuid(),
       title: 'Tagged Digital Item',
       description: 'Digital item with tags',
       file_mime_type: 'application/pdf',

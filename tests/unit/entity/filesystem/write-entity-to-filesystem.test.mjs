@@ -36,7 +36,9 @@ describe('write_entity_to_filesystem', () => {
       entity_content
     })
 
-    expect(result).to.be.true
+    expect(result).to.be.an('object')
+    expect(result.success).to.be.true
+    expect(result.entity_id).to.be.a('string')
 
     // Check that file exists
     const file_exists = await fs
@@ -72,7 +74,9 @@ describe('write_entity_to_filesystem', () => {
       entity_type
     })
 
-    expect(result).to.be.true
+    expect(result).to.be.an('object')
+    expect(result.success).to.be.true
+    expect(result.entity_id).to.be.a('string')
 
     const file_content = await fs.readFile(absolute_path, 'utf8')
     expect(file_content).to.include('title: "Minimal Entity"')

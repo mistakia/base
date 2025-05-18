@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_guideline_to_database from '#libs-server/entity/database/write/write-guideline-to-database.mjs'
@@ -25,6 +26,7 @@ describe('write_guideline_to_database', () => {
     const effective_date = new Date('2025-01-03T00:00:00Z')
 
     const guideline_properties = {
+      entity_id: uuid(),
       title: 'Test Guideline',
       description: 'Test guideline description',
       created_at: now,
@@ -96,8 +98,10 @@ describe('write_guideline_to_database', () => {
     // Use a fixed date for effective_date to avoid timezone issues
     const effective_date = new Date('2025-01-03T00:00:00Z')
     const updated_effective_date = new Date('2025-01-04T00:00:00Z')
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Guideline',
       description: 'Original description',
       created_at: now,
@@ -118,6 +122,7 @@ describe('write_guideline_to_database', () => {
     // Create updated guideline properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Guideline',
       description: 'Updated description',
       created_at: now, // keep original created_at
@@ -183,6 +188,7 @@ describe('write_guideline_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const guideline_properties = {
+      entity_id: uuid(),
       title: 'File Guideline',
       description: 'Guideline with file info',
       created_at: now,
@@ -240,6 +246,7 @@ describe('write_guideline_to_database', () => {
 
     // Create guideline with tag
     const guideline_properties = {
+      entity_id: uuid(),
       title: 'Tagged Guideline',
       description: 'Guideline with tags',
       tags: [tag_entity_id],
@@ -319,6 +326,7 @@ describe('write_guideline_to_database', () => {
   it('should handle transaction parameter correctly', async () => {
     // Arrange
     const guideline_properties = {
+      entity_id: uuid(),
       title: 'Transaction Guideline',
       description: 'Testing transaction handling',
       guideline_status: 'Draft'

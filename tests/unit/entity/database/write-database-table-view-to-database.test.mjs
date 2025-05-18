@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_database_table_view_to_database from '#libs-server/entity/database/write/write-database-table-view-to-database.mjs'
@@ -60,6 +61,7 @@ describe('write_database_table_view_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_view_properties = {
+      entity_id: uuid(),
       title: 'Test View',
       description: 'Test view description',
       view_name: 'test_view',
@@ -141,8 +143,10 @@ describe('write_database_table_view_to_database', () => {
     // Arrange - first create a database table view
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original View',
       description: 'Original description',
       view_name: 'original_view',
@@ -167,6 +171,7 @@ describe('write_database_table_view_to_database', () => {
     // Create updated view properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated View',
       description: 'Updated description',
       view_name: 'updated_view',
@@ -232,6 +237,7 @@ describe('write_database_table_view_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_view_properties = {
+      entity_id: uuid(),
       title: 'File View',
       description: 'View with file info',
       view_name: 'file_view',
@@ -267,6 +273,7 @@ describe('write_database_table_view_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_view_properties = {
+      entity_id: uuid(),
       title: 'Missing Properties View',
       description: 'View with missing properties',
       created_at: now,
@@ -342,6 +349,7 @@ describe('write_database_table_view_to_database', () => {
 
     // Create view with tag
     const database_view_properties = {
+      entity_id: uuid(),
       title: 'Tagged View',
       description: 'Database view with tags',
       view_name: 'tagged_view',

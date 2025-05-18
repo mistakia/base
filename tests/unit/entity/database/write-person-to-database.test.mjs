@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { v4 as uuid } from 'uuid'
 import db from '#db'
 import write_person_to_database from '#libs-server/entity/database/write/write-person-to-database.mjs'
 import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
@@ -23,6 +24,7 @@ describe('write_person_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const person_properties = {
+      entity_id: uuid(),
       title: 'John Doe',
       first_name: 'John',
       last_name: 'Doe',
@@ -83,8 +85,10 @@ describe('write_person_to_database', () => {
     // Arrange - first create a person
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Person',
       first_name: 'Original',
       last_name: 'Person',
@@ -104,6 +108,7 @@ describe('write_person_to_database', () => {
     // Create updated person properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Person',
       first_name: 'Updated',
       last_name: 'Person',
@@ -162,6 +167,7 @@ describe('write_person_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const person_properties = {
+      entity_id: uuid(),
       title: 'File Person',
       first_name: 'File',
       last_name: 'Person',
@@ -218,6 +224,7 @@ describe('write_person_to_database', () => {
 
     // Create person with tag
     const person_properties = {
+      entity_id: uuid(),
       title: 'Tagged Person',
       first_name: 'Tagged',
       last_name: 'Person',
@@ -252,6 +259,7 @@ describe('write_person_to_database', () => {
 
     // Missing first_name
     const missing_first_name = {
+      entity_id: uuid(),
       title: 'Missing First Name',
       last_name: 'Person',
       created_at: now,
@@ -271,6 +279,7 @@ describe('write_person_to_database', () => {
 
     // Missing last_name
     const missing_last_name = {
+      entity_id: uuid(),
       title: 'Missing Last Name',
       first_name: 'Missing',
       created_at: now,
@@ -292,6 +301,7 @@ describe('write_person_to_database', () => {
   it('should handle transaction parameter correctly', async () => {
     // Arrange
     const person_properties = {
+      entity_id: uuid(),
       title: 'Transaction Person',
       first_name: 'Transaction',
       last_name: 'Person',

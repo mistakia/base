@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_task_to_database from '#libs-server/entity/database/write/write-task-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_task_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const task_properties = {
+      entity_id: uuid(),
       title: 'Test Task',
       description: 'Test task description',
       status: 'Planned',
@@ -74,11 +76,13 @@ describe('write_task_to_database', () => {
   })
 
   it('should update an existing task in the database', async () => {
+    const entity_id = uuid()
     // Arrange - first create a task
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const original_properties = {
+      entity_id,
       title: 'Original Task',
       description: 'Original description',
       status: 'No status',
@@ -97,6 +101,7 @@ describe('write_task_to_database', () => {
     // Create updated task properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Task',
       description: 'Updated description',
       status: 'In Progress',
@@ -155,6 +160,7 @@ describe('write_task_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const task_properties = {
+      entity_id: uuid(),
       title: 'File Task',
       description: 'Task with file info',
       created_at: now,
@@ -187,6 +193,7 @@ describe('write_task_to_database', () => {
     const next_week = new Date(now.getTime() + 7 * 86400000) // 7 days later
 
     const task_properties = {
+      entity_id: uuid(),
       title: 'Detailed Task',
       description: 'Task with all fields populated',
       status: 'Started',
@@ -285,6 +292,7 @@ describe('write_task_to_database', () => {
 
     // Create task with tag
     const task_properties = {
+      entity_id: uuid(),
       title: 'Tagged Task',
       description: 'Task with tags',
       status: 'Planned',

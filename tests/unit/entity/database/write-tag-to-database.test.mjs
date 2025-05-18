@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_tag_to_database from '#libs-server/entity/database/write/write-tag-to-database.mjs'
@@ -23,6 +24,7 @@ describe('write_tag_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Test Tag',
       description: 'Test tag description',
       color: '#FF5733',
@@ -78,8 +80,10 @@ describe('write_tag_to_database', () => {
     // Arrange - first create a tag
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Tag',
       description: 'Original description',
       color: '#AABBCC',
@@ -97,6 +101,7 @@ describe('write_tag_to_database', () => {
     // Create updated tag properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Tag',
       description: 'Updated description',
       color: '#112233',
@@ -150,6 +155,7 @@ describe('write_tag_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const tag_properties = {
+      entity_id: uuid(),
       title: 'File Info Tag',
       description: 'Tag with file info',
       color: '#778899',
@@ -180,6 +186,7 @@ describe('write_tag_to_database', () => {
   it('should handle partial tag properties', async () => {
     // Arrange - minimal properties
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Minimal Tag'
       // Only providing title, all other fields should be handled as null or defaults
     }
@@ -213,6 +220,7 @@ describe('write_tag_to_database', () => {
 
     // Create first parent tag
     const parent_tag1_properties = {
+      entity_id: uuid(),
       title: 'Parent Tag 1',
       description: 'A parent tag',
       color: '#AADDEE',
@@ -227,6 +235,7 @@ describe('write_tag_to_database', () => {
 
     // Create second parent tag
     const parent_tag2_properties = {
+      entity_id: uuid(),
       title: 'Parent Tag 2',
       description: 'Another parent tag',
       color: '#EEDDAA',
@@ -241,6 +250,7 @@ describe('write_tag_to_database', () => {
 
     // Create child tag with both parent tags
     const child_tag_properties = {
+      entity_id: uuid(),
       title: 'Child Tag',
       description: 'Tag with parent tags',
       color: '#BBCCDD',
@@ -283,6 +293,7 @@ describe('write_tag_to_database', () => {
     const archive_date = new Date(now.getTime() + 86400000) // 1 day later
 
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Archived Tag',
       description: 'This tag is archived',
       color: '#999999',

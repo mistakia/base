@@ -5,7 +5,7 @@ import {
   get_file_git_sha
 } from '#libs-server/git/file-operations.mjs'
 
-import { create_file_info } from '#libs-server/repository/common/file-utils.mjs'
+import { create_file_info } from '#libs-server/repository/create-file-info.mjs'
 
 const log = debug('repository:git:list-files')
 
@@ -54,7 +54,7 @@ export async function list_markdown_files_from_git({
       }
 
       // Check if file should be processed based on repo type
-      if (!submodule_base_path && file_path.startsWith('system/')) {
+      if (!submodule_base_path && !file_path.startsWith('system/')) {
         continue
       }
 

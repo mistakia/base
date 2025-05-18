@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import dayjs from 'dayjs'
@@ -26,6 +27,7 @@ describe('write_physical_item_to_database', () => {
     const acquisition_date = new Date(now.getTime() - 86400000) // 1 day before
 
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'Test Physical Item',
       description: 'Test physical item description',
       manufacturer: 'Test Manufacturer',
@@ -155,8 +157,10 @@ describe('write_physical_item_to_database', () => {
     // Arrange - first create a physical item
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Physical Item',
       description: 'Original description',
       manufacturer: 'Original Manufacturer',
@@ -182,6 +186,7 @@ describe('write_physical_item_to_database', () => {
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const new_acquisition_date = new Date(now.getTime() - 30 * 86400000) // 30 days before now
     const updated_properties = {
+      entity_id,
       title: 'Updated Physical Item',
       description: 'Updated description',
       manufacturer: 'Updated Manufacturer',
@@ -300,6 +305,7 @@ describe('write_physical_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'File Info Physical Item',
       description: 'Physical item with file info',
       manufacturer: 'Test Corp',
@@ -331,6 +337,7 @@ describe('write_physical_item_to_database', () => {
   it('should handle boolean and array fields correctly', async () => {
     // Arrange
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'Boolean and Array Fields Item',
       description: 'Testing complex field types',
       consumable: true,
@@ -402,6 +409,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_constants.IMPORTANCE_TYPES
     )) {
       const physical_item_properties = {
+        entity_id: uuid(),
         title: `Item with ${importance} importance`,
         importance
       }
@@ -423,6 +431,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_constants.FREQUENCY_TYPES
     )) {
       const physical_item_properties = {
+        entity_id: uuid(),
         title: `Item with ${frequency} usage frequency`,
         frequency_of_use: frequency
       }
@@ -443,6 +452,7 @@ describe('write_physical_item_to_database', () => {
   it('should handle partial physical item properties', async () => {
     // Arrange - minimal properties
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'Minimal Physical Item'
       // Only providing title, all other fields should be handled as null or defaults
     }
@@ -484,6 +494,7 @@ describe('write_physical_item_to_database', () => {
 
     // Create a tag to use for the physical item
     const tag_properties = {
+      entity_id: uuid(),
       title: 'Physical Item Tag',
       description: 'A tag for physical items',
       color: '#00FFCC',
@@ -511,6 +522,7 @@ describe('write_physical_item_to_database', () => {
 
     // Create physical item with tag
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'Tagged Physical Item',
       description: 'Physical item with tags',
       manufacturer: 'Tag Corp',
@@ -543,6 +555,7 @@ describe('write_physical_item_to_database', () => {
     const archive_date = new Date(now.getTime() + 86400000) // 1 day later
 
     const physical_item_properties = {
+      entity_id: uuid(),
       title: 'Archived Physical Item',
       description: 'This physical item is archived',
       manufacturer: 'Archive Inc',

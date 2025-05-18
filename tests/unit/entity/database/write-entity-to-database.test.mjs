@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import db from '#db'
 import { write_entity_to_database } from '#libs-server/entity/database/write/write-entity-to-database.mjs'
 import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import { v4 as uuid } from 'uuid'
 
 describe('write_entity_to_database', () => {
   let test_user
@@ -21,7 +22,8 @@ describe('write_entity_to_database', () => {
     // Arrange
     const entity_properties = {
       title: 'Test Entity',
-      description: 'Test description'
+      description: 'Test description',
+      entity_id: uuid()
     }
     const entity_type = 'task'
     const entity_content = '# Test Entity\n\nContent body'
@@ -52,7 +54,8 @@ describe('write_entity_to_database', () => {
     // Arrange - first create an entity
     const original_properties = {
       title: 'Original Title',
-      description: 'Original description'
+      description: 'Original description',
+      entity_id: uuid()
     }
     const entity_type = 'task'
     const original_content = 'Original content'
@@ -67,7 +70,8 @@ describe('write_entity_to_database', () => {
     // Update properties and content
     const updated_properties = {
       title: 'Updated Title',
-      description: 'Updated description'
+      description: 'Updated description',
+      entity_id
     }
     const updated_content = 'Updated content'
 
@@ -93,7 +97,8 @@ describe('write_entity_to_database', () => {
     // Arrange
     const entity_properties = {
       title: 'File Entity',
-      description: 'Entity with file info'
+      description: 'Entity with file info',
+      entity_id: uuid()
     }
     const entity_type = 'task'
     const file_info = {
@@ -123,7 +128,8 @@ describe('write_entity_to_database', () => {
     const related_entity_id = await write_entity_to_database({
       entity_properties: {
         title: 'Related Entity',
-        description: 'Related entity description'
+        description: 'Related entity description',
+        entity_id: uuid()
       },
       entity_type: 'task',
       user_id: test_user_id
@@ -140,7 +146,8 @@ describe('write_entity_to_database', () => {
         references: [related_entity_id]
       },
       created_at: now,
-      updated_at: later
+      updated_at: later,
+      entity_id: uuid()
     }
 
     // Act
@@ -173,7 +180,8 @@ describe('write_entity_to_database', () => {
         title: 'Test Tag',
         description: 'A test tag',
         created_at: now,
-        updated_at: later
+        updated_at: later,
+        entity_id: uuid()
       },
       entity_type: 'tag',
       user_id: test_user_id
@@ -184,7 +192,8 @@ describe('write_entity_to_database', () => {
       description: 'Entity with tags',
       tags: [tag_entity_id],
       created_at: now,
-      updated_at: later
+      updated_at: later,
+      entity_id: uuid()
     }
 
     // Act

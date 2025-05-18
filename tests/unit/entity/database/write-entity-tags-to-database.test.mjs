@@ -71,7 +71,7 @@ describe('write_entity_tags_to_database', () => {
     // Act
     await write_entity_tags_to_database({
       entity_id,
-      tags,
+      tag_entity_ids: tags,
       db_client: db
     })
 
@@ -91,7 +91,7 @@ describe('write_entity_tags_to_database', () => {
 
     await write_entity_tags_to_database({
       entity_id,
-      tags: initial_tags,
+      tag_entity_ids: initial_tags,
       db_client: db
     })
 
@@ -104,7 +104,7 @@ describe('write_entity_tags_to_database', () => {
 
     await write_entity_tags_to_database({
       entity_id,
-      tags: new_tags,
+      tag_entity_ids: new_tags,
       db_client: db
     })
 
@@ -120,7 +120,7 @@ describe('write_entity_tags_to_database', () => {
     await write_entity_tags_to_database({
       entity_id,
       // TODO should probably be base_relative_path
-      tags: [tag_entity_id1, tag_entity_id2],
+      tag_entity_ids: [tag_entity_id1, tag_entity_id2],
       db_client: db
     })
 
@@ -131,7 +131,7 @@ describe('write_entity_tags_to_database', () => {
     // Act - write empty tags array
     await write_entity_tags_to_database({
       entity_id,
-      tags: [],
+      tag_entity_ids: [],
       db_client: db
     })
 
@@ -145,7 +145,7 @@ describe('write_entity_tags_to_database', () => {
     // Act with null tags
     await write_entity_tags_to_database({
       entity_id,
-      tags: null,
+      tag_entity_ids: null,
       db_client: db
     })
 
@@ -156,7 +156,7 @@ describe('write_entity_tags_to_database', () => {
     // Act with undefined tags
     await write_entity_tags_to_database({
       entity_id,
-      tags: undefined,
+      tag_entity_ids: undefined,
       db_client: db
     })
 
@@ -179,7 +179,7 @@ describe('write_entity_tags_to_database', () => {
       // Act
       await write_entity_tags_to_database({
         entity_id,
-        tags,
+        tag_entity_ids: tags,
         db_client: trx
       })
 

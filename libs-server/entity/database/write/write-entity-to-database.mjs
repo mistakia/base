@@ -1,7 +1,7 @@
 import db from '#db'
 import debug from 'debug'
 import { write_entity_relations_to_database } from './write-entity-relations-to-database.mjs'
-// import { write_entity_tags_to_database } from './write-entity-tags-to-database.mjs'
+import { write_entity_tags_to_database } from './write-entity-tags-to-database.mjs'
 
 const log = debug('entity:database:write')
 
@@ -104,7 +104,8 @@ export async function write_entity_to_database({
     } else {
       // Insert with provided entity_id
       // Use created_at from entity_properties if it exists, otherwise use current time
-      entity_data.created_at = entity_properties.created_at || new Date()
+      entity_data.created_at =
+        entity_properties.created_at || entity_data.updated_at || new Date()
       entity_data.entity_id = entity_properties.entity_id
 
       await db_client('entities').insert(entity_data)
@@ -126,11 +127,11 @@ export async function write_entity_to_database({
     // Process tags if present in entity_properties
     if (entity_properties.tags) {
       // TODO convert base_relative_path to tag_entity_id
-      // await write_entity_tags_to_database({
-      //   entity_id: entity_properties.entity_id,
-      //   tag_entity_ids,
-      //   db_client
-      // })
+      await write_entity_tags_to_database({
+        entity_id: entity_properties.entity_id,
+        tag_entity_ids: entity_properties.tags,
+        db_client
+      })
     }
 
     // Handle archived status if present

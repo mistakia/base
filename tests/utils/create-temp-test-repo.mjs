@@ -30,9 +30,12 @@ export async function create_temp_test_repo({
   initial_content = '# Test Base Repository'
 } = {}) {
   const base_repo = create_temp_test_directory(prefix)
-  const user_repo = create_temp_test_directory('user-repo-')
+  const user_repo_path = path.join(base_repo.path, 'user')
 
   try {
+    // Create the user repository directory inside the base repo
+    await fs.mkdir(user_repo_path, { recursive: true })
+
     // Initialize base git repository
     await exec('git init', { cwd: base_repo.path })
     await exec('git config user.name "Test User"', { cwd: base_repo.path })
@@ -65,20 +68,20 @@ export async function create_temp_test_repo({
     })
 
     // Initialize user submodule repository
-    await exec('git init', { cwd: user_repo.path })
-    await exec('git config user.name "Test User"', { cwd: user_repo.path })
+    await exec('git init', { cwd: user_repo_path })
+    await exec('git config user.name "Test User"', { cwd: user_repo_path })
     await exec('git config user.email "test@example.com"', {
-      cwd: user_repo.path
+      cwd: user_repo_path
     })
 
     // Create user README
-    const user_readme_path = path.join(user_repo.path, 'README.md')
+    const user_readme_path = path.join(user_repo_path, 'README.md')
     await fs.writeFile(user_readme_path, '# Test User Repository')
-    await exec('git add README.md', { cwd: user_repo.path })
-    await exec('git commit -m "Initial commit"', { cwd: user_repo.path })
+    await exec('git add README.md', { cwd: user_repo_path })
+    await exec('git commit -m "Initial commit"', { cwd: user_repo_path })
 
     // Add user submodule to base repo
-    await exec(`git submodule add ${user_repo.path} user`, {
+    await exec('git submodule add ./user user', {
       cwd: base_repo.path
     })
 
@@ -88,21 +91,14 @@ export async function create_temp_test_repo({
     })
     await exec('git branch -M main', { cwd: base_repo.path })
 
-    // Create a combined cleanup function
-    const cleanup = () => {
-      base_repo.cleanup()
-      user_repo.cleanup()
-    }
-
     return {
       path: base_repo.path,
-      user_path: user_repo.path,
-      cleanup
+      user_path: user_repo_path,
+      cleanup: base_repo.cleanup
     }
   } catch (error) {
     // Clean up on failure
     base_repo.cleanup()
-    user_repo.cleanup()
     throw error
   }
 }

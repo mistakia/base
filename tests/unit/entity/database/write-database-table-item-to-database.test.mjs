@@ -1,3 +1,4 @@
+import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_database_table_item_to_database from '#libs-server/entity/database/write/write-database-table-item-to-database.mjs'
@@ -52,6 +53,7 @@ describe('write_database_table_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_item_properties = {
+      entity_id: uuid(),
       title: 'Test Item',
       description: 'Test database table item description',
       database_table_id: test_database_table_id,
@@ -121,8 +123,10 @@ describe('write_database_table_item_to_database', () => {
     // Arrange - first create a database table item
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
+    const entity_id = uuid()
 
     const original_properties = {
+      entity_id,
       title: 'Original Item',
       description: 'Original description',
       database_table_id: test_database_table_id,
@@ -145,6 +149,7 @@ describe('write_database_table_item_to_database', () => {
     // Create updated item properties
     const even_later = new Date(later.getTime() + 1000) // 2 seconds after original created_at
     const updated_properties = {
+      entity_id,
       title: 'Updated Item',
       description: 'Updated description',
       database_table_id: test_database_table_id,
@@ -211,6 +216,7 @@ describe('write_database_table_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_item_properties = {
+      entity_id: uuid(),
       title: 'File Item',
       description: 'Item with file info',
       database_table_id: test_database_table_id,
@@ -241,6 +247,7 @@ describe('write_database_table_item_to_database', () => {
   it('should validate required fields', async () => {
     // Arrange
     const database_item_properties = {
+      entity_id: uuid(),
       title: 'Missing Required Field',
       description: 'This item is missing the required database_table_id'
       // Deliberately omitting database_table_id
@@ -265,6 +272,7 @@ describe('write_database_table_item_to_database', () => {
     const later = new Date(now.getTime() + 1000) // 1 second later
 
     const database_item_properties = {
+      entity_id: uuid(),
       title: 'Complex Fields Item',
       description: 'Item with complex field values',
       database_table_id: test_database_table_id,
@@ -349,6 +357,7 @@ describe('write_database_table_item_to_database', () => {
 
     // Create database table item with tag
     const database_item_properties = {
+      entity_id: uuid(),
       title: 'Tagged Item',
       description: 'Item with tags',
       database_table_id: test_database_table_id,
