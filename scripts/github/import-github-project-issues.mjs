@@ -118,7 +118,8 @@ export default async function import_github_project_issues({
         github_repository_name: repo_data.github_repository_name,
         user_id,
         user_base_directory,
-        project_items_map
+        project_items_map,
+        github_token
       })
 
       // Add results to overall totals

@@ -25,6 +25,8 @@ const log = debug('github:sync-github-issue-to-task')
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {string} options.user_id - User ID for task ownership
  * @param {string} [options.import_history_base_directory] - Base directory for import history
+ * @param {string} options.github_token - GitHub token
+ * @param {string} [options.github_project_number] - GitHub project number
  * @returns {Promise<Object>} - The sync result
  */
 export async function sync_github_issue_to_task({
@@ -34,7 +36,9 @@ export async function sync_github_issue_to_task({
   github_repository_name,
   user_base_directory,
   user_id,
-  import_history_base_directory = null
+  import_history_base_directory = null,
+  github_token,
+  github_project_number = null
 }) {
   let trx
 
@@ -129,7 +133,9 @@ export async function sync_github_issue_to_task({
         user_base_directory,
         import_cid,
         import_history_base_directory,
-        trx
+        trx,
+        github_token,
+        github_project_number
       })
 
       await trx.commit()

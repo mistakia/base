@@ -110,10 +110,6 @@ export async function update_entity_from_external_item({
       })
     }
 
-    if (external_updates) {
-      throw new Error('External updates detected, update external item')
-    }
-
     if (internal_updates) {
       const merged_properties = {
         ...existing_entity_properties,
@@ -130,7 +126,8 @@ export async function update_entity_from_external_item({
     return {
       action: external_updates || internal_updates ? 'updated' : 'skipped',
       entity_id,
-      absolute_path
+      absolute_path,
+      external_updates
     }
   } catch (error) {
     log(

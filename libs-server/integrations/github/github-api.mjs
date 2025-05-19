@@ -1,13 +1,14 @@
 import fetch from 'node-fetch'
 import debug from 'debug'
 import { GraphQLClient, gql } from 'graphql-request'
+import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
 
 const log = debug('github')
 
 // set the github state based on the task status
 export const map_task_status_to_github_state = (status) => {
   switch (status) {
-    case 'Completed':
+    case TASK_STATUS.COMPLETED:
       return 'closed'
     default:
       return 'open'
@@ -232,6 +233,13 @@ export const update_github_issue = async ({
   data
 }) => {
   const url = `https://api.github.com/repos/${github_repository_owner}/${github_repository_name}/issues/${github_issue_number}`
+
+  console.log({
+    url,
+    data
+  })
+
+  process.exit(0)
 
   const response = await fetch(url, {
     method: 'PATCH',
@@ -476,4 +484,377 @@ export async function update_pull_request({
   }
 
   return response.json()
+}
+
+/**
+ * Update GitHub issue using GraphQL API
+ * @param {Object} params - Parameters for updating the issue
+ * @param {string} params.github_repository_owner - Repository owner
+ * @param {string} params.github_repository_name - Repository name
+ * @param {string|number} params.github_issue_number - Issue number
+ * @param {string} params.github_token - GitHub token
+ * @param {Object} params.data - Update data (title, body, state)
+ * @returns {Promise<Object>} Updated issue data
+ */
+export async function update_github_issue_graphql({
+  github_repository_owner,
+  github_repository_name,
+  github_issue_number,
+  github_token,
+  data
+}) {
+  log(
+    `Updating GitHub issue ${github_repository_owner}/${github_repository_name}#${github_issue_number} via GraphQL`
+  )
+
+  const client = create_github_client({ github_token })
+
+  // Get the issue node ID first (required for GraphQL mutations)
+  const get_issue_id_query = gql`
+    query GetIssueId($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        issue(number: $number) {
+          id
+        }
+      }
+    }
+  `
+
+  const variables = {
+    owner: github_repository_owner,
+    name: github_repository_name,
+    number: parseInt(github_issue_number, 10)
+  }
+
+  try {
+    // Get the issue ID
+    const issue_data = await client.request(get_issue_id_query, variables)
+    const issue_id = issue_data.repository.issue.id
+
+    // Build mutations based on what fields are being updated
+    const mutation = gql`
+      mutation UpdateIssue($input: UpdateIssueInput!) {
+        updateIssue(input: $input) {
+          issue {
+            id
+            number
+            title
+            body
+            state
+            url
+          }
+        }
+      }
+    `
+
+    const mutation_input = {
+      id: issue_id
+    }
+
+    // Map fields from our data object to GraphQL input
+    if (data.title !== undefined) {
+      mutation_input.title = data.title
+    }
+
+    if (data.body !== undefined) {
+      mutation_input.body = data.body
+    }
+
+    // Handle state changes
+    if (data.state !== undefined) {
+      if (data.state === 'closed') {
+        mutation_input.state = 'CLOSED'
+      } else if (data.state === 'open') {
+        mutation_input.state = 'OPEN'
+      }
+    }
+
+    // Execute the mutation
+    const result = await client.request(mutation, { input: mutation_input })
+    return result.updateIssue.issue
+  } catch (error) {
+    log(`GitHub GraphQL API error: ${error.message}`)
+    throw error
+  }
+}
+
+/**
+ * Update GitHub project item fields via GraphQL API
+ * @param {Object} params - Parameters for updating the project item
+ * @param {string} params.project_id - Project ID (GraphQL node ID)
+ * @param {string} params.item_id - Project item ID (GraphQL node ID)
+ * @param {Object} params.field_updates - Map of field IDs to their new values
+ * @param {string} params.github_token - GitHub token
+ * @returns {Promise<Object>} Update result
+ */
+export async function update_github_project_item({
+  project_id,
+  item_id,
+  field_updates,
+  github_token
+}) {
+  log('Updating GitHub project item via GraphQL')
+
+  const client = create_github_client({ github_token })
+  const results = {}
+
+  // Process each field update independently
+  for (const [field_id, value] of Object.entries(field_updates)) {
+    try {
+      if (typeof value === 'string') {
+        // Handle text field updates
+        const text_field_mutation = gql`
+          mutation UpdateProjectItemField(
+            $input: UpdateProjectV2ItemFieldValueInput!
+          ) {
+            updateProjectV2ItemFieldValue(input: $input) {
+              projectV2Item {
+                id
+              }
+            }
+          }
+        `
+
+        const text_input = {
+          projectId: project_id,
+          itemId: item_id,
+          fieldId: field_id,
+          value: {
+            text: value
+          }
+        }
+
+        results[field_id] = await client.request(text_field_mutation, {
+          input: text_input
+        })
+      } else if (typeof value === 'boolean' || value === null) {
+        // Handle checkbox/boolean fields
+        const checkbox_mutation = gql`
+          mutation UpdateProjectItemField(
+            $input: UpdateProjectV2ItemFieldValueInput!
+          ) {
+            updateProjectV2ItemFieldValue(input: $input) {
+              projectV2Item {
+                id
+              }
+            }
+          }
+        `
+
+        const checkbox_input = {
+          projectId: project_id,
+          itemId: item_id,
+          fieldId: field_id,
+          value: {
+            boolean: value
+          }
+        }
+
+        results[field_id] = await client.request(checkbox_mutation, {
+          input: checkbox_input
+        })
+      } else if (typeof value === 'object' && value !== null) {
+        if (value.singleSelectOptionId) {
+          // Handle single select field updates
+          const select_mutation = gql`
+            mutation UpdateProjectItemField(
+              $input: UpdateProjectV2ItemFieldValueInput!
+            ) {
+              updateProjectV2ItemFieldValue(input: $input) {
+                projectV2Item {
+                  id
+                }
+              }
+            }
+          `
+
+          const select_input = {
+            projectId: project_id,
+            itemId: item_id,
+            fieldId: field_id,
+            value: {
+              singleSelectOptionId: value.singleSelectOptionId
+            }
+          }
+
+          results[field_id] = await client.request(select_mutation, {
+            input: select_input
+          })
+        } else if (value.date) {
+          // Handle date field updates
+          const date_mutation = gql`
+            mutation UpdateProjectItemField(
+              $input: UpdateProjectV2ItemFieldValueInput!
+            ) {
+              updateProjectV2ItemFieldValue(input: $input) {
+                projectV2Item {
+                  id
+                }
+              }
+            }
+          `
+
+          const date_input = {
+            projectId: project_id,
+            itemId: item_id,
+            fieldId: field_id,
+            value: {
+              date: value.date
+            }
+          }
+
+          results[field_id] = await client.request(date_mutation, {
+            input: date_input
+          })
+        }
+      }
+    } catch (error) {
+      log(
+        `GitHub GraphQL API error updating project item field ${field_id}: ${error.message}`
+      )
+      results[field_id] = { error: error.message }
+    }
+  }
+
+  return results
+}
+
+/**
+ * Get GitHub project item information via GraphQL
+ * @param {Object} params - Parameters for getting project item info
+ * @param {string} params.github_repository_owner - Repository owner
+ * @param {string} params.github_repository_name - Repository name
+ * @param {string|number} params.github_issue_number - Issue number
+ * @param {string|number} params.project_number - Project number
+ * @param {string} params.github_token - GitHub token
+ * @returns {Promise<Object>} Project item data including ID and fields
+ */
+export async function get_github_project_item_for_issue({
+  github_repository_owner,
+  github_repository_name,
+  github_issue_number,
+  project_number,
+  github_token
+}) {
+  log(
+    `Getting GitHub project item for issue ${github_repository_owner}/${github_repository_name}#${github_issue_number}`
+  )
+
+  const client = create_github_client({ github_token })
+
+  const query = gql`
+    query GetProjectItem(
+      $owner: String!
+      $repo: String!
+      $issue_number: Int!
+      $project_number: Int!
+    ) {
+      repository(owner: $owner, name: $repo) {
+        issue(number: $issue_number) {
+          id
+          projectItems(first: 10) {
+            nodes {
+              id
+              project {
+                id
+                number
+                fields(first: 20) {
+                  nodes {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      name
+                      options {
+                        id
+                        name
+                      }
+                    }
+                    ... on ProjectV2Field {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+              fieldValues(first: 20) {
+                nodes {
+                  ... on ProjectV2ItemFieldTextValue {
+                    id
+                    text
+                    field {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                    }
+                  }
+                  ... on ProjectV2ItemFieldDateValue {
+                    date
+                    field {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                    }
+                  }
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    id
+                    name
+                    field {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+
+  const variables = {
+    owner: github_repository_owner,
+    repo: github_repository_name,
+    issue_number: parseInt(github_issue_number, 10),
+    project_number: parseInt(project_number, 10)
+  }
+
+  try {
+    const data = await client.request(query, variables)
+    const issue_data = data.repository.issue
+
+    // Find the project item that matches the requested project number
+    const project_item = issue_data.projectItems.nodes.find(
+      (item) => item.project.number === parseInt(project_number, 10)
+    )
+
+    if (!project_item) {
+      log(`Issue is not in project #${project_number}`)
+      return null
+    }
+
+    // Extract field definitions and options, particularly for status fields
+    const status_field = project_item.project.fields.nodes.find(
+      (field) => field.name && field.name.toLowerCase() === 'status'
+    )
+
+    // Process and organize the data to return
+    return {
+      item_id: project_item.id,
+      project_id: project_item.project.id,
+      fields: project_item.fieldValues.nodes,
+      field_definitions: project_item.project.fields.nodes,
+      status_field
+    }
+  } catch (error) {
+    log(`GitHub GraphQL API error: ${error.message}`)
+    throw error
+  }
 }

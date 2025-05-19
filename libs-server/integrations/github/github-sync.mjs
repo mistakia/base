@@ -1,8 +1,5 @@
 import debug from 'debug'
-import { update_github_issue } from './github-api.mjs'
-import { find_entity_for_github_issue } from './task/index.mjs'
 import { sync_github_issue_to_task } from './sync-github-issue-to-task.mjs'
-import { format_external_id_for_github_issue } from './github-mapper.mjs'
 
 const log = debug('github-sync')
 
@@ -32,6 +29,7 @@ const log = debug('github-sync')
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {Object} [options.project_items_map] - Project items map (optional)
  * @param {string} [options.import_history_base_directory] - Import history base directory (optional)
+ * @param {string} options.github_token - GitHub token
  * @returns {Object} Import results
  */
 export async function process_github_issues({
@@ -41,7 +39,8 @@ export async function process_github_issues({
   user_id,
   user_base_directory,
   project_items_map,
-  import_history_base_directory
+  import_history_base_directory,
+  github_token
 }) {
   const import_results = {
     created: 0,
@@ -87,7 +86,8 @@ export async function process_github_issues({
         github_repository_name,
         user_base_directory,
         user_id,
-        import_history_base_directory
+        import_history_base_directory,
+        github_token
       })
 
       // Update results
@@ -117,98 +117,4 @@ export async function process_github_issues({
   }
 
   return import_results
-}
-
-/**
- * Sync task back to GitHub
- *
- * @param {Object} options - Function options
- * @param {string} options.base_relative_path - Relative path to the task file
- * @param {string} options.github_repository_owner - Repository owner
- * @param {string} options.github_repository_name - Repository name
- * @param {Object} options.updates - Fields to update
- * @param {string} options.github_token - GitHub token
- * @returns {boolean} Success indicator
- */
-export async function sync_task_back_to_github({
-  base_relative_path,
-  github_repository_owner,
-  github_repository_name,
-  updates,
-  github_token
-}) {
-  try {
-    const github_issue_number = Number(updates.github_issue_number)
-
-    if (!github_issue_number) {
-      log(`Task is missing GitHub issue number: ${base_relative_path}`)
-      return false
-    }
-
-    const external_id = format_external_id_for_github_issue({
-      github_repository_owner,
-      github_repository_name,
-      github_issue_number
-    })
-
-    // Read task from filesystem
-    const task = await find_entity_for_github_issue({
-      external_id,
-      github_issue_number: parseInt(updates.github_issue_number || 0)
-    })
-
-    if (!task.success) {
-      log(`Task not found for GitHub sync: ${base_relative_path}`)
-      return false
-    }
-
-    // Prepare update data
-    const github_update_data = prepare_github_update_data({ updates })
-
-    // Skip update if no changes
-    if (Object.keys(github_update_data).length === 0) {
-      return false
-    }
-
-    // Update GitHub issue
-    await update_github_issue({
-      github_repository_owner,
-      github_repository_name,
-      github_issue_number,
-      github_token,
-      data: github_update_data
-    })
-
-    log(`Synced task to GitHub issue #${github_issue_number}`)
-    return true
-  } catch (error) {
-    log(`Error syncing task to GitHub: ${error.message}`)
-    return false
-  }
-}
-
-/**
- * Prepare GitHub update data from task updates
- *
- * @param {Object} options - Function options
- * @param {Object} options.updates - Fields to update
- * @returns {Object} GitHub update data
- */
-function prepare_github_update_data({ updates }) {
-  const github_update_data = {}
-
-  if ('title' in updates) {
-    github_update_data.title = updates.title
-  }
-
-  if ('description' in updates) {
-    github_update_data.body = updates.description
-  }
-
-  if ('status' in updates) {
-    github_update_data.state =
-      updates.status === 'Completed' ? 'closed' : 'open'
-  }
-
-  return github_update_data
 }

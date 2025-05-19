@@ -1,6 +1,7 @@
 import debug from 'debug'
 
 import { update_entity_from_external_item } from '#libs-server/sync/index.mjs'
+import { sync_task_to_github_issue } from '../sync-task-to-github-issue.mjs'
 
 const log = debug('github:task')
 
@@ -18,6 +19,8 @@ const log = debug('github:task')
  * @param {Object} [options.trx=null] - Optional database transaction
  * @param {string} [options.import_cid=null] - Optional import correlation ID
  * @param {string} [options.import_history_base_directory=null] - Optional base directory for import history
+ * @param {string} options.github_token - GitHub token
+ * @param {string} [options.github_project_number=null] - GitHub project number
  * @returns {Promise<Object>} - The update result with conflict information
  */
 export async function update_task_from_github_issue({
@@ -30,7 +33,9 @@ export async function update_task_from_github_issue({
   user_base_directory,
   trx = null,
   import_cid = null,
-  import_history_base_directory = null
+  import_history_base_directory = null,
+  github_token,
+  github_project_number = null
 }) {
   try {
     log(`Updating task from GitHub issue #${github_issue.number}`)
@@ -63,7 +68,7 @@ export async function update_task_from_github_issue({
     const external_update_time = github_issue.updated_at
 
     // Use the generalized entity update function
-    return await update_entity_from_external_item({
+    const update_result = await update_entity_from_external_item({
       external_item: github_issue,
       entity_properties: normalized_github_issue,
       entity_type: 'task',
@@ -75,7 +80,21 @@ export async function update_task_from_github_issue({
       import_history_base_directory,
       trx
     })
+
+    if (update_result.external_updates) {
+      await sync_task_to_github_issue({
+        github_issue_number: github_issue.number,
+        github_repository_owner,
+        github_repository_name,
+        updates: update_result.external_updates,
+        github_token,
+        github_project_number
+      })
+    }
+
+    return update_result
   } catch (error) {
+    console.log(error)
     log(`Error updating task from GitHub issue: ${error.message}`)
     throw error
   }
