@@ -7,7 +7,7 @@ import db from '#db'
 import { build_change_request_from_git } from './utils.mjs'
 import * as github_integration from '#libs-server/integrations/github/index.mjs'
 import config from '#config'
-import { write_document_to_filesystem } from '#libs-server/markdown/index.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -18,7 +18,7 @@ const log = debug('change-requests')
  * @param {object} params - Parameters for creating the change request.
  * @param {string} params.title - The title of the change request.
  * @param {string} params.description - The description of the change request.
- * @param {string} params.creator_id - The ID of the user or system entity creating the request.
+ * @param {string} params.user_id - The ID of the user or system entity creating the request.
  * @param {string} params.target_branch - The target branch for the changes (e.g., 'main').
  * @param {string} params.feature_branch - The branch containing the commits.
  * @param {boolean} [params.create_github_pr=false] - Whether to create a GitHub PR.
@@ -27,13 +27,13 @@ const log = debug('change-requests')
  * @param {string} [params.github_pr_url] - Optional GitHub PR URL if PR already exists.
  * @param {string} [params.thread_id] - Optional ID of the related thread.
  * @param {Array<string>} [params.tags] - Optional tags.
- * @param {string} [params.repo_path] - Path to the repository. Defaults to config.user_base_directory.
+ * @param {string} [params.user_base_directory] - Path to the user repository. Defaults to config.user_base_directory.
  * @returns {Promise<string>} The ID of the newly created change request.
  */
 export async function create_change_request({
   title,
   description,
-  creator_id,
+  user_id,
   target_branch,
   feature_branch,
   create_github_pr = false,
@@ -42,7 +42,7 @@ export async function create_change_request({
   github_pr_url,
   thread_id,
   tags = [],
-  repo_path = config.user_base_directory
+  user_base_directory = config.user_base_directory
 }) {
   const change_request_id = uuidv4()
   const now = new Date()
@@ -61,7 +61,7 @@ export async function create_change_request({
     const git_data = await build_change_request_from_git({
       feature_branch,
       target_branch,
-      repo_path
+      user_base_directory
     })
 
     if (!git_data || !git_data.exists) {
@@ -78,7 +78,7 @@ export async function create_change_request({
         feature_branch,
         target_branch,
         description,
-        repo_path
+        user_base_directory
       })
 
       pr_url = github_result?.pr_url
@@ -93,7 +93,6 @@ export async function create_change_request({
         change_request_id,
         status: 'PendingReview',
         title,
-        creator_id,
         now,
         target_branch,
         feature_branch,
@@ -107,7 +106,7 @@ export async function create_change_request({
         change_request_id,
         title,
         description,
-        creator_id,
+        user_id,
         now,
         target_branch,
         feature_branch,
@@ -117,13 +116,14 @@ export async function create_change_request({
         github_repo,
         thread_id,
         tags,
-        repo_path
+        user_base_directory
       })
     })
 
     log(`Change request ${change_request_id} created successfully.`)
     return change_request_id
   } catch (error) {
+    console.log(error)
     log(`Error creating change request ${change_request_id}:`, error)
     throw error
   }
@@ -136,7 +136,7 @@ async function create_github_pull_request({
   feature_branch,
   target_branch,
   description,
-  repo_path = config.user_base_directory
+  user_base_directory = config.user_base_directory
 }) {
   if (!github_repo) {
     throw new Error('github_repo is required when create_github_pr is true.')
@@ -153,13 +153,12 @@ async function create_github_pull_request({
     }
 
     const pr_result = await github_integration.create_pull_request({
-      token: github_token,
+      github_token,
       repo: github_repo,
       title,
       head: feature_branch,
       base: target_branch,
-      body: description,
-      repo_path
+      body: description
     })
 
     return {
@@ -179,7 +178,6 @@ async function save_to_database({
   change_request_id,
   status,
   title,
-  creator_id,
   now,
   target_branch,
   feature_branch,
@@ -191,7 +189,6 @@ async function save_to_database({
   await trx('change_requests').insert({
     change_request_id,
     title,
-    creator_id,
     created_at: now,
     updated_at: now,
     status,
@@ -209,7 +206,7 @@ async function create_markdown_file({
   change_request_id,
   title,
   description,
-  creator_id,
+  user_id,
   now,
   target_branch,
   feature_branch,
@@ -219,20 +216,20 @@ async function create_markdown_file({
   github_repo,
   thread_id,
   tags,
-  repo_path
+  user_base_directory
 }) {
   const absolute_path = path.join(
-    repo_path,
+    user_base_directory,
     `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
   )
   const iso_date = now.toISOString()
 
-  // Create the frontmatter
-  const frontmatter = {
+  // Create the entity properties
+  const entity_properties = {
     change_request_id,
     title,
     description,
-    creator_id,
+    user_id,
     created_at: iso_date,
     updated_at: iso_date,
     status,
@@ -242,8 +239,7 @@ async function create_markdown_file({
     github_pr_number,
     github_repo,
     thread_id,
-    tags,
-    type: 'change_request'
+    tags
   }
 
   // Create the content
@@ -253,10 +249,11 @@ async function create_markdown_file({
   const dir_path = path.dirname(absolute_path)
   await fs.mkdir(dir_path, { recursive: true })
 
-  // Write the file
-  await write_document_to_filesystem({
+  // Write the file using write_entity_to_filesystem
+  await write_entity_to_filesystem({
     absolute_path,
-    document_properties: frontmatter,
-    document_content: content
+    entity_properties,
+    entity_type: 'change_request',
+    entity_content: content
   })
 }

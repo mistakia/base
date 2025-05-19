@@ -51,7 +51,7 @@ describe('Change Request Status Updates', function () {
 
     // Create the change_requests directory
     await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'user/change-requests'),
+      path.join(test_thread.user_base_directory, 'change-requests'),
       {
         recursive: true
       }
@@ -97,17 +97,17 @@ describe('Change Request Status Updates', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Status Update Test',
         description: 'Testing status update functionality',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Initial status should be PendingReview
       const cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('PendingReview')
 
@@ -117,7 +117,7 @@ describe('Change Request Status Updates', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Approving for testing',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify update result
@@ -134,7 +134,7 @@ describe('Change Request Status Updates', function () {
       // Verify markdown file status
       const markdown_file = path.join(
         test_thread.user_base_directory,
-        'user/change-requests',
+        'change-requests',
         `${cr_id}.md`
       )
       const markdown_content = await fs.readFile(markdown_file, 'utf8')
@@ -148,11 +148,11 @@ describe('Change Request Status Updates', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Status Transition Test',
         description: 'Testing valid status transitions',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Try an invalid transition directly to Merged
@@ -162,7 +162,7 @@ describe('Change Request Status Updates', function () {
           status: 'Merged',
           updater_id: test_user.user_id,
           comment: 'Attempting invalid transition',
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // Should not reach here
@@ -177,12 +177,12 @@ describe('Change Request Status Updates', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Valid approval',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       let cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('Approved')
 
@@ -191,12 +191,12 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         merger_id: test_user.user_id,
         comment: 'Merging approved changes',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('Merged')
     })
@@ -206,11 +206,11 @@ describe('Change Request Status Updates', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Rejection Test',
         description: 'Testing rejection workflow',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Reject the change request
@@ -219,13 +219,13 @@ describe('Change Request Status Updates', function () {
         status: 'Rejected',
         updater_id: test_user.user_id,
         comment: 'Rejecting these changes',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify rejection
       const cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('Rejected')
 
@@ -235,7 +235,7 @@ describe('Change Request Status Updates', function () {
           change_request_id: cr_id,
           merger_id: test_user.user_id,
           comment: 'Attempting to merge rejected CR',
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // Should not reach here
@@ -250,11 +250,11 @@ describe('Change Request Status Updates', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Reopen Test',
         description: 'Testing reopening workflow',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Reject the change request
@@ -263,7 +263,7 @@ describe('Change Request Status Updates', function () {
         status: 'Rejected',
         updater_id: test_user.user_id,
         comment: 'Rejecting temporarily',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Reopen/reset to PendingReview
@@ -272,13 +272,13 @@ describe('Change Request Status Updates', function () {
         status: 'PendingReview',
         updater_id: test_user.user_id,
         comment: 'Reopening for more review',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify reopened
       const cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('PendingReview')
 
@@ -288,12 +288,12 @@ describe('Change Request Status Updates', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Approving reopened CR',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       const approved_cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(approved_cr.status).to.equal('Approved')
     })
@@ -308,7 +308,7 @@ describe('Change Request Status Updates', function () {
           status: 'Approved',
           updater_id: test_user.user_id,
           comment: 'This should fail',
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // Should not reach here
@@ -323,11 +323,11 @@ describe('Change Request Status Updates', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Invalid Status Test',
         description: 'Testing invalid status values',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Try to update with invalid status
@@ -337,7 +337,7 @@ describe('Change Request Status Updates', function () {
           status: 'InvalidStatus',
           updater_id: test_user.user_id,
           comment: 'This should fail',
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // Should not reach here
@@ -349,7 +349,7 @@ describe('Change Request Status Updates', function () {
       // Verify CR status unchanged
       const cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(cr.status).to.equal('PendingReview')
     })

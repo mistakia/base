@@ -235,12 +235,12 @@ export default async function create_thread({
         const change_request_id = await create_change_request({
           title: `Thread ${thread_id} changes`,
           description: `Default change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
-          creator_id: user_id,
+          user_id,
           target_branch: 'main',
           feature_branch: `thread/${thread_id}`,
           thread_id,
           tags: ['thread-changes', 'auto-generated'],
-          repo_path: user_base_directory
+          user_base_directory
         })
 
         // Add change request information to metadata

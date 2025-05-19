@@ -22,10 +22,6 @@ properties:
       - Closed
     required: true
     description: The current lifecycle status of the change request.
-  - name: creator_id
-    type: string
-    required: true
-    description: Identifier for the user or system process that created the request.
   - name: target_branch
     type: string
     required: true
@@ -93,7 +89,6 @@ title: 'Update JavaScript Guidelines for Async/Await'
 type: change_request
 change_request_id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef'
 status: 'PendingReview'
-creator_id: 'user-uuid-or-system-id'
 created_at: '2025-04-06T14:30:00Z'
 updated_at: '2025-04-06T14:30:00Z'
 target_branch: 'main'

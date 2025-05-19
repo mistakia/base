@@ -18,7 +18,7 @@ const log = debug('change-requests')
  * @param {string} params.status - The new status ('Draft', 'PendingReview', 'Approved', 'NeedsRevision', 'Rejected', 'Merged', 'Closed').
  * @param {string} [params.updater_id] - The ID of the user updating the status.
  * @param {string} [params.comment] - Optional comment explaining the status change.
- * @param {string} [params.repo_path] - Optional repository path.
+ * @param {string} [params.user_base_directory] - Optional repository path.
  * @returns {Promise<object>} The updated change request object.
  */
 export async function update_change_request_status({
@@ -26,7 +26,7 @@ export async function update_change_request_status({
   status,
   updater_id,
   comment,
-  repo_path
+  user_base_directory
 }) {
   log(`Updating status of change request ${change_request_id} to ${status}`)
 
@@ -34,7 +34,7 @@ export async function update_change_request_status({
   const { valid_status, current_cr } = await validate_status_transition({
     change_request_id,
     status,
-    repo_path
+    user_base_directory
   })
   if (!valid_status) {
     throw new Error(
@@ -54,12 +54,12 @@ export async function update_change_request_status({
       now,
       updater_id,
       comment,
-      repo_path
+      user_base_directory
     })
   })
 
   // Get and return the updated change request
-  return await verify_update({ change_request_id, status, repo_path })
+  return await verify_update({ change_request_id, status, user_base_directory })
 }
 
 /**
@@ -70,7 +70,7 @@ export async function update_change_request_status({
  * @param {string} [params.merger_id] - The ID of the user performing the merge.
  * @param {string} [params.merge_message] - Optional custom merge message.
  * @param {boolean} [params.delete_branch=true] - Whether to delete the feature branch after merging.
- * @param {string} [params.repo_path] - Optional repository path.
+ * @param {string} [params.user_base_directory] - Optional repository path.
  * @returns {Promise<object>} The updated change request object.
  */
 export async function merge_change_request({
@@ -78,14 +78,14 @@ export async function merge_change_request({
   merger_id,
   merge_message,
   delete_branch = true,
-  repo_path
+  user_base_directory
 }) {
   log(`Merging change request ${change_request_id}`)
 
   // Get and validate the change request
   const change_request = await validate_mergeable({
     change_request_id,
-    repo_path
+    user_base_directory
   })
   const { feature_branch, target_branch } = change_request
 
@@ -98,7 +98,7 @@ export async function merge_change_request({
         merge_message ||
         `Merging change request: ${change_request_id}\n\n${change_request.title}`,
       delete_branch,
-      repo_path
+      user_base_directory
     })
 
     // Get the merge commit hash
@@ -116,7 +116,7 @@ export async function merge_change_request({
       status: 'Merged',
       updater_id: merger_id || 'system',
       comment,
-      repo_path
+      user_base_directory
     })
 
     return updated_cr
@@ -130,7 +130,7 @@ export async function merge_change_request({
 async function validate_status_transition({
   change_request_id,
   status,
-  repo_path
+  user_base_directory
 }) {
   if (!VALID_STATUSES.includes(status)) {
     throw new Error(
@@ -139,7 +139,10 @@ async function validate_status_transition({
   }
 
   // Get current status to validate transitions
-  const current_cr = await get_change_request({ change_request_id, repo_path })
+  const current_cr = await get_change_request({
+    change_request_id,
+    user_base_directory
+  })
   if (!current_cr) {
     throw new Error(`Change request with ID ${change_request_id} not found.`)
   }
@@ -193,10 +196,10 @@ async function update_database_record(trx, change_request_id, update_data) {
 }
 
 // Helper function to validate that a change request is mergeable
-async function validate_mergeable({ change_request_id, repo_path }) {
+async function validate_mergeable({ change_request_id, user_base_directory }) {
   const change_request = await get_change_request({
     change_request_id,
-    repo_path
+    user_base_directory
   })
 
   if (!change_request) {
@@ -213,8 +216,11 @@ async function validate_mergeable({ change_request_id, repo_path }) {
 }
 
 // Helper function to verify the update was successful
-async function verify_update({ change_request_id, status, repo_path }) {
-  const updated_cr = await get_change_request({ change_request_id, repo_path })
+async function verify_update({ change_request_id, status, user_base_directory }) {
+  const updated_cr = await get_change_request({
+    change_request_id,
+    user_base_directory
+  })
 
   if (!updated_cr) {
     throw new Error(`Failed to update change request ${change_request_id}.`)

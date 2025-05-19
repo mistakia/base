@@ -14,7 +14,6 @@ router.get('/', async (req, res) => {
   try {
     const {
       status,
-      creator_id,
       target_branch,
       search,
       tags,
@@ -23,7 +22,7 @@ router.get('/', async (req, res) => {
       offset = '0',
       sort_by = 'updated_at',
       sort_order = 'desc',
-      repo_path
+      user_base_directory
     } = req.query
 
     // Parse tags from comma-separated string if present
@@ -31,7 +30,6 @@ router.get('/', async (req, res) => {
 
     const change_requests = await list_change_requests({
       status,
-      creator_id,
       target_branch,
       search,
       tags: parsed_tags,
@@ -41,7 +39,7 @@ router.get('/', async (req, res) => {
       sort_by,
       sort_order,
       include_git_data: true,
-      repo_path
+      user_base_directory
     })
 
     res.status(200).json(change_requests)
@@ -56,14 +54,14 @@ router.get('/:id', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { id } = req.params
-    const { repo_path } = req.query
+    const { user_base_directory } = req.query
     if (!id) {
       return res.status(400).json({ error: 'missing change request id' })
     }
 
     const change_request = await get_change_request({
       change_request_id: id,
-      repo_path
+      user_base_directory
     })
 
     if (!change_request) {
@@ -83,7 +81,7 @@ router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params
     const { status, comment } = req.body
-    const { repo_path } = req.query
+    const { user_base_directory } = req.query
     if (!status) {
       return res.status(400).json({ error: 'missing status' })
     }
@@ -93,11 +91,12 @@ router.patch('/:id/status', async (req, res) => {
       status,
       updater_id: req.auth.user_id,
       comment,
-      repo_path
+      user_base_directory
     })
 
     res.status(200).json(updated_cr)
   } catch (error) {
+    console.log(error)
     log(error)
     if (
       error.message.includes('Invalid status') ||
@@ -115,14 +114,14 @@ router.post('/:id/merge', async (req, res) => {
   try {
     const { id } = req.params
     const { merge_message = '', delete_branch = true } = req.body || {}
-    const { repo_path } = req.query
+    const { user_base_directory } = req.query
 
     const merged_cr = await merge_change_request({
       change_request_id: id,
       merger_id: req.auth.user_id,
       merge_message,
       delete_branch,
-      repo_path
+      user_base_directory
     })
 
     res.status(200).json(merged_cr)

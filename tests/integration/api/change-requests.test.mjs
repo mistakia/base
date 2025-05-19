@@ -57,7 +57,7 @@ describe('Change Requests API', () => {
 
     // Create the change_requests directory
     await fs.mkdir(
-      path.join(test_thread.user_base_directory, 'user/change-requests'),
+      path.join(test_thread.user_base_directory, 'change-requests'),
       {
         recursive: true
       }
@@ -98,7 +98,7 @@ describe('Change Requests API', () => {
           .request(server)
           .get(`/api/change-requests/${change_request_id}`)
           .query({
-            repo_path: test_repo.root_directory
+            user_base_directory: test_repo.user_path
           }),
         test_user
       )
@@ -151,7 +151,7 @@ describe('Change Requests API', () => {
       // Get list of CRs
       const response = await authenticate_request(
         chai.request(server).get('/api/change-requests').query({
-          repo_path: test_repo.root_directory
+          user_base_directory: test_repo.user_path
         }),
         test_user
       )
@@ -184,7 +184,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .patch(
-            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/status?user_base_directory=${test_repo.user_path}`
           )
           .send({ status: 'Approved' }),
         test_user
@@ -195,7 +195,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .get(
-            `/api/change-requests?status=Approved&repo_path=${test_repo.root_directory}`
+            `/api/change-requests?status=Approved&user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -234,7 +234,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .patch(
-            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/status?user_base_directory=${test_repo.user_path}`
           )
           .send({
             status: 'Approved',
@@ -251,7 +251,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .get(
-            `/api/change-requests/${cr.change_request_id}?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -261,11 +261,12 @@ describe('Change Requests API', () => {
 
       // Verify the markdown file was updated
       const file_path = path.join(
-        'user/change-requests',
+        test_repo.user_path,
+        'change-requests',
         `${cr.change_request_id}.md`
       )
       const { stdout: file_content } = await execute(`cat ${file_path}`, {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       expect(file_content).to.include('status: Approved')
       expect(file_content).to.include('Looks good to me!')
@@ -289,7 +290,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .patch(
-            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/status?user_base_directory=${test_repo.user_path}`
           )
           .send({
             status: 'InvalidStatus'
@@ -314,17 +315,17 @@ describe('Change Requests API', () => {
       // Create a file in the thread branch
       const branch_name = `thread/${thread_data.thread_id}`
       await execute(`git checkout ${branch_name}`, {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       await fs.writeFile(
-        path.join(test_repo.root_directory, 'merge-test.md'),
+        path.join(test_repo.path, 'merge-test.md'),
         '# Test merge content'
       )
       await execute('git add merge-test.md', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       await execute('git commit -m "Add merge test file"', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
 
       // Fetch the change request
@@ -337,7 +338,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .patch(
-            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/status?user_base_directory=${test_repo.user_path}`
           )
           .send({ status: 'Approved' }),
         test_user
@@ -348,7 +349,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .post(
-            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/merge?user_base_directory=${test_repo.user_path}`
           )
           .send({
             merge_message: 'Merging test CR'
@@ -361,10 +362,10 @@ describe('Change Requests API', () => {
 
       // Verify the merge happened by checking if the file exists in main branch
       await execute('git checkout main', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       const { stdout: file_list } = await execute('ls -la', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       expect(file_list).to.include('merge-test.md')
 
@@ -373,7 +374,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .get(
-            `/api/change-requests/${cr.change_request_id}?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -392,17 +393,17 @@ describe('Change Requests API', () => {
       // Create a file in the thread branch
       const branch_name = `thread/${thread_data.thread_id}`
       await execute(`git checkout ${branch_name}`, {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       await fs.writeFile(
-        path.join(test_repo.root_directory, 'already-merged.md'),
+        path.join(test_repo.path, 'already-merged.md'),
         '# Already merged content'
       )
       await execute('git add already-merged.md', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
       await execute('git commit -m "Add already merged file"', {
-        cwd: test_repo.root_directory
+        cwd: test_repo.path
       })
 
       // Fetch the change request
@@ -414,7 +415,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .patch(
-            `/api/change-requests/${cr.change_request_id}/status?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/status?user_base_directory=${test_repo.user_path}`
           )
           .send({ status: 'Approved' }),
         test_user
@@ -424,7 +425,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .post(
-            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/merge?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -434,7 +435,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .post(
-            `/api/change-requests/${cr.change_request_id}/merge?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}/merge?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -497,7 +498,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .get(
-            `/api/change-requests/${cr.change_request_id}?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )
@@ -555,7 +556,7 @@ describe('Change Requests API', () => {
         chai
           .request(server)
           .get(
-            `/api/change-requests/${cr.change_request_id}?repo_path=${test_repo.root_directory}`
+            `/api/change-requests/${cr.change_request_id}?user_base_directory=${test_repo.user_path}`
           ),
         test_user
       )

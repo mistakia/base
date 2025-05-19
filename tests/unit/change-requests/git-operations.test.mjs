@@ -28,7 +28,7 @@ describe('Change Request Git Operations', function () {
     test_repo = await create_temp_test_repo()
 
     // Change to the test repo directory so git operations use this path
-    process.chdir(test_repo.path)
+    process.chdir(test_repo.user_path)
   })
 
   afterEach(async function () {
@@ -42,22 +42,22 @@ describe('Change Request Git Operations', function () {
   // Helper to create a feature branch with some changes
   async function create_feature_branch(branch_name) {
     // Create and checkout branch
-    await execute(`git checkout -b ${branch_name}`, { cwd: test_repo.path })
+    await execute(`git checkout -b ${branch_name}`, { cwd: test_repo.user_path })
 
     // Create a test file with unique content
     const file_name = `test-file-${uuid().substring(0, 8)}.md`
     const content = `# Test Content for ${branch_name}\n\nCreated at ${new Date().toISOString()}`
 
-    await fs.writeFile(path.join(test_repo.path, file_name), content)
+    await fs.writeFile(path.join(test_repo.user_path, file_name), content)
 
     // Commit the changes
-    await execute(`git add ${file_name}`, { cwd: test_repo.path })
+    await execute(`git add ${file_name}`, { cwd: test_repo.user_path })
     await execute(`git commit -m "Add test file for ${branch_name}"`, {
-      cwd: test_repo.path
+      cwd: test_repo.user_path
     })
 
     // Return to main branch
-    await execute('git checkout main', { cwd: test_repo.path })
+    await execute('git checkout main', { cwd: test_repo.user_path })
 
     return { branch_name, file_name, content }
   }
@@ -73,7 +73,7 @@ describe('Change Request Git Operations', function () {
       const commits = await change_request_utils.get_change_request_commits({
         feature_branch: branch_name,
         target_branch: 'main',
-        repo_path: test_repo.path
+        user_base_directory: test_repo.user_path
       })
 
       // Verify we got the expected commits
@@ -94,14 +94,14 @@ describe('Change Request Git Operations', function () {
 
     it('should return empty array if no commits exist', async function () {
       // Create an empty branch with no unique commits
-      await execute('git checkout -b empty-branch', { cwd: test_repo.path })
-      await execute('git checkout main', { cwd: test_repo.path })
+      await execute('git checkout -b empty-branch', { cwd: test_repo.user_path })
+      await execute('git checkout main', { cwd: test_repo.user_path })
 
       // Get the commits using the utility function
       const commits = await change_request_utils.get_change_request_commits({
         feature_branch: 'empty-branch',
         target_branch: 'main',
-        repo_path: test_repo.path
+        user_base_directory: test_repo.user_path
       })
 
       // Verify we got no commits
@@ -121,7 +121,7 @@ describe('Change Request Git Operations', function () {
       const cr_data = await change_request_utils.build_change_request_from_git({
         feature_branch: branch_name,
         target_branch: 'main',
-        repo_path: test_repo.path
+        user_base_directory: test_repo.user_path
       })
 
       // Verify the data
@@ -146,15 +146,15 @@ describe('Change Request Git Operations', function () {
     it('should return data with empty commits for branch with no unique commits', async function () {
       // Create an empty branch
       await execute('git checkout -b empty-branch-for-build', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
-      await execute('git checkout main', { cwd: test_repo.path })
+      await execute('git checkout main', { cwd: test_repo.user_path })
 
       // Build change request from git
       const cr_data = await change_request_utils.build_change_request_from_git({
         feature_branch: 'empty-branch-for-build',
         target_branch: 'main',
-        repo_path: test_repo.path
+        user_base_directory: test_repo.user_path
       })
 
       // Verify the data
@@ -180,7 +180,7 @@ describe('Change Request Git Operations', function () {
           feature_branch: branch_name,
           merge_message: 'Merging test branch',
           delete_branch: false, // Keep branch for verification
-          repo_path: test_repo.path
+          user_base_directory: test_repo.user_path
         }
       )
 
@@ -190,8 +190,8 @@ describe('Change Request Git Operations', function () {
       expect(result.merge_commit_hash).to.be.a('string')
 
       // Verify the file is now in the main branch
-      await execute('git checkout main', { cwd: test_repo.path })
-      const file_path = path.join(test_repo.path, file_name)
+      await execute('git checkout main', { cwd: test_repo.user_path })
+      const file_path = path.join(test_repo.user_path, file_name)
       const file_exists = await fs
         .access(file_path)
         .then(() => true)
@@ -207,7 +207,7 @@ describe('Change Request Git Operations', function () {
           target_branch: 'main',
           feature_branch: 'non-existent-branch',
           merge_message: 'This should fail',
-          repo_path: test_repo.path
+          user_base_directory: test_repo.user_path
         })
 
         // If we get here, the test should fail
@@ -229,19 +229,19 @@ describe('Change Request Git Operations', function () {
         feature_branch: branch_name,
         merge_message: 'Merge and delete test',
         delete_branch: true, // Delete branch after merging
-        repo_path: test_repo.path
+        user_base_directory: test_repo.user_path
       })
 
       // Verify the branch was deleted
       const { stdout: branch_list } = await execute('git branch', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
 
       expect(branch_list).to.not.include(branch_name)
 
       // Verify the changes were merged successfully
-      await execute('git checkout main', { cwd: test_repo.path })
-      const file_path = path.join(test_repo.path, file_name)
+      await execute('git checkout main', { cwd: test_repo.user_path })
+      const file_path = path.join(test_repo.user_path, file_name)
       const file_exists = await fs
         .access(file_path)
         .then(() => true)

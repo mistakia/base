@@ -86,12 +86,12 @@ describe('Change Requests', function () {
       const change_request_id = await change_requests.create_change_request({
         title: 'Test Change Request From Existing Branch',
         description: 'Using an existing Git branch for changes',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch_name,
         thread_id: test_thread.thread_id,
         tags: ['test', 'existing-branch'],
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify results
@@ -112,7 +112,7 @@ describe('Change Requests', function () {
       // Verify markdown file was created
       const markdown_dir = path.join(
         test_thread.user_base_directory,
-        'user/change-requests'
+        'change-requests'
       )
       const markdown_file_path = path.join(
         markdown_dir,
@@ -154,11 +154,11 @@ describe('Change Requests', function () {
         await change_requests.create_change_request({
           title: 'Invalid Branch Test',
           description: 'This should fail',
-          creator_id: test_user.user_id,
+          user_id: test_user.user_id,
           target_branch: 'main',
           feature_branch: 'non-existent-branch',
           thread_id: test_thread.thread_id,
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // If we get here, the test should fail
@@ -182,17 +182,17 @@ describe('Change Requests', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Test CR for retrieval',
         description,
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch_name,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Retrieve the change request
       const retrieved_cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify retrieved data
@@ -215,11 +215,11 @@ describe('Change Requests', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Test CR for status update',
         description: 'Testing status updates',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch_name,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Update the status
@@ -228,13 +228,13 @@ describe('Change Requests', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Approving this change request',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify the status was updated
       const updated_cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       expect(updated_cr.status).to.equal('Approved')
@@ -251,11 +251,11 @@ describe('Change Requests', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Test CR for merging',
         description: 'Testing merge functionality',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch_name,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Update status to approved first
@@ -264,7 +264,7 @@ describe('Change Requests', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Approving for merge test',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Merge the change request
@@ -272,13 +272,13 @@ describe('Change Requests', function () {
         change_request_id: cr_id,
         merger_id: test_user.user_id,
         comment: 'Merging approved changes',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Verify the change request was merged
       const merged_cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       expect(merged_cr.status).to.equal('Merged')
@@ -305,11 +305,11 @@ describe('Change Requests', function () {
       const cr_id = await change_requests.create_change_request({
         title: 'Test CR for blocked merge',
         description: 'Testing merge restrictions',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch_name,
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       try {
@@ -318,7 +318,7 @@ describe('Change Requests', function () {
           change_request_id: cr_id,
           merger_id: test_user.user_id,
           comment: 'Trying to merge without approval',
-          repo_path: test_thread.user_base_directory
+          user_base_directory: test_thread.user_base_directory
         })
 
         // Should not reach here
@@ -332,7 +332,7 @@ describe('Change Requests', function () {
       // Verify status hasn't changed
       const cr = await change_requests.get_change_request({
         change_request_id: cr_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       expect(cr.status).to.equal('PendingReview')
@@ -349,23 +349,23 @@ describe('Change Requests', function () {
       const cr_id1 = await change_requests.create_change_request({
         title: 'Test CR 1',
         description: 'First test CR',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch1.branch_name,
         thread_id: test_thread.thread_id,
         tags: ['test', 'list'],
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       await change_requests.create_change_request({
         title: 'Test CR 2',
         description: 'Second test CR',
-        creator_id: test_user.user_id,
+        user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch: branch2.branch_name,
         thread_id: test_thread.thread_id,
         tags: ['test', 'other'],
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // Update status of one change request
@@ -374,19 +374,19 @@ describe('Change Requests', function () {
         status: 'Approved',
         updater_id: test_user.user_id,
         comment: 'Approving for list test',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
 
       // List all change requests
       const all_crs = await change_requests.list_change_requests({
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(all_crs.length).to.be.at.least(2)
 
       // Filter by status
       const approved_crs = await change_requests.list_change_requests({
         status: 'Approved',
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(approved_crs.length).to.equal(1)
       expect(approved_crs[0].change_request_id).to.equal(cr_id1)
@@ -394,7 +394,7 @@ describe('Change Requests', function () {
       // Filter by thread
       const thread_crs = await change_requests.list_change_requests({
         thread_id: test_thread.thread_id,
-        repo_path: test_thread.user_base_directory
+        user_base_directory: test_thread.user_base_directory
       })
       expect(thread_crs.length).to.be.at.least(2)
     })

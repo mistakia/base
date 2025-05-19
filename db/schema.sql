@@ -96,7 +96,6 @@ DROP INDEX IF EXISTS public.idx_change_requests_target_branch;
 DROP INDEX IF EXISTS public.idx_change_requests_status;
 DROP INDEX IF EXISTS public.idx_change_requests_github_repo;
 DROP INDEX IF EXISTS public.idx_change_requests_github_pr_number;
-DROP INDEX IF EXISTS public.idx_change_requests_creator_id;
 DROP INDEX IF EXISTS public.idx_change_requests_created_at;
 DROP INDEX IF EXISTS public.idx_blocks_user_id;
 DROP INDEX IF EXISTS public.idx_blocks_updated_at;
@@ -749,7 +748,6 @@ CREATE TABLE public.change_requests (
     change_request_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
     status public.change_request_status_type DEFAULT 'Draft'::public.change_request_status_type NOT NULL,
     title text NOT NULL,
-    creator_id text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     target_branch text NOT NULL,
@@ -1929,13 +1927,6 @@ CREATE INDEX idx_blocks_user_id ON public.blocks USING btree (user_id);
 --
 
 CREATE INDEX idx_change_requests_created_at ON public.change_requests USING btree (created_at DESC);
-
-
---
--- Name: idx_change_requests_creator_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_creator_id ON public.change_requests USING btree (creator_id);
 
 
 --

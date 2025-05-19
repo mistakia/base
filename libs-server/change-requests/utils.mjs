@@ -8,8 +8,8 @@
 import * as git_ops from '#libs-server/git/index.mjs'
 import config from '#config'
 import debug from 'debug'
-import { write_document_to_filesystem } from '#libs-server/markdown/index.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -20,14 +20,14 @@ const log = debug('change-requests')
 export async function get_change_request_commits({
   feature_branch,
   target_branch,
-  repo_path = config.user_base_directory
+  user_base_directory = config.user_base_directory
 }) {
   try {
-    // Verify repo_path exists
+    // Verify user_base_directory exists
     const fs = await import('fs/promises')
     const path = await import('path')
 
-    const resolved_path = path.resolve(repo_path)
+    const resolved_path = path.resolve(user_base_directory)
     try {
       const stat = await fs.stat(resolved_path)
       if (!stat.isDirectory()) {
@@ -39,7 +39,7 @@ export async function get_change_request_commits({
 
     // Use the git operation to get commits with their diffs
     return await git_ops.get_commits_with_diffs({
-      repo_path,
+      user_base_directory,
       from_ref: target_branch,
       to_ref: feature_branch
     })
@@ -61,16 +61,16 @@ export async function merge_branch_for_change_request({
   feature_branch,
   merge_message,
   delete_branch = true,
-  repo_path = '.'
+  user_base_directory = '.'
 }) {
   // Check if branches exist
   const target_exists = await git_ops.branch_exists({
-    repo_path,
+    user_base_directory,
     branch_name: target_branch
   })
 
   const feature_exists = await git_ops.branch_exists({
-    repo_path,
+    user_base_directory,
     branch_name: feature_branch
   })
 
@@ -82,12 +82,12 @@ export async function merge_branch_for_change_request({
 
   // Merge the feature branch into the target branch
   await git_ops.checkout_branch({
-    repo_path,
+    user_base_directory,
     branch_name: target_branch
   })
 
   const merge_result = await git_ops.merge_branch({
-    repo_path,
+    user_base_directory,
     branch_to_merge: feature_branch,
     merge_message
   })
@@ -95,7 +95,7 @@ export async function merge_branch_for_change_request({
   // Optionally delete the feature branch after merging
   if (delete_branch) {
     await git_ops.delete_branch({
-      repo_path,
+      user_base_directory,
       branch_name: feature_branch,
       force: false
     })
@@ -113,14 +113,14 @@ export async function merge_branch_for_change_request({
  * @param {String} params.feature_branch - Feature branch name
  * @param {String} params.target_branch - Target branch name
  * @param {String} [params.merge_commit_hash] - Optional merge commit hash to use when feature branch is deleted
- * @param {String} [params.repo_path=config.user_base_directory] - Repository path
+ * @param {String} [params.user_base_directory=config.user_base_directory] - Repository path
  * @returns {Promise<Object|null>} Change request data object or null if feature branch doesn't exist
  */
 export async function build_change_request_from_git({
   feature_branch,
   target_branch,
   merge_commit_hash,
-  repo_path = config.user_base_directory
+  user_base_directory = config.user_base_directory
 }) {
   let commits = []
   const branch_info = {
@@ -134,13 +134,13 @@ export async function build_change_request_from_git({
   try {
     // Check if feature branch exists
     const feature_exists = await git_ops.branch_exists({
-      repo_path,
+      repo_path: user_base_directory,
       branch_name: feature_branch
     })
 
     // Check if target branch exists
     const target_exists = await git_ops.branch_exists({
-      repo_path,
+      repo_path: user_base_directory,
       branch_name: target_branch
     })
 
@@ -164,7 +164,7 @@ export async function build_change_request_from_git({
       commits = await get_change_request_commits({
         feature_branch,
         target_branch,
-        repo_path
+        user_base_directory
       })
 
       branch_info.commits = commits.length
@@ -175,7 +175,7 @@ export async function build_change_request_from_git({
       // If merge commit hash is provided, use it to get commit info
       if (merge_commit_hash) {
         const merge_commit = await git_ops.get_merge_commit_info({
-          repo_path,
+          repo_path: user_base_directory,
           commit_hash: merge_commit_hash
         })
 
@@ -213,7 +213,7 @@ export async function build_change_request_from_git({
  * @param {Date} params.now - The timestamp for the update.
  * @param {string} [params.updater_id] - The ID of the user updating the status.
  * @param {string} [params.comment] - Optional comment explaining the status change.
- * @param {string} [params.repo_path] - Optional repository path.
+ * @param {string} [params.user_base_directory] - Optional repository path.
  */
 export async function update_markdown_file({
   change_request_id,
@@ -221,15 +221,15 @@ export async function update_markdown_file({
   now,
   updater_id,
   comment,
-  repo_path
+  user_base_directory
 }) {
   // Initialize path imports
   const path = await import('path')
 
-  // Build the file path using repo_path if provided
+  // Build the file path using user_base_directory if provided
   const relative_file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-  const absolute_path = repo_path
-    ? path.join(repo_path, relative_file_path)
+  const absolute_path = user_base_directory
+    ? path.join(user_base_directory, relative_file_path)
     : relative_file_path
 
   try {
@@ -237,17 +237,20 @@ export async function update_markdown_file({
       absolute_path
     })
 
-    // Update frontmatter explicitly
-    const new_frontmatter = {
+    if (!markdown_data.success) {
+      throw new Error(markdown_data.error)
+    }
+
+    const updated_entity_properties = {
       ...markdown_data.entity_properties,
       status,
       updated_at: now.toISOString()
     }
 
     if (status === 'Merged') {
-      new_frontmatter.merged_at = now.toISOString()
+      updated_entity_properties.merged_at = now.toISOString()
     } else if (status === 'Closed' || status === 'Rejected') {
-      new_frontmatter.closed_at = now.toISOString()
+      updated_entity_properties.closed_at = now.toISOString()
     }
 
     // Add comment to content if provided
@@ -264,11 +267,12 @@ export async function update_markdown_file({
       content += `\n${comment}\n`
     }
 
-    // Write updated content
-    await write_document_to_filesystem({
+    // Write updated content using write_entity_to_filesystem
+    await write_entity_to_filesystem({
       absolute_path,
-      document_properties: new_frontmatter,
-      document_content: content
+      entity_properties: updated_entity_properties,
+      entity_type: 'change_request',
+      entity_content: content
     })
   } catch (error) {
     log(`Error updating markdown file: ${error.message}`)
