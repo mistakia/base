@@ -1,7 +1,7 @@
 import debug from 'debug'
 import { sync_github_issue_to_task } from './sync-github-issue-to-task.mjs'
 
-const log = debug('github-sync')
+const log = debug('sync-github-issues')
 
 /**
  * GitHub Issue Sync Module
@@ -32,7 +32,7 @@ const log = debug('github-sync')
  * @param {string} options.github_token - GitHub token
  * @returns {Object} Import results
  */
-export async function process_github_issues({
+export async function sync_github_issues({
   issues,
   github_repository_owner,
   github_repository_name,

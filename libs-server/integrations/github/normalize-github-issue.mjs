@@ -1,31 +1,7 @@
 import debug from 'debug'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
-import { format_external_id } from '#libs-server/sync/format-external-id.mjs'
 
-const log = debug('github-mapper')
-
-/**
- * Format external ID specifically for GitHub issues
- *
- * @param {object} params - Parameters
- * @param {string} params.github_repository_owner - GitHub repository owner
- * @param {string} params.github_repository_name - GitHub repository name
- * @param {string} params.github_issue_number - GitHub issue number
- * @returns {string} Formatted external ID for GitHub issue
- */
-export function format_external_id_for_github_issue({
-  github_repository_owner,
-  github_repository_name,
-  github_issue_number
-}) {
-  const external_system = 'github'
-  const external_item_id = `${github_repository_owner}/${github_repository_name}:${github_issue_number}`
-
-  return format_external_id({
-    external_system,
-    external_item_id
-  })
-}
+const log = debug('normalize-github-issue')
 
 /**
  * Field mappings between internal task fields and GitHub issue fields

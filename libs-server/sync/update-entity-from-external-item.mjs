@@ -111,15 +111,25 @@ export async function update_entity_from_external_item({
     }
 
     if (internal_updates) {
+      // Extract values from change objects
+      const updates_to_apply = {}
+
+      for (const [key, change] of Object.entries(internal_updates)) {
+        if (change && typeof change === 'object' && change.changed === true) {
+          updates_to_apply[key] = change.to
+        }
+      }
+
       const merged_properties = {
         ...existing_entity_properties,
-        ...internal_updates
+        ...updates_to_apply
       }
 
       await write_entity_to_filesystem({
         entity_properties: merged_properties,
         entity_type,
-        absolute_path
+        absolute_path,
+        entity_content: entity_result.entity_content
       })
     }
 

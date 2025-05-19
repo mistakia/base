@@ -112,7 +112,7 @@ export default async function import_github_project_issues({
       }
 
       // Process issues for this repository
-      const repo_results = await github.process_github_issues({
+      const repo_results = await github.sync_github_issues({
         issues: repo_data.issues,
         github_repository_owner: repo_data.github_repository_owner,
         github_repository_name: repo_data.github_repository_name,
@@ -209,6 +209,8 @@ const main = async () => {
 }
 
 if (isMain(import.meta.url)) {
-  debug.enable('import-github-project-issues,github-sync,github-mapper,sync:*')
+  debug.enable(
+    'import-github-project-issues,sync-github-issues,normalize-github-issue,sync:*'
+  )
   main()
 }

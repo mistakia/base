@@ -34,6 +34,15 @@ export function format_document_to_file_content({
       return a.localeCompare(b)
     })
 
+    // Helper function to stringify with single quotes
+    const stringify_with_single_quotes = (value) => {
+      if (typeof value === 'string') {
+        // Replace double quotes with single quotes from JSON.stringify output
+        return JSON.stringify(value).replace(/^"(.*)"$/, "'$1'")
+      }
+      return JSON.stringify(value)
+    }
+
     for (const key of sorted_keys) {
       const value = document_properties[key]
 
@@ -44,7 +53,7 @@ export function format_document_to_file_content({
         yaml_lines.push(`${key}:`)
         value.forEach((item) => {
           yaml_lines.push(
-            `  - ${typeof item === 'string' ? JSON.stringify(item) : JSON.stringify(item)}`
+            `  - ${typeof item === 'string' ? stringify_with_single_quotes(item) : stringify_with_single_quotes(item)}`
           )
         })
       } else if (typeof value === 'object') {
@@ -52,7 +61,7 @@ export function format_document_to_file_content({
         yaml_lines.push(`${key}:`)
         Object.entries(value).forEach(([k, v]) => {
           yaml_lines.push(
-            `  ${k}: ${typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v)}`
+            `  ${k}: ${typeof v === 'string' ? stringify_with_single_quotes(v) : stringify_with_single_quotes(v)}`
           )
         })
       } else if (typeof value === 'string') {
@@ -61,7 +70,7 @@ export function format_document_to_file_content({
           yaml_lines.push(`${key}: ${value}`)
         } else {
           // For other strings, ensure proper quoting
-          yaml_lines.push(`${key}: ${JSON.stringify(value)}`)
+          yaml_lines.push(`${key}: ${stringify_with_single_quotes(value)}`)
         }
       } else {
         // For non-strings like numbers, booleans

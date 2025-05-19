@@ -1,7 +1,5 @@
 import path from 'path'
 
-import { format_entity_directory_for_github_tasks } from '../github-constants.mjs'
-
 /**
  * Creates a slug from a string by converting to lowercase, replacing spaces with hyphens,
  * and removing special characters
@@ -37,6 +35,12 @@ function slugify(text, options = {}) {
     .replace(/-+$/, '') // Trim hyphens from end
 
   return result
+}
+
+export const format_entity_directory_for_github_tasks = ({
+  user_base_directory
+}) => {
+  return `${user_base_directory}/task/github`
 }
 
 export function format_entity_directory_for_github_issue({

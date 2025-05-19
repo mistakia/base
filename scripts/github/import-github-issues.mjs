@@ -89,7 +89,7 @@ export default async function import_github_issues({
     log(`Processing ${all_issues.length} issues`)
 
     // Process issues using the new sync system
-    const processed_results = await github.process_github_issues({
+    const processed_results = await github.sync_github_issues({
       issues: all_issues,
       github_repository_owner,
       github_repository_name,
@@ -188,6 +188,8 @@ const main = async () => {
 }
 
 if (isMain(import.meta.url)) {
-  debug.enable('import-github-issues,github-sync,github-mapper,sync:*')
+  debug.enable(
+    'import-github-issues,sync-github-issues,normalize-github-issue,sync:*'
+  )
   main()
 }

@@ -3,10 +3,10 @@ import {
   update_github_issue_graphql,
   get_github_project_item_for_issue,
   update_github_project_item
-} from './github-api.mjs'
+} from './github-api/index.mjs'
 import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
 
-const log = debug('github-sync:sync-task-to-github-issue')
+const log = debug('sync-github-issues:sync-task-to-github-issue')
 
 /**
  * Sync task updates to a GitHub issue
