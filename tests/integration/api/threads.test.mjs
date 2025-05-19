@@ -8,15 +8,14 @@ import {
   create_test_thread,
   authenticate_request
 } from '#tests/utils/index.mjs'
+import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 
 const { expect } = chai
 chai.use(chaiHttp)
 
 describe('Threads API', () => {
   let test_user
-  let test_threads = []
-  let test_user_base_directory
-  let test_system_base_directory
+  let test_root_base_repo
 
   before(async () => {
     await reset_all_tables()
@@ -25,36 +24,32 @@ describe('Threads API', () => {
 
   after(async () => {
     await reset_all_tables()
-    test_threads.forEach((thread) => {
-      thread.cleanup()
-    })
+  })
+
+  beforeEach(async () => {
+    test_root_base_repo = await create_temp_test_repo({ prefix: 'base-repo-' })
+  })
+
+  afterEach(async () => {
+    if (test_root_base_repo) {
+      test_root_base_repo.cleanup()
+    }
   })
 
   describe('GET /api/threads', () => {
     beforeEach(async () => {
       // Create some test threads
-      const thread1 = await create_test_thread({
+      await create_test_thread({
         user_id: test_user.user_id,
-        state: 'active'
+        state: 'active',
+        root_base_repo: test_root_base_repo
       })
 
-      test_user_base_directory = thread1.user_base_directory
-      test_system_base_directory = thread1.system_base_directory
-      const thread2 = await create_test_thread({
+      await create_test_thread({
         user_id: test_user.user_id,
         state: 'paused',
-        user_base_directory: test_user_base_directory,
-        system_base_directory: test_system_base_directory
+        root_base_repo: test_root_base_repo
       })
-
-      test_threads.push(thread1, thread2)
-    })
-
-    afterEach(async () => {
-      test_threads.forEach((thread) => {
-        thread.cleanup()
-      })
-      test_threads = []
     })
 
     it('should list all threads for a user', async () => {
@@ -63,7 +58,7 @@ describe('Threads API', () => {
         test_user
       ).query({
         user_id: test_user.user_id,
-        user_base_directory: test_user_base_directory
+        user_base_directory: test_root_base_repo.user_path
       })
 
       expect(response).to.have.status(200)
@@ -86,7 +81,7 @@ describe('Threads API', () => {
         test_user
       ).query({
         user_id: test_user.user_id,
-        user_base_directory: test_user_base_directory,
+        user_base_directory: test_root_base_repo.user_path,
         state: 'active'
       })
 
@@ -111,6 +106,7 @@ describe('Threads API', () => {
       // Create a test thread with a main request
       test_thread = await create_test_thread({
         user_id: test_user.user_id,
+        root_base_repo: test_root_base_repo,
         initial_timeline: [
           {
             id: 'req_001',
@@ -120,24 +116,13 @@ describe('Threads API', () => {
           }
         ]
       })
-
-      test_user_base_directory = test_thread.user_base_directory
-
-      test_threads.push(test_thread)
-    })
-
-    afterEach(async () => {
-      test_threads.forEach((thread) => {
-        thread.cleanup()
-      })
-      test_threads = []
     })
 
     it('should get a thread by ID', async () => {
       const response = await authenticate_request(
         chai.request(server).get(`/api/threads/${test_thread.thread_id}`),
         test_user
-      ).query({ user_base_directory: test_user_base_directory })
+      ).query({ user_base_directory: test_root_base_repo.user_path })
 
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('object')
@@ -177,22 +162,11 @@ describe('Threads API', () => {
   describe('POST /api/threads', () => {
     beforeEach(async () => {
       // Create some test threads
-      const thread1 = await create_test_thread({
+      await create_test_thread({
         user_id: test_user.user_id,
-        state: 'active'
+        state: 'active',
+        root_base_repo: test_root_base_repo
       })
-
-      test_user_base_directory = thread1.user_base_directory
-      test_system_base_directory = thread1.system_base_directory
-
-      test_threads.push(thread1)
-    })
-
-    afterEach(async () => {
-      test_threads.forEach((thread) => {
-        thread.cleanup()
-      })
-      test_threads = []
     })
 
     it('should create a new thread', async () => {
@@ -200,8 +174,8 @@ describe('Threads API', () => {
         inference_provider: 'ollama',
         model: 'llama2',
         thread_main_request: 'Hello, this is a new thread',
-        user_base_directory: test_user_base_directory,
-        system_base_directory: test_system_base_directory
+        user_base_directory: test_root_base_repo.user_path,
+        system_base_directory: test_root_base_repo.path
       }
 
       const response = await authenticate_request(

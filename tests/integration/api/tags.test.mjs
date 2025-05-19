@@ -14,7 +14,6 @@ chai.use(chaiHttp)
 
 describe('Tags API', () => {
   let test_user
-  let test_entity_id
   let test_repo
   let root_base_directory
   const cleanup_tasks = []
@@ -22,7 +21,7 @@ describe('Tags API', () => {
   before(async () => {
     await reset_all_tables()
     test_user = await create_test_user()
-    
+
     // Set up temporary repo for filesystem operations
     test_repo = await create_temp_test_repo()
     root_base_directory = test_repo.path
@@ -42,8 +41,6 @@ describe('Tags API', () => {
       entity_id: entity.entity_id,
       status: 'No status'
     })
-
-    test_entity_id = entity.entity_id
   })
 
   after(async () => {
@@ -51,12 +48,12 @@ describe('Tags API', () => {
     for (const cleanup of cleanup_tasks) {
       await cleanup()
     }
-    
+
     // Clean up the test repo
     if (test_repo && test_repo.cleanup) {
       test_repo.cleanup()
     }
-    
+
     await reset_all_tables()
   })
 
