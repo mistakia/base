@@ -88,7 +88,7 @@ export default async function generate_guidelines_prompt({
     // Extract the filename without extension from the path
     let guideline_name = 'untitled'
     if (base_relative_path) {
-      // Example: system/guideline/create-activity.md -> create-activity -> create_activity
+      // Example: system/guideline/write-activity.md -> write-activity -> create_activity
       const path_parts = base_relative_path.split('/')
       const filename = path_parts[path_parts.length - 1]
       if (filename) {
