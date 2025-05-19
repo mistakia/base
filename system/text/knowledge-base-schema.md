@@ -8,7 +8,7 @@ observations:
   - '[implementation] System schema is in system/schema and user schema is in submodules #implementation'
   - '[feature] Schema extensions allow for user-specific customization #customization'
 relations:
-  - 'relates_to [[system/text/system-design]]'
+  - 'relates_to [[system/text/system-design.md]]'
 ---
 
 # Knowledge Base Schema

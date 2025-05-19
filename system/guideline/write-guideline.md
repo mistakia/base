@@ -10,9 +10,9 @@ observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
 relations:
-  - 'related_to [[system/guideline/create-activity]]'
-  - 'implements [[system/text/system-design]]'
-  - 'implements [[system/schema/guideline]]'
+  - 'related_to [[system/guideline/write-activity.md]]'
+  - 'implements [[system/text/system-design.md]]'
+  - 'implements [[system/schema/guideline.md]]'
 ---
 
 # Create Guideline
@@ -25,13 +25,13 @@ relations:
   - System guidelines MUST be stored in `system/guideline/`
   - User guidelines MUST be stored in `user/guideline/`
 - Guidelines MUST be named following action-based patterns:
-  - For specific activities, use the format: `verb-object.md` (e.g., `create-guideline.md`, `write-unit-tests.md`)
+  - For specific activities, use the format: `verb-object.md` (e.g., `write-guideline.md`, `write-unit-tests.md`)
   - For categories of activities, use the format: `category-descriptor.md` (e.g., `code-review-standards.md`, `documentation-practices.md`)
   - Names MUST be in kebab-case format
   - Names MUST be specific and descriptive of the guideline's purpose
   - Names SHOULD be concise while maintaining clarity
 - Examples of good naming:
-  - `create-guideline.md` (for specific activity of creating guidelines)
+  - `write-guideline.md` (for specific activity of creating guidelines)
   - `write-software-tests.md` (for specific activity of writing tests)
   - `api-design-standards.md` (for category of API design activities)
   - `database-management.md` (for category of database operations)
@@ -58,7 +58,7 @@ relations:
 ```yaml
 relations:
   - 'implements [[system/schema/guideline]]'
-  - 'related_to [[system/guideline/create-activity]]'
+  - 'related_to [[system/guideline/write-activity]]'
   - 'supersedes [[system/guideline/old-guideline]]'
 ```
 

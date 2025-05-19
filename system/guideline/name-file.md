@@ -8,10 +8,10 @@ tags: [naming, files, convention]
 observations:
   - '[governance] Consistent file naming improves discoverability and reduces ambiguity #naming'
 relations:
-  - 'implements [[system/schema/guideline]]'
+  - 'implements [[system/schema/guideline.md]]'
 ---
 
-- File paths and URIs MUST use dashes (`-`) instead of underscores (`_`).
+- File paths and URIs MUST use dashes (`-`) instead of underscores (`_`) [kebab-case]
 
 ### Rationale
 

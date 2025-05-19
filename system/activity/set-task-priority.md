@@ -9,7 +9,7 @@ observations:
   - '[governance] Only specific priority values are allowed #compliance'
   - '[principle] Task priorities should reflect genuine urgency and importance #effectiveness'
 relations:
-  - 'follows [[system/guideline/set-task-priority]]'
+  - 'follows [[system/guideline/set-task-priority.md]]'
 ---
 
 # Set Task Priority

@@ -8,9 +8,9 @@ observations:
   - '[workflow] Supports review/merge process for changes.'
   - '[feature] Filesystem/Git is primary source of truth.'
 relations:
-  - 'relates_to [[system/text/system-design]]'
-  - 'relates_to [[system/text/knowledge-base-schema]]'
-  - 'implements [[system/schema/change-request]]'
+  - 'relates_to [[system/text/system-design.md]]'
+  - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'implements [[system/schema/change-request.md]]'
 ---
 
 # Change Request System Design

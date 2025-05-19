@@ -11,7 +11,7 @@ observations:
   - '[principle] Clear naming conventions improve discoverability #naming'
   - '[organization] System vs user classification is based on scope of use #categorization'
 relations:
-  - 'guides [[system/activity/create-activity]]'
+  - 'guides [[system/activity/write-activity]]'
   - 'implements [[system/text/system-design]]'
 ---
 

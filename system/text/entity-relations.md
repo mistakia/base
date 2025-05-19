@@ -8,8 +8,8 @@ observations:
   - '[implementation] Relations use a single canonical format #consistency'
   - '[feature] Entity relationships are handled through a single mechanism #simplification'
 relations:
-  - 'relates_to [[system/text/knowledge-base-schema]]'
-  - 'part_of [[system/text/system-design]]'
+  - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'part_of [[system/text/system-design.md]]'
 ---
 
 # Entity Relations

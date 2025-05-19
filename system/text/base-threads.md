@@ -9,7 +9,7 @@ observations:
   - '[architecture] Threads utilize a tiered memory system (Universal and Context) #memory'
   - '[design] Each thread is associated with a specific activity #organization'
 relations:
-  - 'relates_to [[system/text/system-design]]'
+  - 'relates_to [[system/text/system-design.md]]'
 ---
 
 # Execution Model: Base Threads
@@ -24,7 +24,7 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 
 - `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`user/threads/{thread_id}/`).
 - `user_id`: Identifier of the user who owns the thread.
-- `activity_base_relative_path`: Reference to the specific activity this thread is associated with and executing. (e.g., `system/activity/create-activity.md` or `user/activity/custom-activity.md`).
+- `activity_base_relative_path`: Reference to the specific activity this thread is associated with and executing. (e.g., `system/activity/write-activity.md` or `user/activity/custom-activity.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
 - `state`: The current lifecycle state:

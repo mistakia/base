@@ -2,15 +2,15 @@
 title: Create Activity
 type: activity
 description: Process for creating a new activity
-guidelines: [system/create-activity.md]
+guidelines: [system/write-activity.md]
 tags: [activity, creation, workflow]
 observations:
   - '[workflow] Creating activities is a fundamental system operation #core'
   - '[organization] Activities must be properly categorized as system or user #structure'
   - '[governance] Each activity should follow established guidelines #compliance'
 relations:
-  - 'follows [[system/guideline/create-activity]]'
-  - 'implements [[system/text/system-design]]'
+  - 'follows [[system/guideline/write-activity.md]]'
+  - 'implements [[system/text/system-design.md]]'
 ---
 
 # Create Activity
