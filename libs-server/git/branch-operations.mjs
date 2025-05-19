@@ -173,6 +173,14 @@ export async function create_branch({
  * @returns {Promise<Boolean>} True if successful
  */
 export async function checkout_branch({ repo_path, branch_name }) {
+  if (!repo_path) {
+    throw new Error('Repository path is required')
+  }
+
+  if (!branch_name) {
+    throw new Error('Branch name is required')
+  }
+
   try {
     log(`Checking out branch ${branch_name} in ${repo_path}`)
     await execute_shell_command(`git checkout ${branch_name}`, {

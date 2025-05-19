@@ -123,7 +123,6 @@ export async function create_change_request({
     log(`Change request ${change_request_id} created successfully.`)
     return change_request_id
   } catch (error) {
-    console.log(error)
     log(`Error creating change request ${change_request_id}:`, error)
     throw error
   }

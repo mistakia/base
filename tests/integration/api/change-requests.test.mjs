@@ -266,7 +266,7 @@ describe('Change Requests API', () => {
         `${cr.change_request_id}.md`
       )
       const { stdout: file_content } = await execute(`cat ${file_path}`, {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       expect(file_content).to.include('status: Approved')
       expect(file_content).to.include('Looks good to me!')
@@ -315,17 +315,17 @@ describe('Change Requests API', () => {
       // Create a file in the thread branch
       const branch_name = `thread/${thread_data.thread_id}`
       await execute(`git checkout ${branch_name}`, {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       await fs.writeFile(
-        path.join(test_repo.path, 'merge-test.md'),
+        path.join(test_repo.user_path, 'merge-test.md'),
         '# Test merge content'
       )
       await execute('git add merge-test.md', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       await execute('git commit -m "Add merge test file"', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
 
       // Fetch the change request
@@ -362,10 +362,10 @@ describe('Change Requests API', () => {
 
       // Verify the merge happened by checking if the file exists in main branch
       await execute('git checkout main', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       const { stdout: file_list } = await execute('ls -la', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       expect(file_list).to.include('merge-test.md')
 
@@ -393,17 +393,17 @@ describe('Change Requests API', () => {
       // Create a file in the thread branch
       const branch_name = `thread/${thread_data.thread_id}`
       await execute(`git checkout ${branch_name}`, {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       await fs.writeFile(
-        path.join(test_repo.path, 'already-merged.md'),
+        path.join(test_repo.user_path, 'already-merged.md'),
         '# Already merged content'
       )
       await execute('git add already-merged.md', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
       await execute('git commit -m "Add already merged file"', {
-        cwd: test_repo.path
+        cwd: test_repo.user_path
       })
 
       // Fetch the change request

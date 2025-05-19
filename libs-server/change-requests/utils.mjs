@@ -82,12 +82,12 @@ export async function merge_branch_for_change_request({
 
   // Merge the feature branch into the target branch
   await git_ops.checkout_branch({
-    user_base_directory,
+    repo_path: user_base_directory,
     branch_name: target_branch
   })
 
   const merge_result = await git_ops.merge_branch({
-    user_base_directory,
+    repo_path: user_base_directory,
     branch_to_merge: feature_branch,
     merge_message
   })
@@ -95,7 +95,7 @@ export async function merge_branch_for_change_request({
   // Optionally delete the feature branch after merging
   if (delete_branch) {
     await git_ops.delete_branch({
-      user_base_directory,
+      repo_path: user_base_directory,
       branch_name: feature_branch,
       force: false
     })
