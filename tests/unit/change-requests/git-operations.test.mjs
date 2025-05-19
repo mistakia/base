@@ -42,7 +42,9 @@ describe('Change Request Git Operations', function () {
   // Helper to create a feature branch with some changes
   async function create_feature_branch(branch_name) {
     // Create and checkout branch
-    await execute(`git checkout -b ${branch_name}`, { cwd: test_repo.user_path })
+    await execute(`git checkout -b ${branch_name}`, {
+      cwd: test_repo.user_path
+    })
 
     // Create a test file with unique content
     const file_name = `test-file-${uuid().substring(0, 8)}.md`
@@ -94,7 +96,9 @@ describe('Change Request Git Operations', function () {
 
     it('should return empty array if no commits exist', async function () {
       // Create an empty branch with no unique commits
-      await execute('git checkout -b empty-branch', { cwd: test_repo.user_path })
+      await execute('git checkout -b empty-branch', {
+        cwd: test_repo.user_path
+      })
       await execute('git checkout main', { cwd: test_repo.user_path })
 
       // Get the commits using the utility function

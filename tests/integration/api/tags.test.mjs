@@ -81,7 +81,10 @@ describe('Tags API', () => {
       cleanup_tasks.push(cleanup)
 
       const res = await authenticate_request(
-        chai.request(server).get(`/api/tags/${base_relative_path}`).query({ root_base_directory }),
+        chai
+          .request(server)
+          .get(`/api/tags/${base_relative_path}`)
+          .query({ root_base_directory }),
         test_user
       )
 
@@ -94,7 +97,10 @@ describe('Tags API', () => {
 
     it('should return 404 for non-existent tag', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/tags/user/NonExistentTag').query({ root_base_directory }),
+        chai
+          .request(server)
+          .get('/api/tags/user/NonExistentTag')
+          .query({ root_base_directory }),
         test_user
       )
 

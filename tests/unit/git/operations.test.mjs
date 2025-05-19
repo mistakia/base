@@ -337,23 +337,4 @@ describe('Git Operations', function () {
     })
     expect(stdout).to.include('Modified Line 2')
   })
-
-  it('should check if a directory is a submodule', async function () {
-    // Create a submodule
-    const submodule_path = path.join(os.tmpdir(), `git-submodule-${Date.now()}`)
-    await fs.mkdir(submodule_path, { recursive: true })
-    await execute('git init', { cwd: submodule_path })
-    await fs.writeFile(path.join(submodule_path, 'README.md'), '# Submodule')
-    await execute('git add README.md', { cwd: submodule_path })
-    await execute('git commit -m "Initial commit"', { cwd: submodule_path })
-
-    // Add as submodule to test repo
-    await execute(`git submodule add ${submodule_path} data`, {
-      cwd: test_repo_path
-    })
-    await execute('git commit -m "Add submodule"', { cwd: test_repo_path })
-
-    const is_sub = await git.is_submodule('data')
-    expect(is_sub).to.be.true
-  })
 })

@@ -216,7 +216,11 @@ async function validate_mergeable({ change_request_id, user_base_directory }) {
 }
 
 // Helper function to verify the update was successful
-async function verify_update({ change_request_id, status, user_base_directory }) {
+async function verify_update({
+  change_request_id,
+  status,
+  user_base_directory
+}) {
   const updated_cr = await get_change_request({
     change_request_id,
     user_base_directory

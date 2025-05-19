@@ -5,27 +5,6 @@ import { execute_shell_command } from '#libs-server/utils/execute-shell-command.
 const log = debug('git:repository-operations')
 
 /**
- * Check if a repository is a git submodule
- * @param {String} repo_path Path to the repository
- * @returns {Boolean} True if the repository is a submodule
- */
-export async function is_submodule(repo_path) {
-  try {
-    log(`Checking if ${repo_path} is a submodule`)
-    const { stdout } = await execute_shell_command(
-      'git config --get-regexp ^submodule',
-      {
-        cwd: '.' // Run from parent repo directory
-      }
-    )
-    return stdout.includes(repo_path.replace(/^\.\//g, ''))
-  } catch (error) {
-    // If command fails, likely no submodules
-    return false
-  }
-}
-
-/**
  * Get repository info
  * @param {String} repo_path Path to the repository
  * @returns {Object} Repository info including owner and name
@@ -134,7 +113,6 @@ export async function list_submodules({ repo_path = '.' }) {
 }
 
 export default {
-  is_submodule,
   get_repo_info,
   git_init,
   list_submodules

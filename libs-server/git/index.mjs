@@ -39,7 +39,7 @@ export const {
 
 export const { add_files, commit_changes } = commit_operations
 
-export const { is_submodule, get_repo_info, git_init, list_submodules } =
+export const { get_repo_info, git_init, list_submodules } =
   repository_operations
 
 export const { write_file_to_git, delete_file_from_git } = git_files
@@ -81,7 +81,6 @@ export default {
   commit_changes,
 
   // Core operations
-  is_submodule,
   get_repo_info,
   git_init,
   list_submodules
