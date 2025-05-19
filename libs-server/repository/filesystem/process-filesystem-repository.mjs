@@ -80,7 +80,7 @@ async function process_filesystem_file({
  * Process repositories from filesystem
  * @param {Object} options Configuration options
  * @param {string} [options.root_base_directory] The absolute path to the base directory
- * @param {function} [options.entity_processor] Function to process each entity
+ * @param {function} [options.entity_processor] Function to process each entity (entity, file, repository, schemas) => Promise
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_filesystem(options = {}) {

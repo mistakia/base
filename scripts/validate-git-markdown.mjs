@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
-import { process_repositories_from_git } from '#libs-server/repository/process-repository.mjs'
+import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
 
 const log = debug('validate-git-markdown')
 debug.enable(

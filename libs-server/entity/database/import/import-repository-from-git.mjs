@@ -1,6 +1,6 @@
 import debug from 'debug'
 import { import_entity_from_git } from '#libs-server/entity/database/import-entity-from-git.mjs'
-import { process_repositories_from_git } from '#libs-server/repository/process-repository.mjs'
+import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
 
 const log = debug('entity:database:import:repository')
 

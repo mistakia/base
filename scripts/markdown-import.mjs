@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import debug from 'debug'
 
-import { import_repositories_from_git } from '#libs-server/markdown/index.mjs'
+import { import_repository_from_git } from '#libs-server/entity/database/import/import-repository-from-git.mjs'
 import postgres from '#db'
 
 const log = debug('markdown-import')
@@ -60,19 +60,20 @@ async function main() {
 
     // Configure import options with explicit branches
     const import_options = {
+      repositories: [
+        { branch: argv.systemBranch },
+        { branch: argv.userBranch }
+      ],
+      user_id: argv.userId,
       system_branch: argv.systemBranch,
-      user_branch: argv.userBranch,
-      skip_schema_files: argv.skipSchemaFiles
+      user_branch: argv.userBranch
     }
 
     // Start a transaction if in dry run mode
     if (argv.dryRun) {
       await postgres
         .transaction(async () => {
-          const result = await import_repositories_from_git(
-            import_options,
-            argv.userId
-          )
+          const result = await import_repository_from_git(import_options)
           console.log(`Import simulation complete:
 - Imported: ${result.imported} files
 - Skipped: ${result.skipped} files
@@ -90,10 +91,7 @@ async function main() {
         })
     } else {
       // Regular execution
-      const result = await import_repositories_from_git(
-        import_options,
-        argv.userId
-      )
+      const result = await import_repository_from_git(import_options)
       console.log(`Import complete:
 - Imported: ${result.imported} files
 - Skipped: ${result.skipped} files

@@ -4,7 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
-import { process_repositories_from_filesystem } from '#libs-server/repository/process-repository.mjs'
+import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 
 const log = debug('validate-filesystem-markdown')
 debug.enable(
