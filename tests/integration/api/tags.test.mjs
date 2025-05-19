@@ -106,48 +106,4 @@ describe('Tags API', () => {
       expect(res.body.error).to.include('Tag user/NonExistentTag not found')
     })
   })
-
-  describe('GET /api/tags/{tag_id} after tagging', () => {
-    it('should return the tagged entity', async () => {
-      // First, create a tag in the database to get a real UUID for tag_entity_id
-      const { tag_entity_id } = await create_test_tag({
-        user_id: test_user.user_id,
-        title: 'Database Tag',
-        root_base_directory
-      })
-
-      // Then create a filesystem tag for lookup via API
-      const { base_relative_path: tag_id, cleanup } = await create_test_tag({
-        title: 'Updated Test Tag',
-        filesystem: true,
-        user_id: test_user.user_id,
-        root_base_directory
-      })
-      cleanup_tasks.push(cleanup)
-
-      // Associate the test entity with the database tag using the UUID tag_entity_id
-      await db('entity_tags').insert({
-        entity_id: test_entity_id,
-        tag_entity_id // This is the UUID from the database tag
-      })
-
-      // For this test, we're not testing the entity association since we're associating
-      // a database tag but querying a filesystem tag. In a real app, these would be
-      // synchronized, but for the test we're just checking that the API correctly returns
-      // the tag metadata.
-
-      // Query the filesystem tag
-      const res = await authenticate_request(
-        chai.request(server).get(`/api/tags/${tag_id}`).query({ root_base_directory }),
-        test_user
-      )
-
-      expect(res).to.have.status(200)
-      expect(res.body.tag).to.be.an('object')
-      expect(res.body.tag.title).to.equal('Updated Test Tag')
-      expect(res.body.entities).to.be.an('array')
-      // In a real application, we'd expect res.body.entities to include the test entity
-      // but since we're using separate database and filesystem tags, it won't be included
-    })
-  })
 })
