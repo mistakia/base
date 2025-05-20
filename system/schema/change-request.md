@@ -1,6 +1,7 @@
 ---
 title: Change Request
 type: type_definition
+type_name: change_request
 description: Defines the structure for a change request to the knowledge base.
 extends: base
 tags: [system, workflow, git]
@@ -36,7 +37,7 @@ properties:
     required: false
     description: URL of the associated GitHub Pull Request, if any.
   - name: github_pr_number
-    type: integer
+    type: number
     required: false
     description: Number of the associated GitHub Pull Request, if any.
   - name: github_repo
