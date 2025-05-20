@@ -97,10 +97,7 @@ export async function list_markdown_files_in_filesystem({
 
     // Add system files from root repository
     for (const relative_path of system_files) {
-      const absolute_path = path.join(
-        root_base_directory,
-        relative_path
-      )
+      const absolute_path = path.join(root_base_directory, relative_path)
 
       if (file_paths_seen.has(absolute_path)) {
         continue

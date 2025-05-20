@@ -24,10 +24,11 @@ function transform_property_type(property) {
     return {
       ...property,
       type: 'string',
-      pattern: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+      pattern:
+        /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
     }
   }
-  
+
   return property
 }
 
@@ -81,7 +82,7 @@ export function build_validation_schema(entity_type, schemas) {
           if (prop.max !== undefined) property_schema.max = prop.max
           if (prop.properties) property_schema.properties = prop.properties
           if (prop.description) property_schema.description = prop.description
-          
+
           // Transform property type if needed
           property_schema = transform_property_type(property_schema)
 
@@ -91,16 +92,16 @@ export function build_validation_schema(entity_type, schemas) {
     } else {
       // Properties are already in object format
       properties = { ...schema.properties }
-      
+
       // Transform each property type if needed and handle required/optional
       for (const key in properties) {
         let property = properties[key]
-        
+
         // If required is explicitly false, set optional to true for fastest-validator
         if (property.required === false) {
           property.optional = true
         }
-        
+
         properties[key] = transform_property_type(property)
       }
     }

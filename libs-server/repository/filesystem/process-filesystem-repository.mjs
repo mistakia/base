@@ -46,7 +46,9 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
     // Check for validation errors
     if (!validation.success) {
       has_errors = true
-      file.errors = file.errors.concat(validation.errors || ['Validation failed']);
+      file.errors = file.errors.concat(
+        validation.errors || ['Validation failed']
+      )
     }
 
     // Complete the entity with validation results
