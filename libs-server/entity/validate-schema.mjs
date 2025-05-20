@@ -14,6 +14,24 @@ const validator = new Validator({
 })
 
 /**
+ * Transform property type for validation
+ * @param {Object} property Property schema
+ * @returns {Object} Transformed property schema
+ */
+function transform_property_type(property) {
+  // Handle datetime type - convert to string with ISO 8601 format pattern
+  if (property.type === 'datetime') {
+    return {
+      ...property,
+      type: 'string',
+      pattern: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+    }
+  }
+  
+  return property
+}
+
+/**
  * Build validation schema for a specific entity type
  * @param {String} entity_type Entity type to build schema for
  * @param {Object} schemas Loaded schema definitions
@@ -43,13 +61,18 @@ export function build_validation_schema(entity_type, schemas) {
       // Transform array of properties to object with property names as keys
       schema.properties.forEach((prop) => {
         if (prop && prop.name) {
-          const property_schema = {
+          let property_schema = {
             type: prop.type
           }
 
           // Add additional constraints only if they exist
-          if (prop.required !== undefined)
+          if (prop.required !== undefined) {
             property_schema.required = prop.required
+            // If required is explicitly false, set optional to true for fastest-validator
+            if (prop.required === false) {
+              property_schema.optional = true
+            }
+          }
           if (prop.optional !== undefined)
             property_schema.optional = prop.optional
           if (prop.items) property_schema.items = prop.items
@@ -58,13 +81,28 @@ export function build_validation_schema(entity_type, schemas) {
           if (prop.max !== undefined) property_schema.max = prop.max
           if (prop.properties) property_schema.properties = prop.properties
           if (prop.description) property_schema.description = prop.description
+          
+          // Transform property type if needed
+          property_schema = transform_property_type(property_schema)
 
           properties[prop.name] = property_schema
         }
       })
     } else {
       // Properties are already in object format
-      properties = schema.properties
+      properties = { ...schema.properties }
+      
+      // Transform each property type if needed and handle required/optional
+      for (const key in properties) {
+        let property = properties[key]
+        
+        // If required is explicitly false, set optional to true for fastest-validator
+        if (property.required === false) {
+          property.optional = true
+        }
+        
+        properties[key] = transform_property_type(property)
+      }
     }
   }
 

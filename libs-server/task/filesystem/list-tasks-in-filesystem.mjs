@@ -1,7 +1,7 @@
 import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import { list_entity_files_in_filesystem } from '#libs-server/entity/filesystem/list-entity-files-in-filesystem.mjs'
+import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 import config from '#config'
 import is_main from '#libs-server/utils/is-main.mjs'
 
@@ -30,7 +30,7 @@ export async function list_tasks_in_filesystem({
     log('Listing tasks from filesystem')
 
     // First get all task entities
-    const task_entities = await list_entity_files_in_filesystem({
+    const task_entities = await list_entity_files_from_filesystem({
       root_base_directory,
       include_entity_types: ['task']
     })

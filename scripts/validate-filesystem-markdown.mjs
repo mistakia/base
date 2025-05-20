@@ -11,17 +11,11 @@ debug.enable(
   'validate-filesystem-markdown,markdown:process-repository,markdown:scanner'
 )
 
-const validate_filesystem = async ({ system_branch, user_branch }) => {
-  log({
-    system_branch,
-    user_branch
-  })
-
+const validate_filesystem = async ({ root_base_directory }) => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
   const result = await process_repositories_from_filesystem({
-    system_branch,
-    user_branch
+    root_base_directory
   })
 
   // Report results
@@ -42,6 +36,7 @@ const validate_filesystem = async ({ system_branch, user_branch }) => {
         has_errors = true
       }
       console.error(`\nFile: ${file.absolute_path}`)
+      console.error(`Base Path: ${file.base_relative_path || 'N/A'}`)
       file.errors.forEach((error) => {
         console.error(`  • ${error}`)
       })
@@ -58,14 +53,9 @@ export default validate_filesystem
 
 const main = async () => {
   const argv = yargs(hideBin(process.argv))
-    .option('system-branch', {
+    .option('root_base_directory', {
       type: 'string',
-      description: 'Branch to use for the system knowledge base',
-      default: undefined
-    })
-    .option('user-branch', {
-      type: 'string',
-      description: 'Branch to use for the user knowledge base',
+      description: 'Root base directory to use for the knowledge base',
       default: undefined
     })
     .help().argv
@@ -73,8 +63,7 @@ const main = async () => {
   let error
   try {
     const result = await validate_filesystem({
-      system_branch: argv['system-branch'],
-      user_branch: argv['user-branch']
+      root_base_directory: argv.root_base_directory
     })
 
     if (result.has_errors) {
