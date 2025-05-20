@@ -95,7 +95,7 @@ export function build_validation_schema(entity_type, schemas) {
 
       // Transform each property type if needed and handle required/optional
       for (const key in properties) {
-        let property = properties[key]
+        const property = properties[key]
 
         // If required is explicitly false, set optional to true for fastest-validator
         if (property.required === false) {

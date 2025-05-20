@@ -1,5 +1,4 @@
 import debug from 'debug'
-import path from 'path'
 import { list_entity_files_from_filesystem } from './list-entity-files-from-filesystem.mjs'
 
 const log = debug('repository:filesystem:load-schemas')
@@ -63,7 +62,6 @@ export async function load_schema_definitions_from_filesystem({
 
     for (const entity_result of all_entities) {
       const entity = entity_result.entity_properties
-      const file_path = entity_result.file_info.absolute_path
 
       if (entity.type === 'type_definition') {
         schema_map[entity.type_name] = {
