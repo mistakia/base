@@ -13,7 +13,7 @@ const log = debug('entity:git:validate:relations')
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_relations_from_git({
-  relations,
+  relations = [],
   repo_path,
   branch
 }) {

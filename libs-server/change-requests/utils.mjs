@@ -65,12 +65,12 @@ export async function merge_branch_for_change_request({
 }) {
   // Check if branches exist
   const target_exists = await git_ops.branch_exists({
-    user_base_directory,
+    repo_path: user_base_directory,
     branch_name: target_branch
   })
 
   const feature_exists = await git_ops.branch_exists({
-    user_base_directory,
+    repo_path: user_base_directory,
     branch_name: feature_branch
   })
 

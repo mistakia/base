@@ -15,7 +15,6 @@ import {
   create_test_user,
   create_test_thread
 } from '#tests/utils/index.mjs'
-
 const execute = promisify(exec)
 const expect = chai.expect
 

@@ -13,7 +13,7 @@ const log = debug('entity:git:validate:references')
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_references_from_git({
-  references,
+  references = [],
   repo_path,
   branch
 }) {

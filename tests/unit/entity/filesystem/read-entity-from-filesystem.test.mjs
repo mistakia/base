@@ -61,8 +61,8 @@ describe('read_entity_from_filesystem', () => {
     // Check content and raw_content
     expect(result.entity_content).to.equal('# Test Entity\n\nContent body')
     expect(result.raw_content).to.be.a('string')
-    expect(result.raw_content).to.include('title: "Test Entity"')
-    expect(result.raw_content).to.include('type: "test"')
+    expect(result.raw_content).to.include("title: 'Test Entity'")
+    expect(result.raw_content).to.include("type: 'test'")
     expect(result.raw_content).to.include('# Test Entity')
   })
 

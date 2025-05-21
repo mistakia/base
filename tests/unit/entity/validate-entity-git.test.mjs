@@ -98,7 +98,7 @@ This is a test task that should validate successfully.
       }
 
       // The metadata doesn't reference other entities, so it should pass validation
-      const entity_metadata = {
+      const formatted_entity_metadata = {
         tags: [],
         relations: [],
         references: []
@@ -107,7 +107,7 @@ This is a test task that should validate successfully.
       // Call the validation function
       const result = await validate_entity_from_git({
         entity_properties,
-        entity_metadata,
+        formatted_entity_metadata,
         repo_path: test_repo.path,
         branch: 'main',
         schemas
@@ -164,7 +164,7 @@ properties:
       // Call the validation function
       const result = await validate_entity_from_git({
         entity_properties,
-        entity_metadata: {},
+        formatted_entity_metadata: {},
         repo_path: test_repo.path,
         branch: 'main',
         schemas
@@ -200,8 +200,8 @@ name: task
         type: 'task'
       }
 
-      const entity_metadata = {
-        tags: [{ base_relative_path: 'nonexistent/tag' }],
+      const formatted_entity_metadata = {
+        property_tags: [{ base_relative_path: 'nonexistent/tag' }],
         relations: [],
         references: []
       }
@@ -209,7 +209,7 @@ name: task
       // Call the validation function
       const result = await validate_entity_from_git({
         entity_properties,
-        entity_metadata,
+        formatted_entity_metadata,
         repo_path: test_repo.path,
         branch: 'main',
         schemas: {}
@@ -246,7 +246,7 @@ name: task
         type: 'task'
       }
 
-      const entity_metadata = {
+      const formatted_entity_metadata = {
         tags: [],
         relations: [
           {
@@ -261,7 +261,7 @@ name: task
       // Call the validation function
       const result = await validate_entity_from_git({
         entity_properties,
-        entity_metadata,
+        formatted_entity_metadata,
         repo_path: test_repo.path,
         branch: 'main',
         schemas: {}
@@ -314,7 +314,7 @@ name: task
       // Call the validation function with empty schema map
       const result = await validate_entity_from_git({
         entity_properties,
-        entity_metadata: {},
+        formatted_entity_metadata: {},
         repo_path: test_repo.path,
         branch: 'main',
         schemas: {}

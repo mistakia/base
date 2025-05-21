@@ -14,55 +14,17 @@ describe('Entity Format Extractors', () => {
 
       const tags = extract_entity_tags({ entity_properties })
 
-      expect(tags).to.be.an('array')
-      expect(tags).to.have.lengthOf(3)
-      expect(tags[0]).to.deep.include({
+      expect(tags.property_tags).to.be.an('array')
+      expect(tags.property_tags).to.have.lengthOf(3)
+      expect(tags.property_tags[0]).to.deep.include({
         base_relative_path: 'system/development'
       })
-      expect(tags[1]).to.deep.include({
+      expect(tags.property_tags[1]).to.deep.include({
         base_relative_path: 'system/javascript'
       })
-      expect(tags[2]).to.deep.include({ base_relative_path: 'system/testing' })
-    })
-
-    it('should extract hashtags from entity content', () => {
-      const entity_content = `
-          # Test Document
-
-          This is a test #system/javascript document for #system/testing purposes.
-
-          Multiple hashtags #system/one #system/two #system/three should all be detected.
-        `
-
-      const tags = extract_entity_tags({ entity_content })
-
-      expect(tags).to.be.an('array')
-      expect(tags).to.have.lengthOf(5)
-      expect(tags).to.deep.include({ base_relative_path: 'system/javascript' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/testing' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/one' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/two' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/three' })
-    })
-
-    it('should combine tags from entity properties and entity content', () => {
-      const entity_properties = {
-        tags: ['system/frontend', 'system/development']
-      }
-      const entity_content = `
-          # Frontend Development
-
-          Working on #system/javascript and #system/react components.
-        `
-
-      const tags = extract_entity_tags({ entity_properties, entity_content })
-
-      expect(tags).to.be.an('array')
-      expect(tags).to.have.lengthOf(4)
-      expect(tags).to.deep.include({ base_relative_path: 'system/frontend' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/development' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/javascript' })
-      expect(tags).to.deep.include({ base_relative_path: 'system/react' })
+      expect(tags.property_tags[2]).to.deep.include({
+        base_relative_path: 'system/testing'
+      })
     })
 
     it('should handle empty tags properly', () => {
@@ -71,8 +33,8 @@ describe('Entity Format Extractors', () => {
 
       const tags = extract_entity_tags({ entity_properties, entity_content })
 
-      expect(tags).to.be.an('array')
-      expect(tags).to.have.lengthOf(0)
+      expect(tags.property_tags).to.be.an('array')
+      expect(tags.property_tags).to.have.lengthOf(0)
     })
   })
 

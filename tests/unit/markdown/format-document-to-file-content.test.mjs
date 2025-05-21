@@ -18,12 +18,12 @@ describe('Document Content Formatting', () => {
       })
 
       expect(result).to.include('---')
-      expect(result).to.include('title: "Test Document"')
-      expect(result).to.include('type: "test"')
-      expect(result).to.include('description: "Test description"')
+      expect(result).to.include("title: 'Test Document'")
+      expect(result).to.include("type: 'test'")
+      expect(result).to.include("description: 'Test description'")
       expect(result).to.include('tags:')
-      expect(result).to.include('  - "tag1"')
-      expect(result).to.include('  - "tag2"')
+      expect(result).to.include("  - 'tag1'")
+      expect(result).to.include("  - 'tag2'")
       expect(result).to.include('This is the content')
     })
 
@@ -40,7 +40,7 @@ describe('Document Content Formatting', () => {
       })
 
       expect(result).to.include('---')
-      expect(result).to.include('title: "Test Document"')
+      expect(result).to.include("title: 'Test Document'")
       expect(result).to.match(/---\n\n$/m) // Should end with --- followed by blank line
     })
 
@@ -59,11 +59,11 @@ describe('Document Content Formatting', () => {
       })
 
       expect(result).to.include('tags:')
-      expect(result).to.include('  - "tag1"')
-      expect(result).to.include('  - "tag2"')
+      expect(result).to.include("  - 'tag1'")
+      expect(result).to.include("  - 'tag2'")
       expect(result).to.include('metadata:')
-      expect(result).to.include('  key1: "value1"')
-      expect(result).to.include('  key2: "value2"')
+      expect(result).to.include("  key1: 'value1'")
+      expect(result).to.include("  key2: 'value2'")
     })
 
     it('should handle status field without quotes', () => {
@@ -80,7 +80,7 @@ describe('Document Content Formatting', () => {
       })
 
       expect(result).to.include('status: In Progress') // No quotes
-      expect(result).to.include('title: "Test Document"') // With quotes
+      expect(result).to.include("title: 'Test Document'") // With single quotes
     })
 
     it('should throw error if document properties is invalid', () => {

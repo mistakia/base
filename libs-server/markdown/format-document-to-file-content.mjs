@@ -2,6 +2,15 @@ import debug from 'debug'
 
 const log = debug('markdown:format-document-to-file-content')
 
+// Helper function to stringify with single quotes
+const stringify_with_single_quotes = (value) => {
+  if (typeof value === 'string') {
+    // Replace double quotes with single quotes from JSON.stringify output
+    return JSON.stringify(value).replace(/^"(.*)"$/, "'$1'")
+  }
+  return JSON.stringify(value)
+}
+
 /**
  * Format document properties and content into a markdown file with frontmatter
  *
@@ -33,15 +42,6 @@ export function format_document_to_file_content({
       if (b_priority !== -1) return 1
       return a.localeCompare(b)
     })
-
-    // Helper function to stringify with single quotes
-    const stringify_with_single_quotes = (value) => {
-      if (typeof value === 'string') {
-        // Replace double quotes with single quotes from JSON.stringify output
-        return JSON.stringify(value).replace(/^"(.*)"$/, "'$1'")
-      }
-      return JSON.stringify(value)
-    }
 
     for (const key of sorted_keys) {
       const value = document_properties[key]

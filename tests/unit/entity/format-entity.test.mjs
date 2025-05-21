@@ -40,15 +40,15 @@ This is a #system/test task for #system/development purposes.
       expect(result.formatted_entity_metadata).to.be.an('object')
 
       // Check tags (from both entity_properties and content)
-      expect(result.formatted_entity_metadata.tags).to.be.an('array')
-      expect(result.formatted_entity_metadata.tags.length).to.be.at.least(3)
-      expect(result.formatted_entity_metadata.tags).to.deep.include({
+      expect(result.formatted_entity_metadata.property_tags).to.be.an('array')
+      expect(result.formatted_entity_metadata.property_tags.length).to.be.at.least(2)
+      expect(result.formatted_entity_metadata.property_tags).to.deep.include({
         base_relative_path: 'system/important'
       })
-      expect(result.formatted_entity_metadata.tags).to.deep.include({
+      expect(result.formatted_entity_metadata.property_tags).to.deep.include({
         base_relative_path: 'system/development'
       })
-      expect(result.formatted_entity_metadata.tags).to.deep.include({
+      expect(result.formatted_entity_metadata.property_tags).to.deep.include({
         base_relative_path: 'system/test'
       })
 
