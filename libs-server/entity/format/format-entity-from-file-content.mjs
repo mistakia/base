@@ -33,8 +33,13 @@ export function format_entity_from_file_content({ file_content, file_path }) {
     const entity_content = document_content
 
     // Extract entity metadata using the extractors
+    const { property_tags, content_tags } = extract_entity_tags({
+      entity_properties,
+      entity_content
+    })
     const formatted_entity_metadata = {
-      tags: extract_entity_tags({ entity_properties, entity_content }),
+      property_tags,
+      content_tags,
       observations: extract_entity_observations({ entity_properties }),
       relations: extract_entity_relations({ entity_properties }),
       references: extract_entity_references({ entity_content, tokens })

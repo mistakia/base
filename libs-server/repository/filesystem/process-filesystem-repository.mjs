@@ -30,6 +30,12 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
       absolute_path: file.absolute_path
     })
 
+    // Calculate root_base_directory
+    const root_base_directory = file.absolute_path.slice(
+      0,
+      -file.base_relative_path.length
+    )
+
     if (!entity_result.success) {
       file.errors.push(
         entity_result.error || 'Failed to read entity from filesystem'
@@ -40,7 +46,9 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
     // Validate entity against schemas
     const validation = await validate_entity_from_filesystem({
       entity_properties: entity_result.entity_properties,
-      schemas
+      formatted_entity_metadata: entity_result.formatted_entity_metadata,
+      schemas,
+      root_base_directory
     })
 
     // Check for validation errors

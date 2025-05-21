@@ -1,40 +1,32 @@
+import path from 'path'
 import debug from 'debug'
-import { entity_exists_in_git } from './entity-exists-in-git.mjs'
+import { entity_exists_in_filesystem } from './entity-exists-in-filesystem.mjs'
 
-const log = debug('entity:git:validate:references')
+const log = debug('entity:filesystem:validate:references')
 
 /**
- * Validate that references in content exist in git
+ * Validate that references in content exist in filesystem
  *
  * @param {Object} params - Parameters
  * @param {Array} params.references - Array of reference objects
- * @param {string} params.repo_path - Git repository path
- * @param {string} params.branch - Git branch for validation
+ * @param {string} params.root_base_directory - Root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_references_from_git({
+export async function validate_references_from_filesystem({
   references,
-  repo_path,
-  branch
+  root_base_directory
 }) {
+  if (!root_base_directory) {
+    return {
+      valid: false,
+      errors: ['Root base directory is required']
+    }
+  }
+
   if (!Array.isArray(references)) {
     return {
       valid: false,
       errors: ['References must be an array']
-    }
-  }
-
-  if (!repo_path) {
-    return {
-      valid: false,
-      errors: ['Repository path is required']
-    }
-  }
-
-  if (!branch) {
-    return {
-      valid: false,
-      errors: ['Branch is required']
     }
   }
 
@@ -50,16 +42,16 @@ export async function validate_references_from_git({
 
     // Validate each reference
     const validation_promises = reference_paths.map(async (reference) => {
+      const absolute_path = path.join(root_base_directory, reference)
+
       // Check if the referenced entity exists
-      const reference_exists = await entity_exists_in_git({
-        repo_path,
-        file_path: reference,
-        branch
+      const exists = await entity_exists_in_filesystem({
+        absolute_path
       })
 
       return {
         reference,
-        exists: reference_exists.success && reference_exists.exists
+        exists
       }
     })
 
@@ -90,4 +82,4 @@ export async function validate_references_from_git({
   }
 }
 
-export default validate_references_from_git
+export default validate_references_from_filesystem

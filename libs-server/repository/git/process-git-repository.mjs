@@ -51,7 +51,7 @@ async function process_git_file({
     // Validate the entity against schemas
     const validation = await validate_entity_from_git({
       entity_properties: entity_result.entity_properties,
-      entity_metadata: entity_result.entity_metadata,
+      formatted_entity_metadata: entity_result.formatted_entity_metadata,
       repo_path: file.repo_path,
       branch: file.branch || branch,
       schemas

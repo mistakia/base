@@ -38,7 +38,7 @@ export async function read_entity_from_filesystem({ absolute_path } = {}) {
     const file_content = await fs.readFile(absolute_path, 'utf8')
 
     // Parse the entity from file content
-    const { entity_properties, entity_content } =
+    const { entity_properties, entity_content, formatted_entity_metadata } =
       format_entity_from_file_content({
         file_content,
         file_path: absolute_path
@@ -60,6 +60,7 @@ export async function read_entity_from_filesystem({ absolute_path } = {}) {
       success: true,
       entity_properties,
       entity_content,
+      formatted_entity_metadata,
       raw_content: file_content,
       absolute_path
     }

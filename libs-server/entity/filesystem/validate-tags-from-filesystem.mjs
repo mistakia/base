@@ -1,23 +1,21 @@
 import debug from 'debug'
-import { tag_exists_in_git } from '#libs-server/tag/git/tag-exists-in-git.mjs'
+import { tag_exists_in_filesystem } from '#libs-server/tag/filesystem/tag-exists-in-filesystem.mjs'
 
-const log = debug('entity:git:validate:tags')
+const log = debug('entity:filesystem:validate:tags')
 
 /**
- * Validate that tags exist in git
+ * Validate that tags exist in filesystem
  *
  * @param {Object} params - Parameters
  * @param {Array} params.property_tags - Array of tag objects from properties
  * @param {Array} params.content_tags - Array of tag objects from content
- * @param {string} params.repo_path - Git repository path
- * @param {string} params.branch - Git branch for validation
+ * @param {string} params.root_base_directory - Root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_tags_from_git({
+export async function validate_tags_from_filesystem({
   property_tags = [],
   content_tags = [],
-  repo_path,
-  branch
+  root_base_directory
 }) {
   if (!Array.isArray(property_tags) || !Array.isArray(content_tags)) {
     return {
@@ -26,17 +24,10 @@ export async function validate_tags_from_git({
     }
   }
 
-  if (!repo_path) {
+  if (!root_base_directory) {
     return {
       valid: false,
-      errors: ['Repository path is required']
-    }
-  }
-
-  if (!branch) {
-    return {
-      valid: false,
-      errors: ['Branch is required']
+      errors: ['Root base directory is required']
     }
   }
 
@@ -54,10 +45,9 @@ export async function validate_tags_from_git({
     ]
 
     const tag_validation_promises = all_tags.map(async (tag) => {
-      const exists = await tag_exists_in_git({
+      const exists = await tag_exists_in_filesystem({
         base_relative_path: tag.base_relative_path,
-        ref: branch,
-        repository_path: repo_path
+        root_base_directory
       })
       return {
         base_relative_path: tag.base_relative_path,
@@ -89,4 +79,4 @@ export async function validate_tags_from_git({
   }
 }
 
-export default validate_tags_from_git
+export default validate_tags_from_filesystem

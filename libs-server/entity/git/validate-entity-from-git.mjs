@@ -11,7 +11,7 @@ const log = debug('entity:git:validate')
  *
  * @param {Object} params - Parameters
  * @param {Object} params.entity_properties - Entity properties for schema validation
- * @param {Object} params.entity_metadata - Formatted entity metadata for validating tags, relations, references
+ * @param {Object} params.formatted_entity_metadata - Formatted entity metadata for validating tags, relations, references
  * @param {string} params.repo_path - Git repository path
  * @param {string} params.branch - Git branch
  * @param {Object} [params.schemas] - Schema definitions map
@@ -19,7 +19,7 @@ const log = debug('entity:git:validate')
  */
 export async function validate_entity_from_git({
   entity_properties,
-  entity_metadata = {},
+  formatted_entity_metadata = {},
   repo_path,
   branch,
   schemas
@@ -33,8 +33,13 @@ export async function validate_entity_from_git({
     }
   }
 
-  if (!entity_metadata || typeof entity_metadata !== 'object') {
-    log('Warning: No entity_metadata provided, some validations may be skipped')
+  if (
+    !formatted_entity_metadata ||
+    typeof formatted_entity_metadata !== 'object'
+  ) {
+    log(
+      'Warning: No formatted_entity_metadata provided, some validations may be skipped'
+    )
   }
 
   if (!repo_path) {
@@ -79,21 +84,21 @@ export async function validate_entity_from_git({
       await Promise.all([
         // Validate tags existence in git
         validate_tags_from_git({
-          tags: entity_metadata.tags || [],
+          ...formatted_entity_metadata,
           repo_path,
           branch
         }),
 
         // Validate relations existence in git
         validate_relations_from_git({
-          relations: entity_metadata.relations || [],
+          ...formatted_entity_metadata,
           repo_path,
           branch
         }),
 
         // Validate references existence in git
         validate_references_from_git({
-          references: entity_metadata.references || [],
+          ...formatted_entity_metadata,
           repo_path,
           branch
         })

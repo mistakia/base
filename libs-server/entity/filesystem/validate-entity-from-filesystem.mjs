@@ -1,5 +1,8 @@
 import debug from 'debug'
 import { validate_entity_properties } from '../validate-schema.mjs'
+import { validate_tags_from_filesystem } from './validate-tags-from-filesystem.mjs'
+import { validate_relations_from_filesystem } from './validate-relations-from-filesystem.mjs'
+import { validate_references_from_filesystem } from './validate-references-from-filesystem.mjs'
 
 const log = debug('entity:filesystem:validate')
 
@@ -8,12 +11,16 @@ const log = debug('entity:filesystem:validate')
  *
  * @param {Object} params - Parameters
  * @param {Object} params.entity_properties - Entity properties for schema validation
+ * @param {string} params.root_base_directory - Root base directory
+ * @param {Object} [params.formatted_entity_metadata] - Entity metadata for validation
  * @param {Object} [params.schemas] - Schema definitions map
  * @returns {Promise<Object>} - Validation result {success, errors?}
  */
 export async function validate_entity_from_filesystem({
   entity_properties,
-  schemas
+  formatted_entity_metadata = {},
+  schemas,
+  root_base_directory
 }) {
   // Validate required parameters
   if (!entity_properties || typeof entity_properties !== 'object') {
@@ -21,6 +28,15 @@ export async function validate_entity_from_filesystem({
       success: false,
       error: 'Invalid entity properties'
     }
+  }
+
+  if (
+    !formatted_entity_metadata ||
+    typeof formatted_entity_metadata !== 'object'
+  ) {
+    log(
+      'Warning: No formatted_entity_metadata provided, some validations may be skipped'
+    )
   }
 
   try {
@@ -35,13 +51,48 @@ export async function validate_entity_from_filesystem({
         })
       : { valid: true }
 
-    // For filesystem validation, we only validate schema for now
-    // Future implementations could validate tags, relations, and references existence
-
+    // Skip further validations if schema validation failed
     if (!schema_result.valid) {
       return {
         success: schema_result.valid,
         errors: schema_result.errors || []
+      }
+    }
+
+    // Run remaining validations in parallel
+    const [tags_result, relations_result, references_result] =
+      await Promise.all([
+        // Validate tags existence in filesystem
+        validate_tags_from_filesystem({
+          ...formatted_entity_metadata,
+          root_base_directory
+        }),
+
+        // Validate relations existence in filesystem
+        validate_relations_from_filesystem({
+          ...formatted_entity_metadata,
+          root_base_directory
+        }),
+
+        // Validate references existence in filesystem
+        validate_references_from_filesystem({
+          ...formatted_entity_metadata,
+          root_base_directory
+        })
+      ])
+
+    // Combine all validation errors
+    const all_errors = [
+      ...(schema_result.errors || []),
+      ...(tags_result.errors || []),
+      ...(relations_result.errors || []),
+      ...(references_result.errors || [])
+    ].map(String)
+
+    if (all_errors.length > 0) {
+      return {
+        success: false,
+        errors: all_errors
       }
     }
 
