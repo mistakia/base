@@ -8,21 +8,19 @@ const log = debug('entity:git:validate:tags')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.property_tags - Array of tag objects from properties
- * @param {Array} params.content_tags - Array of tag objects from content
  * @param {string} params.repo_path - Git repository path
  * @param {string} params.branch - Git branch for validation
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_tags_from_git({
   property_tags = [],
-  content_tags = [],
   repo_path,
   branch
 }) {
-  if (!Array.isArray(property_tags) || !Array.isArray(content_tags)) {
+  if (!Array.isArray(property_tags)) {
     return {
       valid: false,
-      errors: ['property_tags and content_tags must be arrays']
+      errors: ['property_tags must be an array']
     }
   }
 
@@ -41,16 +39,14 @@ export async function validate_tags_from_git({
   }
 
   try {
-    if (property_tags.length === 0 && content_tags.length === 0) {
+    if (property_tags.length === 0) {
       return { valid: true }
     }
 
-    log(`Validating ${property_tags.length + content_tags.length} tags`)
+    log(`Validating ${property_tags.length} tags`)
 
-    // Combine both arrays for validation, tagging their source
     const all_tags = [
-      ...property_tags.map((tag) => ({ ...tag, source: 'property' })),
-      ...content_tags.map((tag) => ({ ...tag, source: 'content' }))
+      ...property_tags.map((tag) => ({ ...tag, source: 'property' }))
     ]
 
     const tag_validation_promises = all_tags.map(async (tag) => {
