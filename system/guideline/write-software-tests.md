@@ -5,7 +5,7 @@ description: Guidelines for writing effective and maintainable tests across unit
 globs: [tests/**/*]
 guideline_status: Approved
 activities: [Write Tests, Review Tests]
-tags: [testing, quality, maintainability, unit-tests, integration-tests]
+tags: []
 observations:
   - '[principle] Avoiding stubbing creates more reliable tests #reliability'
   - '[strategy] Proper test structure improves readability and maintainability #structure'

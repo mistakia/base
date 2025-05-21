@@ -2,7 +2,7 @@
 title: Change Request System Design
 type: text
 description: Design documentation for the system managing knowledge base changes via Git branches.
-tags: [system, design, workflow, git, change_request, database, documentation]
+tags: []
 observations:
   - '[design] Uses Git branches for atomic change sets.'
   - '[workflow] Supports review/merge process for changes.'

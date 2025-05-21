@@ -2,7 +2,7 @@
 title: Tool Call Prompt
 type: prompt
 description: Standards for using tool calls in AI responses
-tags: [prompt]
+tags: []
 ---
 
 ## Rules

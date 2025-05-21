@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for file naming conventions across the system
 globs: ['**/*']
 guideline_status: Approved
-tags: [naming, files, convention]
+tags: []
 observations:
   - '[governance] Consistent file naming improves discoverability and reduces ambiguity #naming'
 relations:

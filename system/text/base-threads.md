@@ -2,12 +2,12 @@
 title: Base Threads
 type: text
 description: Defines the execution model using Base Threads (formerly Worker Threads) for handling objectives within the system.
-tags: [architecture, execution-model, threads, documentation]
+tags: []
 observations:
-  - '[design] Threads manage execution through distinct stages #workflow'
-  - '[design] Threads support human interaction via blocking/non-blocking requests #collaboration'
-  - '[architecture] Threads utilize a tiered memory system (Universal and Context) #memory'
-  - '[design] Each thread is associated with a specific activity #organization'
+  - '[design] Threads manage execution through distinct stages (workflow)'
+  - '[design] Threads support human interaction via blocking/non-blocking requests'
+  - '[architecture] Threads utilize a tiered memory system (Universal and Context)'
+  - '[design] Each thread is associated with a specific activity'
 relations:
   - 'relates_to [[system/text/system-design.md]]'
 ---

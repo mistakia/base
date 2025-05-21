@@ -83,9 +83,9 @@ Structured facts with semantic categorization in frontmatter:
 
 ```yaml
 observations:
-  - '[category] Content with #tags (optional context)'
-  - '[tech] Uses PostgreSQL for indexing #database'
-  - '[decision] Selected markdown for storage #format (Based on team discussion)'
+  - '[category] A brief description of the observation (optional context)'
+  - '[tech] Uses PostgreSQL for indexing databases'
+  - '[decision] Selected markdown for storage (Based on team discussion)'
 ```
 
 ### Relations

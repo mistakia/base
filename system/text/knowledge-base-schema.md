@@ -2,11 +2,11 @@
 title: Knowledge Base Schema
 type: text
 description: Documentation for the knowledge base schema architecture and extension mechanisms
-tags: [knowledge, schema, documentation]
+tags: []
 observations:
-  - '[design] Knowledge base schema is a dual-system architecture #design'
-  - '[implementation] System schema is in system/schema and user schema is in submodules #implementation'
-  - '[feature] Schema extensions allow for user-specific customization #customization'
+  - '[design] Knowledge base schema is a dual-system architecture'
+  - '[implementation] System schema is in system/schema and user schema is in submodules'
+  - '[feature] Schema extensions allow for user-specific customization'
 relations:
   - 'relates_to [[system/text/system-design.md]]'
 ---
@@ -88,9 +88,9 @@ Structured facts with semantic categorization in frontmatter:
 
 ```yaml
 observations:
-  - '[category] Content with #tags (optional context)'
-  - '[tech] Uses PostgreSQL for indexing #database'
-  - '[decision] Selected markdown for storage #format (Based on team discussion)'
+  - '[category] A brief description of the observation (optional context)'
+  - '[tech] Uses PostgreSQL for indexing databases'
+  - '[decision] Selected markdown for storage (Based on team discussion)'
 ```
 
 ### Relations

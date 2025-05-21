@@ -2,7 +2,7 @@
 title: Activity-Agent Model
 type: text
 description: Design concept for activity-based agent specialization and orchestration
-tags: [architecture, agents, activities, design, documentation]
+tags: []
 observations:
   - '[architecture] Activities serve as the foundation for specialized agents #design'
   - '[design] Base Thread agents can create and delegate to activity-based agents #workflow'

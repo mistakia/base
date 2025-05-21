@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for setting task priorities
 guideline_status: Approved
 activities: [Set Task Priority]
-tags: [task, priority, governance]
+tags: []
 observations:
   - '[standard] Standardized priority values ensure consistent task management #consistency'
   - '[governance] Limited set of priorities helps with workflow automation #automation'

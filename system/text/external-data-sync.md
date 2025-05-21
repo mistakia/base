@@ -2,7 +2,7 @@
 type: text
 title: External Data Sync
 description: System for synchronizing external data with conflict resolution
-tags: [sync, integration, github, notion]
+tags: []
 observations:
   - '[architecture] Field-level conflict detection and resolution #sync'
   - '[feature] Raw import data saved with IPFS content identifiers #storage'

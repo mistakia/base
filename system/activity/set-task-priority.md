@@ -3,7 +3,7 @@ title: Set Task Priority
 type: activity
 description: Process for setting the priority of a task
 guidelines: [system/set_task_priority.md]
-tags: [task, priority, workflow]
+tags: []
 observations:
   - '[workflow] Setting appropriate task priorities helps with resource allocation #organization'
   - '[governance] Only specific priority values are allowed #compliance'

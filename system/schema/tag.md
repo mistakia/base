@@ -10,10 +10,10 @@ properties:
     required: false
     description: Optional color code for the tag (e.g., hex code)
 observations:
-  - '[design] Tags provide cross-cutting organization capability #organization'
-  - '[feature] Tags can be referenced both in frontmatter and with hashtag syntax #usability'
-  - '[architecture] Tag hierarchy allows for more sophisticated organization #organization'
-  - '[usage] Proper noun tags help track project-specific content #project_management'
+  - '[design] Tags provide cross-cutting organization capability'
+  - '[feature] Tags can be referenced both in frontmatter and with tag property'
+  - '[architecture] Tag hierarchy allows for more sophisticated organization'
+  - '[usage] Proper noun tags help track project-specific content'
 ---
 
 # Tag
@@ -22,10 +22,7 @@ Tags provide a flexible way to categorize and organize knowledge items across th
 
 ## Usage
 
-Tags can be attached to any entity in the system, allowing for flexible categorization and improved discoverability. Tags can be referenced in two ways:
-
-1. In frontmatter with the `tags` array property
-2. Inline in markdown content with hashtag syntax (#tag_name)
+Tags can be attached to any entity in the system, allowing for flexible categorization and improved discoverability. Tags can be referenced in the frontmatter with the `tags` array property.
 
 ## Graphical Organization
 
@@ -50,9 +47,9 @@ Tags commonly relate to:
 
 Tags can effectively represent proper nouns such as specific projects, products, or entities:
 
-- **Project Tags**: Create dedicated tags for projects (e.g., #project_alpha) to collect all related content
+- **Project Tags**: Create dedicated tags for projects (e.g., project_alpha) to collect all related content
 - **Entity Tags**: Use tags to track mentions of specific clients, tools, or systems
-- **Conventions**: Consider prefixing proper noun tags for clarity (e.g., #proj_alpha, #client_acme)
+- **Conventions**: Consider prefixing proper noun tags for clarity (e.g., proj_alpha, client_acme)
 
 These proper noun tags enable:
 

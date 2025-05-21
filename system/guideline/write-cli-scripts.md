@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for writing CLI scripts based on existing patterns
 globs: [scripts/**/*]
 guideline_status: Approved
-tags: [scripts, cli, development]
+tags: []
 ---
 
 # Write CLI Scripts

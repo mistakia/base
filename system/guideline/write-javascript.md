@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for writing JavaScript/ECMAScript code
 globs: ['**/*.mjs', '**/*.js']
 guideline_status: Approved
-tags: [javascript]
+tags: []
 observations:
   - '[standard] Consistent module imports improve code maintainability #code-style'
   - '[quality] Explicit file extensions prevent import resolution issues #debugging'

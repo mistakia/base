@@ -2,11 +2,11 @@
 title: Directory Structure
 type: text
 description: Documentation for the system directory structure and organization
-tags: [structure, organization, documentation]
+tags: []
 observations:
-  - '[architecture] Dual knowledge base separates system from user-specific content #organization'
-  - '[principle] Clear directory structure improves navigation and discoverability #organization'
-  - '[design] Organization follows separation of concerns principle #architecture'
+  - '[architecture] Dual knowledge base separates system from user-specific content'
+  - '[principle] Clear directory structure improves navigation and discoverability'
+  - '[design] Organization follows separation of concerns principle'
 relations:
   - 'relates_to [[system/text/system-design.md]]'
   - 'implements [[system/text/knowledge-base-schema.md]]'

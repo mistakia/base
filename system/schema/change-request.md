@@ -4,7 +4,7 @@ type: type_definition
 type_name: change_request
 description: Defines the structure for a change request to the knowledge base.
 extends: base
-tags: [system, workflow, git]
+tags: []
 properties:
   - name: change_request_id
     type: string
@@ -64,8 +64,8 @@ observations:
   - '[workflow] Integrates with Git branching and optionally GitHub Pull Requests.'
   - '[storage] Stored as both a DB record and a Markdown file for discoverability.'
 relations:
-  - 'relates_to [[system/text/system-design]]'
-  - 'relates_to [[system/text/knowledge-base-schema]]'
+  - 'relates_to [[system/text/system-design.md]]'
+  - 'relates_to [[system/text/knowledge-base-schema.md]]'
 ---
 
 # Change Request Schema

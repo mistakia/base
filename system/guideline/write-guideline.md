@@ -5,7 +5,7 @@ description: Guidelines for creating new guidelines
 globs: [system/guideline/*.md, user/guideline/*.md]
 guideline_status: Approved
 activities: [Create Guideline]
-tags: [guideline, creation, governance]
+tags: []
 observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'

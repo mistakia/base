@@ -2,7 +2,7 @@
 title: Default System Prompt
 type: prompt
 description: The default system prompt for Base Thread Agent
-tags: [prompt]
+tags: []
 ---
 
 You are a Base Thread Agent working in your own thread workspace. You have been assigned a specific role.

@@ -2,14 +2,14 @@
 title: System Design
 type: text
 description: Architecture and design principles for the human-in-the-loop LLM system
-tags: [architecture, design, documentation]
+tags: []
 observations:
-  - '[design] Uses a human-in-the-loop approach #collaboration'
-  - '[principle] System should always be evaluated for improvement #iterative'
-  - '[architecture] Dual knowledge base architecture ensures stability while enabling customization #design'
-  - '[principle] File-first approach with git version control provides robust knowledge management #versioning'
-  - '[feature] Activity-based organization provides clear context for actions #organization'
-  - '[principle] Guidelines-driven approach ensures consistency #governance'
+  - '[design] Uses a human-in-the-loop approach'
+  - '[principle] System should always be evaluated for improvement'
+  - '[architecture] Dual knowledge base architecture ensures stability while enabling customization'
+  - '[principle] File-first approach with git version control provides robust knowledge management'
+  - '[feature] Activity-based organization provides clear context for actions'
+  - '[principle] Guidelines-driven approach ensures consistency'
 relations:
   - 'relates_to [[system/text/directory-structure.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'

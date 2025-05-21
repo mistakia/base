@@ -3,7 +3,7 @@ title: General Purpose Role
 type: activity
 description: General purpose role for handling general purpose inquiries and instructions
 guidelines: []
-tags: [activity, role, general-purpose]
+tags: []
 observations:
   - '[workflow] General purpose role handles general purpose inquiries and instructions #core'
 relations:

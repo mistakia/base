@@ -4,15 +4,14 @@ type: guideline
 description: Guidelines for creating new activities
 globs: [system/activity/*.md, user/activity/*.md]
 guideline_status: Approved
-activities: [Create Activity]
-tags: [activity, creation, governance]
+activities: []
+tags: []
 observations:
   - '[governance] Proper activity location ensures system organization #structure'
   - '[principle] Clear naming conventions improve discoverability #naming'
   - '[organization] System vs user classification is based on scope of use #categorization'
 relations:
-  - 'guides [[system/activity/write-activity]]'
-  - 'implements [[system/text/system-design]]'
+  - 'implements [[system/text/system-design.md]]'
 ---
 
 # Create Activity Guideline

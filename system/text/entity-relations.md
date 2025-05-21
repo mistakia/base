@@ -2,11 +2,11 @@
 title: Entity Relations
 type: text
 description: Documentation for standard entity relation types and their usage
-tags: [knowledge, relations, documentation]
+tags: []
 observations:
-  - '[design] Standardized relation types create a consistent semantic graph #knowledge-graph'
-  - '[implementation] Relations use a single canonical format #consistency'
-  - '[feature] Entity relationships are handled through a single mechanism #simplification'
+  - '[design] Standardized relation types create a consistent semantic graph'
+  - '[implementation] Relations use a single canonical format'
+  - '[feature] Entity relationships are handled through a single mechanism'
 relations:
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
   - 'part_of [[system/text/system-design.md]]'

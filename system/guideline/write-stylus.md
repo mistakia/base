@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for writing Stylus stylesheets
 globs: ['**/*.styl']
 guideline_status: Approved
-tags: [stylus, css]
+tags: []
 ---
 
 # Stylus Style Guidelines
