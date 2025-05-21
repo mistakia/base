@@ -1,7 +1,3 @@
-import debug from 'debug'
-
-const log = debug('entity:format:extractors:tag-extractor')
-
 /**
  * Extract tags from entity properties
  * @param {Object} options - Function options
