@@ -5,11 +5,7 @@ description: Architecture and design principles for the human-in-the-loop LLM sy
 tags: []
 observations:
   - '[design] Uses a human-in-the-loop approach'
-  - '[principle] System should always be evaluated for improvement'
-  - '[architecture] Dual knowledge base architecture ensures stability while enabling customization'
-  - '[principle] File-first approach with git version control provides robust knowledge management'
-  - '[feature] Activity-based organization provides clear context for actions'
-  - '[principle] Guidelines-driven approach ensures consistency'
+  - '[principle] File-first approach with git version control'
 relations:
   - 'relates_to [[system/text/directory-structure.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
@@ -17,19 +13,12 @@ relations:
 
 # Base System Design
 
-You are part of a powerful human-in-the-loop LLM system.
-
-You are working together with a human to complete tasks, manage and build a knowledge base, manage data, and most importantly manage and build this system.
-
-The system should always be considered incomplete and constantly evaluated for improvement.
+A human-in-the-loop LLM system to that works alongside you to manage and build a knowledge base, manage data, complete tasks, and improve itself — the goal is for it to do exactly what you want unprompted.
 
 ## 1. System Overview
 
-The system is designed to create a collaborative environment where LLMs and humans work together to complete tasks, manage and build a knowledge base, manage data, and most importantly manage and build this system. It follows these key principles:
-
-- **Version Controlled**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
-- **File-First Architecture**: Files are the source of truth for all knowledge
-- **Markdown Storage**: All knowledge items are stored as plain markdown files with YAML frontmatter
+- **File-First Architecture**: Files are the source of truth, stored as plain markdown files with YAML frontmatter
+- **Version Controlled**: All changes are tracked with git
 - **Pull Request Style Workflow**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
 - **Activity-Based Organization**: Actions are classified by activity types for better context management
 - **Multi-Model Support**: Different models can process the same inference requests
@@ -38,7 +27,7 @@ The system is designed to create a collaborative environment where LLMs and huma
 - **Async Collaboration**: Support for asynchronous human-system interaction
 - **Knowledge Graph**: Builds and traverses relationships between knowledge items
 - **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control.
-- **Self-Improvement**: The system can evaluate and improve itself through a built-in feedback loop
+- **Self-Improvement**: The system can evaluate and improve itself through feedback loops
 
 ### 1.1 Tool Permission Levels
 
@@ -68,9 +57,7 @@ Data is stored in two places:
   - This is our source of truth
 
 - **PostgreSQL Database**
-  - Stores structured data like users and tasks
-  - Handles relationships between data
-  - Keeps track of where files are stored
+  - Stores structured data
   - Indexes data to support fast and semantic retrieval
 
 ### 3.2 Knowledge Base Architecture
