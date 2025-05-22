@@ -27,6 +27,7 @@ $border_color = #D0D0D0
 - Selectors MUST use kebab-case for class and ID names
 - Properties MUST omit semicolons and braces
 - Properties SHOULD omit colons when possible
+- Properties MUST NOT use colons
 - Nested selectors SHOULD be used for component-specific styles
 
 Example:

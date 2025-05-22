@@ -6,10 +6,11 @@ globs: ['**/*.mjs', '**/*.js']
 guideline_status: Approved
 tags: []
 observations:
-  - '[standard] Consistent module imports improve code maintainability #code-style'
-  - '[quality] Explicit file extensions prevent import resolution issues #debugging'
-  - '[architecture] Functional paradigms promote immutability and testability #maintainability'
-  - '[readability] Named parameters improve code clarity and maintainability #code-style'
+  - '[standard] Consistent module imports improve code maintainability'
+  - '[quality] Explicit file extensions prevent import resolution issues'
+  - '[architecture] Functional paradigms promote immutability and testability'
+  - '[readability] Named parameters improve code clarity and maintainability'
+  - '[maintainability] Smaller files are easier to understand and maintain'
 relations:
   - 'implements [[system/text/system-design.md]]'
 ---
@@ -66,6 +67,13 @@ relations:
   - `#root` - Root-level resources
 
 See `package.json` for the complete list of namespaces.
+
+## File Organization
+
+- Files SHOULD have a soft limit of 200 lines
+- Reusable functions SHOULD be placed in their own files
+- Functions that are only used in one place SHOULD be defined in the file where they are used
+- When extracting functions to their own files, follow the naming conventions and namespace organization described above
 
 ## Functional vs Object-Oriented Programming
 
