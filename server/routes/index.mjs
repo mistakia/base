@@ -5,6 +5,7 @@ import github from './github.mjs'
 import change_requests from './change-requests.mjs'
 import threads from './threads.mjs'
 import inference_providers from './inference-providers.mjs'
+import entities from './entities.mjs'
 
 export default {
   users,
@@ -13,5 +14,6 @@ export default {
   github,
   change_requests,
   threads,
-  inference_providers
+  inference_providers,
+  entities
 }

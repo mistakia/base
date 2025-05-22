@@ -1,0 +1,87 @@
+.page-container
+  display flex
+  flex-direction column
+  width 100%
+  height 100%
+  padding 1rem
+
+  .header
+    margin-bottom 1rem
+
+    .title
+      font-size 2rem
+      margin 0
+
+    .entity-path
+      font-size 0.9rem
+      color #666
+      margin-top 0.25rem
+
+  .content-container
+    flex 1
+    overflow auto
+
+    .entity-detail-container
+      display flex
+      flex-direction column
+      gap 1.5rem
+
+      .entity-detail-header
+        display flex
+        justify-content space-between
+        align-items center
+        gap 1rem
+        padding-bottom 1rem
+        border-bottom 1px solid #e0e0e0
+
+        .entity-type
+          font-size 0.9rem
+          padding 0.25rem 0.5rem
+          border-radius 4px
+          background-color #e0e0e0
+          color #333
+
+        .entity-created
+          font-size 0.9rem
+          color #666
+
+      .entity-content
+        line-height 1.6
+        
+        p
+          margin 0.75rem 0
+
+        h1, h2, h3, h4, h5, h6
+          margin-top 1.5rem
+          margin-bottom 0.75rem
+
+      .entity-metadata
+        margin-top 1.5rem
+        padding-top 1.5rem
+        border-top 1px solid #e0e0e0
+        display flex
+        flex-direction column
+        gap 0.75rem
+
+        .metadata-item
+          display flex
+          flex-direction column
+          gap 0.25rem
+          padding 0.75rem
+          background-color #f5f5f5
+          border-radius 4px
+
+          .metadata-key
+            font-weight 500
+            font-size 0.9rem
+            color #444
+            text-transform capitalize
+
+          .metadata-value
+            font-family monospace
+            background-color #e5e5e5
+            padding 0.5rem
+            border-radius 3px
+            font-size 0.85rem
+            white-space pre-wrap
+            overflow-x auto

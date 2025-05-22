@@ -2,6 +2,7 @@ import React from 'react'
 import { useParams } from 'react-router-dom'
 
 import ThreadChat from '@components/thread/thread-chat'
+import '@styles/layout.styl'
 
 import './thread-detail-page.styl'
 

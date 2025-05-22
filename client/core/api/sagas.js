@@ -29,6 +29,7 @@ import {
   post_thread_tool_request_actions,
   get_inference_providers_request_actions
 } from '@core/thread/actions'
+import { get_entity_request_actions } from '@core/entity/actions'
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
@@ -103,7 +104,12 @@ export const get_user_tasks = fetch.bind(
 
 export const get_task = fetch.bind(null, api.get_task, get_task_request_actions)
 
-// Thread API saga functions
+export const get_entity = fetch.bind(
+  null,
+  api.get_entity,
+  get_entity_request_actions
+)
+
 export const get_threads = fetch.bind(
   null,
   api.get_threads,

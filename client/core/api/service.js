@@ -61,7 +61,12 @@ export const api = {
     return { url }
   },
 
-  // Thread API endpoints
+  get_entity({ base_relative_path, root_base_directory }) {
+    const params = { root_base_directory }
+    const url = `${API_URL}/entities/${encodeURIComponent(base_relative_path)}?${qs.stringify(params)}`
+    return { url }
+  },
+
   get_threads({ user_id, state, limit, offset }) {
     const params = { user_id, state, limit, offset }
     const url = `${API_URL}/threads?${qs.stringify(params)}`

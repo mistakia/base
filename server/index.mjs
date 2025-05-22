@@ -87,6 +87,7 @@ api.use('/api/github', routes.github)
 api.use('/api/change-requests', routes.change_requests)
 api.use('/api/threads', routes.threads)
 api.use('/api/inference-providers', routes.inference_providers)
+api.use('/api/entities', routes.entities)
 
 // Register Ollama provider
 provider_registry.register('ollama', new OllamaProvider())

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import MarkdownContent from '@components/markdown-content'
 
+import '@styles/layout.styl'
 import './task-detail-page.styl'
 
 const TaskDetailPage = ({ tasks, load_task }) => {

@@ -7,6 +7,7 @@ import { websocket_sagas } from './websocket'
 import { users_saga } from './users'
 import { path_views_sagas } from './path-views'
 import { thread_sagas } from './thread'
+import { entity_sagas } from './entity/sagas'
 
 export default function* rootSage() {
   yield all([
@@ -16,6 +17,7 @@ export default function* rootSage() {
     ...websocket_sagas,
     ...users_saga,
     ...path_views_sagas,
-    ...thread_sagas
+    ...thread_sagas,
+    ...entity_sagas
   ])
 }
