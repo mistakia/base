@@ -16,7 +16,7 @@
   },
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
-    "start": "webpack serve --mode=development --config webpack/webpack.dev.babel.mjs --port 8081 --history-api-fallback",
+    "start": "node scripts/dev-server.mjs",
     "start:api": "node scripts/server.mjs",
     "lint": "eslint . --ext js,mjs",
     "prettier": "prettier --write .",
@@ -125,9 +125,9 @@
     "stylus-loader": "7.1.3",
     "timeago.js": "^4.0.2",
     "vaul": "^1.1.2",
-    "webpack": "5.98.0",
+    "webpack": "5.99.9",
     "webpack-cli": "5.1.4",
-    "webpack-dev-server": "4.15.2"
+    "webpack-dev-server": "5.2.1"
   },
   "packageManager": "yarn@4.2.2"
 }
