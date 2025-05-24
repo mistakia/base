@@ -1,9 +1,8 @@
 import debug from 'debug'
 import path from 'path'
 
-import { list_markdown_files_from_git } from './list-markdown-files-from-git.mjs'
+import { list_entity_files_from_git } from './list-entity-files-from-git.mjs'
 // import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
-import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { validate_entity_from_git } from '#libs-server/entity/git/validate-entity-from-git.mjs'
 import config from '#config'
 import git from '#libs-server/git/index.mjs'
@@ -35,35 +34,14 @@ async function process_git_file({
   let skipped = false
 
   try {
-    // Read entity from git
-    const entity_result = await read_entity_from_git({
-      repo_path: file.repo_path,
-      file_path: file.git_relative_path,
-      branch: file.branch || branch
-    })
-
-    if (!entity_result.success) {
-      file.errors.push(entity_result.error || 'Failed to read entity from git')
-      has_errors = true
-      return { processed, skipped, has_errors }
-    }
-
     // Validate the entity against schemas
     const validation = await validate_entity_from_git({
-      entity_properties: entity_result.entity_properties,
-      formatted_entity_metadata: entity_result.formatted_entity_metadata,
-      repo_path: file.repo_path,
-      branch: file.branch || branch,
+      entity_properties: file.entity_properties,
+      formatted_entity_metadata: file.formatted_entity_metadata,
+      repo_path: file.file_info.repo_path,
+      branch: file.file_info.branch || branch,
       schemas
     })
-
-    // Complete the entity with validation results
-    const processed_entity = {
-      ...entity_result,
-      validation_result: validation,
-      file_info: file,
-      base_relative_path
-    }
 
     // Add file info and base path
     file.base_relative_path = base_relative_path
@@ -75,9 +53,10 @@ async function process_git_file({
 
     // Run custom entity processor if provided
     if (entity_processor) {
+      // TODO make sure both entity_process functions share same properties schema
       const result = await entity_processor({
-        entity: processed_entity,
         file,
+        validation,
         repository,
         schemas
       })
@@ -166,8 +145,7 @@ export async function process_repositories_from_git(options = {}) {
   let all_files = []
 
   for (const repository of repositories) {
-    // TODO should use list_entity_files_from_git instead
-    const repo_files = await list_markdown_files_from_git({
+    const repo_files = await list_entity_files_from_git({
       repo_path: repository.path,
       branch: repository.branch,
       submodule_base_path: repository.submodule_base_path

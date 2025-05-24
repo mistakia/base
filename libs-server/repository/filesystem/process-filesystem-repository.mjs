@@ -68,6 +68,7 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
 
     // Run custom entity processor if provided
     if (entity_processor) {
+      // TODO make sure both entity_process functions share same properties schema
       const result = await entity_processor({
         entity: processed_entity,
         file,

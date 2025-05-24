@@ -11,9 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const default_base_activity_path = path.join(
   __dirname,
   '..',
-  '..',
-  'system',
-  'activity',
+  'fixtures',
   'default-base-activity.md'
 )
 
@@ -52,7 +50,7 @@ export async function create_temp_test_repo({
     const activity_dir = path.join(base_repo.path, 'system', 'activity')
     await fs.mkdir(activity_dir, { recursive: true })
 
-    // Read the default base activity file
+    // Read the default base activity file from fixtures
     const activity_content = await fs.readFile(
       default_base_activity_path,
       'utf-8'

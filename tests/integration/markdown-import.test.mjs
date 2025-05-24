@@ -4,6 +4,7 @@ import { import_repository_from_git } from '#libs-server/entity/database/import/
 import { git } from '#libs-server'
 import { create_test_user } from '#tests/utils/index.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
+import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 
 describe('Markdown Import Integration Tests', function () {
   this.timeout(15000)
@@ -14,6 +15,7 @@ describe('Markdown Import Integration Tests', function () {
   let user_branch
 
   before(async () => {
+    await reset_all_tables()
     test_user = await create_test_user()
 
     // Create a temp repo for user data
@@ -61,6 +63,7 @@ describe('Markdown Import Integration Tests', function () {
             is_submodule: false
           }
         ],
+        root_base_directory: user_repo.path,
         user_id: test_user.user_id,
         system_branch,
         user_branch
@@ -75,7 +78,7 @@ describe('Markdown Import Integration Tests', function () {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(43)
+      expect(entities.length).to.equal(1)
     })
 
     it('should mark removed entities as archived', async () => {

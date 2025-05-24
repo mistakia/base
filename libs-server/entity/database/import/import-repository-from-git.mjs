@@ -36,7 +36,7 @@ export async function import_repository_from_git({
       entity_processor: async ({ entity, file, repository, schemas }) => {
         try {
           // Skip processing if the file doesn't have a git_sha (which would be unusual)
-          if (!file.git_sha) {
+          if (!file.file_info.git_sha) {
             file.errors.push('Missing git SHA, skipping')
             return false
           }
@@ -45,7 +45,7 @@ export async function import_repository_from_git({
           const import_result = await import_entity_from_git({
             base_relative_path: file.base_relative_path,
             root_base_directory,
-            branch: file.branch,
+            branch: file.file_info.branch,
             user_id
           })
 
@@ -60,7 +60,7 @@ export async function import_repository_from_git({
           }
         } catch (error) {
           log(
-            `Error importing file ${file.base_relative_path || file.git_relative_path}:`,
+            `Error importing file ${file.base_relative_path || file.file_info.git_relative_path}:`,
             error
           )
           file.errors.push(`Import error: ${error.message}`)
