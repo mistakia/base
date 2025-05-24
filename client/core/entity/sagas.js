@@ -1,4 +1,4 @@
-import { call, takeLatest, fork, select } from 'redux-saga/effects'
+import { call, takeLatest, fork } from 'redux-saga/effects'
 
 import { get_entity } from '@core/api/sagas'
 import { entity_actions } from './actions'
