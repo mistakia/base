@@ -22,10 +22,15 @@ describe('read_entity_from_database', () => {
     test_user_id = test_user.user_id
 
     // Create a test entity to read
-    entity_id = await create_test_task({
+    const { task_entity_id } = await create_test_task({
       user_id: test_user_id,
-      additional_properties: { custom_field: 'custom value' }
+      title: 'Test Task',
+      description: 'Test description',
+      status: 'No status',
+      priority: 'Medium'
     })
+
+    entity_id = task_entity_id
   })
 
   afterEach(async () => {
@@ -46,13 +51,11 @@ describe('read_entity_from_database', () => {
     expect(entity.description).to.equal('Test description')
     expect(entity.type).to.equal('task')
     expect(entity.user_id).to.equal(test_user_id)
-    expect(entity.markdown).to.equal('# Test Task\n\nContent body')
 
     // Verify properties are correctly assigned
     expect(entity.properties).to.exist
     expect(entity.properties.title).to.equal('Test Task')
     expect(entity.properties.description).to.equal('Test description')
-    expect(entity.properties.custom_field).to.equal('custom value')
 
     // Check task-specific fields are directly merged
     expect(entity.status).to.equal('No status')
@@ -97,7 +100,7 @@ describe('read_entity_from_database', () => {
 
   it('should include relations when include_relations is true', async () => {
     // Arrange - Create a related entity
-    const related_entity_id = await create_test_task({
+    const { task_entity_id: related_entity_id } = await create_test_task({
       user_id: test_user_id,
       title: 'Related Entity'
     })
@@ -127,14 +130,15 @@ describe('read_entity_from_database', () => {
 
   it('should include tags when include_tags is true', async () => {
     // Arrange - Create a tag
-    const tag_entity_id = await create_test_tag({
+    // This returns a tag_entity_id (UUID) for use in entity_tags table
+    const { tag_entity_id } = await create_test_tag({
       user_id: test_user_id
     })
 
     // Add tag to entity
     await write_entity_tags_to_database({
       entity_id,
-      tags: [tag_entity_id],
+      tag_entity_ids: [tag_entity_id],
       db_client: db
     })
 

@@ -2,20 +2,37 @@ import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
 import config from '#config'
-
-import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
-import { create_temp_test_directory } from '#tests/utils/index.mjs'
-import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
-
-// Missing import for the Git repository test
 import { promisify } from 'util'
 import child_process from 'child_process'
+
+import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
+import {
+  create_temp_test_directory,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
+
+const exec = promisify(child_process.exec)
 
 describe('read_guideline_from_filesystem', () => {
   let temp_dir
   let cleanup
   let original_system_base_directory
   let original_user_base_directory
+  let repo
+  const branch = 'main'
+
+  // System guideline paths in the repo
+  const system_guideline_dir = 'system/guideline'
+  const system_guideline_filename = 'test-guideline.md'
+  const system_guideline_base_relative_path = `${system_guideline_dir}/${system_guideline_filename}`
+
+  // User guideline paths in the repo
+  const user_guideline_dir = 'guideline'
+  const user_guideline_filename = 'test-user-guideline.md'
+  const user_guideline_base_relative_path = `${user_guideline_dir}/${user_guideline_filename}`
+
+  const non_existent_guideline_base_relative_path =
+    'system/guideline/non-existent.md'
 
   beforeEach(async () => {
     // Save original config values
@@ -65,6 +82,63 @@ This is a user guideline for testing.
       path.join(user_dir, 'test-user-guideline.md'),
       user_guideline_content
     )
+
+    // Create a temporary git repository
+    repo = await create_temp_test_repo()
+
+    // Create system guideline directory
+    await fs.mkdir(path.join(repo.path, system_guideline_dir), {
+      recursive: true
+    })
+
+    // Create user guideline directory
+    await fs.mkdir(path.join(repo.path, user_guideline_dir), {
+      recursive: true
+    })
+
+    // Write test system guideline
+    const system_guideline_content_repo = `---
+title: "System Guideline"
+type: "guideline"
+description: "System guideline for testing"
+tags: ["test", "git"]
+---
+
+# System Guideline
+
+This is a system guideline for testing.
+`
+    await fs.writeFile(
+      path.join(repo.path, system_guideline_base_relative_path),
+      system_guideline_content_repo
+    )
+
+    // Write test user guideline
+    const user_guideline_content_repo = `---
+title: "User Guideline"
+type: "guideline"
+description: "User guideline for testing"
+tags: ["user", "git"]
+---
+
+# User Guideline
+
+This is a user guideline for testing.
+`
+    await fs.writeFile(
+      path.join(repo.path, user_guideline_base_relative_path),
+      user_guideline_content_repo
+    )
+
+    // Add files to git and commit
+    await fs.appendFile(
+      path.join(repo.path, 'README.md'),
+      '\n\nUpdated for guideline tests'
+    )
+
+    // Execute git commands to add and commit the files
+    await exec('git add .', { cwd: repo.path })
+    await exec('git commit -m "Add test guidelines"', { cwd: repo.path })
   })
 
   afterEach(() => {
@@ -78,64 +152,74 @@ This is a user guideline for testing.
     }
   })
 
-  it('should successfully read a system guideline', async () => {
-    // Arrange
-    const guideline_id = 'system/test-system-guideline.md'
+  after(() => {
+    // Clean up temporary repository
+    if (repo) {
+      repo.cleanup()
+    }
+  })
 
+  it('should successfully read a system guideline', async () => {
     // Act
     const result = await read_guideline_from_filesystem({
-      guideline_id
+      base_relative_path: system_guideline_base_relative_path,
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.guideline_id).to.equal(guideline_id)
-    expect(result.file_path).to.include(
-      'system/guideline/test-system-guideline.md'
+    expect(result.base_relative_path).to.equal(
+      system_guideline_base_relative_path
+    )
+    expect(result.absolute_path).to.equal(
+      path.join(repo.path, system_guideline_base_relative_path)
     )
     expect(result.content).to.include('# System Guideline')
     expect(result.content).to.include('This is a system guideline for testing.')
   })
 
   it('should successfully read a user guideline', async () => {
-    // Arrange
-    const guideline_id = 'user/test-user-guideline.md'
-
     // Act
     const result = await read_guideline_from_filesystem({
-      guideline_id
+      base_relative_path: user_guideline_base_relative_path,
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.guideline_id).to.equal(guideline_id)
-    expect(result.file_path).to.include('guideline/test-user-guideline.md')
+    expect(result.base_relative_path).to.equal(
+      user_guideline_base_relative_path
+    )
+    expect(result.absolute_path).to.equal(
+      path.join(repo.path, user_guideline_base_relative_path)
+    )
     expect(result.content).to.include('# User Guideline')
     expect(result.content).to.include('This is a user guideline for testing.')
   })
 
   it('should return error when guideline does not exist', async () => {
-    // Arrange
-    const guideline_id = 'system/non-existent-guideline.md'
-
     // Act
     const result = await read_guideline_from_filesystem({
-      guideline_id
+      base_relative_path: non_existent_guideline_base_relative_path,
+      root_base_directory: repo.path
     })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.exists).to.be.false
     expect(result.error).to.include('does not exist in filesystem')
-    expect(result.guideline_id).to.equal(guideline_id)
+    expect(result.base_relative_path).to.equal(
+      non_existent_guideline_base_relative_path
+    )
   })
 
   it('should return error for invalid guideline path', async () => {
     // Act
     const result = await read_guideline_from_filesystem({
-      guideline_id: 'invalid-path'
+      base_relative_path: 'invalid-path',
+      root_base_directory: repo.path
     })
 
     // Assert
@@ -143,152 +227,48 @@ This is a user guideline for testing.
     expect(result.error).to.be.a('string')
   })
 
-  it('should return error when guideline_id is not provided', async () => {
+  it('should return error when base_relative_path is not provided', async () => {
     // Act
-    const result = await read_guideline_from_filesystem({})
+    const result = await read_guideline_from_filesystem({
+      root_base_directory: repo.path
+    })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.error).to.be.a('string')
   })
 
-  it('should use custom system_base_directory when provided', async () => {
+  it('should use custom root_base_directory when provided', async () => {
     // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-system')
-    const system_dir = path.join(custom_dir, 'system', 'guideline')
-    await fs.mkdir(system_dir, { recursive: true })
+    const custom_dir = path.join(repo.path, 'custom')
+    const custom_guideline_dir = path.join(custom_dir, 'system', 'guideline')
+    await fs.mkdir(custom_guideline_dir, { recursive: true })
 
-    const custom_guideline_content = '# Custom System Guideline'
+    const custom_guideline_content = `---
+title: "Custom Guideline"
+type: "guideline"
+description: "Custom guideline for testing"
+---
+
+# Custom Guideline
+
+This is a custom guideline for testing.
+`
     await fs.writeFile(
-      path.join(system_dir, 'custom-guideline.md'),
+      path.join(custom_guideline_dir, 'custom-guideline.md'),
       custom_guideline_content
     )
 
     // Act
     const result = await read_guideline_from_filesystem({
-      guideline_id: 'system/custom-guideline.md',
-      system_base_directory: custom_dir
+      base_relative_path: 'system/guideline/custom-guideline.md',
+      root_base_directory: custom_dir
     })
 
     // Assert
     expect(result.success).to.be.true
     expect(result.exists).to.be.true
-    expect(result.content).to.equal(custom_guideline_content)
-  })
-
-  it('should use custom user_base_directory when provided', async () => {
-    // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-user')
-    const user_dir = path.join(custom_dir, 'guideline')
-    await fs.mkdir(user_dir, { recursive: true })
-
-    const custom_guideline_content = '# Custom User Guideline'
-    await fs.writeFile(
-      path.join(user_dir, 'custom-guideline.md'),
-      custom_guideline_content
-    )
-
-    // Act
-    const result = await read_guideline_from_filesystem({
-      guideline_id: 'user/custom-guideline.md',
-      user_base_directory: custom_dir
-    })
-
-    // Assert
-    expect(result.success).to.be.true
-    expect(result.exists).to.be.true
-    expect(result.content).to.equal(custom_guideline_content)
+    expect(result.content).to.include('# Custom Guideline')
+    expect(result.content).to.include('This is a custom guideline for testing.')
   })
 })
-
-describe('read_guideline_from_filesystem with git repository', () => {
-  let test_repo
-
-  before(async () => {
-    // Create a temporary git repository with test guidelines
-    test_repo = await create_temp_test_repo()
-
-    // Add guideline files to the repo
-    const system_dir = path.join(test_repo.path, 'system', 'guideline')
-    const user_dir = path.join(test_repo.path, 'guideline')
-    await fs.mkdir(system_dir, { recursive: true })
-    await fs.mkdir(user_dir, { recursive: true })
-
-    const system_guideline_content = `# Test System Guideline
-This is a system guideline in a git repo.`
-
-    const user_guideline_content = `# Test User Guideline
-This is a user guideline in a git repo.`
-
-    await fs.writeFile(
-      path.join(system_dir, 'test-guideline.md'),
-      system_guideline_content
-    )
-
-    await fs.writeFile(
-      path.join(user_dir, 'test-user-guideline.md'),
-      user_guideline_content
-    )
-
-    // Commit the files
-    await fs.appendFile(
-      path.join(test_repo.path, 'README.md'),
-      '\n\nUpdated for guideline read tests'
-    )
-
-    try {
-      await exec('git add .', { cwd: test_repo.path })
-      await exec('git commit -m "Add test guidelines for reading"', {
-        cwd: test_repo.path
-      })
-    } catch (error) {
-      console.error('Error committing test files:', error)
-    }
-  })
-
-  after(() => {
-    // Clean up the test repository
-    if (test_repo) {
-      test_repo.cleanup()
-    }
-  })
-
-  it('should successfully read guidelines from git repo', async () => {
-    // Act
-    const system_result = await read_guideline_from_filesystem({
-      guideline_id: 'system/test-guideline.md',
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
-    })
-
-    const user_result = await read_guideline_from_filesystem({
-      guideline_id: 'user/test-user-guideline.md',
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
-    })
-
-    // Assert
-    expect(system_result.success).to.be.true
-    expect(system_result.exists).to.be.true
-    expect(system_result.content).to.include('Test System Guideline')
-
-    expect(user_result.success).to.be.true
-    expect(user_result.exists).to.be.true
-    expect(user_result.content).to.include('Test User Guideline')
-  })
-
-  it('should return error for non-existent guideline in git repo', async () => {
-    // Act
-    const result = await read_guideline_from_filesystem({
-      guideline_id: 'system/nonexistent-guideline.md',
-      system_base_directory: test_repo.path,
-      user_base_directory: test_repo.path
-    })
-
-    // Assert
-    expect(result.success).to.be.false
-    expect(result.exists).to.be.false
-    expect(result.error).to.include('does not exist in filesystem')
-  })
-})
-const exec = promisify(child_process.exec)

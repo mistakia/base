@@ -48,9 +48,6 @@ export default async function create_test_tag({
   // Generate base_relative_path if not provided
   if (!base_relative_path) {
     base_relative_path = `user/${title.replace(/\s+/g, '-')}.md`
-  } else if (!base_relative_path.endsWith('.md')) {
-    // Ensure the base_relative_path has the .md extension
-    base_relative_path = `${base_relative_path}.md`
   }
 
   // Create temp directory if not provided
