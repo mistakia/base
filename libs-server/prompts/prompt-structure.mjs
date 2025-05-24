@@ -12,7 +12,6 @@
  * @property {PromptComponent} guidelines_prompt - Relevant guidelines
  * @property {PromptComponent} tools - Tool definitions available to the thread
  * @property {PromptComponent} context - Thread memory, timeline and other context
- * @property {PromptComponent} main_request - Main focus of the prompt (inquiry/instructions)
  */
 
 /**
@@ -40,10 +39,6 @@ export const prompt_components = {
   context: {
     required: false,
     description: 'Thread memory, timeline entries, and knowledge base context'
-  },
-  main_request: {
-    required: true,
-    description: 'Main focus of the prompt - specific inquiry or instructions'
   }
 }
 

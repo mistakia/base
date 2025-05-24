@@ -62,6 +62,7 @@ export default async function generate_prompt({
   if (thread.activity_base_relative_path) {
     const activity_result = await generate_activity_prompt({
       base_relative_path: thread.activity_base_relative_path,
+      prompt_properties: thread.prompt_properties,
       root_base_directory: system_base_directory
     })
 
@@ -85,8 +86,7 @@ export default async function generate_prompt({
   let tool_call_guideline = ''
   if (thread.tools && thread.tools.length > 0) {
     tools_prompt = await generate_tools_prompt({
-      tool_names: thread.tools,
-      format: 'json'
+      tool_names: thread.tools
     })
 
     // Add the tool_call prompt when tools are present
@@ -103,26 +103,13 @@ export default async function generate_prompt({
     }
   }
 
-  // Find the thread_main_request entry in the timeline
-  const main_request_entry = timeline.find(
-    (entry) => entry.type === 'thread_main_request'
-  )
-
-  // Throw an error if there's no thread_main_request entry
-  if (!main_request_entry) {
-    throw new Error(
-      `Thread ${thread_id} does not have a thread_main_request entry`
-    )
-  }
-
   // Build the final prompt
   const prompt = await build_prompt({
     components: {
       system_prompt,
       activity_prompt,
       guidelines_prompt,
-      tools: tools_prompt,
-      main_request: main_request_entry.content
+      tools: tools_prompt
     },
     metadata: {
       thread_id,

@@ -51,7 +51,7 @@ export default async function create_test_thread({
     model,
     state,
     thread_main_request,
-    system_base_directory: root_base_repo.path,
+    root_base_directory: root_base_repo.path,
     user_base_directory: root_base_repo.user_path
   })
 

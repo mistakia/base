@@ -16,7 +16,6 @@ const log = debug('prompts:build')
  * @param {string} [params.components.guidelines_prompt] Guidelines to include
  * @param {string} [params.components.tools] Tool definitions
  * @param {string} [params.components.context] Thread memory and context
- * @param {string} [params.components.main_request] Main query or instructions
  * @param {Object} [params.metadata] Additional metadata to include
  * @returns {Object} Complete prompt object with messages array for inference, prompt_text string,
  *                   and prompt_parts JSON representation of prompt components
@@ -107,12 +106,6 @@ function format_prompt_text(prompt_object) {
   if (prompt_object.context) {
     prompt_parts.context = prompt_object.context.content
     prompt_text += `${prompt_object.context.content}\n\n`
-  }
-
-  // Main request
-  if (prompt_object.main_request) {
-    prompt_parts.main_request = prompt_object.main_request.content
-    prompt_text += `<main_request>\n${prompt_object.main_request.content}\n</main_request>\n\n`
   }
 
   return {

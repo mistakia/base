@@ -3,6 +3,7 @@ import {
   list_tools,
   tool_to_prompt_function
 } from '#libs-server/tools/registry.mjs'
+import '#libs-server/tools/index.mjs'
 
 const log = debug('prompts:tools')
 

@@ -123,7 +123,7 @@ router.post('/', require_auth, async (req, res) => {
       tools,
       state,
       user_base_directory,
-      system_base_directory
+      root_base_directory
     } = req.body
 
     // Validate required fields
@@ -144,7 +144,7 @@ router.post('/', require_auth, async (req, res) => {
       tools,
       state,
       user_base_directory,
-      system_base_directory
+      root_base_directory
     })
 
     res.status(201).json(thread)

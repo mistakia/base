@@ -110,8 +110,9 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} params.model Model to use from the provider
  * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
+ * @param {string} [params.prompt_properties] Prompt properties for the activity
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
- * @param {string} [params.system_base_directory] Path to system knowledge base repository
+ * @param {string} [params.root_base_directory] Path to root repository
  * @param {string} [params.user_base_directory] Path to user knowledge base repository
  * @param {Object} [params.metadata={}] Additional metadata
  * @returns {Promise<Object>} Created thread object
@@ -123,9 +124,10 @@ export default async function create_thread({
   model,
   state = THREAD_STATUS.ACTIVE,
   thread_main_request,
+  prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
   user_base_directory,
-  system_base_directory,
+  root_base_directory,
   // TODO cleanup
   ...additional_metadata
 }) {
@@ -153,7 +155,7 @@ export default async function create_thread({
   // TODO consider using activity_exists_in_git instead
   const activity_file_exists = await activity_exists_in_filesystem({
     base_relative_path: activity_base_relative_path,
-    root_base_directory: system_base_directory
+    root_base_directory
   })
 
   if (!activity_file_exists) {
@@ -190,6 +192,7 @@ export default async function create_thread({
     created_at: now,
     updated_at: now,
     current_stage: null,
+    prompt_properties,
     ...additional_metadata
   }
 
@@ -201,7 +204,7 @@ export default async function create_thread({
   // Initialize timeline
   const timeline = []
 
-  // Add thread main request if provided
+  // Add thread main request if provided (optional, now treated as a universal property)
   if (thread_main_request) {
     timeline.push({
       id: `req_${uuid().split('-')[0]}`,
@@ -209,6 +212,7 @@ export default async function create_thread({
       type: 'thread_main_request',
       content: thread_main_request
     })
+    metadata.prompt_properties.main_request = thread_main_request
   }
 
   // Write timeline to file
@@ -219,11 +223,11 @@ export default async function create_thread({
   )
 
   // Create git branches if requested and paths provided
-  if (system_base_directory && user_base_directory) {
+  if (root_base_directory && user_base_directory) {
     try {
       await create_thread_branch({
         thread_id,
-        system_base_directory,
+        system_base_directory: root_base_directory,
         user_base_directory
       })
 
