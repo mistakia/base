@@ -50,7 +50,7 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
@@ -118,7 +118,7 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       thread_main_request: 'Hello, this is my first message',
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
@@ -140,7 +140,7 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       tools: ['web_search', 'calculator'],
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
@@ -161,7 +161,7 @@ describe('create_thread', () => {
       model: 'llama2',
       state: THREAD_STATUS.PAUSED,
       pause_reason: 'waiting_for_user_input',
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
@@ -180,7 +180,7 @@ describe('create_thread', () => {
       // Missing user_id
       inference_provider: 'ollama',
       model: 'llama2',
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
@@ -200,7 +200,7 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       state: 'invalid_state', // Invalid state value
-      system_base_directory: system_repo.path,
+      root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
 
