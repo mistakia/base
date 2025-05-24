@@ -175,7 +175,7 @@ describe('Threads API', () => {
         model: 'llama2',
         thread_main_request: 'Hello, this is a new thread',
         user_base_directory: test_root_base_repo.user_path,
-        system_base_directory: test_root_base_repo.path
+        root_base_directory: test_root_base_repo.path
       }
 
       const response = await authenticate_request(
