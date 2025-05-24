@@ -11,8 +11,6 @@ const EntityDetailPage = ({ entities, load_entity }) => {
   const decodedPath = decodeURIComponent(base_relative_path)
   const entity = decodedPath ? entities.get(decodedPath) : null
 
-  console.log({ base_relative_path, decodedPath, entity, params: useParams() })
-
   useEffect(() => {
     if (decodedPath) {
       // You would need to provide the root_base_directory based on your application config
