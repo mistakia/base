@@ -59,7 +59,7 @@ export default async function get_thread({ thread_id, user_base_directory }) {
  *
  * @param {Object} params Parameters
  * @param {string} [params.user_id] Filter by user ID
- * @param {string} [params.state] Filter by thread state
+ * @param {string} [params.thread_state] Filter by thread state
  * @param {number} [params.limit=50] Maximum number of threads to return
  * @param {number} [params.offset=0] Number of threads to skip
  * @param {string} [params.user_base_directory] Custom user base directory
@@ -67,13 +67,13 @@ export default async function get_thread({ thread_id, user_base_directory }) {
  */
 export async function list_threads({
   user_id,
-  state,
+  thread_state,
   limit = 50,
   offset = 0,
   user_base_directory
 }) {
   log(
-    `Listing threads${user_id ? ` for user ${user_id}` : ''}${state ? ` with state ${state}` : ''}`
+    `Listing threads${user_id ? ` for user ${user_id}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`
   )
 
   const threads_dir = get_thread_base_directory({ user_base_directory })
@@ -95,7 +95,7 @@ export async function list_threads({
 
         // Apply filters
         if (user_id && metadata.user_id !== user_id) continue
-        if (state && metadata.state !== state) continue
+        if (thread_state && metadata.thread_state !== thread_state) continue
 
         // Create thread summary (metadata only, no timeline)
         threads.push({
@@ -103,10 +103,9 @@ export async function list_threads({
           user_id: metadata.user_id,
           inference_provider: metadata.inference_provider,
           model: metadata.model,
-          state: metadata.state,
+          thread_state: metadata.thread_state,
           created_at: metadata.created_at,
-          updated_at: metadata.updated_at,
-          current_stage: metadata.current_stage
+          updated_at: metadata.updated_at
         })
       } catch (error) {
         log(`Error reading thread ${thread_id}: ${error.message}`)

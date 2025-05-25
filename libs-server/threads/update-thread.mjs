@@ -5,7 +5,7 @@ import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
-const { THREAD_STATUS, validate_thread_state } = thread_constants
+const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:update')
 
 /**
@@ -13,14 +13,14 @@ const log = debug('threads:update')
  *
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
- * @param {string} params.state New thread state
+ * @param {string} params.thread_state New thread state
  * @param {string} [params.reason] Reason for state change
  * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_state({
   thread_id,
-  state,
+  thread_state,
   reason,
   user_base_directory
 }) {
@@ -28,14 +28,14 @@ export async function update_thread_state({
     throw new Error('thread_id is required')
   }
 
-  if (!state) {
-    throw new Error('state is required')
+  if (!thread_state) {
+    throw new Error('thread_state is required')
   }
 
-  // Validate state using shared function
-  validate_thread_state(state)
+  // Validate thread_state using shared function
+  validate_thread_state(thread_state)
 
-  log(`Updating thread ${thread_id} state to ${state}`)
+  log(`Updating thread ${thread_id} state to ${thread_state}`)
 
   // Get current thread data
   const thread = await get_thread({
@@ -43,8 +43,8 @@ export async function update_thread_state({
     user_base_directory
   })
 
-  // No change if state is already set
-  if (thread.state === state) {
+  // No change if thread_state is already set
+  if (thread.thread_state === thread_state) {
     return thread
   }
 
@@ -55,23 +55,23 @@ export async function update_thread_state({
   delete metadata.timeline
   delete metadata.context_dir
 
-  // Set new state
-  metadata.state = state
+  // Set new thread_state
+  metadata.thread_state = thread_state
   metadata.updated_at = new Date().toISOString()
 
-  // Add state-specific fields
-  if (state === THREAD_STATUS.PAUSED && reason) {
+  // Add thread_state-specific fields
+  if (thread_state === THREAD_STATE.PAUSED && reason) {
     metadata.pause_reason = reason
-  } else if (state === THREAD_STATUS.TERMINATED && reason) {
+  } else if (thread_state === THREAD_STATE.TERMINATED && reason) {
     metadata.termination_reason = reason
   }
 
-  // Remove state-specific fields if no longer applicable
-  if (state !== THREAD_STATUS.PAUSED) {
+  // Remove thread_state-specific fields if no longer applicable
+  if (thread_state !== THREAD_STATE.PAUSED) {
     delete metadata.pause_reason
   }
 
-  if (state !== THREAD_STATUS.TERMINATED) {
+  if (thread_state !== THREAD_STATE.TERMINATED) {
     delete metadata.termination_reason
   }
 
@@ -81,13 +81,13 @@ export async function update_thread_state({
     file_content: JSON.stringify(metadata, null, 2)
   })
 
-  // Add state change entry to timeline
+  // Add thread_state change entry to timeline
   const timeline_entry = {
-    id: `state_${Date.now()}`,
+    id: `thread_state_${Date.now()}`,
     timestamp: metadata.updated_at,
-    type: 'state_change',
-    previous_state: thread.state,
-    new_state: state
+    type: 'thread_state_change',
+    previous_thread_state: thread.thread_state,
+    new_thread_state: thread_state
   }
 
   if (reason) {
@@ -156,12 +156,15 @@ export async function update_thread_metadata({
     }
   }
 
-  // Special handling for state changes
-  if (metadata.state !== undefined && metadata.state !== thread.state) {
-    // Use the dedicated function for state changes
+  // Special handling for thread_state changes
+  if (
+    metadata.thread_state !== undefined &&
+    metadata.thread_state !== thread.thread_state
+  ) {
+    // Use the dedicated function for thread_state changes
     return update_thread_state({
       thread_id,
-      state: metadata.state,
+      thread_state: metadata.thread_state,
       reason: metadata.reason,
       user_base_directory
     })

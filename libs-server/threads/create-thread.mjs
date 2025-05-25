@@ -12,7 +12,7 @@ import git_operations from '#libs-server/git/index.mjs'
 import { create_change_request } from '#libs-server/change-requests/index.mjs'
 import { activity_exists_in_filesystem } from '#libs-server/activity/index.mjs'
 
-const { THREAD_STATUS, validate_thread_state, DEFAULT_THREAD_TOOLS } =
+const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
 const log = debug('threads:create')
 
@@ -108,7 +108,7 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} params.activity_base_relative_path Activity base relative path in format
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
- * @param {string} [params.state=THREAD_STATUS.ACTIVE] Thread state
+ * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {string} [params.prompt_properties] Prompt properties for the activity
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
@@ -122,7 +122,7 @@ export default async function create_thread({
   activity_base_relative_path = THREAD_DEFAULT_ACTIVITY_BASE_RELATIVE_PATH,
   inference_provider,
   model,
-  state = THREAD_STATUS.ACTIVE,
+  thread_state = THREAD_STATE.ACTIVE,
   thread_main_request,
   prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
@@ -148,8 +148,8 @@ export default async function create_thread({
     throw new Error('model is required')
   }
 
-  // Validate state using shared function
-  validate_thread_state(state)
+  // Validate thread_state using shared function
+  validate_thread_state(thread_state)
 
   // Validate that the activity exists
   // TODO consider using activity_exists_in_git instead
@@ -188,7 +188,7 @@ export default async function create_thread({
     activity_base_relative_path,
     inference_provider,
     model,
-    state,
+    thread_state,
     created_at: now,
     updated_at: now,
     current_stage: null,

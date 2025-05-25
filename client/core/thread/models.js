@@ -1,7 +1,7 @@
 import { Record, List, Map } from 'immutable'
 import { thread_constants } from '@libs-shared/index.mjs'
 
-const { THREAD_STATUS, is_valid_thread_state } = thread_constants
+const { THREAD_STATE, is_valid_thread_state } = thread_constants
 
 // Individual record factories without inheritance
 const MessageEntryRecord = Record({
@@ -37,12 +37,12 @@ const ErrorEntryRecord = Record({
   message: ''
 })
 
-const StateChangeEntryRecord = Record({
+const ThreadStateChangeEntryRecord = Record({
   id: null,
   timestamp: null,
   type: null,
-  previous_state: null,
-  new_state: null,
+  previous_thread_state: null,
+  new_thread_state: null,
   reason: null
 })
 
@@ -51,7 +51,7 @@ export {
   ToolCallEntryRecord,
   ToolResultEntryRecord,
   ErrorEntryRecord,
-  StateChangeEntryRecord
+  ThreadStateChangeEntryRecord
 }
 
 /**
@@ -70,10 +70,9 @@ export const ThreadRecord = Record({
   user_id: null,
   inference_provider: null,
   model: null,
-  state: THREAD_STATUS.ACTIVE,
+  thread_state: THREAD_STATE.ACTIVE,
   created_at: null,
   updated_at: null,
-  current_stage: null,
   tools: List(),
   timeline: List(),
   metadata: Map(),
@@ -162,24 +161,24 @@ export const create_error = (error_type, message, details = {}) => {
 }
 
 /**
- * Helper function to create a state change entry
+ * Helper function to create a thread state change entry
  */
-export const create_state_change = (
-  previous_state,
-  new_state,
+export const create_thread_state_change = (
+  previous_thread_state,
+  new_thread_state,
   reason = null
 ) => {
-  // Validate that states match our defined constants
-  if (!is_valid_thread_state(new_state)) {
-    console.warn(`Invalid thread state: ${new_state}`)
+  // Validate that thread states match our defined constants
+  if (!is_valid_thread_state(new_thread_state)) {
+    console.warn(`Invalid thread state: ${new_thread_state}`)
   }
 
-  return new StateChangeEntryRecord({
-    id: `state_${Math.random().toString(36).substr(2, 9)}`,
+  return new ThreadStateChangeEntryRecord({
+    id: `thread_state_${Math.random().toString(36).substr(2, 9)}`,
     timestamp: new Date().toISOString(),
-    type: 'state_change',
-    previous_state,
-    new_state,
+    type: 'thread_state_change',
+    previous_thread_state,
+    new_thread_state,
     reason
   })
 }
@@ -211,7 +210,7 @@ export const parse_timeline_entry = (entry) => {
         details: Map(entry.details || {})
       })
     case 'state_change':
-      return new StateChangeEntryRecord({
+      return new ThreadStateChangeEntryRecord({
         ...entry
       })
     default:

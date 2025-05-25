@@ -3,7 +3,7 @@ import create_temp_test_repo from './create-temp-test-repo.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { thread_constants } from '#libs-shared'
 
-const { THREAD_STATUS } = thread_constants
+const { THREAD_STATE } = thread_constants
 
 /**
  * Creates a test thread with specified parameters
@@ -12,7 +12,7 @@ const { THREAD_STATUS } = thread_constants
  * @param {string} [options.user_id] User ID (creates test user if not provided)
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
- * @param {string} [options.state=THREAD_STATUS.ACTIVE] Thread state (active, paused, terminated)
+ * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, paused, terminated)
  * @param {Object} [options.root_base_repo] Root base repository object with path and user_path
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
  * @param {string} [options.thread_main_request] Main request for the thread
@@ -22,7 +22,7 @@ export default async function create_test_thread({
   user_id,
   inference_provider = 'ollama',
   model = 'llama2',
-  state = THREAD_STATUS.ACTIVE,
+  thread_state = THREAD_STATE.ACTIVE,
   root_base_repo,
   initial_timeline,
   thread_main_request
@@ -49,7 +49,7 @@ export default async function create_test_thread({
     user_id: user.user_id,
     inference_provider,
     model,
-    state,
+    thread_state,
     thread_main_request,
     root_base_directory: root_base_repo.path,
     user_base_directory: root_base_repo.user_path

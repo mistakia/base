@@ -11,7 +11,7 @@ import {
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 
-const { THREAD_STATUS } = thread_constants
+const { THREAD_STATE } = thread_constants
 
 describe('create_thread', () => {
   let test_user
@@ -77,7 +77,7 @@ describe('create_thread', () => {
     expect(metadata.user_id).to.equal(test_user.user_id)
     expect(metadata.inference_provider).to.equal('ollama')
     expect(metadata.model).to.equal('llama2')
-    expect(metadata.state).to.equal(THREAD_STATUS.ACTIVE)
+    expect(metadata.thread_state).to.equal(THREAD_STATE.ACTIVE)
     expect(metadata.created_at).to.be.a('string')
     expect(metadata.git_branch).to.equal(`thread/${thread.thread_id}`)
 
@@ -159,7 +159,7 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      state: THREAD_STATUS.PAUSED,
+      thread_state: THREAD_STATE.PAUSED,
       pause_reason: 'waiting_for_user_input',
       root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
@@ -171,7 +171,7 @@ describe('create_thread', () => {
     const metadata_path = path.join(thread.context_dir, 'metadata.json')
     const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
 
-    expect(metadata.state).to.equal(THREAD_STATUS.PAUSED)
+    expect(metadata.thread_state).to.equal(THREAD_STATE.PAUSED)
     expect(metadata.pause_reason).to.equal('waiting_for_user_input')
   })
 
@@ -199,7 +199,7 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      state: 'invalid_state', // Invalid state value
+      thread_state: 'invalid_state', // Invalid state value
       root_base_directory: system_repo.path,
       user_base_directory: user_repo.path
     }
@@ -207,10 +207,10 @@ describe('create_thread', () => {
     try {
       await create_thread(invalid_state_data)
       // Should not reach here
-      expect.fail('Should have thrown an error for invalid state')
+      expect.fail('Should have thrown an error for invalid thread state')
     } catch (error) {
       expect(error).to.be.an('error')
-      expect(error.message).to.include('state')
+      expect(error.message).to.include('thread state')
     }
   })
 })

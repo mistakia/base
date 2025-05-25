@@ -73,7 +73,7 @@ const handle_errors = (res, error, action) => {
 // Get all threads with optional filtering
 router.get('/', require_auth, async (req, res) => {
   try {
-    const { user_id, state } = req.query
+    const { user_id, thread_state } = req.query
     const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
     const user_base_directory = req.query.user_base_directory
@@ -90,7 +90,7 @@ router.get('/', require_auth, async (req, res) => {
 
     const thread_list = await threads.list_threads({
       user_id: query_user_id,
-      state,
+      thread_state,
       limit,
       offset,
       user_base_directory
@@ -121,7 +121,7 @@ router.post('/', require_auth, async (req, res) => {
       model,
       thread_main_request,
       tools,
-      state,
+      thread_state,
       user_base_directory,
       root_base_directory
     } = req.body
@@ -142,7 +142,7 @@ router.post('/', require_auth, async (req, res) => {
       model,
       thread_main_request,
       tools,
-      state,
+      thread_state,
       user_base_directory,
       root_base_directory
     })
@@ -251,16 +251,16 @@ router.put(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { state, reason, user_base_directory } = req.body
+      const { thread_state, reason, user_base_directory } = req.body
 
-      if (!state) {
-        return res.status(400).json({ error: 'state is required' })
+      if (!thread_state) {
+        return res.status(400).json({ error: 'thread_state is required' })
       }
 
       // Update thread state
       const updated_thread = await threads.update_thread_state({
         thread_id,
-        state,
+        thread_state,
         reason,
         user_base_directory
       })

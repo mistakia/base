@@ -67,8 +67,8 @@ export const api = {
     return { url }
   },
 
-  get_threads({ user_id, state, limit, offset }) {
-    const params = { user_id, state, limit, offset }
+  get_threads({ user_id, thread_state, limit, offset }) {
+    const params = { user_id, thread_state, limit, offset }
     const url = `${API_URL}/threads?${qs.stringify(params)}`
     return { url }
   },
@@ -83,7 +83,7 @@ export const api = {
     model,
     thread_main_request,
     tools,
-    state
+    thread_state
   }) {
     const url = `${API_URL}/threads`
     return {
@@ -93,7 +93,7 @@ export const api = {
         model,
         thread_main_request,
         tools,
-        state
+        thread_state
       })
     }
   },
@@ -106,12 +106,12 @@ export const api = {
     }
   },
 
-  put_thread_state({ thread_id, state, reason }) {
+  put_thread_state({ thread_id, thread_state, reason }) {
     const url = `${API_URL}/threads/${thread_id}/state`
     return {
       url,
       method: 'PUT',
-      body: JSON.stringify({ state, reason }),
+      body: JSON.stringify({ thread_state, reason }),
       headers: {
         'Content-Type': 'application/json'
       }

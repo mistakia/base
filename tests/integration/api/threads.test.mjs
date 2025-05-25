@@ -9,6 +9,7 @@ import {
   authenticate_request
 } from '#tests/utils/index.mjs'
 import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
+import { thread_constants } from '#libs-shared'
 
 const { expect } = chai
 chai.use(chaiHttp)
@@ -41,13 +42,12 @@ describe('Threads API', () => {
       // Create some test threads
       await create_test_thread({
         user_id: test_user.user_id,
-        state: 'active',
         root_base_repo: test_root_base_repo
       })
 
       await create_test_thread({
         user_id: test_user.user_id,
-        state: 'paused',
+        thread_state: thread_constants.THREAD_STATE.PAUSED,
         root_base_repo: test_root_base_repo
       })
     })
@@ -71,7 +71,7 @@ describe('Threads API', () => {
         expect(thread).to.have.property('user_id', test_user.user_id)
         expect(thread).to.have.property('inference_provider')
         expect(thread).to.have.property('model')
-        expect(thread).to.have.property('state')
+        expect(thread).to.have.property('thread_state')
       })
     })
 
@@ -82,13 +82,13 @@ describe('Threads API', () => {
       ).query({
         user_id: test_user.user_id,
         user_base_directory: test_root_base_repo.user_path,
-        state: 'active'
+        thread_state: 'active'
       })
 
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('array')
       expect(response.body).to.have.lengthOf(1)
-      expect(response.body[0].state).to.equal('active')
+      expect(response.body[0].thread_state).to.equal('active')
     })
 
     it('should require authentication', async () => {
@@ -164,7 +164,6 @@ describe('Threads API', () => {
       // Create some test threads
       await create_test_thread({
         user_id: test_user.user_id,
-        state: 'active',
         root_base_repo: test_root_base_repo
       })
     })

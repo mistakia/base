@@ -4,7 +4,7 @@
     "metadata": {
       "inference_provider": "ollama",
       "model": "llama2",
-      "state": "active"
+      "thread_state": "active"
     }
   },
   {
@@ -12,8 +12,7 @@
     "metadata": {
       "inference_provider": "ollama",
       "model": "mistral",
-      "state": "active",
-      "current_stage": "research",
+      "thread_state": "active",
       "tools": ["web_search", "calculator"]
     }
   },
@@ -22,8 +21,7 @@
     "metadata": {
       "inference_provider": "ollama",
       "model": "llama2",
-      "state": "paused",
-      "current_stage": "plan",
+      "thread_state": "paused",
       "pause_reason": "waiting_for_human_input",
       "tools": ["web_search"]
     }
@@ -33,9 +31,8 @@
     "metadata": {
       "inference_provider": "ollama",
       "model": "mistral",
-      "state": "terminated",
+      "thread_state": "terminated",
       "termination_reason": "completed",
-      "current_stage": "complete",
       "tools": ["web_search", "calculator"]
     }
   },
@@ -44,7 +41,7 @@
     "metadata": {
       "inference_provider": "custom_provider",
       "model": "custom_model",
-      "state": "active",
+      "thread_state": "active",
       "provider_settings": {
         "api_key": "test_key",
         "endpoint": "http://test-endpoint"

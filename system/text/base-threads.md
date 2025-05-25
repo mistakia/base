@@ -27,11 +27,10 @@ A **Base Thread** is an execution process responsible for accomplishing a define
 - `activity_base_relative_path`: Reference to the specific activity this thread is associated with and executing. (e.g., `system/activity/write-activity.md` or `user/activity/custom-activity.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
-- `state`: The current lifecycle state:
+- `thread_state`: The current lifecycle state:
   - `Active`: The thread is currently processing its objective.
   - `Paused`: The thread is temporarily halted, usually awaiting external input.
   - `Terminated`: The thread has finished its work (successfully or unsuccessfully) and ceased execution.
-- `current_stage`: The current internal stage within the `Active` state (see below).
 - `created_at`: Timestamp of initiation.
 - `updated_at`: Timestamp of last update.
 - `terminated_at`: Timestamp of termination (if applicable).
@@ -164,7 +163,7 @@ user/
 The `metadata.json` file contains the thread's configuration and state, including:
 
 - Basic thread properties (`thread_id`, `user_id`, `activity_base_relative_path`, etc.)
-- Current execution state and stage
+- Current execution thread_state
 - Timestamps for thread lifecycle events
 - Reference to associated change request
 

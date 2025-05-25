@@ -1,7 +1,7 @@
 /**
- * Thread status constants
+ * Thread state constants
  */
-export const THREAD_STATUS = {
+export const THREAD_STATE = {
   ACTIVE: 'active',
   PAUSED: 'paused',
   TERMINATED: 'terminated'
@@ -29,23 +29,23 @@ export const DEFAULT_THREAD_TOOLS = [
 /**
  * Validates if a thread state is valid
  *
- * @param {string} state - The state to validate
+ * @param {string} thread_state - The state to validate
  * @returns {boolean} - True if valid, false otherwise
  */
-export const is_valid_thread_state = (state) => {
-  return Object.values(THREAD_STATUS).includes(state)
+export const is_valid_thread_state = (thread_state) => {
+  return Object.values(THREAD_STATE).includes(thread_state)
 }
 
 /**
  * Validates thread state and throws an error if invalid
  *
- * @param {string} state - The state to validate
+ * @param {string} thread_state - The state to validate
  * @throws {Error} If state is invalid
  */
-export const validate_thread_state = (state) => {
-  if (!is_valid_thread_state(state)) {
+export const validate_thread_state = (thread_state) => {
+  if (!is_valid_thread_state(thread_state)) {
     throw new Error(
-      `Invalid thread state: ${state}. Must be one of: ${Object.values(THREAD_STATUS).join(', ')}`
+      `Invalid thread state: ${thread_state}. Must be one of: ${Object.values(THREAD_STATE).join(', ')}`
     )
   }
 }
