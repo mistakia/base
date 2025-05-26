@@ -51,6 +51,8 @@ export function format_status(status_string) {
     case 'waiting':
       return TASK_STATUS.WAITING
     case 'paused':
+    case 'deferred':
+    case 'inactive':
       return TASK_STATUS.PAUSED
     case 'no status':
       return TASK_STATUS.NO_STATUS
@@ -73,15 +75,20 @@ export function format_priority(priority_string) {
 
   switch (priority_lower) {
     case 'critical':
+    case '5 critical':
       return TASK_PRIORITY.CRITICAL
     case 'high':
+    case '4 high':
       return TASK_PRIORITY.HIGH
     case 'medium':
+    case '3 medium':
     case 'normal':
       return TASK_PRIORITY.MEDIUM
     case 'low':
+    case '2 low':
       return TASK_PRIORITY.LOW
     case 'none':
+    case '1 none':
       return TASK_PRIORITY.NONE
     default:
       log(`Unknown priority string: ${priority_string}`)
