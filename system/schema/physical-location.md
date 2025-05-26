@@ -26,7 +26,7 @@ properties:
     required: false
     description: Care of recipient
   - name: mail_street_number
-    type: string
+    type: number
     required: false
     description: Street number
   - name: mail_street_prefix
@@ -58,7 +58,7 @@ properties:
     required: false
     description: State/Province
   - name: mail_zip
-    type: string
+    type: number
     required: false
     description: ZIP/Postal code
   - name: mail_country
