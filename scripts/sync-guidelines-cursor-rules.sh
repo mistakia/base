@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 # Base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CURSOR_RULES_DIR="${BASE_DIR}/.cursor/rules"
-SYSTEM_GUIDELINES_DIR="${BASE_DIR}/system/guidelines"
+SYSTEM_GUIDELINES_DIR="${BASE_DIR}/system/guideline"
 DATA_GUIDELINES_DIR="${BASE_DIR}/user/guidelines"
 
 # Ensure cursor rules directory exists
