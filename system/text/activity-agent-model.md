@@ -4,46 +4,47 @@ type: text
 description: Design concept for activity-based agent specialization and orchestration
 tags: []
 observations:
-  - '[architecture] Activities serve as the foundation for specialized agents #design'
-  - '[design] Base Thread agents can create and delegate to activity-based agents #workflow'
-  - '[principle] Agent specialization follows activity boundaries #organization'
+  - '[architecture] Activities define specialized agent behaviors that run inside threads #design'
+  - '[execution] Each thread executes exactly one activity with defined inputs/outputs #implementation'
+  - '[principle] Tool integration enables complex agent capabilities #implementation'
 relations:
   - 'relates_to [[system/text/system-design.md]]'
   - 'relates_to [[system/text/base-threads.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[system/schema/activity.md]]'
 ---
 
 # Activity-Agent Model
 
 ## Overview
 
-The system implements an activity-based agent model where:
-
-1. Each activity definition represents a specialized agent capability
-2. Base Thread agents can create new agents by defining activities
-3. Tasks can be assigned to specific activity-based agents
+The system implements a model where activities define agent behaviors that run inside threads. Each thread executes exactly one activity, providing the execution environment and context. Activities define both functional behavior and interaction patterns through structured inputs, outputs, and tool integrations.
 
 ## Key Concepts
 
-- **Activity-Based Specialization**: Activities define the boundaries and capabilities of specialized agents
-- **Agent Creation**: Base Thread agents can dynamically create specialized agents by defining new activities
-- **Task Assignment**: The Base Thread assigns tasks to appropriate activity-based agents based on their specialization
-
-## Workflow
-
-```
-Base Thread Agent
-  │
-  ├── Creates Activity (Agent Type)
-  │   └── Defines capabilities and guidelines
-  │
-  └── Assigns Task to Activity-Based Agent
-      └── Agent executes task following activity guidelines
-```
+- **Thread as Execution Environment**: Threads provide the runtime context in which activities execute
+- **Activity as Behavior Definition**: Activities define specialized agent behaviors with specific inputs, outputs, and tools
+- **One-to-One Relationship**: Each thread executes exactly one activity (specified by `activity_base_relative_path`)
+- **Functional Structure**: Activities accept defined inputs (`prompt_properties`) and produce structured outputs through completion tools
+- **Composition via Tools**: Activities can invoke other activities through tool calls, enabling complex workflows
 
 ## Implementation Notes
 
-This design pattern enables modular agent capabilities that can evolve independently while maintaining a consistent orchestration layer.
+This design pattern enables:
+
+1. **Modularity**: Activities can evolve independently while maintaining a consistent thread execution model
+2. **Reusability**: Activities can be composed to create complex workflows through tool-based invocation
+3. **Structured Data Flow**: Clear inputs and outputs enable reliable data passing between activities
+4. **Specialized Behavior**: Each activity can define custom tools specific to its domain
+5. **Consistent Completion**: Standardized activity completion mechanisms ensure reliable outputs
+
+## Tool Integration
+
+Activities integrate with tools in three primary ways:
+
+1. **Using Available Tools**: Each activity specifies which system tools it needs access to
+2. **Defining Custom Tools**: Activities can define specialized tools for their specific domain
+3. **Completion Mechanisms**: Each activity implements a completion tool to return structured results
 
 ## Distinction Between Activity and Role
 

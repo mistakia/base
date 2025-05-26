@@ -17,4 +17,4 @@ observations:
   - update the plan as you gather more information and as you make progress
   - rebuild the plan if there has been significant deviation from the original plan
 - seek confirmation of the plan before proceeding
-- execute the plan 
+- execute the plan
