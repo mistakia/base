@@ -38,11 +38,7 @@ export function register_file_search_tool() {
           },
           branch_name: {
             type: 'string',
-            description: 'Branch name to use (takes precedence over thread_id)'
-          },
-          thread_id: {
-            type: 'string',
-            description: 'Optional thread ID to determine branch'
+            description: 'Branch name to use (optional)'
           }
         },
         required: ['query']
@@ -57,7 +53,6 @@ export function register_file_search_tool() {
           path: parameters.path,
           case_sensitive: parameters.case_sensitive || false,
           branch_name: parameters.branch_name,
-          thread_id: parameters.thread_id,
           context
         })
 
