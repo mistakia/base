@@ -12,6 +12,24 @@ const stringify_with_single_quotes = (value) => {
 }
 
 /**
+ * Determines if a string contains newlines or other characters that would need special YAML formatting
+ *
+ * @param {string} str - The string to check
+ * @returns {boolean} - Whether the string needs block scalar formatting
+ */
+const needs_block_format = (str) => {
+  return (
+    str.includes('\n') ||
+    str.includes('\r') ||
+    str.includes("'") ||
+    str.includes('"') ||
+    str.includes('\\') ||
+    str.includes(':') ||
+    str.length > 80
+  )
+}
+
+/**
  * Format document properties and content into a markdown file with frontmatter
  *
  * @param {Object} options - Function options
@@ -68,6 +86,14 @@ export function format_document_to_file_content({
         // For key status values, don't add quotes
         if (key === 'status') {
           yaml_lines.push(`${key}: ${value}`)
+        } else if (needs_block_format(value)) {
+          // Use YAML block scalar for multiline strings or strings with special characters
+          yaml_lines.push(`${key}: |`)
+          // Split by line and indent with 2 spaces
+          const lines = value.replace(/\r\n/g, '\n').split('\n')
+          lines.forEach((line) => {
+            yaml_lines.push(`  ${line}`)
+          })
         } else {
           // For other strings, ensure proper quoting
           yaml_lines.push(`${key}: ${stringify_with_single_quotes(value)}`)
@@ -81,7 +107,7 @@ export function format_document_to_file_content({
     yaml_lines.push('---')
 
     // Combine frontmatter and content
-    return `${yaml_lines.join('\n')}\n\n${document_content.trim()}`
+    return `${yaml_lines.join('\n')}\n\n${document_content.trim()}\n`
   } catch (error) {
     log('Error formatting document content:', error)
     throw error
