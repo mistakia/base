@@ -91,29 +91,33 @@ Tasks support a complete workflow lifecycle:
 - Planning (with duration estimates)
 - Scheduling (with planned start/finish times)
 - Execution (with actual start/finish tracking)
-- Dependencies (with parent/dependent task relationships)
+- Dependencies (with task relationships)
 - Resource allocation (with assignments and required items)
 
 ## Relations
 
 Tasks commonly use these relation types:
 
-- `child_of`: Tasks that this task is a subtask of (formerly parent_tasks)
-- `depends_on`: Tasks that depend on this task (formerly dependent_tasks)
-- `executes`: Activities related to this task (formerly activities)
-- `involves`: Organizations involved in this task (formerly organizations)
-- `assigned_to`: People assigned to this task (formerly persons)
-- `requires`: Physical and digital items needed for this task (formerly physical_items/digital_items)
+- `subtask_of`: This task is a subtask of another task
+- `has_subtask`: This task has subtasks
+- `blocked_by`: This task cannot start/finish until another task is complete (hard dependency)
+- `blocks`: This task blocks another task (hard dependency)
+- `precedes`: It is beneficial to complete this task before another (soft dependency)
+- `succeeds`: It is beneficial to complete this task after another (soft dependency)
+- `relates_to`: This task is related to another task in a non-specific way
+- `needs_item`: This task requires a physical or digital resource
+- `uses_item`: This task uses a tool (physical or digital)
+- `assigned_to`: Person or team responsible for the task
 
 Example:
 
 ```yaml
 relations:
-  - 'child_of [[user/tasks/parent-task]]'
-  - 'depends_on [[user/tasks/dependent-task]]'
-  - 'executes [[system/activities/activity-name]]'
-  - 'involves [[system/organization/org-name]]'
+  - 'subtask_of [[user/tasks/parent-task]]'
+  - 'blocked_by [[user/tasks/other-task]]'
+  - 'precedes [[user/tasks/optional-prereq-task]]'
+  - 'relates_to [[user/tasks/related-task]]'
+  - 'needs_item [[system/physical-item/laptop]] (quantity: 1)'
+  - 'uses_item [[system/digital-item/figma]]'
   - 'assigned_to [[user/person/jane-doe]]'
-  - 'requires [[system/physical_item/item-name]] (quantity: 2)'
-  - 'requires [[system/digital_item/item-name]]'
 ```

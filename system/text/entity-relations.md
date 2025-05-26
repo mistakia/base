@@ -28,7 +28,7 @@ Relations are defined in the frontmatter of markdown files as an array:
 relations:
   - 'implements [[system/text/system-design]]'
   - 'relates_to [[system/text/other-document]] (provides context)'
-  - 'depends_on [[system/schema/dependency]]'
+  - 'blocked_by [[system/schema/dependency]]'
 ```
 
 ## Standard Relation Types
@@ -42,14 +42,21 @@ The following standard relation types are defined in the system and centralized 
 
 ### Dependency Relations
 
-- `depends_on`: Dependency relationship
+- `blocked_by`: Entity is blocked by another entity
+- `blocks`: Entity blocks another entity
 - `requires`: Requires a resource or item
+
+### Sequence Relations
+
+- `precedes`: Entity should be completed before another
+- `succeeds`: Entity should be completed after another
 
 ### Hierarchy Relations
 
 - `part_of`: Item is part of a larger whole
 - `contains`: Item contains other items
-- `child_of`: Parent-child relationship
+- `subtask_of`: Task is a subtask of another task
+- `has_subtask`: Task has subtasks
 
 ### Assignment Relations
 
@@ -60,10 +67,10 @@ The following standard relation types are defined in the system and centralized 
 - `member_of`: Entity is a member of a group/organization
 - `has_member`: Organization has a member
 
-### Workflow Relations
+### Resource Relations
 
-- `follows`: Follows a guideline or process
-- `executes`: Executes an activity or process
+- `needs_item`: Entity requires a specific item
+- `uses_item`: Entity uses a specific item
 
 ### Involvement Relations
 
@@ -75,8 +82,8 @@ All entity relationships are managed through the `relations` property in the fro
 
 ```yaml
 relations:
-  - 'child_of [[user/tasks/parent-task]]'
-  - 'depends_on [[user/tasks/dependent-task]]'
+  - 'subtask_of [[user/tasks/parent-task]]'
+  - 'blocked_by [[user/tasks/dependent-task]]'
   - 'assigned_to [[user/person/jane-doe]]'
 ```
 
@@ -88,9 +95,14 @@ While any entity can use any relation type, certain patterns are common:
 
 - `assigned_to`: Assigned persons
 - `requires`: Required resources
-- `child_of`: Parent tasks
-- `depends_on`: Task dependencies
-- `executes`: Activities executed by the task
+- `subtask_of`: Parent tasks
+- `has_subtask`: Subtasks
+- `blocked_by`: Task dependencies
+- `blocks`: Tasks blocked by this task
+- `precedes`: Tasks that should come before others
+- `succeeds`: Tasks that should come after others
+- `needs_item`: Physical items needed
+- `uses_item`: Tools or resources used
 - `involves`: Organizations involved
 
 ### Physical Item Relations
@@ -109,10 +121,6 @@ While any entity can use any relation type, certain patterns are common:
 - `part_of`: Parent organizations
 - `contains`: Sub-organizations
 
-### Activity Relations
-
-- `follows`: Guidelines followed by the activity
-
 ## Relation Storage
 
 Relations are stored in the database in the `entity_relations` table with the following structure:
@@ -126,5 +134,4 @@ Relations are stored in the database in the `entity_relations` table with the fo
 
 The following functions are available in the `entity-relations` module:
 
-- `get_canonical_relation_type(relation_type)`: Normalizes a relation type to its canonical form
 - `get_all_standard_relation_types()`: Returns all standard relation types

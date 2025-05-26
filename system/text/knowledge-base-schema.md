@@ -101,24 +101,51 @@ Relations must be defined in the frontmatter as an array of strings following a 
 relations:
   - 'relates_to [[system/text/system-design]]'
   - 'implements [[system/schema/design-pattern]]'
-  - 'depends_on [[system/schema/database]]'
+  - 'blocked_by [[system/schema/database]]'
   - 'assigned_to [[user/schema/person/jane-doe]]'
 ```
 
 Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
 
-- `relates_to`: General relationship between items
-- `implements`: Implements a pattern, guideline, or design
-- `depends_on`: Dependency relationship
-- `assigned_to`: Assignment relationship
-- `part_of`: Hierarchical relationship (item is part of a larger whole)
-- `contains`: Contains other items
-- `child_of`: Parent-child relationship
-- `follows`: Follows a guideline or process
-- `requires`: Requires a resource or item
-- `member_of`: Membership relationship
-- `has_member`: Organization-member relationship
-- `involves`: Involvement relationship
+- **Association Relations**
+
+  - `relates_to`: General relationship between items
+  - `implements`: Implements a pattern, guideline, or design
+
+- **Dependency Relations**
+
+  - `blocked_by`: Entity is blocked by another entity
+  - `blocks`: Entity blocks another entity
+  - `requires`: Requires a resource or item
+
+- **Sequence Relations**
+
+  - `precedes`: Entity should be completed before another
+  - `succeeds`: Entity should be completed after another
+
+- **Hierarchy Relations**
+
+  - `part_of`: Hierarchical relationship (item is part of a larger whole)
+  - `contains`: Contains other items
+  - `subtask_of`: Task is a subtask of another task
+  - `has_subtask`: Task has subtasks
+
+- **Assignment Relations**
+
+  - `assigned_to`: Assignment relationship
+
+- **Membership Relations**
+
+  - `member_of`: Membership relationship
+  - `has_member`: Organization-member relationship
+
+- **Resource Relations**
+
+  - `needs_item`: Entity requires a specific item
+  - `uses_item`: Entity uses a specific item
+
+- **Involvement Relations**
+  - `involves`: Involvement relationship
 
 ## Permalinks and Referencing
 
