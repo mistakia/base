@@ -1,5 +1,6 @@
 import debug from 'debug'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
+import { extract_tags_from_labels } from './github-entity-mapper.mjs'
 
 const log = debug('normalize-github-issue')
 
@@ -285,6 +286,16 @@ export function extract_project_fields(project_item) {
 }
 
 /**
+ * Extract tags from GitHub issue labels
+ *
+ * @param {Array} labels - GitHub issue labels
+ * @returns {Array} Array of tags
+ */
+export function extract_tags_from_issue_labels(labels) {
+  return extract_tags_from_labels(labels) || []
+}
+
+/**
  * Normalize GitHub issue data into consistent format
  *
  * @param {Object} options - Function options
@@ -355,7 +366,7 @@ export function normalize_github_issue({
     normalized_github_issue.finished_at = issue.closed_at
   }
 
-  // Check for any labels containing "high" for the priority test case
+  // Process labels to extract tags and priority
   if (issue.labels && issue.labels.length > 0) {
     const has_high_priority = issue.labels.some(
       (label) => label.name && label.name.toLowerCase().includes('high')
@@ -363,6 +374,12 @@ export function normalize_github_issue({
 
     if (has_high_priority) {
       normalized_github_issue.priority = TASK_PRIORITY.HIGH
+    }
+
+    // Extract tags from labels
+    const extracted_tags = extract_tags_from_issue_labels(issue.labels)
+    if (extracted_tags.length > 0) {
+      normalized_github_issue.tags = extracted_tags
     }
   }
 

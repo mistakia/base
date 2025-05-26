@@ -5,6 +5,7 @@ import {
   update_github_project_item
 } from './github-api/index.mjs'
 import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
+import { generate_labels_from_tags } from './github-entity-mapper.mjs'
 
 const log = debug('sync-github-issues:sync-task-to-github-issue')
 
@@ -190,6 +191,20 @@ function format_github_issue_update_data({ updates }) {
     // Handle status updates based on the 'to' value
     github_update_data.state =
       updates.status.to === TASK_STATUS.COMPLETED ? 'closed' : 'open'
+  }
+
+  // Handle tag updates if present
+  if ('tags' in updates && updates.tags.to) {
+    const tag_values = updates.tags.to
+
+    if (Array.isArray(tag_values) && tag_values.length > 0) {
+      // Generate labels from tags
+      const labels = generate_labels_from_tags(tag_values)
+
+      if (labels.length > 0) {
+        github_update_data.labels = labels
+      }
+    }
   }
 
   return github_update_data

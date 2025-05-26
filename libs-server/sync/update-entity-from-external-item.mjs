@@ -120,6 +120,22 @@ export async function update_entity_from_external_item({
         }
       }
 
+      // Handle tags from GitHub labels if present
+      if (entity_properties.tags && Array.isArray(entity_properties.tags)) {
+        // Merge with existing tags if they exist
+        const merged_tags = [...(existing_entity_properties.tags || [])]
+
+        // Add new tags that don't already exist
+        for (const tag of entity_properties.tags) {
+          if (!merged_tags.includes(tag)) {
+            merged_tags.push(tag)
+          }
+        }
+
+        // Update the tags field
+        updates_to_apply.tags = merged_tags
+      }
+
       const merged_properties = {
         ...existing_entity_properties,
         ...updates_to_apply
