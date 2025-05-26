@@ -188,7 +188,7 @@ describe('Threads API', () => {
       expect(response.body.user_id).to.equal(test_user.user_id)
       expect(response.body.inference_provider).to.equal('ollama')
       expect(response.body.model).to.equal('llama2')
-      expect(response.body.state).to.equal('active')
+      expect(response.body.thread_state).to.equal('active')
     })
 
     it('should reject invalid thread data', async () => {
