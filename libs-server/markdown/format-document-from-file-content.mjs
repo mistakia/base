@@ -52,6 +52,17 @@ export function format_document_from_file_content({ file_content, file_path }) {
       : '\n' + cleaned_content
 
     const document_properties = attributes
+
+    // Clean up trailing newlines in string properties (legacy block scalars)
+    for (const key in document_properties) {
+      if (
+        typeof document_properties[key] === 'string' &&
+        document_properties[key].endsWith('\n')
+      ) {
+        document_properties[key] = document_properties[key].replace(/\n$/, '')
+      }
+    }
+
     const document_content = formatted_content.trim()
 
     // Parse markdown content into tokens for reliable processing

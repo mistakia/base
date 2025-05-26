@@ -15,16 +15,19 @@ const stringify_with_single_quotes = (value) => {
  * Determines if a string contains newlines or other characters that would need special YAML formatting
  *
  * @param {string} str - The string to check
+ * @param {string} key - The key associated with the string
  * @returns {boolean} - Whether the string needs block scalar formatting
  */
-const needs_block_format = (str) => {
+const needs_block_format = (str, key) => {
+  // Always use block scalar for description
+  if (key === 'description') return true
+  // Use block scalar for multiline strings, single quote, or long strings
   return (
     str.includes('\n') ||
     str.includes('\r') ||
     str.includes("'") ||
     str.includes('"') ||
     str.includes('\\') ||
-    str.includes(':') ||
     str.length > 80
   )
 }
@@ -86,13 +89,16 @@ export function format_document_to_file_content({
         // For key status values, don't add quotes
         if (key === 'status') {
           yaml_lines.push(`${key}: ${value}`)
-        } else if (needs_block_format(value)) {
-          // Use YAML block scalar for multiline strings or strings with special characters
+        } else if (needs_block_format(value, key)) {
+          // Use YAML block scalar for multiline strings or for specific fields
           yaml_lines.push(`${key}: |`)
-          // Split by line and indent with 2 spaces
-          const lines = value.replace(/\r\n/g, '\n').split('\n')
+          // Split by line, trim trailing whitespace, and indent with 2 spaces
+          const lines = value
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .split('\n')
           lines.forEach((line) => {
-            yaml_lines.push(`  ${line}`)
+            yaml_lines.push(`  ${line.replace(/\s+$/, '')}`)
           })
         } else {
           // For other strings, ensure proper quoting
