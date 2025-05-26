@@ -90,7 +90,7 @@ export async function update_entity_from_external_item({
 
     const internal_updates = detect_field_changes({
       current_data: entity_properties,
-      previous_data: previous_import.processed_data
+      previous_data: previous_import?.processed_data
     })
 
     const external_updates = detect_field_changes({
