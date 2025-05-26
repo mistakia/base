@@ -32,6 +32,60 @@ function transform_property_type(property) {
   return property
 }
 
+function build_property_schema(prop) {
+  if (!prop || !prop.name) return null
+
+  // Handle array of objects with nested property definitions
+  if (
+    prop.type === 'array' &&
+    prop.items &&
+    prop.items.type === 'object' &&
+    Array.isArray(prop.items.properties)
+  ) {
+    const item_properties = {}
+    prop.items.properties.forEach((nested_prop) => {
+      if (nested_prop && nested_prop.name) {
+        item_properties[nested_prop.name] = {
+          type: nested_prop.type,
+          required: nested_prop.required === true,
+          optional: nested_prop.required === false,
+          ...(nested_prop.description
+            ? { description: nested_prop.description }
+            : {})
+        }
+      }
+    })
+    return {
+      [prop.name]: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: item_properties
+        },
+        ...(prop.required !== undefined ? { required: prop.required } : {}),
+        ...(prop.optional !== undefined ? { optional: prop.optional } : {}),
+        ...(prop.description ? { description: prop.description } : {})
+      }
+    }
+  }
+
+  // Handle regular property
+  let property_schema = { type: prop.type }
+  if (prop.required !== undefined) {
+    property_schema.required = prop.required
+    if (prop.required === false) property_schema.optional = true
+  }
+  if (prop.optional !== undefined) property_schema.optional = prop.optional
+  if (prop.items) property_schema.items = prop.items
+  if (prop.enum) property_schema.enum = prop.enum
+  if (prop.min !== undefined) property_schema.min = prop.min
+  if (prop.max !== undefined) property_schema.max = prop.max
+  if (prop.properties) property_schema.properties = prop.properties
+  if (prop.description) property_schema.description = prop.description
+  property_schema = transform_property_type(property_schema)
+  return { [prop.name]: property_schema }
+}
+
 /**
  * Build validation schema for a specific entity type
  * @param {String} entity_type Entity type to build schema for
@@ -54,57 +108,17 @@ export function build_validation_schema(entity_type, schemas) {
     return null
   }
 
-  // Handle properties that are in array format
-  let properties = {}
+  const properties = {}
 
-  if (schema.properties) {
-    if (Array.isArray(schema.properties)) {
-      // Transform array of properties to object with property names as keys
-      schema.properties.forEach((prop) => {
-        if (prop && prop.name) {
-          let property_schema = {
-            type: prop.type
-          }
-
-          // Add additional constraints only if they exist
-          if (prop.required !== undefined) {
-            property_schema.required = prop.required
-            // If required is explicitly false, set optional to true for fastest-validator
-            if (prop.required === false) {
-              property_schema.optional = true
-            }
-          }
-          if (prop.optional !== undefined)
-            property_schema.optional = prop.optional
-          if (prop.items) property_schema.items = prop.items
-          if (prop.enum) property_schema.enum = prop.enum
-          if (prop.min !== undefined) property_schema.min = prop.min
-          if (prop.max !== undefined) property_schema.max = prop.max
-          if (prop.properties) property_schema.properties = prop.properties
-          if (prop.description) property_schema.description = prop.description
-
-          // Transform property type if needed
-          property_schema = transform_property_type(property_schema)
-
-          properties[prop.name] = property_schema
-        }
-      })
-    } else {
-      // Properties are already in object format
-      properties = { ...schema.properties }
-
-      // Transform each property type if needed and handle required/optional
-      for (const key in properties) {
-        const property = properties[key]
-
-        // If required is explicitly false, set optional to true for fastest-validator
-        if (property.required === false) {
-          property.optional = true
-        }
-
-        properties[key] = transform_property_type(property)
-      }
-    }
+  if (
+    schema.properties &&
+    Array.isArray(schema.properties) &&
+    schema.properties.length > 0
+  ) {
+    schema.properties.forEach((prop) => {
+      const prop_schema = build_property_schema(prop)
+      if (prop_schema) Object.assign(properties, prop_schema)
+    })
   }
 
   // Special handling for the meta-schema (the type_definition that defines itself)
