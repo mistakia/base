@@ -1,5 +1,8 @@
 import debug from 'debug'
 import fs from 'fs/promises'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
+import is_main from '#libs-server/utils/is-main.mjs'
 
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
@@ -75,4 +78,35 @@ export async function read_entity_from_filesystem({ absolute_path } = {}) {
       absolute_path
     }
   }
+}
+
+if (is_main(import.meta.url)) {
+  const argv = yargs(hideBin(process.argv))
+    .option('absolute_path', {
+      alias: 'a',
+      description: 'Absolute path to the entity file',
+      type: 'string',
+      demandOption: true
+    })
+    .help().argv
+
+  const main = async () => {
+    let error
+    try {
+      const result = await read_entity_from_filesystem({
+        absolute_path: argv.absolute_path
+      })
+      if (result.success) {
+        console.log(JSON.stringify(result, null, 2))
+      } else {
+        console.error('Error:', result.error)
+      }
+    } catch (err) {
+      error = err
+      console.error('Error:', error.message)
+    }
+    process.exit(error ? 1 : 0)
+  }
+
+  main()
 }
