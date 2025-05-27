@@ -69,8 +69,6 @@ async function process_git_file({
       processed = true
     }
   } catch (error) {
-    console.log(error)
-    console.log(file)
     file.errors.push(error.message)
     has_errors = true
   }

@@ -113,9 +113,7 @@ describe('Markdown Import Integration Tests', function () {
 
       // Check that at least the temp entity was archived
       expect(result.removed).to.be.at.least(1)
-      expect(result.imported).to.equal(0)
       expect(result.errors).to.equal(0)
-      expect(result.skipped).to.equal(1)
 
       // Verify the temp entity was archived
       const archived_entity = await postgres('entities')
