@@ -70,7 +70,7 @@ export async function import_entity_from_git({
     // Step 2: Read the entity from git
     const read_result = await read_entity_from_git({
       repo_path,
-      file_path: git_relative_path,
+      git_relative_path,
       branch
     })
 
