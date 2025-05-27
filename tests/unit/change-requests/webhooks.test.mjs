@@ -55,9 +55,6 @@ describe('Change Request Webhooks', function () {
         recursive: true
       }
     )
-
-    // Change to the test repo directory
-    process.chdir(test_thread.user_base_directory)
   })
 
   afterEach(async function () {

@@ -1,6 +1,8 @@
 import debug from 'debug'
 
 import { file_exists_in_git } from '#libs-server/git/git-files/file-exists-in-git.mjs'
+import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import config from '#config'
 
 const log = debug('entity-exists-in-git')
 
@@ -8,34 +10,26 @@ const log = debug('entity-exists-in-git')
  * Checks if an entity exists in Git
  *
  * @param {Object} options - Function options
- * @param {string} options.repo_path - The absolute path to the Git repository
- * @param {string} options.git_relative_path - The relative path within the repository to the entity file
+ * @param {string} options.base_relative_path - Path relative to Base root, e.g., 'system/entity/<entity-title>.json'
  * @param {string} options.branch - The Git branch to check in
+ * @param {string} [options.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - An object with a success flag and exists boolean
  */
 export async function entity_exists_in_git({
-  repo_path,
-  git_relative_path,
-  branch
-}) {
+  base_relative_path,
+  branch,
+  root_base_directory = config.root_base_directory
+} = {}) {
   try {
-    log(`Checking if entity exists at ${git_relative_path} in branch ${branch}`)
+    log(
+      `Checking if entity exists at ${base_relative_path} in branch ${branch}`
+    )
 
     // Validate required parameters
-    if (!repo_path) {
+    if (!base_relative_path) {
       return {
         success: false,
-        error: 'Repository path is required',
-        git_relative_path,
-        branch
-      }
-    }
-
-    if (!git_relative_path) {
-      return {
-        success: false,
-        error: 'Git relative path is required',
-        repo_path,
+        error: 'Base relative path is required',
         branch
       }
     }
@@ -44,10 +38,15 @@ export async function entity_exists_in_git({
       return {
         success: false,
         error: 'Branch name is required',
-        repo_path,
-        git_relative_path
+        base_relative_path
       }
     }
+
+    // Get file info
+    const { repo_path, git_relative_path } = await get_base_file_info({
+      base_relative_path,
+      root_base_directory
+    })
 
     // Check if the file exists in Git
     const result = await file_exists_in_git({
@@ -67,11 +66,11 @@ export async function entity_exists_in_git({
       branch
     }
   } catch (error) {
-    log(`Error checking if entity exists at ${git_relative_path}:`, error)
+    log(`Error checking if entity exists at ${base_relative_path}:`, error)
     return {
       success: false,
       error: error.message,
-      git_relative_path,
+      base_relative_path,
       branch
     }
   }

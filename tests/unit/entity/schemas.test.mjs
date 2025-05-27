@@ -249,10 +249,18 @@ describe('Entity Schema Module', () => {
       const entity_type = 'task'
       const schemas = {
         task: {
-          properties: {
-            status: { type: 'string', enum: ['In Progress', 'Completed'] },
-            priority: { type: 'string', enum: ['High', 'Medium', 'Low'] }
-          }
+          properties: [
+            {
+              name: 'status',
+              type: 'string',
+              enum: ['In Progress', 'Completed']
+            },
+            {
+              name: 'priority',
+              type: 'string',
+              enum: ['High', 'Medium', 'Low']
+            }
+          ]
         }
       }
       const result = build_validation_schema(entity_type, schemas)

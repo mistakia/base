@@ -53,9 +53,6 @@ describe('Change Request Status Updates', function () {
       }
     )
 
-    // Change to the test repo directory
-    process.chdir(test_thread.user_base_directory)
-
     // Create a feature branch with changes for testing
     feature_branch = `feature/status-test-${uuid().substring(0, 8)}`
     await execute(`git checkout -b ${feature_branch}`, {
@@ -80,9 +77,6 @@ describe('Change Request Status Updates', function () {
   })
 
   afterEach(async function () {
-    // Restore original working directory
-    process.chdir(orig_cwd)
-
     // Clean up
     test_thread.cleanup()
   })

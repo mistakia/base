@@ -58,9 +58,6 @@ describe('Change Requests API', () => {
         recursive: true
       }
     )
-
-    // Change to the test repo directory so git operations use this path
-    process.chdir(test_thread.user_base_directory)
   })
 
   after(async () => {

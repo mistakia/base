@@ -1,5 +1,5 @@
 import debug from 'debug'
-import { tag_exists_in_git } from '#libs-server/tag/git/tag-exists-in-git.mjs'
+import { entity_exists_in_git } from './entity-exists-in-git.mjs'
 
 const log = debug('entity:git:validate:tags')
 
@@ -8,26 +8,19 @@ const log = debug('entity:git:validate:tags')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.property_tags - Array of tag objects from properties
- * @param {string} params.repo_path - Git repository path
  * @param {string} params.branch - Git branch for validation
+ * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_tags_from_git({
   property_tags = [],
-  repo_path,
-  branch
+  branch,
+  root_base_directory
 }) {
   if (!Array.isArray(property_tags)) {
     return {
       valid: false,
       errors: ['property_tags must be an array']
-    }
-  }
-
-  if (!repo_path) {
-    return {
-      valid: false,
-      errors: ['Repository path is required']
     }
   }
 
@@ -50,13 +43,14 @@ export async function validate_tags_from_git({
     ]
 
     const tag_validation_promises = all_tags.map(async (tag) => {
-      const exists = await tag_exists_in_git({
+      const exists_result = await entity_exists_in_git({
         base_relative_path: tag.base_relative_path,
-        branch
+        branch,
+        root_base_directory
       })
       return {
         base_relative_path: tag.base_relative_path,
-        exists,
+        exists: exists_result.success && exists_result.exists,
         source: tag.source
       }
     })

@@ -47,10 +47,18 @@ describe('Entity Validator', () => {
 
       const schemas = {
         task: {
-          properties: {
-            status: { type: 'string', enum: ['In Progress', 'Completed'] },
-            priority: { type: 'string', enum: ['High', 'Medium', 'Low'] }
-          }
+          properties: [
+            {
+              name: 'status',
+              type: 'string',
+              enum: ['In Progress', 'Completed']
+            },
+            {
+              name: 'priority',
+              type: 'string',
+              enum: ['High', 'Medium', 'Low']
+            }
+          ]
         }
       }
 

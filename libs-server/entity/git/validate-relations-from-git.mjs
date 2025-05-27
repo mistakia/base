@@ -8,26 +8,19 @@ const log = debug('entity:git:validate:relations')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.relations - Array of relation objects
- * @param {string} params.repo_path - Git repository path
  * @param {string} params.branch - Git branch for validation
+ * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_relations_from_git({
   relations = [],
-  repo_path,
-  branch
+  branch,
+  root_base_directory
 }) {
   if (!Array.isArray(relations)) {
     return {
       valid: false,
       errors: ['Relations must be an array']
-    }
-  }
-
-  if (!repo_path) {
-    return {
-      valid: false,
-      errors: ['Repository path is required']
     }
   }
 
@@ -50,9 +43,9 @@ export async function validate_relations_from_git({
       const entity_path = relation.entity_path
       // Check if the relation target exists
       const exists_result = await entity_exists_in_git({
-        repo_path,
-        file_path: entity_path,
-        branch
+        base_relative_path: entity_path,
+        branch,
+        root_base_directory
       })
 
       return {

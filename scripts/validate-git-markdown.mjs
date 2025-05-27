@@ -12,9 +12,7 @@ debug.enable(
   'validate-git-markdown,markdown:process-repository,markdown:scanner'
 )
 
-const validate_git = async ({
-  branch = config.system_main_branch
-}) => {
+const validate_git = async ({ branch = config.system_main_branch }) => {
   log({ branch })
 
   // Process from git

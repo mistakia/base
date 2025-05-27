@@ -148,9 +148,13 @@ properties:
         task: {
           name: 'task',
           type: 'type_definition',
-          properties: {
-            status: { type: 'string', enum: ['In Progress', 'Completed'] }
-          }
+          properties: [
+            {
+              name: 'status',
+              type: 'string',
+              enum: ['In Progress', 'Completed']
+            }
+          ]
         }
       }
 

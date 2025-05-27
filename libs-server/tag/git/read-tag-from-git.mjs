@@ -1,5 +1,5 @@
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
-import { tag_exists_in_git } from './tag-exists-in-git.mjs'
+import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-git.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
 
@@ -23,13 +23,13 @@ export async function read_tag_from_git({
   }
 
   // Check if tag exists in git before trying to read
-  const tag_exists = await tag_exists_in_git({
+  const tag_exists_result = await entity_exists_in_git({
     base_relative_path,
     branch,
     root_base_directory
   })
 
-  if (!tag_exists) {
+  if (!tag_exists_result.success || !tag_exists_result.exists) {
     throw new Error(
       `Tag at ${base_relative_path} does not exist in git at ref ${branch || 'HEAD'}`
     )

@@ -130,19 +130,19 @@ export async function process_repositories_from_git(options = {}) {
   // Load schemas from git
   log('Loading schema definitions from git...')
   const schemas = {}
-  
+
   // Load schemas from all repositories
   for (const repository of repositories) {
     // Skip the root repository if it's not needed
     if (repository.submodule_base_path === null && repositories.length > 1) {
       continue
     }
-    
+
     const repo_schemas = await load_schema_definitions_from_git({
       root_base_directory,
       user_base_directory: repository.path
     })
-    
+
     // Merge into main schemas object
     Object.assign(schemas, repo_schemas)
   }

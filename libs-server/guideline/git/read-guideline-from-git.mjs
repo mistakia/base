@@ -1,6 +1,6 @@
 import debug from 'debug'
 import { read_file_from_git } from '#libs-server/git/git-files/read-file-from-git.mjs'
-import { guideline_exists_in_git } from './guideline-exists-in-git.mjs'
+import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-git.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
 
@@ -41,7 +41,7 @@ export async function read_guideline_from_git({
     }
 
     // First check if the guideline exists in git
-    const guideline_exists_result = await guideline_exists_in_git({
+    const guideline_exists_result = await entity_exists_in_git({
       base_relative_path,
       branch,
       root_base_directory

@@ -8,26 +8,19 @@ const log = debug('entity:git:validate:references')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.references - Array of reference objects
- * @param {string} params.repo_path - Git repository path
  * @param {string} params.branch - Git branch for validation
+ * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_references_from_git({
   references = [],
-  repo_path,
-  branch
+  branch,
+  root_base_directory
 }) {
   if (!Array.isArray(references)) {
     return {
       valid: false,
       errors: ['References must be an array']
-    }
-  }
-
-  if (!repo_path) {
-    return {
-      valid: false,
-      errors: ['Repository path is required']
     }
   }
 
@@ -52,9 +45,9 @@ export async function validate_references_from_git({
     const validation_promises = reference_paths.map(async (reference) => {
       // Check if the referenced entity exists
       const reference_exists = await entity_exists_in_git({
-        repo_path,
-        file_path: reference,
-        branch
+        base_relative_path: reference,
+        branch,
+        root_base_directory
       })
 
       return {

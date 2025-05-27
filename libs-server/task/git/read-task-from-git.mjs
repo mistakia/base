@@ -1,7 +1,7 @@
 import debug from 'debug'
 
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
-import { task_exists_in_git } from './task-exists-in-git.mjs'
+import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-git.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
 
@@ -42,7 +42,7 @@ export async function read_task_from_git({
     }
 
     // Check if task exists in git
-    const exists_result = await task_exists_in_git({
+    const exists_result = await entity_exists_in_git({
       base_relative_path,
       branch,
       root_base_directory

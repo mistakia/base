@@ -22,9 +22,6 @@ describe('Change Request Git Operations', function () {
   beforeEach(async function () {
     // Create temporary repository for testing
     test_repo = await create_temp_test_repo()
-
-    // Change to the test repo directory so git operations use this path
-    process.chdir(test_repo.user_path)
   })
 
   afterEach(async function () {

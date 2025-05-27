@@ -5,4 +5,4 @@ export {
 } from './filesystem/index.mjs'
 
 // Re-export git functions
-export { activity_exists_in_git, read_activity_from_git } from './git/index.mjs'
+export { read_activity_from_git } from './git/index.mjs'
