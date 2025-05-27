@@ -33,7 +33,7 @@ fields:
     type: string
     required: true
   - name: start_date
-    type: date
+    type: datetime
     required: true
   - name: budget
     type: number

@@ -51,12 +51,12 @@ properties:
     description: ID of the worker thread that generated this request, if applicable.
   - name: merged_at
     type: string
-    format: date-time
+    format: datetime
     required: false
     description: Timestamp when the change request was merged.
   - name: closed_at
     type: string
-    format: date-time
+    format: datetime
     required: false
     description: Timestamp when the change request was closed (if not merged).
 observations:

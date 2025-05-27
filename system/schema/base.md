@@ -4,10 +4,14 @@ type_name: base
 title: Base Schema
 description: The base schema that all other types inherit from
 properties:
-  - name: title
+  - name: entity_id
     type: string
     required: true
     description: Unique identifier used for references
+  - name: title
+    type: string
+    required: true
+    description: Human readable title for identification
   - name: type
     type: string
     required: true
@@ -44,17 +48,17 @@ properties:
     required: false
     description: Array of structured observations in format "[category] Observation text
   - name: created_at
-    type: date
+    type: datetime
     required: true
     auto_generated: true
     description: Creation timestamp
   - name: updated_at
-    type: date
+    type: datetime
     required: true
     auto_generated: true
     description: Last modified timestamp
   - name: archived_at
-    type: date
+    type: datetime
     required: false
     description: Date when the item was archived
 ---

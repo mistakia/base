@@ -15,7 +15,7 @@ properties:
           description: Name of the field
         type:
           type: string
-          enum: [string, number, boolean, date, array, object]
+          enum: [string, number, boolean, datetime, array, object]
           description: Data type of the field
         required:
           type: boolean
