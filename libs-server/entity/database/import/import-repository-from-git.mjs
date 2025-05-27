@@ -1,5 +1,8 @@
 import debug from 'debug'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 
+import is_main from '#libs-server/utils/is-main.mjs'
 import db from '#db'
 import { import_entity_from_git } from '#libs-server/entity/database/import-entity-from-git.mjs'
 import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
@@ -133,6 +136,90 @@ export async function import_repository_from_git({
     log('Error importing repositories:', error)
     throw error
   }
+}
+
+if (is_main(import.meta.url)) {
+  const argv = yargs(hideBin(process.argv))
+    .usage('Usage: $0 [options]')
+    .option('branch', {
+      alias: 'b',
+      description: 'Branch to use for import',
+      type: 'string',
+      default: config.system_main_branch
+    })
+    .option('root_base_directory', {
+      alias: 'r',
+      description: 'Root base directory to import from',
+      type: 'string',
+      default: config.root_base_directory
+    })
+    .option('user_id', {
+      alias: 'i',
+      description: 'User ID to associate with imported entities',
+      type: 'string',
+      default: config.user_id
+    })
+    .option('dry_run', {
+      alias: 'd',
+      description: 'Dry run, do not modify database',
+      type: 'boolean',
+      default: false
+    })
+    .help()
+    .alias('help', 'h')
+    .epilog('Import markdown files into PostgreSQL database').argv
+
+  debug.enable('entity:database:import-from-git,entity:database:import:*')
+
+  const main = async () => {
+    let error
+    try {
+      console.log('Starting repository import...')
+      log('Configuration:', {
+        branch: argv.branch,
+        root_base_directory: argv.root_base_directory,
+        user_id: argv.user_id,
+        dry_run: argv.dry_run
+      })
+      if (argv.dry_run) {
+        console.log('Dry run mode: No database changes will be made')
+      }
+      const import_options = {
+        user_id: argv.user_id,
+        root_base_directory: argv.root_base_directory,
+        branch: argv.branch
+      }
+      if (argv.dry_run) {
+        await db
+          .transaction(async () => {
+            const result = await import_repository_from_git(import_options)
+            console.log(
+              `Import simulation complete:\n- Imported: ${result.imported} files\n- Skipped: ${result.skipped} files\n- Errors: ${result.errors} files\n- Removed: ${result.removed} stale entities`
+            )
+            throw new Error('Dry run completed, rolling back transaction')
+          })
+          .catch((err) => {
+            if (err.message === 'Dry run completed, rolling back transaction') {
+              console.log('Transaction rolled back successfully')
+            } else {
+              throw err
+            }
+          })
+      } else {
+        const result = await import_repository_from_git(import_options)
+        console.log(
+          `Import complete:\n- Imported: ${result.imported} files\n- Skipped: ${result.skipped} files\n- Errors: ${result.errors} files\n- Removed: ${result.removed} stale entities`
+        )
+      }
+    } catch (err) {
+      error = err
+      console.error('Fatal error:', error)
+    } finally {
+      await db.destroy()
+      process.exit(error ? 1 : 0)
+    }
+  }
+  main()
 }
 
 export default import_repository_from_git
