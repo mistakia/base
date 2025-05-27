@@ -5,6 +5,9 @@
  * including Git operations that treat Git as the source of truth.
  */
 
+import fs from 'fs/promises'
+import path from 'path'
+
 import * as git_ops from '#libs-server/git/index.mjs'
 import config from '#config'
 import debug from 'debug'
@@ -23,10 +26,6 @@ export async function get_change_request_commits({
   user_base_directory = config.user_base_directory
 }) {
   try {
-    // Verify user_base_directory exists
-    const fs = await import('fs/promises')
-    const path = await import('path')
-
     const resolved_path = path.resolve(user_base_directory)
     try {
       const stat = await fs.stat(resolved_path)
@@ -39,11 +38,12 @@ export async function get_change_request_commits({
 
     // Use the git operation to get commits with their diffs
     return await git_ops.get_commits_with_diffs({
-      user_base_directory,
+      repo_path: user_base_directory,
       from_ref: target_branch,
       to_ref: feature_branch
     })
   } catch (error) {
+    console.log(error)
     console.error(
       `Failed to get commits between ${target_branch} and ${feature_branch}:`,
       error

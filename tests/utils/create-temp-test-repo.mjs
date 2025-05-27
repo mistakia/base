@@ -77,6 +77,7 @@ export async function create_temp_test_repo({
     await fs.writeFile(user_readme_path, '# Test User Repository')
     await exec('git add README.md', { cwd: user_repo_path })
     await exec('git commit -m "Initial commit"', { cwd: user_repo_path })
+    await exec('git branch -M main', { cwd: user_repo_path })
 
     // Add user submodule to base repo
     await exec('git submodule add ./user user', {

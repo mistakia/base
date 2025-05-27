@@ -6,7 +6,7 @@ import config from '#config'
 
 const log = debug('github-entity-mapper')
 const CONFIG_PATH = path.resolve(
-  config.root_base_directory,
+  config.root_base_directory || process.cwd(),
   'user/task/github/github-entity-mappings.json'
 )
 
