@@ -1,6 +1,17 @@
 import debug from 'debug'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { write_entity_to_database } from '#libs-server/entity/database/write/write-entity-to-database.mjs'
+import { write_task_to_database } from '#libs-server/entity/database/write/write-task-to-database.mjs'
+import { write_activity_to_database } from '#libs-server/entity/database/write/write-activity-to-database.mjs'
+import { write_person_to_database } from '#libs-server/entity/database/write/write-person-to-database.mjs'
+import { write_physical_item_to_database } from '#libs-server/entity/database/write/write-physical-item-to-database.mjs'
+import { write_physical_location_to_database } from '#libs-server/entity/database/write/write-physical-location-to-database.mjs'
+import { write_tag_to_database } from '#libs-server/entity/database/write/write-tag-to-database.mjs'
+import { write_guideline_to_database } from '#libs-server/entity/database/write/write-guideline-to-database.mjs'
+import { write_organization_to_database } from '#libs-server/entity/database/write/write-organization-to-database.mjs'
+import { write_digital_item_to_database } from '#libs-server/entity/database/write/write-digital-item-to-database.mjs'
+import { write_database_table_item_to_database } from '#libs-server/entity/database/write/write-database-table-item-to-database.mjs'
+import { write_database_table_view_to_database } from '#libs-server/entity/database/write/write-database-table-view-to-database.mjs'
 import { with_transaction } from '#libs-server/utils/with-transaction.mjs'
 import { get_file_git_sha } from '#libs-server/git/file-operations.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
@@ -15,13 +26,15 @@ const log = debug('entity:database:import-from-git')
  * @param {string} options.root_base_directory - The absolute path to the root base directory
  * @param {string} options.branch - The git branch to read from
  * @param {string} options.user_id - The user ID to associate with the entity
+ * @param {boolean} [options.force=false] - Force update even if git SHA matches
  * @returns {Promise<Object>} - Result object with entity_id and status information
  */
 export async function import_entity_from_git({
   base_relative_path,
   root_base_directory,
   branch,
-  user_id
+  user_id,
+  force = false
 }) {
   try {
     log(`Importing entity from git: ${base_relative_path} (branch: ${branch})`)
@@ -96,12 +109,7 @@ export async function import_entity_from_git({
       }
     }
 
-    // Create complete file info object for database storage
-    const complete_file_info = {
-      absolute_path: file_info.absolute_path,
-      base_relative_path,
-      git_sha
-    }
+    const absolute_path = file_info.absolute_path
 
     // Check if entity exists by file path before writing
     let result_entity_id
@@ -112,26 +120,164 @@ export async function import_entity_from_git({
       // Check if entity exists with this file path
       const existing = await trx('entities')
         .where({
-          absolute_path: complete_file_info.absolute_path,
+          absolute_path,
           user_id
         })
         .first()
 
-      // If entity exists and git SHA matches, skip update
-      if (existing && existing.git_sha === git_sha) {
+      // If entity exists and git SHA matches, skip update unless force is true
+      if (!force && existing && existing.git_sha === git_sha) {
         result_entity_id = existing.entity_id
         log(`Entity unchanged: ${git_relative_path} (SHA: ${git_sha})`)
       } else {
-        // Write entity to database
-        result_entity_id = await write_entity_to_database({
-          entity_properties,
-          entity_type,
-          user_id,
-          entity_content,
-          entity_id: existing ? existing.entity_id : null,
-          file_info: complete_file_info,
-          trx
-        })
+        // Write entity to database using the appropriate type-specific function
+        switch (entity_type) {
+          case 'task':
+            result_entity_id = await write_task_to_database({
+              task_properties: entity_properties,
+              user_id,
+              task_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'activity':
+            result_entity_id = await write_activity_to_database({
+              activity_properties: entity_properties,
+              user_id,
+              activity_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'person':
+            result_entity_id = await write_person_to_database({
+              person_properties: entity_properties,
+              user_id,
+              person_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'physical_item':
+            result_entity_id = await write_physical_item_to_database({
+              physical_item_properties: entity_properties,
+              user_id,
+              physical_item_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'physical_location':
+            result_entity_id = await write_physical_location_to_database({
+              physical_location_properties: entity_properties,
+              user_id,
+              physical_location_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'tag':
+            result_entity_id = await write_tag_to_database({
+              tag_properties: entity_properties,
+              user_id,
+              tag_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'guideline':
+            result_entity_id = await write_guideline_to_database({
+              guideline_properties: entity_properties,
+              user_id,
+              guideline_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'organization':
+            result_entity_id = await write_organization_to_database({
+              organization_properties: entity_properties,
+              user_id,
+              organization_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'digital_item':
+            result_entity_id = await write_digital_item_to_database({
+              digital_item_properties: entity_properties,
+              user_id,
+              digital_item_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'database_table_item':
+            result_entity_id = await write_database_table_item_to_database({
+              database_item_properties: entity_properties,
+              user_id,
+              database_item_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          case 'database_table_view':
+            result_entity_id = await write_database_table_view_to_database({
+              database_view_properties: entity_properties,
+              user_id,
+              database_view_content: entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+            break
+          default:
+            // Fallback to generic entity writer for unknown types
+            result_entity_id = await write_entity_to_database({
+              entity_properties,
+              entity_type,
+              user_id,
+              entity_content,
+              entity_id: existing ? existing.entity_id : null,
+              absolute_path,
+              base_relative_path,
+              git_sha,
+              trx
+            })
+        }
 
         is_new = !existing
         log(`${is_new ? 'Created' : 'Updated'} entity: ${git_relative_path}`)

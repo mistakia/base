@@ -23,9 +23,9 @@ const log = debug('entity:database:write-database-table-item')
  * @param {string} params.user_id User ID who owns the item entity
  * @param {string} [params.database_item_content=''] Optional item content/markdown
  * @param {string} [params.database_item_id=null] Optional item ID for updates
- * @param {Object} [params.file_info=null] Optional file information
- * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {string} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} [params.absolute_path=null] Absolute path to the file
+ * @param {string} [params.base_relative_path=null] Base relative path to the file
+ * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The database_item_id (same as entity_id)
  */
@@ -34,7 +34,9 @@ export async function write_database_table_item_to_database({
   user_id,
   database_item_content = '',
   database_item_id = null,
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -56,7 +58,9 @@ export async function write_database_table_item_to_database({
       user_id,
       entity_content: database_item_content,
       entity_id: database_item_id,
-      file_info,
+      absolute_path,
+      base_relative_path,
+      git_sha,
       trx: db_client
     })
 

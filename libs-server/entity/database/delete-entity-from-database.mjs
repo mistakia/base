@@ -66,10 +66,10 @@ export async function delete_entity_from_database({
     }
 
     // 2. Delete all related data
-    await delete_entity_relationships(client, entity_id)
+    await delete_entity_relationships({ client, entity_id })
 
     // 3. Delete type-specific data
-    await delete_type_specific_data(client, entity_id, entity.type)
+    await delete_type_specific_data({ client, entity_id, entity_type: entity.type })
 
     // 4. Delete the entity record itself
     log(`Deleting entity record: ${entity_id}`)
@@ -87,7 +87,7 @@ export async function delete_entity_from_database({
  * @param {string} entity_id Entity ID
  * @returns {Promise<void>}
  */
-async function delete_entity_relationships(client, entity_id) {
+async function delete_entity_relationships({ client, entity_id }) {
   // Entity tags (both directions)
   log(`Deleting tags for entity: ${entity_id}`)
   await client('entity_tags').where({ entity_id }).delete()
@@ -127,7 +127,7 @@ async function delete_entity_relationships(client, entity_id) {
  * @param {string} entity_type Entity type
  * @returns {Promise<void>}
  */
-async function delete_type_specific_data(client, entity_id, entity_type) {
+async function delete_type_specific_data({ client, entity_id, entity_type }) {
   if (!entity_type) {
     log(`No entity type specified for entity: ${entity_id}`)
     return

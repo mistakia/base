@@ -59,13 +59,15 @@ export async function remove_stale_entities({ exiting_files, user_id }) {
  * @param {boolean} [options.archive_missing=true] - Whether to archive entities that no longer exist
  * @param {string} [options.branch] - Branch for validation
  * @param {string} [options.root_base_directory] - Root base directory
+ * @param {boolean} [options.force=false] - Force update all entities regardless of git SHA
  * @returns {Promise<Object>} - Import statistics
  */
 export async function import_repository_from_git({
   user_id,
   archive_missing = true,
   branch,
-  root_base_directory = config.root_base_directory
+  root_base_directory = config.root_base_directory,
+  force = false
 }) {
   // Validate input parameters
   if (!user_id) {
@@ -92,7 +94,8 @@ export async function import_repository_from_git({
             base_relative_path: file.base_relative_path,
             root_base_directory,
             branch: file.file_info.branch,
-            user_id
+            user_id,
+            force
           })
 
           if (import_result.success) {
@@ -165,6 +168,12 @@ if (is_main(import.meta.url)) {
       type: 'boolean',
       default: false
     })
+    .option('force', {
+      alias: 'f',
+      description: 'Force update all entities regardless of git SHA',
+      type: 'boolean',
+      default: false
+    })
     .help()
     .alias('help', 'h')
     .epilog('Import markdown files into PostgreSQL database').argv
@@ -179,7 +188,8 @@ if (is_main(import.meta.url)) {
         branch: argv.branch,
         root_base_directory: argv.root_base_directory,
         user_id: argv.user_id,
-        dry_run: argv.dry_run
+        dry_run: argv.dry_run,
+        force: argv.force
       })
       if (argv.dry_run) {
         console.log('Dry run mode: No database changes will be made')
@@ -187,7 +197,8 @@ if (is_main(import.meta.url)) {
       const import_options = {
         user_id: argv.user_id,
         root_base_directory: argv.root_base_directory,
-        branch: argv.branch
+        branch: argv.branch,
+        force: argv.force
       }
       if (argv.dry_run) {
         await db

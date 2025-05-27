@@ -2,6 +2,8 @@ import db from '#db'
 import debug from 'debug'
 import { write_entity_relations_to_database } from './write-entity-relations-to-database.mjs'
 import { write_entity_tags_to_database } from './write-entity-tags-to-database.mjs'
+import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
+import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 
 const log = debug('entity:database:write')
 
@@ -20,10 +22,9 @@ const log = debug('entity:database:write')
  * @param {string} params.entity_type Type of entity (task, guideline, activity, etc.)
  * @param {string} params.user_id User who owns the entity
  * @param {string} [params.entity_content=''] Optional entity content/markdown
- * @param {Object} [params.file_info=null] Optional file information
- * @param {Object} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {Object} [params.file_info.base_relative_path=null] Path relative to repository base
- * @param {Object} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} params.absolute_path Absolute path to the file (required)
+ * @param {string} params.base_relative_path Path relative to repository base (required)
+ * @param {string} params.git_sha Git SHA of the file (required)
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The entity_id
  */
@@ -32,7 +33,9 @@ export async function write_entity_to_database({
   entity_type,
   user_id,
   entity_content = '',
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -54,6 +57,16 @@ export async function write_entity_to_database({
       throw new Error('entity_properties.entity_id is required')
     }
 
+    if (!absolute_path) {
+      throw new Error('absolute_path is required')
+    }
+    if (!base_relative_path) {
+      throw new Error('base_relative_path is required')
+    }
+    if (!git_sha) {
+      throw new Error('git_sha is required')
+    }
+
     const db_client = trx || db
 
     // Prepare base entity data
@@ -64,29 +77,15 @@ export async function write_entity_to_database({
       user_id,
       markdown: entity_content || null,
       frontmatter: JSON.stringify(entity_properties),
-      updated_at: entity_properties.updated_at || new Date()
+      updated_at: entity_properties.updated_at || new Date(),
+      absolute_path,
+      base_relative_path,
+      git_sha
     }
 
     // Add permalink if provided
     if (entity_properties.permalink) {
       entity_data.permalink = entity_properties.permalink
-    }
-
-    // Add file path and git SHA if provided
-    if (file_info) {
-      // TODO should be required
-      if (file_info.absolute_path) {
-        entity_data.absolute_path = file_info.absolute_path
-      }
-
-      // TODO should be required
-      if (file_info.base_relative_path) {
-        entity_data.base_relative_path = file_info.base_relative_path
-      }
-
-      if (file_info.git_sha) {
-        entity_data.git_sha = file_info.git_sha
-      }
     }
 
     // Check if entity exists in database

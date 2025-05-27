@@ -21,9 +21,9 @@ const log = debug('entity:database:write-activity')
  * @param {string} params.user_id User ID who owns the activity
  * @param {string} [params.activity_content=''] Optional activity content/markdown
  * @param {string} [params.entity_id=null] Optional entity ID for updates
- * @param {Object} [params.file_info=null] Optional file information
- * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {string} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} [params.absolute_path=null] Absolute path to the file
+ * @param {string} [params.base_relative_path=null] Base relative path to the file
+ * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The entity_id of the activity
  */
@@ -32,7 +32,9 @@ export async function write_activity_to_database({
   user_id,
   activity_content = '',
   entity_id = null,
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -46,7 +48,9 @@ export async function write_activity_to_database({
       user_id,
       entity_content: activity_content,
       entity_id,
-      file_info,
+      absolute_path,
+      base_relative_path,
+      git_sha,
       trx: db_client
     })
 

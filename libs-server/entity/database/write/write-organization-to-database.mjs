@@ -22,9 +22,9 @@ const log = debug('entity:database:write-organization')
  * @param {string} params.user_id User ID who owns the organization entity
  * @param {string} [params.organization_content=''] Optional organization content/markdown
  * @param {string} [params.organization_id=null] Optional organization ID for updates
- * @param {Object} [params.file_info=null] Optional file information
- * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {string} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} params.absolute_path Absolute path to the file
+ * @param {string} params.base_relative_path Base relative path to the file
+ * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The organization_id (same as entity_id)
  */
@@ -33,7 +33,9 @@ export async function write_organization_to_database({
   user_id,
   organization_content = '',
   organization_id = null,
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -47,7 +49,9 @@ export async function write_organization_to_database({
       user_id,
       entity_content: organization_content,
       entity_id: organization_id,
-      file_info,
+      absolute_path,
+      base_relative_path,
+      git_sha,
       trx: db_client
     })
 

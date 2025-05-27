@@ -26,9 +26,9 @@ const log = debug('entity:database:write-person')
  * @param {string} params.user_id User ID who owns the person entity
  * @param {string} [params.person_content=''] Optional person content/markdown
  * @param {string} [params.person_id=null] Optional person ID for updates
- * @param {Object} [params.file_info=null] Optional file information
- * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {string} [params.file_info.git_sha=null] Git SHA of the file
+ * @param {string} params.absolute_path Absolute path to the file
+ * @param {string} params.base_relative_path Base relative path to the file
+ * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The person_id (same as entity_id)
  */
@@ -37,7 +37,9 @@ export async function write_person_to_database({
   user_id,
   person_content = '',
   person_id = null,
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -60,7 +62,9 @@ export async function write_person_to_database({
       user_id,
       entity_content: person_content,
       entity_id: person_id,
-      file_info,
+      absolute_path,
+      base_relative_path,
+      git_sha,
       trx: db_client
     })
 

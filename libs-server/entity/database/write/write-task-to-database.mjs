@@ -36,10 +36,9 @@ const log = debug('entity:database:write-task')
  * @param {string} [params.task_properties.assigned_to=null] Person or team responsible for the task
  * @param {string} params.user_id User ID who owns the task
  * @param {string} [params.task_content=''] Optional task content/markdown
- * @param {Object} [params.file_info=null] Optional file information
- * @param {string} [params.file_info.absolute_path=null] Absolute path to the file
- * @param {string} [params.file_info.git_sha=null] Git SHA of the file
- * @param {string} [params.file_info.base_relative_path=null] Base relative path of the task
+ * @param {string} [params.absolute_path=null] Absolute path to the file
+ * @param {string} [params.base_relative_path=null] Base relative path of the task
+ * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
  * @returns {Promise<string>} The entity_id
  */
@@ -47,7 +46,9 @@ export async function write_task_to_database({
   task_properties,
   user_id,
   task_content = '',
-  file_info = null,
+  absolute_path,
+  base_relative_path,
+  git_sha,
   trx = null
 }) {
   try {
@@ -60,7 +61,9 @@ export async function write_task_to_database({
       entity_type: 'task',
       user_id,
       entity_content: task_content,
-      file_info,
+      absolute_path,
+      base_relative_path,
+      git_sha,
       trx: db_client
     })
 
