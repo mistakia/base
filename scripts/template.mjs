@@ -1,11 +1,10 @@
 import debug from 'debug'
+import is_main from '#libs-server/utils/is-main.mjs'
 // import yargs from 'yargs'
 // import { hideBin } from 'yargs/helpers'
 
 // import db from '#db'
 // import config from '#config'
-import { isMain } from '#libs-server'
-
 // const argv = yargs(hideBin(process.argv)).argv
 // const log = debug('template')
 debug.enable('template')
@@ -33,6 +32,6 @@ const main = async () => {
   process.exit()
 }
 
-if (isMain(import.meta.url)) {
+if (is_main(import.meta.url)) {
   main()
 }
