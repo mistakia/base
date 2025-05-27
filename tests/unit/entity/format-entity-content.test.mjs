@@ -1,10 +1,12 @@
 import { expect } from 'chai'
+import { v4 as uuid } from 'uuid'
 import { format_entity_properties_to_frontmatter } from '#libs-server/entity/format/index.mjs'
 
 describe('Entity Content Formatting', () => {
   describe('format_entity_properties_to_frontmatter', () => {
     it('should format base entity fields correctly', () => {
       const entity_properties = {
+        entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
@@ -30,6 +32,7 @@ describe('Entity Content Formatting', () => {
     it('should use existing created_at when provided', () => {
       const created_at = '2023-01-01T00:00:00.000Z'
       const entity_properties = {
+        entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
@@ -47,6 +50,7 @@ describe('Entity Content Formatting', () => {
 
     it('should include all optional base fields when provided', () => {
       const entity_properties = {
+        entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
         user_id: '123456',
@@ -71,6 +75,7 @@ describe('Entity Content Formatting', () => {
 
     it('should include custom fields for extended entity types', () => {
       const entity_properties = {
+        entity_id: uuid(),
         title: 'Test Task',
         description: 'Test description',
         user_id: '123456',

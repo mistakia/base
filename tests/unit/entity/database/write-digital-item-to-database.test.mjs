@@ -41,7 +41,10 @@ describe('write_digital_item_to_database', () => {
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties,
       user_id: test_user_id,
-      digital_item_content
+      digital_item_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -120,7 +123,10 @@ describe('write_digital_item_to_database', () => {
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties: original_properties,
       user_id: test_user_id,
-      digital_item_content: original_content
+      digital_item_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated digital item properties
@@ -145,7 +151,10 @@ describe('write_digital_item_to_database', () => {
       digital_item_properties: updated_properties,
       user_id: test_user_id,
       digital_item_content: updated_content,
-      digital_item_id
+      digital_item_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -208,14 +217,17 @@ describe('write_digital_item_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/digital-item.md',
-      git_sha: '98765abcdef'
+      git_sha: '98765abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -238,7 +250,10 @@ describe('write_digital_item_to_database', () => {
     // Act
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -275,7 +290,10 @@ describe('write_digital_item_to_database', () => {
     // Act
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -330,7 +348,10 @@ describe('write_digital_item_to_database', () => {
     // Act
     const digital_item_id = await write_digital_item_to_database({
       digital_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

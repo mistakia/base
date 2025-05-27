@@ -50,7 +50,10 @@ describe('write_physical_location_to_database', () => {
     const physical_location_id = await write_physical_location_to_database({
       physical_location_properties,
       user_id: test_user_id,
-      physical_location_content
+      physical_location_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -154,7 +157,10 @@ describe('write_physical_location_to_database', () => {
     const physical_location_id = await write_physical_location_to_database({
       physical_location_properties: original_properties,
       user_id: test_user_id,
-      physical_location_content: original_content
+      physical_location_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated location properties
@@ -180,7 +186,10 @@ describe('write_physical_location_to_database', () => {
       physical_location_properties: updated_properties,
       user_id: test_user_id,
       physical_location_content: updated_content,
-      physical_location_id
+      physical_location_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -241,14 +250,17 @@ describe('write_physical_location_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/location.md',
-      git_sha: '12345abcdef'
+      git_sha: '12345abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const physical_location_id = await write_physical_location_to_database({
       physical_location_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -304,7 +316,10 @@ describe('write_physical_location_to_database', () => {
     // Act
     const physical_location_id = await write_physical_location_to_database({
       physical_location_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert tag relationship
@@ -329,7 +344,10 @@ describe('write_physical_location_to_database', () => {
     // Act
     const physical_location_id = await write_physical_location_to_database({
       physical_location_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -369,7 +387,10 @@ describe('write_physical_location_to_database', () => {
       const physical_location_id = await write_physical_location_to_database({
         physical_location_properties,
         user_id: test_user_id,
-        trx
+        trx,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       // Check that entity exists in transaction

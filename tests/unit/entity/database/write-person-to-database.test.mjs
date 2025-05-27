@@ -41,7 +41,10 @@ describe('write_person_to_database', () => {
     const person_id = await write_person_to_database({
       person_properties,
       user_id: test_user_id,
-      person_content
+      person_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -102,7 +105,10 @@ describe('write_person_to_database', () => {
     const person_id = await write_person_to_database({
       person_properties: original_properties,
       user_id: test_user_id,
-      person_content: original_content
+      person_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated person properties
@@ -126,7 +132,10 @@ describe('write_person_to_database', () => {
       person_properties: updated_properties,
       user_id: test_user_id,
       person_content: updated_content,
-      person_id
+      person_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -184,7 +193,9 @@ describe('write_person_to_database', () => {
     const person_id = await write_person_to_database({
       person_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: 'dummy/base/path',
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -238,7 +249,10 @@ describe('write_person_to_database', () => {
     // Act
     const person_id = await write_person_to_database({
       person_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert tag relationship
@@ -270,7 +284,10 @@ describe('write_person_to_database', () => {
     try {
       await write_person_to_database({
         person_properties: missing_first_name,
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing first_name')
     } catch (error) {
@@ -290,7 +307,10 @@ describe('write_person_to_database', () => {
     try {
       await write_person_to_database({
         person_properties: missing_last_name,
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing last_name')
     } catch (error) {
@@ -316,7 +336,10 @@ describe('write_person_to_database', () => {
       const person_id = await write_person_to_database({
         person_properties,
         user_id: test_user_id,
-        trx
+        trx,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       // Check that entity exists in transaction

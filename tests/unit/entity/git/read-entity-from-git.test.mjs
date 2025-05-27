@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { v4 as uuid } from 'uuid'
 
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
@@ -21,6 +22,7 @@ describe('read_entity_from_git', () => {
 
     // Write test entity to git
     const simple_entity_properties = {
+      entity_id: uuid(),
       title: 'Test Git Entity',
       description: 'Entity stored in git',
       user_id: 'user-123',
@@ -41,6 +43,7 @@ describe('read_entity_from_git', () => {
 
     // Write complex entity to git
     const complex_entity_properties = {
+      entity_id: uuid(),
       title: 'Complex Git Entity',
       description: 'Complex entity stored in git',
       user_id: 'user-456',

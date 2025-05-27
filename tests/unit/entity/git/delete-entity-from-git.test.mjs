@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { v4 as uuid } from 'uuid'
 
 import { delete_entity_from_git } from '#libs-server/entity/git/delete-entity-from-git.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
@@ -9,7 +10,7 @@ import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('delete_entity_from_git', () => {
   let repo
-  const entity_path = 'entities/test-entity-to-delete.md'
+  const entity_git_relative_path = 'entities/test-entity-to-delete.md'
   const branch = 'main'
 
   before(async () => {
@@ -21,6 +22,7 @@ describe('delete_entity_from_git', () => {
 
     // Write test entity to git
     const entity_properties = {
+      entity_id: uuid(),
       title: 'Test Entity To Delete',
       description: 'Entity that will be deleted from git',
       user_id: 'user-123',
@@ -32,7 +34,7 @@ describe('delete_entity_from_git', () => {
 
     await write_entity_to_git({
       repo_path: repo.path,
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       entity_properties,
       entity_type,
       entity_content,
@@ -51,7 +53,7 @@ describe('delete_entity_from_git', () => {
     // Verify entity exists before deletion
     const before_result = await read_entity_from_git({
       repo_path: repo.path,
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch
     })
     expect(before_result.success).to.be.true
@@ -59,7 +61,7 @@ describe('delete_entity_from_git', () => {
     // Delete the entity
     const result = await delete_entity_from_git({
       repo_path: repo.path,
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch,
       commit_message: 'Delete test entity'
     })
@@ -68,12 +70,12 @@ describe('delete_entity_from_git', () => {
     expect(result.success).to.be.true
     expect(result.message).to.equal('File deletion completed successfully')
     expect(result.branch).to.equal(branch)
-    expect(result.git_relative_path).to.equal(entity_path)
+    expect(result.git_relative_path).to.equal(entity_git_relative_path)
 
     // Verify entity no longer exists in git
     const after_result = await read_entity_from_git({
       repo_path: repo.path,
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch
     })
     expect(after_result.success).to.be.false
@@ -96,7 +98,7 @@ describe('delete_entity_from_git', () => {
   it('should return error when repository does not exist', async () => {
     const result = await delete_entity_from_git({
       repo_path: '/non/existent/repo',
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch
     })
 
@@ -109,7 +111,7 @@ describe('delete_entity_from_git', () => {
 
     const result = await delete_entity_from_git({
       repo_path: repo.path,
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch: non_existent_branch
     })
 
@@ -119,7 +121,7 @@ describe('delete_entity_from_git', () => {
 
   it('should return error if repo_path is missing', async () => {
     const result = await delete_entity_from_git({
-      git_relative_path: entity_path,
+      git_relative_path: entity_git_relative_path,
       branch
     })
 
@@ -140,7 +142,7 @@ describe('delete_entity_from_git', () => {
   it('should return error if branch is missing', async () => {
     const result = await delete_entity_from_git({
       repo_path: repo.path,
-      git_relative_path: entity_path
+      git_relative_path: entity_git_relative_path
     })
 
     expect(result.success).to.be.false

@@ -38,7 +38,10 @@ describe('write_organization_to_database', () => {
     const organization_id = await write_organization_to_database({
       organization_properties,
       user_id: test_user_id,
-      organization_content
+      organization_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -102,7 +105,10 @@ describe('write_organization_to_database', () => {
     const organization_id = await write_organization_to_database({
       organization_properties: original_properties,
       user_id: test_user_id,
-      organization_content: original_content
+      organization_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated organization properties
@@ -122,7 +128,10 @@ describe('write_organization_to_database', () => {
       organization_properties: updated_properties,
       user_id: test_user_id,
       organization_content: updated_content,
-      organization_id
+      organization_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -173,14 +182,17 @@ describe('write_organization_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/organization.md',
-      git_sha: '98765abcdef'
+      git_sha: '98765abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const organization_id = await write_organization_to_database({
       organization_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -203,7 +215,10 @@ describe('write_organization_to_database', () => {
     // Act
     const organization_id = await write_organization_to_database({
       organization_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -266,7 +281,10 @@ describe('write_organization_to_database', () => {
     // Act
     const organization_id = await write_organization_to_database({
       organization_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -298,7 +316,10 @@ describe('write_organization_to_database', () => {
     // Act
     const organization_id = await write_organization_to_database({
       organization_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

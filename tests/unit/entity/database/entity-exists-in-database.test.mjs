@@ -28,7 +28,10 @@ describe('entity_exists_in_database', () => {
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create an archived entity
@@ -41,7 +44,10 @@ describe('entity_exists_in_database', () => {
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
   })
 
@@ -114,7 +120,10 @@ describe('entity_exists_in_database', () => {
         },
         entity_type: ENTITY_TYPES.TASK,
         user_id: test_user_id,
-        trx
+        trx,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       // Check existence within the transaction

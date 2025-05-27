@@ -88,9 +88,9 @@ export default async function create_test_task({
   const task_entity_id = await write_task_to_database({
     task_properties,
     user_id,
-    file_info: {
-      base_relative_path
-    }
+    absolute_path: absolute_path || '/dummy/path.md',
+    base_relative_path,
+    git_sha: 'dummysha1'
   })
 
   // Get the base_relative_path from the database to ensure consistency

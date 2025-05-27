@@ -36,7 +36,10 @@ describe('write_activity_to_database', () => {
     const activity_entity_id = await write_activity_to_database({
       activity_properties,
       user_id: test_user_id,
-      activity_content
+      activity_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -91,7 +94,10 @@ describe('write_activity_to_database', () => {
     const activity_entity_id = await write_activity_to_database({
       activity_properties: original_properties,
       user_id: test_user_id,
-      activity_content: original_content
+      activity_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated activity properties
@@ -110,7 +116,10 @@ describe('write_activity_to_database', () => {
       activity_properties: updated_properties,
       user_id: test_user_id,
       activity_content: updated_content,
-      entity_id: activity_entity_id
+      entity_id: activity_entity_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -157,7 +166,10 @@ describe('write_activity_to_database', () => {
     const activity_entity_id = await write_activity_to_database({
       activity_properties,
       user_id: test_user_id,
-      file_info
+      file_info,
+      absolute_path: file_info.absolute_path,
+      base_relative_path: 'dummy/base/path',
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -239,7 +251,10 @@ describe('write_activity_to_database', () => {
     // Act
     const activity_entity_id = await write_activity_to_database({
       activity_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert tag relationship

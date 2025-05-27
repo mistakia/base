@@ -71,7 +71,10 @@ describe('write_database_table_item_to_database', () => {
     const database_item_id = await write_database_table_item_to_database({
       database_item_properties,
       user_id: test_user_id,
-      database_item_content
+      database_item_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -143,7 +146,10 @@ describe('write_database_table_item_to_database', () => {
     const database_item_id = await write_database_table_item_to_database({
       database_item_properties: original_properties,
       user_id: test_user_id,
-      database_item_content: original_content
+      database_item_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated item properties
@@ -169,7 +175,10 @@ describe('write_database_table_item_to_database', () => {
       database_item_properties: updated_properties,
       user_id: test_user_id,
       database_item_content: updated_content,
-      database_item_id
+      database_item_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -225,14 +234,17 @@ describe('write_database_table_item_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/item.md',
-      git_sha: '12345abcdef'
+      git_sha: '12345abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const database_item_id = await write_database_table_item_to_database({
       database_item_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -257,7 +269,10 @@ describe('write_database_table_item_to_database', () => {
     try {
       await write_database_table_item_to_database({
         database_item_properties,
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       // If we get here, the test should fail
       expect.fail('Should have thrown an error for missing database_table_id')
@@ -294,7 +309,10 @@ describe('write_database_table_item_to_database', () => {
     // Act
     const database_item_id = await write_database_table_item_to_database({
       database_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -370,7 +388,10 @@ describe('write_database_table_item_to_database', () => {
     // Act
     const database_item_id = await write_database_table_item_to_database({
       database_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

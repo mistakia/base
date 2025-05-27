@@ -37,7 +37,10 @@ describe('write_tag_to_database', () => {
     const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id,
-      tag_content
+      tag_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -95,7 +98,10 @@ describe('write_tag_to_database', () => {
     const tag_entity_id = await write_tag_to_database({
       tag_properties: original_properties,
       user_id: test_user_id,
-      tag_content: original_content
+      tag_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated tag properties
@@ -115,7 +121,10 @@ describe('write_tag_to_database', () => {
       tag_properties: updated_properties,
       user_id: test_user_id,
       tag_content: updated_content,
-      entity_id: tag_entity_id
+      entity_id: tag_entity_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -171,7 +180,9 @@ describe('write_tag_to_database', () => {
     const tag_entity_id = await write_tag_to_database({
       tag_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: 'dummy/base/path',
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -194,7 +205,10 @@ describe('write_tag_to_database', () => {
     // Act
     const tag_entity_id = await write_tag_to_database({
       tag_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -230,7 +244,10 @@ describe('write_tag_to_database', () => {
 
     const parent_tag1_id = await write_tag_to_database({
       tag_properties: parent_tag1_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create second parent tag
@@ -245,7 +262,10 @@ describe('write_tag_to_database', () => {
 
     const parent_tag2_id = await write_tag_to_database({
       tag_properties: parent_tag2_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create child tag with both parent tags
@@ -262,7 +282,10 @@ describe('write_tag_to_database', () => {
     // Act
     const child_tag_entity_id = await write_tag_to_database({
       tag_properties: child_tag_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -305,7 +328,10 @@ describe('write_tag_to_database', () => {
     // Act
     const tag_entity_id = await write_tag_to_database({
       tag_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

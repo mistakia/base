@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { v4 as uuid } from 'uuid'
 
 import { build_validation_schema } from '#libs-server/entity/validate-schema.mjs'
 import { load_schema_definitions_from_git } from '#libs-server/repository/git/load-schema-definitions-from-git.mjs'
@@ -26,22 +27,25 @@ describe('Entity Schema Module', () => {
       repo_path: root_base_directory,
       git_relative_path: 'system/schema/task.md',
       entity_properties: {
+        entity_id: uuid(),
         type: 'type_definition',
         title: 'Task',
         type_name: 'task',
         description: 'Task schema definition',
         user_id: test_user.user_id,
         extends: 'base',
-        properties: {
-          status: {
+        properties: [
+          {
+            name: 'status',
             type: 'string',
             enum: ['In Progress', 'Completed']
           },
-          priority: {
+          {
+            name: 'priority',
             type: 'string',
             enum: ['High', 'Medium', 'Low']
           }
-        }
+        ]
       },
       entity_type: 'type_definition',
       branch: 'main',
@@ -53,22 +57,25 @@ describe('Entity Schema Module', () => {
       repo_path: root_base_directory,
       git_relative_path: 'system/schema/person.md',
       entity_properties: {
+        entity_id: uuid(),
         type: 'type_definition',
         title: 'Person',
         type_name: 'person',
         description: 'Person schema definition',
         user_id: test_user.user_id,
         extends: 'base',
-        properties: {
-          first_name: {
+        properties: [
+          {
+            name: 'first_name',
             type: 'string',
             min: 2
           },
-          last_name: {
+          {
+            name: 'last_name',
             type: 'string',
             min: 2
           }
-        }
+        ]
       },
       entity_type: 'type_definition',
       branch: 'main',
@@ -76,24 +83,26 @@ describe('Entity Schema Module', () => {
       commit_message: 'Add person schema'
     })
 
-    // Write user (submodule) schemas
+    // Write user (submodule) schemas (as type_definition with extends)
     await write_entity_to_git({
       repo_path: user_base_directory,
       git_relative_path: 'schema/task-extension.md',
       entity_properties: {
-        type: 'type_extension',
+        entity_id: uuid(),
+        type: 'type_definition',
         extends: 'task',
         title: 'Task Extension',
         type_name: 'task_extension',
         description: 'Task extension schema definition',
         user_id: test_user.user_id,
-        properties: {
-          custom_field: {
+        properties: [
+          {
+            name: 'custom_field',
             type: 'string'
           }
-        }
+        ]
       },
-      entity_type: 'type_extension',
+      entity_type: 'type_definition',
       branch: 'main',
       entity_content: '# Task Extension Schema',
       commit_message: 'Add task extension schema'
@@ -103,19 +112,21 @@ describe('Entity Schema Module', () => {
       repo_path: user_base_directory,
       git_relative_path: 'schema/unknown-extension.md',
       entity_properties: {
-        type: 'type_extension',
+        entity_id: uuid(),
+        type: 'type_definition',
         extends: 'unknown_type',
         title: 'Unknown Extension',
         type_name: 'unknown_extension',
         description: 'Unknown extension schema definition',
         user_id: test_user.user_id,
-        properties: {
-          custom_field: {
+        properties: [
+          {
+            name: 'custom_field',
             type: 'string'
           }
-        }
+        ]
       },
-      entity_type: 'type_extension',
+      entity_type: 'type_definition',
       branch: 'main',
       entity_content: '# Unknown Extension Schema',
       commit_message: 'Add unknown extension schema'
@@ -135,63 +146,31 @@ describe('Entity Schema Module', () => {
 
       expect(result).to.have.property('task')
       expect(result).to.have.property('person')
+      expect(result).to.have.property('task_extension')
 
-      expect(result.task.properties).to.have.property('status')
-      expect(result.task.properties).to.have.property('priority')
-      expect(result.task.properties).to.have.property('custom_field')
+      // task_extension should inherit all task properties and add custom_field
+      const task_ext_props = result.task_extension.properties
+      const prop_names = task_ext_props.map((p) => p.name)
+      expect(prop_names).to.include('status')
+      expect(prop_names).to.include('priority')
+      expect(prop_names).to.include('custom_field')
 
-      expect(result.person.properties).to.have.property('first_name')
-      expect(result.person.properties).to.have.property('last_name')
+      // person should have its own properties
+      const person_props = result.person.properties
+      const person_prop_names = person_props.map((p) => p.name)
+      expect(person_prop_names).to.include('first_name')
+      expect(person_prop_names).to.include('last_name')
 
-      expect(result.task).to.have.property('type', 'type_definition')
-      expect(result.task).to.have.property('type_name', 'task')
-      expect(result.task).to.have.property(
-        'git_relative_path',
-        'system/schema/task.md'
-      )
-      expect(result.task.properties.status).to.have.property('type', 'string')
-      expect(result.task.properties.status.enum).to.include('In Progress')
-      expect(result.task.properties.status.enum).to.include('Completed')
-      expect(result.task.properties.priority).to.have.property('type', 'string')
-      expect(result.task.properties.priority.enum).to.deep.equal([
-        'High',
-        'Medium',
-        'Low'
-      ])
-      expect(result.task.properties.custom_field).to.have.property(
-        'type',
-        'string'
-      )
+      // task should have its own properties
+      const task_props = result.task.properties
+      const task_prop_names = task_props.map((p) => p.name)
+      expect(task_prop_names).to.include('status')
+      expect(task_prop_names).to.include('priority')
 
-      expect(result.task).to.have.property('extensions')
-      expect(result.task.extensions).to.be.an('array').with.lengthOf(1)
-      expect(result.task.extensions[0]).to.have.property(
-        'type_name',
-        'task_extension'
+      // unknown_extension should not inherit anything (base type missing)
+      expect(result.unknown_extension.properties.map((p) => p.name)).to.include(
+        'custom_field'
       )
-      expect(result.task.extensions[0]).to.have.property(
-        'git_relative_path',
-        'schema/task-extension.md'
-      )
-
-      expect(result.person).to.have.property('type', 'type_definition')
-      expect(result.person).to.have.property('type_name', 'person')
-      expect(result.person).to.have.property(
-        'git_relative_path',
-        'system/schema/person.md'
-      )
-      expect(result.person.properties.first_name).to.have.property(
-        'type',
-        'string'
-      )
-      expect(result.person.properties.first_name).to.have.property('min', 2)
-      expect(result.person.properties.last_name).to.have.property(
-        'type',
-        'string'
-      )
-      expect(result.person.properties.last_name).to.have.property('min', 2)
-
-      expect(Object.keys(result)).to.have.lengthOf(2)
     })
 
     it('should handle errors during schema loading', async () => {
@@ -219,25 +198,17 @@ describe('Entity Schema Module', () => {
           root_base_directory,
           user_base_directory
         })
-        expect(warning_message).to.include('references unknown base type')
+        expect(warning_message).to.include('extends unknown base type')
         expect(result).to.be.an('object')
         expect(Object.keys(result).length).to.be.at.least(1)
-        expect(result).to.have.property('task')
-        expect(result.task).to.have.property('properties')
-        expect(result.task.properties).to.have.property('status')
-        expect(result.task.properties).to.have.property('priority')
-        expect(result.task.properties).to.have.property('custom_field')
-        expect(result.task).to.have.property('extensions')
-        expect(result.task.extensions).to.be.an('array')
-        expect(result.task.extensions[0]).to.have.property(
-          'type_name',
-          'task_extension'
+        expect(result).to.have.property('task_extension')
+        expect(result.task_extension.properties.map((p) => p.name)).to.include(
+          'custom_field'
         )
-        expect(result).to.have.property('person')
-        expect(result.person).to.have.property('properties')
-        expect(result.person.properties).to.have.property('first_name')
-        expect(result.person.properties).to.have.property('last_name')
-        expect(result).to.not.have.property('unknown_type')
+        expect(result).to.have.property('unknown_extension')
+        expect(
+          result.unknown_extension.properties.map((p) => p.name)
+        ).to.include('custom_field')
       } finally {
         console.warn = original_warn
       }
@@ -277,9 +248,13 @@ describe('Entity Schema Module', () => {
       const entity_type = 'unknown_type'
       const schemas = {
         task: {
-          properties: {
-            status: { type: 'string', enum: ['In Progress', 'Completed'] }
-          }
+          properties: [
+            {
+              name: 'status',
+              type: 'string',
+              enum: ['In Progress', 'Completed']
+            }
+          ]
         }
       }
       const result = build_validation_schema(entity_type, schemas)

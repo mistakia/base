@@ -43,7 +43,10 @@ describe('write_guideline_to_database', () => {
     const guideline_entity_id = await write_guideline_to_database({
       guideline_properties,
       user_id: test_user_id,
-      guideline_content
+      guideline_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -116,7 +119,10 @@ describe('write_guideline_to_database', () => {
     const guideline_entity_id = await write_guideline_to_database({
       guideline_properties: original_properties,
       user_id: test_user_id,
-      guideline_content: original_content
+      guideline_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated guideline properties
@@ -139,7 +145,10 @@ describe('write_guideline_to_database', () => {
       guideline_properties: updated_properties,
       user_id: test_user_id,
       guideline_content: updated_content,
-      entity_id: guideline_entity_id
+      entity_id: guideline_entity_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -197,14 +206,17 @@ describe('write_guideline_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/guideline.md',
-      git_sha: '12345abcdef'
+      git_sha: '12345abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const guideline_entity_id = await write_guideline_to_database({
       guideline_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -258,7 +270,10 @@ describe('write_guideline_to_database', () => {
     // Act
     const guideline_entity_id = await write_guideline_to_database({
       guideline_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert tag relationship
@@ -340,7 +355,10 @@ describe('write_guideline_to_database', () => {
       const guideline_entity_id = await write_guideline_to_database({
         guideline_properties,
         user_id: test_user_id,
-        trx
+        trx,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       // Check that entity exists in transaction

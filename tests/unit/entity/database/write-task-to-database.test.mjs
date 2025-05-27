@@ -38,7 +38,10 @@ describe('write_task_to_database', () => {
     const task_id = await write_task_to_database({
       task_properties,
       user_id: test_user_id,
-      task_content
+      task_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -95,7 +98,10 @@ describe('write_task_to_database', () => {
     const task_id = await write_task_to_database({
       task_properties: original_properties,
       user_id: test_user_id,
-      task_content: original_content
+      task_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated task properties
@@ -117,7 +123,10 @@ describe('write_task_to_database', () => {
       task_properties: updated_properties,
       user_id: test_user_id,
       task_content: updated_content,
-      task_id
+      task_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -168,14 +177,17 @@ describe('write_task_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/task.md',
-      git_sha: '12345abcdef'
+      git_sha: '12345abcdef',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const task_id = await write_task_to_database({
       task_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -218,7 +230,10 @@ describe('write_task_to_database', () => {
     // Act
     const task_id = await write_task_to_database({
       task_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was created
@@ -305,7 +320,10 @@ describe('write_task_to_database', () => {
     // Act
     const task_id = await write_task_to_database({
       task_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

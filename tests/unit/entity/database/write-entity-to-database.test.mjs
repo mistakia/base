@@ -33,7 +33,10 @@ describe('write_entity_to_database', () => {
       entity_properties,
       entity_type,
       user_id: test_user_id,
-      entity_content
+      entity_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -64,7 +67,10 @@ describe('write_entity_to_database', () => {
       entity_properties: original_properties,
       entity_type,
       user_id: test_user_id,
-      entity_content: original_content
+      entity_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Update properties and content
@@ -81,7 +87,10 @@ describe('write_entity_to_database', () => {
       entity_type,
       user_id: test_user_id,
       entity_content: updated_content,
-      entity_id
+      entity_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -112,7 +121,9 @@ describe('write_entity_to_database', () => {
       entity_properties,
       entity_type,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -132,7 +143,10 @@ describe('write_entity_to_database', () => {
         entity_id: uuid()
       },
       entity_type: 'task',
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create consistent timestamps to avoid constraint violations
@@ -154,7 +168,10 @@ describe('write_entity_to_database', () => {
     const entity_id = await write_entity_to_database({
       entity_properties,
       entity_type: 'task',
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -184,7 +201,10 @@ describe('write_entity_to_database', () => {
         entity_id: uuid()
       },
       entity_type: 'tag',
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     const entity_properties = {
@@ -200,7 +220,10 @@ describe('write_entity_to_database', () => {
     const entity_id = await write_entity_to_database({
       entity_properties,
       entity_type: 'task',
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -218,7 +241,10 @@ describe('write_entity_to_database', () => {
     try {
       await write_entity_to_database({
         entity_type: 'task',
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
@@ -232,7 +258,10 @@ describe('write_entity_to_database', () => {
     try {
       await write_entity_to_database({
         entity_properties: { title: 'Test', description: 'Test description' },
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')
     } catch (error) {
@@ -244,7 +273,10 @@ describe('write_entity_to_database', () => {
     try {
       await write_entity_to_database({
         entity_properties: { title: 'Test', description: 'Test description' },
-        entity_type: 'task'
+        entity_type: 'task',
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')
     } catch (error) {

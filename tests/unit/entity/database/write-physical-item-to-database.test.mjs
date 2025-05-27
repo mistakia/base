@@ -53,7 +53,10 @@ describe('write_physical_item_to_database', () => {
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
       user_id: test_user_id,
-      physical_item_content
+      physical_item_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -179,7 +182,10 @@ describe('write_physical_item_to_database', () => {
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties: original_properties,
       user_id: test_user_id,
-      physical_item_content: original_content
+      physical_item_content: original_content,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create updated physical item properties
@@ -212,7 +218,10 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties: updated_properties,
       user_id: test_user_id,
       physical_item_content: updated_content,
-      physical_item_id
+      physical_item_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert - verify entity was updated
@@ -315,14 +324,17 @@ describe('write_physical_item_to_database', () => {
     }
     const file_info = {
       absolute_path: '/path/to/physical-item.md',
-      git_sha: 'abcdef123456'
+      git_sha: 'abcdef123456',
+      base_relative_path: 'dummy/base/path'
     }
 
     // Act
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
       user_id: test_user_id,
-      file_info
+      absolute_path: file_info.absolute_path,
+      base_relative_path: file_info.base_relative_path,
+      git_sha: file_info.git_sha
     })
 
     // Assert
@@ -353,7 +365,10 @@ describe('write_physical_item_to_database', () => {
     // Act
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -416,7 +431,10 @@ describe('write_physical_item_to_database', () => {
 
       const physical_item_id = await write_physical_item_to_database({
         physical_item_properties,
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       const physical_item_data = await db('physical_items')
@@ -438,7 +456,10 @@ describe('write_physical_item_to_database', () => {
 
       const physical_item_id = await write_physical_item_to_database({
         physical_item_properties,
-        user_id: test_user_id
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_relative_path: 'dummy/base/path',
+        git_sha: 'dummysha1'
       })
 
       const physical_item_data = await db('physical_items')
@@ -460,7 +481,10 @@ describe('write_physical_item_to_database', () => {
     // Act
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -535,7 +559,10 @@ describe('write_physical_item_to_database', () => {
     // Act
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -567,7 +594,10 @@ describe('write_physical_item_to_database', () => {
     // Act
     const physical_item_id = await write_physical_item_to_database({
       physical_item_properties,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert

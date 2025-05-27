@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { v4 as uuid } from 'uuid'
 
 import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-git.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
@@ -21,6 +22,7 @@ describe('entity_exists_in_git', () => {
 
     // Write test entity to git
     const entity_properties = {
+      entity_id: uuid(),
       title: 'Test Entity',
       description: 'Entity stored in git',
       user_id: 'user-123',

@@ -33,7 +33,10 @@ describe('delete_entity_from_database', () => {
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create a related entity
@@ -45,7 +48,10 @@ describe('delete_entity_from_database', () => {
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create a tag entity
@@ -57,7 +63,10 @@ describe('delete_entity_from_database', () => {
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TAG,
-      user_id: test_user_id
+      user_id: test_user_id,
+      absolute_path: '/dummy/path.md',
+      base_relative_path: 'dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Create a text entity
@@ -80,9 +89,9 @@ describe('delete_entity_from_database', () => {
       entity_type: ENTITY_TYPES.TEXT,
       entity_content: text_content,
       user_id: test_user_id,
-      file_info: {
-        absolute_path: 'test/text-entity.md'
-      }
+      absolute_path: 'test/text-entity.md',
+      base_relative_path: 'test/text-entity',
+      git_sha: 'dummysha1'
     })
 
     // Create entity relation
