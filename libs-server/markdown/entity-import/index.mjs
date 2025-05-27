@@ -1,7 +1,4 @@
-import {
-  import_markdown_entity,
-  remove_stale_entities
-} from './import-markdown-entity.mjs'
+import { import_markdown_entity } from './import-markdown-entity.mjs'
 
 import {
   process_entity_relations,
@@ -24,7 +21,7 @@ import {
 } from './entity-handlers.mjs'
 
 // Main export function
-export { import_markdown_entity, remove_stale_entities }
+export { import_markdown_entity }
 
 // Entity type handlers
 export const entity_handlers = {
@@ -51,7 +48,6 @@ export const relation_handlers = {
 // Default export with organized structure
 export default {
   import: import_markdown_entity,
-  remove_stale: remove_stale_entities,
   entity_handlers,
   relation_handlers
 }

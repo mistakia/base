@@ -92,7 +92,9 @@ export async function create_temp_test_repo({
 
     return {
       path: base_repo.path,
+      branch: 'main',
       user_path: user_repo_path,
+      user_branch: 'main',
       cleanup: base_repo.cleanup
     }
   } catch (error) {

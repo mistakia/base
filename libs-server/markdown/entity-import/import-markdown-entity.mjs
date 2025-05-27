@@ -123,47 +123,6 @@ export async function import_markdown_entity(
   return entity_id
 }
 
-/**
- * Remove stale entities (entities that no longer exist in the repository)
- * @param {Array} current_files Array of current file paths
- * @param {String} user_id User ID
- * @returns {Number} Number of removed entities
- */
-export async function remove_stale_entities(current_files, user_id) {
-  try {
-    // Get absolute paths of all current files
-    const absolute_paths = current_files.map((file) => file.absolute_path)
-
-    // Find entities that are not in the current files
-    const stale_entities = await postgres('entities')
-      .where({ user_id })
-      .whereNotNull('file_path')
-      .whereNotIn('file_path', absolute_paths)
-      .whereNull('archived_at')
-      .select('entity_id', 'title')
-
-    if (stale_entities.length === 0) {
-      log('No stale entities found')
-      return 0
-    }
-
-    // Mark entities as archived
-    const now = new Date()
-    const entity_ids = stale_entities.map((e) => e.entity_id)
-
-    await postgres('entities')
-      .whereIn('entity_id', entity_ids)
-      .update({ archived_at: now })
-
-    log(`Archived ${stale_entities.length} stale entities`)
-    return stale_entities.length
-  } catch (error) {
-    log('Error removing stale entities:', error)
-    throw error
-  }
-}
-
 export default {
-  import_markdown_entity,
-  remove_stale_entities
+  import_markdown_entity
 }

@@ -83,7 +83,6 @@ async function process_git_file({
  * @param {Object} options Configuration options
  * @param {string} [options.root_base_directory] The absolute path to the base directory
  * @param {string} [options.branch] Branch override
- * @param {boolean} [options.skip_schema_files] Whether to skip schema files
  * @param {function} [options.entity_processor] Function to process each entity
  * @returns {Promise<Object>} Processing results
  */
@@ -170,14 +169,6 @@ export async function process_repositories_from_git(options = {}) {
   let errors = 0
 
   for (const file of all_files) {
-    if (
-      options.skip_schema_files &&
-      file.git_relative_path.startsWith('schema/')
-    ) {
-      skipped++
-      continue
-    }
-
     const repository = repositories.find((r) => r.path === file.repo_path)
     if (!repository) {
       log(`Warning: No repository found for path ${file.repo_path}`)

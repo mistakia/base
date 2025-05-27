@@ -53,6 +53,7 @@ export function register_file_search_tool() {
           path: parameters.path,
           case_sensitive: parameters.case_sensitive || false,
           branch_name: parameters.branch_name,
+          thread_id: parameters.thread_id,
           context
         })
 
