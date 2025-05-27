@@ -1,8 +1,10 @@
 ---
-type: text
-title: Block Schema
-description: Defines the schema for content blocks in our markdown-based system
-tags: []
+title: 'Block Schema'
+type: 'text'
+description: |
+  Defines the schema for content blocks in our markdown-based system
+created_at: '2025-05-27T18:10:20.242Z'
+entity_id: '981bb500-b0b9-44cc-a12f-18e0f9f49c33'
 observations:
   - '[architecture] Content blocks provide granular control over document content'
   - '[format] JSON structure allows for flexible block attributes and relationships'
@@ -11,6 +13,9 @@ observations:
 relations:
   - 'part_of [[system/text/system-design.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.242Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Block Schema

@@ -1,14 +1,19 @@
 ---
-type: text
-title: External Data Sync
-description: System for synchronizing external data with conflict resolution
-tags: []
+title: 'External Data Sync'
+type: 'text'
+description: |
+  System for synchronizing external data with conflict resolution
+created_at: '2025-05-27T18:10:20.244Z'
+entity_id: '11dc5b4c-365c-4e7f-b7f4-10c9851b1be1'
 observations:
   - '[architecture] Field-level conflict detection and resolution #sync'
   - '[feature] Raw import data saved with IPFS content identifiers #storage'
   - '[principle] Compare current import to previous imports for precise change detection #accuracy'
 relations:
   - 'part_of [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.244Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # External Data Sync System

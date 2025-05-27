@@ -1,9 +1,12 @@
 ---
-title: Create Activity
-type: activity
-description: Process for creating a new activity
-guidelines: [system/write-activity.md]
-tags: []
+title: 'Create Activity'
+type: 'activity'
+description: |
+  Process for creating a new activity
+created_at: '2025-05-27T18:10:20.225Z'
+entity_id: 'd10f13a7-b037-4f90-9f05-73c3294c0243'
+guidelines:
+  - 'system/write-activity.md'
 observations:
   - '[workflow] Creating activities is a fundamental system operation #core'
   - '[organization] Activities must be properly categorized as system or user #structure'
@@ -11,6 +14,9 @@ observations:
 relations:
   - 'follows [[system/guideline/write-activity.md]]'
   - 'implements [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.225Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Create Activity

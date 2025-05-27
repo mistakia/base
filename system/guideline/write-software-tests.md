@@ -1,15 +1,23 @@
 ---
-title: Writing Software Tests
-type: guideline
-description: Guidelines for writing effective and maintainable tests across unit, integration, and E2E levels
-globs: [tests/**/*]
-guideline_status: Approved
-activities: [Write Tests, Review Tests]
-tags: []
+title: 'Writing Software Tests'
+type: 'guideline'
+description: |
+  Guidelines for writing effective and maintainable tests across unit, integration, and E2E levels
+activities:
+  - 'Write Tests'
+  - 'Review Tests'
+created_at: '2025-05-27T18:10:20.240Z'
+entity_id: '1eaa2062-7bfb-4f05-a2da-7e358210e995'
+globs:
+  - 'tests/**/*'
+guideline_status: 'Approved'
 observations:
   - '[principle] Avoiding stubbing creates more reliable tests #reliability'
   - '[strategy] Proper test structure improves readability and maintainability #structure'
   - '[standard] Consistent database management ensures test isolation #isolation'
+tags:
+updated_at: '2025-05-27T18:10:20.240Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Writing Software Tests

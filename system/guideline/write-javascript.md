@@ -1,10 +1,14 @@
 ---
-title: Write JavaScript
-type: guideline
-description: Guidelines for writing JavaScript/ECMAScript code
-globs: ['**/*.mjs', '**/*.js']
-guideline_status: Approved
-tags: []
+title: 'Write JavaScript'
+type: 'guideline'
+description: |
+  Guidelines for writing JavaScript/ECMAScript code
+created_at: '2025-05-27T18:10:20.240Z'
+entity_id: '1d8b6928-ca52-4eb0-bda2-a6bc23bf1a5b'
+globs:
+  - '**/*.mjs'
+  - '**/*.js'
+guideline_status: 'Approved'
 observations:
   - '[standard] Consistent module imports improve code maintainability'
   - '[quality] Explicit file extensions prevent import resolution issues'
@@ -13,6 +17,9 @@ observations:
   - '[maintainability] Smaller files are easier to understand and maintain'
 relations:
   - 'implements [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.240Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # JavaScript ES Module Imports

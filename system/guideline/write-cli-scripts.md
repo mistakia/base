@@ -1,10 +1,16 @@
 ---
-title: Write CLI Scripts
-type: guideline
-description: Guidelines for writing CLI scripts based on existing patterns
-globs: [scripts/**/*]
-guideline_status: Approved
-tags: []
+title: 'Write CLI Scripts'
+type: 'guideline'
+description: |
+  Guidelines for writing CLI scripts based on existing patterns
+created_at: '2025-05-27T18:10:20.237Z'
+entity_id: '25991601-4814-49b0-837c-60527876bdf4'
+globs:
+  - 'scripts/**/*'
+guideline_status: 'Approved'
+tags:
+updated_at: '2025-05-27T18:10:20.237Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Write CLI Scripts

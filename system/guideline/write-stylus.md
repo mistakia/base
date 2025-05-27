@@ -1,10 +1,16 @@
 ---
-title: Write Stylus
-type: guideline
-description: Guidelines for writing Stylus stylesheets
-globs: ['**/*.styl']
-guideline_status: Approved
-tags: []
+title: 'Write Stylus'
+type: 'guideline'
+description: |
+  Guidelines for writing Stylus stylesheets
+created_at: '2025-05-27T18:10:20.240Z'
+entity_id: '5843993c-489c-442c-a162-f8b12ef8c8ec'
+globs:
+  - '**/*.styl'
+guideline_status: 'Approved'
+tags:
+updated_at: '2025-05-27T18:10:20.240Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Stylus Style Guidelines

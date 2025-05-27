@@ -1,16 +1,22 @@
 ---
-title: Set Task Priority Guideline
-type: guideline
-description: Guidelines for setting task priorities
-guideline_status: Approved
-activities: [Set Task Priority]
-tags: []
+title: 'Set Task Priority Guideline'
+type: 'guideline'
+description: |
+  Guidelines for setting task priorities
+activities:
+  - 'Set Task Priority'
+created_at: '2025-05-27T18:10:20.237Z'
+entity_id: '3ba5ef17-c90a-463c-8890-5c8e635e3297'
+guideline_status: 'Approved'
 observations:
   - '[standard] Standardized priority values ensure consistent task management #consistency'
   - '[governance] Limited set of priorities helps with workflow automation #automation'
   - '[organization] Clear status values improve task tracking and reporting #tracking'
 relations:
   - 'guides [[system/activity/set-task-priority.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.237Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Set Task Priority Guideline

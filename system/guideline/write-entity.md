@@ -1,16 +1,23 @@
 ---
-title: Write Entity
-type: guideline
-description: Guidelines for creating new entity files that conform to the base schema
-globs: [system/**/*.md, user/**/*.md]
-guideline_status: Approved
-activities: []
-tags: []
+title: 'Write Entity'
+type: 'guideline'
+description: |
+  Guidelines for creating new entity files that conform to the base schema
+activities:
+created_at: '2025-05-27T18:10:20.239Z'
+entity_id: '544ca576-6602-4332-b02a-18c5e06122e0'
+globs:
+  - 'system/**/*.md'
+  - 'user/**/*.md'
+guideline_status: 'Approved'
 observations:
   - '[standard] Entity files must follow schema requirements'
 relations:
   - 'implements [[system/schema/base.md]]'
   - 'related_to [[system/guideline/write-guideline.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.239Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Write Entity

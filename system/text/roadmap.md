@@ -1,10 +1,15 @@
 ---
-title: Roadmap
-type: text
-description: Roadmap for planned features and improvements
-tags: []
-observations: []
-relations: []
+title: 'Roadmap'
+type: 'text'
+description: |
+  Roadmap for planned features and improvements
+created_at: '2025-05-27T18:10:20.245Z'
+entity_id: 'd6768bf3-45ea-42f0-800f-63ccad4ac0aa'
+observations:
+relations:
+tags:
+updated_at: '2025-05-27T18:10:20.245Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Roadmap

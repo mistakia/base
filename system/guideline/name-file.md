@@ -1,14 +1,20 @@
 ---
-title: File Naming
-type: guideline
-description: Guidelines for file naming conventions across the system
-globs: ['**/*']
-guideline_status: Approved
-tags: []
+title: 'File Naming'
+type: 'guideline'
+description: |
+  Guidelines for file naming conventions across the system
+created_at: '2025-05-27T18:10:20.236Z'
+entity_id: 'dff6679f-73a3-42fe-825a-94b802270a67'
+globs:
+  - '**/*'
+guideline_status: 'Approved'
 observations:
   - '[governance] Consistent file naming improves discoverability and reduces ambiguity #naming'
 relations:
   - 'implements [[system/schema/guideline.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.236Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 - File paths and URIs MUST use dashes (`-`) instead of underscores (`_`) [kebab-case]

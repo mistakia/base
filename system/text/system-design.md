@@ -1,14 +1,19 @@
 ---
-title: System Design
-type: text
-description: Architecture and design principles for the human-in-the-loop LLM system
-tags: []
+title: 'System Design'
+type: 'text'
+description: |
+  Architecture and design principles for the human-in-the-loop LLM system
+created_at: '2025-05-27T18:10:20.246Z'
+entity_id: 'b75fe9b3-4a83-427c-9e62-3105019df96c'
 observations:
   - '[design] Uses a human-in-the-loop approach'
   - '[principle] File-first approach with git version control'
 relations:
   - 'relates_to [[system/text/directory-structure.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.246Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Base System Design

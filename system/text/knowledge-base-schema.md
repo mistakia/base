@@ -1,14 +1,19 @@
 ---
-title: Knowledge Base Schema
-type: text
-description: Documentation for the knowledge base schema architecture and extension mechanisms
-tags: []
+title: 'Knowledge Base Schema'
+type: 'text'
+description: |
+  Documentation for the knowledge base schema architecture and extension mechanisms
+created_at: '2025-05-27T18:10:20.245Z'
+entity_id: 'e773b4d1-83c1-4fa2-85a8-b22d2d04667a'
 observations:
   - '[design] Knowledge base schema is a dual-system architecture'
   - '[implementation] System schema is in system/schema and user schema is in submodules'
   - '[feature] Schema extensions allow for user-specific customization'
 relations:
   - 'relates_to [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.245Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Knowledge Base Schema

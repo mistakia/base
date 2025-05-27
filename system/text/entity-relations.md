@@ -1,8 +1,10 @@
 ---
-title: Entity Relations
-type: text
-description: Documentation for standard entity relation types and their usage
-tags: []
+title: 'Entity Relations'
+type: 'text'
+description: |
+  Documentation for standard entity relation types and their usage
+created_at: '2025-05-27T18:10:20.243Z'
+entity_id: 'd87b4201-ce8b-4596-b323-936f8449a0c8'
 observations:
   - '[design] Standardized relation types create a consistent semantic graph'
   - '[implementation] Relations use a single canonical format'
@@ -10,6 +12,9 @@ observations:
 relations:
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
   - 'part_of [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.243Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Entity Relations

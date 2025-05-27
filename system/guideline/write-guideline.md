@@ -1,11 +1,16 @@
 ---
-title: Create Guideline
-type: guideline
-description: Guidelines for creating new guidelines
-globs: [system/guideline/*.md, user/guideline/*.md]
-guideline_status: Approved
-activities: [Create Guideline]
-tags: []
+title: 'Create Guideline'
+type: 'guideline'
+description: |
+  Guidelines for creating new guidelines
+activities:
+  - 'Create Guideline'
+created_at: '2025-05-27T18:10:20.239Z'
+entity_id: '55c0f40b-3c54-44f9-8366-8c0d91d72986'
+globs:
+  - 'system/guideline/*.md'
+  - 'user/guideline/*.md'
+guideline_status: 'Approved'
 observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
@@ -13,6 +18,9 @@ relations:
   - 'related_to [[system/guideline/write-activity.md]]'
   - 'implements [[system/text/system-design.md]]'
   - 'implements [[system/schema/guideline.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.239Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Create Guideline

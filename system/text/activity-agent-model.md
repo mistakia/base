@@ -1,8 +1,10 @@
 ---
-title: Activity-Agent Model
-type: text
-description: Design concept for activity-based agent specialization and orchestration
-tags: []
+title: 'Activity-Agent Model'
+type: 'text'
+description: |
+  Design concept for activity-based agent specialization and orchestration
+created_at: '2025-05-27T18:10:20.241Z'
+entity_id: '7ab1422d-533d-4967-972a-7fb8167604ff'
 observations:
   - '[architecture] Activities define specialized agent behaviors that run inside threads #design'
   - '[execution] Each thread executes exactly one activity with defined inputs/outputs #implementation'
@@ -12,6 +14,9 @@ relations:
   - 'relates_to [[system/text/base-threads.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
   - 'relates_to [[system/schema/activity.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.241Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Activity-Agent Model

@@ -1,12 +1,16 @@
 ---
-title: General Purpose Role
-type: activity
-description: General purpose role for handling general purpose inquiries and instructions
-entity_id: 123e4567-e89b-12d3-a456-426614174000
-guidelines: []
-tags: []
+title: 'General Purpose Role'
+type: 'activity'
+description: |
+  General purpose role for handling general purpose inquiries and instructions
+created_at: '2025-05-27T18:10:20.246Z'
+entity_id: '123e4567-e89b-12d3-a456-426614174000'
+guidelines:
 observations:
   - '[workflow] General purpose role handles general purpose inquiries and instructions #core'
+tags:
+updated_at: '2025-05-27T18:10:20.246Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 - understand the request, gather information, and clear up ambiguity

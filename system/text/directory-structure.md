@@ -1,8 +1,10 @@
 ---
-title: Directory Structure
-type: text
-description: Documentation for the system directory structure and organization
-tags: []
+title: 'Directory Structure'
+type: 'text'
+description: |
+  Documentation for the system directory structure and organization
+created_at: '2025-05-27T18:10:20.243Z'
+entity_id: '655f72d5-82dc-49c5-9aa4-90ca5840b739'
 observations:
   - '[architecture] Dual knowledge base separates system from user-specific content'
   - '[principle] Clear directory structure improves navigation and discoverability'
@@ -10,6 +12,9 @@ observations:
 relations:
   - 'relates_to [[system/text/system-design.md]]'
   - 'implements [[system/text/knowledge-base-schema.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.243Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Directory Structure

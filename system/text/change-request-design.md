@@ -1,8 +1,10 @@
 ---
-title: Change Request System Design
-type: text
-description: Design documentation for the system managing knowledge base changes via Git branches.
-tags: []
+title: 'Change Request System Design'
+type: 'text'
+description: |
+  Design documentation for the system managing knowledge base changes via Git branches.
+created_at: '2025-05-27T18:10:20.242Z'
+entity_id: '8a8416e2-1e2a-4851-9609-f3e6dbd81067'
 observations:
   - '[design] Uses Git branches for atomic change sets.'
   - '[workflow] Supports review/merge process for changes.'
@@ -11,6 +13,9 @@ relations:
   - 'relates_to [[system/text/system-design.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
   - 'implements [[system/schema/change-request.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.242Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Change Request System Design

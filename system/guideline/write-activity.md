@@ -1,17 +1,24 @@
 ---
-title: Create Activity Guideline
-type: guideline
-description: Guidelines for creating new activities
-globs: [system/activity/*.md, user/activity/*.md]
-guideline_status: Approved
-activities: []
-tags: []
+title: 'Create Activity Guideline'
+type: 'guideline'
+description: |
+  Guidelines for creating new activities
+activities:
+created_at: '2025-05-27T18:10:20.237Z'
+entity_id: 'e1cfc594-78bb-49ef-a1f3-3575f4ecefe8'
+globs:
+  - 'system/activity/*.md'
+  - 'user/activity/*.md'
+guideline_status: 'Approved'
 observations:
   - '[governance] Proper activity location ensures system organization #structure'
   - '[principle] Clear naming conventions improve discoverability #naming'
   - '[organization] System vs user classification is based on scope of use #categorization'
 relations:
   - 'implements [[system/text/system-design.md]]'
+tags:
+updated_at: '2025-05-27T18:10:20.237Z'
+user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Create Activity Guideline
