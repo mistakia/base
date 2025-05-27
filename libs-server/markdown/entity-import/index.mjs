@@ -1,5 +1,3 @@
-import { import_markdown_entity } from './import-markdown-entity.mjs'
-
 import {
   process_entity_relations,
   process_entity_tags,
@@ -19,9 +17,6 @@ import {
   handle_tag_type,
   handle_database_type
 } from './entity-handlers.mjs'
-
-// Main export function
-export { import_markdown_entity }
 
 // Entity type handlers
 export const entity_handlers = {
@@ -47,7 +42,6 @@ export const relation_handlers = {
 
 // Default export with organized structure
 export default {
-  import: import_markdown_entity,
   entity_handlers,
   relation_handlers
 }
