@@ -48,6 +48,7 @@ export function format_external_id_for_github_issue({
  * @param {string} [options.import_history_base_directory] - Base directory for import history
  * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number] - GitHub project number
+ * @param {boolean} [options.force=false] - Force update all tasks regardless of content
  * @returns {Promise<Object>} - The sync result
  */
 export async function sync_github_issue_to_task({
@@ -59,7 +60,8 @@ export async function sync_github_issue_to_task({
   user_id,
   import_history_base_directory = null,
   github_token,
-  github_project_number = null
+  github_project_number = null,
+  force = false
 }) {
   let trx
 
@@ -156,7 +158,8 @@ export async function sync_github_issue_to_task({
         import_history_base_directory,
         trx,
         github_token,
-        github_project_number
+        github_project_number,
+        force
       })
 
       await trx.commit()

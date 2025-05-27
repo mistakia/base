@@ -21,6 +21,7 @@ const log = debug('github:task')
  * @param {string} [options.import_history_base_directory=null] - Optional base directory for import history
  * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number=null] - GitHub project number
+ * @param {boolean} [options.force=false] - Force update even if content matches
  * @returns {Promise<Object>} - The update result with conflict information
  */
 export async function update_task_from_github_issue({
@@ -35,7 +36,8 @@ export async function update_task_from_github_issue({
   import_cid = null,
   import_history_base_directory = null,
   github_token,
-  github_project_number = null
+  github_project_number = null,
+  force = false
 }) {
   try {
     log(`Updating task from GitHub issue #${github_issue.number}`)
@@ -78,7 +80,8 @@ export async function update_task_from_github_issue({
       external_update_time,
       import_cid,
       import_history_base_directory,
-      trx
+      trx,
+      force
     })
 
     if (update_result.external_updates) {

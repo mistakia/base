@@ -23,6 +23,7 @@ const log = debug('sync:update-external')
  * @param {string} [options.import_cid] - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
  * @param {Object} [options.trx=null] - Optional database transaction
+ * @param {boolean} [options.force=false] - Force update all tasks regardless of content
  * @returns {Promise<Object>} - The update result with conflict information
  */
 export async function update_entity_from_external_item({
@@ -35,7 +36,8 @@ export async function update_entity_from_external_item({
   external_update_time,
   import_cid = null,
   import_history_base_directory = null,
-  trx = null
+  trx = null,
+  force = false
 }) {
   try {
     log(`Updating ${entity_type} from ${external_system} item ${external_id}`)
@@ -110,13 +112,25 @@ export async function update_entity_from_external_item({
       })
     }
 
-    if (internal_updates) {
+    if (internal_updates || force) {
       // Extract values from change objects
       const updates_to_apply = {}
 
-      for (const [key, change] of Object.entries(internal_updates)) {
-        if (change && typeof change === 'object' && change.changed === true) {
-          updates_to_apply[key] = change.to
+      // Ensure internal_updates is an object before using Object.entries
+      if (internal_updates && typeof internal_updates === 'object') {
+        for (const [key, change] of Object.entries(internal_updates)) {
+          if (change && typeof change === 'object' && change.changed === true) {
+            updates_to_apply[key] = change.to
+          }
+        }
+      }
+
+      // When force is true, apply all fields from entity_properties
+      if (force) {
+        log(`Force updating ${entity_type} from ${external_system}`)
+        // Only overwrite fields that exist in the external properties
+        for (const [key, value] of Object.entries(entity_properties)) {
+          updates_to_apply[key] = value
         }
       }
 
@@ -150,7 +164,8 @@ export async function update_entity_from_external_item({
     }
 
     return {
-      action: external_updates || internal_updates ? 'updated' : 'skipped',
+      action:
+        external_updates || internal_updates || force ? 'updated' : 'skipped',
       entity_id,
       absolute_path,
       external_updates

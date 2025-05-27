@@ -16,6 +16,7 @@ export default async function import_github_issues({
   single_issue = null,
   start_page = 1,
   import_history_base_directory = null,
+  force = false,
   // used to mock the get_github_repo_issues function for testing
   get_github_repo_issues = github.get_github_repo_issues
 }) {
@@ -41,7 +42,8 @@ export default async function import_github_issues({
         github_repository_owner,
         github_repository_name,
         user_id,
-        import_history_base_directory
+        import_history_base_directory,
+        force
       })
 
       results[issue_result.action]++
@@ -95,7 +97,8 @@ export default async function import_github_issues({
       github_repository_name,
       user_id,
       import_history_base_directory,
-      github_token
+      github_token,
+      force
     })
 
     Object.assign(results, processed_results)
@@ -160,6 +163,12 @@ const main = async () => {
         type: 'boolean',
         default: false
       })
+      .option('force', {
+        alias: 'f',
+        describe: 'Force update all tasks regardless of content',
+        type: 'boolean',
+        default: false
+      })
       .help().argv
 
     const results = await import_github_issues({
@@ -168,7 +177,8 @@ const main = async () => {
       github_token: args.token || config.github_access_token,
       user_id: args.userId,
       state: args.state,
-      verbose: args.verbose
+      verbose: args.verbose,
+      force: args.force
     })
 
     // Print concise result summary to console

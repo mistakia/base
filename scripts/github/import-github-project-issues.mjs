@@ -18,6 +18,7 @@ export default async function import_github_project_issues({
   github_token,
   user_id,
   user_base_directory = config.user_base_directory,
+  force = false,
   // used to mock the get_github_project function for testing
   get_github_project = github.get_github_project
 }) {
@@ -119,7 +120,8 @@ export default async function import_github_project_issues({
         user_id,
         user_base_directory,
         project_items_map,
-        github_token
+        github_token,
+        force
       })
 
       // Add results to overall totals
@@ -181,6 +183,12 @@ const main = async () => {
           'Only import issues updated since this date (ISO format, e.g. 2023-01-01T00:00:00Z)',
         type: 'string'
       })
+      .option('force', {
+        alias: 'f',
+        describe: 'Force update all tasks regardless of content',
+        type: 'boolean',
+        default: false
+      })
       .help().argv
 
     const results = await import_github_project_issues({
@@ -188,7 +196,8 @@ const main = async () => {
       project_number: argv.project,
       github_token: config.github_access_token,
       user_id: config.user_id,
-      user_base_directory: config.user_base_directory
+      user_base_directory: config.user_base_directory,
+      force: argv.force
     })
 
     // Print concise result summary to console
