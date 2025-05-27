@@ -28,12 +28,8 @@ describe('Change Requests API', () => {
   let test_user
   let test_thread
   let test_repo
-  let orig_cwd
 
   before(async () => {
-    // Save original working directory
-    orig_cwd = process.cwd()
-
     // Reset database tables
     await reset_all_tables()
 
@@ -68,9 +64,6 @@ describe('Change Requests API', () => {
   })
 
   after(async () => {
-    // Restore original working directory
-    process.chdir(orig_cwd)
-
     // Clean up
     test_thread.cleanup()
     test_repo.cleanup()

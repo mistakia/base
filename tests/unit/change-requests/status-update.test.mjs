@@ -24,7 +24,6 @@ const expect = chai.expect
 
 describe('Change Request Status Updates', function () {
   let test_user
-  let orig_cwd
   let test_thread
   let feature_branch
 
@@ -32,9 +31,6 @@ describe('Change Request Status Updates', function () {
   this.timeout(30000)
 
   beforeEach(async function () {
-    // Save original working directory
-    orig_cwd = process.cwd()
-
     // Reset database tables
     await reset_all_tables()
 

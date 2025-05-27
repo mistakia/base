@@ -15,15 +15,11 @@ const execute = promisify(exec)
 
 describe('Change Request Git Operations', function () {
   let test_repo
-  let orig_cwd
 
   // Set longer timeout for Git operations
   this.timeout(30000)
 
   beforeEach(async function () {
-    // Save original working directory
-    orig_cwd = process.cwd()
-
     // Create temporary repository for testing
     test_repo = await create_temp_test_repo()
 
@@ -32,9 +28,6 @@ describe('Change Request Git Operations', function () {
   })
 
   afterEach(async function () {
-    // Restore original working directory
-    process.chdir(orig_cwd)
-
     // Clean up the test repo
     test_repo.cleanup()
   })

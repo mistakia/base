@@ -2,9 +2,11 @@ import fs from 'fs'
 import path from 'path'
 import debug from 'debug'
 
+import config from '#config'
+
 const log = debug('github-entity-mapper')
 const CONFIG_PATH = path.resolve(
-  process.cwd(),
+  config.root_base_directory,
   'user/task/github/github-entity-mappings.json'
 )
 

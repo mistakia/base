@@ -28,16 +28,12 @@ const execute = promisify(exec)
 
 describe('Change Request Webhooks', function () {
   let test_user
-  let orig_cwd
   let test_thread
 
   // Set longer timeout
   this.timeout(15000)
 
   beforeEach(async function () {
-    // Save original working directory
-    orig_cwd = process.cwd()
-
     // Reset database tables
     await reset_all_tables()
 
@@ -65,9 +61,6 @@ describe('Change Request Webhooks', function () {
   })
 
   afterEach(async function () {
-    // Restore original working directory
-    process.chdir(orig_cwd)
-
     // Clean up
     test_thread.cleanup()
   })
