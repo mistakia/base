@@ -52,8 +52,7 @@ export async function validate_tags_from_git({
     const tag_validation_promises = all_tags.map(async (tag) => {
       const exists = await tag_exists_in_git({
         base_relative_path: tag.base_relative_path,
-        ref: branch,
-        repository_path: repo_path
+        branch
       })
       return {
         base_relative_path: tag.base_relative_path,

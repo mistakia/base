@@ -48,11 +48,10 @@ export async function validate_relations_from_git({
     // Process relations
     const validation_promises = relations.map(async (relation) => {
       const entity_path = relation.entity_path
-
       // Check if the relation target exists
       const exists_result = await entity_exists_in_git({
         repo_path,
-        file_path: `${entity_path}.md`,
+        file_path: entity_path,
         branch
       })
 

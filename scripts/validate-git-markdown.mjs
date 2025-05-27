@@ -4,6 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
+import config from '#config'
 import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
 
 const log = debug('validate-git-markdown')
@@ -11,17 +12,15 @@ debug.enable(
   'validate-git-markdown,markdown:process-repository,markdown:scanner'
 )
 
-const validate_git = async ({ system_branch, user_branch }) => {
-  log({
-    system_branch,
-    user_branch
-  })
+const validate_git = async ({
+  branch = config.system_main_branch
+}) => {
+  log({ branch })
 
   // Process from git
   log('Processing repositories from git...')
   const result = await process_repositories_from_git({
-    system_branch,
-    user_branch
+    branch
   })
 
   // Report results

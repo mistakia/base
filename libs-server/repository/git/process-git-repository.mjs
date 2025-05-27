@@ -2,7 +2,7 @@ import debug from 'debug'
 import path from 'path'
 
 import { list_entity_files_from_git } from './list-entity-files-from-git.mjs'
-// import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
+import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
 import { validate_entity_from_git } from '#libs-server/entity/git/validate-entity-from-git.mjs'
 import config from '#config'
 import git from '#libs-server/git/index.mjs'
@@ -129,16 +129,23 @@ export async function process_repositories_from_git(options = {}) {
 
   // Load schemas from git
   log('Loading schema definitions from git...')
-  // TODO
-  // const schemas = await load_schema_definitions_from_git({
-  //   system_repository: repositories.find(
-  //     (r) => r.repository_type === REPOSITORY_TYPE.ROOT
-  //   ),
-  //   user_repository:
-  //     repositories.find(
-  //       (r) => r.repository_type === REPOSITORY_TYPE.SUBMODULE
-  //     ) || null
-  // })
+  const schemas = {}
+  
+  // Load schemas from all repositories
+  for (const repository of repositories) {
+    // Skip the root repository if it's not needed
+    if (repository.submodule_base_path === null && repositories.length > 1) {
+      continue
+    }
+    
+    const repo_schemas = await load_schema_definitions_from_git({
+      root_base_directory,
+      user_base_directory: repository.path
+    })
+    
+    // Merge into main schemas object
+    Object.assign(schemas, repo_schemas)
+  }
 
   // Scan for markdown files across all repositories
   log('Scanning git repositories...')
@@ -179,8 +186,7 @@ export async function process_repositories_from_git(options = {}) {
     const result = await process_git_file({
       file,
       repository,
-      // TODO add schemas back in
-      // schemas,
+      schemas,
       branch: repository?.branch || branch,
       entity_processor: options.entity_processor,
       base_relative_path: file.base_relative_path
@@ -196,8 +202,7 @@ export async function process_repositories_from_git(options = {}) {
     skipped,
     errors,
     total: all_files.length,
-    // TODO add schemas back in
-    // schemas,
+    schemas,
     files: all_files,
     repositories
   }

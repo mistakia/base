@@ -1,6 +1,8 @@
 import debug from 'debug'
+
 import { import_entity_from_git } from '#libs-server/entity/database/import-entity-from-git.mjs'
 import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
+import config from '#config'
 
 const log = debug('entity:database:import:repository')
 
@@ -18,7 +20,7 @@ export async function import_repository_from_git({
   user_id,
   archive_missing = true,
   branch,
-  root_base_directory = process.cwd()
+  root_base_directory = config.root_base_directory
 }) {
   // Validate input parameters
   if (!user_id) {
