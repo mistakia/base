@@ -196,19 +196,12 @@ export async function validate_entity_properties({
     const type_name = entity_properties.type_name
     const is_meta_schema =
       entity_type === 'type_definition' && type_name === 'type_definition'
-    const is_type_extension =
-      entity_type === 'type_definition' && type_name === 'type_extension'
 
     let schema_to_use = validation_schema
 
-    if (is_meta_schema || is_type_extension) {
+    if (is_meta_schema) {
       // Create a copy to modify
       schema_to_use = JSON.parse(JSON.stringify(validation_schema))
-
-      // Make properties optional for type_extension schema definition
-      if (is_type_extension && schema_to_use.properties) {
-        schema_to_use.properties.required = false
-      }
 
       // For the meta-schema that defines type_definition itself, be lenient
       if (

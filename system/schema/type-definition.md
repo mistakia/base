@@ -67,6 +67,7 @@ A type definition includes:
 ---
 title: My Custom Type
 type: type_definition
+type_name: my_custom_type
 extends: task
 properties:
   - name: completion_percentage
@@ -84,3 +85,22 @@ properties:
 ## Inheritance
 
 Types inherit all properties from their parent types. The inheritance chain can be multiple levels deep (e.g., a user type might extend a system type that itself extends the base type).
+
+## Extending Types
+
+To extend an existing type:
+
+1. Create a type_definition document
+2. Set the `extends` property to the name of the type you want to extend
+3. Add your custom properties
+
+When a type extends another type, it automatically inherits all properties from the parent type. You can also override properties by redefining them with the same name.
+
+## Usage
+
+Type definitions should be stored in:
+
+- System types: `system/schema/` directory
+- User types: `user/schema/` directory
+
+This keeps schema definitions organized and discoverable.

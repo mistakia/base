@@ -35,7 +35,7 @@ export async function load_schema_definitions_from_filesystem({
     // Get schemas from root directory
     const root_entities = await list_entity_files_from_filesystem({
       root_base_directory,
-      include_entity_types: ['type_definition', 'type_extension'],
+      include_entity_types: ['type_definition'],
       path_pattern: `${SYSTEM_SCHEMA_RELATIVE_DIR}/*.md`
     })
 
@@ -48,7 +48,7 @@ export async function load_schema_definitions_from_filesystem({
     const user_entities = await list_entity_files_from_filesystem({
       root_base_directory,
       submodule_base_path,
-      include_entity_types: ['type_definition', 'type_extension'],
+      include_entity_types: ['type_definition'],
       path_pattern: `${submodule_base_path}/${USER_SCHEMA_RELATIVE_DIR}/*.md`
     })
 
@@ -58,7 +58,7 @@ export async function load_schema_definitions_from_filesystem({
 
     // Process schema files
     const schema_map = {}
-    const type_extensions = []
+    const type_definitions_with_extends = []
 
     for (const entity_result of all_entities) {
       const entity = entity_result.entity_properties
@@ -67,43 +67,66 @@ export async function load_schema_definitions_from_filesystem({
         schema_map[entity.type_name] = {
           ...entity
         }
-      } else if (entity.type === 'type_extension') {
-        // Store extensions for later processing
-        type_extensions.push({
-          ...entity
-        })
+
+        // Check if this type definition extends another type
+        if (entity.extends) {
+          type_definitions_with_extends.push(entity)
+        }
       }
     }
 
-    // Apply type extensions
-    log(`Applying ${type_extensions.length} type extensions`)
-    for (const extension of type_extensions) {
-      const base_type = extension.extends
+    // Apply 'extends' property from type_definition files
+    log(
+      `Applying extends from ${type_definitions_with_extends.length} type definitions`
+    )
+    for (const definition of type_definitions_with_extends) {
+      const base_type = definition.extends
 
       if (schema_map[base_type]) {
         const base_schema = schema_map[base_type]
+        const extending_schema = schema_map[definition.type_name]
 
-        // Merge properties
-        schema_map[base_type] = {
-          ...base_schema,
-          properties: {
-            ...(base_schema.properties || {}),
-            ...(extension.properties || {})
-          },
-          // Track extensions
-          extensions: [
-            ...(base_schema.extensions || []),
-            {
-              type_name: extension.type_name
-            }
-          ]
+        // Merge base properties into extending schema
+        // Ensure properties remain in array format
+        const base_properties = Array.isArray(base_schema.properties)
+          ? base_schema.properties
+          : []
+
+        const extending_properties = Array.isArray(extending_schema.properties)
+          ? extending_schema.properties
+          : []
+
+        // Create a map of property names for faster lookups
+        const property_map = {}
+        extending_properties.forEach((prop) => {
+          if (prop && prop.name) {
+            property_map[prop.name] = true
+          }
+        })
+
+        // Filter out base properties that are already defined in the extending schema
+        const filtered_base_properties = base_properties.filter((prop) => {
+          return prop && prop.name && !property_map[prop.name]
+        })
+
+        // Combine properties, putting base properties first
+        const combined_properties = [
+          ...filtered_base_properties,
+          ...extending_properties
+        ]
+
+        schema_map[definition.type_name] = {
+          ...extending_schema,
+          properties: combined_properties,
+          // Track inheritance
+          inherited_from: base_type
         }
       } else {
         log(
-          `Extension ${extension.title} references unknown base type ${base_type}`
+          `Definition ${definition.title} extends unknown base type ${base_type}`
         )
         console.warn(
-          `Extension ${extension.title} references unknown base type ${base_type}`
+          `Definition ${definition.title} extends unknown base type ${base_type}`
         )
       }
     }
