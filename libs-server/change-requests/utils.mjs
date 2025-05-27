@@ -221,11 +221,8 @@ export async function update_markdown_file({
   now,
   updater_id,
   comment,
-  user_base_directory
+  user_base_directory = config.user_base_directory
 }) {
-  // Initialize path imports
-  const path = await import('path')
-
   // Build the file path using user_base_directory if provided
   const relative_file_path = `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
   const absolute_path = user_base_directory

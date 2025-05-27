@@ -7,6 +7,7 @@ import { promisify } from 'util'
 
 import server from '#server'
 import db from '#db'
+import config from '#config'
 import {
   reset_all_tables,
   create_test_user,
@@ -58,6 +59,9 @@ describe('Change Requests API', () => {
         recursive: true
       }
     )
+
+    config.root_base_directory = test_repo.path
+    config.user_base_directory = test_repo.user_path
   })
 
   after(async () => {
