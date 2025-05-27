@@ -69,7 +69,11 @@ export async function delete_entity_from_database({
     await delete_entity_relationships({ client, entity_id })
 
     // 3. Delete type-specific data
-    await delete_type_specific_data({ client, entity_id, entity_type: entity.type })
+    await delete_type_specific_data({
+      client,
+      entity_id,
+      entity_type: entity.type
+    })
 
     // 4. Delete the entity record itself
     log(`Deleting entity record: ${entity_id}`)

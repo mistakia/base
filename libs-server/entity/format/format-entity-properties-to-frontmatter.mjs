@@ -49,6 +49,10 @@ export function format_entity_properties_to_frontmatter({
     throw new Error('Entity user_id is required')
   }
 
+  if (!entity_properties.entity_id) {
+    throw new Error('Entity entity_id is required')
+  }
+
   // Add required fields
   frontmatter.type = entity_type
   frontmatter.title = entity_properties.title
