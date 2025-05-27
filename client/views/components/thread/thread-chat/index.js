@@ -19,7 +19,7 @@ const map_state_to_props = createSelector(
 
     return {
       thread_id,
-      thread_status: current_thread ? current_thread.get('thread_state') : null,
+      thread_state: current_thread ? current_thread.get('thread_state') : null,
       messages,
       is_loading: loading_state.current_thread_loading,
       error: loading_state.current_thread_error,

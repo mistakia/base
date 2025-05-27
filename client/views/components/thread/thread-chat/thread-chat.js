@@ -19,12 +19,12 @@ import './thread-chat.styl'
 dayjs.extend(relativeTime)
 
 // Use the imported thread constants
-const { THREAD_STATUS } = thread_constants
+const { THREAD_STATE } = thread_constants
 
 // Thread chat component that displays messages and allows sending new ones
 const ThreadChat = ({
   thread_id,
-  thread_status,
+  thread_state,
   messages,
   is_loading,
   error,
@@ -97,34 +97,34 @@ const ThreadChat = ({
 
   // Render status controls based on current thread status
   const render_status_controls = () => {
-    switch (thread_status) {
-      case THREAD_STATUS.ACTIVE:
+    switch (thread_state) {
+      case THREAD_STATE.ACTIVE:
         return (
           <button
             className='status-button pause'
-            onClick={() => handle_status_change(THREAD_STATUS.PAUSED)}>
+            onClick={() => handle_status_change(THREAD_STATE.PAUSED)}>
             <PauseCircleIcon />
             Pause
           </button>
         )
-      case THREAD_STATUS.PAUSED:
+      case THREAD_STATE.PAUSED:
         return (
           <>
             <button
               className='status-button resume'
-              onClick={() => handle_status_change(THREAD_STATUS.ACTIVE)}>
+              onClick={() => handle_status_change(THREAD_STATE.ACTIVE)}>
               <PlayCircleIcon />
               Resume
             </button>
             <button
               className='status-button terminate'
-              onClick={() => handle_status_change(THREAD_STATUS.TERMINATED)}>
+              onClick={() => handle_status_change(THREAD_STATE.TERMINATED)}>
               <StopCircleIcon />
               Terminate
             </button>
           </>
         )
-      case THREAD_STATUS.TERMINATED:
+      case THREAD_STATE.TERMINATED:
         return null
       default:
         return null
@@ -136,16 +136,16 @@ const ThreadChat = ({
     let status_text = ''
     let status_class = ''
 
-    switch (thread_status) {
-      case THREAD_STATUS.ACTIVE:
+    switch (thread_state) {
+      case THREAD_STATE.ACTIVE:
         status_text = 'Active'
         status_class = 'active'
         break
-      case THREAD_STATUS.PAUSED:
+      case THREAD_STATE.PAUSED:
         status_text = 'Paused'
         status_class = 'paused'
         break
-      case THREAD_STATUS.TERMINATED:
+      case THREAD_STATE.TERMINATED:
         status_text = 'Terminated'
         status_class = 'terminated'
         break
@@ -228,9 +228,9 @@ const ThreadChat = ({
 
       <MessageInput
         onSendMessage={handle_send_message}
-        disabled={thread_status === THREAD_STATUS.TERMINATED}
+        disabled={thread_state === THREAD_STATE.TERMINATED}
         placeholder={
-          thread_status === THREAD_STATUS.TERMINATED
+          thread_state === THREAD_STATE.TERMINATED
             ? 'This thread has been terminated'
             : 'Type a message...'
         }
@@ -241,7 +241,7 @@ const ThreadChat = ({
 
 ThreadChat.propTypes = {
   thread_id: PropTypes.string,
-  thread_status: PropTypes.oneOf(Object.values(THREAD_STATUS)),
+  thread_state: PropTypes.oneOf(Object.values(THREAD_STATE)),
   messages: PropTypes.array,
   is_loading: PropTypes.bool,
   error: PropTypes.object, // Error might be an object
@@ -253,7 +253,7 @@ ThreadChat.propTypes = {
 
 ThreadChat.defaultProps = {
   thread_id: null,
-  thread_status: THREAD_STATUS.ACTIVE, // Default status
+  thread_state: THREAD_STATE.ACTIVE, // Default status
   messages: [],
   is_loading: false,
   error: null,

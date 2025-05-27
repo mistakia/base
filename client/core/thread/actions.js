@@ -4,7 +4,7 @@ import {
 } from '../utils/actions-utils'
 import { thread_constants } from '@libs-shared/index.mjs'
 
-const { THREAD_STATUS } = thread_constants
+const { THREAD_STATE } = thread_constants
 
 // Thread action types
 export const thread_actions = {
@@ -53,7 +53,7 @@ export const thread_actions = {
 
   update_thread_state: ({
     thread_id,
-    state = THREAD_STATUS.ACTIVE,
+    state = THREAD_STATE.ACTIVE,
     reason
   }) => ({
     type: thread_actions.UPDATE_THREAD_STATE,
