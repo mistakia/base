@@ -1,3 +1,8 @@
+import {
+  create_api_actions,
+  create_api_action_types
+} from '../utils/actions-utils'
+
 export const app_actions = {
   APP_LOAD: 'APP_LOAD',
   APP_LOADED: 'APP_LOADED',
@@ -9,14 +14,6 @@ export const app_actions = {
   LOAD_FROM_PRIVATE_KEY: 'LOAD_FROM_PRIVATE_KEY',
   LOAD_KEYS: 'LOAD_KEYS',
 
-  POST_USER_SESSION_PENDING: 'POST_USER_SESSION_PENDING',
-  POST_USER_SESSION_FAILED: 'POST_USER_SESSION_FAILED',
-  POST_USER_SESSION_FULFILLED: 'POST_USER_SESSION_FULFILLED',
-
-  POST_USER_PENDING: 'POST_USER_PENDING',
-  POST_USER_FAILED: 'POST_USER_FAILED',
-  POST_USER_FULFILLED: 'POST_USER_FULFILLED',
-
   load: () => ({
     type: app_actions.APP_LOAD
   }),
@@ -25,17 +22,11 @@ export const app_actions = {
     type: app_actions.APP_LOADED
   }),
 
-  set_selected_path: ({
-    user_id,
-    username,
-    user_folder_path,
-    database_table_name
-  }) => ({
+  set_selected_path: ({ user_id, username, database_table_name }) => ({
     type: app_actions.SET_SELECTED_PATH,
     payload: {
       user_id,
       username,
-      user_folder_path,
       database_table_name
     }
   }),
@@ -71,61 +62,10 @@ export const app_actions = {
     }
   }),
 
-  postUserSessionPending: (opts) => ({
-    type: app_actions.POST_USER_SESSION_PENDING,
-    payload: {
-      opts
-    }
-  }),
-
-  postUserSessionFailed: (opts, error) => ({
-    type: app_actions.POST_USER_SESSION_FAILED,
-    payload: {
-      opts,
-      error
-    }
-  }),
-
-  postUserSessionFullfilled: (opts, data) => ({
-    type: app_actions.POST_USER_SESSION_FULFILLED,
-    payload: {
-      opts,
-      data
-    }
-  }),
-
-  postUserPending: (opts) => ({
-    type: app_actions.POST_USER_PENDING,
-    payload: {
-      opts
-    }
-  }),
-
-  postUserFailed: (opts, error) => ({
-    type: app_actions.POST_USER_FAILED,
-    payload: {
-      opts,
-      error
-    }
-  }),
-
-  postUserFullfilled: (opts, data) => ({
-    type: app_actions.POST_USER_FULFILLED,
-    payload: {
-      opts,
-      data
-    }
-  })
+  ...create_api_action_types('POST_USER_SESSION'),
+  ...create_api_action_types('POST_USER')
 }
 
-export const post_user_session_request_actions = {
-  pending: app_actions.postUserSessionPending,
-  failed: app_actions.postUserSessionFailed,
-  fulfilled: app_actions.postUserSessionFullfilled
-}
-
-export const post_user_request_actions = {
-  pending: app_actions.postUserPending,
-  failed: app_actions.postUserFailed,
-  fulfilled: app_actions.postUserFullfilled
-}
+export const post_user_session_request_actions =
+  create_api_actions('POST_USER_SESSION')
+export const post_user_request_actions = create_api_actions('POST_USER')

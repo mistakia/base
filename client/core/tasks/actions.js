@@ -1,10 +1,16 @@
-export const task_actions = {
-  POST_USER_TASK_FAILED: 'POST_USER_TASK_FAILED',
-  POST_USER_TASK_PENDING: 'POST_USER_TASK_PENDING',
-  POST_USER_TASK_FULFILLED: 'POST_USER_TASK_FULFILLED',
+import {
+  create_api_actions,
+  create_api_action_types
+} from '../utils/actions-utils'
 
+export const task_actions = {
   LOAD_USER_TASKS: 'LOAD_USER_TASKS',
   CREATE_USER_TASK: 'CREATE_USER_TASK',
+  LOAD_TASK: 'LOAD_TASK',
+
+  load_user_tasks: () => ({
+    type: task_actions.LOAD_USER_TASKS
+  }),
 
   create_user_task: ({ text_input }) => ({
     type: task_actions.CREATE_USER_TASK,
@@ -13,32 +19,20 @@ export const task_actions = {
     }
   }),
 
-  postUserTaskPending: (opts) => ({
-    type: task_actions.POST_USER_TASK_PENDING,
+  load_task: ({ task_id }) => ({
+    type: task_actions.LOAD_TASK,
     payload: {
-      opts
+      task_id
     }
   }),
 
-  postUserTaskFulfilled: (opts, data) => ({
-    type: task_actions.POST_USER_TASK_FULFILLED,
-    payload: {
-      opts,
-      data
-    }
-  }),
-
-  postUserTaskFailed: (opts, error) => ({
-    type: task_actions.POST_USER_TASK_FAILED,
-    payload: {
-      opts,
-      error
-    }
-  })
+  ...create_api_action_types('GET_USER_TASKS'),
+  ...create_api_action_types('POST_USER_TASK'),
+  ...create_api_action_types('GET_TASK')
 }
 
-export const post_user_task_request_actions = {
-  failed: task_actions.postUserTaskFailed,
-  pending: task_actions.postUserTaskPending,
-  fulfilled: task_actions.postUserTaskFulfilled
-}
+export const get_user_tasks_request_actions =
+  create_api_actions('GET_USER_TASKS')
+export const post_user_task_request_actions =
+  create_api_actions('POST_USER_TASK')
+export const get_task_request_actions = create_api_actions('GET_TASK')

@@ -1,0 +1,56 @@
+.back-button
+  display inline-flex
+  align-items center
+  color $color_text
+  text-decoration none
+  font-size 14px
+  margin-right 16px
+
+  &:hover
+    color $color_primary
+
+  svg
+    margin-right 8px
+
+.task-detail-container
+  flex 1
+  padding 20px
+  overflow auto
+
+.task-detail-header
+  display flex
+  align-items center
+  margin-bottom 16px
+  
+  .task-status, .task-priority
+    display inline-block
+    font-size 12px
+    padding 4px 10px
+    border-radius 12px
+    margin-right 12px
+  
+  .task-status
+    background-color $color_status_bg
+    color $color_status_text
+  
+  .task-priority
+    background-color $color_priority_bg
+    color $color_priority_text
+
+.task-description
+  margin-bottom 24px
+
+.task-actions
+  margin-top 16px
+  display flex
+  gap 8px
+
+.error-state
+  display flex
+  flex-direction column
+  align-items center
+  justify-content center
+  height 100%
+  padding 24px
+  color $color_danger
+  text-align center 

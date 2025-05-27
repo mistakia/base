@@ -30,8 +30,8 @@ export const api = {
     const url = `${API_URL}/users/${user_id}/tasks`
     return { url, ...POST({ task, signature }) }
   },
-  get_folder_path({ folder_path }) {
-    const url = `${API_URL}/folders${folder_path}`
+  get_tag({ tag_name, user_id }) {
+    const url = `${API_URL}/tags/${tag_name}?user_id=${user_id}`
     return { url }
   },
   get_database({ user_id, database_table_name }) {
@@ -51,14 +51,93 @@ export const api = {
   delete_database_view({ user_id, table_name, view_id }) {
     const url = `${API_URL}/users/${user_id}/databases/${table_name}/views/${view_id}`
     return { url, method: 'DELETE' }
+  },
+  get_user_tasks({ user_id }) {
+    const url = `${API_URL}/users/${user_id}/tasks`
+    return { url }
+  },
+  get_task({ task_id, user_id }) {
+    const url = `${API_URL}/users/${user_id}/tasks/${task_id}`
+    return { url }
+  },
+
+  get_entity({ base_relative_path, root_base_directory }) {
+    const params = { root_base_directory }
+    const url = `${API_URL}/entities/${encodeURIComponent(base_relative_path)}?${qs.stringify(params)}`
+    return { url }
+  },
+
+  get_threads({ user_id, thread_state, limit, offset }) {
+    const params = { user_id, thread_state, limit, offset }
+    const url = `${API_URL}/threads?${qs.stringify(params)}`
+    return { url }
+  },
+
+  get_thread({ thread_id }) {
+    const url = `${API_URL}/threads/${thread_id}`
+    return { url }
+  },
+
+  post_thread({
+    inference_provider,
+    model,
+    thread_main_request,
+    tools,
+    thread_state
+  }) {
+    const url = `${API_URL}/threads`
+    return {
+      url,
+      ...POST({
+        inference_provider,
+        model,
+        thread_main_request,
+        tools,
+        thread_state
+      })
+    }
+  },
+
+  post_thread_message({ thread_id, content, generate_response, stream }) {
+    const url = `${API_URL}/threads/${thread_id}/messages`
+    return {
+      url,
+      ...POST({ content, generate_response, stream })
+    }
+  },
+
+  put_thread_state({ thread_id, thread_state, reason }) {
+    const url = `${API_URL}/threads/${thread_id}/state`
+    return {
+      url,
+      method: 'PUT',
+      body: JSON.stringify({ thread_state, reason }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  },
+
+  post_thread_execute_tool({ thread_id, tool_name, parameters }) {
+    const url = `${API_URL}/threads/${thread_id}/execute-tool`
+    return {
+      url,
+      ...POST({ tool_name, parameters })
+    }
+  },
+
+  get_inference_providers() {
+    const url = `${API_URL}/inference-providers`
+    return { url }
   }
 }
 
-export const api_request = (apiFunction, opts) => {
+export const api_request = (api_function, opts, token) => {
   const controller = new AbortController()
   const abort = controller.abort.bind(controller)
-  const defaultOptions = {}
-  const options = merge(defaultOptions, apiFunction(opts), {
+  const headers = { Authorization: `Bearer ${token}` }
+  const default_options = { headers, credentials: 'include' }
+  const options = merge(default_options, api_function(opts), {
     signal: controller.signal
   })
   const request = dispatch_fetch.bind(null, options)

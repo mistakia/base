@@ -1,7 +1,7 @@
 import { Record } from 'immutable'
 
 import { app_actions } from './actions'
-import { database_table_actions } from '../database-tables/actions'
+import { database_table_actions } from '@core/database-tables/actions'
 import { path_view_actions } from '@core/path-views/actions'
 
 const initial_state = new Record({

@@ -1,7 +1,6 @@
 import express from 'express'
 import ed25519 from '@trashman/ed25519-blake2b'
 import jwt from 'jsonwebtoken'
-import { toBinaryUUID } from 'binary-uuid'
 
 import db from '#db'
 import config from '#config'
@@ -36,23 +35,12 @@ router.post('/?', async (req, res) => {
     await db('users').insert(data).onConflict('public_key').merge()
 
     const user = await db('users')
-      .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
+      .select('*')
       .where({ public_key: data.public_key })
       .first()
 
-    const { user_id } = user
-
-    const user_root_folder = {
-      folder_path: `/${user_id}/`,
-      user_id: toBinaryUUID(user_id),
-      parent_folder_id: null,
-      name: '/',
-      description: 'user root folder'
-    }
-    await db('folders').insert(user_root_folder).onConflict().ignore()
-
-    const token = jwt.sign({ user_id }, config.jwt_secret)
-    res.status(200).send({ token, ...(user || {}) })
+    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
+    res.status(200).send({ token, ...user })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -84,7 +72,7 @@ router.post('/session', async (req, res) => {
     }
 
     const user = await db('users')
-      .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
+      .select('*')
       .where({ public_key: data.public_key })
       .first()
 
@@ -92,8 +80,25 @@ router.post('/session', async (req, res) => {
       return res.status(404).send({ error: 'user not found' })
     }
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt_secret)
+    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
     res.status(200).send({ token, ...user })
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+router.get('/public_keys/:public_key', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { public_key } = req.params
+    const user = await db('users').select('*').where({ public_key }).first()
+
+    if (!user) {
+      return res.status(404).send({ error: 'user not found' })
+    }
+
+    res.status(200).send(user)
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -104,10 +109,7 @@ router.get('/:username', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { username } = req.params
-    const user = await db('users')
-      .select('*', db.raw('BIN_TO_UUID(user_id, true) as user_id'))
-      .where({ username })
-      .first()
+    const user = await db('users').select('*').where({ username }).first()
 
     if (!user) {
       return res.status(404).send({ error: 'user not found' })

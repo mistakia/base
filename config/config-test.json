@@ -1,0 +1,29 @@
+{
+  "server_port": 8080,
+  "production_url": "https://example.com",
+  "production_wss": "wss://example.com",
+  "base_hostname": "",
+  "user_base_directory": "/tmp/base_data_test",
+  "cloudflare": {
+    "zone_id": "xxxxx",
+    "user_email": "xxxxx",
+    "token": "xxxxx"
+  },
+  "postgres": {
+    "client": "pg",
+    "connection": {
+      "host": "localhost",
+      "user": "postgres",
+      "database": "base_test",
+      "decimalNumbers": true
+    },
+    "pool": {
+      "min": 2,
+      "max": 10
+    }
+  },
+  "jwt": {
+    "secret": "jwt_secret_test",
+    "algorithms": ["HS256"]
+  }
+}

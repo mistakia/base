@@ -1,5 +1,8 @@
 {
   "search.exclude": {
-    "**/.yarn": true
+    "**/.yarn": true,
+    "yarn.lock": true,
+    "user/import-history/*": true,
+    "user/task/*": true
   }
 }

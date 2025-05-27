@@ -1,0 +1,126 @@
+// Local variables
+$form_padding = 24px
+$form_border_radius = 6px
+$form_margin_bottom = 20px
+$form_margin_top = 24px
+$form_font_size_normal = 14px
+$form_font_size_small = 12px
+$form_font_size_large = 24px
+$form_padding_input = 10px 12px
+$form_padding_button = 12px 16px
+$form_gap = 12px
+$form_margin_spacing = 8px
+$focus_shadow_size = 2px
+
+.form-container
+  display flex
+  flex-direction column
+  padding $form_padding
+  max-width 600px
+  margin 0 auto
+
+.form-title
+  font-size $form_font_size_large
+  margin-bottom $form_padding
+
+.form-group
+  display flex
+  flex-direction column
+  margin-bottom $form_margin_bottom
+
+.label
+  font-size $form_font_size_normal
+  margin-bottom $form_margin_spacing
+  font-weight 500
+
+.select
+  appearance none
+  padding $form_padding_input
+  border-radius $form_border_radius
+  border 1px solid $color_border
+  background $color_input_background
+  color $color_text
+  font-size $form_font_size_normal
+
+  &:focus
+    outline none
+    border-color rgba($primary_color_rgb, 0.2)
+    box-shadow 0 0 0 $focus_shadow_size rgba($primary_color_rgb, 0.2)
+
+  &:disabled
+    background $color_input_disabled
+    cursor not-allowed
+
+.textarea
+  padding $form_padding_input
+  border-radius $form_border_radius
+  border 1px solid $color_border
+  background $color_input_background
+  color $color_text
+  font-size $form_font_size_normal
+  font-family inherit
+  min-height 100px
+  resize vertical
+
+  &:focus
+    outline none
+    border-color rgba($primary_color_rgb, 0.2)
+    box-shadow 0 0 0 $focus_shadow_size rgba($primary_color_rgb, 0.2)
+
+  &:disabled
+    background $color_input_disabled
+    cursor not-allowed
+
+.submit-button
+  padding $form_padding_button
+  background $color_primary
+  color white
+  border none
+  border-radius $form_border_radius
+  font-size $form_font_size_normal
+  font-weight 500
+  cursor pointer
+  transition background 0.2s
+
+  &:hover
+    background $color_primary_hover
+
+  &:disabled
+    background $color_primary_disabled
+    cursor not-allowed
+
+.cancel-button
+  padding $form_padding_button
+  background transparent
+  color $color_text
+  border 1px solid $color_border
+  border-radius $form_border_radius
+  font-size $form_font_size_normal
+  font-weight 500
+  cursor pointer
+  transition background 0.2s
+
+  &:hover
+    background $color_surface_hover
+
+.button-group
+  display flex
+  gap $form_gap
+  margin-top $form_margin_top
+
+.error-message
+  color $color_danger
+  font-size $form_font_size_normal
+  margin-top $form_margin_spacing
+
+.loading
+  display flex
+  align-items center
+  justify-content center
+  padding $form_padding
+  color $color_text_secondary
+
+.help-text
+  font-size $form_font_size_small
+  color $color_text_secondary
+  margin-top $form_margin_spacing 

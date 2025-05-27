@@ -21,7 +21,7 @@ module.exports = {
           '@components': './client/views/components',
           '@styles': './client/styles',
           '@config': './config.mjs',
-          '@common': './common'
+          '@libs-shared': './libs-shared'
         }
       }
     ],

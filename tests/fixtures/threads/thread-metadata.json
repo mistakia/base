@@ -1,0 +1,51 @@
+[
+  {
+    "name": "minimal_thread",
+    "metadata": {
+      "inference_provider": "ollama",
+      "model": "llama2",
+      "thread_state": "active"
+    }
+  },
+  {
+    "name": "active_thread",
+    "metadata": {
+      "inference_provider": "ollama",
+      "model": "mistral",
+      "thread_state": "active",
+      "tools": ["web_search", "calculator"]
+    }
+  },
+  {
+    "name": "paused_thread",
+    "metadata": {
+      "inference_provider": "ollama",
+      "model": "llama2",
+      "thread_state": "paused",
+      "pause_reason": "waiting_for_human_input",
+      "tools": ["web_search"]
+    }
+  },
+  {
+    "name": "terminated_thread",
+    "metadata": {
+      "inference_provider": "ollama",
+      "model": "mistral",
+      "thread_state": "terminated",
+      "termination_reason": "completed",
+      "tools": ["web_search", "calculator"]
+    }
+  },
+  {
+    "name": "custom_provider_thread",
+    "metadata": {
+      "inference_provider": "custom_provider",
+      "model": "custom_model",
+      "thread_state": "active",
+      "provider_settings": {
+        "api_key": "test_key",
+        "endpoint": "http://test-endpoint"
+      }
+    }
+  }
+]

@@ -12,10 +12,16 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import serveStatic from 'serve-static'
 import qs from 'qs'
+import { expressjwt } from 'express-jwt'
+import jwt from 'jsonwebtoken'
 
 import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
+
+// Initialize inference providers
+import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
+import { provider_registry } from '#libs-server/inference-providers/index.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
@@ -32,16 +38,59 @@ api.locals.log = log
 
 api.disable('x-powered-by')
 api.use(compression())
-api.use(bodyParser.json())
+api.use(
+  bodyParser.json({
+    verify: (req, res, buf) => {
+      // Store raw body for GitHub webhook signature verification
+      if (req.url === '/api/github/webhooks') {
+        req.raw_body = buf
+      }
+    }
+  })
+)
+const allowedOrigins = [config.public_url || '', 'http://localhost:8081']
+
 api.use(
   cors({
-    origin: true,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          'The CORS policy for this site does not allow access from the specified Origin.'
+        return callback(new Error(msg), false)
+      }
+      return callback(null, true)
+    },
     credentials: true
   })
 )
 
+api.use(
+  '/api/*',
+  expressjwt(config.jwt).unless({
+    path: ['/api/users', '/api/users/session']
+  }),
+  (err, req, res, next) => {
+    if (err.code === 'invalid_token' || err.code === 'credentials_required') {
+      return next()
+    }
+    return next(err)
+  }
+)
+
+// Register API routes
 api.use('/api/users', routes.users)
-api.use('/api/folders', routes.folders)
+api.use('/api/tags', routes.tags)
+api.use('/api/github', routes.github)
+api.use('/api/change-requests', routes.change_requests)
+api.use('/api/threads', routes.threads)
+api.use('/api/inference-providers', routes.inference_providers)
+api.use('/api/entities', routes.entities)
+
+// Register Ollama provider
+provider_registry.register('ollama', new OllamaProvider())
 
 if (IS_DEV) {
   api.get('*', (req, res) => {
@@ -91,16 +140,30 @@ const server = createServer()
 server.on('upgrade', async (request, socket, head) => {
   const parsed = new url.URL(request.url, config.url)
   try {
-    const public_key = parsed.searchParams.get('public_key')
-    request.user = { public_key }
+    const token = parsed.searchParams.get('token')
+    if (token) {
+      const decoded = await jwt.verify(token, config.jwt.secret)
+      request.auth = decoded
+    } else {
+      const public_key = parsed.searchParams.get('public_key')
+      if (public_key) {
+        request.user = { public_key }
+      }
+    }
   } catch (error) {
     log(error)
-    return socket.destroy()
+    // Don't destroy the socket for invalid tokens, allow connection without auth
   }
 
   wss.handleUpgrade(request, socket, head, function (ws) {
-    ws.public_key = request.user.public_key
-    log(`websocket connected: ${ws.public_key}`)
+    if (request.user && request.user.public_key) {
+      ws.public_key = request.user.public_key
+      log(`websocket connected with public_key: ${ws.public_key}`)
+    }
+    if (request.auth) {
+      ws.user_id = request.auth.user_id
+      log(`websocket connected with user_id: ${ws.user_id}`)
+    }
     wss.emit('connection', ws, request)
   })
 })

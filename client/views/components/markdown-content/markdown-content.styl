@@ -1,0 +1,127 @@
+.markdown-content
+  font-size 14px
+  line-height 1.6
+  
+  h1, h2, h3, h4, h5, h6
+    margin-top 24px
+    margin-bottom 16px
+    font-weight 600
+    line-height 1.25
+  
+  h1
+    font-size 20px
+    
+  h2
+    font-size 18px
+    
+  h3
+    font-size 16px
+  
+  p
+    margin-bottom 16px
+  
+  ul, ol
+    margin-bottom 16px
+    padding-left 24px
+  
+  li
+    margin-bottom 8px
+  
+  pre
+    background $color_code_bg
+    padding 16px
+    border-radius 4px
+    overflow auto
+    margin-bottom 16px
+  
+  code
+    font-family monospace
+    background $color_code_bg
+    padding 2px 4px
+    border-radius 3px
+    font-size 85%
+  
+  blockquote
+    padding-left 16px
+    border-left 4px solid $color_border
+    color $color_text_secondary
+    margin-left 0
+    margin-right 0
+    margin-bottom 16px
+    
+  a
+    color $color_primary
+    text-decoration none
+    
+    &:hover
+      text-decoration underline
+      
+  img
+    max-width 100%
+    height auto
+    display block
+    margin 16px 0
+    
+  // Task list styles
+  ul.task-list
+    list-style-type none
+    padding-left 0
+    width 100%
+    margin 0
+
+    // Base styles for lists
+    &.base-list-item, ul.base-list-item
+      list-style-type none
+      margin 0
+      padding 0
+
+    // Nested task list
+    &.nested-task-list
+      padding-left 0
+      margin-top 8px
+      margin-bottom 4px
+      margin-left 12px
+    
+    li.task-list-item
+      position relative
+      display flex
+      flex-direction column
+      align-items flex-start
+      margin-bottom 12px
+      padding-left 0
+      width 100%
+      
+      // Nested list styling
+      &.has-nested-items
+        margin-bottom 4px
+        
+      // MUI checkbox styling
+      .mui-checkbox-wrapper
+        width 100%
+        
+        .task-list-item-content
+          display flex
+          align-items flex-start
+          width 100%
+          position relative
+
+        .MuiFormControlLabel-root
+          margin 0
+          align-items flex-start
+          display flex
+          width 100%
+          
+          .MuiFormControlLabel-label
+            font-size 14px
+            font-weight 400
+            font-family inherit
+            line-height 1.6
+            
+          .MuiCheckbox-root
+            padding 0 8px 0 0
+            margin-top 0
+            flex-shrink 0
+
+      // Hide native checkboxes when they've been replaced
+      input[type="checkbox"].mui-checkbox
+        display none
