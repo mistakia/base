@@ -1,6 +1,7 @@
 ---
 title: Prompt Schema
 type: type_definition
+extends: base
 type_name: prompt
 description: Schema for prompt entities used in the system
 relations:
