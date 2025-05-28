@@ -97,7 +97,18 @@ export async function import_entity_from_git({
     }
 
     // Extract entity type and properties
-    const { entity_properties, entity_content } = read_result
+    const { entity_properties, entity_content, formatted_entity_metadata } =
+      read_result
+
+    if (!formatted_entity_metadata) {
+      return {
+        success: false,
+        error: `No formatted_entity_metadata found for ${git_relative_path}`,
+        base_relative_path,
+        branch
+      }
+    }
+
     const entity_type = entity_properties.type
 
     if (!entity_type) {
@@ -141,6 +152,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -153,6 +165,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -165,6 +178,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -177,6 +191,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -189,6 +204,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -201,6 +217,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -213,6 +230,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -225,6 +243,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -237,6 +256,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -249,6 +269,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -261,6 +282,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
             break
@@ -275,6 +297,7 @@ export async function import_entity_from_git({
               absolute_path,
               base_relative_path,
               git_sha,
+              formatted_entity_metadata,
               trx
             })
         }
