@@ -81,6 +81,7 @@ export async function import_repository_from_git({
     const processing_result = await process_repositories_from_git({
       root_base_directory,
       branch,
+      exclude_entity_types: ['type_definition'],
       entity_processor: async ({ entity, file, repository, schemas }) => {
         try {
           // Skip processing if the file doesn't have a git_sha (which would be unusual)
@@ -178,7 +179,9 @@ if (is_main(import.meta.url)) {
     .alias('help', 'h')
     .epilog('Import markdown files into PostgreSQL database').argv
 
-  debug.enable('entity:database:import-from-git,entity:database:import:*')
+  debug.enable(
+    'entity:database:import-from-git,entity:database:import:*,entity:database:write:*'
+  )
 
   const main = async () => {
     let error

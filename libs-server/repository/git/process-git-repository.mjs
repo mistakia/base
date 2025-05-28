@@ -82,6 +82,7 @@ async function process_git_file({
  * @param {string} [options.root_base_directory] The absolute path to the base directory
  * @param {string} [options.branch] Branch override
  * @param {function} [options.entity_processor] Function to process each entity
+ * @param {Array<string>} [options.exclude_entity_types] Entity types to exclude
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_git(options = {}) {
@@ -152,7 +153,8 @@ export async function process_repositories_from_git(options = {}) {
     const repo_files = await list_entity_files_from_git({
       repo_path: repository.path,
       branch: repository.branch,
-      submodule_base_path: repository.submodule_base_path
+      submodule_base_path: repository.submodule_base_path,
+      exclude_entity_types: options.exclude_entity_types || []
     })
 
     log(`Found ${repo_files.length} markdown files in ${repository.path}`)
