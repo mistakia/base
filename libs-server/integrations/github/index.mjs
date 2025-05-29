@@ -13,15 +13,3 @@ export {
   update_task_from_github_issue,
   find_entity_for_github_issue
 } from './task/index.mjs'
-
-// GitHub API functions
-export {
-  get_github_repo_issues,
-  get_github_issue_comments,
-  get_all_github_issue_comments,
-  get_github_project,
-  update_github_issue,
-  update_github_issue_graphql,
-  get_github_project_item_for_issue,
-  update_github_project_item
-} from './github-api/index.mjs'

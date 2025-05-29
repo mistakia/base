@@ -24,7 +24,7 @@ async function fetch_issue_comments({
 }) {
   const comments_map = {}
 
-  log(`Fetching comments for issues with comments_url`)
+  log('Fetching comments for issues with comments_url')
 
   // Process issues in batches to avoid rate limiting
   const batch_size = 5

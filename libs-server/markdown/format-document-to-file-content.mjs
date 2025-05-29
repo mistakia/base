@@ -3,36 +3,6 @@ import yaml from 'js-yaml'
 
 const log = debug('markdown:format-document-to-file-content')
 
-// Helper function to stringify with single quotes
-const stringify_with_single_quotes = (value) => {
-  if (typeof value === 'string') {
-    // Replace double quotes with single quotes from JSON.stringify output
-    return JSON.stringify(value).replace(/^"(.*)"$/, "'$1'")
-  }
-  return JSON.stringify(value)
-}
-
-/**
- * Determines if a string contains newlines or other characters that would need special YAML formatting
- *
- * @param {string} str - The string to check
- * @param {string} key - The key associated with the string
- * @returns {boolean} - Whether the string needs block scalar formatting
- */
-const needs_block_format = (str, key) => {
-  // Always use block scalar for description
-  if (key === 'description') return true
-  // Use block scalar for multiline strings, single quote, or long strings
-  return (
-    str.includes('\n') ||
-    str.includes('\r') ||
-    str.includes("'") ||
-    str.includes('"') ||
-    str.includes('\\') ||
-    str.length > 80
-  )
-}
-
 /**
  * Format document properties and content into a markdown file with frontmatter
  *
@@ -96,7 +66,7 @@ export function format_document_to_file_content({
     }
 
     // Convert to YAML
-    let yaml_content = yaml.dump(sorted_properties, yaml_options)
+    const yaml_content = yaml.dump(sorted_properties, yaml_options)
 
     // Combine frontmatter and content
     return `---\n${yaml_content}---\n\n${document_content.trim()}\n`
