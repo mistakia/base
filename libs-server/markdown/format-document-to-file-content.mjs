@@ -1,4 +1,5 @@
 import debug from 'debug'
+import yaml from 'js-yaml'
 
 const log = debug('markdown:format-document-to-file-content')
 
@@ -49,71 +50,56 @@ export function format_document_to_file_content({
       throw new Error('Document properties must be a valid object')
     }
 
-    // Create frontmatter block
-    const yaml_lines = ['---']
-
-    // Sort keys for consistent output, with priority fields first
+    // Prepare properties with priority fields first
     const priority_fields = ['title', 'type', 'status', 'description']
-    const sorted_keys = Object.keys(document_properties).sort((a, b) => {
-      const a_priority = priority_fields.indexOf(a)
-      const b_priority = priority_fields.indexOf(b)
+    const sorted_properties = {}
 
-      if (a_priority !== -1 && b_priority !== -1) return a_priority - b_priority
-      if (a_priority !== -1) return -1
-      if (b_priority !== -1) return 1
-      return a.localeCompare(b)
-    })
-
-    for (const key of sorted_keys) {
-      const value = document_properties[key]
-
-      // Skip null or undefined values
-      if (value === null || value === undefined) {
-        continue
-      } else if (Array.isArray(value)) {
-        yaml_lines.push(`${key}:`)
-        value.forEach((item) => {
-          yaml_lines.push(
-            `  - ${typeof item === 'string' ? stringify_with_single_quotes(item) : stringify_with_single_quotes(item)}`
-          )
-        })
-      } else if (typeof value === 'object') {
-        // Simple one-level object serialization
-        yaml_lines.push(`${key}:`)
-        Object.entries(value).forEach(([k, v]) => {
-          yaml_lines.push(
-            `  ${k}: ${typeof v === 'string' ? stringify_with_single_quotes(v) : stringify_with_single_quotes(v)}`
-          )
-        })
-      } else if (typeof value === 'string') {
-        // For key status values, don't add quotes
-        if (key === 'status') {
-          yaml_lines.push(`${key}: ${value}`)
-        } else if (needs_block_format(value, key)) {
-          // Use YAML block scalar for multiline strings or for specific fields
-          yaml_lines.push(`${key}: |`)
-          // Split by line, trim trailing whitespace, and indent with 2 spaces
-          const lines = value
-            .replace(/\r\n/g, '\n')
-            .replace(/\r/g, '\n')
-            .split('\n')
-          lines.forEach((line) => {
-            yaml_lines.push(`  ${line.replace(/\s+$/, '')}`)
-          })
-        } else {
-          // For other strings, ensure proper quoting
-          yaml_lines.push(`${key}: ${stringify_with_single_quotes(value)}`)
-        }
-      } else {
-        // For non-strings like numbers, booleans
-        yaml_lines.push(`${key}: ${value}`)
+    // First add priority fields in order
+    for (const field of priority_fields) {
+      if (
+        document_properties[field] !== undefined &&
+        document_properties[field] !== null
+      ) {
+        sorted_properties[field] = document_properties[field]
       }
     }
 
-    yaml_lines.push('---')
+    // Then add all other fields alphabetically
+    const remaining_keys = Object.keys(document_properties)
+      .filter((key) => !priority_fields.includes(key))
+      .sort()
+
+    for (const key of remaining_keys) {
+      const value = document_properties[key]
+      if (value !== undefined && value !== null) {
+        sorted_properties[key] = value
+      }
+    }
+
+    // Special handling for description field - ensure it uses block scalar
+    if (sorted_properties.description) {
+      // We'll handle the block formatting during YAML serialization
+      sorted_properties.description = sorted_properties.description.trim()
+    }
+
+    // Special handling for status - ensure it's not quoted
+    if (sorted_properties.status) {
+      // js-yaml will handle this correctly as long as it's a string
+      sorted_properties.status = String(sorted_properties.status)
+    }
+
+    // Generate YAML with js-yaml
+    const yaml_options = {
+      lineWidth: 100,
+      noRefs: true,
+      noCompatMode: true
+    }
+
+    // Convert to YAML
+    let yaml_content = yaml.dump(sorted_properties, yaml_options)
 
     // Combine frontmatter and content
-    return `${yaml_lines.join('\n')}\n\n${document_content.trim()}\n`
+    return `---\n${yaml_content}---\n\n${document_content.trim()}\n`
   } catch (error) {
     log('Error formatting document content:', error)
     throw error
