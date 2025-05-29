@@ -12,7 +12,7 @@ register_tool({
   tool_name: 'task_create',
   tool_definition: {
     description:
-      'Creates a new task file in the filesystem with the specified properties.',
+      'Creates a new task entity_type file in the filesystem with the specified properties.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -41,12 +41,12 @@ register_tool({
         status: {
           type: 'string',
           description:
-            'Optional: The status of the task. Defaults to TASK_STATUS.PLANNED.'
+            'Optional: The status of the task. Defaults to "Planned".'
         },
         priority: {
           type: 'string',
           description:
-            'Optional: The priority of the task. Defaults to TASK_PRIORITY.MEDIUM.'
+            'Optional: The priority of the task. Defaults to "Medium".'
         },
         finish_by: {
           type: 'string',
@@ -77,12 +77,12 @@ register_tool({
       )
 
       const task_properties = {
+        user_id,
         title,
         description,
         status,
         priority,
         ...(finish_by && { finish_by })
-        // user_id is not a standard entity property for the file itself yet.
       }
 
       const result = await write_task_to_filesystem({

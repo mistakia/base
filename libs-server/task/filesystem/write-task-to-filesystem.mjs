@@ -2,6 +2,7 @@ import debug from 'debug'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
+import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 const log = debug('task:write-to-filesystem')
 
@@ -37,6 +38,14 @@ export async function write_task_to_filesystem({
         error: 'Task properties must be a valid object',
         base_relative_path
       }
+    }
+
+    // Set default status and priority if not provided
+    if (!('status' in task_properties)) {
+      task_properties.status = TASK_STATUS.NO_STATUS
+    }
+    if (!('priority' in task_properties)) {
+      task_properties.priority = TASK_PRIORITY.NONE
     }
 
     // Get the file path using the shared helper
