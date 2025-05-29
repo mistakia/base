@@ -1,29 +1,28 @@
 # Human-in-the-Loop System
 
-A collaborative environment where LLMs and humans work together on tasks and knowledge management, with version control for everything and a focus on continuous improvement.
+A human-in-the-loop LLM system that works alongside a user to manage and build a knowledge base, manage data, complete tasks as the user would, and improve itself — designed for maximum flexibility, simplicity, and to operate as the user would unprompted.
 
 ## Overview
 
 This system creates a framework for LLMs and humans to collaborate effectively, with the following key features:
 
-- **Version Controlled**: All data changes (prompts, tasks, guidelines, etc.) are tracked with git
-- **File-First Architecture**: Files are the source of truth for all knowledge
-- **Markdown Storage**: All knowledge items are stored as plain markdown files with YAML frontmatter
-- **Pull Request Style Workflow**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
-- **Activity-Based Organization**: Actions are classified by activity types for better context management
+- **File-First Architecture**: Files are the source of truth, stored as markdown files with YAML frontmatter
+- **Version Controlled**: Everything is tracked with git
+- **Pull Request Style Change Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
+- **Composable Workflows**: Workflows can embed other workflows, enabling complex operations
 - **Multi-Model Support**: Different models can process the same inference requests
 - **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
 - **Granular Action Control**: System actions have configurable permission levels to control autonomy
 - **Async Collaboration**: Support for asynchronous human-system interaction
 - **Knowledge Graph**: Builds and traverses relationships between knowledge items
-- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control.
-- **Self-Improvement**: The system can evaluate and improve itself through a built-in feedback loop
+- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control
+- **Self-Improvement**: The system can evaluate and improve itself through feedback loops
 
 ## Documentation
 
-- [System Design](system/system-design.md): Overall system architecture and components
-- [Directory Structure](system/directory-structure.md): Organization of code and resources
-- [Configuration System](system/configuration-system.md): How configuration works
+- [System Design](system/text/system-design.md): Overall system architecture and components
+- [Directory Structure](system/text/directory-structure.md): Organization of code and resources
+- [Configuration System](system/text/configuration-system.md): How configuration works
 
 ## Getting Started
 
@@ -61,7 +60,7 @@ export CONFIG_ENCRYPTION_KEY=your_secret_encryption_key
 yarn dev
 ```
 
-See the [Configuration System](docs/configuration.md) document for more details on configuration.
+See the [Configuration System](system/text/configuration-system.md) document for more details on configuration.
 
 ## Contributing
 

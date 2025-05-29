@@ -35,7 +35,7 @@ This document outlines the design for the `change_request` system, which facilit
 
 4. **Optional GitHub Integration:** The system can optionally synchronize with GitHub Pull Requests for file changes, leveraging GitHub's UI for reviews, comments, and merging.
 
-5. **Thread Association:** Each change request is directly linked to the Base Thread that originated it, providing context and traceability.
+5. **Thread Association:** Each change request is directly linked to the Thread that originated it, providing context and traceability.
 
 6. **Change Request Status:** Each change request progresses through a defined workflow with statuses that indicate its readiness for review and application.
 
@@ -49,7 +49,7 @@ This document outlines the design for the `change_request` system, which facilit
   - `change_request_id`: (UUID) Unique identifier (matches DB primary key and filename).
   - `title`: (String) Concise summary.
   - `description`: (String) Detailed explanation (can be brief if body is used).
-  - `thread_id`: (UUID) The Base Thread that initiated this change request.
+  - `thread_id`: (UUID) The Thread that initiated this change request.
   - `created_at`, `updated_at`: (Timestamps)
   - `status`: (String) Current status of the change request (default: `draft`). Values:
     - `draft`: Initial state, changes are being collected or worked on.
@@ -103,7 +103,7 @@ This document outlines the design for the `change_request` system, which facilit
 
 ```mermaid
 graph TD
-    Thread["Base Thread"] -- initiates --> CR["Create Change Request"]
+    Thread["Thread"] -- initiates --> CR["Create Change Request"]
     CR -- creates --> Draft["Status: Draft"]
 
     subgraph "Change Request Creation"
@@ -171,3 +171,12 @@ graph TD
 - **Thread Context:** Maintained link to originating thread for full context
 - **Structured Review Process:** Status-based workflow enables clear progression through review
 - **Database as Index:** Database provides efficient querying without duplicating the source of truth
+
+## Human Confirmation Workflows
+
+The change request system supports various human confirmation workflows to balance efficiency with appropriate oversight:
+
+- **Direct approval:** Human explicitly approves each change request
+- **Batch approval:** Group of change requests approved together
+- **Time-limited delegation:** Auto-approve for a set period
+- **Risk-based approval:** Higher risk changes require higher approval requirements

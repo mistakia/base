@@ -11,6 +11,9 @@ observations:
 relations:
   - 'relates_to [[system/text/directory-structure.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[system/text/change-request-design.md]]'
+  - 'relates_to [[system/text/tool-information.md]]'
+  - 'relates_to [[system/text/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.246Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -18,35 +21,21 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 # Base System Design
 
-A human-in-the-loop LLM system to that works alongside you to manage and build a knowledge base, manage data, complete tasks, and improve itself — the goal is for it to do exactly what you want unprompted.
+A human-in-the-loop LLM system that works alongside a user to manage and build a knowledge base, manage data, complete tasks as the user would, and improve itself — designed for maximum flexibility, simplicity, and to operate as the user would unprompted.
 
 ## 1. System Overview
 
-- **File-First Architecture**: Files are the source of truth, stored as plain markdown files with YAML frontmatter
-- **Version Controlled**: All changes are tracked with git
-- **Pull Request Style Workflow**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
-- **Activity-Based Organization**: Actions are classified by activity types for better context management
+- **File-First Architecture**: Files are the source of truth, stored as markdown files with YAML frontmatter
+- **Version Controlled**: Everything is tracked with git
+- **Pull Request Style Change Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
+- **Composable Workflows**: Workflows can embed other workflows, enabling complex operations
 - **Multi-Model Support**: Different models can process the same inference requests
 - **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
 - **Granular Action Control**: System actions have configurable permission levels to control autonomy
 - **Async Collaboration**: Support for asynchronous human-system interaction
 - **Knowledge Graph**: Builds and traverses relationships between knowledge items
-- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control.
+- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control
 - **Self-Improvement**: The system can evaluate and improve itself through feedback loops
-
-### 1.1 Tool Permission Levels
-
-- **Read-Only**: Can only read data, no modification
-- **Propose-Only**: Can propose changes but requires approval
-- **Auto-Approve-Low-Risk**: Can auto-approve changes deemed low-risk
-- **Full-Access**: Can make changes without approval (restricted)
-
-### 1.2 Human Confirmation Workflows
-
-- Direct approval: Human explicitly approves each change
-- Batch approval: Group of changes approved together
-- Time-limited delegation: Auto-approve for a set period
-- Risk-based approval: Higher risk = higher approval requirements
 
 ## 2. Data Storage System
 
@@ -72,14 +61,13 @@ The system separates knowledge into two types:
 - **System Knowledge Base**
 
   - Located in the `system/` directory of the root repository
-  - Contains core system definitions, schemas, and templates
+  - Contains core system definitions, schemas, and documentation
   - Relevant to core system functionality and relevant to all users
 
 - **User Knowledge Bases**
   - Located in git submodules (with `user/` as the default submodule name)
   - Each submodule belongs to a different user and contains their specific content
   - Contains user-specific data, content, and configurations
-  - Relevant to specific users and their workflows
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 
@@ -98,13 +86,13 @@ Each external data connection has bidirectional sync and conflict resolution:
 
 ### 4.1 Key Terms
 
-- **Activity**: Defines an agentic workflow as a composable, modular, and reusable function that specifies behavior, inputs, outputs, and tool integrations.
+- **Workflow**: Defines agent behavior as a composable, modular function that specifies inputs, outputs, and tool integrations. It is effectively a prompt that defines agent behavior that can be run repeatedly, have loops, branching, wait for human input, embed other workflows, and so on.
 - **Change Request**: A proposal for modifications to the knowledge base that requires review and approval.
-- **Guideline**: A set of rules or recommendations associated with activities that MUST, SHOULD, or MAY be followed that will be included in relevant prompts.
-- **Inference Request**: The process of submitting a `Prompt` to one or more `Models` and receiving the generated outputs.
-- **Model**: A system capable of processing `Inference Requests` and generating outputs.
-- **Prompt**: A structured input provided to a `Model` to guide its response generation.
+- **Guideline**: A set of rules or recommendations accessed by workflows that MUST, SHOULD, or MAY be followed.
+- **Inference Request**: The process of submitting a prompt to models and receiving the generated outputs.
+- **Model**: A system capable of processing inference requests and generating outputs.
+- **Prompt**: A structured input provided to a model to guide its response generation.
 - **Task**: A discrete unit of work that can be assigned, tracked, and completed within the system.
-- **Tool**: A capability provided to `Models` that allows them to perform specific actions or access particular resources.
-- **Trigger**: An event or condition that activates a `Prompt` for an `Inference Request`.
-- **Tags**: Labels that can be added to activities, tasks, tools, and data items to help with organization and retrieval. An activity, task, tool, or data item can have multiple tags.
+- **Tool**: A capability provided to workflows (agents) executing in a thread that allows them to perform specific actions or access resources.
+- **Trigger**: An event or condition that activates a workflow.
+- **Tags**: Labels assigned to entities to define the domain they belong to, supporting classification, organization, and efficient retrieval.
