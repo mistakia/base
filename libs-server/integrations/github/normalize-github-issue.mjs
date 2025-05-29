@@ -306,7 +306,8 @@ export function extract_tags_from_issue_labels(labels) {
  * @param {Object} options.project_item - GitHub project item (optional)
  * @param {Object} options.project_fields - Project fields (optional)
  * @param {string} options.user_id - User ID
- * @returns {Object} Normalized issue data
+ * @param {Array} [options.comments=[]] - GitHub issue comments
+ * @returns {Object} Normalized issue data with github_comments field
  */
 // TODO evaluate if project_item and project_fields can be consolidated
 export function normalize_github_issue({
@@ -316,7 +317,8 @@ export function normalize_github_issue({
   github_repository_name,
   project_item,
   project_fields = {},
-  user_id
+  user_id,
+  comments = []
 }) {
   // Make sure we have an object to work with
   if (!issue) {
@@ -381,6 +383,15 @@ export function normalize_github_issue({
     if (extracted_tags.length > 0) {
       normalized_github_issue.tags = extracted_tags
     }
+  }
+
+  // Add comments if they exist
+  if (comments && comments.length > 0) {
+    normalized_github_issue.github_comments = comments.map((comment) => ({
+      author: comment.user.login,
+      date: comment.created_at,
+      content: comment.body
+    }))
   }
 
   // Override with explicit project fields if provided

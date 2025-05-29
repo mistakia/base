@@ -116,6 +116,22 @@ export const get_github_project = async ({
                       color
                     }
                   }
+                  comments(first: 50) {
+                    nodes {
+                      id
+                      author {
+                        login
+                      }
+                      body
+                      bodyText
+                      createdAt
+                      url
+                    }
+                    pageInfo {
+                      hasNextPage
+                      endCursor
+                    }
+                  }
                   repository {
                     name
                     owner {

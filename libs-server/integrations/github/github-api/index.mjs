@@ -10,3 +10,7 @@ export { update_pull_request } from './update-pull-request.mjs'
 export { update_github_issue_graphql } from './update-github-issue-graphql.mjs'
 export { update_github_project_item } from './update-github-project-item.mjs'
 export { get_github_project_item_for_issue } from './get-github-project-item-for-issue.mjs'
+export {
+  get_github_issue_comments,
+  get_all_github_issue_comments
+} from './get-github-issue-comments.mjs'

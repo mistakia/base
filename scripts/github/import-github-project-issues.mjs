@@ -27,6 +27,7 @@ export default async function import_github_project_issues({
 
     let all_issues = []
     const all_project_items_by_issue = {}
+    const all_comments_map = {}
     let has_next_page = true
     let cursor = null
     let page_count = 0
@@ -61,7 +62,7 @@ export default async function import_github_project_issues({
       cursor = project_data.data.user.projectV2.items.pageInfo.endCursor
 
       // Extract issues from project data (with project items mapping)
-      const { issues, project_items_by_issue } =
+      const { issues, project_items_by_issue, comments_map } =
         github.extract_issues_from_project_graphql(project_data)
 
       // Add issues and project items from this page to the combined results
@@ -80,6 +81,9 @@ export default async function import_github_project_issues({
             project_items_by_issue[github_repository_name][issue_number]
         }
       }
+
+      // Merge comments map - each key is already repo-qualified
+      Object.assign(all_comments_map, comments_map)
     }
 
     log(`Found ${all_issues.length} issues in project`)
@@ -112,6 +116,15 @@ export default async function import_github_project_issues({
         }
       }
 
+      // Get comments for this repository's issues
+      const comments_map = {}
+      for (const issue of repo_data.issues) {
+        const issue_key = `${repo_full_name}#${issue.number}`
+        if (all_comments_map[issue_key]) {
+          comments_map[issue.number] = all_comments_map[issue_key]
+        }
+      }
+
       // Process issues for this repository
       const repo_results = await github.sync_github_issues({
         issues: repo_data.issues,
@@ -120,6 +133,7 @@ export default async function import_github_project_issues({
         user_id,
         user_base_directory,
         project_items_map,
+        comments_map,
         github_token,
         force
       })

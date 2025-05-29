@@ -49,6 +49,7 @@ export function format_external_id_for_github_issue({
  * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number] - GitHub project number
  * @param {boolean} [options.force=false] - Force update all tasks regardless of content
+ * @param {Array} [options.comments=[]] - GitHub issue comments
  * @returns {Promise<Object>} - The sync result
  */
 export async function sync_github_issue_to_task({
@@ -61,7 +62,8 @@ export async function sync_github_issue_to_task({
   import_history_base_directory = null,
   github_token,
   github_project_number = null,
-  force = false
+  force = false,
+  comments = []
 }) {
   let trx
 
@@ -102,7 +104,8 @@ export async function sync_github_issue_to_task({
       github_repository_owner,
       github_repository_name,
       project_item: github_project_item,
-      user_id
+      user_id,
+      comments
     })
     log('Using normalized GitHub issue format')
 
@@ -134,7 +137,8 @@ export async function sync_github_issue_to_task({
         external_id,
         import_cid,
         import_history_base_directory,
-        trx
+        trx,
+        comments
       })
 
       await trx.commit()
@@ -159,7 +163,8 @@ export async function sync_github_issue_to_task({
         trx,
         github_token,
         github_project_number,
-        force
+        force,
+        comments
       })
 
       await trx.commit()

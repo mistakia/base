@@ -6,9 +6,10 @@
 export const extract_issues_from_project_graphql = (project_data) => {
   const issues = []
   const project_items_by_issue = {}
+  const comments_map = {}
 
   if (!project_data?.data?.user?.projectV2?.items?.nodes) {
-    return { issues, project_items_by_issue }
+    return { issues, project_items_by_issue, comments_map }
   }
 
   const project_items = project_data.data.user.projectV2.items.nodes
@@ -51,6 +52,23 @@ export const extract_issues_from_project_graphql = (project_data) => {
       }
     }
 
+    // Extract comments if available
+    if (issue.comments?.nodes?.length > 0) {
+      // Create a unique key for this repo/issue combination
+      const issue_key = `${repo_full_name}#${issue_number}`
+
+      // Transform GraphQL comments to a consistent format matching REST API
+      comments_map[issue_key] = issue.comments.nodes.map((comment) => ({
+        user: {
+          login: comment.author?.login || 'unknown'
+        },
+        created_at: comment.createdAt,
+        body: comment.body,
+        html_url: comment.url,
+        id: comment.id
+      }))
+    }
+
     issues.push(normalized_issue)
 
     // Store the mapping from issue to project item for metadata extraction
@@ -61,5 +79,5 @@ export const extract_issues_from_project_graphql = (project_data) => {
     project_items_by_issue[repo_full_name][issue_number] = item
   }
 
-  return { issues, project_items_by_issue }
+  return { issues, project_items_by_issue, comments_map }
 }

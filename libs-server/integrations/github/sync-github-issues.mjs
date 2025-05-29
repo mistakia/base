@@ -28,6 +28,7 @@ const log = debug('sync-github-issues')
  * @param {string} options.user_id - User ID
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {Object} [options.project_items_map] - Project items map (optional)
+ * @param {Object} [options.comments_map] - Map of issue numbers to comments (optional)
  * @param {string} [options.import_history_base_directory] - Import history base directory (optional)
  * @param {string} options.github_token - GitHub token
  * @param {boolean} [options.force=false] - Force update all tasks regardless of content
@@ -40,6 +41,7 @@ export async function sync_github_issues({
   user_id,
   user_base_directory,
   project_items_map,
+  comments_map = {},
   import_history_base_directory,
   github_token,
   force = false
@@ -71,6 +73,9 @@ export async function sync_github_issues({
       // Get project item if available
       const project_item = project_items_map?.[issue.number]
 
+      // Get comments if available
+      const comments = comments_map?.[issue.number] || []
+
       // Validate required parameters
       if (!github_repository_owner) {
         throw new Error('Missing repository owner')
@@ -90,7 +95,8 @@ export async function sync_github_issues({
         user_id,
         import_history_base_directory,
         github_token,
-        force
+        force,
+        comments
       })
 
       // Update results
