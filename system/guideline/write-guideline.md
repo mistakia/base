@@ -71,6 +71,5 @@ relations:
 ### Content Requirements
 
 - Guidelines MUST use RFC 2119 language (MUST, SHOULD, MAY, etc.) to clearly indicate requirement levels
-- Guidelines SHOULD have a clear, hierarchical structure with headings
-- Each rule SHOULD include a brief explanation of its rationale
-- Guidelines SHOULD include examples where appropriate
+- Each rule SHOULD be clear, concise, and easy to understand so that the rationale is self-evident. The rationale should be explicitly stated if it is not self-evident.
+- Guidelines SHOULD include examples if it helps to clarify the guideline.
