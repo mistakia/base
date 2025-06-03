@@ -21,11 +21,13 @@ const log = debug('entity:database:write-tag')
  * @param {Date} [params.tag_properties.archived_at=null] Date when the tag was archived
  * @param {string} params.user_id User ID who owns the tag entity
  * @param {string} [params.tag_content=''] Optional tag content/markdown
- * @param {string} [params.entity_id=null] Optional tag ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} [params.absolute_path=null] Absolute path to the file
  * @param {string} [params.base_relative_path=null] Base relative path to the file
  * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
  * @returns {Promise<string>} The entity_id of the tag
  */
 export async function write_tag_to_database({
@@ -36,14 +38,16 @@ export async function write_tag_to_database({
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing tag to database')
     const db_client = trx || db
 
     // First write the base entity
-    const returned_entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: tag_properties,
       entity_type: 'tag',
       user_id,
@@ -52,18 +56,20 @@ export async function write_tag_to_database({
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process tag-specific data directly
     await write_tag_data_to_database({
-      entity_id: returned_entity_id,
+      entity_id: result_entity_id,
       color: tag_properties.color,
       db_client
     })
 
-    log(`Tag successfully written with ID: ${returned_entity_id}`)
-    return returned_entity_id
+    log(`Tag successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing tag to database:', error)
     throw error

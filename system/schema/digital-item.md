@@ -33,7 +33,7 @@ properties:
 
 # Digital Item
 
-Digital items represent files, software, or other digital artifacts that are stored electronically. They can be referenced in tasks, activities, and other knowledge base items.
+Digital items represent files, software, or other digital artifacts that are stored electronically. They can be referenced in tasks and other knowledge base items.
 
 ## Digital Asset Management
 
@@ -59,6 +59,5 @@ Digital items might include:
 Digital items commonly relate to:
 
 - tasks (work that produces or requires these files)
-- activities (processes that use these files)
 - persons (who create or use the files)
 - organizations (groups that own or manage the files)

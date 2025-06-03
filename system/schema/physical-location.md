@@ -73,7 +73,7 @@ properties:
 
 # Physical Location
 
-Physical locations represent places, addresses, or geographical points in the real world. They can be referenced by tasks, activities, and other knowledge base items.
+Physical locations represent places, addresses, or geographical points in the real world. They can be referenced by tasks and other knowledge base items.
 
 ## Location Types
 
@@ -96,7 +96,6 @@ The schema supports both structured address components and complete address stri
 Physical locations commonly relate to:
 
 - tasks (work performed at specific locations)
-- activities (processes that occur at specific places)
 - physical_items (objects stored at these locations)
 - organizations (groups that operate at these locations)
 - persons (individuals who work at or visit these locations)

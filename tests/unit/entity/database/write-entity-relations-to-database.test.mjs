@@ -60,10 +60,10 @@ describe('write_entity_relations_to_database', () => {
 
   it('should write entity relations to the database', async () => {
     // Arrange
-    const relations = {
-      depends_on: [target_entity_id1],
-      assigned_to: [target_entity_id2]
-    }
+    const relations = [
+      { entity_id: target_entity_id1, relation_type: 'depends_on' },
+      { entity_id: target_entity_id2, relation_type: 'assigned_to' }
+    ]
 
     // Act
     await write_entity_relations_to_database({
@@ -93,9 +93,9 @@ describe('write_entity_relations_to_database', () => {
 
   it('should delete existing relations when writing new ones', async () => {
     // Arrange - first write some relations
-    const initial_relations = {
-      depends_on: [target_entity_id1]
-    }
+    const initial_relations = [
+      { entity_id: target_entity_id1, relation_type: 'depends_on' }
+    ]
 
     await write_entity_relations_to_database({
       entity_id: source_entity_id,
@@ -111,9 +111,9 @@ describe('write_entity_relations_to_database', () => {
     expect(initial_stored_relations).to.have.lengthOf(1)
 
     // Act - write new relations
-    const new_relations = {
-      assigned_to: [target_entity_id2]
-    }
+    const new_relations = [
+      { entity_id: target_entity_id2, relation_type: 'assigned_to' }
+    ]
 
     await write_entity_relations_to_database({
       entity_id: source_entity_id,
@@ -136,9 +136,10 @@ describe('write_entity_relations_to_database', () => {
 
   it('should handle multiple targets for same relation type', async () => {
     // Arrange
-    const relations = {
-      depends_on: [target_entity_id1, target_entity_id2]
-    }
+    const relations = [
+      { entity_id: target_entity_id1, relation_type: 'depends_on' },
+      { entity_id: target_entity_id2, relation_type: 'depends_on' }
+    ]
 
     // Act
     await write_entity_relations_to_database({
@@ -163,7 +164,7 @@ describe('write_entity_relations_to_database', () => {
 
   it('should handle empty relations object', async () => {
     // Arrange
-    const relations = {}
+    const relations = []
 
     // Act
     await write_entity_relations_to_database({
@@ -183,9 +184,7 @@ describe('write_entity_relations_to_database', () => {
 
   it('should handle empty target IDs array', async () => {
     // Arrange
-    const relations = {
-      depends_on: []
-    }
+    const relations = []
 
     // Act
     await write_entity_relations_to_database({
@@ -205,10 +204,10 @@ describe('write_entity_relations_to_database', () => {
 
   it('should work with a transaction', async () => {
     // Arrange
-    const relations = {
-      depends_on: [target_entity_id1],
-      assigned_to: [target_entity_id2]
-    }
+    const relations = [
+      { entity_id: target_entity_id1, relation_type: 'depends_on' },
+      { entity_id: target_entity_id2, relation_type: 'assigned_to' }
+    ]
 
     // Start a transaction
     const trx = await db.transaction()

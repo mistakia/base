@@ -4,7 +4,7 @@
  * This module serves as the single source of truth for tool definitions
  * that can be used:
  * 1. By the Model Context Protocol (MCP) for external agents
- * 2. By internal Base threads
+ * 2. By internal Execution Threads
  */
 
 // Import and re-export all registry functions

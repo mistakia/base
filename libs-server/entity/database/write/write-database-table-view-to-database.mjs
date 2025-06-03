@@ -25,22 +25,24 @@ const log = debug('entity:database:write-database-table-view')
  * @param {Date} [params.database_view_properties.archived_at=null] Date when the view was archived
  * @param {string} params.user_id User ID who owns the view entity
  * @param {string} [params.database_view_content=''] Optional view content/markdown
- * @param {string} [params.database_view_id=null] Optional view ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} params.absolute_path Absolute path to the file
  * @param {string} params.base_relative_path Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The database_view_id (same as entity_id)
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @returns {Promise<string>} The entity_id
  */
 export async function write_database_table_view_to_database({
   database_view_properties,
   user_id,
   database_view_content = '',
-  database_view_id = null,
+  entity_id = null,
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory
 }) {
   try {
     log('Writing database table view to database')
@@ -62,21 +64,22 @@ export async function write_database_table_view_to_database({
     }
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: database_view_properties,
       entity_type: 'database_view',
       user_id,
       entity_content: database_view_content,
-      entity_id: database_view_id,
+      entity_id,
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory
     })
 
     // Process database view-specific data
     await write_database_table_view_data_to_database({
-      entity_id,
+      entity_id: result_entity_id,
       view_name: database_view_properties.view_name,
       view_description: database_view_properties.view_description,
       database_table_name: database_view_properties.table_name,
@@ -86,8 +89,8 @@ export async function write_database_table_view_to_database({
       db_client
     })
 
-    log(`Database table view successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Database table view successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing database table view to database:', error)
     throw error

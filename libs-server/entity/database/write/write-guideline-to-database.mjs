@@ -20,7 +20,6 @@ const log = debug('entity:database:write-guideline')
  * @param {Date} [params.guideline_properties.archived_at=null] Date when the guideline was archived
  * @param {string} [params.guideline_properties.guideline_status='Draft'] Status of the guideline (Draft, Approved, Deprecated)
  * @param {Date} [params.guideline_properties.effective_date=null] Date when the guideline becomes effective
- * @param {string[]} [params.guideline_properties.activities=[]] List of activity base_relative_paths that this guideline applies to
  * @param {string[]} [params.guideline_properties.globs=[]] Glob patterns for files that this guideline applies to
  * @param {boolean} [params.guideline_properties.always_apply=false] Whether this guideline should always be applied
  * @param {string} params.user_id User ID who owns the guideline
@@ -30,6 +29,8 @@ const log = debug('entity:database:write-guideline')
  * @param {string} params.base_relative_path Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
  * @returns {Promise<string>} The entity_id of the guideline
  */
 export async function write_guideline_to_database({
@@ -40,7 +41,9 @@ export async function write_guideline_to_database({
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing guideline to database')
@@ -56,7 +59,9 @@ export async function write_guideline_to_database({
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process guideline-specific data directly

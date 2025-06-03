@@ -4,7 +4,7 @@ import get_thread from './get-thread.mjs'
 import {
   build_prompt,
   generate_system_prompt,
-  generate_activity_prompt,
+  generate_workflow_prompt,
   generate_tools_prompt,
   generate_guidelines_prompt,
   load_prompt
@@ -55,27 +55,27 @@ export default async function generate_prompt({
   // Generate system prompt component
   const system_prompt = await generate_system_prompt()
 
-  // Generate activity prompt if thread has an activity (base relative path)
-  let activity_prompt = ''
+  // Generate workflow prompt if thread has a workflow (base relative path)
+  let workflow_prompt = ''
   let guidelines_prompt = ''
 
-  if (thread.activity_base_relative_path) {
-    const activity_result = await generate_activity_prompt({
-      base_relative_path: thread.activity_base_relative_path,
+  if (thread.workflow_base_relative_path) {
+    const workflow_result = await generate_workflow_prompt({
+      base_relative_path: thread.workflow_base_relative_path,
       prompt_properties: thread.prompt_properties,
       root_base_directory: system_base_directory
     })
 
-    activity_prompt = activity_result.prompt
+    workflow_prompt = workflow_result.prompt
 
-    // Generate guidelines prompt from the activity's guideline paths
+    // Generate guidelines prompt from the workflow's guideline paths
     if (
-      activity_result.guideline_base_relative_paths &&
-      activity_result.guideline_base_relative_paths.length > 0
+      workflow_result.guideline_base_relative_paths &&
+      workflow_result.guideline_base_relative_paths.length > 0
     ) {
       guidelines_prompt = await generate_guidelines_prompt({
         guideline_base_relative_paths:
-          activity_result.guideline_base_relative_paths,
+          workflow_result.guideline_base_relative_paths,
         root_base_directory: system_base_directory
       })
     }
@@ -107,7 +107,7 @@ export default async function generate_prompt({
   const prompt = await build_prompt({
     components: {
       system_prompt,
-      activity_prompt,
+      workflow_prompt,
       guidelines_prompt,
       tools: tools_prompt
     },
@@ -115,14 +115,14 @@ export default async function generate_prompt({
       thread_id,
       model: thread.model,
       inference_provider: thread.inference_provider,
-      activity_base_relative_path: thread.activity_base_relative_path
+      workflow_base_relative_path: thread.workflow_base_relative_path
     }
   })
 
   return {
     ...prompt,
     thread_id,
-    activity_base_relative_path: thread.activity_base_relative_path,
+    workflow_base_relative_path: thread.workflow_base_relative_path,
     model: thread.model
   }
 }

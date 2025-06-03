@@ -35,12 +35,15 @@ describe('entity_exists_in_database', () => {
     })
 
     // Create an archived entity
+    const now = new Date()
+    const archive_date = new Date(now.getTime() + 1000) // 1 second after updated_at
     archived_entity_id = await write_entity_to_database({
       entity_properties: {
         title: 'Archived Entity',
         description: 'Archived entity for testing',
         user_id: test_user_id,
-        archived_at: new Date(),
+        updated_at: now,
+        archived_at: archive_date,
         entity_id: uuid()
       },
       entity_type: ENTITY_TYPES.TASK,

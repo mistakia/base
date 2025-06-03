@@ -5,18 +5,18 @@ import { format_document_from_file_content } from '#libs-server/markdown/format-
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
 
-const log = debug('prompts:activity')
+const log = debug('prompts:workflow')
 
 /**
- * Generate an activity prompt component from an activity file
+ * Generate a workflow prompt component from a workflow file
  *
  * @param {Object} params Parameters
- * @param {string} params.base_relative_path Activity path relative to Base root, e.g., 'system/activity/<file_path>.md' or 'user/activity/<file_path>.md'
- * @param {Object} [params.prompt_properties] Properties to inject into the activity template
+ * @param {string} params.base_relative_path Workflow path relative to Base root, e.g., 'system/workflow/<file_path>.md' or 'user/workflow/<file_path>.md'
+ * @param {Object} [params.prompt_properties] Properties to inject into the workflow template
  * @param {string} [params.root_base_directory] Custom root base directory
  * @returns {Promise<Object>} Object containing prompt text and guideline paths
  */
-export default async function generate_activity_prompt({
+export default async function generate_workflow_prompt({
   base_relative_path,
   prompt_properties = {},
   root_base_directory = config.root_base_directory
@@ -25,7 +25,7 @@ export default async function generate_activity_prompt({
     throw new Error('base_relative_path is required')
   }
 
-  log(`Generating activity prompt for activity ${base_relative_path}`)
+  log(`Generating workflow prompt for workflow ${base_relative_path}`)
 
   try {
     // Get the file path using the shared helper
@@ -34,11 +34,11 @@ export default async function generate_activity_prompt({
       root_base_directory
     })
 
-    // Read and parse the activity markdown file
-    const activity_content = await fs.readFile(absolute_path, 'utf-8')
+    // Read and parse the workflow markdown file
+    const workflow_content = await fs.readFile(absolute_path, 'utf-8')
     const { document_properties, document_content } =
       format_document_from_file_content({
-        file_content: activity_content,
+        file_content: workflow_content,
         file_path: absolute_path
       })
 
@@ -48,7 +48,7 @@ export default async function generate_activity_prompt({
       prompt_properties
     })
 
-    // Format as a structured activity prompt
+    // Format as a structured workflow prompt
     let prompt = `Role: ${document_properties.title}\n\n`
     prompt += `<role>\n${rendered_content}</role>`
 
@@ -58,8 +58,8 @@ export default async function generate_activity_prompt({
     }
   } catch (error) {
     console.log(error)
-    log(`Error generating activity prompt: ${error.message}`)
-    throw new Error(`Failed to generate activity prompt: ${error.message}`)
+    log(`Error generating workflow prompt: ${error.message}`)
+    throw new Error(`Failed to generate workflow prompt: ${error.message}`)
   }
 }
 

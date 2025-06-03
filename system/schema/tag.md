@@ -38,10 +38,10 @@ Beyond basic categorization, tags can have additional properties:
 
 Tags commonly relate to:
 
-- Any entity type (through tagging relationships)
+- Any entity type
 - Other tags (through parent-child relationships)
-- Tasks (for task categorization)
-- Activities (for activity categorization)
+- Tasks
+- Workflows
 
 ## Proper Noun Representation
 

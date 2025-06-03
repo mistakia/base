@@ -14,12 +14,6 @@ properties:
     type: date
     optional: true
     description: Date when the guideline becomes effective
-  - name: activities
-    type: array
-    items:
-      type: string
-    optional: true
-    description: List of activity base_relative_paths that this guideline applies to
   - name: globs
     type: array
     items:
@@ -34,7 +28,7 @@ properties:
 
 # Guideline
 
-Guidelines represent standards, procedures, or best practices that should be followed when performing activities or completing tasks.
+Guidelines represent standards, procedures, or best practices that should be followed when performing executing workflows and completing tasks.
 
 ## Purpose
 
@@ -50,17 +44,13 @@ Guidelines serve to:
 
 Guidelines commonly relate to:
 
-- activities (processes they govern)
-- tasks (work that follows these guidelines)
-- organizations (groups that adopt these guidelines)
-- persons (individuals who create or follow guidelines)
+- workflows
+- tasks
 
 Example:
 
 ```yaml
 relations:
-  - 'follows [[system/activities/activity-name]]'
+  - 'used_by [[system/workflow/workflow-name]]'
   - 'applies_to [[user/tasks/task-name]]'
-  - 'adopted_by [[system/organization/org-name]]'
-  - 'created_by [[user/person/jane-doe]]'
 ```

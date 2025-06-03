@@ -1,8 +1,14 @@
 import { expect } from 'chai'
 import db from '#db'
 import { write_entity_to_database } from '#libs-server/entity/database/write/write-entity-to-database.mjs'
-import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import {
+  reset_all_tables,
+  create_test_user,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
 import { v4 as uuid } from 'uuid'
+import path from 'path'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 
 describe('write_entity_to_database', () => {
   let test_user
@@ -135,35 +141,65 @@ describe('write_entity_to_database', () => {
   })
 
   it('should process entity relations when provided', async () => {
-    // Arrange - create two related entities first
-    const related_entity_id = await write_entity_to_database({
+    // Arrange - set up a temp repo and create a related entity file
+    const test_repo = await create_temp_test_repo({
+      prefix: 'entity-rel-test-'
+    })
+    const user_repo_path = test_repo.user_path
+    const related_entity_id = uuid()
+    const related_base_relative_path = 'user/relations/related-entity.md'
+    const related_file_path = path.join(
+      user_repo_path,
+      'relations',
+      'related-entity.md'
+    )
+    const now = new Date()
+    const later = new Date(now.getTime() + 1000)
+    await write_entity_to_filesystem({
+      absolute_path: related_file_path,
       entity_properties: {
+        user_id: test_user_id,
+        entity_id: related_entity_id,
         title: 'Related Entity',
-        description: 'Related entity description',
-        entity_id: uuid()
+        description: 'A related entity',
+        type: 'task',
+        created_at: now,
+        updated_at: later
       },
       entity_type: 'task',
-      user_id: test_user_id,
-      absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      entity_content: 'A related entity.'
     })
-
-    // Create consistent timestamps to avoid constraint violations
-    const now = new Date()
-    const later = new Date(now.getTime() + 1000) // 1 second later
-
+    await db('entities').insert({
+      entity_id: related_entity_id,
+      title: 'Related Entity',
+      description: 'A related entity',
+      type: 'task',
+      user_id: test_user_id,
+      created_at: now,
+      updated_at: later,
+      frontmatter: {
+        entity_id: related_entity_id,
+        title: 'Related Entity',
+        description: 'A related entity',
+        type: 'task',
+        created_at: now,
+        updated_at: later
+      },
+      base_relative_path: related_base_relative_path
+    })
+    // Create main entity with relation (using base_relative_path)
     const entity_properties = {
       title: 'Main Entity',
       description: 'Entity with relations',
-      relations: {
-        references: [related_entity_id]
-      },
       created_at: now,
       updated_at: later,
       entity_id: uuid()
     }
-
+    const formatted_entity_metadata = {
+      relations: [
+        { relation_type: 'references', entity_path: related_base_relative_path }
+      ]
+    }
     // Act
     const entity_id = await write_entity_to_database({
       entity_properties,
@@ -171,9 +207,10 @@ describe('write_entity_to_database', () => {
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
       base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      git_sha: 'dummysha1',
+      root_base_directory: test_repo.path,
+      formatted_entity_metadata
     })
-
     // Assert
     const relations = await db('entity_relations')
       .where({
@@ -182,40 +219,63 @@ describe('write_entity_to_database', () => {
         relation_type: 'references'
       })
       .first()
-
     expect(relations).to.exist
+    // Clean up temp repo
+    await test_repo.cleanup()
   })
 
   it('should process entity tags when provided', async () => {
-    // Create consistent timestamps to avoid constraint violations
+    // Arrange - set up a temp repo and create a tag entity file
+    const test_repo = await create_temp_test_repo({
+      prefix: 'entity-tag-test-'
+    })
+    const user_repo_path = test_repo.user_path
+    const tag_entity_id = uuid()
+    const tag_base_relative_path = 'user/tags/entity-tag.md'
+    const tag_file_path = path.join(user_repo_path, 'tags', 'entity-tag.md')
     const now = new Date()
-    const later = new Date(now.getTime() + 1000) // 1 second later
-
-    // Arrange - create a tag entity first
-    const tag_entity_id = await write_entity_to_database({
+    const later = new Date(now.getTime() + 1000)
+    await write_entity_to_filesystem({
+      absolute_path: tag_file_path,
       entity_properties: {
-        title: 'Test Tag',
-        description: 'A test tag',
+        user_id: test_user_id,
+        entity_id: tag_entity_id,
+        title: 'Entity Tag',
+        description: 'A tag for entities',
+        type: 'tag',
         created_at: now,
-        updated_at: later,
-        entity_id: uuid()
+        updated_at: later
       },
       entity_type: 'tag',
-      user_id: test_user_id,
-      absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      entity_content: 'A tag for entities.'
     })
-
+    await db('entities').insert({
+      entity_id: tag_entity_id,
+      title: 'Entity Tag',
+      description: 'A tag for entities',
+      type: 'tag',
+      user_id: test_user_id,
+      created_at: now,
+      updated_at: later,
+      frontmatter: {
+        entity_id: tag_entity_id,
+        title: 'Entity Tag',
+        description: 'A tag for entities',
+        type: 'tag',
+        created_at: now,
+        updated_at: later
+      },
+      base_relative_path: tag_base_relative_path
+    })
+    // Create main entity with tag (using base_relative_path)
     const entity_properties = {
-      title: 'Tagged Entity',
+      title: 'Main Entity',
       description: 'Entity with tags',
-      tags: [tag_entity_id],
+      tags: [tag_base_relative_path],
       created_at: now,
       updated_at: later,
       entity_id: uuid()
     }
-
     // Act
     const entity_id = await write_entity_to_database({
       entity_properties,
@@ -223,9 +283,9 @@ describe('write_entity_to_database', () => {
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
       base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      git_sha: 'dummysha1',
+      root_base_directory: test_repo.path
     })
-
     // Assert
     const tag_relation = await db('entity_tags')
       .where({
@@ -233,8 +293,9 @@ describe('write_entity_to_database', () => {
         tag_entity_id
       })
       .first()
-
     expect(tag_relation).to.exist
+    // Clean up temp repo
+    await test_repo.cleanup()
   })
 
   it('should throw an error when entity_properties is not provided', async () => {

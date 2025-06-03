@@ -4,31 +4,31 @@ import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-g
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
 import config from '#config'
 
-const log = debug('activity:read-from-git')
+const log = debug('workflow:read-from-git')
 
 /**
- * Get the contents of an activity file from a git branch
+ * Get the contents of a workflow file from a git branch
  *
  * @param {Object} params - Parameters
- * @param {string} params.base_relative_path - Activity ID in format [system|user]/<file_path>.md
+ * @param {string} params.base_relative_path - Workflow ID in format [system|user]/<file_path>.md
  * @param {string} params.branch - Git branch to read from
  * @param {string} [params.root_base_directory] - Custom root base directory
- * @returns {Promise<Object>} - Activity file contents and metadata
+ * @returns {Promise<Object>} - Workflow file contents and metadata
  */
-export async function read_activity_from_git({
+export async function read_workflow_from_git({
   base_relative_path,
   branch,
   root_base_directory = config.root_base_directory
 }) {
   try {
     log(
-      `Reading activity file from git: ${base_relative_path} (branch: ${branch})`
+      `Reading workflow file from git: ${base_relative_path} (branch: ${branch})`
     )
 
     if (!base_relative_path) {
       return {
         success: false,
-        error: 'Activity ID is required',
+        error: 'Workflow ID is required',
         base_relative_path,
         branch
       }
@@ -42,28 +42,28 @@ export async function read_activity_from_git({
       }
     }
 
-    // Check if activity exists in git
-    const activity_exists_result = await entity_exists_in_git({
+    // Check if workflow exists in git
+    const workflow_exists_result = await entity_exists_in_git({
       base_relative_path,
       branch,
       root_base_directory
     })
 
-    if (!activity_exists_result.success) {
+    if (!workflow_exists_result.success) {
       return {
         success: false,
         error:
-          activity_exists_result.error ||
-          'Failed to check if activity exists in git',
+          workflow_exists_result.error ||
+          'Failed to check if workflow exists in git',
         base_relative_path,
         branch
       }
     }
 
-    if (!activity_exists_result.exists) {
+    if (!workflow_exists_result.exists) {
       return {
         success: false,
-        error: `Activity '${base_relative_path}' does not exist in branch '${branch}'`,
+        error: `Workflow '${base_relative_path}' does not exist in branch '${branch}'`,
         base_relative_path,
         branch
       }
@@ -76,7 +76,7 @@ export async function read_activity_from_git({
     })
 
     log(
-      `Reading activity from git at path: ${git_relative_path} in repo: ${repo_path}`
+      `Reading workflow from git at path: ${git_relative_path} in repo: ${repo_path}`
     )
 
     // Use the entity reader to get the file contents from git
@@ -91,13 +91,13 @@ export async function read_activity_from_git({
         success: false,
         error:
           entity_result.error ||
-          `Failed to read activity '${base_relative_path}'`,
+          `Failed to read workflow '${base_relative_path}'`,
         base_relative_path,
         branch
       }
     }
 
-    // Return activity with metadata
+    // Return workflow with metadata
     return {
       success: true,
       base_relative_path,
@@ -107,10 +107,10 @@ export async function read_activity_from_git({
       raw_content: entity_result.raw_content
     }
   } catch (error) {
-    log(`Error reading activity file from git: ${error.message}`)
+    log(`Error reading workflow file from git: ${error.message}`)
     return {
       success: false,
-      error: `Failed to read activity file from git: ${error.message}`,
+      error: `Failed to read workflow file from git: ${error.message}`,
       base_relative_path,
       branch
     }

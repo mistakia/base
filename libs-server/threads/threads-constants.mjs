@@ -2,8 +2,8 @@ import path from 'path'
 import config from '#config'
 
 export const THREAD_CONTEXT_DIR = 'threads'
-export const THREAD_DEFAULT_ACTIVITY_BASE_RELATIVE_PATH =
-  'system/activity/default-base-activity.md'
+export const THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH =
+  'system/workflow/default-workflow.md'
 
 /**
  * Get the base directory for thread storage

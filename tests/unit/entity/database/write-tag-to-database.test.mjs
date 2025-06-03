@@ -2,7 +2,13 @@ import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_tag_to_database from '#libs-server/entity/database/write/write-tag-to-database.mjs'
-import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import {
+  reset_all_tables,
+  create_test_user,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
+import path from 'path'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 
 describe('write_tag_to_database', () => {
   let test_user
@@ -228,86 +234,87 @@ describe('write_tag_to_database', () => {
   })
 
   it('should handle meta-tagging (tags on tags)', async () => {
-    // Arrange - first create two parent tags
+    // Arrange - set up a temp repo and create a tag entity file
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // Create first parent tag
-    const parent_tag1_properties = {
-      entity_id: uuid(),
-      title: 'Parent Tag 1',
-      description: 'A parent tag',
-      color: '#AADDEE',
-      created_at: now,
-      updated_at: later
-    }
+    // 1. Create a temp repo
+    const test_repo = await create_temp_test_repo({ prefix: 'meta-tag-test-' })
+    const user_repo_path = test_repo.user_path
+    const tag_entity_id = uuid()
+    const tag_base_relative_path = 'user/tags/meta-tag.md'
+    const tag_file_path = path.join(user_repo_path, 'tags', 'meta-tag.md')
 
-    const parent_tag1_id = await write_tag_to_database({
-      tag_properties: parent_tag1_properties,
-      user_id: test_user_id,
-      absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+    // 2. Write the tag entity file using write_entity_to_filesystem
+    await write_entity_to_filesystem({
+      absolute_path: tag_file_path,
+      entity_properties: {
+        user_id: test_user_id,
+        entity_id: tag_entity_id,
+        title: 'Meta Tag',
+        description: 'A tag for tags',
+        type: 'tag',
+        created_at: now,
+        updated_at: later
+      },
+      entity_type: 'tag',
+      entity_content: 'A tag for tags.'
     })
 
-    // Create second parent tag
-    const parent_tag2_properties = {
-      entity_id: uuid(),
-      title: 'Parent Tag 2',
-      description: 'Another parent tag',
-      color: '#EEDDAA',
-      created_at: now,
-      updated_at: later
-    }
-
-    const parent_tag2_id = await write_tag_to_database({
-      tag_properties: parent_tag2_properties,
+    // 3. Insert the tag entity into the database
+    await db('entities').insert({
+      entity_id: tag_entity_id,
+      title: 'Meta Tag',
+      description: 'A tag for tags',
+      type: 'tag',
       user_id: test_user_id,
-      absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      created_at: now,
+      updated_at: later,
+      frontmatter: {
+        entity_id: tag_entity_id,
+        title: 'Meta Tag',
+        description: 'A tag for tags',
+        type: 'tag',
+        created_at: now,
+        updated_at: later
+      },
+      base_relative_path: tag_base_relative_path
     })
+    await db('tags').insert({ entity_id: tag_entity_id })
 
-    // Create child tag with both parent tags
-    const child_tag_properties = {
+    // 4. Create tag with tag (using base_relative_path)
+    const tag_properties = {
       entity_id: uuid(),
-      title: 'Child Tag',
-      description: 'Tag with parent tags',
+      title: 'Tagged Tag',
+      description: 'Tag with meta-tag',
       color: '#BBCCDD',
-      tags: [parent_tag1_id, parent_tag2_id],
+      tags: [tag_base_relative_path],
       created_at: now,
       updated_at: later
     }
 
     // Act
-    const child_tag_entity_id = await write_tag_to_database({
-      tag_properties: child_tag_properties,
+    const tagged_tag_id = await write_tag_to_database({
+      tag_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
       base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      git_sha: 'dummysha1',
+      root_base_directory: test_repo.path
     })
 
     // Assert
-    // Verify first parent tag relation
-    const tag_relation1 = await db('entity_tags')
+    const tag_relation = await db('entity_tags')
       .where({
-        entity_id: child_tag_entity_id,
-        tag_entity_id: parent_tag1_id
+        entity_id: tagged_tag_id,
+        tag_entity_id
       })
       .first()
 
-    expect(tag_relation1).to.exist
+    expect(tag_relation).to.exist
 
-    // Verify second parent tag relation
-    const tag_relation2 = await db('entity_tags')
-      .where({
-        entity_id: child_tag_entity_id,
-        tag_entity_id: parent_tag2_id
-      })
-      .first()
-
-    expect(tag_relation2).to.exist
+    // Clean up temp repo
+    await test_repo.cleanup()
   })
 
   it('should handle archived status correctly', async () => {

@@ -2,7 +2,7 @@ import write_entity_to_database from './write/write-entity-to-database.mjs'
 import { write_entity_relations_to_database } from './write/write-entity-relations-to-database.mjs'
 import { write_entity_tags_to_database } from './write/write-entity-tags-to-database.mjs'
 import write_task_to_database from './write/write-task-to-database.mjs'
-import write_activity_to_database from './write/write-activity-to-database.mjs'
+import write_workflow_to_database from './write/write-workflow-to-database.mjs'
 import write_guideline_to_database from './write/write-guideline-to-database.mjs'
 import { read_entity_from_database } from './read/read-entity-from-database.mjs'
 import delete_entity_from_database from './delete-entity-from-database.mjs'
@@ -32,7 +32,7 @@ export {
 
   // Entity type-specific writers
   write_task_to_database,
-  write_activity_to_database,
+  write_workflow_to_database,
   write_guideline_to_database,
 
   // Relation handlers
@@ -49,7 +49,7 @@ export default {
   delete_entity_from_database,
   entity_exists_in_database,
   write_task_to_database,
-  write_activity_to_database,
+  write_workflow_to_database,
   write_guideline_to_database,
   write_entity_relations_to_database,
   write_entity_tags_to_database,

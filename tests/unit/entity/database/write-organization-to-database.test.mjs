@@ -2,7 +2,13 @@ import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_organization_to_database from '#libs-server/entity/database/write/write-organization-to-database.mjs'
-import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import {
+  reset_all_tables,
+  create_test_user,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
+import path from 'path'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 
 describe('write_organization_to_database', () => {
   let test_user
@@ -238,44 +244,69 @@ describe('write_organization_to_database', () => {
   })
 
   it('should store organization with relationships', async () => {
-    // Arrange - first create a related tag entity
+    // Arrange - set up a temp repo and create a related entity file
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // Create a tag to use for the organization
-    const tag_properties = {
+    // 1. Create a temp repo
+    const test_repo = await create_temp_test_repo({ prefix: 'org-rel-test-' })
+    const user_repo_path = test_repo.user_path
+    const related_entity_id = uuid()
+    const related_base_relative_path = 'user/relations/related-entity.md'
+    const related_file_path = path.join(
+      user_repo_path,
+      'relations',
+      'related-entity.md'
+    )
+
+    // 2. Write the related entity file using write_entity_to_filesystem
+    await write_entity_to_filesystem({
+      absolute_path: related_file_path,
+      entity_properties: {
+        user_id: test_user_id,
+        entity_id: related_entity_id,
+        title: 'Related Entity',
+        description: 'A related entity for organization',
+        type: 'person',
+        created_at: now,
+        updated_at: later
+      },
+      entity_type: 'person',
+      entity_content: 'A related entity for organization.'
+    })
+
+    // 3. Insert the related entity into the database
+    await db('entities').insert({
+      entity_id: related_entity_id,
+      title: 'Related Entity',
+      description: 'A related entity for organization',
+      type: 'person',
+      user_id: test_user_id,
+      created_at: now,
+      updated_at: later,
+      frontmatter: {
+        entity_id: related_entity_id,
+        title: 'Related Entity',
+        description: 'A related entity for organization',
+        type: 'person',
+        created_at: now,
+        updated_at: later
+      },
+      base_relative_path: related_base_relative_path
+    })
+
+    // 4. Create organization with relationship (using base_relative_path)
+    const organization_properties = {
       entity_id: uuid(),
-      title: 'Organization Tag',
-      description: 'A tag for organizations',
+      title: 'Org with Relation',
+      description: 'Organization with relationships',
       created_at: now,
       updated_at: later
     }
-
-    const tag_entity_id = await db('entities')
-      .insert({
-        title: tag_properties.title,
-        description: tag_properties.description,
-        type: 'tag',
-        user_id: test_user_id,
-        created_at: tag_properties.created_at,
-        updated_at: tag_properties.updated_at,
-        frontmatter: tag_properties
-      })
-      .returning('entity_id')
-      .then((rows) => rows[0].entity_id)
-
-    await db('tags').insert({ entity_id: tag_entity_id })
-
-    // Create organization with tag
-    const organization_properties = {
-      entity_id: uuid(),
-      title: 'Tagged Organization',
-      description: 'Organization with tags',
-      website_url: 'https://tagged-org.example.org',
-      // TODO should be base_relative_path
-      tags: [tag_entity_id],
-      created_at: now,
-      updated_at: later
+    const formatted_entity_metadata = {
+      relations: [
+        { relation_type: 'member_of', entity_path: related_base_relative_path }
+      ]
     }
 
     // Act
@@ -284,18 +315,23 @@ describe('write_organization_to_database', () => {
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
       base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      git_sha: 'dummysha1',
+      root_base_directory: test_repo.path,
+      formatted_entity_metadata
     })
 
     // Assert
-    const tag_relation = await db('entity_tags')
+    const relation = await db('entity_relations')
       .where({
-        entity_id: organization_id,
-        tag_entity_id
+        source_entity_id: organization_id,
+        target_entity_id: related_entity_id
       })
       .first()
 
-    expect(tag_relation).to.exist
+    expect(relation).to.exist
+
+    // Clean up temp repo
+    await test_repo.cleanup()
   })
 
   it('should handle archived status correctly', async () => {

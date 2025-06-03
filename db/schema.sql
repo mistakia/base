@@ -27,7 +27,6 @@ ALTER TABLE IF EXISTS ONLY public.physical_items DROP CONSTRAINT IF EXISTS physi
 ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_entity_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_tag_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_target_entity_id_fkey;
@@ -47,12 +46,12 @@ ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_user_i
 ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_target_block_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_source_block_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_block_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.activities DROP CONSTRAINT IF EXISTS activities_entity_id_fkey;
 DROP TRIGGER IF EXISTS trigger_update_digital_items_search_vector ON public.digital_items;
 DROP TRIGGER IF EXISTS trigger_update_block_search_vector ON public.blocks;
-DROP TRIGGER IF EXISTS refresh_activities_view_trigger ON public.entities;
 DROP TRIGGER IF EXISTS entity_blocks_audit ON public.entity_blocks;
 DROP TRIGGER IF EXISTS entities_audit ON public.entities;
+DROP INDEX IF EXISTS public.idx_workflows_view_entity_id;
+DROP INDEX IF EXISTS public.idx_workflows_entity_id;
 DROP INDEX IF EXISTS public.idx_unique_tag_entities;
 DROP INDEX IF EXISTS public.idx_unique_entity_relations;
 DROP INDEX IF EXISTS public.idx_tasks_status;
@@ -64,9 +63,9 @@ DROP INDEX IF EXISTS public.idx_sync_configs_entity_id;
 DROP INDEX IF EXISTS public.idx_physical_location_coordinates;
 DROP INDEX IF EXISTS public.idx_guideline_status;
 DROP INDEX IF EXISTS public.idx_guideline_effective_date;
+DROP INDEX IF EXISTS public.idx_entity_tags_tag_id;
 DROP INDEX IF EXISTS public.idx_entity_sync_records_external;
 DROP INDEX IF EXISTS public.idx_entity_sync_records_entity_id;
-DROP INDEX IF EXISTS public.idx_entity_tags_tag_id;
 DROP INDEX IF EXISTS public.idx_entity_relations_type;
 DROP INDEX IF EXISTS public.idx_entity_relations_target_type;
 DROP INDEX IF EXISTS public.idx_entity_relations_target;
@@ -109,7 +108,6 @@ DROP INDEX IF EXISTS public.idx_block_relationships_target;
 DROP INDEX IF EXISTS public.idx_block_relationships_source;
 DROP INDEX IF EXISTS public.idx_audit_log_table_record;
 DROP INDEX IF EXISTS public.idx_audit_log_changed_at;
-DROP INDEX IF EXISTS public.idx_activities_view_entity_id;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_username_key;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_public_key_key;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
@@ -121,7 +119,6 @@ ALTER TABLE IF EXISTS ONLY public.task_parents DROP CONSTRAINT IF EXISTS task_pa
 ALTER TABLE IF EXISTS ONLY public.task_organizations DROP CONSTRAINT IF EXISTS task_organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.task_digital_items DROP CONSTRAINT IF EXISTS task_digital_items_pkey;
 ALTER TABLE IF EXISTS ONLY public.task_dependencies DROP CONSTRAINT IF EXISTS task_dependencies_pkey;
-ALTER TABLE IF EXISTS ONLY public.task_activities DROP CONSTRAINT IF EXISTS task_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.sync_conflicts DROP CONSTRAINT IF EXISTS sync_conflicts_pkey;
 ALTER TABLE IF EXISTS ONLY public.sync_configs DROP CONSTRAINT IF EXISTS sync_configs_pkey;
@@ -133,9 +130,9 @@ ALTER TABLE IF EXISTS ONLY public.persons DROP CONSTRAINT IF EXISTS persons_pkey
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.organization_persons DROP CONSTRAINT IF EXISTS organization_persons_pkey;
 ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_pkey;
+ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_sync_records DROP CONSTRAINT IF EXISTS entity_sync_records_entity_id_external_system_external_id_key;
-ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_observations DROP CONSTRAINT IF EXISTS entity_observations_pkey;
 ALTER TABLE IF EXISTS ONLY public.entity_metadata DROP CONSTRAINT IF EXISTS entity_metadata_pkey;
@@ -159,24 +156,19 @@ ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_pkey;
 ALTER TABLE IF EXISTS ONLY public.block_attributes DROP CONSTRAINT IF EXISTS block_attributes_block_id_key_key;
 ALTER TABLE IF EXISTS ONLY public.audit_log DROP CONSTRAINT IF EXISTS audit_log_pkey;
-ALTER TABLE IF EXISTS ONLY public.activities DROP CONSTRAINT IF EXISTS activities_pkey;
+DROP MATERIALIZED VIEW IF EXISTS public.workflows_view;
+DROP TABLE IF EXISTS public.workflows;
+DROP VIEW IF EXISTS public.workflow_guidelines_view;
 DROP TABLE IF EXISTS public.users;
 DROP VIEW IF EXISTS public.text_document_view;
 DROP TABLE IF EXISTS public.tasks;
 DROP TABLE IF EXISTS public.task_tags;
-DROP VIEW IF EXISTS public.task_physical_items_view;
 DROP TABLE IF EXISTS public.task_physical_items;
-DROP VIEW IF EXISTS public.task_persons_view;
 DROP TABLE IF EXISTS public.task_persons;
 DROP TABLE IF EXISTS public.task_parents;
-DROP VIEW IF EXISTS public.task_parent_child_view;
-DROP VIEW IF EXISTS public.task_organizations_view;
 DROP TABLE IF EXISTS public.task_organizations;
-DROP VIEW IF EXISTS public.task_digital_items_view;
 DROP TABLE IF EXISTS public.task_digital_items;
-DROP VIEW IF EXISTS public.task_dependencies_view;
 DROP TABLE IF EXISTS public.task_dependencies;
-DROP TABLE IF EXISTS public.task_activities;
 DROP TABLE IF EXISTS public.tags;
 DROP TABLE IF EXISTS public.sync_conflicts;
 DROP TABLE IF EXISTS public.sync_configs;
@@ -190,7 +182,6 @@ DROP VIEW IF EXISTS public.person_organizations_view;
 DROP TABLE IF EXISTS public.organizations;
 DROP TABLE IF EXISTS public.organization_persons;
 DROP VIEW IF EXISTS public.organization_members_view;
-DROP VIEW IF EXISTS public.guideline_with_activities;
 DROP TABLE IF EXISTS public.guidelines;
 DROP TABLE IF EXISTS public.entity_sync_records;
 DROP VIEW IF EXISTS public.entity_stats;
@@ -198,6 +189,7 @@ DROP TABLE IF EXISTS public.entity_tags;
 DROP TABLE IF EXISTS public.entity_observations;
 DROP TABLE IF EXISTS public.entity_metadata;
 DROP VIEW IF EXISTS public.entity_hierarchies_view;
+DROP TABLE IF EXISTS public.entity_relations;
 DROP TABLE IF EXISTS public.entity_blocks;
 DROP TABLE IF EXISTS public.digital_items;
 DROP TABLE IF EXISTS public.digital_item_tags;
@@ -210,15 +202,11 @@ DROP TABLE IF EXISTS public.blocks;
 DROP TABLE IF EXISTS public.block_relationships;
 DROP TABLE IF EXISTS public.block_attributes;
 DROP TABLE IF EXISTS public.audit_log;
-DROP VIEW IF EXISTS public.activity_guidelines_view;
-DROP TABLE IF EXISTS public.entity_relations;
-DROP MATERIALIZED VIEW IF EXISTS public.activities_view;
-DROP TABLE IF EXISTS public.activities;
 DROP VIEW IF EXISTS public.active_entities;
 DROP TABLE IF EXISTS public.entities;
 DROP FUNCTION IF EXISTS public.update_digital_items_search_vector();
 DROP FUNCTION IF EXISTS public.update_block_search_vector();
-DROP FUNCTION IF EXISTS public.refresh_activities_view();
+DROP FUNCTION IF EXISTS public.refresh_workflows_view();
 DROP FUNCTION IF EXISTS public.process_audit_log();
 DROP FUNCTION IF EXISTS public.is_entity_synced_with_git(p_entity_id uuid, p_git_sha character varying);
 DROP FUNCTION IF EXISTS public.entity_similarity_search(query_embedding public.vector, entity_types public.entity_type[], similarity_threshold double precision, max_results integer);
@@ -233,6 +221,21 @@ DROP TYPE IF EXISTS public.change_request_status_type;
 DROP TYPE IF EXISTS public.block_type;
 DROP EXTENSION IF EXISTS vector;
 DROP EXTENSION IF EXISTS "uuid-ossp";
+-- *not* dropping schema, since initdb creates it
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS '';
+
+
 --
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -307,7 +310,6 @@ CREATE TYPE public.change_request_status_type AS ENUM (
 --
 
 CREATE TYPE public.entity_type AS ENUM (
-    'activity',
     'database',
     'database_item',
     'database_view',
@@ -322,7 +324,8 @@ CREATE TYPE public.entity_type AS ENUM (
     'task',
     'text',
     'type_definition',
-    'type_extension'
+    'type_extension',
+    'workflow'
 );
 
 
@@ -526,14 +529,14 @@ $$;
 
 
 --
--- Name: refresh_activities_view(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: refresh_workflows_view(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.refresh_activities_view() RETURNS trigger
+CREATE FUNCTION public.refresh_workflows_view() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY activities_view;
+  REFRESH MATERIALIZED VIEW CONCURRENTLY workflows_view;
   RETURN NULL;
 END;
 $$;
@@ -621,60 +624,6 @@ CREATE VIEW public.active_entities AS
     entities.archived_at
    FROM public.entities
   WHERE (entities.archived_at IS NULL);
-
-
---
--- Name: activities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.activities (
-    entity_id uuid NOT NULL
-);
-
-
---
--- Name: activities_view; Type: MATERIALIZED VIEW; Schema: public; Owner: -
---
-
-CREATE MATERIALIZED VIEW public.activities_view AS
- SELECT entities.entity_id,
-    entities.title,
-    entities.description,
-    entities.user_id,
-    entities.created_at,
-    entities.updated_at
-   FROM public.entities
-  WHERE ((entities.type = 'activity'::public.entity_type) AND (entities.archived_at IS NULL))
-  WITH NO DATA;
-
-
---
--- Name: entity_relations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entity_relations (
-    relation_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
-    source_entity_id uuid NOT NULL,
-    target_entity_id uuid,
-    relation_type character varying(50) NOT NULL,
-    context text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: activity_guidelines_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.activity_guidelines_view AS
- SELECT entity_relations.source_entity_id AS activity_entity_id,
-    entity_relations.target_entity_id AS guideline_entity_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = 'follows'::text) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'activity'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'guideline'::public.entity_type)))));
 
 
 --
@@ -850,6 +799,20 @@ CREATE TABLE public.entity_blocks (
 
 
 --
+-- Name: entity_relations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_relations (
+    relation_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
+    source_entity_id uuid NOT NULL,
+    target_entity_id uuid,
+    relation_type character varying(50) NOT NULL,
+    context text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
 -- Name: entity_hierarchies_view; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -923,7 +886,7 @@ CREATE VIEW public.entity_stats AS
 
 
 --
--- Name: external_syncs; Type: TABLE; Schema: public; Owner: -
+-- Name: entity_sync_records; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entity_sync_records (
@@ -964,26 +927,6 @@ COMMENT ON COLUMN public.guidelines.globs IS 'Glob patterns for files that this 
 --
 
 COMMENT ON COLUMN public.guidelines.always_apply IS 'Whether this guideline should always be applied';
-
-
---
--- Name: guideline_with_activities; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.guideline_with_activities AS
- SELECT g.entity_id,
-    e.title,
-    e.description,
-    g.guideline_status,
-    g.effective_date,
-    array_agg(DISTINCT r.source_entity_id) AS activity_entity_ids,
-    array_agg(DISTINCT ae.title) AS activity_titles
-   FROM (((public.guidelines g
-     JOIN public.entities e ON ((g.entity_id = e.entity_id)))
-     LEFT JOIN public.entity_relations r ON (((g.entity_id = r.target_entity_id) AND ((r.relation_type)::text = 'follows'::text))))
-     LEFT JOIN public.entities ae ON (((r.source_entity_id = ae.entity_id) AND (ae.type = 'activity'::public.entity_type))))
-  WHERE (e.archived_at IS NULL)
-  GROUP BY g.entity_id, e.title, e.description, g.guideline_status, g.effective_date;
 
 
 --
@@ -1199,16 +1142,6 @@ CREATE TABLE public.tags (
 
 
 --
--- Name: task_activities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.task_activities (
-    activity_id uuid NOT NULL,
-    task_id uuid NOT NULL
-);
-
-
---
 -- Name: task_dependencies; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1216,21 +1149,6 @@ CREATE TABLE public.task_dependencies (
     task_id uuid NOT NULL,
     dependent_task_id uuid NOT NULL
 );
-
-
---
--- Name: task_dependencies_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_dependencies_view AS
- SELECT entity_relations.source_entity_id AS task_entity_id,
-    entity_relations.target_entity_id AS dependent_task_entity_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = 'depends_on'::text) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'task'::public.entity_type)))));
 
 
 --
@@ -1244,21 +1162,6 @@ CREATE TABLE public.task_digital_items (
 
 
 --
--- Name: task_digital_items_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_digital_items_view AS
- SELECT entity_relations.source_entity_id AS task_id,
-    entity_relations.target_entity_id AS digital_item_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = 'requires'::text) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'digital_item'::public.entity_type)))));
-
-
---
 -- Name: task_organizations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1266,36 +1169,6 @@ CREATE TABLE public.task_organizations (
     organization_id uuid NOT NULL,
     task_id uuid NOT NULL
 );
-
-
---
--- Name: task_organizations_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_organizations_view AS
- SELECT entity_relations.source_entity_id AS task_id,
-    entity_relations.target_entity_id AS organization_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = ANY (ARRAY[('assigned_to'::character varying)::text, ('involves'::character varying)::text])) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'organization'::public.entity_type)))));
-
-
---
--- Name: task_parent_child_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_parent_child_view AS
- SELECT entity_relations.target_entity_id AS parent_task_id,
-    entity_relations.source_entity_id AS child_task_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = 'child_of'::text) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'task'::public.entity_type)))));
 
 
 --
@@ -1319,21 +1192,6 @@ CREATE TABLE public.task_persons (
 
 
 --
--- Name: task_persons_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_persons_view AS
- SELECT entity_relations.source_entity_id AS task_id,
-    entity_relations.target_entity_id AS person_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = ANY (ARRAY[('assigned_to'::character varying)::text, ('involves'::character varying)::text])) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'person'::public.entity_type)))));
-
-
---
 -- Name: task_physical_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1341,21 +1199,6 @@ CREATE TABLE public.task_physical_items (
     physical_item_id uuid NOT NULL,
     task_id uuid NOT NULL
 );
-
-
---
--- Name: task_physical_items_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.task_physical_items_view AS
- SELECT entity_relations.source_entity_id AS task_id,
-    entity_relations.target_entity_id AS physical_item_id
-   FROM public.entity_relations
-  WHERE (((entity_relations.relation_type)::text = 'requires'::text) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'task'::public.entity_type)))) AND (EXISTS ( SELECT 1
-           FROM public.entities
-          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'physical_item'::public.entity_type)))));
 
 
 --
@@ -1432,11 +1275,43 @@ CREATE TABLE public.users (
 
 
 --
--- Name: activities activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: workflow_guidelines_view; Type: VIEW; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.activities
-    ADD CONSTRAINT activities_pkey PRIMARY KEY (entity_id);
+CREATE VIEW public.workflow_guidelines_view AS
+ SELECT entity_relations.source_entity_id AS workflow_entity_id,
+    entity_relations.target_entity_id AS guideline_entity_id
+   FROM public.entity_relations
+  WHERE (((entity_relations.relation_type)::text = 'follows'::text) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.source_entity_id) AND (entities.type = 'workflow'::public.entity_type)))) AND (EXISTS ( SELECT 1
+           FROM public.entities
+          WHERE ((entities.entity_id = entity_relations.target_entity_id) AND (entities.type = 'guideline'::public.entity_type)))));
+
+
+--
+-- Name: workflows; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.workflows (
+    entity_id uuid NOT NULL
+);
+
+
+--
+-- Name: workflows_view; Type: MATERIALIZED VIEW; Schema: public; Owner: -
+--
+
+CREATE MATERIALIZED VIEW public.workflows_view AS
+ SELECT entities.entity_id,
+    entities.title,
+    entities.description,
+    entities.user_id,
+    entities.created_at,
+    entities.updated_at
+   FROM public.entities
+  WHERE ((entities.type = 'workflow'::public.entity_type) AND (entities.archived_at IS NULL))
+  WITH NO DATA;
 
 
 --
@@ -1624,15 +1499,7 @@ ALTER TABLE ONLY public.entity_relations
 
 
 --
--- Name: entity_tags entity_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_tags
-    ADD CONSTRAINT entity_tags_pkey PRIMARY KEY (entity_id, tag_entity_id);
-
-
---
--- Name: external_syncs external_syncs_entity_id_external_system_external_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_sync_records entity_sync_records_entity_id_external_system_external_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_sync_records
@@ -1640,11 +1507,19 @@ ALTER TABLE ONLY public.entity_sync_records
 
 
 --
--- Name: external_syncs external_syncs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_sync_records entity_sync_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_sync_records
     ADD CONSTRAINT entity_sync_records_pkey PRIMARY KEY (sync_id);
+
+
+--
+-- Name: entity_tags entity_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_tags
+    ADD CONSTRAINT entity_tags_pkey PRIMARY KEY (entity_id, tag_entity_id);
 
 
 --
@@ -1736,14 +1611,6 @@ ALTER TABLE ONLY public.tags
 
 
 --
--- Name: task_activities task_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.task_activities
-    ADD CONSTRAINT task_activities_pkey PRIMARY KEY (activity_id, task_id);
-
-
---
 -- Name: task_dependencies task_dependencies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1829,13 +1696,6 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_username_key UNIQUE (username);
-
-
---
--- Name: idx_activities_view_entity_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_activities_view_entity_id ON public.activities_view USING btree (entity_id);
 
 
 --
@@ -2133,24 +1993,24 @@ CREATE INDEX idx_entity_relations_type ON public.entity_relations USING btree (r
 
 
 --
--- Name: idx_entity_tags_tag_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_tags_tag_id ON public.entity_tags USING btree (tag_entity_id);
-
-
---
--- Name: idx_external_syncs_entity_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_sync_records_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_sync_records_entity_id ON public.entity_sync_records USING btree (entity_id);
 
 
 --
--- Name: idx_external_syncs_external; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_sync_records_external; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_sync_records_external ON public.entity_sync_records USING btree (external_system, external_id);
+
+
+--
+-- Name: idx_entity_tags_tag_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_entity_tags_tag_id ON public.entity_tags USING btree (tag_entity_id);
 
 
 --
@@ -2231,6 +2091,20 @@ CREATE UNIQUE INDEX idx_unique_tag_entities ON public.entities USING btree (titl
 
 
 --
+-- Name: idx_workflows_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_workflows_entity_id ON public.workflows USING btree (entity_id);
+
+
+--
+-- Name: idx_workflows_view_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_workflows_view_entity_id ON public.workflows_view USING btree (entity_id);
+
+
+--
 -- Name: entities entities_audit; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2245,13 +2119,6 @@ CREATE TRIGGER entity_blocks_audit AFTER INSERT OR DELETE OR UPDATE ON public.en
 
 
 --
--- Name: entities refresh_activities_view_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER refresh_activities_view_trigger AFTER INSERT OR DELETE OR UPDATE ON public.entities FOR EACH ROW EXECUTE FUNCTION public.refresh_activities_view();
-
-
---
 -- Name: blocks trigger_update_block_search_vector; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2263,14 +2130,6 @@ CREATE TRIGGER trigger_update_block_search_vector BEFORE INSERT OR UPDATE ON pub
 --
 
 CREATE TRIGGER trigger_update_digital_items_search_vector BEFORE INSERT OR UPDATE ON public.digital_items FOR EACH ROW EXECUTE FUNCTION public.update_digital_items_search_vector();
-
-
---
--- Name: activities activities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.activities
-    ADD CONSTRAINT activities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
 
 
 --
@@ -2503,6 +2362,13 @@ ALTER TABLE ONLY public.tags
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 
 
 --

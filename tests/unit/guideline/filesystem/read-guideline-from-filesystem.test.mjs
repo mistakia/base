@@ -19,7 +19,6 @@ describe('read_guideline_from_filesystem', () => {
   let original_system_base_directory
   let original_user_base_directory
   let repo
-  const branch = 'main'
 
   // System guideline paths in the repo
   const system_guideline_dir = 'system/guideline'

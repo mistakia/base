@@ -5,12 +5,12 @@ import debug from 'debug'
 
 import {
   get_thread_base_directory,
-  THREAD_DEFAULT_ACTIVITY_BASE_RELATIVE_PATH
+  THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH
 } from './threads-constants.mjs'
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_change_request } from '#libs-server/change-requests/index.mjs'
-import { activity_exists_in_filesystem } from '#libs-server/activity/index.mjs'
+import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
 
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
@@ -105,12 +105,12 @@ async function initialize_memory_repository({ memory_dir }) {
  *
  * @param {Object} params Thread creation parameters
  * @param {string} params.user_id ID of the user who owns the thread
- * @param {string} params.activity_base_relative_path Activity base relative path in format
+ * @param {string} params.workflow_base_relative_path Workflow base relative path in format
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
  * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
- * @param {string} [params.prompt_properties] Prompt properties for the activity
+ * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {string} [params.root_base_directory] Path to root repository
  * @param {string} [params.user_base_directory] Path to user knowledge base repository
@@ -119,7 +119,7 @@ async function initialize_memory_repository({ memory_dir }) {
  */
 export default async function create_thread({
   user_id,
-  activity_base_relative_path = THREAD_DEFAULT_ACTIVITY_BASE_RELATIVE_PATH,
+  workflow_base_relative_path = THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH,
   inference_provider,
   model,
   thread_state = THREAD_STATE.ACTIVE,
@@ -136,8 +136,8 @@ export default async function create_thread({
     throw new Error('user_id is required')
   }
 
-  if (!activity_base_relative_path) {
-    throw new Error('activity_base_relative_path is required')
+  if (!workflow_base_relative_path) {
+    throw new Error('workflow_base_relative_path is required')
   }
 
   if (!inference_provider) {
@@ -151,21 +151,21 @@ export default async function create_thread({
   // Validate thread_state using shared function
   validate_thread_state(thread_state)
 
-  // Validate that the activity exists
-  // TODO consider using activity_exists_in_git instead
-  const activity_file_exists = await activity_exists_in_filesystem({
-    base_relative_path: activity_base_relative_path,
+  // Validate that the workflow exists
+  // TODO consider using workflow_exists_in_git instead
+  const workflow_file_exists = await workflow_exists_in_filesystem({
+    base_relative_path: workflow_base_relative_path,
     root_base_directory
   })
 
-  if (!activity_file_exists) {
-    throw new Error(`Activity '${activity_base_relative_path}' does not exist`)
+  if (!workflow_file_exists) {
+    throw new Error(`Workflow '${workflow_base_relative_path}' does not exist`)
   }
 
   // Generate thread ID
   const thread_id = uuid()
   log(
-    `Creating thread ${thread_id} for user ${user_id} with activity ${activity_base_relative_path}`
+    `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_relative_path}`
   )
 
   // Create thread directory structure
@@ -185,7 +185,7 @@ export default async function create_thread({
   const metadata = {
     thread_id,
     user_id,
-    activity_base_relative_path,
+    workflow_base_relative_path,
     inference_provider,
     model,
     thread_state,

@@ -140,13 +140,15 @@ async function create_or_update_entity({ entity_data, entity_id, db_client }) {
  * @param {Object} params.formatted_entity_metadata Formatted metadata about the entity
  * @param {string} params.user_id User who owns the entity
  * @param {Object} params.db_client Database client or transaction
+ * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<number>} Number of relations processed
  */
 async function process_entity_relations({
   entity_id,
   formatted_entity_metadata,
   user_id,
-  db_client
+  db_client,
+  root_base_directory
 }) {
   if (!formatted_entity_metadata || !formatted_entity_metadata.relations) {
     return 0
@@ -159,7 +161,8 @@ async function process_entity_relations({
   for (const relation of formatted_entity_metadata.relations) {
     try {
       const result = await get_entity_id_from_base_path({
-        base_relative_path: relation.entity_path
+        base_relative_path: relation.entity_path,
+        root_base_directory
       })
 
       if (result.success && result.entity_id) {
@@ -201,14 +204,16 @@ async function process_entity_relations({
  *
  * @param {Object} params Tag conversion parameters
  * @param {string[]} params.tags Array of tag paths
+ * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<Object[]>} Array of tag conversion results
  */
-async function convert_tag_paths_to_entity_ids({ tags }) {
+async function convert_tag_paths_to_entity_ids({ tags, root_base_directory }) {
   return Promise.all(
     tags.map(async (tag) => {
       try {
         const result = await get_entity_id_from_base_path({
-          base_relative_path: tag
+          base_relative_path: tag,
+          root_base_directory
         })
         if (result.success && result.entity_id) {
           log(`Converted tag path ${tag} to entity_id ${result.entity_id}`)
@@ -232,15 +237,24 @@ async function convert_tag_paths_to_entity_ids({ tags }) {
  * @param {string} params.entity_id Entity ID
  * @param {string[]} params.tags Array of tag paths
  * @param {Object} params.db_client Database client or transaction
+ * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<Object>} Tag processing results
  */
-async function process_entity_tags({ entity_id, tags, db_client }) {
+async function process_entity_tags({
+  entity_id,
+  tags,
+  db_client,
+  root_base_directory
+}) {
   if (!tags || tags.length === 0) {
     return { processed: 0, skipped: 0 }
   }
 
   // Convert tag paths to entity IDs
-  const tag_results = await convert_tag_paths_to_entity_ids({ tags })
+  const tag_results = await convert_tag_paths_to_entity_ids({
+    tags,
+    root_base_directory
+  })
 
   // Filter out failed tag conversions
   const valid_tag_entity_ids = tag_results
@@ -306,7 +320,7 @@ async function update_entity_archive_status({
  * @param {string} [params.entity_properties.permalink=null] Custom URL path
  * @param {string[]} [params.entity_properties.tags=[]] Array of categorization tags
  * @param {string[]} [params.entity_properties.observations=[]] Array of structured observations
- * @param {string} params.entity_type Type of entity (task, guideline, activity, etc.)
+ * @param {string} params.entity_type Type of entity (task, guideline, workflow, etc.)
  * @param {string} params.user_id User who owns the entity
  * @param {string} [params.entity_content=''] Optional entity content/markdown
  * @param {string} params.absolute_path Absolute path to the file (required)
@@ -314,6 +328,7 @@ async function update_entity_archive_status({
  * @param {string} params.git_sha Git SHA of the file (required)
  * @param {Object} [params.formatted_entity_metadata=null] Formatted metadata about the entity
  * @param {Object} [params.trx=null] Optional transaction object
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
  * @returns {Promise<string>} The entity_id
  */
 export async function write_entity_to_database({
@@ -325,7 +340,8 @@ export async function write_entity_to_database({
   base_relative_path,
   git_sha,
   formatted_entity_metadata = null,
-  trx = null
+  trx = null,
+  root_base_directory
 }) {
   try {
     log(`Writing ${entity_type} entity to database`)
@@ -366,7 +382,8 @@ export async function write_entity_to_database({
       entity_id,
       formatted_entity_metadata,
       user_id,
-      db_client
+      db_client,
+      root_base_directory
     })
 
     // Process tags if present
@@ -374,7 +391,8 @@ export async function write_entity_to_database({
       await process_entity_tags({
         entity_id,
         tags: entity_properties.tags,
-        db_client
+        db_client,
+        root_base_directory
       })
     }
 

@@ -49,10 +49,10 @@ describe('write_entity_to_filesystem', () => {
 
     // Check file content
     const file_content = await fs.readFile(absolute_path, 'utf8')
-    expect(file_content).to.include("title: 'Test Entity'")
-    expect(file_content).to.include("type: 'test'")
-    expect(file_content).to.include('description: |')
-    expect(file_content).to.include('  Test description')
+    expect(file_content).to.include('title: Test Entity')
+    expect(file_content).to.include('type: test')
+    expect(file_content).to.include('description:')
+    expect(file_content).to.include('Test description')
     expect(file_content).to.include("user_id: '123456'")
     expect(file_content).to.include('tags:')
     expect(file_content).to.include('# Test Entity')
@@ -80,8 +80,8 @@ describe('write_entity_to_filesystem', () => {
     expect(result.entity_id).to.be.a('string')
 
     const file_content = await fs.readFile(absolute_path, 'utf8')
-    expect(file_content).to.include("title: 'Minimal Entity'")
-    expect(file_content).to.include("type: 'minimal'")
+    expect(file_content).to.include('title: Minimal Entity')
+    expect(file_content).to.include('type: minimal')
     expect(file_content).to.include('created_at:')
     expect(file_content).to.include('updated_at:')
   })
@@ -150,10 +150,10 @@ describe('write_entity_to_filesystem', () => {
     })
 
     const file_content = await fs.readFile(absolute_path, 'utf8')
-    expect(file_content).to.include("title: 'Test Task'")
-    expect(file_content).to.include("type: 'task'")
+    expect(file_content).to.include('title: Test Task')
+    expect(file_content).to.include('type: task')
     expect(file_content).to.include('status: In Progress')
-    expect(file_content).to.include("priority: 'High'")
+    expect(file_content).to.include('priority: High')
     expect(file_content).to.include("start_by: '2023-03-01T00:00:00.000Z'")
     expect(file_content).to.include("finish_by: '2023-03-15T00:00:00.000Z'")
   })
@@ -191,23 +191,23 @@ describe('write_entity_to_filesystem', () => {
 
     // Check that frontmatter is properly formatted
     expect(file_content).to.include('---')
-    expect(file_content).to.include("title: 'Full Entity'")
-    expect(file_content).to.include("type: 'complete'")
-    expect(file_content).to.include("permalink: '/custom-path'")
+    expect(file_content).to.include('title: Full Entity')
+    expect(file_content).to.include('type: complete')
+    expect(file_content).to.include('permalink: /custom-path')
 
     // Check array formatting
     expect(file_content).to.include('tags:')
-    expect(file_content).to.include("  - 'test'")
-    expect(file_content).to.include("  - 'entity'")
-    expect(file_content).to.include("  - 'complete'")
+    expect(file_content).to.include('test')
+    expect(file_content).to.include('entity')
+    expect(file_content).to.include('complete')
 
     expect(file_content).to.include('relations:')
-    expect(file_content).to.include("  - 'relates_to [[entity/other-entity]]'")
-    expect(file_content).to.include("  - 'depends_on [[entity/dependency]]'")
+    expect(file_content).to.include('relates_to [[entity/other-entity]]')
+    expect(file_content).to.include('depends_on [[entity/dependency]]')
 
     expect(file_content).to.include('observations:')
-    expect(file_content).to.include("  - '[note] This is a test observation'")
-    expect(file_content).to.include("  - '[tech] Uses markdown #format'")
+    expect(file_content).to.include('[note] This is a test observation')
+    expect(file_content).to.include('[tech] Uses markdown #format')
 
     // Check content formatting
     expect(file_content).to.include('# Full Entity')

@@ -108,9 +108,13 @@ describe('read_entity_from_database', () => {
     // Create a relation between the entities
     await write_entity_relations_to_database({
       entity_id,
-      relations: {
-        references: [related_entity_id]
-      },
+      relations: [
+        {
+          entity_id: related_entity_id,
+          relation_type: 'references',
+          context: null
+        }
+      ],
       user_id: test_user_id,
       db_client: db
     })

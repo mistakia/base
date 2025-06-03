@@ -97,9 +97,13 @@ describe('delete_entity_from_database', () => {
     // Create entity relation
     await write_entity_relations_to_database({
       entity_id,
-      relations: {
-        related_to: [related_entity_id]
-      },
+      relations: [
+        {
+          entity_id: related_entity_id,
+          relation_type: 'related_to',
+          context: null
+        }
+      ],
       user_id: test_user_id,
       db_client: db
     })

@@ -1,15 +1,17 @@
 ---
 title: 'General Purpose Role'
-type: 'activity'
+type: 'workflow'
 description: |
   General purpose role for handling general purpose inquiries and instructions
-created_at: '2025-05-27T18:10:20.246Z'
-entity_id: '123e4567-e89b-12d3-a456-426614174000'
+created_at: '2025-05-27T18:10:20.232Z'
+entity_id: 'f07d39b2-260c-4d9a-b961-2fe728864eb9'
 guidelines:
 observations:
   - '[workflow] General purpose role handles general purpose inquiries and instructions #core'
+relations:
+  - 'implements [[system/text/system-design.md]]'
 tags:
-updated_at: '2025-05-27T18:10:20.246Z'
+updated_at: '2025-05-27T18:10:20.232Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 

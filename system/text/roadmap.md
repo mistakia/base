@@ -19,7 +19,7 @@ This document outlines planned features and improvements for the system.
 ## Notes
 
 - Add support for reranking in retrieval
-- Create an entity deduplication thread/activity workflow
+- Create an entity deduplication thread/workflow
 - Layered Knowledge Graph
   - Raw Graph (non-lossy raw data)
   - Entity Graph (knowledge base)

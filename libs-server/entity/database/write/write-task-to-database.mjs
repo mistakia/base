@@ -36,40 +36,49 @@ const log = debug('entity:database:write-task')
  * @param {string} [params.task_properties.assigned_to=null] Person or team responsible for the task
  * @param {string} params.user_id User ID who owns the task
  * @param {string} [params.task_content=''] Optional task content/markdown
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} [params.absolute_path=null] Absolute path to the file
  * @param {string} [params.base_relative_path=null] Base relative path of the task
  * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
  * @returns {Promise<string>} The entity_id
  */
 export async function write_task_to_database({
   task_properties,
   user_id,
   task_content = '',
+  entity_id = null,
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing task to database')
     const db_client = trx || db
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: task_properties,
       entity_type: 'task',
       user_id,
       entity_content: task_content,
+      entity_id,
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process task-specific data directly
     await write_task_data_to_database({
-      entity_id,
+      entity_id: result_entity_id,
       status: task_properties.status,
       priority: task_properties.priority,
       start_by: task_properties.start_by,
@@ -90,8 +99,8 @@ export async function write_task_to_database({
       db_client
     })
 
-    log(`Task successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Task successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing task to database:', error)
     throw error

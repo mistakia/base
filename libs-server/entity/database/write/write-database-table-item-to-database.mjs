@@ -27,17 +27,21 @@ const log = debug('entity:database:write-database-table-item')
  * @param {string} [params.base_relative_path=null] Base relative path to the file
  * @param {string} [params.git_sha=null] Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
  * @returns {Promise<string>} The database_item_id (same as entity_id)
  */
 export async function write_database_table_item_to_database({
   database_item_properties,
   user_id,
   database_item_content = '',
-  database_item_id = null,
+  entity_id = null,
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing database table item to database')
@@ -52,28 +56,30 @@ export async function write_database_table_item_to_database({
     const field_values = database_item_properties.field_values || {}
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: database_item_properties,
       entity_type: 'database_item',
       user_id,
       entity_content: database_item_content,
-      entity_id: database_item_id,
+      entity_id,
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process database item-specific data
     await write_database_table_item_data_to_database({
-      entity_id,
+      entity_id: result_entity_id,
       database_table_id: database_item_properties.database_table_id,
       field_values,
       db_client
     })
 
-    log(`Database table item successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Database table item successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing database table item to database:', error)
     throw error

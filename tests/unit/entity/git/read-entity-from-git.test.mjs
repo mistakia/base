@@ -108,8 +108,8 @@ describe('read_entity_from_git', () => {
       '# Test Git Entity\n\nThis entity is stored in git.'
     )
     expect(result.raw_content).to.be.a('string')
-    expect(result.raw_content).to.include("title: 'Test Git Entity'")
-    expect(result.raw_content).to.include("type: 'test'")
+    expect(result.raw_content).to.include('title: Test Git Entity')
+    expect(result.raw_content).to.include('type: test')
     expect(result.raw_content).to.include('# Test Git Entity')
   })
 

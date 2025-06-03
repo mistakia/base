@@ -12,7 +12,7 @@ const log = debug('prompts:build')
  * @param {Object} params Parameters
  * @param {Object} params.components Object containing prompt components
  * @param {string} [params.components.system_prompt] System instructions
- * @param {string} [params.components.activity_prompt] Activity-specific instructions
+ * @param {string} [params.components.workflow_prompt] Workflow-specific instructions
  * @param {string} [params.components.guidelines_prompt] Guidelines to include
  * @param {string} [params.components.tools] Tool definitions
  * @param {string} [params.components.context] Thread memory and context
@@ -84,10 +84,10 @@ function format_prompt_text(prompt_object) {
     prompt_text += `${prompt_object.system_prompt.content}\n\n`
   }
 
-  // Activity instructions
-  if (prompt_object.activity_prompt) {
-    prompt_parts.activity_prompt = prompt_object.activity_prompt.content
-    prompt_text += `${prompt_object.activity_prompt.content}\n\n`
+  // Workflow instructions
+  if (prompt_object.workflow_prompt) {
+    prompt_parts.workflow_prompt = prompt_object.workflow_prompt.content
+    prompt_text += `${prompt_object.workflow_prompt.content}\n\n`
   }
 
   // Guidelines

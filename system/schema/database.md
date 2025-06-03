@@ -73,4 +73,3 @@ Databases commonly relate to:
 - database_items (content that belongs to the database)
 - database_views (saved display configurations)
 - tasks (work that involves managing the database)
-- activities (processes that create or use database items)

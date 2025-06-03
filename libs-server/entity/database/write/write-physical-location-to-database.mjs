@@ -36,43 +36,49 @@ const log = debug('entity:database:write-physical-location')
  * @param {Date} [params.physical_location_properties.archived_at=null] Date when the location was archived
  * @param {string} params.user_id User ID who owns the location entity
  * @param {string} [params.physical_location_content=''] Optional location content/markdown
- * @param {string} [params.physical_location_id=null] Optional location ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} params.absolute_path Absolute path to the file
  * @param {string} params.base_relative_path Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The physical_location_id (same as entity_id)
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
+ * @returns {Promise<string>} The entity_id
  */
 export async function write_physical_location_to_database({
   physical_location_properties,
   user_id,
   physical_location_content = '',
-  physical_location_id = null,
+  entity_id = null,
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing physical location to database')
     const db_client = trx || db
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: physical_location_properties,
       entity_type: 'physical_location',
       user_id,
       entity_content: physical_location_content,
-      entity_id: physical_location_id,
+      entity_id,
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process physical location-specific data
     await write_physical_location_data_to_database({
-      entity_id,
+      entity_id: result_entity_id,
       latitude: physical_location_properties.latitude,
       longitude: physical_location_properties.longitude,
       mail_address: physical_location_properties.mail_address,
@@ -92,8 +98,8 @@ export async function write_physical_location_to_database({
       db_client
     })
 
-    log(`Physical location successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Physical location successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing physical location to database:', error)
     throw error

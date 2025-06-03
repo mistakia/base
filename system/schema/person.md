@@ -29,7 +29,7 @@ properties:
 
 # Person
 
-Persons represent individual people who may be involved in tasks, activities, or organizations within the knowledge base.
+Persons represent individual people who may be involved in tasks, or organizations within the knowledge base.
 
 ## Person Attributes
 
@@ -54,7 +54,6 @@ Persons commonly use these relation types:
 
 - `member_of`: Organizations the person belongs to (formerly organizations)
 - `assigned_to`: Tasks assigned to the person
-- `executes`: Activities the person participates in
 - `follows`: Guidelines the person follows or creates
 - `requires`: Physical or digital items the person uses or manages
 
@@ -64,7 +63,6 @@ Example:
 relations:
   - 'member_of [[system/organization/org-name]]'
   - 'assigned_to [[user/tasks/task-name]]'
-  - 'executes [[system/activities/activity-name]]'
   - 'follows [[system/guidelines/guideline-name]]'
   - 'requires [[system/physical_item/item-name]]'
 ```

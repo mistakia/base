@@ -18,6 +18,11 @@ const argv = yargs(hideBin(process.argv))
     description: 'Email address for the new user',
     type: 'string'
   })
+  .option('user_id', {
+    alias: 'i',
+    description: 'User ID for the new user',
+    type: 'string'
+  })
   .option('private_key', {
     alias: 'p',
     description: 'Private key for the new user',
@@ -31,10 +36,10 @@ const log = debug('create-user')
 debug.enable('create-user')
 
 const run = async () => {
-  const { username, email, private_key } = argv
+  const { username, email, private_key, user_id } = argv
 
   log('Creating new user...')
-  const user = await create_user({ username, email, private_key })
+  const user = await create_user({ username, email, private_key, user_id })
 
   // Output user information
   console.log('User created successfully:')

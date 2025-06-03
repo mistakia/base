@@ -72,7 +72,6 @@ Database items commonly relate to:
 
 - their parent database
 - tasks (work related to the item)
-- activities (processes related to the item)
 - persons (people related to the item)
 - organizations (groups related to the item)
 
@@ -82,7 +81,6 @@ Example:
 relations:
   - 'belongs_to [[system/database/database-name]]'
   - 'related_task [[user/tasks/task-name]]'
-  - 'related_activity [[system/activities/activity-name]]'
   - 'related_person [[user/person/jane-doe]]'
   - 'related_organization [[system/organization/org-name]]'
 ```

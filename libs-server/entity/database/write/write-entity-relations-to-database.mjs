@@ -14,7 +14,7 @@ const log = debug('entity:database:write-relations')
  */
 export async function write_entity_relations_to_database({
   entity_id,
-  relations,
+  relations = [],
   user_id,
   db_client
 }) {

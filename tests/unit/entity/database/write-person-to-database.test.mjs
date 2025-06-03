@@ -2,7 +2,13 @@ import { expect } from 'chai'
 import { v4 as uuid } from 'uuid'
 import db from '#db'
 import write_person_to_database from '#libs-server/entity/database/write/write-person-to-database.mjs'
-import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import {
+  reset_all_tables,
+  create_test_user,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
+import path from 'path'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 
 describe('write_person_to_database', () => {
   let test_user
@@ -206,44 +212,66 @@ describe('write_person_to_database', () => {
   })
 
   it('should store person with tags', async () => {
-    // Arrange - first create a related tag entity
+    // Arrange - set up a temp repo and create a tag entity file
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // Create a tag to use for the person
-    const tag_properties = {
+    // 1. Create a temp repo
+    const test_repo = await create_temp_test_repo({
+      prefix: 'person-tag-test-'
+    })
+    const user_repo_path = test_repo.user_path
+    const tag_entity_id = uuid()
+    const tag_base_relative_path = 'user/tags/person-tag.md'
+    const tag_file_path = path.join(user_repo_path, 'tags', 'person-tag.md')
+
+    // 2. Write the tag entity file using write_entity_to_filesystem
+    await write_entity_to_filesystem({
+      absolute_path: tag_file_path,
+      entity_properties: {
+        user_id: test_user_id,
+        entity_id: tag_entity_id,
+        title: 'Person Tag',
+        description: 'A tag for persons',
+        type: 'tag',
+        created_at: now,
+        updated_at: later
+      },
+      entity_type: 'tag',
+      entity_content: 'A tag for persons.'
+    })
+
+    // 3. Insert the tag entity into the database
+    await db('entities').insert({
+      entity_id: tag_entity_id,
       title: 'Person Tag',
       description: 'A tag for persons',
+      type: 'tag',
+      user_id: test_user_id,
       created_at: now,
-      updated_at: later
-    }
-
-    const tag_entity_id = await db('entities')
-      .insert({
-        title: tag_properties.title,
-        description: tag_properties.description,
+      updated_at: later,
+      frontmatter: {
+        entity_id: tag_entity_id,
+        title: 'Person Tag',
+        description: 'A tag for persons',
         type: 'tag',
-        user_id: test_user_id,
-        created_at: tag_properties.created_at,
-        updated_at: tag_properties.updated_at,
-        frontmatter: tag_properties
-      })
-      .returning('entity_id')
-      .then((rows) => rows[0].entity_id)
-
+        created_at: now,
+        updated_at: later
+      },
+      base_relative_path: tag_base_relative_path
+    })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // Create person with tag
+    // 4. Create person with tag (using base_relative_path)
     const person_properties = {
       entity_id: uuid(),
       title: 'Tagged Person',
-      first_name: 'Tagged',
-      last_name: 'Person',
       description: 'Person with tags',
-      // TODO should be base_relative_path
-      tags: [tag_entity_id],
+      tags: [tag_base_relative_path],
       created_at: now,
-      updated_at: later
+      updated_at: later,
+      first_name: 'Tagged',
+      last_name: 'Person'
     }
 
     // Act
@@ -252,10 +280,11 @@ describe('write_person_to_database', () => {
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
       base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1'
+      git_sha: 'dummysha1',
+      root_base_directory: test_repo.path
     })
 
-    // Assert tag relationship
+    // Assert
     const tag_relation = await db('entity_tags')
       .where({
         entity_id: person_id,
@@ -264,6 +293,9 @@ describe('write_person_to_database', () => {
       .first()
 
     expect(tag_relation).to.exist
+
+    // Clean up temp repo
+    await test_repo.cleanup()
   })
 
   it('should throw error when required properties are missing', async () => {

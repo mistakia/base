@@ -17,7 +17,7 @@ properties:
 
 # Organization
 
-Organizations represent companies, departments, teams, or other organizational units that may be involved in tasks, activities, or other aspects of the knowledge base.
+Organizations represent companies, departments, teams, or other organizational units that may be involved in tasks, or other aspects of the knowledge base.
 
 ## Organization Types
 
@@ -47,7 +47,6 @@ Organizations commonly use these relation types:
 - `part_of`: Parent organizations this organization belongs to
 - `contains`: Sub-organizations or departments
 - `involves`: Tasks the organization is responsible for
-- `executes`: Activities the organization participates in
 - `follows`: Guidelines the organization follows
 - `requires`: Physical or digital assets owned by the organization
 
@@ -59,7 +58,6 @@ relations:
   - 'part_of [[system/organization/parent-org]]'
   - 'contains [[system/organization/department-name]]'
   - 'involves [[user/tasks/task-name]]'
-  - 'executes [[system/activities/activity-name]]'
-  - 'follows [[system/guidelines/guideline-name]]'
+  - 'follows [[system/guideline/guideline-name]]'
   - 'requires [[system/physical_item/item-name]]'
 ```

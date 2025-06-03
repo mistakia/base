@@ -10,7 +10,7 @@
  * @enum {string}
  */
 export const ENTITY_TYPES = {
-  ACTIVITY: 'activity',
+  WORKFLOW: 'workflow',
   DATABASE: 'database',
   DATABASE_ITEM: 'database_item',
   DATABASE_VIEW: 'database_view',
@@ -33,7 +33,7 @@ export const ENTITY_TYPES = {
  * @type {Object.<string, string>}
  */
 export const ENTITY_TYPE_TABLES = {
-  [ENTITY_TYPES.ACTIVITY]: 'activities',
+  [ENTITY_TYPES.WORKFLOW]: 'workflows',
   [ENTITY_TYPES.DATABASE]: 'database_tables',
   [ENTITY_TYPES.DATABASE_ITEM]: 'database_table_items',
   [ENTITY_TYPES.DATABASE_VIEW]: 'database_table_views',

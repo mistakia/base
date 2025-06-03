@@ -148,8 +148,8 @@ async function fetch_entity_type_data({ entity_id, entity_type, db_client }) {
     case 'task':
       return db_client('tasks').where({ entity_id }).first()
 
-    case 'activity':
-      return db_client('activities').where({ entity_id }).first()
+    case 'workflow':
+      return db_client('workflows').where({ entity_id }).first()
 
     case 'guideline':
       return db_client('guidelines').where({ entity_id }).first()

@@ -63,53 +63,53 @@ export async function list_tasks_from_database({
       't.started_at',
       't.finished_at',
       't.snooze_until',
-      // Parent task IDs
+      // Parent task IDs - using entity_relations with 'subtask_of' relation
       db.raw(`(
-        SELECT array_agg(parent_task_id)
-        FROM task_parent_child_view
-        WHERE child_task_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'subtask_of'
       ) as parent_task_ids`),
-      // Child task IDs
+      // Child task IDs - using entity_relations with 'subtask_of' relation (reversed)
       db.raw(`(
-        SELECT array_agg(child_task_id)
-        FROM task_parent_child_view
-        WHERE parent_task_id = e.entity_id
+        SELECT array_agg(source_entity_id)
+        FROM entity_relations
+        WHERE target_entity_id = e.entity_id AND relation_type = 'subtask_of'
       ) as child_task_ids`),
-      // Tag entity IDs
+      // Tag entity IDs - using entity_relations
       db.raw(`(
-        SELECT array_agg(tag_entity_id)
-        FROM entity_tags
-        WHERE entity_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'has_tag'
       ) as tag_entity_ids`),
-      // Observation entity IDs
+      // Observation entity IDs - using entity_relations
       db.raw(`(
-        SELECT array_agg(observation_id)
-        FROM entity_observations
-        WHERE entity_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'has_observation'
       ) as observation_entity_ids`),
-      // Metadata entity IDs
+      // Metadata entity IDs - using entity_relations
       db.raw(`(
-        SELECT array_agg(metadata_id)
-        FROM entity_metadata
-        WHERE entity_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'has_metadata'
       ) as metadata_entity_ids`),
-      // Block entity IDs
+      // Block entity IDs - using entity_relations
       db.raw(`(
-        SELECT array_agg(block_id)
-        FROM entity_blocks
-        WHERE entity_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'has_block'
       ) as block_entity_ids`),
-      // Blocked task IDs (tasks that cannot start until this task is completed)
+      // Blocked task IDs - using entity_relations with 'blocks' relation
       db.raw(`(
-        SELECT array_agg(task_entity_id)
-        FROM task_dependencies_view
-        WHERE dependent_task_entity_id = e.entity_id
+        SELECT array_agg(target_entity_id)
+        FROM entity_relations
+        WHERE source_entity_id = e.entity_id AND relation_type = 'blocks'
       ) as blocked_task_ids`),
-      // Blocking task IDs (tasks that must be completed before this task can start)
+      // Blocking task IDs - using entity_relations with 'blocks' relation (reversed)
       db.raw(`(
-        SELECT array_agg(dependent_task_entity_id)
-        FROM task_dependencies_view
-        WHERE task_entity_id = e.entity_id
+        SELECT array_agg(source_entity_id)
+        FROM entity_relations
+        WHERE target_entity_id = e.entity_id AND relation_type = 'blocks'
       ) as blocking_task_ids`)
     )
 
@@ -166,33 +166,36 @@ export async function list_tasks_from_database({
     query.where('t.planned_finish', '<=', max_planned_finish)
   }
 
-  // Filter by tags using entity_tags junction table
+  // Filter by tags using entity_relations table
   if (tag_entity_ids.length > 0) {
     query.whereExists(function () {
       this.select('*')
-        .from('entity_tags')
-        .whereRaw('entity_tags.entity_id = e.entity_id')
-        .whereIn('entity_tags.tag_entity_id', tag_entity_ids)
+        .from('entity_relations')
+        .whereRaw('entity_relations.source_entity_id = e.entity_id')
+        .where('entity_relations.relation_type', '=', 'has_tag')
+        .whereIn('entity_relations.target_entity_id', tag_entity_ids)
     })
   }
 
-  // Filter by organizations using task_organizations_view
+  // Filter by organizations using entity_relations table
   if (organization_ids.length > 0) {
     query.whereExists(function () {
       this.select('*')
-        .from('task_organizations_view')
-        .whereRaw('task_organizations_view.task_id = e.entity_id')
-        .whereIn('task_organizations_view.organization_id', organization_ids)
+        .from('entity_relations')
+        .whereRaw('entity_relations.source_entity_id = e.entity_id')
+        .where('entity_relations.relation_type', '=', 'involves')
+        .whereIn('entity_relations.target_entity_id', organization_ids)
     })
   }
 
-  // Filter by persons using task_persons_view
+  // Filter by persons using entity_relations table
   if (person_ids.length > 0) {
     query.whereExists(function () {
       this.select('*')
-        .from('task_persons_view')
-        .whereRaw('task_persons_view.task_id = e.entity_id')
-        .whereIn('task_persons_view.person_id', person_ids)
+        .from('entity_relations')
+        .whereRaw('entity_relations.source_entity_id = e.entity_id')
+        .where('entity_relations.relation_type', '=', 'assigned_to')
+        .whereIn('entity_relations.target_entity_id', person_ids)
     })
   }
 

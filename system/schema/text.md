@@ -37,7 +37,6 @@ Text commonly relates to:
 
 - other text documents (references, extensions, or related topics)
 - tasks (work documented or described)
-- activities (processes documented or described)
 - guidelines (procedures referenced or explained)
 - persons (authors or subjects)
 - organizations (authoring groups or subjects)

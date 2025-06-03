@@ -12,7 +12,7 @@ const root_dir = path.resolve(__dirname, '..')
 
 // Data directory structure to be created in the submodule
 const data_structure = {
-  activity: {},
+  workflow: {},
   guideline: {},
   tag: {}
 }

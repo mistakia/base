@@ -2,7 +2,7 @@ import debug from 'debug'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { write_entity_to_database } from '#libs-server/entity/database/write/write-entity-to-database.mjs'
 import { write_task_to_database } from '#libs-server/entity/database/write/write-task-to-database.mjs'
-import { write_activity_to_database } from '#libs-server/entity/database/write/write-activity-to-database.mjs'
+import { write_workflow_to_database } from '#libs-server/entity/database/write/write-workflow-to-database.mjs'
 import { write_person_to_database } from '#libs-server/entity/database/write/write-person-to-database.mjs'
 import { write_physical_item_to_database } from '#libs-server/entity/database/write/write-physical-item-to-database.mjs'
 import { write_physical_location_to_database } from '#libs-server/entity/database/write/write-physical-location-to-database.mjs'
@@ -153,20 +153,22 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
-          case 'activity':
-            result_entity_id = await write_activity_to_database({
-              activity_properties: entity_properties,
+          case 'workflow':
+            result_entity_id = await write_workflow_to_database({
+              workflow_properties: entity_properties,
               user_id,
-              activity_content: entity_content,
+              workflow_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'person':
@@ -179,7 +181,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'physical_item':
@@ -192,7 +195,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'physical_location':
@@ -205,7 +209,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'tag':
@@ -218,7 +223,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'guideline':
@@ -231,7 +237,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'organization':
@@ -244,7 +251,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'digital_item':
@@ -257,7 +265,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'database_table_item':
@@ -270,7 +279,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           case 'database_table_view':
@@ -283,7 +293,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
             break
           default:
@@ -298,7 +309,8 @@ export async function import_entity_from_git({
               base_relative_path,
               git_sha,
               formatted_entity_metadata,
-              trx
+              trx,
+              root_base_directory
             })
         }
 

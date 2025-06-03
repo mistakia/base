@@ -185,7 +185,7 @@ The `base_relative_path` format is designed to be used for canonical references 
 The knowledge base supports the following content types. See the actual schema files in `system/schema/` for detailed property definitions and usage guidance:
 
 - [Base](../schema/base.md) - Core properties shared by all content types
-- [Activity](../schema/activity.md) - Actions or processes
+- [Workflow](../schema/workflow.md) - Actions or processes
 - [Task](../schema/task.md) - Discrete units of work
 - [Guideline](../schema/guideline.md) - Standards, procedures, or best practices
 - [Physical Item](../schema/physical_item.md) - Tangible objects or materials

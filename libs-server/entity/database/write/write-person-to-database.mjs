@@ -25,22 +25,26 @@ const log = debug('entity:database:write-person')
  * @param {Date} [params.person_properties.archived_at=null] Date when the person was archived
  * @param {string} params.user_id User ID who owns the person entity
  * @param {string} [params.person_content=''] Optional person content/markdown
- * @param {string} [params.person_id=null] Optional person ID for updates
+ * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} params.absolute_path Absolute path to the file
  * @param {string} params.base_relative_path Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @returns {Promise<string>} The person_id (same as entity_id)
+ * @param {string} [params.root_base_directory=null] Root base directory of the repository
+ * @param {Object} [params.formatted_entity_metadata=null] Formatted entity metadata
+ * @returns {Promise<string>} The entity_id
  */
 export async function write_person_to_database({
   person_properties,
   user_id,
   person_content = '',
-  person_id = null,
+  entity_id = null,
   absolute_path,
   base_relative_path,
   git_sha,
-  trx = null
+  trx = null,
+  root_base_directory,
+  formatted_entity_metadata
 }) {
   try {
     log('Writing person to database')
@@ -56,21 +60,23 @@ export async function write_person_to_database({
     }
 
     // First write the base entity
-    const entity_id = await write_entity_to_database({
+    const result_entity_id = await write_entity_to_database({
       entity_properties: person_properties,
       entity_type: 'person',
       user_id,
       entity_content: person_content,
-      entity_id: person_id,
+      entity_id,
       absolute_path,
       base_relative_path,
       git_sha,
-      trx: db_client
+      trx: db_client,
+      root_base_directory,
+      formatted_entity_metadata
     })
 
     // Process person-specific data directly
     await write_person_data_to_database({
-      entity_id,
+      entity_id: result_entity_id,
       first_name: person_properties.first_name,
       last_name: person_properties.last_name,
       email: person_properties.email,
@@ -79,8 +85,8 @@ export async function write_person_to_database({
       db_client
     })
 
-    log(`Person successfully written with ID: ${entity_id}`)
-    return entity_id
+    log(`Person successfully written with ID: ${result_entity_id}`)
+    return result_entity_id
   } catch (error) {
     log('Error writing person to database:', error)
     throw error

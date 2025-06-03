@@ -8,7 +8,7 @@
 /**
  * @typedef {Object} PromptStructure
  * @property {PromptComponent} system_prompt - Base system instructions
- * @property {PromptComponent} activity_prompt - Activity-specific instructions
+ * @property {PromptComponent} workflow_prompt - Workflow-specific instructions
  * @property {PromptComponent} guidelines_prompt - Relevant guidelines
  * @property {PromptComponent} tools - Tool definitions available to the thread
  * @property {PromptComponent} context - Thread memory, timeline and other context
@@ -24,9 +24,9 @@ export const prompt_components = {
     description:
       'Base system instructions defining the assistant capabilities and limitations'
   },
-  activity_prompt: {
+  workflow_prompt: {
     required: false,
-    description: 'Instructions specific to the activity being executed'
+    description: 'Instructions specific to the workflow being executed'
   },
   guidelines_prompt: {
     required: false,

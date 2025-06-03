@@ -8,11 +8,11 @@ import create_temp_test_directory from './create-temp-test-directory.mjs'
 
 const exec = promisify(child_process.exec)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const default_base_activity_path = path.join(
+const default_workflow_path = path.join(
   __dirname,
   '..',
   'fixtures',
-  'default-base-activity.md'
+  'default-workflow.md'
 )
 
 /**
@@ -46,22 +46,19 @@ export async function create_temp_test_repo({
     await fs.writeFile(readme_path, initial_content)
     await exec('git add README.md', { cwd: base_repo.path })
 
-    // Create system/activity directory
-    const activity_dir = path.join(base_repo.path, 'system', 'activity')
-    await fs.mkdir(activity_dir, { recursive: true })
+    // Create system/workflow directory
+    const workflow_dir = path.join(base_repo.path, 'system', 'workflow')
+    await fs.mkdir(workflow_dir, { recursive: true })
 
-    // Read the default base activity file from fixtures
-    const activity_content = await fs.readFile(
-      default_base_activity_path,
-      'utf-8'
-    )
+    // Read the default workflow file from fixtures
+    const workflow_content = await fs.readFile(default_workflow_path, 'utf-8')
 
     // Write to the test repo
-    const activity_path = path.join(activity_dir, 'default-base-activity.md')
-    await fs.writeFile(activity_path, activity_content)
+    const workflow_path = path.join(workflow_dir, 'default-workflow.md')
+    await fs.writeFile(workflow_path, workflow_content)
 
     // Add to git
-    await exec('git add system/activity/default-base-activity.md', {
+    await exec('git add system/workflow/default-workflow.md', {
       cwd: base_repo.path
     })
 

@@ -102,20 +102,20 @@ Execution Threads utilize a tiered memory system:
 1. **Transient Context Memory**: Information held in context window during execution.
 
 2. **Persistent Working Memory**: Stored in the thread's memory directory:
+
    - **Scratch Space**: Temporary files and computational data
    - **Knowledge Cache**: Frequently accessed information
    - **Reasoning Artifacts**: Intermediate outputs and processing results
 
 3. **Long-term Memory**:
+
    - **Universal Memory (Knowledge Base):**
      - **Purpose:** System-wide, persistent knowledge, guidelines, schemas.
      - **Location:** `system/` and `user/` directories (Markdown files, version controlled).
-   
    - **Persistent Working Memory:**
      - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, a detailed execution history, and working files.
      - **Location:** Disk-based, deterministic path: `user/thread_context/{thread_id}/`.
      - **Git Repository:** Each thread's memory directory is initialized as a git repository with an initial commit containing a `.gitignore` file.
-   
    - **External Memory:** Accessed via knowledge base lookups, file system operations, and external tool calls.
 
 ## Human Interaction (`human_request`)
@@ -154,7 +154,7 @@ For source control operations, each thread uses dedicated Git branches:
 - **Workflow:**
   - Thread-specific file operations are performed within the thread's branch
   - Changes can be reviewed, merged, or discarded based on thread outcomes
-  - Maintains separation between concurrent thread activities
+  - Maintains separation between concurrent thread executions
 - **Creation:** Branches are automatically created during thread initialization
 
 ## Filesystem Structure
@@ -184,5 +184,4 @@ The `timeline.json` file contains an array of entries with a consistent structur
 - `timestamp`: When the entry was created
 - `type`: Type of entry (message, tool_call, tool_result, state_change, etc.)
 - `content`: The actual content of the entry
-This filesystem structure enables persistent storage, versioning, and inspection of thread state, supporting both runtime operations and post-execution analysis.
-
+  This filesystem structure enables persistent storage, versioning, and inspection of thread state, supporting both runtime operations and post-execution analysis.

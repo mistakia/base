@@ -13,7 +13,7 @@ relations:
   - 'relates_to [[system/text/system-design.md]]'
   - 'relates_to [[system/text/execution-threads.md]]'
   - 'relates_to [[system/text/knowledge-base-schema.md]]'
-  - 'relates_to [[system/schema/activity.md]]'
+  - 'relates_to [[system/schema/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.241Z'
 user_id: '00000000-0000-0000-0000-000000000000'
