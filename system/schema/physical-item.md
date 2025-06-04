@@ -48,12 +48,6 @@ properties:
       type: string
     required: false
     description: Attributes of ideal storage location
-  - name: activities
-    type: array
-    items:
-      type: string
-    required: false
-    description: Activities this item is used for
 
   # Physical characteristics
   - name: height_inches
@@ -190,10 +184,10 @@ Physical items represent tangible objects, equipment, or materials that exist in
 
 Physical items commonly use these relation types:
 
-- `part_of`: Items this is a component of (formerly parent_items)
-- `contains`: Components that make up this item (formerly child_items)
+- `part_of`: Items this is a component of
+- `contains`: Components that make up this item
 - `requires`: Resources needed for this item
-- `executes`: Activities this item is used for
+- `used_in`: A project, activity, or event this item is used for
 
 Example:
 
@@ -202,5 +196,5 @@ relations:
   - 'part_of [[system/physical_item/parent-item]]'
   - 'contains [[system/physical_item/component-item]]'
   - 'requires [[system/physical_item/resource-item]]'
-  - 'executes [[system/activities/activity-name]]'
+  - 'used_in [[system/activities/activity-name]]'
 ```
