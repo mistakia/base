@@ -19,3 +19,29 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Ensure the plan is self-contained and understandable without additional context.
 - Use consistent terminology and formatting throughout the plan.
 - Review the plan for completeness and accuracy before sharing.
+
+## Template
+
+```markdown
+# Implementation Plan: [Title]
+
+## Overview
+- [High-level goals and purpose of the implementation]
+- [Expected outcomes]
+
+## Notes
+- [Notable implementation details]
+- [Guidance on approach]
+- [Relevant resources and references]
+- [Potential challenges and considerations]
+
+## Tasks
+
+- [ ] 1. [File path to create or modify]:
+  - [Specific changes or additions required]
+  - [Purpose of these changes]
+
+- [ ] 2. [Next file path]:
+  - [Specific changes or additions required]
+  - [Purpose of these changes]
+```

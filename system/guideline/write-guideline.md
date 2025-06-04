@@ -42,7 +42,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - `api-design-standards.md` (for category of API design workflows)
   - `database-management.md` (for category of database operations)
 
-### Frontmatter Requirements
+### Frontmatter
 
 - Guidelines MUST follow the schema defined in `system/schema/guideline.md`
 - Guidelines MUST include complete frontmatter with these fields:
@@ -68,7 +68,7 @@ relations:
   - 'supersedes [[system/guideline/old-guideline]]'
 ```
 
-### Content Requirements
+### Content
 
 - Guidelines MUST use RFC 2119 language (MUST, SHOULD, MAY, etc.) to clearly indicate requirement levels
 - Each rule SHOULD be clear, concise, and easy to understand so that the rationale is self-evident. The rationale should be explicitly stated if it is not self-evident.
