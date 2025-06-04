@@ -50,7 +50,7 @@ export default async function generate_workflow_prompt({
 
     // Format as a structured workflow prompt
     let prompt = `Role: ${document_properties.title}\n\n`
-    prompt += `<role>\n${rendered_content}</role>`
+    prompt += `<role>\n${rendered_content}\n</role>`
 
     return {
       prompt: prompt.trim(),
