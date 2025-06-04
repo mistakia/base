@@ -89,23 +89,21 @@ The system implements a dual knowledge base architecture:
 ```
 ├── system/             # System Knowledge Base (in root repository)
 │   ├── schema/         # Core schema definitions
-│   ├── activities/     # System activities
-│   ├── guidelines/     # System guidelines
+│   ├── workflow/       # System workflows
+│   ├── guideline/      # System guidelines
 │   └── text/           # System documentation
 │
 └── user/               # Default User Knowledge Base (submodule)
     ├── schema/         # User schema extensions
-    ├── activities/     # User activity definitions
-    ├── guidelines/     # User guideline definitions
+    ├── workflow/       # User workflow definitions
+    ├── guideline/      # User guideline definitions
     ├── text/           # User-specific knowledge items
-    │   ├── tasks/      # User tasks
-    │   ├── notes/      # User notes
     │   ├── projects/   # User projects
     │   └── custom/     # User-defined custom types
-    ├── tasks/          # Task data
-    ├── inference/      # Inference request history
-    ├── tags/           # Tags
-    └── logs/           # System logs
+    ├── task/           # Task data
+    ├── thread/         # Inference request history
+    ├── tag/            # Tags
+    └── log/            # System logs
 ```
 
 Additional user submodules can be added as git submodules and will be automatically recognized and processed by the system. Each submodule is treated as a separate user repository and follows the same structure as the default `user/` submodule.

@@ -1,7 +1,7 @@
 import path from 'path'
 import config from '#config'
 
-export const THREAD_CONTEXT_DIR = 'threads'
+export const THREAD_CONTEXT_DIR = 'thread'
 export const THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH =
   'system/workflow/default-workflow.md'
 

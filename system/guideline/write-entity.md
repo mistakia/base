@@ -28,10 +28,24 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - `type`: The entity type (must match a defined type in `system/schema/`)
   - `description`: Brief summary of the entity's purpose or contents
 - Entity files MUST include any additional required fields specified in their type definition
+- Entity files MUST ONLY use properties defined in their respective schema type definitions
+- Non-schema properties MUST be included in the body content rather than the frontmatter
 - Entity files SHOULD include these fields when applicable:
   - `tags`: Relevant categories and descriptors
   - `relations`: Connections to other system elements using the wikilink format
   - `observations`: Key insights or notes about the entity
+
+## Relations
+
+- Relations MUST be defined in the frontmatter, NOT in the body content
+- Relations MUST use the proper base_relative_path when referencing other entities
+- Relations SHOULD use the format: `'relationship_type [[target_entity_path]]'`
+- Example:
+  ```yaml
+  relations:
+    - 'implements [[system/schema/base.md]]'
+    - 'depends_on [[user/task/setup-database.md]]'
+  ```
 
 ### Examples
 

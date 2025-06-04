@@ -16,10 +16,6 @@ relations:
   - 'implements [[system/schema/base.md]]'
   - 'related_to [[system/guideline/write-entity.md]]'
   - 'related_to [[system/guideline/write-guideline.md]]'
-tags:
-  - 'entity'
-  - 'schema'
-  - 'metadata'
 updated_at: '2023-06-28T10:00:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
