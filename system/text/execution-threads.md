@@ -41,6 +41,8 @@ An **Execution Thread** is a process responsible for accomplishing a defined obj
 - `terminated_at`: Timestamp of termination (if applicable).
 - `tools`: Array of tools available to this thread.
 - `thread_change_request_id`: Reference to the change request that tracks all changes made in the thread's branch.
+- `system_worktree_path`: Path to the Git worktree for the system repository.
+- `user_worktree_path`: Path to the Git worktree for the user repository.
 
 **Note:** The thread's "role" in prompts or UI is derived from its assigned `workflow`. The `workflow_path` is the canonical reference for the thread's objective. The term "role" is never used as an identifier in backend or schema logic.
 
@@ -52,8 +54,16 @@ When a new thread is created:
 4. Timeline is initialized in `timeline.json`
 5. Memory directory is set up with a git repository
 6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
-7. A default change request is created to track changes made in the thread branch relative to main
-8. The thread is associated with a specific workflow that it will execute
+7. Git worktrees are created for each branch to enable concurrent thread execution
+8. A default change request is created to track changes made in the thread branch relative to main
+9. The thread is associated with a specific workflow that it will execute
+
+When a thread is terminated:
+
+1. The thread state is updated to `terminated`
+2. A termination reason is recorded in thread metadata and timeline
+3. Git worktrees created for the thread are removed to clean up system resources
+4. All thread metadata and timeline entries remain accessible for later reference
 
 ## States
 
@@ -114,7 +124,7 @@ Execution Threads utilize a tiered memory system:
      - **Location:** `system/` and `user/` directories (Markdown files, version controlled).
    - **Persistent Working Memory:**
      - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, a detailed execution history, and working files.
-     - **Location:** Disk-based, deterministic path: `user/thread_context/{thread_id}/`.
+     - **Location:** Disk-based, deterministic path: `user/thread/{thread_id}/`.
      - **Git Repository:** Each thread's memory directory is initialized as a git repository with an initial commit containing a `.gitignore` file.
    - **External Memory:** Accessed via knowledge base lookups, file system operations, and external tool calls.
 
@@ -146,16 +156,22 @@ Each thread creates a change request at initialization to:
 
 ## Git Branch Structure
 
-For source control operations, each thread uses dedicated Git branches:
+For source control operations, each thread uses dedicated Git branches and worktrees:
 
-- **Format:** `thread/{thread_id}`
+- **Branch Format:** `thread/{thread_id}`
 - **Repositories:** Created in both system and user knowledge base repositories
-- **Purpose:** Isolates file modifications associated with specific threads
+- **Worktrees:** Each branch is checked out to a separate worktree directory
+- **Purpose:**
+  - Isolates file modifications associated with specific threads
+  - Enables concurrent thread execution without checkout conflicts
+  - Maintains separation between thread operations
 - **Workflow:**
-  - Thread-specific file operations are performed within the thread's branch
+  - Thread-specific file operations are performed within the thread's worktree
   - Changes can be reviewed, merged, or discarded based on thread outcomes
-  - Maintains separation between concurrent thread executions
-- **Creation:** Branches are automatically created during thread initialization
+  - Multiple threads can run simultaneously without interfering with each other
+- **Creation:** Branches and worktrees are automatically created during thread initialization
+- **Storage:** Worktree paths are stored in thread metadata for reference
+- **Cleanup:** Worktrees are automatically removed when threads are terminated
 
 ## Filesystem Structure
 
@@ -163,7 +179,7 @@ Each thread's context is stored in a dedicated directory structure within the us
 
 ```
 user/
-  thread_context/
+  thread/
     {thread_id}/
       metadata.json     # Thread metadata (state, inference_provider, model, etc.)
       timeline.json     # Consolidated chronological timeline of all thread events and state changes
@@ -177,6 +193,7 @@ The `metadata.json` file contains the thread's configuration and state, includin
 - Current execution thread_state
 - Timestamps for thread lifecycle events
 - Reference to associated change request
+- Paths to system and user worktrees
 
 The `timeline.json` file contains an array of entries with a consistent structure:
 

@@ -9,21 +9,23 @@ import {
 } from './threads-constants.mjs'
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
+import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
 import { create_change_request } from '#libs-server/change-requests/index.mjs'
 import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
+import { get_thread_tool_names } from './thread-tools.mjs'
 
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
 const log = debug('threads:create')
 
 /**
- * Create a thread branch in the knowledge base repositories
+ * Create a thread branch in the knowledge base repositories and set up worktrees
  *
  * @param {Object} params - Parameters
  * @param {string} params.thread_id - Thread ID
  * @param {string} params.system_base_directory - Path to system knowledge base repo
  * @param {string} params.user_base_directory - Path to user knowledge base repo
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} Worktree paths for system and user repos
  */
 async function create_thread_branch({
   thread_id,
@@ -31,30 +33,41 @@ async function create_thread_branch({
   user_base_directory
 }) {
   const branch_name = `thread/${thread_id}`
+  const worktree_paths = {}
 
-  // Create branch in system knowledge base
+  // Create branch in system knowledge base without checking out
   log(`Creating branch ${branch_name} in system repo`)
-  await git_operations.checkout_branch({
-    repo_path: system_base_directory,
-    branch_name: 'main'
-  })
   await git_operations.create_branch({
     repo_path: system_base_directory,
     branch_name,
-    base_branch: 'main'
+    base_branch: 'main',
+    checkout: false
+  })
+  
+  // Create worktree for system repo
+  log(`Creating worktree for branch ${branch_name} in system repo`)
+  worktree_paths.system = await create_worktree({
+    repo_path: system_base_directory,
+    branch_name
   })
 
-  // Create branch in user knowledge base
+  // Create branch in user knowledge base without checking out
   log(`Creating branch ${branch_name} in user repo`)
-  await git_operations.checkout_branch({
-    repo_path: user_base_directory,
-    branch_name: 'main'
-  })
   await git_operations.create_branch({
     repo_path: user_base_directory,
     branch_name,
-    base_branch: 'main'
+    base_branch: 'main',
+    checkout: false
   })
+  
+  // Create worktree for user repo
+  log(`Creating worktree for branch ${branch_name} in user repo`)
+  worktree_paths.user = await create_worktree({
+    repo_path: user_base_directory,
+    branch_name
+  })
+
+  return worktree_paths
 }
 
 /**
@@ -181,6 +194,15 @@ export default async function create_thread({
   // Generate timestamps
   const now = new Date().toISOString()
 
+  // Add thread-specific tools
+  const thread_tool_names = get_thread_tool_names()
+  
+  // Combine with provided tools
+  const combined_tools = [
+    ...tools,
+    ...thread_tool_names
+  ]
+
   // Create metadata
   const metadata = {
     thread_id,
@@ -193,12 +215,8 @@ export default async function create_thread({
     updated_at: now,
     current_stage: null,
     prompt_properties,
+    tools: combined_tools,
     ...additional_metadata
-  }
-
-  // Add tools if provided
-  if (tools && tools.length > 0) {
-    metadata.tools = tools
   }
 
   // Initialize timeline
@@ -222,17 +240,19 @@ export default async function create_thread({
     'utf-8'
   )
 
-  // Create git branches if requested and paths provided
+  // Create git branches and worktrees if requested and paths provided
   if (root_base_directory && user_base_directory) {
     try {
-      await create_thread_branch({
+      const worktree_paths = await create_thread_branch({
         thread_id,
         system_base_directory: root_base_directory,
         user_base_directory
       })
 
-      // Add branch information to metadata
+      // Add branch and worktree information to metadata
       metadata.git_branch = `thread/${thread_id}`
+      metadata.system_worktree_path = worktree_paths.system
+      metadata.user_worktree_path = worktree_paths.user
 
       // Create a default change request for this thread if requested
       try {
@@ -257,7 +277,7 @@ export default async function create_thread({
         // Continue thread creation even if change request creation fails
       }
     } catch (error) {
-      log(`Failed to create git branches: ${error.message}`)
+      log(`Failed to create git branches or worktrees: ${error.message}`)
       // Continue thread creation even if branch creation fails
     }
   }

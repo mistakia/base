@@ -4,6 +4,11 @@ import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
 import get_thread from './get-thread.mjs'
+import { 
+  THREAD_MESSAGE_ROLE,
+  validate_thread_message_role
+} from './threads-constants.mjs'
+
 const log = debug('threads:timeline')
 
 // Valid timeline entry types
@@ -20,9 +25,14 @@ const VALID_ENTRY_TYPES = [
 const entry_validators = {
   message: (entry) => {
     if (!entry.role) throw new Error('message entry must have a role')
-    if (!['user', 'assistant', 'system'].includes(entry.role)) {
-      throw new Error('message role must be user, assistant, or system')
+    
+    // Validate using the standardized roles
+    try {
+      validate_thread_message_role(entry.role)
+    } catch (error) {
+      throw new Error(`Invalid message role: ${error.message}`)
     }
+    
     if (!entry.content) throw new Error('message entry must have content')
   },
 
@@ -173,7 +183,7 @@ export async function add_user_message({
     thread_id,
     entry: {
       type: 'message',
-      role: 'user',
+      role: THREAD_MESSAGE_ROLE.USER,
       content
     },
     user_base_directory
@@ -202,7 +212,7 @@ export async function add_assistant_message({
     thread_id,
     entry: {
       type: 'message',
-      role: 'assistant',
+      role: THREAD_MESSAGE_ROLE.THREAD_AGENT,
       content
     },
     user_base_directory
