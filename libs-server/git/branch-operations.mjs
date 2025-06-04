@@ -82,16 +82,18 @@ export async function branch_exists({
  * @param {String} params.repo_path Path to the repository
  * @param {String} params.branch_name Branch name to create
  * @param {String} [params.base_branch='main'] Base branch to create from
+ * @param {Boolean} [params.checkout=true] Whether to checkout the branch after creation
  * @returns {Boolean} True if the branch was created
  */
 export async function create_branch({
   repo_path,
   branch_name,
-  base_branch = 'main'
+  base_branch = 'main',
+  checkout = true
 }) {
   try {
     log(
-      `Attempting to create branch ${branch_name} from ${base_branch} in ${repo_path}`
+      `Attempting to create branch ${branch_name} from ${base_branch} in ${repo_path} ${checkout ? 'and checkout' : 'without checkout'}`
     )
 
     // Check if the branch already exists
@@ -105,9 +107,48 @@ export async function create_branch({
       return true
     }
 
-    // First try to use the local branch directly
+    // Create without checkout if requested
+    if (!checkout) {
+      try {
+        log(`Creating branch ${branch_name} from local branch ${base_branch} without checkout`)
+        await execute_shell_command(
+          `git branch ${branch_name} ${base_branch}`,
+          {
+            cwd: repo_path
+          }
+        )
+        return true
+      } catch (local_error) {
+        log(`Failed to create from local branch without checkout: ${local_error.message}`)
+        
+        // Try with remote if available
+        try {
+          // Check if remote exists and is accessible
+          const { stdout: remote_url } = await execute_shell_command(
+            'git remote get-url origin',
+            { cwd: repo_path }
+          )
+          if (remote_url) {
+            log(`Using remote origin to create branch ${branch_name} without checkout`)
+            await execute_shell_command(`git fetch origin ${base_branch}`, {
+              cwd: repo_path
+            })
+            await execute_shell_command(
+              `git branch ${branch_name} origin/${base_branch}`,
+              { cwd: repo_path }
+            )
+            return true
+          }
+        } catch (remote_error) {
+          log(`No accessible remote origin: ${remote_error.message}`)
+          throw local_error
+        }
+      }
+    }
+    
+    // Create with checkout (default behavior)
     try {
-      log(`Creating branch ${branch_name} from local branch ${base_branch}`)
+      log(`Creating branch ${branch_name} from local branch ${base_branch} with checkout`)
       await execute_shell_command(
         `git checkout -b ${branch_name} ${base_branch}`,
         {
@@ -130,10 +171,17 @@ export async function create_branch({
           await execute_shell_command(`git fetch origin ${base_branch}`, {
             cwd: repo_path
           })
-          await execute_shell_command(
-            `git branch ${branch_name} origin/${base_branch}`,
-            { cwd: repo_path }
-          )
+          if (checkout) {
+            await execute_shell_command(
+              `git checkout -b ${branch_name} origin/${base_branch}`,
+              { cwd: repo_path }
+            )
+          } else {
+            await execute_shell_command(
+              `git branch ${branch_name} origin/${base_branch}`,
+              { cwd: repo_path }
+            )
+          }
           return true
         }
       } catch (remote_error) {
@@ -142,7 +190,7 @@ export async function create_branch({
       }
 
       // Try one more approach - check if we can create from HEAD
-      if (base_branch !== 'HEAD') {
+      if (base_branch !== 'HEAD' && checkout) {
         try {
           log('Creating branch from HEAD as last resort')
           await execute_shell_command(`git checkout -b ${branch_name}`, {
