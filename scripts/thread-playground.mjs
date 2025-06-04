@@ -40,6 +40,7 @@ const create_new_thread = async ({
       model,
       thread_main_request,
       user_base_directory,
+      root_base_directory: config.root_base_directory,
       tools
     })
 
