@@ -63,6 +63,7 @@ export default async function generate_prompt({
     const workflow_result = await generate_workflow_prompt({
       base_relative_path: thread.workflow_base_relative_path,
       prompt_properties: thread.prompt_properties,
+      timeline_entries,
       root_base_directory: system_base_directory
     })
 
@@ -115,7 +116,8 @@ export default async function generate_prompt({
       thread_id,
       model: thread.model,
       inference_provider: thread.inference_provider,
-      workflow_base_relative_path: thread.workflow_base_relative_path
+      workflow_base_relative_path: thread.workflow_base_relative_path,
+      timeline_entry_count: timeline_entries.length
     }
   })
 

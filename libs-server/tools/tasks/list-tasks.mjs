@@ -2,7 +2,7 @@ import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
 import { helpers, format_task } from './helpers.mjs'
 import { list_tasks_in_filesystem } from '#libs-server/task/filesystem/list-tasks-in-filesystem.mjs'
-import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
+import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 const log = debug('tools:tasks')
 
@@ -23,28 +23,32 @@ register_tool({
           type: 'array',
           description: 'Optional: Array of statuses to include',
           items: {
-            type: 'string'
+            type: 'string',
+            enum: Object.values(TASK_STATUS)
           }
         },
         exclude_status: {
           type: 'array',
           description: 'Optional: Array of statuses to exclude',
           items: {
-            type: 'string'
+            type: 'string',
+            enum: Object.values(TASK_STATUS)
           }
         },
         include_priority: {
           type: 'array',
           description: 'Optional: Array of priorities to include',
           items: {
-            type: 'string'
+            type: 'string',
+            enum: Object.values(TASK_PRIORITY)
           }
         },
         exclude_priority: {
           type: 'array',
           description: 'Optional: Array of priorities to exclude',
           items: {
-            type: 'string'
+            type: 'string',
+            enum: Object.values(TASK_PRIORITY)
           }
         },
         include_completed: {

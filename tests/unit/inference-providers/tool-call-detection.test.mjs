@@ -31,7 +31,7 @@ And some text after.`
       expect(tool_calls.length).to.equal(1)
       expect(tool_calls[0]).to.deep.include({
         tool_name: 'function_name',
-        tool_params: {
+        tool_parameters: {
           param1: 'value1',
           param2: 'value2'
         }

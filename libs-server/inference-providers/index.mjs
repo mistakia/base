@@ -311,7 +311,7 @@ export class InferenceProvider {
     // ```tool_call
     // {
     //   "name": "search_web",
-    //   "arguments": {
+    //   "parameters": {
     //     "query": "latest AI developments"
     //   }
     // }
@@ -326,7 +326,7 @@ export class InferenceProvider {
           tool_calls.push({
             id: `tool_call_${id_counter++}`,
             tool_name: tool_data.name,
-            tool_params: tool_data.arguments || {}
+            tool_parameters: tool_data.parameters || {}
           })
         }
       } catch (e) {
@@ -335,7 +335,7 @@ export class InferenceProvider {
     }
 
     // Also try the JSON bracket formats
-    // Example: {"name": "search_web", "arguments": {"query": "latest AI developments"}}
+    // Example: {"name": "search_web", "parameters": {"query": "latest AI developments"}}
     // Example: [["search_web", {"query": "latest AI developments"}]]
     const legacy_tool_call_regex = /\{([^{}]*)\}|\[\[([^[]*)\]\]/g
     let match
@@ -350,8 +350,7 @@ export class InferenceProvider {
           tool_calls.push({
             id: `tool_call_${id_counter++}`,
             tool_name: tool_data.name || tool_data.tool,
-            tool_params:
-              tool_data.params || tool_data.args || tool_data.parameters || {}
+            tool_parameters: tool_data.parameters || {}
           })
         }
       } catch (e) {

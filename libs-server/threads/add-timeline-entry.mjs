@@ -42,16 +42,15 @@ const entry_validators = {
   },
 
   tool_call: (entry) => {
-    if (!entry.tool_name)
+    if (!entry.content.tool_name)
       throw new Error('tool_call entry must have a tool_name')
-    if (!entry.parameters)
+    if (!entry.content.tool_parameters)
       throw new Error('tool_call entry must have parameters')
   },
 
   tool_result: (entry) => {
-    if (!entry.tool_call_id)
-      throw new Error('tool_result entry must have a tool_call_id')
-    if (!entry.result) throw new Error('tool_result entry must have a result')
+    if (!entry.content.result)
+      throw new Error('tool_result entry must have a result')
   },
 
   state_change: (entry) => {

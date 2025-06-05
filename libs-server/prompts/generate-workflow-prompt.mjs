@@ -13,12 +13,14 @@ const log = debug('prompts:workflow')
  * @param {Object} params Parameters
  * @param {string} params.base_relative_path Workflow path relative to Base root, e.g., 'system/workflow/<file_path>.md' or 'user/workflow/<file_path>.md'
  * @param {Object} [params.prompt_properties] Properties to inject into the workflow template
+ * @param {Array} [params.timeline_entries] Timeline entries to make available in the template
  * @param {string} [params.root_base_directory] Custom root base directory
  * @returns {Promise<Object>} Object containing prompt text and guideline paths
  */
 export default async function generate_workflow_prompt({
   base_relative_path,
   prompt_properties = {},
+  timeline_entries = [],
   root_base_directory = config.root_base_directory
 }) {
   if (!base_relative_path) {
@@ -42,10 +44,16 @@ export default async function generate_workflow_prompt({
         file_path: absolute_path
       })
 
-    // Render the document content using Twig with prompt_properties
+    // Prepare template context with prompt properties and timeline data
+    const prompt_properties_with_timeline = {
+      ...prompt_properties,
+      timeline: timeline_entries || []
+    }
+
+    // Render the document content using Twig with template context
     const rendered_content = await render_template({
       document_content,
-      prompt_properties
+      prompt_properties: prompt_properties_with_timeline
     })
 
     // Format as a structured workflow prompt
@@ -67,7 +75,7 @@ export default async function generate_workflow_prompt({
  * Render a template string using Twig
  *
  * @param {string} document_content - The document content to render
- * @param {Object} prompt_properties - The prompt properties to render
+ * @param {Object} prompt_properties - The prompt properties to render with
  * @returns {Promise<string>} - The rendered template string
  */
 async function render_template({ document_content, prompt_properties }) {

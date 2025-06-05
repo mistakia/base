@@ -20,7 +20,10 @@ const log = debug('prompts:build')
  * @returns {Object} Complete prompt object with messages array for inference, prompt_text string,
  *                   and prompt_parts JSON representation of prompt components
  */
-export default async function build_prompt({ components, metadata = {} }) {
+export default async function build_prompt({ 
+  components, 
+  metadata = {} 
+}) {
   if (!components) {
     throw new Error('components object is required')
   }
@@ -84,12 +87,6 @@ function format_prompt_text(prompt_object) {
     prompt_text += `${prompt_object.system_prompt.content}\n\n`
   }
 
-  // Workflow instructions
-  if (prompt_object.workflow_prompt) {
-    prompt_parts.workflow_prompt = prompt_object.workflow_prompt.content
-    prompt_text += `${prompt_object.workflow_prompt.content}\n\n`
-  }
-
   // Guidelines
   if (prompt_object.guidelines_prompt) {
     prompt_parts.guidelines_prompt = prompt_object.guidelines_prompt.content
@@ -106,6 +103,12 @@ function format_prompt_text(prompt_object) {
   if (prompt_object.context) {
     prompt_parts.context = prompt_object.context.content
     prompt_text += `${prompt_object.context.content}\n\n`
+  }
+
+  // Workflow instructions
+  if (prompt_object.workflow_prompt) {
+    prompt_parts.workflow_prompt = prompt_object.workflow_prompt.content
+    prompt_text += `${prompt_object.workflow_prompt.content}\n\n`
   }
 
   return {
