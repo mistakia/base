@@ -73,7 +73,7 @@ The relationship between these knowledge bases is hierarchical - the system know
 
 ### 3.3 External Connections
 
-Each external data connection has bidirectional sync and conflict resolution:
+Each external data connection has bidirectional sync:
 
 - Google Drive
 - Notion

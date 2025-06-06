@@ -6,9 +6,6 @@ description: |
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: '11dc5b4c-365c-4e7f-b7f4-10c9851b1be1'
 observations:
-  - '[architecture] Field-level conflict detection and resolution #sync'
-  - '[feature] Raw import data saved with IPFS content identifiers #storage'
-  - '[principle] Compare current import to previous imports for precise change detection #accuracy'
 relations:
   - 'part_of [[system/text/system-design.md]]'
 tags:
@@ -20,54 +17,63 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ## Overview
 
-The external data sync system manages bidirectional synchronization between internal entities and external data sources (GitHub, Notion, etc.) with field-level conflict detection and resolution.
+Bidirectional synchronization system using content-addressed storage for change detection between internal entities and external sources. Designed to handle field-level conflicts while maintaining complete audit trails without requiring external system webhooks.
 
-## Components
+## Unique Design Decisions
 
-The system consists of:
+### Content-Addressed Change Detection
+Uses SHA-256 hashes of normalized data instead of timestamps or version numbers. Prevents false-positive updates when external APIs return identical data with different timestamps.
 
-- **Core Framework**: Generic sync utilities used by all adapters
-- **System-Specific Adapters**: Code for each external system (GitHub, Notion)
-- **Field Mappers**: Map data between internal and external schemas
-- **Conflict Resolution**: Strategies for resolving conflicts
+### Dual-State Storage Architecture
+Separates raw external responses from normalized internal format to enable:
+- Format evolution without losing historical context
+- Debugging external API changes independent of internal schema changes
+- Audit compliance through immutable external data preservation
 
-## Data Storage
+### Conflict Resolution: External Source Wins
+Local modifications are overwritten by external changes, with additive merging only for tags/labels. This aggressive strategy is viable because local data is version controlled in Git - actual conflict resolution occurs during the commit process, preserving local change history while maintaining external system authority.
 
-- Database tracks sync status and metadata
-- Raw import data stored on disk with IPFS content identifiers
-- Previous imports compared to detect specific field changes
+## Ossified Specifications
 
-## Conflict Resolution Strategies
+### External ID Format
+- **GitHub Issues**: `github:{owner}/{repo}:{issue_number}`
+- **Cloudflare DNS**: `cloudflare:dns:{record_id}`
+- Enables cross-system entity identification without collision risk
 
-- **internal_wins**: Keep internal value, update external system
-- **external_wins**: Use external value, update internal entity
-- **newest_wins**: Use whichever was updated more recently
-- **manual**: Queue for human review and resolution
+### Filename Convention
+Import history files use `{timestamp}_{content_id}.json` format where:
+- Timestamp: ISO 8601 format with colons/periods replaced by hyphens
+- Content ID: SHA-256 hash of file contents
+- Enables chronological sorting and content-based deduplication
 
-## Directory Structure
+## Process Flow
 
-```
-/user/import-history
-  /{external_system}
-    /{entity_id}
-      /raw
-        /{timestamp}_{content_id}.json
-      /processed
-        /{timestamp}_{content_id}.json
-```
+### Change Detection Sequence
+1. **Import Current State**: Fetch external data and calculate content hash
+2. **Historical Comparison**: Compare against previous import using content identifier
+3. **Field-Level Analysis**: Detect specific fields that changed between imports
+4. **Local Conflict Check**: Compare existing local entity against normalized external data
+5. **Transaction Execution**: Apply changes within database transaction scope
 
-## Schema
+### GitHub Integration Process
+1. **API Data Retrieval**: Fetch issues, project items, and comments via GraphQL/REST
+2. **Normalization**: Transform GitHub format to internal task schema using label mappings
+3. **Entity Resolution**: Find existing tasks by external ID or fuzzy matching on title/repository
+4. **Bidirectional Sync**: Update local task from GitHub, optionally push local changes back
 
-External sync tables track relationships, configurations, and conflicts:
+## Local-First GitHub Task Creation
 
-- `entity_sync_records`: Links entities to external records
-- `sync_configs`: Per-entity or per-type sync strategies
-- `sync_conflicts`: Tracks conflicts and resolutions
+### Design Pattern
+Tasks created locally with GitHub repository metadata (`github_repository_owner`, `github_repository_name`) but without `external_id` can be promoted to GitHub issues. The absence of `external_id` indicates local-only state; its presence triggers the standard bidirectional sync process.
 
-## Key Features
+### Creation Workflow
+1. **Local Task Creation**: Create task file in `user/task/github/{owner}/{repo}/` structure with repository metadata
+2. **Issue Creation**: Use creation script to generate GitHub issues from local tasks  
+3. **Automatic Promotion**: Script updates task file with `external_id` and GitHub metadata
+4. **Sync Activation**: Task transitions into standard external sync system
 
-- Field-level change detection based on historical comparison
-- Content-addressed storage using IPFS CIDs for data integrity
-- Configurable conflict resolution per field
-- Audit trail of all imports and conflict resolutions
-- Supports bidirectional sync with field-specific rules
+### Implementation Specification
+- **Detection**: Tasks lacking `external_id` but containing `github_repository_owner` and `github_repository_name`
+- **API Integration**: GitHub Issues REST API for issue creation with title, body, and labels
+- **File Updates**: Atomic addition of `external_id`, `github_number`, `github_id`, and `github_url` fields
+- **Error Handling**: Preserves local state on GitHub API failures; validates required metadata before creation
