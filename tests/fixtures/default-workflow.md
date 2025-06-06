@@ -27,9 +27,9 @@ user_id: '00000000-0000-0000-0000-000000000000'
 {% set relevant_types = ['message', 'state_change', 'error', 'notification', 'tool_call', 'tool_result'] %}
 {% set recent_entries = [] %}
 {% for entry in timeline %}
-  {% if entry.type in relevant_types %}
-    {% set recent_entries = recent_entries|merge([entry]) %}
-  {% endif %}
+{% if entry.type in relevant_types %}
+{% set recent_entries = recent_entries|merge([entry]) %}
+{% endif %}
 {% endfor %}
 {% set recent_timeline = recent_entries|slice(-8) %}
 {% if recent_timeline|length > 0 %}

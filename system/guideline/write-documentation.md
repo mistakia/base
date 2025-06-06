@@ -61,4 +61,4 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - **Stability**: Content should remain accurate across multiple development cycles
 - **Actionability**: Readers should understand what makes your system work
 - **Clarity**: Complex concepts should be explained in clear, direct language
-- **Completeness**: All significant design decisions should be documented with rationale 
+- **Completeness**: All significant design decisions should be documented with rationale

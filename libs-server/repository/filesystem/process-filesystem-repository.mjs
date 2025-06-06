@@ -119,7 +119,7 @@ export async function process_repositories_from_filesystem({
 
   // Find all repositories including submodules
   const repositories = [root_repo]
-  
+
   // If submodule_base_path is specified, only process that submodule
   if (submodule_base_path) {
     repositories.length = 0 // Clear the root repo

@@ -110,7 +110,9 @@ export async function create_branch({
     // Create without checkout if requested
     if (!checkout) {
       try {
-        log(`Creating branch ${branch_name} from local branch ${base_branch} without checkout`)
+        log(
+          `Creating branch ${branch_name} from local branch ${base_branch} without checkout`
+        )
         await execute_shell_command(
           `git branch ${branch_name} ${base_branch}`,
           {
@@ -119,8 +121,10 @@ export async function create_branch({
         )
         return true
       } catch (local_error) {
-        log(`Failed to create from local branch without checkout: ${local_error.message}`)
-        
+        log(
+          `Failed to create from local branch without checkout: ${local_error.message}`
+        )
+
         // Try with remote if available
         try {
           // Check if remote exists and is accessible
@@ -129,7 +133,9 @@ export async function create_branch({
             { cwd: repo_path }
           )
           if (remote_url) {
-            log(`Using remote origin to create branch ${branch_name} without checkout`)
+            log(
+              `Using remote origin to create branch ${branch_name} without checkout`
+            )
             await execute_shell_command(`git fetch origin ${base_branch}`, {
               cwd: repo_path
             })
@@ -145,10 +151,12 @@ export async function create_branch({
         }
       }
     }
-    
+
     // Create with checkout (default behavior)
     try {
-      log(`Creating branch ${branch_name} from local branch ${base_branch} with checkout`)
+      log(
+        `Creating branch ${branch_name} from local branch ${base_branch} with checkout`
+      )
       await execute_shell_command(
         `git checkout -b ${branch_name} ${base_branch}`,
         {

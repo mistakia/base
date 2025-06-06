@@ -4,7 +4,6 @@ import path from 'path'
 import config from '#config'
 
 import { read_workflow_from_filesystem } from '#libs-server/workflow/filesystem/read-workflow-from-filesystem.mjs'
-import { create_temp_test_directory } from '#tests/utils/index.mjs'
 import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 
 describe('read_workflow_from_filesystem', () => {

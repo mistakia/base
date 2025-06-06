@@ -43,7 +43,7 @@ async function create_thread_branch({
     base_branch: 'main',
     checkout: false
   })
-  
+
   // Create worktree for system repo
   log(`Creating worktree for branch ${branch_name} in system repo`)
   worktree_paths.system = await create_worktree({
@@ -59,7 +59,7 @@ async function create_thread_branch({
     base_branch: 'main',
     checkout: false
   })
-  
+
   // Create worktree for user repo
   log(`Creating worktree for branch ${branch_name} in user repo`)
   worktree_paths.user = await create_worktree({
