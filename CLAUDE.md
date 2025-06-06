@@ -65,6 +65,7 @@ yarn export:schema
 **Schema Change Workflow:**
 
 Preferred approach for database schema changes:
+
 1. Run SQL ALTER commands directly on the production database
 2. Export the updated schema using `yarn export:schema`
 3. Do NOT commit migration files or SQL commands to the repository

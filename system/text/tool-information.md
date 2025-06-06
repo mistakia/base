@@ -35,6 +35,7 @@ The system uses a centralized tool registry (`libs-server/tools/registry.mjs`) t
 ### Tool Execution Properties
 
 Each tool defines whether it stops execution through the `stops_execution` property:
+
 - `stops_execution: true` - Tool pauses thread execution (blocking)
 - `stops_execution: false` - Tool executes without pausing thread (non-blocking)
 
@@ -45,6 +46,7 @@ Each tool defines whether it stops execution through the `stops_execution` prope
 Universal tools are available to all threads and provide core system functionality. These tools are automatically registered when the system starts.
 
 **File Tools**:
+
 - `file_read` - Read file contents
 - `file_write` - Write content to files
 - `file_list` - List directory contents
@@ -53,6 +55,7 @@ Universal tools are available to all threads and provide core system functionali
 - `file_search` - Search files by path
 
 **Task Tools**:
+
 - `task_get` - Retrieve specific task details
 - `task_create` - Create new tasks
 - `task_update` - Update existing tasks
@@ -60,9 +63,11 @@ Universal tools are available to all threads and provide core system functionali
 - `list_tasks` - List tasks with filtering
 
 **Entity Tools**:
+
 - `entity_create` - Create new entities
 
 **Notion Tools**:
+
 - `notion_search` - Search Notion content
 - `notion_list_databases` - List available databases
 - `notion_get_page` - Retrieve page content
@@ -78,12 +83,14 @@ Universal tools are available to all threads and provide core system functionali
 Workflows can define custom tools that are registered dynamically when a thread begins executing the workflow. These tools serve as completion signals for workflow execution.
 
 **Registration Process**:
+
 1. Workflow defines tools in `tool_definition` property
 2. `register_workflow_tools()` reads workflow and registers custom tools
 3. Tools become available to the thread executing the workflow
 4. Tool execution signals workflow completion
 
 **Tool Implementation**:
+
 - Custom tools return their parameters as the result
 - All workflow-defined tools default to `stops_execution: true`
 - Tool execution marks workflow as complete
@@ -93,14 +100,17 @@ Workflows can define custom tools that are registered dynamically when a thread 
 Thread tools manage thread execution state and user communication. These tools control thread lifecycle and enable interaction patterns.
 
 **Execution Control**:
+
 - `terminate_thread` - Terminate thread execution permanently
 - `pause_execution` - Pause thread until manual resumption
 
 **User Communication**:
+
 - `message_notify` - Send non-blocking notifications to user
 - `message_ask` - Ask user questions and wait for response (blocking)
 
 **State Management**:
+
 - Thread tools update thread state through `update_thread_state()`
 - Timeline entries track tool usage and state changes
 - Worktree cleanup occurs on thread termination
@@ -121,6 +131,6 @@ Threads execute workflows by first registering the workflow's custom tools, then
 
 ## Permissions and Access Control
 
-*[Placeholder - Tool permission system design in progress]*
+_[Placeholder - Tool permission system design in progress]_
 
 The system will implement role-based access control for tools with different permission levels. Current implementation provides basic access through the centralized registry without granular permissions.
