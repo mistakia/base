@@ -94,11 +94,19 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
  * Process repositories from filesystem
  * @param {string} [root_base_directory] The absolute path to the base directory
  * @param {function} [entity_processor] Function to process each entity (entity, file, schemas) => Promise
+ * @param {string[]} [include_entity_types] Entity types to include
+ * @param {string[]} [exclude_entity_types] Entity types to exclude
+ * @param {string} [path_pattern] Glob pattern for filtering paths
+ * @param {string} [submodule_base_path] If provided, only search in this specific submodule
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_filesystem({
   root_base_directory = config.system_base_directory,
-  entity_processor
+  entity_processor,
+  include_entity_types = [],
+  exclude_entity_types = [],
+  path_pattern,
+  submodule_base_path
 } = {}) {
   log(
     `Processing repositories from filesystem with root directory: ${root_base_directory}`
@@ -111,14 +119,23 @@ export async function process_repositories_from_filesystem({
 
   // Find all repositories including submodules
   const repositories = [root_repo]
-  const submodules = await git.list_submodules({
-    repo_path: root_base_directory
-  })
-
-  for (const submodule of submodules) {
+  
+  // If submodule_base_path is specified, only process that submodule
+  if (submodule_base_path) {
+    repositories.length = 0 // Clear the root repo
     repositories.push({
-      submodule_base_path: submodule.path
+      submodule_base_path
     })
+  } else {
+    const submodules = await git.list_submodules({
+      repo_path: root_base_directory
+    })
+
+    for (const submodule of submodules) {
+      repositories.push({
+        submodule_base_path: submodule.path
+      })
+    }
   }
 
   log(
@@ -158,7 +175,10 @@ export async function process_repositories_from_filesystem({
   for (const repository of repositories) {
     const repo_files = await list_entity_files_from_filesystem({
       root_base_directory,
-      submodule_base_path: repository.submodule_base_path
+      submodule_base_path: repository.submodule_base_path,
+      include_entity_types,
+      exclude_entity_types,
+      path_pattern
     })
 
     const repo_name = repository.submodule_base_path || 'root'
