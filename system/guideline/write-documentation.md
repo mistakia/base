@@ -1,23 +1,24 @@
 ---
-title: 'Write Documentation'
-type: 'guideline'
-description: |
-  Guidelines for creating lean, focused technical documentation that emphasizes unique design decisions and process flows
+title: Write Documentation
+type: guideline
+description: >-
+  Guidelines for creating lean, focused technical documentation that emphasizes unique design
+  decisions and process flows
 created_at: '2025-05-27T18:10:20.244Z'
-entity_id: '12dc5b4c-365c-4e7f-b7f4-10c9851b1be2'
+entity_id: 12dc5b4c-365c-4e7f-b7f4-10c9851b1be2
 globs:
-  - 'system/text/*.md'
-  - 'user/text/*.md'
+  - system/text/*.md
+  - user/text/*.md
   - '*.md'
-guideline_status: 'Approved'
+guideline_status: Approved
 observations:
   - '[clarity] Specific design choices provide more value than generic descriptions #design-decisions'
   - '[maintainability] Code examples become stale quickly and require frequent updates #maintenance'
   - '[focus] Unique architectural decisions distinguish systems from common patterns #architecture'
 relations:
-  - 'implements [[system/text/system-design.md]]'
-tags:
-user_id: '00000000-0000-0000-0000-000000000000'
+  - implements [[system/text/system-design.md]]
+updated_at: '2025-06-06T16:51:43.606Z'
+user_id: 00000000-0000-0000-0000-000000000000
 ---
 
 ### What to Include
