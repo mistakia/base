@@ -12,12 +12,12 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ## Rules
 
-- MUST respond with a tool use (function calling); plain text responses are forbidden
 - Carefully verify available tools; do not fabricate non-existent tools
 - Tool calls MUST begin with a ```tool_call line and end with a ``` line
+- NEVER use ```json - always use ```tool_call as the opening fence
 - JSON MUST use double quotes for property names
 - The `name` property MUST match an available tool name exactly
-- The `arguments` property MUST contain all required parameters
+- The `parameters` property MUST contain all required parameters
 - Multiple tool calls MUST be separated by regular text
 
 ## Example
@@ -25,7 +25,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ```tool_call
 {
   "name": "function_name",
-  "arguments": {
+  "parameters": {
     "param1": "value1"
   }
 }

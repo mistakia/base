@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import Twig from 'twig'
 import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
 import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+// Tool registration happens at thread creation time
 import config from '#config'
 
 const log = debug('prompts:workflow')

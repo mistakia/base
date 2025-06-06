@@ -175,6 +175,28 @@ export default async function create_thread({
     throw new Error(`Workflow '${workflow_base_relative_path}' does not exist`)
   }
 
+  // Get workflow tools list (without registering custom tools yet)
+  let workflow_tools = []
+  try {
+    const { get_workflow_tools } = await import(
+      '#libs-server/workflow/index.mjs'
+    )
+
+    workflow_tools = await get_workflow_tools({
+      workflow_base_relative_path,
+      root_base_directory
+    })
+
+    if (workflow_tools.length > 0) {
+      log(`Extracted workflow tools: ${workflow_tools.join(', ')}`)
+    }
+  } catch (error) {
+    log(
+      `Warning: Could not extract tools from workflow ${workflow_base_relative_path}: ${error.message}`
+    )
+    // Continue thread creation even if tool extraction fails
+  }
+
   // Generate thread ID
   const thread_id = uuid()
   log(
@@ -196,12 +218,13 @@ export default async function create_thread({
 
   // Add thread-specific tools
   const thread_tool_names = get_thread_tool_names()
-  
-  // Combine with provided tools
-  const combined_tools = [
-    ...tools,
-    ...thread_tool_names
-  ]
+
+  // Determine final tools list
+  // If workflow defines tools, use those + thread tools, otherwise use provided tools + thread tools
+  const final_tools =
+    workflow_tools.length > 0
+      ? [...workflow_tools, ...thread_tool_names]
+      : [...tools, ...thread_tool_names]
 
   // Create metadata
   const metadata = {
@@ -215,7 +238,7 @@ export default async function create_thread({
     updated_at: now,
     current_stage: null,
     prompt_properties,
-    tools: combined_tools,
+    tools: final_tools,
     ...additional_metadata
   }
 
