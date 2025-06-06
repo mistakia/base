@@ -69,7 +69,7 @@ export function register_entity_create_tool() {
             : {}),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          user_id: parameters.user_id || context.user_id
+          user_id: parameters.user_id || context.user_id || config.user_id
         }
 
         // Get the absolute path
