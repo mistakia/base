@@ -11,7 +11,8 @@
       "Bash(gh project item-add:*)",
       "Bash(gh project field-list:*)",
       "Bash(gh project item-list:*)",
-      "Bash(gh project item-edit:*)"
+      "Bash(gh project item-edit:*)",
+      "mcp__base__entity_create"
     ],
     "deny": []
   }
