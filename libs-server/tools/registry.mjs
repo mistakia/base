@@ -43,6 +43,7 @@ export function register_tool({ tool_name, tool_definition, implementation }) {
     name: tool_name,
     description: tool_definition.description,
     inputSchema: tool_definition.inputSchema,
+    stops_execution: tool_definition.stops_execution || false,
     implementation
   })
 

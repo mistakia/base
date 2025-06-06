@@ -20,10 +20,7 @@ const log = debug('prompts:build')
  * @returns {Object} Complete prompt object with messages array for inference, prompt_text string,
  *                   and prompt_parts JSON representation of prompt components
  */
-export default async function build_prompt({ 
-  components, 
-  metadata = {} 
-}) {
+export default async function build_prompt({ components, metadata = {} }) {
   if (!components) {
     throw new Error('components object is required')
   }

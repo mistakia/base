@@ -60,6 +60,15 @@ export default async function generate_prompt({
   let guidelines_prompt = ''
 
   if (thread.workflow_base_relative_path) {
+    // Register workflow tools before generating prompts
+    const { register_workflow_tools } = await import(
+      '#libs-server/workflow/index.mjs'
+    )
+    await register_workflow_tools({
+      workflow_base_relative_path: thread.workflow_base_relative_path,
+      root_base_directory: system_base_directory
+    })
+
     const workflow_result = await generate_workflow_prompt({
       base_relative_path: thread.workflow_base_relative_path,
       prompt_properties: thread.prompt_properties,
