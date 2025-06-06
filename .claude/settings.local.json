@@ -4,7 +4,14 @@
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
       "WebFetch(domain:docs.anthropic.com)",
-      "Edit"
+      "Edit",
+      "Bash(gh label list:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh project list:*)",
+      "Bash(gh project item-add:*)",
+      "Bash(gh project field-list:*)",
+      "Bash(gh project item-list:*)",
+      "Bash(gh project item-edit:*)"
     ],
     "deny": []
   }
