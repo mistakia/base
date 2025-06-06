@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(gh pr view:*)",
-      "Bash(gh pr diff:*)"
+      "Bash(gh pr diff:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Edit"
     ],
     "deny": []
   }
