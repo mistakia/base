@@ -84,12 +84,14 @@ export async function update_task_from_github_issue({
       force
     })
 
-    if (update_result.external_updates) {
+    // Sync local changes back to GitHub if they don't conflict with external changes
+    if (update_result.sync_to_external) {
+      log(`Syncing local changes back to GitHub issue #${github_issue.number}`)
       await sync_task_to_github_issue({
         github_issue_number: github_issue.number,
         github_repository_owner,
         github_repository_name,
-        updates: update_result.external_updates,
+        updates: update_result.sync_to_external,
         github_token,
         github_project_number
       })

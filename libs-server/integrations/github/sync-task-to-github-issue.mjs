@@ -41,6 +41,16 @@ export async function sync_task_to_github_issue({
     let issue_update_success = true
     let project_update_success = true
 
+    console.log({
+      github_update_data,
+      updates,
+      github_project_number,
+      github_issue_number,
+      github_repository_owner,
+      github_repository_name
+    })
+    return
+
     // Skip issue update if no changes
     if (Object.keys(github_update_data).length > 0) {
       // Update GitHub issue using GraphQL API

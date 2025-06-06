@@ -163,12 +163,37 @@ export async function update_entity_from_external_item({
       })
     }
 
+    // Determine what needs to be synced back to external system
+    let sync_to_external = null
+
+    if (external_updates && previous_import) {
+      // Only sync fields where local has changed but external hasn't changed since last import
+      const fields_to_sync = {}
+
+      for (const [field, change] of Object.entries(external_updates)) {
+        // Check if this field has changed in the external system since last import
+        const external_field_changed =
+          internal_updates && internal_updates[field]
+
+        if (!external_field_changed) {
+          // External field hasn't changed, so we can safely sync local changes
+          fields_to_sync[field] = change
+        }
+      }
+
+      if (Object.keys(fields_to_sync).length > 0) {
+        sync_to_external = fields_to_sync
+      }
+    }
+
     return {
       action:
         external_updates || internal_updates || force ? 'updated' : 'skipped',
       entity_id,
       absolute_path,
-      external_updates
+      external_updates,
+      sync_to_external,
+      internal_updates
     }
   } catch (error) {
     log(
