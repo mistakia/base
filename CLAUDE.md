@@ -36,7 +36,7 @@ yarn test:git          # Git operations tests
 yarn test:blocks       # Block system tests
 
 # Run a single test file
-yarn test tests/unit/path/to/test.mjs
+yarn test:file ./tests/unit/path/to/test.mjs
 
 # Run a single test
 yarn test -- --grep "test name"
