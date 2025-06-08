@@ -27,10 +27,10 @@ yarn start:api
 
 ```bash
 # Run all tests (unit + integration)
-yarn test
+yarn test:all
 
 # Run tests with minimal output (more token efficient)
-yarn test --reporter min
+yarn test:all --reporter min
 
 # Run specific test suites
 yarn test:unit          # Unit tests only

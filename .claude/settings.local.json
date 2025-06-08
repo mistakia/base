@@ -3,8 +3,6 @@
     "allow": [
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
-      "WebFetch(domain:docs.anthropic.com)",
-      "Edit",
       "Bash(gh label list:*)",
       "Bash(gh issue create:*)",
       "Bash(gh project list:*)",
@@ -12,14 +10,16 @@
       "Bash(gh project field-list:*)",
       "Bash(gh project item-list:*)",
       "Bash(gh project item-edit:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Edit",
       "mcp__base__entity_create",
       "Bash(ls:*)",
-      "Bash(yarn test:file:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(yarn test:integration:*)",
-      "Bash(yarn test:*)"
+      "Bash(yarn test:*)",
+      "Bash(yarn lint:*)",
+      "Bash(DEBUG=* yarn test:*)"
     ],
     "deny": []
   }
