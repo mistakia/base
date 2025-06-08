@@ -9,7 +9,11 @@ describe('Entity Format Extractors', () => {
   describe('extract_entity_tags', () => {
     it('should extract tags from frontmatter', () => {
       const entity_properties = {
-        tags: ['system/development', 'system/javascript', 'system/testing']
+        tags: [
+          'sys:system/development',
+          'sys:system/javascript',
+          'sys:system/testing'
+        ]
       }
 
       const tags = extract_entity_tags({ entity_properties })
@@ -17,13 +21,13 @@ describe('Entity Format Extractors', () => {
       expect(tags.property_tags).to.be.an('array')
       expect(tags.property_tags).to.have.lengthOf(3)
       expect(tags.property_tags[0]).to.deep.include({
-        base_relative_path: 'system/development'
+        base_uri: 'sys:system/development'
       })
       expect(tags.property_tags[1]).to.deep.include({
-        base_relative_path: 'system/javascript'
+        base_uri: 'sys:system/javascript'
       })
       expect(tags.property_tags[2]).to.deep.include({
-        base_relative_path: 'system/testing'
+        base_uri: 'sys:system/testing'
       })
     })
 
@@ -42,9 +46,9 @@ describe('Entity Format Extractors', () => {
     it('should extract basic relations from entity properties', () => {
       const entity_properties = {
         relations: [
-          'depends_on [[system/project-setup]]',
-          'blocked_by [[system/server-configuration]]',
-          'related_to [[system/api-documentation]]'
+          'depends_on [[sys:system/project-setup]]',
+          'blocked_by [[sys:system/server-configuration]]',
+          'related_to [[sys:system/api-documentation]]'
         ]
       }
 
@@ -55,19 +59,19 @@ describe('Entity Format Extractors', () => {
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'depends_on',
-        entity_path: 'system/project-setup',
+        base_uri: 'sys:system/project-setup',
         context: null
       })
 
       expect(relations[1]).to.deep.equal({
         relation_type: 'blocked_by',
-        entity_path: 'system/server-configuration',
+        base_uri: 'sys:system/server-configuration',
         context: null
       })
 
       expect(relations[2]).to.deep.equal({
         relation_type: 'related_to',
-        entity_path: 'system/api-documentation',
+        base_uri: 'sys:system/api-documentation',
         context: null
       })
     })
@@ -75,9 +79,9 @@ describe('Entity Format Extractors', () => {
     it('should extract relations with context from entity properties', () => {
       const entity_properties = {
         relations: [
-          'depends_on [[system/project-setup]] (phase 1)',
-          'blocked_by [[system/server-configuration]] (awaiting IT approval)',
-          'related_to [[system/api-documentation]] (needs updated examples)'
+          'depends_on [[sys:system/project-setup]] (phase 1)',
+          'blocked_by [[sys:system/server-configuration]] (awaiting IT approval)',
+          'related_to [[sys:system/api-documentation]] (needs updated examples)'
         ]
       }
 
@@ -88,19 +92,19 @@ describe('Entity Format Extractors', () => {
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'depends_on',
-        entity_path: 'system/project-setup',
+        base_uri: 'sys:system/project-setup',
         context: 'phase 1'
       })
 
       expect(relations[1]).to.deep.equal({
         relation_type: 'blocked_by',
-        entity_path: 'system/server-configuration',
+        base_uri: 'sys:system/server-configuration',
         context: 'awaiting IT approval'
       })
 
       expect(relations[2]).to.deep.equal({
         relation_type: 'related_to',
-        entity_path: 'system/api-documentation',
+        base_uri: 'sys:system/api-documentation',
         context: 'needs updated examples'
       })
     })
@@ -117,9 +121,9 @@ describe('Entity Format Extractors', () => {
     it('should handle malformed relation strings', () => {
       const entity_properties = {
         relations: [
-          'depends_on system/project-setup', // Missing brackets
-          'blocked_by [[system/server-configuration]]', // Correctly formatted
-          'related_to system/api-documentation' // Missing brackets
+          'depends_on sys:system/project-setup', // Missing brackets
+          'blocked_by [[sys:system/server-configuration]]', // Correctly formatted
+          'related_to sys:system/api-documentation' // Missing brackets
         ]
       }
 
@@ -130,7 +134,7 @@ describe('Entity Format Extractors', () => {
 
       expect(relations[0]).to.deep.equal({
         relation_type: 'blocked_by',
-        entity_path: 'system/server-configuration',
+        base_uri: 'sys:system/server-configuration',
         context: null
       })
     })

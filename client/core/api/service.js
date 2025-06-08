@@ -61,9 +61,9 @@ export const api = {
     return { url }
   },
 
-  get_entity({ base_relative_path, root_base_directory }) {
+  get_entity({ base_uri, root_base_directory }) {
     const params = { root_base_directory }
-    const url = `${API_URL}/entities/${encodeURIComponent(base_relative_path)}?${qs.stringify(params)}`
+    const url = `${API_URL}/entities/${encodeURIComponent(base_uri)}?${qs.stringify(params)}`
     return { url }
   },
 

@@ -54,10 +54,9 @@ function validate_base_payload(webhook_payload) {
  * Update the change request status to 'Merged' when the corresponding PR is merged on GitHub
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
- * @param {string} [user_base_directory] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_merged(webhook_payload, user_base_directory) {
+export async function handle_pr_merged(webhook_payload) {
   let change_request_id
   try {
     const validation_error = validate_base_payload(webhook_payload)
@@ -94,8 +93,7 @@ export async function handle_pr_merged(webhook_payload, user_base_directory) {
       change_request_id,
       status: 'Merged',
       updater_id: 'system:github',
-      comment: `GitHub PR #${pr_number} was merged.`,
-      user_base_directory
+      comment: `GitHub PR #${pr_number} was merged.`
     })
 
     log(
@@ -111,8 +109,7 @@ export async function handle_pr_merged(webhook_payload, user_base_directory) {
       const result = await force_merge_status(
         change_request_id,
         webhook_payload.number,
-        `GitHub PR #${webhook_payload.number} was merged.`,
-        user_base_directory
+        `GitHub PR #${webhook_payload.number} was merged.`
       )
       return result
     } catch (force_error) {
@@ -127,13 +124,9 @@ export async function handle_pr_merged(webhook_payload, user_base_directory) {
  * Update the change request status to 'Closed' when the corresponding PR is closed without merging
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
- * @param {string} [user_base_directory] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_closed_without_merging(
-  webhook_payload,
-  user_base_directory
-) {
+export async function handle_pr_closed_without_merging(webhook_payload) {
   try {
     const validation_error = validate_base_payload(webhook_payload)
     if (validation_error) {
@@ -168,8 +161,7 @@ export async function handle_pr_closed_without_merging(
       change_request_id: change_request.change_request_id,
       status: 'Closed',
       updater_id: 'system:github',
-      comment: `GitHub PR #${pr_number} was closed without merging.`,
-      user_base_directory
+      comment: `GitHub PR #${pr_number} was closed without merging.`
     })
 
     log(
@@ -187,10 +179,9 @@ export async function handle_pr_closed_without_merging(
  * Update the change request status to 'PendingReview' when the corresponding PR is reopened
  *
  * @param {Object} webhook_payload - The GitHub webhook payload
- * @param {string} [user_base_directory] - Optional repository path to use for operations
  * @returns {Promise<Object|null>} The updated change request or null if no matching CR found
  */
-export async function handle_pr_reopened(webhook_payload, user_base_directory) {
+export async function handle_pr_reopened(webhook_payload) {
   try {
     const validation_error = validate_base_payload(webhook_payload)
     if (validation_error) {
@@ -220,8 +211,7 @@ export async function handle_pr_reopened(webhook_payload, user_base_directory) {
       change_request_id: change_request.change_request_id,
       status: 'PendingReview',
       updater_id: 'system:github',
-      comment: `GitHub PR #${pr_number} was reopened.`,
-      user_base_directory
+      comment: `GitHub PR #${pr_number} was reopened.`
     })
 
     log(
@@ -239,10 +229,9 @@ export async function handle_pr_reopened(webhook_payload, user_base_directory) {
  *
  * @param {object} params - Parameters for handling the webhook.
  * @param {object} params.payload - The GitHub webhook payload.
- * @param {string} [params.user_base_directory] - Optional repository path to use for operations.
  * @returns {Promise<object|null>} The updated change request object, or null if no action was taken.
  */
-export async function handle_github_webhook({ payload, user_base_directory }) {
+export async function handle_github_webhook({ payload }) {
   if (!payload || !payload.action || !payload.pull_request) {
     log('Invalid GitHub webhook payload')
     return null
@@ -258,18 +247,17 @@ export async function handle_github_webhook({ payload, user_base_directory }) {
 
   // Dispatch to appropriate handler based on action
   if (action === 'closed' && pull_request.merged) {
-    return await handle_pr_merged(payload, user_base_directory)
+    return await handle_pr_merged(payload)
   } else if (action === 'closed' && !pull_request.merged) {
-    return await handle_pr_closed_without_merging(payload, user_base_directory)
+    return await handle_pr_closed_without_merging(payload)
   } else if (action === 'reopened') {
-    return await handle_pr_reopened(payload, user_base_directory)
+    return await handle_pr_reopened(payload)
   }
 
   // If no specific handler, use the generic approach
   const change_request = await find_matching_change_request(
     pr_number,
-    github_repo,
-    user_base_directory
+    github_repo
   )
   if (!change_request) {
     log(
@@ -298,8 +286,7 @@ export async function handle_github_webhook({ payload, user_base_directory }) {
   if (new_status === 'comment') {
     log(`Received comment on PR #${pr_number}, not changing status`)
     return await get_change_request({
-      change_request_id,
-      user_base_directory
+      change_request_id
     })
   }
 
@@ -309,19 +296,13 @@ export async function handle_github_webhook({ payload, user_base_directory }) {
       change_request_id,
       status: new_status,
       updater_id: 'system:github',
-      comment,
-      user_base_directory
+      comment
     })
     return updated_cr
   } catch (error) {
     // Handle special case for PRs merged externally
     if (new_status === 'Merged' && pull_request.merged) {
-      return await force_merge_status(
-        change_request_id,
-        pr_number,
-        comment,
-        user_base_directory
-      )
+      return await force_merge_status(change_request_id, pr_number, comment)
     }
 
     // For other transitions that fail, just log and return null
@@ -331,11 +312,7 @@ export async function handle_github_webhook({ payload, user_base_directory }) {
 }
 
 // Helper function to find the matching change request for a PR
-async function find_matching_change_request(
-  pr_number,
-  github_repo,
-  user_base_directory
-) {
+async function find_matching_change_request(pr_number, github_repo) {
   if (!pr_number || !github_repo) {
     log('Missing PR number or GitHub repo')
     return null
@@ -394,12 +371,7 @@ function determine_status_update(action, pr_number, is_merged) {
 }
 
 // Helper function to force merge status for PRs merged externally
-async function force_merge_status(
-  change_request_id,
-  pr_number,
-  comment,
-  user_base_directory
-) {
+async function force_merge_status(change_request_id, pr_number, comment) {
   log(
     `Forcing status update to Merged for PR ${pr_number} that was merged on GitHub`
   )
@@ -424,8 +396,7 @@ async function force_merge_status(
         status: 'Merged',
         now,
         updater_id: 'system:github',
-        comment: comment || 'Merged externally via GitHub',
-        user_base_directory
+        comment: comment || 'Merged externally via GitHub'
       })
     } catch (md_error) {
       log(`Warning: Couldn't update markdown file: ${md_error.message}`)

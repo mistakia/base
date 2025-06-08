@@ -15,10 +15,10 @@ persons:
 parent_tasks:
   - Project Setup
 tags:
-  - system/important
-  - system/development
+  - sys:system/important
+  - sys:system/development
 relations:
-  - blocked_by [[system/server-configuration]] (awaiting approval)
+  - blocked_by [[sys:system/server-configuration]] (awaiting approval)
 ---
 
 # Test Task
@@ -45,10 +45,10 @@ This is a #system/test task for #system/development purposes.
         result.formatted_entity_metadata.property_tags.length
       ).to.be.at.least(2)
       expect(result.formatted_entity_metadata.property_tags).to.deep.include({
-        base_relative_path: 'system/important'
+        base_uri: 'sys:system/important'
       })
       expect(result.formatted_entity_metadata.property_tags).to.deep.include({
-        base_relative_path: 'system/development'
+        base_uri: 'sys:system/development'
       })
 
       // Check explicit relations
@@ -56,7 +56,7 @@ This is a #system/test task for #system/development purposes.
       expect(result.formatted_entity_metadata.relations).to.have.lengthOf(1)
       expect(result.formatted_entity_metadata.relations[0]).to.deep.equal({
         relation_type: 'blocked_by',
-        entity_path: 'system/server-configuration',
+        base_uri: 'sys:system/server-configuration',
         context: 'awaiting approval'
       })
     })

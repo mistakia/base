@@ -61,8 +61,8 @@ Example:
 
 ```yaml
 relations:
-  - 'member_of [[system/organization/org-name]]'
-  - 'assigned_to [[user/tasks/task-name]]'
-  - 'follows [[system/guidelines/guideline-name]]'
-  - 'requires [[system/physical_item/item-name]]'
+  - 'member_of [[sys:organization/org-name]]'
+  - 'assigned_to [[user:tasks/task-name]]'
+  - 'follows [[sys:guidelines/guideline-name]]'
+  - 'requires [[sys:physical_item/item-name]]'
 ```

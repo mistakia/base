@@ -1,7 +1,6 @@
 import debug from 'debug'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-import config from '#config'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('tag:exists-in-filesystem')
 
@@ -9,26 +8,19 @@ const log = debug('tag:exists-in-filesystem')
  * Check if a tag file exists in the filesystem
  *
  * @param {Object} params - Parameters
- * @param {string} params.base_relative_path - Relative path to the tag file
- * @param {string} [params.root_base_directory] - Root base directory
+ * @param {string} params.base_uri - URI identifying the tag file
  * @returns {Promise<boolean>} - True if tag exists, false otherwise
  */
-export async function tag_exists_in_filesystem({
-  base_relative_path,
-  root_base_directory = config.root_base_directory
-} = {}) {
-  if (!base_relative_path) {
-    throw new Error('base_relative_path is required')
+export async function tag_exists_in_filesystem({ base_uri } = {}) {
+  if (!base_uri) {
+    throw new Error('base_uri is required')
   }
 
   try {
-    log(`Checking if tag exists in filesystem: ${base_relative_path}`)
+    log(`Checking if tag exists in filesystem: ${base_uri}`)
 
-    // Get file info
-    const { absolute_path } = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Resolve absolute path from base URI using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
 
     log(`Checking tag at path: ${absolute_path}`)
 

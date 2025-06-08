@@ -6,19 +6,20 @@ import { v4 as uuid } from 'uuid'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
+import { clear_registered_directories } from '#libs-server/base-uri/index.mjs'
 
 describe('read_entity_from_git', () => {
   let repo
-  const entity_path = 'entities/test-entity.md'
-  const complex_entity_path = 'entities/complex-entity.md'
+  const base_uri = 'sys:entities/test-entity.md'
+  const complex_base_uri = 'sys:entities/complex-entity.md'
   const branch = 'main'
 
   before(async () => {
-    // Create a temporary git repository
-    repo = await create_temp_test_repo()
+    // Create a temporary git repository with registry
+    repo = await create_temp_test_repo({ register_directories: true })
 
     // Create entities directory
-    await fs.mkdir(path.join(repo.path, 'entities'), { recursive: true })
+    await fs.mkdir(path.join(repo.system_path, 'entities'), { recursive: true })
 
     // Write test entity to git
     const simple_entity_properties = {
@@ -33,12 +34,12 @@ describe('read_entity_from_git', () => {
       '# Test Git Entity\n\nThis entity is stored in git.'
 
     await write_entity_to_git({
-      repo_path: repo.path,
-      git_relative_path: entity_path,
+      base_uri,
       entity_properties: simple_entity_properties,
       entity_type: simple_entity_type,
       entity_content: simple_entity_content,
-      branch
+      branch,
+      commit_message: 'Add test entity'
     })
 
     // Write complex entity to git
@@ -65,16 +66,17 @@ describe('read_entity_from_git', () => {
     const complex_entity_type = 'complex'
 
     await write_entity_to_git({
-      repo_path: repo.path,
-      git_relative_path: complex_entity_path,
+      base_uri: complex_base_uri,
       entity_properties: complex_entity_properties,
       entity_type: complex_entity_type,
-      branch
+      branch,
+      commit_message: 'Add complex test entity'
     })
   })
 
   after(() => {
-    // Clean up temporary repository
+    // Clean up temporary repository and registry
+    clear_registered_directories()
     if (repo) {
       repo.cleanup()
     }
@@ -82,14 +84,14 @@ describe('read_entity_from_git', () => {
 
   it('should read an entity from git successfully', async () => {
     const result = await read_entity_from_git({
-      repo_path: repo.path,
-      git_relative_path: entity_path,
+      repo_path: repo.system_path,
+      git_relative_path: 'entities/test-entity.md',
       branch
     })
 
     // Verify result
     expect(result.success).to.be.true
-    expect(result.git_relative_path).to.equal(entity_path)
+    expect(result.git_relative_path).to.equal('entities/test-entity.md')
     expect(result.branch).to.equal(branch)
     expect(result.entity_properties).to.include({
       title: 'Test Git Entity',
@@ -115,8 +117,8 @@ describe('read_entity_from_git', () => {
 
   it('should handle an entity with complex frontmatter', async () => {
     const result = await read_entity_from_git({
-      repo_path: repo.path,
-      git_relative_path: complex_entity_path,
+      repo_path: repo.system_path,
+      git_relative_path: 'entities/complex-entity.md',
       branch
     })
 
@@ -143,7 +145,7 @@ describe('read_entity_from_git', () => {
     const non_existent_path = 'entities/non-existent-entity.md'
 
     const result = await read_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: non_existent_path,
       branch
     })
@@ -156,7 +158,7 @@ describe('read_entity_from_git', () => {
   it('should return error when repository does not exist', async () => {
     const result = await read_entity_from_git({
       repo_path: '/non/existent/repo',
-      git_relative_path: entity_path,
+      git_relative_path: 'entities/test-entity.md',
       branch
     })
 
@@ -168,8 +170,8 @@ describe('read_entity_from_git', () => {
     const non_existent_branch = 'non-existent-branch'
 
     const result = await read_entity_from_git({
-      repo_path: repo.path,
-      git_relative_path: entity_path,
+      repo_path: repo.system_path,
+      git_relative_path: 'entities/test-entity.md',
       branch: non_existent_branch
     })
 
@@ -179,7 +181,7 @@ describe('read_entity_from_git', () => {
 
   it('should return error if repo_path is missing', async () => {
     const result = await read_entity_from_git({
-      git_relative_path: entity_path,
+      git_relative_path: 'entities/test-entity.md',
       branch
     })
 
@@ -189,7 +191,7 @@ describe('read_entity_from_git', () => {
 
   it('should return error if file_path is missing', async () => {
     const result = await read_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       branch
     })
 
@@ -199,8 +201,8 @@ describe('read_entity_from_git', () => {
 
   it('should return error if branch is missing', async () => {
     const result = await read_entity_from_git({
-      repo_path: repo.path,
-      git_relative_path: entity_path
+      repo_path: repo.system_path,
+      git_relative_path: 'entities/test-entity.md'
     })
 
     expect(result.success).to.be.false

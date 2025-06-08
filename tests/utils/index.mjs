@@ -7,6 +7,12 @@ import reset_all_tables from './reset-all-tables.mjs'
 import create_test_thread from './create-test-thread.mjs'
 import create_test_task from './create-test-task.mjs'
 import create_test_tag from './create-test-tag.mjs'
+import create_test_entity from './create-test-entity.mjs'
+import setup_test_directories, {
+  register_test_directories,
+  setup_api_test_registry,
+  setup_test_registry
+} from './setup-test-directories.mjs'
 
 export {
   create_test_user,
@@ -15,7 +21,12 @@ export {
   reset_all_tables,
   create_test_thread,
   create_test_task,
-  create_test_tag
+  create_test_tag,
+  create_test_entity,
+  setup_test_directories,
+  register_test_directories,
+  setup_api_test_registry,
+  setup_test_registry
 }
 
 export default {
@@ -25,7 +36,10 @@ export default {
   reset_all_tables,
   create_test_thread,
   create_test_task,
-  create_test_tag
+  create_test_tag,
+  create_test_entity,
+  setup_test_directories,
+  register_test_directories
 }
 
 // Create a JWT authentication token for test purposes

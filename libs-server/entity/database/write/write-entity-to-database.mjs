@@ -14,7 +14,7 @@ const log = debug('entity:database:write')
  * @param {string} params.entity_type Type of entity
  * @param {string} params.user_id User who owns the entity
  * @param {string} params.absolute_path Absolute path to the file
- * @param {string} params.base_relative_path Path relative to repository base
+ * @param {string} params.base_uri Resource URI for the entity
  * @param {string} params.git_sha Git SHA of the file
  * @throws {Error} If any required parameter is missing
  */
@@ -23,7 +23,7 @@ function validate_entity_params({
   entity_type,
   user_id,
   absolute_path,
-  base_relative_path,
+  base_uri,
   git_sha
 }) {
   if (!entity_properties || typeof entity_properties !== 'object') {
@@ -46,8 +46,8 @@ function validate_entity_params({
     throw new Error('absolute_path is required')
   }
 
-  if (!base_relative_path) {
-    throw new Error('base_relative_path is required')
+  if (!base_uri) {
+    throw new Error('base_uri is required')
   }
 
   if (!git_sha) {
@@ -64,7 +64,7 @@ function validate_entity_params({
  * @param {string} params.user_id User who owns the entity
  * @param {string} params.entity_content Entity content/markdown
  * @param {string} params.absolute_path Absolute path to the file
- * @param {string} params.base_relative_path Path relative to repository base
+ * @param {string} params.base_uri Resource URI for the entity
  * @param {string} params.git_sha Git SHA of the file
  * @returns {Object} Formatted entity data for database operations
  */
@@ -74,7 +74,7 @@ function prepare_entity_data({
   user_id,
   entity_content,
   absolute_path,
-  base_relative_path,
+  base_uri,
   git_sha
 }) {
   const entity_data = {
@@ -86,7 +86,7 @@ function prepare_entity_data({
     frontmatter: JSON.stringify(entity_properties),
     updated_at: entity_properties.updated_at || new Date(),
     absolute_path,
-    base_relative_path,
+    base_uri,
     git_sha
   }
 
@@ -140,15 +140,13 @@ async function create_or_update_entity({ entity_data, entity_id, db_client }) {
  * @param {Object} params.formatted_entity_metadata Formatted metadata about the entity
  * @param {string} params.user_id User who owns the entity
  * @param {Object} params.db_client Database client or transaction
- * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<number>} Number of relations processed
  */
 async function process_entity_relations({
   entity_id,
   formatted_entity_metadata,
   user_id,
-  db_client,
-  root_base_directory
+  db_client
 }) {
   if (!formatted_entity_metadata || !formatted_entity_metadata.relations) {
     return 0
@@ -157,12 +155,11 @@ async function process_entity_relations({
   // Convert relations to the format expected by write_entity_relations_to_database
   const structured_relations = []
 
-  // Process each relation and convert entity paths to entity IDs
+  // Process each relation and convert base_uri to entity IDs
   for (const relation of formatted_entity_metadata.relations) {
     try {
       const result = await get_entity_id_from_base_path({
-        base_relative_path: relation.entity_path,
-        root_base_directory
+        base_uri: relation.base_uri
       })
 
       if (result.success && result.entity_id) {
@@ -172,16 +169,16 @@ async function process_entity_relations({
           context: relation.context
         })
         log(
-          `Converted relation path ${relation.entity_path} to entity_id ${result.entity_id}`
+          `Converted relation base_uri ${relation.base_uri} to entity_id ${result.entity_id}`
         )
       } else {
         log(
-          `Failed to convert relation path ${relation.entity_path}: ${result.error}`
+          `Failed to convert relation base_uri ${relation.base_uri}: ${result.error}`
         )
       }
     } catch (error) {
       log(
-        `Error converting relation path to entity_id for ${relation.entity_path}:`,
+        `Error converting relation base_uri to entity_id for ${relation.base_uri}:`,
         error
       )
     }
@@ -204,27 +201,23 @@ async function process_entity_relations({
  *
  * @param {Object} params Tag conversion parameters
  * @param {string[]} params.tags Array of tag paths
- * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<Object[]>} Array of tag conversion results
  */
-async function convert_tag_paths_to_entity_ids({ tags, root_base_directory }) {
+async function convert_tag_paths_to_entity_ids({ tags }) {
   return Promise.all(
-    tags.map(async (tag) => {
+    tags.map(async (base_uri) => {
       try {
-        const result = await get_entity_id_from_base_path({
-          base_relative_path: tag,
-          root_base_directory
-        })
+        const result = await get_entity_id_from_base_path({ base_uri })
         if (result.success && result.entity_id) {
-          log(`Converted tag path ${tag} to entity_id ${result.entity_id}`)
+          log(`Converted tag path ${base_uri} to entity_id ${result.entity_id}`)
           return { success: true, entity_id: result.entity_id }
         } else {
-          log(`Failed to convert tag path ${tag}: ${result.error}`)
-          return { success: false, tag }
+          log(`Failed to convert tag path ${base_uri}: ${result.error}`)
+          return { success: false, base_uri }
         }
       } catch (error) {
-        log(`Error converting tag path to entity_id for ${tag}:`, error)
-        return { success: false, tag }
+        log(`Error converting tag path to entity_id for ${base_uri}:`, error)
+        return { success: false, base_uri }
       }
     })
   )
@@ -237,23 +230,16 @@ async function convert_tag_paths_to_entity_ids({ tags, root_base_directory }) {
  * @param {string} params.entity_id Entity ID
  * @param {string[]} params.tags Array of tag paths
  * @param {Object} params.db_client Database client or transaction
- * @param {string} params.root_base_directory Root base directory of the repository
  * @returns {Promise<Object>} Tag processing results
  */
-async function process_entity_tags({
-  entity_id,
-  tags,
-  db_client,
-  root_base_directory
-}) {
+async function process_entity_tags({ entity_id, tags, db_client }) {
   if (!tags || tags.length === 0) {
     return { processed: 0, skipped: 0 }
   }
 
   // Convert tag paths to entity IDs
   const tag_results = await convert_tag_paths_to_entity_ids({
-    tags,
-    root_base_directory
+    tags
   })
 
   // Filter out failed tag conversions
@@ -264,7 +250,7 @@ async function process_entity_tags({
   // Get skipped tags for logging
   const skipped_tags = tag_results
     .filter((result) => !result.success)
-    .map((result) => result.tag)
+    .map((result) => result.base_uri)
 
   if (skipped_tags.length > 0) {
     log(
@@ -324,11 +310,10 @@ async function update_entity_archive_status({
  * @param {string} params.user_id User who owns the entity
  * @param {string} [params.entity_content=''] Optional entity content/markdown
  * @param {string} params.absolute_path Absolute path to the file (required)
- * @param {string} params.base_relative_path Path relative to repository base (required)
+ * @param {string} params.base_uri Resource URI for the entity (required)
  * @param {string} params.git_sha Git SHA of the file (required)
  * @param {Object} [params.formatted_entity_metadata=null] Formatted metadata about the entity
  * @param {Object} [params.trx=null] Optional transaction object
- * @param {string} [params.root_base_directory=null] Root base directory of the repository
  * @returns {Promise<string>} The entity_id
  */
 export async function write_entity_to_database({
@@ -337,11 +322,10 @@ export async function write_entity_to_database({
   user_id,
   entity_content = '',
   absolute_path,
-  base_relative_path,
+  base_uri,
   git_sha,
   formatted_entity_metadata = null,
-  trx = null,
-  root_base_directory
+  trx = null
 }) {
   try {
     log(`Writing ${entity_type} entity to database`)
@@ -352,7 +336,7 @@ export async function write_entity_to_database({
       entity_type,
       user_id,
       absolute_path,
-      base_relative_path,
+      base_uri,
       git_sha
     })
 
@@ -366,7 +350,7 @@ export async function write_entity_to_database({
       user_id,
       entity_content,
       absolute_path,
-      base_relative_path,
+      base_uri,
       git_sha
     })
 
@@ -382,8 +366,7 @@ export async function write_entity_to_database({
       entity_id,
       formatted_entity_metadata,
       user_id,
-      db_client,
-      root_base_directory
+      db_client
     })
 
     // Process tags if present
@@ -391,8 +374,7 @@ export async function write_entity_to_database({
       await process_entity_tags({
         entity_id,
         tags: entity_properties.tags,
-        db_client,
-        root_base_directory
+        db_client
       })
     }
 

@@ -27,7 +27,10 @@ describe('Entity Git Validator', () => {
   describe('validate_entity_from_git', () => {
     it('should validate a valid entity successfully', async () => {
       // Add a valid task entity to the test repo
-      const system_schema_dir = path.join(test_repo.path, 'system/schema')
+      const system_schema_dir = path.join(
+        test_repo.system_path,
+        'system/schema'
+      )
       await fs.mkdir(system_schema_dir, { recursive: true })
 
       // Create task schema file
@@ -52,8 +55,8 @@ properties:
 # Task Schema`
       )
 
-      // Create a valid task entity
-      const tasks_dir = path.join(test_repo.path, 'tasks')
+      // Create a valid task entity in user directory
+      const tasks_dir = path.join(test_repo.user_path, 'task')
       await fs.mkdir(tasks_dir, { recursive: true })
 
       await fs.writeFile(
@@ -71,11 +74,19 @@ This is a test task that should validate successfully.
 `
       )
 
-      // Add files to git and commit
-      await exec('git add system/schema/task.md tasks/test-task.md', {
-        cwd: test_repo.path
+      // Add schema to system repo git and commit
+      await exec('git add system/schema/task.md', {
+        cwd: test_repo.system_path
       })
-      await exec('git commit -m "Add schema and task"', { cwd: test_repo.path })
+      await exec('git commit -m "Add task schema"', {
+        cwd: test_repo.system_path
+      })
+
+      // Add task to user repo git and commit
+      await exec('git add task/test-task.md', {
+        cwd: test_repo.user_path
+      })
+      await exec('git commit -m "Add test task"', { cwd: test_repo.user_path })
 
       // Create schema map by loading the schema we just added
       const schemas = {
@@ -104,11 +115,11 @@ This is a test task that should validate successfully.
         references: []
       }
 
-      // Call the validation function
+      // Call the validation function (task is in user repo)
       const result = await validate_entity_from_git({
         entity_properties,
         formatted_entity_metadata,
-        repo_path: test_repo.path,
+        repo_path: test_repo.user_path,
         branch: 'main',
         schemas
       })
@@ -120,7 +131,10 @@ This is a test task that should validate successfully.
 
     it('should fail validation for invalid entity properties', async () => {
       // Add a schema to the test repo
-      const system_schema_dir = path.join(test_repo.path, 'system/schema')
+      const system_schema_dir = path.join(
+        test_repo.system_path,
+        'system/schema'
+      )
       await fs.mkdir(system_schema_dir, { recursive: true })
 
       // Create task schema file
@@ -140,8 +154,10 @@ properties:
       )
 
       // Add file to git and commit
-      await exec('git add system/schema/task.md', { cwd: test_repo.path })
-      await exec('git commit -m "Add schema"', { cwd: test_repo.path })
+      await exec('git add system/schema/task.md', {
+        cwd: test_repo.system_path
+      })
+      await exec('git commit -m "Add schema"', { cwd: test_repo.system_path })
 
       // Create schema map
       const schemas = {
@@ -169,7 +185,7 @@ properties:
       const result = await validate_entity_from_git({
         entity_properties,
         formatted_entity_metadata: {},
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main',
         schemas
       })
@@ -182,7 +198,10 @@ properties:
 
     it('should fail validation for nonexistent tag references', async () => {
       // Set up schema
-      const system_schema_dir = path.join(test_repo.path, 'system/schema')
+      const system_schema_dir = path.join(
+        test_repo.system_path,
+        'system/schema'
+      )
       await fs.mkdir(system_schema_dir, { recursive: true })
 
       await fs.writeFile(
@@ -195,8 +214,10 @@ name: task
       )
 
       // Add file to git and commit
-      await exec('git add system/schema/task.md', { cwd: test_repo.path })
-      await exec('git commit -m "Add schema"', { cwd: test_repo.path })
+      await exec('git add system/schema/task.md', {
+        cwd: test_repo.system_path
+      })
+      await exec('git commit -m "Add schema"', { cwd: test_repo.system_path })
 
       // Create entity with reference to nonexistent tag
       const entity_properties = {
@@ -205,7 +226,7 @@ name: task
       }
 
       const formatted_entity_metadata = {
-        property_tags: [{ base_relative_path: 'nonexistent/tag' }],
+        property_tags: [{ base_uri: 'sys:nonexistent/tag' }],
         relations: [],
         references: []
       }
@@ -214,7 +235,7 @@ name: task
       const result = await validate_entity_from_git({
         entity_properties,
         formatted_entity_metadata,
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main',
         schemas: {}
       })
@@ -228,7 +249,10 @@ name: task
 
     it('should fail validation for nonexistent entity relations', async () => {
       // Set up schema
-      const system_schema_dir = path.join(test_repo.path, 'system/schema')
+      const system_schema_dir = path.join(
+        test_repo.system_path,
+        'system/schema'
+      )
       await fs.mkdir(system_schema_dir, { recursive: true })
 
       await fs.writeFile(
@@ -241,8 +265,10 @@ name: task
       )
 
       // Add file to git and commit
-      await exec('git add system/schema/task.md', { cwd: test_repo.path })
-      await exec('git commit -m "Add schema"', { cwd: test_repo.path })
+      await exec('git add system/schema/task.md', {
+        cwd: test_repo.system_path
+      })
+      await exec('git commit -m "Add schema"', { cwd: test_repo.system_path })
 
       // Create entity with reference to nonexistent relation
       const entity_properties = {
@@ -254,7 +280,7 @@ name: task
         tags: [],
         relations: [
           {
-            entity_path: 'nonexistent/entity',
+            base_uri: 'sys:nonexistent/entity',
             relation_type: 'depends_on',
             context: null
           }
@@ -266,7 +292,7 @@ name: task
       const result = await validate_entity_from_git({
         entity_properties,
         formatted_entity_metadata,
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main',
         schemas: {}
       })
@@ -281,7 +307,7 @@ name: task
     it('should fail validation when required parameters are missing', async () => {
       // Missing entity_properties
       let result = await validate_entity_from_git({
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main'
       })
 
@@ -300,7 +326,7 @@ name: task
       // Missing branch
       result = await validate_entity_from_git({
         entity_properties: { title: 'Test' },
-        repo_path: test_repo.path
+        repo_path: test_repo.system_path
       })
 
       expect(result.success).to.be.false
@@ -319,7 +345,7 @@ name: task
       const result = await validate_entity_from_git({
         entity_properties,
         formatted_entity_metadata: {},
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main',
         schemas: {}
       })

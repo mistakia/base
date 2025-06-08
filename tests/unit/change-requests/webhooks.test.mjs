@@ -13,6 +13,10 @@ import {
   create_test_thread
 } from '#tests/utils/index.mjs'
 import {
+  clear_registered_directories,
+  register_base_directories
+} from '#libs-server/base-uri/index.mjs'
+import {
   pr_merged_webhook,
   pr_closed_without_merging_webhook,
   pr_reopened_webhook,
@@ -34,6 +38,9 @@ describe('Change Request Webhooks', function () {
   this.timeout(15000)
 
   beforeEach(async function () {
+    // Clear any existing registry
+    clear_registered_directories()
+
     // Reset database tables
     await reset_all_tables()
 
@@ -48,6 +55,12 @@ describe('Change Request Webhooks', function () {
       user_id: test_user.user_id
     })
 
+    // Register the directories from the test thread
+    register_base_directories({
+      system_base_directory: test_thread.system_base_directory,
+      user_base_directory: test_thread.user_base_directory
+    })
+
     // Create change_requests directory in the user repo
     await fs.mkdir(
       path.join(test_thread.user_base_directory, 'change-request'),
@@ -58,7 +71,8 @@ describe('Change Request Webhooks', function () {
   })
 
   afterEach(async function () {
-    // Clean up
+    // Clear registry and clean up
+    clear_registered_directories()
     test_thread.cleanup()
   })
 
@@ -101,8 +115,7 @@ describe('Change Request Webhooks', function () {
         thread_id: test_thread.thread_id,
         github_repo,
         github_pr_number: pr_number,
-        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`,
-        user_base_directory: test_thread.user_base_directory
+        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`
       })
 
       // Update status to Approved (required before merging)
@@ -110,8 +123,7 @@ describe('Change Request Webhooks', function () {
         change_request_id: cr_id,
         status: 'Approved',
         updater_id: test_user.user_id,
-        comment: 'Approving for webhook test',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Approving for webhook test'
       })
 
       // Create a custom webhook payload with the exact same values using the fixture helper
@@ -124,8 +136,7 @@ describe('Change Request Webhooks', function () {
 
       // Process the webhook
       const result = await change_requests.handle_github_webhook({
-        payload: merged_webhook,
-        user_base_directory: test_thread.user_base_directory
+        payload: merged_webhook
       })
 
       // Verify change request was updated to Merged
@@ -177,8 +188,7 @@ describe('Change Request Webhooks', function () {
         thread_id: test_thread.thread_id,
         github_repo,
         github_pr_number: pr_number,
-        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`,
-        user_base_directory: test_thread.user_base_directory
+        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`
       })
 
       // Use the closed webhook fixture and customize it for our test
@@ -198,8 +208,7 @@ describe('Change Request Webhooks', function () {
 
       // Process the webhook
       const result = await change_requests.handle_github_webhook({
-        payload: closed_webhook,
-        user_base_directory: test_thread.user_base_directory
+        payload: closed_webhook
       })
 
       // Verify change request was updated to Closed
@@ -251,8 +260,7 @@ describe('Change Request Webhooks', function () {
         thread_id: test_thread.thread_id,
         github_repo,
         github_pr_number: pr_number,
-        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`,
-        user_base_directory: test_thread.user_base_directory
+        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`
       })
 
       // Create comment webhook based on the base fixtures
@@ -290,8 +298,7 @@ describe('Change Request Webhooks', function () {
 
       // Process the webhook
       const result = await change_requests.handle_github_webhook({
-        payload: comment_webhook,
-        user_base_directory: test_thread.user_base_directory
+        payload: comment_webhook
       })
 
       // Comments don't change status, just verify we got the right CR
@@ -340,8 +347,7 @@ describe('Change Request Webhooks', function () {
         thread_id: test_thread.thread_id,
         github_repo,
         github_pr_number: pr_number,
-        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`,
-        user_base_directory: test_thread.user_base_directory
+        github_pr_url: `https://github.com/${github_repo}/pull/${pr_number}`
       })
 
       // First, set the status to Closed
@@ -349,8 +355,7 @@ describe('Change Request Webhooks', function () {
         change_request_id: cr_id,
         status: 'Closed',
         updater_id: test_user.user_id,
-        comment: 'Closing for webhook reopen test',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Closing for webhook reopen test'
       })
 
       // Create a reopened webhook based on the fixture
@@ -370,8 +375,7 @@ describe('Change Request Webhooks', function () {
 
       // Process the webhook
       const result = await change_requests.handle_github_webhook({
-        payload: reopened_webhook,
-        user_base_directory: test_thread.user_base_directory
+        payload: reopened_webhook
       })
 
       // Verify change request was updated to PendingReview

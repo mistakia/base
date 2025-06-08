@@ -6,10 +6,10 @@ import {
 export const entity_actions = {
   LOAD_ENTITY: 'LOAD_ENTITY',
 
-  load_entity: ({ base_relative_path, root_base_directory }) => ({
+  load_entity: ({ base_uri, root_base_directory }) => ({
     type: entity_actions.LOAD_ENTITY,
     payload: {
-      base_relative_path,
+      base_uri,
       root_base_directory
     }
   }),

@@ -1,22 +1,21 @@
-import chai from 'chai'
+import chai, { expect } from 'chai'
 import chaiHttp from 'chai-http'
 
 import server from '#server'
+import { thread_constants } from '#libs-shared'
 import {
-  reset_all_tables,
   create_test_user,
   create_test_thread,
-  authenticate_request
+  create_temp_test_repo,
+  authenticate_request,
+  reset_all_tables
 } from '#tests/utils/index.mjs'
-import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
-import { thread_constants } from '#libs-shared'
 
-const { expect } = chai
 chai.use(chaiHttp)
 
 describe('Threads API', () => {
   let test_user
-  let test_root_base_repo
+  let test_directories
 
   before(async () => {
     await reset_all_tables()
@@ -28,12 +27,20 @@ describe('Threads API', () => {
   })
 
   beforeEach(async () => {
-    test_root_base_repo = await create_temp_test_repo({ prefix: 'base-repo-' })
+    const test_repo = await create_temp_test_repo({
+      prefix: 'threads-base-repo-',
+      register_directories: true
+    })
+    test_directories = {
+      system_path: test_repo.system_path,
+      user_path: test_repo.user_path,
+      cleanup: test_repo.cleanup
+    }
   })
 
   afterEach(async () => {
-    if (test_root_base_repo) {
-      test_root_base_repo.cleanup()
+    if (test_directories) {
+      test_directories.cleanup()
     }
   })
 
@@ -42,13 +49,13 @@ describe('Threads API', () => {
       // Create some test threads
       await create_test_thread({
         user_id: test_user.user_id,
-        root_base_repo: test_root_base_repo
+        test_directories
       })
 
       await create_test_thread({
         user_id: test_user.user_id,
         thread_state: thread_constants.THREAD_STATE.PAUSED,
-        root_base_repo: test_root_base_repo
+        test_directories
       })
     })
 
@@ -57,8 +64,7 @@ describe('Threads API', () => {
         chai.request(server).get('/api/threads'),
         test_user
       ).query({
-        user_id: test_user.user_id,
-        user_base_directory: test_root_base_repo.user_path
+        user_id: test_user.user_id
       })
 
       expect(response).to.have.status(200)
@@ -81,7 +87,6 @@ describe('Threads API', () => {
         test_user
       ).query({
         user_id: test_user.user_id,
-        user_base_directory: test_root_base_repo.user_path,
         thread_state: 'active'
       })
 
@@ -106,7 +111,7 @@ describe('Threads API', () => {
       // Create a test thread with a main request
       test_thread = await create_test_thread({
         user_id: test_user.user_id,
-        root_base_repo: test_root_base_repo,
+        test_directories,
         initial_timeline: [
           {
             id: 'req_001',
@@ -122,7 +127,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai.request(server).get(`/api/threads/${test_thread.thread_id}`),
         test_user
-      ).query({ user_base_directory: test_root_base_repo.user_path })
+      )
 
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('object')
@@ -164,7 +169,7 @@ describe('Threads API', () => {
       // Create some test threads
       await create_test_thread({
         user_id: test_user.user_id,
-        root_base_repo: test_root_base_repo
+        test_directories
       })
     })
 
@@ -173,8 +178,7 @@ describe('Threads API', () => {
         inference_provider: 'ollama',
         model: 'llama2',
         thread_main_request: 'Hello, this is a new thread',
-        user_base_directory: test_root_base_repo.user_path,
-        root_base_directory: test_root_base_repo.path
+        create_git_branches: false // Don't create git branches in tests
       }
 
       const response = await authenticate_request(

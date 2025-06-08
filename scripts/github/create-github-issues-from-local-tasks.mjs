@@ -40,8 +40,8 @@ export default async function create_github_issues_from_local_tasks({
     }
 
     // Entity processor function to handle each task
-    const entity_processor = async ({ entity }) => {
-      const { entity_properties, file_info } = entity
+    const entity_processor = async ({ file }) => {
+      const { entity_properties, absolute_path } = file
 
       // Check if this task is ready for GitHub creation
       const has_github_metadata =
@@ -69,7 +69,7 @@ export default async function create_github_issues_from_local_tasks({
         log(`Creating issue for: ${entity_properties.title}`)
 
         const result = await create_github_issue_from_task({
-          absolute_path: file_info.absolute_path,
+          absolute_path,
           github_token,
           create_github_issue_api: create_github_issue
         })
@@ -91,7 +91,7 @@ export default async function create_github_issues_from_local_tasks({
         results.errors.push({
           task_title: entity_properties.title,
           error: error.message,
-          absolute_path: file_info.absolute_path,
+          absolute_path,
           repository
         })
         return true
@@ -102,7 +102,6 @@ export default async function create_github_issues_from_local_tasks({
     // Note: For large-scale operations, consider implementing rate limiting
     // to respect GitHub API limits (5000 requests/hour for authenticated requests)
     await process_repositories_from_filesystem({
-      root_base_directory: user_base_directory,
       entity_processor,
       include_entity_types: ['task'],
       path_pattern

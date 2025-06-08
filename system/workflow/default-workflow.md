@@ -9,7 +9,7 @@ guidelines:
 observations:
   - '[workflow] General purpose role handles general purpose inquiries and instructions #core'
 relations:
-  - 'implements [[system/text/system-design.md]]'
+  - 'implements [[sys:text/system-design.md]]'
 prompt_properties:
   - name: main_request
     type: string

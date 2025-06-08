@@ -1,29 +1,22 @@
 import express from 'express'
-import path from 'path'
-
-import config from '#config'
 
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const router = express.Router({ mergeParams: true })
 
-router.get('/:base_relative_path(*)', async (req, res) => {
+router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
-    const { base_relative_path } = req.params
-    const { root_base_directory = config.root_base_directory } = req.query
+    const { base_uri } = req.query
 
-    if (!base_relative_path) {
-      return res.status(400).send({ error: 'missing base_relative_path' })
-    }
-
-    if (!root_base_directory) {
-      return res.status(400).send({ error: 'missing root_base_directory' })
+    if (!base_uri) {
+      return res.status(400).send({ error: 'missing base_uri query parameter' })
     }
 
     try {
-      // Construct absolute path from base_relative_path
-      const absolute_path = path.join(root_base_directory, base_relative_path)
+      // Resolve absolute path using registry with full base_uri
+      const absolute_path = resolve_base_uri_from_registry(base_uri)
 
       // Read entity from filesystem
       const entity = await read_entity_from_filesystem({
@@ -37,13 +30,13 @@ router.get('/:base_relative_path(*)', async (req, res) => {
       }
 
       res.status(200).send({
-        base_relative_path,
+        base_uri,
         ...entity.entity_properties,
         content: entity.entity_content
       })
     } catch (error) {
       return res.status(404).send({
-        error: `Entity ${base_relative_path} not found: ${error.message}`
+        error: `Entity ${base_uri} not found: ${error.message}`
       })
     }
   } catch (error) {

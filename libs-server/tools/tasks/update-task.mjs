@@ -14,7 +14,7 @@ register_tool({
     inputSchema: {
       type: 'object',
       properties: {
-        base_relative_path: {
+        base_uri: {
           type: 'string',
           description: 'The base relative path of the task file to update.'
         },
@@ -44,25 +44,22 @@ register_tool({
           description: 'Optional: The new finish by date (ISO 8601 format).'
         }
       },
-      required: ['base_relative_path']
+      required: ['base_uri']
     }
   },
   implementation: async (parameters, context = {}) => {
     try {
-      const { base_relative_path } = parameters
+      const { base_uri } = parameters
       const user_id = helpers.resolve_user_id(parameters, context)
 
-      log(`Updating task ${base_relative_path} for user ${user_id}`)
+      log(`Updating task ${base_uri} for user ${user_id}`)
 
       // First read the existing task
-      const existing_task = await helpers.verify_task_access(
-        base_relative_path,
-        user_id
-      )
+      const existing_task = await helpers.verify_task_access(base_uri, user_id)
       if (!existing_task) {
         return helpers.error_response(
           'update task',
-          `Task ${base_relative_path} not found or access denied.`
+          `Task ${base_uri} not found or access denied.`
         )
       }
 
@@ -73,7 +70,7 @@ register_tool({
       }
 
       const result = await write_task_to_filesystem({
-        base_relative_path,
+        base_uri,
         task_properties,
         task_content: parameters.description || existing_task.content
       })
@@ -87,20 +84,20 @@ register_tool({
 
       // Fetch the updated task to return
       const updated_task_data = await read_task_from_filesystem({
-        base_relative_path
+        base_uri
       })
       if (!updated_task_data.success) {
-        log(`Could not read back task ${base_relative_path} after update.`)
+        log(`Could not read back task ${base_uri} after update.`)
         return {
           success: true, // Update was successful
-          message: `Task file ${base_relative_path} updated. Could not read back for formatted response.`,
+          message: `Task file ${base_uri} updated. Could not read back for formatted response.`,
           details: result
         }
       }
 
       return {
         success: true,
-        message: `Task file ${base_relative_path} updated.`,
+        message: `Task file ${base_uri} updated.`,
         task: format_task(updated_task_data)
       }
     } catch (error) {

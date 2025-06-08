@@ -193,8 +193,8 @@ Example:
 
 ```yaml
 relations:
-  - 'part_of [[system/physical_item/parent-item]]'
-  - 'contains [[system/physical_item/component-item]]'
-  - 'requires [[system/physical_item/resource-item]]'
-  - 'used_in [[system/activities/activity-name]]'
+  - 'part_of [[sys:physical_item/parent-item]]'
+  - 'contains [[sys:physical_item/component-item]]'
+  - 'requires [[sys:physical_item/resource-item]]'
+  - 'used_in [[sys:activities/activity-name]]'
 ```

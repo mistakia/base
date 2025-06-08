@@ -64,8 +64,8 @@ observations:
   - '[workflow] Integrates with Git branching and optionally GitHub Pull Requests.'
   - '[storage] Stored as both a DB record and a Markdown file for discoverability.'
 relations:
-  - 'relates_to [[system/text/system-design.md]]'
-  - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[sys:text/system-design.md]]'
+  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
 ---
 
 # Change Request Schema

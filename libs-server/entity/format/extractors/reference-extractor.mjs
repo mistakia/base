@@ -20,7 +20,7 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
 
     while ((match = wikilink_regex.exec(entity_content)) !== null) {
       references.push({
-        reference_path: match[1]
+        base_uri: match[1]
       })
     }
 
@@ -76,7 +76,7 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
 
         while ((match = wikilink_regex.exec(part)) !== null) {
           references.push({
-            reference_path: match[1]
+            base_uri: match[1]
           })
         }
       }

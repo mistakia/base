@@ -21,25 +21,27 @@ describe('generate_guidelines_prompt', () => {
   })
 
   // Helper function to create a test guideline file
-  const create_guideline_file = ({ base_relative_path, content }) => {
-    const absolute_path = path.join(test_repo.path, base_relative_path)
+  const create_guideline_file = ({ base_uri, content, is_user = false }) => {
+    const repo_path = is_user ? test_repo.user_path : test_repo.system_path
+    const relative_path = 'guideline/' + base_uri.split('/').pop()
+    const absolute_path = path.join(repo_path, relative_path)
     fs.mkdirSync(path.dirname(absolute_path), { recursive: true })
     fs.writeFileSync(absolute_path, content, 'utf8')
-    return base_relative_path
+    return base_uri
   }
 
-  describe('with guideline_base_relative_paths parameter', () => {
+  describe('with guideline_base_uris parameter', () => {
     // Create test guideline files before each test in this group
     beforeEach(() => {
       // Create system guideline files
       create_guideline_file({
-        base_relative_path: 'system/guideline/test-guideline1.md',
+        base_uri: 'sys:guideline/test-guideline1.md',
         content:
           '---\ntitle: Test Guideline 1\ndescription: First test guideline\ntype: guideline\n---\n\n# Test Guideline 1\n\nThis is test content for guideline 1'
       })
 
       create_guideline_file({
-        base_relative_path: 'system/guideline/test-guideline2.md',
+        base_uri: 'sys:guideline/test-guideline2.md',
         content:
           '---\ntitle: Test Guideline 2\ndescription: Second test guideline\ntype: guideline\n---\n\n# Test Guideline 2\n\nThis is test content for guideline 2'
       })
@@ -49,11 +51,10 @@ describe('generate_guidelines_prompt', () => {
     afterEach(() => {
       // Remove all files from the guidelines directories
       const system_guidelines_dir = path.join(
-        test_repo.path,
-        'system',
+        test_repo.system_path,
         'guideline'
       )
-      const user_guidelines_dir = path.join(test_repo.path, 'user', 'guideline')
+      const user_guidelines_dir = path.join(test_repo.user_path, 'guideline')
 
       if (fs.existsSync(system_guidelines_dir)) {
         fs.readdirSync(system_guidelines_dir).forEach((file) => {
@@ -71,8 +72,7 @@ describe('generate_guidelines_prompt', () => {
     it('should generate prompt for a single guideline', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: ['system/guideline/test-guideline1.md'],
-        root_base_directory: test_repo.path
+        guideline_base_uris: ['sys:guideline/test-guideline1.md']
       })
 
       // Assert
@@ -85,11 +85,10 @@ describe('generate_guidelines_prompt', () => {
     it('should generate prompt for multiple guidelines', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: [
-          'system/guideline/test-guideline1.md',
-          'system/guideline/test-guideline2.md'
-        ],
-        root_base_directory: test_repo.path
+        guideline_base_uris: [
+          'sys:guideline/test-guideline1.md',
+          'sys:guideline/test-guideline2.md'
+        ]
       })
 
       // Assert
@@ -105,11 +104,10 @@ describe('generate_guidelines_prompt', () => {
     it('should handle duplicate guideline paths', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: [
-          'system/guideline/test-guideline1.md',
-          'system/guideline/test-guideline1.md'
-        ],
-        root_base_directory: test_repo.path
+        guideline_base_uris: [
+          'sys:guideline/test-guideline1.md',
+          'sys:guideline/test-guideline1.md'
+        ]
       })
 
       // Assert
@@ -126,11 +124,10 @@ describe('generate_guidelines_prompt', () => {
     it('should handle errors when loading guidelines', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: [
-          'system/guideline/test-guideline1.md',
-          'system/guideline/nonexistent.md'
-        ],
-        root_base_directory: test_repo.path
+        guideline_base_uris: [
+          'sys:guideline/test-guideline1.md',
+          'sys:guideline/nonexistent.md'
+        ]
       })
 
       // Assert
@@ -143,11 +140,10 @@ describe('generate_guidelines_prompt', () => {
     it('should return empty string when no guidelines are found', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: [
-          'system/guideline/nonexistent1.md',
-          'system/guideline/nonexistent2.md'
-        ],
-        root_base_directory: test_repo.path
+        guideline_base_uris: [
+          'sys:guideline/nonexistent1.md',
+          'sys:guideline/nonexistent2.md'
+        ]
       })
 
       // Assert
@@ -159,14 +155,15 @@ describe('generate_guidelines_prompt', () => {
     beforeEach(() => {
       // Create user guideline file
       create_guideline_file({
-        base_relative_path: 'user/guideline/user-guideline.md',
+        base_uri: 'user:guideline/user-guideline.md',
         content:
-          '---\ntitle: User Guideline\ndescription: User test guideline\ntype: guideline\n---\n\n# User Guideline\n\nThis is user guideline content'
+          '---\ntitle: User Guideline\ndescription: User test guideline\ntype: guideline\n---\n\n# User Guideline\n\nThis is user guideline content',
+        is_user: true
       })
     })
 
     afterEach(() => {
-      const user_guidelines_dir = path.join(test_repo.path, 'user', 'guideline')
+      const user_guidelines_dir = path.join(test_repo.user_path, 'guideline')
       if (fs.existsSync(user_guidelines_dir)) {
         fs.readdirSync(user_guidelines_dir).forEach((file) => {
           fs.unlinkSync(path.join(user_guidelines_dir, file))
@@ -177,8 +174,7 @@ describe('generate_guidelines_prompt', () => {
     it('should include user guidelines', async () => {
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: ['user/guideline/user-guideline.md'],
-        root_base_directory: test_repo.path
+        guideline_base_uris: ['user:guideline/user-guideline.md']
       })
 
       // Assert
@@ -193,15 +189,14 @@ describe('generate_guidelines_prompt', () => {
     it('should handle guideline without title', async () => {
       // Create guideline without title
       create_guideline_file({
-        base_relative_path: 'system/guideline/no-title.md',
+        base_uri: 'sys:guideline/no-title.md',
         content:
           '---\ndescription: A guideline without title\ntype: guideline\n---\n\nContent without title'
       })
 
       // Act
       const result = await generate_guidelines_prompt({
-        guideline_base_relative_paths: ['system/guideline/no-title.md'],
-        root_base_directory: test_repo.path
+        guideline_base_uris: ['sys:guideline/no-title.md']
       })
 
       // Assert
@@ -212,15 +207,13 @@ describe('generate_guidelines_prompt', () => {
 
       // Clean up
       fs.unlinkSync(
-        path.join(test_repo.path, 'system', 'guideline', 'no-title.md')
+        path.join(test_repo.system_path, 'guideline', 'no-title.md')
       )
     })
 
     it('should return empty string when no params are provided', async () => {
       // Act
-      const result = await generate_guidelines_prompt({
-        root_base_directory: test_repo.path
-      })
+      const result = await generate_guidelines_prompt({})
 
       // Assert
       expect(result).to.equal('')

@@ -8,23 +8,23 @@ import {
   create_test_task,
   create_test_tag
 } from '#tests/utils/index.mjs'
-import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
+import { setup_test_directories } from '#tests/utils/setup-test-directories.mjs'
 
 describe('search_entities', () => {
   let test_user
   let test_user_id
   let another_user
   let another_user_id
-  let tag_base_relative_paths = []
+  let tag_base_uris = []
   let tag_entity_ids = []
-  let test_repo
+  let test_directories
 
   // Setup test data
   before(async () => {
     await reset_all_tables()
 
-    // Create test repository
-    test_repo = await create_temp_test_repo()
+    // Setup test directories and registry
+    test_directories = setup_test_directories()
 
     // Create test users
     test_user = await create_test_user()
@@ -39,27 +39,22 @@ describe('search_entities', () => {
       await create_test_tag({
         user_id: test_user_id,
         title: 'Project A',
-        color: '#FF0000',
-        root_base_directory: test_repo.path
+        color: '#FF0000'
       }),
       await create_test_tag({
         user_id: test_user_id,
         title: 'Priority',
-        color: '#00FF00',
-        root_base_directory: test_repo.path
+        color: '#00FF00'
       }),
       await create_test_tag({
         user_id: test_user_id,
         title: 'Personal',
-        color: '#0000FF',
-        root_base_directory: test_repo.path
+        color: '#0000FF'
       })
     ])
 
-    // Store the tag entity IDs and base_relative_paths
-    tag_base_relative_paths = tag_creation_results.map(
-      (tag) => tag.base_relative_path
-    )
+    // Store the tag entity IDs and base_uris
+    tag_base_uris = tag_creation_results.map((tag) => tag.base_uri)
 
     tag_entity_ids = tag_creation_results.map((tag) => tag.tag_entity_id)
 
@@ -110,8 +105,7 @@ describe('search_entities', () => {
         priority: 'None',
         created_at: new Date(),
         updated_at: new Date(),
-        archived_at: task.archived ? new Date() : null,
-        root_base_repo: test_repo
+        archived_at: task.archived ? new Date() : null
       })
 
       if (task.tags.length > 0) {
@@ -126,8 +120,8 @@ describe('search_entities', () => {
 
   after(async () => {
     await reset_all_tables()
-    if (test_repo) {
-      test_repo.cleanup()
+    if (test_directories) {
+      test_directories.cleanup()
     }
   })
 
@@ -150,11 +144,11 @@ describe('search_entities', () => {
     })
   })
 
-  it('should filter entities by tag using base_relative_path', async () => {
+  it('should filter entities by tag using base_uri', async () => {
     // Act - Search for entities with the "Project A" tag
     const results = await search_entities({
       user_id: test_user_id,
-      tag_base_relative_paths: [tag_base_relative_paths[0]], // Project A tag
+      tag_base_uris: [tag_base_uris[0]], // Project A tag
       entity_types: ['task'] // Filter to only tasks
     })
 
@@ -169,14 +163,11 @@ describe('search_entities', () => {
     })
   })
 
-  it('should filter entities by multiple tags using base_relative_path (AND logic)', async () => {
+  it('should filter entities by multiple tags using base_uri (AND logic)', async () => {
     // Act - Search for entities with both "Project A" and "Priority" tags
     const results = await search_entities({
       user_id: test_user_id,
-      tag_base_relative_paths: [
-        tag_base_relative_paths[0],
-        tag_base_relative_paths[1]
-      ], // Project A and Priority tags
+      tag_base_uris: [tag_base_uris[0], tag_base_uris[1]], // Project A and Priority tags
       entity_types: ['task'] // Filter to only tasks
     })
 
@@ -269,7 +260,7 @@ describe('search_entities', () => {
     // Act - Search with tag and search term
     const results = await search_entities({
       user_id: test_user_id,
-      tag_base_relative_paths: [tag_base_relative_paths[1]], // Priority tag
+      tag_base_uris: [tag_base_uris[1]], // Priority tag
       search_term: 'Personal',
       entity_types: ['task'] // Filter to only tasks
     })
@@ -317,11 +308,11 @@ describe('search_entities', () => {
     }
   })
 
-  it('should return empty array when tag_base_relative_paths do not match any tags', async () => {
-    // Act - Search with non-existent base_relative_path
+  it('should return empty array when tag_base_uris do not match any tags', async () => {
+    // Act - Search with non-existent base_uri
     const results = await search_entities({
       user_id: test_user_id,
-      tag_base_relative_paths: ['non-existent/path'],
+      tag_base_uris: ['non-existent/path'],
       entity_types: ['task']
     })
 

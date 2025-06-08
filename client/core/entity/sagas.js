@@ -4,8 +4,8 @@ import { get_entity } from '@core/api/sagas'
 import { entity_actions } from './actions'
 
 export function* load_entity({ payload }) {
-  const { base_relative_path, root_base_directory } = payload
-  yield call(get_entity, { base_relative_path, root_base_directory })
+  const { base_uri, root_base_directory } = payload
+  yield call(get_entity, { base_uri, root_base_directory })
 }
 
 //= ====================================

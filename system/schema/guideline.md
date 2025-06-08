@@ -51,6 +51,6 @@ Example:
 
 ```yaml
 relations:
-  - 'used_by [[system/workflow/workflow-name]]'
-  - 'applies_to [[user/tasks/task-name]]'
+  - 'used_by [[sys:workflow/workflow-name]]'
+  - 'applies_to [[user:task/task-name]]'
 ```

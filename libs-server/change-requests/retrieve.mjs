@@ -1,10 +1,8 @@
 import debug from 'debug'
-import path from 'path'
-
-import config from '#config'
 import db from '#db'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { build_change_request_from_git } from './utils.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -14,13 +12,9 @@ const log = debug('change-requests')
  *
  * @param {object} params - Parameters for retrieving the change request.
  * @param {string} params.change_request_id - The ID of the change request to retrieve.
- * @param {string} [params.user_base_directory] - Optional repository path to use for operations.
  * @returns {Promise<object|null>} The change request object with all properties, or null if not found.
  */
-export async function get_change_request({
-  change_request_id,
-  user_base_directory = config.user_base_directory
-}) {
+export async function get_change_request({ change_request_id }) {
   log(`Retrieving change request ${change_request_id}`)
 
   // Get the database record
@@ -38,10 +32,8 @@ export async function get_change_request({
     const result = format_change_request(db_record)
 
     // Get the markdown file content
-    const absolute_path = path.join(
-      user_base_directory,
-      `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-    )
+    const change_request_uri = `user:${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+    const absolute_path = resolve_base_uri_from_registry(change_request_uri)
     try {
       const markdown_data = await read_entity_from_filesystem({
         absolute_path
@@ -68,8 +60,7 @@ export async function get_change_request({
         const git_data = await build_change_request_from_git({
           feature_branch,
           target_branch,
-          merge_commit_hash,
-          user_base_directory
+          merge_commit_hash
         })
         result.git_data = git_data
       }
@@ -103,7 +94,6 @@ export async function get_change_request({
  * @param {string} [params.sort_by='updated_at'] - Field to sort by.
  * @param {string} [params.sort_order='desc'] - Sort order ('asc' or 'desc').
  * @param {boolean} [params.include_git_data=false] - Whether to include Git data.
- * @param {string} [params.user_base_directory] - Optional repository path to use for operations.
  * @returns {Promise<Array<object>>} Array of change request objects.
  */
 export async function list_change_requests({
@@ -116,8 +106,7 @@ export async function list_change_requests({
   offset = 0,
   sort_by = 'updated_at',
   sort_order = 'desc',
-  include_git_data = false,
-  user_base_directory = config.user_base_directory
+  include_git_data = false
 }) {
   log('Listing change requests with filters')
 
@@ -141,16 +130,14 @@ export async function list_change_requests({
     return filter_by_tags({
       results: formatted_results,
       tags,
-      include_git_data,
-      user_base_directory
+      include_git_data
     })
   }
 
   // Otherwise, enhance all results with markdown data
   return enhance_with_markdown({
     results: formatted_results,
-    include_git_data,
-    user_base_directory
+    include_git_data
   })
 }
 
@@ -200,20 +187,13 @@ function format_change_request(record) {
 }
 
 // Helper function to filter results by tags
-async function filter_by_tags({
-  results,
-  tags,
-  include_git_data = false,
-  user_base_directory
-}) {
+async function filter_by_tags({ results, tags, include_git_data = false }) {
   const filtered_results = []
 
   for (const record of results) {
     try {
-      const absolute_path = path.join(
-        user_base_directory,
-        `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
-      )
+      const change_request_uri = `user:${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
+      const absolute_path = resolve_base_uri_from_registry(change_request_uri)
       const markdown_data = await read_entity_from_filesystem({
         absolute_path
       })
@@ -240,8 +220,7 @@ async function filter_by_tags({
         // Add Git data if requested
         if (include_git_data) {
           await add_git_data({
-            record,
-            user_base_directory
+            record
           })
         }
 
@@ -259,17 +238,11 @@ async function filter_by_tags({
 }
 
 // Helper function to enhance results with markdown data
-async function enhance_with_markdown({
-  results,
-  include_git_data = false,
-  user_base_directory
-}) {
+async function enhance_with_markdown({ results, include_git_data = false }) {
   for (const record of results) {
     try {
-      const absolute_path = path.join(
-        user_base_directory,
-        `${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
-      )
+      const change_request_uri = `user:${CHANGE_REQUEST_DIR}/${record.change_request_id}.md`
+      const absolute_path = resolve_base_uri_from_registry(change_request_uri)
       const markdown_data = await read_entity_from_filesystem({
         absolute_path
       })
@@ -291,8 +264,7 @@ async function enhance_with_markdown({
     // Add Git data if requested
     if (include_git_data) {
       await add_git_data({
-        record,
-        user_base_directory
+        record
       })
     }
   }
@@ -301,15 +273,14 @@ async function enhance_with_markdown({
 }
 
 // Helper function to add Git data to a record
-async function add_git_data({ record, user_base_directory }) {
+async function add_git_data({ record }) {
   try {
     const { feature_branch, target_branch, merge_commit_hash } = record
     if (feature_branch && target_branch) {
       const git_data = await build_change_request_from_git({
         feature_branch,
         target_branch,
-        merge_commit_hash,
-        user_base_directory
+        merge_commit_hash
       })
       record.git_data = git_data
     }

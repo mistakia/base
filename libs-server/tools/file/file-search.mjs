@@ -36,12 +36,12 @@ export function register_file_search_tool() {
             description: 'Whether search is case sensitive',
             default: false
           },
-          branch_name: {
+          branch: {
             type: 'string',
-            description: 'Branch name to use (optional)'
+            description: 'Branch name to search in'
           }
         },
-        required: ['query']
+        required: ['query', 'branch']
       }
     },
     implementation: async (parameters, context = {}) => {
@@ -52,9 +52,7 @@ export function register_file_search_tool() {
           repo_path: parameters.repo_path,
           path: parameters.path,
           case_sensitive: parameters.case_sensitive || false,
-          branch_name: parameters.branch_name,
-          thread_id: parameters.thread_id,
-          context
+          branch_name: parameters.branch
         })
 
         return {

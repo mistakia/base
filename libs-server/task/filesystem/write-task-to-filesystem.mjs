@@ -1,7 +1,6 @@
 import debug from 'debug'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-import config from '#config'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 const log = debug('task:write-to-filesystem')
@@ -10,22 +9,20 @@ const log = debug('task:write-to-filesystem')
  * Write a task file to the filesystem
  *
  * @param {Object} params - Parameters
- * @param {string} params.base_relative_path - Task ID in format [system|user]/<file_path>.md
+ * @param {string} params.base_uri - URI identifying the task (e.g., 'user:task/name.md', 'sys:task/name.md')
  * @param {Object} params.task_properties - The task properties to write
  * @param {string} [params.task_content=''] - The markdown content to include after the frontmatter
- * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Result with success, error and path info
  */
 export async function write_task_to_filesystem({
-  base_relative_path,
+  base_uri,
   task_properties,
-  task_content = '',
-  root_base_directory = config.root_base_directory
+  task_content = ''
 }) {
   try {
-    log(`Writing task to filesystem: ${base_relative_path}`)
+    log(`Writing task to filesystem: ${base_uri}`)
 
-    if (!base_relative_path) {
+    if (!base_uri) {
       return {
         success: false,
         error: 'Task relative path is required'
@@ -36,7 +33,7 @@ export async function write_task_to_filesystem({
       return {
         success: false,
         error: 'Task properties must be a valid object',
-        base_relative_path
+        base_uri
       }
     }
 
@@ -48,11 +45,8 @@ export async function write_task_to_filesystem({
       task_properties.priority = TASK_PRIORITY.NONE
     }
 
-    // Get the file path using the shared helper
-    const { absolute_path } = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Resolve absolute path using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
 
     log(`Writing task entity to path: ${absolute_path}`)
 
@@ -66,7 +60,7 @@ export async function write_task_to_filesystem({
 
     return {
       success: true,
-      base_relative_path,
+      base_uri,
       absolute_path
     }
   } catch (error) {
@@ -74,7 +68,7 @@ export async function write_task_to_filesystem({
     return {
       success: false,
       error: `Failed to write task file: ${error.message}`,
-      base_relative_path
+      base_uri
     }
   }
 }

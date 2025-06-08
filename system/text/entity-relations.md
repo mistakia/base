@@ -10,8 +10,8 @@ observations:
   - '[implementation] Relations use a single canonical format'
   - '[feature] Entity relationships are handled through a single mechanism'
 relations:
-  - 'relates_to [[system/text/knowledge-base-schema.md]]'
-  - 'part_of [[system/text/system-design.md]]'
+  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
+  - 'part_of [[sys:text/system-design.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.243Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -31,9 +31,9 @@ Relations are defined in the frontmatter of markdown files as an array:
 
 ```yaml
 relations:
-  - 'implements [[system/text/system-design]]'
-  - 'relates_to [[system/text/other-document]] (provides context)'
-  - 'blocked_by [[system/schema/dependency]]'
+  - 'implements [[sys:text/system-design]]'
+  - 'relates_to [[sys:text/other-document]] (provides context)'
+  - 'blocked_by [[sys:schema/dependency]]'
 ```
 
 ## Standard Relation Types

@@ -5,18 +5,20 @@ import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('validate-filesystem-markdown')
 debug.enable(
   'validate-filesystem-markdown,markdown:process-repository,markdown:scanner'
 )
 
-const validate_filesystem = async ({ root_base_directory }) => {
+const validate_filesystem = async () => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
-  const result = await process_repositories_from_filesystem({
-    root_base_directory
-  })
+  const result = await process_repositories_from_filesystem()
 
   // Report results
   console.log('\nFilesystem Validation Results:')
@@ -36,7 +38,7 @@ const validate_filesystem = async ({ root_base_directory }) => {
         has_errors = true
       }
       console.error(`\nFile: ${file.absolute_path}`)
-      console.error(`Base Path: ${file.base_relative_path || 'N/A'}`)
+      console.error(`Base Path: ${file.base_uri || 'N/A'}`)
       file.errors.forEach((error) => {
         console.error(`  • ${error}`)
       })
@@ -52,19 +54,15 @@ const validate_filesystem = async ({ root_base_directory }) => {
 export default validate_filesystem
 
 const main = async () => {
-  const argv = yargs(hideBin(process.argv))
-    .option('root_base_directory', {
-      type: 'string',
-      description: 'Root base directory to use for the knowledge base',
-      default: undefined
-    })
-    .help().argv
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv))).help()
+    .argv
+
+  // Handle directory registration using the reusable function
+  handle_cli_directory_registration(argv)
 
   let error
   try {
-    const result = await validate_filesystem({
-      root_base_directory: argv.root_base_directory
-    })
+    const result = await validate_filesystem()
 
     if (result.has_errors) {
       error = new Error('Filesystem validation failed')

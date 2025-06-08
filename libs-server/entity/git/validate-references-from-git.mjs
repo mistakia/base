@@ -9,13 +9,11 @@ const log = debug('entity:git:validate:references')
  * @param {Object} params - Parameters
  * @param {Array} params.references - Array of reference objects
  * @param {string} params.branch - Git branch for validation
- * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
 export async function validate_references_from_git({
   references = [],
-  branch,
-  root_base_directory
+  branch
 }) {
   if (!Array.isArray(references)) {
     return {
@@ -36,25 +34,26 @@ export async function validate_references_from_git({
       return { valid: true } // No references found
     }
 
-    // Extract reference paths from reference objects
-    const reference_paths = references.map((ref) => ref.reference_path)
+    // Extract base_uri paths from reference objects
+    const reference_base_uris = references.map((ref) => ref.base_uri)
 
-    log(`Validating ${reference_paths.length} references`)
+    log(`Validating ${reference_base_uris.length} references`)
 
     // Validate each reference
-    const validation_promises = reference_paths.map(async (reference) => {
-      // Check if the referenced entity exists
-      const reference_exists = await entity_exists_in_git({
-        base_relative_path: reference,
-        branch,
-        root_base_directory
-      })
+    const validation_promises = reference_base_uris.map(
+      async (reference_base_uri) => {
+        // Check if the referenced entity exists
+        const reference_exists = await entity_exists_in_git({
+          base_uri: reference_base_uri,
+          branch
+        })
 
-      return {
-        reference,
-        exists: reference_exists.success && reference_exists.exists
+        return {
+          reference_base_uri,
+          exists: reference_exists.success && reference_exists.exists
+        }
       }
-    })
+    )
 
     const reference_results = await Promise.all(validation_promises)
 
@@ -71,7 +70,7 @@ export async function validate_references_from_git({
     return {
       valid: false,
       errors: missing_references.map(
-        (ref) => `Reference not found: ${ref.reference} (${ref.path})`
+        (ref) => `Reference not found: ${ref.reference_base_uri} (${ref.path})`
       )
     }
   } catch (error) {

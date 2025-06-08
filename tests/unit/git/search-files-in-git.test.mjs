@@ -37,47 +37,55 @@ describe('search_files_in_git', function () {
 
     // Add remote to test repo
     await execute(`git remote add origin ${remote_repo.path}`, {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
 
     // Push to remote
-    await execute('git push -u origin main', { cwd: test_repo.path })
+    await execute('git push -u origin main', { cwd: test_repo.system_path })
 
     // Create a feature branch
-    await execute('git checkout -b feature-branch', { cwd: test_repo.path })
+    await execute('git checkout -b feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Add some content to feature branch that we can search for
     await fs.writeFile(
-      path.join(test_repo.path, 'feature.md'),
+      path.join(test_repo.system_path, 'feature.md'),
       '# Feature Content\n\nThis is a special feature file with unique text.'
     )
-    await execute('git add feature.md', { cwd: test_repo.path })
-    await execute('git commit -m "Add feature"', { cwd: test_repo.path })
+    await execute('git add feature.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add feature"', { cwd: test_repo.system_path })
 
     // Create a subdirectory with additional files
-    await fs.mkdir(path.join(test_repo.path, 'docs'), { recursive: true })
+    await fs.mkdir(path.join(test_repo.system_path, 'docs'), {
+      recursive: true
+    })
     await fs.writeFile(
-      path.join(test_repo.path, 'docs', 'guide.md'),
+      path.join(test_repo.system_path, 'docs', 'guide.md'),
       '# User Guide\n\nThis is a guide with SEARCHABLE content.\n\nMore paragraphs here.'
     )
-    await execute('git add docs/guide.md', { cwd: test_repo.path })
-    await execute('git commit -m "Add user guide"', { cwd: test_repo.path })
+    await execute('git add docs/guide.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add user guide"', {
+      cwd: test_repo.system_path
+    })
 
-    await execute('git push -u origin feature-branch', { cwd: test_repo.path })
+    await execute('git push -u origin feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Return to main branch
-    await execute('git checkout main', { cwd: test_repo.path })
+    await execute('git checkout main', { cwd: test_repo.system_path })
 
     // Add some content to main branch that we can search for
     await fs.writeFile(
-      path.join(test_repo.path, 'main-file.md'),
+      path.join(test_repo.system_path, 'main-file.md'),
       '# Main Branch File\n\nThis file contains SEARCHABLE text that should be found.'
     )
-    await execute('git add main-file.md', { cwd: test_repo.path })
+    await execute('git add main-file.md', { cwd: test_repo.system_path })
     await execute('git commit -m "Add main branch file"', {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
-    await execute('git push origin main', { cwd: test_repo.path })
+    await execute('git push origin main', { cwd: test_repo.system_path })
   })
 
   // Clean up after tests
@@ -93,7 +101,7 @@ describe('search_files_in_git', function () {
   it('should search for text in files on a specific branch', async function () {
     // Test searching in main branch
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'SEARCHABLE',
       branch: 'main'
     })
@@ -111,7 +119,7 @@ describe('search_files_in_git', function () {
   it('should search for text in files on a different branch', async function () {
     // Test searching in feature branch
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'SEARCHABLE',
       branch: 'feature-branch'
     })
@@ -128,17 +136,21 @@ describe('search_files_in_git', function () {
 
   it('should search for text with path filter', async function () {
     // Create additional file in docs directory on main branch
-    await fs.mkdir(path.join(test_repo.path, 'docs'), { recursive: true })
+    await fs.mkdir(path.join(test_repo.system_path, 'docs'), {
+      recursive: true
+    })
     await fs.writeFile(
-      path.join(test_repo.path, 'docs', 'readme.md'),
+      path.join(test_repo.system_path, 'docs', 'readme.md'),
       '# Documentation\n\nThis also has SEARCHABLE content.'
     )
-    await execute('git add docs/readme.md', { cwd: test_repo.path })
-    await execute('git commit -m "Add docs readme"', { cwd: test_repo.path })
+    await execute('git add docs/readme.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add docs readme"', {
+      cwd: test_repo.system_path
+    })
 
     // Test searching with path filter
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'SEARCHABLE',
       branch: 'main',
       path: 'docs'
@@ -154,7 +166,7 @@ describe('search_files_in_git', function () {
   it('should search case-insensitive by default', async function () {
     // Test case-insensitive search
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'searchable', // lowercase
       branch: 'main'
     })
@@ -170,7 +182,7 @@ describe('search_files_in_git', function () {
     const git_relative_path = 'case-test.md'
     const content = 'This file has both searchable and SEARCHABLE text.'
     await write_file_to_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       git_relative_path,
       content,
       branch: 'main',
@@ -179,7 +191,7 @@ describe('search_files_in_git', function () {
 
     // Test case-sensitive search for lowercase
     const lowercase_result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'searchable',
       branch: 'main',
       case_sensitive: true
@@ -193,7 +205,7 @@ describe('search_files_in_git', function () {
 
     // Test case-sensitive search for uppercase
     const uppercase_result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'SEARCHABLE',
       branch: 'main',
       case_sensitive: true
@@ -206,7 +218,7 @@ describe('search_files_in_git', function () {
 
   it('should return empty results when no matches found', async function () {
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'NON_EXISTENT_STRING',
       branch: 'main'
     })
@@ -218,7 +230,7 @@ describe('search_files_in_git', function () {
 
   it('should handle non-existent branches gracefully', async function () {
     const result = await search_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       query: 'SEARCHABLE',
       branch: 'non-existent-branch'
     })
@@ -243,7 +255,7 @@ describe('search_files_in_git', function () {
     // Test missing query
     try {
       await search_files_in_git({
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         branch: 'main',
         query: ''
       })
@@ -255,7 +267,7 @@ describe('search_files_in_git', function () {
     // Test missing branch
     try {
       await search_files_in_git({
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         query: 'test'
       })
       expect.fail('Should have thrown an error')

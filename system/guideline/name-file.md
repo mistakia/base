@@ -11,7 +11,7 @@ guideline_status: 'Approved'
 observations:
   - '[governance] Consistent file naming improves discoverability and reduces ambiguity #naming'
 relations:
-  - 'implements [[system/schema/guideline.md]]'
+  - 'implements [[sys:schema/guideline.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.236Z'
 user_id: '00000000-0000-0000-0000-000000000000'

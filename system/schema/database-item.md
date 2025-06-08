@@ -79,8 +79,8 @@ Example:
 
 ```yaml
 relations:
-  - 'belongs_to [[system/database/database-name]]'
-  - 'related_task [[user/tasks/task-name]]'
-  - 'related_person [[user/person/jane-doe]]'
-  - 'related_organization [[system/organization/org-name]]'
+  - 'belongs_to [[sys:database/database-name]]'
+  - 'related_task [[user:task/task-name]]'
+  - 'related_person [[user:person/jane-doe]]'
+  - 'related_organization [[sys:organization/org-name]]'
 ```

@@ -25,9 +25,11 @@
       "id": "tool_001",
       "timestamp": "2023-05-10T14:30:20Z",
       "type": "tool_call",
-      "tool_name": "web_search",
-      "parameters": {
-        "query": "JavaScript async await examples"
+      "content": {
+        "tool_name": "web_search",
+        "tool_parameters": {
+          "query": "JavaScript async await examples"
+        }
       }
     }
   },
@@ -37,16 +39,18 @@
       "id": "tool_result_001",
       "timestamp": "2023-05-10T14:30:25Z",
       "type": "tool_result",
-      "tool_call_id": "tool_001",
-      "result": {
-        "status": "success",
-        "data": [
-          {
-            "title": "JavaScript Async/Await Tutorial",
-            "url": "https://example.com/async-await-tutorial",
-            "snippet": "Learn how to use async/await in JavaScript with practical examples."
-          }
-        ]
+      "content": {
+        "tool_call_id": "tool_001",
+        "result": {
+          "status": "success",
+          "data": [
+            {
+              "title": "JavaScript Async/Await Tutorial",
+              "url": "https://example.com/async-await-tutorial",
+              "snippet": "Learn how to use async/await in JavaScript with practical examples."
+            }
+          ]
+        }
       }
     }
   },
@@ -103,18 +107,22 @@
         "id": "tool_104",
         "timestamp": "2023-05-10T15:00:25Z",
         "type": "tool_call",
-        "tool_name": "calculator",
-        "parameters": {
-          "expression": "3.14159 * 5 * 5"
+        "content": {
+          "tool_name": "calculator",
+          "tool_parameters": {
+            "expression": "3.14159 * 5 * 5"
+          }
         }
       },
       {
         "id": "tool_result_105",
         "timestamp": "2023-05-10T15:00:26Z",
         "type": "tool_result",
-        "tool_call_id": "tool_104",
-        "result": {
-          "value": 78.53975
+        "content": {
+          "tool_call_id": "tool_104",
+          "result": {
+            "value": 78.53975
+          }
         }
       },
       {

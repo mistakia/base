@@ -5,7 +5,7 @@
 import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { validate_entity_from_filesystem } from '#libs-server/entity/filesystem/validate-entity-from-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import config from '#config'
 
 // Setup logger
@@ -22,10 +22,10 @@ export function register_entity_create_tool() {
       inputSchema: {
         type: 'object',
         properties: {
-          base_relative_path: {
+          base_uri: {
             type: 'string',
             description:
-              'The base relative path for the new entity file (e.g., user/entity/my-new-entity.md).'
+              'The base URI for the new entity file (e.g., user:entity/my-new-entity.md).'
           },
           title: {
             type: 'string',
@@ -53,12 +53,12 @@ export function register_entity_create_tool() {
               'Optional: User ID for ownership/context. Defaults to configured user.'
           }
         },
-        required: ['base_relative_path', 'title', 'entity_type']
+        required: ['base_uri', 'title', 'entity_type']
       }
     },
     implementation: async (parameters, context = {}) => {
       try {
-        log(`Creating entity at ${parameters.base_relative_path}`)
+        log(`Creating entity at ${parameters.base_uri}`)
 
         // Build entity properties
         const entity_properties = {
@@ -72,8 +72,10 @@ export function register_entity_create_tool() {
           user_id: parameters.user_id || context.user_id || config.user_id
         }
 
-        // Get the absolute path
-        const absolute_path = `${config.root_base_directory}/${parameters.base_relative_path}`
+        // Get the absolute path using registry
+        const absolute_path = resolve_base_uri_from_registry(
+          parameters.base_uri
+        )
 
         // Write the entity to the filesystem
         const result = await write_entity_to_filesystem({
@@ -83,19 +85,14 @@ export function register_entity_create_tool() {
           entity_content: parameters.entity_content || ''
         })
 
-        // Validate the entity after writing
-        await validate_entity_from_filesystem({
-          absolute_path
-        })
-
         return {
           success: true,
-          message: `Entity created at ${parameters.base_relative_path}`,
+          message: `Entity created at ${parameters.base_uri}`,
           entity_id: result.entity_id,
-          path: parameters.base_relative_path
+          path: parameters.base_uri
         }
       } catch (error) {
-        log(`Error creating entity at ${parameters.base_relative_path}:`, error)
+        log(`Error creating entity at ${parameters.base_uri}:`, error)
         return {
           success: false,
           message: `Failed to create entity: ${error.message}`,

@@ -595,7 +595,7 @@ CREATE TABLE public.entities (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     archived_at timestamp without time zone,
-    base_relative_path character varying(500),
+    base_uri character varying(1000),
     CONSTRAINT check_archived_at CHECK (((archived_at IS NULL) OR (archived_at >= updated_at))),
     CONSTRAINT check_text_fields CHECK (((type <> 'text'::public.entity_type) OR ((markdown IS NOT NULL) AND (frontmatter IS NOT NULL) AND (absolute_path IS NOT NULL)))),
     CONSTRAINT check_updated_at CHECK (((updated_at IS NULL) OR (updated_at >= created_at)))

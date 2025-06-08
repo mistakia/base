@@ -37,53 +37,59 @@ describe('list_files_in_git', function () {
 
     // Add remote to test repo
     await execute(`git remote add origin ${remote_repo.path}`, {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
 
     // Push to remote
-    await execute('git push -u origin main', { cwd: test_repo.path })
+    await execute('git push -u origin main', { cwd: test_repo.system_path })
 
     // Create a feature branch
-    await execute('git checkout -b feature-branch', { cwd: test_repo.path })
+    await execute('git checkout -b feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Add some files to feature branch
     await fs.writeFile(
-      path.join(test_repo.path, 'feature.md'),
+      path.join(test_repo.system_path, 'feature.md'),
       '# Feature Content\n\nThis is a special feature file with unique text.'
     )
-    await execute('git add feature.md', { cwd: test_repo.path })
-    await execute('git commit -m "Add feature"', { cwd: test_repo.path })
+    await execute('git add feature.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add feature"', { cwd: test_repo.system_path })
 
     // Create a subdirectory with additional files
-    await fs.mkdir(path.join(test_repo.path, 'docs'), { recursive: true })
+    await fs.mkdir(path.join(test_repo.system_path, 'docs'), {
+      recursive: true
+    })
     await fs.writeFile(
-      path.join(test_repo.path, 'docs', 'guide.md'),
+      path.join(test_repo.system_path, 'docs', 'guide.md'),
       '# User Guide\n\nThis is a guide with content.'
     )
     await fs.writeFile(
-      path.join(test_repo.path, 'docs', 'api.md'),
+      path.join(test_repo.system_path, 'docs', 'api.md'),
       '# API Documentation\n\nAPI details here.'
     )
-    await execute('git add docs', { cwd: test_repo.path })
+    await execute('git add docs', { cwd: test_repo.system_path })
     await execute('git commit -m "Add documentation files"', {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
 
-    await execute('git push -u origin feature-branch', { cwd: test_repo.path })
+    await execute('git push -u origin feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Return to main branch
-    await execute('git checkout main', { cwd: test_repo.path })
+    await execute('git checkout main', { cwd: test_repo.system_path })
 
     // Add some files to main branch
     await fs.writeFile(
-      path.join(test_repo.path, 'main-file.md'),
+      path.join(test_repo.system_path, 'main-file.md'),
       '# Main Branch File\n\nThis file exists only in main.'
     )
-    await execute('git add main-file.md', { cwd: test_repo.path })
+    await execute('git add main-file.md', { cwd: test_repo.system_path })
     await execute('git commit -m "Add main branch file"', {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
-    await execute('git push origin main', { cwd: test_repo.path })
+    await execute('git push origin main', { cwd: test_repo.system_path })
   })
 
   // Clean up after tests
@@ -99,7 +105,7 @@ describe('list_files_in_git', function () {
   it('should list files in the main branch', async function () {
     // Test listing files in main branch
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'main'
     })
 
@@ -120,7 +126,7 @@ describe('list_files_in_git', function () {
   it('should list files in the feature branch', async function () {
     // Test listing files in feature branch
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'feature-branch'
     })
 
@@ -142,7 +148,7 @@ describe('list_files_in_git', function () {
   it('should list files with path pattern filter', async function () {
     // Test listing files with path filter
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'feature-branch',
       path_pattern: 'docs/*.md'
     })
@@ -164,7 +170,7 @@ describe('list_files_in_git', function () {
   it('should handle directories with path filter', async function () {
     // Test listing files with directory filter
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'feature-branch',
       path_pattern: 'docs'
     })
@@ -180,7 +186,7 @@ describe('list_files_in_git', function () {
 
   it('should handle non-existent branches gracefully', async function () {
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'non-existent-branch'
     })
 
@@ -191,7 +197,7 @@ describe('list_files_in_git', function () {
   it('should handle invalid path patterns gracefully', async function () {
     // Add a file to use in the test
     await write_file_to_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       git_relative_path: 'test.txt',
       content: 'Test content',
       branch: 'main',
@@ -199,7 +205,7 @@ describe('list_files_in_git', function () {
     })
 
     const result = await list_files_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       branch: 'main',
       path_pattern: 'definitely/not/a/real/path/*'
     })
@@ -224,7 +230,7 @@ describe('list_files_in_git', function () {
     // Test missing branch
     try {
       await list_files_in_git({
-        repo_path: test_repo.path
+        repo_path: test_repo.system_path
       })
       expect.fail('Should have thrown an error')
     } catch (error) {

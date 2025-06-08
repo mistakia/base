@@ -35,20 +35,16 @@ export function register_file_diff_tool() {
             description: 'Diff format (unified, name-only, stat)',
             default: 'unified'
           },
-          thread_id: {
+          branch: {
             type: 'string',
-            description: 'Thread ID to determine branch'
-          },
-          branch_name: {
-            type: 'string',
-            description: 'Branch name to use (takes precedence over thread_id)'
+            description: 'Branch name to get diff from'
           },
           repo_path: {
             type: 'string',
             description: 'Repository path (for testing)'
           }
-        }
-        // No required properties
+        },
+        required: ['branch']
       }
     },
     implementation: async (parameters, context = {}) => {
@@ -58,8 +54,7 @@ export function register_file_diff_tool() {
           path: parameters.path,
           compare_with: parameters.compare_with || 'main',
           format: parameters.format || 'unified',
-          thread_id: parameters.thread_id,
-          branch_name: parameters.branch_name,
+          branch_name: parameters.branch,
           repo_path: parameters.repo_path,
           context
         })

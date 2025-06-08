@@ -12,7 +12,14 @@
       "Bash(gh project field-list:*)",
       "Bash(gh project item-list:*)",
       "Bash(gh project item-edit:*)",
-      "mcp__base__entity_create"
+      "mcp__base__entity_create",
+      "Bash(ls:*)",
+      "Bash(yarn test:file:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(yarn test:integration:*)",
+      "Bash(yarn test:*)"
     ],
     "deny": []
   }

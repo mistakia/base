@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import { write_task_to_database } from '#libs-server/entity/database/write/write-task-to-database.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/index.mjs'
 import { write_task_to_filesystem } from '#libs-server/task/filesystem/write-task-to-filesystem.mjs'
-import create_temp_test_repo from './create-temp-test-repo.mjs'
+import { setup_test_directories } from './setup-test-directories.mjs'
 import db from '#db'
 
 /**
@@ -12,8 +12,8 @@ import db from '#db'
  * 1. Database task: Stored in the entities table with type='task' and have a UUID entity_id.
  *    These tasks are referenced in the tasks table via the entity_id column (UUID).
  *
- * 2. Filesystem task: Stored as markdown files in the filesystem with a path based on base_relative_path.
- *    The base_relative_path is a string in the format "system/task-name" or "user/task-name".
+ * 2. Filesystem task: Stored as markdown files in the filesystem with a path based on base_uri.
+ *    The base_uri is a string in the format "sys:task/task-name.md" or "user:task/task-name.md".
  *
  * @param {Object} options - Test options
  * @param {string} options.user_id - User ID
@@ -22,9 +22,9 @@ import db from '#db'
  * @param {string} [options.status='No status'] - Task status
  * @param {string} [options.priority='None'] - Task priority
  * @param {Date} [options.finish_by] - Task deadline
- * @param {string} [options.base_relative_path] - Task base_relative_path in format [system|user]/<task-title>
- * @param {Object} [options.root_base_repo] - Root base repository object with path and user_path
- * @returns {Promise<Object>} Object containing task_entity_id, base_relative_path, root_base_repo, and cleanup function
+ * @param {string} [options.base_uri] - Task base_uri in format sys:task/<task-title>.md or user:task/<task-title>.md
+ * @param {Object} [options.test_directories] - Test directories object with system and user paths
+ * @returns {Promise<Object>} Object containing task_entity_id, base_uri, test_directories, and cleanup function
  */
 export default async function create_test_task({
   user_id,
@@ -35,8 +35,8 @@ export default async function create_test_task({
   finish_by,
   created_at = new Date(),
   updated_at = new Date(),
-  base_relative_path,
-  root_base_repo,
+  base_uri,
+  test_directories,
   ...other_task_properties
 }) {
   if (!user_id) {
@@ -55,23 +55,24 @@ export default async function create_test_task({
     ...other_task_properties
   }
 
-  // Generate base_relative_path if not provided
-  if (!base_relative_path) {
-    base_relative_path = `user/${title.replace(/\s+/g, '-')}`
+  // Generate base_uri if not provided
+  if (!base_uri) {
+    const task_filename = `${title.replace(/\s+/g, '-').toLowerCase()}.md`
+    base_uri = `user:task/${task_filename}`
   }
 
-  // Create temporary repo if not provided
-  let temp_repo
-  if (!root_base_repo) {
-    temp_repo = await create_temp_test_repo({ prefix: 'task-test-' })
-    root_base_repo = temp_repo
+  // Setup test directories if not provided
+  let temp_directories
+  if (!test_directories) {
+    temp_directories = setup_test_directories({
+      system_prefix: 'task-system-',
+      user_prefix: 'task-user-'
+    })
+    test_directories = temp_directories
   }
 
-  // Get file info using the base_relative_path
-  const { absolute_path } = await get_base_file_info({
-    base_relative_path,
-    root_base_directory: root_base_repo.path
-  })
+  // Resolve absolute path from base URI
+  const absolute_path = resolve_base_uri(base_uri)
 
   // Make sure the directory exists
   const dir_path = path.dirname(absolute_path)
@@ -79,9 +80,8 @@ export default async function create_test_task({
 
   // Write task to filesystem
   await write_task_to_filesystem({
-    base_relative_path,
-    task_properties,
-    root_base_directory: root_base_repo.path
+    base_uri,
+    task_properties
   })
 
   // Write task to database
@@ -89,26 +89,26 @@ export default async function create_test_task({
     task_properties,
     user_id,
     absolute_path: absolute_path || '/dummy/path.md',
-    base_relative_path,
+    base_uri,
     git_sha: 'dummysha1'
   })
 
-  // Get the base_relative_path from the database to ensure consistency
+  // Get the base_uri from the database to ensure consistency
   const task_data = await db('entities')
-    .select('base_relative_path')
+    .select('base_uri')
     .where('entity_id', task_entity_id)
     .first()
 
   const cleanup = () => {
-    if (temp_repo) {
-      temp_repo.cleanup()
+    if (temp_directories) {
+      temp_directories.cleanup()
     }
   }
 
   return {
     task_entity_id,
-    base_relative_path: task_data.base_relative_path,
-    root_base_repo,
+    base_uri: task_data.base_uri,
+    test_directories,
     cleanup
   }
 }

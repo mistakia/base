@@ -41,7 +41,7 @@ describe('write_entity_to_database', () => {
       user_id: test_user_id,
       entity_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -75,7 +75,7 @@ describe('write_entity_to_database', () => {
       user_id: test_user_id,
       entity_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -95,7 +95,7 @@ describe('write_entity_to_database', () => {
       entity_content: updated_content,
       entity_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -118,7 +118,7 @@ describe('write_entity_to_database', () => {
     const entity_type = 'task'
     const file_info = {
       absolute_path: '/path/to/file.md',
-      base_relative_path: 'system/text/file',
+      base_uri: 'sys:text/file',
       git_sha: '12345abcdef'
     }
 
@@ -128,7 +128,7 @@ describe('write_entity_to_database', () => {
       entity_type,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -136,7 +136,7 @@ describe('write_entity_to_database', () => {
     const entity = await db('entities').where({ entity_id }).first()
     expect(entity).to.exist
     expect(entity.absolute_path).to.equal(file_info.absolute_path)
-    expect(entity.base_relative_path).to.equal(file_info.base_relative_path)
+    expect(entity.base_uri).to.equal(file_info.base_uri)
     expect(entity.git_sha).to.equal(file_info.git_sha)
   })
 
@@ -147,7 +147,7 @@ describe('write_entity_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const related_entity_id = uuid()
-    const related_base_relative_path = 'user/relations/related-entity.md'
+    const related_base_uri = 'user:relations/related-entity.md'
     const related_file_path = path.join(
       user_repo_path,
       'relations',
@@ -185,9 +185,9 @@ describe('write_entity_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: related_base_relative_path
+      base_uri: related_base_uri
     })
-    // Create main entity with relation (using base_relative_path)
+    // Create main entity with relation (using base_uri)
     const entity_properties = {
       title: 'Main Entity',
       description: 'Entity with relations',
@@ -196,9 +196,7 @@ describe('write_entity_to_database', () => {
       entity_id: uuid()
     }
     const formatted_entity_metadata = {
-      relations: [
-        { relation_type: 'references', entity_path: related_base_relative_path }
-      ]
+      relations: [{ relation_type: 'references', base_uri: related_base_uri }]
     }
     // Act
     const entity_id = await write_entity_to_database({
@@ -206,9 +204,8 @@ describe('write_entity_to_database', () => {
       entity_type: 'task',
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1',
-      root_base_directory: test_repo.path,
       formatted_entity_metadata
     })
     // Assert
@@ -231,7 +228,7 @@ describe('write_entity_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/entity-tag.md'
+    const tag_base_uri = 'user:tags/entity-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'entity-tag.md')
     const now = new Date()
     const later = new Date(now.getTime() + 1000)
@@ -265,13 +262,13 @@ describe('write_entity_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
-    // Create main entity with tag (using base_relative_path)
+    // Create main entity with tag (using base_uri)
     const entity_properties = {
       title: 'Main Entity',
       description: 'Entity with tags',
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later,
       entity_id: uuid()
@@ -282,9 +279,8 @@ describe('write_entity_to_database', () => {
       entity_type: 'task',
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
     // Assert
     const tag_relation = await db('entity_tags')
@@ -304,7 +300,7 @@ describe('write_entity_to_database', () => {
         entity_type: 'task',
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')
@@ -321,7 +317,7 @@ describe('write_entity_to_database', () => {
         entity_properties: { title: 'Test', description: 'Test description' },
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')
@@ -336,7 +332,7 @@ describe('write_entity_to_database', () => {
         entity_properties: { title: 'Test', description: 'Test description' },
         entity_type: 'task',
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error')

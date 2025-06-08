@@ -16,7 +16,7 @@ observations:
   - '[readability] Named parameters improve code clarity and maintainability'
   - '[maintainability] Smaller files are easier to understand and maintain'
 relations:
-  - 'implements [[system/text/system-design.md]]'
+  - 'implements [[sys:text/system-design.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.240Z'
 user_id: '00000000-0000-0000-0000-000000000000'

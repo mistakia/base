@@ -10,7 +10,7 @@ observations:
   - '[implementation] System schema is in system/schema and user schema is in submodules'
   - '[feature] Schema extensions allow for user-specific customization'
 relations:
-  - 'relates_to [[system/text/system-design.md]]'
+  - 'relates_to [[sys:text/system-design.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.245Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -104,10 +104,10 @@ Relations must be defined in the frontmatter as an array of strings following a 
 
 ```yaml
 relations:
-  - 'relates_to [[system/text/system-design]]'
-  - 'implements [[system/schema/design-pattern]]'
-  - 'blocked_by [[system/schema/database]]'
-  - 'assigned_to [[user/schema/person/jane-doe]]'
+  - 'relates_to [[sys:text/system-design]]'
+  - 'implements [[sys:schema/design-pattern]]'
+  - 'blocked_by [[sys:schema/database]]'
+  - 'assigned_to [[user:schema/person/jane-doe]]'
 ```
 
 Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
@@ -158,31 +158,22 @@ Each document has a unique permalink that serves as its stable identifier. These
 
 - Auto-generated from the title if not specified
 - Can be customized in frontmatter
-- Used in memory:// URLs for direct references
-- The canonical reference for relations is the file path (relative to the knowledge base root) without the `.md` extension, e.g. `[[system/text/system-design]]`.
-
-Example reference using memory:// URLs:
-
-```
-memory://system/text/system-design
-memory://user/person/jane-doe
-memory://system/schema/database
-```
+- The canonical reference for relations is the file path (relative to the knowledge base root) e.g. `[[sys:text/system-design.md]]`.
 
 ## File Path Storage
 
 Entity files are stored in the database with two path references:
 
 - `absolute_path`: The full filesystem path to the file (e.g., `/Users/username/Projects/base/system/text/base-threads.md`)
-- `base_relative_path`: A standardized reference path that follows these conventions:
-  - For root repository files: `system/text/base-threads.md`
-  - For submodule files: `<submodule_name>/<relative_path>.md` (e.g., `user/guidelines/write-text.md`)
+- `base_uri`: A standardized reference path that follows these conventions:
+  - For system knowledge base files: `sys:text/base-threads.md`
+  - For user knowledge base files: `<knowledge_base_name>:<relative_path>.md` (e.g., `user:guidelines/write-text.md`)
 
-The `base_relative_path` format is designed to be used for canonical references across the knowledge base and is the format used in wikilinks.
+The `base_uri` format is designed to be used for canonical references across the knowledge base and is the format used in wikilinks.
 
 ## Available Content Types
 
-The knowledge base supports the following content types. See the actual schema files in `system/schema/` for detailed property definitions and usage guidance:
+The knowledge base supports the following content types. See the actual schema files in `sys:schema/` for detailed property definitions and usage guidance:
 
 - [Base](../schema/base.md) - Core properties shared by all content types
 - [Workflow](../schema/workflow.md) - Actions or processes

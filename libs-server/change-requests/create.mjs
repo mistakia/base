@@ -8,6 +8,7 @@ import { build_change_request_from_git } from './utils.mjs'
 import * as github_integration from '#libs-server/integrations/github/index.mjs'
 import config from '#config'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { CHANGE_REQUEST_DIR } from './constants.mjs'
 
 const log = debug('change-requests')
@@ -27,7 +28,6 @@ const log = debug('change-requests')
  * @param {string} [params.github_pr_url] - Optional GitHub PR URL if PR already exists.
  * @param {string} [params.thread_id] - Optional ID of the related thread.
  * @param {Array<string>} [params.tags] - Optional tags.
- * @param {string} [params.user_base_directory] - Path to the user repository. Defaults to config.user_base_directory.
  * @returns {Promise<string>} The ID of the newly created change request.
  */
 export async function create_change_request({
@@ -41,8 +41,7 @@ export async function create_change_request({
   github_pr_number,
   github_pr_url,
   thread_id,
-  tags = [],
-  user_base_directory = config.user_base_directory
+  tags = []
 }) {
   const change_request_id = uuidv4()
   const now = new Date()
@@ -60,8 +59,7 @@ export async function create_change_request({
     // Extract Git data to build the change request
     const git_data = await build_change_request_from_git({
       feature_branch,
-      target_branch,
-      user_base_directory
+      target_branch
     })
 
     if (!git_data || !git_data.exists) {
@@ -77,8 +75,7 @@ export async function create_change_request({
         title,
         feature_branch,
         target_branch,
-        description,
-        user_base_directory
+        description
       })
 
       pr_url = github_result?.pr_url
@@ -115,8 +112,7 @@ export async function create_change_request({
         github_pr_number: pr_number,
         github_repo,
         thread_id,
-        tags,
-        user_base_directory
+        tags
       })
     })
 
@@ -134,8 +130,7 @@ async function create_github_pull_request({
   title,
   feature_branch,
   target_branch,
-  description,
-  user_base_directory = config.user_base_directory
+  description
 }) {
   if (!github_repo) {
     throw new Error('github_repo is required when create_github_pr is true.')
@@ -214,13 +209,10 @@ async function create_markdown_file({
   github_pr_number,
   github_repo,
   thread_id,
-  tags,
-  user_base_directory
+  tags
 }) {
-  const absolute_path = path.join(
-    user_base_directory,
-    `${CHANGE_REQUEST_DIR}/${change_request_id}.md`
-  )
+  const change_request_uri = `user:${CHANGE_REQUEST_DIR}/${change_request_id}.md`
+  const absolute_path = resolve_base_uri_from_registry(change_request_uri)
   const iso_date = now.toISOString()
 
   // Create the entity properties

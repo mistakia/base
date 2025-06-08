@@ -4,7 +4,10 @@ import { hideBin } from 'yargs/helpers'
 import { list_markdown_files_in_filesystem } from './list-markdown-files-in-filesystem.mjs'
 import { read_entity_from_filesystem } from '../../entity/filesystem/read-entity-from-filesystem.mjs'
 import is_main from '#libs-server/utils/is-main.mjs'
-import config from '#config'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('repository:filesystem:list-entity-files')
 
@@ -12,34 +15,21 @@ const log = debug('repository:filesystem:list-entity-files')
  * List entity files from filesystem with optional filtering
  *
  * @param {Object} params - Parameters
- * @param {string} params.root_base_directory - The root base directory to search in
- * @param {string} [params.submodule_base_path] - If provided, only search in this specific submodule
  * @param {string[]} [params.include_entity_types] - Entity types to include
  * @param {string[]} [params.exclude_entity_types] - Entity types to exclude
  * @param {string} [params.path_pattern] - Glob pattern for filtering paths
  * @returns {Promise<Array>} - Array of entity file objects with properties and metadata
  */
 export async function list_entity_files_from_filesystem({
-  root_base_directory,
-  submodule_base_path,
   include_entity_types = [],
   exclude_entity_types = [],
   path_pattern
 }) {
-  // Validate required parameters
-  if (!root_base_directory) {
-    throw new Error('root_base_directory is required')
-  }
-
   try {
-    log(
-      `Listing entities from filesystem in '${root_base_directory}'${submodule_base_path ? `, submodule: ${submodule_base_path}` : ''}`
-    )
+    log('Listing entities from filesystem')
 
     // Get all markdown files using existing function, passing path_pattern directly
     const all_files = await list_markdown_files_in_filesystem({
-      root_base_directory,
-      submodule_base_path,
       path_pattern
     })
 
@@ -71,7 +61,7 @@ export async function list_entity_files_from_filesystem({
 
         if (should_include && !should_exclude) {
           // Add to results with consistent format
-          // Include base_relative_path to match the original function's output
+          // Include base_uri to match the original function's output
           entities.push({
             entity_properties: entity_result.entity_properties,
             file_info: file
@@ -94,14 +84,7 @@ export default list_entity_files_from_filesystem
 
 // Add CLI functionality if run directly
 if (is_main(import.meta.url)) {
-  const argv = yargs(hideBin(process.argv))
-    .option('root_base_directory', {
-      alias: 'r',
-      description: 'Root base directory to search in',
-      type: 'string',
-      demandOption: true,
-      default: config.system_base_directory
-    })
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     .option('include_entity_types', {
       alias: 'i',
       description: 'Entity types to include (e.g., guideline,rule)',
@@ -122,10 +105,12 @@ if (is_main(import.meta.url)) {
     .help().argv
 
   const main = async () => {
+    // Handle directory registration using the reusable function
+    handle_cli_directory_registration(argv)
+
     let error
     try {
       const entities = await list_entity_files_from_filesystem({
-        root_base_directory: argv.root_base_directory,
         include_entity_types: argv.include_entity_types,
         exclude_entity_types: argv.exclude_entity_types,
         path_pattern: argv.path_pattern

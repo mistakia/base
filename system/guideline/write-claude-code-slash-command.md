@@ -15,8 +15,8 @@ observations:
   - '[practice] $ARGUMENTS placeholder enables flexible command invocation'
   - '[organization] Nested directories support command namespacing'
 relations:
-  - related_to [[system/guideline/write-entity.md]]
-  - implements [[system/text/system-design.md]]
+  - related_to [[sys:guideline/write-entity.md]]
+  - implements [[sys:text/system-design.md]]
 updated_at: '2025-06-06T16:51:43.604Z'
 user_id: 00000000-0000-0000-0000-000000000000
 ---
@@ -58,6 +58,7 @@ user_id: 00000000-0000-0000-0000-000000000000
 - `$ARGUMENTS` is replaced literally throughout the entire file
 - Commands SHOULD handle empty arguments gracefully
 - Example usage:
+
   ```markdown
   <task>Fix issue #$ARGUMENTS</task>
   <instructions>

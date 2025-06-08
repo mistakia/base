@@ -9,14 +9,9 @@ const log = debug('entity:git:validate:tags')
  * @param {Object} params - Parameters
  * @param {Array} params.property_tags - Array of tag objects from properties
  * @param {string} params.branch - Git branch for validation
- * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_tags_from_git({
-  property_tags = [],
-  branch,
-  root_base_directory
-}) {
+export async function validate_tags_from_git({ property_tags = [], branch }) {
   if (!Array.isArray(property_tags)) {
     return {
       valid: false,
@@ -44,12 +39,11 @@ export async function validate_tags_from_git({
 
     const tag_validation_promises = all_tags.map(async (tag) => {
       const exists_result = await entity_exists_in_git({
-        base_relative_path: tag.base_relative_path,
-        branch,
-        root_base_directory
+        base_uri: tag.base_uri,
+        branch
       })
       return {
-        base_relative_path: tag.base_relative_path,
+        base_uri: tag.base_uri,
         exists: exists_result.success && exists_result.exists,
         source: tag.source
       }
@@ -66,7 +60,7 @@ export async function validate_tags_from_git({
     return {
       valid: false,
       errors: missing_tags.map(
-        (tag) => `${tag.source} tag not found: ${tag.base_relative_path}`
+        (tag) => `${tag.source} tag not found: ${tag.base_uri}`
       )
     }
   } catch (error) {

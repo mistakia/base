@@ -45,7 +45,7 @@ describe('write_tag_to_database', () => {
       user_id: test_user_id,
       tag_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -106,7 +106,7 @@ describe('write_tag_to_database', () => {
       user_id: test_user_id,
       tag_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -129,7 +129,7 @@ describe('write_tag_to_database', () => {
       tag_content: updated_content,
       entity_id: tag_entity_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -187,7 +187,7 @@ describe('write_tag_to_database', () => {
       tag_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: file_info.git_sha
     })
 
@@ -213,7 +213,7 @@ describe('write_tag_to_database', () => {
       tag_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -242,7 +242,7 @@ describe('write_tag_to_database', () => {
     const test_repo = await create_temp_test_repo({ prefix: 'meta-tag-test-' })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/meta-tag.md'
+    const tag_base_uri = 'user:tags/meta-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'meta-tag.md')
 
     // 2. Write the tag entity file using write_entity_to_filesystem
@@ -278,17 +278,17 @@ describe('write_tag_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create tag with tag (using base_relative_path)
+    // 4. Create tag with tag (using base_uri)
     const tag_properties = {
       entity_id: uuid(),
       title: 'Tagged Tag',
       description: 'Tag with meta-tag',
       color: '#BBCCDD',
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
@@ -298,9 +298,8 @@ describe('write_tag_to_database', () => {
       tag_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -337,7 +336,7 @@ describe('write_tag_to_database', () => {
       tag_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 

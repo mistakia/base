@@ -11,8 +11,8 @@ observations:
   - '[feature] Content addressing enables efficient versioning and deduplication'
   - '[principle] Block-based content facilitates modular document manipulation'
 relations:
-  - 'part_of [[system/text/system-design.md]]'
-  - 'relates_to [[system/text/knowledge-base-schema.md]]'
+  - 'part_of [[sys:text/system-design.md]]'
+  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.242Z'
 user_id: '00000000-0000-0000-0000-000000000000'

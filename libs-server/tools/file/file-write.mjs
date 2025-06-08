@@ -44,20 +44,16 @@ export function register_file_write_tool() {
             type: 'string',
             description: 'The path to the repository'
           },
-          thread_id: {
+          branch: {
             type: 'string',
-            description: 'Thread ID to infer branch if branch_name not provided'
-          },
-          branch_name: {
-            type: 'string',
-            description: 'Explicit branch name to use'
+            description: 'Branch name to write the file to'
           },
           commit_message: {
             type: 'string',
             description: 'Commit message for the change'
           }
         },
-        required: ['path']
+        required: ['path', 'branch']
       }
     },
     implementation: async (parameters, context = {}) => {
@@ -69,8 +65,7 @@ export function register_file_write_tool() {
           patch_content: parameters.patch_content,
           operation: parameters.operation,
           repo_path: parameters.repo_path,
-          thread_id: parameters.thread_id,
-          branch_name: parameters.branch_name,
+          branch_name: parameters.branch,
           commit_message: parameters.commit_message,
           context
         })

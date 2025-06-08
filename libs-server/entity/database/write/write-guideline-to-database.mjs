@@ -26,10 +26,9 @@ const log = debug('entity:database:write-guideline')
  * @param {string} [params.guideline_content=''] Optional guideline content/markdown
  * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} params.absolute_path Absolute path to the file
- * @param {string} params.base_relative_path Base relative path to the file
+ * @param {string} params.base_uri Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @param {string} [params.root_base_directory=null] Root base directory of the repository
  * @param {Object} [params.formatted_entity_metadata] Formatted entity metadata
  * @returns {Promise<string>} The entity_id of the guideline
  */
@@ -39,10 +38,9 @@ export async function write_guideline_to_database({
   guideline_content = '',
   entity_id = null,
   absolute_path,
-  base_relative_path,
+  base_uri,
   git_sha,
   trx = null,
-  root_base_directory,
   formatted_entity_metadata
 }) {
   try {
@@ -57,10 +55,9 @@ export async function write_guideline_to_database({
       entity_content: guideline_content,
       entity_id,
       absolute_path,
-      base_relative_path,
+      base_uri,
       git_sha,
       trx: db_client,
-      root_base_directory,
       formatted_entity_metadata
     })
 

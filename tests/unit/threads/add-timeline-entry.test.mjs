@@ -41,8 +41,7 @@ describe('add_timeline_entry', () => {
 
     await add_timeline_entry({
       thread_id: test_thread.thread_id,
-      entry: user_message,
-      user_base_directory: test_thread.user_base_directory
+      entry: user_message
     })
 
     // Verify entry was added to timeline
@@ -66,8 +65,7 @@ describe('add_timeline_entry', () => {
 
     await add_timeline_entry({
       thread_id: test_thread.thread_id,
-      entry: assistant_message,
-      user_base_directory: test_thread.user_base_directory
+      entry: assistant_message
     })
 
     // Verify entry was added to timeline
@@ -91,8 +89,7 @@ describe('add_timeline_entry', () => {
 
     await add_timeline_entry({
       thread_id: test_thread.thread_id,
-      entry: tool_call,
-      user_base_directory: test_thread.user_base_directory
+      entry: tool_call
     })
 
     // Verify entry was added to timeline
@@ -116,8 +113,7 @@ describe('add_timeline_entry', () => {
 
     await add_timeline_entry({
       thread_id: test_thread.thread_id,
-      entry: tool_result,
-      user_base_directory: test_thread.user_base_directory
+      entry: tool_result
     })
 
     // Verify entry was added to timeline
@@ -143,8 +139,7 @@ describe('add_timeline_entry', () => {
     for (const entry of entries) {
       await add_timeline_entry({
         thread_id: test_thread.thread_id,
-        entry,
-        user_base_directory: test_thread.user_base_directory
+        entry
       })
     }
 
@@ -173,8 +168,7 @@ describe('add_timeline_entry', () => {
     try {
       await add_timeline_entry({
         thread_id: test_thread.thread_id,
-        entry: invalid_entry,
-        user_base_directory: test_thread.user_base_directory
+        entry: invalid_entry
       })
       // Should not reach here
       expect.fail('Should have thrown an error for invalid entry type')
@@ -195,8 +189,7 @@ describe('add_timeline_entry', () => {
     try {
       await add_timeline_entry({
         thread_id: test_thread.thread_id,
-        entry: incomplete_entry,
-        user_base_directory: test_thread.user_base_directory
+        entry: incomplete_entry
       })
       // Should not reach here
       expect.fail('Should have thrown an error for missing required fields')
@@ -213,8 +206,7 @@ describe('add_timeline_entry', () => {
     try {
       await add_timeline_entry({
         thread_id: 'non-existent-thread-id',
-        entry: user_message,
-        user_base_directory: test_thread.user_base_directory
+        entry: user_message
       })
       // Should not reach here
       expect.fail('Should have thrown an error for non-existent thread')

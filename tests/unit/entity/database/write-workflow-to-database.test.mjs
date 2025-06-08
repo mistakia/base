@@ -44,7 +44,7 @@ describe('write_workflow_to_database', () => {
       user_id: test_user_id,
       workflow_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -102,7 +102,7 @@ describe('write_workflow_to_database', () => {
       user_id: test_user_id,
       workflow_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -124,7 +124,7 @@ describe('write_workflow_to_database', () => {
       workflow_content: updated_content,
       entity_id: workflow_entity_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -174,7 +174,7 @@ describe('write_workflow_to_database', () => {
       user_id: test_user_id,
       file_info,
       absolute_path: file_info.absolute_path,
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: file_info.git_sha
     })
 
@@ -198,7 +198,7 @@ describe('write_workflow_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/workflow-tag.md'
+    const tag_base_uri = 'user:tags/workflow-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'workflow-tag.md')
 
     // 2. Write the tag entity file using write_entity_to_filesystem
@@ -234,13 +234,13 @@ describe('write_workflow_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
     // Create a related task entity for relation testing
     const task_entity_id = uuid()
-    const task_base_relative_path = 'user/tasks/related-task.md'
+    const task_base_uri = 'user:tasks/related-task.md'
     const task_file_path = path.join(user_repo_path, 'tasks', 'related-task.md')
 
     // Write the task entity file
@@ -278,26 +278,24 @@ describe('write_workflow_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: task_base_relative_path
+      base_uri: task_base_uri
     })
     await db('tasks').insert({ entity_id: task_entity_id, status: 'Planned' })
 
-    // Create workflow with tags (using base_relative_path)
+    // Create workflow with tags (using base_uri)
     const workflow_properties = {
       entity_id: uuid(),
       title: 'Related Workflow',
       description: 'Workflow with tags and relations',
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
 
     // Set up formatted_entity_metadata with relations
     const formatted_entity_metadata = {
-      property_tags: [{ base_relative_path: tag_base_relative_path }],
-      relations: [
-        { relation_type: 'contains', entity_path: task_base_relative_path }
-      ]
+      property_tags: [{ base_uri: tag_base_uri }],
+      relations: [{ relation_type: 'contains', base_uri: task_base_uri }]
     }
 
     const workflow_content = '# Related Workflow\n\nThis has relations.'
@@ -308,9 +306,8 @@ describe('write_workflow_to_database', () => {
       user_id: test_user_id,
       workflow_content,
       absolute_path: '/path/to/related.md',
-      base_relative_path: 'path/to/related',
+      base_uri: 'sys:path/to/related',
       git_sha: 'abcdef',
-      root_base_directory: test_repo.path,
       formatted_entity_metadata
     })
 

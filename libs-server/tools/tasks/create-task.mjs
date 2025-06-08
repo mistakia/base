@@ -21,7 +21,7 @@ register_tool({
           description:
             'Optional: User ID for ownership/context. Defaults to configured user. Not directly stored in file properties yet.'
         },
-        base_relative_path: {
+        base_uri: {
           type: 'string',
           description:
             'The base relative path for the new task file (e.g., user/tasks/my-new-task.md).'
@@ -55,13 +55,13 @@ register_tool({
             'Optional: The date by which the task should be completed (ISO 8601 format).'
         }
       },
-      required: ['base_relative_path', 'title']
+      required: ['base_uri', 'title']
     }
   },
   implementation: async (parameters, context = {}) => {
     try {
       const {
-        base_relative_path,
+        base_uri,
         title,
         description,
         status = TASK_STATUS.PLANNED,
@@ -73,7 +73,7 @@ register_tool({
       const user_id = helpers.resolve_user_id(parameters, context) // For logging and future use
 
       log(
-        `Creating new task file "${title}" at ${base_relative_path} for user ${user_id}`
+        `Creating new task file "${title}" at ${base_uri} for user ${user_id}`
       )
 
       const task_properties = {
@@ -86,7 +86,7 @@ register_tool({
       }
 
       const result = await write_task_to_filesystem({
-        base_relative_path,
+        base_uri,
         task_properties,
         task_content
       })
@@ -100,20 +100,20 @@ register_tool({
 
       // Fetch the newly created task to return
       const new_task_data = await read_task_from_filesystem({
-        base_relative_path
+        base_uri
       })
       if (!new_task_data.success) {
-        log(`Could not read back task ${base_relative_path} after write.`)
+        log(`Could not read back task ${base_uri} after write.`)
         return {
           success: true, // Write was successful
-          message: `Task file ${base_relative_path} created. Could not read back for formatted response.`,
+          message: `Task file ${base_uri} created. Could not read back for formatted response.`,
           details: result
         }
       }
 
       return {
         success: true,
-        message: `Task file ${base_relative_path} created.`,
+        message: `Task file ${base_uri} created.`,
         task: format_task(new_task_data)
       }
     } catch (error) {

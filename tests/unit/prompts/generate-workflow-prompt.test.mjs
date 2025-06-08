@@ -3,6 +3,10 @@ import path from 'path'
 import fs from 'fs'
 import generate_workflow_prompt from '#libs-server/prompts/generate-workflow-prompt.mjs'
 import { create_temp_test_directory } from '#tests/utils/index.mjs'
+import {
+  register_base_directories,
+  clear_registered_directories
+} from '#libs-server/base-uri/index.mjs'
 
 describe('generate_workflow_prompt', () => {
   // Test directories
@@ -16,16 +20,25 @@ describe('generate_workflow_prompt', () => {
     test_user_dir = await create_temp_test_directory('user-workflows-test')
 
     // Create workflows directories with proper structure
-    fs.mkdirSync(path.join(test_system_dir.path, 'system', 'workflow'), {
+    fs.mkdirSync(path.join(test_system_dir.path, 'workflow'), {
       recursive: true
     })
     fs.mkdirSync(path.join(test_user_dir.path, 'workflow'), {
       recursive: true
     })
+
+    // Register directories for registry system
+    register_base_directories({
+      system_base_directory: test_system_dir.path,
+      user_base_directory: test_user_dir.path
+    })
   })
 
   // Clean up test directories after tests
   after(async () => {
+    // Clear registry
+    clear_registered_directories()
+
     // Use the cleanup functions provided by create_temp_test_directory
     if (test_system_dir && test_system_dir.cleanup) {
       test_system_dir.cleanup()
@@ -43,17 +56,15 @@ describe('generate_workflow_prompt', () => {
     file_name,
     content
   }) => {
-    // For system workflows: base_dir/system/workflow/file_name
-    // For user workflows: base_dir/workflow/file_name
-    const file_path =
-      workflow_directory_type === 'system'
-        ? path.join(base_dir, workflow_directory_type, 'workflow', file_name)
-        : path.join(base_dir, 'workflow', file_name)
+    // Both system and user workflows now go directly in workflow/ directory
+    // System: base_dir/workflow/file_name
+    // User: base_dir/workflow/file_name
+    const file_path = path.join(base_dir, 'workflow', file_name)
     fs.writeFileSync(file_path, content, 'utf8')
     return file_path
   }
 
-  describe('with base_relative_path parameter', () => {
+  describe('with base_uri parameter', () => {
     // Create test workflow files before each test in this group
     beforeEach(() => {
       // Create system workflow files
@@ -62,7 +73,7 @@ describe('generate_workflow_prompt', () => {
         workflow_directory_type: 'system',
         file_name: 'test-workflow1.md',
         content:
-          '---\ntitle: Test Workflow 1\ndescription: First test workflow\ntype: workflow\nguidelines: ["system/guideline1.md", "system/guideline2.md"]\n---\n\n# Test Workflow 1\n\n<role>This is test content for workflow 1</role>'
+          '---\ntitle: Test Workflow 1\ndescription: First test workflow\ntype: workflow\nguidelines: ["sys:guideline1.md", "sys:guideline2.md"]\n---\n\n# Test Workflow 1\n\n<role>This is test content for workflow 1</role>'
       })
 
       create_workflow_file({
@@ -78,18 +89,14 @@ describe('generate_workflow_prompt', () => {
         workflow_directory_type: 'user',
         file_name: 'user-workflow1.md',
         content:
-          '---\ntitle: User Workflow 1\ndescription: User test workflow\ntype: workflow\nguidelines: ["user/user-guideline1.md"]\n---\n\n# User Workflow 1\n\n<role>This is user workflow content</role>'
+          '---\ntitle: User Workflow 1\ndescription: User test workflow\ntype: workflow\nguidelines: ["user:user-guideline1.md"]\n---\n\n# User Workflow 1\n\n<role>This is user workflow content</role>'
       })
     })
 
     // Clean up files after each test
     afterEach(() => {
       // Remove all files from the workflow directories
-      const system_workflow_dir = path.join(
-        test_system_dir.path,
-        'system',
-        'workflow'
-      )
+      const system_workflow_dir = path.join(test_system_dir.path, 'workflow')
       const user_workflow_dir = path.join(test_user_dir.path, 'workflow')
 
       if (fs.existsSync(system_workflow_dir)) {
@@ -111,8 +118,7 @@ describe('generate_workflow_prompt', () => {
     it('should generate prompt for a system workflow with guidelines', async () => {
       // Act
       const result = await generate_workflow_prompt({
-        base_relative_path: 'system/workflow/test-workflow1.md',
-        root_base_directory: test_system_dir.path
+        base_uri: 'sys:workflow/test-workflow1.md'
       })
 
       // Assert
@@ -122,21 +128,16 @@ describe('generate_workflow_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is test content for workflow 1</role>'
       )
-      expect(result.guideline_base_relative_paths).to.be.an('array')
-      expect(result.guideline_base_relative_paths).to.have.lengthOf(2)
-      expect(result.guideline_base_relative_paths).to.include(
-        'system/guideline1.md'
-      )
-      expect(result.guideline_base_relative_paths).to.include(
-        'system/guideline2.md'
-      )
+      expect(result.guideline_base_uris).to.be.an('array')
+      expect(result.guideline_base_uris).to.have.lengthOf(2)
+      expect(result.guideline_base_uris).to.include('sys:guideline1.md')
+      expect(result.guideline_base_uris).to.include('sys:guideline2.md')
     })
 
     it('should generate prompt for a system workflow without guidelines', async () => {
       // Act
       const result = await generate_workflow_prompt({
-        base_relative_path: 'system/workflow/test-workflow2.md',
-        root_base_directory: test_system_dir.path
+        base_uri: 'sys:workflow/test-workflow2.md'
       })
 
       // Assert
@@ -146,15 +147,14 @@ describe('generate_workflow_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is test content for workflow 2</role>'
       )
-      expect(result.guideline_base_relative_paths).to.be.an('array')
-      expect(result.guideline_base_relative_paths).to.have.lengthOf(0)
+      expect(result.guideline_base_uris).to.be.an('array')
+      expect(result.guideline_base_uris).to.have.lengthOf(0)
     })
 
     it('should generate prompt for a user workflow', async () => {
       // Act
       const result = await generate_workflow_prompt({
-        base_relative_path: 'workflow/user-workflow1.md',
-        root_base_directory: test_user_dir.path
+        base_uri: 'user:workflow/user-workflow1.md'
       })
 
       // Assert
@@ -164,19 +164,16 @@ describe('generate_workflow_prompt', () => {
       expect(result.prompt).to.include(
         '<role>This is user workflow content</role>'
       )
-      expect(result.guideline_base_relative_paths).to.be.an('array')
-      expect(result.guideline_base_relative_paths).to.have.lengthOf(1)
-      expect(result.guideline_base_relative_paths).to.include(
-        'user/user-guideline1.md'
-      )
+      expect(result.guideline_base_uris).to.be.an('array')
+      expect(result.guideline_base_uris).to.have.lengthOf(1)
+      expect(result.guideline_base_uris).to.include('user:user-guideline1.md')
     })
 
     it('should throw an error for non-existent workflow', async () => {
       try {
         // Act
         await generate_workflow_prompt({
-          base_relative_path: 'system/workflow/nonexistent.md',
-          root_base_directory: test_system_dir.path
+          base_uri: 'sys:workflow/nonexistent.md'
         })
         // If we get here, fail the test
         expect.fail('Expected to throw an error but did not')
@@ -187,18 +184,16 @@ describe('generate_workflow_prompt', () => {
       }
     })
 
-    it('should throw an error when base_relative_path is not provided', async () => {
+    it('should throw an error when base_uri is not provided', async () => {
       try {
         // Act
-        await generate_workflow_prompt({
-          root_base_directory: test_system_dir.path
-        })
+        await generate_workflow_prompt({})
         // If we get here, fail the test
         expect.fail('Expected to throw an error but did not')
       } catch (error) {
         // Assert
         expect(error).to.be.an('error')
-        expect(error.message).to.equal('base_relative_path is required')
+        expect(error.message).to.equal('base_uri is required')
       }
     })
   })

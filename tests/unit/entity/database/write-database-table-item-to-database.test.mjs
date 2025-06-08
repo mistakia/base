@@ -5,7 +5,7 @@ import write_database_table_item_to_database from '#libs-server/entity/database/
 import {
   reset_all_tables,
   create_test_user,
-  create_temp_test_repo
+  setup_test_directories
 } from '#tests/utils/index.mjs'
 import path from 'path'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
@@ -14,11 +14,15 @@ describe('write_database_table_item_to_database', () => {
   let test_user
   let test_user_id
   let test_database_table_id
+  let test_directories
 
   beforeEach(async () => {
     await reset_all_tables()
     test_user = await create_test_user()
     test_user_id = test_user.user_id
+
+    // Setup test directories and register them
+    test_directories = setup_test_directories()
 
     // Create a test database table for our items
     test_database_table_id = await db('entities')
@@ -51,6 +55,9 @@ describe('write_database_table_item_to_database', () => {
 
   afterEach(async () => {
     await reset_all_tables()
+    if (test_directories) {
+      test_directories.cleanup()
+    }
   })
 
   it('should create a new database table item entity in the database', async () => {
@@ -79,7 +86,7 @@ describe('write_database_table_item_to_database', () => {
       user_id: test_user_id,
       database_item_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -154,7 +161,7 @@ describe('write_database_table_item_to_database', () => {
       user_id: test_user_id,
       database_item_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -183,7 +190,7 @@ describe('write_database_table_item_to_database', () => {
       database_item_content: updated_content,
       database_item_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -241,7 +248,7 @@ describe('write_database_table_item_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/item.md',
       git_sha: '12345abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -249,7 +256,7 @@ describe('write_database_table_item_to_database', () => {
       database_item_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -277,7 +284,7 @@ describe('write_database_table_item_to_database', () => {
         database_item_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       // If we get here, the test should fail
@@ -317,7 +324,7 @@ describe('write_database_table_item_to_database', () => {
       database_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -352,20 +359,19 @@ describe('write_database_table_item_to_database', () => {
   })
 
   it('should store database table item with relationships', async () => {
-    // Arrange - set up a temp repo and create a tag entity file
+    // Arrange - create a tag entity file using registered directories
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // 1. Create a temp repo
-    const test_repo = await create_temp_test_repo({
-      prefix: 'db-item-tag-test-'
-    })
-    const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/item-tag.md'
-    const tag_file_path = path.join(user_repo_path, 'tags', 'item-tag.md')
+    const tag_base_uri = 'user:tags/item-tag.md'
+    const tag_file_path = path.join(
+      test_directories.user_path,
+      'tags',
+      'item-tag.md'
+    )
 
-    // 2. Write the tag entity file using write_entity_to_filesystem
+    // 1. Write the tag entity file using write_entity_to_filesystem
     await write_entity_to_filesystem({
       absolute_path: tag_file_path,
       entity_properties: {
@@ -381,7 +387,7 @@ describe('write_database_table_item_to_database', () => {
       entity_content: 'A tag for database items.'
     })
 
-    // 3. Insert the tag entity into the database
+    // 2. Insert the tag entity into the database
     await db('entities').insert({
       entity_id: tag_entity_id,
       title: 'Item Tag',
@@ -398,17 +404,17 @@ describe('write_database_table_item_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create database table item with tag (using base_relative_path)
+    // 3. Create database table item with tag (using base_uri)
     const database_item_properties = {
       entity_id: uuid(),
       title: 'Tagged Item',
       description: 'Item with tags',
       database_table_id: test_database_table_id,
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
@@ -418,9 +424,8 @@ describe('write_database_table_item_to_database', () => {
       database_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -432,8 +437,5 @@ describe('write_database_table_item_to_database', () => {
       .first()
 
     expect(tag_relation).to.exist
-
-    // Clean up temp repo
-    await test_repo.cleanup()
   })
 })

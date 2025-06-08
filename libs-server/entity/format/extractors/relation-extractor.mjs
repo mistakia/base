@@ -13,7 +13,7 @@ export function extract_entity_relations({ entity_properties }) {
     Array.isArray(entity_properties.relations)
   ) {
     entity_properties.relations.forEach((relation_str) => {
-      // Parse relation string in format: "relation_type [[entity_path]] (optional context)"
+      // Parse relation string in format: "relation_type [[base_uri]] (optional context)"
       const relation_match = relation_str.match(
         /^(.*?) \[\[(.*?)\]\]( \((.*?)\))?$/
       )
@@ -21,7 +21,7 @@ export function extract_entity_relations({ entity_properties }) {
       if (relation_match) {
         relations.push({
           relation_type: relation_match[1],
-          entity_path: relation_match[2],
+          base_uri: relation_match[2],
           context: relation_match[4] || null
         })
       }

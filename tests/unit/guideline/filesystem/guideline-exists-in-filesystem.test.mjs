@@ -1,135 +1,66 @@
 import { expect } from 'chai'
-import { promises as fs } from 'fs'
-import path from 'path'
-import config from '#config'
-import { promisify } from 'util'
-import child_process from 'child_process'
 
 import { guideline_exists_in_filesystem } from '#libs-server/guideline/filesystem/guideline-exists-in-filesystem.mjs'
 import {
-  create_temp_test_directory,
-  create_temp_test_repo
+  create_temp_test_repo,
+  create_test_entity
 } from '#tests/utils/index.mjs'
-
-const exec = promisify(child_process.exec)
-
+import { clear_registered_directories } from '#libs-server/base-uri/index.mjs'
 describe('guideline_exists_in_filesystem', () => {
-  let temp_dir
-  let cleanup
-  let original_system_base_directory
-  let original_user_base_directory
-  let repo
+  let system_repo
 
   // System guideline paths in the repo
-  const system_guideline_dir = 'system/guideline'
-  const system_guideline_filename = 'test-guideline.md'
-  const system_guideline_base_relative_path = `${system_guideline_dir}/${system_guideline_filename}`
+  const system_guideline_base_uri = 'sys:guideline/test-guideline.md'
 
   // User guideline paths in the repo
-  const user_guideline_dir = 'guideline'
-  const user_guideline_filename = 'test-user-guideline.md'
-  const user_guideline_base_relative_path = `${user_guideline_dir}/${user_guideline_filename}`
+  const user_guideline_base_uri = 'user:guideline/test-user-guideline.md'
 
-  const non_existent_guideline_base_relative_path =
-    'system/guideline/non-existent.md'
-
-  beforeEach(() => {
-    // Save original config values
-    original_system_base_directory = config.system_base_directory
-    original_user_base_directory = config.user_base_directory
-
-    // Create temporary directory for tests
-    const temp_directory = create_temp_test_directory('guideline-exists-test-')
-    temp_dir = temp_directory.path
-    cleanup = temp_directory.cleanup
-
-    // Set config directories to our test directory
-    config.system_base_directory = temp_dir
-    config.user_base_directory = temp_dir
-  })
-
-  afterEach(() => {
-    // Restore original config values
-    config.system_base_directory = original_system_base_directory
-    config.user_base_directory = original_user_base_directory
-
-    // Clean up temporary directory
-    if (cleanup) {
-      cleanup()
-    }
-  })
+  const non_existent_guideline_base_uri = 'sys:guideline/non-existent.md'
 
   before(async () => {
-    // Create a temporary git repository
-    repo = await create_temp_test_repo()
-
-    // Create system guideline directory
-    await fs.mkdir(path.join(repo.path, system_guideline_dir), {
-      recursive: true
+    // Create temporary git repositories with registry
+    system_repo = await create_temp_test_repo({
+      prefix: 'guideline-system-',
+      register_directories: true
     })
 
-    // Create user guideline directory
-    await fs.mkdir(path.join(repo.path, user_guideline_dir), {
-      recursive: true
+    // Create test system guideline using create_test_entity
+    await create_test_entity({
+      base_uri: system_guideline_base_uri,
+      entity_type: 'guideline',
+      entity_properties: {
+        title: 'Test Guideline',
+        description: 'This is a test guideline',
+        tags: ['test', 'git']
+      },
+      entity_content: '# Test Guideline\n\nThis is a test guideline for Git.'
     })
 
-    // Write test system guideline
-    const system_guideline_content = `---
-title: "Test Guideline"
-type: "guideline"
-description: "This is a test guideline"
-tags: ["test", "git"]
----
-
-# Test Guideline
-
-This is a test guideline for Git.
-`
-    await fs.writeFile(
-      path.join(repo.path, system_guideline_base_relative_path),
-      system_guideline_content
-    )
-
-    // Write test user guideline
-    const user_guideline_content = `---
-title: "User Guideline"
-type: "guideline"
-description: "This is a user guideline"
-tags: ["user", "git"]
----
-
-# User Guideline
-
-This is a user guideline for Git.
-`
-    await fs.writeFile(
-      path.join(repo.path, user_guideline_base_relative_path),
-      user_guideline_content
-    )
-
-    // Add files to git and commit
-    await fs.appendFile(
-      path.join(repo.path, 'README.md'),
-      '\n\nUpdated for guideline tests'
-    )
-
-    // Execute git commands to add and commit the files
-    await exec('git add .', { cwd: repo.path })
-    await exec('git commit -m "Add test guidelines"', { cwd: repo.path })
+    // Create test user guideline using create_test_entity
+    await create_test_entity({
+      base_uri: user_guideline_base_uri,
+      entity_type: 'guideline',
+      entity_properties: {
+        title: 'User Guideline',
+        description: 'This is a user guideline',
+        tags: ['user', 'git']
+      },
+      entity_content: '# User Guideline\n\nThis is a user guideline for Git.'
+    })
   })
 
   after(() => {
-    // Clean up temporary repository
-    if (repo) {
-      repo.cleanup()
+    // Clean up temporary repositories and registry
+    clear_registered_directories()
+    if (system_repo) {
+      system_repo.cleanup()
     }
   })
 
   it('should return true when system guideline exists', async () => {
     // Act
     const exists = await guideline_exists_in_filesystem({
-      base_relative_path: system_guideline_base_relative_path,
-      root_base_directory: repo.path
+      base_uri: system_guideline_base_uri
     })
 
     // Assert
@@ -139,8 +70,7 @@ This is a user guideline for Git.
   it('should return true when user guideline exists', async () => {
     // Act
     const exists = await guideline_exists_in_filesystem({
-      base_relative_path: user_guideline_base_relative_path,
-      root_base_directory: repo.path
+      base_uri: user_guideline_base_uri
     })
 
     // Assert
@@ -150,8 +80,7 @@ This is a user guideline for Git.
   it('should return false when guideline does not exist', async () => {
     // Act
     const exists = await guideline_exists_in_filesystem({
-      base_relative_path: non_existent_guideline_base_relative_path,
-      root_base_directory: repo.path
+      base_uri: non_existent_guideline_base_uri
     })
 
     // Assert
@@ -161,41 +90,57 @@ This is a user guideline for Git.
   it('should return false when guideline path is invalid', async () => {
     // Act
     const exists = await guideline_exists_in_filesystem({
-      base_relative_path: 'invalid-path',
-      root_base_directory: repo.path
+      base_uri: 'invalid-path'
     })
 
     // Assert
     expect(exists).to.be.false
   })
 
-  it('should return false when base_relative_path is not provided', async () => {
+  it('should return false when base_uri is not provided', async () => {
     // Act
-    const exists = await guideline_exists_in_filesystem({
-      root_base_directory: repo.path
-    })
+    const exists = await guideline_exists_in_filesystem({})
 
     // Assert
     expect(exists).to.be.false
   })
 
-  it('should use custom root_base_directory when provided', async () => {
-    // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-system')
-    const system_dir = path.join(custom_dir, 'system', 'guideline')
-    await fs.mkdir(system_dir, { recursive: true })
-    await fs.writeFile(
-      path.join(system_dir, 'custom-guideline.md'),
-      '# Custom Guideline'
-    )
-
-    // Act
-    const exists = await guideline_exists_in_filesystem({
-      base_relative_path: 'system/guideline/custom-guideline.md',
-      root_base_directory: custom_dir
+  it('should use custom directories via registry', async () => {
+    // Arrange - create a new repo and re-register
+    const custom_repo = await create_temp_test_repo({
+      prefix: 'custom-guideline-',
+      register_directories: true
     })
 
-    // Assert
-    expect(exists).to.be.true
+    try {
+      // Create a custom guideline using create_test_entity
+      await create_test_entity({
+        base_uri: 'sys:guideline/custom-guideline.md',
+        entity_type: 'guideline',
+        entity_properties: {
+          title: 'Custom Guideline',
+          description: 'A custom guideline for testing'
+        },
+        entity_content: '# Custom Guideline\n\nThis is a custom guideline.'
+      })
+
+      // Act
+      const exists = await guideline_exists_in_filesystem({
+        base_uri: 'sys:guideline/custom-guideline.md'
+      })
+
+      // Assert
+      expect(exists).to.be.true
+    } finally {
+      // Cleanup
+      clear_registered_directories()
+      custom_repo.cleanup()
+
+      // Re-register the original repos for other tests
+      system_repo = await create_temp_test_repo({
+        prefix: 'guideline-system-',
+        register_directories: true
+      })
+    }
   })
 })

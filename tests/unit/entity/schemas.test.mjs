@@ -3,12 +3,16 @@ import { v4 as uuid } from 'uuid'
 
 import { build_validation_schema } from '#libs-server/entity/validate-schema.mjs'
 import { load_schema_definitions_from_git } from '#libs-server/repository/git/load-schema-definitions-from-git.mjs'
+import {
+  clear_registered_directories,
+  register_base_directories
+} from '#libs-server/base-uri/index.mjs'
 import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 import create_test_user from '#tests/utils/create-test-user.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
 
 describe('Entity Schema Module', () => {
-  let root_base_directory
+  let system_base_directory
   let user_base_directory
   let test_user
   let cleanup
@@ -17,15 +21,16 @@ describe('Entity Schema Module', () => {
     test_user = await create_test_user()
 
     // Create a temp root repo and user submodule
-    const repo_setup = await create_temp_test_repo()
-    root_base_directory = repo_setup.path
+    const repo_setup = await create_temp_test_repo({
+      register_directories: true
+    })
+    system_base_directory = repo_setup.system_path
     user_base_directory = repo_setup.user_path
     cleanup = repo_setup.cleanup
 
     // Write system (root) schemas
     await write_entity_to_git({
-      repo_path: root_base_directory,
-      git_relative_path: 'system/schema/task.md',
+      base_uri: 'sys:system/schema/task.md',
       entity_properties: {
         entity_id: uuid(),
         type: 'type_definition',
@@ -54,8 +59,7 @@ describe('Entity Schema Module', () => {
     })
 
     await write_entity_to_git({
-      repo_path: root_base_directory,
-      git_relative_path: 'system/schema/person.md',
+      base_uri: 'sys:system/schema/person.md',
       entity_properties: {
         entity_id: uuid(),
         type: 'type_definition',
@@ -85,8 +89,7 @@ describe('Entity Schema Module', () => {
 
     // Write user (submodule) schemas (as type_definition with extends)
     await write_entity_to_git({
-      repo_path: user_base_directory,
-      git_relative_path: 'schema/task-extension.md',
+      base_uri: 'user:schema/task-extension.md',
       entity_properties: {
         entity_id: uuid(),
         type: 'type_definition',
@@ -109,8 +112,7 @@ describe('Entity Schema Module', () => {
     })
 
     await write_entity_to_git({
-      repo_path: user_base_directory,
-      git_relative_path: 'schema/unknown-extension.md',
+      base_uri: 'user:schema/unknown-extension.md',
       entity_properties: {
         entity_id: uuid(),
         type: 'type_definition',
@@ -139,10 +141,7 @@ describe('Entity Schema Module', () => {
 
   describe('load_schema_definitions_from_git', () => {
     it('should load schema definitions from repositories', async () => {
-      const result = await load_schema_definitions_from_git({
-        root_base_directory,
-        user_base_directory
-      })
+      const result = await load_schema_definitions_from_git()
 
       expect(result).to.have.property('task')
       expect(result).to.have.property('person')
@@ -174,10 +173,14 @@ describe('Entity Schema Module', () => {
     })
 
     it('should handle errors during schema loading', async () => {
-      const result = await load_schema_definitions_from_git({
-        root_base_directory: '/path/does/not/exist',
+      // Clear registry and set invalid directories to test error handling
+      clear_registered_directories()
+      register_base_directories({
+        system_base_directory: '/path/does/not/exist',
         user_base_directory: '/path/does/not/exist'
       })
+
+      const result = await load_schema_definitions_from_git()
 
       expect(result).to.deep.equal({})
       expect(result).to.be.an('object')
@@ -185,6 +188,12 @@ describe('Entity Schema Module', () => {
       expect(Object.keys(result)).to.have.lengthOf(0)
       expect(result).to.not.have.property('task')
       expect(result).to.not.have.property('person')
+
+      // Restore original directories
+      register_base_directories({
+        system_base_directory,
+        user_base_directory
+      })
     })
 
     it('should warn about extensions for unknown base types', async () => {
@@ -194,10 +203,7 @@ describe('Entity Schema Module', () => {
         warning_message = message
       }
       try {
-        const result = await load_schema_definitions_from_git({
-          root_base_directory,
-          user_base_directory
-        })
+        const result = await load_schema_definitions_from_git()
         expect(warning_message).to.include('extends unknown base type')
         expect(result).to.be.an('object')
         expect(Object.keys(result).length).to.be.at.least(1)

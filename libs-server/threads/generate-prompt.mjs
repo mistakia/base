@@ -18,17 +18,10 @@ const log = debug('threads:generate_prompt')
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to generate prompt for
  * @param {string} [params.timeline_id] Optional specific timeline entry ID to prompt from
- * @param {string} [params.user_base_directory] Custom user base directory
- * @param {string} [params.system_base_directory] System base directory
  * @returns {Promise<Object>} Object containing formatted messages for inference
  * @throws {Error} If no thread_main_request entry exists in the timeline
  */
-export default async function generate_prompt({
-  thread_id,
-  timeline_id,
-  user_base_directory,
-  system_base_directory
-}) {
+export default async function generate_prompt({ thread_id, timeline_id }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
   }
@@ -38,7 +31,7 @@ export default async function generate_prompt({
   )
 
   // Get thread data
-  const thread = await get_thread({ thread_id, user_base_directory })
+  const thread = await get_thread({ thread_id })
 
   // Get timeline entries
   const timeline = thread.timeline || []
@@ -59,34 +52,30 @@ export default async function generate_prompt({
   let workflow_prompt = ''
   let guidelines_prompt = ''
 
-  if (thread.workflow_base_relative_path) {
+  if (thread.workflow_base_uri) {
     // Register workflow tools before generating prompts
     const { register_workflow_tools } = await import(
       '#libs-server/workflow/index.mjs'
     )
     await register_workflow_tools({
-      workflow_base_relative_path: thread.workflow_base_relative_path,
-      root_base_directory: system_base_directory
+      workflow_base_uri: thread.workflow_base_uri
     })
 
     const workflow_result = await generate_workflow_prompt({
-      base_relative_path: thread.workflow_base_relative_path,
+      base_uri: thread.workflow_base_uri,
       prompt_properties: thread.prompt_properties,
-      timeline_entries,
-      root_base_directory: system_base_directory
+      timeline_entries
     })
 
     workflow_prompt = workflow_result.prompt
 
     // Generate guidelines prompt from the workflow's guideline paths
     if (
-      workflow_result.guideline_base_relative_paths &&
-      workflow_result.guideline_base_relative_paths.length > 0
+      workflow_result.guideline_base_uris &&
+      workflow_result.guideline_base_uris.length > 0
     ) {
       guidelines_prompt = await generate_guidelines_prompt({
-        guideline_base_relative_paths:
-          workflow_result.guideline_base_relative_paths,
-        root_base_directory: system_base_directory
+        guideline_base_uris: workflow_result.guideline_base_uris
       })
     }
   }
@@ -125,7 +114,7 @@ export default async function generate_prompt({
       thread_id,
       model: thread.model,
       inference_provider: thread.inference_provider,
-      workflow_base_relative_path: thread.workflow_base_relative_path,
+      workflow_base_uri: thread.workflow_base_uri,
       timeline_entry_count: timeline_entries.length
     }
   })
@@ -133,7 +122,7 @@ export default async function generate_prompt({
   return {
     ...prompt,
     thread_id,
-    workflow_base_relative_path: thread.workflow_base_relative_path,
+    workflow_base_uri: thread.workflow_base_uri,
     model: thread.model
   }
 }

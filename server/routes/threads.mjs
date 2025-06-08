@@ -1,16 +1,16 @@
 import express from 'express'
 import debug from 'debug'
-import { threads, inference_providers } from '#libs-server'
-import {
-  execute_tool,
-  has_tool,
-  list_tools
-} from '#libs-server/tools/index.mjs'
+
+import * as threads from '#libs-server/threads/index.mjs'
+import * as inference_providers from '#libs-server/inference-providers/index.mjs'
+import { has_tool } from '#libs-server/tools/registry.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
 
-// Middleware for authentication check
+/**
+ * Middleware for authentication check
+ */
 const require_auth = (req, res, next) => {
   if (!req.auth?.user_id) {
     return res.status(401).json({ error: 'Authentication required' })
@@ -18,56 +18,46 @@ const require_auth = (req, res, next) => {
   next()
 }
 
-// Middleware to check thread ownership
-const check_thread_ownership = async (req, res, next) => {
+/**
+ * Handle errors consistently
+ */
+function handle_errors(res, error, operation) {
+  log(`Error ${operation}: ${error.message}`)
+  res.status(500).json({
+    error: `Failed to ${operation}`,
+    message: error.message
+  })
+}
+
+/**
+ * Middleware to check thread ownership
+ */
+async function check_thread_ownership(req, res, next) {
   try {
     const { thread_id } = req.params
-    const user_base_directory =
-      req.body?.user_base_directory || req.query?.user_base_directory
 
-    const thread = await threads.get_thread({ thread_id, user_base_directory })
+    // Get the thread
+    const thread = await threads.get_thread({
+      thread_id
+    })
 
-    if (!thread) {
-      return res.status(404).json({ error: 'Thread not found' })
-    }
-
+    // Check if the authenticated user owns this thread
     if (thread.user_id !== req.auth.user_id) {
       return res
         .status(403)
         .json({ error: 'Not authorized to access this thread' })
     }
 
-    // Add thread to request for use in route handlers
+    // Attach thread to request for use in route handlers
     req.thread = thread
+
     next()
   } catch (error) {
-    log('Error checking thread ownership: %o', error)
-
-    // Handle thread not found errors specifically
-    if (error.message && error.message.includes('Thread not found')) {
+    if (error.message.includes('Thread not found')) {
       return res.status(404).json({ error: 'Thread not found' })
     }
-
-    res.status(500).json({ error: 'Internal server error' })
+    handle_errors(res, error, 'checking thread ownership')
   }
-}
-
-// Helper to handle common errors
-const handle_errors = (res, error, action) => {
-  log(`Error ${action}: %o`, error)
-
-  // Check if this is a thread not found error
-  if (error.message && error.message.includes('Thread not found')) {
-    return res.status(404).json({
-      error: 'Thread not found',
-      message: error.message
-    })
-  }
-
-  res.status(500).json({
-    error: `Error ${action}`,
-    message: error.message
-  })
 }
 
 // Get all threads with optional filtering
@@ -76,7 +66,6 @@ router.get('/', require_auth, async (req, res) => {
     const { user_id, thread_state } = req.query
     const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
-    const user_base_directory = req.query.user_base_directory
 
     // Default to the authenticated user if no user_id is provided
     const query_user_id = user_id || req.auth.user_id
@@ -92,8 +81,7 @@ router.get('/', require_auth, async (req, res) => {
       user_id: query_user_id,
       thread_state,
       limit,
-      offset,
-      user_base_directory
+      offset
     })
 
     res.json(thread_list)
@@ -122,8 +110,7 @@ router.post('/', require_auth, async (req, res) => {
       thread_main_request,
       tools,
       thread_state,
-      user_base_directory,
-      root_base_directory
+      create_git_branches = true
     } = req.body
 
     // Validate required fields
@@ -143,8 +130,7 @@ router.post('/', require_auth, async (req, res) => {
       thread_main_request,
       tools,
       thread_state,
-      user_base_directory,
-      root_base_directory
+      create_git_branches
     })
 
     res.status(201).json(thread)
@@ -161,12 +147,7 @@ router.post(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const {
-        content,
-        generate_response = true,
-        stream = false,
-        user_base_directory
-      } = req.body
+      const { content, generate_response = true, stream = false } = req.body
 
       if (!content) {
         return res.status(400).json({ error: 'message content is required' })
@@ -175,8 +156,7 @@ router.post(
       // Add user message
       let updated_thread = await threads.add_user_message({
         thread_id,
-        content,
-        user_base_directory
+        content
       })
 
       // If generate_response is true, generate an AI response
@@ -212,8 +192,7 @@ router.post(
             // Add assistant message to timeline
             updated_thread = await threads.add_assistant_message({
               thread_id,
-              content: response.message.content,
-              user_base_directory
+              content: response.message.content
             })
           }
         } catch (error) {
@@ -224,14 +203,12 @@ router.post(
             thread_id,
             error_type: 'generate_response_failed',
             message: error.message,
-            details: { stack: error.stack },
-            user_base_directory
+            details: { stack: error.stack }
           })
 
           // Re-fetch the thread to include the error entry
           updated_thread = await threads.get_thread({
-            thread_id,
-            user_base_directory
+            thread_id
           })
         }
       }
@@ -251,7 +228,7 @@ router.put(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { thread_state, reason, user_base_directory } = req.body
+      const { thread_state, reason } = req.body
 
       if (!thread_state) {
         return res.status(400).json({ error: 'thread_state is required' })
@@ -261,8 +238,7 @@ router.put(
       const updated_thread = await threads.update_thread_state({
         thread_id,
         thread_state,
-        reason,
-        user_base_directory
+        reason
       })
 
       res.json(updated_thread)
@@ -280,7 +256,7 @@ router.post(
   async (req, res) => {
     try {
       const { thread_id } = req.params
-      const { tool_name, parameters, user_base_directory } = req.body
+      const { tool_name, parameters } = req.body
 
       if (!tool_name) {
         return res.status(400).json({ error: 'tool_name is required' })
@@ -308,46 +284,56 @@ router.post(
       const updated_thread = await threads.add_tool_call({
         thread_id,
         tool_name,
-        parameters,
-        user_base_directory
+        parameters
       })
 
-      // Get the tool call ID from the last entry
-      const tool_call =
-        updated_thread.timeline[updated_thread.timeline.length - 1]
-
-      // Execute the tool
-      const result = await execute_tool({
-        tool_name,
-        parameters,
-        thread_id,
-        context: { user_id: req.auth.user_id },
-        user_base_directory
-      })
-
-      // Add tool result to timeline
-      const result_thread = await threads.add_tool_result({
-        thread_id,
-        tool_call_id: tool_call.id,
-        result,
-        user_base_directory
-      })
-
-      res.json(result_thread)
+      res.json(updated_thread)
     } catch (error) {
       handle_errors(res, error, 'executing tool')
     }
   }
 )
 
-// List available thread tools
-router.get('/tools', require_auth, async (req, res) => {
-  try {
-    const available_tools = list_tools()
-    res.json(available_tools)
-  } catch (error) {
-    handle_errors(res, error, 'listing tools')
+// Execute a thread
+router.post(
+  '/:thread_id/execute',
+  require_auth,
+  check_thread_ownership,
+  async (req, res) => {
+    try {
+      const { thread_id } = req.params
+      const {
+        auto_execute_tools = true,
+        continuous = false,
+        max_iterations = 50
+      } = req.body
+
+      // Execute the thread
+      const result = await threads.execute_thread({
+        thread_id,
+        auto_execute_tools,
+        continuous,
+        max_iterations,
+        on_text: (text) => {
+          // In a real implementation, this could stream text via WebSocket
+          log(`Thread ${thread_id} text: ${text}`)
+        },
+        on_tool_call: (tool_call) => {
+          log(`Thread ${thread_id} tool call: ${tool_call.tool_name}`)
+        },
+        on_tool_result: (tool_call, result) => {
+          log(`Thread ${thread_id} tool result: ${result.success}`)
+        },
+        on_completion: (completion) => {
+          log(`Thread ${thread_id} completion: ${completion.text}`)
+        }
+      })
+
+      res.json(result)
+    } catch (error) {
+      handle_errors(res, error, 'executing thread')
+    }
   }
-})
+)
 
 export default router

@@ -6,6 +6,10 @@ import { hideBin } from 'yargs/helpers'
 import { isMain } from '#libs-server'
 import config from '#config'
 import { process_repositories_from_git } from '#libs-server/repository/git/process-git-repository.mjs'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('validate-git-markdown')
 debug.enable(
@@ -54,24 +58,21 @@ const validate_git = async ({ branch = config.system_main_branch }) => {
 export default validate_git
 
 const main = async () => {
-  const argv = yargs(hideBin(process.argv))
-    .option('system-branch', {
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
+    .option('branch', {
       type: 'string',
-      description: 'Branch to use for the system knowledge base',
-      default: undefined
-    })
-    .option('user-branch', {
-      type: 'string',
-      description: 'Branch to use for the user knowledge base',
-      default: undefined
+      description: 'Branch to use for validation',
+      default: config.system_main_branch
     })
     .help().argv
+
+  // Handle directory registration using the reusable function
+  handle_cli_directory_registration(argv)
 
   let error
   try {
     const result = await validate_git({
-      system_branch: argv['system-branch'],
-      user_branch: argv['user-branch']
+      branch: argv.branch
     })
 
     if (result.has_errors) {

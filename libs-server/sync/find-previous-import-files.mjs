@@ -28,11 +28,11 @@ export async function find_previous_import_files({
     })
 
     // Check if raw directory exists
-    if (!fs.existsSync(dir_paths.raw_path)) return null
+    if (!fs.existsSync(dir_paths.raw_data_directory)) return null
 
     // List all files in the raw directory
     const raw_files = fs
-      .readdirSync(dir_paths.raw_path)
+      .readdirSync(dir_paths.raw_data_directory)
       .filter((file) => file.endsWith('.json'))
       .sort() // Sort by filename (includes timestamp)
       .reverse() // Most recent first
@@ -40,21 +40,24 @@ export async function find_previous_import_files({
     if (raw_files.length === 0) return null
 
     const latest_raw_file = raw_files[0]
-    const raw_filepath = path.join(dir_paths.raw_path, latest_raw_file)
+    const raw_filepath = path.join(
+      dir_paths.raw_data_directory,
+      latest_raw_file
+    )
     const raw_data = JSON.parse(fs.readFileSync(raw_filepath, 'utf8'))
 
     // Check for matching processed file if processed directory exists
     let processed_filepath = null
     let processed_data = null
-    if (fs.existsSync(dir_paths.processed_path)) {
+    if (fs.existsSync(dir_paths.processed_data_directory)) {
       const timestamp = latest_raw_file.split('_')[0]
       const processed_files = fs
-        .readdirSync(dir_paths.processed_path)
+        .readdirSync(dir_paths.processed_data_directory)
         .filter((file) => file.startsWith(timestamp) && file.endsWith('.json'))
 
       if (processed_files.length > 0) {
         processed_filepath = path.join(
-          dir_paths.processed_path,
+          dir_paths.processed_data_directory,
           processed_files[0]
         )
         processed_data = JSON.parse(fs.readFileSync(processed_filepath, 'utf8'))

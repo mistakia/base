@@ -1,11 +1,8 @@
 /* global describe, it */
 
 import chai from 'chai'
-import chai_http from 'chai-http'
 
 import db from '#db'
-
-chai.use(chai_http)
 
 const expect = chai.expect
 

@@ -1,6 +1,6 @@
-import path from 'path'
 import debug from 'debug'
 import { entity_exists_in_filesystem } from './entity-exists-in-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('entity:filesystem:validate:references')
 
@@ -9,20 +9,9 @@ const log = debug('entity:filesystem:validate:references')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.references - Array of reference objects
- * @param {string} params.root_base_directory - Root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_references_from_filesystem({
-  references,
-  root_base_directory
-}) {
-  if (!root_base_directory) {
-    return {
-      valid: false,
-      errors: ['Root base directory is required']
-    }
-  }
-
+export async function validate_references_from_filesystem({ references }) {
   if (!Array.isArray(references)) {
     return {
       valid: false,
@@ -35,25 +24,28 @@ export async function validate_references_from_filesystem({
       return { valid: true } // No references found
     }
 
-    // Extract reference paths from reference objects
-    const reference_paths = references.map((ref) => ref.reference_path)
+    // Extract base_uri paths from reference objects
+    const reference_base_uris = references.map((ref) => ref.base_uri)
 
-    log(`Validating ${reference_paths.length} references`)
+    log(`Validating ${reference_base_uris.length} references`)
 
     // Validate each reference
-    const validation_promises = reference_paths.map(async (reference) => {
-      const absolute_path = path.join(root_base_directory, reference)
+    const validation_promises = reference_base_uris.map(
+      async (reference_base_uri) => {
+        // Resolve the base_uri to absolute path using registry
+        const absolute_path = resolve_base_uri_from_registry(reference_base_uri)
 
-      // Check if the referenced entity exists
-      const exists = await entity_exists_in_filesystem({
-        absolute_path
-      })
+        // Check if the referenced entity exists
+        const exists = await entity_exists_in_filesystem({
+          absolute_path
+        })
 
-      return {
-        reference,
-        exists
+        return {
+          reference_base_uri,
+          exists
+        }
       }
-    })
+    )
 
     const reference_results = await Promise.all(validation_promises)
 
@@ -70,7 +62,7 @@ export async function validate_references_from_filesystem({
     return {
       valid: false,
       errors: missing_references.map(
-        (ref) => `Reference not found: ${ref.reference} (${ref.path})`
+        (ref) => `Reference not found: ${ref.reference_base_uri} (${ref.path})`
       )
     }
   } catch (error) {

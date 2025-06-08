@@ -15,15 +15,9 @@ const log = debug('threads:update')
  * @param {string} params.thread_id Thread ID to update
  * @param {string} params.thread_state New thread state
  * @param {string} [params.reason] Reason for state change
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
-export async function update_thread_state({
-  thread_id,
-  thread_state,
-  reason,
-  user_base_directory
-}) {
+export async function update_thread_state({ thread_id, thread_state, reason }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
   }
@@ -39,8 +33,7 @@ export async function update_thread_state({
 
   // Get current thread data
   const thread = await get_thread({
-    thread_id,
-    user_base_directory
+    thread_id
   })
 
   // No change if thread_state is already set
@@ -116,7 +109,7 @@ export async function update_thread_state({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
  * @param {Object} params.metadata Metadata fields to update
- * @param {string} [params.user_base_directory] Custom user base directory
+ * @param {string} [params.user_base_directory] Custom user base directory (overrides registry)
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_metadata({
@@ -136,8 +129,7 @@ export async function update_thread_metadata({
 
   // Get current thread data
   const thread = await get_thread({
-    thread_id,
-    user_base_directory
+    thread_id
   })
 
   // Update metadata

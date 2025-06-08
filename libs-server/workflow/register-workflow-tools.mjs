@@ -8,34 +8,27 @@ const log = debug('workflow:register-tools')
  * Register workflow-defined custom tools with the tool registry
  *
  * @param {Object} params Parameters
- * @param {string} params.workflow_base_relative_path Workflow path relative to Base root
- * @param {string} [params.root_base_directory] Custom root base directory
+ * @param {string} params.workflow_base_uri Workflow path relative to Base root
  * @returns {Promise<Array<string>>} Array of scoped tool names that were registered
  */
-export async function register_workflow_tools({
-  workflow_base_relative_path,
-  root_base_directory
-}) {
-  if (!workflow_base_relative_path) {
+export async function register_workflow_tools({ workflow_base_uri }) {
+  if (!workflow_base_uri) {
     return []
   }
 
-  log(`Registering tools for workflow: ${workflow_base_relative_path}`)
+  log(`Registering tools for workflow: ${workflow_base_uri}`)
 
   try {
     // Read the workflow to get tool definitions
     const workflow_result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory
+      base_uri: workflow_base_uri
     })
 
     if (
       !workflow_result.success ||
       !workflow_result.entity_properties.tool_definition
     ) {
-      log(
-        `No custom tools to register for workflow: ${workflow_base_relative_path}`
-      )
+      log(`No custom tools to register for workflow: ${workflow_base_uri}`)
       return []
     }
 
@@ -66,7 +59,7 @@ export async function register_workflow_tools({
             tool_name,
             parameters,
             workflow_completion: true,
-            workflow_base_relative_path,
+            workflow_base_uri,
             result: parameters
           }
         }
@@ -98,23 +91,18 @@ export async function register_workflow_tools({
  * Get the tools list for a workflow (uses tool names as-is)
  *
  * @param {Object} params Parameters
- * @param {string} params.workflow_base_relative_path Workflow path relative to Base root
- * @param {string} [params.root_base_directory] Custom root base directory
+ * @param {string} params.workflow_base_uri Workflow path relative to Base root
  * @returns {Promise<Array<string>>} Array of tool names
  */
-export async function get_workflow_tools({
-  workflow_base_relative_path,
-  root_base_directory
-}) {
-  if (!workflow_base_relative_path) {
+export async function get_workflow_tools({ workflow_base_uri }) {
+  if (!workflow_base_uri) {
     return []
   }
 
   try {
     // Read the workflow to get tools list
     const workflow_result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory
+      base_uri: workflow_base_uri
     })
 
     if (!workflow_result.success || !workflow_result.entity_properties.tools) {

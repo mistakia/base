@@ -16,14 +16,14 @@ const log = debug('repository:git:list-files')
  * @param {string} params.repo_path - Path to the git repository
  * @param {string} params.branch - Git branch to scan
  * @param {string} [params.path_pattern] - Pattern for files to include (default: '*.md')
- * @param {string} [params.submodule_base_path] - Base path if repository is a submodule
+ * @param {boolean} [params.is_system_repo] - Whether the repository is a system repository (default: false)
  * @returns {Promise<Array>} - Array of file information objects
  */
 export async function list_markdown_files_from_git({
   repo_path,
   branch,
   path_pattern = '*.md',
-  submodule_base_path = null
+  is_system_repo = false
 }) {
   // Validate required parameters
   if (!repo_path) {
@@ -54,7 +54,7 @@ export async function list_markdown_files_from_git({
       }
 
       // Check if file should be processed based on repo type
-      if (!submodule_base_path && !file_path.startsWith('system/')) {
+      if (is_system_repo && !file_path.startsWith('system/')) {
         continue
       }
 
@@ -74,8 +74,6 @@ export async function list_markdown_files_from_git({
         repo_path,
         relative_path: file_path,
         absolute_path,
-        source: 'git',
-        submodule_base_path,
         // Git-specific properties
         git_sha,
         branch

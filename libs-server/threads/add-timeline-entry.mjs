@@ -18,7 +18,10 @@ const VALID_ENTRY_TYPES = [
   'tool_result',
   'state_change',
   'error',
-  'thread_main_request'
+  'thread_main_request',
+  'notification',
+  'human_request',
+  'assistant_response'
 ]
 
 // Validation functions for different entry types
@@ -54,16 +57,33 @@ const entry_validators = {
   },
 
   state_change: (entry) => {
-    if (!entry.previous_state)
-      throw new Error('state_change entry must have a previous_state')
-    if (!entry.new_state)
-      throw new Error('state_change entry must have a new_state')
+    if (!entry.content.from_state && !entry.previous_state)
+      throw new Error(
+        'state_change entry must have a from_state or previous_state'
+      )
+    if (!entry.content.to_state && !entry.new_state)
+      throw new Error('state_change entry must have a to_state or new_state')
   },
 
   error: (entry) => {
     if (!entry.error_type)
       throw new Error('error entry must have an error_type')
     if (!entry.message) throw new Error('error entry must have a message')
+  },
+
+  notification: (entry) => {
+    if (!entry.content.message)
+      throw new Error('notification entry must have a message')
+  },
+
+  human_request: (entry) => {
+    if (!entry.content.question)
+      throw new Error('human_request entry must have a question')
+  },
+
+  assistant_response: (entry) => {
+    if (!entry.content.text && !entry.content.tool_calls)
+      throw new Error('assistant_response entry must have text or tool_calls')
   }
 }
 
@@ -73,14 +93,9 @@ const entry_validators = {
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {Object} params.entry Timeline entry to add
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data
  */
-export default async function add_timeline_entry({
-  thread_id,
-  entry,
-  user_base_directory
-}) {
+export default async function add_timeline_entry({ thread_id, entry }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
   }
@@ -101,8 +116,7 @@ export default async function add_timeline_entry({
 
   // Get the thread
   const thread = await get_thread({
-    thread_id,
-    user_base_directory
+    thread_id
   })
 
   // Clone the entry to avoid modifying the original
@@ -166,14 +180,9 @@ export default async function add_timeline_entry({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} params.content Message content
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the new message
  */
-export async function add_user_message({
-  thread_id,
-  content,
-  user_base_directory
-}) {
+export async function add_user_message({ thread_id, content }) {
   if (!content) {
     throw new Error('content is required')
   }
@@ -184,8 +193,7 @@ export async function add_user_message({
       type: 'message',
       role: THREAD_MESSAGE_ROLE.USER,
       content
-    },
-    user_base_directory
+    }
   })
 }
 
@@ -195,14 +203,9 @@ export async function add_user_message({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} params.content Message content
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the new message
  */
-export async function add_assistant_message({
-  thread_id,
-  content,
-  user_base_directory
-}) {
+export async function add_assistant_message({ thread_id, content }) {
   if (!content) {
     throw new Error('content is required')
   }
@@ -213,8 +216,7 @@ export async function add_assistant_message({
       type: 'message',
       role: THREAD_MESSAGE_ROLE.THREAD_AGENT,
       content
-    },
-    user_base_directory
+    }
   })
 }
 
@@ -225,15 +227,9 @@ export async function add_assistant_message({
  * @param {string} params.thread_id Thread ID
  * @param {string} params.tool_name Name of the tool
  * @param {Object} params.parameters Tool parameters
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the tool call
  */
-export async function add_tool_call({
-  thread_id,
-  tool_name,
-  parameters,
-  user_base_directory
-}) {
+export async function add_tool_call({ thread_id, tool_name, parameters }) {
   if (!tool_name) {
     throw new Error('tool_name is required')
   }
@@ -248,8 +244,7 @@ export async function add_tool_call({
       type: 'tool_call',
       tool_name,
       parameters
-    },
-    user_base_directory
+    }
   })
 }
 
@@ -260,15 +255,9 @@ export async function add_tool_call({
  * @param {string} params.thread_id Thread ID
  * @param {string} params.tool_call_id ID of the tool call
  * @param {Object} params.result Tool execution result
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the tool result
  */
-export async function add_tool_result({
-  thread_id,
-  tool_call_id,
-  result,
-  user_base_directory
-}) {
+export async function add_tool_result({ thread_id, tool_call_id, result }) {
   if (!tool_call_id) {
     throw new Error('tool_call_id is required')
   }
@@ -283,8 +272,7 @@ export async function add_tool_result({
       type: 'tool_result',
       tool_call_id,
       result
-    },
-    user_base_directory
+    }
   })
 }
 
@@ -296,16 +284,9 @@ export async function add_tool_result({
  * @param {string} params.error_type Type of error
  * @param {string} params.message Error message
  * @param {Object} [params.details] Additional error details
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the error
  */
-export async function add_error({
-  thread_id,
-  error_type,
-  message,
-  details,
-  user_base_directory
-}) {
+export async function add_error({ thread_id, error_type, message, details }) {
   if (!error_type) {
     throw new Error('error_type is required')
   }
@@ -321,8 +302,7 @@ export async function add_error({
       error_type,
       message,
       ...(details ? { details } : {})
-    },
-    user_base_directory
+    }
   })
 }
 
@@ -332,14 +312,9 @@ export async function add_error({
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} params.content Main request content
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Updated thread data with the new thread main request
  */
-export async function add_thread_main_request({
-  thread_id,
-  content,
-  user_base_directory
-}) {
+export async function add_thread_main_request({ thread_id, content }) {
   if (!content) {
     throw new Error('content is required')
   }
@@ -349,7 +324,6 @@ export async function add_thread_main_request({
     entry: {
       type: 'thread_main_request',
       content
-    },
-    user_base_directory
+    }
   })
 }

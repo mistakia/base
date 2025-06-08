@@ -27,22 +27,22 @@ export const helpers = {
 
   /**
    * Verifies a user has access to a task file
-   * @param {String} base_relative_path Task base relative path to check
+   * @param {String} base_uri Task base relative path to check
    * @param {String} user_id User ID to check (currently not used for filesystem access, but good for future)
    * @returns {Object|null} Task object if access is granted (or file exists), null otherwise
    */
-  async verify_task_access(base_relative_path, user_id) {
+  async verify_task_access(base_uri, user_id) {
     // For now, we read from filesystem. Git read might be needed later.
-    const task_result = await read_task_from_filesystem({ base_relative_path })
+    const task_result = await read_task_from_filesystem({ base_uri })
 
     if (!task_result.success || !task_result.entity_properties) {
-      log(`Task ${base_relative_path} not found or error reading it.`)
+      log(`Task ${base_uri} not found or error reading it.`)
       return null
     }
 
     if (task_result.entity_properties.user_id !== user_id) {
       log(
-        `Access denied: Task ${base_relative_path} user ${task_result.entity_properties.user_id} does not match requesting user ${user_id}`
+        `Access denied: Task ${base_uri} user ${task_result.entity_properties.user_id} does not match requesting user ${user_id}`
       )
       return null
     }
@@ -89,7 +89,7 @@ export function format_task(task) {
   } = entity_properties
 
   return {
-    base_relative_path: file_info?.base_relative_path,
+    base_uri: file_info?.base_uri,
     title,
     description,
     status,

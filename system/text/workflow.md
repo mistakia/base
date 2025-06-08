@@ -10,10 +10,10 @@ observations:
   - '[execution] Each thread executes exactly one workflow with defined inputs/outputs'
   - '[principle] Tool integration enables complex agent capabilities'
 relations:
-  - 'relates_to [[system/text/system-design.md]]'
-  - 'relates_to [[system/text/execution-threads.md]]'
-  - 'relates_to [[system/text/knowledge-base-schema.md]]'
-  - 'relates_to [[system/schema/workflow.md]]'
+  - 'relates_to [[sys:text/system-design.md]]'
+  - 'relates_to [[sys:text/execution-threads.md]]'
+  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
+  - 'relates_to [[sys:schema/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.241Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -28,7 +28,7 @@ The system implements a design pattern where workflows define agent behaviors th
 ## Key Concepts
 
 - **Thread as Execution Environment**: Threads provide the runtime context for workflows
-- **One-to-One Relationship**: Each thread executes one workflow (specified by `workflow_base_relative_path`)
+- **One-to-One Relationship**: Each thread executes one workflow (specified by `workflow_base_uri`)
 - **Workflow as Behavior Definition**: Workflows define agent behaviors with inputs, outputs, and tools
 - **Functional Structure**: Workflows accept inputs (`prompt_properties`) and produce outputs through completion tools
 - **Composition**: Workflows can invoke other workflows through tool calls, enabling complex operations

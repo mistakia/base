@@ -1,52 +1,39 @@
 import debug from 'debug'
 
-import config from '#config'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { read_entity_from_filesystem } from './read-entity-from-filesystem.mjs'
 
 const log = debug('entity:filesystem:get-entity-id')
 
 /**
- * Gets an entity_id from a base_relative_path
+ * Gets an entity_id from a base_uri using the registry system
  *
  * @param {Object} params - Function options
- * @param {string} params.base_relative_path - Path relative to Base root
- * @param {string} params.root_base_directory - Absolute path to the Base root directory
+ * @param {string} params.base_uri - URI identifying the entity (e.g., 'sys:entity/name.md', 'user:task/task.md')
  * @returns {Promise<Object>} - Result containing entity_id or error
  */
-export async function get_entity_id_from_base_path({
-  base_relative_path,
-  root_base_directory = config.root_base_directory
-} = {}) {
+export async function get_entity_id_from_base_path({ base_uri } = {}) {
   try {
-    log(`Getting entity_id for base path: ${base_relative_path}`)
+    log(`Getting entity_id for base path: ${base_uri}`)
 
-    if (!base_relative_path) {
-      throw new Error('base_relative_path is required')
+    if (!base_uri) {
+      throw new Error('base_uri is required')
     }
 
-    if (!root_base_directory) {
-      throw new Error('root_base_directory is required')
-    }
-
-    // Get file info to determine absolute path
-    const file_info = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Resolve absolute path using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+    log(`Resolved absolute path using registry: ${absolute_path}`)
 
     // Read entity from filesystem using absolute path
     const entity_result = await read_entity_from_filesystem({
-      absolute_path: file_info.absolute_path
+      absolute_path
     })
 
     if (!entity_result.success) {
       return {
         success: false,
-        error:
-          entity_result.error ||
-          `Failed to read entity from ${base_relative_path}`,
-        base_relative_path
+        error: entity_result.error || `Failed to read entity from ${base_uri}`,
+        base_uri
       }
     }
 
@@ -55,27 +42,25 @@ export async function get_entity_id_from_base_path({
     if (!entity_id) {
       return {
         success: false,
-        error: `No entity_id found in entity properties for ${base_relative_path}`,
-        base_relative_path
+        error: `No entity_id found in entity properties for ${base_uri}`,
+        base_uri
       }
     }
 
-    log(
-      `Successfully retrieved entity_id ${entity_id} for ${base_relative_path}`
-    )
+    log(`Successfully retrieved entity_id ${entity_id} for ${base_uri}`)
 
     return {
       success: true,
       entity_id,
-      base_relative_path,
+      base_uri,
       entity_properties: entity_result.entity_properties
     }
   } catch (error) {
-    log(`Error getting entity_id from base path ${base_relative_path}:`, error)
+    log(`Error getting entity_id from base path ${base_uri}:`, error)
     return {
       success: false,
       error: error.message,
-      base_relative_path
+      base_uri
     }
   }
 }

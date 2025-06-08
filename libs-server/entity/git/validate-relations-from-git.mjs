@@ -9,14 +9,9 @@ const log = debug('entity:git:validate:relations')
  * @param {Object} params - Parameters
  * @param {Array} params.relations - Array of relation objects
  * @param {string} params.branch - Git branch for validation
- * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_relations_from_git({
-  relations = [],
-  branch,
-  root_base_directory
-}) {
+export async function validate_relations_from_git({ relations = [], branch }) {
   if (!Array.isArray(relations)) {
     return {
       valid: false,
@@ -40,16 +35,15 @@ export async function validate_relations_from_git({
 
     // Process relations
     const validation_promises = relations.map(async (relation) => {
-      const entity_path = relation.entity_path
+      const base_uri = relation.base_uri
       // Check if the relation target exists
       const exists_result = await entity_exists_in_git({
-        base_relative_path: entity_path,
-        branch,
-        root_base_directory
+        base_uri,
+        branch
       })
 
       return {
-        entity_path,
+        base_uri,
         exists: exists_result.success && exists_result.exists
       }
     })
@@ -67,7 +61,7 @@ export async function validate_relations_from_git({
     return {
       valid: false,
       errors: missing_relations.map(
-        (rel) => `Relation target entity not found: ${rel.entity_path}`
+        (rel) => `Relation target entity not found: ${rel.base_uri}`
       )
     }
   } catch (error) {

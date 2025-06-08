@@ -8,24 +8,13 @@ const log = debug('entity:filesystem:validate:tags')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.property_tags - Array of tag objects from properties
- * @param {string} params.root_base_directory - Root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_tags_from_filesystem({
-  property_tags = [],
-  root_base_directory
-}) {
+export async function validate_tags_from_filesystem({ property_tags = [] }) {
   if (!Array.isArray(property_tags)) {
     return {
       valid: false,
       errors: ['property_tags must be an array']
-    }
-  }
-
-  if (!root_base_directory) {
-    return {
-      valid: false,
-      errors: ['Root base directory is required']
     }
   }
 
@@ -42,11 +31,10 @@ export async function validate_tags_from_filesystem({
 
     const tag_validation_promises = all_tags.map(async (tag) => {
       const exists = await tag_exists_in_filesystem({
-        base_relative_path: tag.base_relative_path,
-        root_base_directory
+        base_uri: tag.base_uri
       })
       return {
-        base_relative_path: tag.base_relative_path,
+        base_uri: tag.base_uri,
         exists,
         source: tag.source
       }
@@ -63,7 +51,7 @@ export async function validate_tags_from_filesystem({
     return {
       valid: false,
       errors: missing_tags.map(
-        (tag) => `${tag.source} tag not found: ${tag.base_relative_path}`
+        (tag) => `${tag.source} tag not found: ${tag.base_uri}`
       )
     }
   } catch (error) {

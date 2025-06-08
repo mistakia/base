@@ -17,7 +17,7 @@ describe('Tool Call Detection', () => {
 \`\`\`tool_call
 {
   "name": "function_name",
-  "arguments": {
+  "parameters": {
     "param1": "value1",
     "param2": "value2"
   }
@@ -43,7 +43,7 @@ And some text after.`
 \`\`\`tool_call
 {
   "name": "first_function",
-  "arguments": {
+  "parameters": {
     "param1": "value1"
   }
 }
@@ -52,7 +52,7 @@ Second tool:
 \`\`\`tool_call
 {
   "name": "second_function",
-  "arguments": {
+  "parameters": {
     "param2": "value2"
   }
 }
@@ -69,11 +69,11 @@ Some text between`
 
     it('should properly continue ID counting across multiple calls', () => {
       const first_text =
-        '```tool_call\n{"name": "first_tool", "arguments": {}}\n```'
+        '```tool_call\n{"name": "first_tool", "parameters": {}}\n```'
       const { next_id } = provider.find_tool_calls(first_text)
 
       const second_text =
-        '```tool_call\n{"name": "second_tool", "arguments": {}}\n```'
+        '```tool_call\n{"name": "second_tool", "parameters": {}}\n```'
       const result = provider.find_tool_calls(second_text, next_id)
 
       expect(result.tool_calls[0].id).to.equal(`tool_call_${next_id}`)
@@ -92,7 +92,7 @@ This is not valid JSON
       const text = `\`\`\`tool_call
 {
   "not_name": "function_name",
-  "arguments": {}
+  "parameters": {}
 }
 \`\`\``
 

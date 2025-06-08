@@ -61,7 +61,7 @@ describe('write_physical_item_to_database', () => {
       user_id: test_user_id,
       physical_item_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -190,7 +190,7 @@ describe('write_physical_item_to_database', () => {
       user_id: test_user_id,
       physical_item_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -226,7 +226,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_content: updated_content,
       physical_item_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -331,7 +331,7 @@ describe('write_physical_item_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/physical-item.md',
       git_sha: 'abcdef123456',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -339,7 +339,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -373,7 +373,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -439,7 +439,7 @@ describe('write_physical_item_to_database', () => {
         physical_item_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 
@@ -464,7 +464,7 @@ describe('write_physical_item_to_database', () => {
         physical_item_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 
@@ -489,7 +489,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -528,7 +528,7 @@ describe('write_physical_item_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const related_entity_id = uuid()
-    const related_base_relative_path = 'user/relations/related-entity.md'
+    const related_base_uri = 'user:relations/related-entity.md'
     const related_file_path = path.join(
       user_repo_path,
       'relations',
@@ -568,10 +568,10 @@ describe('write_physical_item_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: related_base_relative_path
+      base_uri: related_base_uri
     })
 
-    // 4. Create physical item with relationship (using base_relative_path)
+    // 4. Create physical item with relationship (using base_uri)
     const physical_item_properties = {
       entity_id: uuid(),
       title: 'Physical Item with Relation',
@@ -580,9 +580,7 @@ describe('write_physical_item_to_database', () => {
       updated_at: later
     }
     const formatted_entity_metadata = {
-      relations: [
-        { relation_type: 'member_of', entity_path: related_base_relative_path }
-      ]
+      relations: [{ relation_type: 'member_of', base_uri: related_base_uri }]
     }
 
     // Act
@@ -590,9 +588,8 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1',
-      root_base_directory: test_repo.path,
       formatted_entity_metadata
     })
 
@@ -630,7 +627,7 @@ describe('write_physical_item_to_database', () => {
       physical_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 

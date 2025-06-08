@@ -58,7 +58,7 @@ describe('write_physical_location_to_database', () => {
       user_id: test_user_id,
       physical_location_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -165,7 +165,7 @@ describe('write_physical_location_to_database', () => {
       user_id: test_user_id,
       physical_location_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -194,7 +194,7 @@ describe('write_physical_location_to_database', () => {
       physical_location_content: updated_content,
       physical_location_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -257,7 +257,7 @@ describe('write_physical_location_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/location.md',
       git_sha: '12345abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -265,7 +265,7 @@ describe('write_physical_location_to_database', () => {
       physical_location_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -289,7 +289,7 @@ describe('write_physical_location_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/location-tag.md'
+    const tag_base_uri = 'user:tags/location-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'location-tag.md')
 
     // 2. Write the tag entity file using write_entity_to_filesystem
@@ -325,18 +325,18 @@ describe('write_physical_location_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create physical location with tag (using base_relative_path)
+    // 4. Create physical location with tag (using base_uri)
     const physical_location_properties = {
       entity_id: uuid(),
       title: 'Tagged Location',
       description: 'Physical location with tags',
       latitude: 51.5074,
       longitude: -0.1278,
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
@@ -346,9 +346,8 @@ describe('write_physical_location_to_database', () => {
       physical_location_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -378,7 +377,7 @@ describe('write_physical_location_to_database', () => {
       physical_location_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -421,7 +420,7 @@ describe('write_physical_location_to_database', () => {
         user_id: test_user_id,
         trx,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 

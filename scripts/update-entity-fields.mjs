@@ -8,6 +8,10 @@ import config from '#config'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('update-entity-fields')
 debug.enable(
@@ -17,15 +21,12 @@ debug.enable(
 const system_user_id = '00000000-0000-0000-0000-000000000000'
 
 const update_entity_fields = async ({
-  root_base_directory = config.root_base_directory,
   user_id = config.user_id,
   dry_run = false
 }) => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
-  const result = await process_repositories_from_filesystem({
-    root_base_directory
-  })
+  const result = await process_repositories_from_filesystem()
 
   // Track statistics
   let updated_count = 0
@@ -35,9 +36,7 @@ const update_entity_fields = async ({
 
   // Process each file with missing fields
   for (const file of result.files) {
-    const is_system_file =
-      file.base_relative_path.startsWith('system') ||
-      file.base_relative_path.startsWith('tests')
+    const is_system_file = file.base_uri.startsWith('sys:')
 
     if (file.errors && file.errors.length > 0) {
       let needs_update = false
@@ -92,18 +91,18 @@ const update_entity_fields = async ({
               entity_content
             })
 
-            updated_files.push(file.base_relative_path)
+            updated_files.push(file.base_uri)
             updated_count++
-            log(`Updated ${file.base_relative_path}`)
+            log(`Updated ${file.base_uri}`)
           } else {
-            log(`[DRY RUN] Would update ${file.base_relative_path}`)
+            log(`[DRY RUN] Would update ${file.base_uri}`)
             console.log(updated_properties)
-            updated_files.push(file.base_relative_path)
+            updated_files.push(file.base_uri)
             updated_count++
           }
         } catch (err) {
-          log(`Error updating ${file.base_relative_path}:`, err)
-          error_files.push(file.base_relative_path)
+          log(`Error updating ${file.base_uri}:`, err)
+          error_files.push(file.base_uri)
           error_count++
         }
       }
@@ -142,12 +141,7 @@ const update_entity_fields = async ({
 export default update_entity_fields
 
 const main = async () => {
-  const argv = yargs(hideBin(process.argv))
-    .option('root_base_directory', {
-      type: 'string',
-      description: 'Root base directory to use for the knowledge base',
-      default: config.root_base_directory
-    })
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     .option('user_id', {
       type: 'string',
       description: 'User ID to use for the knowledge base',
@@ -160,10 +154,13 @@ const main = async () => {
     })
     .help().argv
 
+  // Handle directory registration using the reusable function
+  handle_cli_directory_registration(argv)
+
   let error
   try {
     const result = await update_entity_fields({
-      root_base_directory: argv.root_base_directory,
+      user_id: argv.user_id,
       dry_run: argv.dry_run
     })
 

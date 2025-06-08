@@ -1,33 +1,27 @@
 import debug from 'debug'
-import { read_file_from_git } from '#libs-server/git/git-files/read-file-from-git.mjs'
+import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { entity_exists_in_git } from '#libs-server/entity/git/entity-exists-in-git.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-import config from '#config'
+import { get_git_info_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('guideline:read-from-git')
 
 /**
- * Read a guideline file from a git branch
+ * Get the contents of a guideline file from a git branch
  *
  * @param {Object} params - Parameters
- * @param {string} params.base_relative_path - Guideline path relative to Base root, e.g., 'system/guideline/<file_path>.md' or 'guideline/<file_path>.md'
+ * @param {string} params.base_uri - Guideline ID in URI format (e.g., 'sys:guideline/name.md', 'user:guideline/name.md')
  * @param {string} params.branch - Git branch to read from
- * @param {string} [params.root_base_directory] - Custom root base directory
  * @returns {Promise<Object>} - Guideline file contents and metadata
  */
-export async function read_guideline_from_git({
-  base_relative_path,
-  branch,
-  root_base_directory = config.root_base_directory
-}) {
-  log(`Reading guideline from git: ${base_relative_path} (branch: ${branch})`)
-
+export async function read_guideline_from_git({ base_uri, branch }) {
   try {
-    if (!base_relative_path) {
+    log(`Reading guideline file from git: ${base_uri} (branch: ${branch})`)
+
+    if (!base_uri) {
       return {
         success: false,
-        error: 'Guideline base relative path is required',
-        base_relative_path,
+        error: 'Guideline base_uri is required',
+        base_uri,
         branch
       }
     }
@@ -36,79 +30,75 @@ export async function read_guideline_from_git({
       return {
         success: false,
         error: 'Branch name is required',
-        base_relative_path
+        base_uri
       }
     }
 
-    // First check if the guideline exists in git
+    // Check if guideline exists in git
     const guideline_exists_result = await entity_exists_in_git({
-      base_relative_path,
-      branch,
-      root_base_directory
+      base_uri,
+      branch
     })
 
     if (!guideline_exists_result.success) {
       return {
         success: false,
-        error: guideline_exists_result.error,
-        base_relative_path,
-        branch,
-        exists: false
+        error:
+          guideline_exists_result.error ||
+          'Failed to check if guideline exists in git',
+        base_uri,
+        branch
       }
     }
 
     if (!guideline_exists_result.exists) {
       return {
         success: false,
-        error: `Guideline '${base_relative_path}' does not exist in git branch '${branch}'`,
-        base_relative_path,
-        branch,
-        exists: false
+        error: `Guideline '${base_uri}' does not exist in branch '${branch}'`,
+        base_uri,
+        branch
       }
     }
 
-    // Use the shared helper to get file info
-    const { repo_path, git_relative_path, absolute_path } =
-      await get_base_file_info({
-        base_relative_path,
-        root_base_directory
-      })
+    // Get git info using registry
+    const { git_relative_path, repo_path } =
+      get_git_info_from_registry(base_uri)
 
     log(
-      `Reading guideline from git at path: ${git_relative_path} in repo: ${repo_path} (branch: ${branch})`
+      `Reading guideline from git at path: ${git_relative_path} in repo: ${repo_path}`
     )
 
-    // Read the file from git
-    const result = await read_file_from_git({
+    // Use the entity reader to get the file contents from git
+    const entity_result = await read_entity_from_git({
       repo_path,
       git_relative_path,
       branch
     })
 
-    if (!result.success) {
+    if (!entity_result.success) {
       return {
         success: false,
-        error: result.error || 'Failed to read guideline from git',
-        base_relative_path,
-        branch,
-        exists: true
+        error: entity_result.error || `Failed to read guideline '${base_uri}'`,
+        base_uri,
+        branch
       }
     }
 
+    // Return guideline with metadata
     return {
       success: true,
-      base_relative_path,
+      base_uri,
       branch,
-      absolute_path,
-      content: result.content,
-      exists: true
+      entity_properties: entity_result.entity_properties,
+      entity_content: entity_result.entity_content,
+      raw_content: entity_result.raw_content
     }
   } catch (error) {
-    log(`Error reading guideline from git: ${error.message}`)
+    log(`Error reading guideline file from git: ${error.message}`)
     return {
       success: false,
-      error: error.message,
-      base_relative_path,
+      error: `Failed to read guideline file from git: ${error.message}`,
+      base_uri,
       branch
     }
   }

@@ -14,7 +14,7 @@ const default_import_history_base_directory = path.join(
  * @param {string} options.external_system - Name of external system
  * @param {string} options.entity_id - Entity UUID
  * @param {string} [options.import_history_base_directory] - Optional override for base directory
- * @returns {Object} Object with raw and processed paths
+ * @returns {Object} Object with import directory paths
  */
 export function get_import_directory_paths({
   external_system,
@@ -27,10 +27,10 @@ export function get_import_directory_paths({
   const entity_dir = path.join(system_dir, entity_id)
 
   return {
-    base_path: base_dir,
-    system_path: system_dir,
-    entity_path: entity_dir,
-    raw_path: path.join(entity_dir, 'raw'),
-    processed_path: path.join(entity_dir, 'processed')
+    import_history_directory: base_dir,
+    external_system_import_directory: system_dir,
+    entity_import_directory: entity_dir,
+    raw_data_directory: path.join(entity_dir, 'raw'),
+    processed_data_directory: path.join(entity_dir, 'processed')
   }
 }

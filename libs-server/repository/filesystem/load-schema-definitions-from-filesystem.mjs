@@ -1,5 +1,9 @@
 import debug from 'debug'
 import { list_entity_files_from_filesystem } from './list-entity-files-from-filesystem.mjs'
+import {
+  get_system_base_directory,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('repository:filesystem:load-schemas')
 
@@ -8,25 +12,14 @@ const SYSTEM_SCHEMA_RELATIVE_DIR = 'system/schema'
 const USER_SCHEMA_RELATIVE_DIR = 'schema'
 
 /**
- * Load schema definitions from filesystem
+ * Load schema definitions from filesystem using registry system
  *
- * @param {Object} options - Options for loading schemas
- * @param {string} options.root_base_directory - Root base directory
- * @param {string} options.user_base_directory - User base directory
  * @returns {Promise<Object>} - Map of schema definitions by name
  */
-export async function load_schema_definitions_from_filesystem({
-  root_base_directory,
-  user_base_directory
-} = {}) {
-  // Validate input
-  if (!root_base_directory) {
-    throw new Error('root_base_directory is required')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required')
-  }
+export async function load_schema_definitions_from_filesystem() {
+  // Get directories from registry
+  const system_base_directory = get_system_base_directory()
+  const user_base_directory = get_user_base_directory()
 
   try {
     // Collect all schema files from filesystem
@@ -34,22 +27,16 @@ export async function load_schema_definitions_from_filesystem({
 
     // Get schemas from root directory
     const root_entities = await list_entity_files_from_filesystem({
-      root_base_directory,
+      base_directory: system_base_directory,
       include_entity_types: ['type_definition'],
       path_pattern: `${SYSTEM_SCHEMA_RELATIVE_DIR}/*.md`
     })
 
-    // Calculate submodule path by comparing user and root paths
-    const submodule_base_path = user_base_directory
-      .replace(root_base_directory, '')
-      .replace(/^\//, '')
-
-    // Get schemas from user directory as a submodule
+    // Get schemas from user directory
     const user_entities = await list_entity_files_from_filesystem({
-      root_base_directory,
-      submodule_base_path,
+      base_directory: user_base_directory,
       include_entity_types: ['type_definition'],
-      path_pattern: `${submodule_base_path}/${USER_SCHEMA_RELATIVE_DIR}/*.md`
+      path_pattern: `${USER_SCHEMA_RELATIVE_DIR}/*.md`
     })
 
     // Combine entities from both directories

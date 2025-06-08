@@ -11,7 +11,6 @@ const log = debug('entity:filesystem:validate')
  *
  * @param {Object} params - Parameters
  * @param {Object} params.entity_properties - Entity properties for schema validation
- * @param {string} params.root_base_directory - Root base directory
  * @param {Object} [params.formatted_entity_metadata] - Entity metadata for validation
  * @param {Object} [params.schemas] - Schema definitions map
  * @returns {Promise<Object>} - Validation result {success, errors?}
@@ -19,8 +18,7 @@ const log = debug('entity:filesystem:validate')
 export async function validate_entity_from_filesystem({
   entity_properties,
   formatted_entity_metadata = {},
-  schemas,
-  root_base_directory
+  schemas
 }) {
   // Validate required parameters
   if (!entity_properties || typeof entity_properties !== 'object') {
@@ -64,20 +62,17 @@ export async function validate_entity_from_filesystem({
       await Promise.all([
         // Validate tags existence in filesystem
         validate_tags_from_filesystem({
-          ...formatted_entity_metadata,
-          root_base_directory
+          ...formatted_entity_metadata
         }),
 
         // Validate relations existence in filesystem
         validate_relations_from_filesystem({
-          ...formatted_entity_metadata,
-          root_base_directory
+          ...formatted_entity_metadata
         }),
 
         // Validate references existence in filesystem
         validate_references_from_filesystem({
-          ...formatted_entity_metadata,
-          root_base_directory
+          ...formatted_entity_metadata
         })
       ])
 

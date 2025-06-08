@@ -2,13 +2,11 @@ import { v4 as uuid } from 'uuid'
 import { expect } from 'chai'
 import db from '#db'
 import write_guideline_to_database from '#libs-server/entity/database/write/write-guideline-to-database.mjs'
-import {
-  reset_all_tables,
-  create_test_user,
-  create_temp_test_repo
-} from '#tests/utils/index.mjs'
+import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
 import path from 'path'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { setup_test_directories } from '#tests/utils/setup-test-directories.mjs'
+import { clear_registered_directories } from '#libs-server/base-uri/index.mjs'
 
 describe('write_guideline_to_database', () => {
   let test_user
@@ -22,6 +20,7 @@ describe('write_guideline_to_database', () => {
 
   afterEach(async () => {
     await reset_all_tables()
+    clear_registered_directories()
   })
 
   it('should create a new guideline entity in the database', async () => {
@@ -51,7 +50,7 @@ describe('write_guideline_to_database', () => {
       user_id: test_user_id,
       guideline_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -127,7 +126,7 @@ describe('write_guideline_to_database', () => {
       user_id: test_user_id,
       guideline_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -153,7 +152,7 @@ describe('write_guideline_to_database', () => {
       guideline_content: updated_content,
       entity_id: guideline_entity_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -213,7 +212,7 @@ describe('write_guideline_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/guideline.md',
       git_sha: '12345abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -221,7 +220,7 @@ describe('write_guideline_to_database', () => {
       guideline_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -239,14 +238,16 @@ describe('write_guideline_to_database', () => {
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // 1. Create a temp repo
-    const test_repo = await create_temp_test_repo({
-      prefix: 'guideline-tag-test-'
-    })
-    const user_repo_path = test_repo.user_path
+    // 1. Setup test directories with registry
+    const test_dirs = setup_test_directories()
+
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/guideline-tag.md'
-    const tag_file_path = path.join(user_repo_path, 'tags', 'guideline-tag.md')
+    const tag_base_uri = 'user:tag/guideline-tag.md'
+    const tag_file_path = path.join(
+      test_dirs.user_path,
+      'tag',
+      'guideline-tag.md'
+    )
 
     // 2. Write the tag entity file using write_entity_to_filesystem
     await write_entity_to_filesystem({
@@ -281,16 +282,16 @@ describe('write_guideline_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create guideline with tag (using base_relative_path)
+    // 4. Create guideline with tag (using base_uri)
     const guideline_properties = {
       entity_id: uuid(),
       title: 'Tagged Guideline',
       description: 'Guideline with tags',
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
@@ -300,9 +301,8 @@ describe('write_guideline_to_database', () => {
       guideline_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -315,8 +315,8 @@ describe('write_guideline_to_database', () => {
 
     expect(tag_relation).to.exist
 
-    // Clean up temp repo
-    await test_repo.cleanup()
+    // Clean up test directories
+    test_dirs.cleanup()
   })
 
   it('should handle transaction parameter correctly', async () => {
@@ -338,7 +338,7 @@ describe('write_guideline_to_database', () => {
         user_id: test_user_id,
         trx,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 

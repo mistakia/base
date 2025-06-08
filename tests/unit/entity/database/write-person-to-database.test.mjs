@@ -49,7 +49,7 @@ describe('write_person_to_database', () => {
       user_id: test_user_id,
       person_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -113,7 +113,7 @@ describe('write_person_to_database', () => {
       user_id: test_user_id,
       person_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -140,7 +140,7 @@ describe('write_person_to_database', () => {
       person_content: updated_content,
       person_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -200,7 +200,7 @@ describe('write_person_to_database', () => {
       person_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: file_info.git_sha
     })
 
@@ -222,7 +222,7 @@ describe('write_person_to_database', () => {
     })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/person-tag.md'
+    const tag_base_uri = 'user:tags/person-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'person-tag.md')
 
     // 2. Write the tag entity file using write_entity_to_filesystem
@@ -258,16 +258,16 @@ describe('write_person_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create person with tag (using base_relative_path)
+    // 4. Create person with tag (using base_uri)
     const person_properties = {
       entity_id: uuid(),
       title: 'Tagged Person',
       description: 'Person with tags',
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later,
       first_name: 'Tagged',
@@ -279,9 +279,8 @@ describe('write_person_to_database', () => {
       person_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert
@@ -318,7 +317,7 @@ describe('write_person_to_database', () => {
         person_properties: missing_first_name,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing first_name')
@@ -341,7 +340,7 @@ describe('write_person_to_database', () => {
         person_properties: missing_last_name,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing last_name')
@@ -370,7 +369,7 @@ describe('write_person_to_database', () => {
         user_id: test_user_id,
         trx,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 

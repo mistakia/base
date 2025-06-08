@@ -13,9 +13,9 @@ observations:
   - '[standard] Proper entity type selection ensures data consistency'
   - '[governance] Entity types determine required fields and validation rules'
 relations:
-  - 'implements [[system/schema/base.md]]'
-  - 'related_to [[system/guideline/write-entity.md]]'
-  - 'related_to [[system/guideline/write-guideline.md]]'
+  - 'implements [[sys:schema/base.md]]'
+  - 'related_to [[sys:guideline/write-entity.md]]'
+  - 'related_to [[sys:guideline/write-guideline.md]]'
 updated_at: '2023-06-28T10:00:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
@@ -27,9 +27,9 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ### Understanding Entity Types
 
 - When creating a new entity, you MUST select a type that accurately represents the nature and purpose of the entity
-- The entity type MUST be one of the predefined types in the `system/schema/` directory
+- The entity type MUST be one of the predefined types in the `sys:schema/` directory
 - You MUST understand the specific requirements and properties associated with each entity type
-- You SHOULD review the corresponding schema file in `system/schema/` before creating a new entity
+- You SHOULD review the corresponding schema file in `sys:schema/` before creating a new entity
 
 ### Common Entity Types and Use Cases
 

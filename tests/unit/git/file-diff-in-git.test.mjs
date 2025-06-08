@@ -32,59 +32,69 @@ describe('file_diff_in_git', function () {
     remote_repo = create_temp_test_directory('git-diff-remote-')
     await execute('git init --bare', { cwd: remote_repo.path })
 
-    // Add remote to test repo
+    // Add remote to test repo (using system repo)
     await execute(`git remote add origin ${remote_repo.path}`, {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
 
     // Push to remote
-    await execute('git push -u origin main', { cwd: test_repo.path })
+    await execute('git push -u origin main', { cwd: test_repo.system_path })
 
     // Create a feature branch
-    await execute('git checkout -b feature-branch', { cwd: test_repo.path })
+    await execute('git checkout -b feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Add/modify files in feature branch
     await fs.writeFile(
-      path.join(test_repo.path, 'feature-file.md'),
+      path.join(test_repo.system_path, 'feature-file.md'),
       '# Feature Content\n\nThis file only exists in the feature branch.'
     )
-    await execute('git add feature-file.md', { cwd: test_repo.path })
-    await execute('git commit -m "Add feature file"', { cwd: test_repo.path })
+    await execute('git add feature-file.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add feature file"', {
+      cwd: test_repo.system_path
+    })
 
     // Modify README in feature branch
     await fs.writeFile(
-      path.join(test_repo.path, 'README.md'),
+      path.join(test_repo.system_path, 'README.md'),
       '# Test Repository\n\nThis README has been modified in the feature branch.'
     )
-    await execute('git add README.md', { cwd: test_repo.path })
-    await execute('git commit -m "Update README"', { cwd: test_repo.path })
-
-    // Create a directory with files
-    await fs.mkdir(path.join(test_repo.path, 'docs'), { recursive: true })
-    await fs.writeFile(
-      path.join(test_repo.path, 'docs', 'guide.md'),
-      '# User Guide\n\nThis is a guide in the feature branch.'
-    )
-    await execute('git add docs', { cwd: test_repo.path })
-    await execute('git commit -m "Add documentation"', {
-      cwd: test_repo.path
+    await execute('git add README.md', { cwd: test_repo.system_path })
+    await execute('git commit -m "Update README"', {
+      cwd: test_repo.system_path
     })
 
-    await execute('git push -u origin feature-branch', { cwd: test_repo.path })
+    // Create a directory with files
+    await fs.mkdir(path.join(test_repo.system_path, 'docs'), {
+      recursive: true
+    })
+    await fs.writeFile(
+      path.join(test_repo.system_path, 'docs', 'guide.md'),
+      '# User Guide\n\nThis is a guide in the feature branch.'
+    )
+    await execute('git add docs', { cwd: test_repo.system_path })
+    await execute('git commit -m "Add documentation"', {
+      cwd: test_repo.system_path
+    })
+
+    await execute('git push -u origin feature-branch', {
+      cwd: test_repo.system_path
+    })
 
     // Return to main branch
-    await execute('git checkout main', { cwd: test_repo.path })
+    await execute('git checkout main', { cwd: test_repo.system_path })
 
     // Add another file to main branch (different from feature branch)
     await fs.writeFile(
-      path.join(test_repo.path, 'main-file.md'),
+      path.join(test_repo.system_path, 'main-file.md'),
       '# Main Branch File\n\nThis file only exists in the main branch.'
     )
-    await execute('git add main-file.md', { cwd: test_repo.path })
+    await execute('git add main-file.md', { cwd: test_repo.system_path })
     await execute('git commit -m "Add main branch file"', {
-      cwd: test_repo.path
+      cwd: test_repo.system_path
     })
-    await execute('git push origin main', { cwd: test_repo.path })
+    await execute('git push origin main', { cwd: test_repo.system_path })
   })
 
   // Clean up after tests
@@ -99,7 +109,7 @@ describe('file_diff_in_git', function () {
 
   it('should get the diff between two branches for the entire repository', async function () {
     const result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       from_branch: 'main',
       to_branch: 'feature-branch'
     })
@@ -121,7 +131,7 @@ describe('file_diff_in_git', function () {
 
   it('should get the diff for a specific file between branches', async function () {
     const result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       file_path: 'README.md',
       from_branch: 'main',
       to_branch: 'feature-branch'
@@ -143,7 +153,7 @@ describe('file_diff_in_git', function () {
 
   it('should get the diff for a directory between branches', async function () {
     const result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       file_path: 'docs',
       from_branch: 'main',
       to_branch: 'feature-branch'
@@ -165,7 +175,7 @@ describe('file_diff_in_git', function () {
   it('should support different diff formats', async function () {
     // Test name-only format
     const name_only_result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       from_branch: 'main',
       to_branch: 'feature-branch',
       format: 'name-only'
@@ -182,7 +192,7 @@ describe('file_diff_in_git', function () {
 
     // Test stat format
     const stat_result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       from_branch: 'main',
       to_branch: 'feature-branch',
       format: 'stat'
@@ -202,7 +212,7 @@ describe('file_diff_in_git', function () {
   it('should handle non-existent branches gracefully', async function () {
     // Test with non-existent from_branch
     const from_branch_result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       from_branch: 'non-existent-branch',
       to_branch: 'feature-branch'
     })
@@ -214,7 +224,7 @@ describe('file_diff_in_git', function () {
 
     // Test with non-existent to_branch
     const to_branch_result = await file_diff_in_git({
-      repo_path: test_repo.path,
+      repo_path: test_repo.system_path,
       from_branch: 'main',
       to_branch: 'non-existent-branch'
     })
@@ -240,7 +250,7 @@ describe('file_diff_in_git', function () {
     // Test missing from_branch
     try {
       await file_diff_in_git({
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         to_branch: 'feature-branch'
       })
       expect.fail('Should have thrown an error')
@@ -251,7 +261,7 @@ describe('file_diff_in_git', function () {
     // Test missing to_branch
     try {
       await file_diff_in_git({
-        repo_path: test_repo.path,
+        repo_path: test_repo.system_path,
         from_branch: 'main'
       })
       expect.fail('Should have thrown an error')

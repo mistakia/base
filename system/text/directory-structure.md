@@ -10,8 +10,8 @@ observations:
   - '[principle] Clear directory structure improves navigation and discoverability'
   - '[design] Organization follows separation of concerns principle'
 relations:
-  - 'relates_to [[system/text/system-design.md]]'
-  - 'implements [[system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[sys:text/system-design.md]]'
+  - 'implements [[sys:text/knowledge-base-schema.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.243Z'
 user_id: '00000000-0000-0000-0000-000000000000'

@@ -90,14 +90,12 @@ describe('Change Request Status Updates', function () {
         user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
-        thread_id: test_thread.thread_id,
-        user_base_directory: test_thread.user_base_directory
+        thread_id: test_thread.thread_id
       })
 
       // Initial status should be PendingReview
       const cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('PendingReview')
 
@@ -106,8 +104,7 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'Approved',
         updater_id: test_user.user_id,
-        comment: 'Approving for testing',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Approving for testing'
       })
 
       // Verify update result
@@ -141,8 +138,7 @@ describe('Change Request Status Updates', function () {
         user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
-        thread_id: test_thread.thread_id,
-        user_base_directory: test_thread.user_base_directory
+        thread_id: test_thread.thread_id
       })
 
       // Try an invalid transition directly to Merged
@@ -151,8 +147,7 @@ describe('Change Request Status Updates', function () {
           change_request_id: cr_id,
           status: 'Merged',
           updater_id: test_user.user_id,
-          comment: 'Attempting invalid transition',
-          user_base_directory: test_thread.user_base_directory
+          comment: 'Attempting invalid transition'
         })
 
         // Should not reach here
@@ -166,13 +161,11 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'Approved',
         updater_id: test_user.user_id,
-        comment: 'Valid approval',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Valid approval'
       })
 
       let cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('Approved')
 
@@ -180,13 +173,11 @@ describe('Change Request Status Updates', function () {
       await change_requests.merge_change_request({
         change_request_id: cr_id,
         merger_id: test_user.user_id,
-        comment: 'Merging approved changes',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Merging approved changes'
       })
 
       cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('Merged')
     })
@@ -199,8 +190,7 @@ describe('Change Request Status Updates', function () {
         user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
-        thread_id: test_thread.thread_id,
-        user_base_directory: test_thread.user_base_directory
+        thread_id: test_thread.thread_id
       })
 
       // Reject the change request
@@ -208,14 +198,12 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'Rejected',
         updater_id: test_user.user_id,
-        comment: 'Rejecting these changes',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Rejecting these changes'
       })
 
       // Verify rejection
       const cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('Rejected')
 
@@ -224,8 +212,7 @@ describe('Change Request Status Updates', function () {
         await change_requests.merge_change_request({
           change_request_id: cr_id,
           merger_id: test_user.user_id,
-          comment: 'Attempting to merge rejected CR',
-          user_base_directory: test_thread.user_base_directory
+          comment: 'Attempting to merge rejected CR'
         })
 
         // Should not reach here
@@ -243,8 +230,7 @@ describe('Change Request Status Updates', function () {
         user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
-        thread_id: test_thread.thread_id,
-        user_base_directory: test_thread.user_base_directory
+        thread_id: test_thread.thread_id
       })
 
       // Reject the change request
@@ -252,8 +238,7 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'Rejected',
         updater_id: test_user.user_id,
-        comment: 'Rejecting temporarily',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Rejecting temporarily'
       })
 
       // Reopen/reset to PendingReview
@@ -261,14 +246,12 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'PendingReview',
         updater_id: test_user.user_id,
-        comment: 'Reopening for more review',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Reopening for more review'
       })
 
       // Verify reopened
       const cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('PendingReview')
 
@@ -277,13 +260,11 @@ describe('Change Request Status Updates', function () {
         change_request_id: cr_id,
         status: 'Approved',
         updater_id: test_user.user_id,
-        comment: 'Approving reopened CR',
-        user_base_directory: test_thread.user_base_directory
+        comment: 'Approving reopened CR'
       })
 
       const approved_cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(approved_cr.status).to.equal('Approved')
     })
@@ -297,8 +278,7 @@ describe('Change Request Status Updates', function () {
           change_request_id: fake_id,
           status: 'Approved',
           updater_id: test_user.user_id,
-          comment: 'This should fail',
-          user_base_directory: test_thread.user_base_directory
+          comment: 'This should fail'
         })
 
         // Should not reach here
@@ -316,8 +296,7 @@ describe('Change Request Status Updates', function () {
         user_id: test_user.user_id,
         target_branch: 'main',
         feature_branch,
-        thread_id: test_thread.thread_id,
-        user_base_directory: test_thread.user_base_directory
+        thread_id: test_thread.thread_id
       })
 
       // Try to update with invalid status
@@ -326,8 +305,7 @@ describe('Change Request Status Updates', function () {
           change_request_id: cr_id,
           status: 'InvalidStatus',
           updater_id: test_user.user_id,
-          comment: 'This should fail',
-          user_base_directory: test_thread.user_base_directory
+          comment: 'This should fail'
         })
 
         // Should not reach here
@@ -338,8 +316,7 @@ describe('Change Request Status Updates', function () {
 
       // Verify CR status unchanged
       const cr = await change_requests.get_change_request({
-        change_request_id: cr_id,
-        user_base_directory: test_thread.user_base_directory
+        change_request_id: cr_id
       })
       expect(cr.status).to.equal('PendingReview')
     })

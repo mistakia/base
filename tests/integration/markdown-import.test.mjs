@@ -3,9 +3,13 @@ import path from 'path'
 
 import postgres from '#db'
 import { import_repository_from_git } from '#libs-server/entity/database/import/import-repository-from-git.mjs'
-import { create_test_user } from '#tests/utils/index.mjs'
+import { create_test_user, create_test_entity } from '#tests/utils/index.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
+import {
+  register_base_directories,
+  clear_registered_directories
+} from '#libs-server/base-uri/index.mjs'
 
 describe('Markdown Import Integration Tests', function () {
   this.timeout(30000)
@@ -23,14 +27,34 @@ describe('Markdown Import Integration Tests', function () {
       prefix: 'user-repo-',
       initial_content: '---\ntype: text\n---\n# User Repository'
     })
-    branch = test_repo.branch
+    branch = test_repo.system_branch
+
+    // Register directories with the base URI registry
+    register_base_directories({
+      system_base_directory: test_repo.system_path,
+      user_base_directory: test_repo.user_path
+    })
+
+    // Add a proper entity file to the user repo for testing
+    await create_test_entity({
+      base_uri: 'user:test-entity.md',
+      branch: test_repo.user_branch,
+      entity_properties: {
+        title: 'Test Entity',
+        user_id: test_user.user_id
+      },
+      entity_type: 'text',
+      entity_content:
+        '# Test Entity\n\nThis is a test entity for import testing.'
+    })
   })
 
   after(async () => {
     // Clean up the database
     await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
-    // Clean up the user repository
+    // Clean up registry and repositories
+    clear_registered_directories()
     if (test_repo && test_repo.cleanup) {
       test_repo.cleanup()
     }
@@ -46,10 +70,9 @@ describe('Markdown Import Integration Tests', function () {
       // Clear database first
       await postgres('entities').where({ user_id: test_user.user_id }).delete()
 
-      // Run the import using the real system directory
+      // Run the import using the registry-resolved directories
       const result = await import_repository_from_git({
         user_id: test_user.user_id,
-        root_base_directory: test_repo.path,
         branch
       })
 
@@ -62,14 +85,13 @@ describe('Markdown Import Integration Tests', function () {
         .where({ user_id: test_user.user_id })
         .select('*')
 
-      expect(entities.length).to.equal(1)
+      expect(entities.length).to.equal(2) // 1 from user repo + 1 workflow from system repo
     })
 
     it('should mark removed entities as archived', async () => {
       // First, import all files
       await import_repository_from_git({
         user_id: test_user.user_id,
-        root_base_directory: test_repo.path,
         branch
       })
 
@@ -94,7 +116,7 @@ describe('Markdown Import Integration Tests', function () {
             description: 'This entity will be archived'
           }),
           absolute_path: path.join(
-            test_repo.path,
+            test_repo.system_path,
             'system/non-existent-file.md'
           ),
           git_sha: 'fake-sha',
@@ -107,7 +129,6 @@ describe('Markdown Import Integration Tests', function () {
       // Run import with stale entity removal
       const result = await import_repository_from_git({
         user_id: test_user.user_id,
-        root_base_directory: test_repo.path,
         branch
       })
 

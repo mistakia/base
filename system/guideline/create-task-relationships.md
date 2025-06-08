@@ -13,7 +13,7 @@ observations:
   - 'Clear relationship definitions improve task planning and execution'
   - 'Consistent relationship usage enhances reporting and visibility'
 relations:
-  - 'implements [[system/schema/task.md]]'
+  - 'implements [[sys:schema/task.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.235Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -48,7 +48,7 @@ Hierarchical relationships establish parent-child relationships between tasks.
 
 ```yaml
 relations:
-  - 'subtask_of [[user/tasks/redesign-website.md]]'
+  - 'subtask_of [[user:tasks/redesign-website.md]]'
 ```
 
 ### `parent_of`
@@ -65,8 +65,8 @@ relations:
 
 ```yaml
 relations:
-  - 'parent_of [[user/tasks/update-navigation.md]]'
-  - 'parent_of [[user/tasks/optimize-images.md]]'
+  - 'parent_of [[user:tasks/update-navigation.md]]'
+  - 'parent_of [[user:tasks/optimize-images.md]]'
 ```
 
 ## Dependency Relationships
@@ -87,7 +87,7 @@ Dependency relationships establish execution order and prerequisites.
 
 ```yaml
 relations:
-  - 'blocked_by [[user/tasks/setup-database.md]]'
+  - 'blocked_by [[user:tasks/setup-database.md]]'
 ```
 
 ### `blocks`
@@ -104,7 +104,7 @@ relations:
 
 ```yaml
 relations:
-  - 'blocks [[user/tasks/deploy-application.md]]'
+  - 'blocks [[user:tasks/deploy-application.md]]'
 ```
 
 ### `precedes`
@@ -121,7 +121,7 @@ relations:
 
 ```yaml
 relations:
-  - 'precedes [[user/tasks/user-testing.md]]'
+  - 'precedes [[user:tasks/user-testing.md]]'
 ```
 
 ### `follows`
@@ -138,7 +138,7 @@ relations:
 
 ```yaml
 relations:
-  - 'follows [[user/tasks/gather-requirements.md]]'
+  - 'follows [[user:tasks/gather-requirements.md]]'
 ```
 
 ### `relates_to`
@@ -155,7 +155,7 @@ relations:
 
 ```yaml
 relations:
-  - 'relates_to [[user/tasks/update-documentation.md]]'
+  - 'relates_to [[user:tasks/update-documentation.md]]'
 ```
 
 ## Resource Relationships
@@ -176,8 +176,8 @@ Resource relationships connect tasks to the items needed for completion.
 
 ```yaml
 relations:
-  - 'needs_item [[system/physical-item/meeting-room.md]] (quantity: 1)'
-  - 'needs_item [[system/digital-item/license-key.md]]'
+  - 'needs_item [[sys:physical-item/meeting-room.md]] (quantity: 1)'
+  - 'needs_item [[sys:digital-item/license-key.md]]'
 ```
 
 ### `uses_item`
@@ -194,8 +194,8 @@ relations:
 
 ```yaml
 relations:
-  - 'uses_item [[system/digital-item/figma.md]]'
-  - 'uses_item [[system/physical-item/camera.md]]'
+  - 'uses_item [[sys:digital-item/figma.md]]'
+  - 'uses_item [[sys:physical-item/camera.md]]'
 ```
 
 ## Assignment Relationships
@@ -216,8 +216,8 @@ Assignment relationships connect tasks to the people or teams responsible.
 
 ```yaml
 relations:
-  - 'assigned_to [[user/person/jane-doe.md]]'
-  - 'assigned_to [[system/team/design.md]]'
+  - 'assigned_to [[user:person/jane-doe.md]]'
+  - 'assigned_to [[sys:team/design.md]]'
 ```
 
 ## Decision Guide: Choosing the Right Relationship
@@ -249,11 +249,11 @@ When determining which relationships to apply to a task, ask these questions:
 
 ```yaml
 relations:
-  - 'subtask_of [[user/tasks/website-redesign.md]]'
-  - 'blocked_by [[user/tasks/finalize-design.md]]'
-  - 'precedes [[user/tasks/browser-testing.md]]'
-  - 'relates_to [[user/tasks/update-documentation.md]]'
-  - 'needs_item [[system/digital-item/hosting-account.md]]'
-  - 'uses_item [[system/digital-item/vs-code.md]]'
-  - 'assigned_to [[user/person/jane-doe.md]]'
+  - 'subtask_of [[user:tasks/website-redesign.md]]'
+  - 'blocked_by [[user:tasks/finalize-design.md]]'
+  - 'precedes [[user:tasks/browser-testing.md]]'
+  - 'relates_to [[user:tasks/update-documentation.md]]'
+  - 'needs_item [[sys:digital-item/hosting-account.md]]'
+  - 'uses_item [[sys:digital-item/vs-code.md]]'
+  - 'assigned_to [[user:person/jane-doe.md]]'
 ```

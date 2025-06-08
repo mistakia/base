@@ -7,6 +7,7 @@ import {
   create_test_user,
   create_temp_test_repo
 } from '#tests/utils/index.mjs'
+import { register_test_directories } from '#tests/utils/setup-test-directories.mjs'
 import path from 'path'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 
@@ -90,7 +91,7 @@ describe('write_database_table_view_to_database', () => {
       user_id: test_user_id,
       database_view_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -176,7 +177,7 @@ describe('write_database_table_view_to_database', () => {
       user_id: test_user_id,
       database_view_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -207,7 +208,7 @@ describe('write_database_table_view_to_database', () => {
       database_view_content: updated_content,
       database_view_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -264,7 +265,7 @@ describe('write_database_table_view_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/view.md',
       git_sha: '12345abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -272,7 +273,7 @@ describe('write_database_table_view_to_database', () => {
       database_view_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -305,7 +306,7 @@ describe('write_database_table_view_to_database', () => {
         database_view_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing view_name')
@@ -320,7 +321,7 @@ describe('write_database_table_view_to_database', () => {
         database_view_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail('Should have thrown an error for missing table_name')
@@ -335,7 +336,7 @@ describe('write_database_table_view_to_database', () => {
         database_view_properties,
         user_id: test_user_id,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
       expect.fail(
@@ -351,16 +352,24 @@ describe('write_database_table_view_to_database', () => {
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // 1. Create a temp repo
+    // 1. Create a temp repo (without auto-registration)
     const test_repo = await create_temp_test_repo({
-      prefix: 'db-view-tag-test-'
+      prefix: 'db-view-tag-test-',
+      register_directories: false
     })
+
+    // 2. Register directories with the registry
+    const cleanup_registry = register_test_directories({
+      system_base_directory: test_repo.system_path,
+      user_base_directory: test_repo.user_path
+    })
+
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/view-tag.md'
+    const tag_base_uri = 'user:tags/view-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'view-tag.md')
 
-    // 2. Write the tag entity file using write_entity_to_filesystem
+    // 3. Write the tag entity file using write_entity_to_filesystem
     await write_entity_to_filesystem({
       absolute_path: tag_file_path,
       entity_properties: {
@@ -376,7 +385,7 @@ describe('write_database_table_view_to_database', () => {
       entity_content: 'A tag for database views.'
     })
 
-    // 3. Insert the tag entity into the database
+    // 4. Insert the tag entity into the database
     await db('entities').insert({
       entity_id: tag_entity_id,
       title: 'View Tag',
@@ -393,11 +402,11 @@ describe('write_database_table_view_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: tag_base_relative_path
+      base_uri: tag_base_uri
     })
     await db('tags').insert({ entity_id: tag_entity_id })
 
-    // 4. Create view with tag (using base_relative_path)
+    // 5. Create view with tag (using base_uri)
     const database_view_properties = {
       entity_id: uuid(),
       title: 'Tagged View',
@@ -405,7 +414,7 @@ describe('write_database_table_view_to_database', () => {
       view_name: 'tagged_view',
       table_name: 'test_table',
       database_table_entity_id: test_database_table_id,
-      tags: [tag_base_relative_path],
+      tags: [tag_base_uri],
       created_at: now,
       updated_at: later
     }
@@ -415,9 +424,8 @@ describe('write_database_table_view_to_database', () => {
       database_view_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:dummy/base/path',
+      git_sha: 'dummysha1'
     })
 
     // Assert tag relationship
@@ -430,7 +438,8 @@ describe('write_database_table_view_to_database', () => {
 
     expect(tag_relation).to.exist
 
-    // Clean up temp repo
+    // Clean up registry and temp repo
+    cleanup_registry()
     await test_repo.cleanup()
   })
 })

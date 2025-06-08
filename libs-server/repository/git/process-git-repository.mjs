@@ -1,9 +1,12 @@
 import debug from 'debug'
-import path from 'path'
 
 import { list_entity_files_from_git } from './list-entity-files-from-git.mjs'
 import { load_schema_definitions_from_git } from './load-schema-definitions-from-git.mjs'
 import { validate_entity_from_git } from '#libs-server/entity/git/validate-entity-from-git.mjs'
+import {
+  get_system_base_directory,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 import config from '#config'
 import git from '#libs-server/git/index.mjs'
 
@@ -17,7 +20,7 @@ const log = debug('markdown:process-git-repository')
  * @param {Object} options.schemas Schema definitions
  * @param {string} [options.branch] Branch name
  * @param {function} [options.entity_processor] Function to process the entity
- * @param {string} options.base_relative_path Base relative path for the file (required)
+ * @param {string} options.base_uri Base relative path for the file (required)
  * @returns {Promise<Object>} Processing result
  */
 async function process_git_file({
@@ -26,7 +29,7 @@ async function process_git_file({
   schemas,
   branch,
   entity_processor,
-  base_relative_path
+  base_uri
 }) {
   file.errors = file.errors || []
   let has_errors = false
@@ -44,7 +47,7 @@ async function process_git_file({
     })
 
     // Add file info and base path
-    file.base_relative_path = base_relative_path
+    file.base_uri = base_uri
 
     if (!validation.success) {
       file.errors = file.errors.concat(validation.errors || [validation.error])
@@ -53,7 +56,6 @@ async function process_git_file({
 
     // Run custom entity processor if provided
     if (entity_processor) {
-      // TODO make sure both entity_process functions share same properties schema
       const result = await entity_processor({
         file,
         validation,
@@ -77,46 +79,57 @@ async function process_git_file({
 }
 
 /**
- * Process repositories from git
+ * Process repositories from git using registry system
  * @param {Object} options Configuration options
- * @param {string} [options.root_base_directory] The absolute path to the base directory
  * @param {string} [options.branch] Branch override
  * @param {function} [options.entity_processor] Function to process each entity
+ *   The entity_processor receives an object with the following properties:
+ *   - file: {
+ *       base_uri: string,              // Base URI for the entity (e.g., 'user:task/my-task.md')
+ *       entity_properties: Object,     // Parsed entity properties from frontmatter
+ *       formatted_entity_metadata: Object, // Additional metadata
+ *       file_info: {                   // Git file information
+ *         git_relative_path: string,   // Path relative to git root
+ *         git_sha: string,             // Current git SHA of the file
+ *         repo_path: string,           // Absolute path to repository
+ *         branch: string               // Git branch name
+ *       },
+ *       errors: Array                  // Array of error messages (if any)
+ *     }
+ *   - validation: Object              // Validation result from schema validation
+ *   - repository: Object              // Repository configuration
+ *   - schemas: Object                 // Schema definitions for validation
+ *   Returns: boolean (false to skip, true/undefined to process)
  * @param {Array<string>} [options.exclude_entity_types] Entity types to exclude
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_git(options = {}) {
-  const root_base_directory = options.root_base_directory || process.cwd()
+  // Get directories from registry
+  const system_base_directory = get_system_base_directory()
+  const user_base_directory = get_user_base_directory()
+
   log(
-    `Processing repositories from git with root directory: ${root_base_directory}`
+    `Processing repositories from git with system directory: ${system_base_directory}, user directory: ${user_base_directory}`
   )
 
   // Setup root repository
-  const current_branch = await git.get_current_branch(root_base_directory)
+  const current_branch = await git.get_current_branch(system_base_directory)
   const branch = options.branch || config.system_main_branch || current_branch
-  const root_repo = {
-    path: root_base_directory,
-    branch,
-    submodule_base_path: null
-  }
+  const repositories = [
+    {
+      path: system_base_directory,
+      branch,
+      is_system_repo: true
+    }
+  ]
 
-  // Find all repositories including submodules
-  const repositories = [root_repo]
-  const submodules = await git.list_submodules({
-    repo_path: root_base_directory
-  })
-
-  for (const submodule of submodules) {
-    const submodule_path = path.join(root_base_directory, submodule.path)
-    const submodule_branch =
-      (await git.get_current_branch(submodule_path)) ||
-      submodule.branch ||
-      branch
-
+  // Add user repository if it exists and is different from root
+  if (user_base_directory && user_base_directory !== system_base_directory) {
+    const user_branch =
+      (await git.get_current_branch(user_base_directory)) || branch
     repositories.push({
-      path: submodule_path,
-      branch: submodule_branch,
-      submodule_base_path: submodule.path
+      path: user_base_directory,
+      branch: user_branch
     })
   }
 
@@ -127,23 +140,9 @@ export async function process_repositories_from_git(options = {}) {
 
   // Load schemas from git
   log('Loading schema definitions from git...')
-  const schemas = {}
 
-  // Load schemas from all repositories
-  for (const repository of repositories) {
-    // Skip the root repository if it's not needed
-    if (repository.submodule_base_path === null && repositories.length > 1) {
-      continue
-    }
-
-    const repo_schemas = await load_schema_definitions_from_git({
-      root_base_directory,
-      user_base_directory: repository.path
-    })
-
-    // Merge into main schemas object
-    Object.assign(schemas, repo_schemas)
-  }
+  // Load schemas using registry system
+  const schemas = await load_schema_definitions_from_git()
 
   // Scan for markdown files across all repositories
   log('Scanning git repositories...')
@@ -153,8 +152,8 @@ export async function process_repositories_from_git(options = {}) {
     const repo_files = await list_entity_files_from_git({
       repo_path: repository.path,
       branch: repository.branch,
-      submodule_base_path: repository.submodule_base_path,
-      exclude_entity_types: options.exclude_entity_types || []
+      exclude_entity_types: options.exclude_entity_types || [],
+      is_system_repo: repository.is_system_repo
     })
 
     log(`Found ${repo_files.length} markdown files in ${repository.path}`)
@@ -180,7 +179,7 @@ export async function process_repositories_from_git(options = {}) {
       schemas,
       branch: repository?.branch || branch,
       entity_processor: options.entity_processor,
-      base_relative_path: file.base_relative_path
+      base_uri: file.base_uri
     })
 
     if (result.processed) processed++

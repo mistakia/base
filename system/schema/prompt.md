@@ -5,8 +5,8 @@ extends: base
 type_name: prompt
 description: Schema for prompt entities used in the system
 relations:
-  - 'implements [[system/text/knowledge-base-schema.md]]'
-  - 'extends [[system/schema/base.md]]'
+  - 'implements [[sys:text/knowledge-base-schema.md]]'
+  - 'extends [[sys:schema/base.md]]'
 ---
 
 # Prompt Schema

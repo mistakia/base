@@ -1,6 +1,6 @@
-import path from 'path'
 import debug from 'debug'
 import { entity_exists_in_filesystem } from './entity-exists-in-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('entity:filesystem:validate:relations')
 
@@ -9,20 +9,9 @@ const log = debug('entity:filesystem:validate:relations')
  *
  * @param {Object} params - Parameters
  * @param {Array} params.relations - Array of relation objects
- * @param {string} params.root_base_directory - Root base directory
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_relations_from_filesystem({
-  relations,
-  root_base_directory
-}) {
-  if (!root_base_directory) {
-    return {
-      valid: false,
-      errors: ['Root base directory is required']
-    }
-  }
-
+export async function validate_relations_from_filesystem({ relations }) {
   if (!Array.isArray(relations)) {
     return {
       valid: false,
@@ -39,14 +28,15 @@ export async function validate_relations_from_filesystem({
 
     // Process relations
     const validation_promises = relations.map(async (relation) => {
-      const absolute_path = path.join(root_base_directory, relation.entity_path)
+      // Resolve the base_uri to absolute path using registry
+      const absolute_path = resolve_base_uri_from_registry(relation.base_uri)
 
       const exists = await entity_exists_in_filesystem({
         absolute_path
       })
 
       return {
-        entity_path: relation.entity_path,
+        base_uri: relation.base_uri,
         exists
       }
     })
@@ -64,7 +54,7 @@ export async function validate_relations_from_filesystem({
     return {
       valid: false,
       errors: missing_relations.map(
-        (rel) => `Relation target entity not found: ${rel.entity_path}`
+        (rel) => `Relation target entity not found: ${rel.base_uri}`
       )
     }
   } catch (error) {

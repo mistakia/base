@@ -29,21 +29,16 @@ export function register_file_list_tool() {
             description: 'Optional: Glob pattern to filter files',
             default: '*'
           },
-          thread_id: {
+          branch: {
             type: 'string',
-            description: 'Optional: Thread ID to determine branch'
-          },
-          branch_name: {
-            type: 'string',
-            description:
-              'Optional: Branch name to use (takes precedence over thread_id)'
+            description: 'Branch name to list files from'
           },
           repo_path: {
             type: 'string',
             description: 'Optional: Repository path (for testing)'
           }
-        }
-        // No required properties, path and pattern have defaults
+        },
+        required: ['branch']
       }
     },
     implementation: async (parameters, context = {}) => {
@@ -52,8 +47,7 @@ export function register_file_list_tool() {
         return await list_files({
           path: parameters.path || '',
           pattern: parameters.pattern || '*',
-          thread_id: parameters.thread_id,
-          branch_name: parameters.branch_name,
+          branch_name: parameters.branch,
           repo_path: parameters.repo_path,
           context
         })

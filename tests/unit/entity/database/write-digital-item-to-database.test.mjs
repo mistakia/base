@@ -9,6 +9,7 @@ import {
 } from '#tests/utils/index.mjs'
 import path from 'path'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { clear_registered_directories } from '#libs-server/base-uri/index.mjs'
 
 describe('write_digital_item_to_database', () => {
   let test_user
@@ -49,7 +50,7 @@ describe('write_digital_item_to_database', () => {
       user_id: test_user_id,
       digital_item_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -131,7 +132,7 @@ describe('write_digital_item_to_database', () => {
       user_id: test_user_id,
       digital_item_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -159,7 +160,7 @@ describe('write_digital_item_to_database', () => {
       digital_item_content: updated_content,
       digital_item_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -224,7 +225,7 @@ describe('write_digital_item_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/digital-item.md',
       git_sha: '98765abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -232,7 +233,7 @@ describe('write_digital_item_to_database', () => {
       digital_item_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -258,7 +259,7 @@ describe('write_digital_item_to_database', () => {
       digital_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -298,7 +299,7 @@ describe('write_digital_item_to_database', () => {
       digital_item_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -316,84 +317,87 @@ describe('write_digital_item_to_database', () => {
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
 
-    // 1. Create a temp repo
+    // 1. Create a temp repo with registry
     const test_repo = await create_temp_test_repo({
-      prefix: 'digital-item-tag-test-'
+      prefix: 'digital-item-tag-test-',
+      register_directories: true
     })
     const user_repo_path = test_repo.user_path
     const tag_entity_id = uuid()
-    const tag_base_relative_path = 'user/tags/digital-tag.md'
+    const tag_base_uri = 'user:tags/digital-tag.md'
     const tag_file_path = path.join(user_repo_path, 'tags', 'digital-tag.md')
 
-    // 2. Write the tag entity file using write_entity_to_filesystem
-    await write_entity_to_filesystem({
-      absolute_path: tag_file_path,
-      entity_properties: {
-        user_id: test_user_id,
-        entity_id: tag_entity_id,
-        title: 'Digital Tag',
-        description: 'A tag for digital items',
-        type: 'tag',
-        created_at: now,
-        updated_at: later
-      },
-      entity_type: 'tag',
-      entity_content: 'A tag for digital items.'
-    })
-
-    // 3. Insert the tag entity into the database
-    await db('entities').insert({
-      entity_id: tag_entity_id,
-      title: 'Digital Tag',
-      description: 'A tag for digital items',
-      type: 'tag',
-      user_id: test_user_id,
-      created_at: now,
-      updated_at: later,
-      frontmatter: {
-        entity_id: tag_entity_id,
-        title: 'Digital Tag',
-        description: 'A tag for digital items',
-        type: 'tag',
-        created_at: now,
-        updated_at: later
-      },
-      base_relative_path: tag_base_relative_path
-    })
-    await db('tags').insert({ entity_id: tag_entity_id })
-
-    // 4. Create digital item with tag (using base_relative_path)
-    const digital_item_properties = {
-      entity_id: uuid(),
-      title: 'Tagged Digital Item',
-      description: 'Digital item with tags',
-      file_mime_type: 'application/pdf',
-      tags: [tag_base_relative_path],
-      created_at: now,
-      updated_at: later
-    }
-
-    // Act
-    const digital_item_id = await write_digital_item_to_database({
-      digital_item_properties,
-      user_id: test_user_id,
-      absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
-      git_sha: 'dummysha1',
-      root_base_directory: test_repo.path
-    })
-
-    // Assert
-    const tag_relation = await db('entity_tags')
-      .where({
-        entity_id: digital_item_id,
-        tag_entity_id
+    try {
+      // 2. Write the tag entity file using write_entity_to_filesystem
+      await write_entity_to_filesystem({
+        absolute_path: tag_file_path,
+        entity_properties: {
+          user_id: test_user_id,
+          entity_id: tag_entity_id,
+          title: 'Digital Tag',
+          description: 'A tag for digital items',
+          type: 'tag',
+          created_at: now,
+          updated_at: later
+        },
+        entity_type: 'tag',
+        entity_content: 'A tag for digital items.'
       })
-      .first()
 
-    expect(tag_relation).to.exist
+      // 3. Insert the tag entity into the database
+      await db('entities').insert({
+        entity_id: tag_entity_id,
+        title: 'Digital Tag',
+        description: 'A tag for digital items',
+        type: 'tag',
+        user_id: test_user_id,
+        created_at: now,
+        updated_at: later,
+        frontmatter: {
+          entity_id: tag_entity_id,
+          title: 'Digital Tag',
+          description: 'A tag for digital items',
+          type: 'tag',
+          created_at: now,
+          updated_at: later
+        },
+        base_uri: tag_base_uri
+      })
+      await db('tags').insert({ entity_id: tag_entity_id })
 
-    // Clean up temp repo
-    await test_repo.cleanup()
+      // 4. Create digital item with tag (using base_uri)
+      const digital_item_properties = {
+        entity_id: uuid(),
+        title: 'Tagged Digital Item',
+        description: 'Digital item with tags',
+        file_mime_type: 'application/pdf',
+        tags: [tag_base_uri],
+        created_at: now,
+        updated_at: later
+      }
+
+      // Act - no longer passing system_base_directory, using registry instead
+      const digital_item_id = await write_digital_item_to_database({
+        digital_item_properties,
+        user_id: test_user_id,
+        absolute_path: '/dummy/path.md',
+        base_uri: 'sys:dummy/base/path',
+        git_sha: 'dummysha1'
+      })
+
+      // Assert
+      const tag_relation = await db('entity_tags')
+        .where({
+          entity_id: digital_item_id,
+          tag_entity_id
+        })
+        .first()
+
+      expect(tag_relation).to.exist
+    } finally {
+      // Clean up registry and temp repo
+      clear_registered_directories()
+      await test_repo.cleanup()
+    }
   })
 })

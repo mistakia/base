@@ -6,7 +6,7 @@ import { read_entity_from_database } from '#libs-server/entity/database/read/rea
  *
  * @param {Object} params - Parameters for searching entities
  * @param {string} params.user_id - The user ID who owns the entities
- * @param {string[]} [params.tag_base_relative_paths] - Optional array of tag base_relative_paths to filter by
+ * @param {string[]} [params.tag_base_uris] - Optional array of tag base_uris to filter by
  * @param {boolean} [params.include_archived=false] - Whether to include archived entities
  * @param {string[]} [params.entity_types] - Optional array of entity types to filter by
  * @param {string} [params.search_term] - Optional search term to filter by title
@@ -17,7 +17,7 @@ import { read_entity_from_database } from '#libs-server/entity/database/read/rea
  */
 export default async function search_entities({
   user_id,
-  tag_base_relative_paths = null,
+  tag_base_uris = null,
   include_archived = false,
   entity_types = null,
   search_term = null,
@@ -59,12 +59,12 @@ export default async function search_entities({
     query.where('e.title', 'like', term)
   }
 
-  // Filter by tags if specified using base_relative_paths
-  if (tag_base_relative_paths && tag_base_relative_paths.length > 0) {
-    // First get the tag entity IDs from the base_relative_paths
+  // Filter by tags if specified using base_uris
+  if (tag_base_uris && tag_base_uris.length > 0) {
+    // First get the tag entity IDs from the base_uris
     const tag_entities = await db_client('entities')
       .select('entity_id')
-      .whereIn('base_relative_path', tag_base_relative_paths)
+      .whereIn('base_uri', tag_base_uris)
       .where('user_id', user_id)
       .where('type', 'tag')
 
@@ -86,7 +86,7 @@ export default async function search_entities({
 
       query.whereIn('e.entity_id', entity_ids_with_all_tags)
     } else {
-      // If no tags match the provided base_relative_paths, return empty result
+      // If no tags match the provided base_uris, return empty result
       return []
     }
   }

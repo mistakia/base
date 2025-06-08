@@ -82,7 +82,7 @@ export async function search_repository({
     )
 
     const { stdout } = await execute_shell_command(
-      `git grep ${case_option} -n -I --no-color "${query}" ${git_ref} ${path_filter}`,
+      `git grep ${case_option} -n -I --no-color "${query}" "${git_ref}" -- ${path_filter}`,
       {
         cwd: repo_path,
         maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large results

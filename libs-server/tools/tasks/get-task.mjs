@@ -8,12 +8,11 @@ const log = debug('tools:tasks')
 register_tool({
   tool_name: 'task_get',
   tool_definition: {
-    description:
-      'Retrieves details for a specific task by its base_relative_path.',
+    description: 'Retrieves details for a specific task by its base_uri.',
     inputSchema: {
       type: 'object',
       properties: {
-        base_relative_path: {
+        base_uri: {
           type: 'string',
           description:
             'The base relative path of the task file (e.g., user/tasks/my-task.md).'
@@ -24,28 +23,28 @@ register_tool({
             'Optional: User ID. Currently not used for access check for filesystem reads but kept for consistency.'
         }
       },
-      required: ['base_relative_path']
+      required: ['base_uri']
     }
   },
   implementation: async (parameters, context = {}) => {
     try {
-      const { base_relative_path } = parameters
+      const { base_uri } = parameters
       const user_id = helpers.resolve_user_id(parameters, context) // Kept for consistency, not used in verify for now
 
-      log(`Getting task ${base_relative_path} for user ${user_id}`)
+      log(`Getting task ${base_uri} for user ${user_id}`)
 
-      const task = await helpers.verify_task_access(base_relative_path, user_id)
+      const task = await helpers.verify_task_access(base_uri, user_id)
 
       if (!task) {
         return {
           task: null,
-          error: `Task ${base_relative_path} not found or access denied.`
+          error: `Task ${base_uri} not found or access denied.`
         }
       }
 
       return { task }
     } catch (error) {
-      log(`Error getting task ${parameters.base_relative_path}:`, error)
+      log(`Error getting task ${parameters.base_uri}:`, error)
       return helpers.error_response('get task', error.message)
     }
   }

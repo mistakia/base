@@ -11,7 +11,7 @@ import add_timeline_entry from './add-timeline-entry.mjs'
 import generate_prompt from './generate-prompt.mjs'
 import { is_blocking_tool_call } from './thread-tools.mjs'
 import { get_provider } from '../inference-providers/index.mjs'
-import { get_tool, execute_tool } from '#libs-server/tools/registry.mjs'
+import { execute_tool } from '#libs-server/tools/registry.mjs'
 import { THREAD_MESSAGE_ROLE } from './threads-constants.mjs'
 
 // Import tool registry for workflow custom tools
@@ -25,136 +25,65 @@ const log = debug('threads:execute')
  * @param {Object} params Parameters for processing a tool call
  * @param {Object} params.thread Thread object
  * @param {Object} params.tool_call Tool call to process
- * @param {string} params.user_base_directory User base directory
  * @returns {Promise<Object>} Result of the tool execution
  */
-const process_tool_call = async ({
-  thread,
-  tool_call,
-  user_base_directory
-}) => {
-  const { thread_id } = thread
-  const { tool_name, tool_parameters } = tool_call
+const process_tool_call = async ({ thread, tool_call }) => {
+  log(`Processing tool call: ${tool_call.tool_name}`)
 
-  log(`Processing tool call ${tool_name} for thread ${thread_id}`)
+  try {
+    // Create execution context
+    const context = {
+      thread_id: thread.thread_id
+    }
 
-  // First check if tool exists in the registry
-  const tool = get_tool({ tool_name })
+    // Execute the tool
+    const result = await execute_tool({
+      tool_name: tool_call.tool_name,
+      parameters: tool_call.tool_parameters,
+      context
+    })
 
-  if (!tool) {
-    const error_message = `Tool ${tool_name} not found in registry`
-    log(error_message)
-
-    // Add timeline entry for tool call error
+    // Add timeline entry for tool execution
     await add_timeline_entry({
-      thread_id,
-      user_base_directory,
+      thread_id: thread.thread_id,
       entry: {
-        id: uuidv4(),
+        id: tool_call.id,
         timestamp: new Date().toISOString(),
-        type: 'error',
-        error_type: 'tool_not_found',
-        message: error_message,
+        type: 'tool_result',
         content: {
-          tool_name,
-          tool_parameters
+          tool_name: tool_call.tool_name,
+          parameters: tool_call.tool_parameters,
+          result
         }
       }
     })
 
-    return {
-      success: false,
-      error: error_message
-    }
-  }
-
-  try {
-    // Add timeline entry for tool call
-    const tool_call_entry = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      type: 'tool_call',
-      content: {
-        tool_name,
-        tool_parameters
-      }
-    }
-
-    await add_timeline_entry({
-      thread_id,
-      user_base_directory,
-      entry: tool_call_entry
-    })
-
-    // Execute the tool through the centralized registry
-    const execution_result = await execute_tool({
-      tool_name,
-      parameters: tool_parameters,
-      thread_id,
-      context: {
-        thread_id,
-        user_base_directory,
-        thread
-      }
-    })
-
-    // Check if execution was successful
-    if (execution_result.status !== 'success') {
-      throw new Error(execution_result.error || 'Unknown tool execution error')
-    }
-
-    const tool_result = execution_result.data
-
-    // Add timeline entry for tool result
-    const tool_result_entry = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      type: 'tool_result',
-      content: {
-        tool_name,
-        tool_parameters,
-        result: tool_result
-      }
-    }
-
-    await add_timeline_entry({
-      thread_id,
-      user_base_directory,
-      entry: tool_result_entry
-    })
-
-    return {
-      success: true,
-      tool_name,
-      tool_parameters,
-      result: tool_result
-    }
+    return result
   } catch (error) {
-    const error_message = `Error executing tool ${tool_name}: ${error.message}`
-    log(error_message)
+    log(`Error executing tool ${tool_call.tool_name}: ${error.message}`)
+
+    const error_result = {
+      success: false,
+      error: error.message,
+      tool_name: tool_call.tool_name
+    }
 
     // Add timeline entry for tool error
     await add_timeline_entry({
-      thread_id,
-      user_base_directory,
+      thread_id: thread.thread_id,
       entry: {
-        id: uuidv4(),
+        id: tool_call.id,
         timestamp: new Date().toISOString(),
-        type: 'error',
-        error_type: 'tool_execution_error',
-        message: error_message,
+        type: 'tool_result',
         content: {
-          tool_name,
-          tool_parameters,
-          error: error.message
+          tool_name: tool_call.tool_name,
+          parameters: tool_call.tool_parameters,
+          result: error_result
         }
       }
     })
 
-    return {
-      success: false,
-      error: error_message
-    }
+    return error_result
   }
 }
 
@@ -244,7 +173,6 @@ const process_stream = async ({
  * @param {Object} params Inference request parameters
  * @param {Object} params.thread Thread object
  * @param {string} params.prompt Prompt text
- * @param {string} params.user_base_directory User base directory
  * @param {Function} params.on_text Callback for text updates
  * @param {Function} params.on_tool_call Callback for tool calls
  * @returns {Promise<Object>} Response from the inference
@@ -252,7 +180,6 @@ const process_stream = async ({
 const make_inference_request = async ({
   thread,
   prompt,
-  user_base_directory,
   on_text = () => {},
   on_tool_call = () => {}
 }) => {
@@ -272,7 +199,6 @@ const make_inference_request = async ({
     // Add timeline entry for message
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -301,7 +227,6 @@ const make_inference_request = async ({
     // Add timeline entry for assistant response
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -320,7 +245,6 @@ const make_inference_request = async ({
     // Add timeline entry for error
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -342,7 +266,6 @@ const make_inference_request = async ({
  *
  * @param {Object} params Thread execution parameters
  * @param {string} params.thread_id ID of the thread to execute
- * @param {string} params.user_base_directory User base directory
  * @param {Function} params.on_text Callback for text output
  * @param {Function} params.on_tool_call Callback for tool calls
  * @param {Function} params.on_tool_result Callback for tool results
@@ -354,7 +277,6 @@ const make_inference_request = async ({
  */
 export const execute_thread = async ({
   thread_id,
-  user_base_directory,
   on_text = () => {},
   on_tool_call = () => {},
   on_tool_result = () => {},
@@ -378,7 +300,6 @@ export const execute_thread = async ({
       // Add timeline entry for max iterations reached
       await add_timeline_entry({
         thread_id,
-        user_base_directory,
         entry: {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
@@ -394,7 +315,6 @@ export const execute_thread = async ({
       // Update thread state to paused
       await update_thread_state({
         thread_id,
-        user_base_directory,
         thread_state: 'paused',
         reason: 'Maximum iterations reached in continuous execution'
       })
@@ -406,7 +326,6 @@ export const execute_thread = async ({
       // Execute single iteration
       last_result = await execute_single_iteration({
         thread_id,
-        user_base_directory,
         on_text,
         on_tool_call,
         on_tool_result,
@@ -453,7 +372,6 @@ export const execute_thread = async ({
  */
 const execute_single_iteration = async ({
   thread_id,
-  user_base_directory,
   on_text,
   on_tool_call,
   on_tool_result,
@@ -464,39 +382,34 @@ const execute_single_iteration = async ({
   try {
     // Get thread data
     const thread = await get_thread({
-      thread_id,
-      user_base_directory
+      thread_id
     })
 
     // Register workflow tools if this thread has a workflow
-    if (thread.workflow_base_relative_path) {
+    if (thread.workflow_base_uri) {
       const { register_workflow_tools } = await import(
         '#libs-server/workflow/index.mjs'
       )
       await register_workflow_tools({
-        workflow_base_relative_path: thread.workflow_base_relative_path,
-        root_base_directory: user_base_directory.split('/user')[0] // Extract root from user base
+        workflow_base_uri: thread.workflow_base_uri
       })
     }
 
     // Generate prompt
     const prompt_data = await generate_prompt({
-      thread_id,
-      user_base_directory
+      thread_id
     })
 
     // Update thread state to active if not already
     if (thread.thread_state !== 'active') {
       await update_thread_state({
         thread_id,
-        user_base_directory,
         thread_state: 'active'
       })
 
       // Add timeline entry for state change
       await add_timeline_entry({
         thread_id,
-        user_base_directory,
         entry: {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
@@ -516,7 +429,6 @@ const execute_single_iteration = async ({
     const response = await make_inference_request({
       thread,
       prompt: prompt_data.prompt_text,
-      user_base_directory,
       on_text,
       on_tool_call
     })
@@ -536,78 +448,74 @@ const execute_single_iteration = async ({
           if (auto_execute_tools) {
             const result = await process_tool_call({
               thread,
-              tool_call,
-              user_base_directory
+              tool_call
             })
 
-            on_tool_result(result)
+            // Notify callback
+            on_tool_result(tool_call, result)
 
-            // If this is a workflow completion tool, update thread state
-            if (result.success && result.result?.stops_execution) {
-              log(`Workflow tool ${tool_call.tool_name} completed execution`)
-
-              // Update thread state to completed if it's a workflow completion
-              await update_thread_state({
-                thread_id: thread.thread_id,
-                user_base_directory,
-                thread_state: 'completed',
-                reason: `Workflow completed via ${tool_call.tool_name} tool`
-              })
-            }
+            // Break after processing blocking tool
+            break
+          } else {
+            // Just notify callback without executing
+            on_tool_result(tool_call, {
+              success: false,
+              message: 'Tool execution disabled'
+            })
+            break
           }
+        } else {
+          // Non-blocking tool - execute if auto-executing
+          if (auto_execute_tools) {
+            const result = await process_tool_call({
+              thread,
+              tool_call
+            })
 
-          // Break after first blocking tool
-          break
-        }
-
-        // Process non-blocking tool calls if auto-executing
-        if (auto_execute_tools) {
-          const result = await process_tool_call({
-            thread,
-            tool_call,
-            user_base_directory
-          })
-
-          on_tool_result(result)
+            // Notify callback
+            on_tool_result(tool_call, result)
+          } else {
+            // Just notify callback without executing
+            on_tool_result(tool_call, {
+              success: false,
+              message: 'Tool execution disabled'
+            })
+          }
         }
       }
     }
 
-    // Call completion callback
-    on_completion({
-      thread_id,
-      blocking_tool_encountered,
-      execution_stopping_tool,
-      response,
-      iteration_count
-    })
-
-    return {
-      thread_id,
-      blocking_tool_encountered,
-      execution_stopping_tool,
-      response
-    }
-  } catch (error) {
-    log(`Error executing thread iteration: ${error.message}`)
-
-    // Add timeline entry for error
+    // Add timeline entry for assistant response
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
-        type: 'error',
-        error_type: 'thread_execution_error',
-        message: `Thread execution failed: ${error.message}`,
+        type: 'assistant_response',
         content: {
-          error: error.message,
-          iteration: iteration_count
+          text: response.text,
+          tool_calls: response.tool_calls || []
         }
       }
     })
 
+    // Notify completion callback
+    on_completion({
+      text: response.text,
+      tool_calls: response.tool_calls || [],
+      blocking_tool_encountered,
+      execution_stopping_tool
+    })
+
+    return {
+      success: true,
+      text: response.text,
+      tool_calls: response.tool_calls || [],
+      blocking_tool_encountered,
+      execution_stopping_tool
+    }
+  } catch (error) {
+    log(`Error in single iteration: ${error.message}`)
     throw error
   }
 }

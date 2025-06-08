@@ -11,20 +11,17 @@ const log = debug('threads:get')
  *
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to retrieve
- * @param {string} [params.user_base_directory] Custom user base directory
  * @returns {Promise<Object>} Thread data object
  * @throws {Error} If thread is not found
  */
-export default async function get_thread({ thread_id, user_base_directory }) {
+export default async function get_thread({ thread_id }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
   }
 
   log(`Getting thread ${thread_id}`)
 
-  const thread_base_directory = get_thread_base_directory({
-    user_base_directory
-  })
+  const thread_base_directory = get_thread_base_directory()
   const thread_dir = path.join(thread_base_directory, thread_id)
 
   try {
@@ -62,7 +59,7 @@ export default async function get_thread({ thread_id, user_base_directory }) {
  * @param {string} [params.thread_state] Filter by thread state
  * @param {number} [params.limit=50] Maximum number of threads to return
  * @param {number} [params.offset=0] Number of threads to skip
- * @param {string} [params.user_base_directory] Custom user base directory
+ * @param {string} [params.user_base_directory] Custom user base directory (overrides registry)
  * @returns {Promise<Array>} Array of thread summary objects
  */
 export async function list_threads({

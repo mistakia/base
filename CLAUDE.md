@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Human-in-the-Loop System - an LLM-powered knowledge base management and collaboration platform. The system uses a file-first architecture with markdown/YAML files as the primary data format, git for version control, and PostgreSQL for indexing and search.
 
+**User Directory Configuration**: The user data directory is external to the main repository and configured via `config.user_base_directory`. This allows the user data to exist as a separate git repository outside the Base system.
+
 ## Common Development Commands
 
 ### Development
@@ -26,6 +28,9 @@ yarn start:api
 ```bash
 # Run all tests (unit + integration)
 yarn test
+
+# Run tests with minimal output (more token efficient)
+yarn test --reporter min
 
 # Run specific test suites
 yarn test:unit          # Unit tests only
@@ -127,10 +132,11 @@ All modifications follow a pull request-style workflow:
   /workflow/         # System workflows
   /text/            # Documentation
 
-/user/               # User data (git submodule)
-  /task/            # User tasks
-  /thread/          # Thread execution data
-  /workflow/        # User workflows
+# User directory is external, configured via config.user_base_directory
+# <user-directory>/   # User data (separate git repository)
+#   /task/            # User tasks
+#   /thread/          # Thread execution data
+#   /workflow/        # User workflows
 ```
 
 ### State Management (Client)

@@ -119,7 +119,7 @@ describe('write_entity_tags_to_database', () => {
     // First add some tags
     await write_entity_tags_to_database({
       entity_id,
-      // TODO should probably be base_relative_path
+      // TODO should probably be base_uri
       tag_entity_ids: [tag_entity_id1, tag_entity_id2],
       db_client: db
     })
@@ -169,7 +169,7 @@ describe('write_entity_tags_to_database', () => {
 
   it('should work with a transaction', async () => {
     // Arrange
-    // TODO should probably be base_relative_path
+    // TODO should probably be base_uri
     const tags = [tag_entity_id1, tag_entity_id2]
 
     // Start a transaction

@@ -5,8 +5,8 @@ import debug from 'debug'
 import config from '#config'
 
 const log = debug('github-entity-mapper')
-const CONFIG_PATH = path.resolve(
-  config.root_base_directory || process.cwd(),
+const GITHUB_ENTITY_MAPPINGS_PATH = path.resolve(
+  config.user_base_directory,
   'user/task/github/github-entity-mappings.json'
 )
 
@@ -17,7 +17,7 @@ const CONFIG_PATH = path.resolve(
  */
 export function load_mappings() {
   try {
-    const config_content = fs.readFileSync(CONFIG_PATH, 'utf8')
+    const config_content = fs.readFileSync(GITHUB_ENTITY_MAPPINGS_PATH, 'utf8')
     return JSON.parse(config_content).mappings
   } catch (error) {
     log(`Error loading mappings: ${error.message}`)

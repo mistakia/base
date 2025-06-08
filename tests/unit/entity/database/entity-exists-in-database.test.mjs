@@ -30,7 +30,7 @@ describe('entity_exists_in_database', () => {
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -49,7 +49,7 @@ describe('entity_exists_in_database', () => {
       entity_type: ENTITY_TYPES.TASK,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
   })
@@ -125,7 +125,7 @@ describe('entity_exists_in_database', () => {
         user_id: test_user_id,
         trx,
         absolute_path: '/dummy/path.md',
-        base_relative_path: 'dummy/base/path',
+        base_uri: 'sys:dummy/base/path',
         git_sha: 'dummysha1'
       })
 

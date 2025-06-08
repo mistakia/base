@@ -2,9 +2,8 @@ import debug from 'debug'
 import fs from 'fs/promises'
 import Twig from 'twig'
 import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 // Tool registration happens at thread creation time
-import config from '#config'
 
 const log = debug('prompts:workflow')
 
@@ -12,30 +11,25 @@ const log = debug('prompts:workflow')
  * Generate a workflow prompt component from a workflow file
  *
  * @param {Object} params Parameters
- * @param {string} params.base_relative_path Workflow path relative to Base root, e.g., 'system/workflow/<file_path>.md' or 'user/workflow/<file_path>.md'
+ * @param {string} params.base_uri URI identifying the workflow (e.g., 'sys:workflow/name.md', 'user:workflow/name.md')
  * @param {Object} [params.prompt_properties] Properties to inject into the workflow template
  * @param {Array} [params.timeline_entries] Timeline entries to make available in the template
- * @param {string} [params.root_base_directory] Custom root base directory
  * @returns {Promise<Object>} Object containing prompt text and guideline paths
  */
 export default async function generate_workflow_prompt({
-  base_relative_path,
+  base_uri,
   prompt_properties = {},
-  timeline_entries = [],
-  root_base_directory = config.root_base_directory
+  timeline_entries = []
 }) {
-  if (!base_relative_path) {
-    throw new Error('base_relative_path is required')
+  if (!base_uri) {
+    throw new Error('base_uri is required')
   }
 
-  log(`Generating workflow prompt for workflow ${base_relative_path}`)
+  log(`Generating workflow prompt for workflow ${base_uri}`)
 
   try {
-    // Get the file path using the shared helper
-    const { absolute_path } = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Resolve absolute path using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
 
     // Read and parse the workflow markdown file
     const workflow_content = await fs.readFile(absolute_path, 'utf-8')
@@ -63,7 +57,7 @@ export default async function generate_workflow_prompt({
 
     return {
       prompt: prompt.trim(),
-      guideline_base_relative_paths: document_properties.guidelines || []
+      guideline_base_uris: document_properties.guidelines || []
     }
   } catch (error) {
     console.log(error)

@@ -46,7 +46,7 @@ describe('write_task_to_database', () => {
       user_id: test_user_id,
       task_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -106,7 +106,7 @@ describe('write_task_to_database', () => {
       user_id: test_user_id,
       task_content: original_content,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -131,7 +131,7 @@ describe('write_task_to_database', () => {
       task_content: updated_content,
       task_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -184,7 +184,7 @@ describe('write_task_to_database', () => {
     const file_info = {
       absolute_path: '/path/to/task.md',
       git_sha: '12345abcdef',
-      base_relative_path: 'dummy/base/path'
+      base_uri: 'sys:dummy/base/path'
     }
 
     // Act
@@ -192,7 +192,7 @@ describe('write_task_to_database', () => {
       task_properties,
       user_id: test_user_id,
       absolute_path: file_info.absolute_path,
-      base_relative_path: file_info.base_relative_path,
+      base_uri: file_info.base_uri,
       git_sha: file_info.git_sha
     })
 
@@ -238,7 +238,7 @@ describe('write_task_to_database', () => {
       task_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1'
     })
 
@@ -292,7 +292,7 @@ describe('write_task_to_database', () => {
     const test_repo = await create_temp_test_repo({ prefix: 'task-rel-test-' })
     const user_repo_path = test_repo.user_path
     const related_entity_id = uuid()
-    const related_base_relative_path = 'user/relations/related-entity.md'
+    const related_base_uri = 'user:relations/related-entity.md'
     const related_file_path = path.join(
       user_repo_path,
       'relations',
@@ -332,10 +332,10 @@ describe('write_task_to_database', () => {
         created_at: now,
         updated_at: later
       },
-      base_relative_path: related_base_relative_path
+      base_uri: related_base_uri
     })
 
-    // 4. Create task with relationship (using base_relative_path)
+    // 4. Create task with relationship (using base_uri)
     const task_properties = {
       entity_id: uuid(),
       title: 'Task with Relation',
@@ -344,9 +344,7 @@ describe('write_task_to_database', () => {
       updated_at: later
     }
     const formatted_entity_metadata = {
-      relations: [
-        { relation_type: 'references', entity_path: related_base_relative_path }
-      ]
+      relations: [{ relation_type: 'references', base_uri: related_base_uri }]
     }
 
     // Act
@@ -354,9 +352,8 @@ describe('write_task_to_database', () => {
       task_properties,
       user_id: test_user_id,
       absolute_path: '/dummy/path.md',
-      base_relative_path: 'dummy/base/path',
+      base_uri: 'sys:dummy/base/path',
       git_sha: 'dummysha1',
-      root_base_directory: test_repo.path,
       formatted_entity_metadata
     })
 

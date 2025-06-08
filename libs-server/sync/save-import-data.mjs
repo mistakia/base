@@ -35,9 +35,11 @@ export async function save_import_data({
     })
 
     // Create directories if they don't exist
-    await fs_promises.mkdir(dir_paths.raw_path, { recursive: true })
+    await fs_promises.mkdir(dir_paths.raw_data_directory, { recursive: true })
     if (processed_data) {
-      await fs_promises.mkdir(dir_paths.processed_path, { recursive: true })
+      await fs_promises.mkdir(dir_paths.processed_data_directory, {
+        recursive: true
+      })
     }
 
     // Generate content identifiers
@@ -46,7 +48,7 @@ export async function save_import_data({
     // Create timestamped filenames
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const raw_filename = `${timestamp}_${raw_data_cid}.json`
-    const raw_filepath = path.join(dir_paths.raw_path, raw_filename)
+    const raw_filepath = path.join(dir_paths.raw_data_directory, raw_filename)
 
     // Write raw data to file
     await write_file_to_filesystem({
@@ -62,7 +64,7 @@ export async function save_import_data({
       processed_data_cid = await create_content_identifier(processed_data)
       const processed_filename = `${timestamp}_${processed_data_cid}.json`
       processed_filepath = path.join(
-        dir_paths.processed_path,
+        dir_paths.processed_data_directory,
         processed_filename
       )
 

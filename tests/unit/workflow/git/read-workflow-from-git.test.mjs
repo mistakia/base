@@ -6,38 +6,49 @@ import child_process from 'child_process'
 
 import { read_workflow_from_git } from '#libs-server/workflow/git/read-workflow-from-git.mjs'
 import { create_temp_test_repo } from '#tests/utils/index.mjs'
+import { register_test_directories } from '#tests/utils/setup-test-directories.mjs'
 
 const exec = promisify(child_process.exec)
 
 describe('read_workflow_from_git', () => {
-  let repo
+  let system_repo, user_repo
+  let cleanup_registry
   const branch = 'main'
 
   // System workflow paths in the repo
-  const system_workflow_dir = 'system/workflow'
+  const system_workflow_dir = 'workflow'
   const system_workflow_filename = 'test-workflow.md'
   const complex_workflow_filename = 'complex-workflow.md'
-  const system_workflow_base_relative_path = `${system_workflow_dir}/${system_workflow_filename}`
-  const complex_workflow_base_relative_path = `${system_workflow_dir}/${complex_workflow_filename}`
+  const system_workflow_base_uri = `sys:${system_workflow_dir}/${system_workflow_filename}`
+  const complex_workflow_base_uri = `sys:${system_workflow_dir}/${complex_workflow_filename}`
 
   // User workflow paths in the repo
   const user_workflow_dir = 'workflow'
   const user_workflow_filename = 'test-user-workflow.md'
-  const user_workflow_base_relative_path = `${user_workflow_dir}/${user_workflow_filename}`
+  const user_workflow_base_uri = `user:${user_workflow_dir}/${user_workflow_filename}`
 
-  const non_existent_workflow_base_relative_path = 'system/non-existent.md'
+  const non_existent_workflow_base_uri = 'sys:workflow/non-existent.md'
 
   before(async () => {
-    // Create a temporary git repository
-    repo = await create_temp_test_repo()
+    // Create temporary git repositories
+    system_repo = await create_temp_test_repo({ register_directories: false })
+    user_repo = await create_temp_test_repo({ register_directories: false })
+
+    // Register directories for URI resolution
+    cleanup_registry = register_test_directories({
+      system_base_directory: system_repo.system_path,
+      user_base_directory: user_repo.user_path
+    })
 
     // Create system workflow directory
-    await fs.mkdir(path.join(repo.path, system_workflow_dir), {
+    await fs.mkdir(path.join(system_repo.system_path, system_workflow_dir), {
       recursive: true
     })
 
     // Create user workflow directory
-    await fs.mkdir(path.join(repo.path, user_workflow_dir), { recursive: true })
+    await fs.mkdir(path.join(user_repo.user_path, user_workflow_dir), {
+      recursive: true
+    })
 
     // Write test system workflow
     const system_workflow_content = `---
@@ -52,7 +63,11 @@ tags: ["test", "git"]
 This is a test workflow for Git.
 `
     await fs.writeFile(
-      path.join(repo.path, system_workflow_base_relative_path),
+      path.join(
+        system_repo.system_path,
+        system_workflow_dir,
+        system_workflow_filename
+      ),
       system_workflow_content
     )
 
@@ -69,7 +84,7 @@ tags: ["user", "git"]
 This is a user workflow for Git.
 `
     await fs.writeFile(
-      path.join(repo.path, user_workflow_base_relative_path),
+      path.join(user_repo.user_path, user_workflow_dir, user_workflow_filename),
       user_workflow_content
     )
 
@@ -96,41 +111,56 @@ custom_object:
 This is a complex workflow with many properties.
 `
     await fs.writeFile(
-      path.join(repo.path, complex_workflow_base_relative_path),
+      path.join(
+        system_repo.system_path,
+        system_workflow_dir,
+        complex_workflow_filename
+      ),
       complex_workflow_content
     )
 
     // Add files to git and commit
     await fs.appendFile(
-      path.join(repo.path, 'README.md'),
+      path.join(system_repo.system_path, 'README.md'),
       '\n\nUpdated for workflow tests'
     )
 
     // Execute git commands to add and commit the files
-    await exec('git add .', { cwd: repo.path })
-    await exec('git commit -m "Add test workflows"', { cwd: repo.path })
+    await exec('git add .', { cwd: system_repo.system_path })
+    await exec('git commit -m "Add test workflows"', {
+      cwd: system_repo.system_path
+    })
+
+    // Also commit user workflow
+    await exec('git add .', { cwd: user_repo.user_path })
+    await exec('git commit -m "Add test user workflows"', {
+      cwd: user_repo.user_path
+    })
   })
 
   after(() => {
-    // Clean up temporary repository
-    if (repo) {
-      repo.cleanup()
+    // Clean up temporary repositories and registry
+    if (cleanup_registry) {
+      cleanup_registry()
+    }
+    if (system_repo) {
+      system_repo.cleanup()
+    }
+    if (user_repo) {
+      user_repo.cleanup()
     }
   })
 
   it('should successfully read a system workflow from git', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: system_workflow_base_relative_path,
-      branch,
-      root_base_directory: repo.path
+      base_uri: system_workflow_base_uri,
+      branch
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.base_relative_path).to.equal(
-      system_workflow_base_relative_path
-    )
+    expect(result.base_uri).to.equal(system_workflow_base_uri)
     expect(result.branch).to.equal(branch)
     expect(result.entity_properties).to.include({
       title: 'Test Workflow',
@@ -148,14 +178,13 @@ This is a complex workflow with many properties.
   it('should successfully read a user workflow from git', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: user_workflow_base_relative_path,
-      branch,
-      root_base_directory: repo.path
+      base_uri: user_workflow_base_uri,
+      branch
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.base_relative_path).to.equal(user_workflow_base_relative_path)
+    expect(result.base_uri).to.equal(user_workflow_base_uri)
     expect(result.branch).to.equal(branch)
     expect(result.entity_properties).to.include({
       title: 'User Workflow',
@@ -173,9 +202,8 @@ This is a complex workflow with many properties.
   it('should handle complex workflow properties', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: complex_workflow_base_relative_path,
-      branch,
-      root_base_directory: repo.path
+      base_uri: complex_workflow_base_uri,
+      branch
     })
 
     // Assert
@@ -202,26 +230,22 @@ This is a complex workflow with many properties.
   it('should return error when workflow does not exist', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: non_existent_workflow_base_relative_path,
-      branch,
-      root_base_directory: repo.path
+      base_uri: non_existent_workflow_base_uri,
+      branch
     })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.error).to.include('does not exist')
-    expect(result.base_relative_path).to.equal(
-      non_existent_workflow_base_relative_path
-    )
+    expect(result.base_uri).to.equal(non_existent_workflow_base_uri)
     expect(result.branch).to.equal(branch)
   })
 
-  it('should return error when base_relative_path is invalid', async () => {
+  it('should return error when base_uri is invalid', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: 'invalid-path',
-      branch,
-      root_base_directory: repo.path
+      base_uri: 'invalid-path',
+      branch
     })
 
     // Assert
@@ -229,11 +253,10 @@ This is a complex workflow with many properties.
     expect(result.error).to.be.a('string')
   })
 
-  it('should return error when base_relative_path is not provided', async () => {
+  it('should return error when base_uri is not provided', async () => {
     // Act
     const result = await read_workflow_from_git({
-      branch,
-      root_base_directory: repo.path
+      branch
     })
 
     // Assert
@@ -244,8 +267,7 @@ This is a complex workflow with many properties.
   it('should return error when branch is not provided', async () => {
     // Act
     const result = await read_workflow_from_git({
-      base_relative_path: system_workflow_base_relative_path,
-      root_base_directory: repo.path
+      base_uri: system_workflow_base_uri
     })
 
     // Assert

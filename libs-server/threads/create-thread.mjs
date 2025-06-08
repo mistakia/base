@@ -5,7 +5,7 @@ import debug from 'debug'
 
 import {
   get_thread_base_directory,
-  THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH
+  THREAD_DEFAULT_WORKFLOW_BASE_URI
 } from './threads-constants.mjs'
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
@@ -13,6 +13,10 @@ import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
 import { create_change_request } from '#libs-server/change-requests/index.mjs'
 import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
 import { get_thread_tool_names } from './thread-tools.mjs'
+import {
+  get_registered_directories,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
@@ -23,17 +27,15 @@ const log = debug('threads:create')
  *
  * @param {Object} params - Parameters
  * @param {string} params.thread_id - Thread ID
- * @param {string} params.system_base_directory - Path to system knowledge base repo
- * @param {string} params.user_base_directory - Path to user knowledge base repo
  * @returns {Promise<Object>} Worktree paths for system and user repos
  */
-async function create_thread_branch({
-  thread_id,
-  system_base_directory,
-  user_base_directory
-}) {
+async function create_thread_branch({ thread_id }) {
   const branch_name = `thread/${thread_id}`
   const worktree_paths = {}
+
+  // Get directories from registry
+  const { system_base_directory, user_base_directory } =
+    get_registered_directories()
 
   // Create branch in system knowledge base without checking out
   log(`Creating branch ${branch_name} in system repo`)
@@ -118,29 +120,27 @@ async function initialize_memory_repository({ memory_dir }) {
  *
  * @param {Object} params Thread creation parameters
  * @param {string} params.user_id ID of the user who owns the thread
- * @param {string} params.workflow_base_relative_path Workflow base relative path in format
+ * @param {string} params.workflow_base_uri Workflow base relative path in format
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} params.model Model to use from the provider
  * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
- * @param {string} [params.root_base_directory] Path to root repository
- * @param {string} [params.user_base_directory] Path to user knowledge base repository
+ * @param {boolean} [params.create_git_branches=true] Whether to create git branches and worktrees
  * @param {Object} [params.metadata={}] Additional metadata
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
   user_id,
-  workflow_base_relative_path = THREAD_DEFAULT_WORKFLOW_BASE_RELATIVE_PATH,
+  workflow_base_uri = THREAD_DEFAULT_WORKFLOW_BASE_URI,
   inference_provider,
   model,
   thread_state = THREAD_STATE.ACTIVE,
   thread_main_request,
   prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
-  user_base_directory,
-  root_base_directory,
+  create_git_branches = true,
   // TODO cleanup
   ...additional_metadata
 }) {
@@ -149,8 +149,8 @@ export default async function create_thread({
     throw new Error('user_id is required')
   }
 
-  if (!workflow_base_relative_path) {
-    throw new Error('workflow_base_relative_path is required')
+  if (!workflow_base_uri) {
+    throw new Error('workflow_base_uri is required')
   }
 
   if (!inference_provider) {
@@ -167,12 +167,11 @@ export default async function create_thread({
   // Validate that the workflow exists
   // TODO consider using workflow_exists_in_git instead
   const workflow_file_exists = await workflow_exists_in_filesystem({
-    base_relative_path: workflow_base_relative_path,
-    root_base_directory
+    base_uri: workflow_base_uri
   })
 
   if (!workflow_file_exists) {
-    throw new Error(`Workflow '${workflow_base_relative_path}' does not exist`)
+    throw new Error(`Workflow '${workflow_base_uri}' does not exist`)
   }
 
   // Get workflow tools list (without registering custom tools yet)
@@ -183,8 +182,7 @@ export default async function create_thread({
     )
 
     workflow_tools = await get_workflow_tools({
-      workflow_base_relative_path,
-      root_base_directory
+      workflow_base_uri
     })
 
     if (workflow_tools.length > 0) {
@@ -192,7 +190,7 @@ export default async function create_thread({
     }
   } catch (error) {
     log(
-      `Warning: Could not extract tools from workflow ${workflow_base_relative_path}: ${error.message}`
+      `Warning: Could not extract tools from workflow ${workflow_base_uri}: ${error.message}`
     )
     // Continue thread creation even if tool extraction fails
   }
@@ -200,10 +198,11 @@ export default async function create_thread({
   // Generate thread ID
   const thread_id = uuid()
   log(
-    `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_relative_path}`
+    `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_uri}`
   )
 
-  // Create thread directory structure
+  // Create thread directory structure using registry
+  const user_base_directory = get_user_base_directory()
   const thread_base_directory = get_thread_base_directory({
     user_base_directory
   })
@@ -230,7 +229,7 @@ export default async function create_thread({
   const metadata = {
     thread_id,
     user_id,
-    workflow_base_relative_path,
+    workflow_base_uri,
     inference_provider,
     model,
     thread_state,
@@ -263,13 +262,11 @@ export default async function create_thread({
     'utf-8'
   )
 
-  // Create git branches and worktrees if requested and paths provided
-  if (root_base_directory && user_base_directory) {
+  // Create git branches and worktrees if requested
+  if (create_git_branches) {
     try {
       const worktree_paths = await create_thread_branch({
-        thread_id,
-        system_base_directory: root_base_directory,
-        user_base_directory
+        thread_id
       })
 
       // Add branch and worktree information to metadata
@@ -285,9 +282,7 @@ export default async function create_thread({
           user_id,
           target_branch: 'main',
           feature_branch: `thread/${thread_id}`,
-          thread_id,
-          tags: ['thread-changes', 'auto-generated'],
-          user_base_directory
+          thread_id
         })
 
         // Add change request information to metadata

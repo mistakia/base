@@ -64,8 +64,7 @@ describe('Change Request Git Operations', function () {
       // Get the commits using the utility function
       const commits = await change_request_utils.get_change_request_commits({
         feature_branch: branch_name,
-        target_branch: 'main',
-        user_base_directory: test_repo.user_path
+        target_branch: 'main'
       })
 
       // Verify we got the expected commits
@@ -94,8 +93,7 @@ describe('Change Request Git Operations', function () {
       // Get the commits using the utility function
       const commits = await change_request_utils.get_change_request_commits({
         feature_branch: 'empty-branch',
-        target_branch: 'main',
-        user_base_directory: test_repo.user_path
+        target_branch: 'main'
       })
 
       // Verify we got no commits
@@ -114,8 +112,7 @@ describe('Change Request Git Operations', function () {
       // Build change request from git
       const cr_data = await change_request_utils.build_change_request_from_git({
         feature_branch: branch_name,
-        target_branch: 'main',
-        user_base_directory: test_repo.user_path
+        target_branch: 'main'
       })
 
       // Verify the data
@@ -147,8 +144,7 @@ describe('Change Request Git Operations', function () {
       // Build change request from git
       const cr_data = await change_request_utils.build_change_request_from_git({
         feature_branch: 'empty-branch-for-build',
-        target_branch: 'main',
-        user_base_directory: test_repo.user_path
+        target_branch: 'main'
       })
 
       // Verify the data
@@ -173,8 +169,7 @@ describe('Change Request Git Operations', function () {
           target_branch: 'main',
           feature_branch: branch_name,
           merge_message: 'Merging test branch',
-          delete_branch: false, // Keep branch for verification
-          user_base_directory: test_repo.user_path
+          delete_branch: false // Keep branch for verification
         }
       )
 
@@ -200,8 +195,7 @@ describe('Change Request Git Operations', function () {
         await change_request_utils.merge_branch_for_change_request({
           target_branch: 'main',
           feature_branch: 'non-existent-branch',
-          merge_message: 'This should fail',
-          user_base_directory: test_repo.user_path
+          merge_message: 'This should fail'
         })
 
         // If we get here, the test should fail
@@ -222,8 +216,7 @@ describe('Change Request Git Operations', function () {
         target_branch: 'main',
         feature_branch: branch_name,
         merge_message: 'Merge and delete test',
-        delete_branch: true, // Delete branch after merging
-        user_base_directory: test_repo.user_path
+        delete_branch: true // Delete branch after merging
       })
 
       // Verify the branch was deleted

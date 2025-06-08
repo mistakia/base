@@ -14,7 +14,10 @@ import { write_database_table_item_to_database } from '#libs-server/entity/datab
 import { write_database_table_view_to_database } from '#libs-server/entity/database/write/write-database-table-view-to-database.mjs'
 import { with_transaction } from '#libs-server/utils/with-transaction.mjs'
 import { get_file_git_sha } from '#libs-server/git/file-operations.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import {
+  resolve_base_uri_from_registry,
+  get_git_info_from_registry
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('entity:database:import-from-git')
 
@@ -22,30 +25,24 @@ const log = debug('entity:database:import-from-git')
  * Imports an entity from git into the database
  *
  * @param {Object} options - Function options
- * @param {string} options.base_relative_path - The path relative to the root base directory
- * @param {string} options.root_base_directory - The absolute path to the root base directory
+ * @param {string} options.base_uri - The base URI identifying the entity
  * @param {string} options.branch - The git branch to read from
  * @param {string} options.user_id - The user ID to associate with the entity
  * @param {boolean} [options.force=false] - Force update even if git SHA matches
  * @returns {Promise<Object>} - Result object with entity_id and status information
  */
 export async function import_entity_from_git({
-  base_relative_path,
-  root_base_directory,
+  base_uri,
   branch,
   user_id,
   force = false
 }) {
   try {
-    log(`Importing entity from git: ${base_relative_path} (branch: ${branch})`)
+    log(`Importing entity from git: ${base_uri} (branch: ${branch})`)
 
     // Validate required parameters
-    if (!base_relative_path) {
-      throw new Error('Base relative path is required')
-    }
-
-    if (!root_base_directory) {
-      throw new Error('Root base directory is required')
+    if (!base_uri) {
+      throw new Error('Base URI is required')
     }
 
     if (!branch) {
@@ -56,13 +53,12 @@ export async function import_entity_from_git({
       throw new Error('User ID is required')
     }
 
-    // Get file information using get_base_file_info
-    const file_info = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Get git info using registry
+    const { git_relative_path, repo_path } =
+      get_git_info_from_registry(base_uri)
 
-    const { repo_path, git_relative_path } = file_info
+    // Get absolute path using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
 
     // Step 1: Get the git SHA for the file
     const git_sha = await get_file_git_sha({
@@ -75,7 +71,7 @@ export async function import_entity_from_git({
       return {
         success: false,
         error: `Failed to get git SHA for ${git_relative_path}`,
-        base_relative_path,
+        base_uri,
         branch
       }
     }
@@ -91,7 +87,7 @@ export async function import_entity_from_git({
       return {
         success: false,
         error: read_result.error || 'Failed to read entity from git',
-        base_relative_path,
+        base_uri,
         branch
       }
     }
@@ -104,7 +100,7 @@ export async function import_entity_from_git({
       return {
         success: false,
         error: `No formatted_entity_metadata found for ${git_relative_path}`,
-        base_relative_path,
+        base_uri,
         branch
       }
     }
@@ -115,12 +111,10 @@ export async function import_entity_from_git({
       return {
         success: false,
         error: `No entity type found in properties for ${git_relative_path}`,
-        base_relative_path,
+        base_uri,
         branch
       }
     }
-
-    const absolute_path = file_info.absolute_path
 
     // Check if entity exists by file path before writing
     let result_entity_id
@@ -150,11 +144,10 @@ export async function import_entity_from_git({
               task_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'workflow':
@@ -164,11 +157,10 @@ export async function import_entity_from_git({
               workflow_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'person':
@@ -178,11 +170,10 @@ export async function import_entity_from_git({
               person_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'physical_item':
@@ -192,11 +183,10 @@ export async function import_entity_from_git({
               physical_item_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'physical_location':
@@ -206,11 +196,10 @@ export async function import_entity_from_git({
               physical_location_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'tag':
@@ -220,11 +209,10 @@ export async function import_entity_from_git({
               tag_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'guideline':
@@ -234,11 +222,10 @@ export async function import_entity_from_git({
               guideline_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'organization':
@@ -248,11 +235,10 @@ export async function import_entity_from_git({
               organization_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'digital_item':
@@ -262,11 +248,10 @@ export async function import_entity_from_git({
               digital_item_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'database_table_item':
@@ -276,11 +261,10 @@ export async function import_entity_from_git({
               database_item_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           case 'database_table_view':
@@ -290,11 +274,10 @@ export async function import_entity_from_git({
               database_view_content: entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
             break
           default:
@@ -306,11 +289,10 @@ export async function import_entity_from_git({
               entity_content,
               entity_id: existing ? existing.entity_id : null,
               absolute_path,
-              base_relative_path,
+              base_uri,
               git_sha,
               formatted_entity_metadata,
-              trx,
-              root_base_directory
+              trx
             })
         }
 
@@ -327,14 +309,14 @@ export async function import_entity_from_git({
       git_sha,
       git_relative_path,
       branch,
-      base_relative_path
+      base_uri
     }
   } catch (error) {
-    log(`Error importing entity from git at ${base_relative_path}:`, error)
+    log(`Error importing entity from git at ${base_uri}:`, error)
     return {
       success: false,
       error: error.message,
-      base_relative_path,
+      base_uri,
       branch
     }
   }

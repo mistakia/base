@@ -1,6 +1,6 @@
 import debug from 'debug'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('task:exists-in-filesystem')
 
@@ -8,22 +8,15 @@ const log = debug('task:exists-in-filesystem')
  * Check if a task file exists in the filesystem
  *
  * @param {Object} params - Parameters
- * @param {string} params.base_relative_path - Relative path to the task file
- * @param {string} [params.root_base_directory] - Root base directory
+ * @param {string} params.base_uri - URI identifying the task (e.g., 'user:task/name.md', 'sys:task/name.md')
  * @returns {Promise<boolean>} - True if task exists, false otherwise
  */
-export async function task_exists_in_filesystem({
-  base_relative_path,
-  root_base_directory
-}) {
+export async function task_exists_in_filesystem({ base_uri }) {
   try {
-    log(`Checking if task exists in filesystem: ${base_relative_path}`)
+    log(`Checking if task exists in filesystem: ${base_uri}`)
 
-    // Use the base file info helper
-    const { absolute_path } = await get_base_file_info({
-      base_relative_path,
-      root_base_directory
-    })
+    // Resolve absolute path using registry
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
 
     log(`Checking task at path: ${absolute_path}`)
 

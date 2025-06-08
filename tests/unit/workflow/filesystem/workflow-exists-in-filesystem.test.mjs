@@ -1,54 +1,41 @@
 import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
-import config from '#config'
 
 import { workflow_exists_in_filesystem } from '#libs-server/workflow/filesystem/workflow-exists-in-filesystem.mjs'
-import { create_temp_test_directory } from '#tests/utils/index.mjs'
-import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
+import {
+  setup_test_directories,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
 
 describe('workflow_exists_in_filesystem', () => {
-  let temp_dir
-  let cleanup
-  let original_root_base_directory
+  let test_dirs
 
   beforeEach(() => {
-    // Save original config values
-    original_root_base_directory = config.root_base_directory
-
-    // Create temporary directory for tests
-    const temp_directory = create_temp_test_directory('workflow-exists-test-')
-    temp_dir = temp_directory.path
-    cleanup = temp_directory.cleanup
-
-    // Set config directory to our test directory
-    config.root_base_directory = temp_dir
+    // Setup test directories and register them
+    test_dirs = setup_test_directories()
   })
 
   afterEach(() => {
-    // Restore original config values
-    config.root_base_directory = original_root_base_directory
-
-    // Clean up temporary directory
-    if (cleanup) {
-      cleanup()
+    // Clean up directories and clear registry
+    if (test_dirs?.cleanup) {
+      test_dirs.cleanup()
     }
   })
 
   it('should return true when workflow file exists', async () => {
     // Arrange
-    const base_relative_path = 'system/workflow/test-workflow.md'
-    const file_dir = path.join(temp_dir, 'system/workflow')
+    const base_uri = 'sys:system/workflow/test-workflow.md'
+    const file_dir = path.join(test_dirs.system_path, 'system/workflow')
     await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(temp_dir, base_relative_path),
+      path.join(test_dirs.system_path, 'system/workflow/test-workflow.md'),
       '# Test Workflow'
     )
 
     // Act
     const exists = await workflow_exists_in_filesystem({
-      base_relative_path,
-      root_base_directory: temp_dir
+      base_uri
     })
 
     // Assert
@@ -57,18 +44,17 @@ describe('workflow_exists_in_filesystem', () => {
 
   it('should return true when user workflow exists', async () => {
     // Arrange
-    const base_relative_path = 'workflow/test-workflow.md'
-    const file_dir = path.join(temp_dir, 'workflow')
+    const base_uri = 'user:workflow/test-workflow.md'
+    const file_dir = path.join(test_dirs.user_path, 'workflow')
     await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(temp_dir, base_relative_path),
+      path.join(test_dirs.user_path, 'workflow/test-workflow.md'),
       '# Test Workflow'
     )
 
     // Act
     const exists = await workflow_exists_in_filesystem({
-      base_relative_path,
-      root_base_directory: temp_dir
+      base_uri
     })
 
     // Assert
@@ -77,11 +63,11 @@ describe('workflow_exists_in_filesystem', () => {
 
   it('should return false when workflow does not exist', async () => {
     // Arrange
-    const base_relative_path = 'system/workflow/non-existent-workflow.md'
+    const base_uri = 'sys:system/workflow/non-existent-workflow.md'
 
     // Act
     const exists = await workflow_exists_in_filesystem({
-      base_relative_path
+      base_uri
     })
 
     // Assert
@@ -91,14 +77,14 @@ describe('workflow_exists_in_filesystem', () => {
   it('should return false when workflow path is invalid', async () => {
     // Act
     const exists = await workflow_exists_in_filesystem({
-      base_relative_path: ''
+      base_uri: ''
     })
 
     // Assert
     expect(exists).to.be.false
   })
 
-  it('should return false when base_relative_path is not provided', async () => {
+  it('should return false when base_uri is not provided', async () => {
     // Act
     const exists = await workflow_exists_in_filesystem({})
 
@@ -106,21 +92,22 @@ describe('workflow_exists_in_filesystem', () => {
     expect(exists).to.be.false
   })
 
-  it('should use custom root_base_directory when provided', async () => {
+  it('should work with registered directories', async () => {
     // Arrange
-    const custom_dir = path.join(temp_dir, 'custom-base')
-    const base_relative_path = 'system/workflow/custom-workflow.md'
-    const file_dir = path.join(custom_dir, 'system/workflow')
+    const base_uri = 'sys:system/workflow/registered-workflow.md'
+    const file_dir = path.join(test_dirs.system_path, 'system/workflow')
     await fs.mkdir(file_dir, { recursive: true })
     await fs.writeFile(
-      path.join(custom_dir, base_relative_path),
-      '# Custom Workflow'
+      path.join(
+        test_dirs.system_path,
+        'system/workflow/registered-workflow.md'
+      ),
+      '# Registered Workflow'
     )
 
     // Act
     const exists = await workflow_exists_in_filesystem({
-      base_relative_path,
-      root_base_directory: custom_dir
+      base_uri
     })
 
     // Assert
@@ -147,8 +134,7 @@ describe('workflow_exists_in_filesystem with git repository', () => {
   it('should return true for existing workflows in git repo', async () => {
     // Act
     const workflow_exists = await workflow_exists_in_filesystem({
-      base_relative_path: 'system/workflow/default-workflow.md',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:system/workflow/default-workflow.md'
     })
 
     // Assert
@@ -157,12 +143,11 @@ describe('workflow_exists_in_filesystem with git repository', () => {
 
   it('should return false for non-existent workflows in git repo', async () => {
     // Arrange
-    const non_existent_path = 'system/workflow/nonexistent-workflow.md'
+    const non_existent_path = 'sys:system/workflow/nonexistent-workflow.md'
 
     // Act
     const workflow_exists_result = await workflow_exists_in_filesystem({
-      base_relative_path: non_existent_path,
-      root_base_directory: test_repo.path
+      base_uri: non_existent_path
     })
 
     // Assert

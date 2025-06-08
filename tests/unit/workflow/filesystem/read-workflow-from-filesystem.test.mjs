@@ -1,44 +1,33 @@
 import { expect } from 'chai'
 import { promises as fs } from 'fs'
 import path from 'path'
-import config from '#config'
 
 import { read_workflow_from_filesystem } from '#libs-server/workflow/filesystem/read-workflow-from-filesystem.mjs'
-import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
+import {
+  setup_test_directories,
+  create_temp_test_repo
+} from '#tests/utils/index.mjs'
 
 describe('read_workflow_from_filesystem', () => {
-  let test_repo
-  let original_system_base_directory
-  let original_user_base_directory
+  let test_dirs
 
-  before(async () => {
-    // Save original config values
-    original_system_base_directory = config.system_base_directory
-    original_user_base_directory = config.user_base_directory
-
-    // Create temporary test repository
-    test_repo = await create_temp_test_repo()
-
-    // Set config directories to our test repository
-    config.system_base_directory = test_repo.path
-    config.user_base_directory = test_repo.user_path
+  beforeEach(() => {
+    // Setup test directories and register them with the registry
+    test_dirs = setup_test_directories()
   })
 
-  after(() => {
-    // Restore original config values
-    config.system_base_directory = original_system_base_directory
-    config.user_base_directory = original_user_base_directory
-
-    // Clean up temporary repository
-    if (test_repo && test_repo.cleanup) {
-      test_repo.cleanup()
+  afterEach(() => {
+    // Clean up directories and clear registry
+    if (test_dirs?.cleanup) {
+      test_dirs.cleanup()
     }
   })
 
   it('should successfully read a system workflow', async () => {
     // Arrange
-    const workflow_base_relative_path = 'system/workflow/test-workflow.md'
-    const workflow_dir = path.join(test_repo.path, 'system', 'workflow')
+    const workflow_base_uri = 'sys:system/workflow/test-workflow.md'
+    const workflow_dir = path.join(test_dirs.system_path, 'system', 'workflow')
+    await fs.mkdir(workflow_dir, { recursive: true })
 
     const workflow_content = `---
 title: "Test Workflow"
@@ -59,15 +48,14 @@ This is a test workflow content.
 
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory: test_repo.path
+      base_uri: workflow_base_uri
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.base_relative_path).to.equal(workflow_base_relative_path)
+    expect(result.base_uri).to.equal(workflow_base_uri)
     expect(result.absolute_path).to.equal(
-      path.join(test_repo.path, workflow_base_relative_path)
+      path.join(test_dirs.system_path, 'system/workflow/test-workflow.md')
     )
     expect(result.entity_properties).to.include({
       title: 'Test Workflow',
@@ -82,8 +70,8 @@ This is a test workflow content.
 
   it('should successfully read a user workflow', async () => {
     // Arrange
-    const workflow_base_relative_path = 'user/workflow/test-user-workflow.md'
-    const workflow_dir = path.join(test_repo.user_path, 'workflow')
+    const workflow_base_uri = 'user:workflow/test-user-workflow.md'
+    const workflow_dir = path.join(test_dirs.user_path, 'workflow')
     await fs.mkdir(workflow_dir, { recursive: true })
 
     const workflow_content = `---
@@ -105,15 +93,14 @@ This is user workflow content.
 
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory: test_repo.path
+      base_uri: workflow_base_uri
     })
 
     // Assert
     expect(result.success).to.be.true
-    expect(result.base_relative_path).to.equal(workflow_base_relative_path)
+    expect(result.base_uri).to.equal(workflow_base_uri)
     expect(result.absolute_path).to.equal(
-      path.join(test_repo.path, workflow_base_relative_path)
+      path.join(test_dirs.user_path, 'workflow', 'test-user-workflow.md')
     )
     expect(result.entity_properties).to.include({
       title: 'User Workflow',
@@ -127,26 +114,23 @@ This is user workflow content.
 
   it('should return error when workflow does not exist', async () => {
     // Arrange
-    const workflow_base_relative_path =
-      'system/workflow/non-existent-workflow.md'
+    const workflow_base_uri = 'sys:system/workflow/non-existent-workflow.md'
 
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory: test_repo.path
+      base_uri: workflow_base_uri
     })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.error).to.include('does not exist')
-    expect(result.base_relative_path).to.equal(workflow_base_relative_path)
+    expect(result.base_uri).to.equal(workflow_base_uri)
   })
 
-  it('should return error when workflow_base_relative_path is invalid', async () => {
+  it('should return error when workflow_base_uri is invalid', async () => {
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: 'invalid-path',
-      root_base_directory: test_repo.path
+      base_uri: 'invalid-path'
     })
 
     // Assert
@@ -154,7 +138,7 @@ This is user workflow content.
     expect(result.error).to.be.a('string')
   })
 
-  it('should return error when workflow_base_relative_path is not provided', async () => {
+  it('should return error when workflow_base_uri is not provided', async () => {
     // Act
     const result = await read_workflow_from_filesystem({})
 
@@ -165,8 +149,9 @@ This is user workflow content.
 
   it('should handle malformed frontmatter gracefully', async () => {
     // Arrange
-    const workflow_base_relative_path = 'system/workflow/malformed-workflow.md'
-    const system_dir = path.join(test_repo.path, 'system', 'workflow')
+    const workflow_base_uri = 'sys:system/workflow/malformed-workflow.md'
+    const system_dir = path.join(test_dirs.system_path, 'system', 'workflow')
+    await fs.mkdir(system_dir, { recursive: true })
 
     const malformed_content = `---
 title: "Malformed Workflow
@@ -183,8 +168,7 @@ description: Missing closing quote
 
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory: test_repo.path
+      base_uri: workflow_base_uri
     })
 
     // Assert
@@ -194,8 +178,9 @@ description: Missing closing quote
 
   it('should handle workflow without type property', async () => {
     // Arrange
-    const workflow_base_relative_path = 'system/workflow/no-type-workflow.md'
-    const workflow_dir = path.join(test_repo.path, 'system', 'workflow')
+    const workflow_base_uri = 'sys:system/workflow/no-type-workflow.md'
+    const workflow_dir = path.join(test_dirs.system_path, 'system', 'workflow')
+    await fs.mkdir(workflow_dir, { recursive: true })
 
     const no_type_content = `---
 title: "No Type Workflow"
@@ -212,20 +197,35 @@ description: "Workflow without type"
 
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: workflow_base_relative_path,
-      root_base_directory: test_repo.path
+      base_uri: workflow_base_uri
     })
 
     // Assert
     expect(result.success).to.be.false
     expect(result.error).to.include('No entity type found')
   })
+})
+
+// Add tests using git repository approach for integration testing
+describe('read_workflow_from_filesystem with git repository', () => {
+  let test_repo
+
+  before(async () => {
+    // Create a temporary git repository with test workflows
+    test_repo = await create_temp_test_repo()
+  })
+
+  after(() => {
+    // Clean up the test repository
+    if (test_repo?.cleanup) {
+      test_repo.cleanup()
+    }
+  })
 
   it('should successfully read the default workflow in git repo', async () => {
     // Act
     const result = await read_workflow_from_filesystem({
-      base_relative_path: 'system/workflow/default-workflow.md',
-      root_base_directory: test_repo.path
+      base_uri: 'sys:system/workflow/default-workflow.md'
     })
 
     // Assert

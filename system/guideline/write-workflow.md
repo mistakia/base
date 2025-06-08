@@ -15,9 +15,9 @@ observations:
   - '[organization] System vs user classification is based on scope of use'
   - '[standard] Workflow design should enable composability and reuse'
 relations:
-  - 'implements [[system/text/system-design.md]]'
-  - 'implements [[system/schema/workflow.md]]'
-  - 'related_to [[system/guideline/write-guideline.md]]'
+  - 'implements [[sys:text/system-design.md]]'
+  - 'implements [[sys:schema/workflow.md]]'
+  - 'related_to [[sys:guideline/write-guideline.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.237Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -47,7 +47,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ### Frontmatter Requirements
 
-- Workflows MUST follow the schema defined in `system/schema/workflow.md`
+- Workflows MUST follow the schema defined in `sys:schema/workflow.md`
 - Workflows MUST include complete frontmatter with these fields:
   - `title`: Clear, specific, and descriptive title
   - `type`: Always set to "workflow"
@@ -64,9 +64,9 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ```yaml
 relations:
-  - 'follows [[system/guideline/write-workflow.md]]'
-  - 'calls [[system/workflow/find-information.md]]'
-  - 'implements [[system/schema/workflow.md]]'
+  - 'follows [[sys:guideline/write-workflow.md]]'
+  - 'calls [[sys:workflow/find-information.md]]'
+  - 'implements [[sys:schema/workflow.md]]'
 ```
 
 ### Content Requirements

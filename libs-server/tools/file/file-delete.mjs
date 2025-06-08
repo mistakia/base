@@ -15,7 +15,7 @@ export function register_file_delete_tool() {
   register_tool({
     tool_name: 'file_delete',
     tool_definition: {
-      description: 'Deletes a file within a specific thread or feature branch',
+      description: 'Deletes a file within a specific branch',
       inputSchema: {
         type: 'object',
         properties: {
@@ -27,13 +27,9 @@ export function register_file_delete_tool() {
             type: 'string',
             description: 'The path to the repository'
           },
-          thread_id: {
+          branch: {
             type: 'string',
-            description: 'Thread ID to infer branch if branch_name not provided'
-          },
-          branch_name: {
-            type: 'string',
-            description: 'Explicit branch name to use'
+            description: 'Branch name to delete the file from'
           },
           commit_message: {
             type: 'string',
@@ -45,7 +41,7 @@ export function register_file_delete_tool() {
             default: false
           }
         },
-        required: ['path']
+        required: ['path', 'branch']
       }
     },
     implementation: async (parameters) => {
@@ -54,8 +50,7 @@ export function register_file_delete_tool() {
         return await delete_file({
           path: parameters.path,
           repo_path: parameters.repo_path,
-          thread_id: parameters.thread_id,
-          branch_name: parameters.branch_name,
+          branch_name: parameters.branch,
           commit_message: parameters.commit_message,
           force: parameters.force
         })

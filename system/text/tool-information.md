@@ -8,8 +8,8 @@ observations:
   - '[design] Documents tool registration and execution model.'
   - '[architecture] Defines three distinct tool categories with different purposes.'
 relations:
-  - relates_to [[system/text/system-design.md]]
-  - relates_to [[system/text/change-request-design.md]]
+  - relates_to [[sys:text/system-design.md]]
+  - relates_to [[sys:text/change-request-design.md]]
 updated_at: '2025-06-04T15:45:43.273Z'
 user_id: 00000000-0000-0000-0000-000000000000
 ---

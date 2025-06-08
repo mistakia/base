@@ -21,8 +21,7 @@ router.get('/', async (req, res) => {
       limit = '100',
       offset = '0',
       sort_by = 'updated_at',
-      sort_order = 'desc',
-      user_base_directory
+      sort_order = 'desc'
     } = req.query
 
     // Parse tags from comma-separated string if present
@@ -38,8 +37,7 @@ router.get('/', async (req, res) => {
       offset: parseInt(offset),
       sort_by,
       sort_order,
-      include_git_data: true,
-      user_base_directory
+      include_git_data: true
     })
 
     res.status(200).json(change_requests)
@@ -54,14 +52,12 @@ router.get('/:id', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { id } = req.params
-    const { user_base_directory } = req.query
     if (!id) {
       return res.status(400).json({ error: 'missing change request id' })
     }
 
     const change_request = await get_change_request({
-      change_request_id: id,
-      user_base_directory
+      change_request_id: id
     })
 
     if (!change_request) {
@@ -81,7 +77,6 @@ router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params
     const { status, comment } = req.body
-    const { user_base_directory } = req.query
     if (!status) {
       return res.status(400).json({ error: 'missing status' })
     }
@@ -90,8 +85,7 @@ router.patch('/:id/status', async (req, res) => {
       change_request_id: id,
       status,
       updater_id: req.auth.user_id,
-      comment,
-      user_base_directory
+      comment
     })
 
     res.status(200).json(updated_cr)
@@ -114,14 +108,12 @@ router.post('/:id/merge', async (req, res) => {
   try {
     const { id } = req.params
     const { merge_message = '', delete_branch = true } = req.body || {}
-    const { user_base_directory } = req.query
 
     const merged_cr = await merge_change_request({
       change_request_id: id,
       merger_id: req.auth.user_id,
       merge_message,
-      delete_branch,
-      user_base_directory
+      delete_branch
     })
 
     res.status(200).json(merged_cr)

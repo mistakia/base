@@ -6,7 +6,8 @@ import {
   create_test_user,
   create_test_tag,
   authenticate_request,
-  create_temp_test_repo
+  create_temp_test_repo,
+  setup_api_test_registry
 } from '#tests/utils/index.mjs'
 import db from '#db'
 
@@ -15,7 +16,7 @@ chai.use(chaiHttp)
 describe('Tags API', () => {
   let test_user
   let test_repo
-  let root_base_directory
+  let registry_cleanup
   const cleanup_tasks = []
 
   before(async () => {
@@ -24,7 +25,12 @@ describe('Tags API', () => {
 
     // Set up temporary repo for filesystem operations
     test_repo = await create_temp_test_repo()
-    root_base_directory = test_repo.path
+
+    // Setup registry for API calls
+    registry_cleanup = setup_api_test_registry({
+      system_base_directory: test_repo.system_path,
+      user_base_directory: test_repo.user_path
+    })
 
     // Create a test entity for tagging tests
     const [entity] = await db('entities')
@@ -49,6 +55,11 @@ describe('Tags API', () => {
       await cleanup()
     }
 
+    // Clean up registry
+    if (registry_cleanup) {
+      registry_cleanup()
+    }
+
     // Clean up the test repo
     if (test_repo && test_repo.cleanup) {
       test_repo.cleanup()
@@ -70,21 +81,16 @@ describe('Tags API', () => {
     })
   })
 
-  describe('GET /api/tags/{base_relative_path}', () => {
+  describe('GET /api/tags', () => {
     it('should get a tag and its associated entities', async () => {
-      const { base_relative_path, cleanup } = await create_test_tag({
+      const { base_uri, cleanup } = await create_test_tag({
         title: 'Test Tag',
-        filesystem: true,
-        user_id: test_user.user_id,
-        root_base_directory
+        user_id: test_user.user_id
       })
       cleanup_tasks.push(cleanup)
 
       const res = await authenticate_request(
-        chai
-          .request(server)
-          .get(`/api/tags/${base_relative_path}`)
-          .query({ root_base_directory }),
+        chai.request(server).get('/api/tags').query({ base_uri }),
         test_user
       )
 
@@ -99,14 +105,16 @@ describe('Tags API', () => {
       const res = await authenticate_request(
         chai
           .request(server)
-          .get('/api/tags/user/NonExistentTag')
-          .query({ root_base_directory }),
+          .get('/api/tags')
+          .query({ base_uri: 'sys:tag/NonExistentTag.md' }),
         test_user
       )
 
       expect(res).to.have.status(404)
       expect(res.body).to.have.property('error')
-      expect(res.body.error).to.include('Tag user/NonExistentTag not found')
+      expect(res.body.error).to.include(
+        'Tag sys:tag/NonExistentTag.md not found'
+      )
     })
   })
 })

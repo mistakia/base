@@ -45,7 +45,7 @@ export async function list_tasks_from_database({
       'e.title',
       'e.description',
       'e.user_id',
-      'e.base_relative_path',
+      'e.base_uri',
       'e.created_at',
       'e.updated_at',
       't.status',

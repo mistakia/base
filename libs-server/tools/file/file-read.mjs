@@ -24,21 +24,16 @@ export function register_file_read_tool() {
             type: 'string',
             description: 'Path to the file relative to the repository root.'
           },
-          thread_id: {
+          branch: {
             type: 'string',
-            description: 'Optional: Thread ID to determine branch'
-          },
-          branch_name: {
-            type: 'string',
-            description:
-              'Optional: Branch name to use (takes precedence over thread_id)'
+            description: 'Branch name to read the file from'
           },
           repo_path: {
             type: 'string',
             description: 'Optional: Repository path (for testing)'
           }
         },
-        required: ['path']
+        required: ['path', 'branch']
       }
     },
     implementation: async (parameters, context = {}) => {
@@ -46,8 +41,7 @@ export function register_file_read_tool() {
         // Delegate to the base-files implementation
         return await read_file({
           path: parameters.path,
-          thread_id: parameters.thread_id,
-          branch_name: parameters.branch_name,
+          branch_name: parameters.branch,
           repo_path: parameters.repo_path,
           context
         })

@@ -7,18 +7,20 @@ import { delete_entity_from_git } from '#libs-server/entity/git/delete-entity-fr
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
 import { read_entity_from_git } from '#libs-server/entity/git/read-entity-from-git.mjs'
 import { create_temp_test_repo } from '#tests/utils/create-temp-test-repo.mjs'
+import { clear_registered_directories } from '#libs-server/base-uri/index.mjs'
 
 describe('delete_entity_from_git', () => {
   let repo
   const entity_git_relative_path = 'entities/test-entity-to-delete.md'
+  const entity_base_uri = 'sys:entities/test-entity-to-delete.md'
   const branch = 'main'
 
   before(async () => {
-    // Create a temporary git repository
-    repo = await create_temp_test_repo()
+    // Create a temporary git repository with registry
+    repo = await create_temp_test_repo({ register_directories: true })
 
     // Create entities directory
-    await fs.mkdir(path.join(repo.path, 'entities'), { recursive: true })
+    await fs.mkdir(path.join(repo.system_path, 'entities'), { recursive: true })
 
     // Write test entity to git
     const entity_properties = {
@@ -33,17 +35,18 @@ describe('delete_entity_from_git', () => {
       '# Test Entity To Delete\n\nThis entity should be deleted from git.'
 
     await write_entity_to_git({
-      repo_path: repo.path,
-      git_relative_path: entity_git_relative_path,
+      base_uri: entity_base_uri,
       entity_properties,
       entity_type,
       entity_content,
-      branch
+      branch,
+      commit_message: 'Add test entity for deletion'
     })
   })
 
   after(() => {
-    // Clean up temporary repository
+    // Clean up temporary repository and registry
+    clear_registered_directories()
     if (repo) {
       repo.cleanup()
     }
@@ -52,7 +55,7 @@ describe('delete_entity_from_git', () => {
   it('should delete an entity from git successfully', async () => {
     // Verify entity exists before deletion
     const before_result = await read_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: entity_git_relative_path,
       branch
     })
@@ -60,7 +63,7 @@ describe('delete_entity_from_git', () => {
 
     // Delete the entity
     const result = await delete_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: entity_git_relative_path,
       branch,
       commit_message: 'Delete test entity'
@@ -74,7 +77,7 @@ describe('delete_entity_from_git', () => {
 
     // Verify entity no longer exists in git
     const after_result = await read_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: entity_git_relative_path,
       branch
     })
@@ -85,7 +88,7 @@ describe('delete_entity_from_git', () => {
     const non_existent_path = 'entities/non-existent-entity.md'
 
     const result = await delete_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: non_existent_path,
       branch
     })
@@ -110,7 +113,7 @@ describe('delete_entity_from_git', () => {
     const non_existent_branch = 'non-existent-branch'
 
     const result = await delete_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: entity_git_relative_path,
       branch: non_existent_branch
     })
@@ -131,7 +134,7 @@ describe('delete_entity_from_git', () => {
 
   it('should return error if git_relative_path is missing', async () => {
     const result = await delete_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       branch
     })
 
@@ -141,7 +144,7 @@ describe('delete_entity_from_git', () => {
 
   it('should return error if branch is missing', async () => {
     const result = await delete_entity_from_git({
-      repo_path: repo.path,
+      repo_path: repo.system_path,
       git_relative_path: entity_git_relative_path
     })
 

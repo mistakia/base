@@ -47,25 +47,21 @@ export async function batch_write_files({
   }
 
   try {
-    // Determine the target branch if not explicitly provided
-    let target_branch = branch_name
-
-    if (!target_branch) {
-      const branch_info = await get_target_branch({
+    // Determine the target branch using the centralized utility
+    const { branch_name: target_branch, repo_path: target_repo_path } =
+      await get_target_branch({
         thread_id,
+        branch_name,
         repo_path
       })
 
-      target_branch = branch_info.branch_name
-    }
-
     log(
-      `Batch writing ${files.length} files in branch ${target_branch} at ${repo_path}`
+      `Batch writing ${files.length} files in branch ${target_branch} at ${target_repo_path}`
     )
 
     // Check if branch exists - fail if it doesn't
     const branch_exists = await git.branch_exists({
-      repo_path,
+      repo_path: target_repo_path,
       branch_name: target_branch,
       check_remote: false
     })
@@ -76,7 +72,7 @@ export async function batch_write_files({
 
     // Create worktree for the branch
     const worktree_path = await git.create_worktree({
-      repo_path,
+      repo_path: target_repo_path,
       branch_name: target_branch
     })
 
@@ -214,7 +210,7 @@ export async function batch_write_files({
     } finally {
       // Clean up worktree
       await git.remove_worktree({
-        repo_path,
+        repo_path: target_repo_path,
         worktree_path
       })
       log(`Cleaned up worktree at ${worktree_path}`)

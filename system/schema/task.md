@@ -113,11 +113,11 @@ Example:
 
 ```yaml
 relations:
-  - 'subtask_of [[user/tasks/parent-task]]'
-  - 'blocked_by [[user/tasks/other-task]]'
-  - 'precedes [[user/tasks/optional-prereq-task]]'
-  - 'relates_to [[user/tasks/related-task]]'
-  - 'needs_item [[system/physical-item/laptop]] (quantity: 1)'
-  - 'uses_item [[system/digital-item/figma]]'
-  - 'assigned_to [[user/person/jane-doe]]'
+  - 'subtask_of [[user:tasks/parent-task]]'
+  - 'blocked_by [[user:tasks/other-task]]'
+  - 'precedes [[user:tasks/optional-prereq-task]]'
+  - 'relates_to [[user:tasks/related-task]]'
+  - 'needs_item [[sys:physical-item/laptop]] (quantity: 1)'
+  - 'uses_item [[sys:digital-item/figma]]'
+  - 'assigned_to [[user:person/jane-doe]]'
 ```

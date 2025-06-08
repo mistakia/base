@@ -11,6 +11,10 @@ import {
   get_thread,
   execute_thread
 } from '#libs-server/threads/index.mjs'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 import generate_prompt from '#libs-server/threads/generate-prompt.mjs'
 import { THREAD_MESSAGE_ROLE } from '#libs-server/threads/threads-constants.mjs'
 import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
@@ -30,15 +34,10 @@ provider_registry.register('ollama', new OllamaProvider())
  * @param {Object} params Timeline display parameters
  * @returns {Promise<void>}
  */
-const display_timeline = async ({
-  thread_id,
-  user_base_directory,
-  limit = 0
-}) => {
+const display_timeline = async ({ thread_id, limit = 0 }) => {
   try {
     const thread = await get_thread({
-      thread_id,
-      user_base_directory
+      thread_id
     })
 
     console.log(chalk.cyan('\n--- Thread Timeline ---'))
@@ -150,22 +149,19 @@ const display_timeline = async ({
  */
 const create_new_thread = async ({
   user_id,
-  workflow_base_relative_path,
+  workflow_base_uri,
   inference_provider,
   model,
   thread_main_request,
-  user_base_directory,
   tools
 }) => {
   try {
     const thread = await create_thread({
       user_id,
-      workflow_base_relative_path,
+      workflow_base_uri,
       inference_provider,
       model,
       thread_main_request,
-      user_base_directory,
-      root_base_directory: config.root_base_directory,
       tools
     })
 
@@ -184,11 +180,10 @@ const create_new_thread = async ({
  * @param {Object} params Thread loading parameters
  * @returns {Promise<Object>} Loaded thread
  */
-const load_thread = async ({ thread_id, user_base_directory }) => {
+const load_thread = async ({ thread_id }) => {
   try {
     const thread = await get_thread({
-      thread_id,
-      user_base_directory
+      thread_id
     })
     log(`Loaded thread ${thread_id}`)
     console.log(chalk.green(`\nLoaded thread: ${thread_id}`))
@@ -201,15 +196,14 @@ const load_thread = async ({ thread_id, user_base_directory }) => {
 }
 
 /**
- * Generate and output prompt
- * @param {Object} params Prompt generation parameters
- * @returns {Promise<Object>} Generated prompt data
+ * Output the prompt for a thread
+ * @param {Object} params Prompt output parameters
+ * @returns {Promise<Object>} Prompt data
  */
-const output_prompt = async ({ thread_id, user_base_directory }) => {
+const output_prompt = async ({ thread_id }) => {
   try {
     const prompt_data = await generate_prompt({
-      thread_id,
-      user_base_directory
+      thread_id
     })
 
     console.log(chalk.cyan('\n--- Generated Prompt ---'))
@@ -218,31 +212,29 @@ const output_prompt = async ({ thread_id, user_base_directory }) => {
 
     return prompt_data
   } catch (error) {
-    log('Prompt generation error:', error)
     console.error(chalk.red(`Failed to generate prompt: ${error.message}`))
     throw error
   }
 }
 
 /**
- * Run the thread execution loop
+ * Execute a thread using the execution loop
  * @param {Object} params Thread execution parameters
- * @returns {Promise<Object>} Execution result
+ * @returns {Promise<void>}
  */
 const run_thread_execution = async ({
   thread_id,
-  user_base_directory,
-  auto_execute = true,
+  auto_execute_tools = true,
   continuous = false,
   max_iterations = 50
 }) => {
-  console.log(
-    chalk.cyan(
-      `\n--- Executing Thread${continuous ? ' (Continuous Mode)' : ''} ---`
-    )
-  )
-
   try {
+    console.log(
+      chalk.green(
+        `\nExecuting thread ${thread_id} (auto_execute_tools: ${auto_execute_tools}, continuous: ${continuous}, max: ${max_iterations})`
+      )
+    )
+
     // Setup callbacks for execution events
     const on_text = (text) => {
       process.stdout.write(text)
@@ -255,52 +247,38 @@ const run_thread_execution = async ({
       )
     }
 
-    const on_tool_result = (result) => {
-      console.log(chalk.yellow(`\n[Tool Result] ${result.tool_name}`))
+    const on_tool_result = (tool_call, result) => {
+      console.log(chalk.yellow(`\n[Tool Result] ${tool_call.tool_name}`))
       if (result.success) {
-        console.log(chalk.green('Success:'), result.result)
+        console.log(chalk.green('Success:'), result)
       } else {
-        console.log(chalk.red('Error:'), result.error)
+        console.log(chalk.red('Error:'), result.error || result.message)
       }
     }
 
     const on_completion = (completion_info) => {
-      const {
-        blocking_tool_encountered,
-        terminate_tool_encountered,
-        pause_tool_encountered,
-        message_ask_tool_encountered,
-        iteration_count
-      } = completion_info
+      const { blocking_tool_encountered, execution_stopping_tool } =
+        completion_info
 
-      if (continuous && iteration_count) {
-        console.log(chalk.gray(`\n[Iteration ${iteration_count}]`))
-      }
-
-      if (terminate_tool_encountered) {
-        console.log(chalk.green('\n\n--- Thread Terminated ---'))
-      } else if (pause_tool_encountered) {
-        console.log(chalk.yellow('\n\n--- Thread Paused ---'))
-      } else if (message_ask_tool_encountered) {
+      if (blocking_tool_encountered) {
         console.log(
-          chalk.yellow('\n\n--- Thread Paused (Waiting for User Response) ---')
+          chalk.yellow(
+            `\n\n--- Thread Paused (Blocking Tool: ${execution_stopping_tool}) ---`
+          )
         )
-      } else if (blocking_tool_encountered) {
-        console.log(chalk.yellow('\n\n--- Thread Paused (Blocking Tool) ---'))
       } else if (!continuous) {
         console.log(chalk.blue('\n\n--- Thread Execution Step Complete ---'))
       }
     }
 
-    // Execute the thread with continuous support
+    // Execute the thread with proper callback support
     const result = await execute_thread({
       thread_id,
-      user_base_directory,
       on_text,
       on_tool_call,
       on_tool_result,
       on_completion,
-      auto_execute_tools: auto_execute,
+      auto_execute_tools,
       continuous,
       max_iterations
     })
@@ -327,7 +305,7 @@ const run_thread_execution = async ({
  * Main run function
  */
 const run = async () => {
-  const argv = yargs(hideBin(process.argv))
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     .option('thread-id', {
       alias: 't',
       type: 'string',
@@ -361,12 +339,6 @@ const run = async () => {
       alias: 'r',
       type: 'string',
       description: 'Main request for the thread'
-    })
-    .option('directory', {
-      alias: 'd',
-      type: 'string',
-      description: 'Custom user base directory',
-      default: config.user_base_directory
     })
     .option('inference', {
       alias: 'i',
@@ -431,14 +403,15 @@ const run = async () => {
     .help()
     .alias('help', 'h').argv
 
-  const user_base_directory = argv.directory
+  // Handle directory registration using the reusable function
+  handle_cli_directory_registration(argv)
+
   let thread
 
   if (argv['thread-id']) {
     // Load existing thread
     thread = await load_thread({
-      thread_id: argv['thread-id'],
-      user_base_directory
+      thread_id: argv['thread-id']
     })
   } else if (!argv.timeline) {
     // Create new thread if not just viewing timeline
@@ -446,42 +419,46 @@ const run = async () => {
 
     thread = await create_new_thread({
       user_id: argv['user-id'],
-      workflow_base_relative_path: argv.workflow,
+      workflow_base_uri: argv.workflow,
       inference_provider: argv.provider,
       model: argv.model,
-      thread_main_request,
-      user_base_directory
+      thread_main_request
     })
   }
 
   // Display timeline if requested
-  if (argv.timeline && thread) {
-    await display_timeline({
-      thread_id: thread.thread_id,
-      user_base_directory,
-      limit: argv['timeline-limit']
-    })
+  if (argv.timeline) {
+    if (thread) {
+      await display_timeline({
+        thread_id: thread.thread_id,
+        limit: argv['timeline-limit']
+      })
+    } else if (argv['thread-id']) {
+      // Display timeline for existing thread without loading full thread object
+      await display_timeline({
+        thread_id: argv['thread-id'],
+        limit: argv['timeline-limit']
+      })
+    }
     return
   }
 
   // Generate and output prompt if not just viewing timeline
   if (!argv.timeline) {
     const prompt_data = await output_prompt({
-      thread_id: thread.thread_id,
-      user_base_directory
+      thread_id: thread.thread_id
     })
 
     // Execute the thread if requested
     if (argv.execute) {
-      const auto_execute = !argv['no-auto']
+      const auto_execute_tools = !argv['no-auto']
       const continuous = argv.loop
       const max_iterations = argv['max-iterations']
 
       // Execute the thread (either single step or continuous)
       await run_thread_execution({
         thread_id: thread.thread_id,
-        user_base_directory,
-        auto_execute,
+        auto_execute_tools,
         continuous,
         max_iterations
       })
@@ -489,7 +466,6 @@ const run = async () => {
       // Display timeline after execution
       await display_timeline({
         thread_id: thread.thread_id,
-        user_base_directory,
         limit: argv['timeline-limit']
       })
     }

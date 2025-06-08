@@ -9,6 +9,7 @@ import add_timeline_entry from './add-timeline-entry.mjs'
 import { update_thread_state } from './update-thread.mjs'
 import { register_tool, get_tool } from '#libs-server/tools/registry.mjs'
 import { remove_worktree } from '#libs-server/git/worktree-operations.mjs'
+import { get_registered_directories } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('threads:tools')
 
@@ -25,19 +26,14 @@ export const THREAD_MESSAGE_ASK_TOOL = 'message_ask'
  * @param {string} params.summary Optional summary of thread results
  * @param {Object} context Execution context
  * @param {string} context.thread_id ID of the thread to terminate
- * @param {string} context.user_base_directory User base directory
  * @returns {Promise<Object>} Result of the tool execution
  */
 export const terminate_thread = async (params, context = {}) => {
   const { summary = 'Thread execution terminated' } = params
-  const { thread_id, user_base_directory } = context
+  const { thread_id } = context
 
   if (!thread_id) {
     throw new Error('thread_id is required in context')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required in context')
   }
 
   log(`Terminating thread ${thread_id}`)
@@ -46,7 +42,6 @@ export const terminate_thread = async (params, context = {}) => {
     // Update thread state to terminated
     const updated_thread = await update_thread_state({
       thread_id,
-      user_base_directory,
       thread_state: 'terminated',
       reason: 'Thread terminated via terminate_thread tool'
     })
@@ -54,7 +49,6 @@ export const terminate_thread = async (params, context = {}) => {
     // Add timeline entry for termination
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -74,8 +68,10 @@ export const terminate_thread = async (params, context = {}) => {
         log(
           `Cleaning up system worktree at ${updated_thread.system_worktree_path}`
         )
+        // Get system base directory from registry
+        const { system_base_directory } = get_registered_directories()
         await remove_worktree({
-          repo_path: updated_thread.system_worktree_path.split('/thread/')[0], // Extract base repo path
+          repo_path: system_base_directory,
           worktree_path: updated_thread.system_worktree_path
         })
       } catch (worktree_error) {
@@ -87,6 +83,8 @@ export const terminate_thread = async (params, context = {}) => {
     if (updated_thread.user_worktree_path) {
       try {
         log(`Cleaning up user worktree at ${updated_thread.user_worktree_path}`)
+        // Get user base directory from registry
+        const { user_base_directory } = get_registered_directories()
         await remove_worktree({
           repo_path: user_base_directory,
           worktree_path: updated_thread.user_worktree_path
@@ -119,19 +117,14 @@ export const terminate_thread = async (params, context = {}) => {
  * @param {string} params.reason Optional reason for pausing
  * @param {Object} context Execution context
  * @param {string} context.thread_id ID of the thread to pause
- * @param {string} context.user_base_directory User base directory
  * @returns {Promise<Object>} Result of the tool execution
  */
 export const pause_execution = async (params, context = {}) => {
   const { reason = 'Thread execution paused by assistant' } = params
-  const { thread_id, user_base_directory } = context
+  const { thread_id } = context
 
   if (!thread_id) {
     throw new Error('thread_id is required in context')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required in context')
   }
 
   log(`Pausing thread ${thread_id}`)
@@ -140,7 +133,6 @@ export const pause_execution = async (params, context = {}) => {
     // Update thread state to paused
     await update_thread_state({
       thread_id,
-      user_base_directory,
       thread_state: 'paused',
       reason
     })
@@ -148,7 +140,6 @@ export const pause_execution = async (params, context = {}) => {
     // Add timeline entry for pausing
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -184,19 +175,14 @@ export const pause_execution = async (params, context = {}) => {
  * @param {string} params.level Optional notification level (info, warning, error)
  * @param {Object} context Execution context
  * @param {string} context.thread_id ID of the thread
- * @param {string} context.user_base_directory User base directory
  * @returns {Promise<Object>} Result of the tool execution
  */
 export const message_notify = async (params, context = {}) => {
   const { message, level = 'info' } = params
-  const { thread_id, user_base_directory } = context
+  const { thread_id } = context
 
   if (!thread_id) {
     throw new Error('thread_id is required in context')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required in context')
   }
 
   if (!message) {
@@ -209,7 +195,6 @@ export const message_notify = async (params, context = {}) => {
     // Add timeline entry for the notification
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -247,19 +232,14 @@ export const message_notify = async (params, context = {}) => {
  * @param {string} params.options Optional array of predefined answer options
  * @param {Object} context Execution context
  * @param {string} context.thread_id ID of the thread
- * @param {string} context.user_base_directory User base directory
  * @returns {Promise<Object>} Result of the tool execution
  */
 export const message_ask = async (params, context = {}) => {
   const { question, options = [] } = params
-  const { thread_id, user_base_directory } = context
+  const { thread_id } = context
 
   if (!thread_id) {
     throw new Error('thread_id is required in context')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required in context')
   }
 
   if (!question) {
@@ -277,7 +257,6 @@ export const message_ask = async (params, context = {}) => {
     const request_id = uuidv4()
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: request_id,
         timestamp: new Date().toISOString(),
@@ -294,7 +273,6 @@ export const message_ask = async (params, context = {}) => {
     // Pause the thread while waiting for response
     await update_thread_state({
       thread_id,
-      user_base_directory,
       thread_state: 'paused',
       reason: 'Waiting for user response to question'
     })
@@ -302,7 +280,6 @@ export const message_ask = async (params, context = {}) => {
     // Add timeline entry for the pause
     await add_timeline_entry({
       thread_id,
-      user_base_directory,
       entry: {
         id: uuidv4(),
         timestamp: new Date().toISOString(),

@@ -27,10 +27,9 @@ const log = debug('entity:database:write-database-table-view')
  * @param {string} [params.database_view_content=''] Optional view content/markdown
  * @param {string} [params.entity_id=null] Optional entity ID for updates
  * @param {string} params.absolute_path Absolute path to the file
- * @param {string} params.base_relative_path Base relative path to the file
+ * @param {string} params.base_uri Base relative path to the file
  * @param {string} params.git_sha Git SHA of the file
  * @param {Object} [params.trx=null] Optional transaction object
- * @param {string} [params.root_base_directory=null] Root base directory of the repository
  * @returns {Promise<string>} The entity_id
  */
 export async function write_database_table_view_to_database({
@@ -39,10 +38,9 @@ export async function write_database_table_view_to_database({
   database_view_content = '',
   entity_id = null,
   absolute_path,
-  base_relative_path,
+  base_uri,
   git_sha,
-  trx = null,
-  root_base_directory
+  trx = null
 }) {
   try {
     log('Writing database table view to database')
@@ -71,10 +69,9 @@ export async function write_database_table_view_to_database({
       entity_content: database_view_content,
       entity_id,
       absolute_path,
-      base_relative_path,
+      base_uri,
       git_sha,
-      trx: db_client,
-      root_base_directory
+      trx: db_client
     })
 
     // Process database view-specific data

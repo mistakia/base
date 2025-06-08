@@ -7,14 +7,14 @@ import '@styles/layout.styl'
 import './entity-detail-page.styl'
 
 const EntityDetailPage = ({ entities, load_entity }) => {
-  const { '*': base_relative_path } = useParams()
-  const decodedPath = decodeURIComponent(base_relative_path)
+  const { '*': base_uri } = useParams()
+  const decodedPath = decodeURIComponent(base_uri)
   const entity = decodedPath ? entities.get(decodedPath) : null
 
   useEffect(() => {
     if (decodedPath) {
       // You would need to provide the root_base_directory based on your application config
-      load_entity({ base_relative_path: decodedPath })
+      load_entity({ base_uri: decodedPath })
     }
   }, [decodedPath, load_entity])
 
@@ -62,9 +62,7 @@ const EntityDetailPage = ({ entities, load_entity }) => {
             {Object.entries(entity_data)
               .filter(
                 ([key]) =>
-                  !['content', 'title', 'type', 'base_relative_path'].includes(
-                    key
-                  )
+                  !['content', 'title', 'type', 'base_uri'].includes(key)
               )
               .map(([key, value]) => (
                 <div key={key} className='metadata-item'>

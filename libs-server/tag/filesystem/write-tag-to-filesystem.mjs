@@ -1,37 +1,31 @@
 import { write_entity_to_filesystem } from '../../entity/filesystem/write-entity-to-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-import config from '#config'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 /**
  * Write a tag to the filesystem
  *
  * @param {Object} params Parameters
- * @param {string} params.base_relative_path Path relative to Base root, e.g., 'system/tag/<tag-title>.md' or 'tag/<tag-title>.md'
+ * @param {string} params.base_uri URI identifying the tag (e.g., 'sys:tag/name.md', 'user:tag/name.md')
  * @param {Object} params.tag_properties Tag properties (name, color, etc.)
  * @param {string} [params.tag_content=''] Content of the tag document
- * @param {string} [params.root_base_directory] Custom root base directory
  * @returns {Promise<boolean>} True if successful
  * @throws {Error} If writing fails
  */
 export async function write_tag_to_filesystem({
-  base_relative_path,
+  base_uri,
   tag_properties,
-  tag_content = '',
-  root_base_directory = config.root_base_directory
+  tag_content = ''
 } = {}) {
-  if (!base_relative_path) {
-    throw new Error('base_relative_path is required')
+  if (!base_uri) {
+    throw new Error('base_uri is required')
   }
 
   if (!tag_properties || typeof tag_properties !== 'object') {
     throw new Error('tag_properties must be a valid object')
   }
 
-  // Get the absolute path for the tag file
-  const { absolute_path } = await get_base_file_info({
-    base_relative_path,
-    root_base_directory
-  })
+  // Resolve absolute path using registry
+  const absolute_path = resolve_base_uri_from_registry(base_uri)
 
   try {
     // Use write_entity_to_filesystem to write the tag
@@ -44,8 +38,6 @@ export async function write_tag_to_filesystem({
 
     return result
   } catch (error) {
-    throw new Error(
-      `Failed to write tag to ${base_relative_path}: ${error.message}`
-    )
+    throw new Error(`Failed to write tag to ${base_uri}: ${error.message}`)
   }
 }

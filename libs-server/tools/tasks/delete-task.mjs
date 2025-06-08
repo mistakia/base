@@ -1,9 +1,8 @@
 import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
 import { helpers } from './helpers.mjs'
-// import { delete_file_in_filesystem } from '#libs-server/filesystem/delete-file-in-filesystem.mjs'
-// import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
-// import config from '#config'
+import { delete_file_in_filesystem } from '#libs-server/filesystem/delete-file-in-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('tools:tasks')
 
@@ -15,7 +14,7 @@ register_tool({
     inputSchema: {
       type: 'object',
       properties: {
-        base_relative_path: {
+        base_uri: {
           type: 'string',
           description: 'The base relative path of the task file to delete.'
         },
@@ -30,27 +29,24 @@ register_tool({
           default: true
         }
       },
-      required: ['base_relative_path']
+      required: ['base_uri']
     }
   },
   implementation: async (parameters, context = {}) => {
     try {
-      const { base_relative_path, permanent = true } = parameters
+      const { base_uri, permanent = true } = parameters
       const user_id = helpers.resolve_user_id(parameters, context)
 
       log(
-        `Deleting task ${base_relative_path} for user ${user_id} (permanent: ${permanent})`
+        `Deleting task ${base_uri} for user ${user_id} (permanent: ${permanent})`
       )
 
       // First verify access to the task
-      const existing_task = await helpers.verify_task_access(
-        base_relative_path,
-        user_id
-      )
+      const existing_task = await helpers.verify_task_access(base_uri, user_id)
       if (!existing_task) {
         return helpers.error_response(
           'delete task',
-          `Task ${base_relative_path} not found or access denied.`
+          `Task ${base_uri} not found or access denied.`
         )
       }
 
@@ -63,24 +59,23 @@ register_tool({
         }
       }
 
-      // Get the absolute path for deletion
-      // const { absolute_path } = await get_base_file_info({
-      //   base_relative_path,
-      //   root_base_directory: config.root_base_directory
-      // })
+      // Get the absolute path for deletion using the registry
+      const absolute_path = resolve_base_uri_from_registry(base_uri)
 
       // Delete the file
-      //   const result = await delete_file_in_filesystem({ file_path: absolute_path })
-      //   if (!result.success) {
-      //     return helpers.error_response(
-      //       'delete task',
-      //       result.error || 'Task deletion returned no success'
-      //     )
-      //   }
+      const result = await delete_file_in_filesystem({
+        file_path: absolute_path
+      })
+      if (!result.success) {
+        return helpers.error_response(
+          'delete task',
+          result.error || 'Task deletion returned no success'
+        )
+      }
 
       return {
         success: true,
-        message: `Task file ${base_relative_path} deleted.`
+        message: `Task file ${base_uri} deleted.`
       }
     } catch (error) {
       log('Error deleting task file:', error)

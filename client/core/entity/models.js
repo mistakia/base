@@ -9,7 +9,7 @@ import { Map } from 'immutable'
 // TODO use a record instead
 export function create_entity(entity) {
   return Map({
-    base_relative_path: entity.base_relative_path,
+    base_uri: entity.base_uri,
     content: entity.content,
     type: entity.type,
     title: entity.title,

@@ -1,0 +1,265 @@
+/**
+ * Base URI Utilities
+ *
+ * Centralized utilities for constructing, parsing, and validating base URIs
+ * according to the Resource URI Specification.
+ *
+ * This module provides the single source of truth for all base_uri operations
+ * to ensure consistency and ease of maintenance across the codebase.
+ */
+
+import path from 'path'
+import config from '#config'
+import {
+  get_system_base_directory,
+  get_user_base_directory
+} from './base-directory-registry.mjs'
+
+/**
+ * Create a system repository URI
+ * @param {string} resource_path - Path within system repository (e.g., 'schema/task.md')
+ * @returns {string} - Complete base_uri (e.g., 'sys:schema/task.md')
+ */
+export function create_system_uri(resource_path) {
+  const clean_path = resource_path.replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
+  return `sys:${clean_path}`
+}
+
+/**
+ * Create a user repository URI
+ * @param {string} resource_path - Path within user repository (e.g., 'task/my-task.md')
+ * @returns {string} - Complete base_uri (e.g., 'user:task/my-task.md')
+ */
+export function create_user_uri(resource_path) {
+  const clean_path = resource_path.replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
+  return `user:${clean_path}`
+}
+
+/**
+ * Create an SSH server URI
+ * @param {Object} params - Parameters
+ * @param {string} params.host_name - SSH host name from config (e.g., 'database', 'league')
+ * @param {string} params.remote_path - Path on remote server (e.g., '/etc/config.md')
+ * @returns {string} - Complete base_uri (e.g., 'ssh://database/etc/config.md')
+ */
+export function create_ssh_uri({ host_name, remote_path }) {
+  const clean_path = remote_path.replace(/^\/+/, '') // Remove leading slashes
+  return `ssh://${host_name}/${clean_path}`
+}
+
+/**
+ * Create a git repository URI
+ * @param {Object} params - Parameters
+ * @param {string} params.repo_url - Git repository URL or path
+ * @param {string} params.file_path - Path within repository
+ * @param {string} [params.branch] - Optional branch name
+ * @returns {string} - Complete base_uri (e.g., 'git://github.com/owner/repo/path/file.md@main')
+ */
+export function create_git_uri({ repo_url, file_path, branch = null }) {
+  const clean_path = file_path.replace(/^\/+/, '') // Remove leading slashes
+  const base_uri = `git://${repo_url}/${clean_path}`
+  return branch ? `${base_uri}@${branch}` : base_uri
+}
+
+/**
+ * Create base URI from git file information
+ * @param {Object} params - Parameters
+ * @param {string} params.git_relative_path - The git relative path
+ * @param {string} params.repo_path - The repository path
+ * @returns {string} - Proper base URI
+ */
+export function create_base_uri_from_git_file({
+  git_relative_path,
+  repo_path
+}) {
+  // Convert git relative path to absolute path within the repository
+  const absolute_file_path = path.join(repo_path, git_relative_path)
+
+  // Use centralized utility to create appropriate base URI
+  return create_base_uri_from_path(absolute_file_path)
+}
+
+/**
+ * Parse a base_uri into its components
+ * @param {string} base_uri - The base_uri to parse
+ * @returns {Object} - Parsed components { scheme, authority, path, branch }
+ */
+export function parse_base_uri(base_uri) {
+  if (!base_uri || typeof base_uri !== 'string') {
+    throw new Error('Invalid base_uri: must be a non-empty string')
+  }
+
+  // Handle branch notation (e.g., git://repo/file@branch)
+  const [uri_part, branch] = base_uri.split('@')
+
+  // First try to match path-only schemes (sys:, user:)
+  const path_only_match = uri_part.match(/^(sys|user):(.*)$/)
+  if (path_only_match) {
+    const [, scheme, path] = path_only_match
+    return {
+      scheme,
+      authority: '',
+      path,
+      branch: branch || null,
+      original: base_uri
+    }
+  }
+
+  // Then try to match authority-based schemes (scheme://authority/path)
+  const authority_match = uri_part.match(/^([^:]+):\/\/(.*)$/)
+  if (!authority_match) {
+    throw new Error(`Invalid base_uri format: ${base_uri}`)
+  }
+
+  const [, scheme, remainder] = authority_match
+
+  // For authority-based schemes, split authority and path
+  const slash_index = remainder.indexOf('/')
+  if (slash_index === -1) {
+    // No path, only authority
+    return {
+      scheme,
+      authority: remainder,
+      path: '',
+      branch: branch || null,
+      original: base_uri
+    }
+  }
+
+  const authority = remainder.substring(0, slash_index)
+  const path = remainder.substring(slash_index + 1)
+
+  return {
+    scheme,
+    authority,
+    path,
+    branch: branch || null,
+    original: base_uri
+  }
+}
+
+/**
+ * Validate base_uri format
+ * @param {string} base_uri - The base_uri to validate
+ * @returns {boolean} - True if valid, false otherwise
+ */
+export function is_valid_base_uri(base_uri) {
+  try {
+    const parsed = parse_base_uri(base_uri)
+    const valid_schemes = ['sys', 'user', 'ssh', 'git', 'http', 'https']
+    return valid_schemes.includes(parsed.scheme)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Resolve base_uri to absolute filesystem path using registered directories
+ * @param {string} base_uri - The base_uri to resolve
+ * @param {Object} [options] - Resolution options (for backward compatibility)
+ * @param {string} [options.user_base_directory] - Override user base directory
+ * @param {string} [options.system_base_directory] - Override system base directory
+ * @returns {string} - Absolute filesystem path
+ */
+export function resolve_base_uri(base_uri, options = {}) {
+  const parsed = parse_base_uri(base_uri)
+
+  // Try to use registry first, fall back to options or config
+  let user_base_directory, system_base_directory
+
+  try {
+    system_base_directory =
+      options.system_base_directory || get_system_base_directory()
+  } catch {
+    system_base_directory =
+      options.system_base_directory || config.system_base_directory
+  }
+
+  try {
+    user_base_directory =
+      options.user_base_directory || get_user_base_directory()
+  } catch {
+    user_base_directory =
+      options.user_base_directory || config.user_base_directory
+  }
+
+  switch (parsed.scheme) {
+    case 'sys':
+      return path.join(system_base_directory, parsed.path)
+
+    case 'user':
+      if (!user_base_directory) {
+        throw new Error('User base directory not configured')
+      }
+      return path.join(user_base_directory, parsed.path)
+
+    case 'ssh':
+    case 'git':
+    case 'http':
+    case 'https':
+      // These require special handling and cannot be resolved to local paths
+      throw new Error(`Cannot resolve remote URI to local path: ${base_uri}`)
+
+    default:
+      throw new Error(`Unknown URI scheme: ${parsed.scheme}`)
+  }
+}
+
+/**
+ * Create base_uri from absolute filesystem path using registered directories
+ * @param {string} absolute_path - Absolute filesystem path
+ * @param {Object} [options] - Creation options (for backward compatibility)
+ * @param {string} [options.user_base_directory] - Override user base directory
+ * @param {string} [options.system_base_directory] - Override system base directory
+ * @returns {string} - Appropriate base_uri
+ */
+export function create_base_uri_from_path(absolute_path, options = {}) {
+  // Try to use registry first, fall back to options or config
+  let user_base_directory, system_base_directory
+
+  try {
+    system_base_directory =
+      options.system_base_directory || get_system_base_directory()
+  } catch {
+    system_base_directory =
+      options.system_base_directory || config.system_base_directory
+  }
+
+  try {
+    user_base_directory =
+      options.user_base_directory || get_user_base_directory()
+  } catch {
+    user_base_directory =
+      options.user_base_directory || config.user_base_directory
+  }
+
+  // Check if path is within user directory
+  if (user_base_directory && absolute_path.startsWith(user_base_directory)) {
+    const relative_path = path.relative(user_base_directory, absolute_path)
+    return create_user_uri(relative_path)
+  }
+
+  // Check if path is within system directory
+  if (absolute_path.startsWith(system_base_directory)) {
+    const relative_path = path.relative(system_base_directory, absolute_path)
+    return create_system_uri(relative_path)
+  }
+
+  // External paths are not supported - only managed repositories
+  throw new Error(
+    `Path outside managed repositories not supported: ${absolute_path}`
+  )
+}
+
+// Default export with all utilities
+export default {
+  create_system_uri,
+  create_user_uri,
+  create_ssh_uri,
+  create_git_uri,
+  parse_base_uri,
+  is_valid_base_uri,
+  resolve_base_uri,
+  create_base_uri_from_path,
+  create_base_uri_from_git_file
+}

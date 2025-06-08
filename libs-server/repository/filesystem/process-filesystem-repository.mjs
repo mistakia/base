@@ -1,12 +1,13 @@
 import debug from 'debug'
-import path from 'path'
 
 import { list_entity_files_from_filesystem } from './list-entity-files-from-filesystem.mjs'
 import { load_schema_definitions_from_filesystem } from './load-schema-definitions-from-filesystem.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { validate_entity_from_filesystem } from '../../entity/filesystem/validate-entity-from-filesystem.mjs'
-import git from '#libs-server/git/index.mjs'
-import config from '#config'
+import {
+  get_system_base_directory,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('markdown:process-filesystem-repository')
 
@@ -30,12 +31,6 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
       absolute_path: file.absolute_path
     })
 
-    // Calculate root_base_directory
-    const root_base_directory = file.absolute_path.slice(
-      0,
-      -file.base_relative_path.length
-    )
-
     if (!entity_result.success) {
       file.errors.push(
         entity_result.error || 'Failed to read entity from filesystem'
@@ -47,8 +42,7 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
     const validation = await validate_entity_from_filesystem({
       entity_properties: entity_result.entity_properties,
       formatted_entity_metadata: entity_result.formatted_entity_metadata,
-      schemas,
-      root_base_directory
+      schemas
     })
 
     // Check for validation errors
@@ -59,19 +53,16 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
       )
     }
 
-    // Complete the entity with validation results
-    const processed_entity = {
-      ...entity_result,
-      validation_result: validation,
-      file_info: file
-    }
-
     // Run custom entity processor if provided
     if (entity_processor) {
-      // TODO make sure both entity_process functions share same properties schema
       const result = await entity_processor({
-        entity: processed_entity,
-        file,
+        file: {
+          ...file,
+          entity_properties: entity_result.entity_properties,
+          formatted_entity_metadata: entity_result.formatted_entity_metadata,
+          base_uri: file.base_uri
+        },
+        validation,
         schemas
       })
       if (result === false) {
@@ -91,82 +82,64 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
 }
 
 /**
- * Process repositories from filesystem
- * @param {string} [root_base_directory] The absolute path to the base directory
- * @param {function} [entity_processor] Function to process each entity (entity, file, schemas) => Promise
+ * Process repositories from filesystem using registry system
+ * @param {function} [entity_processor] Function to process each entity
+ *   The entity_processor receives an object with the following properties:
+ *   - file: {
+ *       absolute_path: string,         // Absolute filesystem path
+ *       base_uri: string,              // Base URI for the entity (e.g., 'user:task/my-task.md')
+ *       git_relative_path: string,     // Path relative to base directory
+ *       repo_path: string,             // Repository base path
+ *       entity_properties: Object,     // Parsed entity properties from frontmatter
+ *       formatted_entity_metadata: Object, // Additional metadata
+ *       errors: Array                  // Array of error messages (if any)
+ *     }
+ *   - validation: Object              // Validation result from schema validation
+ *   - schemas: Object                 // Schema definitions for validation
+ *   Returns: boolean (false to skip, true/undefined to process)
  * @param {string[]} [include_entity_types] Entity types to include
  * @param {string[]} [exclude_entity_types] Entity types to exclude
  * @param {string} [path_pattern] Glob pattern for filtering paths
- * @param {string} [submodule_base_path] If provided, only search in this specific submodule
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_filesystem({
-  root_base_directory = config.system_base_directory,
   entity_processor,
   include_entity_types = [],
   exclude_entity_types = [],
-  path_pattern,
-  submodule_base_path
+  path_pattern
 } = {}) {
+  // Get directories from registry
+  const system_base_directory = get_system_base_directory()
+  const user_base_directory = get_user_base_directory()
+
   log(
-    `Processing repositories from filesystem with root directory: ${root_base_directory}`
+    `Processing repositories from filesystem with root directory: ${system_base_directory}, user directory: ${user_base_directory}`
   )
 
-  // Setup root repository
-  const root_repo = {
-    submodule_base_path: null
-  }
-
-  // Find all repositories including submodules
-  const repositories = [root_repo]
-
-  // If submodule_base_path is specified, only process that submodule
-  if (submodule_base_path) {
-    repositories.length = 0 // Clear the root repo
-    repositories.push({
-      submodule_base_path
-    })
-  } else {
-    const submodules = await git.list_submodules({
-      repo_path: root_base_directory
-    })
-
-    for (const submodule of submodules) {
-      repositories.push({
-        submodule_base_path: submodule.path
-      })
+  // Setup repositories
+  const repositories = [
+    {
+      base_path: system_base_directory
     }
+  ]
+
+  // Add user repository if it exists and is different from root
+  if (user_base_directory && user_base_directory !== system_base_directory) {
+    repositories.push({
+      base_path: user_base_directory
+    })
   }
 
   log(
     'Processing repositories:',
-    repositories.map((r) => r.submodule_base_path || 'root')
+    repositories.map((r) => r.base_path)
   )
 
   // Load schemas from filesystem
   log('Loading schema definitions from filesystem...')
-  const schemas = {}
 
-  // Load schemas only from submodules, skip the root repository
-  for (const repository of repositories) {
-    // Skip the root repository
-    if (repository.submodule_base_path === null) {
-      continue
-    }
-
-    const user_base_directory = path.join(
-      root_base_directory,
-      repository.submodule_base_path
-    )
-
-    const repo_schemas = await load_schema_definitions_from_filesystem({
-      root_base_directory,
-      user_base_directory
-    })
-
-    // Merge into main schemas object
-    Object.assign(schemas, repo_schemas)
-  }
+  // Load schemas using registry system
+  const schemas = await load_schema_definitions_from_filesystem()
 
   // Scan for entity files across all repositories
   log('Scanning filesystem repositories...')
@@ -174,15 +147,13 @@ export async function process_repositories_from_filesystem({
 
   for (const repository of repositories) {
     const repo_files = await list_entity_files_from_filesystem({
-      root_base_directory,
-      submodule_base_path: repository.submodule_base_path,
+      base_directory: repository.base_path,
       include_entity_types,
       exclude_entity_types,
       path_pattern
     })
 
-    const repo_name = repository.submodule_base_path || 'root'
-    log(`Found ${repo_files.length} entity files in ${repo_name}`)
+    log(`Found ${repo_files.length} entity files in ${repository.base_path}`)
     all_files = all_files.concat(repo_files.map((file) => file.file_info))
   }
 

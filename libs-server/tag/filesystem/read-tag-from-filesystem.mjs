@@ -1,28 +1,21 @@
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { get_base_file_info } from '#libs-server/base-files/get-base-file-info.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 /**
  * Read a tag from the filesystem
  *
  * @param {Object} params Parameters
- * @param {string} params.base_relative_path Path relative to Base root, e.g., 'system/tag/<tag-title>.md' or 'tag/<tag-title>.md'
- * @param {string} [params.root_base_directory] Custom root base directory
+ * @param {string} params.base_uri URI identifying the tag (e.g., 'sys:tag/name.md', 'user:tag/name.md')
  * @returns {Promise<Object>} Tag data
  * @throws {Error} If tag doesn't exist or reading fails
  */
-export async function read_tag_from_filesystem({
-  base_relative_path,
-  root_base_directory
-} = {}) {
-  if (!base_relative_path) {
-    throw new Error('base_relative_path is required')
+export async function read_tag_from_filesystem({ base_uri } = {}) {
+  if (!base_uri) {
+    throw new Error('base_uri is required')
   }
 
-  // Get file info
-  const { absolute_path } = await get_base_file_info({
-    base_relative_path,
-    root_base_directory
-  })
+  // Resolve absolute path using registry
+  const absolute_path = resolve_base_uri_from_registry(base_uri)
 
   try {
     // Read and parse the tag file
@@ -36,11 +29,9 @@ export async function read_tag_from_filesystem({
 
     return {
       ...result,
-      base_relative_path
+      base_uri
     }
   } catch (error) {
-    throw new Error(
-      `Failed to read tag at ${base_relative_path}: ${error.message}`
-    )
+    throw new Error(`Failed to read tag at ${base_uri}: ${error.message}`)
   }
 }

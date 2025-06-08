@@ -1,5 +1,9 @@
 import debug from 'debug'
 import { list_entity_files_from_git } from './list-entity-files-from-git.mjs'
+import {
+  get_system_base_directory,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('repository:git:load-schemas')
 
@@ -8,25 +12,14 @@ const SYSTEM_SCHEMA_GIT_RELATIVE_DIR = 'system/schema'
 const USER_SCHEMA_GIT_RELATIVE_DIR = 'schema'
 
 /**
- * Load schema definitions from git repositories
+ * Load schema definitions from git repositories using registry system
  *
- * @param {Object} options - Options for loading schemas
- * @param {Object} options.root_base_directory - Root base directory
- * @param {Object} options.user_base_directory - User base directory
  * @returns {Promise<Object>} - Map of schema definitions by name
  */
-export async function load_schema_definitions_from_git({
-  root_base_directory,
-  user_base_directory
-} = {}) {
-  // Validate input
-  if (!root_base_directory) {
-    throw new Error('root_base_directory is required')
-  }
-
-  if (!user_base_directory) {
-    throw new Error('user_base_directory is required')
-  }
+export async function load_schema_definitions_from_git() {
+  // Get directories from registry
+  const system_base_directory = get_system_base_directory()
+  const user_base_directory = get_user_base_directory()
 
   try {
     // Collect all schema files from repositories
@@ -34,24 +27,19 @@ export async function load_schema_definitions_from_git({
 
     // Get schemas from root repository
     const root_entities = await list_entity_files_from_git({
-      repo_path: root_base_directory,
+      repo_path: system_base_directory,
       branch: 'main',
       include_entity_types: ['type_definition'],
-      path_pattern: `${SYSTEM_SCHEMA_GIT_RELATIVE_DIR}/*.md`
+      path_pattern: `${SYSTEM_SCHEMA_GIT_RELATIVE_DIR}/*.md`,
+      is_system_repo: true
     })
-
-    // Calculate submodule path by comparing user and root paths
-    const submodule_base_path = user_base_directory
-      .replace(root_base_directory, '')
-      .replace(/^\//, '')
 
     // Get schemas from user repository
     const user_entities = await list_entity_files_from_git({
       repo_path: user_base_directory,
       branch: 'main',
       include_entity_types: ['type_definition'],
-      path_pattern: `${USER_SCHEMA_GIT_RELATIVE_DIR}/*.md`,
-      submodule_base_path
+      path_pattern: `${USER_SCHEMA_GIT_RELATIVE_DIR}/*.md`
     })
 
     // Combine entities from both repositories
