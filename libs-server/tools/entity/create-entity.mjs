@@ -25,7 +25,7 @@ export function register_entity_create_tool() {
           base_uri: {
             type: 'string',
             description:
-              'The base URI for the new entity file (e.g., user:entity/my-new-entity.md).'
+              'The base URI for the new entity file. User-created entities MUST use the user: prefix (e.g., user:text/my-document.md, user:task/new-feature.md).'
           },
           title: {
             type: 'string',

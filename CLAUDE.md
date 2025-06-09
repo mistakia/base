@@ -39,6 +39,9 @@ yarn test:api          # API tests
 yarn test:threads      # Thread system tests
 yarn test:git          # Git operations tests
 yarn test:blocks       # Block system tests
+yarn test:markdown     # Markdown processing tests
+yarn test:sync         # Synchronization tests
+yarn test:change-requests  # Change request tests
 
 # Run a single test file
 yarn test:file ./tests/unit/path/to/test.mjs
