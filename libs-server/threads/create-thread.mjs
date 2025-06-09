@@ -10,8 +10,8 @@ import {
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
-import { create_change_request } from '#libs-server/change-requests/index.mjs'
 import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
+import * as change_requests from '#libs-server/change-requests/index.mjs'
 import { get_thread_tool_names } from './thread-tools.mjs'
 import {
   get_registered_directories,
@@ -128,6 +128,7 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {boolean} [params.create_git_branches=true] Whether to create git branches and worktrees
+ * @param {boolean} [params.create_change_request=false] Whether to create a change request for the thread
  * @param {Object} [params.metadata={}] Additional metadata
  * @returns {Promise<Object>} Created thread object
  */
@@ -141,6 +142,7 @@ export default async function create_thread({
   prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
   create_git_branches = true,
+  create_change_request = false,
   // TODO cleanup
   ...additional_metadata
 }) {
@@ -274,25 +276,27 @@ export default async function create_thread({
       metadata.system_worktree_path = worktree_paths.system
       metadata.user_worktree_path = worktree_paths.user
 
-      // Create a default change request for this thread if requested
-      try {
-        const change_request_id = await create_change_request({
-          title: `Thread ${thread_id} changes`,
-          description: `Default change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
-          user_id,
-          target_branch: 'main',
-          feature_branch: `thread/${thread_id}`,
-          thread_id
-        })
+      // Create a change request for this thread if explicitly requested
+      if (create_change_request) {
+        try {
+          const change_request_id = await change_requests.create_change_request({
+            title: `Thread ${thread_id} changes`,
+            description: `Change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
+            user_id,
+            target_branch: 'main',
+            feature_branch: `thread/${thread_id}`,
+            thread_id
+          })
 
-        // Add change request information to metadata
-        metadata.thread_change_request_id = change_request_id
-        log(
-          `Created default change request ${change_request_id} for thread ${thread_id}`
-        )
-      } catch (error) {
-        log(`Failed to create default change request: ${error.message}`)
-        // Continue thread creation even if change request creation fails
+          // Add change request information to metadata
+          metadata.thread_change_request_id = change_request_id
+          log(
+            `Created change request ${change_request_id} for thread ${thread_id}`
+          )
+        } catch (error) {
+          log(`Failed to create change request: ${error.message}`)
+          // Continue thread creation even if change request creation fails
+        }
       }
     } catch (error) {
       log(`Failed to create git branches or worktrees: ${error.message}`)
