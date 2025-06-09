@@ -40,7 +40,10 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ### Worktree and Branch Setup
 
+**CRITICAL: Never commit directly to `main` or `master` branches**
+
 - A dedicated worktree MUST be created for each GitHub task to isolate changes
+- ALL development work MUST be done in feature branches or worktrees
 - Branch naming MUST follow the pattern: `fix/{issue-number}-{short-description}`
   - Example: `fix/16-no-auto-change-requests`
 - Worktree creation MUST follow this process:
@@ -48,6 +51,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
   2. Create worktree with: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
   3. Navigate to the new worktree directory
   4. Install dependencies if needed: `yarn install`
+- Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers
 
 ### Development Process
 
@@ -172,6 +176,7 @@ unnecessary file creation for threads that don't require change tracking."
 
 ## Common Pitfalls to Avoid
 
+- **DO NOT commit directly to main or master branches** - Use worktrees/feature branches
 - DO NOT modify tests without understanding why they were written
 - DO NOT break existing functionality without explicit requirements
 - DO NOT commit without running tests

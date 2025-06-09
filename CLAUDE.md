@@ -187,3 +187,12 @@ Threads execute workflows in isolated git worktrees:
 - Debug logging available via DEBUG environment variable
 - JWT authentication for API endpoints
 - WebSocket for real-time client-server communication
+
+## Git Workflow Rules
+
+**CRITICAL: Never commit directly to `main` or `master` branches**
+
+- ALL development work MUST be done in feature branches or worktrees
+- Use the pattern: `git worktree add -b feature/description ../repo-worktrees/feature-description`
+- Changes MUST go through the change request/pull request process
+- Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers

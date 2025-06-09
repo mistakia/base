@@ -58,14 +58,18 @@ Read task/github/{org}/{repo}/{issue-number}-{task-name}.md
 ```
 
 #### 1.2 Set Up Worktree and Branch
+
+**CRITICAL: Never commit directly to `main` or `master` branches**
+
 ```bash
 # Navigate to main repository
 cd /path/to/repository
 
-# Check current branch and status
+# Check current branch and status (MUST be on main/master)
 git status
 git branch --show-current
 
+# NEVER work directly on main/master branches
 # Create worktree with descriptive branch name
 git worktree add -b fix/{issue-number}-{short-description} ../repo-worktrees/fix-{issue-number}-{short-description}
 
@@ -201,7 +205,7 @@ unnecessary file creation for threads that don't require change tracking."
 ### Before Implementation
 - [ ] Task requirements fully understood
 - [ ] Current behavior documented and tested
-- [ ] Worktree and branch properly set up
+- [ ] Worktree and branch properly set up (NEVER on main/master)
 - [ ] Dependencies installed and working
 
 ### During Development
