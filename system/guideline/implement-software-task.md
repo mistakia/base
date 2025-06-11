@@ -15,28 +15,28 @@ prompt_properties:
     required: false
     description: Example task data to populate templates
     default:
-      issue_number: "16"
-      task_description: "no-auto-change-requests"
-      project_path: "mistakia/base"
-      task_file: "16-modify-thread-creation"
-      branch_name: "fix/16-no-auto-change-requests"
-      repo_name: "base"
-      target_files: "libs-server/threads/create-thread.mjs"
-      test_type: "unit"
-      test_file: "threads/create-thread"
-      documentation_files: "system/text/execution-threads.md"
-      commit_type: "fix"
-      commit_summary: "modify thread creation to not automatically generate change requests"
+      issue_number: '16'
+      task_description: 'no-auto-change-requests'
+      project_path: 'mistakia/base'
+      task_file: '16-modify-thread-creation'
+      branch_name: 'fix/16-no-auto-change-requests'
+      repo_name: 'base'
+      target_files: 'libs-server/threads/create-thread.mjs'
+      test_type: 'unit'
+      test_file: 'threads/create-thread'
+      documentation_files: 'system/text/execution-threads.md'
+      commit_type: 'fix'
+      commit_summary: 'modify thread creation to not automatically generate change requests'
       requirements:
-        - "Remove automatic change request creation from thread creation"
-        - "Add optional create_change_request parameter for explicit control"
-        - "Update documentation to reflect the behavioral change"
+        - 'Remove automatic change request creation from thread creation'
+        - 'Add optional create_change_request parameter for explicit control'
+        - 'Update documentation to reflect the behavioral change'
       changes:
-        - "Remove automatic change request creation from thread creation"
-        - "Add optional create_change_request parameter for explicit control"
-        - "Update documentation to reflect the behavioral change"
-        - "Add comprehensive tests for the new behavior"
-        - "Update existing tests to explicitly request change requests when needed"
+        - 'Remove automatic change request creation from thread creation'
+        - 'Add optional create_change_request parameter for explicit control'
+        - 'Update documentation to reflect the behavioral change'
+        - 'Add comprehensive tests for the new behavior'
+        - 'Update existing tests to explicitly request change requests when needed'
       detailed_description: "The thread creation workflow now only creates change requests when explicitly requested via the create_change_request parameter, preventing unnecessary file creation for threads that don't require change tracking."
 observations:
   - '[workflow] Isolated worktrees prevent conflicts with main development branch'
@@ -129,6 +129,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Example Implementation Process
 
 ### 1. Task Analysis
+
 ```bash
 # Read and understand the task
 cat task/{{ task_example.project_path }}/{{ task_example.task_file }}.md
@@ -140,6 +141,7 @@ cat task/{{ task_example.project_path }}/{{ task_example.task_file }}.md
 ```
 
 ### 2. Worktree Setup
+
 ```bash
 # Navigate to repository
 cd /path/to/repository
@@ -153,6 +155,7 @@ yarn install
 ```
 
 ### 3. Development Cycle
+
 ```bash
 # Make changes to core functionality
 # Update {{ task_example.target_files }}
@@ -169,6 +172,7 @@ yarn test:integration --reporter min
 ```
 
 ### 4. Documentation Updates
+
 ```bash
 # Update system documentation
 # Edit {{ task_example.documentation_files }}
@@ -178,6 +182,7 @@ yarn test:integration --reporter min
 ```
 
 ### 5. Final Validation
+
 ```bash
 # Run full test suite
 yarn test:all --reporter min

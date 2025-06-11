@@ -18,26 +18,32 @@ Never merge unreviewed code directly into main.
 1. If $ARGUMENTS is provided, use it as the branch name. Otherwise, use the current branch name.
 
 2. Navigate to the main repository directory (not the worktree):
+
    - Use `pwd` to check current location
    - If in a worktree directory, navigate to the main repository using the parent directory path
    - The main repository is typically in the parent directory of the worktrees
 
 3. Ensure main branch is up to date:
+
    - Switch to main branch: `git checkout main`
    - Pull latest changes: `git pull origin main`
 
 4. Verify the feature branch exists and has commits:
+
    - Check branch exists: `git branch --list [branch-name]`
    - Show branch commits: `git log main..[branch-name] --oneline`
 
 5. Merge the feature branch with no-fast-forward to preserve history:
+
    - Run: `git merge [branch-name] --no-ff`
    - Include a descriptive merge commit message
 
 6. Push the merged changes:
+
    - Push to origin: `git push origin main`
 
 7. Clean up the worktree and branch (only after successful merge):
+
    - Remove the worktree: `git worktree remove ../worktrees/[branch-name]`
    - Delete the local branch: `git branch -d [branch-name]`
    - Optionally delete remote branch if it exists: `git push origin --delete [branch-name]`
@@ -45,7 +51,7 @@ Never merge unreviewed code directly into main.
 8. Verify the merge was successful:
    - Check git log to confirm merge commit exists
    - Ensure working directory is clean: `git status`
-</instructions>
+     </instructions>
 
 <output_format>
 Provide a summary including:

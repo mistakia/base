@@ -17,26 +17,26 @@ prompt_properties:
     required: false
     description: Example workflow data to populate templates and examples
     default:
-      org: "mistakia"
-      repo: "base"
-      issue_number: "16"
-      task_name: "modify-thread-creation"
-      short_description: "no-auto-change-requests"
-      branch_name: "fix/16-no-auto-change-requests"
-      worktree_path: "../repo-worktrees/fix-16-no-auto-change-requests"
-      main_file: "libs-server/threads/create-thread.mjs"
-      test_component: "threads"
-      test_file: "create-thread-test.mjs"
-      integration_test: "change-requests.test.mjs"
-      documentation_file: "execution-threads.md"
-      commit_type: "fix"
-      commit_summary: "modify thread creation to not automatically generate change requests"
+      org: 'mistakia'
+      repo: 'base'
+      issue_number: '16'
+      task_name: 'modify-thread-creation'
+      short_description: 'no-auto-change-requests'
+      branch_name: 'fix/16-no-auto-change-requests'
+      worktree_path: '../repo-worktrees/fix-16-no-auto-change-requests'
+      main_file: 'libs-server/threads/create-thread.mjs'
+      test_component: 'threads'
+      test_file: 'create-thread-test.mjs'
+      integration_test: 'change-requests.test.mjs'
+      documentation_file: 'execution-threads.md'
+      commit_type: 'fix'
+      commit_summary: 'modify thread creation to not automatically generate change requests'
       commit_details:
-        - "Remove automatic change request creation from thread creation"
-        - "Add optional create_change_request parameter for explicit control"
-        - "Update documentation to reflect the behavioral change"
-        - "Add comprehensive tests for the new behavior"
-        - "Update existing tests to explicitly request change requests when needed"
+        - 'Remove automatic change request creation from thread creation'
+        - 'Add optional create_change_request parameter for explicit control'
+        - 'Update documentation to reflect the behavioral change'
+        - 'Add comprehensive tests for the new behavior'
+        - 'Update existing tests to explicitly request change requests when needed'
       commit_description: "The thread creation workflow now only creates change requests when explicitly requested via the create_change_request parameter, preventing unnecessary file creation for threads that don't require change tracking."
 relations:
   - 'implements [[sys:guideline/implement-software-task.md]]'
@@ -65,6 +65,7 @@ Implement a software task following established development practices, comprehen
 ### Phase 1: Task Analysis and Setup
 
 #### 1.1 Read and Analyze Task
+
 ```bash
 # Navigate to task file and read requirements
 Read task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workflow_example.issue_number }}-{{ workflow_example.task_name }}.md
@@ -77,6 +78,7 @@ Read task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workf
 ```
 
 #### 1.2 Set Up Worktree and Branch
+
 ```bash
 # Navigate to main repository
 cd /path/to/repository
@@ -94,6 +96,7 @@ yarn install
 ```
 
 #### 1.3 Explore Codebase
+
 ```bash
 # Search for relevant patterns
 Grep "pattern related to task" --include="*.mjs"
@@ -108,6 +111,7 @@ Read path/to/relevant/file.mjs
 ### Phase 2: Development and Testing
 
 #### 2.1 Create Initial Test
+
 ```bash
 # Create test file to document current behavior
 Write tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
@@ -117,6 +121,7 @@ yarn test:file ./tests/unit/{{ workflow_example.test_component }}/{{ workflow_ex
 ```
 
 #### 2.2 Implement Core Changes
+
 ```bash
 # Make primary implementation changes
 Edit {{ workflow_example.main_file }}
@@ -129,6 +134,7 @@ Edit files/with/unused/imports.mjs
 ```
 
 #### 2.3 Update Tests for New Behavior
+
 ```bash
 # Update tests to expect new behavior
 Edit tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
@@ -141,6 +147,7 @@ yarn test:unit --reporter min
 ```
 
 #### 2.4 Handle Integration Tests
+
 ```bash
 # Check for affected integration tests
 yarn test:integration --reporter min
@@ -155,6 +162,7 @@ Edit tests/utils/test-helpers.mjs
 ### Phase 3: Documentation and Quality
 
 #### 3.1 Update System Documentation
+
 ```bash
 # Update relevant documentation
 Edit system/text/{{ workflow_example.documentation_file }}
@@ -167,6 +175,7 @@ Edit system/workflow/related-workflow.md
 ```
 
 #### 3.2 Run Quality Checks
+
 ```bash
 # Execute comprehensive test suite
 yarn test:unit --reporter min
@@ -182,6 +191,7 @@ yarn typecheck
 ### Phase 4: Finalization
 
 #### 4.1 Final Validation
+
 ```bash
 # Run complete test suite
 yarn test:all --reporter min
@@ -195,6 +205,7 @@ git status
 ```
 
 #### 4.2 Commit Changes
+
 ```bash
 # Stage all changes
 git add .
@@ -212,23 +223,27 @@ git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_su
 ## Process Checkpoints
 
 ### Phase 1 Complete
+
 - [ ] Task requirements documented and understood
 - [ ] Worktree and branch properly configured
 - [ ] Codebase exploration completed
 - [ ] Dependencies installed and verified
 
 ### Phase 2 Complete
+
 - [ ] Initial tests created and passing
 - [ ] Core implementation completed
 - [ ] Tests updated for new behavior
 - [ ] Integration tests addressed
 
 ### Phase 3 Complete
+
 - [ ] Documentation updated
 - [ ] Quality checks passing
 - [ ] Code standards verified
 
 ### Phase 4 Complete
+
 - [ ] Final validation successful
 - [ ] Changes committed with proper message
 - [ ] Implementation ready for review
@@ -246,6 +261,7 @@ git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_su
 For a software task to modify thread creation behavior:
 
 **Process Flow:**
+
 1. Analyzed task requirements from `task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workflow_example.issue_number }}-{{ workflow_example.task_name }}.md`
 2. Created worktree `{{ workflow_example.branch_name }}`
 3. Implemented changes in `{{ workflow_example.main_file }}`
@@ -253,6 +269,7 @@ For a software task to modify thread creation behavior:
 5. Verified quality standards and committed changes
 
 **Deliverables:**
+
 - Modified core implementation files
 - Updated test suites (unit and integration)
 - Updated system documentation

@@ -57,7 +57,7 @@ describe('Change Requests API', () => {
       user_id: test_user.user_id,
       test_directories,
       create_git_branches: true,
-        create_change_request: true
+      create_change_request: true
     })
 
     // Create the change_requests directory

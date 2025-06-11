@@ -279,14 +279,16 @@ export default async function create_thread({
       // Create a change request for this thread if explicitly requested
       if (create_change_request) {
         try {
-          const change_request_id = await change_requests.create_change_request({
-            title: `Thread ${thread_id} changes`,
-            description: `Change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
-            user_id,
-            target_branch: 'main',
-            feature_branch: `thread/${thread_id}`,
-            thread_id
-          })
+          const change_request_id = await change_requests.create_change_request(
+            {
+              title: `Thread ${thread_id} changes`,
+              description: `Change request for thread ${thread_id}. Contains all changes made in this thread relative to main.`,
+              user_id,
+              target_branch: 'main',
+              feature_branch: `thread/${thread_id}`,
+              thread_id
+            }
+          )
 
           // Add change request information to metadata
           metadata.thread_change_request_id = change_request_id

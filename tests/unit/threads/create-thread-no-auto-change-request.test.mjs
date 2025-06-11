@@ -1,6 +1,4 @@
 import { expect } from 'chai'
-import fs from 'fs/promises'
-import path from 'path'
 
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { register_base_directories } from '#libs-server/base-uri/index.mjs'
@@ -10,8 +8,6 @@ import {
   reset_all_tables
 } from '#tests/utils/index.mjs'
 import { thread_constants } from '#libs-shared'
-
-const { THREAD_STATE } = thread_constants
 
 describe('create_thread - no automatic change requests', () => {
   let test_user

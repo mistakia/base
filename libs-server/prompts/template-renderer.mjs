@@ -27,7 +27,9 @@ export async function render_template({
     return template.render(template_context)
   } catch (error) {
     log(`Template rendering error for ${context_name}: ${error.message}`)
-    throw new Error(`Failed to render template for ${context_name}: ${error.message}`)
+    throw new Error(
+      `Failed to render template for ${context_name}: ${error.message}`
+    )
   }
 }
 
@@ -57,16 +59,16 @@ export function prepare_template_context({
  * @param {Object} [params.entity_properties] - Entity properties that may contain prompt_properties with defaults
  * @returns {Object} - Final context with defaults applied
  */
-export function merge_default_values({
-  base_context,
-  entity_properties
-}) {
-  let final_context = { ...base_context }
-  
+export function merge_default_values({ base_context, entity_properties }) {
+  const final_context = { ...base_context }
+
   if (entity_properties?.prompt_properties) {
     // Apply default values from entity prompt_properties
     for (const prop of entity_properties.prompt_properties) {
-      if (prop.default !== undefined && final_context[prop.name] === undefined) {
+      if (
+        prop.default !== undefined &&
+        final_context[prop.name] === undefined
+      ) {
         final_context[prop.name] = prop.default
       }
     }
@@ -99,4 +101,4 @@ export function extract_name_from_uri(base_uri, fallback = 'untitled') {
   }
 
   return fallback
-} 
+}
