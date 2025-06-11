@@ -73,7 +73,8 @@ describe('GitHub Webhooks with Registry System', () => {
         user_id: test_user.user_id,
         thread_main_request: 'Testing GitHub webhook with registry system',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request
@@ -132,7 +133,8 @@ describe('GitHub Webhooks with Registry System', () => {
         user_id: test_user.user_id,
         thread_main_request: 'Testing GitHub close webhook with registry',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request

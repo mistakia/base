@@ -56,7 +56,8 @@ describe('Change Requests API', () => {
     test_thread = await create_test_thread({
       user_id: test_user.user_id,
       test_directories,
-      create_git_branches: true
+      create_git_branches: true,
+        create_change_request: true
     })
 
     // Create the change_requests directory
@@ -83,7 +84,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'Test Get CR - This is for testing GET endpoint',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request ID from the thread
@@ -127,14 +129,16 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'First test CR',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       const thread2 = await create_test_thread({
         user_id: test_user.user_id,
         thread_main_request: 'Second test CR',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request IDs
@@ -168,7 +172,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing filters',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request
@@ -213,7 +218,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing status updates',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request
@@ -266,7 +272,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing invalid status',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request
@@ -297,7 +304,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing merge endpoint',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Create a file in the thread worktree (not by checking out the branch)
@@ -367,7 +375,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing double merge',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Create a file in the thread worktree (not by checking out the branch)
@@ -426,7 +435,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing GitHub webhooks',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request
@@ -482,7 +492,8 @@ describe('Change Requests API', () => {
         user_id: test_user.user_id,
         thread_main_request: 'For testing GitHub close webhooks',
         test_directories,
-        create_git_branches: true
+        create_git_branches: true,
+        create_change_request: true
       })
 
       // Fetch the change request

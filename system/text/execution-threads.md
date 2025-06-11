@@ -40,7 +40,7 @@ An **Execution Thread** is a process responsible for accomplishing a defined obj
 - `updated_at`: Timestamp of last update.
 - `terminated_at`: Timestamp of termination (if applicable).
 - `tools`: Array of tools available to this thread.
-- `thread_change_request_id`: Reference to the change request that tracks all changes made in the thread's branch.
+- `thread_change_request_id`: Optional reference to a change request that tracks changes made in the thread's branch (set only when a change request is explicitly created).
 - `system_worktree_path`: Path to the Git worktree for the system repository.
 - `user_worktree_path`: Path to the Git worktree for the user repository.
 
@@ -55,8 +55,7 @@ When a new thread is created:
 5. Memory directory is set up with a git repository
 6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
 7. Git worktrees are created for each branch to enable concurrent thread execution
-8. A default change request is created to track changes made in the thread branch relative to main
-9. The thread is associated with a specific workflow that it will execute
+8. The thread is associated with a specific workflow that it will execute
 
 When a thread is terminated:
 
