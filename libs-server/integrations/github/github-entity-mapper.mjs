@@ -7,7 +7,7 @@ import config from '#config'
 const log = debug('github-entity-mapper')
 const GITHUB_ENTITY_MAPPINGS_PATH = path.resolve(
   config.user_base_directory,
-  'user/task/github/github-entity-mappings.json'
+  'task/github/github-entity-mappings.json'
 )
 
 /**

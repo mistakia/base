@@ -7,7 +7,6 @@ import {
   create_test_user,
   reset_all_tables
 } from '#tests/utils/index.mjs'
-import { thread_constants } from '#libs-shared'
 
 describe('create_thread - no automatic change requests', () => {
   let test_user
