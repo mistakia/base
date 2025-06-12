@@ -17,20 +17,23 @@ const log = debug('repository:filesystem:list-entity-files')
  * @param {Object} params - Parameters
  * @param {string[]} [params.include_entity_types] - Entity types to include
  * @param {string[]} [params.exclude_entity_types] - Entity types to exclude
- * @param {string} [params.path_pattern] - Glob pattern for filtering paths
+ * @param {string[]} [params.include_path_patterns] - Glob patterns for including files by path
+ * @param {string[]} [params.exclude_path_patterns] - Glob patterns for excluding files by path
  * @returns {Promise<Array>} - Array of entity file objects with properties and metadata
  */
 export async function list_entity_files_from_filesystem({
   include_entity_types = [],
   exclude_entity_types = [],
-  path_pattern
+  include_path_patterns = [],
+  exclude_path_patterns = []
 }) {
   try {
     log('Listing entities from filesystem')
 
-    // Get all markdown files using existing function, passing path_pattern directly
+    // Get all markdown files using existing function, passing path patterns
     const all_files = await list_markdown_files_in_filesystem({
-      path_pattern
+      include_path_patterns,
+      exclude_path_patterns
     })
 
     log(
@@ -97,10 +100,19 @@ if (is_main(import.meta.url)) {
       type: 'string',
       coerce: (arg) => (arg ? arg.split(',') : [])
     })
-    .option('path_pattern', {
-      alias: 'p',
-      description: 'Path pattern to filter by (e.g., "system/schema/*.md")',
-      type: 'string'
+    .option('include_path_patterns', {
+      alias: 'ip',
+      description:
+        'Path patterns to include files by (e.g., "system/*.md,user/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .option('exclude_path_patterns', {
+      alias: 'ep',
+      description:
+        'Path patterns to exclude files by (e.g., "system/temp/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
     })
     .help().argv
 
@@ -113,7 +125,8 @@ if (is_main(import.meta.url)) {
       const entities = await list_entity_files_from_filesystem({
         include_entity_types: argv.include_entity_types,
         exclude_entity_types: argv.exclude_entity_types,
-        path_pattern: argv.path_pattern
+        include_path_patterns: argv.include_path_patterns,
+        exclude_path_patterns: argv.exclude_path_patterns
       })
       console.log(`Found ${entities.length} matching entities`)
       console.log(JSON.stringify(entities, null, 2))

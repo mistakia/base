@@ -23,7 +23,9 @@ export default async function import_github_project_issues({
   get_github_project = github.get_github_project
 }) {
   try {
-    log(`Importing issues from GitHub project: ${username}/${github_project_number}`)
+    log(
+      `Importing issues from GitHub project: ${username}/${github_project_number}`
+    )
 
     let all_issues = []
     const all_project_items_by_issue = {}
@@ -53,7 +55,9 @@ export default async function import_github_project_issues({
       }
 
       if (!project_data.data?.user?.projectV2) {
-        throw new Error(`Project ${username}/${github_project_number} not found`)
+        throw new Error(
+          `Project ${username}/${github_project_number} not found`
+        )
       }
 
       // Check if there are more pages

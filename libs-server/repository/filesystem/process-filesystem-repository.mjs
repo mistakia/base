@@ -99,14 +99,16 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
  *   Returns: boolean (false to skip, true/undefined to process)
  * @param {string[]} [include_entity_types] Entity types to include
  * @param {string[]} [exclude_entity_types] Entity types to exclude
- * @param {string} [path_pattern] Glob pattern for filtering paths
+ * @param {string[]} [include_path_patterns] Path patterns to include
+ * @param {string[]} [exclude_path_patterns] Path patterns to exclude
  * @returns {Promise<Object>} Processing results
  */
 export async function process_repositories_from_filesystem({
   entity_processor,
   include_entity_types = [],
   exclude_entity_types = [],
-  path_pattern
+  include_path_patterns = [],
+  exclude_path_patterns = []
 } = {}) {
   // Get directories from registry
   const system_base_directory = get_system_base_directory()
@@ -150,7 +152,8 @@ export async function process_repositories_from_filesystem({
       base_directory: repository.base_path,
       include_entity_types,
       exclude_entity_types,
-      path_pattern
+      include_path_patterns,
+      exclude_path_patterns
     })
 
     log(`Found ${repo_files.length} entity files in ${repository.base_path}`)

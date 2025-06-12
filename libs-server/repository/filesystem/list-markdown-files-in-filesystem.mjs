@@ -18,10 +18,14 @@ debug.enable('markdown:scanner:filesystem')
 /**
  * Get list of markdown files from the filesystem recursively, including submodules
  * @param {Object} params - Parameters
- * @param {string} [params.path_pattern] - Optional glob pattern for filtering files by path
+ * @param {string[]} [params.include_path_patterns] - Optional array of glob patterns for including files by path
+ * @param {string[]} [params.exclude_path_patterns] - Optional array of glob patterns for excluding files by path
  * @returns {Promise<Array>} Array of file metadata objects
  */
-export async function list_markdown_files_in_filesystem({ path_pattern }) {
+export async function list_markdown_files_in_filesystem({
+  include_path_patterns = [],
+  exclude_path_patterns = []
+}) {
   const files = []
   const file_paths_seen = new Set() // Track file paths to handle duplicates
 
@@ -44,7 +48,8 @@ export async function list_markdown_files_in_filesystem({ path_pattern }) {
         directory: base_directory,
         file_extension: '.md',
         absolute_paths: false,
-        path_pattern
+        include_path_patterns,
+        exclude_path_patterns
       })
 
       // Add files from this directory
@@ -80,10 +85,19 @@ export async function list_markdown_files_in_filesystem({ path_pattern }) {
 
 if (is_main(import.meta.url)) {
   const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
-    .option('path_pattern', {
-      alias: 'p',
-      description: 'Path pattern to filter files by (e.g., "*.md")',
-      type: 'string'
+    .option('include_path_patterns', {
+      alias: 'i',
+      description:
+        'Path patterns to include files by (e.g., "system/*.md,user/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .option('exclude_path_patterns', {
+      alias: 'e',
+      description:
+        'Path patterns to exclude files by (e.g., "system/temp/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
     })
     .help().argv
 
@@ -94,7 +108,8 @@ if (is_main(import.meta.url)) {
     let error
     try {
       const files = await list_markdown_files_in_filesystem({
-        path_pattern: argv.path_pattern
+        include_path_patterns: argv.include_path_patterns,
+        exclude_path_patterns: argv.exclude_path_patterns
       })
       console.log(`Found ${files.length} markdown files`)
       console.log(JSON.stringify(files, null, 2))

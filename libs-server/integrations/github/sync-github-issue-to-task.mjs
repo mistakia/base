@@ -107,12 +107,12 @@ export async function sync_github_issue_to_task({
       user_id,
       comments
     })
-    
+
     // Add github_project_number if provided
     if (github_project_number) {
       normalized_github_issue.github_project_number = github_project_number
     }
-    
+
     log('Using normalized GitHub issue format')
 
     // Calculate import content identifier

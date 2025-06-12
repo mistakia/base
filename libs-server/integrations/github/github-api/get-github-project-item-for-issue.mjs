@@ -28,11 +28,7 @@ export async function get_github_project_item_for_issue({
   const client = create_github_client({ github_token })
 
   const query = gql`
-    query GetProjectItem(
-      $owner: String!
-      $repo: String!
-      $issue_number: Int!
-    ) {
+    query GetProjectItem($owner: String!, $repo: String!, $issue_number: Int!) {
       repository(owner: $owner, name: $repo) {
         issue(number: $issue_number) {
           id

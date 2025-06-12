@@ -5,23 +5,45 @@ import path from 'path'
 const log = debug('repository:filesystem:list-files-recursive')
 
 /**
- * Tests if a file path matches the pattern
+ * Tests if a file path matches any of the patterns
  *
  * @param {string} file_path - Path to check
- * @param {string} path_pattern - Pattern to match against (simple glob with just * wildcard)
- * @returns {boolean} - Whether the path matches the pattern
+ * @param {string[]} patterns - Array of patterns to match against (simple glob with just * wildcard)
+ * @returns {boolean} - Whether the path matches any of the patterns
  */
-function matches_pattern(file_path, path_pattern) {
-  if (!path_pattern) return true
+function matches_any_pattern(file_path, patterns) {
+  if (!patterns || patterns.length === 0) return true
 
-  // Convert glob pattern to regex
-  // This handles simple glob patterns where * matches any sequence of characters
-  const regex_pattern = path_pattern
-    .replace(/\./g, '\\.') // Escape dots
-    .replace(/\*/g, '.*') // Convert * to regex equivalent
+  return patterns.some((pattern) => {
+    // Convert glob pattern to regex
+    // This handles simple glob patterns where * matches any sequence of characters
+    const regex_pattern = pattern
+      .replace(/\./g, '\\.') // Escape dots
+      .replace(/\*/g, '.*') // Convert * to regex equivalent
 
-  const regex = new RegExp(`^${regex_pattern}$`)
-  return regex.test(file_path)
+    const regex = new RegExp(`^${regex_pattern}$`)
+    return regex.test(file_path)
+  })
+}
+
+/**
+ * Tests if a file path should be included based on include and exclude patterns
+ *
+ * @param {string} file_path - Path to check
+ * @param {string[]} include_patterns - Patterns to include (if empty, all files are included)
+ * @param {string[]} exclude_patterns - Patterns to exclude (take precedence over include)
+ * @returns {boolean} - Whether the file should be included
+ */
+function should_include_file(file_path, include_patterns, exclude_patterns) {
+  // First check exclude patterns - they take precedence
+  if (exclude_patterns && exclude_patterns.length > 0) {
+    if (matches_any_pattern(file_path, exclude_patterns)) {
+      return false
+    }
+  }
+
+  // Then check include patterns
+  return matches_any_pattern(file_path, include_patterns)
 }
 
 /**
@@ -29,14 +51,16 @@ function matches_pattern(file_path, path_pattern) {
  *
  * @param {Object} params - Parameters
  * @param {string} params.directory - Directory to search in
- * @param {string} [params.path_pattern] - Pattern to match against paths (simple glob with * wildcard)
+ * @param {string[]} [params.include_path_patterns] - Array of patterns to include (simple glob with * wildcard)
+ * @param {string[]} [params.exclude_path_patterns] - Array of patterns to exclude (simple glob with * wildcard)
  * @param {string} [params.file_extension] - Filter by file extension (e.g., '.md')
  * @param {boolean} [params.absolute_paths=true] - Return absolute paths if true, relative if false
  * @returns {Promise<string[]>} - List of file paths
  */
 export async function list_files_recursive({
   directory,
-  path_pattern,
+  include_path_patterns = [],
+  exclude_path_patterns = [],
   file_extension,
   absolute_paths = true
 }) {
@@ -49,7 +73,8 @@ export async function list_files_recursive({
     log(`Scanning directory ${directory} recursively`)
     const result = await scan_directory_recursively({
       directory,
-      path_pattern,
+      include_path_patterns,
+      exclude_path_patterns,
       file_extension,
       absolute_paths,
       base_directory: directory
@@ -69,7 +94,8 @@ export async function list_files_recursive({
  * @param {Object} params - Parameters
  * @param {string} params.directory - Current directory to scan
  * @param {string} params.base_directory - Original base directory (for relative path calculation)
- * @param {string} [params.path_pattern] - Pattern to match against
+ * @param {string[]} params.include_path_patterns - Patterns to include
+ * @param {string[]} params.exclude_path_patterns - Patterns to exclude
  * @param {string} [params.file_extension] - Filter by file extension
  * @param {boolean} params.absolute_paths - Return absolute paths if true, relative if false
  * @returns {Promise<string[]>} - List of file paths
@@ -77,7 +103,8 @@ export async function list_files_recursive({
 async function scan_directory_recursively({
   directory,
   base_directory,
-  path_pattern,
+  include_path_patterns,
+  exclude_path_patterns,
   file_extension,
   absolute_paths
 }) {
@@ -95,7 +122,8 @@ async function scan_directory_recursively({
         const subdirectory_files = await scan_directory_recursively({
           directory: entry_path,
           base_directory,
-          path_pattern,
+          include_path_patterns,
+          exclude_path_patterns,
           file_extension,
           absolute_paths
         })
@@ -109,8 +137,14 @@ async function scan_directory_recursively({
           continue
         }
 
-        // Apply pattern matching if specified
-        if (path_pattern && !matches_pattern(relative_path, path_pattern)) {
+        // Apply pattern matching
+        if (
+          !should_include_file(
+            relative_path,
+            include_path_patterns,
+            exclude_path_patterns
+          )
+        ) {
           continue
         }
 

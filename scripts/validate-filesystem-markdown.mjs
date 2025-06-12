@@ -15,10 +15,16 @@ debug.enable(
   'validate-filesystem-markdown,markdown:process-repository,markdown:scanner'
 )
 
-const validate_filesystem = async () => {
+const validate_filesystem = async ({
+  include_path_patterns = [],
+  exclude_path_patterns = []
+} = {}) => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
-  const result = await process_repositories_from_filesystem()
+  const result = await process_repositories_from_filesystem({
+    include_path_patterns,
+    exclude_path_patterns
+  })
 
   // Report results
   console.log('\nFilesystem Validation Results:')
@@ -54,15 +60,32 @@ const validate_filesystem = async () => {
 export default validate_filesystem
 
 const main = async () => {
-  const argv = add_directory_cli_options(yargs(hideBin(process.argv))).help()
-    .argv
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
+    .option('include_path_patterns', {
+      alias: 'i',
+      description:
+        'Path patterns to include files by (e.g., "system/*.md,user/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .option('exclude_path_patterns', {
+      alias: 'e',
+      description:
+        'Path patterns to exclude files by (e.g., "system/temp/*.md")',
+      type: 'string',
+      coerce: (arg) => (arg ? arg.split(',') : [])
+    })
+    .help().argv
 
   // Handle directory registration using the reusable function
   handle_cli_directory_registration(argv)
 
   let error
   try {
-    const result = await validate_filesystem()
+    const result = await validate_filesystem({
+      include_path_patterns: argv.include_path_patterns,
+      exclude_path_patterns: argv.exclude_path_patterns
+    })
 
     if (result.has_errors) {
       error = new Error('Filesystem validation failed')

@@ -84,7 +84,8 @@ export async function sync_task_to_github_issue({
           let status_option_id = null
           if (status_field && status_field.options) {
             const status_option = status_field.options.find(
-              (option) => option.name.toLowerCase() === github_status.toLowerCase()
+              (option) =>
+                option.name.toLowerCase() === github_status.toLowerCase()
             )
 
             if (status_option) {
@@ -94,7 +95,7 @@ export async function sync_task_to_github_issue({
               )
             } else {
               log(
-                `Could not find matching status option in project for status "${github_status}". Available options: ${status_field.options.map(o => o.name).join(', ')}`
+                `Could not find matching status option in project for status "${github_status}". Available options: ${status_field.options.map((o) => o.name).join(', ')}`
               )
             }
           }
@@ -114,9 +115,7 @@ export async function sync_task_to_github_issue({
 
             log('Updated GitHub project item status successfully')
           } else {
-            log(
-              `Could not find status option ID for status "${github_status}"`
-            )
+            log(`Could not find status option ID for status "${github_status}"`)
             project_update_success = false
           }
         } else {
@@ -214,4 +213,3 @@ function map_task_status_to_github_project_status(task_status) {
       return 'Planned'
   }
 }
-
