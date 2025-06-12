@@ -8,29 +8,29 @@ const log = debug('github')
  * Get GitHub project data using GraphQL
  * @param {Object} params - Parameters for getting GitHub project
  * @param {string} params.username - GitHub username
- * @param {number} params.project_number - Project number
+ * @param {number} params.github_project_number - GitHub project number
  * @param {string} params.github_token - GitHub API token
  * @param {string|null} params.cursor - Pagination cursor
  * @returns {Promise<Object>} Project data
  */
 export const get_github_project = async ({
   username,
-  project_number,
+  github_project_number,
   github_token,
   cursor = null
 }) => {
   log(
-    `Getting GitHub project ${username}/${project_number}${cursor ? ' (with cursor)' : ''}`
+    `Getting GitHub project ${username}/${github_project_number}${cursor ? ' (with cursor)' : ''}`
   )
 
   const query = gql`
     query GetProject(
       $username: String!
-      $project_number: Int!
+      $github_project_number: Int!
       $after_cursor: String
     ) {
       user(login: $username) {
-        projectV2(number: $project_number) {
+        projectV2(number: $github_project_number) {
           id
           items(first: 100, after: $after_cursor) {
             pageInfo {
@@ -155,7 +155,7 @@ export const get_github_project = async ({
 
   const variables = {
     username,
-    project_number,
+    github_project_number,
     after_cursor: cursor
   }
 

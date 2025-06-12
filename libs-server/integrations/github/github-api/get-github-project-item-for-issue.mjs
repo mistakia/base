@@ -10,7 +10,7 @@ const log = debug('github')
  * @param {string} params.github_repository_owner - Repository owner
  * @param {string} params.github_repository_name - Repository name
  * @param {string|number} params.github_issue_number - Issue number
- * @param {string|number} params.project_number - Project number
+ * @param {string|number} params.github_project_number - GitHub project number
  * @param {string} params.github_token - GitHub token
  * @returns {Promise<Object>} Project item data including ID and fields
  */
@@ -18,7 +18,7 @@ export async function get_github_project_item_for_issue({
   github_repository_owner,
   github_repository_name,
   github_issue_number,
-  project_number,
+  github_project_number,
   github_token
 }) {
   log(
@@ -32,7 +32,6 @@ export async function get_github_project_item_for_issue({
       $owner: String!
       $repo: String!
       $issue_number: Int!
-      $project_number: Int!
     ) {
       repository(owner: $owner, name: $repo) {
         issue(number: $issue_number) {
@@ -107,8 +106,7 @@ export async function get_github_project_item_for_issue({
   const variables = {
     owner: github_repository_owner,
     repo: github_repository_name,
-    issue_number: parseInt(github_issue_number, 10),
-    project_number: parseInt(project_number, 10)
+    issue_number: parseInt(github_issue_number, 10)
   }
 
   try {
@@ -117,11 +115,11 @@ export async function get_github_project_item_for_issue({
 
     // Find the project item that matches the requested project number
     const project_item = issue_data.projectItems.nodes.find(
-      (item) => item.project.number === parseInt(project_number, 10)
+      (item) => item.project.number === parseInt(github_project_number, 10)
     )
 
     if (!project_item) {
-      log(`Issue is not in project #${project_number}`)
+      log(`Issue is not in project #${github_project_number}`)
       return null
     }
 

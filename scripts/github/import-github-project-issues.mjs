@@ -14,7 +14,7 @@ debug.enable('import-github-project-issues,github')
  */
 export default async function import_github_project_issues({
   username,
-  project_number,
+  github_project_number,
   github_token,
   user_id,
   user_base_directory = config.user_base_directory,
@@ -23,7 +23,7 @@ export default async function import_github_project_issues({
   get_github_project = github.get_github_project
 }) {
   try {
-    log(`Importing issues from GitHub project: ${username}/${project_number}`)
+    log(`Importing issues from GitHub project: ${username}/${github_project_number}`)
 
     let all_issues = []
     const all_project_items_by_issue = {}
@@ -43,7 +43,7 @@ export default async function import_github_project_issues({
       // Get project data with comprehensive issue information
       const project_data = await get_github_project({
         username,
-        project_number,
+        github_project_number,
         github_token,
         cursor
       })
@@ -53,7 +53,7 @@ export default async function import_github_project_issues({
       }
 
       if (!project_data.data?.user?.projectV2) {
-        throw new Error(`Project ${username}/${project_number} not found`)
+        throw new Error(`Project ${username}/${github_project_number} not found`)
       }
 
       // Check if there are more pages
@@ -135,6 +135,7 @@ export default async function import_github_project_issues({
         project_items_map,
         comments_map,
         github_token,
+        github_project_number,
         force
       })
 
@@ -162,7 +163,7 @@ export default async function import_github_project_issues({
       totals,
       project: {
         username,
-        project_number,
+        github_project_number,
         id: project_id,
         item_count: all_issues.length
       },
@@ -207,7 +208,7 @@ const main = async () => {
 
     const results = await import_github_project_issues({
       username: argv.username,
-      project_number: argv.project,
+      github_project_number: argv.project,
       github_token: config.github_access_token,
       user_id: config.user_id,
       user_base_directory: config.user_base_directory,
