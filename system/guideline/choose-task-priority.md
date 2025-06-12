@@ -5,7 +5,7 @@ description: Guidelines for choosing appropriate task priorities
 created_at: '2023-06-04T12:00:00.000Z'
 entity_id: fd9843c8-14a2-4736-83b2-873a6a8f5816
 globs:
-  - user/task/**/*.md
+  - 'task/**/*.md'
 guideline_status: Approved
 observations:
   - '[standard] Standardized priority values ensure consistent task management'

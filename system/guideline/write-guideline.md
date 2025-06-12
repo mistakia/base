@@ -6,8 +6,7 @@ description: |
 created_at: '2025-05-27T18:10:20.239Z'
 entity_id: '55c0f40b-3c54-44f9-8366-8c0d91d72986'
 globs:
-  - 'system/guideline/*.md'
-  - 'user/guideline/*.md'
+  - 'guideline/**/*.md'
 guideline_status: 'Approved'
 observations:
   - '[governance] Clear naming conventions improve discoverability #naming'

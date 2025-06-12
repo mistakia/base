@@ -7,8 +7,7 @@ description: >-
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 12dc5b4c-365c-4e7f-b7f4-10c9851b1be2
 globs:
-  - system/text/*.md
-  - user/text/*.md
+  - 'text/**/*.md'
   - '*.md'
 guideline_status: Approved
 observations:
