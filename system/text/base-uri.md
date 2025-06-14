@@ -1,13 +1,16 @@
 ---
 title: Base URI Specification
 type: text
-description: Universal resource identifier scheme for distributed knowledge systems across local and remote infrastructure
-user_id: '00000000-0000-0000-0000-000000000000'
+description: >-
+  Universal resource identifier scheme for distributed knowledge systems across local and remote
+  infrastructure
 created_at: '2025-06-06T20:45:00.000Z'
-updated_at: '2025-06-06T20:45:00.000Z'
+entity_id: 27efa635-3493-41eb-adbc-7ceeff2eff90
 relations:
-  - 'implements [[sys:text/system-design.md]]'
-  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
+  - implements [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/knowledge-base-schema.md]]
+updated_at: '2025-06-14T17:43:40.949Z'
+user_id: 00000000-0000-0000-0000-000000000000
 ---
 
 # Base URI Specification

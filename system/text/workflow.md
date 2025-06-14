@@ -10,10 +10,10 @@ observations:
   - '[execution] Each thread executes exactly one workflow with defined inputs/outputs'
   - '[principle] Tool integration enables complex agent capabilities'
 relations:
-  - 'relates_to [[sys:text/system-design.md]]'
-  - 'relates_to [[sys:text/execution-threads.md]]'
-  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
-  - 'relates_to [[sys:schema/workflow.md]]'
+  - 'relates_to [[sys:system/text/system-design.md]]'
+  - 'relates_to [[sys:system/text/execution-threads.md]]'
+  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[sys:system/schema/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.241Z'
 user_id: '00000000-0000-0000-0000-000000000000'

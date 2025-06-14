@@ -13,7 +13,7 @@ observations:
   - 'Clear relationship definitions improve task planning and execution'
   - 'Consistent relationship usage enhances reporting and visibility'
 relations:
-  - 'implements [[sys:schema/task.md]]'
+  - 'implements [[sys:system/schema/task.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.235Z'
 user_id: '00000000-0000-0000-0000-000000000000'

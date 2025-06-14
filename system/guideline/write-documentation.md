@@ -15,7 +15,7 @@ observations:
   - '[maintainability] Code examples become stale quickly and require frequent updates #maintenance'
   - '[focus] Unique architectural decisions distinguish systems from common patterns #architecture'
 relations:
-  - implements [[sys:text/system-design.md]]
+  - implements [[sys:system/text/system-design.md]]
 updated_at: '2025-06-06T16:51:43.606Z'
 user_id: 00000000-0000-0000-0000-000000000000
 ---

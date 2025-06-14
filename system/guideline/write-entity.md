@@ -11,9 +11,9 @@ guideline_status: 'Approved'
 observations:
   - '[standard] Entity files must follow schema requirements'
 relations:
-  - 'implements [[sys:schema/base.md]]'
-  - 'related_to [[sys:guideline/write-guideline.md]]'
-  - 'related_to [[sys:text/base-uri.md]]'
+  - 'implements [[sys:system/schema/base.md]]'
+  - 'related_to [[sys:system/guideline/write-guideline.md]]'
+  - 'related_to [[sys:system/text/base-uri.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.239Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -25,7 +25,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 - Entity files MUST include all required fields from the base schema:
   - `title`: Clear, identifiable name for the entity
-  - `type`: The entity type (must match a defined type in `sys:schema/`)
+  - `type`: The entity type (must match a defined type in `sys:system/schema/`)
   - `description`: Brief summary of the entity's purpose or contents
 - Entity files MUST include any additional required fields specified in their type definition
 - Entity files MUST ONLY use properties defined in their respective schema type definitions
@@ -43,7 +43,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Example:
   ```yaml
   relations:
-    - 'implements [[sys:schema/base.md]]'
+    - 'implements [[sys:system/schema/base.md]]'
     - 'depends_on [[user:task/setup-database.md]]'
   ```
 

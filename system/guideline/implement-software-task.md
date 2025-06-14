@@ -43,8 +43,8 @@ observations:
   - '[quality] Comprehensive testing ensures behavioral correctness'
   - '[documentation] Clear commit messages improve project history'
 relations:
-  - 'related_to [[sys:guideline/write-workflow.md]]'
-  - 'implements [[sys:text/system-design.md]]'
+  - 'related_to [[sys:system/guideline/write-workflow.md]]'
+  - 'implements [[sys:system/text/system-design.md]]'
 tags:
 updated_at: '2025-06-09T03:30:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'

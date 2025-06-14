@@ -113,6 +113,6 @@ Example:
 
 ```yaml
 relations:
-  - 'follows [[sys:guideline/guideline-name.md]]'
-  - 'calls [[sys:workflow/find-information.md]]'
+  - 'follows [[sys:system/guideline/guideline-name.md]]'
+  - 'calls [[sys:system/workflow/find-information.md]]'
 ```

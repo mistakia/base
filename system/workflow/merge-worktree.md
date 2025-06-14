@@ -1,21 +1,23 @@
 ---
-title: 'Merge Worktree Feature Branch'
-type: 'workflow'
-description: |
-  Merge a worktree feature branch into the main branch following proper git workflow
-prompt_properties:
-  - name: 'branch_name'
-    description: 'Name of the feature branch to merge (optional, defaults to current branch)'
-    type: 'string'
-    required: false
+title: Merge Worktree Feature Branch
+type: workflow
+description: Merge a worktree feature branch into the main branch following proper git workflow
+created_at: '2025-06-14T17:43:40.946Z'
+entity_id: a37c88c1-97d3-483a-b30e-7871c3a243bb
 observations:
   - '[workflow] Proper merge process ensures code quality and maintains clean git history'
   - '[principle] All changes must go through proper merge process rather than direct commits to main'
   - '[requirement] Feature branch should be reviewed and ready for merge before using this workflow'
+prompt_properties:
+  - name: branch_name
+    description: Name of the feature branch to merge (optional, defaults to current branch)
+    type: string
+    required: false
 relations:
-  - 'implements [[system/schema/workflow.md]]'
-  - 'follows [[system/guideline/write-workflow.md]]'
-user_id: '00000000-0000-0000-0000-000000000000'
+  - implements [[system/schema/workflow.md]]
+  - follows [[system/guideline/write-workflow.md]]
+updated_at: '2025-06-14T17:43:40.949Z'
+user_id: 00000000-0000-0000-0000-000000000000
 ---
 
 # Merge Worktree Feature Branch

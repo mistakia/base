@@ -10,8 +10,8 @@ observations:
   - '[design] Threads support human interaction via blocking/non-blocking requests'
   - '[architecture] Threads utilize a tiered memory system (Universal and Context)'
 relations:
-  - 'relates_to [[sys:text/system-design.md]]'
-  - 'relates_to [[sys:text/workflow.md]]'
+  - 'relates_to [[sys:system/text/system-design.md]]'
+  - 'relates_to [[sys:system/text/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.242Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -29,7 +29,7 @@ An **Execution Thread** is a process responsible for accomplishing a defined obj
 
 - `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`user:thread/{thread_id}/`).
 - `user_id`: Identifier of the user who owns the thread.
-- `workflow_base_uri`: Reference to the specific workflow this thread is associated with and executing. (e.g., `sys:workflow/write-workflow.md` or `user:workflow/custom-workflow.md`).
+- `workflow_base_uri`: Reference to the specific workflow this thread is associated with and executing. (e.g., `sys:system/workflow/write-workflow.md` or `user:workflow/custom-workflow.md`).
 - `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
 - `model`: The specific model to use from the provider.
 - `thread_state`: The current lifecycle state:

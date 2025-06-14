@@ -10,9 +10,9 @@ observations:
   - '[workflow] Supports review/merge process for changes.'
   - '[feature] Filesystem/Git is primary source of truth.'
 relations:
-  - 'relates_to [[sys:text/system-design.md]]'
-  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
-  - 'implements [[sys:schema/change-request.md]]'
+  - 'relates_to [[sys:system/text/system-design.md]]'
+  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
+  - 'implements [[sys:system/schema/change-request.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.242Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -44,7 +44,7 @@ This document outlines the design for the `change_request` system, which facilit
 ### 1. File (`user/change-request/{change_request_id}.md`)
 
 - **Purpose:** Stores descriptive metadata and content for discoverability and human readability.
-- **Schema:** Defined in `sys:schema/change_request.md`.
+- **Schema:** Defined in `sys:system/schema/change_request.md`.
 - **Key Frontmatter Fields:**
   - `change_request_id`: (UUID) Unique identifier (matches DB primary key and filename).
   - `title`: (String) Concise summary.

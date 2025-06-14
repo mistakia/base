@@ -9,11 +9,11 @@ observations:
   - '[design] Uses a human-in-the-loop approach'
   - '[principle] File-first approach with git version control'
 relations:
-  - 'relates_to [[sys:text/directory-structure.md]]'
-  - 'relates_to [[sys:text/knowledge-base-schema.md]]'
-  - 'relates_to [[sys:text/change-request-design.md]]'
-  - 'relates_to [[sys:text/tool-information.md]]'
-  - 'relates_to [[sys:text/workflow.md]]'
+  - 'relates_to [[sys:system/text/directory-structure.md]]'
+  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
+  - 'relates_to [[sys:system/text/change-request-design.md]]'
+  - 'relates_to [[sys:system/text/tool-information.md]]'
+  - 'relates_to [[sys:system/text/workflow.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.246Z'
 user_id: '00000000-0000-0000-0000-000000000000'

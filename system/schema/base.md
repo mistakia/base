@@ -98,8 +98,8 @@ Connections to other knowledge items in frontmatter:
 
 ```yaml
 relations:
-  - 'relates_to [[sys:text/system-design]]'
-  - 'implements [[sys:schema/base]]'
-  - 'depends_on [[sys:schema/database]]'
+  - 'relates_to [[sys:system/text/system-design]]'
+  - 'implements [[sys:system/schema/base]]'
+  - 'depends_on [[sys:system/schema/database]]'
   - 'assigned_to [[user:schema/person/jane-doe]]'
 ```

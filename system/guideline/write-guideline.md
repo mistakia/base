@@ -12,9 +12,9 @@ observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
 relations:
-  - 'related_to [[sys:guideline/write-workflow.md]]'
-  - 'implements [[sys:text/system-design.md]]'
-  - 'implements [[sys:schema/guideline.md]]'
+  - 'related_to [[sys:system/guideline/write-workflow.md]]'
+  - 'implements [[sys:system/text/system-design.md]]'
+  - 'implements [[sys:system/schema/guideline.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.239Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -27,7 +27,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ### File Structure and Naming
 
 - Guidelines MUST be stored in the appropriate location:
-  - System guidelines MUST be stored in `sys:guideline/`
+  - System guidelines MUST be stored in `sys:system/guideline/`
   - User guidelines MUST be stored in `user:guideline/`
 - Guidelines MUST be named following action-based patterns:
   - For specific workflows, use the format: `verb-object.md` (e.g., `write-guideline.md`, `write-unit-tests.md`)
@@ -43,7 +43,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ### Frontmatter
 
-- Guidelines MUST follow the schema defined in `sys:schema/guideline.md`
+- Guidelines MUST follow the schema defined in `sys:system/schema/guideline.md`
 - Guidelines MUST include complete frontmatter with these fields:
   - `title`: Clear, specific, and descriptive title
   - `type`: Always set to "guideline"
@@ -55,16 +55,16 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - `workflows`: Related workflows this guideline supports
   - `observations`: Key insights or principles behind the guideline
   - `relations`: Connections to other system elements using the wikilink format with relationship type:
-    - Format: `'relationship_type [[target_element_base_uri]]'` (e.g., `'implements [[sys:schema/guideline.md]]'`)
+    - Format: `'relationship_type [[target_element_base_uri]]'` (e.g., `'implements [[sys:system/schema/guideline.md]]'`)
     - Common relationship types: `implements`, `related_to`, `depends_on`, `extends`, `supersedes`
     - Common targets: guidelines, workflows, schemas, design documents
     - Examples:
 
 ```yaml
 relations:
-  - 'implements [[sys:schema/guideline.md]]'
-  - 'related_to [[sys:guideline/write-workflow.md]]'
-  - 'supersedes [[sys:guideline/old-guideline.md]]'
+  - 'implements [[sys:system/schema/guideline.md]]'
+  - 'related_to [[sys:system/guideline/write-workflow.md]]'
+  - 'supersedes [[sys:system/guideline/old-guideline.md]]'
 ```
 
 ### Content

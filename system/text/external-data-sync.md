@@ -7,7 +7,7 @@ created_at: '2025-05-27T18:10:20.244Z'
 entity_id: '11dc5b4c-365c-4e7f-b7f4-10c9851b1be1'
 observations:
 relations:
-  - 'part_of [[sys:text/system-design.md]]'
+  - 'part_of [[sys:system/text/system-design.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.244Z'
 user_id: '00000000-0000-0000-0000-000000000000'

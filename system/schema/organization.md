@@ -58,6 +58,6 @@ relations:
   - 'part_of [[sys:organization/parent-org]]'
   - 'contains [[sys:organization/department-name]]'
   - 'involves [[user:tasks/task-name]]'
-  - 'follows [[sys:guideline/guideline-name]]'
+  - 'follows [[sys:system/guideline/guideline-name]]'
   - 'requires [[sys:physical_item/item-name]]'
 ```

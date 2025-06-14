@@ -7,10 +7,10 @@ description: |
 created_at: '2025-06-09T03:30:00.000Z'
 entity_id: 'b2c3d4e5-6f78-9012-cdef-123456789abc'
 guidelines:
-  - 'sys:guideline/implement-software-task.md'
-  - 'sys:guideline/write-software-tests.md'
-  - 'sys:guideline/write-javascript.md'
-  - 'sys:guideline/write-software-implementation-plan.md'
+  - 'sys:system/guideline/implement-software-task.md'
+  - 'sys:system/guideline/write-software-tests.md'
+  - 'sys:system/guideline/write-javascript.md'
+  - 'sys:system/guideline/write-software-implementation-plan.md'
 prompt_properties:
   - name: workflow_example
     type: object
@@ -39,9 +39,9 @@ prompt_properties:
         - 'Update existing tests to explicitly request change requests when needed'
       commit_description: "The thread creation workflow now only creates change requests when explicitly requested via the create_change_request parameter, preventing unnecessary file creation for threads that don't require change tracking."
 relations:
-  - 'implements [[sys:guideline/implement-software-task.md]]'
-  - 'uses [[sys:guideline/write-workflow.md]]'
-  - 'uses [[sys:guideline/write-software-implementation-plan.md]]'
+  - 'implements [[sys:system/guideline/implement-software-task.md]]'
+  - 'uses [[sys:system/guideline/write-workflow.md]]'
+  - 'uses [[sys:system/guideline/write-software-implementation-plan.md]]'
 updated_at: '2025-06-09T03:30:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
@@ -57,8 +57,8 @@ Implement a software task following established development practices, comprehen
 - Access to the target repository
 - Understanding of the codebase structure
 - Development environment set up (Node.js, Yarn, etc.)
-- Familiarity with [[sys:guideline/implement-software-task.md]]
-- Familiarity with [[sys:guideline/write-software-implementation-plan.md]]
+- Familiarity with [[sys:system/guideline/implement-software-task.md]]
+- Familiarity with [[sys:system/guideline/write-software-implementation-plan.md]]
 
 ## Workflow Steps
 
