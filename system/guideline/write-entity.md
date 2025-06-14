@@ -13,6 +13,7 @@ observations:
 relations:
   - 'implements [[sys:schema/base.md]]'
   - 'related_to [[sys:guideline/write-guideline.md]]'
+  - 'related_to [[sys:text/base-uri.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.239Z'
 user_id: '00000000-0000-0000-0000-000000000000'
@@ -46,6 +47,19 @@ user_id: '00000000-0000-0000-0000-000000000000'
     - 'depends_on [[user:task/setup-database.md]]'
   ```
 
+## Tags
+
+- Tags MUST be defined in the frontmatter, NOT in the body content
+- Tags MUST use the proper base_uri when referencing tag entities
+- Tags SHOULD use the format: `'tag_base_uri'`
+- Example:
+  ```yaml
+  tags:
+    - 'sys:tag/authentication.md'
+    - 'sys:tag/security.md'
+    - 'user:tag/project-alpha.md'
+  ```
+
 ### Examples
 
 For a new task entity:
@@ -59,7 +73,10 @@ priority: High
 status: In Progress
 assigned_to: john-smith
 finish_by: 2023-08-15
-tags: [authentication, security, frontend]
+tags:
+  - 'sys:tag/authentication.md'
+  - 'sys:tag/security.md'
+  - 'sys:tag/frontend.md'
 relations:
   - 'implements [[user:text/requirements/user-authentication.md]]'
   - 'depends_on [[user:task/setup-database.md]]'
