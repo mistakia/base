@@ -1,4 +1,5 @@
 import debug from 'debug'
+import fs from 'fs'
 import db from '#db'
 import {
   create_task_from_github_issue,
@@ -8,6 +9,7 @@ import {
 import { normalize_github_issue } from './normalize-github-issue.mjs'
 import { create_content_identifier } from '#libs-server/utils/create-content-identifier.mjs'
 import { format_external_id } from '#libs-server/sync/format-external-id.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('github:sync-github-issue-to-task')
 
@@ -32,6 +34,50 @@ export function format_external_id_for_github_issue({
     external_system,
     external_item_id
   })
+}
+
+/**
+ * Validate and filter relations by checking if target entities exist
+ * @param {Array} relations - Array of relation strings
+ * @param {string} user_base_directory - Base directory for user data
+ * @returns {Array} Filtered array of relations where targets exist
+ */
+function validate_and_filter_relations(relations, user_base_directory) {
+  if (!relations || !Array.isArray(relations)) {
+    return []
+  }
+
+  const valid_relations = []
+
+  for (const relation of relations) {
+    try {
+      // Extract base_uri from relation string format: "relation_type [[base_uri]]"
+      const match = relation.match(/\[\[([^\]]+)\]\]/)
+      if (!match) {
+        log(`Skipping invalid relation format: ${relation}`)
+        continue
+      }
+
+      const target_base_uri = match[1]
+
+      // Convert base_uri to absolute path
+      const target_absolute_path = resolve_base_uri(target_base_uri, {
+        user_base_directory
+      })
+
+      // Check if target file exists
+      if (fs.existsSync(target_absolute_path)) {
+        valid_relations.push(relation)
+        log(`Validated relation: ${relation}`)
+      } else {
+        log(`Skipping relation - target does not exist: ${target_base_uri}`)
+      }
+    } catch (error) {
+      log(`Error validating relation "${relation}": ${error.message}`)
+    }
+  }
+
+  return valid_relations
 }
 
 /**
@@ -111,6 +157,14 @@ export async function sync_github_issue_to_task({
     // Add github_project_number if provided
     if (github_project_number) {
       normalized_github_issue.github_project_number = github_project_number
+    }
+
+    // Validate and filter relations - only include relations where target entities exist
+    if (normalized_github_issue.relations) {
+      normalized_github_issue.relations = validate_and_filter_relations(
+        normalized_github_issue.relations,
+        user_base_directory
+      )
     }
 
     log('Using normalized GitHub issue format')
