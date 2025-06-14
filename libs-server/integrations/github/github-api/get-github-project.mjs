@@ -109,6 +109,56 @@ export const get_github_project = async ({
                   createdAt
                   updatedAt
                   closedAt
+                  parent {
+                    id
+                    number
+                    title
+                    repository {
+                      name
+                      owner { login }
+                    }
+                  }
+                  subIssues(first: 20) {
+                    nodes {
+                      id
+                      number
+                      title
+                      repository {
+                        name
+                        owner { login }
+                      }
+                    }
+                  }
+                  timelineItems(first: 50, itemTypes: [CROSS_REFERENCED_EVENT]) {
+                    nodes {
+                      ... on CrossReferencedEvent {
+                        id
+                        createdAt
+                        source {
+                          ... on Issue {
+                            id
+                            number
+                            title
+                            repository {
+                              name
+                              owner { login }
+                            }
+                          }
+                        }
+                        target {
+                          ... on Issue {
+                            id
+                            number  
+                            title
+                            repository {
+                              name
+                              owner { login }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                   labels(first: 20) {
                     nodes {
                       id

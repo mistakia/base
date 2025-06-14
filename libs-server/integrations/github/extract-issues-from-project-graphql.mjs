@@ -52,6 +52,19 @@ export const extract_issues_from_project_graphql = (project_data) => {
       }
     }
 
+    // Include relationship data for issue relationship extraction
+    if (issue.parent) {
+      normalized_issue.parent = issue.parent
+    }
+
+    if (issue.subIssues?.nodes?.length > 0) {
+      normalized_issue.subIssues = issue.subIssues
+    }
+
+    if (issue.timelineItems?.nodes?.length > 0) {
+      normalized_issue.timelineItems = issue.timelineItems
+    }
+
     // Extract comments if available
     if (issue.comments?.nodes?.length > 0) {
       // Create a unique key for this repo/issue combination

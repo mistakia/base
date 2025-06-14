@@ -1,6 +1,7 @@
 import debug from 'debug'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { extract_tags_from_labels } from './github-entity-mapper.mjs'
+import { extract_issue_relationships } from './extract-issue-relationships.mjs'
 
 const log = debug('normalize-github-issue')
 
@@ -406,6 +407,12 @@ export function normalize_github_issue({
 
     // Add project metadata
     normalized_github_issue.github_project_item_id = project_item.id
+  }
+
+  // Extract issue relationships (parent/child and cross-references)
+  const relations = extract_issue_relationships(issue)
+  if (relations.length > 0) {
+    normalized_github_issue.relations = relations
   }
 
   return normalized_github_issue
