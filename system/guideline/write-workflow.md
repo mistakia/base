@@ -13,6 +13,7 @@ observations:
   - '[principle] Clear naming conventions improve discoverability'
   - '[organization] System vs user classification is based on scope of use'
   - '[standard] Workflow design should enable composability and reuse'
+  - '[pattern] XML tags provide clear structure for workflow prompts'
 relations:
   - 'implements [[sys:text/system-design.md]]'
   - 'implements [[sys:schema/workflow.md]]'
@@ -70,7 +71,19 @@ relations:
 
 ### Content Requirements
 
-- Workflows MUST include clear, step-by-step instructions in the main content
+#### Workflow Body Structure
+
+- Workflows MUST use clear XML tags to structure the workflow content:
+  ```markdown
+  <task>Primary objective of the workflow</task>
+  <context>Background information and situational context</context>
+  <instructions>Step-by-step guidance for executing the workflow</instructions>
+  <output_format>Expected response format or deliverables</output_format>
+  ```
+
+#### Content Guidelines
+
+- Workflows MUST include clear, step-by-step instructions in the `<instructions>` section
 - Workflows SHOULD have a clear, hierarchical structure with bullet points or numbered lists
 - Complex workflows SHOULD be broken down into logical sections
 - Workflows SHOULD include documentation on:
@@ -78,3 +91,26 @@ relations:
   - Error handling and edge cases
   - Examples of usage in different contexts
 - Workflows that call other workflows SHOULD clearly document these dependencies
+
+### Workflow Design Best Practices
+
+#### Design Principles
+
+- Workflows SHOULD be focused on a single workflow or task type
+- Workflows SHOULD include examples of expected input/output
+- Workflows SHOULD reference relevant project documentation
+- Workflows SHOULD specify when to update task states or create todos
+- Workflows SHOULD enable composability and reuse
+
+#### Documentation Standards
+
+- Workflows SHOULD include a clear description in the `<task>` section
+- Workflows SHOULD specify expected input format in the `<context>` section
+- Workflows SHOULD document any prerequisites or assumptions
+- Workflows SHOULD provide clear guidance in the `<instructions>` section
+
+#### Error Handling
+
+- Workflows SHOULD provide guidance for common error scenarios
+- Workflows SHOULD specify fallback behavior when inputs are missing
+- Workflows SHOULD include validation steps for critical operations

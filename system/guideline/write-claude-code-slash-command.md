@@ -17,11 +17,14 @@ observations:
 relations:
   - related_to [[sys:guideline/write-entity.md]]
   - implements [[sys:text/system-design.md]]
+  - follows [[sys:guideline/write-workflow.md]]
 updated_at: '2025-06-06T16:51:43.604Z'
 user_id: 00000000-0000-0000-0000-000000000000
 ---
 
 # Write Claude Code Slash Command
+
+Claude Code slash commands are specialized workflows that follow the general workflow guidelines defined in [[sys:guideline/write-workflow.md]]. This document covers the Claude Code specific requirements and conventions.
 
 ## Command Structure
 
@@ -39,12 +42,13 @@ user_id: 00000000-0000-0000-0000-000000000000
 - Personal commands: `/user:command-name`
 - Arguments passed using: `/project:command-name argument-text`
 
-## Content Requirements
+## Claude Code Specific Requirements
 
 ### Command File Structure
 
 - The entire command file becomes the prompt sent to Claude
-- Commands MUST use clear XML tags to structure the prompt:
+- Commands MUST follow the XML tag structure defined in [[sys:guideline/write-workflow.md]]
+- Commands MUST use the standard workflow XML tags:
   ```markdown
   <task>Primary objective</task>
   <context>Background information and project context</context>
@@ -69,33 +73,23 @@ user_id: 00000000-0000-0000-0000-000000000000
      </instructions>
   ```
 
-## Best Practices
+## Claude Code Best Practices
 
 ### Command Design
 
-- Commands SHOULD be focused on a single workflow or task type
-- Commands SHOULD include examples of expected input/output
-- Commands SHOULD reference relevant project documentation
 - Commands MUST NOT include direct CLI commands (use MCP tools instead)
-- Commands SHOULD specify when to update task states or create todos
-
-### Documentation
-
-- Commands SHOULD include a clear description at the beginning
-- Commands SHOULD specify expected argument format
-- Commands SHOULD document any prerequisites or assumptions
-- Example header:
+- Commands SHOULD include a clear description comment at the beginning:
   ```markdown
   <!-- Fix GitHub issue by issue number -->
   <!-- Usage: /project:fix-issue 123 -->
   <!-- Prerequisites: GitHub integration configured -->
   ```
 
-### Error Handling
+### Documentation Requirements
 
-- Commands SHOULD provide guidance for common error scenarios
-- Commands SHOULD specify fallback behavior when arguments are missing
-- Commands SHOULD include validation steps for critical operations
+- Commands SHOULD specify expected argument format in comments
+- Commands SHOULD document any prerequisites or assumptions
+- Commands SHOULD include usage examples in comments
 
 ## Example Command
 
@@ -128,5 +122,4 @@ Provide a summary of:
 - Deployment outcome
 - Any issues encountered
   </output_format>
-  </markdown>
 ```
