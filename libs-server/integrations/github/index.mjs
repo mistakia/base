@@ -15,6 +15,12 @@ export {
   generate_github_issue_task_base_uri
 } from './extract-issue-relationships.mjs'
 
+// Relationship change analysis
+export {
+  analyze_relationship_changes,
+  filter_actionable_relationship_changes
+} from './analyze-relationship-changes.mjs'
+
 // Task handlers
 export {
   create_task_from_github_issue,

@@ -15,3 +15,13 @@ export {
   get_github_issue_comments,
   get_all_github_issue_comments
 } from './get-github-issue-comments.mjs'
+
+// GitHub relationship management
+export {
+  set_github_issue_parent,
+  remove_github_issue_parent,
+  add_github_issue_child,
+  remove_github_issue_child,
+  create_github_issue_cross_reference,
+  get_github_issue_id
+} from './update-github-issue-relationships.mjs'

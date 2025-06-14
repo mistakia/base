@@ -2,12 +2,137 @@ import debug from 'debug'
 import {
   update_github_issue_graphql,
   get_github_project_item_for_issue,
-  update_github_project_item
+  update_github_project_item,
+  get_github_issue_id,
+  set_github_issue_parent,
+  remove_github_issue_parent,
+  create_github_issue_cross_reference
 } from './github-api/index.mjs'
 import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
 import { generate_labels_from_tags } from './github-entity-mapper.mjs'
+import {
+  analyze_relationship_changes,
+  filter_actionable_relationship_changes
+} from './analyze-relationship-changes.mjs'
 
 const log = debug('sync-github-issues:sync-task-to-github-issue')
+
+/**
+ * Sync relationship changes to GitHub
+ * @param {Object} params - Parameters
+ * @param {string} params.github_issue_number - Current issue number
+ * @param {string} params.github_repository_owner - Repository owner
+ * @param {string} params.github_repository_name - Repository name
+ * @param {Object} params.relations_changes - Analyzed relationship changes
+ * @param {string} params.github_token - GitHub API token
+ * @returns {Promise<boolean>} Success indicator
+ */
+async function sync_relationships_to_github({
+  github_issue_number,
+  github_repository_owner,
+  github_repository_name,
+  relations_changes,
+  github_token
+}) {
+  log(`Syncing ${relations_changes.summary.total_actionable} relationship changes to GitHub`)
+
+  let success = true
+
+  try {
+    // Get current issue ID for parent/child operations
+    const current_issue_id = await get_github_issue_id({
+      github_repository_owner,
+      github_repository_name,
+      issue_number: github_issue_number,
+      github_token
+    })
+
+    // Handle parent/child relationship changes
+    for (const change of relations_changes.parent_child) {
+      try {
+        log(`Processing parent/child change: ${change.action} ${change.relation_type}`)
+
+        // Get target issue ID
+        const target_issue_id = await get_github_issue_id({
+          github_repository_owner: change.github_repository_owner,
+          github_repository_name: change.github_repository_name,
+          issue_number: change.github_issue_number,
+          github_token
+        })
+
+        if (change.action === 'add') {
+          if (change.relation_type === 'subtask_of') {
+            // Current issue becomes subtask of target
+            await set_github_issue_parent({
+              issue_id: current_issue_id,
+              parent_issue_id: target_issue_id,
+              github_token
+            })
+            log(`Set issue #${github_issue_number} as subtask of #${change.github_issue_number}`)
+          } else if (change.relation_type === 'has_subtask') {
+            // Target issue becomes subtask of current
+            await set_github_issue_parent({
+              issue_id: target_issue_id,
+              parent_issue_id: current_issue_id,
+              github_token
+            })
+            log(`Set issue #${change.github_issue_number} as subtask of #${github_issue_number}`)
+          }
+        } else if (change.action === 'remove') {
+          if (change.relation_type === 'subtask_of') {
+            // Remove current issue from parent
+            await remove_github_issue_parent({
+              issue_id: current_issue_id,
+              github_token
+            })
+            log(`Removed issue #${github_issue_number} from parent #${change.github_issue_number}`)
+          } else if (change.relation_type === 'has_subtask') {
+            // Remove target issue from current as parent
+            await remove_github_issue_parent({
+              issue_id: target_issue_id,
+              github_token
+            })
+            log(`Removed issue #${change.github_issue_number} from parent #${github_issue_number}`)
+          }
+        }
+      } catch (error) {
+        log(`Error processing parent/child change: ${error.message}`)
+        success = false
+      }
+    }
+
+    // Handle cross-reference changes
+    for (const change of relations_changes.cross_references) {
+      try {
+        if (change.action === 'add') {
+          log(`Processing cross-reference addition: #${github_issue_number} -> #${change.github_issue_number}`)
+
+          await create_github_issue_cross_reference({
+            source_issue_number: github_issue_number,
+            target_issue_number: change.github_issue_number,
+            github_repository_owner,
+            github_repository_name,
+            github_token,
+            comment_text: 'Related to'
+          })
+          log(`Created cross-reference from #${github_issue_number} to #${change.github_issue_number}`)
+        } else if (change.action === 'remove') {
+          // Cross-reference removal not supported by GitHub API
+          log(`Skipping cross-reference removal (not supported by GitHub API): #${github_issue_number} -> #${change.github_issue_number}`)
+        }
+      } catch (error) {
+        log(`Error processing cross-reference change: ${error.message}`)
+        success = false
+      }
+    }
+
+    log(`Relationship sync completed with ${success ? 'success' : 'some errors'}`)
+    return success
+  } catch (error) {
+    log(`Error syncing relationships to GitHub: ${error.message}`)
+    return false
+  }
+}
 
 /**
  * Sync task updates to a GitHub issue
@@ -131,8 +256,21 @@ export async function sync_task_to_github_issue({
       }
     }
 
+    // Handle relationship sync if there are relationship changes
+    let relationship_sync_success = true
+    if (github_update_data.relations_changes) {
+      log('Syncing relationship changes to GitHub')
+      relationship_sync_success = await sync_relationships_to_github({
+        github_issue_number,
+        github_repository_owner,
+        github_repository_name,
+        relations_changes: github_update_data.relations_changes,
+        github_token
+      })
+    }
+
     log(`Synced task to GitHub issue #${github_issue_number}`)
-    return issue_update_success && project_update_success
+    return issue_update_success && project_update_success && relationship_sync_success
   } catch (error) {
     console.log(error)
     log(`Error syncing task to GitHub: ${error.message}`)
@@ -178,6 +316,21 @@ function format_github_issue_update_data({ updates }) {
       if (labels.length > 0) {
         github_update_data.labels = labels
       }
+    }
+  }
+
+  // Handle relationship updates if present
+  if ('relations' in updates && updates.relations) {
+    const relations_changes = analyze_relationship_changes({
+      from: updates.relations.from || [],
+      to: updates.relations.to || []
+    })
+
+    // Filter to only actionable changes
+    const actionable_changes = filter_actionable_relationship_changes(relations_changes)
+
+    if (actionable_changes.summary.total_actionable > 0) {
+      github_update_data.relations_changes = actionable_changes
     }
   }
 
