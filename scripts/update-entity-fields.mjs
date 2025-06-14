@@ -22,11 +22,16 @@ const system_user_id = '00000000-0000-0000-0000-000000000000'
 
 const update_entity_fields = async ({
   user_id = config.user_id,
-  dry_run = false
+  dry_run = false,
+  include_path_patterns = [],
+  exclude_path_patterns = []
 }) => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
-  const result = await process_repositories_from_filesystem()
+  const result = await process_repositories_from_filesystem({
+    include_path_patterns,
+    exclude_path_patterns
+  })
 
   // Track statistics
   let updated_count = 0
@@ -152,6 +157,16 @@ const main = async () => {
       description: 'Run in dry-run mode without making actual changes',
       default: false
     })
+    .option('include_path_patterns', {
+      type: 'array',
+      description: 'Path patterns to include (glob patterns)',
+      default: []
+    })
+    .option('exclude_path_patterns', {
+      type: 'array',
+      description: 'Path patterns to exclude (glob patterns)',
+      default: []
+    })
     .help().argv
 
   // Handle directory registration using the reusable function
@@ -161,7 +176,9 @@ const main = async () => {
   try {
     const result = await update_entity_fields({
       user_id: argv.user_id,
-      dry_run: argv.dry_run
+      dry_run: argv.dry_run,
+      include_path_patterns: argv.include_path_patterns,
+      exclude_path_patterns: argv.exclude_path_patterns
     })
 
     if (result.error_count > 0) {
