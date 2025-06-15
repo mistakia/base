@@ -24,11 +24,7 @@ export const get_github_issue = async ({
   )
 
   const query = gql`
-    query GetIssue(
-      $owner: String!
-      $name: String!
-      $number: Int!
-    ) {
+    query GetIssue($owner: String!, $name: String!, $number: Int!) {
       repository(owner: $owner, name: $name) {
         issue(number: $number) {
           id
@@ -47,7 +43,9 @@ export const get_github_issue = async ({
             title
             repository {
               name
-              owner { login }
+              owner {
+                login
+              }
             }
           }
           subIssues(first: 20) {
@@ -57,7 +55,9 @@ export const get_github_issue = async ({
               title
               repository {
                 name
-                owner { login }
+                owner {
+                  login
+                }
               }
             }
           }
@@ -73,18 +73,22 @@ export const get_github_issue = async ({
                     title
                     repository {
                       name
-                      owner { login }
+                      owner {
+                        login
+                      }
                     }
                   }
                 }
                 target {
                   ... on Issue {
                     id
-                    number  
+                    number
                     title
                     repository {
                       name
-                      owner { login }
+                      owner {
+                        login
+                      }
                     }
                   }
                 }

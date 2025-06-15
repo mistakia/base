@@ -115,7 +115,9 @@ export const get_github_project = async ({
                     title
                     repository {
                       name
-                      owner { login }
+                      owner {
+                        login
+                      }
                     }
                   }
                   subIssues(first: 20) {
@@ -125,11 +127,16 @@ export const get_github_project = async ({
                       title
                       repository {
                         name
-                        owner { login }
+                        owner {
+                          login
+                        }
                       }
                     }
                   }
-                  timelineItems(first: 50, itemTypes: [CROSS_REFERENCED_EVENT]) {
+                  timelineItems(
+                    first: 50
+                    itemTypes: [CROSS_REFERENCED_EVENT]
+                  ) {
                     nodes {
                       ... on CrossReferencedEvent {
                         id
@@ -141,18 +148,22 @@ export const get_github_project = async ({
                             title
                             repository {
                               name
-                              owner { login }
+                              owner {
+                                login
+                              }
                             }
                           }
                         }
                         target {
                           ... on Issue {
                             id
-                            number  
+                            number
                             title
                             repository {
                               name
-                              owner { login }
+                              owner {
+                                login
+                              }
                             }
                           }
                         }

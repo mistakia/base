@@ -32,7 +32,9 @@ function extract_github_info_from_base_uri(base_uri) {
   }
 
   // Match pattern: user:task/github/{owner}/{repo}/{number}-{title}.md
-  const match = base_uri.match(/^user:task\/github\/([^/]+)\/([^/]+)\/(\d+)-.*\.md$/)
+  const match = base_uri.match(
+    /^user:task\/github\/([^/]+)\/([^/]+)\/(\d+)-.*\.md$/
+  )
   if (!match) {
     return null
   }
@@ -83,10 +85,10 @@ export function analyze_relationship_changes({ from = [], to = [] }) {
   }
 
   // Find added relations
-  const added_relations = to.filter(rel => !from.includes(rel))
+  const added_relations = to.filter((rel) => !from.includes(rel))
 
   // Find removed relations
-  const removed_relations = from.filter(rel => !to.includes(rel))
+  const removed_relations = from.filter((rel) => !to.includes(rel))
 
   log(`Added: ${added_relations.length}, Removed: ${removed_relations.length}`)
 
@@ -157,14 +159,20 @@ export function analyze_relationship_changes({ from = [], to = [] }) {
       changes.summary.cross_reference_changes++
 
       // Log warning about cross-reference removal limitation
-      log(`Warning: Cross-reference removal not supported by GitHub API: ${relation}`)
+      log(
+        `Warning: Cross-reference removal not supported by GitHub API: ${relation}`
+      )
     }
 
     changes.summary.total_removed++
   }
 
-  log(`Analysis complete: ${changes.summary.total_added} added, ${changes.summary.total_removed} removed`)
-  log(`Parent/child changes: ${changes.summary.parent_child_changes}, Cross-reference changes: ${changes.summary.cross_reference_changes}`)
+  log(
+    `Analysis complete: ${changes.summary.total_added} added, ${changes.summary.total_removed} removed`
+  )
+  log(
+    `Parent/child changes: ${changes.summary.parent_child_changes}, Cross-reference changes: ${changes.summary.cross_reference_changes}`
+  )
 
   return changes
 }
@@ -180,13 +188,21 @@ export function validate_relationship_change(change) {
   }
 
   // Check required fields
-  if (!change.action || !change.relation_type || !change.github_repository_owner ||
-      !change.github_repository_name || !change.github_issue_number) {
+  if (
+    !change.action ||
+    !change.relation_type ||
+    !change.github_repository_owner ||
+    !change.github_repository_name ||
+    !change.github_issue_number
+  ) {
     return { valid: false, reason: 'Missing required fields' }
   }
 
   // Validate GitHub info
-  if (typeof change.github_issue_number !== 'number' || change.github_issue_number <= 0) {
+  if (
+    typeof change.github_issue_number !== 'number' ||
+    change.github_issue_number <= 0
+  ) {
     return { valid: false, reason: 'Invalid GitHub issue number' }
   }
 
@@ -249,7 +265,9 @@ export function filter_actionable_relationship_changes(changes) {
     }
   }
 
-  log(`Filtered to ${filtered.summary.total_actionable} actionable changes (${filtered.summary.skipped} skipped)`)
+  log(
+    `Filtered to ${filtered.summary.total_actionable} actionable changes (${filtered.summary.skipped} skipped)`
+  )
 
   return filtered
 }

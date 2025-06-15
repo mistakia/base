@@ -45,7 +45,9 @@ export async function set_github_issue_parent({
   try {
     const client = create_github_client({ github_token })
     const data = await client.request(mutation, variables)
-    log(`Successfully converted issue to subtask: ${data.convertIssueToSubIssue.subIssue.number}`)
+    log(
+      `Successfully converted issue to subtask: ${data.convertIssueToSubIssue.subIssue.number}`
+    )
     return { success: true, data }
   } catch (error) {
     log(`Error converting issue to subtask: ${error.message}`)
@@ -60,10 +62,7 @@ export async function set_github_issue_parent({
  * @param {string} params.github_token - GitHub API token
  * @returns {Promise<Object>} Mutation result
  */
-export async function remove_github_issue_parent({
-  issue_id,
-  github_token
-}) {
+export async function remove_github_issue_parent({ issue_id, github_token }) {
   log(`Converting subtask ${issue_id} back to independent issue`)
 
   const mutation = gql`
@@ -87,7 +86,9 @@ export async function remove_github_issue_parent({
   try {
     const client = create_github_client({ github_token })
     const data = await client.request(mutation, variables)
-    log(`Successfully converted subtask to issue: ${data.convertSubIssueToIssue.issue.number}`)
+    log(
+      `Successfully converted subtask to issue: ${data.convertSubIssueToIssue.issue.number}`
+    )
     return { success: true, data }
   } catch (error) {
     log(`Error converting subtask to issue: ${error.message}`)
@@ -153,7 +154,9 @@ export async function create_github_issue_cross_reference({
   github_token,
   comment_text = 'Related to'
 }) {
-  log(`Creating cross-reference from issue #${source_issue_number} to #${target_issue_number}`)
+  log(
+    `Creating cross-reference from issue #${source_issue_number} to #${target_issue_number}`
+  )
 
   const mutation = gql`
     mutation AddComment($input: AddCommentInput!) {
@@ -253,7 +256,9 @@ export async function get_github_issue_id({
     const data = await client.request(query, variables)
 
     if (!data.repository?.issue?.id) {
-      throw new Error(`Could not find issue #${issue_number} in ${github_repository_owner}/${github_repository_name}`)
+      throw new Error(
+        `Could not find issue #${issue_number} in ${github_repository_owner}/${github_repository_name}`
+      )
     }
 
     return data.repository.issue.id

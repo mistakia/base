@@ -14,8 +14,8 @@ prompt_properties:
     type: string
     required: false
 relations:
-  - implements [[system/schema/workflow.md]]
-  - follows [[system/guideline/write-workflow.md]]
+  - implements [[sys:system/schema/workflow.md]]
+  - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2025-06-14T17:43:40.949Z'
 user_id: 00000000-0000-0000-0000-000000000000
 ---

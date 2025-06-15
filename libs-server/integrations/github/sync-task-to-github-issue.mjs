@@ -34,7 +34,9 @@ async function sync_relationships_to_github({
   relations_changes,
   github_token
 }) {
-  log(`Syncing ${relations_changes.summary.total_actionable} relationship changes to GitHub`)
+  log(
+    `Syncing ${relations_changes.summary.total_actionable} relationship changes to GitHub`
+  )
 
   let success = true
 
@@ -50,7 +52,9 @@ async function sync_relationships_to_github({
     // Handle parent/child relationship changes
     for (const change of relations_changes.parent_child) {
       try {
-        log(`Processing parent/child change: ${change.action} ${change.relation_type}`)
+        log(
+          `Processing parent/child change: ${change.action} ${change.relation_type}`
+        )
 
         // Get target issue ID
         const target_issue_id = await get_github_issue_id({
@@ -68,7 +72,9 @@ async function sync_relationships_to_github({
               parent_issue_id: target_issue_id,
               github_token
             })
-            log(`Set issue #${github_issue_number} as subtask of #${change.github_issue_number}`)
+            log(
+              `Set issue #${github_issue_number} as subtask of #${change.github_issue_number}`
+            )
           } else if (change.relation_type === 'has_subtask') {
             // Target issue becomes subtask of current
             await set_github_issue_parent({
@@ -76,7 +82,9 @@ async function sync_relationships_to_github({
               parent_issue_id: current_issue_id,
               github_token
             })
-            log(`Set issue #${change.github_issue_number} as subtask of #${github_issue_number}`)
+            log(
+              `Set issue #${change.github_issue_number} as subtask of #${github_issue_number}`
+            )
           }
         } else if (change.action === 'remove') {
           if (change.relation_type === 'subtask_of') {
@@ -85,14 +93,18 @@ async function sync_relationships_to_github({
               issue_id: current_issue_id,
               github_token
             })
-            log(`Removed issue #${github_issue_number} from parent #${change.github_issue_number}`)
+            log(
+              `Removed issue #${github_issue_number} from parent #${change.github_issue_number}`
+            )
           } else if (change.relation_type === 'has_subtask') {
             // Remove target issue from current as parent
             await remove_github_issue_parent({
               issue_id: target_issue_id,
               github_token
             })
-            log(`Removed issue #${change.github_issue_number} from parent #${github_issue_number}`)
+            log(
+              `Removed issue #${change.github_issue_number} from parent #${github_issue_number}`
+            )
           }
         }
       } catch (error) {
@@ -105,7 +117,9 @@ async function sync_relationships_to_github({
     for (const change of relations_changes.cross_references) {
       try {
         if (change.action === 'add') {
-          log(`Processing cross-reference addition: #${github_issue_number} -> #${change.github_issue_number}`)
+          log(
+            `Processing cross-reference addition: #${github_issue_number} -> #${change.github_issue_number}`
+          )
 
           await create_github_issue_cross_reference({
             source_issue_number: github_issue_number,
@@ -115,10 +129,14 @@ async function sync_relationships_to_github({
             github_token,
             comment_text: 'Related to'
           })
-          log(`Created cross-reference from #${github_issue_number} to #${change.github_issue_number}`)
+          log(
+            `Created cross-reference from #${github_issue_number} to #${change.github_issue_number}`
+          )
         } else if (change.action === 'remove') {
           // Cross-reference removal not supported by GitHub API
-          log(`Skipping cross-reference removal (not supported by GitHub API): #${github_issue_number} -> #${change.github_issue_number}`)
+          log(
+            `Skipping cross-reference removal (not supported by GitHub API): #${github_issue_number} -> #${change.github_issue_number}`
+          )
         }
       } catch (error) {
         log(`Error processing cross-reference change: ${error.message}`)
@@ -126,7 +144,9 @@ async function sync_relationships_to_github({
       }
     }
 
-    log(`Relationship sync completed with ${success ? 'success' : 'some errors'}`)
+    log(
+      `Relationship sync completed with ${success ? 'success' : 'some errors'}`
+    )
     return success
   } catch (error) {
     log(`Error syncing relationships to GitHub: ${error.message}`)
@@ -270,7 +290,11 @@ export async function sync_task_to_github_issue({
     }
 
     log(`Synced task to GitHub issue #${github_issue_number}`)
-    return issue_update_success && project_update_success && relationship_sync_success
+    return (
+      issue_update_success &&
+      project_update_success &&
+      relationship_sync_success
+    )
   } catch (error) {
     console.log(error)
     log(`Error syncing task to GitHub: ${error.message}`)
@@ -327,7 +351,8 @@ function format_github_issue_update_data({ updates }) {
     })
 
     // Filter to only actionable changes
-    const actionable_changes = filter_actionable_relationship_changes(relations_changes)
+    const actionable_changes =
+      filter_actionable_relationship_changes(relations_changes)
 
     if (actionable_changes.summary.total_actionable > 0) {
       github_update_data.relations_changes = actionable_changes

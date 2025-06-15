@@ -118,24 +118,36 @@ export function extract_cross_reference_relationships(issue) {
     for (const timelineItem of issue.timelineItems.nodes) {
       if (timelineItem.__typename === 'CrossReferencedEvent') {
         // Check if this issue is the source (it referenced another issue)
-        if (timelineItem.source &&
-            timelineItem.source.id === issue.id &&
-            timelineItem.target) {
-          const target_base_uri = generate_github_issue_task_base_uri(timelineItem.target)
+        if (
+          timelineItem.source &&
+          timelineItem.source.id === issue.id &&
+          timelineItem.target
+        ) {
+          const target_base_uri = generate_github_issue_task_base_uri(
+            timelineItem.target
+          )
           if (target_base_uri) {
             relations.push(`relates_to [[${target_base_uri}]]`)
-            log(`Added relates_to relation to referenced issue #${timelineItem.target.number}`)
+            log(
+              `Added relates_to relation to referenced issue #${timelineItem.target.number}`
+            )
           }
         }
 
         // Check if this issue is the target (another issue referenced it)
-        if (timelineItem.target &&
-            timelineItem.target.id === issue.id &&
-            timelineItem.source) {
-          const source_base_uri = generate_github_issue_task_base_uri(timelineItem.source)
+        if (
+          timelineItem.target &&
+          timelineItem.target.id === issue.id &&
+          timelineItem.source
+        ) {
+          const source_base_uri = generate_github_issue_task_base_uri(
+            timelineItem.source
+          )
           if (source_base_uri) {
             relations.push(`relates_to [[${source_base_uri}]]`)
-            log(`Added relates_to relation from referencing issue #${timelineItem.source.number}`)
+            log(
+              `Added relates_to relation from referencing issue #${timelineItem.source.number}`
+            )
           }
         }
       }
@@ -172,7 +184,9 @@ export function extract_issue_relationships(issue) {
   // Remove duplicates while preserving order
   const unique_relations = [...new Set(relations)]
 
-  log(`Extracted ${unique_relations.length} unique relationships for issue #${issue.number}`)
+  log(
+    `Extracted ${unique_relations.length} unique relationships for issue #${issue.number}`
+  )
 
   return unique_relations
 }

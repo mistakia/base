@@ -47,6 +47,7 @@ Claude Code slash commands are lightweight wrappers that invoke workflows and re
 ### Command Design Pattern
 
 Commands SHOULD follow this pattern:
+
 1. Reference relevant guidelines for standards
 2. Invoke appropriate workflow(s) for execution
 3. Apply guidelines for quality assurance
@@ -169,12 +170,13 @@ Branch to deploy: $ARGUMENTS (if provided, otherwise current branch)
    - Follow all workflow steps for staging deployment
 
 2. Apply deployment standards from: [[sys:system/guideline/deployment-standards.md]]
+
    - Ensure proper testing before deployment
    - Follow rollback procedures if issues occur
    - Document deployment status and outcomes
 
 3. Provide deployment summary following the output format below
-</instructions>
+   </instructions>
 
 <output_format>
 Provide a summary of:
@@ -184,7 +186,7 @@ Provide a summary of:
 - Guideline compliance verification
 - Deployment outcome
 - Any issues encountered
-</output_format>
+  </output_format>
 ```
 
 ## Migration from Legacy Commands
