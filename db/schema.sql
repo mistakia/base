@@ -29,8 +29,6 @@ ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organi
 ALTER TABLE IF EXISTS ONLY public.guidelines DROP CONSTRAINT IF EXISTS guidelines_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_tag_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_tags DROP CONSTRAINT IF EXISTS entity_tags_entity_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_target_entity_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.entity_relations DROP CONSTRAINT IF EXISTS entity_relations_source_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_observations DROP CONSTRAINT IF EXISTS entity_observations_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_metadata DROP CONSTRAINT IF EXISTS entity_metadata_entity_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.entity_blocks DROP CONSTRAINT IF EXISTS entity_blocks_entity_id_fkey;
@@ -2250,22 +2248,6 @@ ALTER TABLE ONLY public.entity_metadata
 
 ALTER TABLE ONLY public.entity_observations
     ADD CONSTRAINT entity_observations_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
-
-
---
--- Name: entity_relations entity_relations_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_relations
-    ADD CONSTRAINT entity_relations_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
-
-
---
--- Name: entity_relations entity_relations_target_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_relations
-    ADD CONSTRAINT entity_relations_target_entity_id_fkey FOREIGN KEY (target_entity_id) REFERENCES public.entities(entity_id) ON DELETE CASCADE;
 
 
 --
