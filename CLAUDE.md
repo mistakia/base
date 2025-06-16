@@ -188,6 +188,14 @@ Threads execute workflows in isolated git worktrees:
 - JWT authentication for API endpoints
 - WebSocket for real-time client-server communication
 
+## Naming Conventions
+
+- **Directory Names**: Use singular nouns for directory names (e.g., `directory/`, `entity/`, `task/` not `directories/`, `entities/`, `tasks/`)
+- **File Names**: Use kebab-case for multi-word files (e.g., `file-display-page.js`)
+- **Component Names**: Use PascalCase for React components
+- **Variable Names**: Use snake_case for variables and function names
+- **CSS Classes**: Use BEM methodology with kebab-case
+
 ## Git Workflow Rules
 
 **CRITICAL: Never commit directly to `main` or `master` branches**
