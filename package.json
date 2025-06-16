@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
     "start": "node scripts/dev-server.mjs",
-    "start:api": "node scripts/server.mjs",
+    "start:api": "nodemon scripts/server.mjs",
     "lint": "eslint . --ext js,mjs",
     "prettier": "prettier --write .",
     "find-large-files": "node scripts/find-large-files.mjs",
@@ -110,6 +110,7 @@
     "nanocurrency-web": "^1.4.3",
     "nib": "1.2.0",
     "nock": "^14.0.3",
+    "nodemon": "^3.0.2",
     "prettier": "^3.5.3",
     "prettier-plugin-sql": "^0.18.1",
     "prop-types": "^15.8.1",

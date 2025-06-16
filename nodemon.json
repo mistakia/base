@@ -1,0 +1,20 @@
+{
+  "watch": [
+    "server/",
+    "config/",
+    "libs-server/",
+    "libs-shared/",
+    "scripts/server.mjs"
+  ],
+  "ext": "mjs,js,json",
+  "ignore": [
+    "node_modules/",
+    "tests/",
+    "client/",
+    "static/",
+    "*.test.mjs",
+    "*.spec.mjs"
+  ],
+  "delay": 1000,
+  "verbose": true
+} 
