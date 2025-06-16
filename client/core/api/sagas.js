@@ -30,6 +30,10 @@ import {
   get_inference_providers_request_actions
 } from '@core/thread/actions'
 import { get_entity_request_actions } from '@core/entity/actions'
+import {
+  get_directories_request_actions,
+  get_file_content_request_actions
+} from '@core/directory/actions'
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
@@ -150,4 +154,16 @@ export const get_inference_providers = fetch.bind(
   null,
   api.get_inference_providers,
   get_inference_providers_request_actions
+)
+
+export const get_directories = fetch.bind(
+  null,
+  api.get_directories,
+  get_directories_request_actions
+)
+
+export const get_file_content = fetch.bind(
+  null,
+  api.get_file_content,
+  get_file_content_request_actions
 )

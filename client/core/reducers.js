@@ -8,6 +8,7 @@ import { database_table_items_reducer } from './database-tables'
 import { tasks_reducer } from './tasks'
 import { thread_reducer } from './thread'
 import { entity_reducer } from './entity'
+import { directory_reducer } from './directory'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -19,7 +20,8 @@ const root_reducer = (router) =>
     database_table_items: database_table_items_reducer,
     tasks: tasks_reducer,
     thread: thread_reducer,
-    entity: entity_reducer
+    entity: entity_reducer,
+    directory: directory_reducer
   })
 
 export default root_reducer

@@ -10,6 +10,8 @@ import AuthPage from '@pages/auth'
 import { TasksPage, TaskDetailPage } from '@pages/tasks'
 import { ThreadsPage, ThreadDetailPage } from '@pages/thread'
 import { EntityPage, EntityDetailPage } from '@pages/entity'
+import DirectoryPage from '@pages/directory'
+import FileDisplayPage from '@pages/file'
 
 const map_state_to_props = createSelector(get_app, (app) => ({
   public_key: app.public_key,
@@ -41,6 +43,12 @@ const Routes = ({ public_key, username }) => {
       {/* Entity routes */}
       <Route path='/entities' element={<EntityPage />} />
       <Route path='/entities/*' element={<EntityDetailPage />} />
+
+      {/* Directory routes */}
+      <Route path='/directory/:type/*' element={<DirectoryPage />} />
+
+      {/* File display routes */}
+      <Route path='/file/:type/*' element={<FileDisplayPage />} />
 
       <Route path='/:username' element={<HomePage />} />
       <Route

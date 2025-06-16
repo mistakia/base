@@ -129,6 +129,19 @@ export const api = {
   get_inference_providers() {
     const url = `${API_URL}/inference-providers`
     return { url }
+  },
+
+  get_directories({ type, path }) {
+    let url = `${API_URL}/directories?type=${type}`
+    if (path) {
+      url += `&path=${encodeURIComponent(path)}`
+    }
+    return { url }
+  },
+
+  get_file_content({ type, path }) {
+    const url = `${API_URL}/directories/file?type=${type}&path=${encodeURIComponent(path)}`
+    return { url }
   }
 }
 

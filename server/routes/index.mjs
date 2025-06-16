@@ -6,6 +6,7 @@ import change_requests from './change-requests.mjs'
 import threads from './threads.mjs'
 import inference_providers from './inference-providers.mjs'
 import entities from './entities.mjs'
+import directories from './directories.mjs'
 
 export default {
   users,
@@ -15,5 +16,6 @@ export default {
   change_requests,
   threads,
   inference_providers,
-  entities
+  entities,
+  directories
 }

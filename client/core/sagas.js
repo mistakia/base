@@ -8,6 +8,7 @@ import { users_saga } from './users'
 import { path_views_sagas } from './path-views'
 import { thread_sagas } from './thread'
 import { entity_sagas } from './entity/sagas'
+import { directory_sagas } from './directory'
 
 export default function* rootSage() {
   yield all([
@@ -18,6 +19,7 @@ export default function* rootSage() {
     ...users_saga,
     ...path_views_sagas,
     ...thread_sagas,
-    ...entity_sagas
+    ...entity_sagas,
+    ...directory_sagas
   ])
 }
