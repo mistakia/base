@@ -1,0 +1,63 @@
+{
+  "physical_item": {
+    "database_id": "7078f88d-0299-4f7a-a375-98c759d83f8e",
+    "entity_type": "physical_item",
+    "property_mappings": {
+      "name": "item_name",
+      "manufacturer": "manufactured_name",
+      "content": "misc_notes",
+      "priority": "importance",
+      "quantity": "current quantity",
+      "target_quantity": "target quantity",
+      "reference_url": "link",
+      "location": "current_location",
+      "usage_frequency": "frequency_of_use",
+      "status": "exist",
+      "weight_oz": "weight_oz",
+      "width_inches": "width_inches",
+      "height_inches": "height_inches",
+      "depth_inches": "depth_inches",
+      "voltage": "voltage",
+      "wattage": "wattage",
+      "max_temperature_celsius": "max_temperature_celsius",
+      "min_temperature_celsius": "min_temperature_celsius",
+      "max_humidity_percent": "max_humidity_%",
+      "min_humidity_percent": "min_humidity_%",
+      "perishable": "perishable",
+      "consumable": "consumable",
+      "expiration_date": "expiration date"
+    },
+    "type_conversions": {
+      "item_name": "title",
+      "manufactured_name": "rich_text",
+      "misc_notes": "rich_text",
+      "importance": "select_to_priority",
+      "current quantity": "number",
+      "target quantity": "number",
+      "link": "url",
+      "current_location": "select",
+      "frequency_of_use": "select_to_usage_frequency",
+      "exist": "select_to_boolean",
+      "weight_oz": "number",
+      "width_inches": "number",
+      "height_inches": "number",
+      "depth_inches": "number",
+      "voltage": "number",
+      "wattage": "number",
+      "max_temperature_celsius": "number",
+      "min_temperature_celsius": "number",
+      "max_humidity_%": "number",
+      "min_humidity_%": "number",
+      "perishable": "checkbox",
+      "consumable": "checkbox",
+      "expiration date": "date"
+    },
+    "relation_mappings": {
+      "home_areas": "location_relations",
+      "home_tags": "tag_relations",
+      "home_activities": "activity_relations",
+      "kit_name": "kit_relations",
+      "kit_items": "kit_item_relations"
+    }
+  }
+}
