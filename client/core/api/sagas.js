@@ -7,7 +7,10 @@ import {
   get_user_tasks_request_actions,
   get_task_request_actions
 } from '@core/tasks/actions'
-import { get_user_request_actions } from '@core/users/actions'
+import {
+  get_user_request_actions,
+  get_users_request_actions
+} from '@core/users/actions'
 import {
   post_user_request_actions,
   post_user_session_request_actions
@@ -34,6 +37,7 @@ import {
   get_directories_request_actions,
   get_file_content_request_actions
 } from '@core/directory/actions'
+import { get_resource_request_actions } from '@core/resource/actions'
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
@@ -65,6 +69,11 @@ function* fetch(...args) {
 }
 
 export const get_user = fetch.bind(null, api.get_user, get_user_request_actions)
+export const get_users = fetch.bind(
+  null,
+  api.get_users,
+  get_users_request_actions
+)
 export const post_user_session = fetch.bind(
   null,
   api.post_user_session,
@@ -166,4 +175,10 @@ export const get_file_content = fetch.bind(
   null,
   api.get_file_content,
   get_file_content_request_actions
+)
+
+export const get_resource = fetch.bind(
+  null,
+  api.get_resource,
+  get_resource_request_actions
 )

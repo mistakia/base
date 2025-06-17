@@ -1,42 +1,40 @@
+@import '../../../styles/mixins'
+
 .task-item
-  padding 15px
-  border 1px solid $task_border_color
-  border-radius 4px
-  margin-bottom 10px
+  grid-item()
+  padding $space_base
+  margin-bottom $space_base
 
   .task-title
-    font-size 16px
-    font-weight 600
-    color $task_title_color
-    margin-bottom 8px
+    font-family $font_family_mono
+    font-size $font_size_lg
+    font-weight $font_weight_semibold
+    color $color_text
+    margin-bottom $space_sm
 
   .task-status,
   .task-priority
-    display inline-block
-    font-size 12px
-    padding 2px 8px
-    border-radius 12px
-    margin-right 10px
-    margin-bottom 8px
+    status-badge()
+    margin-right $space_base
+    margin-bottom $space_sm
 
   .task-status
-    background-color $task_status_bg_color
-    color $task_status_text_color
+    background-color $color_success_subtle
+    color $color_success
 
   .task-priority
-    background-color $task_priority_bg_color
-    color $task_priority_text_color
+    background-color $color_warning_subtle
+    color $color_warning
 
   .task-description
-    font-size 14px
-    color $task_description_color
+    font-family $font_family_mono
+    font-size $font_size_base
+    color $color_text_secondary
     line-height 1.4
 
   // Preview variant
   &.task-item-preview
-    border none
-    border-bottom 1px solid $task_border_color
-    border-radius 0
+    list-item()
     margin-bottom 0
 
     &:last-child
@@ -50,14 +48,14 @@
 
   // Detailed variant
   &.task-item-detailed
-    padding 20px
-    border 1px solid $border_color
-    box-shadow 0 1px 3px rgba(0, 0, 0, 0.1)
+    padding $space_lg
+    border 1px solid $color_border
+    box-shadow $shadow_sm
 
     .task-title
-      font-size 20px
-      margin-bottom 12px
+      font-size $font_size_2xl
+      margin-bottom $space_base
 
     .task-description
-      margin-top 12px
-      white-space pre-wrap 
+      margin-top $space_base
+      white-space pre-wrap

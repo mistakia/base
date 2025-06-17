@@ -1,0 +1,179 @@
+@import '../../../styles/mixins'
+
+.resource-directory
+  width 100%
+  min-height 100vh
+
+.directory-header
+  margin-bottom $space_2xl
+  padding-bottom $space_lg
+  header-separator()
+
+.breadcrumbs
+  breadcrumb()
+  margin-bottom $space_base
+  
+  .scheme
+    color $color_text
+    font-weight $font_weight_semibold
+    letter-spacing 0.5px
+    
+  .breadcrumb-link
+    color $color_text_secondary
+    text-decoration none
+    transition color $transition_base
+    
+    &:hover
+      color $color_text
+      
+  .current
+    color $color_text
+    font-weight $font_weight_medium
+
+.resource-grid
+  grid-layout()
+  
+  +mobile-only()
+    grid-template-columns 1fr
+    gap 0
+
+.resource-item
+  grid-item()
+  min-height 80px
+  
+  &.directory
+    border-left 3px solid $color_primary
+    
+    .item-type
+      type-indicator($color_primary)
+      
+  &.file
+    border-left 3px solid transparent
+    
+    &:hover
+      border-left-color $color_border
+      
+    .item-type
+      type-indicator($color_text_secondary)
+
+.item-header
+  display flex
+  justify-content space-between
+  align-items flex-start
+  margin-bottom $space_base
+  
+.item-meta
+  display flex
+  gap $space_base
+  align-items center
+
+.item-name
+  font-family $font_family_mono
+  font-size $font_size_lg
+  font-weight $font_weight_medium
+  line-height 1.4
+  word-break break-word
+  color $color_text
+
+.item-size
+  font-family $font_family_mono
+  font-size $font_size_xs
+  color $color_text_secondary
+  letter-spacing 0.3px
+  opacity 0.8
+
+.item-modified
+  font-family $font_family_mono
+  font-size $font_size_xs
+  color $color_text_secondary
+  opacity 0.6
+  letter-spacing 0.3px
+
+.no-items
+  empty-state()
+
+// Alternative list view for dense data
+.resource-directory.dense
+  .resource-grid
+    list-layout()
+    
+  .resource-item
+    list-item()
+    min-height auto
+      
+    &.directory
+      border-left none
+      
+      .item-name
+        color $color_primary
+        
+    .item-header
+      margin-right $space_base
+      margin-bottom 0
+      flex-shrink 0
+      
+      .item-type
+        font-size $font_size_xs - 2
+        padding $space_xs $space_xs
+        
+      .item-meta
+        display none
+      
+    .item-name
+      flex 1
+      font-size $font_size_base
+      
+    .item-size
+      margin 0 $space_lg 0 $space_base
+      opacity 0.6
+      
+    .item-modified
+      margin 0
+      opacity 0.5
+      min-width 100px
+      text-align right
+
+// Responsive adjustments
++mobile-only()
+  .directory-header
+    margin-bottom $space_xl
+    
+  .breadcrumbs
+    font-size $font_size_sm
+    
+  .resource-grid
+    list-layout()
+    
+  .resource-item
+    list-item()
+    border-left none !important
+    padding $space_base 0
+    min-height auto
+      
+    &.directory .item-name
+      color $color_primary
+      
+    .item-header
+      margin-right $space_base
+      margin-bottom 0
+      flex-shrink 0
+      
+      .item-type
+        font-size $font_size_xs - 2
+        padding $space_xs $space_xs
+        
+      .item-meta
+        display none
+        
+    .item-name
+      flex 1
+      font-size $font_size_base
+
+// Loading state
+.resource-directory.loading
+  .resource-grid
+    opacity 0.6
+    pointer-events none
+    
+  .resource-item
+    loading-shimmer()

@@ -9,6 +9,7 @@ import { tasks_reducer } from './tasks'
 import { thread_reducer } from './thread'
 import { entity_reducer } from './entity'
 import { directory_reducer } from './directory'
+import resource_reducer from './resource'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -21,7 +22,8 @@ const root_reducer = (router) =>
     tasks: tasks_reducer,
     thread: thread_reducer,
     entity: entity_reducer,
-    directory: directory_reducer
+    directory: directory_reducer,
+    resource: resource_reducer
   })
 
 export default root_reducer

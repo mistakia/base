@@ -1,41 +1,59 @@
-// Base colors
-$background_color = white
-$border_color = #D0D0D0
-$hover_shadow = $border_color
-$text_color = #000000
-$menu_background_color = #fafafa
+// =====================================================
+// MINIMALIST INDUSTRIAL DESIGN SYSTEM
+// =====================================================
 
-// Task-specific colors
-$task_border_color = #eee
-$task_title_color = #333
-$task_description_color = #666
-$task_status_bg_color = #e8f5e9
-$task_status_text_color = #2e7d32
-$task_priority_bg_color = #fff3e0
-$task_priority_text_color = #e65100
-$link_color = #007bff
+// Typography Scale
+$font_family_mono = 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
+$font_size_xs = 11px
+$font_size_sm = 12px
+$font_size_base = 14px
+$font_size_lg = 16px
+$font_size_xl = 18px
+$font_size_2xl = 20px
+$font_size_3xl = 24px
+$font_weight_normal = 400
+$font_weight_medium = 500
+$font_weight_semibold = 600
+$font_weight_bold = 700
 
-$primary_color_rgb = 0, 123, 255
+// Spacing Scale (Modular 8px grid)
+$space_xs = 4px
+$space_sm = 8px
+$space_base = 16px
+$space_lg = 24px
+$space_xl = 32px
+$space_2xl = 48px
+$space_3xl = 64px
 
-// UI Colors System
+// Border Radius Scale (Minimal)
+$radius_none = 0
+$radius_sm = 2px
+$radius_base = 4px
+
+// Shadow Scale (Subtle)
+$shadow_sm = 0 4px 12px rgba(0, 0, 0, 0.05)
+
+// =====================================================
+// COLOR SYSTEM (Single Source of Truth)
+// =====================================================
+
+// Neutral Colors
 $color_text = #212529
 $color_text_secondary = #6c757d
+$color_text_tertiary = #b0b0b0
 $color_border = #ced4da
-$color_header_background = #f8f9fa
+$color_border_light = #e9ecef
 $color_surface = #ffffff
-$color_surface_hover = #f8f9fa
+$color_surface_hover = #fafafa
+$color_surface_secondary = #f8f9fa
 
-// Input colors
-$color_input_background = #ffffff
-$color_input_disabled = #e9ecef
-
-// Action colors
+// Action Colors
 $color_primary = #007bff
 $color_primary_hover = #0069d9
 $color_primary_disabled = #83b9f3
 $color_link = #007bff
 
-// Status colors
+// Status Colors
 $color_success = #28a745
 $color_success_subtle = #d4edda
 $color_warning = #ffc107
@@ -43,15 +61,27 @@ $color_warning_subtle = #fff3cd
 $color_danger = #dc3545
 $color_danger_subtle = #f8d7da
 
-// Additional UI/text colors
-$text_color_tertiary = #b0b0b0 // Used for less prominent text
-$input_disabled_color = $color_input_disabled // Alias for consistency
+// Code/Technical Colors
+$color_code_bg = #f6f8fa
+$color_code_border = #e1e4e8
 
-// Code/Markdown backgrounds
-$color_code_bg = #f5f5f5 // Used for code blocks in markdown
+// =====================================================
+// COMPONENT TOKENS
+// =====================================================
 
-// Task detail status/priority colors (consolidate with task_status/task_priority if possible)
-$color_status_bg = $task_status_bg_color // Alias for consistency
-$color_status_text = $task_status_text_color // Alias for consistency
-$color_priority_bg = $task_priority_bg_color // Alias for consistency
-$color_priority_text = $task_priority_text_color // Alias for consistency
+// Grid System
+$grid_gap = 1px
+$grid_min_column = 280px
+
+// Interactive States
+$transition_fast = 0.15s ease
+$transition_base = 0.2s ease
+$hover_lift = translateY(-1px)
+
+// Form Controls
+$input_padding_y = 12px
+$input_padding_x = 16px
+$input_border_width = 1px
+
+// RGB values for alpha operations
+$primary_color_rgb = 0, 123, 255

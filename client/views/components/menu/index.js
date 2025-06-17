@@ -1,5 +1,4 @@
 import { connect } from 'react-redux'
-import { createSelector } from 'reselect'
 
 import { get_app } from '@core/app'
 import {
@@ -19,6 +18,8 @@ const map_state_to_props = (state) => {
 
   return {
     username: app.username,
+    public_key: app.public_key,
+    is_authenticated: !!app.public_key,
     user_directories:
       user_state && user_state.directories ? user_state.directories : [],
     system_directories:

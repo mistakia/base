@@ -1,5 +1,6 @@
 export {
   get_user,
+  get_users,
   post_user,
   post_user_session,
   post_user_task,
@@ -16,5 +17,6 @@ export {
   post_thread_message,
   put_thread_state,
   post_thread_execute_tool,
-  get_inference_providers
+  get_inference_providers,
+  get_resource
 } from './sagas'

@@ -1,49 +1,53 @@
+@import '../../../../styles/mixins'
+
 .back-button
   display inline-flex
   align-items center
   color $color_text
   text-decoration none
-  font-size 14px
-  margin-right 16px
+  font-family $font_family_mono
+  font-size $font_size_base
+  margin-right $space_base
 
   &:hover
     color $color_primary
 
   svg
-    margin-right 8px
+    margin-right $space_sm
 
 .task-detail-container
   flex 1
-  padding 20px
+  padding $space_lg
   overflow auto
 
 .task-detail-header
   display flex
   align-items center
-  margin-bottom 16px
+  margin-bottom $space_base
   
   .task-status, .task-priority
-    display inline-block
-    font-size 12px
-    padding 4px 10px
-    border-radius 12px
-    margin-right 12px
+    status-badge()
+    margin-right $space_base
   
   .task-status
-    background-color $color_status_bg
-    color $color_status_text
+    background-color $color_success_subtle
+    color $color_success
   
   .task-priority
-    background-color $color_priority_bg
-    color $color_priority_text
+    background-color $color_warning_subtle
+    color $color_warning
 
 .task-description
-  margin-bottom 24px
+  margin-bottom $space_lg
+  font-family $font_family_mono
+  font-size $font_size_base
+  line-height 1.6
+  color $color_text
 
 .task-actions
-  margin-top 16px
+  margin-top $space_base
   display flex
-  gap 8px
+  gap $space_sm
 
 .error-state
   display flex
@@ -51,6 +55,7 @@
   align-items center
   justify-content center
   height 100%
-  padding 24px
+  padding $space_lg
   color $color_danger
-  text-align center 
+  font-family $font_family_mono
+  text-align center

@@ -9,8 +9,9 @@ import { path_views_sagas } from './path-views'
 import { thread_sagas } from './thread'
 import { entity_sagas } from './entity/sagas'
 import { directory_sagas } from './directory'
+import { resource_sagas } from './resource/sagas'
 
-export default function* rootSage() {
+export default function* rootSaga() {
   yield all([
     ...app_sagas,
     ...database_sagas,
@@ -20,6 +21,7 @@ export default function* rootSage() {
     ...path_views_sagas,
     ...thread_sagas,
     ...entity_sagas,
-    ...directory_sagas
+    ...directory_sagas,
+    ...resource_sagas
   ])
 }

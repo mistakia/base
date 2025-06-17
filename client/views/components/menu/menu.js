@@ -15,6 +15,8 @@ import './menu.styl'
 
 const Menu = ({
   username,
+  public_key,
+  is_authenticated,
   drawer_open,
   set_drawer_open,
   is_desktop,
@@ -28,57 +30,99 @@ const Menu = ({
   const location = useLocation()
   const navigate = useNavigate()
 
-  const menu_items = [
-    {
-      label: 'Home',
-      path: `/${username}`,
-      icon: (
-        <HomeOutlinedIcon
-          style={{
-            marginRight: 8,
-            color: 'rgb(145, 145, 142)',
-            width: 20,
-            height: 20
-          }}
-        />
-      )
-    },
-    {
-      label: 'Tasks',
-      path: '/tasks',
-      icon: (
-        <FormatListBulletedOutlinedIcon
-          style={{
-            marginRight: 8,
-            color: 'rgb(145, 145, 142)',
-            width: 20,
-            height: 20
-          }}
-        />
-      )
-    },
-    {
-      label: 'Threads',
-      path: '/threads',
-      icon: (
-        <MemoryOutlinedIcon
-          style={{
-            marginRight: 8,
-            color: 'rgb(145, 145, 142)',
-            width: 20,
-            height: 20
-          }}
-        />
-      )
-    }
-    // Add more items as needed
-  ]
+  // Build menu items based on authentication state
+  const menu_items = []
+
+  if (is_authenticated) {
+    // Authenticated user menu items
+    menu_items.push(
+      {
+        label: 'Home',
+        path: `/${username}`,
+        icon: (
+          <HomeOutlinedIcon
+            style={{
+              marginRight: 8,
+              color: 'rgb(145, 145, 142)',
+              width: 20,
+              height: 20
+            }}
+          />
+        )
+      },
+      {
+        label: 'Tasks',
+        path: '/tasks',
+        icon: (
+          <FormatListBulletedOutlinedIcon
+            style={{
+              marginRight: 8,
+              color: 'rgb(145, 145, 142)',
+              width: 20,
+              height: 20
+            }}
+          />
+        )
+      },
+      {
+        label: 'Threads',
+        path: '/threads',
+        icon: (
+          <MemoryOutlinedIcon
+            style={{
+              marginRight: 8,
+              color: 'rgb(145, 145, 142)',
+              width: 20,
+              height: 20
+            }}
+          />
+        )
+      }
+    )
+  } else {
+    // Public/unauthenticated user menu items
+    menu_items.push(
+      {
+        label: 'Home',
+        path: '/',
+        icon: (
+          <HomeOutlinedIcon
+            style={{
+              marginRight: 8,
+              color: 'rgb(145, 145, 142)',
+              width: 20,
+              height: 20
+            }}
+          />
+        )
+      },
+      {
+        label: 'Sign In',
+        path: '/auth',
+        icon: null
+      }
+    )
+  }
 
   useEffect(() => {
-    // Load root directories for both user and system
-    load_directories({ type: 'user', path: '' })
-    load_directories({ type: 'system', path: '' })
-  }, [load_directories])
+    // Load directories when viewing any user-scoped page or tasks/threads pages
+    const user_match = location.pathname.match(/^\/([^/]+)/)
+    const path_segment = user_match ? user_match[1] : null
+    const is_user_page =
+      path_segment &&
+      path_segment !== 'auth' &&
+      path_segment !== 'tasks' &&
+      path_segment !== 'threads'
+
+    const is_tasks_or_threads_page =
+      location.pathname.startsWith('/tasks') ||
+      location.pathname.startsWith('/threads')
+
+    if (is_user_page || (is_authenticated && is_tasks_or_threads_page)) {
+      load_directories({ type: 'user', path: '' })
+      load_directories({ type: 'system', path: '' })
+    }
+  }, [load_directories, location.pathname, is_authenticated])
 
   const handle_toggle_directory = (type, directory_path) => {
     toggle_directory({ type, path: directory_path })
@@ -117,6 +161,10 @@ const Menu = ({
           ? cached_content.directories.length > 0
           : false
 
+    // Extract username from current path
+    const path_match = location.pathname.match(/^\/([^/]+)/)
+    const current_username = path_match ? path_match[1] : null
+
     return (
       <li
         key={`${type}-${directory.path}`}
@@ -139,9 +187,18 @@ const Menu = ({
           </button>
           <div
             className='menu__directory-content'
-            onClick={() =>
-              handle_navigate(`/directory/${type}/${directory.path}`)
-            }>
+            onClick={() => {
+              // Use current username from path, or authenticated username for tasks/threads pages
+              const navigate_username =
+                current_username || (is_authenticated ? username : null)
+              if (navigate_username) {
+                // Map directory type to route prefix
+                const route_prefix = type === 'system' ? 'sys' : type
+                handle_navigate(
+                  `/${navigate_username}/${route_prefix}/${directory.path}`
+                )
+              }
+            }}>
             <FolderOutlinedIcon
               style={{
                 marginRight: 8,
@@ -164,52 +221,74 @@ const Menu = ({
     )
   }
 
-  const render_menu = () => (
-    <div className='menu__content'>
-      <ul className='menu__list'>
-        {menu_items.map(({ label, path, icon }) => (
-          <li
-            key={path}
-            className={`menu__item${location.pathname.startsWith(path) ? ' menu__item--active' : ''}`}
-            onClick={() => handle_navigate(path)}>
-            {icon && (
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginRight: 8
-                }}>
-                {icon}
-              </span>
-            )}
-            {label}
-          </li>
-        ))}
-      </ul>
+  const render_menu = () => {
+    // Check if we're on any user-scoped page or tasks/threads pages
+    const user_match = location.pathname.match(/^\/([^/]+)/)
+    const path_segment = user_match ? user_match[1] : null
+    const is_user_page =
+      path_segment &&
+      path_segment !== 'auth' &&
+      path_segment !== 'tasks' &&
+      path_segment !== 'threads'
 
-      {user_directories && user_directories.length > 0 && (
-        <div className='menu__section'>
-          <div className='menu__section-header'>User Directories</div>
-          <ul className='menu__directory-list'>
-            {user_directories.map((directory) =>
-              render_directory_item(directory, 'user')
-            )}
-          </ul>
-        </div>
-      )}
+    const is_tasks_or_threads_page =
+      location.pathname.startsWith('/tasks') ||
+      location.pathname.startsWith('/threads')
 
-      {system_directories && system_directories.length > 0 && (
-        <div className='menu__section'>
-          <div className='menu__section-header'>System Directories</div>
-          <ul className='menu__directory-list'>
-            {system_directories.map((directory) =>
-              render_directory_item(directory, 'system')
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
+    const should_show_directories =
+      is_user_page || (is_authenticated && is_tasks_or_threads_page)
+
+    return (
+      <div className='menu__content'>
+        <ul className='menu__list'>
+          {menu_items.map(({ label, path, icon }) => (
+            <li
+              key={path}
+              className={`menu__item${location.pathname.startsWith(path) ? ' menu__item--active' : ''}`}
+              onClick={() => handle_navigate(path)}>
+              {icon && (
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginRight: 8
+                  }}>
+                  {icon}
+                </span>
+              )}
+              {label}
+            </li>
+          ))}
+        </ul>
+
+        {should_show_directories &&
+          user_directories &&
+          user_directories.length > 0 && (
+            <div className='menu__section'>
+              <div className='menu__section-header'>User Directories</div>
+              <ul className='menu__directory-list'>
+                {user_directories.map((directory) =>
+                  render_directory_item(directory, 'user')
+                )}
+              </ul>
+            </div>
+          )}
+
+        {should_show_directories &&
+          system_directories &&
+          system_directories.length > 0 && (
+            <div className='menu__section'>
+              <div className='menu__section-header'>System Directories</div>
+              <ul className='menu__directory-list'>
+                {system_directories.map((directory) =>
+                  render_directory_item(directory, 'system')
+                )}
+              </ul>
+            </div>
+          )}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -238,7 +317,9 @@ const Menu = ({
 }
 
 Menu.propTypes = {
-  username: PropTypes.string.isRequired,
+  username: PropTypes.string,
+  public_key: PropTypes.string,
+  is_authenticated: PropTypes.bool.isRequired,
   drawer_open: PropTypes.bool.isRequired,
   set_drawer_open: PropTypes.func.isRequired,
   is_desktop: PropTypes.bool.isRequired,

@@ -18,6 +18,10 @@ export const api = {
     const url = `${API_URL}/users/${username}`
     return { url }
   },
+  get_users() {
+    const url = `${API_URL}/users`
+    return { url }
+  },
   post_user({ data, signature }) {
     const url = `${API_URL}/users`
     return { url, ...POST({ data, signature }) }
@@ -141,6 +145,11 @@ export const api = {
 
   get_file_content({ type, path }) {
     const url = `${API_URL}/directories/file?type=${type}&path=${encodeURIComponent(path)}`
+    return { url }
+  },
+
+  get_resource({ base_uri, username }) {
+    const url = `${API_URL}/resource?base_uri=${encodeURIComponent(base_uri)}&username=${encodeURIComponent(username)}`
     return { url }
   }
 }
