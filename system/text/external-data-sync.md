@@ -37,7 +37,7 @@ Separates raw external responses from normalized internal format to enable:
 
 Local modifications are overwritten by external changes, with additive merging only for tags/labels. This aggressive strategy is viable because local data is version controlled in Git - actual conflict resolution occurs during the commit process, preserving local change history while maintaining external system authority.
 
-## Ossified Specifications
+## Specifications
 
 ### External ID Format
 

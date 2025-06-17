@@ -16,6 +16,8 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - For each file, clearly describe the specific changes or additions required, without including any example code.
 - Break down the implementation into clear, actionable steps, ensuring each step is concise and unambiguous.
 - Use a markdown task list format so that progress can be tracked easily.
+- Use markdown checkboxes `- [ ]` for incomplete tasks and `- [x]` for completed tasks.
+- Do not use emojis in implementation plans.
 - Ensure the plan is self-contained and understandable without additional context.
 - Use consistent terminology and formatting throughout the plan.
 - Review the plan for completeness and accuracy before sharing.
