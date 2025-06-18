@@ -21,6 +21,9 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Ensure the plan is self-contained and understandable without additional context.
 - Use consistent terminology and formatting throughout the plan.
 - Review the plan for completeness and accuracy before sharing.
+- Number each task for easy reference.
+- Include the purpose of each change to provide context.
+- Group related file changes together when logical.
 
 ## Template
 
