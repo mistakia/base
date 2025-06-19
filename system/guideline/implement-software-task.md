@@ -72,7 +72,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Branch naming MUST follow the pattern: `fix/{issue-number}-{short-description}` or `feat/{issue-number}-{short-description}`
   - Example: `{{ task_example.branch_name }}`
 - Worktree creation MUST follow this process:
-  1. Navigate to the main repository directory
+  1. Navigate to the target project repository directory (check you're NOT in user-base)
   2. Create worktree with: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
   3. Navigate to the new worktree directory
   4. Install dependencies if needed: `yarn install`
@@ -143,8 +143,9 @@ cat task/{{ task_example.project_path }}/{{ task_example.task_file }}.md
 ### 2. Worktree Setup
 
 ```bash
-# Navigate to repository
+# Navigate to target project repository (check you're NOT in user-base)
 cd /path/to/repository
+pwd  # Verify you're in the correct repository
 
 # Create worktree and branch
 git worktree add -b {{ task_example.branch_name }} ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
