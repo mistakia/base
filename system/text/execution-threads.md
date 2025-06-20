@@ -25,6 +25,10 @@ Execution threads execute objectives such as completing tasks or handling system
 
 An **Execution Thread** is a process responsible for accomplishing a defined objective. It manages its workflow through stages and interacts with humans when necessary. Threads coordinate with each other, leveraging specialized workflows to achieve goals.
 
+**Note**: Threads can be created through two pathways:
+1. **Active Execution**: Created to execute a specific workflow and accomplish an objective
+2. **Imported Sessions**: Created from external LLM conversations (Claude, Cursor, OpenAI) for preservation and analysis
+
 ## Properties
 
 - `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`user:thread/{thread_id}/`).
@@ -48,14 +52,14 @@ An **Execution Thread** is a process responsible for accomplishing a defined obj
 
 When a new thread is created:
 
-1. A unique `thread_id` is generated (UUID)
+1. A unique `thread_id` is generated (UUID, deterministic for imported sessions)
 2. Directory structure is created at `user:thread/{thread_id}/`
 3. Thread metadata is written to `metadata.json` file
 4. Timeline is initialized in `timeline.json`
 5. Memory directory is set up with a git repository
 6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
 7. Git worktrees are created for each branch to enable concurrent thread execution
-8. The thread is associated with a specific workflow that it will execute
+8. The thread is associated with a specific workflow (for active execution) or marked as imported (for external sessions)
 
 When a thread is terminated:
 
@@ -103,6 +107,12 @@ Threads maintain a chronological timeline of interactions and events, structured
 - **StateChangeEntry:** Records of thread state transitions
 
 Timeline entries are immutable and provide a complete audit trail of thread actions, events, and state changes, enabling seamless resumption after pauses and comprehensive post-execution analysis.
+
+**External Session Import**: When importing external LLM conversations, the original conversation timeline is preserved by converting external message formats to appropriate Base timeline entry types:
+- External user/assistant messages become MessageEntry types
+- Tool calls and results are mapped to ToolCallEntry and ToolResultEntry
+- Context updates and system changes become StateChangeEntry types
+- Provider-specific metadata is preserved in entry data fields
 
 ## Memory Structure
 
