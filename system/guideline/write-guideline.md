@@ -12,16 +12,20 @@ observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
   - '[distinction] Guidelines define reusable standards, workflows define specific processes'
+  - '[philosophy] Start with core beliefs and iterate based on actual needs'
 relations:
   - 'related_to [[sys:system/guideline/write-workflow.md]]'
   - 'implements [[sys:system/text/system-design.md]]'
   - 'implements [[sys:system/schema/guideline.md]]'
+  - 'follows [[user:guideline/starting-point-philosophy.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.239Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Create Guideline
+
+Follow the [[user:guideline/starting-point-philosophy.md]] when creating guidelines.
 
 ## Purpose and Distinction
 

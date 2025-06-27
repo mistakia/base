@@ -41,3 +41,11 @@ export {
   search_blocks,
   show_block
 } from './block-operations.mjs'
+
+// Export from block permissions module
+export {
+  PERMISSION_LEVELS,
+  parse_companion_permissions,
+  apply_block_permissions,
+  process_block_permissions
+} from './block-permissions.mjs'

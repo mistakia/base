@@ -14,16 +14,20 @@ observations:
   - '[organization] System vs user classification is based on scope of use'
   - '[standard] Workflow design should enable composability and reuse'
   - '[pattern] XML tags provide clear structure for workflow prompts'
+  - '[philosophy] Start with core beliefs and iterate based on actual needs'
 relations:
   - 'implements [[sys:system/text/system-design.md]]'
   - 'implements [[sys:system/schema/workflow.md]]'
   - 'related_to [[sys:system/guideline/write-guideline.md]]'
+  - 'follows [[user:guideline/starting-point-philosophy.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.237Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Create Workflow Guideline
+
+Follow the [[user:guideline/starting-point-philosophy.md]] when creating workflows.
 
 ## Guidelines
 
@@ -97,6 +101,7 @@ relations:
 #### Design Principles
 
 - Workflows SHOULD be focused on a single workflow or task type
+- Workflows SHOULD start with essential elements and expand based on actual usage
 - Workflows SHOULD include examples of expected input/output
 - Workflows SHOULD reference relevant project documentation
 - Workflows SHOULD specify when to update task states or create todos

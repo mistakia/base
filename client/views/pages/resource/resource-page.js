@@ -118,8 +118,8 @@ const ResourcePage = ({
     return <LoadingIndicator />
   }
 
-  const loading = resource_state?.is_loading
-  const error = resource_state?.error
+  const loading = resource_state?.get('loading')
+  const error = resource_state?.get('error')
 
   if (loading) {
     return <LoadingIndicator />
@@ -127,6 +127,11 @@ const ResourcePage = ({
 
   if (error) {
     return <ErrorMessage error={error} />
+  }
+
+  // Check if resource hasn't been loaded yet
+  if (!resource_content && !loading && !error) {
+    return <LoadingIndicator />
   }
 
   // Render directory or file based on URI structure

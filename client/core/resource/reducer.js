@@ -7,16 +7,19 @@ const initial_state = create_resource_state()
 
 const resourceReducer = (state = initial_state, { payload, type }) => {
   switch (type) {
-    case resource_actions.GET_RESOURCE_PENDING:
+    case resource_actions.GET_RESOURCE_PENDING: {
+      const pending_base_uri = payload.opts?.base_uri || payload.base_uri
       return state
         .set('loading', true)
         .set('error', null)
-        .setIn(['resources', payload.base_uri, 'loading'], true)
-        .setIn(['resources', payload.base_uri, 'error'], null)
+        .setIn(['resources', pending_base_uri, 'loading'], true)
+        .setIn(['resources', pending_base_uri, 'error'], null)
+    }
 
     case resource_actions.GET_RESOURCE_FULFILLED: {
       const { opts, data } = payload
       const { base_uri } = opts
+
       const resource = create_resource({
         base_uri,
         ...data,
@@ -31,12 +34,14 @@ const resourceReducer = (state = initial_state, { payload, type }) => {
         .setIn(['resources', base_uri], resource)
     }
 
-    case resource_actions.GET_RESOURCE_FAILED:
+    case resource_actions.GET_RESOURCE_FAILED: {
+      const failed_base_uri = payload.opts?.base_uri || payload.base_uri
       return state
         .set('loading', false)
         .set('error', payload.error)
-        .setIn(['resources', payload.base_uri, 'loading'], false)
-        .setIn(['resources', payload.base_uri, 'error'], payload.error)
+        .setIn(['resources', failed_base_uri, 'loading'], false)
+        .setIn(['resources', failed_base_uri, 'error'], payload.error)
+    }
 
     case resource_actions.TOGGLE_DIRECTORY: {
       const { base_uri } = payload

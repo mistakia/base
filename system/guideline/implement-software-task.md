@@ -62,6 +62,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - Expected behavior after implementation
   - Technical constraints and context
 - Related files and systems MUST be identified through codebase exploration
+- The working directory/worktree path MUST be documented and tracked throughout the implementation process
 
 ### Worktree and Branch Setup
 
@@ -76,6 +77,8 @@ user_id: '00000000-0000-0000-0000-000000000000'
   2. Create worktree with: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
   3. Navigate to the new worktree directory
   4. Install dependencies if needed: `yarn install`
+  5. Document the worktree path for reference throughout the implementation
+- The current working directory MUST be verified before executing commands to ensure operations are performed in the correct worktree
 - Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers
 
 ### Development Process
@@ -152,7 +155,10 @@ git worktree add -b {{ task_example.branch_name }} ../{{ task_example.repo_name 
 
 # Navigate and setup
 cd ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
+pwd  # Document and verify the working directory path
 yarn install
+
+# Working directory: ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
 ```
 
 ### 3. Development Cycle

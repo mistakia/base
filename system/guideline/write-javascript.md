@@ -96,3 +96,4 @@ See `package.json` for the complete list of namespaces.
 - Functions with multiple parameters MUST use named parameters (object destructuring)
 - Functions with a single parameter MAY use positional arguments
 - Named parameters SHOULD have default values when appropriate
+- Do not use emojis in JavaScript code

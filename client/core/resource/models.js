@@ -15,7 +15,10 @@ export const create_resource = ({
   metadata = null,
   raw_content = null,
   parsed_content = null,
-  is_entity = false
+  is_entity = false,
+  // Block permission-specific
+  blocks = null,
+  permission_metadata = null
 } = {}) =>
   Record({
     base_uri,
@@ -30,7 +33,9 @@ export const create_resource = ({
     metadata,
     raw_content,
     parsed_content,
-    is_entity
+    is_entity,
+    blocks,
+    permission_metadata
   })()
 
 export const create_resource_state = ({

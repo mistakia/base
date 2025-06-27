@@ -19,6 +19,7 @@ describe('API /users', () => {
   let signature
   let user_id
   let timestamp
+  let auth_token
 
   before(async () => {
     await reset_all_tables()
@@ -57,6 +58,7 @@ describe('API /users', () => {
 
     // Store for future tests
     user_id = res.body.user_id
+    auth_token = res.body.token
 
     // Verify token is a valid JWT
     const decoded = jwt.verify(res.body.token, config.jwt.secret)
@@ -85,6 +87,7 @@ describe('API /users', () => {
     const res = await chai
       .request(server)
       .get(`/api/users/${user_data.username}`)
+      .set('Authorization', `Bearer ${auth_token}`)
 
     res.should.have.status(200)
     res.body.should.be.a('object')

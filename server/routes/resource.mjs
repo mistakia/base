@@ -8,6 +8,11 @@ import {
   is_valid_base_uri
 } from '#libs-server/base-uri/index.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import {
+  markdown_to_blocks,
+  process_block_permissions
+} from '#libs-server/blocks/index.mjs'
+import config from '#config'
 
 const router = express.Router()
 
@@ -28,7 +33,7 @@ router.get('/', async (req, res) => {
       })
     }
 
-    return await handle_resource_by_uri(req, res, base_uri, log)
+    return await handle_resource_by_uri({ req, res, base_uri, log })
   } catch (error) {
     log(error)
     res.status(500).json({ error: error.message })
@@ -36,7 +41,7 @@ router.get('/', async (req, res) => {
 })
 
 // Handle resource requests by base_uri
-async function handle_resource_by_uri(req, res, base_uri, log) {
+async function handle_resource_by_uri({ req, res, base_uri, log }) {
   try {
     // Validate URI format
     if (!is_valid_base_uri(base_uri)) {
@@ -59,17 +64,61 @@ async function handle_resource_by_uri(req, res, base_uri, log) {
 
     // Handle directories
     if (stat.isDirectory()) {
-      return await handle_directory_by_path(
+      return await handle_directory_by_path({
         res,
         absolute_path,
-        parsed_uri.path,
+        relative_path: parsed_uri.path,
         base_uri
-      )
+      })
     }
 
     // Handle files
     if (stat.isFile()) {
-      return await handle_file_by_path(res, absolute_path, base_uri, parsed_uri)
+      // Extract user context from request
+      const user_context = get_user_context_from_request({ req })
+
+      // Check knowledge base access for non-entity files
+      if (!has_knowledge_base_access({ user_context })) {
+        // Check if this is an entity file that might be public
+        const file_extension = path.extname(absolute_path).toLowerCase()
+        if (file_extension === '.md') {
+          try {
+            const entity_result = await read_entity_from_filesystem({
+              absolute_path
+            })
+
+            // If it's not an entity file, deny access
+            if (!entity_result.success || !entity_result.entity_properties) {
+              return res.status(403).json({
+                error:
+                  'Access denied: Insufficient permissions for this resource',
+                resource: base_uri
+              })
+            }
+          } catch (err) {
+            // If we can't read it as an entity, deny access
+            return res.status(403).json({
+              error:
+                'Access denied: Insufficient permissions for this resource',
+              resource: base_uri
+            })
+          }
+        } else {
+          // Non-markdown files require knowledge base access
+          return res.status(403).json({
+            error: 'Access denied: Insufficient permissions for this resource',
+            resource: base_uri
+          })
+        }
+      }
+
+      return await handle_file_by_path({
+        res,
+        absolute_path,
+        base_uri,
+        parsed_uri,
+        user_context
+      })
     }
 
     return res
@@ -85,12 +134,12 @@ async function handle_resource_by_uri(req, res, base_uri, log) {
 }
 
 // Handle directory listing
-async function handle_directory_by_path(
+async function handle_directory_by_path({
   res,
   absolute_path,
   relative_path,
   base_uri
-) {
+}) {
   const entries = await fs.readdir(absolute_path, { withFileTypes: true })
 
   const items = []
@@ -135,7 +184,13 @@ async function handle_directory_by_path(
 }
 
 // Handle individual file
-async function handle_file_by_path(res, absolute_path, base_uri, parsed_uri) {
+async function handle_file_by_path({
+  res,
+  absolute_path,
+  base_uri,
+  parsed_uri,
+  user_context = {}
+}) {
   const raw_content = await fs.readFile(absolute_path, 'utf8')
   const file_extension = path.extname(absolute_path).toLowerCase()
   const file_name = path.basename(absolute_path)
@@ -152,17 +207,74 @@ async function handle_file_by_path(res, absolute_path, base_uri, parsed_uri) {
   // Handle markdown files (potential entities)
   if (file_extension === '.md') {
     try {
+      // Check for entity properties
       const entity_result = await read_entity_from_filesystem({
-        absolute_path,
-        throw_if_not_entity: false
+        absolute_path
       })
 
       if (entity_result.success && entity_result.entity_properties) {
         response.is_entity = true
         response.metadata = entity_result.entity_properties
         response.parsed_content = entity_result.entity_content
+
+        // Check ownership based on entity properties
+        const entity_user_id = entity_result.entity_properties.user_id
+        user_context.is_owner =
+          user_context.user_id && entity_user_id === user_context.user_id
+
+        // Entity files are public by default (unless restricted by block permissions)
+        user_context.is_public_entity = true
       } else {
         response.parsed_content = raw_content
+        // Non-entity files require knowledge base ownership (already checked above)
+        user_context.is_owner = has_knowledge_base_access({ user_context })
+        user_context.is_public_entity = false
+      }
+
+      // Apply block-level permissions and serve blocks
+      try {
+        const { markdown_file_root_block, blocks } = await markdown_to_blocks({
+          markdown_text: raw_content,
+          file_path: absolute_path
+        })
+
+        const permission_result = await process_block_permissions({
+          file_path: absolute_path,
+          blocks,
+          user_context
+        })
+
+        // Add block structure to response
+        response.blocks = {
+          document: markdown_file_root_block,
+          blocks: permission_result.blocks
+        }
+        response.permission_metadata = permission_result.permission_metadata
+
+        // Log permission processing results for debugging
+        if (permission_result.permission_metadata.has_permissions) {
+          console.log(
+            `Applied permissions for ${base_uri}: ${permission_result.permission_metadata.blocks_redacted} blocks redacted`
+          )
+        }
+
+        // For markdown files with blocks, we don't need to send raw_content
+        // as the client will use the block renderer
+        delete response.raw_content
+        delete response.parsed_content
+      } catch (permission_error) {
+        // Log permission processing error but don't fail the request
+        console.warn(
+          'Block permission processing failed for',
+          base_uri,
+          ':',
+          permission_error.message
+        )
+        response.permission_metadata = {
+          error: permission_error.message,
+          has_permissions: false,
+          blocks_redacted: 0
+        }
       }
     } catch (err) {
       response.parsed_content = raw_content
@@ -170,6 +282,22 @@ async function handle_file_by_path(res, absolute_path, base_uri, parsed_uri) {
   }
 
   res.json(response)
+}
+
+// Helper function to extract user context from request
+function get_user_context_from_request({ req }) {
+  const user_context = {
+    user_id: req.auth?.user_id || null,
+    roles: []
+  }
+
+  return user_context
+}
+
+// Helper function to check if user has access to the knowledge base
+function has_knowledge_base_access({ user_context }) {
+  // Only the knowledge base owner can access non-entity files
+  return user_context.user_id === config.user_id
 }
 
 // Helper function to format file sizes

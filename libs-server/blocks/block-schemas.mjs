@@ -292,7 +292,17 @@ export function create_block({
     content,
     metadata: { ...(block_schema.metadata || base.metadata), ...metadata },
     attributes: { ...(block_schema.attributes || {}), ...attributes },
-    relationships: { ...base.relationships, ...relationships }
+    relationships: {
+      ...base.relationships,
+      ...relationships,
+      // Ensure arrays are properly deep-copied to prevent shared references
+      children: [
+        ...(relationships.children || base.relationships.children || [])
+      ],
+      references: [
+        ...(relationships.references || base.relationships.references || [])
+      ]
+    }
   })
 
   switch (type) {

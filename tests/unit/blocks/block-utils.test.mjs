@@ -195,18 +195,34 @@ This is a test document for block utilities unit tests.
   })
 
   describe('export_file', () => {
+    let local_markdown_file_root_block_cid
+
+    beforeEach(async () => {
+      // Import the test file first to get a CID
+      const import_result = await import_file({
+        file_path: test_file_path,
+        user_id: test_user.user_id
+      })
+      expect(import_result).to.have.property('success', true)
+      local_markdown_file_root_block_cid =
+        import_result.markdown_file_root_block_cid
+    })
+
     it('should export document to a markdown file', async () => {
       const exported_file_path = path.join(temp_dir, 'exported-doc.md')
 
       const result = await export_file({
-        block_cid: markdown_file_root_block_cid,
+        block_cid: local_markdown_file_root_block_cid,
         file_path: exported_file_path,
         user_id: test_user.user_id
       })
 
       expect(result).to.have.property('success', true)
       expect(result).to.have.property('file_path', exported_file_path)
-      expect(result).to.have.property('block_cid', markdown_file_root_block_cid)
+      expect(result).to.have.property(
+        'block_cid',
+        local_markdown_file_root_block_cid
+      )
 
       // Verify file was created
       const file_exists = await fs

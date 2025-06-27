@@ -11,6 +11,11 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
+import {
+  extract_username_from_path,
+  RESERVED_ROOT_ROUTES
+} from '@core/constants'
+
 import './menu.styl'
 
 const Menu = ({
@@ -52,7 +57,7 @@ const Menu = ({
       },
       {
         label: 'Tasks',
-        path: '/tasks',
+        path: `/${RESERVED_ROOT_ROUTES.TASKS}`,
         icon: (
           <FormatListBulletedOutlinedIcon
             style={{
@@ -66,7 +71,7 @@ const Menu = ({
       },
       {
         label: 'Threads',
-        path: '/threads',
+        path: `/${RESERVED_ROOT_ROUTES.THREADS}`,
         icon: (
           <MemoryOutlinedIcon
             style={{
@@ -98,7 +103,7 @@ const Menu = ({
       },
       {
         label: 'Sign In',
-        path: '/auth',
+        path: `/${RESERVED_ROOT_ROUTES.AUTH}`,
         icon: null
       }
     )
@@ -106,17 +111,11 @@ const Menu = ({
 
   useEffect(() => {
     // Load directories when viewing any user-scoped page or tasks/threads pages
-    const user_match = location.pathname.match(/^\/([^/]+)/)
-    const path_segment = user_match ? user_match[1] : null
-    const is_user_page =
-      path_segment &&
-      path_segment !== 'auth' &&
-      path_segment !== 'tasks' &&
-      path_segment !== 'threads'
+    const is_user_page = extract_username_from_path(location.pathname) !== null
 
     const is_tasks_or_threads_page =
-      location.pathname.startsWith('/tasks') ||
-      location.pathname.startsWith('/threads')
+      location.pathname.startsWith(`/${RESERVED_ROOT_ROUTES.TASKS}`) ||
+      location.pathname.startsWith(`/${RESERVED_ROOT_ROUTES.THREADS}`)
 
     if (is_user_page || (is_authenticated && is_tasks_or_threads_page)) {
       load_directories({ type: 'user', path: '' })
@@ -161,9 +160,8 @@ const Menu = ({
           ? cached_content.directories.length > 0
           : false
 
-    // Extract username from current path
-    const path_match = location.pathname.match(/^\/([^/]+)/)
-    const current_username = path_match ? path_match[1] : null
+    // Extract username from current path (excluding special routes)
+    const current_username = extract_username_from_path(location.pathname)
 
     return (
       <li
@@ -223,17 +221,11 @@ const Menu = ({
 
   const render_menu = () => {
     // Check if we're on any user-scoped page or tasks/threads pages
-    const user_match = location.pathname.match(/^\/([^/]+)/)
-    const path_segment = user_match ? user_match[1] : null
-    const is_user_page =
-      path_segment &&
-      path_segment !== 'auth' &&
-      path_segment !== 'tasks' &&
-      path_segment !== 'threads'
+    const is_user_page = extract_username_from_path(location.pathname) !== null
 
     const is_tasks_or_threads_page =
-      location.pathname.startsWith('/tasks') ||
-      location.pathname.startsWith('/threads')
+      location.pathname.startsWith(`/${RESERVED_ROOT_ROUTES.TASKS}`) ||
+      location.pathname.startsWith(`/${RESERVED_ROOT_ROUTES.THREADS}`)
 
     const should_show_directories =
       is_user_page || (is_authenticated && is_tasks_or_threads_page)

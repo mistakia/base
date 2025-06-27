@@ -5,6 +5,7 @@ import PropTypes from 'prop-types'
 import { Routes as RouterRoutes, Route, Navigate } from 'react-router-dom'
 
 import { get_app } from '@core/app'
+import { RESERVED_ROOT_ROUTES } from '@core/constants'
 import LandingPage from '@pages/landing'
 import UserRootPage from '@pages/user-root'
 import AuthPage from '@pages/auth'
@@ -30,7 +31,7 @@ const Routes = ({ public_key, username }) => {
   return (
     <RouterRoutes>
       {/* Auth route - always accessible */}
-      <Route path='/auth' element={<AuthPage />} />
+      <Route path={`/${RESERVED_ROOT_ROUTES.AUTH}`} element={<AuthPage />} />
 
       {/* Landing page or authenticated redirect for root path */}
       <Route
@@ -48,12 +49,24 @@ const Routes = ({ public_key, username }) => {
       {public_key && (
         <>
           {/* Tasks routes */}
-          <Route path='/tasks' element={<TasksPage />} />
-          <Route path='/tasks/:task_id' element={<TaskDetailPage />} />
+          <Route
+            path={`/${RESERVED_ROOT_ROUTES.TASKS}`}
+            element={<TasksPage />}
+          />
+          <Route
+            path={`/${RESERVED_ROOT_ROUTES.TASKS}/:task_id`}
+            element={<TaskDetailPage />}
+          />
 
           {/* Thread routes */}
-          <Route path='/threads' element={<ThreadsPage />} />
-          <Route path='/threads/:thread_id' element={<ThreadDetailPage />} />
+          <Route
+            path={`/${RESERVED_ROOT_ROUTES.THREADS}`}
+            element={<ThreadsPage />}
+          />
+          <Route
+            path={`/${RESERVED_ROOT_ROUTES.THREADS}/:thread_id`}
+            element={<ThreadDetailPage />}
+          />
         </>
       )}
 

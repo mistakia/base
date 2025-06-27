@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import PageLayout from '@components/page-layout'
 import BackButton from '@components/back-button'
 import MarkdownContent from '@components/markdown-content'
+import BlockRenderer from '@components/block-renderer'
 import JSONViewer from '@components/json-viewer'
 import CodeViewer from '@components/code-viewer'
 
@@ -108,12 +109,42 @@ const ResourceFile = ({ base_uri, scheme, path, username, content }) => {
     )
   }
 
+  const render_permission_metadata = () => {
+    if (!content?.permission_metadata?.has_permissions) return null
+
+    const { permission_metadata } = content
+    return (
+      <div className='permission-metadata'>
+        <div className='permission-info'>
+          {permission_metadata.blocks_redacted > 0 && (
+            <div className='redaction-notice'>
+              <span className='icon'>🔒</span>
+              <span className='text'>
+                {permission_metadata.blocks_redacted} block(s) redacted due to
+                permissions
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const render_content = () => {
+    const file_extension = get_filename().split('.').pop()?.toLowerCase()
+
+    // Use blocks if available for markdown files
+    if (
+      (file_extension === 'md' || file_extension === 'markdown') &&
+      content.blocks
+    ) {
+      return <BlockRenderer blocks_data={content.blocks} />
+    }
+
+    // Check if we have raw_content for non-markdown files or fallback
     if (!content?.raw_content) {
       return <div className='no-content'>No content available</div>
     }
-
-    const file_extension = get_filename().split('.').pop()?.toLowerCase()
 
     // Render based on file type or content type
     if (content.is_entity && content.parsed_content) {
@@ -158,6 +189,7 @@ const ResourceFile = ({ base_uri, scheme, path, username, content }) => {
         </div>
 
         {render_entity_metadata()}
+        {render_permission_metadata()}
 
         <div className='file-content'>{render_content()}</div>
       </div>
@@ -174,7 +206,12 @@ ResourceFile.propTypes = {
     raw_content: PropTypes.string,
     parsed_content: PropTypes.string,
     is_entity: PropTypes.bool,
-    metadata: PropTypes.object
+    metadata: PropTypes.object,
+    permission_metadata: PropTypes.shape({
+      has_permissions: PropTypes.bool,
+      blocks_redacted: PropTypes.number
+    }),
+    blocks: PropTypes.object
   })
 }
 

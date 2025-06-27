@@ -47,6 +47,7 @@ user_id: 00000000-0000-0000-0000-000000000000
 - Design choices SHOULD be explained with their rationale when not self-evident
 - Process descriptions SHOULD use numbered steps or clear sequence indicators
 - Documentation SHOULD be organized from high-level concepts to specific details
+- Do not use emojis in documentation
 
 ### Maintenance Principles
 

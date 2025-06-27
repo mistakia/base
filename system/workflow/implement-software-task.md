@@ -75,6 +75,7 @@ Read task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workf
 # - Expected new behavior
 # - Technical context and constraints
 # - Affected systems and files
+# - Working directory/worktree path to be used
 ```
 
 #### 1.2 Set Up Worktree and Branch
@@ -92,12 +93,18 @@ git worktree add -b {{ workflow_example.branch_name }} {{ workflow_example.workt
 
 # Navigate to worktree and setup
 cd {{ workflow_example.worktree_path }}
+pwd  # Verify and document current working directory
 yarn install
+
+# Working Directory: {{ workflow_example.worktree_path }}
 ```
 
 #### 1.3 Explore Codebase
 
 ```bash
+# Verify working directory before exploration
+pwd  # Should be {{ workflow_example.worktree_path }}
+
 # Search for relevant patterns
 Grep "pattern related to task" --include="*.mjs"
 
@@ -226,6 +233,7 @@ git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_su
 
 - [ ] Task requirements documented and understood
 - [ ] Worktree and branch properly configured
+- [ ] Working directory path documented and verified
 - [ ] Codebase exploration completed
 - [ ] Dependencies installed and verified
 

@@ -20,7 +20,7 @@ import {
 // Register tools
 // import './notion/index.mjs'
 import './tasks/index.mjs'
-// import './file/index.mjs'
+import './file/index.mjs'
 import './entity/index.mjs'
 import '../threads/thread-tools.mjs'
 
