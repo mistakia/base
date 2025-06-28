@@ -7,7 +7,6 @@ created_at: '2023-06-28T10:00:00.000Z'
 entity_id: '44f5b239-8c30-4de5-a3a8-f5c983a51f22'
 globs:
   - '**/*.md'
-guideline_status: 'Approved'
 observations:
   - '[standard] Proper entity type selection ensures data consistency'
   - '[governance] Entity types determine required fields and validation rules'
@@ -37,7 +36,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - Key properties: status, priority, start/finish dates, assigned_to
 - `guideline`: SHOULD be used for standards, procedures, or best practices
   - Example: "JavaScript coding standards", "Documentation guidelines", "Task naming conventions"
-  - Key properties: guideline_status, effective_date, globs
+  - Key properties: globs
   - Note: Guidelines will be used in prompts to guide system behavior
 - `text`: SHOULD be used for general textual content without specialized requirements
 

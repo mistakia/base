@@ -8,7 +8,6 @@ created_at: '2025-06-09T03:30:00.000Z'
 entity_id: 'a1b2c3d4-5e6f-7890-abcd-ef1234567890'
 globs:
   - 'task/**/*.md'
-guideline_status: 'Approved'
 prompt_properties:
   - name: task_example
     type: object

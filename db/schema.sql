@@ -59,8 +59,6 @@ DROP INDEX IF EXISTS public.idx_sync_conflicts_status;
 DROP INDEX IF EXISTS public.idx_sync_configs_entity_type;
 DROP INDEX IF EXISTS public.idx_sync_configs_entity_id;
 DROP INDEX IF EXISTS public.idx_physical_location_coordinates;
-DROP INDEX IF EXISTS public.idx_guideline_status;
-DROP INDEX IF EXISTS public.idx_guideline_effective_date;
 DROP INDEX IF EXISTS public.idx_entity_tags_tag_id;
 DROP INDEX IF EXISTS public.idx_entity_sync_records_external;
 DROP INDEX IF EXISTS public.idx_entity_sync_records_entity_id;
@@ -212,7 +210,6 @@ DROP FUNCTION IF EXISTS public.block_similarity_search(query_embedding public.ve
 DROP TYPE IF EXISTS public.task_status_type;
 DROP TYPE IF EXISTS public.priority_type;
 DROP TYPE IF EXISTS public.importance_type;
-DROP TYPE IF EXISTS public.guideline_status_type;
 DROP TYPE IF EXISTS public.frequency_type;
 DROP TYPE IF EXISTS public.entity_type;
 DROP TYPE IF EXISTS public.change_request_status_type;
@@ -335,17 +332,6 @@ CREATE TYPE public.frequency_type AS ENUM (
     'Daily',
     'Weekly',
     'Infrequent'
-);
-
-
---
--- Name: guideline_status_type; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.guideline_status_type AS ENUM (
-    'Draft',
-    'Approved',
-    'Deprecated'
 );
 
 
@@ -906,8 +892,6 @@ CREATE TABLE public.entity_sync_records (
 
 CREATE TABLE public.guidelines (
     entity_id uuid NOT NULL,
-    guideline_status public.guideline_status_type,
-    effective_date timestamp without time zone,
     globs jsonb DEFAULT '[]'::jsonb,
     always_apply boolean DEFAULT false
 );
@@ -2009,20 +1993,6 @@ CREATE INDEX idx_entity_sync_records_external ON public.entity_sync_records USIN
 --
 
 CREATE INDEX idx_entity_tags_tag_id ON public.entity_tags USING btree (tag_entity_id);
-
-
---
--- Name: idx_guideline_effective_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_guideline_effective_date ON public.guidelines USING btree (effective_date);
-
-
---
--- Name: idx_guideline_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_guideline_status ON public.guidelines USING btree (guideline_status);
 
 
 --
