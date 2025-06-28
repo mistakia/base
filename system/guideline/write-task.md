@@ -6,7 +6,6 @@ created_at: '2025-06-26T01:12:08.170Z'
 entity_id: d76a09ed-c569-4727-b7e9-98f9c68fd203
 globs:
   - task/**/*.md
-guideline_status: Approved
 observations:
   - '[principle] Clear titles improve task discoverability and understanding'
   - '[standard] Proper frontmatter enables system integration and tracking'

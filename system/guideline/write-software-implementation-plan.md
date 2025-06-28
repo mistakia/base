@@ -6,7 +6,6 @@ description: |
 created_at: '2025-05-27T18:10:20.238Z'
 entity_id: 'e76459ed-cea8-4e1e-8601-8d3d1fc5ccb5'
 globs:
-guideline_status: 'Approved'
 tags:
 updated_at: '2025-05-27T18:10:20.238Z'
 user_id: '00000000-0000-0000-0000-000000000000'

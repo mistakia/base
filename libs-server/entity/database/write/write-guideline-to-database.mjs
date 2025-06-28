@@ -18,8 +18,6 @@ const log = debug('entity:database:write-guideline')
  * @param {Date} [params.guideline_properties.created_at] Creation timestamp (auto-generated if omitted)
  * @param {Date} [params.guideline_properties.updated_at] Last modified timestamp (auto-generated if omitted)
  * @param {Date} [params.guideline_properties.archived_at=null] Date when the guideline was archived
- * @param {string} [params.guideline_properties.guideline_status='Draft'] Status of the guideline (Draft, Approved, Deprecated)
- * @param {Date} [params.guideline_properties.effective_date=null] Date when the guideline becomes effective
  * @param {string[]} [params.guideline_properties.globs=[]] Glob patterns for files that this guideline applies to
  * @param {boolean} [params.guideline_properties.always_apply=false] Whether this guideline should always be applied
  * @param {string} params.user_id User ID who owns the guideline
@@ -64,8 +62,6 @@ export async function write_guideline_to_database({
     // Process guideline-specific data directly
     await write_guideline_data_to_database({
       entity_id: returned_entity_id,
-      guideline_status: guideline_properties.guideline_status,
-      effective_date: guideline_properties.effective_date,
       globs: guideline_properties.globs,
       always_apply: guideline_properties.always_apply,
       db_client
@@ -84,8 +80,6 @@ export async function write_guideline_to_database({
  *
  * @param {Object} params Parameters
  * @param {string} params.entity_id Entity ID
- * @param {string} [params.guideline_status='Draft'] Status of the guideline (Draft, Approved, Deprecated)
- * @param {Date} [params.effective_date=null] Date when the guideline becomes effective
  * @param {string[]} [params.globs=[]] Glob patterns for files that this guideline applies to
  * @param {boolean} [params.always_apply=false] Whether this guideline should always be applied
  * @param {Object} params.db_client Database client
@@ -93,8 +87,6 @@ export async function write_guideline_to_database({
  */
 async function write_guideline_data_to_database({
   entity_id,
-  guideline_status = 'Draft',
-  effective_date = null,
   globs = [],
   always_apply = false,
   db_client
@@ -104,8 +96,6 @@ async function write_guideline_data_to_database({
   // Process guideline-specific data
   const guideline_data = {
     entity_id,
-    guideline_status,
-    effective_date,
     globs: JSON.stringify(globs || []),
     always_apply: always_apply || false
   }

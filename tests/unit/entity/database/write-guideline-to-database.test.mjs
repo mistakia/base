@@ -27,8 +27,6 @@ describe('write_guideline_to_database', () => {
     // Arrange
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
-    // Use a fixed date for effective_date to avoid timezone issues
-    const effective_date = new Date('2025-01-03T00:00:00Z')
 
     const guideline_properties = {
       entity_id: uuid(),
@@ -36,8 +34,6 @@ describe('write_guideline_to_database', () => {
       description: 'Test guideline description',
       created_at: now,
       updated_at: later,
-      guideline_status: 'Draft',
-      effective_date,
       globs: ['*.js', '*.mjs'],
       always_apply: false
     }
@@ -86,13 +82,6 @@ describe('write_guideline_to_database', () => {
       .where({ entity_id: guideline_entity_id })
       .first()
     expect(guideline_data).to.exist
-    expect(guideline_data.guideline_status).to.equal(
-      guideline_properties.guideline_status
-    )
-    expect(new Date(guideline_data.effective_date).getTime()).to.be.closeTo(
-      guideline_properties.effective_date.getTime(),
-      1000000
-    )
     expect(guideline_data.globs).to.deep.equal(guideline_properties.globs)
     expect(guideline_data.always_apply).to.equal(
       guideline_properties.always_apply
@@ -103,9 +92,6 @@ describe('write_guideline_to_database', () => {
     // Arrange - first create a guideline
     const now = new Date()
     const later = new Date(now.getTime() + 1000) // 1 second later
-    // Use a fixed date for effective_date to avoid timezone issues
-    const effective_date = new Date('2025-01-03T00:00:00Z')
-    const updated_effective_date = new Date('2025-01-04T00:00:00Z')
     const entity_id = uuid()
 
     const original_properties = {
@@ -114,8 +100,6 @@ describe('write_guideline_to_database', () => {
       description: 'Original description',
       created_at: now,
       updated_at: later,
-      guideline_status: 'Draft',
-      effective_date,
       globs: ['*.js'],
       always_apply: false
     }
@@ -138,8 +122,6 @@ describe('write_guideline_to_database', () => {
       description: 'Updated description',
       created_at: now, // keep original created_at
       updated_at: even_later,
-      guideline_status: 'Approved',
-      effective_date: updated_effective_date,
       globs: ['*.js', '*.mjs', '*.cjs'],
       always_apply: true
     }
@@ -183,13 +165,6 @@ describe('write_guideline_to_database', () => {
       .where({ entity_id: guideline_entity_id })
       .first()
     expect(guideline_data).to.exist
-    expect(guideline_data.guideline_status).to.equal(
-      updated_properties.guideline_status
-    )
-    expect(new Date(guideline_data.effective_date).getTime()).to.be.closeTo(
-      updated_properties.effective_date.getTime(),
-      1000000
-    )
     expect(guideline_data.globs).to.deep.equal(updated_properties.globs)
     expect(guideline_data.always_apply).to.equal(
       updated_properties.always_apply
@@ -206,8 +181,7 @@ describe('write_guideline_to_database', () => {
       title: 'File Guideline',
       description: 'Guideline with file info',
       created_at: now,
-      updated_at: later,
-      guideline_status: 'Draft'
+      updated_at: later
     }
     const file_info = {
       absolute_path: '/path/to/guideline.md',
@@ -324,8 +298,7 @@ describe('write_guideline_to_database', () => {
     const guideline_properties = {
       entity_id: uuid(),
       title: 'Transaction Guideline',
-      description: 'Testing transaction handling',
-      guideline_status: 'Draft'
+      description: 'Testing transaction handling'
     }
 
     // Start a transaction

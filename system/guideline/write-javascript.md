@@ -8,7 +8,6 @@ entity_id: '1d8b6928-ca52-4eb0-bda2-a6bc23bf1a5b'
 globs:
   - '**/*.mjs'
   - '**/*.js'
-guideline_status: 'Approved'
 observations:
   - '[standard] Consistent module imports improve code maintainability'
   - '[quality] Explicit file extensions prevent import resolution issues'

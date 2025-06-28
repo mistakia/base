@@ -36,7 +36,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
   - Key properties: status, priority, start/finish dates, assigned_to
 - `guideline`: SHOULD be used for standards, procedures, or best practices
   - Example: "JavaScript coding standards", "Documentation guidelines", "Task naming conventions"
-  - Key properties: guideline_status, effective_date, globs
+  - Key properties: globs
   - Note: Guidelines will be used in prompts to guide system behavior
 - `text`: SHOULD be used for general textual content without specialized requirements
 

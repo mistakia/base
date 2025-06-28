@@ -5,15 +5,6 @@ title: Guideline
 extends: base
 description: Guidelines represent standards, procedures, or best practices
 properties:
-  - name: guideline_status
-    type: string
-    enum: [Draft, Approved, Deprecated]
-    required: false
-    description: Current status of the guideline
-  - name: effective_date
-    type: date
-    optional: true
-    description: Date when the guideline becomes effective
   - name: globs
     type: array
     items:
