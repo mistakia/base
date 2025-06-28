@@ -7,7 +7,6 @@ created_at: '2025-05-27T18:10:20.237Z'
 globs:
   - 'task/**/*.md'
 entity_id: '3ba5ef17-c90a-463c-8890-5c8e635e3297'
-guideline_status: 'Approved'
 observations:
   - '[standard] Standardized status values ensure consistent task management'
   - '[governance] Limited set of statuses helps with workflow automation'

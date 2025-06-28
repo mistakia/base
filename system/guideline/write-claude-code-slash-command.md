@@ -9,7 +9,6 @@ entity_id: d8071403-69de-49c3-87d4-2633ad8c20a8
 globs:
   - .claude/commands/**/*.md
   - ~/.claude/commands/**/*.md
-guideline_status: Approved
 observations:
   - '[pattern] XML tags provide clear structure for command prompts'
   - '[practice] $ARGUMENTS placeholder enables flexible command invocation'

@@ -7,7 +7,6 @@ created_at: '2025-05-27T18:10:20.237Z'
 entity_id: 'e1cfc594-78bb-49ef-a1f3-3575f4ecefe8'
 globs:
   - 'workflow/**/*.md'
-guideline_status: 'Approved'
 observations:
   - '[governance] Proper workflow location ensures system organization'
   - '[principle] Clear naming conventions improve discoverability'

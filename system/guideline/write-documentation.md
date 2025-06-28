@@ -9,7 +9,6 @@ entity_id: 12dc5b4c-365c-4e7f-b7f4-10c9851b1be2
 globs:
   - 'text/**/*.md'
   - '*.md'
-guideline_status: Approved
 observations:
   - '[clarity] Specific design choices provide more value than generic descriptions #design-decisions'
   - '[maintainability] Code examples become stale quickly and require frequent updates #maintenance'

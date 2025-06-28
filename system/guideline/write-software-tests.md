@@ -7,7 +7,6 @@ created_at: '2025-05-27T18:10:20.240Z'
 entity_id: '1eaa2062-7bfb-4f05-a2da-7e358210e995'
 globs:
   - 'tests/**/*'
-guideline_status: 'Approved'
 observations:
   - '[principle] Avoiding stubbing creates more reliable tests #reliability'
   - '[strategy] Proper test structure improves readability and maintainability #structure'
