@@ -2,14 +2,9 @@
 
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-
-// Get the directory of the current module
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 // Data directory structure to be created in the user repository
 const data_structure = {
