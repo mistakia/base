@@ -16,7 +16,7 @@ const log = debug('markdown:scanner:filesystem')
 debug.enable('markdown:scanner:filesystem')
 
 /**
- * Get list of markdown files from the filesystem recursively, including submodules
+ * Get list of markdown files from the filesystem recursively, including separate user repositories
  * @param {Object} params - Parameters
  * @param {string[]} [params.include_path_patterns] - Optional array of glob patterns for including files by path
  * @param {string[]} [params.exclude_path_patterns] - Optional array of glob patterns for excluding files by path

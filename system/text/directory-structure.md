@@ -35,7 +35,6 @@ The system is organized into the following top-level directories:
 ├── server/             # Express API server
 ├── static/             # Static resources (images, styles, etc.)
 ├── system/             # System Knowledge Base
-├── user/               # Default user submodule (git submodule)
 └── tests/              # Test files
 ```
 
@@ -93,7 +92,7 @@ The system implements a dual knowledge base architecture:
 │   ├── guideline/      # System guidelines
 │   └── text/           # System documentation
 │
-└── user/               # Default User Knowledge Base (submodule)
+└── <user-repository>/  # User Knowledge Base (separate git repository)
     ├── schema/         # User schema extensions
     ├── workflow/       # User workflow definitions
     ├── guideline/      # User guideline definitions
@@ -106,12 +105,14 @@ The system implements a dual knowledge base architecture:
     └── log/            # System logs
 ```
 
-Additional user submodules can be added as git submodules and will be automatically recognized and processed by the system. Each submodule is treated as a separate user repository and follows the same structure as the default `user/` submodule.
+Additional user repositories can be configured and will be automatically recognized and processed by the system. Each repository is treated as a separate user knowledge base and follows the same structure.
 
-The `system/` directory in the root repository contains core definitions that provide the foundation for all knowledge items, while user submodules contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
+The `system/` directory in the `base` project repository contains core definitions that provide the foundation for all knowledge items, while user repositories contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
 
 ## Implementation Notes
 
 1. **Module System**: The system uses ES modules with the `.mjs` extension for clarity.
 2. **Path Aliases**: Configure path aliases in build tools to simplify imports.
-3. **Multiple Users**: Multiple user repositories can be attached as git submodules and will be processed independently.
+3. **Multiple Users**: Multiple user repositories can be configured independently and will be processed separately.
+
+**Note**: User knowledge bases are stored in separate git repositories that can be located anywhere on the filesystem, configured via `config.user_base_directory` or runtime registration.

@@ -7,7 +7,7 @@ created_at: '2025-05-27T18:10:20.245Z'
 entity_id: 'e773b4d1-83c1-4fa2-85a8-b22d2d04667a'
 observations:
   - '[design] Knowledge base schema is a dual-system architecture'
-  - '[implementation] System schema is in system/schema and user schema is in submodules'
+  - '[implementation] System schema is in system/schema and user schema is in separate repositories'
   - '[feature] Schema extensions allow for user-specific customization'
 relations:
   - 'relates_to [[sys:system/text/system-design.md]]'
@@ -30,8 +30,8 @@ The knowledge base architecture consists of two complementary components:
 
 ### User Knowledge Base
 
-- Located in submodules (with `user/` as the default submodule name)
-- Each submodule belongs to a different user and contains their specific content
+- Located in separate git repositories that can be anywhere on the filesystem
+- Each repository belongs to a different user and contains their specific content
 - Implements and extends the system schema for user-specific needs
 - Can customize and add properties to existing types
 - Can define new types that inherit from system types
@@ -69,9 +69,9 @@ Users can extend the knowledge base schema in several ways:
    ---
    ```
 
-All schema extensions should be stored in the `schema/` directory within the user's submodule to maintain separation from content items. This keeps schema definitions organized and discoverable.
+All schema extensions should be stored in the `schema/` directory within the user's repository to maintain separation from content items. This keeps schema definitions organized and discoverable.
 
-Example path: `user/schema/custom_task_extension.md`
+Example path: `<user-repository>/schema/custom_task_extension.md`
 
 ## Content Structure
 

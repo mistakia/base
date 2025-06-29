@@ -19,7 +19,7 @@ describe('load_schema_definitions_from_git', () => {
   before(async () => {
     test_user = await create_test_user()
 
-    // Create a temp root repo and user submodule
+    // Create a temp root repo and user repository
     const repo_setup = await create_temp_test_repo({
       register_directories: true
     })
@@ -86,7 +86,7 @@ describe('load_schema_definitions_from_git', () => {
       commit_message: 'Add person schema'
     })
 
-    // Write user (submodule) schemas (as type_definition with extends)
+    // Write user repository schemas (as type_definition with extends)
     await write_entity_to_git({
       base_uri: 'user:schema/task-extension.md',
       entity_properties: {

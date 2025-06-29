@@ -46,7 +46,7 @@ Data is stored in two places:
 - **Git Repositories**
 
   - Root repository holds system files and configuration
-  - User-specific content stored in git submodules
+  - User-specific content stored in separate git repositories
   - Everything is version controlled and can be worked on offline
   - This is our source of truth
 
@@ -65,9 +65,10 @@ The system separates knowledge into two types:
   - Relevant to core system functionality and relevant to all users
 
 - **User Knowledge Bases**
-  - Located in git submodules (with `user/` as the default submodule name)
-  - Each submodule belongs to a different user and contains their specific content
+  - Located in separate git repositories that can be anywhere on the filesystem
+  - Each repository belongs to a different user and contains their specific content
   - Contains user-specific data, content, and configurations
+  - Configured via `config.user_base_directory` or runtime registration
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 

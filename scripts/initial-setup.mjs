@@ -4,13 +4,14 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 
 // Get the directory of the current module
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const root_dir = path.resolve(__dirname, '..')
 
-// Data directory structure to be created in the submodule
+// Data directory structure to be created in the user repository
 const data_structure = {
   workflow: {},
   guideline: {},
@@ -40,39 +41,35 @@ const create_directory_structure = (base_path, structure) => {
   }
 }
 
-// Function to initialize data directory as a git submodule
-const initialize_data_submodule = () => {
-  const data_path = path.join(root_dir, 'data')
+// Function to initialize user data directory as a separate git repository
+const initialize_user_repository = (user_data_path) => {
+  // Check if user data directory exists and is a git repository
+  const is_git_repo = fs.existsSync(path.join(user_data_path, '.git'))
 
-  // Check if data directory exists and is a git submodule
-  const is_submodule =
-    fs.existsSync(path.join(data_path, '.git')) ||
-    fs.existsSync(path.join(root_dir, '.git', 'modules', 'data'))
-
-  if (is_submodule) {
-    console.log('Data directory is already a git submodule')
+  if (is_git_repo) {
+    console.log('User data directory is already a git repository')
     return
   }
 
-  // If data directory exists but is not a submodule
-  if (fs.existsSync(data_path)) {
+  // If user data directory exists but is not a git repository
+  if (fs.existsSync(user_data_path)) {
     console.log(
-      'Data directory exists but is not a submodule, remove it and try again'
+      'User data directory exists but is not a git repository. Please initialize it manually or remove it and try again.'
     )
     return
   }
 
   try {
-    // Create a new git repository for data
-    console.log('Initializing data directory as a git repository...')
-    fs.mkdirSync(data_path, { recursive: true })
+    // Create a new git repository for user data
+    console.log('Initializing user data directory as a git repository...')
+    fs.mkdirSync(user_data_path, { recursive: true })
 
-    // Initialize git repository in data directory
-    execSync('git init', { cwd: data_path })
-    console.log('Git repository initialized in data directory')
+    // Initialize git repository in user data directory
+    execSync('git init', { cwd: user_data_path })
+    console.log('Git repository initialized in user data directory')
 
-    // Create the directory structure in the data directory
-    create_directory_structure(data_path, data_structure)
+    // Create the directory structure in the user data directory
+    create_directory_structure(user_data_path, data_structure)
 
     // Write .gitignore file
     const gitignore_content = [
@@ -82,34 +79,79 @@ const initialize_data_submodule = () => {
       'threads/*',
       ''
     ].join('\n')
-    fs.writeFileSync(path.join(data_path, '.gitignore'), gitignore_content)
+    fs.writeFileSync(path.join(user_data_path, '.gitignore'), gitignore_content)
 
     // Add and commit the initial structure
-    execSync('git add .', { cwd: data_path })
-    execSync('git commit -m "Initial data structure"', { cwd: data_path })
-    console.log('Initial data structure committed')
+    execSync('git add .', { cwd: user_data_path })
+    execSync('git commit -m "Initial user data structure"', {
+      cwd: user_data_path
+    })
+    console.log('Initial user data structure committed')
 
-    // Add as a submodule to the main repository
+    console.log('User data directory initialized as a separate git repository')
     console.log(
-      'Adding data directory as a submodule to the main repository...'
+      `Configure config.user_base_directory to point to: ${user_data_path}`
     )
-    execSync(`git submodule add ${data_path}`, { cwd: root_dir })
-    execSync('git submodule init', { cwd: root_dir })
-    console.log('Data directory added as a submodule')
   } catch (error) {
     console.log(error)
-    console.error('Error initializing data submodule:', error.message)
+    console.error('Error initializing user data repository:', error.message)
     process.exit(1)
   }
 }
 
 // Main function
-const setup_system = () => {
-  console.log('Initializing data directory as a git submodule...')
-  initialize_data_submodule()
+const main = async () => {
+  const argv = yargs(hideBin(process.argv))
+    .usage('Usage: $0 --user-base-directory <path>')
+    .option('user-base-directory', {
+      alias: 'u',
+      type: 'string',
+      description: 'Path where the user data repository should be created',
+      demandOption: true
+    })
+    .option('force', {
+      alias: 'f',
+      type: 'boolean',
+      description: 'Force initialization even if directory exists',
+      default: false
+    })
+    .example(
+      '$0 --user-base-directory /path/to/user-data',
+      'Initialize user repository at specified path'
+    )
+    .example(
+      '$0 -u ../user-data',
+      'Initialize user repository in parent directory'
+    )
+    .help()
+    .alias('help', 'h').argv
 
-  console.log('System setup complete!')
+  const user_data_path = path.resolve(argv.userBaseDirectory)
+
+  console.log('Setting up user data repository...')
+  console.log(`Target path: ${user_data_path}`)
+
+  // Check if force flag is needed
+  if (fs.existsSync(user_data_path) && !argv.force) {
+    console.error(`Error: Directory ${user_data_path} already exists.`)
+    console.error('Use --force to proceed anyway, or choose a different path.')
+    process.exit(1)
+  }
+
+  let error
+  try {
+    initialize_user_repository(user_data_path)
+    console.log('\n✓ System setup complete!')
+    console.log(
+      `Remember to configure config.user_base_directory to: ${user_data_path}`
+    )
+  } catch (err) {
+    error = err
+    console.error('Setup failed:', error.message)
+  }
+
+  process.exit(error ? 1 : 0)
 }
 
 // Run the setup
-setup_system()
+main()
