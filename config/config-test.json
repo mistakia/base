@@ -25,5 +25,11 @@
   "jwt": {
     "secret": "jwt_secret_test",
     "algorithms": ["HS256"]
+  },
+  "notion_api_key": "secret:NOTION_API_KEY",
+  "notion": {
+    "rate_limit_delay": 200,
+    "batch_size": 50,
+    "sync_frequency": "daily"
   }
 }

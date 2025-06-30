@@ -7,3 +7,4 @@ export { validate_tags_from_filesystem } from './validate-tags-from-filesystem.m
 export { validate_relations_from_filesystem } from './validate-relations-from-filesystem.mjs'
 export { validate_references_from_filesystem } from './validate-references-from-filesystem.mjs'
 export { get_entity_id_from_base_path } from './get-entity-id-from-base-path.mjs'
+export { get_directory_for_entity_type } from './get-directory-for-entity-type.mjs'
