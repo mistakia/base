@@ -326,8 +326,7 @@ const main = async () => {
       verbose: argv.verbose,
       enable_notion_writes: argv.enableNotionWrites,
       dry_run: argv.dryRun,
-      import_history_base_directory:
-        argv.importHistoryBaseDirectory || config.user_base_directory
+      import_history_base_directory: argv.importHistoryBaseDirectory
     })
 
     // Print concise result summary to console
