@@ -59,8 +59,6 @@ Each block is represented as a JSON object with the following structure:
 
 ## Block Types
 
-The system supports the following block types:
-
 | Type             | Description           | Specific Attributes                                                                                 |
 | ---------------- | --------------------- | --------------------------------------------------------------------------------------------------- |
 | `markdown_file`  | Root document         | `title` (string), `source_path` (string)                                                            |
@@ -84,18 +82,9 @@ The system supports the following block types:
 
 ### Common Attributes
 
-Some attributes are shared across multiple block types:
-
-- `color`: Visual styling of the block. Can be one of:
-
-  - `default`
-  - `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`
-  - `gray_background`, `brown_background`, `orange_background`, `yellow_background`
-  - `green_background`, `blue_background`, `purple_background`, `pink_background`, `red_background`
-
-- `uri`: Used for blocks that reference external resources (images, files, videos, bookmarks)
-- `type`: Used for blocks that can reference either local files or external resources
-- `caption`: Optional descriptive text for media and link blocks
+- `color`: Block styling (default, gray, brown, orange, yellow, green, blue, purple, pink, red, or _background variants)
+- `uri`: External resource reference
+- `caption`: Media/link description
 
 ## Content Addressing
 
@@ -116,20 +105,65 @@ When converting blocks back to markdown:
 
 ## Block Relationships
 
-Blocks can have the following relationships:
+- **Parent-Child**: Hierarchical structure
+- **References**: Cross-references between blocks
 
-1. **Parent-Child**: Hierarchical structure (e.g., a list contains list items)
-2. **References**: Cross-references between blocks (e.g., link to another heading)
+Relationships use CIDs for graph traversal and querying.
 
-These relationships are stored as CIDs, enabling efficient graph traversal and querying.
+## Block Permissions
+
+Companion `.blockpermissions` YAML files control block access. Default behavior is public access. Restricted blocks are content-redacted, not removed.
+
+### Permission Levels
+
+- `public`: All users (default)
+- `owner`: Content owner only
+
+### Companion File Format
+
+```yaml
+permissions:
+  - blocks: [1, 2, 3]
+    allow: owner
+  - block_range: [5, 8]
+    allow: owner
+  - block_type: code
+    allow: owner
+  - heading_level: 3
+    allow: owner
+  - block_cids: ["block_cid_1", "block_cid_2"]
+    allow: owner
+```
+
+### Block Matchers
+
+- **blocks**: Block index (1-based)
+- **block_range**: Inclusive range
+- **block_type**: Specific type
+- **heading_level**: Heading level (1-6)
+- **block_cids**: Content identifiers
+
+### Redaction Templates
+
+Restricted content is replaced with type-specific placeholders like `[REDACTED HEADING]`, `[REDACTED CODE]`, or `[REDACTED CONTENT]`.
+
+### User Context
+
+Permission checking uses `{ is_owner: boolean, user_id: string }` context.
+
+### Processing
+
+1. Parse companion file
+2. Apply rules based on user context
+3. Redact restricted content
+4. Preserve block structure and relationships
 
 ## Implementation
 
-The block system is implemented in JavaScript/Node.js. The core modules are:
+Core modules in `libs-server/blocks/`:
 
-1. `block-schemas.mjs`: Defines block types and schemas
-2. `block-converter.mjs`: Handles conversion between markdown and blocks
-3. `block-store.mjs`: Manages block storage and retrieval
-4. `block-operations.mjs`: High-level operations for working with blocks
-
-For implementation details, refer to the source code in the `libs-server/blocks` directory.
+- `block-schemas.mjs`: Type definitions
+- `block-converter.mjs`: Markdown conversion
+- `block-store.mjs`: Storage operations
+- `block-operations.mjs`: High-level operations
+- `block-permissions.mjs`: Access control

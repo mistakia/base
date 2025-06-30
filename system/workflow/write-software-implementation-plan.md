@@ -63,6 +63,8 @@ After writing and saving the implementation plan, display:
 **Implementation Plan Created**
 
 Path: [base_uri of the updated task or created text entity]
+
 Title: [title of the entity]
+
 Description: [brief description of what the plan covers]
 </output_format>
