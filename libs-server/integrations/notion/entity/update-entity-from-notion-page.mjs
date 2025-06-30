@@ -5,7 +5,10 @@
 import debug from 'debug'
 import { normalize_notion_page } from '../normalize-notion-page.mjs'
 import { normalize_notion_database_item } from '../normalize-notion-database-item.mjs'
-import { get_entity_type_for_database, get_entity_mapping_config } from '../notion-entity-mapper.mjs'
+import {
+  get_entity_type_for_database,
+  get_entity_mapping_config
+} from '../notion-entity-mapper.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { detect_field_changes } from '#libs-server/sync/index.mjs'
 import { format_entity_path_for_notion } from './format-entity-path-for-notion.mjs'
@@ -20,7 +23,12 @@ const log = debug('integrations:notion:entity:update')
  * @param {Object} options - Update options
  * @returns {Object} Update result
  */
-export async function update_entity_from_notion_page(existing_entity, notion_page, database_id = null, options = {}) {
+export async function update_entity_from_notion_page(
+  existing_entity,
+  notion_page,
+  database_id = null,
+  options = {}
+) {
   try {
     log(`Updating entity from Notion page: ${notion_page.id}`)
 
@@ -30,14 +38,20 @@ export async function update_entity_from_notion_page(existing_entity, notion_pag
       // Database item
       const entity_type = get_entity_type_for_database(database_id)
       if (!entity_type) {
-        throw new Error(`No entity type mapping found for database: ${database_id}`)
+        throw new Error(
+          `No entity type mapping found for database: ${database_id}`
+        )
       }
 
       const mapping_config = get_entity_mapping_config(entity_type)
-      normalized_updates = normalize_notion_database_item(notion_page, mapping_config, database_id)
+      normalized_updates = await normalize_notion_database_item(
+        notion_page,
+        mapping_config,
+        database_id
+      )
     } else {
       // Standalone page
-      normalized_updates = normalize_notion_page(notion_page)
+      normalized_updates = await normalize_notion_page(notion_page)
     }
 
     // Detect changes between existing entity and normalized updates
@@ -93,61 +107,8 @@ export async function update_entity_from_notion_page(existing_entity, notion_pag
     return result
   } catch (error) {
     log(`Failed to update entity from Notion page: ${error.message}`)
-    throw new Error(`Failed to update entity from Notion page: ${error.message}`)
-  }
-}
-
-/**
- * Update entity with conflict resolution
- * @param {Object} existing_entity - Existing entity
- * @param {Object} notion_page - Notion page data
- * @param {string} database_id - Database ID
- * @param {Object} conflict_resolution - Conflict resolution strategy
- * @returns {Object} Update result with conflict info
- */
-export async function update_entity_with_conflict_resolution(existing_entity, notion_page, database_id, conflict_resolution = {}) {
-  try {
-    const { strategy = 'notion_wins', fields = {} } = conflict_resolution
-
-    // Detect potential conflicts by comparing timestamps
-    const entity_modified = new Date(existing_entity.updated_at || existing_entity.created_at)
-    const notion_modified = new Date(notion_page.last_edited_time)
-
-    const has_conflict = entity_modified > notion_modified
-
-    if (has_conflict) {
-      log(`Potential conflict detected: entity modified ${entity_modified}, Notion modified ${notion_modified}`)
-
-      switch (strategy) {
-        case 'notion_wins':
-          // Proceed with normal update
-          break
-
-        case 'local_wins':
-          return {
-            entity_id: existing_entity.entity_id,
-            action: 'conflict_skipped',
-            conflict_reason: 'local_entity_newer',
-            entity_modified,
-            notion_modified
-          }
-
-        case 'field_level':
-          // Implement field-level conflict resolution
-          // This would require more sophisticated logic
-          log('Field-level conflict resolution not yet implemented')
-          break
-
-        default:
-          throw new Error(`Unknown conflict resolution strategy: ${strategy}`)
-      }
-    }
-
-    return await update_entity_from_notion_page(existing_entity, notion_page, database_id, {
-      preserve_local_fields: fields.preserve_local
-    })
-  } catch (error) {
-    log(`Failed to update entity with conflict resolution: ${error.message}`)
-    throw error
+    throw new Error(
+      `Failed to update entity from Notion page: ${error.message}`
+    )
   }
 }

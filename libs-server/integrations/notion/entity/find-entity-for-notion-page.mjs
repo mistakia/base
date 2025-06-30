@@ -1,236 +1,292 @@
 /**
- * Find matching entity for Notion page
+ * Find matching entity for Notion page - no fuzzy matching, exact matches only
  */
 
 import debug from 'debug'
-import { Glob } from 'glob'
+import fs from 'fs/promises'
+import path from 'path'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
+import { title_to_safe_filename } from '#libs-server/utils/sanitize-filename.mjs'
 import config from '#config'
 
 const log = debug('integrations:notion:entity:find')
 
 /**
- * Find entity by external ID
- * @param {string} external_id - The external ID to search for
- * @returns {Object|null} Found entity or null
+ * Generate expected entity paths based on normalized entity data
+ * @param {Object} normalized_entity - Normalized entity object
+ * @returns {Object} Object with base_uri and absolute_path
  */
-async function find_entity_by_external_id(external_id) {
-  try {
-    if (!config.user_base_directory) {
-      throw new Error('User base directory not configured')
-    }
+function get_expected_entity_paths(normalized_entity) {
+  const safe_name = title_to_safe_filename(
+    normalized_entity.name || normalized_entity.title
+  )
+  const directory = normalized_entity.type.replace(/_/g, '-')
+  const base_uri = `user:${directory}/${safe_name}.md`
+  const absolute_path = resolve_base_uri_from_registry(base_uri)
 
-    // Search through all markdown files in the user directory
-    const glob = new Glob('**/*.md', {
-      cwd: config.user_base_directory,
-      absolute: true
-    })
-
-    for await (const file_path of glob) {
-      try {
-        const entity = await read_entity_from_filesystem(file_path)
-        if (entity && entity.external_id === external_id) {
-          log(`Found entity with external_id: ${external_id}`)
-          return {
-            ...entity,
-            file_path: file_path.replace(config.user_base_directory + '/', '')
-          }
-        }
-      } catch (error) {
-        // Skip files that can't be parsed as entities
-        continue
-      }
-    }
-
-    return null
-  } catch (error) {
-    log(`Error searching for entity by external_id: ${error.message}`)
-    return null
-  }
+  return { base_uri, absolute_path }
 }
 
 /**
- * Find entity by fuzzy name matching
- * @param {string} name - Name to search for
- * @param {string} entity_type - Entity type to filter by
- * @returns {Object|null} Best matching entity or null
+ * Check if a file has the matching external_id
+ * @param {string} file_path - Absolute path to file
+ * @param {string} target_external_id - External ID to match
+ * @returns {Promise<Object|null>} Entity data if match found, null otherwise
  */
-async function find_entity_by_fuzzy_name(name, entity_type) {
+async function check_file_for_external_id(file_path, target_external_id) {
   try {
-    if (!config.user_base_directory) {
-      throw new Error('User base directory not configured')
-    }
-
-    const candidates = []
-
-    // Search in the appropriate entity type directory
-    const type_dir = entity_type.replace('_', '-')
-    const search_pattern = `${type_dir}/*.md`
-
-    const glob = new Glob(search_pattern, {
-      cwd: config.user_base_directory,
-      absolute: true
+    const result = await read_entity_from_filesystem({
+      absolute_path: file_path
     })
 
-    for await (const file_path of glob) {
-      try {
-        const entity = await read_entity_from_filesystem(file_path)
-        if (entity && entity.type === entity_type) {
-          // Calculate similarity score
-          const similarity = calculate_name_similarity(name, entity.name)
-          if (similarity > 0.7) { // Threshold for considering a match
-            candidates.push({
-              entity,
-              similarity,
-              file_path: file_path.replace(config.user_base_directory + '/', '')
-            })
-          }
-        }
-      } catch (error) {
-        // Skip files that can't be parsed
-        continue
-      }
-    }
-
-    // Return the best match
-    if (candidates.length > 0) {
-      candidates.sort((a, b) => b.similarity - a.similarity)
-      const best_match = candidates[0]
-
-      log(`Found fuzzy match for "${name}": "${best_match.entity.name}" (${best_match.similarity.toFixed(2)})`)
+    if (
+      result.success &&
+      result.entity_properties.external_id === target_external_id
+    ) {
       return {
-        ...best_match.entity,
-        file_path: best_match.file_path,
-        match_confidence: best_match.similarity
+        ...result.entity_properties,
+        content: result.entity_content,
+        absolute_path: file_path
       }
     }
 
     return null
   } catch (error) {
-    log(`Error in fuzzy name search: ${error.message}`)
+    // Skip files that can't be read or parsed
     return null
   }
 }
 
 /**
- * Calculate similarity between two strings (simplified Levenshtein-based)
- * @param {string} str1 - First string
- * @param {string} str2 - Second string
- * @returns {number} Similarity score between 0 and 1
+ * Search all files in a directory for matching external_id
+ * @param {string} directory_path - Directory to search
+ * @param {string} target_external_id - External ID to match
+ * @returns {Promise<Object|null>} Entity data if found, null otherwise
  */
-function calculate_name_similarity(str1, str2) {
-  if (!str1 || !str2) return 0
-
-  const s1 = str1.toLowerCase().trim()
-  const s2 = str2.toLowerCase().trim()
-
-  if (s1 === s2) return 1
-
-  // Simple similarity based on common words and character overlap
-  const words1 = s1.split(/\s+/)
-  const words2 = s2.split(/\s+/)
-
-  let common_words = 0
-  for (const word1 of words1) {
-    if (words2.some(word2 => word2.includes(word1) || word1.includes(word2))) {
-      common_words++
+async function search_directory_for_external_id(
+  directory_path,
+  target_external_id
+) {
+  try {
+    // Check if directory exists
+    try {
+      await fs.access(directory_path)
+    } catch (error) {
+      return null
     }
-  }
 
-  const word_similarity = common_words / Math.max(words1.length, words2.length)
+    const files = await fs.readdir(directory_path)
+    const markdown_files = files.filter((file) => file.endsWith('.md'))
 
-  // Character-based similarity (simplified)
-  const max_length = Math.max(s1.length, s2.length)
-  let common_chars = 0
+    for (const file of markdown_files) {
+      const file_path = path.join(directory_path, file)
+      const entity = await check_file_for_external_id(
+        file_path,
+        target_external_id
+      )
 
-  const shorter = s1.length < s2.length ? s1 : s2
-  const longer = s1.length >= s2.length ? s1 : s2
-
-  for (let i = 0; i < shorter.length; i++) {
-    if (longer.includes(shorter[i])) {
-      common_chars++
+      if (entity) {
+        log(`Found entity with external_id in ${file_path}`)
+        return entity
+      }
     }
+
+    return null
+  } catch (error) {
+    return null
   }
-
-  const char_similarity = common_chars / max_length
-
-  // Combine word and character similarity
-  return (word_similarity * 0.7) + (char_similarity * 0.3)
 }
 
 /**
- * Find entity for a Notion page using multiple strategies
- * @param {string} page_id - Notion page ID
- * @param {string} database_id - Database ID (null for standalone pages)
- * @param {Object} page_data - Notion page data for fuzzy matching
- * @returns {Object|null} Found entity or null
+ * Full scan across all entity directories for matching external_id (last resort)
+ * @param {string} target_external_id - External ID to match
+ * @returns {Promise<Object|null>} Entity data if found, null otherwise
  */
-export async function find_entity_for_notion_page(page_id, database_id = null, page_data = null) {
-  try {
-    log(`Searching for entity matching Notion page: ${page_id}`)
+async function full_scan_for_external_id(target_external_id) {
+  const user_base_directory = config.user_base_directory
 
-    // Strategy 1: Search by external ID
-    const external_id = database_id
-      ? `notion:database:${database_id}:${page_id}`
-      : `notion:page:${page_id}`
+  if (!user_base_directory) {
+    return null
+  }
 
-    let entity = await find_entity_by_external_id(external_id)
+  // Common entity type directories to search
+  const entity_directories = [
+    'text',
+    'task',
+    'workflow',
+    'physical-item',
+    'physical-location',
+    'guideline'
+  ]
+
+  log(`Starting full scan for external_id: ${target_external_id}`)
+
+  for (const dir_name of entity_directories) {
+    const directory_path = path.join(user_base_directory, dir_name)
+    const entity = await search_directory_for_external_id(
+      directory_path,
+      target_external_id
+    )
+
     if (entity) {
-      log(`Found entity by external_id: ${entity.entity_id}`)
-      return {
-        ...entity,
-        match_method: 'external_id',
-        match_confidence: 1.0
+      log(`Found entity via full scan in ${dir_name}/ directory`)
+      return entity
+    }
+  }
+
+  return null
+}
+
+/**
+ * Find entity by exact name matching at expected location
+ * @param {string} name - Name to search for
+ * @param {string} entity_type - Entity type
+ * @returns {Promise<Object|null>} Entity data if found, null otherwise
+ */
+async function find_entity_by_exact_name(name, entity_type) {
+  try {
+    log(`Searching for entity by exact name: ${name} (type: ${entity_type})`)
+
+    // Generate expected path based on name and type
+    const safe_name = title_to_safe_filename(name)
+    const directory = entity_type.replace(/_/g, '-')
+    const base_uri = `user:${directory}/${safe_name}.md`
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+
+    log(`Checking expected path for exact name: ${absolute_path}`)
+
+    try {
+      const result = await read_entity_from_filesystem({ absolute_path })
+
+      if (result.success) {
+        const entity = {
+          ...result.entity_properties,
+          content: result.entity_content,
+          absolute_path
+        }
+
+        // Check if names match exactly
+        if (entity.name === name || entity.title === name) {
+          log(
+            `Found entity by exact name at expected location: ${absolute_path}`
+          )
+          return entity
+        }
       }
+    } catch (error) {
+      // Expected path not found, which is normal
     }
 
-    // Strategy 2: Fuzzy matching by name if page data is provided
-    if (page_data && page_data.properties) {
-      // Extract name/title from page properties
-      let page_name = null
+    return null
+  } catch (error) {
+    log(`Error searching for entity by exact name: ${error.message}`)
+    return null
+  }
+}
 
-      // Look for title property
-      for (const [, prop_data] of Object.entries(page_data.properties)) {
-        if (prop_data.type === 'title' && prop_data.title && prop_data.title.length > 0) {
-          page_name = prop_data.title.map(item => item.plain_text || '').join('')
-          break
-        }
-      }
+/**
+ * Find entity for Notion page using a three-tier exact matching strategy
+ *
+ * This function implements a graduated search approach that prioritizes performance
+ * while ensuring comprehensive coverage. The search strategies are:
+ *
+ * 1. **Expected Location Search**: Fastest - checks the exact path where we expect
+ *    the entity to be based on its title and type. This works when entities follow
+ *    standard naming conventions and haven't been moved.
+ *
+ * 2. **Entity Type Directory Search**: Medium speed - scans all files within the
+ *    appropriate entity type directory (e.g., all files in physical-item/). This
+ *    handles cases where the entity exists but with a different filename than expected.
+ *
+ * 3. **Full Filesystem Scan**: Slowest - searches across all entity directories.
+ *    This is the fallback when entities have been moved to unexpected locations or
+ *    when the entity type mapping is incorrect.
+ *
+ * Each strategy only searches for exact external_id matches - no fuzzy matching is
+ * performed to prevent data corruption from incorrect entity associations.
+ *
+ * @param {string} external_id - Notion external ID (e.g., "notion:page:abc123")
+ * @param {Object} normalized_entity - Normalized entity data from Notion
+ * @returns {Promise<Object|null>} Entity data if found, null otherwise
+ */
+export async function find_entity_for_notion_page(
+  external_id,
+  normalized_entity
+) {
+  try {
+    log(`Finding entity for Notion external_id: ${external_id}`)
 
-      // Look for name-like properties if no title found
-      if (!page_name) {
-        for (const [prop_name, prop_data] of Object.entries(page_data.properties)) {
-          if (prop_name.toLowerCase().includes('name') && prop_data.rich_text) {
-            page_name = prop_data.rich_text.map(item => item.plain_text || '').join('')
-            break
-          }
-        }
-      }
-
-      if (page_name && page_name.trim()) {
-        // Determine entity type for fuzzy search
-        let entity_type = 'text' // Default for standalone pages
-        if (database_id) {
-          const { get_entity_type_for_database } = await import('../notion-entity-mapper.mjs')
-          entity_type = get_entity_type_for_database(database_id) || 'physical_item'
-        }
-
-        entity = await find_entity_by_fuzzy_name(page_name.trim(), entity_type)
-        if (entity) {
-          log(`Found entity by fuzzy name matching: ${entity.entity_id}`)
-          return {
-            ...entity,
-            match_method: 'fuzzy_name',
-            match_confidence: entity.match_confidence
-          }
-        }
-      }
+    if (!external_id) {
+      throw new Error('Missing required parameter: external_id')
     }
 
-    log(`No matching entity found for Notion page: ${page_id}`)
+    if (!normalized_entity) {
+      throw new Error('Missing required parameter: normalized_entity')
+    }
+
+    // Strategy 1: Check expected location based on title/name
+    // This is the fastest approach and works for entities that follow standard naming
+    const expected_paths = get_expected_entity_paths(normalized_entity)
+    log(
+      `Strategy 1 - Checking expected location: ${expected_paths.absolute_path}`
+    )
+
+    const expected_entity = await check_file_for_external_id(
+      expected_paths.absolute_path,
+      external_id
+    )
+    if (expected_entity) {
+      log('Found entity at expected location (Strategy 1 success)')
+      return expected_entity
+    }
+
+    // Strategy 2: Search within the expected entity type directory
+    // This handles cases where the entity exists but with a different filename
+    const entity_type_directory = path.dirname(expected_paths.absolute_path)
+    log(
+      `Strategy 2 - Searching entity type directory: ${entity_type_directory}`
+    )
+
+    const directory_entity = await search_directory_for_external_id(
+      entity_type_directory,
+      external_id
+    )
+    if (directory_entity) {
+      log(
+        `Found entity in type directory (Strategy 2 success): ${entity_type_directory}`
+      )
+      return directory_entity
+    }
+
+    // Strategy 3: Full scan across all entity directories (last resort)
+    // This is the most comprehensive but slowest approach
+    log(
+      `Strategy 3 - Performing full filesystem scan for external_id: ${external_id}`
+    )
+
+    const scanned_entity = await full_scan_for_external_id(external_id)
+    if (scanned_entity) {
+      log('Found entity via full scan (Strategy 3 success)')
+      return scanned_entity
+    }
+
+    log(
+      `No entity found for external_id: ${external_id} (all strategies exhausted)`
+    )
     return null
   } catch (error) {
     log(`Error finding entity for Notion page: ${error.message}`)
-    return null
+    throw error
   }
+}
+
+/**
+ * Find entity by exact name matching (fallback when no external_id match)
+ * @param {string} name - Entity name/title
+ * @param {string} entity_type - Entity type
+ * @returns {Promise<Object|null>} Entity data if found, null otherwise
+ */
+export async function find_entity_by_name_filesystem(name, entity_type) {
+  return await find_entity_by_exact_name(name, entity_type)
 }

@@ -28,7 +28,15 @@ async function get_all_block_children(block_id, notion) {
     // Process each block and recursively get children if they exist
     for (const block of response.results) {
       if (block.has_children) {
-        block.children = await get_all_block_children(block.id, notion)
+        // Skip recursive fetching for child pages and child databases
+        // These should be handled as references, not content merging
+        if (block.type === 'child_page' || block.type === 'child_database') {
+          log(
+            `Skipping recursive fetch for ${block.type} to prevent content merging`
+          )
+        } else {
+          block.children = await get_all_block_children(block.id, notion)
+        }
       }
       blocks.push(block)
     }

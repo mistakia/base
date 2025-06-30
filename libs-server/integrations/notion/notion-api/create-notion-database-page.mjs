@@ -14,7 +14,11 @@ const log = debug('integrations:notion:api:create-database-page')
  * @param {Array} children - Optional content blocks for the page
  * @returns {Object} Created page object
  */
-export async function create_notion_database_page(database_id, properties, children = null) {
+export async function create_notion_database_page(
+  database_id,
+  properties,
+  children = null
+) {
   const notion = get_notion_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
@@ -51,23 +55,29 @@ export async function create_notion_database_page(database_id, properties, child
  * @param {string} content - Markdown content to convert to blocks
  * @returns {Object} Created page object
  */
-export async function create_notion_database_page_with_content(database_id, properties, content) {
+export async function create_notion_database_page_with_content(
+  database_id,
+  properties,
+  content
+) {
   // For now, create without content - we'll implement markdown->blocks conversion later
   // This is a placeholder for future enhancement
-  const children = content ? [
-    {
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: [
-          {
-            type: 'text',
-            text: { content }
+  const children = content
+    ? [
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: { content }
+              }
+            ]
           }
-        ]
-      }
-    }
-  ] : null
+        }
+      ]
+    : null
 
   return await create_notion_database_page(database_id, properties, children)
 }

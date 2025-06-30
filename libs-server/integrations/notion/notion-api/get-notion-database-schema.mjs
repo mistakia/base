@@ -34,7 +34,9 @@ export async function get_notion_database_schema(database_id) {
       url: database.url
     }
 
-    log(`Retrieved schema for database: ${database.title?.[0]?.plain_text || clean_id}`)
+    log(
+      `Retrieved schema for database: ${database.title?.[0]?.plain_text || clean_id}`
+    )
     return schema
   } catch (error) {
     log(`Failed to retrieve database schema: ${error.message}`)
@@ -61,7 +63,10 @@ export async function get_notion_database_property_types(database_id) {
     // Include additional type-specific information
     if (property.type === 'select' && property.select?.options) {
       property_types[name].options = property.select.options
-    } else if (property.type === 'multi_select' && property.multi_select?.options) {
+    } else if (
+      property.type === 'multi_select' &&
+      property.multi_select?.options
+    ) {
       property_types[name].options = property.multi_select.options
     } else if (property.type === 'relation' && property.relation?.database_id) {
       property_types[name].database_id = property.relation.database_id
@@ -77,7 +82,10 @@ export async function get_notion_database_property_types(database_id) {
  * @param {Object} properties - Properties to validate
  * @returns {Object} Validation result with errors
  */
-export async function validate_properties_against_schema(database_id, properties) {
+export async function validate_properties_against_schema(
+  database_id,
+  properties
+) {
   const property_types = await get_notion_database_property_types(database_id)
   const validation_result = {
     valid: true,
@@ -89,7 +97,9 @@ export async function validate_properties_against_schema(database_id, properties
     const schema_property = property_types[prop_name]
 
     if (!schema_property) {
-      validation_result.warnings.push(`Property '${prop_name}' not found in database schema`)
+      validation_result.warnings.push(
+        `Property '${prop_name}' not found in database schema`
+      )
       continue
     }
 

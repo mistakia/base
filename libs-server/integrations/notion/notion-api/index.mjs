@@ -11,9 +11,7 @@ export {
   clean_notion_id
 } from './create-notion-client.mjs'
 
-export {
-  get_notion_page_with_blocks
-} from './get-notion-page-with-blocks.mjs'
+export { get_notion_page_with_blocks } from './get-notion-page-with-blocks.mjs'
 
 export {
   update_notion_page_properties,
@@ -35,3 +33,15 @@ export {
   get_notion_database_property_types,
   validate_properties_against_schema
 } from './get-notion-database-schema.mjs'
+
+export {
+  get_notion_search_results,
+  get_all_notion_search_results
+} from './get-notion-search-results.mjs'
+
+export {
+  get_notion_databases,
+  get_all_notion_databases,
+  get_notion_database_items,
+  get_all_notion_database_items
+} from './get-notion-databases.mjs'

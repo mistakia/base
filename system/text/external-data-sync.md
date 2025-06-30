@@ -37,11 +37,21 @@ Separates raw external responses from normalized internal format to enable:
 
 Local modifications are overwritten by external changes, with additive merging only for tags/labels. This aggressive strategy is viable because local data is version controlled in Git - actual conflict resolution occurs during the commit process, preserving local change history while maintaining external system authority.
 
+### Notion-Specific Design Patterns
+
+**Block-Based Content Architecture**: Notion's hierarchical block system requires specialized conversion logic to preserve formatting and structure when transforming to markdown. The system handles nested blocks, rich text formatting, and embedded content while maintaining semantic meaning.
+
+**Database Property Mapping**: Configuration-driven approach maps Notion database properties to entity fields with type conversion support. Handles complex property types including multi-select, relations, formulas, and rollups through a flexible mapping system.
+
+**Filesystem-Based Entity Matching**: Uses exact external_id matching followed by expected location search to prevent entity corruption. Avoids database queries that could match wrong entities during sync operations.
+
 ## Ossified Specifications
 
 ### External ID Format
 
 - **GitHub Issues**: `github:{owner}/{repo}:{issue_number}`
+- **Notion Pages**: `notion:page:{page_id}`
+- **Notion Database Items**: `notion:database:{database_id}:{page_id}`
 - **Cloudflare DNS**: `cloudflare:dns:{record_id}`
 - Enables cross-system entity identification without collision risk
 
@@ -70,7 +80,16 @@ Import history files use `{timestamp}_{content_id}.json` format where:
 3. **Entity Resolution**: Find existing tasks by external ID or fuzzy matching on title/repository
 4. **Bidirectional Sync**: Update local task from GitHub, optionally push local changes back
 
-## Local-First GitHub Task Creation
+### Notion Integration Process
+
+1. **Content Retrieval**: Fetch pages and database items via Notion API with full block content
+2. **Block Conversion**: Transform Notion's hierarchical block structure to markdown with formatting preservation
+3. **Property Mapping**: Convert database properties to entity fields using configuration-driven mappings
+4. **Entity Resolution**: Find existing entities by external_id with filesystem-based exact matching
+5. **Bidirectional Sync**: Import Notion content to local entities, optionally export entity changes back to Notion
+6. **Safety Controls**: Read-only by default with explicit write enablement and dry-run analysis
+
+## Local-First Entity Creation Patterns
 
 ### Design Pattern
 
@@ -89,3 +108,35 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 - **API Integration**: GitHub Issues REST API for issue creation with title, body, and labels
 - **File Updates**: Atomic addition of `external_id`, `github_number`, `github_id`, and `github_url` fields
 - **Error Handling**: Preserves local state on GitHub API failures; validates required metadata before creation
+
+## Notion Sync Implementation
+
+### Block-to-Markdown Conversion
+
+**Rich Text Preservation**: Maintains all Notion formatting including bold, italic, strikethrough, code, and links through semantic markdown conversion. Handles complex nested structures and preserves intentional spacing.
+
+**Content Structure Mapping**: Converts Notion's block hierarchy to markdown equivalents while preserving semantic meaning. Supports all Notion block types including headings, lists, toggles, callouts, tables, and embedded content.
+
+**Entity Reference Translation**: Converts Notion page references to Base entity reference format (`[[user:type/filename.md]]`) enabling cross-system entity linking.
+
+### Configuration-Driven Property Mapping
+
+**Type Conversion System**: Handles transformation between Notion property types and entity fields with support for:
+- Rich text to markdown content conversion
+- Select properties to enumerated values
+- Multi-select to tag arrays
+- Date properties with timezone handling
+- Number and formula property extraction
+- Relation properties to entity references
+
+**Database Schema Mapping**: Configuration files define which entity types correspond to specific Notion databases, enabling flexible sync relationships without code changes.
+
+### Safety and Reliability Features
+
+**Read-Only Default Mode**: All Notion write operations disabled by default, requiring explicit `--enable-notion-writes` flag to prevent accidental data modification.
+
+**Dry-Run Analysis**: Comprehensive preview mode showing exactly what changes would be made without executing them, including field-level change detection.
+
+**Import History Tracking**: Content-addressed storage of sync operations enables precise change detection and prevents unnecessary updates when external data hasn't changed.
+
+**Filesystem-Based Entity Search**: Exact external_id matching prevents entity corruption that could occur with fuzzy database searches, ensuring sync operations target correct entities.

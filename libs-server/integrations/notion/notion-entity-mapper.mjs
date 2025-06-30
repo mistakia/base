@@ -6,16 +6,18 @@
  */
 
 import debug from 'debug'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 import { readFileSync } from 'fs'
+import { resolve } from 'path'
+
+import config from '#config'
 
 const log = debug('integrations:notion:entity-mapper')
 
-// Get the directory path for loading configuration files
-const current_file_path = fileURLToPath(import.meta.url)
-const current_dir = dirname(current_file_path)
-const config_path = join(current_dir, '../../../../config/notion-entity-mappings.json')
+// Path to user-base notion entity mappings configuration
+const NOTION_ENTITY_MAPPINGS_PATH = resolve(
+  config.user_base_directory,
+  'config/notion-entity-mappings.json'
+)
 
 let _mapping_config = null
 
@@ -29,36 +31,16 @@ function load_mapping_config() {
   }
 
   try {
-    const config_content = readFileSync(config_path, 'utf8')
+    const config_content = readFileSync(NOTION_ENTITY_MAPPINGS_PATH, 'utf8')
     _mapping_config = JSON.parse(config_content)
     log('Loaded Notion entity mappings configuration')
     return _mapping_config
   } catch (error) {
     log(`Failed to load mapping config: ${error.message}`)
 
-    // Return default configuration for physical_item
+    // Return default configuration
     _mapping_config = {
-      physical_item: {
-        database_id: '7078f88d-0299-4f7a-a375-98c759d83f8e',
-        entity_type: 'physical_item',
-        property_mappings: {
-          name: 'item_name',
-          manufacturer: 'manufactured_name',
-          content: 'misc_notes',
-          priority: 'importance',
-          quantity: 'current quantity',
-          target_quantity: 'target quantity',
-          reference_url: 'link',
-          location: 'current_location',
-          usage_frequency: 'frequency_of_use',
-          status: 'exist'
-        },
-        type_conversions: {
-          importance: 'select_to_priority',
-          frequency_of_use: 'select_to_usage_frequency',
-          exist: 'select_to_boolean'
-        }
-      }
+      databases: {}
     }
 
     log('Using default mapping configuration')
@@ -67,13 +49,13 @@ function load_mapping_config() {
 }
 
 /**
- * Get mapping configuration for an entity type
- * @param {string} entity_type - The entity type to get mapping for
+ * Get mapping configuration for a database
+ * @param {string} database_id - The Notion database ID
  * @returns {Object|null} Mapping configuration or null if not found
  */
-export function get_entity_mapping_config(entity_type) {
+export function get_database_mapping_config(database_id) {
   const config = load_mapping_config()
-  return config[entity_type] || null
+  return config.databases?.[database_id] || null
 }
 
 /**
@@ -82,36 +64,36 @@ export function get_entity_mapping_config(entity_type) {
  * @returns {string|null} Entity type or null if not found
  */
 export function get_entity_type_for_database(database_id) {
-  const config = load_mapping_config()
-
-  for (const [entity_type, mapping] of Object.entries(config)) {
-    if (mapping.database_id === database_id) {
-      return entity_type
-    }
-  }
-
-  return null
+  const mapping = get_database_mapping_config(database_id)
+  return mapping?.entity_type || null
 }
 
 /**
- * Get database ID for an entity type
- * @param {string} entity_type - The entity type
- * @returns {string|null} Database ID or null if not found
+ * Get database mapping config from entity's notion_database_id property
+ * @param {Object} entity - Entity object with notion_database_id in frontmatter
+ * @returns {Object|null} Database mapping config or null if not found
  */
-export function get_database_id_for_entity_type(entity_type) {
-  const mapping = get_entity_mapping_config(entity_type)
-  return mapping?.database_id || null
+export function get_database_mapping_config_from_entity(entity) {
+  if (!entity.notion_database_id) {
+    return null
+  }
+
+  return get_database_mapping_config(entity.notion_database_id)
 }
 
 /**
  * Convert entity property to Notion property format
- * @param {string} entity_type - The entity type
+ * @param {string} database_id - The Notion database ID
  * @param {string} entity_field - The entity field name
  * @param {any} value - The value to convert
  * @returns {Object} Notion property object
  */
-export function convert_entity_property_to_notion(entity_type, entity_field, value) {
-  const mapping = get_entity_mapping_config(entity_type)
+export function convert_entity_property_to_notion(
+  database_id,
+  entity_field,
+  value
+) {
+  const mapping = get_database_mapping_config(database_id)
   if (!mapping || !mapping.property_mappings[entity_field]) {
     return null
   }
@@ -201,14 +183,16 @@ export function convert_entity_property_to_notion(entity_type, entity_field, val
 
 /**
  * Convert multiple entity properties to Notion properties format
- * @param {string} entity_type - The entity type
+ * @param {string} database_id - The Notion database ID
  * @param {Object} entity_data - Entity data object
  * @returns {Object} Notion properties object
  */
-export function convert_entity_to_notion_properties(entity_type, entity_data) {
-  const mapping = get_entity_mapping_config(entity_type)
+export function convert_entity_to_notion_properties(database_id, entity_data) {
+  const mapping = get_database_mapping_config(database_id)
   if (!mapping) {
-    throw new Error(`No mapping configuration found for entity type: ${entity_type}`)
+    throw new Error(
+      `No mapping configuration found for database: ${database_id}`
+    )
   }
 
   const notion_properties = {}
@@ -216,7 +200,7 @@ export function convert_entity_to_notion_properties(entity_type, entity_data) {
   for (const [entity_field] of Object.entries(mapping.property_mappings)) {
     if (entity_data[entity_field] !== undefined) {
       const converted_property = convert_entity_property_to_notion(
-        entity_type,
+        database_id,
         entity_field,
         entity_data[entity_field]
       )
@@ -231,12 +215,37 @@ export function convert_entity_to_notion_properties(entity_type, entity_data) {
 }
 
 /**
+ * Convert entity properties to Notion properties using entity's notion_database_id
+ * @param {Object} entity - Entity with notion_database_id property
+ * @returns {Object} Notion properties object
+ */
+export function convert_entity_to_notion_properties_from_entity(entity) {
+  if (!entity.notion_database_id) {
+    throw new Error(
+      `Entity ${entity.entity_id} does not have notion_database_id property`
+    )
+  }
+
+  return convert_entity_to_notion_properties(entity.notion_database_id, entity)
+}
+
+/**
  * Get all configured entity types
- * @returns {Array} Array of entity type names
+ * @returns {Array} Array of unique entity type names
  */
 export function get_configured_entity_types() {
   const config = load_mapping_config()
-  return Object.keys(config)
+  const entity_types = new Set()
+
+  if (config.databases) {
+    for (const mapping of Object.values(config.databases)) {
+      if (mapping.entity_type) {
+        entity_types.add(mapping.entity_type)
+      }
+    }
+  }
+
+  return Array.from(entity_types)
 }
 
 /**
@@ -245,5 +254,5 @@ export function get_configured_entity_types() {
  */
 export function get_configured_database_ids() {
   const config = load_mapping_config()
-  return Object.values(config).map(mapping => mapping.database_id)
+  return config.databases ? Object.keys(config.databases) : []
 }

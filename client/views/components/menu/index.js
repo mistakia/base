@@ -1,5 +1,4 @@
 import { connect } from 'react-redux'
-import { createSelector } from 'reselect'
 
 import { get_app } from '@core/app'
 import {

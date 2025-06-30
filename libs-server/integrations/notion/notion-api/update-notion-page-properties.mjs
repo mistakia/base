@@ -15,7 +15,11 @@ const log = debug('integrations:notion:api:update-page-properties')
  * @param {boolean} options.archived - Whether to archive the page
  * @returns {Object} Updated page object
  */
-export async function update_notion_page_properties(page_id, properties, options = {}) {
+export async function update_notion_page_properties(
+  page_id,
+  properties,
+  options = {}
+) {
   const notion = get_notion_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
@@ -51,7 +55,10 @@ export async function update_notion_page_properties(page_id, properties, options
  * @param {Object} retry_options - Retry configuration
  * @returns {Array} Array of update results
  */
-export async function batch_update_notion_page_properties(updates, retry_options = {}) {
+export async function batch_update_notion_page_properties(
+  updates,
+  retry_options = {}
+) {
   const { max_retries = 3, delay = 1000 } = retry_options
   const results = []
 
@@ -78,7 +85,7 @@ export async function batch_update_notion_page_properties(updates, retry_options
           })
         } else {
           // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, delay * attempts))
+          await new Promise((resolve) => setTimeout(resolve, delay * attempts))
         }
       }
     }

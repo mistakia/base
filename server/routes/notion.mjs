@@ -109,9 +109,9 @@ router.get('/databases', async (req, res) => {
       page_size: 100
     })
 
-    const databases = response.results.map(db => ({
+    const databases = response.results.map((db) => ({
       id: db.id,
-      title: db.title?.map(t => t.plain_text).join('') || 'Untitled',
+      title: db.title?.map((t) => t.plain_text).join('') || 'Untitled',
       url: db.url,
       created_time: db.created_time,
       last_edited_time: db.last_edited_time,

@@ -15,7 +15,11 @@ const log = debug('integrations:notion:api:update-database-page')
  * @param {boolean} options.archived - Whether to archive the page
  * @returns {Object} Updated page object
  */
-export async function update_notion_database_page(page_id, properties, options = {}) {
+export async function update_notion_database_page(
+  page_id,
+  properties,
+  options = {}
+) {
   const notion = get_notion_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
@@ -81,7 +85,9 @@ export async function update_notion_database_page_content(page_id, new_blocks) {
         children: new_blocks
       })
 
-      log(`Successfully updated database page content with ${new_blocks.length} blocks`)
+      log(
+        `Successfully updated database page content with ${new_blocks.length} blocks`
+      )
       return result
     }
 
@@ -89,6 +95,8 @@ export async function update_notion_database_page_content(page_id, new_blocks) {
     return { success: true }
   } catch (error) {
     log(`Failed to update database page content: ${error.message}`)
-    throw new Error(`Failed to update Notion database page content: ${error.message}`)
+    throw new Error(
+      `Failed to update Notion database page content: ${error.message}`
+    )
   }
 }

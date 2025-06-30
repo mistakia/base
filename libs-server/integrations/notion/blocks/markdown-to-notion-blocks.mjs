@@ -201,7 +201,9 @@ export function markdown_to_notion_blocks(markdown, options = {}) {
     return blocks
   } catch (error) {
     log(`Error converting markdown to blocks: ${error.message}`)
-    throw new Error(`Failed to convert markdown to Notion blocks: ${error.message}`)
+    throw new Error(
+      `Failed to convert markdown to Notion blocks: ${error.message}`
+    )
   }
 }
 
