@@ -82,7 +82,7 @@ Each block is represented as a JSON object with the following structure:
 
 ### Common Attributes
 
-- `color`: Block styling (default, gray, brown, orange, yellow, green, blue, purple, pink, red, or _background variants)
+- `color`: Block styling (default, gray, brown, orange, yellow, green, blue, purple, pink, red, or \_background variants)
 - `uri`: External resource reference
 - `caption`: Media/link description
 
@@ -131,7 +131,7 @@ permissions:
     allow: owner
   - heading_level: 3
     allow: owner
-  - block_cids: ["block_cid_1", "block_cid_2"]
+  - block_cids: ['block_cid_1', 'block_cid_2']
     allow: owner
 ```
 

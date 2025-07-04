@@ -122,6 +122,7 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 ### Configuration-Driven Property Mapping
 
 **Type Conversion System**: Handles transformation between Notion property types and entity fields with support for:
+
 - Rich text to markdown content conversion
 - Select properties to enumerated values
 - Multi-select to tag arrays
@@ -140,3 +141,87 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 **Import History Tracking**: Content-addressed storage of sync operations enables precise change detection and prevents unnecessary updates when external data hasn't changed.
 
 **Filesystem-Based Entity Search**: Exact external_id matching prevents entity corruption that could occur with fuzzy database searches, ensuring sync operations target correct entities.
+
+## Import History Management
+
+### CLI Utilities for History Cleanup
+
+The system includes comprehensive tools for managing import history files to prevent unlimited storage growth while maintaining audit trails:
+
+**Cleanup Script**: `scripts/import-history/cleanup-import-history.mjs` provides flexible control over import history retention:
+
+```bash
+# Keep only 5 most recent files for GitHub entities
+node scripts/import-history/cleanup-import-history.mjs --external-system github --keep-count 5
+
+# Preview cleanup for specific entity without making changes
+node scripts/import-history/cleanup-import-history.mjs --entity-id abc123 --dry-run
+
+# Show summary statistics across all systems
+node scripts/import-history/cleanup-import-history.mjs --summary
+
+# List all import history files
+node scripts/import-history/cleanup-import-history.mjs --list
+
+# Clean up all systems keeping default 10 files per entity
+node scripts/import-history/cleanup-import-history.mjs
+```
+
+**Safety Features**:
+
+- Dry-run mode shows planned changes without executing them
+- Confirmation prompts prevent accidental deletions (unless `--force` flag used)
+- Preserves newest files based on timestamp ordering
+- Handles both raw and processed data files independently
+- Automatic cleanup of empty directories after file removal
+
+**Filtering Options**:
+
+- `--external-system`: Target specific sync system (github, notion)
+- `--entity-id`: Process single entity when combined with external-system
+- `--keep-count`: Number of files to retain per entity (default: 10)
+
+**Operational Modes**:
+
+- `--summary`: Display statistics without performing cleanup
+- `--list`: Show detailed file listing for inspection
+- `--dry-run`: Preview changes without deletion
+- `--verbose`: Enable detailed logging for troubleshooting
+
+### Programmatic Access
+
+Import history management is available through the sync module:
+
+```javascript
+import {
+  list_import_history_files,
+  cleanup_import_history_files,
+  get_cleanup_summary
+} from '#libs-server/sync/index.mjs'
+
+// Get summary statistics
+const summary = await get_cleanup_summary({
+  external_system: 'github',
+  keep_count: 5
+})
+
+// List files for specific entity
+const files = await list_import_history_files({
+  external_system: 'notion',
+  entity_id: 'abc123'
+})
+
+// Perform cleanup with dry-run
+const results = await cleanup_import_history_files({
+  external_system: 'github',
+  keep_count: 3,
+  dry_run: true
+})
+```
+
+**Use Cases**:
+
+- Automated maintenance scripts in CI/CD pipelines
+- Monitoring storage usage trends
+- Investigating sync history for specific entities
+- Bulk cleanup operations during system maintenance
