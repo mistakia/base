@@ -122,6 +122,7 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 ### Configuration-Driven Property Mapping
 
 **Type Conversion System**: Handles transformation between Notion property types and entity fields with support for:
+
 - Rich text to markdown content conversion
 - Select properties to enumerated values
 - Multi-select to tag arrays

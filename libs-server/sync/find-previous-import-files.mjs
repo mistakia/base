@@ -46,14 +46,15 @@ export async function find_previous_import_files({
     )
     const raw_data = JSON.parse(fs.readFileSync(raw_filepath, 'utf8'))
 
-    // Check for matching processed file if processed directory exists
+    // Find most recent processed file (regardless of timestamp)
     let processed_filepath = null
     let processed_data = null
     if (fs.existsSync(dir_paths.processed_data_directory)) {
-      const timestamp = latest_raw_file.split('_')[0]
       const processed_files = fs
         .readdirSync(dir_paths.processed_data_directory)
-        .filter((file) => file.startsWith(timestamp) && file.endsWith('.json'))
+        .filter((file) => file.endsWith('.json'))
+        .sort() // Sort by filename (includes timestamp)
+        .reverse() // Most recent first
 
       if (processed_files.length > 0) {
         processed_filepath = path.join(
