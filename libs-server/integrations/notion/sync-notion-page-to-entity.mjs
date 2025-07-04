@@ -147,16 +147,10 @@ export async function sync_notion_page_to_entity(
         }
       }
 
-      // Add the existing entity_id to the normalized entity properties
-      const entity_properties_with_id = {
-        ...normalized_entity,
-        entity_id: existing_entity.entity_id
-      }
-
-      // Use the shared update function
+      // Use the shared update function with clean normalized entity data
       const update_result = await update_entity_from_external_item({
         external_item: notion_page,
-        entity_properties: entity_properties_with_id,
+        entity_properties: normalized_entity,
         entity_type: normalized_entity.type,
         external_system: 'notion',
         external_id,
