@@ -92,16 +92,26 @@ export function has_tool({ tool_name }) {
 }
 
 /**
- * List all registered tools
+ * List registered tools with optional whitelist filtering
  *
+ * @param {Object} [params={}] - Parameters
+ * @param {Array<string>} [params.tool_whitelist] - Array of tool names to include (defaults to all tools)
  * @returns {Array<Object>} Array of tool definitions
  */
-export function list_tools() {
-  return Array.from(tool_registry.values()).map((tool) => ({
+export function list_tools({ tool_whitelist } = {}) {
+  const all_tools = Array.from(tool_registry.values()).map((tool) => ({
     name: tool.name,
     description: tool.description,
     inputSchema: tool.inputSchema
   }))
+
+  // If no whitelist provided or invalid, return all tools
+  if (!tool_whitelist || !Array.isArray(tool_whitelist)) {
+    return all_tools
+  }
+
+  // Filter tools by whitelist
+  return all_tools.filter((tool) => tool_whitelist.includes(tool.name))
 }
 
 /**
