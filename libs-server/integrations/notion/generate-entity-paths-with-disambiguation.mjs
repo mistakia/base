@@ -105,10 +105,51 @@ export async function generate_entity_paths_with_database_disambiguation({
             )
           }
 
-          // Create disambiguated filename
+          // Create disambiguated filename and check for further conflicts
           if (disambiguating_suffix) {
-            safe_name = `${base_safe_name}-${disambiguating_suffix}`
-            log(`Generated disambiguated filename: ${safe_name}`)
+            let candidate_name = `${base_safe_name}-${disambiguating_suffix}`
+            let counter = 1
+
+            // Check if the disambiguated name also conflicts
+            while (true) {
+              const candidate_uri = `user:${directory}/${candidate_name}.md`
+              const candidate_path =
+                resolve_base_uri_from_registry(candidate_uri)
+
+              const candidate_exists = await file_exists_in_filesystem({
+                absolute_path: candidate_path
+              })
+
+              if (!candidate_exists) {
+                // Found a non-conflicting name
+                safe_name = candidate_name
+                log(`Generated disambiguated filename: ${safe_name}`)
+                break
+              }
+
+              // Check if existing file has the same external_id (shouldn't happen, but safety check)
+              const existing_candidate_result =
+                await read_entity_from_filesystem({
+                  absolute_path: candidate_path
+                })
+
+              if (existing_candidate_result.success) {
+                const existing_candidate_external_id =
+                  existing_candidate_result.entity_properties.external_id
+
+                if (existing_candidate_external_id === external_id) {
+                  // Same external_id, this is the same entity
+                  safe_name = candidate_name
+                  log(`Found existing file with same external_id: ${safe_name}`)
+                  break
+                }
+              }
+
+              // Name conflicts, try with counter
+              counter++
+              candidate_name = `${base_safe_name}-${disambiguating_suffix}-${counter}`
+              log(`Name conflict detected, trying: ${candidate_name}`)
+            }
           }
         } else if (existing_external_id === external_id) {
           log('External ID matches existing entity - no conflict')

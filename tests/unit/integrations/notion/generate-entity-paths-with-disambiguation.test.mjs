@@ -309,4 +309,131 @@ describe('Generate Entity Paths with Database Disambiguation', () => {
       'physical-item/legacy-item-home-items.md'
     )
   })
+
+  it('should handle multiple conflicts with iterative disambiguation', async () => {
+    // Create first entity: test-item.md
+    const file1_path = path.join(
+      test_user_directory_info.path,
+      'physical-item',
+      'test-item.md'
+    )
+    await fs.writeFile(
+      file1_path,
+      [
+        '---',
+        'title: test-item',
+        'type: physical_item',
+        'entity_id: first-id',
+        'external_id: notion:database:other-db:page1',
+        '---',
+        'First entity'
+      ].join('\n')
+    )
+
+    // Create second entity: test-item-home-items.md
+    const file2_path = path.join(
+      test_user_directory_info.path,
+      'physical-item',
+      'test-item-home-items.md'
+    )
+    await fs.writeFile(
+      file2_path,
+      [
+        '---',
+        'title: test-item',
+        'type: physical_item',
+        'entity_id: second-id',
+        'external_id: notion:database:7078f88d-0299-4f7a-a375-98c759d83f8e:page2',
+        '---',
+        'Second entity'
+      ].join('\n')
+    )
+
+    // Test third entity - should get test-item-home-items-2.md
+    const entity_properties = {
+      type: 'physical_item',
+      name: 'test-item',
+      title: 'test-item'
+    }
+    const external_id =
+      'notion:database:7078f88d-0299-4f7a-a375-98c759d83f8e:page3'
+    const database_id = '7078f88d-0299-4f7a-a375-98c759d83f8e'
+
+    const result = await generate_entity_paths_with_database_disambiguation({
+      entity_properties,
+      external_id,
+      database_id
+    })
+
+    expect(result.base_uri).to.equal(
+      'user:physical-item/test-item-home-items-2.md'
+    )
+    expect(result.was_disambiguated).to.be.true
+    expect(result.absolute_path).to.include(
+      'physical-item/test-item-home-items-2.md'
+    )
+  })
+
+  it('should handle multiple standalone page conflicts', async () => {
+    // Create text directory
+    await fs.mkdir(path.join(test_user_directory_info.path, 'text'), {
+      recursive: true
+    })
+
+    // Create test-page.md
+    const file1_path = path.join(
+      test_user_directory_info.path,
+      'text',
+      'test-page.md'
+    )
+    await fs.writeFile(
+      file1_path,
+      [
+        '---',
+        'title: test-page',
+        'type: text',
+        'entity_id: first-id',
+        'external_id: notion:page:page1',
+        '---',
+        'First page'
+      ].join('\n')
+    )
+
+    // Create test-page-notion.md
+    const file2_path = path.join(
+      test_user_directory_info.path,
+      'text',
+      'test-page-notion.md'
+    )
+    await fs.writeFile(
+      file2_path,
+      [
+        '---',
+        'title: test-page',
+        'type: text',
+        'entity_id: second-id',
+        'external_id: notion:page:page2',
+        '---',
+        'Second page'
+      ].join('\n')
+    )
+
+    // Test third standalone page - should get test-page-notion-2.md
+    const entity_properties = {
+      type: 'text',
+      name: 'test-page',
+      title: 'test-page'
+    }
+    const external_id = 'notion:page:page3'
+
+    const result = await generate_entity_paths_with_database_disambiguation({
+      entity_properties,
+      external_id,
+      database_id: null
+    })
+
+    expect(result.base_uri).to.equal('user:text/test-page-notion-2.md')
+    expect(result.was_disambiguated).to.be.true
+    expect(result.absolute_path).to.include('text/test-page-notion-2.md')
+  })
 })
