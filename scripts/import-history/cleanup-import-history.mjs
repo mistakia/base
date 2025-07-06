@@ -93,7 +93,8 @@ function format_bytes(bytes) {
  * Display summary statistics
  */
 function display_summary(summary) {
-  console.log('📊 Import History Summary:\n')
+  log('Displaying import history summary')
+  console.log('Import History Summary:\n')
 
   console.log(`Total entities: ${summary.entities_total}`)
   console.log(
@@ -122,7 +123,8 @@ function display_summary(summary) {
  * Display entity list
  */
 function display_entity_list(entities) {
-  console.log(`📋 Import History Entities (${entities.length}):\n`)
+  log(`Displaying entity list with ${entities.length} entities`)
+  console.log(`Import History Entities (${entities.length}):\n`)
 
   // Group by external system
   const by_system = {}
@@ -165,7 +167,8 @@ function display_entity_list(entities) {
  * Display cleanup results
  */
 function display_results(results) {
-  console.log('\n📊 Cleanup Results:')
+  log('Displaying cleanup results')
+  console.log('\nCleanup Results:')
   console.log('─'.repeat(50))
   console.log(`Entities processed: ${results.entities_processed}`)
   console.log(`Raw files deleted: ${results.raw_files_deleted}`)
@@ -174,14 +177,14 @@ function display_results(results) {
   console.log(`Storage freed: ${format_bytes(results.bytes_freed)}`)
 
   if (results.errors.length > 0) {
-    console.log(`\n❌ Errors (${results.errors.length}):`)
+    console.log(`\nErrors (${results.errors.length}):`)
     for (const error of results.errors) {
       console.log(`  ${error}`)
     }
   }
 
   if (argv['dry-run']) {
-    console.log('\n⚠️  This was a dry run. No files were actually deleted.')
+    console.log('\nThis was a dry run. No files were actually deleted.')
   }
 }
 
@@ -194,12 +197,12 @@ async function confirm_cleanup(summary) {
   }
 
   if (summary.files_to_delete === 0) {
-    console.log('\n✅ No files need to be deleted.')
+    console.log('\nNo files need to be deleted.')
     return false
   }
 
   console.log(
-    `\n⚠️  This will delete ${summary.files_to_delete} files and free ${format_bytes(summary.bytes_to_free)} of storage.`
+    `\nThis will delete ${summary.files_to_delete} files and free ${format_bytes(summary.bytes_to_free)} of storage.`
   )
 
   if (!argv['dry-run']) {
@@ -221,18 +224,18 @@ async function confirm_cleanup(summary) {
 function validate_arguments() {
   if (argv['entity-id'] && !argv['external-system']) {
     console.error(
-      '❌ Error: --entity-id requires --external-system to be specified'
+      'Error: --entity-id requires --external-system to be specified'
     )
     process.exit(1)
   }
 
   if (argv['keep-count'] < 0) {
-    console.error('❌ Error: --keep-count must be a non-negative number')
+    console.error('Error: --keep-count must be a non-negative number')
     process.exit(1)
   }
 
   if (argv.summary && argv.list) {
-    console.error('❌ Error: Cannot use both --summary and --list options')
+    console.error('Error: Cannot use both --summary and --list options')
     process.exit(1)
   }
 }
@@ -242,6 +245,7 @@ function validate_arguments() {
  */
 async function main() {
   try {
+    log('Starting import history cleanup script')
     validate_arguments()
 
     const options = {
@@ -253,10 +257,12 @@ async function main() {
         : null
     }
 
-    console.log('🔍 Analyzing import history...')
+    log('Analyzing import history with options:', options)
+    console.log('Analyzing import history...')
 
     if (argv.list) {
       // List entities and their import files
+      log('Listing import history files')
       const entities = await list_import_history_files(options)
       display_entity_list(entities)
       return
@@ -264,24 +270,28 @@ async function main() {
 
     if (argv.summary) {
       // Show summary statistics only
+      log('Showing summary statistics only')
       const summary = await get_cleanup_summary(options)
       display_summary(summary)
       return
     }
 
     // Get summary for confirmation
+    log('Getting cleanup summary for confirmation')
     const summary = await get_cleanup_summary(options)
     display_summary(summary)
 
     // Confirm cleanup
     const confirmed = await confirm_cleanup(summary)
     if (!confirmed) {
-      console.log('\n❌ Cleanup cancelled.')
+      log('Cleanup cancelled by user')
+      console.log('\nCleanup cancelled.')
       return
     }
 
     // Perform cleanup
-    console.log('\n🗑️  Cleaning up import history files...')
+    log('Performing cleanup with dry_run:', argv['dry-run'])
+    console.log('\nCleaning up import history files...')
     const results = await cleanup_import_history_files({
       ...options,
       dry_run: argv['dry-run']
@@ -291,10 +301,12 @@ async function main() {
     display_results(results)
 
     if (results.total_files_deleted > 0 && !argv['dry-run']) {
-      console.log('\n✅ Cleanup completed successfully!')
+      log('Cleanup completed successfully')
+      console.log('\nCleanup completed successfully!')
     }
   } catch (error) {
-    console.error('\n❌ Error during cleanup:', error.message)
+    log('Error during cleanup:', error.message)
+    console.error('\nError during cleanup:', error.message)
     if (argv.verbose) {
       console.error(error.stack)
     }

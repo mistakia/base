@@ -10,6 +10,7 @@ import {
   normalize_spacing
 } from './block-transition-rules.mjs'
 import { store_file_with_content_identifier } from '#libs-server/utils/store-file-with-content-identifier.mjs'
+import { sanitize_for_filename } from '#libs-server/utils/sanitize-filename.mjs'
 
 const log = debug('integrations:notion:blocks:to-markdown')
 
@@ -337,12 +338,11 @@ async function convert_block_to_markdown(
       if (block.child_page?.title) {
         // Convert child page title to proper base-uri format for knowledge base linking
         // Format: user:text/filename.md (following RFC 3986)
-        const safe_name = block.child_page.title
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Remove multiple consecutive hyphens
-          .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+        // Use shared sanitization function for consistency with main entity path generation
+        const safe_name = sanitize_for_filename(block.child_page.title, {
+          maxLength: 100,
+          fallback: 'untitled-child-page'
+        })
 
         const base_uri = `user:text/${safe_name}.md`
         markdown += `${indent}[[${base_uri}]]\n\n`

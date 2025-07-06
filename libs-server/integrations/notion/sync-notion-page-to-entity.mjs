@@ -12,42 +12,10 @@ import {
 } from './notion-entity-mapper.mjs'
 import { update_entity_from_external_item } from '#libs-server/sync/index.mjs'
 import { create_entity_from_external_item } from '#libs-server/entity/index.mjs'
-import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
-import { sanitize_for_filename } from '#libs-server/utils/sanitize-filename.mjs'
-import {
-  find_entity_for_notion_page,
-  find_entity_by_name_filesystem
-} from './entity/find-entity-for-notion-page.mjs'
+import { generate_entity_paths_with_database_disambiguation } from './generate-entity-paths-with-disambiguation.mjs'
+import { find_entity_for_notion_page } from './entity/find-entity-for-notion-page.mjs'
 
 const log = debug('integrations:notion:sync-page-to-entity')
-
-/**
- * Generate entity base URI and resolve to absolute path
- * @param {Object} entity - Entity object
- * @returns {Object} Object with base_uri and absolute_path
- */
-function generate_entity_paths(entity) {
-  // Convert title to filename-safe format using shared utility
-  const safe_name = sanitize_for_filename(
-    entity.title || entity.name || 'untitled',
-    {
-      maxLength: 100,
-      fallback: 'untitled'
-    }
-  )
-
-  // Use entity type for directory - convert underscores to hyphens for consistency
-  const directory = entity.type.replace(/_/g, '-')
-
-  // Create base URI following RFC 3986 format with user: scheme
-  // Format: user:directory/filename.md
-  const base_uri = `user:${directory}/${safe_name}.md`
-
-  // Resolve to absolute path using the registry
-  const absolute_path = resolve_base_uri_from_registry(base_uri)
-
-  return { base_uri, absolute_path }
-}
 
 /**
  * Sync a Notion page to a local entity
@@ -96,25 +64,18 @@ export async function sync_notion_page_to_entity(
     }
 
     // Check if entity already exists by external_id using filesystem search
-    let existing_entity = await find_entity_for_notion_page(
+    // STRICT ENFORCEMENT: Only match by external_id - no fallback to name matching
+    const existing_entity = await find_entity_for_notion_page(
       external_id,
       normalized_entity
     )
 
-    // If not found by external_id, try searching by name/title as fallback
-    if (!existing_entity) {
-      existing_entity = await find_entity_by_name_filesystem(
-        normalized_entity.name || normalized_entity.title,
-        normalized_entity.type
+    if (existing_entity) {
+      log(`Found existing entity by external_id: ${existing_entity.entity_id}`)
+    } else {
+      log(
+        `No existing entity found for external_id: ${external_id} - will create new entity`
       )
-
-      if (existing_entity) {
-        log(
-          `Found existing entity by name match, will update external_id: ${existing_entity.entity_id}`
-        )
-        // Update the entity to include the external_id for future syncs
-        existing_entity.external_id = external_id
-      }
     }
 
     let sync_result
@@ -123,10 +84,15 @@ export async function sync_notion_page_to_entity(
       log(`Updating existing entity: ${existing_entity.entity_id}`)
 
       // Generate new paths for the updated entity
-      const { base_uri, absolute_path } = generate_entity_paths({
-        ...normalized_entity,
-        entity_id: existing_entity.entity_id
-      })
+      const { base_uri, absolute_path } =
+        await generate_entity_paths_with_database_disambiguation({
+          entity_properties: {
+            ...normalized_entity,
+            entity_id: existing_entity.entity_id
+          },
+          external_id,
+          database_id
+        })
 
       // Check if the file path has changed (e.g., due to title change)
       const old_path = existing_entity.absolute_path
@@ -174,7 +140,11 @@ export async function sync_notion_page_to_entity(
 
       // Generate paths for the new entity
       const { base_uri, absolute_path } =
-        generate_entity_paths(normalized_entity)
+        await generate_entity_paths_with_database_disambiguation({
+          entity_properties: normalized_entity,
+          external_id,
+          database_id
+        })
 
       // Use the shared create function
       const create_result = await create_entity_from_external_item({
@@ -206,45 +176,5 @@ export async function sync_notion_page_to_entity(
   } catch (error) {
     log(`Failed to sync Notion page to entity: ${error.message}`)
     throw new Error(`Failed to sync Notion page to entity: ${error.message}`)
-  }
-}
-
-/**
- * Find the base-uri for a child page reference
- * @param {string} title - Child page title
- * @returns {string} Base URI for the child page
- */
-export async function find_child_page_base_uri(title) {
-  try {
-    // First try to find an existing entity with this title using filesystem search
-    const existing_entity = await find_entity_by_name_filesystem(title, 'text')
-
-    if (existing_entity && existing_entity.base_uri) {
-      log(
-        `Found existing entity for child page "${title}": ${existing_entity.base_uri}`
-      )
-      return existing_entity.base_uri
-    }
-
-    // If not found, generate the expected base-uri format using shared sanitization
-    const safe_name = sanitize_for_filename(title, {
-      maxLength: 100,
-      fallback: 'untitled'
-    })
-
-    const expected_base_uri = `user:text/${safe_name}.md`
-    log(
-      `Generated expected base-uri for child page "${title}": ${expected_base_uri}`
-    )
-    return expected_base_uri
-  } catch (error) {
-    log(`Error finding child page base-uri for "${title}": ${error.message}`)
-    // Fallback to generated format using shared sanitization
-    const safe_name = sanitize_for_filename(title, {
-      maxLength: 100,
-      fallback: 'untitled'
-    })
-
-    return `user:text/${safe_name}.md`
   }
 }

@@ -7,7 +7,7 @@ import { normalize_notion_page } from '../normalize-notion-page.mjs'
 import { normalize_notion_database_item } from '../normalize-notion-database-item.mjs'
 import {
   get_entity_type_for_database,
-  get_entity_mapping_config
+  get_database_mapping_config
 } from '../notion-entity-mapper.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { detect_field_changes } from '#libs-server/sync/index.mjs'
@@ -43,7 +43,7 @@ export async function update_entity_from_notion_page(
         )
       }
 
-      const mapping_config = get_entity_mapping_config(entity_type)
+      const mapping_config = get_database_mapping_config(database_id)
       normalized_updates = await normalize_notion_database_item(
         notion_page,
         mapping_config,

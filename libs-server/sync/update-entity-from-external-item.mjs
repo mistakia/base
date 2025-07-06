@@ -84,6 +84,25 @@ export async function update_entity_from_external_item({
     const existing_entity_properties = entity_result.entity_properties
     const entity_id = existing_entity_properties.entity_id
 
+    // CRITICAL: Validate external_id immutability
+    // The external_id is the source of truth and must never be changed
+    if (
+      existing_entity_properties.external_id &&
+      existing_entity_properties.external_id !== external_id
+    ) {
+      const error_message = [
+        'External ID immutability violation detected.',
+        `Entity ${entity_id} at ${absolute_path}`,
+        `has external_id "${existing_entity_properties.external_id}"`,
+        `but sync attempted to update it with "${external_id}".`,
+        'This indicates incorrect entity matching - entities should only be',
+        'updated by their original external source.'
+      ].join(' ')
+
+      log(error_message)
+      throw new Error(error_message)
+    }
+
     const previous_import = await find_previous_import_files({
       external_system,
       entity_id,
