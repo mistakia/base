@@ -66,18 +66,6 @@ Universal tools are available to all threads and provide core system functionali
 
 - `entity_create` - Create new entities
 
-**Notion Tools**:
-
-- `notion_search` - Search Notion content
-- `notion_list_databases` - List available databases
-- `notion_get_page` - Retrieve page content
-- `notion_get_database` - Get database structure
-- `notion_query_database` - Query database records
-- `notion_create_page` - Create new pages
-- `notion_update_page` - Update existing pages
-- `notion_get_block_children` - Get child blocks
-- `notion_append_block_children` - Add child blocks
-
 ### Workflow-Defined Tools
 
 Workflows can define custom tools that are registered dynamically when a thread begins executing the workflow. These tools serve as completion signals for workflow execution.
