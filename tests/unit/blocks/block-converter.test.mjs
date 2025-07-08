@@ -10,6 +10,7 @@ import {
   compute_cid,
   BLOCK_TYPES
 } from '#libs-server/blocks/index.mjs'
+import { build_ast_from_blocks } from '#libs-server/blocks/block-converter.mjs'
 
 describe('Block Converter', () => {
   let temp_dir
@@ -506,6 +507,139 @@ Final paragraph.`
       expect(converted_markdown).to.include('## Level 2')
       expect(converted_markdown).to.include('### Level 3')
       expect(converted_markdown).to.include('#### Level 4')
+    })
+  })
+
+  describe('build_ast_from_blocks', () => {
+    it('should handle circular references with warning', async () => {
+      // Create blocks with circular references
+      const circular_blocks = {
+        block_a: {
+          block_cid: 'block_a',
+          type: 'paragraph',
+          content: 'Block A',
+          attributes: {},
+          relationships: {
+            children: ['block_b'],
+            parent: 'block_c'
+          }
+        },
+        block_b: {
+          block_cid: 'block_b',
+          type: 'paragraph',
+          content: 'Block B',
+          attributes: {},
+          relationships: {
+            children: ['block_c'],
+            parent: 'block_a'
+          }
+        },
+        block_c: {
+          block_cid: 'block_c',
+          type: 'paragraph',
+          content: 'Block C',
+          attributes: {},
+          relationships: {
+            children: ['block_a'],
+            parent: 'block_b'
+          }
+        }
+      }
+
+      // Capture console.warn calls
+      const original_warn = console.warn
+      const warn_calls = []
+      console.warn = (...args) => {
+        warn_calls.push(args.join(' '))
+      }
+
+      try {
+        // Create a parent AST node
+        const parent_node = {
+          type: 'root',
+          children: []
+        }
+
+        // This should not crash and should warn about circular references
+        await build_ast_from_blocks({
+          block: circular_blocks.block_a,
+          all_blocks: circular_blocks,
+          parent_node
+        })
+
+        // Check that warning was logged
+        expect(warn_calls.length).to.be.greaterThan(0)
+        expect(
+          warn_calls.some((call) =>
+            call.includes('Circular reference detected')
+          )
+        ).to.be.true
+        expect(warn_calls.some((call) => call.includes('block_a'))).to.be.true
+      } finally {
+        // Restore console.warn
+        console.warn = original_warn
+      }
+    })
+
+    it('should process normal block hierarchies without warnings', async () => {
+      // Create normal tree structure
+      const normal_blocks = {
+        root: {
+          block_cid: 'root',
+          type: 'paragraph',
+          content: 'Root',
+          attributes: {},
+          relationships: {
+            children: ['child1', 'child2'],
+            parent: ''
+          }
+        },
+        child1: {
+          block_cid: 'child1',
+          type: 'paragraph',
+          content: 'Child 1',
+          attributes: {},
+          relationships: {
+            children: [],
+            parent: 'root'
+          }
+        },
+        child2: {
+          block_cid: 'child2',
+          type: 'paragraph',
+          content: 'Child 2',
+          attributes: {},
+          relationships: {
+            children: [],
+            parent: 'root'
+          }
+        }
+      }
+
+      // Capture console.warn calls
+      const original_warn = console.warn
+      const warn_calls = []
+      console.warn = (...args) => {
+        warn_calls.push(args.join(' '))
+      }
+
+      try {
+        const parent_node = {
+          type: 'root',
+          children: []
+        }
+
+        await build_ast_from_blocks({
+          block: normal_blocks.root,
+          all_blocks: normal_blocks,
+          parent_node
+        })
+
+        // Should not have any warnings for normal structure
+        expect(warn_calls.length).to.equal(0)
+      } finally {
+        console.warn = original_warn
+      }
     })
   })
 

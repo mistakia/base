@@ -8,7 +8,7 @@ import { notion_blocks_to_markdown } from '../../../libs-server/integrations/not
 
 describe('Notion blocks to markdown conversion', () => {
   describe('Block transition spacing', () => {
-    it('to-do list followed by heading should have proper spacing', () => {
+    it('to-do list followed by heading should have proper spacing', async () => {
       const blocks = [
         {
           id: 'todo-1',
@@ -35,7 +35,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // What we want (proper spacing with the fix)
       const expectedFixed = `- [ ] Complete first task
@@ -47,7 +47,7 @@ describe('Notion blocks to markdown conversion', () => {
       expect(result.trim()).to.equal(expectedFixed)
     })
 
-    it('bulleted list followed by heading should have proper spacing', () => {
+    it('bulleted list followed by heading should have proper spacing', async () => {
       const blocks = [
         {
           id: 'list-1',
@@ -72,7 +72,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // Fixed output with proper spacing
       const lines = result.split('\n')
@@ -84,7 +84,7 @@ describe('Notion blocks to markdown conversion', () => {
       ])
     })
 
-    it('toggle close followed by any block should have proper spacing', () => {
+    it('toggle close followed by any block should have proper spacing', async () => {
       const blocks = [
         {
           id: 'toggle-1',
@@ -111,7 +111,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // Should have proper spacing after toggle closes
       expect(result).to.contain(
@@ -119,7 +119,7 @@ describe('Notion blocks to markdown conversion', () => {
       )
     })
 
-    it('nested lists with varying depths should handle transitions properly', () => {
+    it('nested lists with varying depths should handle transitions properly', async () => {
       const blocks = [
         {
           id: 'list-1',
@@ -146,7 +146,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // Should handle proper indentation
       const lines = result.split('\n').filter((line) => line.trim())
@@ -157,7 +157,7 @@ describe('Notion blocks to markdown conversion', () => {
       ])
     })
 
-    it('empty paragraphs for intentional spacing should be preserved', () => {
+    it('empty paragraphs for intentional spacing should be preserved', async () => {
       const blocks = [
         {
           id: 'para-1',
@@ -182,7 +182,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // Should preserve intentional spacing from empty paragraph (3 newlines total)
       expect(result).to.contain(
@@ -190,7 +190,7 @@ describe('Notion blocks to markdown conversion', () => {
       )
     })
 
-    it('mixed block types in sequence should have consistent spacing', () => {
+    it('mixed block types in sequence should have consistent spacing', async () => {
       const blocks = [
         {
           id: 'para-1',
@@ -231,7 +231,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // All blocks should have consistent spacing
       const sections = result.split('\n\n').filter((section) => section.trim())
@@ -240,7 +240,7 @@ describe('Notion blocks to markdown conversion', () => {
   })
 
   describe('Rich text formatting preservation', () => {
-    it('should preserve bold, italic, and other formatting in block transitions', () => {
+    it('should preserve bold, italic, and other formatting in block transitions', async () => {
       const blocks = [
         {
           id: 'todo-formatted',
@@ -266,7 +266,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks, {
+      const result = await notion_blocks_to_markdown(blocks, {
         preserve_formatting: true
       })
 
@@ -276,7 +276,7 @@ describe('Notion blocks to markdown conversion', () => {
   })
 
   describe('Real-world scenarios', () => {
-    it('task list followed by status update (common pattern)', () => {
+    it('task list followed by status update (common pattern)', async () => {
       const blocks = [
         {
           id: 'task-1',
@@ -320,7 +320,7 @@ describe('Notion blocks to markdown conversion', () => {
         }
       ]
 
-      const result = notion_blocks_to_markdown(blocks)
+      const result = await notion_blocks_to_markdown(blocks)
 
       // This should be properly formatted with appropriate spacing
       const lines = result.split('\n')

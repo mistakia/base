@@ -90,7 +90,6 @@ router.patch('/:id/status', async (req, res) => {
 
     res.status(200).json(updated_cr)
   } catch (error) {
-    console.log(error)
     log(error)
     if (
       error.message.includes('Invalid status') ||

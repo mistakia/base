@@ -292,8 +292,25 @@ function create_ast_node_from_block(block) {
  * @param {Object} options.block - The current block
  * @param {Object} options.all_blocks - Map of all blocks by CID
  * @param {Object} options.parent_node - The parent AST node
+ * @param {Set} options.visited - Set to track visited blocks to prevent cycles
  */
-async function build_ast_from_blocks({ block, all_blocks, parent_node }) {
+export async function build_ast_from_blocks({
+  block,
+  all_blocks,
+  parent_node,
+  visited = new Set()
+}) {
+  // Prevent infinite recursion by checking if we've already processed this block
+  if (visited.has(block.block_cid)) {
+    console.warn(
+      `Circular reference detected in block hierarchy: block ${block.block_cid} already visited`
+    )
+    return
+  }
+
+  // Add current block to visited set
+  visited.add(block.block_cid)
+
   // Skip document blocks for AST construction
   if (block.type === BLOCK_TYPES.MARKDOWN_FILE) {
     // Process all children of document
@@ -304,7 +321,8 @@ async function build_ast_from_blocks({ block, all_blocks, parent_node }) {
         await build_ast_from_blocks({
           block: child_block,
           all_blocks,
-          parent_node
+          parent_node,
+          visited
         })
       }
     }
@@ -329,7 +347,8 @@ async function build_ast_from_blocks({ block, all_blocks, parent_node }) {
           await build_ast_from_blocks({
             block: child_block,
             all_blocks,
-            parent_node: node
+            parent_node: node,
+            visited
           })
         }
       }
@@ -448,7 +467,8 @@ export async function blocks_to_markdown({ document, blocks }) {
   await build_ast_from_blocks({
     block: document,
     all_blocks: blocks,
-    parent_node: ast
+    parent_node: ast,
+    visited: new Set()
   })
 
   // Convert AST to markdown
