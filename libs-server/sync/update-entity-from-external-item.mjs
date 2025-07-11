@@ -15,6 +15,7 @@ const log = debug('sync:update-external')
  * @param {Object} options - Function options
  * @param {Object} options.external_item - The external item data
  * @param {Object} options.entity_properties - The normalized entity properties
+ * @param {string} [options.entity_content] - The content for the markdown body (optional)
  * @param {string} options.entity_type - Type of entity to update
  * @param {string} options.external_system - The external system identifier
  * @param {string} options.external_id - External identifier for the item
@@ -29,6 +30,7 @@ const log = debug('sync:update-external')
 export async function update_entity_from_external_item({
   external_item,
   entity_properties,
+  entity_content = null,
   entity_type,
   external_system,
   external_id,
@@ -71,17 +73,17 @@ export async function update_entity_from_external_item({
     }
 
     // Read the existing entity
-    const entity_result = await read_entity_from_filesystem({
+    const existing_entity_result = await read_entity_from_filesystem({
       absolute_path
     })
 
-    if (!entity_result.success) {
+    if (!existing_entity_result.success) {
       throw new Error(
-        `Failed to read ${entity_type} file at ${absolute_path}: ${entity_result.error}`
+        `Failed to read ${entity_type} file at ${absolute_path}: ${existing_entity_result.error}`
       )
     }
 
-    const existing_entity_properties = entity_result.entity_properties
+    const existing_entity_properties = existing_entity_result.entity_properties
     const entity_id = existing_entity_properties.entity_id
 
     // CRITICAL: Validate external_id immutability
@@ -178,7 +180,7 @@ export async function update_entity_from_external_item({
         entity_properties: merged_properties,
         entity_type,
         absolute_path,
-        entity_content: entity_result.entity_content
+        entity_content: entity_content || existing_entity_result.entity_content
       })
     }
 

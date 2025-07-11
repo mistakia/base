@@ -22,7 +22,7 @@ properties:
     description: Custom URL path (auto-generated if omitted)
   - name: description
     type: string
-    required: true
+    required: false
     description: Short description of the content
   - name: user_id
     type: string

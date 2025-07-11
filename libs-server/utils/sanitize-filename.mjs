@@ -24,7 +24,8 @@ export function sanitize_for_filename(input, options = {}) {
   const sanitized = input
     .toLowerCase()
     .trim()
-    .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+    .replace(/\//g, '-') // Replace forward slashes with hyphens
+    .replace(/[<>:"|\\?*]/g, '') // Remove other invalid filename characters
     .replace(/[^\w\s-]/g, '') // Keep only word characters, spaces, and hyphens
     .replace(/_/g, '-') // Convert underscores to hyphens
     .replace(/\s+/g, '-') // Replace spaces with hyphens

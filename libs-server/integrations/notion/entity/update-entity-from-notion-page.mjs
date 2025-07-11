@@ -32,7 +32,8 @@ export async function update_entity_from_notion_page(
   try {
     log(`Updating entity from Notion page: ${notion_page.id}`)
 
-    let normalized_updates
+    let entity_properties
+    let entity_content
 
     if (database_id) {
       // Database item
@@ -44,18 +45,22 @@ export async function update_entity_from_notion_page(
       }
 
       const mapping_config = get_database_mapping_config(database_id)
-      normalized_updates = await normalize_notion_database_item(
+      const normalized_result = await normalize_notion_database_item(
         notion_page,
         mapping_config,
         database_id
       )
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     } else {
       // Standalone page
-      normalized_updates = await normalize_notion_page(notion_page)
+      const normalized_result = await normalize_notion_page(notion_page)
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     }
 
     // Detect changes between existing entity and normalized updates
-    const changes = detect_field_changes(existing_entity, normalized_updates)
+    const changes = detect_field_changes(existing_entity, entity_properties)
 
     if (!changes || Object.keys(changes).length === 0) {
       log('No changes detected - skipping update')
@@ -69,7 +74,7 @@ export async function update_entity_from_notion_page(
     // Merge updates while preserving important existing fields
     const updated_entity = {
       ...existing_entity,
-      ...normalized_updates,
+      ...entity_properties,
       entity_id: existing_entity.entity_id, // Preserve original entity ID
       type: existing_entity.type, // Preserve original type
       created_at: existing_entity.created_at, // Preserve creation time
@@ -89,7 +94,12 @@ export async function update_entity_from_notion_page(
     const file_path = format_entity_path_for_notion(updated_entity)
 
     // Write updated entity to filesystem
-    await write_entity_to_filesystem(updated_entity, file_path)
+    await write_entity_to_filesystem({
+      absolute_path: file_path,
+      entity_properties: updated_entity,
+      entity_type: updated_entity.type,
+      entity_content: entity_content || ''
+    })
 
     const result = {
       entity_id: updated_entity.entity_id,

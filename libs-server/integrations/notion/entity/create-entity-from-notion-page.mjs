@@ -27,7 +27,8 @@ export async function create_entity_from_notion_page(
   try {
     log(`Creating entity from Notion page: ${notion_page.id}`)
 
-    let normalized_entity
+    let entity_properties
+    let entity_content
 
     if (database_id) {
       // Database item
@@ -39,33 +40,37 @@ export async function create_entity_from_notion_page(
       }
 
       const mapping_config = get_database_mapping_config(database_id)
-      normalized_entity = await normalize_notion_database_item(
+      const normalized_result = await normalize_notion_database_item(
         notion_page,
         mapping_config,
         database_id
       )
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     } else {
       // Standalone page
-      normalized_entity = await normalize_notion_page(notion_page)
+      const normalized_result = await normalize_notion_page(notion_page)
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     }
 
     // Generate file path for the entity
-    const file_path = format_entity_path_for_notion(normalized_entity)
+    const file_path = format_entity_path_for_notion(entity_properties)
 
     // Write entity to filesystem
     await write_entity_to_filesystem({
       absolute_path: file_path,
-      entity_properties: normalized_entity,
-      entity_type: normalized_entity.type,
-      entity_content: normalized_entity.content || ''
+      entity_properties,
+      entity_type: entity_properties.type,
+      entity_content: entity_content || ''
     })
 
     const result = {
-      entity_id: normalized_entity.entity_id,
-      entity_type: normalized_entity.type,
-      name: normalized_entity.name,
+      entity_id: entity_properties.entity_id,
+      entity_type: entity_properties.type,
+      name: entity_properties.name,
       file_path,
-      external_id: normalized_entity.external_id,
+      external_id: entity_properties.external_id,
       created_at: new Date().toISOString()
     }
 

@@ -74,7 +74,9 @@ export async function convert_blocks_to_markdown(blocks, options = {}) {
  * Create base entity structure common to all Notion entities
  * @param {Object} notion_page - Notion page object
  * @param {Object} params - Entity parameters
- * @returns {Object} Base entity structure
+ * @returns {Object} Object with entity_properties and entity_content
+ * @returns {Object} return.entity_properties - Entity properties for frontmatter
+ * @returns {string} return.entity_content - Entity content for markdown body
  */
 export function create_base_entity_structure(notion_page, params) {
   const {
@@ -87,11 +89,10 @@ export function create_base_entity_structure(notion_page, params) {
     additional_properties = {}
   } = params
 
-  return {
+  const entity_properties = {
     type: entity_type,
     name: name || 'Untitled',
     title: title || name || 'Untitled',
-    content: content || '',
     external_id,
     created_at: notion_page.created_time || new Date().toISOString(),
     updated_at: notion_page.last_edited_time || new Date().toISOString(),
@@ -109,6 +110,12 @@ export function create_base_entity_structure(notion_page, params) {
       archived: notion_page.archived || false,
       properties: notion_page.properties || {}
     }
+  }
+
+  // Return separate entity properties and content
+  return {
+    entity_properties,
+    entity_content: content || ''
   }
 }
 

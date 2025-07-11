@@ -112,7 +112,7 @@ describe('Entity Content Formatting', () => {
         })
       ).to.throw('Entity title is required')
 
-      // Missing description
+      // Missing entity_id
       expect(() =>
         format_entity_properties_to_frontmatter({
           entity_properties: {
@@ -121,7 +121,7 @@ describe('Entity Content Formatting', () => {
           },
           entity_type: 'test'
         })
-      ).to.throw('Entity description is required')
+      ).to.throw('Entity entity_id is required')
 
       // Missing user_id
       expect(() =>

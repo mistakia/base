@@ -35,7 +35,8 @@ export async function sync_notion_page_to_entity(
     // Get the full page with blocks
     const notion_page = await get_notion_page_with_blocks(page_id)
 
-    let normalized_entity
+    let entity_properties
+    let entity_content
     let external_id
 
     if (database_id) {
@@ -51,23 +52,30 @@ export async function sync_notion_page_to_entity(
       }
 
       const mapping_config = get_database_mapping_config(database_id)
-      normalized_entity = await normalize_notion_database_item(
+      const normalized_result = await normalize_notion_database_item(
         notion_page,
         mapping_config,
         database_id,
         options
       )
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     } else {
       // This is a standalone page
       external_id = `notion:page:${page_id}`
-      normalized_entity = await normalize_notion_page(notion_page, options)
+      const normalized_result = await normalize_notion_page(
+        notion_page,
+        options
+      )
+      entity_properties = normalized_result.entity_properties
+      entity_content = normalized_result.entity_content
     }
 
     // Check if entity already exists by external_id using filesystem search
     // STRICT ENFORCEMENT: Only match by external_id - no fallback to name matching
     const existing_entity = await find_entity_for_notion_page(
       external_id,
-      normalized_entity
+      entity_properties
     )
 
     if (existing_entity) {
@@ -87,7 +95,7 @@ export async function sync_notion_page_to_entity(
       const { base_uri, absolute_path } =
         await generate_entity_paths_with_database_disambiguation({
           entity_properties: {
-            ...normalized_entity,
+            ...entity_properties,
             entity_id: existing_entity.entity_id
           },
           external_id,
@@ -116,8 +124,9 @@ export async function sync_notion_page_to_entity(
       // Use the shared update function with clean normalized entity data
       const update_result = await update_entity_from_external_item({
         external_item: notion_page,
-        entity_properties: normalized_entity,
-        entity_type: normalized_entity.type,
+        entity_properties,
+        entity_content,
+        entity_type: entity_properties.type,
         external_system: 'notion',
         external_id,
         absolute_path,
@@ -128,7 +137,7 @@ export async function sync_notion_page_to_entity(
 
       sync_result = {
         ...update_result,
-        entity_type: normalized_entity.type,
+        entity_type: entity_properties.type,
         file_path: absolute_path,
         base_uri,
         old_path: path_changed ? old_path : null,
@@ -141,7 +150,7 @@ export async function sync_notion_page_to_entity(
       // Generate paths for the new entity
       const { base_uri, absolute_path } =
         await generate_entity_paths_with_database_disambiguation({
-          entity_properties: normalized_entity,
+          entity_properties,
           external_id,
           database_id
         })
@@ -149,19 +158,20 @@ export async function sync_notion_page_to_entity(
       // Use the shared create function
       const create_result = await create_entity_from_external_item({
         external_item: notion_page,
-        entity_properties: normalized_entity,
-        entity_type: normalized_entity.type,
+        entity_properties,
+        entity_content,
+        entity_type: entity_properties.type,
         external_system: 'notion',
         external_id,
         absolute_path,
-        user_id: normalized_entity.user_id,
+        user_id: entity_properties.user_id,
         import_history_base_directory: options.import_history_base_directory
       })
 
       sync_result = {
         action: 'created',
         entity_id: create_result.entity_id,
-        entity_type: normalized_entity.type,
+        entity_type: entity_properties.type,
         file_path: absolute_path,
         base_uri
       }

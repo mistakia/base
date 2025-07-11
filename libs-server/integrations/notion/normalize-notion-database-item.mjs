@@ -46,37 +46,43 @@ export async function normalize_notion_database_item(
     const content = await convert_blocks_to_markdown(notion_page.blocks || [])
 
     // Create base entity structure using shared function
-    const entity = create_base_entity_structure(notion_page, {
-      entity_type,
-      name,
-      title: name,
-      content: content || mapped_properties.content || '',
-      external_id: `notion:database:${database_id}:${notion_page.id}`,
-      user_id: options.user_id,
-      additional_properties: {
-        ...mapped_properties,
-        notion_metadata: {
-          notion_id: notion_page.id,
-          database_id,
-          notion_url: notion_page.url,
-          created_by: notion_page.created_by,
-          last_edited_by: notion_page.last_edited_by,
-          archived: notion_page.archived || false,
-          raw_properties: extracted_properties
+    const { entity_properties, entity_content } = create_base_entity_structure(
+      notion_page,
+      {
+        entity_type,
+        name,
+        title: name,
+        content: content || mapped_properties.content || '',
+        external_id: `notion:database:${database_id}:${notion_page.id}`,
+        user_id: options.user_id,
+        additional_properties: {
+          ...mapped_properties,
+          notion_metadata: {
+            notion_id: notion_page.id,
+            database_id,
+            notion_url: notion_page.url,
+            created_by: notion_page.created_by,
+            last_edited_by: notion_page.last_edited_by,
+            archived: notion_page.archived || false,
+            raw_properties: extracted_properties
+          }
         }
       }
-    })
+    )
 
     // Validate and clean entity before return
-    const cleaned_entity = validate_and_clean_entity(entity, {
+    const cleaned_entity = validate_and_clean_entity(entity_properties, {
       entity_type,
-      required_fields: ['name', 'title', 'description']
+      required_fields: ['name', 'title']
     })
 
     log(
       `Normalized database item to ${entity_type} entity: ${cleaned_entity.name}`
     )
-    return cleaned_entity
+    return {
+      entity_properties: cleaned_entity,
+      entity_content
+    }
   } catch (error) {
     log(`Failed to normalize Notion database item: ${error.message}`)
     throw new Error(

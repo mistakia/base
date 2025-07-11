@@ -10,6 +10,7 @@ const log = debug('entity:external')
  * @param {Object} options - Function options
  * @param {Object} options.external_item - The external item data
  * @param {Object} options.entity_properties - The normalized external item data
+ * @param {string} [options.entity_content] - The content for the markdown body (optional)
  * @param {string} options.entity_type - Type of entity to create (e.g., 'task', 'note')
  * @param {string} options.external_system - The external system identifier (e.g., 'github')
  * @param {string} options.external_id - External identifier for the item
@@ -23,6 +24,7 @@ const log = debug('entity:external')
 export async function create_entity_from_external_item({
   external_item,
   entity_properties,
+  entity_content = '',
   entity_type,
   external_system,
   external_id,
@@ -80,7 +82,7 @@ export async function create_entity_from_external_item({
       absolute_path,
       entity_properties: entity_properties_copy,
       entity_type,
-      entity_content: entity_properties_copy.description || ''
+      entity_content
     })
 
     if (!success) {

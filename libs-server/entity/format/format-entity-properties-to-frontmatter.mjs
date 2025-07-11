@@ -1,13 +1,14 @@
 /**
  * Maps of base fields that are required according to the base schema
  */
-const BASE_REQUIRED_FIELDS = ['title', 'type', 'description', 'user_id']
+const BASE_REQUIRED_FIELDS = ['title', 'type', 'user_id']
 
 /**
  * Maps of base fields that are optional according to the base schema
  */
 const BASE_OPTIONAL_FIELDS = [
   'permalink',
+  'description',
   'tags',
   'relations',
   'observations',
@@ -41,10 +42,6 @@ export function format_entity_properties_to_frontmatter({
     throw new Error('Entity title is required')
   }
 
-  if (!entity_properties.description) {
-    throw new Error('Entity description is required')
-  }
-
   if (!entity_properties.user_id) {
     throw new Error('Entity user_id is required')
   }
@@ -56,7 +53,6 @@ export function format_entity_properties_to_frontmatter({
   // Add required fields
   frontmatter.type = entity_type
   frontmatter.title = entity_properties.title
-  frontmatter.description = entity_properties.description
   frontmatter.user_id = entity_properties.user_id
 
   // Add auto-generated timestamp fields
@@ -66,6 +62,10 @@ export function format_entity_properties_to_frontmatter({
   // Add optional base fields if present
   if (entity_properties.permalink !== undefined) {
     frontmatter.permalink = entity_properties.permalink
+  }
+
+  if (entity_properties.description !== undefined) {
+    frontmatter.description = entity_properties.description
   }
 
   if (entity_properties.tags && Array.isArray(entity_properties.tags)) {
