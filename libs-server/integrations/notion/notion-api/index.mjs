@@ -8,6 +8,8 @@
 export {
   create_notion_client,
   get_notion_client,
+  notion_api_client,
+  get_notion_api_client,
   clean_notion_id
 } from './create-notion-client.mjs'
 

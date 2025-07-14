@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 
-import { get_notion_client } from './create-notion-client.mjs'
+import { get_notion_api_client } from './create-notion-client.mjs'
 
 const log = debug('integrations:notion:databases')
 
@@ -16,15 +16,23 @@ const log = debug('integrations:notion:databases')
  * @param {string} [options.start_cursor] - Pagination cursor
  * @param {number} [options.page_size=100] - Number of results per page
  * @param {string} [options.notion_token] - Notion API token
+ * @param {number} [options.timeout_ms] - Request timeout in milliseconds
+ * @param {Object} [options.retry_config] - Retry configuration
  * @returns {Promise<Object>} Database list with pagination info
  */
 export async function get_notion_databases({
   start_cursor,
   page_size = 100,
-  notion_token
+  notion_token,
+  timeout_ms,
+  retry_config
 } = {}) {
   try {
-    const notion = get_notion_client({ notion_token })
+    const notion = get_notion_api_client({
+      notion_token,
+      timeout_ms,
+      retry_config
+    })
 
     const query_params = {
       page_size,
@@ -102,6 +110,8 @@ export async function get_all_notion_databases(options = {}) {
  * @param {string} [options.start_cursor] - Pagination cursor
  * @param {number} [options.page_size=100] - Number of results per page
  * @param {string} [options.notion_token] - Notion API token
+ * @param {number} [options.timeout_ms] - Request timeout in milliseconds
+ * @param {Object} [options.retry_config] - Retry configuration
  * @returns {Promise<Object>} Database items with pagination info
  */
 export async function get_notion_database_items({
@@ -110,10 +120,16 @@ export async function get_notion_database_items({
   sorts,
   start_cursor,
   page_size = 100,
-  notion_token
+  notion_token,
+  timeout_ms,
+  retry_config
 } = {}) {
   try {
-    const notion = get_notion_client({ notion_token })
+    const notion = get_notion_api_client({
+      notion_token,
+      timeout_ms,
+      retry_config
+    })
 
     const query_params = {
       page_size,

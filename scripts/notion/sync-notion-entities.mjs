@@ -36,6 +36,8 @@ export default async function sync_notion_entities({
   user_id,
   page_size = 50,
   rate_limit_delay = 200,
+  timeout_ms = 30000,
+  max_retries = 3,
   verbose = false,
   enable_notion_writes = false,
   dry_run = false,
@@ -72,6 +74,8 @@ export default async function sync_notion_entities({
     log(`- Specific page: ${page_id || 'all'}`)
     log(`- Page size: ${page_size}`)
     log(`- Rate limit delay: ${rate_limit_delay}ms`)
+    log(`- Request timeout: ${timeout_ms}ms`)
+    log(`- Max retries: ${max_retries}`)
     log(`- Notion writes enabled: ${enable_notion_writes}`)
     log(`- Dry run mode: ${dry_run}`)
 
@@ -85,6 +89,10 @@ export default async function sync_notion_entities({
       page_id,
       page_size,
       rate_limit_delay,
+      timeout_ms,
+      retry_config: {
+        max_retries
+      },
       verbose,
       notion_token: notion_api_key,
       user_id,
@@ -208,6 +216,16 @@ const main = async () => {
         type: 'number',
         default: 200
       })
+      .option('timeout', {
+        describe: 'Request timeout in milliseconds',
+        type: 'number',
+        default: 30000
+      })
+      .option('max-retries', {
+        describe: 'Maximum number of retries for failed requests',
+        type: 'number',
+        default: 3
+      })
       .option('verbose', {
         alias: 'v',
         describe: 'Enable verbose output with detailed results',
@@ -323,6 +341,8 @@ const main = async () => {
       user_id: config.user_id,
       page_size: argv.pageSize,
       rate_limit_delay: argv.rateLimit,
+      timeout_ms: argv.timeout,
+      max_retries: argv.maxRetries,
       verbose: argv.verbose,
       enable_notion_writes: argv.enableNotionWrites,
       dry_run: argv.dryRun,

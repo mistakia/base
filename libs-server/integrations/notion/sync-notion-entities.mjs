@@ -3,7 +3,7 @@
  */
 
 import debug from 'debug'
-import { get_notion_client } from './notion-api/create-notion-client.mjs'
+import { get_notion_api_client } from './notion-api/create-notion-client.mjs'
 import {
   get_all_notion_search_results,
   get_all_notion_database_items
@@ -31,7 +31,11 @@ export async function search_all_notion_content(options = {}) {
     }
 
     // Get all search results (both pages and databases)
-    const all_results = await get_all_notion_search_results(search_options)
+    const all_results = await get_all_notion_search_results({
+      ...search_options,
+      timeout_ms: options.timeout_ms,
+      retry_config: options.retry_config
+    })
 
     // Separate databases and pages
     const databases = []
@@ -84,7 +88,11 @@ async function get_all_database_pages(database_id, options = {}) {
       sorts: options.sorts
     }
 
-    const pages = await get_all_notion_database_items(query_options)
+    const pages = await get_all_notion_database_items({
+      ...query_options,
+      timeout_ms: options.timeout_ms,
+      retry_config: options.retry_config
+    })
     log(`Retrieved ${pages.length} pages from database ${database_id}`)
 
     return pages
@@ -606,7 +614,10 @@ export async function sync_single_notion_page_to_entity(page_id, options = {}) {
     log(`Starting sync for single Notion page: ${page_id}`)
 
     // Get the page to determine if it's in a database
-    const notion_client = get_notion_client()
+    const notion_client = get_notion_api_client({
+      timeout_ms: options.timeout_ms,
+      retry_config: options.retry_config
+    })
     const page = await notion_client.pages.retrieve({ page_id })
 
     let database_id = null
