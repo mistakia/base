@@ -20,7 +20,6 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Ensure the plan is self-contained and understandable without additional context.
 - Use consistent terminology and formatting throughout the plan.
 - Review the plan for completeness and accuracy before sharing.
-- Number each task for easy reference.
 - Include the purpose of each change to provide context.
 - Group related file changes together when logical.
 
@@ -43,12 +42,13 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ## Tasks
 
-- [ ] 1. [File path to create or modify]:
+- [ ] [File path to create or modify]:
 
   - [Specific changes or additions required]
   - [Purpose of these changes]
 
-- [ ] 2. [Next file path]:
+- [ ] [Next file path]:
+
   - [Specific changes or additions required]
   - [Purpose of these changes]
 ```
