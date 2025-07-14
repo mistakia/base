@@ -11,7 +11,7 @@ import {
   sync_notion_bidirectional
 } from '#libs-server/integrations/notion/index.mjs'
 
-import { get_notion_client } from '#libs-server/integrations/notion/notion-api/index.mjs'
+import { get_notion_api_client } from '#libs-server/integrations/notion/notion-api/index.mjs'
 
 const log = debug('routes:notion')
 const router = express.Router()
@@ -21,7 +21,7 @@ const router = express.Router()
  */
 router.get('/status', async (req, res) => {
   try {
-    const notion_client = get_notion_client()
+    const notion_client = get_notion_api_client()
     const status = {
       client_available: !!notion_client,
       timestamp: new Date().toISOString()
@@ -93,7 +93,7 @@ router.post('/entity/:id/sync', async (req, res) => {
  */
 router.get('/databases', async (req, res) => {
   try {
-    const notion = get_notion_client()
+    const notion = get_notion_api_client()
     if (!notion) {
       return res.status(503).json({
         error: 'Notion client not available - check API key configuration'

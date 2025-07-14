@@ -3,7 +3,10 @@
  */
 
 import debug from 'debug'
-import { get_notion_client, clean_notion_id } from './create-notion-client.mjs'
+import {
+  get_notion_api_client,
+  clean_notion_id
+} from './create-notion-client.mjs'
 
 const log = debug('integrations:notion:api:get-page-with-blocks')
 
@@ -54,7 +57,7 @@ async function get_all_block_children(block_id, notion) {
  * @returns {Object} Page object with blocks array
  */
 export async function get_notion_page_with_blocks(page_id) {
-  const notion = get_notion_client()
+  const notion = get_notion_api_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
   }

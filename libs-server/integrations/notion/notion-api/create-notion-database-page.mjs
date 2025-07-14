@@ -3,7 +3,10 @@
  */
 
 import debug from 'debug'
-import { get_notion_client, clean_notion_id } from './create-notion-client.mjs'
+import {
+  get_notion_api_client,
+  clean_notion_id
+} from './create-notion-client.mjs'
 
 const log = debug('integrations:notion:api:create-database-page')
 
@@ -19,7 +22,7 @@ export async function create_notion_database_page(
   properties,
   children = null
 ) {
-  const notion = get_notion_client()
+  const notion = get_notion_api_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
   }

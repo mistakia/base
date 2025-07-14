@@ -3,7 +3,10 @@
  */
 
 import debug from 'debug'
-import { get_notion_client, clean_notion_id } from './create-notion-client.mjs'
+import {
+  get_notion_api_client,
+  clean_notion_id
+} from './create-notion-client.mjs'
 
 const log = debug('integrations:notion:api:update-database-page')
 
@@ -20,7 +23,7 @@ export async function update_notion_database_page(
   properties,
   options = {}
 ) {
-  const notion = get_notion_client()
+  const notion = get_notion_api_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
   }
@@ -56,7 +59,7 @@ export async function update_notion_database_page(
  * @returns {Object} Result of the block update operation
  */
 export async function update_notion_database_page_content(page_id, new_blocks) {
-  const notion = get_notion_client()
+  const notion = get_notion_api_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
   }

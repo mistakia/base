@@ -3,7 +3,10 @@
  */
 
 import debug from 'debug'
-import { get_notion_client, clean_notion_id } from './create-notion-client.mjs'
+import {
+  get_notion_api_client,
+  clean_notion_id
+} from './create-notion-client.mjs'
 
 const log = debug('integrations:notion:api:get-database-schema')
 
@@ -13,7 +16,7 @@ const log = debug('integrations:notion:api:get-database-schema')
  * @returns {Object} Database schema with properties
  */
 export async function get_notion_database_schema(database_id) {
-  const notion = get_notion_client()
+  const notion = get_notion_api_client()
   if (!notion) {
     throw new Error('Notion client not available - check API key configuration')
   }

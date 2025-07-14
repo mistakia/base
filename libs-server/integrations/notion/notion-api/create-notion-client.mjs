@@ -312,25 +312,6 @@ export function notion_api_client(options = {}) {
 }
 
 /**
- * Get configured Notion client (singleton pattern)
- */
-let _notion_client = null
-let _client_options = null
-
-export function get_notion_client(options = {}) {
-  // Create new client if options changed or no client exists
-  const options_changed =
-    JSON.stringify(options) !== JSON.stringify(_client_options)
-
-  if (!_notion_client || options_changed) {
-    _notion_client = create_notion_client(options)
-    _client_options = { ...options }
-  }
-
-  return _notion_client
-}
-
-/**
  * Get configured Notion API client with retry capabilities (singleton pattern)
  */
 let _notion_api_client = null
