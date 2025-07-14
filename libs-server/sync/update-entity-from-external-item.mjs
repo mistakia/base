@@ -6,6 +6,7 @@ import {
 import { detect_field_changes } from '#libs-server/sync/detect-field-changes.mjs'
 import { save_import_data } from '#libs-server/sync/save-import-data.mjs'
 import { find_previous_import_files } from '#libs-server/sync/find-previous-import-files.mjs'
+import { remove_stale_external_properties } from '#libs-server/sync/clean-entity-properties.mjs'
 
 const log = debug('sync:update-external')
 
@@ -176,8 +177,14 @@ export async function update_entity_from_external_item({
         ...updates_to_apply
       }
 
+      const cleaned_properties = remove_stale_external_properties(
+        merged_properties,
+        entity_properties,
+        external_system
+      )
+
       await write_entity_to_filesystem({
-        entity_properties: merged_properties,
+        entity_properties: cleaned_properties,
         entity_type,
         absolute_path,
         entity_content: entity_content || existing_entity_result.entity_content

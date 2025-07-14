@@ -52,7 +52,7 @@ export async function normalize_notion_database_item(
         entity_type,
         name,
         title: name,
-        content: content || mapped_properties.content || '',
+        content,
         external_id: `notion:database:${database_id}:${notion_page.id}`,
         user_id: options.user_id,
         additional_properties: {
