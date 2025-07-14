@@ -47,7 +47,8 @@ describe('create_thread', () => {
     const thread_data = {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
-      model: 'llama2'
+      model: 'llama2',
+      create_git_branches: true
     }
 
     const thread = await create_thread(thread_data)
@@ -106,7 +107,8 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      thread_main_request: 'Hello, this is my first message'
+      thread_main_request: 'Hello, this is my first message',
+      create_git_branches: true
     }
 
     const thread = await create_thread(thread_data)
@@ -126,7 +128,8 @@ describe('create_thread', () => {
       user_id: test_user.user_id,
       inference_provider: 'ollama',
       model: 'llama2',
-      tools: ['web_search', 'calculator']
+      tools: ['web_search', 'calculator'],
+      create_git_branches: true
     }
 
     const thread = await create_thread(thread_data)
@@ -146,7 +149,8 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       thread_state: THREAD_STATE.PAUSED,
-      pause_reason: 'waiting_for_user_input'
+      pause_reason: 'waiting_for_user_input',
+      create_git_branches: true
     }
 
     const thread = await create_thread(thread_data)

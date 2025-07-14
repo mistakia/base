@@ -127,7 +127,7 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
- * @param {boolean} [params.create_git_branches=true] Whether to create git branches and worktrees
+ * @param {boolean} [params.create_git_branches=false] Whether to create git branches and worktrees
  * @param {boolean} [params.create_change_request=false] Whether to create a change request for the thread
  * @param {Object} [params.metadata={}] Additional metadata
  * @returns {Promise<Object>} Created thread object
@@ -141,7 +141,7 @@ export default async function create_thread({
   thread_main_request,
   prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
-  create_git_branches = true,
+  create_git_branches = false,
   create_change_request = false,
   // TODO cleanup
   ...additional_metadata
