@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Thread Timeline",
+  "description": "Schema for thread timeline.json files containing chronological event log",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "timestamp", "type"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier for the timeline entry"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "When the entry was created (ISO 8601)"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "message",
+          "tool_call",
+          "tool_result",
+          "error",
+          "state_change",
+          "thread_main_request",
+          "notification",
+          "human_request",
+          "assistant_response"
+        ],
+        "description": "Type of timeline entry"
+      }
+    },
+    "allOf": [
+      {
+        "if": {
+          "properties": { "type": { "const": "message" } }
+        },
+        "then": {
+          "required": ["role", "content"],
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": ["user", "assistant", "system"],
+              "description": "Role of the message sender"
+            },
+            "content": {
+              "type": "string",
+              "description": "Text content of the message"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Additional message metadata",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "tool_call" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "object",
+              "required": ["tool_name", "tool_parameters"],
+              "properties": {
+                "tool_name": {
+                  "type": "string",
+                  "description": "Name of the tool being called"
+                },
+                "tool_parameters": {
+                  "type": "object",
+                  "description": "Parameters passed to the tool",
+                  "additionalProperties": true
+                },
+                "tool_call_id": {
+                  "type": "string",
+                  "description": "Unique identifier for this tool call"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "tool_result" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "object",
+              "required": ["tool_call_id", "result"],
+              "properties": {
+                "tool_call_id": {
+                  "type": "string",
+                  "description": "ID of the corresponding tool call"
+                },
+                "result": {
+                  "description": "Result data from the tool execution",
+                  "oneOf": [
+                    { "type": "object" },
+                    { "type": "array" },
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "type": "null" }
+                  ]
+                },
+                "error": {
+                  "type": "object",
+                  "description": "Error information if tool execution failed",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "code": { "type": "string" },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "error" } }
+        },
+        "then": {
+          "required": ["error_type", "message"],
+          "properties": {
+            "error_type": {
+              "type": "string",
+              "description": "Category of error that occurred"
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error description"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error details and context",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "state_change" } }
+        },
+        "then": {
+          "required": ["previous_state", "new_state"],
+          "properties": {
+            "previous_state": {
+              "type": "string",
+              "enum": ["active", "paused", "terminated"],
+              "description": "Previous thread state"
+            },
+            "new_state": {
+              "type": "string",
+              "enum": ["active", "paused", "terminated"],
+              "description": "New thread state"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Reason for the state change"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Additional context for the state change",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "thread_main_request" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Initial request or objective that started the thread"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "human_request" } }
+        },
+        "then": {
+          "required": ["request_id", "prompt", "request_type", "status"],
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "description": "Unique identifier for the human request"
+            },
+            "prompt": {
+              "type": "string",
+              "description": "The prompt/question presented to the human"
+            },
+            "request_type": {
+              "type": "string",
+              "enum": ["blocking", "non_blocking"],
+              "description": "Whether the thread waits for response or continues"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["pending", "responded", "cancelled"],
+              "description": "Current status of the human request"
+            },
+            "response": {
+              "type": "string",
+              "description": "Human's response (only present when status is 'responded')"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "notification" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Notification message content"
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["info", "warning", "error"],
+              "description": "Severity level of the notification"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "assistant_response" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Response content from the assistant"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Additional response metadata",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    ],
+    "additionalProperties": false
+  }
+}

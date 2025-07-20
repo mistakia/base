@@ -61,6 +61,8 @@
     "react-table": "mistakia/react-table#986f0423ac571efeb19fc6d181ca8bc871049b3d",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
     "ws": "8.18.1",

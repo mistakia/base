@@ -1,6 +1,26 @@
 import path from 'path'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
+// Thread state constants
+export const THREAD_STATE = {
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  TERMINATED: 'terminated'
+}
+
+// Valid thread state values
+export const VALID_THREAD_STATES = Object.values(THREAD_STATE)
+
+// Validate that a thread state is valid
+export function validate_thread_state(thread_state) {
+  if (!VALID_THREAD_STATES.includes(thread_state)) {
+    throw new Error(
+      `Invalid thread state: ${thread_state}. Must be one of: ${VALID_THREAD_STATES.join(', ')}`
+    )
+  }
+  return true
+}
+
 export const THREAD_CONTEXT_DIR = 'thread'
 export const THREAD_DEFAULT_WORKFLOW_BASE_URI =
   'sys:system/workflow/default-workflow.md'

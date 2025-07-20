@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { v4 as uuid } from 'uuid'
+import { v4 as uuid, v5 as uuidv5 } from 'uuid'
 import debug from 'debug'
 
 import {
@@ -21,6 +21,9 @@ import {
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
 const log = debug('threads:create')
+
+// Namespace UUID for generating deterministic thread IDs from session IDs
+const SESSION_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
 
 /**
  * Create a thread branch in the knowledge base repositories and set up worktrees
@@ -116,20 +119,103 @@ async function initialize_memory_repository({ memory_dir }) {
 }
 
 /**
+ * Build thread metadata for both standard and imported/external session threads
+ * @param {Object} params - Metadata parameters
+ * @param {string} params.thread_id
+ * @param {string} params.user_id
+ * @param {string} params.workflow_base_uri
+ * @param {string} params.inference_provider
+ * @param {string|Array<string>} params.model - Single model or array of models (legacy)
+ * @param {Array<string>} [params.models] - Array of models used in thread (preferred)
+ * @param {string} params.thread_state
+ * @param {Object} params.prompt_properties
+ * @param {Array<string>} params.tools
+ * @param {Object} [params.external_session] - Optional external session info
+ * @param {Object} [params.additional_fields] - Any additional fields to merge
+ * @returns {Object} Thread metadata object
+ */
+export function build_thread_metadata({
+  thread_id,
+  user_id,
+  workflow_base_uri,
+  inference_provider,
+  model,
+  models,
+  thread_state,
+  prompt_properties = {},
+  tools = [],
+  external_session = null,
+  additional_fields = {}
+}) {
+  const now = new Date().toISOString()
+
+  // Handle both single model and models array
+  let models_array
+  if (models && Array.isArray(models)) {
+    models_array = models
+  } else if (model) {
+    // Convert single model to array
+    models_array = Array.isArray(model) ? model : [model]
+  } else {
+    models_array = []
+  }
+
+  const metadata = {
+    thread_id,
+    user_id,
+    workflow_base_uri,
+    inference_provider,
+    models: models_array,
+    thread_state,
+    created_at: now,
+    updated_at: now,
+    prompt_properties,
+    tools,
+    ...additional_fields
+  }
+  if (external_session) {
+    metadata.external_session = external_session
+  }
+  return metadata
+}
+
+/**
+ * Generate deterministic thread ID from session information
+ * @param {Object} params - Session parameters
+ * @param {string} params.session_id - Session ID from provider
+ * @param {string} params.session_provider - Session provider name
+ * @returns {string} Deterministic thread ID
+ */
+export function generate_thread_id_from_session({
+  session_id,
+  session_provider
+}) {
+  if (!session_provider) {
+    throw new Error('session_provider must be defined')
+  }
+  // Create deterministic UUID from session ID and provider
+  const session_key = `${session_provider}:${session_id}`
+  return uuidv5(session_key, SESSION_NAMESPACE)
+}
+
+/**
  * Create a new thread with proper structure
  *
  * @param {Object} params Thread creation parameters
  * @param {string} params.user_id ID of the user who owns the thread
- * @param {string} params.workflow_base_uri Workflow base relative path in format
+ * @param {string} [params.workflow_base_uri] Workflow base relative path in format (optional for external sessions)
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
- * @param {string} params.model Model to use from the provider
+ * @param {string} [params.model] Model to use from the provider (legacy, single model)
+ * @param {Array<string>} [params.models] Models used in the thread (preferred)
  * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {boolean} [params.create_git_branches=false] Whether to create git branches and worktrees
  * @param {boolean} [params.create_change_request=false] Whether to create a change request for the thread
- * @param {Object} [params.metadata={}] Additional metadata
+ * @param {boolean} [params.create_memory_repository=false] Whether to initialize git repository in memory directory
+ * @param {Object} [params.external_session] External session information for imported sessions
+ * @param {Object} [params.additional_metadata={}] Additional metadata fields to include in thread metadata
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
@@ -137,71 +223,91 @@ export default async function create_thread({
   workflow_base_uri = THREAD_DEFAULT_WORKFLOW_BASE_URI,
   inference_provider,
   model,
+  models,
   thread_state = THREAD_STATE.ACTIVE,
   thread_main_request,
   prompt_properties = {},
   tools = DEFAULT_THREAD_TOOLS,
   create_git_branches = false,
   create_change_request = false,
-  // TODO cleanup
-  ...additional_metadata
+  create_memory_repository = false,
+  external_session = null,
+  additional_metadata = {}
 }) {
   // Validate required parameters
   if (!user_id) {
     throw new Error('user_id is required')
   }
 
-  if (!workflow_base_uri) {
-    throw new Error('workflow_base_uri is required')
-  }
-
   if (!inference_provider) {
     throw new Error('inference_provider is required')
   }
 
-  if (!model) {
-    throw new Error('model is required')
+  // Validate that we have at least one model
+  if (!model && (!models || models.length === 0)) {
+    throw new Error('At least one model is required')
   }
 
   // Validate thread_state using shared function
   validate_thread_state(thread_state)
 
-  // Validate that the workflow exists
-  // TODO consider using workflow_exists_in_git instead
-  const workflow_file_exists = await workflow_exists_in_filesystem({
-    base_uri: workflow_base_uri
-  })
+  // For external sessions, workflow_base_uri can be undefined
+  const is_external_session = !!external_session
+  if (!is_external_session && !workflow_base_uri) {
+    throw new Error('workflow_base_uri is required for non-session threads')
+  }
 
-  if (!workflow_file_exists) {
-    throw new Error(`Workflow '${workflow_base_uri}' does not exist`)
+  // Validate that the workflow exists (if provided)
+  if (workflow_base_uri) {
+    // TODO consider using workflow_exists_in_git instead
+    const workflow_file_exists = await workflow_exists_in_filesystem({
+      base_uri: workflow_base_uri
+    })
+
+    if (!workflow_file_exists) {
+      throw new Error(`Workflow '${workflow_base_uri}' does not exist`)
+    }
   }
 
   // Get workflow tools list (without registering custom tools yet)
   let workflow_tools = []
-  try {
-    const { get_workflow_tools } = await import(
-      '#libs-server/workflow/index.mjs'
-    )
+  if (workflow_base_uri) {
+    try {
+      const { get_workflow_tools } = await import(
+        '#libs-server/workflow/index.mjs'
+      )
 
-    workflow_tools = await get_workflow_tools({
-      workflow_base_uri
-    })
+      workflow_tools = await get_workflow_tools({
+        workflow_base_uri
+      })
 
-    if (workflow_tools.length > 0) {
-      log(`Extracted workflow tools: ${workflow_tools.join(', ')}`)
+      if (workflow_tools.length > 0) {
+        log(`Extracted workflow tools: ${workflow_tools.join(', ')}`)
+      }
+    } catch (error) {
+      log(
+        `Warning: Could not extract tools from workflow ${workflow_base_uri}: ${error.message}`
+      )
+      // Continue thread creation even if tool extraction fails
     }
-  } catch (error) {
-    log(
-      `Warning: Could not extract tools from workflow ${workflow_base_uri}: ${error.message}`
-    )
-    // Continue thread creation even if tool extraction fails
   }
 
   // Generate thread ID
-  const thread_id = uuid()
-  log(
-    `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_uri}`
-  )
+  let thread_id
+  if (is_external_session) {
+    thread_id = generate_thread_id_from_session({
+      session_id: external_session.session_id,
+      session_provider: external_session.session_provider
+    })
+    log(
+      `Creating thread ${thread_id} from ${external_session.session_provider} session ${external_session.session_id}`
+    )
+  } else {
+    thread_id = uuid()
+    log(
+      `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_uri}`
+    )
+  }
 
   // Create thread directory structure using registry
   const user_base_directory = get_user_base_directory()
@@ -210,9 +316,15 @@ export default async function create_thread({
   })
   const thread_dir = path.join(thread_base_directory, thread_id)
   const memory_dir = path.join(thread_dir, 'memory')
+  const raw_data_dir = path.join(thread_dir, 'raw-data')
 
   await fs.mkdir(thread_dir, { recursive: true })
   await fs.mkdir(memory_dir, { recursive: true })
+
+  // Create raw-data directory for external sessions
+  if (external_session) {
+    await fs.mkdir(raw_data_dir, { recursive: true })
+  }
 
   // Generate timestamps
   const now = new Date().toISOString()
@@ -227,21 +339,20 @@ export default async function create_thread({
       ? [...workflow_tools, ...thread_tool_names]
       : [...tools, ...thread_tool_names]
 
-  // Create metadata
-  const metadata = {
+  // Create metadata using shared builder
+  const metadata = build_thread_metadata({
     thread_id,
     user_id,
     workflow_base_uri,
     inference_provider,
     model,
+    models,
     thread_state,
-    created_at: now,
-    updated_at: now,
-    current_stage: null,
     prompt_properties,
     tools: final_tools,
-    ...additional_metadata
-  }
+    external_session,
+    additional_fields: additional_metadata
+  })
 
   // Initialize timeline
   const timeline = []
@@ -257,12 +368,14 @@ export default async function create_thread({
     metadata.prompt_properties.main_request = thread_main_request
   }
 
-  // Write timeline to file
-  await fs.writeFile(
-    path.join(thread_dir, 'timeline.json'),
-    JSON.stringify(timeline, null, 2),
-    'utf-8'
-  )
+  // Write timeline to file (only if we have timeline content or it's not an external session)
+  if (timeline.length > 0 || !external_session) {
+    await fs.writeFile(
+      path.join(thread_dir, 'timeline.json'),
+      JSON.stringify(timeline, null, 2),
+      'utf-8'
+    )
+  }
 
   // Create git branches and worktrees if requested
   if (create_git_branches) {
@@ -314,22 +427,31 @@ export default async function create_thread({
   )
 
   // Initialize git repository in memory directory if requested
-  try {
-    await initialize_memory_repository({
-      memory_dir
-    })
+  if (create_memory_repository) {
+    try {
+      await initialize_memory_repository({
+        memory_dir
+      })
 
-    // Add memory repo information to metadata
-    metadata.memory_repo_initialized = true
-  } catch (error) {
-    log(`Failed to initialize memory repository: ${error.message}`)
-    // Continue thread creation even if repo initialization fails
+      // Add memory repo information to metadata
+      metadata.memory_repo_initialized = true
+    } catch (error) {
+      log(`Failed to initialize memory repository: ${error.message}`)
+      // Continue thread creation even if repo initialization fails
+    }
   }
 
   // Return thread information
-  return {
+  const result = {
     ...metadata,
     timeline,
     context_dir: thread_dir
   }
+
+  // Add raw_data_dir for external sessions
+  if (external_session) {
+    result.raw_data_dir = raw_data_dir
+  }
+
+  return result
 }

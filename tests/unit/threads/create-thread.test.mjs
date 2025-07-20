@@ -149,7 +149,9 @@ describe('create_thread', () => {
       inference_provider: 'ollama',
       model: 'llama2',
       thread_state: THREAD_STATE.PAUSED,
-      pause_reason: 'waiting_for_user_input',
+      additional_metadata: {
+        pause_reason: 'waiting_for_user_input'
+      },
       create_git_branches: true
     }
 

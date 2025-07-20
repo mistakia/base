@@ -2,202 +2,139 @@
 title: 'Execution Threads'
 type: 'text'
 description: |
-  Defines the execution model using Threads for handling objectives within the system.
+  Defines execution threads as a unified session model for handling both conversations and agentic workflows across different providers within the system.
 created_at: '2025-05-27T18:10:20.241Z'
 entity_id: '576c86bd-3ff4-4d88-b246-f168f3f11700'
 observations:
-  - '[design] Threads are the execution environment for workflows and execute exactly one workflow'
-  - '[design] Threads support human interaction via blocking/non-blocking requests'
-  - '[architecture] Threads utilize a tiered memory system (Universal and Context)'
+  - '[design] Threads provide a standardized session format for all interactions, whether Base system sessions or external provider sessions'
+  - '[architecture] Unified timeline structure enables consistent handling across different session providers'
+  - '[integration] Session provider acts as the "engine" choice - external providers are normalized to common thread format'
+  - '[focus] Agentic workflows are the primary use case, with conversations as a secondary pattern'
 relations:
   - 'relates_to [[sys:system/text/system-design.md]]'
   - 'relates_to [[sys:system/text/workflow.md]]'
 tags:
-updated_at: '2025-05-27T18:10:20.242Z'
+updated_at: '2025-07-20T18:10:20.242Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Execution Threads
 
-Execution threads execute objectives such as completing tasks or handling system events.
+Execution threads are the system's unified representation of sessions - whether conversations or agentic workflows from the Base system or external providers. All sessions are standardized to enable consistent storage, querying, and analysis.
 
 ## Definition
 
-An **Execution Thread** is a process responsible for accomplishing a defined objective. It manages its workflow through stages and interacts with humans when necessary. Threads coordinate with each other, leveraging specialized workflows to achieve goals.
+An **Execution Thread** is a session that captures conversations and agentic workflows. Sessions can originate from:
 
-## Properties
+1. **Base System Sessions**: Native workflows and conversations executing within the Base system
+2. **External Provider Sessions**: Conversations and agentic workflows from external LLM providers (Claude, Cursor, OpenAI, etc.)
 
-- `thread_id`: Unique identifier for the thread instance. Also implicitly defines the path to its context memory (`user:thread/{thread_id}/`).
-- `user_id`: Identifier of the user who owns the thread.
-- `workflow_base_uri`: Reference to the specific workflow this thread is associated with and executing. (e.g., `sys:system/workflow/write-workflow.md` or `user:workflow/custom-workflow.md`).
-- `inference_provider`: Name of the AI provider being used (e.g., 'ollama').
-- `model`: The specific model to use from the provider.
-- `thread_state`: The current lifecycle state:
-  - `Active`: The thread is currently processing its objective.
-  - `Paused`: The thread is temporarily halted, usually awaiting external input.
-  - `Terminated`: The thread has finished its work (successfully or unsuccessfully) and ceased execution.
-- `created_at`: Timestamp of initiation.
-- `updated_at`: Timestamp of last update.
-- `terminated_at`: Timestamp of termination (if applicable).
-- `tools`: Array of tools available to this thread.
-- `thread_change_request_id`: Optional reference to a change request that tracks changes made in the thread's branch (set only when a change request is explicitly created).
-- `system_worktree_path`: Path to the Git worktree for the system repository.
-- `user_worktree_path`: Path to the Git worktree for the user repository.
+The session provider is simply the choice of "engine" for the interaction. All threads follow the same structure and interfaces, allowing the system to handle them uniformly regardless of provider.
 
-**Note:** The thread's "role" in prompts or UI is derived from its assigned `workflow`. The `workflow_path` is the canonical reference for the thread's objective. The term "role" is never used as an identifier in backend or schema logic.
+## Core Properties
 
-When a new thread is created:
+- `thread_id`: Unique identifier (UUID). Defines the path to thread data (`user:thread/{thread_id}/`)
+- `user_id`: Owner of the thread
+- `workflow_base_uri`: For Base system sessions, references the executing workflow
+- `session_provider`: Origin of the session (e.g., 'base', 'claude', 'cursor', 'openai')
+- `thread_state`: Current state - `active`, `paused`, or `terminated`
+- `created_at`, `updated_at`, `terminated_at`: Lifecycle timestamps
+- `thread_change_request_id`: Optional reference to associated change request
 
-1. A unique `thread_id` is generated (UUID)
-2. Directory structure is created at `user:thread/{thread_id}/`
-3. Thread metadata is written to `metadata.json` file
-4. Timeline is initialized in `timeline.json`
-5. Memory directory is set up with a git repository
-6. Git branches are created in both system and user knowledge bases with the format `thread/{thread_id}`
-7. Git worktrees are created for each branch to enable concurrent thread execution
-8. The thread is associated with a specific workflow that it will execute
+## External Session Providers
 
-When a thread is terminated:
+The system supports importing sessions from:
 
-1. The thread state is updated to `terminated`
-2. A termination reason is recorded in thread metadata and timeline
-3. Git worktrees created for the thread are removed to clean up system resources
-4. All thread metadata and timeline entries remain accessible for later reference
+### Claude (Anthropic)
 
-## States
+- Source: Chat conversations from claude.ai
+- Format: JSONL export files
+- Preserves: Messages, tool calls, artifacts, context
 
-- `active`: Operational
-- `paused`: Temporarily suspended, awaiting action
-- `terminated`: Successfully completed or terminated
+### Cursor
 
-## Key Functions
+- Source: AI coding sessions from Cursor IDE
+- Format: SQLite database export
+- Preserves: Code edits, AI interactions, file context
 
-- **Tool Calling**: Use system tools to interact with resources
-- **Timeline Tracking**: Maintain chronological record of activity
-- **Context Management**: Dynamically manage context window
-- **Knowledge Retrieval**: Search and access relevant knowledge
-- **User Interaction**: Communicate with users for input
-- **Change Request Creation**: Propose knowledge base changes
+### OpenAI
 
-## Tool Calling
+- Source: ChatGPT conversations
+- Format: JSON export from data archive
+- Preserves: Messages, model responses, conversation metadata
 
-Execution Threads support tool calling capabilities, allowing them to interact with resources and perform actions:
+## Session Normalization
 
-- tools are defined with schemas detailing parameters and return types
-- **Invocation Flow:**
-  1. Workflow generates a tool call request with parameters
-  2. System executes the tool with the provided parameters
-  3. Tool results are returned to the thread for processing
-- **Execution Models:**
-  - **Synchronous:** Thread waits for tool execution to complete
-  - **Asynchronous:** Thread continues processing while tool executes
+All external sessions are normalized to the standard thread format:
+
+1. **Timeline Conversion**: Provider-specific message formats → standard timeline entries
+2. **Metadata Extraction**: Session properties → thread metadata
+3. **Tool Call Mapping**: External tool usage → standard tool call/result entries
+4. **Context Preservation**: Provider-specific data retained in entry metadata
 
 ## Timeline Structure
 
-Threads maintain a chronological timeline of interactions and events, structured as entries of different types:
+Threads maintain a chronological timeline with standardized entry types:
 
-- **MessageEntry:** User or workflow generated messages
-- **ToolCallEntry:** Requests by the workflow to invoke tools
-- **ToolResultEntry:** Results from tool executions
-- **ErrorEntry:** Error events that occurred during execution
-- **StateChangeEntry:** Records of thread state transitions
+- **message**: User or assistant messages
+- **tool_call**: Tool invocation requests
+- **tool_result**: Tool execution results
+- **error**: Error events
+- **state_change**: State transitions
 
-Timeline entries are immutable and provide a complete audit trail of thread actions, events, and state changes, enabling seamless resumption after pauses and comprehensive post-execution analysis.
+This unified structure enables:
 
-## Memory Structure
-
-Execution Threads utilize a tiered memory system:
-
-1. **Transient Context Memory**: Information held in context window during execution.
-
-2. **Persistent Working Memory**: Stored in the thread's memory directory:
-
-   - **Scratch Space**: Temporary files and computational data
-   - **Knowledge Cache**: Frequently accessed information
-   - **Reasoning Artifacts**: Intermediate outputs and processing results
-
-3. **Long-term Memory**:
-
-   - **Universal Memory (Knowledge Base):**
-     - **Purpose:** System-wide, persistent knowledge, guidelines, schemas.
-     - **Location:** `sys:` and `user:` directories (Markdown files, version controlled).
-   - **Persistent Working Memory:**
-     - **Purpose:** Persistent storage associated directly with a `thread_id`. Holds the necessary state for pause/resume, intermediate results, `human_request` objects, final outputs, a detailed execution history, and working files.
-     - **Location:** Disk-based, deterministic path: `user:thread/{thread_id}/`.
-     - **Git Repository:** Each thread's memory directory is initialized as a git repository with an initial commit containing a `.gitignore` file.
-   - **External Memory:** Accessed via knowledge base lookups, file system operations, and external tool calls.
-
-## Human Interaction (`human_request`)
-
-When an Execution Thread requires human input or confirmation:
-
-- **Concept:** A `human_request` is created to manage the interaction.
-- **Properties:** Includes `request_id`, `thread_id`, the `prompt` for the human, `type` (`Blocking` or `NonBlocking`), `status` (`Pending`, `Responded`, `Cancelled`), and the `response`.
-- **Workflow:**
-  - **Blocking:** The thread enters the `Paused` state until the request is `Responded` or `Cancelled`.
-  - **Non-Blocking:** The thread remains `Active`, continuing work that doesn't depend on the response, and incorporates the response asynchronously when available.
-- **Notification:** An external mechanism notifies the user and captures their response.
-
-## Thread Change Request
-
-Each thread creates a change request at initialization to:
-
-- Capture and review changes made during execution
-- Track modifications in thread metadata
-
-- **Properties:**
-  - `title`: Defaults to `Thread {thread_id} changes`
-  - `description`: Describes that it contains changes made in the thread branch
-  - `target_branch`: Main branch (typically 'main')
-  - `feature_branch`: The thread's branch (`thread/{thread_id}`)
-  - `thread_id`: Reference to the originating thread
-- **Storage:** Indexed in the database and stored as a Markdown file like other change requests
-
-## Git Branch Structure
-
-For source control operations, each thread uses dedicated Git branches and worktrees:
-
-- **Branch Format:** `thread/{thread_id}`
-- **Repositories:** Created in both system and user knowledge base repositories
-- **Worktrees:** Each branch is checked out to a separate worktree directory
-- **Purpose:**
-  - Isolates file modifications associated with specific threads
-  - Enables concurrent thread execution without checkout conflicts
-  - Maintains separation between thread operations
-- **Workflow:**
-  - Thread-specific file operations are performed within the thread's worktree
-  - Changes can be reviewed, merged, or discarded based on thread outcomes
-  - Multiple threads can run simultaneously without interfering with each other
-- **Creation:** Branches and worktrees are automatically created during thread initialization
-- **Storage:** Worktree paths are stored in thread metadata for reference
-- **Cleanup:** Worktrees are automatically removed when threads are terminated
+- Cross-provider session analysis
+- Consistent replay and inspection
+- Standard querying interfaces
 
 ## Filesystem Structure
 
-Each thread's context is stored in a dedicated directory structure within the user's `user:` directory:
-
 ```
-user:
-  thread/
-    {thread_id}/
-      metadata.json     # Thread metadata (state, inference_provider, model, etc.)
-      timeline.json     # Consolidated chronological timeline of all thread events and state changes
-      memory/           # Thread-specific memory & working files (git subdirectory)
-        .gitignore      # Configured to ignore temporary and binary files
+user:thread/{thread_id}/
+  metadata.json     # Thread configuration and state
+  timeline.json     # Chronological event log
+  memory/          # Working directory (git repository)
+  raw-data/        # Original provider data (external sessions only)
 ```
 
-The `metadata.json` file contains the thread's configuration and state, including:
+## JSON Schemas
 
-- Basic thread properties (`thread_id`, `user_id`, `workflow_base_uri`, etc.)
-- Current execution thread_state
-- Timestamps for thread lifecycle events
-- Reference to associated change request
-- Paths to system and user worktrees
+Formal JSON Schema definitions ensure consistent thread data structure:
 
-The `timeline.json` file contains an array of entries with a consistent structure:
+### Thread Metadata Schema
 
-- `id`: Unique identifier for the entry
-- `timestamp`: When the entry was created
-- `type`: Type of entry (message, tool_call, tool_result, state_change, etc.)
-- `content`: The actual content of the entry
-  This filesystem structure enables persistent storage, versioning, and inspection of thread state, supporting both runtime operations and post-execution analysis.
+- **File**: `sys:system/text/thread-metadata-schema.json`
+- Conditional validation based on session provider
+- Support for both Base system and external provider sessions
+
+### Thread Timeline Schema
+
+- **File**: `sys:system/text/thread-timeline-schema.json`
+- Polymorphic entry types with type-specific validation
+- Standardized entry properties across all timeline entry types
+
+## Development Guidelines
+
+### Adding New Providers
+
+1. Create provider directory in `libs-server/integrations/{provider}/`
+2. Implement session normalization:
+   - Parse provider's export format
+   - Map to standard timeline entries
+   - Extract session metadata
+3. Register provider in thread creation logic
+
+### Working with Threads
+
+- Use `libs-server/threads/` for core thread operations
+- Provider-specific logic stays in `libs-server/integrations/{provider}/`
+- Timeline entries must follow standard schemas
+- Preserve original data in entry metadata when possible
+
+## Key Benefits
+
+- **Unified Interface**: Query and analyze all sessions consistently
+- **Provider Agnostic**: Add new sources without changing core logic
+- **Future Proof**: Standardized format adapts to new session types
+- **Development Efficiency**: Single set of tools works across all sessions

@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Thread Metadata",
+  "description": "Schema for thread metadata.json files containing thread configuration and state",
+  "type": "object",
+  "required": [
+    "thread_id",
+    "user_id",
+    "session_provider",
+    "thread_state",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "thread_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the thread instance"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier of the user who owns the thread"
+    },
+    "workflow_base_uri": {
+      "type": "string",
+      "description": "Reference to the specific workflow for Base system sessions (e.g., 'sys:system/workflow/write-workflow.md')"
+    },
+    "session_provider": {
+      "type": "string",
+      "enum": ["base", "claude", "cursor", "openai"],
+      "description": "Origin provider for the session - the 'engine' choice for the interaction"
+    },
+    "inference_provider": {
+      "type": "string",
+      "description": "Name of the AI provider being used (e.g., 'ollama', 'anthropic')"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of model names used in the thread (preferred over single model)"
+    },
+    "model": {
+      "type": "string",
+      "description": "Single model name (deprecated - use models array instead)"
+    },
+    "thread_state": {
+      "type": "string",
+      "enum": ["active", "paused", "terminated"],
+      "description": "Current lifecycle state of the thread"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of thread initiation (ISO 8601)"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last update (ISO 8601)"
+    },
+    "terminated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of termination (ISO 8601) - only present if thread_state is 'terminated'"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of tools available to this thread"
+    },
+    "thread_change_request_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional reference to a change request that tracks changes made in the thread's branch"
+    },
+    "git_branch": {
+      "type": "string",
+      "description": "Git branch name associated with this thread (format: 'thread/{thread_id}')"
+    },
+    "system_worktree_path": {
+      "type": "string",
+      "description": "Path to the Git worktree for the system repository"
+    },
+    "user_worktree_path": {
+      "type": "string",
+      "description": "Path to the Git worktree for the user repository"
+    },
+    "memory_repo_initialized": {
+      "type": "boolean",
+      "description": "Whether the thread's memory directory has been initialized as a git repository"
+    },
+    "external_session": {
+      "type": "object",
+      "description": "External session metadata for imported sessions",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Original session ID from the external provider"
+        },
+        "session_provider": {
+          "type": "string",
+          "enum": ["claude", "cursor", "openai"],
+          "description": "External provider that originated this session"
+        },
+        "import_timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this external session was imported into the Base system"
+        },
+        "provider_metadata": {
+          "type": "object",
+          "description": "Provider-specific metadata preserved from the original session",
+          "additionalProperties": true
+        }
+      },
+      "required": ["session_id", "session_provider"],
+      "additionalProperties": false
+    },
+    "prompt_properties": {
+      "type": "object",
+      "description": "Workflow-specific properties and configuration",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "session_provider": { "const": "base" }
+    }
+  },
+  "then": {
+    "required": ["workflow_base_uri"]
+  },
+  "else": {
+    "required": ["external_session"]
+  }
+}
