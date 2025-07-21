@@ -34,7 +34,16 @@ export default async function get_thread({ thread_id }) {
 
     // Read timeline
     const timeline_path = path.join(thread_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    let timeline
+    try {
+      timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    } catch (timeline_error) {
+      if (timeline_error.code === 'ENOENT') {
+        timeline = []
+      } else {
+        throw timeline_error
+      }
+    }
 
     // Return combined thread data
     return {
