@@ -9,11 +9,14 @@
  */
 
 import path from 'path'
+import debug from 'debug'
 import config from '#config'
 import {
   get_system_base_directory,
   get_user_base_directory
 } from './base-directory-registry.mjs'
+
+const log = debug('base-uri:utilities')
 
 /**
  * Create a system repository URI
@@ -201,6 +204,7 @@ export function resolve_base_uri(base_uri, options = {}) {
       throw new Error(`Cannot resolve remote URI to local path: ${base_uri}`)
 
     default:
+      log(`Unexpected URI scheme '${parsed.scheme}' in base URI path resolution - this may indicate a coding gap`)
       throw new Error(`Unknown URI scheme: ${parsed.scheme}`)
   }
 }

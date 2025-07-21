@@ -6,11 +6,14 @@
  */
 
 import path from 'path'
+import debug from 'debug'
 import { parse_base_uri } from './base-uri-utilities.mjs'
 import {
   get_system_base_directory,
   get_user_base_directory
 } from './base-directory-registry.mjs'
+
+const log = debug('base-uri:registry-utilities')
 
 /**
  * Resolve base_uri to absolute filesystem path using only registered directories
@@ -40,6 +43,7 @@ export function resolve_base_uri_from_registry(base_uri) {
       throw new Error(`Cannot resolve remote URI to local path: ${base_uri}`)
 
     default:
+      log(`Unexpected URI scheme '${parsed.scheme}' in base URI resolution - this may indicate a coding gap`)
       throw new Error(`Unknown URI scheme: ${parsed.scheme}`)
   }
 }
@@ -69,6 +73,7 @@ export function get_git_info_from_registry(base_uri) {
     case 'https':
       throw new Error(`Unsupported scheme for git operations: ${parsed.scheme}`)
     default:
+      log(`Unexpected URI scheme '${parsed.scheme}' in git operations - this may indicate a coding gap`)
       throw new Error(`Unsupported scheme for git operations: ${parsed.scheme}`)
   }
 

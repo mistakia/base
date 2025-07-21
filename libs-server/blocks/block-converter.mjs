@@ -4,6 +4,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import debug from 'debug'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkStringify from 'remark-stringify'
@@ -11,6 +12,8 @@ import { visit } from 'unist-util-visit'
 import { sha256 } from 'multiformats/hashes/sha2'
 import { CID } from 'multiformats/cid'
 import { BLOCK_TYPES, create_block } from './block-schemas.mjs'
+
+const log = debug('blocks:converter')
 
 const DEFAULT_CODEC = 0x71 // dag-cbor as a placeholder
 
@@ -80,6 +83,7 @@ async function create_block_from_node(node) {
       content = node.value
       break
     default:
+      log(`Unexpected AST node type '${node.type}' in markdown-to-block conversion - this may indicate a coding gap or new markdown element`)
       return null // Skip unsupported node types
   }
 
@@ -282,6 +286,7 @@ function create_ast_node_from_block(block) {
         value: `<video src="${block.attributes.uri}" controls></video>`
       }
     default:
+      log(`Unexpected block type '${block.type}' in block-to-AST conversion - this may indicate a coding gap or new block type`)
       return null
   }
 }

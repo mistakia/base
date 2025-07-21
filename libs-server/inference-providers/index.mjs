@@ -2,6 +2,10 @@
  * Base class for inference providers
  * All inference providers must extend this class and implement its methods
  */
+
+import debug from 'debug'
+
+const log = debug('inference-providers')
 export class InferenceProvider {
   constructor() {
     this.display_name = 'Base Provider'
@@ -210,6 +214,7 @@ export class InferenceProvider {
             }
           } catch (e) {
             // Not a valid tool call, continue
+            log(`Failed to parse tool call in response formatting - this may indicate malformed tool call: ${e.message}`)
           }
         }
 
@@ -331,6 +336,7 @@ export class InferenceProvider {
         }
       } catch (e) {
         // Not a valid JSON in tool call, continue
+        log(`Failed to parse JSON in tool call extraction - this may indicate malformed JSON: ${e.message}`)
       }
     }
 

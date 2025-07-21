@@ -13,6 +13,10 @@
  * required fields and relationships.
  */
 
+import debug from 'debug'
+
+const log = debug('blocks:schemas')
+
 /**
  * Block Types Enum
  */
@@ -343,6 +347,7 @@ export function create_block({
     case BLOCK_TYPES.HTML_BLOCK:
       return merge_block_data(HTML_BLOCK)
     default:
+      log(`Unexpected block type '${type}' in block creation - this may indicate a coding gap`)
       return merge_block_data({ type })
   }
 }

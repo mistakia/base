@@ -59,7 +59,7 @@ export function format_status(status_string) {
     case 'no status':
       return TASK_STATUS.NO_STATUS
     default:
-      log(`Unknown status string: ${status_string}`)
+      log(`Unexpected status string '${status_string}' in GitHub issue normalization - this may indicate a coding gap or new GitHub status`)
       return TASK_STATUS.NO_STATUS
   }
 }
@@ -93,7 +93,7 @@ export function format_priority(priority_string) {
     case '1 none':
       return TASK_PRIORITY.NONE
     default:
-      log(`Unknown priority string: ${priority_string}`)
+      log(`Unexpected priority string '${priority_string}' in GitHub issue normalization - this may indicate a coding gap or new GitHub priority`)
       return TASK_PRIORITY.NONE
   }
 }
