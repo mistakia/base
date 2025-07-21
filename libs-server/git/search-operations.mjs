@@ -35,7 +35,9 @@ export async function get_diff({
       case 'unified':
       default:
         if (format && format !== 'unified') {
-          log(`Unexpected format type '${format}' in diff operation, falling back to unified diff - this may indicate a coding gap`)
+          log(
+            `Unexpected format type '${format}' in diff operation, falling back to unified diff - this may indicate a coding gap`
+          )
         }
         format_option = '-p'
         break

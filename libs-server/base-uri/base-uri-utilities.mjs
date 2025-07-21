@@ -204,7 +204,9 @@ export function resolve_base_uri(base_uri, options = {}) {
       throw new Error(`Cannot resolve remote URI to local path: ${base_uri}`)
 
     default:
-      log(`Unexpected URI scheme '${parsed.scheme}' in base URI path resolution - this may indicate a coding gap`)
+      log(
+        `Unexpected URI scheme '${parsed.scheme}' in base URI path resolution - this may indicate a coding gap`
+      )
       throw new Error(`Unknown URI scheme: ${parsed.scheme}`)
   }
 }

@@ -83,7 +83,9 @@ async function create_block_from_node(node) {
       content = node.value
       break
     default:
-      log(`Unexpected AST node type '${node.type}' in markdown-to-block conversion - this may indicate a coding gap or new markdown element`)
+      log(
+        `Unexpected AST node type '${node.type}' in markdown-to-block conversion - this may indicate a coding gap or new markdown element`
+      )
       return null // Skip unsupported node types
   }
 
@@ -286,7 +288,9 @@ function create_ast_node_from_block(block) {
         value: `<video src="${block.attributes.uri}" controls></video>`
       }
     default:
-      log(`Unexpected block type '${block.type}' in block-to-AST conversion - this may indicate a coding gap or new block type`)
+      log(
+        `Unexpected block type '${block.type}' in block-to-AST conversion - this may indicate a coding gap or new block type`
+      )
       return null
   }
 }
