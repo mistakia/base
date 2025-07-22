@@ -52,30 +52,39 @@ This workflow handles the complete process for merging a worktree feature branch
 - Switch to main branch: `git checkout main`
 - Pull latest changes: `git pull origin main`
 
-### 4. Verify Feature Branch
+### 4. Rebase Feature Branch onto Main
+
+- Switch to the feature branch: `git checkout [branch-name]`
+- Rebase the feature branch onto the latest main: `git rebase main`
+- **If conflicts occur, do NOT attempt to resolve them yourself. Abort the rebase with `git rebase --abort` and report the issue to the team or reviewer.**
+- After successful rebase, ensure all changes are as expected
+
+### 5. Verify Feature Branch
 
 - Check branch exists: `git branch --list [branch-name]`
 - Show branch commits to verify there are changes: `git log main..[branch-name] --oneline`
 
-### 5. Perform Merge
+### 6. Perform Merge
 
+- Switch to main branch: `git checkout main`
 - Merge the feature branch with no-fast-forward to preserve history:
   ```bash
   git merge [branch-name] --no-ff
   ```
+- **If merge conflicts occur, do NOT attempt to resolve them yourself. Abort the merge with `git merge --abort` and report the issue to the team or reviewer.**
 - Include a descriptive merge commit message that summarizes the feature
 
-### 6. Push Changes
+### 7. Push Changes
 
 - Push the merged changes to origin: `git push origin main`
 
-### 7. Clean Up (Only After Successful Merge)
+### 8. Clean Up (Only After Successful Merge)
 
 - Remove the worktree: `git worktree remove ../worktrees/[branch-name]`
 - Delete the local branch: `git branch -d [branch-name]`
 - Optionally delete remote branch if it exists: `git push origin --delete [branch-name]`
 
-### 8. Verify Success
+### 9. Verify Success
 
 - Check git log to confirm merge commit exists
 - Ensure working directory is clean: `git status`
@@ -94,7 +103,8 @@ The workflow should provide a summary including:
 ## Error Handling
 
 - If branch doesn't exist, abort and report error
-- If merge conflicts occur, abort merge and report conflicts that need resolution
+- If rebase conflicts occur, do NOT resolve them yourself. Abort rebase and report conflicts that need resolution
+- If merge conflicts occur, do NOT resolve them yourself. Abort merge and report conflicts that need resolution
 - If push fails, report the error and current state
 - If cleanup fails, report what was successfully cleaned up and what remains
 
