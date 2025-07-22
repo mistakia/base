@@ -211,20 +211,13 @@ git diff --name-only
 git status
 ```
 
-#### 4.2 Commit Changes
+#### 4.2 Stage Changes
 
 ```bash
 # Stage all changes
 git add .
 
-# Create commit following conventional commit format
-git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_summary }}
-
-{% for detail in workflow_example.commit_details %}
-- {{ detail }}
-{% endfor %}
-
-{{ workflow_example.commit_description }}"
+# (Do not commit changes at this stage)
 ```
 
 ## Process Checkpoints
@@ -253,7 +246,7 @@ git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_su
 ### Phase 4 Complete
 
 - [ ] Final validation successful
-- [ ] Changes committed with proper message
+- [ ] Changes staged and ready for review
 - [ ] Implementation ready for review
 
 ## Success Criteria
@@ -262,7 +255,7 @@ git commit -m "{{ workflow_example.commit_type }}: {{ workflow_example.commit_su
 - All tests pass and quality gates are met
 - Documentation accurately reflects changes
 - Code follows established patterns and standards
-- Commit history is clean and descriptive
+- Changes are staged and ready for review
 
 ## Example Output
 
@@ -274,11 +267,11 @@ For a software task to modify thread creation behavior:
 2. Created worktree `{{ workflow_example.branch_name }}`
 3. Implemented changes in `{{ workflow_example.main_file }}`
 4. Updated tests and documentation
-5. Verified quality standards and committed changes
+5. Verified quality standards and staged changes
 
 **Deliverables:**
 
 - Modified core implementation files
 - Updated test suites (unit and integration)
 - Updated system documentation
-- Clean commit with descriptive message
+- Changes staged and ready for review

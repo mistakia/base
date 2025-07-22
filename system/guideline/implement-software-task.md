@@ -113,13 +113,10 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ### Commit and Review Process
 
-- Changes MUST be committed with descriptive commit messages following conventional commit format
-- Commit messages MUST:
-  - Include type prefix (fix:, feat:, docs:, etc.)
-  - Describe what was changed and why
-  - Include technical details in the body if complex
-  - NOT include co-author attribution unless specifically requested
-- All changes MUST be staged and committed before requesting review
+- All changes MUST be staged before requesting review
+- Changes MUST NOT be committed until after review unless otherwise specified
+- Staging MUST be done with `git add .`
+- Commit messages and commit process are handled after review
 
 ### Implementation Validation
 
@@ -196,15 +193,10 @@ yarn test:all --reporter min
 # Check code quality
 yarn lint
 
-# Commit changes
+# Stage changes
 git add .
-git commit -m "{{ task_example.commit_type }}: {{ task_example.commit_summary }}
 
-{% for change in task_example.changes %}
-- {{ change }}
-{% endfor %}
-
-{{ task_example.detailed_description }}"
+# (Do not commit changes at this stage)
 ```
 
 ## Common Pitfalls to Avoid
