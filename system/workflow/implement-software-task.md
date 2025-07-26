@@ -2,15 +2,13 @@
 title: 'Implement Software Task Workflow'
 type: 'workflow'
 description: |
-  Step-by-step workflow for implementing software tasks with proper worktree setup,
-  development practices, and quality assurance
+  Execute software implementation by setting up work environment and following implementation plans
 created_at: '2025-06-09T03:30:00.000Z'
 entity_id: 'b2c3d4e5-6f78-9012-cdef-123456789abc'
 guidelines:
   - 'sys:system/guideline/implement-software-task.md'
   - 'sys:system/guideline/write-software-tests.md'
   - 'sys:system/guideline/write-javascript.md'
-  - 'sys:system/guideline/write-software-implementation-plan.md'
 prompt_properties:
   - name: workflow_example
     type: object
@@ -24,255 +22,85 @@ prompt_properties:
       short_description: 'no-auto-change-requests'
       branch_name: 'fix/16-no-auto-change-requests'
       worktree_path: '../repo-worktrees/fix-16-no-auto-change-requests'
-      main_file: 'libs-server/threads/create-thread.mjs'
-      test_component: 'threads'
-      test_file: 'create-thread-test.mjs'
-      integration_test: 'change-requests.test.mjs'
-      documentation_file: 'execution-threads.md'
-      commit_type: 'fix'
-      commit_summary: 'modify thread creation to not automatically generate change requests'
-      commit_details:
-        - 'Remove automatic change request creation from thread creation'
-        - 'Add optional create_change_request parameter for explicit control'
-        - 'Update documentation to reflect the behavioral change'
-        - 'Add comprehensive tests for the new behavior'
-        - 'Update existing tests to explicitly request change requests when needed'
-      commit_description: "The thread creation workflow now only creates change requests when explicitly requested via the create_change_request parameter, preventing unnecessary file creation for threads that don't require change tracking."
 relations:
   - 'implements [[sys:system/guideline/implement-software-task.md]]'
   - 'uses [[sys:system/guideline/write-workflow.md]]'
-  - 'uses [[sys:system/guideline/write-software-implementation-plan.md]]'
-updated_at: '2025-06-09T03:30:00.000Z'
+  - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
+updated_at: '2025-07-26T00:00:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
-# Implement Software Task Workflow
+<task>Execute a software implementation following an implementation plan</task>
 
-## Objective
+<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step.</context>
 
-Implement a software task following established development practices, comprehensive testing, and quality assurance standards.
+<instructions>
+## Setup Phase
 
-## Prerequisites
+1. **Locate Implementation Plan**
 
-- Access to the target repository
-- Understanding of the codebase structure
-- Development environment set up (Node.js, Yarn, etc.)
-- Familiarity with [[sys:system/guideline/implement-software-task.md]]
-- Familiarity with [[sys:system/guideline/write-software-implementation-plan.md]]
-- Familiarity with [[sys:system/guideline/implement-software-task.md]]
+   - Find the implementation plan in the task file or text entity
+   - Confirm the plan includes specific file changes and tasks
+   - Note the location and format of the implementation plan
 
-## Workflow Steps
+2. **Set Up Work Environment**
+   - Navigate to the target repository (not user-base)
+   - Verify clean state on main/master branch
+   - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
+   - Navigate to worktree directory
+   - Install dependencies: `yarn install`
+   - Document working directory path
 
-### Phase 1: Task Analysis and Setup
+## Execution Phase
 
-#### 1.1 Read and Analyze Task
+3. **Work on First Task Only**
 
-```bash
-# Navigate to task file and read requirements
-Read task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workflow_example.issue_number }}-{{ workflow_example.task_name }}.md
+   - Select the first uncompleted task from the implementation plan
+   - Make the required changes for that task only
+   - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
 
-# Document findings:
-# - Current behavior to be changed
-# - Expected new behavior
-# - Technical context and constraints
-# - Affected systems and files
-# - Working directory/worktree path to be used
-```
+4. **Update Implementation Plan**
 
-#### 1.2 Set Up Worktree and Branch
+   - Update the implementation plan with task completion progress
+   - If during implementation you discover the plan needs changes (drift detected):
+     - STOP implementation immediately
+     - Present the proposed changes and reasoning for review
+     - Wait for explicit approval before updating the plan
+     - Only continue after plan changes are approved
 
-```bash
-# Navigate to main repository
-cd /path/to/repository
+5. **Stop for Review**
+   - Do NOT proceed to the next task automatically
+   - Present what was completed and current plan status
+   - Wait for explicit instruction to proceed with next task or all remaining tasks
 
-# Verify clean state on main/master
-git status
-git branch --show-current
+## Quality Assurance
 
-# Create worktree following naming conventions
-git worktree add -b {{ workflow_example.branch_name }} {{ workflow_example.worktree_path }}
+6. **When All Tasks Complete** (only after explicit instruction)
+   - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
+   - Run code quality checks: `yarn lint` and `yarn typecheck` if available
+   - Review all changes: `git diff --name-only` and `git status`
+   - Stage changes: `git add .`
 
-# Navigate to worktree and setup
-cd {{ workflow_example.worktree_path }}
-pwd  # Verify and document current working directory
-yarn install
+## Key Rules
 
-# Working Directory: {{ workflow_example.worktree_path }}
-```
+- Work on ONE task at a time from the implementation plan
+- ALWAYS update the implementation plan with progress after each task
+- If plan changes are needed (drift), STOP and get approval before updating
+- STOP after each task for review unless explicitly told to continue with all remaining tasks
+- Use the worktree setup pattern from the guidelines
+- Document working directory and verify before each operation
+  </instructions>
 
-#### 1.3 Explore Codebase
+<output_format>
+After completing each task:
 
-```bash
-# Verify working directory before exploration
-pwd  # Should be {{ workflow_example.worktree_path }}
+**Task Completed**: [Description of task]
 
-# Search for relevant patterns
-Grep "pattern related to task" --include="*.mjs"
+**Changes Made**: [Brief summary of what was changed]
 
-# Find related files
-Glob "**/*{keyword}*.mjs"
+**Implementation Plan Updated**: [Confirmation that progress was marked and any plan changes made]
 
-# Read key implementation files
-Read path/to/relevant/file.mjs
-```
+**Working Directory**: [Current worktree path]
 
-### Phase 2: Development and Testing
-
-#### 2.1 Create Initial Test
-
-```bash
-# Create test file to document current behavior
-Write tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
-
-# Verify current behavior
-yarn test:file ./tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
-```
-
-#### 2.2 Implement Core Changes
-
-```bash
-# Make primary implementation changes
-Edit {{ workflow_example.main_file }}
-
-# Update related components
-Edit related/files.mjs
-
-# Clean up unused code
-Edit files/with/unused/imports.mjs
-```
-
-#### 2.3 Update Tests for New Behavior
-
-```bash
-# Update tests to expect new behavior
-Edit tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
-
-# Verify implementation
-yarn test:file ./tests/unit/{{ workflow_example.test_component }}/{{ workflow_example.test_file }}
-
-# Run broader test suite
-yarn test:unit --reporter min
-```
-
-#### 2.4 Handle Integration Tests
-
-```bash
-# Check for affected integration tests
-yarn test:integration --reporter min
-
-# Update integration tests as needed
-Edit tests/integration/api/{{ workflow_example.integration_test }}
-
-# Update test utilities if needed
-Edit tests/utils/test-helpers.mjs
-```
-
-### Phase 3: Documentation and Quality
-
-#### 3.1 Update System Documentation
-
-```bash
-# Update relevant documentation
-Edit system/text/{{ workflow_example.documentation_file }}
-
-# Update API documentation for interface changes
-Edit system/schema/related-schema.md
-
-# Update workflow documentation for process changes
-Edit system/workflow/related-workflow.md
-```
-
-#### 3.2 Run Quality Checks
-
-```bash
-# Execute comprehensive test suite
-yarn test:unit --reporter min
-yarn test:integration --reporter min
-
-# Verify code quality standards
-yarn lint
-
-# Run type checking if applicable
-yarn typecheck
-```
-
-### Phase 4: Finalization
-
-#### 4.1 Final Validation
-
-```bash
-# Run complete test suite
-yarn test:all --reporter min
-
-# Manual verification of edge cases
-# Test specific functionality end-to-end
-
-# Review all changes
-git diff --name-only
-git status
-```
-
-#### 4.2 Stage Changes
-
-```bash
-# Stage all changes
-git add .
-
-# (Do not commit changes at this stage)
-```
-
-## Process Checkpoints
-
-### Phase 1 Complete
-
-- [ ] Task requirements documented and understood
-- [ ] Worktree and branch properly configured
-- [ ] Working directory path documented and verified
-- [ ] Codebase exploration completed
-- [ ] Dependencies installed and verified
-
-### Phase 2 Complete
-
-- [ ] Initial tests created and passing
-- [ ] Core implementation completed
-- [ ] Tests updated for new behavior
-- [ ] Integration tests addressed
-
-### Phase 3 Complete
-
-- [ ] Documentation updated
-- [ ] Quality checks passing
-- [ ] Code standards verified
-
-### Phase 4 Complete
-
-- [ ] Final validation successful
-- [ ] Changes staged and ready for review
-- [ ] Implementation ready for review
-
-## Success Criteria
-
-- Implementation addresses the original software task requirements
-- All tests pass and quality gates are met
-- Documentation accurately reflects changes
-- Code follows established patterns and standards
-- Changes are staged and ready for review
-
-## Example Output
-
-For a software task to modify thread creation behavior:
-
-**Process Flow:**
-
-1. Analyzed task requirements from `task/github/{{ workflow_example.org }}/{{ workflow_example.repo }}/{{ workflow_example.issue_number }}-{{ workflow_example.task_name }}.md`
-2. Created worktree `{{ workflow_example.branch_name }}`
-3. Implemented changes in `{{ workflow_example.main_file }}`
-4. Updated tests and documentation
-5. Verified quality standards and staged changes
-
-**Deliverables:**
-
-- Modified core implementation files
-- Updated test suites (unit and integration)
-- Updated system documentation
-- Changes staged and ready for review
+**Next Step**: Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
+</output_format>

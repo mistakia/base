@@ -2,50 +2,21 @@
 title: 'Implement Software Task'
 type: 'guideline'
 description: |
-  Guidelines for implementing software tasks with proper worktree setup, development workflow, 
-  and code quality practices
+  Guidelines for setting up work environment and executing software implementations
 created_at: '2025-06-09T03:30:00.000Z'
 entity_id: 'a1b2c3d4-5e6f-7890-abcd-ef1234567890'
 globs:
   - 'task/**/*.md'
-prompt_properties:
-  - name: task_example
-    type: object
-    required: false
-    description: Example task data to populate templates
-    default:
-      issue_number: '16'
-      task_description: 'no-auto-change-requests'
-      project_path: 'mistakia/base'
-      task_file: '16-modify-thread-creation'
-      branch_name: 'fix/16-no-auto-change-requests'
-      repo_name: 'base'
-      target_files: 'libs-server/threads/create-thread.mjs'
-      test_type: 'unit'
-      test_file: 'threads/create-thread'
-      documentation_files: 'system/text/execution-threads.md'
-      commit_type: 'fix'
-      commit_summary: 'modify thread creation to not automatically generate change requests'
-      requirements:
-        - 'Remove automatic change request creation from thread creation'
-        - 'Add optional create_change_request parameter for explicit control'
-        - 'Update documentation to reflect the behavioral change'
-      changes:
-        - 'Remove automatic change request creation from thread creation'
-        - 'Add optional create_change_request parameter for explicit control'
-        - 'Update documentation to reflect the behavioral change'
-        - 'Add comprehensive tests for the new behavior'
-        - 'Update existing tests to explicitly request change requests when needed'
-      detailed_description: "The thread creation workflow now only creates change requests when explicitly requested via the create_change_request parameter, preventing unnecessary file creation for threads that don't require change tracking."
 observations:
   - '[workflow] Isolated worktrees prevent conflicts with main development branch'
-  - '[quality] Comprehensive testing ensures behavioral correctness'
-  - '[documentation] Clear commit messages improve project history'
+  - '[quality] Step-by-step execution with review stops ensures quality'
+  - '[safety] Working directory verification prevents errors'
 relations:
   - 'related_to [[sys:system/guideline/write-workflow.md]]'
   - 'implements [[sys:system/text/system-design.md]]'
+  - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
 tags:
-updated_at: '2025-06-09T03:30:00.000Z'
+updated_at: '2025-07-26T00:00:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
@@ -53,158 +24,78 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ## Guidelines
 
-### Task Setup and Preparation
+### Prerequisites
 
-- Tasks MUST be read and understood fully before beginning implementation
-- Requirements MUST be identified from the task description, including:
-  - Current behavior that needs to be changed
-  - Expected behavior after implementation
-  - Technical constraints and context
-- Related files and systems MUST be identified through codebase exploration
-- The working directory/worktree path MUST be documented and tracked throughout the implementation process
+- An implementation plan MUST exist before starting work
+- The implementation plan MUST be located in the task file or as a separate text entity
+- The plan MUST include specific file changes and tasks
 
-### Worktree and Branch Setup
+### Worktree and Environment Setup
 
 **CRITICAL: Never commit directly to `main` or `master` branches**
 
 - A dedicated worktree MUST be created for each software task to isolate changes
-- ALL development work MUST be done in feature branches or worktrees
+- ALL development work MUST be done in feature branches within worktrees
 - Branch naming MUST follow the pattern: `fix/{issue-number}-{short-description}` or `feat/{issue-number}-{short-description}`
-  - Example: `{{ task_example.branch_name }}`
-- Worktree creation MUST follow this process:
-  1. Navigate to the target project repository directory (check you're NOT in user-base)
-  2. Create worktree with: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
-  3. Navigate to the new worktree directory
-  4. Install dependencies if needed: `yarn install`
-  5. Document the worktree path for reference throughout the implementation
-- The current working directory MUST be verified before executing commands to ensure operations are performed in the correct worktree
-- Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers
+- Worktree creation MUST follow this pattern:
+  1. Navigate to the target project repository directory (NOT user-base)
+  2. Verify clean state: `git status` and `git branch --show-current`
+  3. Create worktree: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
+  4. Navigate to worktree: `cd ../{repo-name}-worktrees/{branch-name}`
+  5. Install dependencies: `yarn install`
+  6. Document the worktree path for all subsequent operations
 
-### Development Process
+### Execution Process
 
-- Changes MUST be implemented incrementally with frequent testing
-- Implementation MUST address the root cause, not just symptoms
-- Implementation SHOULD follow best practices and correct design patterns regardless of existing implementation
-- Backwards compatibility SHOULD be ignored unless explicitly required - implement the solution correctly rather than maintaining legacy behavior
-- Configuration options SHOULD be provided when changing behaviors that users may depend on
+- Tasks from the implementation plan MUST be executed one at a time
+- Each task MUST be completed fully before proceeding to the next
+- Work MUST stop after each task for review unless explicitly instructed otherwise
+- The working directory MUST be verified before each operation
+- The implementation plan MUST be updated with progress after each task completion
 
-### Testing Strategy
+### Step-by-Step Review Protocol
 
-- Existing tests MUST be reviewed to understand current behavior expectations
-- New tests MUST be written to verify the changed behavior
-- Existing tests SHOULD be updated to reflect the new correct behavior
-- Tests MUST be run frequently during development: `yarn test:unit`, `yarn test:integration`
-- Specific test commands SHOULD be used for targeted testing: `yarn test:file {test-file}`
+- After completing each task, MUST stop and present what was completed
+- MUST wait for explicit confirmation before proceeding to next task
+- MAY proceed with all remaining tasks only when explicitly instructed
+- MUST NOT make assumptions about continuing without user approval
 
-### Documentation Updates
+### Implementation Plan Management
 
-- System documentation MUST be updated to reflect behavioral changes
-- API documentation MUST be updated for any parameter or interface changes
-- Code comments SHOULD be updated to reflect new behavior
-- Examples and usage patterns MUST be updated where applicable
+- Tasks MUST be marked as completed in the implementation plan using checkbox format: `- [x]`
+- If implementation reveals better approaches or additional tasks needed (drift detection):
+  - Implementation MUST stop immediately
+  - Proposed changes MUST be presented for review with reasoning
+  - Plan updates MUST be approved before continuing
+  - Only after approval should the plan be updated and work resumed
 
-### Code Quality
+### Testing and Quality Assurance
 
-- All linting rules MUST pass: `yarn lint`
-- Type checking MUST pass if applicable: `yarn typecheck`
-- Code style MUST be consistent with existing codebase conventions
-- Unused imports and variables MUST be removed
-- Functions SHOULD have clear, descriptive names
+- Tests SHOULD be run periodically during implementation to verify correctness
+- Code quality checks MUST be run before staging: `yarn lint` and `yarn typecheck`
+- Full test suite MUST be run before considering implementation complete
+- Appropriate test commands: `yarn test:unit`, `yarn test:integration`, `yarn test:file {specific-test}`
 
-### Commit and Review Process
+### Change Management
 
-- All changes MUST be staged before requesting review
-- Changes MUST NOT be committed until after review unless otherwise specified
-- Staging MUST be done with `git add .`
-- Commit messages and commit process are handled after review
+- All changes MUST be staged with `git add .` when implementation is complete
+- Changes MUST NOT be committed until after review process
+- The working directory path MUST be documented in all communications
+- Git status MUST be checked before and after making changes
 
-### Implementation Validation
+### Safety and Verification
 
-- The implementation MUST solve the original problem described in the task
-- Edge cases MUST be considered and tested
-- Performance impact MUST be evaluated for significant changes
-- Security implications MUST be considered for any authentication or data handling changes
-
-## Example Implementation Process
-
-### 1. Task Analysis
-
-```bash
-# Read and understand the task
-cat task/{{ task_example.project_path }}/{{ task_example.task_file }}.md
-
-# Identify key requirements:
-{% for requirement in task_example.requirements %}
-# - {{ requirement }}
-{% endfor %}
-```
-
-### 2. Worktree Setup
-
-```bash
-# Navigate to target project repository (check you're NOT in user-base)
-cd /path/to/repository
-pwd  # Verify you're in the correct repository
-
-# Create worktree and branch
-git worktree add -b {{ task_example.branch_name }} ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
-
-# Navigate and setup
-cd ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
-pwd  # Document and verify the working directory path
-yarn install
-
-# Working directory: ../{{ task_example.repo_name }}-worktrees/{{ task_example.branch_name }}
-```
-
-### 3. Development Cycle
-
-```bash
-# Make changes to core functionality
-# Update {{ task_example.target_files }}
-
-# Test changes
-yarn test:file ./tests/{{ task_example.test_type }}/{{ task_example.test_file }}.test.mjs
-
-# Update related tests
-# Fix integration tests that depend on old behavior
-
-# Run comprehensive tests
-yarn test:unit --reporter min
-yarn test:integration --reporter min
-```
-
-### 4. Documentation Updates
-
-```bash
-# Update system documentation
-# Edit {{ task_example.documentation_files }}
-
-# Verify documentation accuracy
-# Review all references to changed behavior
-```
-
-### 5. Final Validation
-
-```bash
-# Run full test suite
-yarn test:all --reporter min
-
-# Check code quality
-yarn lint
-
-# Stage changes
-git add .
-
-# (Do not commit changes at this stage)
-```
+- Current working directory MUST be verified before executing any commands
+- Operations MUST be performed in the correct worktree, not the main repository
+- File paths MUST be verified before making edits
+- Changes MUST be reviewed with `git diff` before staging
 
 ## Common Pitfalls to Avoid
 
-- **DO NOT commit directly to main or master branches** - Use worktrees/feature branches
-- DO NOT modify tests without understanding why they were written
-- DO NOT maintain broken or suboptimal behavior for backwards compatibility unless explicitly required
-- DO NOT commit without running tests
-- DO NOT ignore linting errors
-- DO NOT make changes outside the scope of the task
-- DO NOT include debug code or temporary changes in commits
+- DO NOT commit directly to main or master branches
+- DO NOT proceed to multiple tasks without explicit instruction
+- DO NOT work outside the implementation plan scope
+- DO NOT forget to update the implementation plan with progress
+- DO NOT make changes without verifying working directory
+- DO NOT stage changes until all tasks are complete and tested
+- DO NOT update the plan without review when drift is discovered - stop and get approval first
