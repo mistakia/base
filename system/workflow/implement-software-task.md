@@ -59,6 +59,7 @@ Implement a software task following established development practices, comprehen
 - Development environment set up (Node.js, Yarn, etc.)
 - Familiarity with [[sys:system/guideline/implement-software-task.md]]
 - Familiarity with [[sys:system/guideline/write-software-implementation-plan.md]]
+- Familiarity with [[sys:system/guideline/implement-software-task.md]]
 
 ## Workflow Steps
 
