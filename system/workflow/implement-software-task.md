@@ -9,6 +9,7 @@ guidelines:
   - 'sys:system/guideline/implement-software-task.md'
   - 'sys:system/guideline/write-software-tests.md'
   - 'sys:system/guideline/write-javascript.md'
+  - 'user:guideline/write-software.md'
 prompt_properties:
   - name: workflow_example
     type: object
@@ -26,13 +27,15 @@ relations:
   - 'implements [[sys:system/guideline/implement-software-task.md]]'
   - 'uses [[sys:system/guideline/write-workflow.md]]'
   - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
+  - 'uses [[user:guideline/write-software.md]]'
+  - 'uses [[sys:system/guideline/write-javascript.md]]'
 updated_at: '2025-07-26T00:00:00.000Z'
 user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 <task>Execute a software implementation following an implementation plan</task>
 
-<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step.</context>
+<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step. Follow the [[user:guideline/write-software.md]] for general software development practices and [[sys:system/guideline/write-javascript.md]] for JavaScript-specific guidelines.</context>
 
 <instructions>
 ## Setup Phase
@@ -56,6 +59,8 @@ user_id: '00000000-0000-0000-0000-000000000000'
 3. **Work on First Task Only**
 
    - Select the first uncompleted task from the implementation plan
+   - Follow [[user:guideline/write-software.md]] for variable naming and DRY principles
+   - Follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
    - Make the required changes for that task only
    - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
 
