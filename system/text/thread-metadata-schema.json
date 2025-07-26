@@ -66,6 +66,10 @@
       "format": "date-time",
       "description": "Timestamp of termination (ISO 8601) - only present if thread_state is 'terminated'"
     },
+    "termination_reason": {
+      "type": "string",
+      "description": "Reason for thread termination (e.g., 'session_import_complete', 'user_terminated', 'error')"
+    },
     "tools": {
       "type": "array",
       "items": {
@@ -74,7 +78,7 @@
       "description": "Array of tools available to this thread"
     },
     "thread_change_request_id": {
-      "type": "string",
+      "type": ["string", "null"],
       "format": "uuid",
       "description": "Optional reference to a change request that tracks changes made in the thread's branch"
     },
@@ -83,11 +87,11 @@
       "description": "Git branch name associated with this thread (format: 'thread/{thread_id}')"
     },
     "system_worktree_path": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "Path to the Git worktree for the system repository"
     },
     "user_worktree_path": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "Path to the Git worktree for the user repository"
     },
     "memory_repo_initialized": {
@@ -107,7 +111,7 @@
           "enum": ["claude", "cursor", "openai"],
           "description": "External provider that originated this session"
         },
-        "import_timestamp": {
+        "imported_at": {
           "type": "string",
           "format": "date-time",
           "description": "When this external session was imported into the Base system"
@@ -116,9 +120,17 @@
           "type": "object",
           "description": "Provider-specific metadata preserved from the original session",
           "additionalProperties": true
+        },
+        "raw_data_saved": {
+          "type": "boolean",
+          "description": "Whether the raw imported data has been saved"
+        },
+        "message_count": {
+          "type": "integer",
+          "description": "Number of messages imported from the external session"
         }
       },
-      "required": ["session_id", "session_provider"],
+      "required": ["session_provider"],
       "additionalProperties": false
     },
     "prompt_properties": {

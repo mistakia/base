@@ -25,7 +25,7 @@ export const create_thread_from_session = async ({
       session_provider: normalized_session.session_provider,
       session_id: normalized_session.session_id,
       imported_at: new Date().toISOString(),
-      source_metadata: normalized_session.metadata,
+      provider_metadata: normalized_session.metadata,
       raw_data_saved: !!raw_session_data,
       message_count: normalized_session.messages
         ? normalized_session.messages.length
@@ -45,9 +45,6 @@ export const create_thread_from_session = async ({
       create_memory_repository: false,
       external_session,
       additional_metadata: {
-        terminated_at:
-          normalized_session.metadata.end_time || new Date().toISOString(),
-        termination_reason: 'session_import_complete',
         thread_change_request_id: null,
         system_worktree_path: null,
         user_worktree_path: null
@@ -317,7 +314,7 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       external_session: {
         ...existing_metadata.external_session,
         last_updated: now,
-        source_metadata: normalized_session.metadata,
+        provider_metadata: normalized_session.metadata,
         message_count: normalized_session.messages
           ? normalized_session.messages.length
           : 0
