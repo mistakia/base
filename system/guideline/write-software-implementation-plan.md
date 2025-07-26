@@ -33,6 +33,21 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - [High-level goals and purpose of the implementation]
 - [Expected outcomes]
 
+## Background
+
+- [Existing code, configuration, or documentation related to the task]
+- [Current system state and relevant context]
+- [Dependencies and integrations]
+
+## Design
+
+- [High-level approach and organization]
+- [Proposed folder and file structure]
+- [Key functions, classes, and modules to be created]
+- [Relationships between components]
+- [New dependencies or configuration requirements]
+- [Integration points with existing code]
+
 ## Notes
 
 - [Notable implementation details]

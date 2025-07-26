@@ -16,37 +16,81 @@ user_id: 00000000-0000-0000-0000-000000000000
 <task>Write a software implementation plan by analyzing a task and breaking it into specific file changes</task>
 
 <context>
-Create structured implementation plans by understanding requirements, analyzing codebase, and planning changes.
+Create structured implementation plans by understanding requirements, analyzing codebase, and planning changes. This is done in three phases: research, design, and task planning. Each phase requires explicit user confirmation before proceeding to the next.
 </context>
 
 <instructions>
-1. **Understand the task completely**:
-   - Ask questions if anything is unclear
-   - What problem does this solve?
-   - What are the exact requirements?
-   - Ask for clarifications if the instructions are broad or vague
+## Important: Phase Progression
 
-2. **Understand the existing codebase**:
+- **DO NOT** move to the next phase until the user explicitly confirms they are ready
+- Users may iterate on each phase as long as needed
+- Wait for explicit statements like "proceed to design phase" or "let's move to task planning"
+- Each phase builds on the previous one but can be refined based on feedback
 
-   - How is the current system structured?
-   - What patterns and conventions are used?
-   - Where does this new functionality fit?
-   - What existing code can be reused?
+## Phase 1: Research and Information Gathering
 
-3. **Plan the transition**:
+1. **Use sub-agents to research the codebase**:
+   - Launch a general-purpose agent to:
+     - Search for existing code related to the task
+     - Identify current patterns and conventions
+     - Find relevant configuration and documentation
+     - Locate similar implementations or related functionality
+   
+2. **Gather information from the user**:
+   - Ask clarifying questions about requirements
+   - Understand the problem being solved
+   - Clarify any ambiguous instructions
+   - Confirm understanding of expected outcomes
 
-   - What's the simplest path from current state to desired state?
-   - Which files need to change and how?
-   - What's the most sensible order to make changes, consider ease of review?
-   - What could break and how to prevent it?
+3. **Create initial plan outline**:
+   - Write only the following sections:
+     - **Overview**: High-level goals and expected outcomes
+     - **Background**: Summary of research findings
+     - **Notes**: Initial thoughts and considerations
+   - Do not include Design or Tasks sections yet
 
-4. **Write the implementation plan**:
+4. **Stop for review**:
+   - Present the research findings to the user
+   - Ask if they want to refine or expand the research
+   - Wait for explicit confirmation to proceed to Phase 2
+   - Iterate on this phase as much as needed
 
-   - Follow the guideline template [[sys:system/guideline/write-software-implementation-plan.md]]
-   - List all files that need changes
-   - Make each task clear and testable
+## Phase 2: Design
 
-5. **Save the implementation plan**:
+5. **Only after user confirms Phase 1**:
+   - Create the **Design** section:
+     - Describe the high-level approach
+     - Outline proposed file organization
+     - Identify key components and their relationships
+     - Note new dependencies or configuration needs
+     - Explain integration points with existing code
+
+6. **Stop for design review**:
+   - Present the design to the user
+   - Ask for feedback on the proposed approach
+   - Refine the design based on feedback
+   - Wait for explicit confirmation to proceed to Phase 3
+   - Iterate on this phase as much as needed
+
+## Phase 3: Task Planning
+
+7. **Only after user confirms Phase 2**:
+   - Create detailed tasks:
+     - List all files that need changes
+     - Describe specific modifications required
+     - Explain the purpose of each change
+     - Order tasks for logical implementation
+
+8. **Follow the guideline**:
+   - Use the template from [[sys:system/guideline/write-software-implementation-plan.md]]
+   - Ensure all sections are complete
+   - Review for clarity and completeness
+
+9. **Final review**:
+   - Present the complete plan to the user
+   - Make any final adjustments based on feedback
+
+10. **Save the implementation plan**:
    - If a task entity is known, update the task entity file with the implementation plan
    - If no task entity is known:
      - Create a new text entity using `entity_create` tool
