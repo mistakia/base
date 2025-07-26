@@ -62,6 +62,7 @@ This workflow handles the complete process for merging a worktree feature branch
 - The main repository is typically in the parent directory of the worktrees
 
 ### 3. Update Main Branch (Execute from main repository directory)
+
 ### 3. Update Main Branch (Execute from main repository directory)
 
 - Ensure you're in the main repository: `pwd` should show main repository path
@@ -72,6 +73,7 @@ This workflow handles the complete process for merging a worktree feature branch
 - Pull latest changes: `git pull origin $DEFAULT_BRANCH`
 
 ### 4. Rebase Feature Branch onto Main (Execute from main repository directory)
+
 ### 4. Rebase Feature Branch onto Main (Execute from main repository directory)
 
 - Switch to the feature branch: `git checkout [branch-name]`
@@ -83,6 +85,7 @@ This workflow handles the complete process for merging a worktree feature branch
 - After successful rebase, ensure all changes are as expected
 
 ### 5. Verify Feature Branch (Execute from main repository directory)
+
 ### 5. Verify Feature Branch (Execute from main repository directory)
 
 - Check branch exists: `git branch --list [branch-name]`
@@ -90,6 +93,7 @@ This workflow handles the complete process for merging a worktree feature branch
 - Show branch commits to verify there are changes: `git log $DEFAULT_BRANCH..[branch-name] --oneline`
 
 ### 6. Perform Merge (Execute from main repository directory)
+
 ### 6. Perform Merge (Execute from main repository directory)
 
 - Switch to default branch: `git checkout $DEFAULT_BRANCH`
@@ -102,12 +106,14 @@ This workflow handles the complete process for merging a worktree feature branch
 - Include a descriptive merge commit message that summarizes the feature
 
 ### 7. Push Changes (Execute from main repository directory)
+
 ### 7. Push Changes (Execute from main repository directory)
 
 - Push the merged changes to origin: `git push origin $DEFAULT_BRANCH`
 - Push the merged changes to origin: `git push origin $DEFAULT_BRANCH`
 
 ### 8. Clean Up (Only After Successful Merge, Execute from main repository directory)
+
 ### 8. Clean Up (Only After Successful Merge, Execute from main repository directory)
 
 - Find worktree path from earlier `git worktree list` output
@@ -121,6 +127,7 @@ This workflow handles the complete process for merging a worktree feature branch
 - If remote branch exists, delete it: `git push origin --delete [branch-name]`
 
 ### 9. Verify Success (Execute from main repository directory)
+
 ### 9. Verify Success (Execute from main repository directory)
 
 - Check git log to confirm merge commit exists: `git log -1 --oneline`
