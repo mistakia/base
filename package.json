@@ -33,7 +33,10 @@
     "test:change-requests": "DEBUG='change-requests:*' CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/unit/change-requests/**/*.mjs",
     "test:threads": "DEBUG='threads:*' CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit ./tests/integration/threads/**/*.mjs",
     "test:file": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --require tests/unit/global.mjs --exit",
-    "export:schema": "ssh database 'pg_dump -U postgres -h localhost --dbname=base_production --schema-only --clean --no-owner --if-exists --file=/home/user/base.schema.postgres.sql --no-tablespaces' && scp database:/home/user/base.schema.postgres.sql ./db/schema.sql && awk 'NR==18{print \"SET search_path = public;\"} {print}' ./db/schema.sql > ./db/schema.tmp.sql && mv ./db/schema.tmp.sql ./db/schema.sql"
+    "export:schema": "ssh database 'pg_dump -U postgres -h localhost --dbname=base_production --schema-only --clean --no-owner --if-exists --file=/home/user/base.schema.postgres.sql --no-tablespaces' && scp database:/home/user/base.schema.postgres.sql ./db/schema.sql && awk 'NR==18{print \"SET search_path = public;\"} {print}' ./db/schema.sql > ./db/schema.tmp.sql && mv ./db/schema.tmp.sql ./db/schema.sql",
+    "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
+    "deploy": "pm2 deploy server.pm2.config.js production --force",
+    "deploy:setup": "pm2 deploy server.pm2.config.js production setup"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
