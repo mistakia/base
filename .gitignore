@@ -22,6 +22,7 @@ yarn-error.log
 #
 config/config*
 .cursor/mcp.json
+build/
 
 # Ignore cursor rules
 .cursor/rules/*.mdc

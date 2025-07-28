@@ -36,7 +36,8 @@
     "export:schema": "ssh database 'pg_dump -U postgres -h localhost --dbname=base_production --schema-only --clean --no-owner --if-exists --file=/home/user/base.schema.postgres.sql --no-tablespaces' && scp database:/home/user/base.schema.postgres.sql ./db/schema.sql && awk 'NR==18{print \"SET search_path = public;\"} {print}' ./db/schema.sql > ./db/schema.tmp.sql && mv ./db/schema.tmp.sql ./db/schema.sql",
     "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
     "deploy": "pm2 deploy server.pm2.config.js production --force",
-    "deploy:setup": "pm2 deploy server.pm2.config.js production setup"
+    "deploy:setup": "pm2 deploy server.pm2.config.js production setup",
+    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
