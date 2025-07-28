@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import Button from '@mui/material/Button'
 import MuiDialog from '@mui/material/Dialog'
-import MuidialogActions from '@mui/material/dialogActions'
+import MuiDialogActions from '@mui/material/DialogActions'
 import MuiDialogContent from '@mui/material/DialogContent'
 import MuiDialogContentText from '@mui/material/DialogContentText'
 import MuiDialogTitle from '@mui/material/DialogTitle'
@@ -47,14 +47,14 @@ export default class Dialog extends React.Component {
             {this.props.info.description}
           </MuiDialogContentText>
         </MuiDialogContent>
-        <MuidialogActions>
+        <MuiDialogActions>
           <Button onClick={this.handle_close} text>
             Cancel
           </Button>
           <Button onClick={this.handle_click} text>
             Confirm
           </Button>
-        </MuidialogActions>
+        </MuiDialogActions>
       </MuiDialog>
     )
   }
