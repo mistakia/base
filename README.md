@@ -8,11 +8,11 @@ This system creates a framework for LLMs and humans to collaborate effectively, 
 
 - **File-First Architecture**: Files are the source of truth, stored as markdown files with YAML frontmatter
 - **Version Controlled**: Everything is tracked with git
-- **Pull Request Style Change Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
+- **Change Tracking and Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
 - **Composable Workflows**: Workflows can embed other workflows, enabling complex operations
-- **Multi-Model Support**: Different models can process the same inference requests
+- **Multi-Model Support**: Use the right model for each prompt and task
 - **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
-- **Granular Action Control**: System actions have configurable permission levels to control autonomy
+- **Granular Action Control**: Tool calls have configurable permission levels to control autonomy
 - **Async Collaboration**: Support for asynchronous human-system interaction
 - **Knowledge Graph**: Builds and traverses relationships between knowledge items
 - **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control
