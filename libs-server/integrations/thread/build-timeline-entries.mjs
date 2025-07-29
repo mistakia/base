@@ -119,7 +119,9 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
     'tool_name',
     'parameters',
     'result',
-    'tool_id'
+    'tool_id',
+    'thinking_type',
+    'system_type'
   ]
   Object.keys(message).forEach((key) => {
     if (!known_message_keys.includes(key)) {
@@ -133,7 +135,9 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
 
   const base_entry = {
     id: message.id,
-    timestamp: message.timestamp.toISOString()
+    timestamp: message.timestamp.toISOString(),
+    session_provider,
+    provider_data: message.provider_data || {}
   }
 
   switch (message.type) {
@@ -141,14 +145,10 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
       return {
         ...base_entry,
         type: 'message',
-        content: {
-          role: message.role,
-          content: format_message_content(message.content),
-          metadata: {
-            session_provider,
-            ...message.metadata,
-            provider_data: message.provider_data
-          }
+        role: message.role,
+        content: format_message_content(message.content),
+        metadata: {
+          ...message.metadata
         }
       }
 
@@ -158,12 +158,13 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
         type: 'tool_call',
         content: {
           tool_name: message.tool_name,
-          parameters: message.parameters,
-          metadata: {
-            session_provider,
-            tool_id: message.tool_id,
-            ...message.metadata
-          }
+          tool_parameters: message.parameters,
+          tool_call_id: message.tool_id,
+          execution_status: message.execution_status || 'pending',
+          result_preview: message.result_preview || null
+        },
+        metadata: {
+          ...message.metadata
         }
       }
 
@@ -172,13 +173,34 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
         ...base_entry,
         type: 'tool_result',
         content: {
-          tool_name: message.tool_name,
+          tool_call_id: message.tool_id,
           result: message.result,
-          metadata: {
-            session_provider,
-            tool_id: message.tool_id,
-            ...message.metadata
-          }
+          error: message.error || null
+        },
+        metadata: {
+          ...message.metadata
+        }
+      }
+
+    case 'system':
+      return {
+        ...base_entry,
+        type: 'system',
+        content: message.content,
+        system_type: message.system_type || 'status',
+        metadata: {
+          ...message.metadata
+        }
+      }
+
+    case 'thinking':
+      return {
+        ...base_entry,
+        type: 'thinking',
+        content: message.content,
+        thinking_type: message.thinking_type || 'reasoning',
+        metadata: {
+          ...message.metadata
         }
       }
 
@@ -186,13 +208,11 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
       return {
         ...base_entry,
         type: 'state_change',
-        content: {
-          state: message.metadata?.summary_type || 'session_summary',
-          message: message.content,
-          metadata: {
-            session_provider,
-            ...message.metadata
-          }
+        previous_state: message.previous_state || 'unknown',
+        new_state: message.new_state || 'unknown',
+        reason: message.reason || message.content,
+        metadata: {
+          ...message.metadata
         }
       }
 
@@ -200,27 +220,23 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
       return {
         ...base_entry,
         type: 'error',
-        content: {
-          error: message.content,
-          metadata: {
-            session_provider,
-            ...message.metadata
-          }
+        error_type: message.error_type || 'unknown',
+        message: message.content || message.message,
+        details: message.details || {},
+        metadata: {
+          ...message.metadata
         }
       }
 
     case 'unknown':
       return {
         ...base_entry,
-        type: 'message',
-        content: {
-          role: 'system',
-          content: `Unsupported message type: ${message.metadata?.original_type || 'unknown'}\n${message.content}`,
-          metadata: {
-            session_provider,
-            unsupported_message_type: message.metadata?.original_type,
-            ...message.metadata
-          }
+        type: 'system',
+        content: `Unsupported message type: ${message.metadata?.original_type || 'unknown'}\n${message.content}`,
+        system_type: 'status',
+        metadata: {
+          unsupported_message_type: message.metadata?.original_type,
+          ...message.metadata
         }
       }
 
@@ -228,16 +244,13 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
       log_timeline_unsupported('message_types', message.type)
       return {
         ...base_entry,
-        type: 'message',
-        content: {
-          role: 'system',
-          content: `Unknown message type: ${message.type}\n${JSON.stringify(message, null, 2)}`,
-          metadata: {
-            session_provider,
-            original_type: message.type,
-            unsupported_conversion: true,
-            ...message.metadata
-          }
+        type: 'system',
+        content: `Unknown message type: ${message.type}\n${JSON.stringify(message, null, 2)}`,
+        system_type: 'status',
+        metadata: {
+          original_type: message.type,
+          unsupported_conversion: true,
+          ...message.metadata
         }
       }
   }
@@ -249,31 +262,93 @@ const format_message_content = (content) => {
   }
 
   if (Array.isArray(content)) {
-    return content
-      .map((item) => {
+    // Check if this is structured content blocks
+    const has_content_blocks = content.some(
+      (item) =>
+        typeof item === 'object' &&
+        item.type &&
+        [
+          'text',
+          'thinking',
+          'thinking.thinking',
+          'thinking.signature',
+          'tool_use',
+          'tool_result',
+          'image',
+          'code'
+        ].includes(item.type)
+    )
+
+    if (has_content_blocks) {
+      // Return as structured content blocks for schema compliance
+      return content.map((item) => {
         if (typeof item === 'string') {
-          return item
+          return {
+            type: 'text',
+            content: item
+          }
         }
 
         if (typeof item === 'object' && item.type) {
           switch (item.type) {
-            case 'tool_call':
-              return `[Tool Call: ${item.tool_name}]\nParameters: ${JSON.stringify(item.parameters, null, 2)}`
+            case 'text':
+            case 'thinking':
+            case 'thinking.thinking':
+            case 'thinking.signature':
+            case 'tool_use':
             case 'tool_result':
-              return `[Tool Result: ${item.tool_use_id}]\nResult: ${typeof item.content === 'string' ? item.content : JSON.stringify(item.content, null, 2)}`
+            case 'code':
+              return {
+                type: item.type,
+                content: item.content || item.text || JSON.stringify(item),
+                metadata: item.metadata || {}
+              }
+            case 'image':
+              return {
+                type: 'image',
+                content: item.content || '[Image]',
+                metadata: {
+                  source_type: item.metadata?.source_type || 'unknown',
+                  media_type: item.metadata?.media_type || 'image/*',
+                  ...item.metadata
+                }
+              }
+            case 'tool_call':
+              return {
+                type: 'tool_use',
+                content: `Tool: ${item.tool_name}\nParameters: ${JSON.stringify(item.parameters, null, 2)}`,
+                metadata: { tool_name: item.tool_name, tool_id: item.tool_id }
+              }
             default:
               log_timeline_unsupported(
                 'content_formats',
                 item.type,
                 'in message content array'
               )
-              return JSON.stringify(item, null, 2)
+              return {
+                type: 'text',
+                content: JSON.stringify(item, null, 2),
+                metadata: { unsupported_type: item.type }
+              }
           }
         }
 
-        return JSON.stringify(item, null, 2)
+        return {
+          type: 'text',
+          content: JSON.stringify(item, null, 2)
+        }
       })
-      .join('\n\n')
+    } else {
+      // Legacy format - convert to simple text
+      return content
+        .map((item) => {
+          if (typeof item === 'string') {
+            return item
+          }
+          return JSON.stringify(item, null, 2)
+        })
+        .join('\n\n')
+    }
   }
 
   // Handle object content (non-array)

@@ -30,3 +30,6 @@ build/
 
 # But keep the directory structure
 !.cursor/rules/.gitkeep
+
+# Temporary files
+tmp/

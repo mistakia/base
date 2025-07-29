@@ -46,6 +46,44 @@ export const normalize_claude_session = (claude_session) => {
       if (normalized_entry) {
         normalized_messages.push(normalized_entry)
       }
+
+      // Check for thinking content that should be separate entries
+      if (
+        entry.type === 'assistant' &&
+        entry.message?.content &&
+        Array.isArray(entry.message.content)
+      ) {
+        entry.message.content.forEach((content_item, content_index) => {
+          if (content_item.type && content_item.type.startsWith('thinking')) {
+            // Create separate thinking entry
+            const thinking_entry = {
+              id: `${entry.uuid}-thinking-${content_index}`,
+              parent_id: entry.uuid,
+              timestamp: new Date(entry.timestamp),
+              type: 'thinking',
+              content:
+                content_item.content ||
+                content_item.text ||
+                content_item.thinking,
+              thinking_type:
+                content_item.type === 'thinking.signature'
+                  ? 'analysis'
+                  : 'reasoning',
+              metadata: {
+                original_content_type: content_item.type,
+                ...content_item.metadata
+              },
+              provider_data: {
+                line_number: entry.line_number,
+                session_index: index,
+                is_sidechain: entry.isSidechain || false,
+                content_block_index: content_index
+              }
+            }
+            normalized_messages.push(thinking_entry)
+          }
+        })
+      }
     })
 
     // Sort by timestamp to ensure chronological order
@@ -88,7 +126,14 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
     'leafUuid',
     'toolUseResult',
     'version',
-    'sessionId'
+    'sessionId',
+    'content',
+    'isMeta',
+    'isApiErrorMessage',
+    'gitBranch',
+    'isCompactSummary',
+    'level',
+    'metadata'
   ]
 
   all_entry_keys.forEach((key) => {
@@ -122,12 +167,28 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
     case 'summary':
       return {
         ...base_normalized,
-        type: 'state_change',
-        role: 'system',
+        type: 'system',
         content: entry.summary,
+        system_type: 'status',
         metadata: {
           summary_type: 'session_summary',
           leaf_uuid: entry.leafUuid
+        }
+      }
+
+    case 'system':
+      return {
+        ...base_normalized,
+        type: 'system',
+        content: entry.content || entry.message?.content || '',
+        system_type: 'status',
+        metadata: {
+          is_meta: entry.isMeta || false,
+          is_api_error_message: entry.isApiErrorMessage || false,
+          git_branch: entry.gitBranch || null,
+          is_compact_summary: entry.isCompactSummary || false,
+          level: entry.level || null,
+          ...entry.metadata
         }
       }
 
@@ -147,21 +208,19 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
 }
 
 const normalize_user_entry = (entry, base_normalized) => {
-  // Check for tool use results in user entries
-  if (entry.toolUseResult) {
-    log_unsupported({
-      category: 'message_fields',
-      value: 'toolUseResult',
-      context: 'user entry with tool result data'
-    })
-  }
-
   // Analyze user message structure
   if (entry.message?.content && Array.isArray(entry.message.content)) {
     entry.message.content.forEach((content_item) => {
       if (
         content_item.type &&
-        !['text', 'tool_result'].includes(content_item.type)
+        ![
+          'text',
+          'tool_result',
+          'thinking',
+          'thinking.thinking',
+          'thinking.signature',
+          'image'
+        ].includes(content_item.type)
       ) {
         log_unsupported({
           category: 'content_types',
@@ -178,9 +237,14 @@ const normalize_user_entry = (entry, base_normalized) => {
     role: 'user',
     content: extract_user_content(entry.message),
     metadata: {
-      cwd: entry.cwd,
+      working_directory: entry.cwd,
       user_type: entry.userType,
-      tool_use_result: entry.toolUseResult || null
+      tool_use_result: entry.toolUseResult || null,
+      is_meta: entry.isMeta || false,
+      is_api_error_message: entry.isApiErrorMessage || false,
+      git_branch: entry.gitBranch || null,
+      is_compact_summary: entry.isCompactSummary || false,
+      level: entry.level || null
     }
   }
 }
@@ -216,7 +280,8 @@ const normalize_assistant_entry = (entry, base_normalized) => {
       'output_tokens',
       'cache_read_input_tokens',
       'cache_creation_input_tokens',
-      'service_tier'
+      'service_tier',
+      'server_tool_use'
     ]
     Object.keys(message.usage).forEach((key) => {
       if (!known_usage_keys.includes(key)) {
@@ -239,7 +304,13 @@ const normalize_assistant_entry = (entry, base_normalized) => {
       request_id: entry.requestId,
       usage: entry.message?.usage,
       stop_reason: entry.message?.stop_reason,
-      stop_sequence: entry.message?.stop_sequence
+      stop_sequence: entry.message?.stop_sequence,
+      result_preview: entry.toolUseResult || null,
+      is_meta: entry.isMeta || false,
+      is_api_error_message: entry.isApiErrorMessage || false,
+      git_branch: entry.gitBranch || null,
+      is_compact_summary: entry.isCompactSummary || false,
+      level: entry.level || null
     }
   }
 }
@@ -267,6 +338,24 @@ const extract_user_content = (message) => {
             type: 'tool_result',
             tool_use_id: item.tool_use_id,
             content: item.content
+          }
+        case 'thinking':
+        case 'thinking.thinking':
+        case 'thinking.signature':
+          return {
+            type: item.type,
+            content: item.content || item.text || item.thinking,
+            metadata: item.metadata || {}
+          }
+        case 'image':
+          return {
+            type: 'image',
+            content: item.source?.data || item.content || '[Image]',
+            metadata: {
+              source_type: item.source?.type,
+              media_type: item.source?.media_type,
+              ...item.metadata
+            }
           }
         default:
           log_unsupported({
@@ -296,7 +385,17 @@ const extract_assistant_content = (message) => {
     return message.content.map((item) => {
       // Track all properties in content items
       if (typeof item === 'object' && item.type) {
-        const known_content_keys = ['type', 'text', 'name', 'id', 'input']
+        const known_content_keys = [
+          'type',
+          'text',
+          'name',
+          'id',
+          'input',
+          'content',
+          'thinking',
+          'metadata',
+          'source' // for images
+        ]
         Object.keys(item).forEach((key) => {
           if (!known_content_keys.includes(key)) {
             log_unsupported({
@@ -313,10 +412,31 @@ const extract_assistant_content = (message) => {
           return item.text
         case 'tool_use':
           return {
-            type: 'tool_call',
-            tool_name: item.name,
-            tool_id: item.id,
-            parameters: item.input
+            type: 'tool_use',
+            content: `Tool: ${item.name}`,
+            metadata: {
+              tool_name: item.name,
+              tool_id: item.id,
+              parameters: item.input
+            }
+          }
+        case 'thinking':
+        case 'thinking.thinking':
+        case 'thinking.signature':
+          return {
+            type: item.type,
+            content: item.content || item.text || item.thinking,
+            metadata: item.metadata || {}
+          }
+        case 'image':
+          return {
+            type: 'image',
+            content: item.source?.data || item.content || '[Image]',
+            metadata: {
+              source_type: item.source?.type,
+              media_type: item.source?.media_type,
+              ...item.metadata
+            }
           }
         default:
           if (item.type) {
