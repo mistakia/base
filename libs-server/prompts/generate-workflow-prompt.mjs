@@ -1,8 +1,12 @@
 import debug from 'debug'
 import fs from 'fs/promises'
-import Twig from 'twig'
 import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
+import {
+  render_template,
+  prepare_template_context,
+  merge_default_values
+} from './template-renderer.mjs'
 // Tool registration happens at thread creation time
 
 const log = debug('prompts:workflow')
@@ -40,15 +44,22 @@ export default async function generate_workflow_prompt({
       })
 
     // Prepare template context with prompt properties and timeline data
-    const prompt_properties_with_timeline = {
-      ...prompt_properties,
-      timeline: timeline_entries || []
-    }
+    const base_context = prepare_template_context({
+      prompt_properties,
+      timeline_entries
+    })
+
+    // Merge default values from workflow properties
+    const final_context = merge_default_values({
+      base_context,
+      entity_properties: document_properties
+    })
 
     // Render the document content using Twig with template context
     const rendered_content = await render_template({
       document_content,
-      prompt_properties: prompt_properties_with_timeline
+      template_context: final_context,
+      context_name: base_uri
     })
 
     // Format as a structured workflow prompt
@@ -63,27 +74,5 @@ export default async function generate_workflow_prompt({
     console.log(error)
     log(`Error generating workflow prompt: ${error.message}`)
     throw new Error(`Failed to generate workflow prompt: ${error.message}`)
-  }
-}
-
-/**
- * Render a template string using Twig
- *
- * @param {string} document_content - The document content to render
- * @param {Object} prompt_properties - The prompt properties to render with
- * @returns {Promise<string>} - The rendered template string
- */
-async function render_template({ document_content, prompt_properties }) {
-  try {
-    // Create a temporary template
-    const template = Twig.twig({
-      data: document_content
-    })
-
-    // Render the template with the provided context
-    return template.render(prompt_properties)
-  } catch (error) {
-    log(`Template rendering error: ${error.message}`)
-    throw new Error(`Failed to render template: ${error.message}`)
   }
 }

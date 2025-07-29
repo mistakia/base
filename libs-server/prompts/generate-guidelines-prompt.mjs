@@ -1,6 +1,12 @@
 import debug from 'debug'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import {
+  render_template,
+  prepare_template_context,
+  merge_default_values,
+  extract_name_from_uri
+} from './template-renderer.mjs'
 
 const log = debug('prompts:guidelines')
 
@@ -9,10 +15,14 @@ const log = debug('prompts:guidelines')
  *
  * @param {Object} params Parameters
  * @param {Array<string>} [params.guideline_base_uris] Array of guideline URIs (e.g., 'sys:guideline/name.md')
+ * @param {Object} [params.prompt_properties] Properties to inject into guideline templates
+ * @param {Array} [params.timeline_entries] Timeline entries to make available in templates
  * @returns {Promise<string>} Generated guidelines prompt component
  */
 export default async function generate_guidelines_prompt({
-  guideline_base_uris = []
+  guideline_base_uris = [],
+  prompt_properties = {},
+  timeline_entries = []
 }) {
   log('Generating guidelines prompt')
 
@@ -69,26 +79,44 @@ export default async function generate_guidelines_prompt({
     return prompt
   }
 
+  // Prepare template context with prompt properties and timeline data
+  const base_context = prepare_template_context({
+    prompt_properties,
+    timeline_entries
+  })
+
   // Add each guideline in a structured format
   for (const guideline of guidelines_content) {
-    const { entity_content, base_uri } = guideline
+    const { entity_content, entity_properties, base_uri } = guideline
 
     // Extract the filename without extension from the path
-    let guideline_name = 'untitled'
-    if (base_uri) {
-      // Example: system/guideline/write-workflow.md -> write-workflow -> create_workflow
-      const path_parts = base_uri.split('/')
-      const filename = path_parts[path_parts.length - 1]
-      if (filename) {
-        guideline_name = filename.replace(/\.md$/, '').replace(/-/g, '_')
-      }
+    const guideline_name = extract_name_from_uri(base_uri)
+
+    // Merge default values from guideline properties with provided context
+    const final_context = merge_default_values({
+      base_context,
+      entity_properties
+    })
+
+    // Render the guideline content using Twig template
+    let rendered_content
+    try {
+      rendered_content = await render_template({
+        document_content: entity_content,
+        template_context: final_context,
+        context_name: base_uri
+      })
+    } catch (error) {
+      log(`Template rendering error for ${base_uri}: ${error.message}`)
+      // Fall back to original content if template rendering fails
+      rendered_content = entity_content
     }
 
     // Opening tag with guideline name
     prompt += `<${guideline_name}_rules>\n\n`
 
-    // Add the raw content
-    prompt += `${entity_content}\n\n`
+    // Add the rendered content
+    prompt += `${rendered_content}\n\n`
 
     // Closing tag with guideline name
     prompt += `</${guideline_name}_rules>\n\n`
