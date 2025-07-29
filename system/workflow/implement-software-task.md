@@ -103,6 +103,10 @@ After completing each task:
 
 **Changes Made**: [Brief summary of what was changed]
 
+**Files Modified**:
+- [List of file paths for edited files]
+- [List of file paths for created files]
+
 **Implementation Plan Updated**: [Confirmation that progress was marked and any plan changes made]
 
 **Working Directory**: [Current worktree path]
