@@ -208,15 +208,6 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
 }
 
 const normalize_user_entry = (entry, base_normalized) => {
-  // Check for tool use results in user entries
-  if (entry.toolUseResult) {
-    log_unsupported({
-      category: 'message_fields',
-      value: 'toolUseResult',
-      context: 'user entry with tool result data'
-    })
-  }
-
   // Analyze user message structure
   if (entry.message?.content && Array.isArray(entry.message.content)) {
     entry.message.content.forEach((content_item) => {
@@ -394,7 +385,17 @@ const extract_assistant_content = (message) => {
     return message.content.map((item) => {
       // Track all properties in content items
       if (typeof item === 'object' && item.type) {
-        const known_content_keys = ['type', 'text', 'name', 'id', 'input']
+        const known_content_keys = [
+          'type',
+          'text',
+          'name',
+          'id',
+          'input',
+          'content',
+          'thinking',
+          'metadata',
+          'source' // for images
+        ]
         Object.keys(item).forEach((key) => {
           if (!known_content_keys.includes(key)) {
             log_unsupported({
