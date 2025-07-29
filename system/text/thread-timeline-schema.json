@@ -27,9 +27,20 @@
           "thread_main_request",
           "notification",
           "human_request",
-          "assistant_response"
+          "assistant_response",
+          "system",
+          "thinking"
         ],
         "description": "Type of timeline entry"
+      },
+      "provider": {
+        "type": "string",
+        "description": "Session provider (claude, cursor, openai, etc.)"
+      },
+      "provider_data": {
+        "type": "object",
+        "description": "Provider-specific data and metadata",
+        "additionalProperties": true
       }
     },
     "allOf": [
@@ -46,12 +57,93 @@
               "description": "Role of the message sender"
             },
             "content": {
-              "type": "string",
-              "description": "Text content of the message"
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Simple text content"
+                },
+                {
+                  "type": "array",
+                  "description": "Structured content blocks",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "text",
+                          "thinking",
+                          "thinking.thinking",
+                          "thinking.signature",
+                          "tool_use",
+                          "tool_result",
+                          "image",
+                          "code"
+                        ]
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "required": ["type", "content"],
+                    "additionalProperties": true
+                  }
+                }
+              ],
+              "description": "Message content - can be simple text or structured blocks"
             },
             "metadata": {
               "type": "object",
               "description": "Additional message metadata",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "description": "AI model used for this message"
+                },
+                "request_id": {
+                  "type": "string",
+                  "description": "Provider request identifier"
+                },
+                "usage": {
+                  "type": "object",
+                  "description": "Token usage information",
+                  "properties": {
+                    "input_tokens": { "type": "number" },
+                    "output_tokens": { "type": "number" },
+                    "cache_creation_input_tokens": { "type": "number" },
+                    "cache_read_input_tokens": { "type": "number" },
+                    "service_tier": { "type": "string" }
+                  }
+                },
+                "stop_reason": {
+                  "type": "string",
+                  "enum": [
+                    "end_turn",
+                    "stop_sequence",
+                    "tool_use",
+                    "max_tokens"
+                  ]
+                },
+                "stop_sequence": {
+                  "type": "string"
+                },
+                "git_branch": {
+                  "type": "string",
+                  "description": "Git branch context"
+                },
+                "is_meta": {
+                  "type": "boolean",
+                  "description": "Whether this is a metadata entry"
+                },
+                "level": {
+                  "type": "number",
+                  "description": "Hierarchical level of the entry"
+                }
+              },
               "additionalProperties": true
             }
           }
@@ -80,6 +172,16 @@
                 "tool_call_id": {
                   "type": "string",
                   "description": "Unique identifier for this tool call"
+                },
+                "execution_status": {
+                  "type": "string",
+                  "enum": ["pending", "executing", "completed", "failed"],
+                  "description": "Status of tool execution"
+                },
+                "result_preview": {
+                  "type": "object",
+                  "description": "Preview or summary of tool execution result",
+                  "additionalProperties": true
                 }
               },
               "additionalProperties": false
@@ -262,6 +364,74 @@
             "metadata": {
               "type": "object",
               "description": "Additional response metadata",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "system" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "System-level message or notification content"
+            },
+            "system_type": {
+              "type": "string",
+              "enum": ["initialization", "configuration", "status", "cleanup"],
+              "description": "Type of system entry"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "System-specific metadata",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "thinking" } }
+        },
+        "then": {
+          "required": ["content"],
+          "properties": {
+            "content": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "Simple thinking content"
+                },
+                {
+                  "type": "object",
+                  "description": "Structured thinking content",
+                  "properties": {
+                    "thinking": {
+                      "type": "string",
+                      "description": "Main thinking content"
+                    },
+                    "signature": {
+                      "type": "string",
+                      "description": "Thinking signature or metadata"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              ],
+              "description": "AI model's internal reasoning content"
+            },
+            "thinking_type": {
+              "type": "string",
+              "enum": ["reasoning", "planning", "reflection", "analysis"],
+              "description": "Type of thinking process"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Thinking-specific metadata",
               "additionalProperties": true
             }
           }
