@@ -29,7 +29,9 @@ module.exports = {
       'pre-deploy': 'git pull',
       'pre-deploy-local': '',
       'post-deploy': [
-        'source /home/user/.bashrc',
+        'export NODE_ENV=production',
+        'source ~/.nvm/nvm.sh',
+        'nvm use',
         'yarn install',
         'yarn build',
         'pm2 reload server.pm2.config.js --env production'
