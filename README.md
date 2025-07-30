@@ -4,7 +4,7 @@ A human-in-the-loop LLM system that works alongside a user to manage and build a
 
 ## Overview
 
-This system creates a framework for LLMs and humans to collaborate effectively, with the following key features:
+This system creates a framework for humans to collaborate effectively with LLMs, with the following key features:
 
 - **File-First Architecture**: Files are the source of truth, stored as markdown files with YAML frontmatter
 - **Version Controlled**: Everything is tracked with git
