@@ -16,16 +16,18 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Break down the implementation into clear, actionable steps, ensuring each step is concise and unambiguous.
 - Use a markdown task list format so that progress can be tracked easily.
 - Use markdown checkboxes `- [ ]` for incomplete tasks and `- [x]` for completed tasks.
-- Do not use emojis in implementation plans.
+- **STRICTLY AVOID** emojis in implementation plans - they make plans look unprofessional and add no value.
 - Ensure the plan is self-contained and understandable without additional context.
 - Use consistent terminology and formatting throughout the plan.
 - Review the plan for completeness and accuracy before sharing.
 - Include the purpose of each change to provide context.
-- Group related file changes together when logical.
+- **Avoid numbered lists** - use logical groupings, categories, or phases instead of sequential numbering to prevent staleness when plans are modified.
+- **Task item structure should be flexible** - allow for varying levels of detail, code snippets, file paths, and implementation notes as appropriate for different types of work.
+- **Progress tracking** - all task items must use `- [ ]` checkbox format to enable progress tracking.
 
 ## Template
 
-```markdown
+````markdown
 # Implementation Plan: [Title]
 
 ## Overview
@@ -57,13 +59,40 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 ## Tasks
 
-- [ ] [File path to create or modify]:
+### Core Implementation
 
-  - [Specific changes or additions required]
-  - [Purpose of these changes]
+- [ ] **[File path to create or modify]**
 
-- [ ] [Next file path]:
+  - File: `[full/path/to/file]`
+  - Purpose: [Why this change is needed]
+  - Changes:
+    - [Specific modification 1]
+    - [Specific modification 2]
 
-  - [Specific changes or additions required]
-  - [Purpose of these changes]
+- [ ] **[Alternative format with code details]**
+  - File: `[full/path/to/file]`
+  - Purpose: [Why this change is needed]
+  - Changes:
+  ```language
+  - Remove: old_function_name
+  - Implement: new_function_name
+  - Add: new_feature_logic
+  - Update: configuration_settings
+  ```
+````
+
+### Configuration & Setup
+
+- [ ] **[Configuration file updates]**
+  - [Configuration changes needed]
+  - [Environment setup requirements]
+
+### Testing & Validation
+
+- [ ] **[Test implementation]**
+  - [Test scenarios to implement]
+  - [Validation steps required]
+
+```
+
 ```
