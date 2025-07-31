@@ -77,11 +77,6 @@
       },
       "description": "Array of tools available to this thread"
     },
-    "thread_change_request_id": {
-      "type": ["string", "null"],
-      "format": "uuid",
-      "description": "Optional reference to a change request that tracks changes made in the thread's branch"
-    },
     "git_branch": {
       "type": "string",
       "description": "Git branch name associated with this thread (format: 'thread/{thread_id}')"

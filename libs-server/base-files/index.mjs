@@ -2,7 +2,7 @@
  * Central file operations module for Base
  *
  * This module provides file-related operations for working with files in Git
- * repositories, primarily focused on change request and thread management.
+ * repositories, primarily focused on thread management.
  */
 
 import { read_file } from './read-file.mjs'

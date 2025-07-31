@@ -2,7 +2,7 @@
 title: Change Request
 type: type_definition
 type_name: change_request
-description: Defines the structure for a change request to the knowledge base.
+description: HISTORICAL - Defines the structure for a change request to the knowledge base. This system was removed in January 2025.
 extends: base
 tags: []
 properties:
@@ -69,6 +69,8 @@ relations:
 ---
 
 # Change Request Schema
+
+> **HISTORICAL NOTE**: This change request system was removed in January 2025 as part of codebase simplification. The system was complete but unused in production. This schema documentation is preserved for historical reference.
 
 This schema defines the structure for `change_request` items within the knowledge base. Change requests are used to propose, track, and manage modifications to files stored under version control (Git).
 

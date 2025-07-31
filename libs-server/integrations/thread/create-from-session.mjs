@@ -45,7 +45,6 @@ export const create_thread_from_session = async ({
       create_memory_repository: false,
       external_session,
       additional_metadata: {
-        thread_change_request_id: null,
         system_worktree_path: null,
         user_worktree_path: null
       }

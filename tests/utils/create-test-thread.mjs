@@ -17,7 +17,6 @@ const { THREAD_STATE } = thread_constants
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
  * @param {string} [options.thread_main_request] Main request for the thread
  * @param {boolean} [options.create_git_branches=false] Whether to create git branches (default false for tests)
- * @param {boolean} [options.create_change_request=false] Whether to create a change request (default false for tests)
  * @returns {Promise<Object>} Created thread info including thread_id, context_dir, and user
  */
 export default async function create_test_thread({
@@ -28,8 +27,7 @@ export default async function create_test_thread({
   test_directories,
   initial_timeline,
   thread_main_request,
-  create_git_branches = false,
-  create_change_request = false
+  create_git_branches = false
 }) {
   // Create test user if not provided
   const user = user_id ? { user_id } : await create_test_user()
@@ -68,8 +66,7 @@ export default async function create_test_thread({
     model,
     thread_state,
     thread_main_request,
-    create_git_branches,
-    create_change_request
+    create_git_branches
   })
 
   const cleanup = () => {

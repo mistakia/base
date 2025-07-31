@@ -84,7 +84,6 @@ api.use(
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
-api.use('/api/change-requests', routes.change_requests)
 api.use('/api/threads', routes.threads)
 api.use('/api/inference-providers', routes.inference_providers)
 api.use('/api/entities', routes.entities)

@@ -52,7 +52,6 @@ The `libs-server/` directory contains server-specific code organized by function
 └── libs-server/
     ├── index.mjs               # Main export file
     ├── blocks/                 # Block-related functionality
-    ├── change_requests/        # Change request management
     ├── entities/               # Entity management
     ├── git/                    # Git integration functionality
     ├── inference_providers/    # Inference service providers
