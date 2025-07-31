@@ -41,7 +41,6 @@ yarn test:git          # Git operations tests
 yarn test:blocks       # Block system tests
 yarn test:markdown     # Markdown processing tests
 yarn test:sync         # Synchronization tests
-yarn test:change-requests  # Change request tests
 
 # Run a single test file
 yarn test:file ./tests/unit/path/to/test.mjs
@@ -103,14 +102,6 @@ Everything is an entity with a type (task, workflow, guideline, person, etc.). E
 1. **Tools**: Atomic operations (file_read, task_create, etc.) in `/libs-server/tools/`
 2. **Workflows**: Compose tools into agent behaviors in markdown files
 3. **Threads**: Execute workflows with state management and git worktrees
-
-#### Change Request Pattern
-
-All modifications follow a pull request-style workflow:
-
-- Changes made in feature branches
-- Review and approval process
-- Tracked in `/user/change-request/`
 
 ### Directory Structure
 
@@ -202,5 +193,5 @@ Threads execute workflows in isolated git worktrees:
 
 - ALL development work MUST be done in feature branches or worktrees
 - Use the pattern: `git worktree add -b feature/description ../repo-worktrees/feature-description`
-- Changes MUST go through the change request/pull request process
+- Changes MUST go through the pull request process
 - Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers

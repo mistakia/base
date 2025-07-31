@@ -86,12 +86,6 @@ DROP INDEX IF EXISTS public.idx_entities_content_gin;
 DROP INDEX IF EXISTS public.idx_entities_archived_at;
 DROP INDEX IF EXISTS public.idx_digital_items_search;
 DROP INDEX IF EXISTS public.idx_database_items_parent;
-DROP INDEX IF EXISTS public.idx_change_requests_updated_at;
-DROP INDEX IF EXISTS public.idx_change_requests_target_branch;
-DROP INDEX IF EXISTS public.idx_change_requests_status;
-DROP INDEX IF EXISTS public.idx_change_requests_github_repo;
-DROP INDEX IF EXISTS public.idx_change_requests_github_pr_number;
-DROP INDEX IF EXISTS public.idx_change_requests_created_at;
 DROP INDEX IF EXISTS public.idx_blocks_user_id;
 DROP INDEX IF EXISTS public.idx_blocks_updated_at;
 DROP INDEX IF EXISTS public.idx_blocks_type;
@@ -143,8 +137,6 @@ ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.database_table_views DROP CONSTRAINT IF EXISTS database_table_views_pkey;
 ALTER TABLE IF EXISTS ONLY public.database_table_tags DROP CONSTRAINT IF EXISTS database_table_tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.database_table_items DROP CONSTRAINT IF EXISTS database_table_items_pkey;
-ALTER TABLE IF EXISTS ONLY public.change_requests DROP CONSTRAINT IF EXISTS change_requests_pkey;
-ALTER TABLE IF EXISTS ONLY public.change_requests DROP CONSTRAINT IF EXISTS change_requests_feature_branch_key;
 ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_pkey;
 ALTER TABLE IF EXISTS ONLY public.blocks DROP CONSTRAINT IF EXISTS blocks_block_cid_key;
 ALTER TABLE IF EXISTS ONLY public.block_relationships DROP CONSTRAINT IF EXISTS block_relationships_source_block_id_target_block_id_relatio_key;
@@ -193,7 +185,6 @@ DROP TABLE IF EXISTS public.database_tables;
 DROP TABLE IF EXISTS public.database_table_views;
 DROP TABLE IF EXISTS public.database_table_tags;
 DROP TABLE IF EXISTS public.database_table_items;
-DROP TABLE IF EXISTS public.change_requests;
 DROP TABLE IF EXISTS public.blocks;
 DROP TABLE IF EXISTS public.block_relationships;
 DROP TABLE IF EXISTS public.block_attributes;
@@ -212,7 +203,6 @@ DROP TYPE IF EXISTS public.priority_type;
 DROP TYPE IF EXISTS public.importance_type;
 DROP TYPE IF EXISTS public.frequency_type;
 DROP TYPE IF EXISTS public.entity_type;
-DROP TYPE IF EXISTS public.change_request_status_type;
 DROP TYPE IF EXISTS public.block_type;
 DROP EXTENSION IF EXISTS vector;
 DROP EXTENSION IF EXISTS "uuid-ossp";
@@ -285,19 +275,7 @@ CREATE TYPE public.block_type AS ENUM (
 );
 
 
---
--- Name: change_request_status_type; Type: TYPE; Schema: public; Owner: -
---
 
-CREATE TYPE public.change_request_status_type AS ENUM (
-    'Draft',
-    'PendingReview',
-    'NeedsRevision',
-    'Approved',
-    'Rejected',
-    'Merged',
-    'Closed'
-);
 
 
 --
@@ -673,29 +651,6 @@ CREATE TABLE public.blocks (
 );
 
 
---
--- Name: change_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.change_requests (
-    change_request_id uuid DEFAULT public.uuid_generate_v1() NOT NULL,
-    status public.change_request_status_type DEFAULT 'Draft'::public.change_request_status_type NOT NULL,
-    title text NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    target_branch text NOT NULL,
-    feature_branch text NOT NULL,
-    github_pr_url text,
-    github_pr_number integer,
-    github_repo text,
-    thread_id uuid,
-    merged_at timestamp with time zone,
-    closed_at timestamp with time zone,
-    merge_commit_hash text,
-    CONSTRAINT check_change_requests_closed_at CHECK (((closed_at IS NULL) OR (closed_at >= created_at))),
-    CONSTRAINT check_change_requests_merged_at CHECK (((merged_at IS NULL) OR (merged_at >= created_at))),
-    CONSTRAINT check_change_requests_updated_at CHECK ((updated_at >= created_at))
-);
 
 
 --
@@ -1352,20 +1307,6 @@ ALTER TABLE ONLY public.blocks
     ADD CONSTRAINT blocks_pkey PRIMARY KEY (block_id);
 
 
---
--- Name: change_requests change_requests_feature_branch_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.change_requests
-    ADD CONSTRAINT change_requests_feature_branch_key UNIQUE (feature_branch);
-
-
---
--- Name: change_requests change_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.change_requests
-    ADD CONSTRAINT change_requests_pkey PRIMARY KEY (change_request_id);
 
 
 --
@@ -1764,46 +1705,6 @@ CREATE INDEX idx_blocks_updated_at ON public.blocks USING btree (updated_at DESC
 CREATE INDEX idx_blocks_user_id ON public.blocks USING btree (user_id);
 
 
---
--- Name: idx_change_requests_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_created_at ON public.change_requests USING btree (created_at DESC);
-
-
---
--- Name: idx_change_requests_github_pr_number; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_github_pr_number ON public.change_requests USING btree (github_pr_number) WHERE (github_pr_number IS NOT NULL);
-
-
---
--- Name: idx_change_requests_github_repo; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_github_repo ON public.change_requests USING btree (github_repo);
-
-
---
--- Name: idx_change_requests_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_status ON public.change_requests USING btree (status);
-
-
---
--- Name: idx_change_requests_target_branch; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_target_branch ON public.change_requests USING btree (target_branch);
-
-
---
--- Name: idx_change_requests_updated_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_change_requests_updated_at ON public.change_requests USING btree (updated_at DESC);
 
 
 --

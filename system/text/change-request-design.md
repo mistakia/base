@@ -2,7 +2,8 @@
 title: 'Change Request System Design'
 type: 'text'
 description: |
-  Design documentation for the system managing knowledge base changes via Git branches.
+  HISTORICAL: Design documentation for the system managing knowledge base changes via Git branches.
+  This system was removed in January 2025 as it was not in use and added unnecessary complexity.
 created_at: '2025-05-27T18:10:20.242Z'
 entity_id: '8a8416e2-1e2a-4851-9609-f3e6dbd81067'
 observations:
@@ -19,6 +20,8 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ---
 
 # Change Request System Design
+
+> **HISTORICAL NOTE**: This change request system was removed in January 2025 as part of codebase simplification. The system was complete but unused in production, and its removal reduces complexity while preserving the file-first architecture. This documentation is preserved for historical reference.
 
 This document outlines the design for the `change_request` system, which facilitates proposing, reviewing, and merging changes to the knowledge base using Git branches as the primary mechanism.
 
