@@ -20,6 +20,11 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 # Write Entity
 
+## Content Formatting
+
+- Entity content MUST NOT use emojis in any form
+- Entity content MUST use Base URI format as specified in sys:system/text/base-uri.md
+
 ## Frontmatter Requirements
 
 - Entity files MUST include all required fields from the base schema:
