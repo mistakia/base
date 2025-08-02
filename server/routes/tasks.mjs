@@ -1,7 +1,7 @@
 import express from 'express'
 
 import {
-  list_tasks_from_database,
+  list_tasks_from_filesystem,
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
 
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
           : [person_ids]
         : []
 
-      const tasks = await list_tasks_from_database({
+      const tasks = await list_tasks_from_filesystem({
         user_id,
         status,
         tag_entity_ids: parsed_tag_entity_ids,
@@ -91,7 +91,7 @@ router.get('/', async (req, res) => {
         archived: archived === 'true'
       })
 
-      res.status(200).send(await tasks)
+      res.status(200).send(tasks)
     }
   } catch (error) {
     log(error)

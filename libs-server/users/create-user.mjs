@@ -1,6 +1,6 @@
 import ed25519 from '@trashman/ed25519-blake2b'
-
-import db from '#db'
+import { randomUUID } from 'crypto'
+import user_registry from './user-registry.mjs'
 
 /**
  * Creates a new user with a public/private key pair
@@ -31,24 +31,24 @@ export default async function create_user({
   }
 
   const public_key = ed25519.publicKey(private_key)
-  const data = {
+
+  // Generate user_id if not provided
+  const created_user_id = user_id || randomUUID()
+
+  const user_data = {
+    user_id: created_user_id,
     public_key: public_key.toString('hex'),
     username,
-    email
+    email,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
 
-  // Add user_id to data if provided
-  if (user_id) {
-    data.user_id = user_id
-  }
-
-  const [{ user_id: created_user_id }] = await db('users')
-    .insert(data)
-    .returning('user_id')
-  const user = await db('users').where('user_id', created_user_id).first()
+  // Create user in file-based registry
+  await user_registry.create_user(user_data)
 
   return {
     private_key,
-    ...user
+    ...user_data
   }
 }

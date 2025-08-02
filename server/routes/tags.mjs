@@ -1,6 +1,6 @@
 import express from 'express'
 import {
-  list_tags_from_database,
+  list_tags_from_filesystem,
   read_tag_from_filesystem
 } from '#libs-server/tag/index.mjs'
 import { search_entities } from '#libs-server/entity/index.mjs'
@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
       }
     } else {
       // If no base_uri, list all tags
-      const tags = await list_tags_from_database({
+      const tags = await list_tags_from_filesystem({
         user_id,
         include_archived: include_archived === 'true',
         search_term

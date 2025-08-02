@@ -3,7 +3,6 @@ import is_main from '#libs-server/utils/is-main.mjs'
 // import yargs from 'yargs'
 // import { hideBin } from 'yargs/helpers'
 
-// import db from '#db'
 // import config from '#config'
 // const argv = yargs(hideBin(process.argv)).argv
 // const log = debug('template')
@@ -22,13 +21,9 @@ const main = async () => {
     console.log(error)
   }
 
-  /* await db('jobs').insert({
-   *   type: constants.jobs.EXAMPLE,
-   *   succ: error ? 0 : 1,
-   *   reason: error ? error.message : null,
-   *   timestamp: Math.round(Date.now() / 1000)
-   * })
-   */
+  // File-first architecture - no database logging needed
+  // All operations should use filesystem-based logging if needed
+
   process.exit()
 }
 

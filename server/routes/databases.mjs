@@ -1,8 +1,6 @@
 import express from 'express'
 import Validator from 'fastest-validator'
 
-import { read_entity_from_database } from '#libs-server/entity/index.mjs'
-
 const v = new Validator({ haltOnFirstError: true })
 const router = express.Router({ mergeParams: true })
 
@@ -148,25 +146,13 @@ router.delete('/:table_name/views/:view_id', async (req, res) => {
       return res.status(400).send({ error: 'invalid view_id' })
     }
 
-    // Fetch the database view entity to verify ownership
-    const database_view = await read_entity_from_database({
-      entity_id: view_id,
-      user_id: req.auth.user_id
+    // Note: This functionality needs to be redesigned for file-based operations
+    // The current implementation requires entity_id -> file_path mapping
+    // For now, return not implemented error
+    return res.status(501).send({
+      error:
+        'Database view operations not yet implemented for file-first architecture'
     })
-
-    // Check if view exists and belongs to the authenticated user
-    if (!database_view) {
-      return res.status(404).send({ error: 'database view not found' })
-    }
-
-    // Verify that the entity is a database view type
-    if (database_view.type !== 'database_view') {
-      return res.status(400).send({ error: 'entity is not a database view' })
-    }
-
-    // TODO delete the database view
-
-    res.status(200).send({ success: true })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -186,30 +172,12 @@ router.get('/:table_name/views/:view_id', async (req, res) => {
       return res.status(400).send({ error: 'invalid view_id' })
     }
 
-    // Fetch the database view entity
-    const database_view = await read_entity_from_database({
-      entity_id: view_id,
-      user_id: req.auth.user_id,
-      include_relations: true,
-      include_tags: true
-    })
-
-    // Check if view exists and belongs to the authenticated user
-    if (!database_view) {
-      return res.status(404).send({ error: 'database view not found' })
-    }
-
-    // Verify that the entity is a database view type
-    if (database_view.type !== 'database_view') {
-      return res.status(400).send({ error: 'entity is not a database view' })
-    }
-
-    // TODO
-    // Execute the table state query
-    // Return the results
-
-    res.status(200).send({
-      view: database_view
+    // Note: This functionality needs to be redesigned for file-based operations
+    // The current implementation requires entity_id -> file_path mapping
+    // For now, return not implemented error
+    return res.status(501).send({
+      error:
+        'Database view operations not yet implemented for file-first architecture'
     })
   } catch (error) {
     log(error)

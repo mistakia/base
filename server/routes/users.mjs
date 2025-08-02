@@ -2,8 +2,8 @@ import express from 'express'
 import ed25519 from '@trashman/ed25519-blake2b'
 import jwt from 'jsonwebtoken'
 
-import db from '#db'
 import config from '#config'
+import user_registry from '#libs-server/users/user-registry.mjs'
 import tasks from './tasks.mjs'
 import databases from './databases.mjs'
 
@@ -14,12 +14,14 @@ router.get('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
     // Return all users but filtered for public consumption
-    const users = await db('users')
-      .select('*')
-      .orderBy('created_at', 'desc')
-      .limit(50) // Limit to prevent too much data
+    const users = await user_registry.load_users()
 
-    const filtered_users = users.map(filter_public_user_data)
+    // Sort by created_at desc and limit to 50
+    const sorted_users = users
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 50)
+
+    const filtered_users = sorted_users.map(filter_public_user_data)
     res.status(200).send(filtered_users)
   } catch (error) {
     log(error)
@@ -72,12 +74,16 @@ router.post('/?', async (req, res) => {
       data.username = `user_${data.public_key.slice(0, 8)}`
     }
 
-    await db('users').insert(data).onConflict('public_key').merge()
+    // Try to find existing user by public key
+    let user = await user_registry.find_by_public_key(data.public_key)
 
-    const user = await db('users')
-      .select('*')
-      .where({ public_key: data.public_key })
-      .first()
+    if (user) {
+      // Update existing user
+      user = await user_registry.update_user(user.user_id, data)
+    } else {
+      // Create new user
+      user = await user_registry.create_user(data)
+    }
 
     const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
     res.status(200).send({ token, ...user })
@@ -111,10 +117,7 @@ router.post('/session', async (req, res) => {
       return res.status(400).send({ error: 'invalid timestamp' })
     }
 
-    const user = await db('users')
-      .select('*')
-      .where({ public_key: data.public_key })
-      .first()
+    const user = await user_registry.find_by_public_key(data.public_key)
 
     if (!user) {
       return res.status(404).send({ error: 'user not found' })
@@ -132,7 +135,7 @@ router.get('/public_keys/:public_key', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { public_key } = req.params
-    const user = await db('users').select('*').where({ public_key }).first()
+    const user = await user_registry.find_by_public_key(public_key)
 
     if (!user) {
       return res.status(404).send({ error: 'user not found' })
@@ -149,7 +152,7 @@ router.get('/:username', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { username } = req.params
-    const user = await db('users').select('*').where({ username }).first()
+    const user = await user_registry.find_by_username(username)
 
     if (!user) {
       return res.status(404).send({ error: 'user not found' })

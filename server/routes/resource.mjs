@@ -8,10 +8,6 @@ import {
   is_valid_base_uri
 } from '#libs-server/base-uri/index.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import {
-  markdown_to_blocks,
-  process_block_permissions
-} from '#libs-server/blocks/index.mjs'
 import config from '#config'
 
 const router = express.Router()
@@ -222,59 +218,13 @@ async function handle_file_by_path({
         user_context.is_owner =
           user_context.user_id && entity_user_id === user_context.user_id
 
-        // Entity files are public by default (unless restricted by block permissions)
+        // Entity files are public by default
         user_context.is_public_entity = true
       } else {
         response.parsed_content = raw_content
         // Non-entity files require knowledge base ownership (already checked above)
         user_context.is_owner = has_knowledge_base_access({ user_context })
         user_context.is_public_entity = false
-      }
-
-      // Apply block-level permissions and serve blocks
-      try {
-        const { markdown_file_root_block, blocks } = await markdown_to_blocks({
-          markdown_text: raw_content,
-          file_path: absolute_path
-        })
-
-        const permission_result = await process_block_permissions({
-          file_path: absolute_path,
-          blocks,
-          user_context
-        })
-
-        // Add block structure to response
-        response.blocks = {
-          document: markdown_file_root_block,
-          blocks: permission_result.blocks
-        }
-        response.permission_metadata = permission_result.permission_metadata
-
-        // Log permission processing results for debugging
-        if (permission_result.permission_metadata.has_permissions) {
-          console.log(
-            `Applied permissions for ${base_uri}: ${permission_result.permission_metadata.blocks_redacted} blocks redacted`
-          )
-        }
-
-        // For markdown files with blocks, we don't need to send raw_content
-        // as the client will use the block renderer
-        delete response.raw_content
-        delete response.parsed_content
-      } catch (permission_error) {
-        // Log permission processing error but don't fail the request
-        console.warn(
-          'Block permission processing failed for',
-          base_uri,
-          ':',
-          permission_error.message
-        )
-        response.permission_metadata = {
-          error: permission_error.message,
-          has_permissions: false,
-          blocks_redacted: 0
-        }
       }
     } catch (err) {
       response.parsed_content = raw_content
