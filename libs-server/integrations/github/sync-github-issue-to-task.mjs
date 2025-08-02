@@ -1,6 +1,5 @@
 import debug from 'debug'
 import fs from 'fs'
-import db from '#db'
 import {
   create_task_from_github_issue,
   update_task_from_github_issue,
@@ -111,8 +110,6 @@ export async function sync_github_issue_to_task({
   force = false,
   comments = []
 }) {
-  let trx
-
   try {
     log(`Syncing GitHub issue #${github_issue.number} to task`)
 
@@ -132,9 +129,6 @@ export async function sync_github_issue_to_task({
     if (!user_id) {
       throw new Error('Missing required parameter: user_id')
     }
-
-    // Start a transaction for database operations
-    trx = await db.transaction()
 
     // Create external ID
     const external_id = format_external_id_for_github_issue({
@@ -179,8 +173,7 @@ export async function sync_github_issue_to_task({
       github_repository_owner,
       github_repository_name,
       github_issue_title: github_issue.title,
-      user_base_directory,
-      trx
+      user_base_directory
     })
 
     let result
@@ -197,11 +190,8 @@ export async function sync_github_issue_to_task({
         external_id,
         import_cid,
         import_history_base_directory,
-        trx,
         comments
       })
-
-      await trx.commit()
 
       return {
         action: 'created',
@@ -220,24 +210,16 @@ export async function sync_github_issue_to_task({
         user_base_directory,
         import_cid,
         import_history_base_directory,
-        trx,
         github_token,
         github_project_number,
         force,
         comments
       })
 
-      await trx.commit()
-
       return result
     }
   } catch (error) {
     log(`Error syncing GitHub issue to task: ${error.message}`)
-
-    // Rollback transaction if it exists
-    if (trx) {
-      await trx.rollback()
-    }
 
     throw error
   }

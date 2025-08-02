@@ -9,7 +9,6 @@ import {
   create_temp_test_repo,
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
-import db from '#db'
 
 chai.use(chaiHttp)
 
@@ -30,22 +29,6 @@ describe('Tags API', () => {
     registry_cleanup = setup_api_test_registry({
       system_base_directory: test_repo.system_path,
       user_base_directory: test_repo.user_path
-    })
-
-    // Create a test entity for tagging tests
-    const [entity] = await db('entities')
-      .insert({
-        title: 'Test Entity',
-        description: 'For testing tag associations',
-        user_id: test_user.user_id,
-        type: 'task'
-      })
-      .returning('entity_id')
-
-    // Create task extension record
-    await db('tasks').insert({
-      entity_id: entity.entity_id,
-      status: 'No status'
     })
   })
 

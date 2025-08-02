@@ -47,7 +47,6 @@ user_id: '00000000-0000-0000-0000-000000000000'
   import express from 'express'
 
   // Project imports
-  import db from '#db'
   import create_tag from '#libs-server/tags/create-tag.mjs'
   import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
   ```
@@ -65,7 +64,6 @@ user_id: '00000000-0000-0000-0000-000000000000'
 
 - Use the appropriate namespace prefix for different parts of the application:
   - `#server` - Server components
-  - `#db` - Database utilities
   - `#libs-server` - Server-side library functions
   - `#libs-shared` - Shared library functions
   - `#tests` - Test utilities

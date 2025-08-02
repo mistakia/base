@@ -2,7 +2,6 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
 
-import db from '#db'
 import server from '#server'
 import {
   create_test_user,
@@ -16,7 +15,7 @@ chai.use(chaiHttp)
 
 describe('API /:user_id/tasks GET', () => {
   let user
-  let task_entity_id
+  // let task_entity_id
   let task_base_uri
   let test_directories
   let registry_cleanup
@@ -28,18 +27,14 @@ describe('API /:user_id/tasks GET', () => {
 
   beforeEach(async () => {
     // Create a test task before each test
-    const {
-      task_entity_id: entity_id,
-      base_uri,
-      test_directories: directories
-    } = await create_test_task({
+    const { base_uri, test_directories: directories } = await create_test_task({
       user_id: user.user_id,
       title: 'Test Task',
       description: 'A task for testing',
       finish_by: new Date('2023-01-01')
     })
 
-    task_entity_id = entity_id
+    // task_entity_id = entity_id
     task_base_uri = base_uri
     test_directories = directories
 
@@ -75,10 +70,13 @@ describe('API /:user_id/tasks GET', () => {
     })
 
     it('should filter tasks by status', async () => {
-      // First, let's make sure our task has a specific status
-      await db('tasks')
-        .where('entity_id', task_entity_id)
-        .update({ status: 'Waiting' })
+      // Create a task with specific status for testing
+      await create_test_task({
+        user_id: user.user_id,
+        title: 'Waiting Task',
+        description: 'A task with waiting status',
+        status: 'Waiting'
+      })
 
       const res = await chai
         .request(server)

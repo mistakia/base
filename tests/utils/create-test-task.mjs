@@ -1,19 +1,14 @@
 import fs from 'fs'
 import path from 'path'
-import { write_task_to_database } from '#libs-server/entity/database/write/write-task-to-database.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/index.mjs'
 import { write_task_to_filesystem } from '#libs-server/task/filesystem/write-task-to-filesystem.mjs'
 import { setup_test_directories } from './setup-test-directories.mjs'
-import db from '#db'
 
 /**
- * Creates a task entity for testing. This function creates both:
+ * Creates a task entity for testing using file-first architecture.
  *
- * 1. Database task: Stored in the entities table with type='task' and have a UUID entity_id.
- *    These tasks are referenced in the tasks table via the entity_id column (UUID).
- *
- * 2. Filesystem task: Stored as markdown files in the filesystem with a path based on base_uri.
- *    The base_uri is a string in the format "sys:task/task-name.md" or "user:task/task-name.md".
+ * Note: This function now only creates filesystem tasks as part of the PostgreSQL removal.
+ * Database operations have been removed in favor of pure file-based storage.
  *
  * @param {Object} options - Test options
  * @param {string} options.user_id - User ID
@@ -24,7 +19,7 @@ import db from '#db'
  * @param {Date} [options.finish_by] - Task deadline
  * @param {string} [options.base_uri] - Task base_uri in format sys:task/<task-title>.md or user:task/<task-title>.md
  * @param {Object} [options.test_directories] - Test directories object with system and user paths
- * @returns {Promise<Object>} Object containing task_entity_id, base_uri, test_directories, and cleanup function
+ * @returns {Promise<Object>} Object containing base_uri, test_directories, and cleanup function
  */
 export default async function create_test_task({
   user_id,
@@ -78,26 +73,11 @@ export default async function create_test_task({
   const dir_path = path.dirname(absolute_path)
   fs.mkdirSync(dir_path, { recursive: true })
 
-  // Write task to filesystem
+  // Write task to filesystem (file-first architecture)
   await write_task_to_filesystem({
     base_uri,
     task_properties
   })
-
-  // Write task to database
-  const task_entity_id = await write_task_to_database({
-    task_properties,
-    user_id,
-    absolute_path: absolute_path || '/dummy/path.md',
-    base_uri,
-    git_sha: 'dummysha1'
-  })
-
-  // Get the base_uri from the database to ensure consistency
-  const task_data = await db('entities')
-    .select('base_uri')
-    .where('entity_id', task_entity_id)
-    .first()
 
   const cleanup = () => {
     if (temp_directories) {
@@ -106,8 +86,7 @@ export default async function create_test_task({
   }
 
   return {
-    task_entity_id,
-    base_uri: task_data.base_uri,
+    base_uri,
     test_directories,
     cleanup
   }

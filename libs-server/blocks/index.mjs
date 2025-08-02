@@ -1,8 +1,8 @@
 /**
  * Block System Module
  *
- * A content-addressable block-based system for working with markdown documents
- * using PostgreSQL as the storage backend
+ * Markdown processing utilities and block schemas.
+ * Database-dependent components removed in favor of file-first architecture.
  */
 
 // Export block schemas and types
@@ -26,26 +26,14 @@ export {
   create_block
 } from './block-schemas.mjs'
 
-// Export from converter module
+// Export block converter utilities
 export {
+  // Markdown conversion functions
   markdown_to_blocks,
   blocks_to_markdown,
   markdown_file_to_blocks,
-  compute_cid
+  // Content identifier utilities
+  compute_cid,
+  // AST building utilities
+  build_ast_from_blocks
 } from './block-converter.mjs'
-
-// Export from block operations module
-export {
-  import_file,
-  export_file,
-  search_blocks,
-  show_block
-} from './block-operations.mjs'
-
-// Export from block permissions module
-export {
-  PERMISSION_LEVELS,
-  parse_companion_permissions,
-  apply_block_permissions,
-  process_block_permissions
-} from './block-permissions.mjs'

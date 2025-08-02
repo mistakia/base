@@ -5,7 +5,6 @@ import crypto from 'crypto'
 
 import server from '#server'
 import config from '#config'
-import db from '#db'
 import { reset_all_tables } from '#tests/utils/index.mjs'
 import ed25519 from '@trashman/ed25519-blake2b'
 
@@ -18,12 +17,12 @@ describe('API /users', () => {
   let public_key
   let signature
   let user_id
-  let timestamp
+  // let timestamp
   let auth_token
 
   before(async () => {
     await reset_all_tables()
-    timestamp = new Date()
+    // timestamp = new Date()
 
     // Create keys for a test user
     private_key = crypto.randomBytes(32)
@@ -64,23 +63,6 @@ describe('API /users', () => {
     const decoded = jwt.verify(res.body.token, config.jwt.secret)
     decoded.should.have.property('user_id')
     decoded.user_id.should.equal(user_id)
-
-    // Verify database record
-    const user = await db('users').where('user_id', user_id).first()
-    user.should.be.a('object')
-    user.should.have.property('user_id')
-    user.should.have.property('public_key')
-    user.should.have.property('username')
-    user.should.have.property('email')
-    user.should.have.property('created_at')
-    user.should.have.property('updated_at')
-
-    user.public_key.should.equal(user_data.public_key)
-    user.username.should.equal(user_data.username)
-    user.email.should.equal(user_data.email)
-
-    user.created_at.should.be.least(timestamp)
-    user.updated_at.should.be.least(timestamp)
   })
 
   it('should get a user by username', async () => {
@@ -122,15 +104,6 @@ describe('API /users', () => {
     res.body.username.should.equal(user_data.username)
     res.body.public_key.should.equal(user_data.public_key)
     res.body.email.should.equal(user_data.email)
-
-    // Verify timestamps are returned correctly
-    const user = await db('users').where('user_id', user_id).first()
-    new Date(res.body.created_at)
-      .getTime()
-      .should.equal(new Date(user.created_at).getTime())
-    new Date(res.body.updated_at)
-      .getTime()
-      .should.equal(new Date(user.updated_at).getTime())
   })
 
   it('should create a session and return JWT token', async () => {

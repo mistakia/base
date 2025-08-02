@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Human-in-the-Loop System - an LLM-powered knowledge base management and collaboration platform. The system uses a file-first architecture with markdown/YAML files as the primary data format, git for version control, and PostgreSQL for indexing and search.
+This is a Human-in-the-Loop System - an LLM-powered knowledge base management and collaboration platform. The system uses a file-first architecture with markdown/YAML files as the primary data format and git for version control.
 
 **User Directory Configuration**: The user data directory is external to the main repository and configured via `config.user_base_directory`. This allows the user data to exist as a separate git repository outside the Base system.
 
@@ -59,24 +59,9 @@ yarn lint
 yarn prettier
 ```
 
-### Database Operations
+### File-First Architecture
 
-```bash
-# Export production schema
-yarn export:schema
-
-# Database setup is automatic in tests
-# Schema file: db/schema.sql
-```
-
-**Schema Change Workflow:**
-
-Preferred approach for database schema changes:
-
-1. Run SQL ALTER commands directly on the production database
-2. Export the updated schema using `yarn export:schema`
-3. Do NOT commit migration files or SQL commands to the repository
-4. The exported schema file (`db/schema.sql`) becomes the source of truth
+The system operates with a file-first architecture where all data is stored as markdown files with YAML frontmatter in the filesystem. No database dependencies are required for operation.
 
 ## Architecture Overview
 
@@ -84,7 +69,7 @@ Preferred approach for database schema changes:
 
 1. **Client**: React SPA with Redux state management (`/client`)
 2. **Server**: Express.js API with WebSocket support (`/server`)
-3. **Data**: PostgreSQL + Git repositories
+3. **Data**: Git repositories with file-based storage
 
 ### Key Architectural Concepts
 
@@ -144,13 +129,12 @@ The client uses Redux with Immutable.js:
 
 ### Entity Storage Strategy
 
-Entities can be stored in three layers:
+Entities are stored in two layers:
 
-1. **Filesystem**: Markdown files with YAML frontmatter
+1. **Filesystem**: Markdown files with YAML frontmatter as the primary storage
 2. **Git**: Version control and change tracking
-3. **Database**: Indexing, search, and relationships
 
-The system automatically syncs between these layers.
+All operations work directly with the filesystem, using git for version control.
 
 ### Thread Execution
 
@@ -172,7 +156,7 @@ Threads execute workflows in isolated git worktrees:
 
 - Node.js 18+ required
 - Uses Yarn 4.2.2 for package management
-- PostgreSQL with pgvector extension for semantic search
+- File-first architecture with no database dependencies
 - All file paths use ES modules (.mjs extension)
 - Test files follow pattern: `*.test.mjs`
 - Debug logging available via DEBUG environment variable

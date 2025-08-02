@@ -18,14 +18,17 @@ export {
   delete_entity_from_git
 } from './git/index.mjs'
 
-// Re-export database functions
+// Re-export search functions (file-based)
+export { default as search_entities } from './search/search-entities.mjs'
+
+// Re-export relationship functions (base_uri-based)
 export {
-  read_entity_from_database,
-  write_entity_to_database,
-  delete_entity_from_database,
-  entity_exists_in_database,
-  search_entities
-} from './database/index.mjs'
+  validate_base_uri_exists,
+  resolve_entity_relations,
+  find_entities_with_relations_to,
+  get_entity_relations,
+  build_relation_index
+} from './relationships/index.mjs'
 
 // Export entity creation from external sources
 export { create_entity_from_external_item } from './create-entity-from-external-item.mjs'
