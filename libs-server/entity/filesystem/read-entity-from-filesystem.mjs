@@ -6,6 +6,7 @@ import is_main from '#libs-server/utils/is-main.mjs'
 
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
+import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('read-entity-from-filesystem')
 
@@ -46,6 +47,16 @@ export async function read_entity_from_filesystem({ absolute_path } = {}) {
         file_content,
         file_path: absolute_path
       })
+
+    // Add base_uri to entity properties (derived from file path)
+    try {
+      const base_uri = create_base_uri_from_path(absolute_path)
+      entity_properties.base_uri = base_uri
+    } catch (error) {
+      // If base_uri can't be created (e.g., path outside managed repositories),
+      // continue without it - this allows tests and edge cases to work
+      log(`Could not create base_uri for ${absolute_path}: ${error.message}`)
+    }
 
     // Get entity type from properties
     const entity_type = entity_properties.type

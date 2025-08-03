@@ -45,12 +45,19 @@ export default async function get_thread({ thread_id }) {
       }
     }
 
-    // Return combined thread data
-    return {
+    // Add backward compatibility for model field
+    const thread_data = {
       ...metadata,
       timeline,
       context_dir: thread_dir
     }
+
+    // Provide backward compatibility for model field
+    if (metadata.models && metadata.models.length > 0 && !metadata.model) {
+      thread_data.model = metadata.models[0]
+    }
+
+    return thread_data
   } catch (error) {
     log(`Error getting thread ${thread_id}: ${error.message}`)
     if (error.code === 'ENOENT') {
@@ -104,7 +111,7 @@ export async function list_threads({
         if (thread_state && metadata.thread_state !== thread_state) continue
 
         // Create thread summary (metadata only, no timeline)
-        threads.push({
+        const thread_summary = {
           thread_id: metadata.thread_id,
           user_id: metadata.user_id,
           inference_provider: metadata.inference_provider,
@@ -112,7 +119,14 @@ export async function list_threads({
           thread_state: metadata.thread_state,
           created_at: metadata.created_at,
           updated_at: metadata.updated_at
-        })
+        }
+
+        // Provide backward compatibility for model field
+        if (metadata.models && metadata.models.length > 0 && !metadata.model) {
+          thread_summary.model = metadata.models[0]
+        }
+
+        threads.push(thread_summary)
       } catch (error) {
         log(`Error reading thread ${thread_id}: ${error.message}`)
         // Skip invalid threads

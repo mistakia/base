@@ -420,6 +420,11 @@ export default async function create_thread({
     context_dir: thread_dir
   }
 
+  // Provide backward compatibility for model field
+  if (metadata.models && metadata.models.length > 0 && !metadata.model) {
+    result.model = metadata.models[0]
+  }
+
   // Add raw_data_dir for external sessions
   if (external_session) {
     result.raw_data_dir = raw_data_dir

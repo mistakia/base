@@ -16,10 +16,12 @@ function matches_any_pattern(file_path, patterns) {
 
   return patterns.some((pattern) => {
     // Convert glob pattern to regex
-    // This handles simple glob patterns where * matches any sequence of characters
+    // Handle ** (double wildcard) and * (single wildcard) differently
     const regex_pattern = pattern
       .replace(/\./g, '\\.') // Escape dots
-      .replace(/\*/g, '.*') // Convert * to regex equivalent
+      .replace(/\*\*\//g, '§DOUBLESTARSLASH§') // Replace **/ as a unit first
+      .replace(/\*/g, '[^/]*') // Convert single * to match anything except directory separators
+      .replace(/§DOUBLESTARSLASH§/g, '(?:.*/)?') // Convert **/ to match optional directory path with slash
 
     const regex = new RegExp(`^${regex_pattern}$`)
     return regex.test(file_path)
