@@ -26,6 +26,7 @@ Standards for reviewing code during implementation reviews.
 ### Remove Migration Artifacts
 
 Comments referencing removed functionality MUST be deleted:
+
 - References to replaced systems (e.g., "Removed database transaction")
 - Migration notes that provide no ongoing value
 - Historical implementation details

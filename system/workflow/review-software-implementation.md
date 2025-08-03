@@ -37,6 +37,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Setup Phase
 
 1. **Verify Working Environment**
+
    - Confirm current working directory matches the implementation worktree
    - Run `git status` to identify all unstaged changes
    - Locate and verify implementation plan file exists and is accessible
@@ -51,6 +52,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Automated Compliance Phase
 
 3. **Delegate Compliance Scanning to Agent**
+
    - Use Task tool with general-purpose agent to perform automated checks
    - Agent should analyze all changed files for:
      - Variable naming compliance (descriptive, globally unique, contextual)
@@ -69,6 +71,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Human Review Phase
 
 5. **File-by-File Review**
+
    - Start with files flagged by compliance scan
    - For each file, perform human review focusing on:
      - **Architecture**: Does implementation match intended design?
@@ -91,6 +94,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Resolution Phase
 
 7. **Address Critical Issues**
+
    - Fix critical compliance violations first
    - Apply fixes following the same guidelines (write-software.md, write-javascript.md)
    - Re-run compliance checks on fixed files using agent delegation
@@ -104,6 +108,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Validation Phase
 
 9. **Final Quality Checks**
+
    - Run test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality tools: `yarn lint` and `yarn typecheck` if available
    - Verify all critical issues are resolved
@@ -118,6 +123,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 ## Continuation Support
 
 **If Context Overflow Occurs:**
+
 - Use `/continue-review-software-implementation` command
 - Current checkpoint will be captured with:
   - Working directory and git state
@@ -134,7 +140,7 @@ user_id: '00000000-0000-0000-0000-000000000000'
 - Create checkpoints after each major phase for continuation support
 - Document all human decisions for future reference
 - Maintain working directory verification throughout process
-</instructions>
+  </instructions>
 
 <output_format>
 After completing each phase:
@@ -145,9 +151,10 @@ After completing each phase:
 
 **Files Reviewed**: [List of files with review status: approved/needs-fixes/pending]
 
-**Compliance Findings**: 
+**Compliance Findings**:
+
 - Critical: [Number] issues
-- Important: [Number] issues  
+- Important: [Number] issues
 - Minor: [Number] issues
 
 **Implementation Plan Status**: [Aligned/Drift Detected/Updated]
