@@ -5,12 +5,13 @@ import config from '#config'
 
 const { cloudflare } = config
 
-export const get_records = async ({ name, per_page = 300 }) => {
+export const get_records = async ({ name, type, per_page = 300 }) => {
   let url = `https://api.cloudflare.com/client/v4/zones/${cloudflare.zone_id}/dns_records`
 
   const query = qs.stringify(
     {
       name,
+      type,
       per_page
     },
     {
