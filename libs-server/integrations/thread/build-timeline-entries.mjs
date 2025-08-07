@@ -34,20 +34,16 @@ export const build_timeline_from_session = async (
     const timeline_entries = []
 
     // Convert session messages to timeline entries - these represent the actual session content
-    for (const message of normalized_session.messages) {
+    for (const [index, message] of normalized_session.messages.entries()) {
       const entry = convert_message_to_timeline_entry(
         message,
-        normalized_session.session_provider
+        normalized_session.session_provider,
+        index
       )
       if (entry) {
         timeline_entries.push(entry)
       }
     }
-
-    // Sort timeline entries by timestamp to maintain chronological order
-    timeline_entries.sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-    )
 
     // Handle existing timeline updates for re-imports
     const timeline_path = path.join(thread_info.thread_dir, 'timeline.json')
@@ -105,7 +101,11 @@ export const build_timeline_from_session = async (
   }
 }
 
-const convert_message_to_timeline_entry = (message, session_provider) => {
+const convert_message_to_timeline_entry = (
+  message,
+  session_provider,
+  sequence_index
+) => {
   // Track any unexpected message properties
   const known_message_keys = [
     'id',
@@ -137,7 +137,11 @@ const convert_message_to_timeline_entry = (message, session_provider) => {
     id: message.id,
     timestamp: message.timestamp.toISOString(),
     session_provider,
-    provider_data: message.provider_data || {}
+    provider_data: message.provider_data || {},
+    ordering: {
+      sequence: sequence_index,
+      parent_id: message.parent_id || null
+    }
   }
 
   switch (message.type) {
@@ -413,9 +417,6 @@ const merge_with_existing_timeline = async (
     const all_entries = Array.from(existing_entries_map.values()).concat(
       new_unique_entries
     )
-
-    // Sort by timestamp
-    all_entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
 
     log(
       `Timeline merge complete: ${new_unique_entries.length} new entries added, ${updated_entries} entries updated`

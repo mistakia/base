@@ -358,6 +358,11 @@ const main = async () => {
               type: 'boolean',
               default: false
             })
+            .option('allow-updates', {
+              describe: 'Allow updating existing imported threads',
+              type: 'boolean',
+              default: false
+            })
             .option('verbose', {
               alias: 'v',
               describe: 'Verbose output',
@@ -435,6 +440,7 @@ const main = async () => {
             max_entries: argv.maxEntries,
             max_conversations: argv.maxConversations,
             dry_run: argv.dryRun,
+            allow_updates: argv.allowUpdates,
             verbose: argv.verbose
           })
 
@@ -462,6 +468,9 @@ const main = async () => {
             console.log(`Would create threads: ${result.would_create}`)
           } else {
             console.log(`Threads created: ${result.threads_created}`)
+            if (result.threads_updated !== undefined) {
+              console.log(`Threads updated: ${result.threads_updated}`)
+            }
             console.log(`Threads failed: ${result.threads_failed}`)
             console.log(`Success rate: ${result.success_rate}%`)
 
@@ -475,6 +484,20 @@ const main = async () => {
               if (result.results.created.length > 5) {
                 console.log(
                   `  ... and ${result.results.created.length - 5} more`
+                )
+              }
+            }
+
+            if (result.results?.updated?.length > 0) {
+              console.log('\nUpdated threads:')
+              result.results.updated.slice(0, 5).forEach((thread) => {
+                console.log(
+                  `  ${thread.thread_id} (${thread.timeline_entries || 'unknown'} entries)`
+                )
+              })
+              if (result.results.updated.length > 5) {
+                console.log(
+                  `  ... and ${result.results.updated.length - 5} more`
                 )
               }
             }
@@ -744,6 +767,10 @@ const main = async () => {
       .example(
         '$0 import --provider cursor',
         'Import all Cursor conversations as threads'
+      )
+      .example(
+        '$0 import --provider claude --allow-updates',
+        'Update existing Claude thread imports with latest data'
       )
       .example('$0 import --provider openai --openai-bearer-token "..." \\', '')
       .example(

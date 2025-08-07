@@ -63,6 +63,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       provider_name: 'claude',
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
+      allow_updates: config.allow_updates,
       provider_options: { claude_sessions: valid_sessions }
     })
 
@@ -71,6 +72,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       valid_sessions: valid_sessions.length,
       invalid_sessions: invalid_sessions.length,
       threads_created: results.created.length,
+      threads_updated: results.updated.length,
       threads_failed: results.failed.length,
       threads_skipped: results.skipped.length,
       results

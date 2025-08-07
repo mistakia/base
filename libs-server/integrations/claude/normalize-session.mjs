@@ -77,7 +77,8 @@ export const normalize_claude_session = (claude_session) => {
                 line_number: entry.line_number,
                 session_index: index,
                 is_sidechain: entry.isSidechain || false,
-                content_block_index: content_index
+                content_block_index: content_index,
+                is_thinking_block: true // Add marker to identify thinking blocks
               }
             }
             normalized_messages.push(thinking_entry)
@@ -86,10 +87,37 @@ export const normalize_claude_session = (claude_session) => {
       }
     })
 
-    // Sort by timestamp to ensure chronological order
-    normalized_messages.sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-    )
+    // Sort by line_number to ensure correct order from the original session
+    // line_number represents the actual sequence in the Claude session export
+    normalized_messages.sort((a, b) => {
+      const line_a = a.provider_data?.line_number || 0
+      const line_b = b.provider_data?.line_number || 0
+
+      // First sort by line_number if available
+      if (line_a !== line_b) {
+        return line_a - line_b
+      }
+
+      // If line_numbers are the same, thinking blocks come after their parent
+      const is_thinking_a = a.provider_data?.is_thinking_block || false
+      const is_thinking_b = b.provider_data?.is_thinking_block || false
+
+      if (is_thinking_a !== is_thinking_b) {
+        return is_thinking_a ? 1 : -1
+      }
+
+      // If both are thinking blocks, sort by content_block_index
+      if (is_thinking_a && is_thinking_b) {
+        const index_a = a.provider_data?.content_block_index || 0
+        const index_b = b.provider_data?.content_block_index || 0
+        if (index_a !== index_b) {
+          return index_a - index_b
+        }
+      }
+
+      // Fall back to timestamp if everything else is the same
+      return new Date(a.timestamp) - new Date(b.timestamp)
+    })
 
     // Extract session metadata
     const session_metadata = extract_session_metadata(entries, metadata)
@@ -133,7 +161,9 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
     'gitBranch',
     'isCompactSummary',
     'level',
-    'metadata'
+    'metadata',
+    'parse_line_number',
+    'toolUseID'
   ]
 
   all_entry_keys.forEach((key) => {
@@ -244,7 +274,9 @@ const normalize_user_entry = (entry, base_normalized) => {
       is_api_error_message: entry.isApiErrorMessage || false,
       git_branch: entry.gitBranch || null,
       is_compact_summary: entry.isCompactSummary || false,
-      level: entry.level || null
+      level: entry.level || null,
+      parse_line_number: entry.parse_line_number || null,
+      toolUseID: entry.toolUseID || null
     }
   }
 }
@@ -310,7 +342,9 @@ const normalize_assistant_entry = (entry, base_normalized) => {
       is_api_error_message: entry.isApiErrorMessage || false,
       git_branch: entry.gitBranch || null,
       is_compact_summary: entry.isCompactSummary || false,
-      level: entry.level || null
+      level: entry.level || null,
+      parse_line_number: entry.parse_line_number || null,
+      toolUseID: entry.toolUseID || null
     }
   }
 }

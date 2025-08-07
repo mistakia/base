@@ -272,6 +272,7 @@ export const update_existing_thread = async (
     const { build_timeline_from_session } = await import(
       './build-timeline-entries.mjs'
     )
+
     const timeline_result = await build_timeline_from_session(
       normalized_session,
       { thread_dir },

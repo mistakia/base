@@ -71,7 +71,8 @@ export const parse_claude_jsonl_file = async (file_path) => {
           }
           sessions.get(summary_session_id).entries.push({
             ...entry,
-            line_number: line_count
+            line_number: entry.line_number || line_count,
+            parse_line_number: line_count
           })
           continue
         }
@@ -98,7 +99,8 @@ export const parse_claude_jsonl_file = async (file_path) => {
 
         sessions.get(session_id).entries.push({
           ...entry,
-          line_number: line_count
+          line_number: entry.line_number || line_count,
+          parse_line_number: line_count
         })
       } catch (parse_error) {
         log(

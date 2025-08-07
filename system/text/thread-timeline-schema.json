@@ -41,6 +41,21 @@
         "type": "object",
         "description": "Provider-specific data and metadata",
         "additionalProperties": true
+      },
+      "ordering": {
+        "type": "object",
+        "description": "Timeline ordering and relationship metadata for deterministic sequencing",
+        "properties": {
+          "sequence": {
+            "type": "number",
+            "description": "Sequential position in the normalized session (0-based index)"
+          },
+          "parent_id": {
+            "type": "string",
+            "description": "ID of parent entry for hierarchical relationships"
+          }
+        },
+        "additionalProperties": false
       }
     },
     "allOf": [
@@ -142,6 +157,14 @@
                 "level": {
                   "type": "number",
                   "description": "Hierarchical level of the entry"
+                },
+                "parse_line_number": {
+                  "type": "number",
+                  "description": "Line number from external session parsing"
+                },
+                "toolUseID": {
+                  "type": "string",
+                  "description": "Tool use identifier for tracking tool interactions"
                 }
               },
               "additionalProperties": true
