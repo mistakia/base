@@ -35,6 +35,7 @@ export const create_thread_from_session = async ({
     // Use the unified create_thread function
     const thread_result = await create_thread({
       user_id,
+      workflow_base_uri: null, // External sessions should not have a default workflow
       inference_provider,
       model,
       models,
