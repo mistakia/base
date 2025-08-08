@@ -2,6 +2,12 @@ import debug from 'debug'
 import fs from 'fs/promises'
 import path from 'path'
 
+import {
+  find_orphaned_tool_calls,
+  find_orphaned_tool_results,
+  link_tool_call_to_result
+} from '../shared/tool-extraction-utils.mjs'
+
 const log = debug('integrations:thread:build-timeline-entries')
 
 // Track unsupported message types and content formats for timeline conversion
@@ -35,11 +41,11 @@ export const build_timeline_from_session = async (
 
     // Convert session messages to timeline entries - these represent the actual session content
     for (const [index, message] of normalized_session.messages.entries()) {
-      const entry = convert_message_to_timeline_entry(
+      const entry = convert_message_to_timeline_entry({
         message,
-        normalized_session.session_provider,
-        index
-      )
+        session_provider: normalized_session.session_provider,
+        sequence_index: index
+      })
       if (entry) {
         timeline_entries.push(entry)
       }
@@ -50,12 +56,14 @@ export const build_timeline_from_session = async (
     let final_timeline = timeline_entries
 
     if (update_existing) {
-      final_timeline = await merge_with_existing_timeline(
+      final_timeline = await merge_with_existing_timeline({
         timeline_path,
-        timeline_entries,
-        normalized_session
-      )
+        new_entries: timeline_entries
+      })
     }
+
+    // Validate and report tool interaction quality
+    const tool_validation = validate_tool_interactions(final_timeline)
 
     // Write timeline to file
     await fs.writeFile(timeline_path, JSON.stringify(final_timeline, null, 2))
@@ -81,6 +89,18 @@ export const build_timeline_from_session = async (
       )
     }
 
+    // Log tool interaction validation results
+    if (tool_validation.orphaned_calls.length > 0) {
+      log(
+        `Found ${tool_validation.orphaned_calls.length} orphaned tool calls (no matching results)`
+      )
+    }
+    if (tool_validation.orphaned_results.length > 0) {
+      log(
+        `Found ${tool_validation.orphaned_results.length} orphaned tool results (no matching calls)`
+      )
+    }
+
     return {
       timeline_path,
       entry_count: final_timeline.length,
@@ -89,6 +109,7 @@ export const build_timeline_from_session = async (
         ? final_timeline.length -
           (await get_existing_timeline_length(timeline_path))
         : final_timeline.length,
+      tool_validation,
       unsupported_items: {
         message_types: Array.from(TIMELINE_UNSUPPORTED.message_types),
         content_formats: Array.from(TIMELINE_UNSUPPORTED.content_formats),
@@ -101,11 +122,11 @@ export const build_timeline_from_session = async (
   }
 }
 
-const convert_message_to_timeline_entry = (
+const convert_message_to_timeline_entry = ({
   message,
   session_provider,
   sequence_index
-) => {
+}) => {
   // Track any unexpected message properties
   const known_message_keys = [
     'id',
@@ -116,10 +137,14 @@ const convert_message_to_timeline_entry = (
     'provider_data',
     'timestamp',
     'parent_id',
+    'ordering',
+    // Legacy field support for backward compatibility
     'tool_name',
     'parameters',
     'result',
     'tool_id',
+    'execution_status',
+    'error',
     'thinking_type',
     'system_type'
   ]
@@ -133,9 +158,23 @@ const convert_message_to_timeline_entry = (
     }
   })
 
+  // Normalize timestamp to ISO string regardless of input type
+  let iso_timestamp
+  const ts = message.timestamp
+  if (ts instanceof Date) {
+    iso_timestamp = ts.toISOString()
+  } else if (typeof ts === 'string' || typeof ts === 'number') {
+    const d = new Date(ts)
+    iso_timestamp = isNaN(d.getTime())
+      ? new Date().toISOString()
+      : d.toISOString()
+  } else {
+    iso_timestamp = new Date().toISOString()
+  }
+
   const base_entry = {
     id: message.id,
-    timestamp: message.timestamp.toISOString(),
+    timestamp: iso_timestamp,
     session_provider,
     provider_data: message.provider_data || {},
     ordering: {
@@ -161,11 +200,14 @@ const convert_message_to_timeline_entry = (
         ...base_entry,
         type: 'tool_call',
         content: {
-          tool_name: message.tool_name,
-          tool_parameters: message.parameters,
-          tool_call_id: message.tool_id,
-          execution_status: message.execution_status || 'pending',
-          result_preview: message.result_preview || null
+          tool_name: message.content?.tool_name || message.tool_name,
+          tool_parameters:
+            message.content?.tool_parameters || message.parameters,
+          tool_call_id: message.content?.tool_call_id || message.tool_id,
+          execution_status:
+            message.content?.execution_status ||
+            message.execution_status ||
+            'pending'
         },
         metadata: {
           ...message.metadata
@@ -177,9 +219,9 @@ const convert_message_to_timeline_entry = (
         ...base_entry,
         type: 'tool_result',
         content: {
-          tool_call_id: message.tool_id,
-          result: message.result,
-          error: message.error || null
+          tool_call_id: message.content?.tool_call_id || message.tool_id,
+          result: message.content?.result || message.result,
+          error: message.content?.error || message.error || null
         },
         metadata: {
           ...message.metadata
@@ -370,11 +412,7 @@ const format_message_content = (content) => {
   return JSON.stringify(content, null, 2)
 }
 
-const merge_with_existing_timeline = async (
-  timeline_path,
-  new_entries,
-  normalized_session
-) => {
+const merge_with_existing_timeline = async ({ timeline_path, new_entries }) => {
   try {
     // Read existing timeline if it exists
     const existing_timeline = await read_existing_timeline(timeline_path)
@@ -472,5 +510,56 @@ export const create_timeline_summary = (timeline_entries) => {
     tool_result_count: entry_types.tool_result || 0,
     state_change_count: entry_types.state_change || 0,
     error_count: entry_types.error || 0
+  }
+}
+
+/**
+ * Validate tool interactions in timeline entries
+ */
+const validate_tool_interactions = (timeline_entries) => {
+  const orphaned_calls = find_orphaned_tool_calls(timeline_entries)
+  const orphaned_results = find_orphaned_tool_results(timeline_entries)
+
+  const tool_calls = timeline_entries.filter(
+    (entry) => entry.type === 'tool_call'
+  )
+  const tool_results = timeline_entries.filter(
+    (entry) => entry.type === 'tool_result'
+  )
+
+  // Find successful tool interaction pairs
+  const linked_pairs = []
+  for (const call of tool_calls) {
+    const call_id = call.content?.tool_call_id
+    if (call_id) {
+      const matching_result = tool_results.find(
+        (result) => result.content?.tool_call_id === call_id
+      )
+      if (matching_result) {
+        // Link tool call to result to update execution status and preview
+        try {
+          link_tool_call_to_result(call, matching_result)
+        } catch (e) {
+          log(
+            `Error linking tool call to result for id ${call_id}: ${e.message}`
+          )
+        }
+        linked_pairs.push({ call, result: matching_result })
+      }
+    }
+  }
+
+  log(
+    `Tool interaction validation: ${tool_calls.length} calls, ${tool_results.length} results, ${linked_pairs.length} properly linked pairs`
+  )
+
+  return {
+    tool_call_count: tool_calls.length,
+    tool_result_count: tool_results.length,
+    linked_pairs_count: linked_pairs.length,
+    orphaned_calls,
+    orphaned_results,
+    linking_success_rate:
+      tool_calls.length > 0 ? linked_pairs.length / tool_calls.length : 1
   }
 }

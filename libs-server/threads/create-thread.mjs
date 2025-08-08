@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { v4 as uuid, v5 as uuidv5 } from 'uuid'
+import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
 import {
@@ -12,6 +12,7 @@ import git_operations from '#libs-server/git/index.mjs'
 import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
 import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
 import { get_thread_tool_names } from './thread-tools.mjs'
+import { generate_thread_id_from_session } from './generate-thread-id-from-session.mjs'
 import {
   get_registered_directories,
   get_user_base_directory
@@ -20,9 +21,6 @@ import {
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
 const log = debug('threads:create')
-
-// Namespace UUID for generating deterministic thread IDs from session IDs
-const SESSION_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
 
 /**
  * Create a thread branch in the knowledge base repositories and set up worktrees
@@ -176,25 +174,6 @@ export function build_thread_metadata({
     metadata.external_session = external_session
   }
   return metadata
-}
-
-/**
- * Generate deterministic thread ID from session information
- * @param {Object} params - Session parameters
- * @param {string} params.session_id - Session ID from provider
- * @param {string} params.session_provider - Session provider name
- * @returns {string} Deterministic thread ID
- */
-export function generate_thread_id_from_session({
-  session_id,
-  session_provider
-}) {
-  if (!session_provider) {
-    throw new Error('session_provider must be defined')
-  }
-  // Create deterministic UUID from session ID and provider
-  const session_key = `${session_provider}:${session_id}`
-  return uuidv5(session_key, SESSION_NAMESPACE)
 }
 
 /**

@@ -1,6 +1,11 @@
 // import { v4 as uuidv4 } from 'uuid'
 import debug from 'debug'
 
+import {
+  create_tool_call_entry,
+  create_tool_result_entry
+} from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+
 const log = debug('integrations:claude:normalize-session')
 
 // Track unsupported properties for future implementation
@@ -37,13 +42,17 @@ export const normalize_claude_session = (claude_session) => {
     })
 
     // Second pass: convert entries to normalized format
+    let overall_sequence = 0
     entries.forEach((entry, index) => {
       const normalized_entry = normalize_claude_entry({
         entry,
-        entry_map,
         index
       })
       if (normalized_entry) {
+        normalized_entry.ordering = {
+          sequence: overall_sequence++,
+          parent_id: entry.parentUuid || null
+        }
         normalized_messages.push(normalized_entry)
       }
 
@@ -79,44 +88,105 @@ export const normalize_claude_session = (claude_session) => {
                 is_sidechain: entry.isSidechain || false,
                 content_block_index: content_index,
                 is_thinking_block: true // Add marker to identify thinking blocks
+              },
+              ordering: {
+                sequence: overall_sequence,
+                parent_id: entry.uuid
               }
             }
+            overall_sequence++ // Increment after creating the entry
             normalized_messages.push(thinking_entry)
+          }
+        })
+      }
+
+      // Check for tool_use content that should be separate entries
+      if (
+        entry.type === 'assistant' &&
+        entry.message?.content &&
+        Array.isArray(entry.message.content)
+      ) {
+        entry.message.content.forEach((content_item, content_index) => {
+          if (content_item.type === 'tool_use') {
+            // Handle both raw Claude API format and processed format
+            const tool_name =
+              content_item.metadata?.tool_name || content_item.name
+            const tool_parameters =
+              content_item.metadata?.parameters || content_item.input || {}
+            const tool_call_id =
+              content_item.metadata?.tool_id || content_item.id
+
+            if (!tool_name || !tool_call_id) {
+              log(
+                `Warning: Incomplete tool_use data in session ${index}, content block ${content_index}`
+              )
+              return // Skip this tool use
+            }
+
+            // Create separate tool call entry
+            const tool_call_entry = create_tool_call_entry({
+              parent_id: entry.uuid,
+              tool_name,
+              tool_parameters,
+              tool_call_id,
+              timestamp: new Date(entry.timestamp),
+              provider_data: {
+                line_number: entry.line_number,
+                session_index: index,
+                is_sidechain: entry.isSidechain || false,
+                content_block_index: content_index,
+                is_extracted_tool: true
+              },
+              sequence_index: overall_sequence
+            })
+
+            if (tool_call_entry) {
+              overall_sequence++ // Increment after creating the entry
+              normalized_messages.push(tool_call_entry)
+            }
+          }
+        })
+      }
+
+      // Check for tool_result content in user messages
+      if (
+        entry.type === 'user' &&
+        entry.message?.content &&
+        Array.isArray(entry.message.content)
+      ) {
+        entry.message.content.forEach((content_item, content_index) => {
+          if (content_item.type === 'tool_result') {
+            // Create separate tool result entry
+            const tool_result_entry = create_tool_result_entry({
+              tool_call_id: content_item.tool_use_id,
+              result: content_item.content,
+              error: content_item.is_error ? content_item.content : null,
+              timestamp: new Date(entry.timestamp),
+              provider_data: {
+                line_number: entry.line_number,
+                session_index: index,
+                is_sidechain: entry.isSidechain || false,
+                content_block_index: content_index,
+                is_extracted_tool: true
+              },
+              sequence_index: overall_sequence
+            })
+
+            if (tool_result_entry) {
+              overall_sequence++ // Increment after creating the entry
+              normalized_messages.push(tool_result_entry)
+            }
           }
         })
       }
     })
 
-    // Sort by line_number to ensure correct order from the original session
-    // line_number represents the actual sequence in the Claude session export
+    // Sort by ordering sequence to ensure correct timeline order
     normalized_messages.sort((a, b) => {
-      const line_a = a.provider_data?.line_number || 0
-      const line_b = b.provider_data?.line_number || 0
+      const seq_a = a.ordering?.sequence ?? 0
+      const seq_b = b.ordering?.sequence ?? 0
 
-      // First sort by line_number if available
-      if (line_a !== line_b) {
-        return line_a - line_b
-      }
-
-      // If line_numbers are the same, thinking blocks come after their parent
-      const is_thinking_a = a.provider_data?.is_thinking_block || false
-      const is_thinking_b = b.provider_data?.is_thinking_block || false
-
-      if (is_thinking_a !== is_thinking_b) {
-        return is_thinking_a ? 1 : -1
-      }
-
-      // If both are thinking blocks, sort by content_block_index
-      if (is_thinking_a && is_thinking_b) {
-        const index_a = a.provider_data?.content_block_index || 0
-        const index_b = b.provider_data?.content_block_index || 0
-        if (index_a !== index_b) {
-          return index_a - index_b
-        }
-      }
-
-      // Fall back to timestamp if everything else is the same
-      return new Date(a.timestamp) - new Date(b.timestamp)
+      return seq_a - seq_b
     })
 
     // Extract session metadata
@@ -136,7 +206,7 @@ export const normalize_claude_session = (claude_session) => {
   }
 }
 
-const normalize_claude_entry = ({ entry, entry_map, index }) => {
+const normalize_claude_entry = ({ entry, index }) => {
   // Track all properties found in the entry for completeness analysis
   const all_entry_keys = Object.keys(entry)
   const known_keys = [
@@ -178,7 +248,6 @@ const normalize_claude_entry = ({ entry, entry_map, index }) => {
 
   const base_normalized = {
     id: entry.uuid,
-    parent_id: entry.parentUuid || null,
     timestamp: new Date(entry.timestamp),
     provider_data: {
       line_number: entry.line_number,
@@ -261,11 +330,22 @@ const normalize_user_entry = (entry, base_normalized) => {
     })
   }
 
+  const content = extract_user_content(entry.message)
+
+  // Skip messages with empty content (e.g., messages that only contained tool_result blocks)
+  if (
+    !content ||
+    (typeof content === 'string' && content.trim() === '') ||
+    (Array.isArray(content) && content.length === 0)
+  ) {
+    return null
+  }
+
   return {
     ...base_normalized,
     type: 'message',
     role: 'user',
-    content: extract_user_content(entry.message),
+    content,
     metadata: {
       working_directory: entry.cwd,
       user_type: entry.userType,
@@ -326,18 +406,28 @@ const normalize_assistant_entry = (entry, base_normalized) => {
     })
   }
 
+  const content = extract_assistant_content(entry.message)
+
+  // Skip messages with empty content (e.g., messages that only contained tool_use blocks)
+  if (
+    !content ||
+    (typeof content === 'string' && content.trim() === '') ||
+    (Array.isArray(content) && content.length === 0)
+  ) {
+    return null
+  }
+
   return {
     ...base_normalized,
     type: 'message',
     role: 'assistant',
-    content: extract_assistant_content(entry.message),
+    content,
     metadata: {
       model: entry.message?.model,
       request_id: entry.requestId,
       usage: entry.message?.usage,
       stop_reason: entry.message?.stop_reason,
       stop_sequence: entry.message?.stop_sequence,
-      result_preview: entry.toolUseResult || null,
       is_meta: entry.isMeta || false,
       is_api_error_message: entry.isApiErrorMessage || false,
       git_branch: entry.gitBranch || null,
@@ -359,47 +449,46 @@ const extract_user_content = (message) => {
   }
 
   if (Array.isArray(message.content)) {
-    return message.content.map((item) => {
-      if (typeof item === 'string') {
-        return item
-      }
+    return message.content
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item
+        }
 
-      switch (item.type) {
-        case 'text':
-          return item.text || item.content
-        case 'tool_result':
-          return {
-            type: 'tool_result',
-            tool_use_id: item.tool_use_id,
-            content: item.content
-          }
-        case 'thinking':
-        case 'thinking.thinking':
-        case 'thinking.signature':
-          return {
-            type: item.type,
-            content: item.content || item.text || item.thinking,
-            metadata: item.metadata || {}
-          }
-        case 'image':
-          return {
-            type: 'image',
-            content: item.source?.data || item.content || '[Image]',
-            metadata: {
-              source_type: item.source?.type,
-              media_type: item.source?.media_type,
-              ...item.metadata
+        switch (item.type) {
+          case 'text':
+            return item.text || item.content
+          case 'tool_result':
+            // Tool results are extracted as separate entries, skip them in message content
+            return null
+          case 'thinking':
+          case 'thinking.thinking':
+          case 'thinking.signature':
+            return {
+              type: item.type,
+              content: item.content || item.text || item.thinking,
+              metadata: item.metadata || {}
             }
-          }
-        default:
-          log_unsupported({
-            category: 'content_types',
-            value: item.type,
-            context: 'user message content item'
-          })
-          return JSON.stringify(item)
-      }
-    })
+          case 'image':
+            return {
+              type: 'image',
+              content: item.source?.data || item.content || '[Image]',
+              metadata: {
+                source_type: item.source?.type,
+                media_type: item.source?.media_type,
+                ...item.metadata
+              }
+            }
+          default:
+            log_unsupported({
+              category: 'content_types',
+              value: item.type,
+              context: 'user message content item'
+            })
+            return JSON.stringify(item)
+        }
+      })
+      .filter((item) => item !== null)
   }
 
   return JSON.stringify(message.content)
@@ -416,73 +505,68 @@ const extract_assistant_content = (message) => {
   }
 
   if (Array.isArray(message.content)) {
-    return message.content.map((item) => {
-      // Track all properties in content items
-      if (typeof item === 'object' && item.type) {
-        const known_content_keys = [
-          'type',
-          'text',
-          'name',
-          'id',
-          'input',
-          'content',
-          'thinking',
-          'metadata',
-          'source' // for images
-        ]
-        Object.keys(item).forEach((key) => {
-          if (!known_content_keys.includes(key)) {
-            log_unsupported({
-              category: 'content_types',
-              value: `${item.type}.${key}`,
-              context: 'assistant content property'
-            })
-          }
-        })
-      }
+    return message.content
+      .map((item) => {
+        // Track all properties in content items
+        if (typeof item === 'object' && item.type) {
+          const known_content_keys = [
+            'type',
+            'text',
+            'name',
+            'id',
+            'input',
+            'content',
+            'thinking',
+            'metadata',
+            'source' // for images
+          ]
+          Object.keys(item).forEach((key) => {
+            if (!known_content_keys.includes(key)) {
+              log_unsupported({
+                category: 'content_types',
+                value: `${item.type}.${key}`,
+                context: 'assistant content property'
+              })
+            }
+          })
+        }
 
-      switch (item.type) {
-        case 'text':
-          return item.text
-        case 'tool_use':
-          return {
-            type: 'tool_use',
-            content: `Tool: ${item.name}`,
-            metadata: {
-              tool_name: item.name,
-              tool_id: item.id,
-              parameters: item.input
+        switch (item.type) {
+          case 'text':
+            return item.text
+          case 'tool_use':
+            // Tool calls are extracted as separate entries, skip them in message content
+            return null
+          case 'thinking':
+          case 'thinking.thinking':
+          case 'thinking.signature':
+            return {
+              type: item.type,
+              content: item.content || item.text || item.thinking,
+              metadata: item.metadata || {}
             }
-          }
-        case 'thinking':
-        case 'thinking.thinking':
-        case 'thinking.signature':
-          return {
-            type: item.type,
-            content: item.content || item.text || item.thinking,
-            metadata: item.metadata || {}
-          }
-        case 'image':
-          return {
-            type: 'image',
-            content: item.source?.data || item.content || '[Image]',
-            metadata: {
-              source_type: item.source?.type,
-              media_type: item.source?.media_type,
-              ...item.metadata
+          case 'image':
+            return {
+              type: 'image',
+              content: item.source?.data || item.content || '[Image]',
+              metadata: {
+                source_type: item.source?.type,
+                media_type: item.source?.media_type,
+                ...item.metadata
+              }
             }
-          }
-        default:
-          if (item.type) {
-            log_unsupported({
-              category: 'content_types',
-              value: item.type,
-              context: 'assistant message content'
-            })
-          }
-          return JSON.stringify(item)
-      }
-    })
+          default:
+            if (item.type) {
+              log_unsupported({
+                category: 'content_types',
+                value: item.type,
+                context: 'assistant message content'
+              })
+            }
+            return JSON.stringify(item)
+        }
+      })
+      .filter((item) => item !== null)
   }
 
   return JSON.stringify(message.content)
@@ -577,89 +661,6 @@ export const normalize_claude_sessions = (claude_sessions) => {
   }
 
   return normalized_sessions
-}
-
-export const extract_tool_calls_and_results = (normalized_messages) => {
-  const tool_interactions = []
-
-  for (let i = 0; i < normalized_messages.length; i++) {
-    const message = normalized_messages[i]
-
-    if (message.role === 'assistant' && Array.isArray(message.content)) {
-      const tool_calls = message.content.filter(
-        (item) => item.type === 'tool_call'
-      )
-
-      tool_calls.forEach((tool_call) => {
-        // Look for corresponding tool result in subsequent user messages
-        const tool_result = find_tool_result({
-          messages: normalized_messages,
-          start_index: i + 1,
-          tool_id: tool_call.tool_id
-        })
-
-        tool_interactions.push({
-          call_message_id: message.id,
-          result_message_id: tool_result?.message_id || null,
-          tool_name: tool_call.tool_name,
-          tool_id: tool_call.tool_id,
-          parameters: tool_call.parameters,
-          result: tool_result?.result || null,
-          timestamp: message.timestamp
-        })
-      })
-    }
-  }
-
-  return tool_interactions
-}
-
-const find_tool_result = ({ messages, start_index, tool_id }) => {
-  for (
-    let i = start_index;
-    i < Math.min(start_index + 5, messages.length);
-    i++
-  ) {
-    const message = messages[i]
-
-    // Check for tool results in different formats
-    if (message.role === 'user') {
-      // Check provider_data first
-      if (message.provider_data?.tool_result) {
-        const tool_result = message.provider_data.tool_result
-        if (tool_result.tool_use_id === tool_id) {
-          return {
-            message_id: message.id,
-            result: tool_result.content
-          }
-        }
-      }
-
-      // Check content array for tool_result items
-      if (Array.isArray(message.content)) {
-        for (const content_item of message.content) {
-          if (
-            content_item.type === 'tool_result' &&
-            content_item.tool_use_id === tool_id
-          ) {
-            return {
-              message_id: message.id,
-              result: content_item.content
-            }
-          }
-        }
-      }
-
-      // Check metadata for tool_use_result (alternative location)
-      if (message.metadata?.tool_use_result?.tool_use_id === tool_id) {
-        return {
-          message_id: message.id,
-          result: message.metadata.tool_use_result.content
-        }
-      }
-    }
-  }
-  return null
 }
 
 // Export the unsupported tracking for reporting

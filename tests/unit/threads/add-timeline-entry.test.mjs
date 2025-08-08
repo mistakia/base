@@ -102,8 +102,10 @@ describe('add_timeline_entry', () => {
     const added_entry = timeline[0]
     expect(added_entry.id).to.equal(tool_call.id)
     expect(added_entry.type).to.equal('tool_call')
-    expect(added_entry.tool_name).to.equal(tool_call.tool_name)
-    expect(added_entry.parameters).to.deep.equal(tool_call.parameters)
+    expect(added_entry.content.tool_name).to.equal(tool_call.content.tool_name)
+    expect(added_entry.content.tool_parameters).to.deep.equal(
+      tool_call.content.tool_parameters
+    )
   })
 
   it('should add a tool result entry to the timeline', async () => {
@@ -126,8 +128,10 @@ describe('add_timeline_entry', () => {
     const added_entry = timeline[0]
     expect(added_entry.id).to.equal(tool_result.id)
     expect(added_entry.type).to.equal('tool_result')
-    expect(added_entry.tool_call_id).to.equal(tool_result.tool_call_id)
-    expect(added_entry.result).to.deep.equal(tool_result.result)
+    expect(added_entry.content.tool_call_id).to.equal(
+      tool_result.content.tool_call_id
+    )
+    expect(added_entry.content.result).to.deep.equal(tool_result.content.result)
   })
 
   it('should add multiple entries in order', async () => {
