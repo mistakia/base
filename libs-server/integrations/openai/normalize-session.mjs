@@ -7,6 +7,11 @@
 
 import debug from 'debug'
 
+import {
+  create_tool_call_entry,
+  create_tool_result_entry
+} from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+
 const log = debug('integrations:openai:normalize')
 
 // Track unsupported features for reporting
@@ -192,6 +197,17 @@ function traverseConversationTree(mapping, node_id, messages, processed) {
     const message = extractMessageData(node.message, node_id)
     if (message) {
       messages.push(message)
+
+      // Extract tool interactions as separate timeline entries
+      const tool_entries = extractToolInteractionsFromMessage(
+        node.message,
+        node_id
+      )
+      tool_entries.forEach((tool_entry) => {
+        if (tool_entry) {
+          messages.push(tool_entry)
+        }
+      })
     }
   }
 
@@ -201,6 +217,94 @@ function traverseConversationTree(mapping, node_id, messages, processed) {
       traverseConversationTree(mapping, child_id, messages, processed)
     })
   }
+}
+
+/**
+ * Extract tool interactions as separate timeline entries
+ */
+function extractToolInteractionsFromMessage(message, node_id) {
+  const tool_entries = []
+  const content_type = message.content?.content_type
+
+  try {
+    // Extract tool calls from tool_invocation messages
+    if (content_type === 'tool_invocation') {
+      const tool_call_entry = create_tool_call_entry({
+        parent_id: message.id || node_id,
+        tool_name: message.content.tool_name,
+        tool_parameters: message.content.parameters || {},
+        tool_call_id: message.content.invocation_id || message.id,
+        timestamp: parseTimestamp(message.create_time),
+        provider_data: {
+          content_type: 'tool_invocation',
+          node_id,
+          is_extracted_tool: true,
+          openai_metadata: {
+            recipient: message.recipient,
+            channel: message.channel,
+            weight: message.weight
+          }
+        }
+      })
+
+      if (tool_call_entry) {
+        tool_entries.push(tool_call_entry)
+      }
+    }
+
+    // Extract tool results from execution_output messages
+    if (content_type === 'execution_output') {
+      // Try to find the tool_call_id from the message context
+      const tool_call_id = findRelatedToolCallId(message, node_id)
+
+      const tool_result_entry = create_tool_result_entry({
+        tool_call_id,
+        result: message.content.text || message.content.output,
+        error: message.content.error,
+        timestamp: parseTimestamp(message.create_time),
+        provider_data: {
+          content_type: 'execution_output',
+          node_id,
+          is_extracted_tool: true,
+          openai_metadata: {
+            exit_code: message.content.exit_code,
+            recipient: message.recipient,
+            channel: message.channel,
+            weight: message.weight
+          }
+        }
+      })
+
+      if (tool_result_entry) {
+        tool_entries.push(tool_result_entry)
+      }
+    }
+  } catch (error) {
+    log(
+      `Error extracting tool interactions from message ${node_id}: ${error.message}`
+    )
+  }
+
+  return tool_entries
+}
+
+/**
+ * Find related tool call ID for execution output
+ */
+function findRelatedToolCallId(message, node_id) {
+  // OpenAI doesn't always provide direct linking, so we use various strategies:
+
+  // 1. Check message metadata for parent_id or request_id
+  if (message.metadata?.parent_id) {
+    return message.metadata.parent_id
+  }
+
+  if (message.metadata?.request_id) {
+    return message.metadata.request_id
+  }
+
+  // 2. Use the message ID as fallback
+  return message.id || node_id
 }
 
 /**
@@ -318,7 +422,12 @@ function hasContentParts(content) {
   return !!(
     content.model_set_context ||
     content.structured_context ||
-    content.repository
+    content.repository ||
+    content.content_type === 'tool_invocation' ||
+    content.content_type === 'execution_output' ||
+    content.tool_name ||
+    content.text ||
+    content.output
   )
 }
 
@@ -341,9 +450,11 @@ function determineMessageType(message) {
     case 'model_editable_context':
       return 'context'
     case 'execution_output':
-      return 'tool_result'
+      // Tool results are extracted separately, treat as regular message
+      return 'message'
     case 'tool_invocation':
-      return 'tool_call'
+      // Tool calls are extracted separately, treat as regular message
+      return 'message'
     case 'multimodal_text':
       return 'multimodal'
     default:
@@ -372,10 +483,12 @@ function extractContentData(content) {
       return extractContextContent(content)
 
     case 'execution_output':
-      return extractExecutionOutput(content)
+      // Tool results are extracted as separate entries, skip in message content
+      return { content: '' }
 
     case 'tool_invocation':
-      return extractToolInvocation(content)
+      // Tool calls are extracted as separate entries, skip in message content
+      return { content: '' }
 
     default:
       // Fallback to text extraction
@@ -431,36 +544,6 @@ function extractContextContent(content) {
       structured_context: content.structured_context
     },
     content_type: 'context'
-  }
-}
-
-/**
- * Extract execution output
- */
-function extractExecutionOutput(content) {
-  return {
-    content: content.text || content.output || '',
-    execution_data: {
-      output: content.output,
-      error: content.error,
-      exit_code: content.exit_code
-    },
-    content_type: 'execution_output'
-  }
-}
-
-/**
- * Extract tool invocation
- */
-function extractToolInvocation(content) {
-  return {
-    content: `Tool: ${content.tool_name || 'unknown'}`,
-    tool_call: {
-      name: content.tool_name,
-      parameters: content.parameters,
-      invocation_id: content.invocation_id
-    },
-    content_type: 'tool_invocation'
   }
 }
 

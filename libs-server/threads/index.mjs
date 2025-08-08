@@ -20,14 +20,6 @@ import add_timeline_entry, {
 import generate_prompt from './generate-prompt.mjs'
 import execute_thread from './execute-thread.mjs'
 import * as thread_tools from './thread-tools.mjs'
-import {
-  register_tool,
-  has_tool,
-  get_tool,
-  get_tool_metadata,
-  list_tools,
-  execute_tool
-} from '#libs-server/tools/index.mjs'
 
 const log = debug('threads')
 
@@ -80,14 +72,4 @@ export default {
   generate_prompt,
   execute_thread,
   thread_tools
-}
-
-// Re-export tool operations directly from centralized tools implementation
-export {
-  register_tool,
-  has_tool,
-  get_tool,
-  get_tool_metadata,
-  list_tools,
-  execute_tool
 }

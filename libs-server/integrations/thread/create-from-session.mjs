@@ -4,9 +4,8 @@ import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
-import create_thread, {
-  generate_thread_id_from_session
-} from '#libs-server/threads/create-thread.mjs'
+import create_thread from '#libs-server/threads/create-thread.mjs'
+import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 

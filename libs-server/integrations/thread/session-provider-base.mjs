@@ -7,7 +7,7 @@
  */
 
 import debug from 'debug'
-import { generate_thread_id_from_session } from '#libs-server/threads/create-thread.mjs'
+import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 
 export class SessionProviderBase {
   constructor({ provider_name }) {

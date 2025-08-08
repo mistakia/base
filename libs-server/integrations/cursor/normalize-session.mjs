@@ -1,5 +1,10 @@
 import debug from 'debug'
 
+import {
+  create_tool_call_entry,
+  create_tool_result_entry
+} from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+
 const log = debug('integrations:cursor:normalize')
 
 // Track unsupported properties for future implementation
@@ -87,11 +92,19 @@ export const normalize_cursor_conversation = (conversation) => {
     })
   }
 
-  // Normalize messages
+  // Normalize messages and extract tool interactions
   for (const msg of conversation.messages || []) {
     const normalized = normalize_message(msg)
     if (normalized) {
       session.messages.push(normalized)
+
+      // Extract potential tool interactions as separate timeline entries
+      const tool_entries = extract_cursor_tool_interactions(msg)
+      tool_entries.forEach((tool_entry) => {
+        if (tool_entry) {
+          session.messages.push(tool_entry)
+        }
+      })
     }
   }
 
@@ -148,6 +161,101 @@ export const normalize_cursor_conversations = (conversations) => {
 
   log(`Successfully normalized ${sessions.length} conversations`)
   return sessions
+}
+
+/**
+ * Extract potential tool interactions from Cursor messages
+ * This is a basic implementation since Cursor's tool interaction patterns
+ * are not well-defined in the current schema
+ */
+function extract_cursor_tool_interactions(msg) {
+  const tool_entries = []
+
+  try {
+    // Pattern 1: Messages with capability_type (potential tool calls)
+    if (
+      msg.capability_type &&
+      ['code_interpreter', 'file_search', 'browser'].includes(
+        msg.capability_type
+      )
+    ) {
+      const tool_call_entry = create_tool_call_entry({
+        parent_id: msg.id,
+        tool_name: msg.capability_type,
+        tool_parameters: {
+          content: msg.content,
+          content_parts: msg.content_parts
+        },
+        tool_call_id: `${msg.id}-${msg.capability_type}`,
+        timestamp: msg.timestamp,
+        provider_data: {
+          cursor_capability: msg.capability_type,
+          is_extracted_tool: true,
+          message_type: msg.type,
+          timing_info: msg.timing_info
+        }
+      })
+
+      if (tool_call_entry) {
+        tool_entries.push(tool_call_entry)
+      }
+    }
+
+    // Pattern 2: Tool role messages (potential tool results)
+    if (msg.role === 'tool') {
+      const tool_result_entry = create_tool_result_entry({
+        tool_call_id: msg.server_bubble_id || `${msg.id}-result`,
+        result: msg.content,
+        error: msg.error,
+        timestamp: msg.timestamp,
+        provider_data: {
+          cursor_tool_response: true,
+          is_extracted_tool: true,
+          message_type: msg.type,
+          timing_info: msg.timing_info,
+          finish_reason: msg.finish_reason
+        }
+      })
+
+      if (tool_result_entry) {
+        tool_entries.push(tool_result_entry)
+      }
+    }
+
+    // Pattern 3: Code execution content parts (potential tool interactions)
+    if (msg.content_parts && Array.isArray(msg.content_parts)) {
+      msg.content_parts.forEach((part, index) => {
+        if (part.type === 'code' && part.language && part.code) {
+          const tool_call_entry = create_tool_call_entry({
+            parent_id: msg.id,
+            tool_name: 'code_execution',
+            tool_parameters: {
+              language: part.language,
+              code: part.code
+            },
+            tool_call_id: `${msg.id}-code-${index}`,
+            timestamp: msg.timestamp,
+            provider_data: {
+              cursor_code_execution: true,
+              is_extracted_tool: true,
+              content_part_index: index,
+              language: part.language
+            }
+          })
+
+          if (tool_call_entry) {
+            tool_entries.push(tool_call_entry)
+          }
+        }
+      })
+    }
+  } catch (error) {
+    log(
+      `Error extracting tool interactions from Cursor message ${msg.id}: ${error.message}`
+    )
+  }
+
+  return tool_entries
 }
 
 /**

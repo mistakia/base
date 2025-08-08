@@ -200,11 +200,6 @@
                   "type": "string",
                   "enum": ["pending", "executing", "completed", "failed"],
                   "description": "Status of tool execution"
-                },
-                "result_preview": {
-                  "type": "object",
-                  "description": "Preview or summary of tool execution result",
-                  "additionalProperties": true
                 }
               },
               "additionalProperties": false
