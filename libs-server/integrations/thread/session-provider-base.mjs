@@ -8,6 +8,7 @@
 
 import debug from 'debug'
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
+import { calculate_session_counts } from './session-count-utilities.mjs'
 
 export class SessionProviderBase {
   constructor({ provider_name }) {
@@ -179,13 +180,14 @@ export class SessionProviderBase {
    * @returns {Object} Thread metadata object
    */
   generate_thread_metadata({ conversation, additional_metadata = {} }) {
-    const message_count = conversation.messages?.length || 0
+    const counts = calculate_session_counts(conversation.messages || [])
     const session_id = this.get_session_id(conversation)
 
     return {
       provider: this.provider_name,
       session_id,
-      message_count,
+      message_count: counts.message_count,
+      tool_call_count: counts.tool_call_count,
       created_at: conversation.created_at || new Date().toISOString(),
       updated_at: conversation.updated_at || new Date().toISOString(),
       ...additional_metadata

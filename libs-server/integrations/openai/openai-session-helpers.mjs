@@ -8,6 +8,7 @@
 import debug from 'debug'
 import { v5 as uuidv5 } from 'uuid'
 import { OPENAI_NAMESPACE } from './openai-config.mjs'
+import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
 const log = debug('integrations:openai:session-helpers')
 
@@ -336,7 +337,7 @@ export const map_message_type_to_timeline_type = ({ message_type, role }) => {
  * @returns {Object} Thread metadata object
  */
 export const generate_openai_thread_metadata = ({ conversation }) => {
-  const message_count = conversation.messages?.length || 0
+  const counts = calculate_session_counts(conversation.messages || [])
   const start_time = conversation.created_at
   const end_time = conversation.updated_at
 
@@ -374,7 +375,8 @@ export const generate_openai_thread_metadata = ({ conversation }) => {
     duration_minutes,
 
     // Content analysis
-    message_count,
+    message_count: counts.message_count,
+    tool_call_count: counts.tool_call_count,
     message_types,
     role_counts,
     has_tool_usage,

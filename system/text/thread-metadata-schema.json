@@ -93,6 +93,14 @@
       "type": "boolean",
       "description": "Whether the thread's memory directory has been initialized as a git repository"
     },
+    "message_count": {
+      "type": "integer",
+      "description": "Total number of messages in this thread"
+    },
+    "tool_call_count": {
+      "type": "integer",
+      "description": "Total number of tool calls made in this thread"
+    },
     "external_session": {
       "type": "object",
       "description": "External session metadata for imported sessions",
@@ -119,10 +127,6 @@
         "raw_data_saved": {
           "type": "boolean",
           "description": "Whether the raw imported data has been saved"
-        },
-        "message_count": {
-          "type": "integer",
-          "description": "Number of messages imported from the external session"
         }
       },
       "required": ["session_provider"],

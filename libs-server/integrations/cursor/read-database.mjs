@@ -3,6 +3,7 @@ import path from 'path'
 import os from 'os'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
 const log = debug('integrations:cursor:read-database')
 
@@ -411,7 +412,7 @@ function generate_message_id() {
  */
 export const get_conversation_summary = (conversation) => {
   const messages = conversation.messages || []
-  const message_count = messages.length
+  const counts = calculate_session_counts(messages)
 
   // Calculate duration if we have timestamps
   let start_time = null
@@ -448,12 +449,14 @@ export const get_conversation_summary = (conversation) => {
 
   return {
     composer_id: conversation.composer_id,
-    message_count,
+    message_count: counts.message_count,
+    tool_call_count: counts.tool_call_count,
     start_time,
     end_time,
     duration_minutes,
     summary:
-      conversation.summary || `Conversation with ${message_count} messages`,
+      conversation.summary ||
+      `Conversation with ${counts.message_count} messages`,
     has_code_blocks,
     model_used
   }
