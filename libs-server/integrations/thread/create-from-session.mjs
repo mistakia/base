@@ -6,6 +6,7 @@ import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
+import { calculate_session_counts } from './session-count-utilities.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 
@@ -19,16 +20,16 @@ export const create_thread_from_session = async ({
   raw_session_data = null // Original raw data from provider
 }) => {
   try {
+    // Calculate message and tool call counts from normalized session
+    const counts = calculate_session_counts(normalized_session.messages || [])
+
     // Create external session metadata
     const external_session = {
       session_provider: normalized_session.session_provider,
       session_id: normalized_session.session_id,
       imported_at: new Date().toISOString(),
       provider_metadata: normalized_session.metadata,
-      raw_data_saved: !!raw_session_data,
-      message_count: normalized_session.messages
-        ? normalized_session.messages.length
-        : 0
+      raw_data_saved: !!raw_session_data
     }
 
     // Use the unified create_thread function
@@ -46,7 +47,9 @@ export const create_thread_from_session = async ({
       external_session,
       additional_metadata: {
         system_worktree_path: null,
-        user_worktree_path: null
+        user_worktree_path: null,
+        message_count: counts.message_count,
+        tool_call_count: counts.tool_call_count
       }
     })
 
@@ -306,18 +309,20 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       await fs.readFile(metadata_path, 'utf-8')
     )
 
+    // Calculate updated counts from normalized session
+    const counts = calculate_session_counts(normalized_session.messages || [])
+
     // Update relevant fields
     const now = new Date().toISOString()
     const updated_metadata = {
       ...existing_metadata,
       updated_at: now,
+      message_count: counts.message_count,
+      tool_call_count: counts.tool_call_count,
       external_session: {
         ...existing_metadata.external_session,
         last_updated: now,
-        provider_metadata: normalized_session.metadata,
-        message_count: normalized_session.messages
-          ? normalized_session.messages.length
-          : 0
+        provider_metadata: normalized_session.metadata
       }
     }
 

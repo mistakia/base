@@ -99,6 +99,7 @@ export const list_cursor_conversations = async (options = {}) => {
       return {
         composer_id: conversation.composer_id,
         message_count: summary.message_count,
+        tool_call_count: summary.tool_call_count,
         duration_minutes: summary.duration_minutes,
         created_at: conversation.created_at,
         last_updated_at: conversation.last_updated_at,

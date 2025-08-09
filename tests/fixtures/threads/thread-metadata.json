@@ -4,7 +4,9 @@
     "metadata": {
       "inference_provider": "ollama",
       "model": "llama2",
-      "thread_state": "active"
+      "thread_state": "active",
+      "message_count": 0,
+      "tool_call_count": 0
     }
   },
   {
@@ -13,7 +15,9 @@
       "inference_provider": "ollama",
       "model": "mistral",
       "thread_state": "active",
-      "tools": ["web_search", "calculator"]
+      "tools": ["web_search", "calculator"],
+      "message_count": 5,
+      "tool_call_count": 2
     }
   },
   {
@@ -23,7 +27,9 @@
       "model": "llama2",
       "thread_state": "paused",
       "pause_reason": "waiting_for_human_input",
-      "tools": ["web_search"]
+      "tools": ["web_search"],
+      "message_count": 3,
+      "tool_call_count": 1
     }
   },
   {
@@ -33,7 +39,9 @@
       "model": "mistral",
       "thread_state": "terminated",
       "termination_reason": "completed",
-      "tools": ["web_search", "calculator"]
+      "tools": ["web_search", "calculator"],
+      "message_count": 10,
+      "tool_call_count": 4
     }
   },
   {
@@ -45,7 +53,9 @@
       "provider_settings": {
         "api_key": "test_key",
         "endpoint": "http://test-endpoint"
-      }
+      },
+      "message_count": 7,
+      "tool_call_count": 0
     }
   }
 ]
