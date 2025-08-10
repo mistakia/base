@@ -589,11 +589,8 @@ const extract_assistant_content = (message) => {
           case 'thinking':
           case 'thinking.thinking':
           case 'thinking.signature':
-            return {
-              type: item.type,
-              content: item.content || item.text || item.thinking,
-              metadata: item.metadata || {}
-            }
+            // Thinking blocks are extracted as separate entries, skip them in message content
+            return null
           case 'image':
             return {
               type: 'image',
