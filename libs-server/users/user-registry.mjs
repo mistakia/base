@@ -1,7 +1,6 @@
 import path from 'path'
 import fs from 'fs/promises'
 import debug from 'debug'
-import { v4 as uuidv4 } from 'uuid'
 
 import config from '#config'
 
@@ -21,35 +20,32 @@ class UserRegistry {
     if (!user_base_dir) {
       throw new Error('USER_BASE_DIRECTORY not configured')
     }
-    this.file_path = path.join(user_base_dir, '.system', 'users.json')
+    this.file_path = path.join(user_base_dir, 'users.json')
   }
 
-  async _ensure_system_directory() {
-    const system_dir = path.dirname(this.file_path)
-    await fs.mkdir(system_dir, { recursive: true })
+  async _ensure_directory() {
+    const dir = path.dirname(this.file_path)
+    await fs.mkdir(dir, { recursive: true })
   }
 
   async _load_users_from_file() {
     try {
       const file_content = await fs.readFile(this.file_path, 'utf8')
       const data = JSON.parse(file_content)
-      return data.users || []
+      return data.users || {}
     } catch (error) {
       if (error.code === 'ENOENT') {
-        log('Users file not found, returning empty array')
-        return []
+        log('Users file not found, returning empty object')
+        return {}
       }
       throw new Error(`Failed to load users file: ${error.message}`)
     }
   }
 
   async _save_users_to_file(users) {
-    await this._ensure_system_directory()
+    await this._ensure_directory()
 
     const data = {
-      export_timestamp: new Date().toISOString(),
-      export_version: '1.0.0',
-      source: 'user-registry',
       users
     }
 
@@ -62,7 +58,7 @@ class UserRegistry {
       // Atomic rename
       await fs.rename(temp_file, this.file_path)
 
-      log(`Saved ${users.length} users to ${this.file_path}`)
+      log(`Saved ${Object.keys(users).length} users to ${this.file_path}`)
     } catch (error) {
       // Clean up temporary file if it exists
       try {
@@ -99,22 +95,23 @@ class UserRegistry {
 
   async load_users() {
     await this._refresh_cache_if_needed()
-    return [...this.cache] // Return copy to prevent external modification
+    return { ...this.cache } // Return copy to prevent external modification
   }
 
   async save_users(users) {
-    // Validate users array
-    if (!Array.isArray(users)) {
-      throw new Error('Users must be an array')
+    // Validate users object
+    if (typeof users !== 'object' || users === null) {
+      throw new Error('Users must be an object')
     }
 
     // Validate each user
-    const required_fields = ['user_id', 'public_key']
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i]
+    const required_fields = ['username', 'created_at']
+    for (const [public_key, user] of Object.entries(users)) {
       for (const field of required_fields) {
         if (!(field in user)) {
-          throw new Error(`User ${i}: Missing required field: ${field}`)
+          throw new Error(
+            `User ${public_key}: Missing required field: ${field}`
+          )
         }
       }
     }
@@ -122,7 +119,7 @@ class UserRegistry {
     await this._save_users_to_file(users)
 
     // Update cache
-    this.cache = [...users]
+    this.cache = { ...users }
     this.cache_timestamp = Date.now()
   }
 
@@ -132,7 +129,7 @@ class UserRegistry {
     }
 
     const users = await this.load_users()
-    return users.find((user) => user.public_key === public_key) || null
+    return users[public_key] || null
   }
 
   async find_by_username(username) {
@@ -141,109 +138,21 @@ class UserRegistry {
     }
 
     const users = await this.load_users()
-    return users.find((user) => user.username === username) || null
-  }
-
-  async find_by_user_id(user_id) {
-    if (!user_id) {
-      return null
-    }
-
-    const users = await this.load_users()
-    return users.find((user) => user.user_id === user_id) || null
-  }
-
-  async create_user(user_data) {
-    const users = await this.load_users()
-
-    // Validate required fields
-    if (!user_data.public_key) {
-      throw new Error('public_key is required')
-    }
-
-    // Check for duplicate public key
-    if (users.find((user) => user.public_key === user_data.public_key)) {
-      throw new Error('User with this public key already exists')
-    }
-
-    // Check for duplicate username if provided
-    if (
-      user_data.username &&
-      users.find((user) => user.username === user_data.username)
-    ) {
-      throw new Error('User with this username already exists')
-    }
-
-    // Create new user
-    const new_user = {
-      user_id: user_data.user_id || uuidv4(),
-      username: user_data.username || null,
-      public_key: user_data.public_key,
-      email: user_data.email || null,
-      created_at: user_data.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-
-    users.push(new_user)
-    await this.save_users(users)
-
-    log(`Created user: ${new_user.user_id}`)
-    return new_user
-  }
-
-  async update_user(user_id, updates) {
-    const users = await this.load_users()
-    const user_index = users.findIndex((user) => user.user_id === user_id)
-
-    if (user_index === -1) {
-      throw new Error('User not found')
-    }
-
-    // Validate updates
-    if (
-      updates.public_key &&
-      updates.public_key !== users[user_index].public_key
-    ) {
-      // Check for duplicate public key
-      if (users.find((user) => user.public_key === updates.public_key)) {
-        throw new Error('User with this public key already exists')
+    for (const [public_key, user] of Object.entries(users)) {
+      if (user.username === username) {
+        return { public_key, ...user }
       }
     }
-
-    if (updates.username && updates.username !== users[user_index].username) {
-      // Check for duplicate username
-      if (users.find((user) => user.username === updates.username)) {
-        throw new Error('User with this username already exists')
-      }
-    }
-
-    // Apply updates
-    const updated_user = {
-      ...users[user_index],
-      ...updates,
-      updated_at: new Date().toISOString()
-    }
-
-    users[user_index] = updated_user
-    await this.save_users(users)
-
-    log(`Updated user: ${user_id}`)
-    return updated_user
+    return null
   }
 
-  async delete_user(user_id) {
-    const users = await this.load_users()
-    const user_index = users.findIndex((user) => user.user_id === user_id)
-
-    if (user_index === -1) {
-      throw new Error('User not found')
+  async user_has_access(public_key) {
+    if (!public_key) {
+      return false
     }
 
-    const deleted_user = users.splice(user_index, 1)[0]
-    await this.save_users(users)
-
-    log(`Deleted user: ${user_id}`)
-    return deleted_user
+    const users = await this.load_users()
+    return public_key in users
   }
 
   // Clear cache for testing

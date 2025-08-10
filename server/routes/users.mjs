@@ -14,10 +14,17 @@ router.get('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
     // Return all users but filtered for public consumption
-    const users = await user_registry.load_users()
+    const users_object = await user_registry.load_users()
 
-    // Sort by created_at desc and limit to 50
-    const sorted_users = users
+    // Convert to array and sort by created_at desc and limit to 50
+    const users_array = Object.entries(users_object).map(
+      ([public_key, user]) => ({
+        public_key,
+        ...user
+      })
+    )
+
+    const sorted_users = users_array
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 50)
 
@@ -34,20 +41,18 @@ const filter_public_user_data = (user) => {
   if (!user) return null
 
   const {
-    user_id,
     username,
     public_key,
     created_at,
-    updated_at
-    // Remove private fields like email, etc.
+    permissions = {}
+    // Remove any other private fields
   } = user
 
   return {
-    user_id,
     username,
     public_key,
     created_at,
-    updated_at
+    permissions
   }
 }
 
@@ -70,23 +75,24 @@ router.post('/?', async (req, res) => {
       return res.status(400).send({ error: 'invalid signature' })
     }
 
-    if (!data.username) {
-      data.username = `user_${data.public_key.slice(0, 8)}`
+    // Check if user has access
+    const has_access = await user_registry.user_has_access(data.public_key)
+    if (!has_access) {
+      return res
+        .status(403)
+        .send({
+          error: 'Access denied - contact administrator to add your public key'
+        })
     }
 
-    // Try to find existing user by public key
-    let user = await user_registry.find_by_public_key(data.public_key)
-
-    if (user) {
-      // Update existing user
-      user = await user_registry.update_user(user.user_id, data)
-    } else {
-      // Create new user
-      user = await user_registry.create_user(data)
+    // Get user data
+    const user = await user_registry.find_by_public_key(data.public_key)
+    if (!user) {
+      return res.status(403).send({ error: 'Access denied - user not found' })
     }
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
-    res.status(200).send({ token, ...user })
+    const token = jwt.sign({ public_key: data.public_key }, config.jwt.secret)
+    res.status(200).send({ token, public_key: data.public_key, ...user })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -117,14 +123,23 @@ router.post('/session', async (req, res) => {
       return res.status(400).send({ error: 'invalid timestamp' })
     }
 
-    const user = await user_registry.find_by_public_key(data.public_key)
-
-    if (!user) {
-      return res.status(404).send({ error: 'user not found' })
+    // Check if user has access
+    const has_access = await user_registry.user_has_access(data.public_key)
+    if (!has_access) {
+      return res
+        .status(403)
+        .send({
+          error: 'Access denied - contact administrator to add your public key'
+        })
     }
 
-    const token = jwt.sign({ user_id: user.user_id }, config.jwt.secret)
-    res.status(200).send({ token, ...user })
+    const user = await user_registry.find_by_public_key(data.public_key)
+    if (!user) {
+      return res.status(403).send({ error: 'Access denied - user not found' })
+    }
+
+    const token = jwt.sign({ public_key: data.public_key }, config.jwt.secret)
+    res.status(200).send({ token, public_key: data.public_key, ...user })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -161,13 +176,13 @@ router.get('/:username', async (req, res) => {
     // Check if request is authenticated via Authorization header
     const auth_header = req.headers.authorization
     let is_authenticated = false
-    let requesting_user_id = null
+    let requesting_public_key = null
 
     if (auth_header) {
       try {
         const token = auth_header.replace('Bearer ', '')
         const decoded = jwt.verify(token, config.jwt.secret)
-        requesting_user_id = decoded.user_id
+        requesting_public_key = decoded.public_key
         is_authenticated = true
       } catch (err) {
         // Invalid token, treat as unauthenticated
@@ -176,7 +191,7 @@ router.get('/:username', async (req, res) => {
     }
 
     // If authenticated and requesting their own profile, return full data
-    if (is_authenticated && requesting_user_id === user.user_id) {
+    if (is_authenticated && requesting_public_key === user.public_key) {
       res.status(200).send(user)
     } else {
       // Return filtered public data
@@ -188,7 +203,7 @@ router.get('/:username', async (req, res) => {
   }
 })
 
-router.use('/:user_id/databases', databases)
-router.use('/:user_id/tasks', tasks)
+router.use('/:public_key/databases', databases)
+router.use('/:public_key/tasks', tasks)
 
 export default router

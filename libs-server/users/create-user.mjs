@@ -44,11 +44,20 @@ export default async function create_user({
     updated_at: new Date().toISOString()
   }
 
-  // Create user in file-based registry
-  await user_registry.create_user(user_data)
+  // Add user to registry for testing purposes
+  const users = await user_registry.load_users()
+  users[public_key.toString('hex')] = {
+    username,
+    created_at: new Date().toISOString(),
+    permissions: {}
+  }
+  await user_registry.save_users(users)
 
   return {
     private_key,
-    ...user_data
+    public_key: public_key.toString('hex'),
+    user_id: created_user_id, // For backward compatibility in tests
+    username,
+    created_at: user_data.created_at
   }
 }

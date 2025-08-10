@@ -22,16 +22,12 @@ export const api = {
     const url = `${API_URL}/users`
     return { url }
   },
-  post_user({ data, signature }) {
-    const url = `${API_URL}/users`
-    return { url, ...POST({ data, signature }) }
-  },
   post_user_session({ data, signature }) {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
-  post_user_task({ user_id, task, signature }) {
-    const url = `${API_URL}/users/${user_id}/tasks`
+  post_user_task({ public_key, task, signature }) {
+    const url = `${API_URL}/users/${public_key}/tasks`
     return { url, ...POST({ task, signature }) }
   },
   get_tag({ tag_name, user_id }) {

@@ -10,7 +10,7 @@ import history from '@core/history'
 import { app_actions } from './actions'
 import { get_app } from './selectors'
 import { local_storage_adapter } from '@core/utils'
-import { post_user, post_user_session } from '@core/api'
+import { post_user_session } from '@core/api'
 
 const fpPromise = FingerprintJS.load()
 
@@ -83,21 +83,6 @@ export function reset() {
   page_view()
 }
 
-export function* create_user({ payload }) {
-  const { private_key, public_key } = yield select(get_app)
-  const { error } = payload
-
-  // if we have a private key and no user data was returned, create a new user
-  if (error === 'Error: user not found' && private_key) {
-    const data = {
-      public_key
-    }
-    const hash = blake2b(JSON.stringify(data), null, 32)
-    const signature = new Ed25519().sign(hash, Convert.hex2ab(private_key))
-    yield call(post_user, { data, signature: Convert.ab2hex(signature) })
-  }
-}
-
 export function save_token({ payload }) {
   const { token } = payload.data
   local_storage_adapter.setItem('base_token', token)
@@ -127,14 +112,6 @@ export function* watch_post_user_session_fulfilled() {
   yield takeLatest(app_actions.POST_USER_SESSION_FULFILLED, save_token)
 }
 
-export function* watch_post_user_session_failed() {
-  yield takeLatest(app_actions.POST_USER_SESSION_FAILED, create_user)
-}
-
-export function* watch_post_user_fulfilled() {
-  yield takeLatest(app_actions.POST_USER_FULFILLED, save_token)
-}
-
 //= ====================================
 //  ROOT
 // -------------------------------------
@@ -144,7 +121,5 @@ export const app_sagas = [
   fork(watch_location_change),
   fork(watch_load_from_new_keypair),
   fork(watch_load_from_private_key),
-  fork(watch_post_user_session_fulfilled),
-  fork(watch_post_user_session_failed),
-  fork(watch_post_user_fulfilled)
+  fork(watch_post_user_session_fulfilled)
 ]

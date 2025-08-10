@@ -45,6 +45,7 @@ export default function AuthPage({
   }
 
   if (private_key) {
+    const keypair = get_keypair_from_private_key(private_key)
     const first = private_key.slice(0, 8)
     const middle = private_key.slice(8, -8).match(/.{1,8}/g)
     const last = private_key.slice(-8)
@@ -52,8 +53,8 @@ export default function AuthPage({
     return (
       <Container maxWidth='md' className='home__container'>
         <div className='private_key_description'>
-          <h1>Secret</h1>
-          <div>This provides access to your accounts</div>
+          <h1>Keypair Generated</h1>
+          <div>Your private key provides access to your account</div>
         </div>
         <div className='private_key_container'>
           <div className='private_key_text highlight'>{first}</div>
@@ -63,6 +64,29 @@ export default function AuthPage({
             </div>
           ))}
           <div className='private_key_text highlight'>{last}</div>
+        </div>
+        <div className='access_instructions'>
+          <h2>To Access the System</h2>
+          <p>
+            Share your <strong>public key</strong> with the administrator to be
+            granted access:
+          </p>
+          <div className='public_key_display'>
+            <TextField
+              label='Public Key'
+              value={keypair.public_key}
+              variant='outlined'
+              fullWidth
+              InputProps={{
+                readOnly: true
+              }}
+              helperText='Share this public key with the administrator'
+            />
+          </div>
+          <p>
+            Once your public key has been added to the system, you can
+            authenticate using your private key.
+          </p>
         </div>
       </Container>
     )
@@ -74,16 +98,24 @@ export default function AuthPage({
         direction='column'
         spacing={2}
         divider={<Divider orientation='horizontal' flexItem />}>
-        <Button variant='contained' onClick={generateKey}>
-          Create New Account
-        </Button>
-        <TextField
-          id='outlined-basic'
-          label='Secret'
-          variant='outlined'
-          helperText='Paste secret to load existing account'
-          onChange={handle_change}
-        />
+        <div>
+          <Button variant='contained' onClick={generateKey}>
+            Generate New Keypair
+          </Button>
+          <p style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
+            Create a new cryptographic keypair for authentication
+          </p>
+        </div>
+        <div>
+          <TextField
+            id='outlined-basic'
+            label='Private Key'
+            variant='outlined'
+            helperText='Enter your existing private key to authenticate'
+            onChange={handle_change}
+            fullWidth
+          />
+        </div>
       </Stack>
     </Container>
   )

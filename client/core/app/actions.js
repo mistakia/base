@@ -62,10 +62,8 @@ export const app_actions = {
     }
   }),
 
-  ...create_api_action_types('POST_USER_SESSION'),
-  ...create_api_action_types('POST_USER')
+  ...create_api_action_types('POST_USER_SESSION')
 }
 
 export const post_user_session_request_actions =
   create_api_actions('POST_USER_SESSION')
-export const post_user_request_actions = create_api_actions('POST_USER')

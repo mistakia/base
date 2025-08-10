@@ -11,10 +11,7 @@ import {
   get_user_request_actions,
   get_users_request_actions
 } from '@core/users/actions'
-import {
-  post_user_request_actions,
-  post_user_session_request_actions
-} from '@core/app/actions'
+import { post_user_session_request_actions } from '@core/app/actions'
 import {
   post_database_view_request_actions,
   delete_database_view_request_actions
@@ -78,11 +75,6 @@ export const post_user_session = fetch.bind(
   null,
   api.post_user_session,
   post_user_session_request_actions
-)
-export const post_user = fetch.bind(
-  null,
-  api.post_user,
-  post_user_request_actions
 )
 export const post_user_task = fetch.bind(
   null,

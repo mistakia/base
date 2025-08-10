@@ -1,7 +1,6 @@
 export {
   get_user,
   get_users,
-  post_user,
   post_user_session,
   post_user_task,
   get_database,
