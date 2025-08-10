@@ -306,7 +306,56 @@ const normalize_claude_entry = ({ entry, index }) => {
   }
 }
 
+const is_system_interrupt_message = (content) => {
+  if (typeof content === 'string') {
+    return content.trim() === '[Request interrupted by user]'
+  }
+
+  if (Array.isArray(content) && content.length === 1) {
+    const first_item = content[0]
+    if (typeof first_item === 'string') {
+      return first_item.trim() === '[Request interrupted by user]'
+    }
+    if (first_item?.type === 'text' && first_item?.text) {
+      return first_item.text.trim() === '[Request interrupted by user]'
+    }
+  }
+
+  return false
+}
+
+const extract_interrupt_content = (content) => {
+  // Extract clean content from interrupt pattern, removing brackets
+  return 'Request interrupted by user'
+}
+
 const normalize_user_entry = (entry, base_normalized) => {
+  // Check if this is a system interrupt message disguised as user message
+  const message_content = entry.message?.content
+  if (is_system_interrupt_message(message_content)) {
+    return {
+      ...base_normalized,
+      type: 'system',
+      content: extract_interrupt_content(message_content),
+      system_type: 'status',
+      metadata: {
+        original_type: 'user',
+        is_interrupt: true,
+        working_directory: entry.cwd,
+        user_type: entry.userType,
+        tool_use_result: entry.toolUseResult || null,
+        is_meta: entry.isMeta || false,
+        is_api_error_message: entry.isApiErrorMessage || false,
+        git_branch: entry.gitBranch || null,
+        is_compact_summary: entry.isCompactSummary || false,
+        level: entry.level || null,
+        parse_line_number: entry.parse_line_number || null,
+        toolUseID: entry.toolUseID || null,
+        original_content: message_content
+      }
+    }
+  }
+
   // Analyze user message structure
   if (entry.message?.content && Array.isArray(entry.message.content)) {
     entry.message.content.forEach((content_item) => {
