@@ -199,7 +199,7 @@ router.get('/:username', async (req, res) => {
   }
 })
 
-router.use('/:public_key/databases', databases)
-router.use('/:public_key/tasks', tasks)
+router.use('/:user_id/databases', databases)
+router.use('/:user_id/tasks', tasks)
 
 export default router

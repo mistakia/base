@@ -7,7 +7,11 @@
 
 import debug from 'debug'
 import { create_openai_client } from './api/index.mjs'
-import { get_openai_config, validate_openai_auth, OPENAI_NAMESPACE } from './openai-config.mjs'
+import {
+  get_openai_config,
+  validate_openai_auth,
+  OPENAI_NAMESPACE
+} from './openai-config.mjs'
 import { v5 as uuidv5 } from 'uuid'
 import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
