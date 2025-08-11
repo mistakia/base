@@ -1,29 +1,17 @@
 import { combineReducers } from 'redux-immutable'
 
-import { app_reducer } from './app'
-import { dialog_reducer } from './dialog'
-import { users_reducer } from './users'
-import { path_views_reducer } from './path-views'
-import { database_table_items_reducer } from './database-tables'
-import { tasks_reducer } from './tasks'
-import { thread_reducer } from './thread'
-import { entity_reducer } from './entity'
-import { directory_reducer } from './directory'
-import resource_reducer from './resource'
+import { app_reducer } from './app/index.js'
+import { dialog_reducer } from './dialog/index.js'
+import { threads_reducer } from './threads/index.js'
+import { directory_reducer } from './directory/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
     router,
     app: app_reducer,
     dialog: dialog_reducer,
-    users: users_reducer,
-    path_views: path_views_reducer,
-    database_table_items: database_table_items_reducer,
-    tasks: tasks_reducer,
-    thread: thread_reducer,
-    entity: entity_reducer,
-    directory: directory_reducer,
-    resource: resource_reducer
+    threads: threads_reducer,
+    directory: directory_reducer
   })
 
 export default root_reducer

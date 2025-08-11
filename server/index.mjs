@@ -67,6 +67,10 @@ api.use(
   })
 )
 
+// Register threads API routes BEFORE JWT middleware to bypass authentication
+api.use('/api/threads', routes.threads)
+
+// JWT middleware for other routes (threads routes are above this and bypass auth)
 api.use(
   '/api/*',
   expressjwt(config.jwt).unless({
@@ -80,15 +84,15 @@ api.use(
   }
 )
 
-// Register API routes
+// Register other API routes
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
-api.use('/api/threads', routes.threads)
 api.use('/api/inference-providers', routes.inference_providers)
 api.use('/api/entities', routes.entities)
 api.use('/api/directories', routes.directories)
 api.use('/api/resource', routes.resource)
+api.use('/api/filesystem', routes.filesystem)
 
 // Register Ollama provider
 provider_registry.register('ollama', new OllamaProvider())
@@ -124,7 +128,7 @@ if (IS_DEV) {
   // res.redirect(307, `${config.url}${req.path}`)
 }
 
-const createServer = () => {
+const create_server = () => {
   if (!options.ssl) {
     return http.createServer(api)
   }
@@ -136,7 +140,7 @@ const createServer = () => {
   return https.createServer(sslOptions, api)
 }
 
-const server = createServer()
+const server = create_server()
 
 server.on('upgrade', async (request, socket, head) => {
   const parsed = new url.URL(request.url, config.url)

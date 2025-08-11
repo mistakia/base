@@ -32,7 +32,7 @@ const base = (options) => ({
       },
       {
         test: /\.jsx?$/, // Transform all .js and .jsx files required somewhere with Babel
-        exclude: /node_modules/,
+        exclude: /node_modules\/(?!react-table)/,
         use: {
           loader: 'babel-loader',
           options: options.babelQuery
@@ -48,6 +48,7 @@ const base = (options) => ({
       },
       {
         test: /\.styl$/,
+        exclude: /node_modules\/react-table/,
         use: [
           {
             loader: 'style-loader'
@@ -65,6 +66,38 @@ const base = (options) => ({
                 use: [nib()],
                 import: [
                   'nib',
+                  path.resolve(__dirname, '../client/styles/variables.styl')
+                ],
+                includeCSS: true
+              }
+            }
+          }
+        ]
+      },
+      {
+        test: /\.styl$/,
+        include: /node_modules\/react-table/,
+        use: [
+          {
+            loader: 'style-loader'
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1
+            }
+          },
+          {
+            loader: 'stylus-loader',
+            options: {
+              stylusOptions: {
+                use: [nib()],
+                import: [
+                  'nib',
+                  path.resolve(
+                    __dirname,
+                    '../node_modules/react-table/src/styles/variables.styl'
+                  ),
                   path.resolve(__dirname, '../client/styles/variables.styl')
                 ],
                 includeCSS: true

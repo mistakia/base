@@ -1,0 +1,116 @@
+.thread-card
+  background: white
+  border-radius: $radius_base
+  border: 2px solid $color_border_light
+  padding: $space_base $space_base 0 $space_base
+  margin-bottom: $space_sm
+  cursor: pointer
+  transition: all $transition_fast
+  position: relative
+  display: flex
+  flex-direction: column
+
+  &:hover
+    background-color: $color_surface_hover
+    transform: $hover_lift
+    box-shadow: $shadow_sm
+
+  &--focused
+    border-color: $color_primary
+    box-shadow: 0 0 0 1px rgba($color_primary, 0.3)
+
+  &:last-child
+    margin-bottom: 0
+
+.thread-header-row
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: $space_xs
+
+.thread-status-info
+  display: flex
+  align-items: center
+  gap: $space_xs
+
+.thread-provider-section
+  display: flex
+  align-items: center
+
+.thread-title
+  font-size: $font_size_base
+  font-weight: $font_weight_medium
+  color: $color_text
+  margin-bottom: $space_xs
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.thread-state-indicator
+  font-size: $font_size_base
+  font-weight: bold
+  flex-shrink: 0
+  line-height: 1
+
+.thread-time-info
+  font-size: $font_size_xs
+  color: $color_text_tertiary
+  font-family: $font_family_mono
+
+.thread-metrics-row
+  display: flex
+  gap: $space_sm
+  margin-bottom: $space_xs
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.thread-message-count
+  font-family: $font_family_mono
+
+.thread-token-count
+  font-family: $font_family_mono
+
+.thread-id-row
+  border-top: 1px solid $color_border_light
+  margin: $space_xs -16px 0 -16px
+  padding: $space_xs $space_base
+  overflow-x: auto
+  white-space: nowrap
+
+.thread-id-text
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.thread-working-directory-row
+  border-top: 1px solid $color_border_light
+  margin: 0 -16px 0 -16px
+  padding: $space_xs $space_base
+  overflow-x: auto
+  white-space: nowrap
+  border-bottom-left-radius: $radius_base
+  border-bottom-right-radius: $radius_base
+
+.thread-working-directory-text
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+// Responsive adjustments for mobile
+@media (max-width: 768px)
+  .thread-card
+    border-radius: 0
+    border-left: none
+    border-right: none
+    margin-left: (-$space_base)
+    margin-right: (-$space_base)
+
+  .thread-header-row
+    flex-direction: column
+    align-items: stretch
+
+  .thread-state-indicator
+    align-self: flex-end
+    position: absolute
+    top: $space_base
+    right: $space_base

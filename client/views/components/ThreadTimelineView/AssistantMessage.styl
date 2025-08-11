@@ -1,0 +1,43 @@
+// =====================================================
+// ASSISTANT MESSAGE COMPONENT - Industrial Minimalist
+// =====================================================
+
+$assistant_message_border = $color_border
+
+.assistant-message
+  border-radius $radius_sm
+  margin-bottom $space_xs
+  background-color transparent
+  border 1px solid transparent
+  padding 0 8px
+  
+  transition border-color $transition_fast
+  
+  &:hover
+    border-color darken($color_border, 15%)
+  
+  &--clickable
+    cursor pointer
+    
+    &:hover
+      border-color $color_primary
+
+  &--latest
+    background-color #fff
+    border-color darken($color_success, 10%) // sharper/darker success border
+    border-width 1px
+    padding $space_base
+    box-shadow $shadow_sm
+
+.assistant-message__content
+  font-family $font_family_mono
+  font-size $font_size_base
+  line-height 1.5
+  color $color_text
+  white-space pre-wrap
+  word-break break-word
+  margin 0
+  
+  &--reasoning
+    font-style italic
+    color $color_text_secondary

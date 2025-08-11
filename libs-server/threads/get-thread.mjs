@@ -6,6 +6,41 @@ import { get_thread_base_directory } from './threads-constants.mjs'
 
 const log = debug('threads:get')
 
+async function read_json_file({ file_path }) {
+  const raw = await fs.readFile(file_path, 'utf-8')
+  return JSON.parse(raw)
+}
+
+async function read_json_file_or_default({ file_path, default_value }) {
+  try {
+    return await read_json_file({ file_path })
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return default_value
+    }
+    throw error
+  }
+}
+
+function add_backward_compatibility_fields({ metadata, thread_dir, timeline }) {
+  const enriched = {
+    ...metadata,
+    timeline,
+    context_dir: thread_dir
+  }
+
+  if (metadata.models && metadata.models.length > 0 && !metadata.model) {
+    enriched.model = metadata.models[0]
+  }
+
+  return enriched
+}
+
+function get_effective_updated_at({ metadata }) {
+  const updated_at = metadata.updated_at || metadata.created_at || 0
+  return new Date(updated_at)
+}
+
 /**
  * Get thread data by ID
  *
@@ -15,7 +50,7 @@ const log = debug('threads:get')
  * @throws {Error} If thread is not found
  */
 export default async function get_thread({ thread_id }) {
-  if (!thread_id) {
+  if (!thread_id || typeof thread_id !== 'string') {
     throw new Error('thread_id is required')
   }
 
@@ -25,39 +60,17 @@ export default async function get_thread({ thread_id }) {
   const thread_dir = path.join(thread_base_directory, thread_id)
 
   try {
-    // Check if thread directory exists
     await fs.access(thread_dir)
 
-    // Read metadata
     const metadata_path = path.join(thread_dir, 'metadata.json')
-    const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
-
-    // Read timeline
     const timeline_path = path.join(thread_dir, 'timeline.json')
-    let timeline
-    try {
-      timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
-    } catch (timeline_error) {
-      if (timeline_error.code === 'ENOENT') {
-        timeline = []
-      } else {
-        throw timeline_error
-      }
-    }
 
-    // Add backward compatibility for model field
-    const thread_data = {
-      ...metadata,
-      timeline,
-      context_dir: thread_dir
-    }
+    const [metadata, timeline] = await Promise.all([
+      read_json_file({ file_path: metadata_path }),
+      read_json_file_or_default({ file_path: timeline_path, default_value: [] })
+    ])
 
-    // Provide backward compatibility for model field
-    if (metadata.models && metadata.models.length > 0 && !metadata.model) {
-      thread_data.model = metadata.models[0]
-    }
-
-    return thread_data
+    return add_backward_compatibility_fields({ metadata, thread_dir, timeline })
   } catch (error) {
     log(`Error getting thread ${thread_id}: ${error.message}`)
     if (error.code === 'ENOENT') {
@@ -92,52 +105,52 @@ export async function list_threads({
   const threads_dir = get_thread_base_directory({ user_base_directory })
 
   try {
-    // Create threads directory if it doesn't exist
     await fs.mkdir(threads_dir, { recursive: true })
 
-    // List thread directories
     const thread_dirs = await fs.readdir(threads_dir)
 
-    // Get thread summaries
-    const threads = []
+    const results = await Promise.allSettled(
+      thread_dirs.map(async (thread_id) => {
+        try {
+          const metadata_path = path.join(
+            threads_dir,
+            thread_id,
+            'metadata.json'
+          )
+          const metadata = await read_json_file({ file_path: metadata_path })
 
-    for (const thread_id of thread_dirs) {
-      try {
-        const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
-        const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
+          if (user_id && metadata.user_id !== user_id) return null
+          if (thread_state && metadata.thread_state !== thread_state)
+            return null
 
-        // Apply filters
-        if (user_id && metadata.user_id !== user_id) continue
-        if (thread_state && metadata.thread_state !== thread_state) continue
+          const thread_summary = { ...metadata }
 
-        // Create thread summary (metadata only, no timeline)
-        const thread_summary = {
-          thread_id: metadata.thread_id,
-          user_id: metadata.user_id,
-          inference_provider: metadata.inference_provider,
-          model: metadata.model,
-          thread_state: metadata.thread_state,
-          created_at: metadata.created_at,
-          updated_at: metadata.updated_at
+          if (
+            metadata.models &&
+            metadata.models.length > 0 &&
+            !metadata.model
+          ) {
+            thread_summary.model = metadata.models[0]
+          }
+
+          return thread_summary
+        } catch (error) {
+          log(`Error reading thread ${thread_id}: ${error.message}`)
+          return null
         }
+      })
+    )
 
-        // Provide backward compatibility for model field
-        if (metadata.models && metadata.models.length > 0 && !metadata.model) {
-          thread_summary.model = metadata.models[0]
-        }
+    const threads = results
+      .filter((r) => r.status === 'fulfilled' && r.value)
+      .map((r) => r.value)
 
-        threads.push(thread_summary)
-      } catch (error) {
-        log(`Error reading thread ${thread_id}: ${error.message}`)
-        // Skip invalid threads
-        continue
-      }
-    }
+    threads.sort(
+      (a, b) =>
+        get_effective_updated_at({ metadata: b }) -
+        get_effective_updated_at({ metadata: a })
+    )
 
-    // Sort by updated_at (newest first)
-    threads.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-
-    // Apply pagination
     return threads.slice(offset, offset + limit)
   } catch (error) {
     log(`Error listing threads: ${error.message}`)

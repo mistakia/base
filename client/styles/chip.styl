@@ -1,0 +1,26 @@
+$chip_padding_y = 3px
+$chip_padding_x = 8px
+$chip_font_size = 10px
+$chip_border_radius = 4px
+$chip_background = #f8f9fa
+$chip_border = 1px solid #e9ecef
+$chip_color = #6c757d
+
+.chip
+  display inline-flex
+  align-items center
+  padding $chip_padding_y $chip_padding_x
+  font-family 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
+  font-size $chip_font_size
+  font-weight 500
+  color $chip_color
+  background $chip_background
+  border $chip_border
+  border-radius $chip_border_radius
+  line-height 1
+  white-space nowrap
+  transition all 0.15s ease
+  
+  &:hover
+    background darken($chip_background, 2%)
+    border-color darken(#e9ecef, 5%)

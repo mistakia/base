@@ -1,0 +1,109 @@
+// =====================================================
+// GLOBAL UTILITIES & COMPOSABLE CLASSES
+// =====================================================
+
+// Highlighted text (e.g., search matches)
+.search-highlight
+  background-color: #fff3cd !important
+  color: #856404 !important
+  padding: 1px 3px !important
+  border-radius: 2px !important
+  font-weight: bold !important
+
+// Small inline icon next to filenames
+.file-icon
+  display: inline-block
+  margin-right: 4px
+  font-size: 14px
+
+// Compact progress indicator with rounded bar
+.progress-indicator
+  height: 8px !important
+  border-radius: 4px !important
+  
+  .MuiLinearProgress-bar
+    border-radius: 4px !important
+
+// Simple expand transition utility
+.tool-expand-transition
+  transition: all 0.2s ease-in-out !important
+
+// Header hover interaction
+.tool-header-interactive
+  transition: background-color 0.2s ease-in-out !important
+  
+  &:hover
+    background-color: rgba(0, 0, 0, 0.04) !important
+    cursor: pointer
+
+// Semantic status colors for text
+.status-success
+  color: #28a745 !important
+  
+.status-error
+  color: #d73a49 !important
+  
+.status-warning
+  color: #f66a0a !important
+  
+.status-info
+  color: #0969da !important
+
+// =====================================================
+// TWO COLUMN LAYOUT SYSTEM
+// =====================================================
+
+.two-column-container
+  display: flex
+  flex-direction: column
+  gap: var(--space-base)
+  
+  @media (min-width: 992px) // lg breakpoint
+    flex-direction: row
+    gap: var(--space-lg)
+
+.two-column-left
+  flex: 1
+  min-width: 0 // Prevent flex item overflow
+  
+  @media (min-width: 992px) // lg breakpoint
+    flex: 2 // Default to 8/12 ratio (2:1)
+
+.two-column-right  
+  flex: 1
+  min-width: 0 // Prevent flex item overflow
+  
+  @media (min-width: 992px) // lg breakpoint
+    flex: 1 // Default to 4/12 ratio (1:2 with left)
+
+// Sticky right column variant
+.two-column-right-sticky
+  @media (min-width: 992px) // lg breakpoint
+    position: sticky
+    top: 20px
+    height: fit-content
+
+// Custom width variants
+.two-column-left-wide
+  @media (min-width: 992px)
+    flex: 3 // 9/12 ratio
+
+.two-column-right-narrow  
+  @media (min-width: 992px)
+    flex: 1 // 3/12 ratio
+
+.two-column-left-narrow
+  @media (min-width: 992px)
+    flex: 1 // 3/12 ratio
+
+.two-column-right-wide
+  @media (min-width: 992px)
+    flex: 3 // 9/12 ratio
+
+// Equal columns
+.two-column-equal
+  .two-column-left,
+  .two-column-right
+    @media (min-width: 992px)
+      flex: 1
+

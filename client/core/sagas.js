@@ -1,27 +1,15 @@
 import { all } from 'redux-saga/effects'
 
-import { app_sagas } from './app'
-import { database_sagas } from './database-tables'
-import { tasks_sagas } from './tasks'
-import { websocket_sagas } from './websocket'
-import { users_saga } from './users'
-import { path_views_sagas } from './path-views'
-import { thread_sagas } from './thread'
-import { entity_sagas } from './entity/sagas'
-import { directory_sagas } from './directory'
-import { resource_sagas } from './resource/sagas'
+import { app_sagas } from './app/index.js'
+import { websocket_sagas } from './websocket/index.js'
+import { threads_sagas } from './threads/index.js'
+import { directory_sagas } from './directory/index.js'
 
-export default function* rootSaga() {
+export default function* root_saga() {
   yield all([
     ...app_sagas,
-    ...database_sagas,
-    ...tasks_sagas,
     ...websocket_sagas,
-    ...users_saga,
-    ...path_views_sagas,
-    ...thread_sagas,
-    ...entity_sagas,
-    ...directory_sagas,
-    ...resource_sagas
+    ...threads_sagas,
+    ...directory_sagas
   ])
 }

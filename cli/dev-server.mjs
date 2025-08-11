@@ -9,7 +9,7 @@ const webpackConfigPath = path.resolve(
   '../webpack/webpack.dev.babel.mjs'
 )
 
-async function startServer() {
+async function start_dev_server() {
   try {
     // Dynamically import webpack config
     const { default: webpackConfig } = await import(webpackConfigPath)
@@ -44,4 +44,4 @@ async function startServer() {
   }
 }
 
-startServer()
+start_dev_server()

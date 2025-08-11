@@ -30,8 +30,8 @@ export const THREAD_DEFAULT_WORKFLOW_BASE_URI =
  *
  * @returns {string} Thread base directory path
  */
-export function get_thread_base_directory() {
-  const base_directory = get_user_base_directory()
+export function get_thread_base_directory({ user_base_directory } = {}) {
+  const base_directory = user_base_directory || get_user_base_directory()
   return path.join(base_directory, THREAD_CONTEXT_DIR)
 }
 

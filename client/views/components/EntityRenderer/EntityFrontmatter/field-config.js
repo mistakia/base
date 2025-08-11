@@ -1,0 +1,112 @@
+export const entity_field_config = {
+  task: {
+    always_visible: [
+      'status',
+      'priority',
+      'start_by',
+      'finish_by',
+      'assigned_to',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_id',
+      'permalink',
+      'tags',
+      'relations',
+      'estimated_total_duration',
+      'estimated_preparation_duration',
+      'estimated_execution_duration',
+      'estimated_cleanup_duration',
+      'actual_duration',
+      'planned_start',
+      'planned_finish',
+      'started_at',
+      'finished_at',
+      'snooze_until',
+      'archived_at'
+    ]
+  },
+  physical_item: {
+    always_visible: [
+      'manufacturer',
+      'model_number',
+      'current_location',
+      'storage_location',
+      'current_quantity',
+      'importance',
+      'frequency_of_use',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_id',
+      'permalink',
+      'tags',
+      'relations',
+      'serial_number',
+      'acquisition_date',
+      'target_location',
+      'home_areas',
+      'home_attribute',
+      'height_inches',
+      'width_inches',
+      'depth_inches',
+      'weight_ounces',
+      'volume_cubic_inches',
+      'voltage',
+      'wattage',
+      'outlets_used',
+      'water_connection',
+      'drain_connection',
+      'ethernet_connected',
+      'min_storage_temperature_celsius',
+      'max_storage_temperature_celsius',
+      'min_storage_humidity_percent',
+      'max_storage_humidity_percent',
+      'exist',
+      'target_quantity',
+      'consumable',
+      'perishable',
+      'kit_name',
+      'kit_items',
+      'large_drawer_units',
+      'standard_drawer_units',
+      'storage_notes',
+      'misc_notes',
+      'archived_at'
+    ]
+  },
+  default: {
+    always_visible: [
+      'status',
+      'priority',
+      'observations',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_id',
+      'permalink',
+      'tags',
+      'relations',
+      'start_by',
+      'finish_by',
+      'estimated_total_duration',
+      'estimated_preparation_duration',
+      'estimated_execution_duration',
+      'estimated_cleanup_duration',
+      'actual_duration',
+      'planned_start',
+      'planned_finish',
+      'started_at',
+      'finished_at',
+      'snooze_until',
+      'assigned_to',
+      'archived_at'
+    ]
+  }
+}

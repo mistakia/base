@@ -1,0 +1,424 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+import { Box } from '@mui/material'
+
+import '@styles/chip.styl'
+
+const extract_thread_title = (metadata) => {
+  if (!metadata?.external_session?.provider_metadata?.summaries?.length) {
+    return ''
+  }
+  return metadata.external_session.provider_metadata.summaries[0]
+}
+
+const extract_total_tokens = (metadata) => {
+  return metadata?.external_session?.provider_metadata?.total_tokens || 0
+}
+
+const extract_duration = (metadata) => {
+  const duration_minutes =
+    metadata?.external_session?.provider_metadata?.duration_minutes
+  if (!duration_minutes) return null
+
+  if (duration_minutes < 1) {
+    return `${Math.round(duration_minutes * 60)}s`
+  } else if (duration_minutes < 60) {
+    return `${Math.round(duration_minutes)}m`
+  } else {
+    const hours = Math.floor(duration_minutes / 60)
+    const minutes = Math.round(duration_minutes % 60)
+    return `${hours}h ${minutes}m`
+  }
+}
+
+const extract_models = (metadata) => {
+  return metadata?.external_session?.provider_metadata?.models || []
+}
+
+const format_token_shorthand = ({ count }) => {
+  if (count == null || isNaN(count)) return '0'
+
+  const absolute_count = Math.abs(count)
+
+  const format_with_suffix = (value, suffix) => {
+    const fixed = value.toFixed(1)
+    const trimmed = fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed
+    return `${trimmed}${suffix}`
+  }
+
+  if (absolute_count >= 1e12) return format_with_suffix(count / 1e12, 'T')
+  if (absolute_count >= 1e9) return format_with_suffix(count / 1e9, 'B')
+  if (absolute_count >= 1e6) return format_with_suffix(count / 1e6, 'M')
+  if (absolute_count >= 1e3) return format_with_suffix(count / 1e3, 'K')
+  return `${count}`
+}
+
+const extract_external_session_info = (metadata) => {
+  if (!metadata?.external_session) return null
+
+  const { session_provider, session_id, provider_metadata } =
+    metadata.external_session
+  const working_directory = provider_metadata?.working_directory
+
+  return {
+    provider: session_provider,
+    session_id,
+    working_directory
+  }
+}
+
+const extract_thread_state = (metadata) => {
+  return metadata?.thread_state || null
+}
+
+// Custom hook for metadata processing
+const use_thread_metadata = (metadata) => {
+  return {
+    title: extract_thread_title(metadata),
+    total_tokens: extract_total_tokens(metadata),
+    duration: extract_duration(metadata),
+    models: extract_models(metadata),
+    external_session_info: extract_external_session_info(metadata),
+    thread_state: extract_thread_state(metadata)
+  }
+}
+
+// Sub-components for better organization
+const ThreadTitle = ({ title }) => {
+  if (!title) return null
+
+  return (
+    <h5
+      style={{
+        marginBottom: '16px',
+        fontWeight: 'bold',
+        fontSize: '20px',
+        margin: 0
+      }}>
+      {title}
+    </h5>
+  )
+}
+
+ThreadTitle.propTypes = {
+  title: PropTypes.string
+}
+
+const ThreadStats = ({
+  total_tokens,
+  session_id,
+  duration,
+  models,
+  external_session_info,
+  thread_state
+}) => {
+  const MetadataRow = ({
+    label,
+    value,
+    scrollable = false,
+    is_first = false
+  }) => (
+    <Box
+      sx={{
+        borderTop: is_first ? 'none' : '1px solid #e0e0e0',
+        borderBottom: 'none',
+        position: 'relative',
+        minHeight: '60px'
+      }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '8px',
+          left: '12px',
+          fontSize: '11px',
+          color: '#666',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+        {label}
+      </Box>
+      <Box
+        sx={{
+          pt: '28px',
+          pb: '12px',
+          px: '12px',
+          fontSize: '14px',
+          color: '#333',
+          fontWeight: 400,
+          ...(scrollable
+            ? {
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
+                fontFamily: 'monospace'
+              }
+            : {
+                wordBreak: 'break-all'
+              })
+        }}>
+        {value}
+      </Box>
+    </Box>
+  )
+
+  MetadataRow.propTypes = {
+    label: PropTypes.string.isRequired,
+    value: PropTypes.node.isRequired,
+    scrollable: PropTypes.bool,
+    is_first: PropTypes.bool
+  }
+
+  const LabeledCell = ({
+    label,
+    value,
+    scrollable = false,
+    add_left_border = false
+  }) => (
+    <Box
+      sx={{
+        position: 'relative',
+        flex: 1,
+        minWidth: 0,
+        borderLeft: add_left_border ? '1px solid #e0e0e0' : 'none'
+      }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '8px',
+          left: '12px',
+          fontSize: '11px',
+          color: '#666',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+        {label}
+      </Box>
+      <Box
+        sx={{
+          pt: '28px',
+          pb: '12px',
+          px: '12px',
+          fontSize: '14px',
+          color: '#333',
+          fontWeight: 400,
+          ...(scrollable
+            ? {
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
+                fontFamily: 'monospace'
+              }
+            : {
+                wordBreak: 'break-all'
+              })
+        }}>
+        {value}
+      </Box>
+    </Box>
+  )
+
+  LabeledCell.propTypes = {
+    label: PropTypes.string.isRequired,
+    value: PropTypes.node.isRequired,
+    scrollable: PropTypes.bool,
+    add_left_border: PropTypes.bool
+  }
+
+  const TwoCellRow = ({
+    left_label,
+    left_value,
+    right_label,
+    right_value,
+    is_first = false
+  }) => (
+    <Box
+      sx={{
+        borderTop: is_first ? 'none' : '1px solid #e0e0e0',
+        borderBottom: 'none',
+        display: 'flex',
+        minHeight: '60px'
+      }}>
+      <LabeledCell label={left_label} value={left_value} />
+      <LabeledCell
+        label={right_label}
+        value={right_value}
+        add_left_border={true}
+      />
+    </Box>
+  )
+
+  TwoCellRow.propTypes = {
+    left_label: PropTypes.string.isRequired,
+    left_value: PropTypes.node.isRequired,
+    right_label: PropTypes.string.isRequired,
+    right_value: PropTypes.node.isRequired,
+    is_first: PropTypes.bool
+  }
+
+  const render_models_value = ({ models }) => (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        fontSize: '12px'
+      }}>
+      {models.map((model) => (
+        <Box key={model} sx={{ fontFamily: 'monospace' }}>
+          {model}
+        </Box>
+      ))}
+    </Box>
+  )
+
+  const working_directory = external_session_info?.working_directory
+
+  // Determine which rows will be rendered to set is_first correctly
+  const has_session_provider = external_session_info?.provider
+  const has_thread_state = thread_state
+  const has_working_directory = working_directory
+
+  return (
+    <Box>
+      {has_session_provider && (
+        <MetadataRow
+          label='Session Provider'
+          value={external_session_info.provider}
+          is_first={true}
+        />
+      )}
+      {has_thread_state && (
+        <MetadataRow
+          label='Thread State'
+          value={thread_state}
+          is_first={!has_session_provider}
+        />
+      )}
+      {has_working_directory && (
+        <MetadataRow
+          label='Directory'
+          value={working_directory}
+          scrollable={true}
+          is_first={!has_session_provider && !has_thread_state}
+        />
+      )}
+      {duration ? (
+        <TwoCellRow
+          left_label='Tokens'
+          left_value={format_token_shorthand({ count: total_tokens })}
+          right_label='Duration'
+          right_value={duration}
+          is_first={
+            !has_session_provider && !has_thread_state && !has_working_directory
+          }
+        />
+      ) : (
+        <MetadataRow
+          label='Tokens'
+          value={format_token_shorthand({ count: total_tokens })}
+          is_first={
+            !has_session_provider && !has_thread_state && !has_working_directory
+          }
+        />
+      )}
+      {models.length > 0 && (
+        <MetadataRow label='Models' value={render_models_value({ models })} />
+      )}
+      {session_id && (
+        <MetadataRow
+          label='External Session ID'
+          value={
+            <Box sx={{ fontSize: '12px', color: '#888' }}>{session_id}</Box>
+          }
+        />
+      )}
+    </Box>
+  )
+}
+
+ThreadStats.propTypes = {
+  total_tokens: PropTypes.number.isRequired,
+  session_id: PropTypes.string,
+  duration: PropTypes.string,
+  models: PropTypes.arrayOf(PropTypes.string).isRequired,
+  external_session_info: PropTypes.shape({
+    provider: PropTypes.string,
+    session_id: PropTypes.string,
+    working_directory: PropTypes.string
+  }),
+  thread_state: PropTypes.string
+}
+
+const ExternalSessionChips = ({ external_session_info, thread_state }) => {
+  if (!external_session_info && !thread_state) return null
+
+  return (
+    <Box
+      sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+      {external_session_info && (
+        <>
+          <span className='chip'>{external_session_info.provider}</span>
+          {external_session_info.working_directory && (
+            <span className='chip'>
+              {external_session_info.working_directory}
+            </span>
+          )}
+        </>
+      )}
+      {thread_state && <span className='chip'>{thread_state}</span>}
+    </Box>
+  )
+}
+
+ExternalSessionChips.propTypes = {
+  external_session_info: PropTypes.shape({
+    provider: PropTypes.string,
+    session_id: PropTypes.string,
+    working_directory: PropTypes.string
+  }),
+  thread_state: PropTypes.string
+}
+
+const LoadingState = () => (
+  <Box sx={{ p: 3, mb: 3 }}>
+    <h5 style={{ fontSize: '20px', margin: 0 }}>Loading...</h5>
+  </Box>
+)
+
+const ThreadHeader = ({ metadata, is_loading_metadata }) => {
+  const {
+    title,
+    total_tokens,
+    duration,
+    models,
+    external_session_info,
+    thread_state
+  } = use_thread_metadata(metadata)
+
+  if (is_loading_metadata) {
+    return <LoadingState />
+  }
+
+  return (
+    <Box sx={{ backgroundColor: 'white', borderRadius: 2, overflow: 'hidden' }}>
+      <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+        <ThreadTitle title={title} />
+      </Box>
+      <ThreadStats
+        total_tokens={total_tokens}
+        session_id={external_session_info?.session_id}
+        duration={duration}
+        models={models}
+        external_session_info={external_session_info}
+        thread_state={thread_state}
+      />
+    </Box>
+  )
+}
+
+ThreadHeader.propTypes = {
+  metadata: PropTypes.object,
+  is_loading_metadata: PropTypes.bool
+}
+
+export default ThreadHeader

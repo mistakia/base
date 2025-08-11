@@ -8,6 +8,7 @@ import inference_providers from './inference-providers.mjs'
 import entities from './entities.mjs'
 import directories from './directories.mjs'
 import resource from './resource.mjs'
+import filesystem from './filesystem.mjs'
 
 export default {
   users,
@@ -19,5 +20,6 @@ export default {
   inference_providers,
   entities,
   directories,
-  resource
+  resource,
+  filesystem
 }
