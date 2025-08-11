@@ -47,7 +47,14 @@ export const parse_claude_jsonl_file = async (file_path) => {
 
     const sessions = new Map()
     let line_count = 0
+    let primary_session_id = null
+    const file_summaries = []
 
+    // Extract session ID from filename (Claude uses UUID format filenames)
+    primary_session_id = path.basename(file_path, '.jsonl')
+
+    // Collect all entries from the file
+    const all_entries = []
     for await (const line of line_reader) {
       line_count++
 
@@ -58,49 +65,13 @@ export const parse_claude_jsonl_file = async (file_path) => {
       try {
         const entry = JSON.parse(line)
 
-        // Handle summary entries differently - they don't belong to a specific session
+        // Collect summary entries for metadata
         if (entry.type === 'summary') {
-          // Store summaries separately - we'll associate them with sessions later
-          const summary_session_id = 'summaries'
-          if (!sessions.has(summary_session_id)) {
-            sessions.set(summary_session_id, {
-              session_id: summary_session_id,
-              entries: [],
-              metadata: {
-                file_path,
-                type: 'summaries'
-              }
-            })
-          }
-          sessions.get(summary_session_id).entries.push({
-            ...entry,
-            line_number: entry.line_number || line_count,
-            parse_line_number: line_count
-          })
+          file_summaries.push(entry.summary)
           continue
         }
 
-        // Group entries by sessionId - skip entries without sessionId
-        const session_id = entry.sessionId
-        if (!session_id) {
-          log(`Warning: Entry on line ${line_count} has no sessionId, skipping`)
-          continue
-        }
-
-        if (!sessions.has(session_id)) {
-          sessions.set(session_id, {
-            session_id,
-            entries: [],
-            metadata: {
-              cwd: entry.cwd,
-              version: entry.version,
-              user_type: entry.userType,
-              file_path
-            }
-          })
-        }
-
-        sessions.get(session_id).entries.push({
+        all_entries.push({
           ...entry,
           line_number: entry.line_number || line_count,
           parse_line_number: line_count
@@ -113,36 +84,39 @@ export const parse_claude_jsonl_file = async (file_path) => {
       }
     }
 
-    const session_list = Array.from(sessions.values())
-    log(
-      `Parsed ${line_count} lines into ${session_list.length} sessions from ${path.basename(file_path)}`
-    )
+    // Create single session with primary session ID containing all entries
+    const session = {
+      session_id: primary_session_id,
+      entries: all_entries,
+      metadata: {
+        file_path,
+        file_summaries
+      }
+    }
 
-    // Extract summaries and associate them with sessions
-    const summaries_session = sessions.get('summaries')
-    const file_summaries = summaries_session
-      ? summaries_session.entries.map((e) => e.summary)
-      : []
-
-    // Remove the summaries session from the main list
-    const actual_sessions = session_list.filter(
-      (session) => session.session_id !== 'summaries'
-    )
-
-    // Sort entries within each session by timestamp and add file summaries
-    actual_sessions.forEach((session) => {
-      // Add file summaries to session metadata
-      session.metadata.file_summaries = file_summaries
-
-      // Sort entries by timestamp
-      session.entries.sort((a, b) => {
-        const timestamp_a = new Date(a.timestamp)
-        const timestamp_b = new Date(b.timestamp)
-        return timestamp_a.getTime() - timestamp_b.getTime()
-      })
+    // Extract metadata from entries
+    all_entries.forEach((entry) => {
+      if (!session.metadata.cwd && entry.cwd) {
+        session.metadata.cwd = entry.cwd
+      }
+      if (!session.metadata.version && entry.version) {
+        session.metadata.version = entry.version
+      }
+      if (!session.metadata.user_type && entry.userType) {
+        session.metadata.user_type = entry.userType
+      }
     })
 
-    return actual_sessions
+    // Sort entries by parse line number to preserve original file order
+    session.entries.sort((a, b) => {
+      return (a.parse_line_number || 0) - (b.parse_line_number || 0)
+    })
+
+    log(
+      `Parsed ${line_count} lines into 1 session (${primary_session_id}) with ${session.entries.length} entries from ${path.basename(file_path)}`
+    )
+
+    return [session]
   } catch (error) {
     log(`Error parsing Claude JSONL file ${file_path}: ${error.message}`)
     throw error

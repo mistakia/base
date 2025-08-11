@@ -6,7 +6,7 @@ import {
   find_orphaned_tool_calls,
   find_orphaned_tool_results,
   link_tool_call_to_result
-} from '../shared/tool-extraction-utils.mjs'
+} from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
 
@@ -61,6 +61,11 @@ export const build_timeline_from_session = async (
         new_entries: timeline_entries
       })
     }
+
+    // Sort timeline entries by sequence
+    final_timeline = final_timeline.sort(
+      (a, b) => a.ordering.sequence - b.ordering.sequence
+    )
 
     // Validate and report tool interaction quality
     const tool_validation = validate_tool_interactions(final_timeline)
