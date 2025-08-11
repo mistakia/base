@@ -11,7 +11,7 @@ import { get_user_base_directory } from '#libs-server/base-uri/base-directory-re
  */
 export const CLAUDE_DEFAULT_PATHS = {
   // Claude Code projects directory
-  claude_projects_dir: '~/.claude/projects'
+  claude_projects_directory: '~/.claude/projects'
 }
 
 /**
@@ -38,7 +38,7 @@ export const CLAUDE_DEFAULT_OPTIONS = {
  */
 export function get_claude_config(overrides = {}) {
   return {
-    projects_dir: CLAUDE_DEFAULT_PATHS.claude_projects_dir,
+    claude_projects_directory: CLAUDE_DEFAULT_PATHS.claude_projects_directory,
     user_base_directory: get_user_base_directory(),
     ...CLAUDE_DEFAULT_OPTIONS,
     ...overrides

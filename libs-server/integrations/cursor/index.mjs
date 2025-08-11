@@ -9,6 +9,7 @@ import debug from 'debug'
 import { CursorSessionProvider } from './cursor-session-provider.mjs'
 import { get_cursor_config } from './cursor-config.mjs'
 import { get_conversation_summary } from './read-database.mjs'
+import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
 const log = debug('integrations:cursor')
 
@@ -56,9 +57,6 @@ export const import_cursor_conversations_to_threads = async (options = {}) => {
     }
 
     // Create threads using unified provider system
-    const { create_threads_from_session_provider } = await import(
-      '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
-    )
     const results = await create_threads_from_session_provider({
       provider_name: 'cursor',
       user_base_directory: config.user_base_directory,

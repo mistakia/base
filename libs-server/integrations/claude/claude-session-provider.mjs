@@ -29,7 +29,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
    */
   async find_sessions({
     claude_sessions = [],
-    projects_dir,
+    claude_projects_directory,
     filter_sessions
   } = {}) {
     // If sessions are provided directly, use them
@@ -38,9 +38,9 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     }
 
     // Otherwise discover from filesystem
-    const config = get_claude_config({ projects_dir })
+    const config = get_claude_config({ claude_projects_directory })
     return await find_claude_sessions_from_filesystem({
-      projects_dir: config.projects_dir,
+      claude_projects_directory: config.claude_projects_directory,
       filter_sessions
     })
   }

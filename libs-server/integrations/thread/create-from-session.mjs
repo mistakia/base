@@ -11,6 +11,7 @@ import {
   get_raw_data_storage_config,
   get_timestamp_for_raw_data
 } from './thread-integration-shared-config.mjs'
+import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 
@@ -36,6 +37,19 @@ export const create_thread_from_session = async ({
       raw_data_saved: !!raw_session_data
     }
 
+    // Extract timeline timestamps for thread creation
+    const session_metadata = normalized_session.metadata || {}
+    const timeline_created_at = session_metadata.start_time
+      ? session_metadata.start_time instanceof Date
+        ? session_metadata.start_time.toISOString()
+        : session_metadata.start_time
+      : null
+    const timeline_updated_at = session_metadata.end_time
+      ? session_metadata.end_time instanceof Date
+        ? session_metadata.end_time.toISOString()
+        : session_metadata.end_time
+      : null
+
     // Use the unified create_thread function
     const thread_result = await create_thread({
       user_id,
@@ -54,7 +68,9 @@ export const create_thread_from_session = async ({
         user_worktree_path: null,
         message_count: counts.message_count,
         tool_call_count: counts.tool_call_count
-      }
+      },
+      created_at: timeline_created_at,
+      updated_at: timeline_updated_at
     })
 
     // Save raw session data if provided
@@ -279,13 +295,12 @@ export const update_existing_thread = async (
     }
 
     // Update thread metadata
-    await update_thread_metadata(thread_dir, normalized_session)
-
-    // Build/update timeline with merge support
-    const { build_timeline_from_session } = await import(
-      './build-timeline-entries.mjs'
+    const metadata_changed = await update_thread_metadata(
+      thread_dir,
+      normalized_session
     )
 
+    // Build/update timeline with merge support
     const timeline_result = await build_timeline_from_session(
       normalized_session,
       { thread_dir },
@@ -294,15 +309,22 @@ export const update_existing_thread = async (
       }
     )
 
-    log(
-      `Updated thread ${thread_id} with ${timeline_result.new_entries_added} new timeline entries`
-    )
+    const files_modified = metadata_changed || timeline_result.timeline_modified
+
+    if (files_modified) {
+      log(
+        `Updated thread ${thread_id} with ${timeline_result.new_entries_added} new timeline entries (metadata: ${metadata_changed ? 'changed' : 'unchanged'}, timeline: ${timeline_result.timeline_modified ? 'changed' : 'unchanged'})`
+      )
+    } else {
+      log(`No changes detected for thread ${thread_id}, files not modified`)
+    }
 
     return {
       thread_id,
       thread_dir,
       new_entries_added: timeline_result.new_entries_added,
-      total_entries: timeline_result.entry_count
+      total_entries: timeline_result.entry_count,
+      files_modified
     }
   } catch (error) {
     log(`Error updating existing thread: ${error.message}`)
@@ -324,25 +346,46 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
 
     // Update relevant fields
     const now = new Date().toISOString()
+
+    // Use timeline end_time for updated_at if available, otherwise use current time
+    const session_metadata = normalized_session.metadata || {}
+    const timeline_updated_at = session_metadata.end_time
+      ? session_metadata.end_time instanceof Date
+        ? session_metadata.end_time.toISOString()
+        : session_metadata.end_time
+      : now
+
     const updated_metadata = {
       ...existing_metadata,
-      updated_at: now,
+      updated_at: timeline_updated_at,
       message_count: counts.message_count,
       tool_call_count: counts.tool_call_count,
       external_session: {
         ...existing_metadata.external_session,
-        last_updated: now,
         provider_metadata: normalized_session.metadata
       }
     }
 
-    // Write updated metadata
-    await fs.writeFile(metadata_path, JSON.stringify(updated_metadata, null, 2))
+    // Check if metadata actually changed before writing
+    const metadata_changed =
+      JSON.stringify(existing_metadata) !== JSON.stringify(updated_metadata)
 
-    log(`Updated thread metadata at ${metadata_path}`)
+    if (metadata_changed) {
+      // Write updated metadata only if it changed
+      await fs.writeFile(
+        metadata_path,
+        JSON.stringify(updated_metadata, null, 2)
+      )
+      log(`Updated thread metadata at ${metadata_path}`)
+    } else {
+      log(`Metadata unchanged, skipping write for ${metadata_path}`)
+    }
+
+    return metadata_changed
   } catch (error) {
     log(`Error updating thread metadata: ${error.message}`)
     // Don't throw - metadata update failure shouldn't stop timeline update
+    return false
   }
 }
 
@@ -392,10 +435,11 @@ export const create_threads_from_sessions = async (
             session_id: session.session_id,
             thread_id,
             thread_dir,
-            new_entries_added: update_result.new_entries_added
+            new_entries_added: update_result.new_entries_added,
+            files_modified: update_result.files_modified
           })
           log(
-            `Successfully updated thread ${thread_id} for session ${session.session_id} (${update_result.new_entries_added} new entries)`
+            `Successfully updated thread ${thread_id} for session ${session.session_id} (${update_result.new_entries_added} new entries, files ${update_result.files_modified ? 'modified' : 'unchanged'})`
           )
         } else {
           log(

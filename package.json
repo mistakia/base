@@ -42,6 +42,7 @@
     "@trashman/ed25519-blake2b": "^0.0.7",
     "@tsmx/secure-config": "^2.3.0",
     "binary-uuid": "^2.0.3",
+    "chokidar": "^4.0.1",
     "cors": "^2.8.5",
     "debug": "^4.4.0",
     "deep-extend": "^0.6.0",

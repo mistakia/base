@@ -10,7 +10,7 @@ import {
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
-import { workflow_exists_in_filesystem } from '#libs-server/workflow/index.mjs'
+import { workflow_exists_in_filesystem, get_workflow_tools } from '#libs-server/workflow/index.mjs'
 import { get_thread_tool_names } from './thread-tools.mjs'
 import { generate_thread_id_from_session } from './generate-thread-id-from-session.mjs'
 import {
@@ -129,6 +129,8 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {Array<string>} params.tools
  * @param {Object} [params.external_session] - Optional external session info
  * @param {Object} [params.additional_fields] - Any additional fields to merge
+ * @param {string} [params.created_at] - Optional override for created_at timestamp (ISO string)
+ * @param {string} [params.updated_at] - Optional override for updated_at timestamp (ISO string)
  * @returns {Object} Thread metadata object
  */
 export function build_thread_metadata({
@@ -142,7 +144,9 @@ export function build_thread_metadata({
   prompt_properties = {},
   tools = [],
   external_session = null,
-  additional_fields = {}
+  additional_fields = {},
+  created_at = null,
+  updated_at = null
 }) {
   const now = new Date().toISOString()
 
@@ -164,8 +168,8 @@ export function build_thread_metadata({
     inference_provider,
     models: models_array,
     thread_state,
-    created_at: now,
-    updated_at: now,
+    created_at: created_at || now,
+    updated_at: updated_at || now,
     prompt_properties,
     tools,
     ...additional_fields
@@ -193,6 +197,8 @@ export function build_thread_metadata({
  * @param {boolean} [params.create_memory_repository=false] Whether to initialize git repository in memory directory
  * @param {Object} [params.external_session] External session information for imported sessions
  * @param {Object} [params.additional_metadata={}] Additional metadata fields to include in thread metadata
+ * @param {string} [params.created_at] Optional override for created_at timestamp (ISO string)
+ * @param {string} [params.updated_at] Optional override for updated_at timestamp (ISO string)
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
@@ -208,7 +214,9 @@ export default async function create_thread({
   create_git_branches = false,
   create_memory_repository = false,
   external_session = null,
-  additional_metadata = {}
+  additional_metadata = {},
+  created_at = null,
+  updated_at = null
 }) {
   // Validate required parameters
   if (!user_id) {
@@ -249,10 +257,6 @@ export default async function create_thread({
   let workflow_tools = []
   if (workflow_base_uri) {
     try {
-      const { get_workflow_tools } = await import(
-        '#libs-server/workflow/index.mjs'
-      )
-
       workflow_tools = await get_workflow_tools({
         workflow_base_uri
       })
@@ -327,7 +331,9 @@ export default async function create_thread({
     prompt_properties,
     tools: final_tools,
     external_session,
-    additional_fields: additional_metadata
+    additional_fields: additional_metadata,
+    created_at,
+    updated_at
   })
 
   // Initialize timeline

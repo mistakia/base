@@ -160,7 +160,7 @@ const main = async () => {
             .option('claude-projects-dir', {
               describe: 'Claude projects directory',
               type: 'string',
-              default: get_claude_config().projects_dir
+              default: get_claude_config().claude_projects_directory
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
@@ -218,7 +218,7 @@ const main = async () => {
 
           const sessions = await list_sessions({
             provider: argv.provider,
-            claude_projects_dir: argv.claudeProjectsDir,
+            claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             openai_auth,
             verbose: argv.verbose
@@ -307,7 +307,7 @@ const main = async () => {
             .option('claude-projects-dir', {
               describe: 'Claude projects directory',
               type: 'string',
-              default: get_claude_config().projects_dir
+              default: get_claude_config().claude_projects_directory
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
@@ -430,7 +430,7 @@ const main = async () => {
 
           const result = await import_sessions({
             provider: argv.provider,
-            claude_projects_dir: argv.claudeProjectsDir,
+            claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             openai_auth,
             user_base_directory: argv.userBaseDir,
@@ -599,7 +599,7 @@ const main = async () => {
             .option('claude-projects-dir', {
               describe: 'Claude projects directory',
               type: 'string',
-              default: get_claude_config().projects_dir
+              default: get_claude_config().claude_projects_directory
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
@@ -654,7 +654,7 @@ const main = async () => {
 
           const result = await validate_sessions({
             provider: argv.provider,
-            claude_projects_dir: argv.claudeProjectsDir,
+            claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             openai_auth,
             verbose: argv.verbose

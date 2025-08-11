@@ -78,11 +78,9 @@ router.post('/?', async (req, res) => {
     // Check if user has access
     const has_access = await user_registry.user_has_access(data.public_key)
     if (!has_access) {
-      return res
-        .status(403)
-        .send({
-          error: 'Access denied - contact administrator to add your public key'
-        })
+      return res.status(403).send({
+        error: 'Access denied - contact administrator to add your public key'
+      })
     }
 
     // Get user data
@@ -126,11 +124,9 @@ router.post('/session', async (req, res) => {
     // Check if user has access
     const has_access = await user_registry.user_has_access(data.public_key)
     if (!has_access) {
-      return res
-        .status(403)
-        .send({
-          error: 'Access denied - contact administrator to add your public key'
-        })
+      return res.status(403).send({
+        error: 'Access denied - contact administrator to add your public key'
+      })
     }
 
     const user = await user_registry.find_by_public_key(data.public_key)

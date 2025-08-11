@@ -65,12 +65,25 @@ export const build_timeline_from_session = async (
     // Validate and report tool interaction quality
     const tool_validation = validate_tool_interactions(final_timeline)
 
-    // Write timeline to file
-    await fs.writeFile(timeline_path, JSON.stringify(final_timeline, null, 2))
+    // Check if timeline actually changed before writing
+    const existing_timeline_content =
+      await read_existing_timeline(timeline_path)
+    const timeline_changed =
+      !existing_timeline_content ||
+      JSON.stringify(existing_timeline_content) !==
+        JSON.stringify(final_timeline)
 
-    log(
-      `Created timeline with ${final_timeline.length} entries at ${timeline_path}`
-    )
+    if (timeline_changed) {
+      // Write timeline to file only if it changed
+      await fs.writeFile(timeline_path, JSON.stringify(final_timeline, null, 2))
+      log(
+        `Created/updated timeline with ${final_timeline.length} entries at ${timeline_path}`
+      )
+    } else {
+      log(
+        `Timeline unchanged, skipping write for ${timeline_path} (${final_timeline.length} entries)`
+      )
+    }
 
     // Log summary of unsupported items found during timeline conversion
     if (TIMELINE_UNSUPPORTED.message_types.size > 0) {
@@ -105,6 +118,7 @@ export const build_timeline_from_session = async (
       timeline_path,
       entry_count: final_timeline.length,
       timeline_entries: final_timeline,
+      timeline_modified: timeline_changed,
       new_entries_added: update_existing
         ? final_timeline.length -
           (await get_existing_timeline_length(timeline_path))

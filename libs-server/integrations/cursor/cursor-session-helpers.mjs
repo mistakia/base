@@ -6,6 +6,7 @@
  */
 
 import debug from 'debug'
+import { read_all_cursor_conversations } from './read-database.mjs'
 import { v5 as uuidv5 } from 'uuid'
 import { CURSOR_THREAD_NAMESPACE } from './cursor-config.mjs'
 
@@ -38,8 +39,6 @@ export const find_cursor_sessions_from_database = async ({
   cursor_data_path,
   filter_conversations = null
 }) => {
-  const { read_all_cursor_conversations } = await import('./read-database.mjs')
-
   log(`Finding Cursor conversations from database: ${cursor_data_path}`)
   const conversations = await read_all_cursor_conversations({
     db_path: cursor_data_path,

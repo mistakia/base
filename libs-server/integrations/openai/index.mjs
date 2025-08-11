@@ -13,6 +13,7 @@ import {
   OPENAI_DEFAULT_LIMITS
 } from './openai-config.mjs'
 import { create_openai_client } from './api/index.mjs'
+import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
 const log = debug('integrations:openai')
 
@@ -65,9 +66,6 @@ export const import_openai_conversations_to_threads = async (options = {}) => {
     }
 
     // Create threads using unified provider system
-    const { create_threads_from_session_provider } = await import(
-      '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
-    )
     const results = await create_threads_from_session_provider({
       provider_name: 'openai',
       user_base_directory: config.user_base_directory,

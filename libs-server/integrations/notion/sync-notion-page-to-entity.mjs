@@ -3,6 +3,7 @@
  */
 
 import debug from 'debug'
+import fs from 'fs/promises'
 import { get_notion_page_with_blocks } from './notion-api/index.mjs'
 import { normalize_notion_page } from './normalize-notion-page.mjs'
 import { normalize_notion_database_item } from './normalize-notion-database-item.mjs'
@@ -111,8 +112,7 @@ export async function sync_notion_page_to_entity(
 
         // If path changed, delete the old file first
         try {
-          const { unlink } = await import('fs/promises')
-          await unlink(old_path)
+          await fs.unlink(old_path)
           log(`Deleted old entity file: ${old_path}`)
         } catch (error) {
           log(

@@ -6,8 +6,9 @@
  */
 
 import debug from 'debug'
+import { create_openai_client } from './api/index.mjs'
+import { get_openai_config, validate_openai_auth, OPENAI_NAMESPACE } from './openai-config.mjs'
 import { v5 as uuidv5 } from 'uuid'
-import { OPENAI_NAMESPACE } from './openai-config.mjs'
 import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
 const log = debug('integrations:openai:session-helpers')
@@ -39,11 +40,6 @@ export const find_openai_sessions_from_api = async ({
   auth_options = {},
   max_conversations
 }) => {
-  const { create_openai_client } = await import('./api/index.mjs')
-  const { get_openai_config, validate_openai_auth } = await import(
-    './openai-config.mjs'
-  )
-
   const config = get_openai_config({ max_conversations, ...auth_options })
   const { bearer_token, session_cookies, device_id, client_version } = config
 

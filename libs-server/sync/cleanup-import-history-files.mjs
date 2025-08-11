@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import fs_sync from 'fs'
 import debug from 'debug'
 
 import { list_import_history_files } from '#libs-server/sync/list-import-history-files.mjs'
@@ -174,12 +175,10 @@ async function cleanup_entity_files({ entity, keep_count, dry_run }) {
  */
 async function cleanup_empty_directories(entity) {
   try {
-    const fs_sync = await import('fs')
-
     // Check and remove empty raw directory
     try {
       const raw_dir = entity.entity_import_directory + '/raw'
-      if (fs_sync.default.existsSync(raw_dir)) {
+      if (fs_sync.existsSync(raw_dir)) {
         const raw_contents = await fs.readdir(raw_dir)
         if (raw_contents.length === 0) {
           await fs.rmdir(raw_dir)
@@ -193,7 +192,7 @@ async function cleanup_empty_directories(entity) {
     // Check and remove empty processed directory
     try {
       const processed_dir = entity.entity_import_directory + '/processed'
-      if (fs_sync.default.existsSync(processed_dir)) {
+      if (fs_sync.existsSync(processed_dir)) {
         const processed_contents = await fs.readdir(processed_dir)
         if (processed_contents.length === 0) {
           await fs.rmdir(processed_dir)
@@ -206,7 +205,7 @@ async function cleanup_empty_directories(entity) {
 
     // Check and remove empty entity directory
     try {
-      if (fs_sync.default.existsSync(entity.entity_import_directory)) {
+      if (fs_sync.existsSync(entity.entity_import_directory)) {
         const entity_contents = await fs.readdir(entity.entity_import_directory)
         if (entity_contents.length === 0) {
           await fs.rmdir(entity.entity_import_directory)

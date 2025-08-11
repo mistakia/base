@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
+import { list_files_recursive } from './file-operations.mjs'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
@@ -157,9 +158,7 @@ async function search_files_directly(
 ) {
   const results = []
   // Get files to search in
-  const all_files = await import('./file-operations.mjs').then((module) =>
-    module.list_files_recursive(repo_path, path_filter || '')
-  )
+  const all_files = await list_files_recursive(repo_path, path_filter || '')
 
   // Create a regex for the search
   const search_regex = new RegExp(query, case_sensitive ? '' : 'i')

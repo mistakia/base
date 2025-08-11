@@ -9,6 +9,7 @@ import {
   generate_guidelines_prompt,
   load_prompt
 } from '#libs-server/prompts/index.mjs'
+import { register_workflow_tools } from '#libs-server/workflow/index.mjs'
 
 const log = debug('threads:generate_prompt')
 
@@ -54,9 +55,6 @@ export default async function generate_prompt({ thread_id, timeline_id }) {
 
   if (thread.workflow_base_uri) {
     // Register workflow tools before generating prompts
-    const { register_workflow_tools } = await import(
-      '#libs-server/workflow/index.mjs'
-    )
     await register_workflow_tools({
       workflow_base_uri: thread.workflow_base_uri
     })

@@ -13,6 +13,7 @@ import { is_blocking_tool_call } from './thread-tools.mjs'
 import { get_provider } from '../inference-providers/index.mjs'
 import { execute_tool } from '#libs-server/tools/registry.mjs'
 import { THREAD_MESSAGE_ROLE } from './threads-constants.mjs'
+import { register_workflow_tools } from '#libs-server/workflow/index.mjs'
 
 // Import tool registry for workflow custom tools
 import '#libs-server/tools/index.mjs'
@@ -387,9 +388,6 @@ const execute_single_iteration = async ({
 
     // Register workflow tools if this thread has a workflow
     if (thread.workflow_base_uri) {
-      const { register_workflow_tools } = await import(
-        '#libs-server/workflow/index.mjs'
-      )
       await register_workflow_tools({
         workflow_base_uri: thread.workflow_base_uri
       })

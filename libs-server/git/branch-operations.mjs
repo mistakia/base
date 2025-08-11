@@ -1,4 +1,5 @@
 import debug from 'debug'
+import fs from 'fs/promises'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
@@ -268,9 +269,7 @@ export async function merge_branch({
     log(`Merging ${branch_to_merge} into current branch`)
 
     const temp_msg_file = `/tmp/git-merge-msg-${Date.now()}`
-    await import('fs/promises').then((fs) =>
-      fs.writeFile(temp_msg_file, merge_message)
-    )
+    await fs.writeFile(temp_msg_file, merge_message)
 
     // Execute the merge with the message file
     await execute_shell_command(
@@ -281,9 +280,7 @@ export async function merge_branch({
     )
 
     // Clean up the temporary file
-    await import('fs/promises').then((fs) =>
-      fs.unlink(temp_msg_file).catch(() => {})
-    )
+    await fs.unlink(temp_msg_file).catch(() => {})
 
     // Get the hash of the merge commit (HEAD after merge)
     const { stdout: commit_hash } = await execute_shell_command(

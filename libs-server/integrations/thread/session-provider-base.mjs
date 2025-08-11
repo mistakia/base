@@ -9,6 +9,8 @@
 import debug from 'debug'
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 import { calculate_session_counts } from './session-count-utilities.mjs'
+import { create_thread_from_session } from './create-from-session.mjs'
+import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 export class SessionProviderBase {
   constructor({ provider_name }) {
@@ -132,14 +134,6 @@ export class SessionProviderBase {
    * @returns {Promise<Object>} Thread creation result
    */
   async create_single_thread({ raw_session, options = {} }) {
-    // Import here to avoid circular dependencies
-    const { create_thread_from_session } = await import(
-      './create-from-session.mjs'
-    )
-    const { build_timeline_from_session } = await import(
-      './build-timeline-entries.mjs'
-    )
-
     // Normalize session just-in-time
     const normalized_session = this.normalize_session(raw_session)
 

@@ -260,7 +260,8 @@ const update_existing_session_thread = async ({
       thread_id,
       thread_dir,
       new_entries_added: update_result.new_entries_added,
-      total_entries: update_result.total_entries
+      total_entries: update_result.total_entries,
+      files_modified: update_result.files_modified
     }
   }
 }
@@ -317,7 +318,7 @@ const log_session_result = (session_result, provider_name) => {
       break
     case 'updated':
       log(
-        `↻ Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (${data.new_entries_added} new entries)`
+        `↻ Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (${data.new_entries_added} new entries, files ${data.files_modified ? 'modified' : 'unchanged'})`
       )
       break
     case 'skipped':

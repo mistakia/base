@@ -6,6 +6,8 @@
  */
 
 import debug from 'debug'
+import { parse_all_claude_files } from './parse-jsonl.mjs'
+import { normalize_claude_session } from './normalize-session.mjs'
 
 const log = debug('integrations:claude:session-helpers')
 
@@ -26,19 +28,17 @@ export const find_claude_sessions_from_data = async ({ sessions = [] }) => {
  * Find Claude sessions from filesystem (JSONL files)
  *
  * @param {Object} params - Parameters object
- * @param {string} params.projects_dir - Claude projects directory path
+ * @param {string} params.claude_projects_directory - Claude projects directory path
  * @param {Function} params.filter_sessions - Optional filter function
  * @returns {Promise<Array>} Array of raw Claude session objects
  */
 export const find_claude_sessions_from_filesystem = async ({
-  projects_dir,
+  claude_projects_directory,
   filter_sessions = null
 }) => {
-  const { parse_all_claude_files } = await import('./parse-jsonl.mjs')
-
-  log(`Finding Claude sessions from filesystem: ${projects_dir}`)
+  log(`Finding Claude sessions from filesystem: ${claude_projects_directory}`)
   const sessions = await parse_all_claude_files({
-    projects_dir,
+    claude_projects_directory,
     filter_sessions
   })
 
@@ -100,7 +100,6 @@ export const extract_claude_models_from_session = async ({
   // Use provided normalized session or normalize on demand
   let session_to_check = normalized_session
   if (!session_to_check) {
-    const { normalize_claude_session } = await import('./normalize-session.mjs')
     session_to_check = normalize_claude_session(raw_session)
   }
 

@@ -9,6 +9,7 @@ import debug from 'debug'
 import { ClaudeSessionProvider } from './claude-session-provider.mjs'
 import { get_claude_config } from './claude-config.mjs'
 import { parse_all_claude_files, get_session_summary } from './parse-jsonl.mjs'
+import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
 const log = debug('integrations:claude')
 
@@ -33,7 +34,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
 
     // Find sessions using provider
     const claude_sessions = await provider.find_sessions({
-      projects_dir: config.projects_dir,
+      claude_projects_directory: config.claude_projects_directory,
       filter_sessions: config.filter_sessions
     })
 
@@ -56,9 +57,6 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
     }
 
     // Create threads using unified provider system
-    const { create_threads_from_session_provider } = await import(
-      '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
-    )
     const results = await create_threads_from_session_provider({
       provider_name: 'claude',
       user_base_directory: config.user_base_directory,
@@ -92,7 +90,7 @@ export const list_claude_sessions = async (options = {}) => {
 
   try {
     const sessions = await provider.find_sessions({
-      projects_dir: config.projects_dir,
+      claude_projects_directory: config.claude_projects_directory,
       filter_sessions: config.filter_sessions
     })
 

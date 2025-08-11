@@ -9,10 +9,13 @@ import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 const log = debug('integrations:claude:parse-jsonl')
 
 export const find_claude_project_files = async ({
-  projects_dir = CLAUDE_DEFAULT_PATHS.claude_projects_dir
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
 } = {}) => {
   try {
-    const expanded_dir = projects_dir.replace('~', process.env.HOME)
+    const expanded_dir = claude_projects_directory.replace(
+      '~',
+      process.env.HOME
+    )
     log(`Looking for Claude project files in ${expanded_dir}`)
 
     const files = await list_files_recursive({
@@ -147,11 +150,11 @@ export const parse_claude_jsonl_file = async (file_path) => {
 }
 
 export const parse_all_claude_files = async ({
-  projects_dir = CLAUDE_DEFAULT_PATHS.claude_projects_dir,
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
   filter_sessions = null
 } = {}) => {
   try {
-    const files = await find_claude_project_files({ projects_dir })
+    const files = await find_claude_project_files({ claude_projects_directory })
     const all_sessions = []
 
     for (const { file_path } of files) {
