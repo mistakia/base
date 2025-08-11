@@ -1,0 +1,113 @@
+$user_message_bg =hsl(32, 21.30%, 88.00%)
+
+.user-message
+  background-color: transparent
+  border: 2px solid $user_message_bg
+  border-radius: $radius_sm
+  padding: $space_base
+  margin-bottom: $space_xs
+  position: relative
+  
+  font-family: $font_family_mono
+  font-size: $font_size_base
+  line-height: 1.5
+  color: $color_text
+  white-space: pre-wrap
+  word-break: break-word
+  overflow: hidden
+  
+  &--clickable
+    cursor: pointer
+    transition: background-color $transition_fast, border-color $transition_fast
+    
+    &:hover
+      background-color: transparent
+      border-color: darken($user_message_bg, 6%)
+      
+      .user-message__toggle
+        color: $color_text
+
+.user-message__chip
+  position: absolute
+  top: 8px
+  right: 8px
+  z-index: 1
+  text-transform: uppercase
+  background: $user_message_bg
+  border-color: $user_message_bg
+  
+  &:hover
+    // Neutralize global .chip hover styles for the user chip
+    background: $user_message_bg
+    border-color: $user_message_bg
+
+.user-message__content
+  margin-bottom: 0
+  
+  &--truncated
+    margin-bottom: $space_sm
+
+.user-message__command
+  display: flex
+  align-items: baseline
+  gap: $space_xs
+  font-family: $font_family_mono
+  font-size: $font_size_base
+  color: $color_text
+  white-space: normal
+  word-break: break-word
+
+.user-message__command-prompt
+  color: $color_text_secondary
+
+.user-message__command-name
+  font-weight: $font_weight_medium
+  color: $color_text
+
+.user-message__command-args
+  color: $color_text_secondary
+  margin-left: $space_lg
+
+.user-message__command-message
+  width: 100%
+  font-size: $font_size_sm
+  color: $color_text_secondary
+  margin-top: $space_xs
+  display: flex
+  gap: $space_xs
+  align-items: flex-start
+
+.user-message__command-prefix
+  color: $color_text_secondary
+  flex-shrink: 0
+
+.user-message__command-message-text
+  white-space: normal
+  word-break: break-word
+
+.user-message__toggle
+  // Minimal, brutalist-style button
+  background: none
+  border: none
+  color: $color_text_secondary
+  font-size: $font_size_sm
+  font-family: $font_family_mono
+  font-weight: $font_weight_medium
+  cursor: pointer
+  padding: 0
+  margin: 0
+  text-decoration: none
+  letter-spacing: 0.5px
+  text-transform: uppercase
+  user-select: none
+  
+  // Subtle interaction states
+  transition: color $transition_fast
+  
+  &:focus
+    outline: 1px solid $color_border
+    outline-offset: 2px
+  
+  // Remove browser button styles
+  -webkit-appearance: none
+  -moz-appearance: none

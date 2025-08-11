@@ -1,12 +1,6 @@
-/* global gtag */
-import { takeLatest, fork, put, call, select } from 'redux-saga/effects'
-import FingerprintJS from '@fingerprintjs/fingerprintjs'
-import { LOCATION_CHANGE, push } from 'redux-first-history'
-import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
-import Convert from 'nanocurrency-web/dist/lib/util/convert'
-import { blake2b } from 'blakejs'
+import { takeLatest, fork, put } from 'redux-saga/effects'
+import { LOCATION_CHANGE } from 'redux-first-history'
 
-import history from '@core/history'
 import { app_actions } from './actions'
 import { get_app } from './selectors'
 import { local_storage_adapter } from '@core/utils'
@@ -69,12 +63,6 @@ async function load_keys() {
 }
 
 export function* load() {
-  const { private_key, public_key } = yield call(load_keys)
-  if (private_key && public_key) {
-    yield put(app_actions.load_keys({ private_key, public_key }))
-    yield call(establish_user_session)
-  }
-
   yield put(app_actions.loaded())
 }
 

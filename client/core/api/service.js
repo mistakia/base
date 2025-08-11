@@ -78,6 +78,16 @@ export const api = {
     return { url }
   },
 
+  get_thread_timeline({ thread_id }) {
+    const url = `${API_URL}/filesystem/file?path=/thread/${thread_id}/timeline.json`
+    return { url }
+  },
+
+  get_thread_metadata({ thread_id }) {
+    const url = `${API_URL}/filesystem/file?path=/thread/${thread_id}/metadata.json`
+    return { url }
+  },
+
   post_thread({
     inference_provider,
     model,
@@ -132,15 +142,20 @@ export const api = {
   },
 
   get_directories({ type, path }) {
-    let url = `${API_URL}/directories?type=${type}`
+    let url = `${API_URL}/filesystem/directory`
     if (path) {
-      url += `&path=${encodeURIComponent(path)}`
+      url += `?path=${encodeURIComponent(path)}`
     }
     return { url }
   },
 
   get_file_content({ type, path }) {
-    const url = `${API_URL}/directories/file?type=${type}&path=${encodeURIComponent(path)}`
+    const url = `${API_URL}/filesystem/file?path=${encodeURIComponent(path)}`
+    return { url }
+  },
+
+  get_path_info({ path }) {
+    const url = `${API_URL}/filesystem/info?path=${encodeURIComponent(path)}`
     return { url }
   },
 

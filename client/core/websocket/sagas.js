@@ -1,7 +1,7 @@
 import { call, takeLatest, select, fork, delay, put } from 'redux-saga/effects'
 
 import { websocket_actions } from './actions'
-import { get_app } from '@core/app'
+import { get_app } from '@core/app/selectors'
 import { open_websocket, close_websocket, websocket_is_open } from './service'
 
 export function* disconnect() {

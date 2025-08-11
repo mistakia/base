@@ -9,7 +9,6 @@ export {
   delete_database_view,
   get_user_tasks,
   get_task,
-  // Thread API functions
   get_threads,
   get_thread,
   post_thread,
@@ -17,5 +16,6 @@ export {
   put_thread_state,
   post_thread_execute_tool,
   get_inference_providers,
-  get_resource
+  get_resource,
+  get_path_info
 } from './sagas'

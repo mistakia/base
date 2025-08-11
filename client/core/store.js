@@ -4,24 +4,26 @@ import { createReduxHistoryContext } from 'redux-first-history'
 import createSagaMiddleware, { END } from 'redux-saga'
 import { createBrowserHistory } from 'history'
 
-import rootSaga from './sagas'
+import root_saga from './sagas'
 import root_reducer from './reducers'
 
-const sagaMiddleware = createSagaMiddleware()
+const saga_middleware = createSagaMiddleware()
 const initial_state = window.__INITIAL_STATE__
 
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
+const compose_enhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
+
+const redux_history_context = createReduxHistoryContext({
+  history: createBrowserHistory(),
+  selectRouterState: (state) => state.get('router')
+})
 
 const { createReduxHistory, routerMiddleware, routerReducer } =
-  createReduxHistoryContext({
-    history: createBrowserHistory(),
-    selectRouterState: (state) => state.get('router')
-  })
+  redux_history_context
 
 // ======================================================
 // Middleware Configuration
 // ======================================================
-const middlewares = [sagaMiddleware, routerMiddleware]
+const middlewares = [saga_middleware, routerMiddleware]
 
 // ======================================================
 // Store Enhancers
@@ -34,17 +36,17 @@ const enhancers = [applyMiddleware(...middlewares)]
 export const store = createStore(
   root_reducer(routerReducer),
   fromJS(initial_state),
-  composeEnhancers(...enhancers)
+  compose_enhancers(...enhancers)
 )
 
-sagaMiddleware.run(rootSaga)
+saga_middleware.run(root_saga)
 store.close = () => store.dispatch(END)
 
 if (module.hot) {
   // Enable webpack hot module replacement for reducers
   module.hot.accept('./reducers', () => {
-    const nextReducers = root_reducer(history)
-    store.replaceReducer(nextReducers)
+    const next_reducers = root_reducer(history)
+    store.replaceReducer(next_reducers)
   })
 }
 

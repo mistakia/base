@@ -1,7 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
-import markdownItTaskCheckbox from './markdown-it-task-checkbox'
+import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
 import 'highlight.js/styles/github.css'
 
 // Initialize markdown-it with highlight.js

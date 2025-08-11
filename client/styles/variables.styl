@@ -2,16 +2,11 @@
 // MINIMALIST INDUSTRIAL DESIGN SYSTEM
 // =====================================================
 
-// Typography Scale
-$font_family_mono = 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
+$font_family_mono = 'IBM Plex Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
 $font_size_xs = 11px
 $font_size_sm = 12px
 $font_size_base = 14px
-$font_size_lg = 16px
 $font_size_xl = 18px
-$font_size_2xl = 20px
-$font_size_3xl = 24px
-$font_weight_normal = 400
 $font_weight_medium = 500
 $font_weight_semibold = 600
 $font_weight_bold = 700
@@ -26,7 +21,6 @@ $space_2xl = 48px
 $space_3xl = 64px
 
 // Border Radius Scale (Minimal)
-$radius_none = 0
 $radius_sm = 2px
 $radius_base = 4px
 
@@ -43,27 +37,41 @@ $color_text_secondary = #6c757d
 $color_text_tertiary = #b0b0b0
 $color_border = #ced4da
 $color_border_light = #e9ecef
-$color_surface = #ffffff
+$color_surface = #F7F7F4
 $color_surface_hover = #fafafa
 $color_surface_secondary = #f8f9fa
+
+// overwrite react-table background TODO fix in the upstream library via config or classname
+$backgroundColor = $color_surface
 
 // Action Colors
 $color_primary = #007bff
 $color_primary_hover = #0069d9
-$color_primary_disabled = #83b9f3
-$color_link = #007bff
-
-// Status Colors
-$color_success = #28a745
-$color_success_subtle = #d4edda
-$color_warning = #ffc107
-$color_warning_subtle = #fff3cd
-$color_danger = #dc3545
-$color_danger_subtle = #f8d7da
 
 // Code/Technical Colors
-$color_code_bg = #f6f8fa
+$color_code_bg = #f1f3f0
 $color_code_border = #e1e4e8
+
+// Semantic Colors
+$color_error = #d73a49
+$color_success = #28a745
+$color_warning = #f66a0a
+$color_info = #0969da
+
+// Tool Type Colors
+$color_tool_filesystem = #1976d2
+$color_tool_execution = #9c27b0
+$color_tool_search = #0288d1
+$color_tool_management = #ed6c02
+$color_tool_mcp = #9c27b0
+
+// Breadcrumb Colors - dynamic gradient from light to dark
+// Base colors for the gradient endpoints
+$breadcrumb_light_color = mix(#E8D4C1, $color_surface, 60%)  // Light cream, almost paper
+$breadcrumb_dark_color = darken(desaturate(#6B4423, 15%), 10%)  // Dark muted brown
+
+// Bar background - matches the lightest breadcrumb shade
+$color_breadcrumb_bar_bg = $breadcrumb_light_color
 
 // =====================================================
 // COMPONENT TOKENS
@@ -78,10 +86,62 @@ $transition_fast = 0.15s ease
 $transition_base = 0.2s ease
 $hover_lift = translateY(-1px)
 
-// Form Controls
-$input_padding_y = 12px
-$input_padding_x = 16px
-$input_border_width = 1px
-
 // RGB values for alpha operations
 $primary_color_rgb = 0, 123, 255
+
+// =====================================================
+// CSS CUSTOM PROPERTIES (for JS access)
+// =====================================================
+
+:root
+  // Colors
+  --color-text: $color_text
+  --color-text-secondary: $color_text_secondary
+  --color-text-tertiary: $color_text_tertiary
+  --color-border: $color_border
+  --color-border-light: $color_border_light
+  --color-surface: $color_surface
+  --color-surface-hover: $color_surface_hover
+  --color-surface-secondary: $color_surface_secondary
+  --color-primary: $color_primary
+  --color-primary-hover: $color_primary_hover
+  --color-code-bg: $color_code_bg
+  --color-code-border: $color_code_border
+  
+  // Semantic Colors
+  --color-error: $color_error
+  --color-success: $color_success
+  --color-warning: $color_warning
+  --color-info: $color_info
+  
+  // Tool Type Colors
+  --color-tool-filesystem: $color_tool_filesystem
+  --color-tool-execution: $color_tool_execution
+  --color-tool-search: $color_tool_search
+  --color-tool-management: $color_tool_management
+  --color-tool-mcp: $color_tool_mcp
+  
+  // Breadcrumb Colors
+  --color-breadcrumb-light: $breadcrumb_light_color
+  --color-breadcrumb-dark: $breadcrumb_dark_color
+  --color-breadcrumb-bar-bg: $color_breadcrumb_bar_bg
+  
+  // Spacing
+  --space-xs: $space_xs
+  --space-sm: $space_sm
+  --space-base: $space_base
+  --space-lg: $space_lg
+  --space-xl: $space_xl
+  --space-2xl: $space_2xl
+  --space-3xl: $space_3xl
+  
+  // Border radius
+  --radius-sm: $radius_sm
+  --radius-base: $radius_base
+  
+  // Typography
+  --font-family-mono: $font_family_mono
+  --font-size-xs: $font_size_xs
+  --font-size-sm: $font_size_sm
+  --font-size-base: $font_size_base
+  --font-size-xl: $font_size_xl

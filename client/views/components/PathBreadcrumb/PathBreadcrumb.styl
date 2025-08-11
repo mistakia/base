@@ -1,0 +1,50 @@
+.breadcrumb-bar
+  display flex
+  align-items center
+  gap 0
+  height 30px
+  font-family var(--font-family-mono)
+  white-space nowrap
+  overflow hidden
+  background-color var(--bar-bg, var(--color-breadcrumb-bar-bg))
+  width 100%
+  position relative
+
+.breadcrumb-item
+  position relative
+  display inline-flex
+  align-items center
+  height 30px
+  padding-left var(--space-base)
+  padding-right var(--space-base)
+  background-color var(--bg-color, var(--color-breadcrumb-light))
+  color var(--font-color, #333333)
+  font-family var(--font-family-mono)
+  font-size var(--font-size-xs)
+  font-weight $font_weight_medium
+  text-decoration none
+  border none
+  outline none
+  cursor default
+  transform skewX(-15deg)
+  margin-left -6px
+  margin-top 0
+  margin-bottom 0
+  z-index var(--z-index, auto)
+  transition background-color $transition_base
+
+  & > span
+    transform skewX(15deg)
+    display inline-block
+    line-height 30px
+    white-space nowrap
+
+  &.is-clickable
+    cursor pointer
+
+    &:hover
+      background-color unquote('color-mix(in srgb, var(--bg-color, var(--color-breadcrumb-light)) 85%, #000 15%)')
+      color var(--font-color, #333333)
+      z-index 20
+
+

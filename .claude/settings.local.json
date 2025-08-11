@@ -26,9 +26,12 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_console_messages",
       "mcp__playwright__browser_wait_for",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "mcp__playwright__browser_close"
     ],
     "deny": [],
-    "additionalDirectories": ["/Users/trashman/user-base/thread"]
+    "additionalDirectories": [
+      "/Users/trashman/user-base/repository/active/mistakia/react-table/"
+    ]
   }
 }
