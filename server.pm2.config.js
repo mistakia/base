@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'base-api',
-      script: 'scripts/server.mjs',
+      script: 'services/server.mjs',
       args: '--config /home/user/base/config/config.json',
       watch: false,
       env_production: {

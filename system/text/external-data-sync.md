@@ -148,23 +148,23 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 
 The system includes comprehensive tools for managing import history files to prevent unlimited storage growth while maintaining audit trails:
 
-**Cleanup Script**: `scripts/import-history/cleanup-import-history.mjs` provides flexible control over import history retention:
+**Cleanup Script**: `cli/import-history/cleanup-import-history.mjs` provides flexible control over import history retention:
 
 ```bash
 # Keep only 5 most recent files for GitHub entities
-node scripts/import-history/cleanup-import-history.mjs --external-system github --keep-count 5
+node cli/import-history/cleanup-import-history.mjs --external-system github --keep-count 5
 
 # Preview cleanup for specific entity without making changes
-node scripts/import-history/cleanup-import-history.mjs --entity-id abc123 --dry-run
+node cli/import-history/cleanup-import-history.mjs --entity-id abc123 --dry-run
 
 # Show summary statistics across all systems
-node scripts/import-history/cleanup-import-history.mjs --summary
+node cli/import-history/cleanup-import-history.mjs --summary
 
 # List all import history files
-node scripts/import-history/cleanup-import-history.mjs --list
+node cli/import-history/cleanup-import-history.mjs --list
 
 # Clean up all systems keeping default 10 files per entity
-node scripts/import-history/cleanup-import-history.mjs
+node cli/import-history/cleanup-import-history.mjs
 ```
 
 **Safety Features**:

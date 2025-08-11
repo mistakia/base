@@ -31,7 +31,8 @@ The system is organized into the following top-level directories:
 ├── db/                 # Database Schema
 ├── libs-server/        # Server-side code only
 ├── libs-shared/        # Shared code (client & server)
-├── scripts/            # Executable command-line scripts
+├── cli/                # Command-line tools and utilities
+├── services/           # Long-running processes and servers
 ├── server/             # Express API server
 ├── static/             # Static resources (images, styles, etc.)
 ├── system/             # System Knowledge Base
@@ -65,9 +66,13 @@ The `libs-server/` directory contains server-specific code organized by function
     └── users/                  # User management functionality
 ```
 
-### Scripts
+### CLI
 
-The `scripts/` directory contains executable command-line scripts.
+The `cli/` directory contains command-line tools and utilities for development, system maintenance, and data processing.
+
+### Services
+
+The `services/` directory contains long-running processes and servers, including the main API server and MCP servers.
 
 ### Tests
 

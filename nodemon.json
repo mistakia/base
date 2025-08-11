@@ -4,7 +4,7 @@
     "config/",
     "libs-server/",
     "libs-shared/",
-    "scripts/server.mjs"
+    "services/server.mjs"
   ],
   "ext": "mjs,js,json",
   "ignore": [

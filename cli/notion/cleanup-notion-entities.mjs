@@ -17,7 +17,7 @@ import config from '#config'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 
-const log = debug('scripts:notion:cleanup')
+const log = debug('cli:notion:cleanup')
 
 const argv = yargs(hideBin(process.argv))
   .option('dry-run', {
@@ -46,7 +46,7 @@ const argv = yargs(hideBin(process.argv))
   .help().argv
 
 if (argv.verbose) {
-  debug.enable('scripts:notion:cleanup')
+  debug.enable('cli:notion:cleanup')
 }
 
 /**
