@@ -7,6 +7,10 @@ import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 import { calculate_session_counts } from './session-count-utilities.mjs'
+import {
+  get_raw_data_storage_config,
+  get_timestamp_for_raw_data
+} from './thread-integration-shared-config.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 
@@ -96,7 +100,13 @@ const save_raw_session_data = async ({
     return
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  // Get the configured timestamp format
+  const storage_config = get_raw_data_storage_config()
+  const timestamp = get_timestamp_for_raw_data(storage_config.timestamp_format)
+
+  log(
+    `Using timestamp format '${storage_config.timestamp_format}': ${timestamp}`
+  )
 
   // Save provider-specific raw data format
   switch (session_provider) {

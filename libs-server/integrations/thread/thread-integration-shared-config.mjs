@@ -5,6 +5,52 @@
  * Provider-specific configuration is now in the provider-config directory.
  */
 
+import config from '#config'
+
+/**
+ * Constants for raw data timestamp formats
+ */
+export const RAW_DATA_TIMESTAMP_FORMAT = {
+  DATE: 'date', // YYYY-MM-DD format, overwrites on same day
+  DATETIME: 'datetime' // Full timestamp format, creates unique files
+}
+
+/**
+ * Default raw data storage configuration
+ */
+export const RAW_DATA_STORAGE_DEFAULTS = {
+  timestamp_format: RAW_DATA_TIMESTAMP_FORMAT.DATE
+}
+
+/**
+ * Get raw data storage configuration
+ * @returns {Object} Raw data storage configuration
+ */
+export function get_raw_data_storage_config() {
+  const user_config = config.thread_integration?.raw_data_storage || {}
+  return {
+    ...RAW_DATA_STORAGE_DEFAULTS,
+    ...user_config
+  }
+}
+
+/**
+ * Generate timestamp for raw data files based on configured format
+ * @param {string} format - Timestamp format ('date' or 'datetime')
+ * @returns {string} Formatted timestamp string
+ */
+export function get_timestamp_for_raw_data(format) {
+  const now = new Date()
+
+  if (format === RAW_DATA_TIMESTAMP_FORMAT.DATE) {
+    // Return YYYY-MM-DD format
+    return now.toISOString().split('T')[0]
+  }
+
+  // Default to full datetime format (backward compatible)
+  return now.toISOString().replace(/[:.]/g, '-')
+}
+
 /**
  * Shared default options for all integrations
  */
