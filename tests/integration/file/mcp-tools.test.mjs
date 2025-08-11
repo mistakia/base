@@ -50,7 +50,7 @@ describe('MCP File Tools Integration', function () {
     // Initialize the MCP client with stdio transport
     const transport = new StdioClientTransport({
       command: 'node',
-      args: [path.resolve(process.cwd(), 'scripts/mcp/mcp-server-stdio.mjs')],
+      args: [path.resolve(process.cwd(), 'services/mcp/mcp-server-stdio.mjs')],
       cwd: process.cwd(),
       env: {
         ...process.env,

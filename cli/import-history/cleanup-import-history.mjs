@@ -18,7 +18,7 @@ import {
 } from '#libs-server/sync/cleanup-import-history-files.mjs'
 import { list_import_history_files } from '#libs-server/sync/list-import-history-files.mjs'
 
-const log = debug('scripts:import-history:cleanup')
+const log = debug('cli:import-history:cleanup')
 
 const argv = yargs(hideBin(process.argv))
   .option('external-system', {
@@ -75,7 +75,7 @@ const argv = yargs(hideBin(process.argv))
   ).argv
 
 if (argv.verbose) {
-  debug.enable('scripts:import-history:cleanup')
+  debug.enable('cli:import-history:cleanup')
 }
 
 /**

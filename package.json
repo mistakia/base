@@ -11,15 +11,16 @@
     "#libs-shared": "./libs-shared/index.mjs",
     "#libs-shared/*": "./libs-shared/*",
     "#tests/*": "./tests/*",
-    "#scripts/*": "./scripts/*"
+    "#cli/*": "./cli/*",
+    "#services/*": "./services/*"
   },
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
-    "start": "node scripts/dev-server.mjs",
-    "start:api": "nodemon scripts/server.mjs",
+    "start": "node cli/dev-server.mjs",
+    "start:api": "nodemon services/server.mjs",
     "lint": "eslint . --ext js,mjs",
     "prettier": "prettier --write .",
-    "find-large-files": "node scripts/find-large-files.mjs",
+    "find-large-files": "node cli/find-large-files.mjs",
     "test": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --exit",
     "test:all": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --exit ./tests/unit/**/*.mjs ./tests/integration/**/*.mjs",
     "test:unit": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --exit ./tests/unit/**/*.mjs",

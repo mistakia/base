@@ -22,7 +22,7 @@ The system automatically:
 - Saves them as formatted `.mdc` files in `.cursor/rules/` with prefixes:
   - `system-` prefix for files from `/system/guideline/`
   - `user-` prefix for files from `/user/guideline/`
-- The `scripts/sync-guidelines-cursor-rules.sh` script maintains these files automatically
+- The `cli/sync-guidelines-cursor-rules.sh` script maintains these files automatically
 
 ## Updating Rules
 
@@ -32,7 +32,7 @@ When new guidelines are added or existing ones are modified:
 
    ```bash
    # From the project root
-   ./scripts/sync-guidelines-cursor-rules.sh
+   ./cli/sync-guidelines-cursor-rules.sh
    ```
 
 2. The script will:
