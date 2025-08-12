@@ -2,7 +2,7 @@ import React from 'react'
 import { Routes as RouterRoutes, Route } from 'react-router-dom'
 
 import Homepage from '@pages/Homepage/index.js'
-import DirectoryPage from '@pages/DirectoryPage.js'
+import DirectoryPage from '@pages/DirectoryPage/index.js'
 import ThreadsPage from '@pages/ThreadsPage.js'
 import ThreadPage from '@pages/ThreadPage/index.js'
 
