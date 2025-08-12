@@ -54,7 +54,7 @@ export async function normalize_notion_database_item(
         title: name,
         content,
         external_id: `notion:database:${database_id}:${notion_page.id}`,
-        user_id: options.user_id,
+        user_public_key: options.user_public_key,
         additional_properties: {
           ...mapped_properties,
           notion_metadata: {

@@ -164,7 +164,7 @@ export async function sync_notion_page_to_entity(
         external_system: 'notion',
         external_id,
         absolute_path,
-        user_id: entity_properties.user_id,
+        user_public_key: entity_properties.user_public_key,
         import_history_base_directory: options.import_history_base_directory
       })
 

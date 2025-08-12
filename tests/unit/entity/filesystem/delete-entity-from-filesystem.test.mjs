@@ -24,7 +24,7 @@ describe('delete_entity_from_filesystem', () => {
     const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
-      user_id: '123456'
+      user_public_key: 'abc123'
     }
     const entity_type = 'test'
 

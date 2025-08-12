@@ -9,7 +9,7 @@ describe('Entity Content Formatting', () => {
         entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
-        user_id: '123456',
+        user_public_key: 'abc123',
         tags: ['tag1', 'tag2'],
         permalink: '/test'
       }
@@ -22,7 +22,7 @@ describe('Entity Content Formatting', () => {
       expect(result.title).to.equal('Test Entity')
       expect(result.type).to.equal('test')
       expect(result.description).to.equal('Test description')
-      expect(result.user_id).to.equal('123456')
+      expect(result.user_public_key).to.equal('abc123')
       expect(result.tags).to.deep.equal(['tag1', 'tag2'])
       expect(result.permalink).to.equal('/test')
       expect(result.created_at).to.be.a('string')
@@ -35,7 +35,7 @@ describe('Entity Content Formatting', () => {
         entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
-        user_id: '123456',
+        user_public_key: 'abc123',
         created_at
       }
 
@@ -53,7 +53,7 @@ describe('Entity Content Formatting', () => {
         entity_id: uuid(),
         title: 'Test Entity',
         description: 'Test description',
-        user_id: '123456',
+        user_public_key: 'abc123',
         permalink: '/test',
         tags: ['tag1', 'tag2'],
         relations: ['relates_to [[entity/test]]'],
@@ -78,7 +78,7 @@ describe('Entity Content Formatting', () => {
         entity_id: uuid(),
         title: 'Test Task',
         description: 'Test description',
-        user_id: '123456',
+        user_public_key: 'abc123',
         status: 'In Progress',
         priority: 'High',
         start_by: '2023-03-01T00:00:00.000Z',
@@ -106,7 +106,7 @@ describe('Entity Content Formatting', () => {
         format_entity_properties_to_frontmatter({
           entity_properties: {
             description: 'Test description',
-            user_id: '123456'
+            user_public_key: '123456'
           },
           entity_type: 'test'
         })
@@ -117,22 +117,23 @@ describe('Entity Content Formatting', () => {
         format_entity_properties_to_frontmatter({
           entity_properties: {
             title: 'Test Entity',
-            user_id: '123456'
+            user_public_key: 'abc123'
           },
           entity_type: 'test'
         })
       ).to.throw('Entity entity_id is required')
 
-      // Missing user_id
+      // Missing user_public_key (provide entity_id so validation reaches user_public_key)
       expect(() =>
         format_entity_properties_to_frontmatter({
           entity_properties: {
+            entity_id: uuid(),
             title: 'Test Entity',
             description: 'Test description'
           },
           entity_type: 'test'
         })
-      ).to.throw('Entity user_id is required')
+      ).to.throw('Entity user_public_key is required')
     })
   })
 })

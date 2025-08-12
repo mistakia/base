@@ -15,7 +15,7 @@ relations:
   - 'relates_to [[sys:system/text/workflow.md]]'
 tags:
 updated_at: '2025-07-20T18:10:20.242Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Execution Threads
@@ -34,7 +34,7 @@ The session provider is simply the choice of "engine" for the interaction. All t
 ## Core Properties
 
 - `thread_id`: Unique identifier (UUID). Defines the path to thread data (`user:thread/{thread_id}/`)
-- `user_id`: Owner of the thread
+- `user_public_key`: Owner of the thread
 - `workflow_base_uri`: For Base system sessions, references the executing workflow
 - `session_provider`: Origin of the session (e.g., 'base', 'claude', 'cursor', 'openai')
 - `thread_state`: Current state - `active`, `paused`, or `terminated`

@@ -9,13 +9,13 @@ export function* disconnect() {
 }
 
 export function* connect() {
-  const { public_key } = yield select(get_app)
-  yield call(open_websocket, { public_key })
+  const { user_public_key } = yield select(get_app)
+  yield call(open_websocket, { user_public_key })
 }
 
 export function* reconnect() {
-  const { public_key } = yield select(get_app)
-  if (public_key) {
+  const { user_public_key } = yield select(get_app)
+  if (user_public_key) {
     while (!websocket_is_open()) {
       yield call(connect)
       yield delay(2000) // TODO - increase delay each run

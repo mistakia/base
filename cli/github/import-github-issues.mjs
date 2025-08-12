@@ -68,7 +68,7 @@ export default async function import_github_issues({
   github_repository_owner,
   github_repository_name,
   github_token,
-  user_id,
+  user_public_key,
   state = 'all',
   single_issue = null,
   start_page = 1,
@@ -120,7 +120,7 @@ export default async function import_github_issues({
         issue: single_issue,
         github_repository_owner,
         github_repository_name,
-        user_id,
+        user_public_key,
         import_history_base_directory,
         github_token,
         force,
@@ -187,7 +187,7 @@ export default async function import_github_issues({
       issues: all_issues,
       github_repository_owner,
       github_repository_name,
-      user_id,
+      user_public_key,
       import_history_base_directory,
       github_token,
       force,
@@ -239,9 +239,9 @@ const main = async () => {
         describe: 'GitHub personal access token',
         type: 'string'
       })
-      .option('user-id', {
-        alias: 'u',
-        describe: 'User ID to associate with imported tasks',
+      .option('user-public-key', {
+        alias: 'k',
+        describe: 'User public key to associate with imported tasks',
         type: 'string'
       })
       .option('state', {
@@ -268,7 +268,7 @@ const main = async () => {
       github_repository_owner: args.owner,
       github_repository_name: args.repo,
       github_token: args.token || config.github_access_token,
-      user_id: args.userId,
+      user_public_key: args.userPublicKey || config.user_public_key,
       state: args.state,
       verbose: args.verbose,
       force: args.force

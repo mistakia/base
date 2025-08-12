@@ -47,10 +47,10 @@ export function register_entity_create_tool() {
             type: 'object',
             description: 'Additional properties for the entity.'
           },
-          user_id: {
+          user_public_key: {
             type: 'string',
             description:
-              'Optional: User ID for ownership/context. Defaults to configured user.'
+              'Optional: User public key for ownership/context. Defaults to configured user.'
           }
         },
         required: ['base_uri', 'title', 'entity_type']
@@ -69,7 +69,10 @@ export function register_entity_create_tool() {
             : {}),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          user_id: parameters.user_id || context.user_id || config.user_id
+          user_public_key:
+            parameters.user_public_key ||
+            context.user_public_key ||
+            config.user_public_key
         }
 
         // Get the absolute path using registry

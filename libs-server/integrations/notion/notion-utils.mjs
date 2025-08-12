@@ -85,7 +85,7 @@ export function create_base_entity_structure(notion_page, params) {
     title,
     content,
     external_id,
-    user_id = '00000000-0000-0000-0000-000000000000',
+    user_public_key = '00000000-0000-0000-0000-000000000000',
     additional_properties = {}
   } = params
 
@@ -96,7 +96,7 @@ export function create_base_entity_structure(notion_page, params) {
     external_id,
     created_at: notion_page.created_time || new Date().toISOString(),
     updated_at: notion_page.last_edited_time || new Date().toISOString(),
-    user_id,
+    user_public_key,
 
     // Add any additional mapped properties
     ...additional_properties,

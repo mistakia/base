@@ -26,38 +26,38 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
-  post_user_task({ public_key, task, signature }) {
-    const url = `${API_URL}/users/${public_key}/tasks`
+  post_user_task({ user_public_key, task, signature }) {
+    const url = `${API_URL}/users/${user_public_key}/tasks`
     return { url, ...POST({ task, signature }) }
   },
-  get_tag({ tag_name, user_id }) {
-    const url = `${API_URL}/tags/${tag_name}?user_id=${user_id}`
+  get_tag({ tag_name, user_public_key }) {
+    const url = `${API_URL}/tags/${tag_name}?user_public_key=${user_public_key}`
     return { url }
   },
-  get_database({ user_id, database_table_name }) {
-    const url = `${API_URL}/users/${user_id}/databases/${database_table_name}`
+  get_database({ user_public_key, database_table_name }) {
+    const url = `${API_URL}/users/${user_public_key}/databases/${database_table_name}`
     return { url }
   },
-  get_database_items({ user_id, database_table_name, ...params }) {
-    const url = `${API_URL}/users/${user_id}/databases/${database_table_name}/items?${qs.stringify(
+  get_database_items({ user_public_key, database_table_name, ...params }) {
+    const url = `${API_URL}/users/${user_public_key}/databases/${database_table_name}/items?${qs.stringify(
       params
     )}`
     return { url }
   },
-  post_database_view({ user_id, table_name, ...params }) {
-    const url = `${API_URL}/users/${user_id}/databases/${table_name}/views`
+  post_database_view({ user_public_key, table_name, ...params }) {
+    const url = `${API_URL}/users/${user_public_key}/databases/${table_name}/views`
     return { url, ...POST(params) }
   },
-  delete_database_view({ user_id, table_name, view_id }) {
-    const url = `${API_URL}/users/${user_id}/databases/${table_name}/views/${view_id}`
+  delete_database_view({ user_public_key, table_name, view_id }) {
+    const url = `${API_URL}/users/${user_public_key}/databases/${table_name}/views/${view_id}`
     return { url, method: 'DELETE' }
   },
-  get_user_tasks({ user_id }) {
-    const url = `${API_URL}/users/${user_id}/tasks`
+  get_user_tasks({ user_public_key }) {
+    const url = `${API_URL}/users/${user_public_key}/tasks`
     return { url }
   },
-  get_task({ task_id, user_id }) {
-    const url = `${API_URL}/users/${user_id}/tasks/${task_id}`
+  get_task({ task_id, user_public_key }) {
+    const url = `${API_URL}/users/${user_public_key}/tasks/${task_id}`
     return { url }
   },
 
@@ -67,8 +67,8 @@ export const api = {
     return { url }
   },
 
-  get_threads({ user_id, thread_state, limit, offset }) {
-    const params = { user_id, thread_state, limit, offset }
+  get_threads({ user_public_key, thread_state, limit, offset }) {
+    const params = { user_public_key, thread_state, limit, offset }
     const url = `${API_URL}/threads?${qs.stringify(params)}`
     return { url }
   },
@@ -156,11 +156,6 @@ export const api = {
 
   get_path_info({ path }) {
     const url = `${API_URL}/filesystem/info?path=${encodeURIComponent(path)}`
-    return { url }
-  },
-
-  get_resource({ base_uri, username }) {
-    const url = `${API_URL}/resource?base_uri=${encodeURIComponent(base_uri)}&username=${encodeURIComponent(username)}`
     return { url }
   }
 }

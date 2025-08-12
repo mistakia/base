@@ -45,7 +45,7 @@ describe('create_thread', () => {
 
   it('should create a thread with minimal required parameters', async () => {
     const thread_data = {
-      user_id: test_user.user_id,
+      user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
       model: 'llama2',
       create_git_branches: true
@@ -71,7 +71,7 @@ describe('create_thread', () => {
     const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
 
     expect(metadata.thread_id).to.equal(thread.thread_id)
-    expect(metadata.user_id).to.equal(test_user.user_id)
+    expect(metadata.user_public_key).to.equal(test_user.user_public_key)
     expect(metadata.inference_provider).to.equal('ollama')
     expect(metadata.models).to.be.an('array')
     expect(metadata.models).to.have.lengthOf(1)
@@ -106,7 +106,7 @@ describe('create_thread', () => {
 
   it('should create a thread with a main request', async () => {
     const thread_data = {
-      user_id: test_user.user_id,
+      user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
       model: 'llama2',
       thread_main_request: 'Hello, this is my first message',
@@ -127,7 +127,7 @@ describe('create_thread', () => {
 
   it('should create a thread with custom tools', async () => {
     const thread_data = {
-      user_id: test_user.user_id,
+      user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
       model: 'llama2',
       tools: ['web_search', 'calculator'],
@@ -147,7 +147,7 @@ describe('create_thread', () => {
 
   it('should create a thread with a specified state', async () => {
     const thread_data = {
-      user_id: test_user.user_id,
+      user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
       model: 'llama2',
       thread_state: THREAD_STATE.PAUSED,
@@ -169,7 +169,7 @@ describe('create_thread', () => {
 
   it('should reject invalid thread parameters', async () => {
     const invalid_thread_data = {
-      // Missing user_id
+      // Missing user_public_key
       inference_provider: 'ollama',
       model: 'llama2'
     }
@@ -177,16 +177,16 @@ describe('create_thread', () => {
     try {
       await create_thread(invalid_thread_data)
       // Should not reach here
-      expect.fail('Should have thrown an error for missing user_id')
+      expect.fail('Should have thrown an error for missing user_public_key')
     } catch (error) {
       expect(error).to.be.an('error')
-      expect(error.message).to.include('user_id')
+      expect(error.message).to.include('user_public_key')
     }
   })
 
   it('should reject invalid state transitions', async () => {
     const invalid_state_data = {
-      user_id: test_user.user_id,
+      user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
       model: 'llama2',
       thread_state: 'invalid_state' // Invalid state value

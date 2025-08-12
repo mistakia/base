@@ -17,7 +17,7 @@ relations:
   - relates_to [[sys:system/guideline/choose-task-status.md]]
   - relates_to [[sys:system/guideline/choose-task-priority.md]]
 updated_at: '2025-06-26T01:12:08.170Z'
-user_id: 00000000-0000-0000-0000-000000000000
+user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
 
 ## Essential Requirements

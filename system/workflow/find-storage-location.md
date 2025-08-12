@@ -13,7 +13,7 @@ prompt_properties:
       'description': 'The information to store'
     }
 updated_at: '2025-05-27T18:10:20.233Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 You are a storage location advisor for a knowledge management system. Your role is to analyze incoming information and determine where it should be stored in the knowledge base.

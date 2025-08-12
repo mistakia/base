@@ -18,9 +18,9 @@ register_tool({
           type: 'string',
           description: 'The base relative path of the task file to update.'
         },
-        user_id: {
+        user_public_key: {
           type: 'string',
-          description: 'Optional: User ID. Defaults to configured user.'
+          description: 'Optional: User public key. Defaults to configured user.'
         },
         title: {
           type: 'string',
@@ -50,12 +50,18 @@ register_tool({
   implementation: async (parameters, context = {}) => {
     try {
       const { base_uri } = parameters
-      const user_id = helpers.resolve_user_id(parameters, context)
+      const user_public_key = helpers.resolve_user_public_key(
+        parameters,
+        context
+      )
 
-      log(`Updating task ${base_uri} for user ${user_id}`)
+      log(`Updating task ${base_uri} for user ${user_public_key}`)
 
       // First read the existing task
-      const existing_task = await helpers.verify_task_access(base_uri, user_id)
+      const existing_task = await helpers.verify_task_access(
+        base_uri,
+        user_public_key
+      )
       if (!existing_task) {
         return helpers.error_response(
           'update task',

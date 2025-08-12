@@ -12,7 +12,7 @@ const log = debug('task:filesystem:list')
  * This replaces the database-based task listing with file-based operations
  *
  * @param {Object} params - Query parameters
- * @param {string} params.user_id - User ID to filter tasks by
+ * @param {string} params.user_public_key - User public key to filter tasks by
  * @param {string} [params.status] - Task status to filter by
  * @param {Array<string>} [params.tag_entity_ids=[]] - Tag entity IDs to filter by
  * @param {Array<string>} [params.organization_ids=[]] - Organization IDs to filter by
@@ -29,7 +29,7 @@ const log = debug('task:filesystem:list')
  * @returns {Promise<Array>} - List of tasks matching the filters
  */
 export async function list_tasks_from_filesystem({
-  user_id,
+  user_public_key,
   status,
   tag_entity_ids = [],
   organization_ids = [],
@@ -45,7 +45,7 @@ export async function list_tasks_from_filesystem({
   archived = false
 }) {
   try {
-    log(`Listing tasks from filesystem for user ${user_id}`)
+    log(`Listing tasks from filesystem for user ${user_public_key}`)
 
     // Use the proper entity listing function that handles entity validation and type filtering
     const task_entities = await list_entity_files_from_filesystem({
@@ -60,7 +60,7 @@ export async function list_tasks_from_filesystem({
         const { entity_properties } = entity_file
 
         // Skip if not belonging to the user
-        if (entity_properties.user_id !== user_id) {
+        if (entity_properties.user_public_key !== user_public_key) {
           continue
         }
 
@@ -101,7 +101,7 @@ export async function list_tasks_from_filesystem({
           task_id: entity_properties.base_uri, // Use base_uri as primary ID
           title: entity_properties.title,
           description: entity_properties.description,
-          user_id: entity_properties.user_id,
+          user_public_key: entity_properties.user_public_key,
           base_uri: entity_properties.base_uri,
           created_at: entity_properties.created_at,
           updated_at: entity_properties.updated_at,

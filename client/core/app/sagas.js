@@ -1,65 +1,50 @@
-import { takeLatest, fork, put } from 'redux-saga/effects'
-import { LOCATION_CHANGE } from 'redux-first-history'
+import { takeLatest, fork, put, select, call } from 'redux-saga/effects'
+import { LOCATION_CHANGE, push } from 'redux-first-history'
+import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
+import Convert from 'nanocurrency-web/dist/lib/util/convert'
+import { blake2b } from 'blakejs'
 
 import { app_actions } from './actions'
 import { get_app } from './selectors'
 import { local_storage_adapter } from '@core/utils'
 import { post_user_session } from '@core/api'
 
-const fpPromise = FingerprintJS.load()
-
-function save_key({ private_key, public_key }) {
-  local_storage_adapter.setItem('base_private_key', private_key)
-  local_storage_adapter.setItem('base_public_key', public_key)
+function save_key({ user_private_key, user_public_key }) {
+  local_storage_adapter.setItem('base_private_key', user_private_key)
+  local_storage_adapter.setItem('base_public_key', user_public_key)
 }
 
 function* establish_user_session() {
-  const { private_key, public_key } = yield select(get_app)
-  if (!private_key || !public_key) {
+  const { user_private_key, user_public_key } = yield select(get_app)
+  if (!user_private_key || !user_public_key) {
     return
   }
 
   const timestamp = Date.now()
-  const data = { timestamp, public_key }
+  const data = { timestamp, user_public_key }
   const hash = blake2b(JSON.stringify(data), null, 32)
-  const signature = new Ed25519().sign(hash, Convert.hex2ab(private_key))
+  const signature = new Ed25519().sign(hash, Convert.hex2ab(user_private_key))
   yield call(post_user_session, { data, signature: Convert.ab2hex(signature) })
 }
 
 export function* load_from_new_keypair({ payload }) {
-  const { private_key, public_key } = payload
-  save_key({ private_key, public_key })
+  const { user_private_key, user_public_key } = payload
+  save_key({ user_private_key, user_public_key })
   yield call(establish_user_session)
 }
 
 export function* load_from_private_key({ payload }) {
-  const { private_key, public_key } = payload
-  save_key({ private_key, public_key })
+  const { user_private_key, user_public_key } = payload
+  save_key({ user_private_key, user_public_key })
   yield put(push('/'))
   yield call(establish_user_session)
 }
 
-// cookie-less / anonymous GA reporting
-async function page_view() {
-  if (!window.gtag) {
-    return
-  }
-
-  const fp = await fpPromise
-  const result = await fp.get()
-
-  gtag('config', '', {
-    page_path: history.location.pathname,
-    client_storage: 'none',
-    anonymize_ip: true,
-    client_id: result.visitorId
-  })
-}
-
 async function load_keys() {
-  const private_key = await local_storage_adapter.getItem('base_private_key')
-  const public_key = await local_storage_adapter.getItem('base_public_key')
-  return { private_key, public_key }
+  const user_private_key =
+    await local_storage_adapter.getItem('base_private_key')
+  const user_public_key = await local_storage_adapter.getItem('base_public_key')
+  return { user_private_key, user_public_key }
 }
 
 export function* load() {
@@ -68,7 +53,6 @@ export function* load() {
 
 export function reset() {
   window.scrollTo(0, 0)
-  page_view()
 }
 
 export function save_token({ payload }) {

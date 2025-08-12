@@ -30,7 +30,7 @@ relations:
   - 'uses [[user:guideline/write-software.md]]'
   - 'uses [[sys:system/guideline/write-javascript.md]]'
 updated_at: '2025-07-26T00:00:00.000Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 <task>Execute a software implementation following an implementation plan</task>

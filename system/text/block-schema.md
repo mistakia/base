@@ -15,7 +15,7 @@ relations:
   - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.242Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Block Schema
@@ -39,7 +39,7 @@ Each block is represented as a JSON object with the following structure:
     // Block metadata
     "created_at": "ISO timestamp", // Creation time
     "updated_at": "ISO timestamp", // Last update time
-    "user_id": "string", // Owner of the block
+    "user_public_key": "string", // Owner of the block
     "tags": [], // Optional tags
     "position": {
       // Position in document
@@ -149,7 +149,7 @@ Restricted content is replaced with type-specific placeholders like `[REDACTED H
 
 ### User Context
 
-Permission checking uses `{ is_owner: boolean, user_id: string }` context.
+Permission checking uses `{ is_owner: boolean, user_public_key: string }` context.
 
 ### Processing
 

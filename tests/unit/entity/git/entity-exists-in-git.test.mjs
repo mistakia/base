@@ -36,7 +36,7 @@ describe('entity_exists_in_git', () => {
       entity_id: uuid(),
       title: 'Test Entity',
       description: 'Entity stored in git',
-      user_id: 'user-123',
+      user_public_key: 'abc123',
       tags: ['git', 'test']
     }
     const entity_type = 'test'

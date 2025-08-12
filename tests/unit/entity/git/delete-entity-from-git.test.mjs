@@ -27,7 +27,7 @@ describe('delete_entity_from_git', () => {
       entity_id: uuid(),
       title: 'Test Entity To Delete',
       description: 'Entity that will be deleted from git',
-      user_id: 'user-123',
+      user_public_key: 'abc123',
       tags: ['git', 'test', 'delete']
     }
     const entity_type = 'test'

@@ -6,8 +6,6 @@ import notion from './notion.mjs'
 import threads from './threads.mjs'
 import inference_providers from './inference-providers.mjs'
 import entities from './entities.mjs'
-import directories from './directories.mjs'
-import resource from './resource.mjs'
 import filesystem from './filesystem.mjs'
 
 export default {
@@ -19,7 +17,5 @@ export default {
   threads,
   inference_providers,
   entities,
-  directories,
-  resource,
   filesystem
 }

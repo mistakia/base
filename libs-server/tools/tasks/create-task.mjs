@@ -16,10 +16,10 @@ register_tool({
     inputSchema: {
       type: 'object',
       properties: {
-        user_id: {
+        user_public_key: {
           type: 'string',
           description:
-            'Optional: User ID for ownership/context. Defaults to configured user. Not directly stored in file properties yet.'
+            'Optional: User public key for ownership/context. Defaults to configured user.'
         },
         base_uri: {
           type: 'string',
@@ -70,14 +70,17 @@ register_tool({
         task_content
       } = parameters
 
-      const user_id = helpers.resolve_user_id(parameters, context) // For logging and future use
+      const user_public_key = helpers.resolve_user_public_key(
+        parameters,
+        context
+      )
 
       log(
-        `Creating new task file "${title}" at ${base_uri} for user ${user_id}`
+        `Creating new task file "${title}" at ${base_uri} for user ${user_public_key}`
       )
 
       const task_properties = {
-        user_id,
+        user_public_key,
         title,
         description,
         status,

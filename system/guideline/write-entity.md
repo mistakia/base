@@ -15,7 +15,7 @@ relations:
   - 'related_to [[sys:system/text/base-uri.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.239Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Write Entity

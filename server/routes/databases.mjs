@@ -88,7 +88,7 @@ const table_state_validator = v.compile(table_state_schema)
 router.get('/:table_name', async (req, res) => {
   const { log } = req.app.locals
   try {
-    // const { table_name, user_id } = req.params
+    // const { table_name, user_public_key } = req.params
 
     // TODO
     // get the database table entity & metadata
@@ -107,7 +107,7 @@ router.get('/:table_name', async (req, res) => {
 router.post('/:table_name/views', async (req, res) => {
   const { log } = req.app.locals
   try {
-    // const { table_name, user_id } = req.params
+    // const { table_name, user_public_key } = req.params
     const { view_id, view_name, table_state, view_description } = req.body
 
     if (!view_id_validator(view_id)) {

@@ -11,7 +11,7 @@ export const entity_field_config = {
     ],
     expandable: [
       'entity_id',
-      'user_id',
+      'user_public_key',
       'permalink',
       'tags',
       'relations',
@@ -42,7 +42,7 @@ export const entity_field_config = {
     ],
     expandable: [
       'entity_id',
-      'user_id',
+      'user_public_key',
       'permalink',
       'tags',
       'relations',
@@ -89,7 +89,7 @@ export const entity_field_config = {
     ],
     expandable: [
       'entity_id',
-      'user_id',
+      'user_public_key',
       'permalink',
       'tags',
       'relations',

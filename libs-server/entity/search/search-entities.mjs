@@ -7,7 +7,7 @@ import config from '#config'
  * Search for entities using file-based approach
  *
  * @param {Object} params - Parameters for searching entities
- * @param {string} params.user_id - The user ID who owns the entities
+ * @param {string} params.user_public_key - The user public key who owns the entities
  * @param {string[]} [params.tag_base_uris] - Optional array of tag base_uris to filter by
  * @param {boolean} [params.include_archived=false] - Whether to include archived entities
  * @param {string[]} [params.entity_types] - Optional array of entity types to filter by
@@ -17,7 +17,7 @@ import config from '#config'
  * @returns {Promise<Array>} - Array of matching entities
  */
 export default async function search_entities({
-  user_id,
+  user_public_key,
   tag_base_uris = null,
   include_archived = false,
   entity_types = null,
@@ -26,8 +26,8 @@ export default async function search_entities({
   offset = 0
 }) {
   // Validate required parameters
-  if (!user_id) {
-    throw new Error('user_id is required for entity search')
+  if (!user_public_key) {
+    throw new Error('user_public_key is required for entity search')
   }
 
   // Get user base directory
@@ -55,7 +55,7 @@ export default async function search_entities({
       })
 
       // Skip if not a valid entity or doesn't belong to user
-      if (!entity_data || entity_data.user_id !== user_id) {
+      if (!entity_data || entity_data.user_public_key !== user_public_key) {
         continue
       }
 

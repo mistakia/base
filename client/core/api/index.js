@@ -16,6 +16,5 @@ export {
   put_thread_state,
   post_thread_execute_tool,
   get_inference_providers,
-  get_resource,
   get_path_info
 } from './sagas'

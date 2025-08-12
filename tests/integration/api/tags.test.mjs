@@ -68,7 +68,7 @@ describe('Tags API', () => {
     it('should get a tag and its associated entities', async () => {
       const { base_uri, cleanup } = await create_test_tag({
         title: 'Test Tag',
-        user_id: test_user.user_id
+        user_public_key: test_user.user_public_key
       })
       cleanup_tasks.push(cleanup)
 

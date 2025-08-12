@@ -13,7 +13,7 @@ const log = debug('github:task')
  * @param {string} options.github_repository_owner - Repository owner
  * @param {string} options.github_repository_name - Repository name
  * @param {string} options.user_base_directory - Base directory for user data
- * @param {string} options.user_id - The user creating the task
+ * @param {string} options.user_public_key - The user public key creating the task
  * @param {string} options.external_id - External identifier for the issue
  * @param {string} options.import_cid - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
@@ -26,7 +26,7 @@ export async function create_task_from_github_issue({
   github_repository_owner,
   github_repository_name,
   user_base_directory,
-  user_id,
+  user_public_key,
   external_id,
   import_cid,
   import_history_base_directory = null,
@@ -51,8 +51,8 @@ export async function create_task_from_github_issue({
       throw new Error('Missing user_base_directory parameter')
     }
 
-    if (!user_id) {
-      throw new Error('Missing user_id parameter')
+    if (!user_public_key) {
+      throw new Error('Missing user_public_key parameter')
     }
 
     // Use normalized issue data from the github_issue object
@@ -79,7 +79,7 @@ export async function create_task_from_github_issue({
       external_system: 'github',
       external_id,
       absolute_path,
-      user_id,
+      user_public_key,
       import_cid,
       import_history_base_directory,
       trx

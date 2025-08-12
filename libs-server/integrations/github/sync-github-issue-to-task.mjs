@@ -89,7 +89,7 @@ function validate_and_filter_relations(relations, user_base_directory) {
  * @param {string} options.github_repository_owner - Repository owner
  * @param {string} options.github_repository_name - Repository name
  * @param {string} options.user_base_directory - Base directory for user data
- * @param {string} options.user_id - User ID for task ownership
+ * @param {string} options.user_public_key - User public key for task ownership
  * @param {string} [options.import_history_base_directory] - Base directory for import history
  * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number] - GitHub project number
@@ -103,7 +103,7 @@ export async function sync_github_issue_to_task({
   github_repository_owner,
   github_repository_name,
   user_base_directory,
-  user_id,
+  user_public_key,
   import_history_base_directory = null,
   github_token,
   github_project_number = null,
@@ -126,8 +126,8 @@ export async function sync_github_issue_to_task({
     if (!user_base_directory) {
       throw new Error('Missing required parameter: user_base_directory')
     }
-    if (!user_id) {
-      throw new Error('Missing required parameter: user_id')
+    if (!user_public_key) {
+      throw new Error('Missing required parameter: user_public_key')
     }
 
     // Create external ID
@@ -144,7 +144,7 @@ export async function sync_github_issue_to_task({
       github_repository_owner,
       github_repository_name,
       project_item: github_project_item,
-      user_id,
+      user_public_key,
       comments
     })
 
@@ -186,7 +186,7 @@ export async function sync_github_issue_to_task({
         github_repository_owner,
         github_repository_name,
         user_base_directory,
-        user_id,
+        user_public_key,
         external_id,
         import_cid,
         import_history_base_directory,

@@ -35,7 +35,7 @@ const SESSION_PROVIDER_MAP = {
  *
  * @param {Object} params - Parameters object
  * @param {string} params.provider_name - Name of the session provider
- * @param {string} params.user_id - User ID for thread creation
+ * @param {string} params.user_public_key - User public key for thread creation
  * @param {string} params.user_base_directory - Base directory for user data
  * @param {boolean} params.allow_updates - Allow updating existing threads
  * @param {boolean} params.verbose - Enable verbose logging
@@ -44,7 +44,7 @@ const SESSION_PROVIDER_MAP = {
  */
 export const create_threads_from_session_provider = async ({
   provider_name,
-  user_id = config.user_id,
+  user_public_key = config.user_public_key,
   user_base_directory = get_user_base_directory(),
   allow_updates = false,
   verbose = false,
@@ -101,7 +101,7 @@ export const create_threads_from_session_provider = async ({
       const session_result = await process_single_session({
         raw_session,
         session_provider,
-        user_id,
+        user_public_key,
         user_base_directory,
         allow_updates,
         verbose
@@ -146,7 +146,7 @@ export const create_threads_from_session_provider = async ({
 const process_single_session = async ({
   raw_session,
   session_provider,
-  user_id,
+  user_public_key,
   user_base_directory,
   allow_updates,
   verbose
@@ -185,7 +185,7 @@ const process_single_session = async ({
   return await create_new_session_thread({
     raw_session,
     session_provider,
-    user_id,
+    user_public_key,
     user_base_directory,
     session_id
   })
@@ -198,7 +198,7 @@ const process_single_session = async ({
 const create_new_session_thread = async ({
   raw_session,
   session_provider,
-  user_id,
+  user_public_key,
   user_base_directory,
   session_id
 }) => {
@@ -208,7 +208,7 @@ const create_new_session_thread = async ({
   // Create thread with direct access to raw data
   const thread_result = await create_thread_from_session({
     normalized_session,
-    user_id,
+    user_public_key,
     user_base_directory,
     inference_provider: session_provider.get_inference_provider(),
     models: session_provider.get_models_from_session(raw_session),

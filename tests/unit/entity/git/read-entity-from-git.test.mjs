@@ -26,7 +26,7 @@ describe('read_entity_from_git', () => {
       entity_id: uuid(),
       title: 'Test Git Entity',
       description: 'Entity stored in git',
-      user_id: 'user-123',
+      user_public_key: 'abc123',
       tags: ['git', 'test']
     }
     const simple_entity_type = 'test'
@@ -47,7 +47,7 @@ describe('read_entity_from_git', () => {
       entity_id: uuid(),
       title: 'Complex Git Entity',
       description: 'Complex entity stored in git',
-      user_id: 'user-456',
+      user_public_key: 'def456',
       status: 'In Progress',
       priority: 'High',
       relations: [
@@ -97,7 +97,7 @@ describe('read_entity_from_git', () => {
       title: 'Test Git Entity',
       type: 'test',
       description: 'Entity stored in git',
-      user_id: 'user-123'
+      user_public_key: 'abc123'
     })
 
     // Check that tags are present

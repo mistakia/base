@@ -1,7 +1,7 @@
 /**
  * Maps of base fields that are required according to the base schema
  */
-const BASE_REQUIRED_FIELDS = ['title', 'type', 'user_id']
+const BASE_REQUIRED_FIELDS = ['title', 'type', 'user_public_key']
 
 /**
  * Maps of base fields that are optional according to the base schema
@@ -42,18 +42,18 @@ export function format_entity_properties_to_frontmatter({
     throw new Error('Entity title is required')
   }
 
-  if (!entity_properties.user_id) {
-    throw new Error('Entity user_id is required')
-  }
-
   if (!entity_properties.entity_id) {
     throw new Error('Entity entity_id is required')
+  }
+
+  if (!entity_properties.user_public_key) {
+    throw new Error('Entity user_public_key is required')
   }
 
   // Add required fields
   frontmatter.type = entity_type
   frontmatter.title = entity_properties.title
-  frontmatter.user_id = entity_properties.user_id
+  frontmatter.user_public_key = entity_properties.user_public_key
 
   // Add auto-generated timestamp fields
   frontmatter.created_at = entity_properties.created_at || now

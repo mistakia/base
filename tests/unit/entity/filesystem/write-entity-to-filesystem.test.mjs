@@ -23,7 +23,7 @@ describe('write_entity_to_filesystem', () => {
     const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
-      user_id: '123456',
+      user_public_key: 'abc123',
       tags: ['tag1', 'tag2']
     }
     const entity_type = 'test'
@@ -53,7 +53,7 @@ describe('write_entity_to_filesystem', () => {
     expect(file_content).to.include('type: test')
     expect(file_content).to.include('description:')
     expect(file_content).to.include('Test description')
-    expect(file_content).to.include("user_id: '123456'")
+    expect(file_content).to.include('user_public_key: abc123')
     expect(file_content).to.include('tags:')
     expect(file_content).to.include('# Test Entity')
     expect(file_content).to.include('Content body')
@@ -64,7 +64,7 @@ describe('write_entity_to_filesystem', () => {
     const entity_properties = {
       title: 'Minimal Entity',
       description: 'Minimal description',
-      user_id: '123456'
+      user_public_key: 'abc123'
     }
     const entity_type = 'minimal'
 
@@ -92,7 +92,7 @@ describe('write_entity_to_filesystem', () => {
         entity_properties: {
           title: 'Test',
           description: 'Test',
-          user_id: '123'
+          user_public_key: 'abc123'
         },
         entity_type: 'test'
       })
@@ -121,7 +121,7 @@ describe('write_entity_to_filesystem', () => {
         entity_properties: {
           title: 'Test',
           description: 'Test',
-          user_id: '123'
+          user_public_key: '123'
         }
       })
       expect.fail('Should have thrown an error')
@@ -135,7 +135,7 @@ describe('write_entity_to_filesystem', () => {
     const entity_properties = {
       title: 'Test Task',
       description: 'Test task description',
-      user_id: '123456',
+      user_public_key: 'abc123',
       status: 'In Progress',
       priority: 'High',
       start_by: '2023-03-01T00:00:00.000Z',
@@ -163,7 +163,7 @@ describe('write_entity_to_filesystem', () => {
     const entity_properties = {
       title: 'Full Entity',
       description: 'Complete entity with all base fields',
-      user_id: 'user-123',
+      user_public_key: 'abc123',
       permalink: '/custom-path',
       tags: ['test', 'entity', 'complete'],
       relations: [

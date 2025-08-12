@@ -15,7 +15,7 @@ relations:
   - 'related_to [[sys:system/guideline/write-entity.md]]'
   - 'related_to [[sys:system/guideline/write-guideline.md]]'
 updated_at: '2023-06-28T10:00:00.000Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Choose Entity Type

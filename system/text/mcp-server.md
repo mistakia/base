@@ -12,7 +12,7 @@ relations:
   - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2025-01-06T21:10:00.000Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # MCP Server

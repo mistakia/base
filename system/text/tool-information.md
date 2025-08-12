@@ -11,7 +11,7 @@ relations:
   - relates_to [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/change-request-design.md]]
 updated_at: '2025-06-04T15:45:43.273Z'
-user_id: 00000000-0000-0000-0000-000000000000
+user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
 
 # Tool Information

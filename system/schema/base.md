@@ -24,11 +24,10 @@ properties:
     type: string
     required: false
     description: Short description of the content
-  - name: user_id
+  - name: user_public_key
     type: string
-    format: uuid
     required: true
-    description: Owning user ID
+    description: Owning user public key (hex)
   - name: tags
     type: array
     items:

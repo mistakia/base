@@ -17,7 +17,7 @@ relations:
   - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
 tags:
 updated_at: '2025-07-26T00:00:00.000Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Implement Software Task

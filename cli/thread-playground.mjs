@@ -148,7 +148,7 @@ const display_timeline = async ({ thread_id, limit = 0 }) => {
  * @returns {Promise<Object>} Created thread
  */
 const create_new_thread = async ({
-  user_id,
+  user_public_key,
   workflow_base_uri,
   inference_provider,
   model,
@@ -157,7 +157,7 @@ const create_new_thread = async ({
 }) => {
   try {
     const thread = await create_thread({
-      user_id,
+      user_public_key,
       workflow_base_uri,
       inference_provider,
       model,
@@ -311,11 +311,11 @@ const run = async () => {
       type: 'string',
       description: 'Existing thread ID to load'
     })
-    .option('user-id', {
-      alias: 'u',
+    .option('user-public-key', {
+      alias: 'k',
       type: 'string',
-      description: 'User ID for the thread',
-      default: config.user_id
+      description: 'User public key for the thread',
+      default: config.user_public_key
     })
     .option('provider', {
       alias: 'p',
@@ -418,7 +418,7 @@ const run = async () => {
     const thread_main_request = argv.request || ''
 
     thread = await create_new_thread({
-      user_id: argv['user-id'],
+      user_public_key: argv['user-public-key'],
       workflow_base_uri: argv.workflow,
       inference_provider: argv.provider,
       model: argv.model,

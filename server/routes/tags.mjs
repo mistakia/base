@@ -12,7 +12,10 @@ router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { base_uri, include_archived, search_term } = req.query
-    const user_id = req.auth.user_id
+    const user_public_key = req.auth?.user_public_key
+    if (!user_public_key) {
+      return res.status(401).send({ error: 'authentication required' })
+    }
 
     // If base_uri is provided, get a specific tag
     if (base_uri) {
@@ -24,7 +27,7 @@ router.get('/', async (req, res) => {
 
         // Get all entities associated with this tag using base_uri
         const tagged_entities = await search_entities({
-          user_id,
+          user_public_key,
           tag_base_uris: [tag.base_uri]
         })
 
@@ -41,7 +44,7 @@ router.get('/', async (req, res) => {
     } else {
       // If no base_uri, list all tags
       const tags = await list_tags_from_filesystem({
-        user_id,
+        user_public_key,
         include_archived: include_archived === 'true',
         search_term
       })

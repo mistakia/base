@@ -50,14 +50,19 @@ class FileSearchEngine {
     }
 
     // Fallback to existing entity search with search term
-    const { user_id, entity_types = null, limit = 100, offset = 0 } = options
+    const {
+      user_public_key,
+      entity_types = null,
+      limit = 100,
+      offset = 0
+    } = options
 
-    if (!user_id) {
-      throw new Error('user_id required for content search fallback')
+    if (!user_public_key) {
+      throw new Error('user_public_key required for content search fallback')
     }
 
     return search_entities({
-      user_id,
+      user_public_key,
       search_term: pattern,
       entity_types,
       limit,
@@ -84,13 +89,13 @@ class FileSearchEngine {
     }
 
     // Fallback: estimate based on search results
-    const { user_id } = options
-    if (!user_id) {
+    const { user_public_key } = options
+    if (!user_public_key) {
       return 0
     }
 
     const results = await this.search_entities({
-      user_id,
+      user_public_key,
       search_term: pattern,
       limit: 1000 // Large limit for counting
     })

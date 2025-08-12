@@ -84,7 +84,7 @@ export default async function get_thread({ thread_id }) {
  * List threads with optional filtering
  *
  * @param {Object} params Parameters
- * @param {string} [params.user_id] Filter by user ID
+ * @param {string} [params.user_public_key] Filter by user public key
  * @param {string} [params.thread_state] Filter by thread state
  * @param {number} [params.limit=50] Maximum number of threads to return
  * @param {number} [params.offset=0] Number of threads to skip
@@ -92,14 +92,14 @@ export default async function get_thread({ thread_id }) {
  * @returns {Promise<Array>} Array of thread summary objects
  */
 export async function list_threads({
-  user_id,
+  user_public_key,
   thread_state,
   limit = 50,
   offset = 0,
   user_base_directory
 }) {
   log(
-    `Listing threads${user_id ? ` for user ${user_id}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`
+    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`
   )
 
   const threads_dir = get_thread_base_directory({ user_base_directory })
@@ -119,7 +119,8 @@ export async function list_threads({
           )
           const metadata = await read_json_file({ file_path: metadata_path })
 
-          if (user_id && metadata.user_id !== user_id) return null
+          if (user_public_key && metadata.user_public_key !== user_public_key)
+            return null
           if (thread_state && metadata.thread_state !== thread_state)
             return null
 

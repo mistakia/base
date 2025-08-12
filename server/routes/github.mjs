@@ -81,7 +81,7 @@ router.post('/webhooks', async (req, res) => {
     // Get the event name and process accordingly
     const event_name = req.headers['x-github-event']
     const github_token = config.github_access_token
-    const default_user_id = config.user_id
+    const default_user_public_key = config.user_public_key
 
     // Process different event types
     switch (event_name) {
@@ -113,7 +113,7 @@ router.post('/webhooks', async (req, res) => {
           github_repository_owner: repository.owner.login,
           github_repository_name: repository.name,
           github_token,
-          user_id: default_user_id
+          user_public_key: default_user_public_key
         })
 
         log(
@@ -249,7 +249,7 @@ router.post('/webhooks', async (req, res) => {
             github_repository_owner,
             github_repository_name,
             github_token,
-            user_id: default_user_id,
+            user_public_key: default_user_public_key,
             project_item: card
           })
 

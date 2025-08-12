@@ -22,15 +22,15 @@ function handle_errors(res, error, operation) {
 // Get all threads with optional filtering
 router.get('/', async (req, res) => {
   try {
-    const { user_id, thread_state } = req.query
-    const limit = parseInt(req.query.limit) || 50
+    const { user_public_key, thread_state } = req.query
+    const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
 
-    // Use provided user_id or default to null for all users
-    const query_user_id = user_id
+    // Use provided public key or default to null for all users
+    const query_user_public_key = user_public_key
 
     const thread_list = await threads.list_threads({
-      user_id: query_user_id,
+      user_public_key: query_user_public_key,
       thread_state,
       limit,
       offset
@@ -67,7 +67,7 @@ router.get('/:thread_id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const {
-      user_id,
+      user_public_key,
       inference_provider,
       model,
       thread_main_request,
@@ -86,8 +86,12 @@ router.post('/', async (req, res) => {
     }
 
     // Create the thread
+    if (!user_public_key && !req.auth?.user_public_key) {
+      return res.status(400).json({ error: 'user_public_key is required' })
+    }
+
     const thread = await threads.create_thread({
-      user_id: user_id || 'default-user',
+      user_public_key: user_public_key || req.auth?.user_public_key,
       inference_provider,
       model,
       thread_main_request,
@@ -113,7 +117,15 @@ router.post('/:thread_id/messages', async (req, res) => {
     }
 
     // Get the thread first to access its properties
-    const thread = await threads.get_thread({ thread_id })
+    let thread
+    try {
+      thread = await threads.get_thread({ thread_id })
+    } catch (error) {
+      if (error.message && error.message.includes('Thread not found')) {
+        return res.status(404).json({ error: 'Thread not found' })
+      }
+      throw error
+    }
 
     // Add user message
     let updated_thread = await threads.add_user_message({

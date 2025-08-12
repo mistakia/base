@@ -17,10 +17,10 @@ register_tool({
           description:
             'The base relative path of the task file (e.g., user/tasks/my-task.md).'
         },
-        user_id: {
+        user_public_key: {
           type: 'string',
           description:
-            'Optional: User ID. Currently not used for access check for filesystem reads but kept for consistency.'
+            'Optional: User public key. Currently not used for access check for filesystem reads but kept for consistency.'
         }
       },
       required: ['base_uri']
@@ -29,11 +29,14 @@ register_tool({
   implementation: async (parameters, context = {}) => {
     try {
       const { base_uri } = parameters
-      const user_id = helpers.resolve_user_id(parameters, context) // Kept for consistency, not used in verify for now
+      const user_public_key = helpers.resolve_user_public_key(
+        parameters,
+        context
+      ) // Kept for consistency, not used in verify for now
 
-      log(`Getting task ${base_uri} for user ${user_id}`)
+      log(`Getting task ${base_uri} for user ${user_public_key}`)
 
-      const task = await helpers.verify_task_access(base_uri, user_id)
+      const task = await helpers.verify_task_access(base_uri, user_public_key)
 
       if (!task) {
         return {

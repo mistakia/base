@@ -28,7 +28,7 @@ describe('entity_exists_in_filesystem', () => {
     const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
-      user_id: 'test-user-123'
+      user_public_key: 'abc123'
     }
     const entity_type = 'test'
     const entity_content = '# Test Entity\n\nContent body'
@@ -76,7 +76,7 @@ describe('entity_exists_in_filesystem', () => {
     const entity_properties = {
       title: 'Unreadable Entity',
       description: 'Test description',
-      user_id: 'test-user-123'
+      user_public_key: 'abc123'
     }
     const entity_type = 'test'
 

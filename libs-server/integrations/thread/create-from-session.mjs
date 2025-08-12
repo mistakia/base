@@ -17,7 +17,7 @@ const log = debug('integrations:thread:create-from-session')
 
 export const create_thread_from_session = async ({
   normalized_session,
-  user_id = config.user_id,
+  user_public_key = config.user_public_key,
   user_base_directory = get_user_base_directory(),
   inference_provider,
   model,
@@ -52,7 +52,7 @@ export const create_thread_from_session = async ({
 
     // Use the unified create_thread function
     const thread_result = await create_thread({
-      user_id,
+      user_public_key,
       workflow_base_uri: null, // External sessions should not have a default workflow
       inference_provider,
       model,
@@ -471,7 +471,7 @@ export const create_threads_from_sessions = async (
 
       const thread_result = await create_thread_from_session({
         normalized_session: session,
-        user_id: options.user_id || config.user_id,
+        user_public_key: options.user_public_key || config.user_public_key,
         user_base_directory:
           options.user_base_directory || get_user_base_directory(),
         inference_provider: options.inference_provider,

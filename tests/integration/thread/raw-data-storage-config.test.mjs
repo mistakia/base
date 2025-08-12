@@ -32,7 +32,7 @@ describe('Raw Data Storage Configuration', () => {
 
       assert.equal(
         storage_config.timestamp_format,
-        RAW_DATA_TIMESTAMP_FORMAT.DATETIME
+        RAW_DATA_TIMESTAMP_FORMAT.DATE
       )
     })
 

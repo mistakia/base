@@ -37,7 +37,7 @@ describe('Entity Schema Module', () => {
         title: 'Task',
         type_name: 'task',
         description: 'Task schema definition',
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         extends: 'base',
         properties: [
           {
@@ -66,7 +66,7 @@ describe('Entity Schema Module', () => {
         title: 'Person',
         type_name: 'person',
         description: 'Person schema definition',
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         extends: 'base',
         properties: [
           {
@@ -97,7 +97,7 @@ describe('Entity Schema Module', () => {
         title: 'Task Extension',
         type_name: 'task_extension',
         description: 'Task extension schema definition',
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         properties: [
           {
             name: 'custom_field',
@@ -120,7 +120,7 @@ describe('Entity Schema Module', () => {
         title: 'Unknown Extension',
         type_name: 'unknown_extension',
         description: 'Unknown extension schema definition',
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         properties: [
           {
             name: 'custom_field',

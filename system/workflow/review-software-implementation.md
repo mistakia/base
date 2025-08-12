@@ -26,7 +26,7 @@ relations:
   - 'implements [[sys:system/guideline/write-javascript.md]]'
   - 'implements [[sys:system/guideline/review-software-implementation.md]]'
 updated_at: '2025-08-01T00:00:00.000Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 <task>Review and validate software implementation changes for compliance and quality before commit</task>

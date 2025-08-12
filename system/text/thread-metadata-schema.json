@@ -5,7 +5,7 @@
   "type": "object",
   "required": [
     "thread_id",
-    "user_id",
+    "user_public_key",
     "session_provider",
     "thread_state",
     "created_at",
@@ -17,10 +17,9 @@
       "format": "uuid",
       "description": "Unique identifier for the thread instance"
     },
-    "user_id": {
+    "user_public_key": {
       "type": "string",
-      "format": "uuid",
-      "description": "Identifier of the user who owns the thread"
+      "description": "Public key of the user who owns the thread"
     },
     "workflow_base_uri": {
       "type": "string",

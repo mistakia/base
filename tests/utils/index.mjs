@@ -44,12 +44,12 @@ export default {
 
 // Create a JWT authentication token for test purposes
 export const create_auth_token = (user) => {
-  if (!user || !user.user_id) {
-    throw new Error('User object with user_id is required')
+  if (!user || !user.user_public_key) {
+    throw new Error('User object with user_public_key is required')
   }
 
   // Generate a JWT token for the test user
-  return jwt.sign({ user_id: user.user_id }, config.jwt.secret)
+  return jwt.sign({ user_public_key: user.user_public_key }, config.jwt.secret)
 }
 
 // Helper to set up authentication headers for test requests

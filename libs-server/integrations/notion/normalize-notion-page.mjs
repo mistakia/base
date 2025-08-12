@@ -37,7 +37,7 @@ export async function normalize_notion_page(notion_page, options = {}) {
         title,
         content,
         external_id: `notion:page:${notion_page.id}`,
-        user_id: options.user_id
+        user_public_key: options.user_public_key
       }
     )
 

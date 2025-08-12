@@ -34,7 +34,7 @@ describe('Thread Messages API', () => {
   beforeEach(async () => {
     // Create a fresh thread for each test
     test_thread = await create_test_thread({
-      user_id: test_user.user_id
+      user_public_key: test_user.user_public_key
     })
 
     // Setup registry for API calls to use the thread's directories

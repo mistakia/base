@@ -7,7 +7,6 @@ export * as cloudflare from './integrations/cloudflare.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as git from './git/index.mjs'
-export { default as normalize_user_id } from './normalize-user-id.mjs'
 export * as markdown from './markdown/index.mjs'
 export * as blocks from './blocks/index.mjs'
 export * as threads from './threads/index.mjs'

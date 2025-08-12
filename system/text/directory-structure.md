@@ -14,7 +14,7 @@ relations:
   - 'implements [[sys:system/text/knowledge-base-schema.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.243Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Directory Structure
@@ -59,7 +59,7 @@ The `libs-server/` directory contains server-specific code organized by function
     ├── integrations/           # External service integrations
     ├── markdown/               # Markdown processing
     ├── mcp/                    # Model Context Protocol service
-    ├── normalize_user_id.mjs   # User ID normalization utilities
+    ├── normalize_user_public_key.mjs   # User public key normalization utilities
     ├── tags/                   # Tag management functionality
     ├── tasks/                  # Task management functionality
     ├── threads/                # Thread management functionality

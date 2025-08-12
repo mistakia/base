@@ -12,7 +12,7 @@ const PROTECTED_PROPERTIES = new Set([
   'title',
   'created_at',
   'updated_at',
-  'user_id',
+  'user_public_key',
   'external_id'
 ])
 

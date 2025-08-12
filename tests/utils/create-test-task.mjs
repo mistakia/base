@@ -11,7 +11,7 @@ import { setup_test_directories } from './setup-test-directories.mjs'
  * Database operations have been removed in favor of pure file-based storage.
  *
  * @param {Object} options - Test options
- * @param {string} options.user_id - User ID
+ * @param {string} options.user_public_key - User public key
  * @param {string} [options.title='Test Task'] - Task title
  * @param {string} [options.description='A task for testing'] - Task description
  * @param {string} [options.status='No status'] - Task status
@@ -22,7 +22,7 @@ import { setup_test_directories } from './setup-test-directories.mjs'
  * @returns {Promise<Object>} Object containing base_uri, test_directories, and cleanup function
  */
 export default async function create_test_task({
-  user_id,
+  user_public_key,
   title = 'Test Task',
   description = 'A task for testing',
   status = 'No status',
@@ -34,12 +34,12 @@ export default async function create_test_task({
   test_directories,
   ...other_task_properties
 }) {
-  if (!user_id) {
-    throw new Error('user_id is required')
+  if (!user_public_key) {
+    throw new Error('user_public_key is required')
   }
 
   const task_properties = {
-    user_id,
+    user_public_key,
     title,
     description,
     status,

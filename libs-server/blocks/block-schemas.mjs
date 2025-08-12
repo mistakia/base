@@ -53,7 +53,7 @@ export const BASE_BLOCK = {
     // Additional metadata
     created_at: null, // Creation timestamp
     updated_at: null, // Last update timestamp
-    user_id: null, // Owner of the block
+    user_public_key: null, // Owner of the block
     tags: [], // Optional tags
     position: {
       // Position in source document

@@ -60,7 +60,11 @@ export const validate_claude_session_structure = ({ session }) => {
     errors.push('Missing session_id')
   }
 
-  if (!session.entries || !Array.isArray(session.entries) || session.entries.length === 0) {
+  if (
+    !session.entries ||
+    !Array.isArray(session.entries) ||
+    session.entries.length === 0
+  ) {
     errors.push('Missing or invalid entries array')
   }
 

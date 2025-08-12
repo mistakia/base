@@ -25,7 +25,7 @@ const log = debug('sync-github-issues')
  * @param {Array} options.issues - GitHub issues to process
  * @param {string} options.github_repository_owner - Repository owner
  * @param {string} options.github_repository_name - Repository name
- * @param {string} options.user_id - User ID
+ * @param {string} options.user_public_key - User public key
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {Object} [options.project_items_map] - Project items map (optional)
  * @param {Object} [options.comments_map] - Map of issue numbers to comments (optional)
@@ -39,7 +39,7 @@ export async function sync_github_issues({
   issues,
   github_repository_owner,
   github_repository_name,
-  user_id,
+  user_public_key,
   user_base_directory,
   project_items_map,
   comments_map = {},
@@ -94,7 +94,7 @@ export async function sync_github_issues({
         github_repository_owner,
         github_repository_name,
         user_base_directory,
-        user_id,
+        user_public_key,
         import_history_base_directory,
         github_token,
         github_project_number,

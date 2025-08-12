@@ -8,21 +8,21 @@ const log = debug('tag:filesystem:list')
  * This replaces the database-based tag listing with file-based operations
  *
  * @param {Object} params Parameters
- * @param {string} params.user_id User ID
+ * @param {string} params.user_public_key User public key
  * @param {boolean} [params.include_archived=false] Whether to include archived tags
  * @param {string} [params.search_term] Search term to filter tags by title
  * @returns {Promise<Array>} Array of tag objects
  */
 export async function list_tags_from_filesystem({
-  user_id,
+  user_public_key,
   include_archived = false,
   search_term
 } = {}) {
   try {
-    log(`Listing tags from filesystem for user ${user_id}`)
+    log(`Listing tags from filesystem for user ${user_public_key}`)
 
-    if (!user_id) {
-      throw new Error('user_id is required')
+    if (!user_public_key) {
+      throw new Error('user_public_key is required')
     }
 
     // Use the proper entity listing function that handles entity validation and type filtering
@@ -38,7 +38,7 @@ export async function list_tags_from_filesystem({
         const { entity_properties } = entity_file
 
         // Skip if not belonging to the user
-        if (entity_properties.user_id !== user_id) {
+        if (entity_properties.user_public_key !== user_public_key) {
           continue
         }
 
@@ -66,7 +66,7 @@ export async function list_tags_from_filesystem({
           tag_entity_id: entity_properties.entity_id,
           title: entity_properties.title,
           description: entity_properties.description,
-          user_id: entity_properties.user_id,
+          user_public_key: entity_properties.user_public_key,
           created_at: entity_properties.created_at,
           updated_at: entity_properties.updated_at,
           // Tag-specific properties from frontmatter

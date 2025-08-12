@@ -45,7 +45,6 @@ export const parse_claude_jsonl_file = async (file_path) => {
       crlfDelay: Infinity
     })
 
-    const sessions = new Map()
     let line_count = 0
     let primary_session_id = null
     const file_summaries = []

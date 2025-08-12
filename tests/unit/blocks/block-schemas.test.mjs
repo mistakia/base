@@ -52,7 +52,7 @@ describe('Block Schemas', () => {
     it('should have proper metadata structure', () => {
       expect(BASE_BLOCK.metadata).to.have.property('created_at')
       expect(BASE_BLOCK.metadata).to.have.property('updated_at')
-      expect(BASE_BLOCK.metadata).to.have.property('user_id')
+      expect(BASE_BLOCK.metadata).to.have.property('user_public_key')
       expect(BASE_BLOCK.metadata).to.have.property('tags')
       expect(BASE_BLOCK.metadata).to.have.property('position')
 
@@ -216,7 +216,7 @@ describe('Block Schemas', () => {
 
     it('should create block with custom metadata', () => {
       const custom_metadata = {
-        user_id: 'test-user-123',
+        user_public_key: 'test-user-123',
         tags: ['tag1', 'tag2'],
         position: {
           start: { line: 5, character: 10 },
@@ -230,7 +230,7 @@ describe('Block Schemas', () => {
         metadata: custom_metadata
       })
 
-      expect(block.metadata.user_id).to.equal('test-user-123')
+      expect(block.metadata.user_public_key).to.equal('test-user-123')
       expect(block.metadata.tags).to.deep.equal(['tag1', 'tag2'])
       expect(block.metadata.position.start.line).to.equal(5)
       expect(block.metadata.position.start.character).to.equal(10)

@@ -7,7 +7,7 @@ created_at: '2025-05-28T18:48:51.491Z'
 entity_id: 'b1a773c0-70d5-4f13-aa76-e6191119a27a'
 tags:
 updated_at: '2025-05-28T18:48:51.491Z'
-user_id: '00000000-0000-0000-0000-000000000000'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 You are an Agent working in your own Execution Thread workspace. You have been assigned a specific workflow.

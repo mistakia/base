@@ -66,15 +66,13 @@ const verify_postgres_export = async () => {
 
     // Validate user records
     const required_user_fields = [
-      'user_id',
+      'user_public_key',
       'username',
-      'public_key',
       'email',
       'created_at',
       'updated_at'
     ]
     const public_keys = new Set()
-    const user_ids = new Set()
 
     for (let i = 0; i < export_data.users.length; i++) {
       const user = export_data.users[i]
@@ -87,21 +85,17 @@ const verify_postgres_export = async () => {
       }
 
       // Check for duplicate public keys
-      if (public_keys.has(user.public_key)) {
-        throw new Error(`User ${i}: Duplicate public key: ${user.public_key}`)
+      if (public_keys.has(user.user_public_key)) {
+        throw new Error(
+          `User ${i}: Duplicate public key: ${user.user_public_key}`
+        )
       }
-      public_keys.add(user.public_key)
-
-      // Check for duplicate user IDs
-      if (user_ids.has(user.user_id)) {
-        throw new Error(`User ${i}: Duplicate user_id: ${user.user_id}`)
-      }
-      user_ids.add(user.user_id)
+      public_keys.add(user.user_public_key)
 
       // Validate public key format (should be 64 hex characters)
-      if (!/^[a-f0-9]{64}$/i.test(user.public_key)) {
+      if (!/^[a-f0-9]{64}$/i.test(user.user_public_key)) {
         throw new Error(
-          `User ${i}: Invalid public key format: ${user.public_key}`
+          `User ${i}: Invalid public key format: ${user.user_public_key}`
         )
       }
 

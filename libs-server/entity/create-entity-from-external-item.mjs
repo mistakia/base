@@ -15,7 +15,7 @@ const log = debug('entity:external')
  * @param {string} options.external_system - The external system identifier (e.g., 'github')
  * @param {string} options.external_id - External identifier for the item
  * @param {string} options.absolute_path - Absolute path where entity should be written
- * @param {string} options.user_id - The user creating the entity
+ * @param {string} options.user_public_key - The user public key creating the entity
  * @param {string} [options.import_cid] - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
  * @param {Object} [options.trx=null] - Optional database transaction
@@ -29,7 +29,7 @@ export async function create_entity_from_external_item({
   external_system,
   external_id,
   absolute_path,
-  user_id,
+  user_public_key,
   import_cid,
   import_history_base_directory = null,
   trx = null
@@ -61,8 +61,8 @@ export async function create_entity_from_external_item({
       throw new Error('Missing absolute_path parameter')
     }
 
-    if (!user_id) {
-      throw new Error('Missing user_id parameter')
+    if (!user_public_key) {
+      throw new Error('Missing user_public_key parameter')
     }
 
     // Create a copy of the entity properties to avoid mutations

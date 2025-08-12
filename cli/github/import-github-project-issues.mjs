@@ -16,7 +16,7 @@ export default async function import_github_project_issues({
   username,
   github_project_number,
   github_token,
-  user_id,
+  user_public_key,
   user_base_directory = config.user_base_directory,
   force = false,
   // used to mock the get_github_project function for testing
@@ -134,7 +134,7 @@ export default async function import_github_project_issues({
         issues: repo_data.issues,
         github_repository_owner: repo_data.github_repository_owner,
         github_repository_name: repo_data.github_repository_name,
-        user_id,
+        user_public_key,
         user_base_directory,
         project_items_map,
         comments_map,
@@ -214,7 +214,7 @@ const main = async () => {
       username: argv.username,
       github_project_number: argv.project,
       github_token: config.github_access_token,
-      user_id: config.user_id,
+      user_public_key: config.user_public_key,
       user_base_directory: config.user_base_directory,
       force: argv.force
     })

@@ -48,12 +48,12 @@ describe('Threads API', () => {
     beforeEach(async () => {
       // Create some test threads
       await create_test_thread({
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         test_directories
       })
 
       await create_test_thread({
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         thread_state: thread_constants.THREAD_STATE.PAUSED,
         test_directories
       })
@@ -64,7 +64,7 @@ describe('Threads API', () => {
         chai.request(server).get('/api/threads'),
         test_user
       ).query({
-        user_id: test_user.user_id
+        user_public_key: test_user.user_public_key
       })
 
       expect(response).to.have.status(200)
@@ -74,7 +74,10 @@ describe('Threads API', () => {
       // Verify thread properties
       response.body.forEach((thread) => {
         expect(thread).to.have.property('thread_id')
-        expect(thread).to.have.property('user_id', test_user.user_id)
+        expect(thread).to.have.property(
+          'user_public_key',
+          test_user.user_public_key
+        )
         expect(thread).to.have.property('inference_provider')
         expect(thread).to.have.property('model')
         expect(thread).to.have.property('thread_state')
@@ -86,7 +89,7 @@ describe('Threads API', () => {
         chai.request(server).get('/api/threads'),
         test_user
       ).query({
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         thread_state: 'active'
       })
 
@@ -110,7 +113,7 @@ describe('Threads API', () => {
     beforeEach(async () => {
       // Create a test thread with a main request
       test_thread = await create_test_thread({
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         test_directories,
         initial_timeline: [
           {
@@ -132,7 +135,7 @@ describe('Threads API', () => {
       expect(response).to.have.status(200)
       expect(response.body).to.be.an('object')
       expect(response.body.thread_id).to.equal(test_thread.thread_id)
-      expect(response.body.user_id).to.equal(test_user.user_id)
+      expect(response.body.user_public_key).to.equal(test_user.user_public_key)
       expect(response.body.inference_provider).to.equal('ollama')
       expect(response.body.model).to.equal('llama2')
 
@@ -168,7 +171,7 @@ describe('Threads API', () => {
     beforeEach(async () => {
       // Create some test threads
       await create_test_thread({
-        user_id: test_user.user_id,
+        user_public_key: test_user.user_public_key,
         test_directories
       })
     })
@@ -189,7 +192,7 @@ describe('Threads API', () => {
       expect(response).to.have.status(201)
       expect(response.body).to.be.an('object')
       expect(response.body.thread_id).to.be.a('string')
-      expect(response.body.user_id).to.equal(test_user.user_id)
+      expect(response.body.user_public_key).to.equal(test_user.user_public_key)
       expect(response.body.inference_provider).to.equal('ollama')
       expect(response.body.model).to.equal('llama2')
       expect(response.body.thread_state).to.equal('active')

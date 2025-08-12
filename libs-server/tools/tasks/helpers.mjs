@@ -15,23 +15,28 @@ export const helpers = {
    * @param {Object} context Request context
    * @returns {String} Resolved user ID
    */
-  resolve_user_id(parameters, context = {}) {
-    const user_id = parameters.user_id || context?.user_id || config.user_id
+  resolve_user_public_key(parameters, context = {}) {
+    const user_public_key =
+      parameters.user_public_key ||
+      context?.user_public_key ||
+      config.user_public_key
 
-    if (!user_id) {
-      throw new Error('User ID is required but could not be determined.')
+    if (!user_public_key) {
+      throw new Error(
+        'User public key is required but could not be determined.'
+      )
     }
 
-    return user_id
+    return user_public_key
   },
 
   /**
    * Verifies a user has access to a task file
    * @param {String} base_uri Task base relative path to check
-   * @param {String} user_id User ID to check (currently not used for filesystem access, but good for future)
+   * @param {String} user_public_key User public key to check
    * @returns {Object|null} Task object if access is granted (or file exists), null otherwise
    */
-  async verify_task_access(base_uri, user_id) {
+  async verify_task_access(base_uri, user_public_key) {
     // For now, we read from filesystem. Git read might be needed later.
     const task_result = await read_task_from_filesystem({ base_uri })
 
@@ -40,9 +45,9 @@ export const helpers = {
       return null
     }
 
-    if (task_result.entity_properties.user_id !== user_id) {
+    if (task_result.entity_properties.user_public_key !== user_public_key) {
       log(
-        `Access denied: Task ${base_uri} user ${task_result.entity_properties.user_id} does not match requesting user ${user_id}`
+        `Access denied: Task ${base_uri} user ${task_result.entity_properties.user_public_key} does not match requesting user ${user_public_key}`
       )
       return null
     }

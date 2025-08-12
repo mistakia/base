@@ -14,8 +14,8 @@ chai.use(chaiHttp)
 
 describe('API /users', () => {
   let user_data
-  let private_key
-  let public_key
+  let user_private_key
+  let user_public_key
   let signature
   let auth_token
 
@@ -23,18 +23,18 @@ describe('API /users', () => {
     await reset_all_tables()
 
     // Create keys for a test user
-    private_key = crypto.randomBytes(32)
-    public_key = ed25519.publicKey(private_key)
+    user_private_key = crypto.randomBytes(32)
+    user_public_key = ed25519.publicKey(user_private_key)
 
     user_data = {
-      public_key: public_key.toString('hex'),
+      user_public_key: user_public_key.toString('hex'),
       username: 'testuser_' + Date.now().toString(36),
       email: 'test@example.com'
     }
 
     // Add user to users.json for access control
     const users = await user_registry.load_users()
-    users[user_data.public_key] = {
+    users[user_data.user_public_key] = {
       username: user_data.username,
       created_at: new Date().toISOString(),
       permissions: {}
@@ -42,7 +42,9 @@ describe('API /users', () => {
     await user_registry.save_users(users)
 
     const data_hash = ed25519.hash(JSON.stringify(user_data))
-    signature = ed25519.sign(data_hash, private_key, public_key).toString('hex')
+    signature = ed25519
+      .sign(data_hash, user_private_key, user_public_key)
+      .toString('hex')
   })
 
   it('should authenticate an authorized user', async () => {
@@ -54,18 +56,18 @@ describe('API /users', () => {
     res.should.have.status(200)
     res.body.should.be.a('object')
     res.body.should.have.property('token')
-    res.body.should.have.property('public_key')
+    res.body.should.have.property('user_public_key')
     res.body.should.have.property('username')
     res.body.username.should.equal(user_data.username)
-    res.body.public_key.should.equal(user_data.public_key)
+    res.body.user_public_key.should.equal(user_data.user_public_key)
 
     // Store for future tests
     auth_token = res.body.token
 
     // Verify token is a valid JWT
     const decoded = jwt.verify(res.body.token, config.jwt.secret)
-    decoded.should.have.property('public_key')
-    decoded.public_key.should.equal(user_data.public_key)
+    decoded.should.have.property('user_public_key')
+    decoded.user_public_key.should.equal(user_data.user_public_key)
   })
 
   it('should get a user by username', async () => {
@@ -76,18 +78,18 @@ describe('API /users', () => {
 
     res.should.have.status(200)
     res.body.should.be.a('object')
-    res.body.should.have.property('public_key')
+    res.body.should.have.property('user_public_key')
     res.body.should.have.property('username')
     res.body.should.have.property('created_at')
 
     res.body.username.should.equal(user_data.username)
-    res.body.public_key.should.equal(user_data.public_key)
+    res.body.user_public_key.should.equal(user_data.user_public_key)
   })
 
-  it('should get a user by public_key', async () => {
+  it('should get a user by user_public_key', async () => {
     const res = await chai
       .request(server)
-      .get(`/api/users/public_keys/${user_data.public_key}`)
+      .get(`/api/users/public_keys/${user_data.user_public_key}`)
 
     res.should.have.status(200)
     res.body.should.be.a('object')
@@ -100,13 +102,13 @@ describe('API /users', () => {
 
   it('should create a session and return JWT token', async () => {
     const session_data = {
-      public_key: user_data.public_key,
+      user_public_key: user_data.user_public_key,
       timestamp: Date.now()
     }
 
     const data_hash = ed25519.hash(JSON.stringify(session_data))
     const session_signature = ed25519
-      .sign(data_hash, private_key, public_key)
+      .sign(data_hash, user_private_key, user_public_key)
       .toString('hex')
 
     const res = await chai.request(server).post('/api/users/session').send({
@@ -117,15 +119,15 @@ describe('API /users', () => {
     res.should.have.status(200)
     res.body.should.be.a('object')
     res.body.should.have.property('token')
-    res.body.should.have.property('public_key')
+    res.body.should.have.property('user_public_key')
     res.body.should.have.property('username')
 
-    res.body.public_key.should.equal(user_data.public_key)
+    res.body.user_public_key.should.equal(user_data.user_public_key)
     res.body.username.should.equal(user_data.username)
 
     // Verify token is a valid JWT
     const decoded = jwt.verify(res.body.token, config.jwt.secret)
-    decoded.should.have.property('public_key')
-    decoded.public_key.should.equal(user_data.public_key)
+    decoded.should.have.property('user_public_key')
+    decoded.user_public_key.should.equal(user_data.user_public_key)
   })
 })

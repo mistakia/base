@@ -9,7 +9,7 @@ const DirectoryPage = ({ directory_markdown }) => {
   return (
     <PageLayout>
       {directory_markdown && (
-        <div className="directory-markdown-container">
+        <div className='directory-markdown-container'>
           <MarkdownViewer content={directory_markdown} />
         </div>
       )}

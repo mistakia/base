@@ -122,7 +122,7 @@ async function initialize_memory_repository({ memory_dir }) {
  * Build thread metadata for both standard and imported/external session threads
  * @param {Object} params - Metadata parameters
  * @param {string} params.thread_id
- * @param {string} params.user_id
+ * @param {string} params.user_public_key
  * @param {string} params.workflow_base_uri
  * @param {string} params.inference_provider
  * @param {string|Array<string>} params.model - Single model or array of models (legacy)
@@ -138,7 +138,7 @@ async function initialize_memory_repository({ memory_dir }) {
  */
 export function build_thread_metadata({
   thread_id,
-  user_id,
+  user_public_key,
   workflow_base_uri,
   inference_provider,
   model,
@@ -166,7 +166,7 @@ export function build_thread_metadata({
 
   const metadata = {
     thread_id,
-    user_id,
+    user_public_key,
     workflow_base_uri,
     inference_provider,
     models: models_array,
@@ -187,7 +187,7 @@ export function build_thread_metadata({
  * Create a new thread with proper structure
  *
  * @param {Object} params Thread creation parameters
- * @param {string} params.user_id ID of the user who owns the thread
+ * @param {string} params.user_public_key Public key of the user who owns the thread
  * @param {string} [params.workflow_base_uri] Workflow base relative path in format (optional for external sessions)
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} [params.model] Model to use from the provider (legacy, single model)
@@ -205,7 +205,7 @@ export function build_thread_metadata({
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
-  user_id,
+  user_public_key,
   workflow_base_uri = THREAD_DEFAULT_WORKFLOW_BASE_URI,
   inference_provider,
   model,
@@ -222,8 +222,8 @@ export default async function create_thread({
   updated_at = null
 }) {
   // Validate required parameters
-  if (!user_id) {
-    throw new Error('user_id is required')
+  if (!user_public_key) {
+    throw new Error('user_public_key is required')
   }
 
   if (!inference_provider) {
@@ -288,7 +288,7 @@ export default async function create_thread({
   } else {
     thread_id = uuid()
     log(
-      `Creating thread ${thread_id} for user ${user_id} with workflow ${workflow_base_uri}`
+      `Creating thread ${thread_id} for user ${user_public_key} with workflow ${workflow_base_uri}`
     )
   }
 
@@ -325,7 +325,7 @@ export default async function create_thread({
   // Create metadata using shared builder
   const metadata = build_thread_metadata({
     thread_id,
-    user_id,
+    user_public_key,
     workflow_base_uri,
     inference_provider,
     model,

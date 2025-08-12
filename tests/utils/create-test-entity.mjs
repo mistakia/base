@@ -15,7 +15,7 @@ const log = debug('test:create-test-entity')
  * @param {string} [options.entity_type='text'] - The type of entity being created
  * @param {string} [options.entity_content] - The markdown content (auto-generated if omitted)
  * @param {string} [options.commit_message] - Custom commit message (auto-generated if omitted)
- * @param {string} [options.user_id] - User ID for the entity (auto-generated if omitted)
+ * @param {string} [options.user_public_key] - User public key for the entity (auto-generated if omitted)
  * @returns {Promise<Object>} - Object containing entity details and write result
  */
 export async function create_test_entity({
@@ -25,7 +25,7 @@ export async function create_test_entity({
   entity_type = 'text',
   entity_content,
   commit_message,
-  user_id
+  user_public_key
 } = {}) {
   try {
     if (!base_uri) {
@@ -34,7 +34,7 @@ export async function create_test_entity({
 
     // Generate default values
     const entity_id = entity_properties.entity_id || uuidv4()
-    const default_user_id = user_id || uuidv4()
+    const default_user_public_key = user_public_key || uuidv4()
     const default_title = `Test ${entity_type.charAt(0).toUpperCase() + entity_type.slice(1)} Entity`
     const default_description = `This is a test ${entity_type} entity for testing purposes.`
 
@@ -61,7 +61,7 @@ This entity contains sample content to test the import and processing functional
       entity_id,
       title: default_title,
       description: default_description,
-      user_id: default_user_id,
+      user_public_key: default_user_public_key,
       ...entity_properties // Override defaults with provided properties
     }
 

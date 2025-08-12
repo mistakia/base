@@ -14,10 +14,10 @@ register_tool({
     inputSchema: {
       type: 'object',
       properties: {
-        user_id: {
+        user_public_key: {
           type: 'string',
           description:
-            'Optional: User ID to filter tasks by. Defaults to configured user.'
+            'Optional: User public key to filter tasks by. Defaults to configured user.'
         },
         include_status: {
           type: 'array',
@@ -70,9 +70,12 @@ register_tool({
         include_completed = false
       } = parameters
 
-      const user_id = helpers.resolve_user_id(parameters, context)
+      const user_public_key = helpers.resolve_user_public_key(
+        parameters,
+        context
+      )
 
-      log(`Getting filtered tasks from filesystem for user ${user_id}`)
+      log(`Getting filtered tasks from filesystem for user ${user_public_key}`)
 
       // Add 'completed' to exclude_status if include_completed is false
       const final_exclude_status = include_completed

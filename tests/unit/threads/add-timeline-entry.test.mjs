@@ -22,7 +22,7 @@ describe('add_timeline_entry', () => {
   beforeEach(async () => {
     // Create a fresh thread for each test
     test_thread = await create_test_thread({
-      user_id: test_user.user_id
+      user_public_key: test_user.user_public_key
     })
   })
 

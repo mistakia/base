@@ -310,7 +310,7 @@ export function extract_tags_from_issue_labels(labels) {
  * @param {string} options.github_repository_name - Repository name
  * @param {Object} options.project_item - GitHub project item (optional)
  * @param {Object} options.project_fields - Project fields (optional)
- * @param {string} options.user_id - User ID
+ * @param {string} options.user_public_key - User public key
  * @param {Array} [options.comments=[]] - GitHub issue comments
  * @returns {Object} Normalized issue data with github_comments field
  */
@@ -322,7 +322,7 @@ export function normalize_github_issue({
   github_repository_name,
   project_item,
   project_fields = {},
-  user_id,
+  user_public_key,
   comments = []
 }) {
   // Make sure we have an object to work with
@@ -330,13 +330,13 @@ export function normalize_github_issue({
     throw new Error('Missing issue data for normalization')
   }
 
-  if (!user_id) {
-    throw new Error('Missing user ID for normalization')
+  if (!user_public_key) {
+    throw new Error('Missing user public key for normalization')
   }
 
   // Extract basic fields
   const normalized_github_issue = {
-    user_id,
+    user_public_key,
     title: issue.title,
     description: issue.body || 'No description provided',
     status: map_status({ data: issue, direction: 'to_internal' }),

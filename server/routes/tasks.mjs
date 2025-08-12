@@ -10,7 +10,7 @@ const router = express.Router({ mergeParams: true })
 // Get all tasks with optional filtering OR get a specific task by base_uri
 router.get('/', async (req, res) => {
   const { log } = req.app.locals
-  const { user_id } = req.params
+  const { user_public_key } = req.params
   try {
     const {
       base_uri,
@@ -29,8 +29,8 @@ router.get('/', async (req, res) => {
       archived
     } = req.query
 
-    if (!user_id) {
-      return res.status(400).send({ error: 'missing user_id' })
+    if (!user_public_key) {
+      return res.status(400).send({ error: 'missing user_public_key' })
     }
 
     // If base_uri is provided, get a specific task
@@ -75,7 +75,7 @@ router.get('/', async (req, res) => {
         : []
 
       const tasks = await list_tasks_from_filesystem({
-        user_id,
+        user_public_key,
         status,
         tag_entity_ids: parsed_tag_entity_ids,
         organization_ids: parsed_organization_ids,

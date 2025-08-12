@@ -140,7 +140,7 @@ export async function update_thread_metadata({
   delete current_metadata.context_dir
 
   // Prevent updating protected fields
-  const protected_fields = ['thread_id', 'user_id', 'created_at']
+  const protected_fields = ['thread_id', 'user_public_key', 'created_at']
 
   for (const field of protected_fields) {
     if (metadata[field] !== undefined) {

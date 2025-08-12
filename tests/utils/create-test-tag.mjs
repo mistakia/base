@@ -7,7 +7,7 @@ import { write_tag_to_filesystem } from '#libs-server/tag/filesystem/write-tag-t
  * Creates a tag entity for testing in the filesystem.
  *
  * @param {Object} options - Test options
- * @param {string} options.user_id - User ID
+ * @param {string} options.user_public_key - User public key
  * @param {string} [options.title='Test Tag'] - Tag title
  * @param {string} [options.description='A tag for testing'] - Tag description
  * @param {string} [options.color='#FF0000'] - Tag color
@@ -15,19 +15,19 @@ import { write_tag_to_filesystem } from '#libs-server/tag/filesystem/write-tag-t
  * @returns {Promise<Object>} Object containing base_uri and cleanup function
  */
 export default async function create_test_tag({
-  user_id,
+  user_public_key,
   title = 'Test Tag',
   description = 'A tag for testing',
   color = '#FF0000',
   base_uri
 }) {
-  if (!user_id) {
-    throw new Error('user_id is required')
+  if (!user_public_key) {
+    throw new Error('user_public_key is required')
   }
 
   const tag_properties = {
     title,
-    user_id,
+    user_public_key,
     description,
     color,
     created_at: new Date(),

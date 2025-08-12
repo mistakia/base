@@ -25,7 +25,7 @@ describe('read_entity_from_filesystem', () => {
     const entity_properties = {
       title: 'Test Entity',
       description: 'Test description',
-      user_id: '123456',
+      user_public_key: 'abc123',
       tags: ['tag1', 'tag2']
     }
     const entity_type = 'test'
@@ -50,7 +50,7 @@ describe('read_entity_from_filesystem', () => {
       title: 'Test Entity',
       type: 'test',
       description: 'Test description',
-      user_id: '123456'
+      user_public_key: 'abc123'
     })
 
     // Check that tags are present
@@ -71,7 +71,7 @@ describe('read_entity_from_filesystem', () => {
     const entity_properties = {
       title: 'Complex Entity',
       description: 'Entity with complex frontmatter',
-      user_id: 'user-123',
+      user_public_key: 'abc123',
       status: 'In Progress',
       priority: 'High',
       relations: [
@@ -136,7 +136,7 @@ describe('read_entity_from_filesystem', () => {
     const content = `---
 title: "No Type Entity"
 description: "Entity without type"
-user_id: "123456"
+user_public_key: abc123
 ---
 
 # No Type Entity

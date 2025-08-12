@@ -35,7 +35,6 @@ import {
   get_file_content_request_actions,
   get_path_info_request_actions
 } from '@core/directory/actions'
-import { get_resource_request_actions } from '@core/resource/actions'
 import {
   get_thread_timeline_actions,
   get_thread_metadata_actions
@@ -178,12 +177,6 @@ export const get_path_info = fetch.bind(
   null,
   api.get_path_info,
   get_path_info_request_actions
-)
-
-export const get_resource = fetch.bind(
-  null,
-  api.get_resource,
-  get_resource_request_actions
 )
 
 export const get_thread_timeline = fetch.bind(

@@ -9,7 +9,7 @@ const { THREAD_STATE } = thread_constants
  * Creates a test thread with specified parameters
  *
  * @param {Object} options Thread options
- * @param {string} [options.user_id] User ID (creates test user if not provided)
+ * @param {string} [options.user_public_key] User public key (creates test user if not provided)
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
  * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, paused, terminated)
@@ -20,7 +20,7 @@ const { THREAD_STATE } = thread_constants
  * @returns {Promise<Object>} Created thread info including thread_id, context_dir, and user
  */
 export default async function create_test_thread({
-  user_id,
+  user_public_key,
   inference_provider = 'ollama',
   model = 'llama2',
   thread_state = THREAD_STATE.ACTIVE,
@@ -30,7 +30,7 @@ export default async function create_test_thread({
   create_git_branches = false
 }) {
   // Create test user if not provided
-  const user = user_id ? { user_id } : await create_test_user()
+  const user = user_public_key ? { user_public_key } : await create_test_user()
 
   // Setup test directories if not provided
   let temp_repo
@@ -61,7 +61,7 @@ export default async function create_test_thread({
 
   // Create the thread using the actual implementation
   const thread = await create_thread({
-    user_id: user.user_id,
+    user_public_key: user.user_public_key,
     inference_provider,
     model,
     thread_state,

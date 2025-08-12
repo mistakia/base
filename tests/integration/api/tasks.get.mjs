@@ -13,7 +13,7 @@ import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 chai.should()
 chai.use(chaiHttp)
 
-describe('API /:user_id/tasks GET', () => {
+describe('API /:user_public_key/tasks GET', () => {
   let user
   // let task_entity_id
   let task_base_uri
@@ -28,7 +28,7 @@ describe('API /:user_id/tasks GET', () => {
   beforeEach(async () => {
     // Create a test task before each test
     const { base_uri, test_directories: directories } = await create_test_task({
-      user_id: user.user_id,
+      user_public_key: user.user_public_key,
       title: 'Test Task',
       description: 'A task for testing',
       finish_by: new Date('2023-01-01')
@@ -49,7 +49,7 @@ describe('API /:user_id/tasks GET', () => {
     it('should get all tasks for a user', async () => {
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_id}/tasks`)
+        .get(`/api/users/${user.user_public_key}/tasks`)
 
       res.should.have.status(200)
       res.body.should.be.an('array')
@@ -60,19 +60,19 @@ describe('API /:user_id/tasks GET', () => {
       task.should.have.property('base_uri')
       task.should.have.property('title')
       task.should.have.property('description')
-      task.should.have.property('user_id')
+      task.should.have.property('user_public_key')
       task.should.have.property('created_at')
       task.should.have.property('updated_at')
       task.should.have.property('status')
       task.should.have.property('priority')
       task.should.have.property('finish_by')
-      task.user_id.should.equal(user.user_id)
+      task.user_public_key.should.equal(user.user_public_key)
     })
 
     it('should filter tasks by status', async () => {
       // Create a task with specific status for testing
       await create_test_task({
-        user_id: user.user_id,
+        user_public_key: user.user_public_key,
         title: 'Waiting Task',
         description: 'A task with waiting status',
         status: 'Waiting'
@@ -80,7 +80,7 @@ describe('API /:user_id/tasks GET', () => {
 
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_id}/tasks`)
+        .get(`/api/users/${user.user_public_key}/tasks`)
         .query({
           status: 'Waiting'
         })
@@ -100,7 +100,7 @@ describe('API /:user_id/tasks GET', () => {
     it('should get a specific task by base_uri', async () => {
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_id}/tasks`)
+        .get(`/api/users/${user.user_public_key}/tasks`)
         .query({ base_uri: task_base_uri })
 
       res.should.have.status(200)
@@ -109,7 +109,7 @@ describe('API /:user_id/tasks GET', () => {
       res.body.base_uri.should.equal(task_base_uri)
       res.body.should.have.property('title')
       res.body.should.have.property('description')
-      res.body.should.have.property('user_id')
+      res.body.should.have.property('user_public_key')
       res.body.should.have.property('created_at')
       res.body.should.have.property('updated_at')
       res.body.should.have.property('status')
@@ -123,7 +123,7 @@ describe('API /:user_id/tasks GET', () => {
       const non_existent_base_uri = 'user:task/non-existent-task.md'
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_id}/tasks`)
+        .get(`/api/users/${user.user_public_key}/tasks`)
         .query({ base_uri: non_existent_base_uri })
 
       res.should.have.status(404)

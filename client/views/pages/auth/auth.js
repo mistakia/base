@@ -12,27 +12,27 @@ import './auth.styl'
 
 function generate_key_pair() {
   const array = new Uint8Array(32)
-  const private_key = Convert.ab2hex(crypto.getRandomValues(array))
-  const keys = new Ed25519().generateKeys(private_key)
+  const user_private_key = Convert.ab2hex(crypto.getRandomValues(array))
+  const keys = new Ed25519().generateKeys(user_private_key)
   return {
-    private_key,
-    public_key: keys.publicKey.toString('hex')
+    user_private_key,
+    user_public_key: keys.publicKey.toString('hex')
   }
 }
 
-function get_keypair_from_private_key(private_key) {
-  private_key = private_key.replace(/\s/g, '')
-  const keys = new Ed25519().generateKeys(private_key)
+function get_keypair_from_private_key(user_private_key) {
+  user_private_key = user_private_key.replace(/\s/g, '')
+  const keys = new Ed25519().generateKeys(user_private_key)
   return {
-    private_key: keys.privateKey.toString('hex'),
-    public_key: keys.publicKey.toString('hex')
+    user_private_key: keys.privateKey.toString('hex'),
+    user_public_key: keys.publicKey.toString('hex')
   }
 }
 
 export default function AuthPage({
   load_from_new_keypair,
   load_from_private_key,
-  private_key
+  user_private_key
 }) {
   const generateKey = () => {
     const keypair = generate_key_pair()
@@ -44,11 +44,11 @@ export default function AuthPage({
     load_from_private_key(keypair)
   }
 
-  if (private_key) {
-    const keypair = get_keypair_from_private_key(private_key)
-    const first = private_key.slice(0, 8)
-    const middle = private_key.slice(8, -8).match(/.{1,8}/g)
-    const last = private_key.slice(-8)
+  if (user_private_key) {
+    const keypair = get_keypair_from_private_key(user_private_key)
+    const first = user_private_key.slice(0, 8)
+    const middle = user_private_key.slice(8, -8).match(/.{1,8}/g)
+    const last = user_private_key.slice(-8)
 
     return (
       <Container maxWidth='md' className='home__container'>
@@ -74,7 +74,7 @@ export default function AuthPage({
           <div className='public_key_display'>
             <TextField
               label='Public Key'
-              value={keypair.public_key}
+              value={keypair.user_public_key}
               variant='outlined'
               fullWidth
               InputProps={{
@@ -124,5 +124,5 @@ export default function AuthPage({
 AuthPage.propTypes = {
   load_from_new_keypair: PropTypes.func.isRequired,
   load_from_private_key: PropTypes.func.isRequired,
-  private_key: PropTypes.string
+  user_private_key: PropTypes.string
 }

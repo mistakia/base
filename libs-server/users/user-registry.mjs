@@ -106,11 +106,11 @@ class UserRegistry {
 
     // Validate each user
     const required_fields = ['username', 'created_at']
-    for (const [public_key, user] of Object.entries(users)) {
+    for (const [user_public_key, user] of Object.entries(users)) {
       for (const field of required_fields) {
         if (!(field in user)) {
           throw new Error(
-            `User ${public_key}: Missing required field: ${field}`
+            `User ${user_public_key}: Missing required field: ${field}`
           )
         }
       }
@@ -123,13 +123,13 @@ class UserRegistry {
     this.cache_timestamp = Date.now()
   }
 
-  async find_by_public_key(public_key) {
-    if (!public_key) {
+  async find_by_public_key(user_public_key) {
+    if (!user_public_key) {
       return null
     }
 
     const users = await this.load_users()
-    return users[public_key] || null
+    return users[user_public_key] || null
   }
 
   async find_by_username(username) {
@@ -138,21 +138,21 @@ class UserRegistry {
     }
 
     const users = await this.load_users()
-    for (const [public_key, user] of Object.entries(users)) {
+    for (const [user_public_key, user] of Object.entries(users)) {
       if (user.username === username) {
-        return { public_key, ...user }
+        return { user_public_key, ...user }
       }
     }
     return null
   }
 
-  async user_has_access(public_key) {
-    if (!public_key) {
+  async user_has_access(user_public_key) {
+    if (!user_public_key) {
       return false
     }
 
     const users = await this.load_users()
-    return public_key in users
+    return user_public_key in users
   }
 
   // Clear cache for testing

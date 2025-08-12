@@ -18,10 +18,10 @@ debug.enable(
   'update-entity-fields,markdown:process-repository,markdown:scanner,write-entity-to-filesystem'
 )
 
-const system_user_id = '00000000-0000-0000-0000-000000000000'
+const system_user_public_key = '00000000-0000-0000-0000-000000000000'
 
 const update_entity_fields = async ({
-  user_id = config.user_id,
+  user_public_key = config.user_public_key,
   dry_run = false,
   include_path_patterns = [],
   exclude_path_patterns = []
@@ -51,7 +51,7 @@ const update_entity_fields = async ({
         if (error.includes('entity_id') && error.includes('required')) {
           needs_update = true
         }
-        if (error.includes('user_id') && error.includes('required')) {
+        if (error.includes('user_public_key') && error.includes('required')) {
           needs_update = true
         }
         if (error.includes('created_at') && error.includes('required')) {
@@ -83,7 +83,9 @@ const update_entity_fields = async ({
 
           // Add missing fields to properties
           const updated_properties = {
-            user_id: is_system_file ? system_user_id : user_id,
+            user_public_key: is_system_file
+              ? system_user_public_key
+              : user_public_key,
             ...entity_properties
           }
 
@@ -147,10 +149,10 @@ export default update_entity_fields
 
 const main = async () => {
   const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
-    .option('user_id', {
+    .option('user_public_key', {
       type: 'string',
-      description: 'User ID to use for the knowledge base',
-      default: config.user_id
+      description: 'User public key to use for the knowledge base',
+      default: config.user_public_key
     })
     .option('dry_run', {
       type: 'boolean',
@@ -175,7 +177,7 @@ const main = async () => {
   let error
   try {
     const result = await update_entity_fields({
-      user_id: argv.user_id,
+      user_public_key: argv.user_public_key,
       dry_run: argv.dry_run,
       include_path_patterns: argv.include_path_patterns,
       exclude_path_patterns: argv.exclude_path_patterns
