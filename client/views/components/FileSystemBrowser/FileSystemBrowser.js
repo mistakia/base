@@ -34,7 +34,14 @@ const FileSystemBrowser = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        maxWidth: '1100px',
+        margin: '0 auto'
+      }}>
       <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       {is_directory ? (
         <DirectoryView path={current_path} on_navigate={handle_navigate} />

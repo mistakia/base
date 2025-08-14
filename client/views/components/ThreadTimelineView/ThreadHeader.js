@@ -580,7 +580,13 @@ const ThreadHeader = ({ metadata }) => {
   } = use_thread_metadata(metadata)
 
   return (
-    <Box sx={{ backgroundColor: 'white', borderRadius: 2, overflow: 'hidden' }}>
+    <Box
+      sx={{
+        backgroundColor: 'white',
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginTop: '16px'
+      }}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
         <ThreadTitle title={title} />
       </Box>

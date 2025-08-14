@@ -104,11 +104,6 @@ const Thread = ({ thread, is_focused = false }) => {
           </span>
         )}
       </div>
-
-      <div className='thread-id-row'>
-        <span className='thread-id-text'>{thread.thread_id}</span>
-      </div>
-
       <div className='thread-working-directory-row'>
         <span className='thread-working-directory-text'>
           {working_directory}

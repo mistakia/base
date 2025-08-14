@@ -6,8 +6,9 @@ const label_sx = {
   fontWeight: 600,
   width: '80px',
   fontSize: '11px',
-  wordWrap: 'break-word',
-  overflowWrap: 'break-word',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   verticalAlign: 'top'
 }
 

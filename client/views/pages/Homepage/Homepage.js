@@ -7,6 +7,8 @@ import PageLayout from '@views/layout/PageLayout.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import Thread from '@components/Thread/index.js'
 
+import './Homepage.styl'
+
 const Homepage = ({ threads, is_loading_threads, load_threads }) => {
   const [cards_per_row, set_cards_per_row] = useState(4) // Default assumption
   const [focused_index, set_focused_index] = useState(0)
@@ -143,7 +145,7 @@ const Homepage = ({ threads, is_loading_threads, load_threads }) => {
   return (
     <PageLayout>
       <div className='homepage-section'>
-        <div>
+        <div className='threads-container'>
           {is_loading_threads ? (
             <div>Loading threads...</div>
           ) : threads.size === 0 ? (

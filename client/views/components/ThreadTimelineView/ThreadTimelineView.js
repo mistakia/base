@@ -1,19 +1,28 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 import { get_threads_state } from '@core/threads/selectors'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
+import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 
 import ThreadHeader from './ThreadHeader'
 import TimelineList from './TimelineList'
 import './Timeline.styl'
 
 const ThreadTimelineView = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const current_path = location.pathname
   const threads_state = useSelector(get_threads_state)
   const selected_thread_data = threads_state.get('selected_thread_data')
   const is_loading_thread = threads_state.get('is_loading_thread')
   const thread_error = threads_state.get('thread_error')
+
+  const handle_navigate = (path) => {
+    navigate(path || '/')
+  }
 
   if (is_loading_thread) {
     return (
@@ -50,7 +59,8 @@ const ThreadTimelineView = () => {
   const rightContent = <ThreadHeader metadata={metadata} />
 
   return (
-    <Box sx={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <Box sx={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       <TwoColumnLayout
         left_content={leftContent}
         right_content={rightContent}
