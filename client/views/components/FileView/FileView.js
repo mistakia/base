@@ -40,6 +40,7 @@ const FileView = ({ path }) => {
           <EntityRenderer
             frontmatter={file_data.frontmatter}
             markdown={file_data.markdown}
+            is_redacted={file_data?.is_redacted}
             path={path}
           />
         )

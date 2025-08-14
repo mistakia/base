@@ -5,7 +5,7 @@ import { codeToHtml } from 'shiki'
 import { normalize_language } from '@views/utils/language-utils.js'
 import { StatusText, MonospaceText } from './styled/index.js'
 
-const CodeViewer = ({ code, language }) => {
+const CodeViewer = ({ code, language, is_redacted }) => {
   const [highlighted_html, set_highlighted_html] = useState('')
   const [error, set_error] = useState(null)
   const normalized_language = useMemo(
@@ -19,6 +19,23 @@ const CodeViewer = ({ code, language }) => {
     const render_highlight = async () => {
       try {
         set_error(null)
+
+        // For redacted content, skip syntax highlighting and preserve server format
+        if (is_redacted) {
+          const lines = (code || '').split('\n')
+          const redacted_html = lines
+            .map(
+              (line, index) =>
+                `<div style="white-space: pre;"><span style="display: inline-block; width: 3ch; color: #6e7781; text-align: right; padding-right: var(--space-base); user-select: none;">${index + 1}</span>${line}</div>`
+            )
+            .join('')
+
+          const wrapped_html = `<pre style="margin: 0; padding: var(--space-base); font-size: var(--font-size-base); line-height: 1.5; overflow: auto; color: var(--color-text-disabled); overflow-x: auto; background-color: color-mix(in srgb, var(--color-text-disabled) 10%, transparent); user-select: none; cursor: not-allowed; opacity: 0.8; border: 1px dashed var(--color-border-subtle); border-radius: 4px;">${redacted_html}</pre>`
+
+          if (is_active) set_highlighted_html(wrapped_html)
+          return
+        }
+
         const html = await codeToHtml(code || '', {
           lang: normalized_language,
           theme: 'solarized-light',
@@ -57,7 +74,7 @@ const CodeViewer = ({ code, language }) => {
     return () => {
       is_active = false
     }
-  }, [code, normalized_language])
+  }, [code, normalized_language, is_redacted])
 
   if (error) {
     return (
@@ -92,7 +109,13 @@ const CodeViewer = ({ code, language }) => {
   }
 
   return (
-    <div style={{ overflow: 'auto' }}>
+    <div
+      style={{ overflow: 'auto' }}
+      title={
+        is_redacted ? 'Access restricted - code content redacted' : undefined
+      }
+      aria-label={is_redacted ? 'Redacted code content' : undefined}
+      role={is_redacted ? 'text' : undefined}>
       <div dangerouslySetInnerHTML={{ __html: highlighted_html }} />
     </div>
   )
@@ -100,7 +123,8 @@ const CodeViewer = ({ code, language }) => {
 
 CodeViewer.propTypes = {
   code: PropTypes.string.isRequired,
-  language: PropTypes.string.isRequired
+  language: PropTypes.string.isRequired,
+  is_redacted: PropTypes.bool
 }
 
 export default CodeViewer

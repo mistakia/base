@@ -1,4 +1,8 @@
 import path from 'path'
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import remarkStringify from 'remark-stringify'
+import { visit } from 'unist-util-visit'
 
 // Redaction character
 const REDACT_CHAR = '█'
@@ -92,14 +96,21 @@ export const redact_file_content_response = (file_response) => {
   // Use single _redacted flag
   redacted.is_redacted = true
 
-  // Redact the main content
+  // Determine file extension for markdown detection
+  const file_extension = redacted.path ? path.extname(redacted.path) : ''
+
+  // Redact the main content with markdown awareness
   if (redacted.content) {
-    redacted.content = redact_text_content(redacted.content)
+    if (is_markdown_content(file_extension)) {
+      redacted.content = redact_markdown_content(redacted.content)
+    } else {
+      redacted.content = redact_text_content(redacted.content)
+    }
   }
 
-  // Redact markdown body
+  // Redact markdown body with markdown awareness
   if (redacted.markdown) {
-    redacted.markdown = redact_text_content(redacted.markdown)
+    redacted.markdown = redact_markdown_content(redacted.markdown)
   }
 
   // Redact frontmatter values but preserve keys for structure
@@ -235,4 +246,156 @@ export const redact_thread_data = (thread) => {
 
   // Keep response shape identical to non-redacted responses
   return redacted
+}
+/**
+ * Redacts URL while preserving basic structure
+ *
+ * @param {string} url - URL to redact
+ * @returns {string} Redacted URL
+ */
+export const redact_url = (url) => {
+  if (!url || typeof url !== 'string') {
+    return url
+  }
+
+  try {
+    const urlObj = new URL(url)
+    // Preserve protocol and basic structure
+    return `${urlObj.protocol}//${REDACT_CHAR.repeat(8)}.${REDACT_CHAR.repeat(3)}`
+  } catch {
+    // If not a valid URL, redact as text
+    return redact_text_content(url)
+  }
+}
+
+/**
+ * Redacts code content while preserving indentation and structure
+ *
+ * @param {string} code - Code content to redact
+ * @returns {string} Redacted code
+ */
+export const redact_code_content = (code) => {
+  if (!code || typeof code !== 'string') {
+    return code
+  }
+
+  return code
+    .split('\n')
+    .map((line) => {
+      // Preserve leading whitespace for indentation
+      const leadingWhitespace = line.match(/^\s*/)[0]
+      const content = line.slice(leadingWhitespace.length)
+
+      if (content.length === 0) {
+        return line // Empty line, keep as-is
+      }
+
+      // Redact non-whitespace but preserve line structure
+      const redactedContent = content.replace(/\S/g, REDACT_CHAR)
+      return leadingWhitespace + redactedContent
+    })
+    .join('\n')
+}
+
+/**
+ * Redacts markdown content while preserving structure and formatting
+ *
+ * @param {string} markdown_content - Markdown content to redact
+ * @param {Object} options - Redaction options
+ * @param {boolean} options.preserve_structure - Whether to preserve markdown structure (default: true)
+ * @returns {string} Redacted markdown content
+ */
+export const redact_markdown_content = (markdown_content, options = {}) => {
+  if (!markdown_content || typeof markdown_content !== 'string') {
+    return markdown_content
+  }
+
+  const { preserve_structure = true } = options
+
+  // If not preserving structure, fall back to simple text redaction
+  if (!preserve_structure) {
+    return redact_text_content(markdown_content)
+  }
+
+  try {
+    // Parse markdown into AST
+    const ast = unified().use(remarkParse).parse(markdown_content)
+
+    // Visit all nodes and redact content while preserving structure
+    visit(ast, (node) => {
+      switch (node.type) {
+        case 'text':
+          // Redact text content
+          node.value = redact_text_content(node.value)
+          break
+        case 'code':
+          // Redact code block content but preserve structure
+          node.value = redact_code_content(node.value)
+          break
+        case 'inlineCode':
+          // Redact inline code
+          node.value = redact_text_content(node.value)
+          break
+        case 'link':
+          // Redact URL but preserve link structure
+          if (node.url) {
+            node.url = redact_url(node.url)
+          }
+          if (node.title) {
+            node.title = redact_text_content(node.title)
+          }
+          break
+        case 'image':
+          // Redact image URLs and alt text
+          if (node.url) {
+            node.url = redact_url(node.url)
+          }
+          if (node.alt) {
+            node.alt = redact_text_content(node.alt)
+          }
+          if (node.title) {
+            node.title = redact_text_content(node.title)
+          }
+          break
+        case 'html':
+          // Redact HTML content
+          node.value = redact_text_content(node.value)
+          break
+        case 'yaml':
+          // Redact YAML frontmatter
+          node.value = redact_text_content(node.value)
+          break
+        case 'definition':
+          // Redact link definitions
+          if (node.url) {
+            node.url = redact_url(node.url)
+          }
+          if (node.title) {
+            node.title = redact_text_content(node.title)
+          }
+          break
+      }
+    })
+
+    // Convert AST back to markdown
+    return unified().use(remarkStringify).stringify(ast)
+  } catch (error) {
+    // If parsing fails, fall back to simple text redaction
+    console.warn(
+      'Markdown parsing failed during redaction, falling back to text redaction:',
+      error.message
+    )
+    return redact_text_content(markdown_content)
+  }
+}
+
+/**
+ * Detects if content is likely markdown
+ *
+ * @param {string} content - Content to check
+ * @param {string} file_extension - File extension hint
+ * @returns {boolean} True if content appears to be markdown
+ */
+export const is_markdown_content = (file_extension) => {
+  return /\.(md|markdown|mdown)$/i.test(file_extension)
 }

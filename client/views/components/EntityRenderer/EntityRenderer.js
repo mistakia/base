@@ -6,10 +6,10 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import EntityFrontmatter from './EntityFrontmatter/index.js'
 
-const EntityRenderer = ({ frontmatter, markdown }) => {
+const EntityRenderer = ({ frontmatter, markdown, is_redacted }) => {
   const left_content = markdown ? (
     <Box sx={{ pr: 2 }}>
-      <MarkdownViewer content={markdown} />
+      <MarkdownViewer content={markdown} is_redacted={is_redacted} />
     </Box>
   ) : null
 
@@ -45,7 +45,8 @@ const EntityRenderer = ({ frontmatter, markdown }) => {
 
 EntityRenderer.propTypes = {
   frontmatter: PropTypes.object,
-  markdown: PropTypes.string
+  markdown: PropTypes.string,
+  is_redacted: PropTypes.bool
 }
 
 export default EntityRenderer
