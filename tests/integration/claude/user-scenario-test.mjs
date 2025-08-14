@@ -13,7 +13,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
           parentUuid: '9d9bc176-b3ef-4cd5-9516-84034bdf1a96',
           isSidechain: false,
           userType: 'external',
-          cwd: '/Users/trashman/user-base/repository/active/mistakia/league-worktrees/refactor-244-separate-rankings-adp-data',
+          cwd: '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data',
           sessionId: 'e491f7ab-3fbe-42d5-84d7-cbb35a46881e',
           version: '1.0.61',
           gitBranch: 'refactor/244-separate-rankings-adp-data',
@@ -34,7 +34,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
         }
       ],
       metadata: {
-        cwd: '/Users/trashman/user-base/repository/active/mistakia/league-worktrees/refactor-244-separate-rankings-adp-data',
+        cwd: '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data',
         version: '1.0.61',
         user_type: 'external'
       }
@@ -54,7 +54,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
     expect(message.metadata.original_type).to.equal('user')
     expect(message.metadata.is_interrupt).to.be.true
     expect(message.metadata.working_directory).to.equal(
-      '/Users/trashman/user-base/repository/active/mistakia/league-worktrees/refactor-244-separate-rankings-adp-data'
+      '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data'
     )
     expect(message.metadata.user_type).to.equal('external')
     expect(message.metadata.git_branch).to.equal(
