@@ -8,7 +8,6 @@ import { Box } from '@mui/material'
  */
 const RedactedContent = ({
   content_type = 'text',
-  redaction_level = 'full',
   original_length = 0,
   placeholder_char = '█',
   show_tooltip = true,
@@ -68,13 +67,14 @@ const RedactedContent = ({
       : generate_redacted_text(original_length, placeholder_char)
 
   // Get appropriate styling based on content type
-  const get_redaction_styles = (content_type, redaction_level) => {
+  const get_redaction_styles = (content_type) => {
     const base_styles = {
       color: 'var(--color-text-disabled)',
       backgroundColor:
         'color-mix(in srgb, var(--color-text-disabled) 10%, transparent)',
       userSelect: 'none',
-      cursor: 'not-allowed'
+      cursor: 'not-allowed',
+      opacity: 0.8
     }
 
     const type_styles = {
@@ -112,19 +112,9 @@ const RedactedContent = ({
       }
     }
 
-    const level_styles = {
-      partial: {
-        opacity: 0.6
-      },
-      full: {
-        opacity: 0.8
-      }
-    }
-
     return {
       ...base_styles,
-      ...type_styles[content_type],
-      ...level_styles[redaction_level]
+      ...type_styles[content_type]
     }
   }
 
@@ -138,7 +128,7 @@ const RedactedContent = ({
       component={component}
       title={tooltip_title}
       sx={{
-        ...get_redaction_styles(content_type, redaction_level),
+        ...get_redaction_styles(content_type),
         ...props.sx
       }}
       {...props}
@@ -158,7 +148,6 @@ RedactedContent.propTypes = {
     'path',
     'content'
   ]),
-  redaction_level: PropTypes.oneOf(['partial', 'full']),
   original_length: PropTypes.number,
   placeholder_char: PropTypes.string,
   show_tooltip: PropTypes.bool,

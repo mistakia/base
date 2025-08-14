@@ -11,9 +11,15 @@ const DirectoryPage = ({
   is_loading_directory_markdown,
   directory_markdown_error
 }) => {
+  // Only show the container if there's actual content to display
+  const has_directory_content =
+    directory_markdown ||
+    is_loading_directory_markdown ||
+    directory_markdown_error
+
   return (
     <PageLayout>
-      {is_directory && (
+      {is_directory && has_directory_content && (
         <div className='directory-markdown-container'>
           {is_loading_directory_markdown && (
             <div className='directory-markdown-loading'>

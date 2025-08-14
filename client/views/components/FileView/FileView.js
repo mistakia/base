@@ -32,24 +32,6 @@ const FileView = ({ path }) => {
   }
 
   const render_content = () => {
-    // Check if content is redacted
-    if (file_data?.is_redacted) {
-      return (
-        <Box sx={{ p: 3 }}>
-          <RedactedContent
-            content_type='content'
-            original_length={file_data?.content?.length || 500}
-            show_tooltip={true}
-            sx={{
-              minHeight: '200px',
-              width: '100%',
-              display: 'block'
-            }}
-          />
-        </Box>
-      )
-    }
-
     const file_type = get_file_type()
 
     switch (file_type) {
@@ -63,16 +45,43 @@ const FileView = ({ path }) => {
         )
 
       case 'markdown':
-        return <MarkdownViewer content={file_data?.content || ''} />
+        return (
+          <MarkdownViewer
+            content={file_data?.content || ''}
+            is_redacted={file_data?.is_redacted}
+          />
+        )
 
       case 'code': {
         const language = path.split('.').pop().toLowerCase()
         return (
-          <CodeViewer code={file_data?.content || ''} language={language} />
+          <CodeViewer
+            code={file_data?.content || ''}
+            language={language}
+            is_redacted={file_data?.is_redacted}
+          />
         )
       }
 
       default:
+        // For other file types, use RedactedContent component if redacted
+        if (file_data?.is_redacted) {
+          return (
+            <Box sx={{ p: 3 }}>
+              <RedactedContent
+                content_type='content'
+                original_length={file_data?.content?.length || 500}
+                show_tooltip={true}
+                sx={{
+                  minHeight: '200px',
+                  width: '100%',
+                  display: 'block'
+                }}
+              />
+            </Box>
+          )
+        }
+
         return (
           <div style={{ padding: '24px', margin: '16px' }}>
             <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
