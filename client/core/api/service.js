@@ -163,7 +163,7 @@ export const api = {
 export const api_request = (api_function, opts, token) => {
   const controller = new AbortController()
   const abort = controller.abort.bind(controller)
-  const headers = { Authorization: `Bearer ${token}` }
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
   const default_options = { headers, credentials: 'include' }
   const options = merge(default_options, api_function(opts), {
     signal: controller.signal
