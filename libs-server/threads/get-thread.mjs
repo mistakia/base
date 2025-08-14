@@ -55,7 +55,10 @@ function get_effective_updated_at({ metadata }) {
  * @returns {Promise<Object>} Thread data object
  * @throws {Error} If thread is not found or access denied
  */
-export default async function get_thread({ thread_id, user_public_key = null }) {
+export default async function get_thread({
+  thread_id,
+  user_public_key = null
+}) {
   if (!thread_id || typeof thread_id !== 'string') {
     throw new Error('thread_id is required')
   }
@@ -76,7 +79,11 @@ export default async function get_thread({ thread_id, user_public_key = null }) 
       read_json_file_or_default({ file_path: timeline_path, default_value: [] })
     ])
 
-    const thread_data = add_backward_compatibility_fields({ metadata, thread_dir, timeline })
+    const thread_data = add_backward_compatibility_fields({
+      metadata,
+      thread_dir,
+      timeline
+    })
 
     // Check user permissions for this thread
     if (user_public_key !== undefined) {
@@ -85,7 +92,7 @@ export default async function get_thread({ thread_id, user_public_key = null }) 
         user_public_key,
         resource_path: thread_resource_path
       })
-      
+
       if (!permission_result.allowed) {
         // Return redacted thread data instead of throwing an error
         log(`Access denied to thread ${thread_id}, returning redacted content`)
@@ -155,7 +162,7 @@ export async function list_threads({
               user_public_key: requesting_user_public_key,
               resource_path: thread_resource_path
             })
-            
+
             if (!permission_result.allowed) {
               return null
             }

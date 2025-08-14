@@ -117,17 +117,42 @@ const extract_dates = (metadata) => {
   if (!metadata || !metadata.get) {
     return { created_at: null, updated_at: null }
   }
-  
+
   const created_at = metadata.get('created_at') || null
   const updated_at = metadata.get('updated_at') || null
-  
+
   return { created_at, updated_at }
+}
+
+const extract_message_counts = (metadata) => {
+  if (!metadata || !metadata.get) {
+    return {
+      message_count: 0,
+      user_message_count: 0,
+      assistant_message_count: 0
+    }
+  }
+
+  return {
+    message_count: metadata.get('message_count') || 0,
+    user_message_count: metadata.get('user_message_count') || 0,
+    assistant_message_count: metadata.get('assistant_message_count') || 0
+  }
+}
+
+const extract_tool_call_count = (metadata) => {
+  if (!metadata || !metadata.get) {
+    return 0
+  }
+  return metadata.get('tool_call_count') || 0
 }
 
 // Custom hook for metadata processing
 const use_thread_metadata = (metadata) => {
   const dates = extract_dates(metadata)
-  
+  const message_counts = extract_message_counts(metadata)
+  const tool_call_count = extract_tool_call_count(metadata)
+
   return {
     title: extract_thread_title(metadata),
     total_tokens: extract_total_tokens(metadata),
@@ -136,7 +161,11 @@ const use_thread_metadata = (metadata) => {
     external_session_info: extract_external_session_info(metadata),
     thread_state: extract_thread_state(metadata),
     created_at: dates.created_at,
-    updated_at: dates.updated_at
+    updated_at: dates.updated_at,
+    message_count: message_counts.message_count,
+    user_message_count: message_counts.user_message_count,
+    assistant_message_count: message_counts.assistant_message_count,
+    tool_call_count
   }
 }
 
@@ -169,7 +198,11 @@ const ThreadStats = ({
   external_session_info,
   thread_state,
   created_at,
-  updated_at
+  updated_at,
+  message_count,
+  user_message_count,
+  assistant_message_count,
+  tool_call_count
 }) => {
   const MetadataRow = ({
     label,
@@ -335,21 +368,21 @@ const ThreadStats = ({
   // Format date as YYYY/MM/DD HH:MM AM/PM
   const format_short_date = (date_string) => {
     if (!date_string) return null
-    
+
     try {
       const date = new Date(date_string)
       if (isNaN(date.getTime())) return null
-      
+
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
-      
+
       let hours = date.getHours()
       const minutes = String(date.getMinutes()).padStart(2, '0')
       const ampm = hours >= 12 ? 'PM' : 'AM'
       hours = hours % 12
       hours = hours || 12
-      
+
       return `${year}/${month}/${day} ${hours}:${minutes} ${ampm}`
     } catch {
       return null
@@ -359,7 +392,7 @@ const ThreadStats = ({
   // Create date display components with relative time and absolute timestamp
   const DateDisplay = ({ date }) => {
     if (!date) return 'Unknown'
-    
+
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <Box sx={{ fontSize: '14px', color: '#333' }}>
@@ -412,9 +445,12 @@ const ThreadStats = ({
           left_value={<DateDisplay date={created_at} />}
           right_label='Last Updated'
           right_value={<DateDisplay date={updated_at} />}
-          is_first={!has_session_provider && !has_thread_state && !has_working_directory}
+          is_first={
+            !has_session_provider && !has_thread_state && !has_working_directory
+          }
         />
       )}
+      {/* Display tokens/duration OR tokens/cost based on what data is available */}
       {duration ? (
         <TwoCellRow
           left_label='Tokens'
@@ -422,7 +458,10 @@ const ThreadStats = ({
           right_label='Duration'
           right_value={duration}
           is_first={
-            !has_session_provider && !has_thread_state && !has_working_directory && !has_dates
+            !has_session_provider &&
+            !has_thread_state &&
+            !has_working_directory &&
+            !has_dates
           }
         />
       ) : (
@@ -430,8 +469,34 @@ const ThreadStats = ({
           label='Tokens'
           value={format_token_shorthand({ count: total_tokens })}
           is_first={
-            !has_session_provider && !has_thread_state && !has_working_directory && !has_dates
+            !has_session_provider &&
+            !has_thread_state &&
+            !has_working_directory &&
+            !has_dates
           }
+        />
+      )}
+      {/* Message counts - show detailed breakdown if available, otherwise show total */}
+      {user_message_count > 0 || assistant_message_count > 0 ? (
+        <TwoCellRow
+          left_label='User Messages'
+          left_value={user_message_count.toLocaleString()}
+          right_label='Assistant Messages'
+          right_value={assistant_message_count.toLocaleString()}
+        />
+      ) : (
+        message_count > 0 && (
+          <MetadataRow
+            label='Messages'
+            value={message_count.toLocaleString()}
+          />
+        )
+      )}
+      {/* Tool calls - always show if available */}
+      {tool_call_count > 0 && (
+        <MetadataRow
+          label='Tool Calls'
+          value={tool_call_count.toLocaleString()}
         />
       )}
       {models.length > 0 && (
@@ -461,7 +526,11 @@ ThreadStats.propTypes = {
   }),
   thread_state: PropTypes.string,
   created_at: PropTypes.string,
-  updated_at: PropTypes.string
+  updated_at: PropTypes.string,
+  message_count: PropTypes.number,
+  user_message_count: PropTypes.number,
+  assistant_message_count: PropTypes.number,
+  tool_call_count: PropTypes.number
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -503,7 +572,11 @@ const ThreadHeader = ({ metadata }) => {
     external_session_info,
     thread_state,
     created_at,
-    updated_at
+    updated_at,
+    message_count,
+    user_message_count,
+    assistant_message_count,
+    tool_call_count
   } = use_thread_metadata(metadata)
 
   return (
@@ -520,6 +593,10 @@ const ThreadHeader = ({ metadata }) => {
         thread_state={thread_state}
         created_at={created_at}
         updated_at={updated_at}
+        message_count={message_count}
+        user_message_count={user_message_count}
+        assistant_message_count={assistant_message_count}
+        tool_call_count={tool_call_count}
       />
     </Box>
   )

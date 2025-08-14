@@ -33,9 +33,12 @@ router.get('/', async (req, res) => {
 
     // Use provided public key or default to null for all users
     const query_user_public_key = user_public_key
-    
+
     // Filter threads based on user permissions
-    const requesting_user_public_key = req.auth?.user_public_key || req.permission_context?.user_public_key || null
+    const requesting_user_public_key =
+      req.auth?.user_public_key ||
+      req.permission_context?.user_public_key ||
+      null
 
     const thread_list = await threads.list_threads({
       user_public_key: query_user_public_key,
@@ -57,7 +60,10 @@ router.get('/:thread_id', check_thread_permission(), async (req, res) => {
     log(`Getting thread ${req.params.thread_id}`)
     const { thread_id } = req.params
 
-    const user_public_key = req.auth?.user_public_key || req.permission_context?.user_public_key || null
+    const user_public_key =
+      req.auth?.user_public_key ||
+      req.permission_context?.user_public_key ||
+      null
     const thread = await threads.get_thread({
       thread_id,
       user_public_key

@@ -100,6 +100,30 @@
       "type": "integer",
       "description": "Total number of tool calls made in this thread"
     },
+    "user_message_count": {
+      "type": "integer",
+      "description": "Total number of user messages in this thread"
+    },
+    "assistant_message_count": {
+      "type": "integer",
+      "description": "Total number of assistant messages in this thread"
+    },
+    "input_tokens": {
+      "type": "integer",
+      "description": "Total number of input tokens consumed in this thread"
+    },
+    "output_tokens": {
+      "type": "integer",
+      "description": "Total number of output tokens generated in this thread"
+    },
+    "cache_creation_input_tokens": {
+      "type": "integer",
+      "description": "Total number of input tokens used for cache creation in this thread"
+    },
+    "cache_read_input_tokens": {
+      "type": "integer",
+      "description": "Total number of input tokens read from cache in this thread"
+    },
     "external_session": {
       "type": "object",
       "description": "External session metadata for imported sessions",

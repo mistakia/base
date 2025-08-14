@@ -627,24 +627,46 @@ const extract_session_metadata = (entries, file_metadata) => {
   const end_time =
     timestamps.length > 0 ? new Date(Math.max(...timestamps)) : null
 
-  // Extract model information from assistant messages
+  // Extract model information from assistant messages and calculate token breakdowns
   const models = new Set()
-  const total_tokens = entries.reduce((total, entry) => {
-    if (entry.type === 'assistant' && entry.message?.usage?.input_tokens) {
-      const usage = entry.message.usage
-      if (entry.message.model) {
+  let total_tokens = 0
+  let input_tokens = 0
+  let output_tokens = 0
+  let cache_creation_input_tokens = 0
+  let cache_read_input_tokens = 0
+
+  // Count messages by type
+  let user_message_count = 0
+  let assistant_message_count = 0
+
+  entries.forEach((entry) => {
+    // Count messages by type
+    if (entry.type === 'user') {
+      user_message_count++
+    } else if (entry.type === 'assistant') {
+      assistant_message_count++
+
+      // Extract token information from assistant messages
+      if (entry.message?.usage) {
+        const usage = entry.message.usage
+        input_tokens += usage.input_tokens || 0
+        output_tokens += usage.output_tokens || 0
+        cache_creation_input_tokens += usage.cache_creation_input_tokens || 0
+        cache_read_input_tokens += usage.cache_read_input_tokens || 0
+
+        total_tokens +=
+          (usage.input_tokens || 0) +
+          (usage.output_tokens || 0) +
+          (usage.cache_read_input_tokens || 0) +
+          (usage.cache_creation_input_tokens || 0)
+      }
+
+      // Track models
+      if (entry.message?.model) {
         models.add(entry.message.model)
       }
-      return (
-        total +
-        (usage.input_tokens || 0) +
-        (usage.output_tokens || 0) +
-        (usage.cache_read_input_tokens || 0) +
-        (usage.cache_creation_input_tokens || 0)
-      )
     }
-    return total
-  }, 0)
+  })
 
   // Find summaries for session description
   const summaries = entries
@@ -665,6 +687,12 @@ const extract_session_metadata = (entries, file_metadata) => {
     duration_minutes:
       start_time && end_time ? (end_time - start_time) / (1000 * 60) : null,
     total_tokens,
+    input_tokens,
+    output_tokens,
+    cache_creation_input_tokens,
+    cache_read_input_tokens,
+    user_message_count,
+    assistant_message_count,
     entry_count: entries.length,
     summaries,
     file_source: file_metadata.file_path

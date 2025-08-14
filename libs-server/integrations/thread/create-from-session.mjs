@@ -6,7 +6,11 @@ import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
-import { calculate_session_counts } from './session-count-utilities.mjs'
+import {
+  calculate_session_counts,
+  calculate_detailed_message_counts,
+  aggregate_token_counts
+} from './session-count-utilities.mjs'
 import {
   get_raw_data_storage_config,
   get_timestamp_for_raw_data
@@ -27,6 +31,14 @@ export const create_thread_from_session = async ({
   try {
     // Calculate message and tool call counts from normalized session
     const counts = calculate_session_counts(normalized_session.messages || [])
+
+    // Calculate detailed message counts and token information for Claude sessions
+    const detailed_counts = calculate_detailed_message_counts(
+      normalized_session.messages || []
+    )
+    const token_counts = aggregate_token_counts(
+      normalized_session.metadata || {}
+    )
 
     // Create external session metadata
     const external_session = {
@@ -67,7 +79,16 @@ export const create_thread_from_session = async ({
         system_worktree_path: null,
         user_worktree_path: null,
         message_count: counts.message_count,
-        tool_call_count: counts.tool_call_count
+        tool_call_count: counts.tool_call_count,
+        // Add detailed counts for Claude sessions
+        ...(normalized_session.session_provider === 'claude' && {
+          user_message_count: detailed_counts.user_message_count,
+          assistant_message_count: detailed_counts.assistant_message_count,
+          input_tokens: token_counts.input_tokens,
+          output_tokens: token_counts.output_tokens,
+          cache_creation_input_tokens: token_counts.cache_creation_input_tokens,
+          cache_read_input_tokens: token_counts.cache_read_input_tokens
+        })
       },
       created_at: timeline_created_at,
       updated_at: timeline_updated_at
@@ -343,6 +364,12 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
 
     // Calculate updated counts from normalized session
     const counts = calculate_session_counts(normalized_session.messages || [])
+    const detailed_counts = calculate_detailed_message_counts(
+      normalized_session.messages || []
+    )
+    const token_counts = aggregate_token_counts(
+      normalized_session.metadata || {}
+    )
 
     // Update relevant fields
     const now = new Date().toISOString()
@@ -363,7 +390,16 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       external_session: {
         ...existing_metadata.external_session,
         provider_metadata: normalized_session.metadata
-      }
+      },
+      // Add detailed counts for Claude sessions
+      ...(normalized_session.session_provider === 'claude' && {
+        user_message_count: detailed_counts.user_message_count,
+        assistant_message_count: detailed_counts.assistant_message_count,
+        input_tokens: token_counts.input_tokens,
+        output_tokens: token_counts.output_tokens,
+        cache_creation_input_tokens: token_counts.cache_creation_input_tokens,
+        cache_read_input_tokens: token_counts.cache_read_input_tokens
+      })
     }
 
     // Check if metadata actually changed before writing
