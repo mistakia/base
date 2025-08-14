@@ -42,7 +42,9 @@ export default async function create_user({
   users[user_public_key.toString('hex')] = {
     username,
     created_at: new Date().toISOString(),
-    permissions: {}
+    permissions: {
+      rules: [{ action: 'allow', pattern: 'is_owner' }]
+    }
   }
   await user_registry.save_users(users)
 

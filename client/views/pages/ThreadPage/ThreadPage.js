@@ -62,10 +62,7 @@ const ThreadPage = ({
 
   return (
     <PageLayout>
-      <ThreadTimelineView
-        thread_id={id}
-        timeline_data={thread_data?.timeline}
-      />
+      <ThreadTimelineView />
       <FileSystemBrowser />
     </PageLayout>
   )

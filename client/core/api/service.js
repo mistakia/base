@@ -78,16 +78,6 @@ export const api = {
     return { url }
   },
 
-  get_thread_timeline({ thread_id }) {
-    const url = `${API_URL}/filesystem/file?path=/thread/${thread_id}/timeline.json`
-    return { url }
-  },
-
-  get_thread_metadata({ thread_id }) {
-    const url = `${API_URL}/filesystem/file?path=/thread/${thread_id}/metadata.json`
-    return { url }
-  },
-
   post_thread({
     inference_provider,
     model,

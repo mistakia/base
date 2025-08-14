@@ -35,10 +35,6 @@ import {
   get_file_content_request_actions,
   get_path_info_request_actions
 } from '@core/directory/actions'
-import {
-  get_thread_timeline_actions,
-  get_thread_metadata_actions
-} from '@core/threads/actions'
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
@@ -177,16 +173,4 @@ export const get_path_info = fetch.bind(
   null,
   api.get_path_info,
   get_path_info_request_actions
-)
-
-export const get_thread_timeline = fetch.bind(
-  null,
-  api.get_thread_timeline,
-  get_thread_timeline_actions
-)
-
-export const get_thread_metadata = fetch.bind(
-  null,
-  api.get_thread_metadata,
-  get_thread_metadata_actions
 )

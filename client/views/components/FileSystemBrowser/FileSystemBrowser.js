@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 
 import DirectoryView from '@components/DirectoryView/index.js'
 import FileView from '@components/FileView/index.js'
+import PathBreadcrumb from '@components/PathBreadcrumb/index.js'
 import { use_file_system_data } from '@views/hooks/useFileSystemData.js'
 
 const FileSystemBrowser = () => {
@@ -34,6 +35,7 @@ const FileSystemBrowser = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       {is_directory ? (
         <DirectoryView path={current_path} on_navigate={handle_navigate} />
       ) : (

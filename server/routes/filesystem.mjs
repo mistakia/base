@@ -5,9 +5,21 @@ import debug from 'debug'
 import fm from 'front-matter'
 
 import config from '#config'
+import {
+  check_filesystem_permission,
+  apply_redaction_interceptor
+} from '#server/middleware/permissions.mjs'
+import {
+  check_user_permissions_batch,
+  map_filesystem_path_to_base_uri
+} from '#server/middleware/permission-checker.mjs'
 
 const router = express.Router()
 const log = debug('api:filesystem')
+
+// Apply permission checking middleware to all filesystem routes
+router.use(check_filesystem_permission())
+router.use(apply_redaction_interceptor())
 
 // Get user base directory from config
 const USER_BASE_DIR = config.user_base_directory
@@ -85,6 +97,41 @@ router.get('/directory', async (req, res) => {
 
     // Get detailed info for each file/directory
     const items = []
+    const file_permission_results = {}
+
+    // Collect file paths for batch permission checking
+    const file_paths_to_check = []
+    for (const file_name of files) {
+      // Skip hidden files and git directories
+      if (file_name.startsWith('.')) {
+        continue
+      }
+
+      const file_relative_path = path
+        .join(relative_path, file_name)
+        .replace(/\\/g, '/')
+      file_paths_to_check.push(file_relative_path)
+    }
+
+    // Batch check permissions for all files
+    if (file_paths_to_check.length > 0) {
+      const user_public_key = req.permission_context?.user_public_key || null
+      const resource_paths = file_paths_to_check.map((file_path) => {
+        const full_file_path = path.join(USER_BASE_DIR, file_path)
+        return map_filesystem_path_to_base_uri(full_file_path)
+      })
+      const batch_results = await check_user_permissions_batch({
+        user_public_key,
+        resource_paths
+      })
+
+      // Map results back to file paths
+      file_paths_to_check.forEach((file_path, index) => {
+        const resource_path = resource_paths[index]
+        file_permission_results[file_path] = batch_results[resource_path]
+      })
+    }
+
     for (const file_name of files) {
       // Skip hidden files and git directories
       if (file_name.startsWith('.')) {
@@ -95,6 +142,16 @@ router.get('/directory', async (req, res) => {
       const file_info = await get_file_info(file_path, file_name)
 
       if (file_info) {
+        // Check if this specific file requires redaction
+        const file_relative_path = path
+          .join(relative_path, file_name)
+          .replace(/\\/g, '/')
+        const permission_result = file_permission_results[file_relative_path]
+
+        if (permission_result && !permission_result.allowed) {
+          file_info._requires_redaction = true
+        }
+
         items.push(file_info)
       }
     }

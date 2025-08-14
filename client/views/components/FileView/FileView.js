@@ -8,6 +8,7 @@ import { get_file_type_from_path } from '@views/utils/language-utils.js'
 import EntityRenderer from '@components/EntityRenderer/index.js'
 import CodeViewer from '@components/primitives/CodeViewer.js'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
+import { RedactedContent } from '@components/primitives/styled'
 
 const FileView = ({ path }) => {
   const dispatch = useDispatch()
@@ -31,6 +32,24 @@ const FileView = ({ path }) => {
   }
 
   const render_content = () => {
+    // Check if content is redacted
+    if (file_data?.is_redacted) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <RedactedContent
+            content_type='content'
+            original_length={file_data?.content?.length || 500}
+            show_tooltip={true}
+            sx={{
+              minHeight: '200px',
+              width: '100%',
+              display: 'block'
+            }}
+          />
+        </Box>
+      )
+    }
+
     const file_type = get_file_type()
 
     switch (file_type) {
@@ -75,7 +94,7 @@ const FileView = ({ path }) => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <div style={{ color: '#f44336' }}>Error: {error}</div>
+        <div style={{ color: '#f44336' }}>{error}</div>
       </Box>
     )
   }

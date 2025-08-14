@@ -5,19 +5,28 @@ import { Box } from '@mui/material'
 import '@styles/chip.styl'
 
 const extract_thread_title = (metadata) => {
-  if (!metadata?.external_session?.provider_metadata?.summaries?.length) {
+  if (!metadata || !metadata.getIn) {
     return ''
   }
-  return metadata.external_session.provider_metadata.summaries[0]
+  const summaries = metadata.getIn(['external_session', 'provider_metadata', 'summaries'])
+  if (!summaries || !summaries.length) {
+    return ''
+  }
+  return summaries[0]
 }
 
 const extract_total_tokens = (metadata) => {
-  return metadata?.external_session?.provider_metadata?.total_tokens || 0
+  if (!metadata || !metadata.getIn) {
+    return 0
+  }
+  return metadata.getIn(['external_session', 'provider_metadata', 'total_tokens']) || 0
 }
 
 const extract_duration = (metadata) => {
-  const duration_minutes =
-    metadata?.external_session?.provider_metadata?.duration_minutes
+  if (!metadata || !metadata.getIn) {
+    return null
+  }
+  const duration_minutes = metadata.getIn(['external_session', 'provider_metadata', 'duration_minutes'])
   if (!duration_minutes) return null
 
   if (duration_minutes < 1) {
@@ -32,7 +41,10 @@ const extract_duration = (metadata) => {
 }
 
 const extract_models = (metadata) => {
-  return metadata?.external_session?.provider_metadata?.models || []
+  if (!metadata || !metadata.getIn) {
+    return []
+  }
+  return metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
 }
 
 const format_token_shorthand = ({ count }) => {
@@ -54,11 +66,17 @@ const format_token_shorthand = ({ count }) => {
 }
 
 const extract_external_session_info = (metadata) => {
-  if (!metadata?.external_session) return null
+  if (!metadata || !metadata.getIn) {
+    return null
+  }
 
-  const { session_provider, session_id, provider_metadata } =
-    metadata.external_session
-  const working_directory = provider_metadata?.working_directory
+  const external_session = metadata.get('external_session')
+  if (!external_session) return null
+
+  const session_provider = external_session.session_provider || external_session.get?.('session_provider')
+  const session_id = external_session.session_id || external_session.get?.('session_id')
+  const provider_metadata = external_session.provider_metadata || external_session.get?.('provider_metadata')
+  const working_directory = provider_metadata?.working_directory || provider_metadata?.get?.('working_directory')
 
   return {
     provider: session_provider,
@@ -68,7 +86,10 @@ const extract_external_session_info = (metadata) => {
 }
 
 const extract_thread_state = (metadata) => {
-  return metadata?.thread_state || null
+  if (!metadata || !metadata.get) {
+    return null
+  }
+  return metadata.get('thread_state') || null
 }
 
 // Custom hook for metadata processing
@@ -385,7 +406,7 @@ const LoadingState = () => (
   </Box>
 )
 
-const ThreadHeader = ({ metadata, is_loading_metadata }) => {
+const ThreadHeader = ({ metadata }) => {
   const {
     title,
     total_tokens,
@@ -394,10 +415,6 @@ const ThreadHeader = ({ metadata, is_loading_metadata }) => {
     external_session_info,
     thread_state
   } = use_thread_metadata(metadata)
-
-  if (is_loading_metadata) {
-    return <LoadingState />
-  }
 
   return (
     <Box sx={{ backgroundColor: 'white', borderRadius: 2, overflow: 'hidden' }}>
@@ -417,8 +434,7 @@ const ThreadHeader = ({ metadata, is_loading_metadata }) => {
 }
 
 ThreadHeader.propTypes = {
-  metadata: PropTypes.object,
-  is_loading_metadata: PropTypes.bool
+  metadata: PropTypes.object
 }
 
 export default ThreadHeader

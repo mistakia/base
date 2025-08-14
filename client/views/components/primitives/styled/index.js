@@ -9,3 +9,4 @@
 export { default as MonospaceText } from './MonospaceText.js'
 export { default as UnifiedChip } from './UnifiedChip.js'
 export { default as StatusText } from './StatusText.js'
+export { default as RedactedContent } from './RedactedContent.js'

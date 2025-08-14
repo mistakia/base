@@ -18,6 +18,7 @@ import jwt from 'jsonwebtoken'
 import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
+import { create_permission_middleware } from '#server/middleware/permissions.mjs'
 
 // Initialize inference providers
 import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
@@ -75,8 +76,18 @@ api.use(
       '/api/users',
       '/api/users/session',
       /^(?:)\/api\/users\/[^/]+\/tasks(?:\/.*)?$/,
-      /^(?:)\/api\/users\/public_keys\/[^/]+$/
+      /^(?:)\/api\/users\/public_keys\/[^/]+$/,
+      /^\/api\/filesystem\/.*$/, // Allow public access but still check permissions
+      /^\/api\/threads\/.*$/ // Allow public access but still check permissions
     ]
+  })
+)
+
+// Permission middleware for API routes (after JWT auth)
+api.use(
+  '/api/*',
+  create_permission_middleware({
+    exclude_paths: ['/api/users/session']
   })
 )
 
@@ -88,6 +99,33 @@ api.use('/api/github', routes.github)
 api.use('/api/inference-providers', routes.inference_providers)
 api.use('/api/entities', routes.entities)
 api.use('/api/filesystem', routes.filesystem)
+
+// JWT Error handler
+api.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    log(`JWT Error: ${err.message}`)
+    log(`Request path: ${req.path}`)
+    log(
+      `Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`
+    )
+
+    if (err.message === 'jwt malformed') {
+      log('JWT malformed error - token format issue')
+      const auth_header = req.headers.authorization
+      if (auth_header) {
+        const token_part = auth_header.replace('Bearer ', '')
+        log(`Token parts count: ${token_part.split('.').length} (should be 3)`)
+      }
+    }
+
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: err.message,
+      details: 'JWT authentication failed'
+    })
+  }
+  next(err)
+})
 
 // Register Ollama provider
 provider_registry.register('ollama', new OllamaProvider())

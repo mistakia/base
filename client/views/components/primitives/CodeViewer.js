@@ -70,7 +70,7 @@ const CodeViewer = ({ code, language }) => {
           border: '1px solid var(--color-warning)',
           borderRadius: 'var(--radius-base)'
         }}>
-        <StatusText status='error'>Error: {error}</StatusText>
+        <StatusText status='error'>{error}</StatusText>
       </Box>
     )
   }

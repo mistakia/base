@@ -5,11 +5,12 @@ import {
   get_file_content,
   get_path_info
 } from '@core/api/sagas'
+import { api, api_request } from '@core/api/service'
 import {
   directory_action_types,
   get_directory_markdown_request_actions
 } from './actions'
-import { get_directory_state } from './selectors'
+import { get_app } from '@core/app/selectors'
 
 export function* load_directory({ payload }) {
   yield call(get_directories, { path: payload?.path })
@@ -35,15 +36,17 @@ export function* load_directory_markdown({ payload }) {
       : filename
 
     try {
-      // Use existing get_file_content saga
-      yield call(get_file_content, { path: markdown_path })
+      // Directly use API service instead of saga to avoid state conflicts
+      const { token } = yield select(get_app)
+      const { request } = api_request(
+        api.get_file_content,
+        { path: markdown_path },
+        token
+      )
 
-      // Check if file was loaded successfully by examining the state
-      const directory_state = yield select(get_directory_state)
-      const file_data = directory_state.get('file_data')
-      const file_error = directory_state.get('file_error')
+      const file_data = yield call(request)
 
-      if (file_data && file_data.content && !file_error) {
+      if (file_data && file_data.content) {
         yield put(
           get_directory_markdown_request_actions.fulfilled({
             opts: payload,

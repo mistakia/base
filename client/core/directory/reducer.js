@@ -7,7 +7,7 @@ const DirectoryState = new Record({
   directory_items: new List(),
   file_data: null,
   path_info: null,
-  directory_markdown: null,
+  directory_markdown_file: null,
   is_loading_directory: false,
   is_loading_file: false,
   is_loading_path_info: false,
@@ -88,14 +88,14 @@ export function directory_reducer(
 
     case directory_action_types.GET_DIRECTORY_MARKDOWN_FULFILLED:
       return state.merge({
-        directory_markdown: payload.data?.content || null,
+        directory_markdown_file: payload.data || null,
         is_loading_directory_markdown: false,
         directory_markdown_error: null
       })
 
     case directory_action_types.GET_DIRECTORY_MARKDOWN_FAILED:
       return state.merge({
-        directory_markdown: null,
+        directory_markdown_file: null,
         is_loading_directory_markdown: false,
         directory_markdown_error: payload.error
       })

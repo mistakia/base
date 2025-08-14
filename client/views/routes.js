@@ -12,9 +12,6 @@ const Routes = () => {
       {/* Homepage route */}
       <Route path='/' element={<Homepage />} />
 
-      {/* Directory routes */}
-      <Route path='/directory/*' element={<DirectoryPage />} />
-
       {/* Threads routes */}
       <Route path='/thread' element={<ThreadsPage />} />
       <Route path='/thread/:id' element={<ThreadPage />} />

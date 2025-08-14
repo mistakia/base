@@ -100,11 +100,13 @@ Create structured implementation plans by understanding requirements, analyzing 
 
 - If a task entity is known, update the task entity file with the implementation plan
 - If no task entity is known:
-  - Create a new text entity using `entity_create` tool
-  - Use entity type "text"
-  - Set title as "Implementation Plan: [Task Name]"
-  - Set description as brief summary of what the plan covers
-  - Include the full implementation plan in the entity_content field
+  - Create a new task entity using `entity_create` tool
+  - Use entity type "task" (see [[sys:system/schema/task.md]])
+  - Set `title` to the task name and include a brief `description`
+  - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
+  - Include the full implementation plan in the `entity_content` field
+  - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`.
+  - Check the `tag/` directory for any applicable tags and add them to the entity metadata/relations using the base URI link format `[[user:tag/<tag>.md]]` (e.g., `[[user:tag/property-management.md]]`). See [[sys:system/text/base-uri.md]]
 
 </instructions>
 
@@ -113,7 +115,7 @@ After writing and saving the implementation plan, display:
 
 **Implementation Plan Created**
 
-Path: [base_uri of the updated task or created text entity]
+Path: [base_uri of the updated task or created task entity]
 
 Title: [title of the entity]
 

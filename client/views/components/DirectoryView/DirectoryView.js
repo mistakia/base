@@ -21,6 +21,7 @@ import {
   get_directory_items,
   get_directory_state
 } from '@core/directory'
+import { RedactedContent } from '@components/primitives/styled'
 
 const DirectoryView = ({ path, on_navigate }) => {
   const dispatch = useDispatch()
@@ -85,6 +86,11 @@ const DirectoryView = ({ path, on_navigate }) => {
   }
 
   const handle_item_click = (event, item) => {
+    // Prevent navigation for redacted items
+    if (item.is_redacted) {
+      return
+    }
+
     const new_path = build_item_path(item)
 
     if (event?.metaKey || event?.ctrlKey) {
@@ -96,6 +102,11 @@ const DirectoryView = ({ path, on_navigate }) => {
   }
 
   const handle_item_mouse_down = (event, item) => {
+    // Prevent middle-click navigation for redacted items
+    if (item.is_redacted) {
+      return
+    }
+
     if (event.button === 1) {
       const new_path = build_item_path(item)
       open_in_new_tab(new_path)
@@ -122,35 +133,49 @@ const DirectoryView = ({ path, on_navigate }) => {
     color: '#0366d6',
     fontSize: '13px',
     lineHeight: '20px',
-    textDecoration: 'none',
-    cursor: 'pointer'
+    textDecoration: 'none'
   }
+
+  const get_name_style = (item) => ({
+    ...name_style,
+    cursor: item.is_redacted ? 'default' : 'pointer'
+  })
 
   return (
     <TableContainer
       sx={{
         overflow: 'visible',
         border: '1px solid #e1e4e8',
-        borderRadius: '6px',
+        borderBottomLeftRadius: '6px',
+        borderBottomRightRadius: '6px',
         backgroundColor: 'white'
       }}>
       <Table sx={{ minWidth: 650 }} size='small'>
         <TableBody>
-          {sorted_items.map((item) => (
+          {sorted_items.map((item, index) => (
             <TableRow
               key={item.name}
-              hover
+              hover={!item.is_redacted}
               sx={{
-                cursor: 'pointer',
+                cursor: item.is_redacted ? 'default' : 'pointer',
                 height: 41,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  backgroundColor: item.is_redacted
+                    ? 'transparent'
+                    : 'rgba(0, 0, 0, 0.04)'
                 }
               }}
               onClick={(e) => handle_item_click(e, item)}
               onMouseDown={(e) => handle_item_mouse_down(e, item)}>
               <TableCell
-                sx={{ py: 0, px: 2, borderBottom: '1px solid #e1e4e8' }}>
+                sx={{
+                  py: 0,
+                  px: 2,
+                  borderBottom:
+                    index === sorted_items.length - 1
+                      ? 'none'
+                      : '1px solid #e1e4e8'
+                }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                   <Box
                     sx={{
@@ -161,33 +186,75 @@ const DirectoryView = ({ path, on_navigate }) => {
                     }}>
                     {get_file_icon(item)}
                   </Box>
-                  <span
-                    style={name_style}
-                    onMouseEnter={(e) => {
-                      e.target.style.textDecoration = 'underline'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.textDecoration = 'none'
-                    }}>
-                    {item.name}
-                  </span>
+                  {item.is_redacted ? (
+                    <RedactedContent
+                      content_type='filename'
+                      show_tooltip={true}
+                      sx={{
+                        ...get_name_style(item),
+                        color: '#666'
+                      }}>
+                      {item.name}
+                    </RedactedContent>
+                  ) : (
+                    <span
+                      style={get_name_style(item)}
+                      onMouseEnter={(e) => {
+                        e.target.style.textDecoration = 'underline'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.textDecoration = 'none'
+                      }}>
+                      {item.name}
+                    </span>
+                  )}
                 </Box>
               </TableCell>
               <TableCell
                 align='right'
-                sx={{ py: 0, px: 2, borderBottom: '1px solid #e1e4e8' }}>
-                <span style={{ fontSize: '12px', color: '#666' }}>
-                  {item.type === 'directory'
-                    ? '-'
-                    : format_file_size(item.size)}
-                </span>
+                sx={{
+                  py: 0,
+                  px: 2,
+                  borderBottom:
+                    index === sorted_items.length - 1
+                      ? 'none'
+                      : '1px solid #e1e4e8'
+                }}>
+                {item.is_redacted && item.type === 'file' ? (
+                  <RedactedContent
+                    content_type='file_size'
+                    show_tooltip={true}
+                    sx={{ fontSize: '12px', color: '#666' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '12px', color: '#666' }}>
+                    {item.type === 'directory'
+                      ? '-'
+                      : format_file_size(item.size)}
+                  </span>
+                )}
               </TableCell>
               <TableCell
                 align='right'
-                sx={{ py: 0, px: 2, borderBottom: '1px solid #e1e4e8' }}>
-                <span style={{ fontSize: '12px', color: '#666' }}>
-                  {item.modified ? format_relative_time(item.modified) : '-'}
-                </span>
+                sx={{
+                  py: 0,
+                  px: 2,
+                  borderBottom:
+                    index === sorted_items.length - 1
+                      ? 'none'
+                      : '1px solid #e1e4e8'
+                }}>
+                {item.is_redacted ? (
+                  <RedactedContent
+                    content_type='date'
+                    show_tooltip={true}
+                    sx={{ fontSize: '12px', color: '#666' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '12px', color: '#666' }}>
+                    {item.modified ? format_relative_time(item.modified) : '-'}
+                  </span>
+                )}
               </TableCell>
             </TableRow>
           ))}
