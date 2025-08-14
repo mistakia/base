@@ -1,5 +1,4 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 
@@ -15,7 +14,6 @@ const ThreadTimelineView = () => {
   const selected_thread_data = threads_state.get('selected_thread_data')
   const is_loading_thread = threads_state.get('is_loading_thread')
   const thread_error = threads_state.get('thread_error')
-
 
   if (is_loading_thread) {
     return (
@@ -35,7 +33,8 @@ const ThreadTimelineView = () => {
     )
   }
 
-  const timeline_to_display = selected_thread_data && selected_thread_data.get('timeline')
+  const timeline_to_display =
+    selected_thread_data && selected_thread_data.get('timeline')
   const metadata = selected_thread_data
 
   if (!timeline_to_display || timeline_to_display.length === 0) {
@@ -48,9 +47,7 @@ const ThreadTimelineView = () => {
 
   const leftContent = <TimelineList timeline={timeline_to_display} />
 
-  const rightContent = (
-    <ThreadHeader metadata={metadata} />
-  )
+  const rightContent = <ThreadHeader metadata={metadata} />
 
   return (
     <Box sx={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -65,7 +62,5 @@ const ThreadTimelineView = () => {
     </Box>
   )
 }
-
-ThreadTimelineView.propTypes = {}
 
 export default ThreadTimelineView

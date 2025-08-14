@@ -77,8 +77,8 @@ api.use(
       '/api/users/session',
       /^(?:)\/api\/users\/[^/]+\/tasks(?:\/.*)?$/,
       /^(?:)\/api\/users\/public_keys\/[^/]+$/,
-      /^\/api\/filesystem\/.*$/, // Allow public access but still check permissions
-      /^\/api\/threads\/.*$/ // Allow public access but still check permissions
+      /^\/api\/filesystem(?:\/.*)?$/, // Allow public access but still check permissions
+      /^\/api\/threads(?:\/.*)?$/ // Allow public access but still check permissions
     ]
   })
 )

@@ -1,11 +1,6 @@
 import { takeLatest, fork, call } from 'redux-saga/effects'
 
-import {
-  get_threads,
-  get_thread,
-  get_thread_timeline,
-  get_thread_metadata
-} from '@core/api/sagas'
+import { get_threads, get_thread } from '@core/api/sagas'
 import { threads_action_types } from './actions'
 
 export function* load_threads({ payload }) {
@@ -32,7 +27,4 @@ export function* watch_load_thread() {
 //  ROOT
 // -------------------------------------
 
-export const threads_sagas = [
-  fork(watch_load_threads),
-  fork(watch_load_thread)
-]
+export const threads_sagas = [fork(watch_load_threads), fork(watch_load_thread)]

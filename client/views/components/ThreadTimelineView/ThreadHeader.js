@@ -3,12 +3,17 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
 import '@styles/chip.styl'
+import { format_relative_time } from '@views/utils/date-formatting.js'
 
 const extract_thread_title = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return ''
   }
-  const summaries = metadata.getIn(['external_session', 'provider_metadata', 'summaries'])
+  const summaries = metadata.getIn([
+    'external_session',
+    'provider_metadata',
+    'summaries'
+  ])
   if (!summaries || !summaries.length) {
     return ''
   }
@@ -19,14 +24,21 @@ const extract_total_tokens = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return 0
   }
-  return metadata.getIn(['external_session', 'provider_metadata', 'total_tokens']) || 0
+  return (
+    metadata.getIn(['external_session', 'provider_metadata', 'total_tokens']) ||
+    0
+  )
 }
 
 const extract_duration = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return null
   }
-  const duration_minutes = metadata.getIn(['external_session', 'provider_metadata', 'duration_minutes'])
+  const duration_minutes = metadata.getIn([
+    'external_session',
+    'provider_metadata',
+    'duration_minutes'
+  ])
   if (!duration_minutes) return null
 
   if (duration_minutes < 1) {
@@ -44,7 +56,9 @@ const extract_models = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return []
   }
-  return metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
+  return (
+    metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
+  )
 }
 
 const format_token_shorthand = ({ count }) => {
@@ -73,10 +87,17 @@ const extract_external_session_info = (metadata) => {
   const external_session = metadata.get('external_session')
   if (!external_session) return null
 
-  const session_provider = external_session.session_provider || external_session.get?.('session_provider')
-  const session_id = external_session.session_id || external_session.get?.('session_id')
-  const provider_metadata = external_session.provider_metadata || external_session.get?.('provider_metadata')
-  const working_directory = provider_metadata?.working_directory || provider_metadata?.get?.('working_directory')
+  const session_provider =
+    external_session.session_provider ||
+    external_session.get?.('session_provider')
+  const session_id =
+    external_session.session_id || external_session.get?.('session_id')
+  const provider_metadata =
+    external_session.provider_metadata ||
+    external_session.get?.('provider_metadata')
+  const working_directory =
+    provider_metadata?.working_directory ||
+    provider_metadata?.get?.('working_directory')
 
   return {
     provider: session_provider,
@@ -92,15 +113,30 @@ const extract_thread_state = (metadata) => {
   return metadata.get('thread_state') || null
 }
 
+const extract_dates = (metadata) => {
+  if (!metadata || !metadata.get) {
+    return { created_at: null, updated_at: null }
+  }
+  
+  const created_at = metadata.get('created_at') || null
+  const updated_at = metadata.get('updated_at') || null
+  
+  return { created_at, updated_at }
+}
+
 // Custom hook for metadata processing
 const use_thread_metadata = (metadata) => {
+  const dates = extract_dates(metadata)
+  
   return {
     title: extract_thread_title(metadata),
     total_tokens: extract_total_tokens(metadata),
     duration: extract_duration(metadata),
     models: extract_models(metadata),
     external_session_info: extract_external_session_info(metadata),
-    thread_state: extract_thread_state(metadata)
+    thread_state: extract_thread_state(metadata),
+    created_at: dates.created_at,
+    updated_at: dates.updated_at
   }
 }
 
@@ -131,7 +167,9 @@ const ThreadStats = ({
   duration,
   models,
   external_session_info,
-  thread_state
+  thread_state,
+  created_at,
+  updated_at
 }) => {
   const MetadataRow = ({
     label,
@@ -294,10 +332,55 @@ const ThreadStats = ({
 
   const working_directory = external_session_info?.working_directory
 
+  // Format date as YYYY/MM/DD HH:MM AM/PM
+  const format_short_date = (date_string) => {
+    if (!date_string) return null
+    
+    try {
+      const date = new Date(date_string)
+      if (isNaN(date.getTime())) return null
+      
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      
+      let hours = date.getHours()
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12
+      hours = hours || 12
+      
+      return `${year}/${month}/${day} ${hours}:${minutes} ${ampm}`
+    } catch {
+      return null
+    }
+  }
+
+  // Create date display components with relative time and absolute timestamp
+  const DateDisplay = ({ date }) => {
+    if (!date) return 'Unknown'
+    
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <Box sx={{ fontSize: '14px', color: '#333' }}>
+          {format_relative_time(date)}
+        </Box>
+        <Box sx={{ fontSize: '11px', color: '#999' }}>
+          {format_short_date(date)}
+        </Box>
+      </Box>
+    )
+  }
+
+  DateDisplay.propTypes = {
+    date: PropTypes.string
+  }
+
   // Determine which rows will be rendered to set is_first correctly
   const has_session_provider = external_session_info?.provider
   const has_thread_state = thread_state
   const has_working_directory = working_directory
+  const has_dates = created_at || updated_at
 
   return (
     <Box>
@@ -323,6 +406,15 @@ const ThreadStats = ({
           is_first={!has_session_provider && !has_thread_state}
         />
       )}
+      {has_dates && (
+        <TwoCellRow
+          left_label='Created'
+          left_value={<DateDisplay date={created_at} />}
+          right_label='Last Updated'
+          right_value={<DateDisplay date={updated_at} />}
+          is_first={!has_session_provider && !has_thread_state && !has_working_directory}
+        />
+      )}
       {duration ? (
         <TwoCellRow
           left_label='Tokens'
@@ -330,7 +422,7 @@ const ThreadStats = ({
           right_label='Duration'
           right_value={duration}
           is_first={
-            !has_session_provider && !has_thread_state && !has_working_directory
+            !has_session_provider && !has_thread_state && !has_working_directory && !has_dates
           }
         />
       ) : (
@@ -338,7 +430,7 @@ const ThreadStats = ({
           label='Tokens'
           value={format_token_shorthand({ count: total_tokens })}
           is_first={
-            !has_session_provider && !has_thread_state && !has_working_directory
+            !has_session_provider && !has_thread_state && !has_working_directory && !has_dates
           }
         />
       )}
@@ -367,7 +459,9 @@ ThreadStats.propTypes = {
     session_id: PropTypes.string,
     working_directory: PropTypes.string
   }),
-  thread_state: PropTypes.string
+  thread_state: PropTypes.string,
+  created_at: PropTypes.string,
+  updated_at: PropTypes.string
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -400,12 +494,6 @@ ExternalSessionChips.propTypes = {
   thread_state: PropTypes.string
 }
 
-const LoadingState = () => (
-  <Box sx={{ p: 3, mb: 3 }}>
-    <h5 style={{ fontSize: '20px', margin: 0 }}>Loading...</h5>
-  </Box>
-)
-
 const ThreadHeader = ({ metadata }) => {
   const {
     title,
@@ -413,7 +501,9 @@ const ThreadHeader = ({ metadata }) => {
     duration,
     models,
     external_session_info,
-    thread_state
+    thread_state,
+    created_at,
+    updated_at
   } = use_thread_metadata(metadata)
 
   return (
@@ -428,6 +518,8 @@ const ThreadHeader = ({ metadata }) => {
         models={models}
         external_session_info={external_session_info}
         thread_state={thread_state}
+        created_at={created_at}
+        updated_at={updated_at}
       />
     </Box>
   )

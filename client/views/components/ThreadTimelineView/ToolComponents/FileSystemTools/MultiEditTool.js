@@ -25,7 +25,8 @@ const MultiEditTool = ({ tool_call_event }) => {
   const threads_state = useSelector(get_threads_state)
   const selected_thread_data = threads_state.get('selected_thread_data')
   const working_directory =
-    selected_thread_data?.get('external_session')?.provider_metadata?.working_directory
+    selected_thread_data?.get('external_session')?.provider_metadata
+      ?.working_directory
 
   const get_action_button = () => {
     const { edits } = get_edit_info()
