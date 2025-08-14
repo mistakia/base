@@ -131,6 +131,11 @@ export const api = {
     return { url }
   },
 
+  get_models() {
+    const url = `${API_URL}/models`
+    return { url }
+  },
+
   get_directories({ type, path }) {
     let url = `${API_URL}/filesystem/directory`
     if (path) {

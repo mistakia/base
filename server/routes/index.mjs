@@ -5,6 +5,7 @@ import github from './github.mjs'
 import notion from './notion.mjs'
 import threads from './threads.mjs'
 import inference_providers from './inference-providers.mjs'
+import models from './models.mjs'
 import entities from './entities.mjs'
 import filesystem from './filesystem.mjs'
 
@@ -16,6 +17,7 @@ export default {
   notion,
   threads,
   inference_providers,
+  models,
   entities,
   filesystem
 }

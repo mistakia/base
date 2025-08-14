@@ -78,7 +78,8 @@ api.use(
       /^(?:)\/api\/users\/[^/]+\/tasks(?:\/.*)?$/,
       /^(?:)\/api\/users\/public_keys\/[^/]+$/,
       /^\/api\/filesystem(?:\/.*)?$/, // Allow public access but still check permissions
-      /^\/api\/threads(?:\/.*)?$/ // Allow public access but still check permissions
+      /^\/api\/threads(?:\/.*)?$/, // Allow public access but still check permissions
+      /^\/api\/models(?:\/.*)?$/ // Allow public access to models endpoint
     ]
   })
 )
@@ -87,7 +88,7 @@ api.use(
 api.use(
   '/api/*',
   create_permission_middleware({
-    exclude_paths: ['/api/users/session']
+    exclude_paths: ['/api/users/session', /^\/api\/models(?:\/.*)?$/]
   })
 )
 
@@ -97,6 +98,7 @@ api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
 api.use('/api/inference-providers', routes.inference_providers)
+api.use('/api/models', routes.models)
 api.use('/api/entities', routes.entities)
 api.use('/api/filesystem', routes.filesystem)
 

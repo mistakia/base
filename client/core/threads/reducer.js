@@ -9,7 +9,12 @@ const ThreadsState = new Record({
   is_loading_threads: false,
   is_loading_thread: false,
   threads_error: null,
-  thread_error: null
+  thread_error: null,
+  models_data: new Map({
+    loading: false,
+    error: null,
+    data: null
+  })
 })
 
 export function threads_reducer(state = new ThreadsState(), { payload, type }) {
@@ -61,6 +66,25 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.merge({
         selected_thread: null,
         selected_thread_data: null
+      })
+
+    case threads_action_types.GET_MODELS_PENDING:
+      return state.mergeIn(['models_data'], {
+        loading: true,
+        error: null
+      })
+
+    case threads_action_types.GET_MODELS_FULFILLED:
+      return state.mergeIn(['models_data'], {
+        loading: false,
+        error: null,
+        data: Map(payload.data)
+      })
+
+    case threads_action_types.GET_MODELS_FAILED:
+      return state.mergeIn(['models_data'], {
+        loading: false,
+        error: payload.error
       })
 
     default:

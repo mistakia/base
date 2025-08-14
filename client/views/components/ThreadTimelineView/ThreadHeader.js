@@ -1,9 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
+import { useSelector } from 'react-redux'
 
 import '@styles/chip.styl'
 import { format_relative_time } from '@views/utils/date-formatting.js'
+import { get_thread_cost_display } from '@core/threads/selectors'
 
 const extract_thread_title = (metadata) => {
   if (!metadata || !metadata.getIn) {
@@ -202,7 +204,8 @@ const ThreadStats = ({
   message_count,
   user_message_count,
   assistant_message_count,
-  tool_call_count
+  tool_call_count,
+  thread_cost_display
 }) => {
   const MetadataRow = ({
     label,
@@ -492,12 +495,24 @@ const ThreadStats = ({
           />
         )
       )}
-      {/* Tool calls - always show if available */}
-      {tool_call_count > 0 && (
-        <MetadataRow
-          label='Tool Calls'
-          value={tool_call_count.toLocaleString()}
+      {/* Tool calls and cost - use TwoCellRow if both exist, otherwise show individually */}
+      {tool_call_count > 0 && thread_cost_display ? (
+        <TwoCellRow
+          left_label='Tool Calls'
+          left_value={tool_call_count.toLocaleString()}
+          right_label='Cost'
+          right_value={thread_cost_display}
         />
+      ) : (
+        <>
+          {tool_call_count > 0 && (
+            <MetadataRow
+              label='Tool Calls'
+              value={tool_call_count.toLocaleString()}
+            />
+          )}
+          {thread_cost_display && <MetadataRow label='Cost' value={thread_cost_display} />}
+        </>
       )}
       {models.length > 0 && (
         <MetadataRow label='Models' value={render_models_value({ models })} />
@@ -530,7 +545,8 @@ ThreadStats.propTypes = {
   message_count: PropTypes.number,
   user_message_count: PropTypes.number,
   assistant_message_count: PropTypes.number,
-  tool_call_count: PropTypes.number
+  tool_call_count: PropTypes.number,
+  thread_cost_display: PropTypes.string
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -579,6 +595,9 @@ const ThreadHeader = ({ metadata }) => {
     tool_call_count
   } = use_thread_metadata(metadata)
 
+  // Get cost display from Redux store
+  const thread_cost_display = useSelector(get_thread_cost_display)
+
   return (
     <Box
       sx={{
@@ -603,6 +622,7 @@ const ThreadHeader = ({ metadata }) => {
         user_message_count={user_message_count}
         assistant_message_count={assistant_message_count}
         tool_call_count={tool_call_count}
+        thread_cost_display={thread_cost_display}
       />
     </Box>
   )
