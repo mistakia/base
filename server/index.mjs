@@ -35,17 +35,6 @@ api.locals.log = log
 api.disable('x-powered-by')
 api.use(compression())
 
-// Force HTTPS in production
-if (!IS_DEV && options.ssl) {
-  api.use((req, res, next) => {
-    if (req.header('x-forwarded-proto') !== 'https') {
-      res.redirect(`https://${req.header('host')}${req.url}`)
-    } else {
-      next()
-    }
-  })
-}
-
 // Add security headers for SPA
 api.use((req, res, next) => {
   // Security headers
