@@ -1,6 +1,6 @@
 import https from 'https'
 import http from 'http'
-import fs, { promises as fsPromise } from 'fs'
+import fs from 'fs'
 import url, { fileURLToPath } from 'url'
 import path, { dirname } from 'path'
 
@@ -10,7 +10,6 @@ import extend from 'deep-extend'
 import debug from 'debug'
 import bodyParser from 'body-parser'
 import cors from 'cors'
-import serveStatic from 'serve-static'
 import qs from 'qs'
 import jwt from 'jsonwebtoken'
 
@@ -53,15 +52,18 @@ api.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('X-XSS-Protection', '1; mode=block')
-  
+
   // SPA-specific headers
   res.setHeader('Cache-Control', 'public, max-age=0')
-  
+
   // Enable CORS for SPA
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, DELETE, OPTIONS'
+  )
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  
+
   next()
 })
 
@@ -113,40 +115,6 @@ api.use('/api/tags', routes.tags)
 api.use('/api/models', routes.models)
 api.use('/api/filesystem', routes.filesystem)
 
-// Health check endpoint
-api.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString()
-  })
-})
-
-// Handle common SPA scenarios
-api.use((req, res, next) => {
-  // Skip API routes
-  if (req.path.startsWith('/api/')) {
-    return next()
-  }
-  
-  // Handle trailing slashes for better UX
-  if (req.path.length > 1 && req.path.endsWith('/')) {
-    return res.redirect(301, req.path.slice(0, -1))
-  }
-  
-  // Handle common SPA routing patterns
-  if (req.path.includes('.')) {
-    // This is likely a file request, let it pass through
-    return next()
-  }
-  
-  // Log SPA route requests for debugging
-  if (IS_DEV) {
-    log(`SPA Route Request: ${req.method} ${req.path}`)
-  }
-  
-  next()
-})
-
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)
@@ -183,39 +151,64 @@ if (IS_DEV) {
     res.redirect(307, `http://localhost:8081${req.path}`)
   })
 } else {
-  const buildPath = path.join(__dirname, '..', 'build')
-  
-  // Serve static files from build directory with optimized caching
-  api.use('/', serveStatic(buildPath, {
-    // Enable aggressive caching for static assets
-    maxAge: '1y',
-    // Don't serve index.html for directory requests
-    index: false,
-    // Set proper cache headers for different file types
-    setHeaders: (res, path) => {
-      if (path.endsWith('.js') || path.endsWith('.css')) {
-        // Cache JavaScript and CSS files aggressively (they have content hashes)
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-      } else if (path.endsWith('.html')) {
-        // Don't cache HTML files
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-      } else if (path.match(/\.(ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/)) {
-        // Cache images and fonts
-        res.setHeader('Cache-Control', 'public, max-age=31536000')
+  const build_path = path.join(__dirname, '..', 'build')
+  const static_path = path.join(__dirname, '..', 'static')
+
+  // Serve built assets with long-term caching
+  api.use(
+    '/build',
+    express.static(build_path, {
+      fallthrough: true,
+      setHeaders: (res, filepath) => {
+        // Set Cache-Control to cache forever for built assets
+        res.set('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+    })
+  )
+
+  // Serve static files with medium-term caching
+  api.use(
+    '/static',
+    express.static(static_path, {
+      fallthrough: false,
+      setHeaders: (res, filepath) => {
+        // Set Cache-Control for 7 days for static files
+        res.set('Cache-Control', 'public, max-age=604800')
+      }
+    }),
+    (err, req, res, next) => {
+      // Error handling middleware for static files
+      if (err) {
+        res.status(404).send('Static content not found')
+      } else {
+        next()
       }
     }
-  }))
-  
-  // SPA fallback: serve index.html for all routes that don't match static files
-  // This enables client-side routing to work properly
-  api.get('*', (req, res) => {
-    const indexPath = path.join(buildPath, 'index.html')
-    res.sendFile(indexPath, { 
-      cacheControl: false,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+  )
+
+  // Serve built assets from root for backward compatibility
+  api.use(
+    express.static(build_path, {
+      fallthrough: true,
+      index: false, // Don't serve index.html for directory requests
+      setHeaders: (res, filepath) => {
+        // Only cache non-HTML files
+        if (!filepath.endsWith('.html')) {
+          res.set('Cache-Control', 'public, max-age=31536000, immutable')
+        }
+      }
+    })
+  )
+
+  // Serve index.html for all other routes (SPA client-side routing)
+  api.use('/*', (req, res, next) => {
+    res.sendFile(path.join(build_path, 'index.html'), (err) => {
+      if (err) {
+        if (!res.headersSent) {
+          res.status(404).send('Page not found')
+        } else {
+          next(err)
+        }
       }
     })
   })

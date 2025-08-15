@@ -34,7 +34,7 @@ const theme_import_map = {
   'solarized-light': () => import('@shikijs/themes/solarized-light'),
   'solarized-dark': () => import('@shikijs/themes/solarized-dark'),
   'dark-plus': () => import('@shikijs/themes/dark-plus'),
-  'nord': () => import('@shikijs/themes/nord')
+  nord: () => import('@shikijs/themes/nord')
 }
 
 const get_highlighter = async () => {
@@ -83,5 +83,3 @@ export const code_to_html = async (
   const highlighter = await get_highlighter()
   return highlighter.codeToHtml(code || '', { lang, theme, transformers })
 }
-
-

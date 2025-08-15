@@ -181,7 +181,7 @@ const base = (options) => ({
   plugins: options.plugins.concat([
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer']
-    }),
+    })
   ]),
   resolve: {
     modules: ['node_modules', 'app'],

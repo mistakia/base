@@ -18,7 +18,7 @@
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
     "start": "node cli/dev-server.mjs",
     "start:api": "nodemon services/server.mjs",
-    "lint": "eslint . --ext js,mjs",
+    "lint": "eslint . --ext js,mjs --ignore-pattern build",
     "prettier": "prettier --write .",
     "find-large-files": "node cli/find-large-files.mjs",
     "test": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --exit",
@@ -34,7 +34,7 @@
     "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
     "deploy": "pm2 deploy server.pm2.config.js production --force",
     "deploy:setup": "pm2 deploy server.pm2.config.js production setup",
-    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/current/build"
+    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
