@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react'
-import { Provider } from 'react-redux'
+import PropTypes from 'prop-types'
+import { Provider, useSelector } from 'react-redux'
 import { HistoryRouter as Router } from 'redux-first-history/rr6'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { CircularProgress, Box } from '@mui/material'
 
 import { store, history } from '@core/store.js'
 import StoreRegistry from '@core/store-registry.js'
 import { app_actions } from '@core/app/actions'
+import { get_app } from '@core/app/selectors'
 import Routes from './routes.js'
 
 // Import styles
@@ -56,16 +59,41 @@ const theme = createTheme({
   }
 })
 
-const Root = () => {
+const AppInitializer = ({ children }) => {
+  const app_state = useSelector(get_app)
+  const is_loaded = app_state.get('is_loaded')
+
   useEffect(() => {
     store.dispatch(app_actions.load())
   }, [])
 
+  if (!is_loaded) {
+    return (
+      <Box
+        display='flex'
+        justifyContent='center'
+        alignItems='center'
+        minHeight='100vh'>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  return children
+}
+
+AppInitializer.propTypes = {
+  children: PropTypes.node.isRequired
+}
+
+const Root = () => {
   return (
     <Provider store={store}>
       <Router history={history}>
         <ThemeProvider theme={theme}>
-          <Routes />
+          <AppInitializer>
+            <Routes />
+          </AppInitializer>
         </ThemeProvider>
       </Router>
     </Provider>

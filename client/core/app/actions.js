@@ -15,11 +15,12 @@ export const app_actions = {
     type: app_actions.APP_LOADED
   }),
 
-  load_keys: ({ user_public_key, user_private_key }) => ({
+  load_keys: ({ user_public_key, user_private_key, user_token }) => ({
     type: app_actions.LOAD_KEYS,
     payload: {
       user_public_key,
-      user_private_key
+      user_private_key,
+      user_token
     }
   }),
 

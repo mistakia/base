@@ -61,12 +61,6 @@ export const api = {
     return { url }
   },
 
-  get_entity({ base_uri, root_base_directory }) {
-    const params = { root_base_directory }
-    const url = `${API_URL}/entities/${encodeURIComponent(base_uri)}?${qs.stringify(params)}`
-    return { url }
-  },
-
   get_threads({ user_public_key, thread_state, limit, offset }) {
     const params = { user_public_key, thread_state, limit, offset }
     const url = `${API_URL}/threads?${qs.stringify(params)}`
@@ -124,11 +118,6 @@ export const api = {
       url,
       ...POST({ tool_name, parameters })
     }
-  },
-
-  get_inference_providers() {
-    const url = `${API_URL}/inference-providers`
-    return { url }
   },
 
   get_models() {

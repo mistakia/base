@@ -41,9 +41,8 @@ export const create_permission_middleware = (options = {}) => {
       return next()
     }
 
-    // Extract user public key from JWT auth or request
-    const user_public_key =
-      req.auth?.user_public_key || req.user?.user_public_key || null
+    // Extract user public key from request
+    const user_public_key = req.user?.user_public_key || null
 
     // Store permission context on request for route handlers
     req.permission_context = {
@@ -65,7 +64,7 @@ export const create_permission_middleware = (options = {}) => {
 export const check_filesystem_permission = () => {
   return async (req, res, next) => {
     try {
-      const user_public_key = req.auth?.user_public_key || null
+      const user_public_key = req.user?.user_public_key || null
       const request_path = req.query.path || req.params.path || ''
 
       // Resolve path relative to user base directory for correct base-uri mapping
@@ -107,7 +106,7 @@ export const check_filesystem_permission = () => {
 export const check_thread_permission = () => {
   return async (req, res, next) => {
     try {
-      const user_public_key = req.auth?.user_public_key || null
+      const user_public_key = req.user?.user_public_key || null
       const thread_id = req.params.thread_id
 
       if (!thread_id) {

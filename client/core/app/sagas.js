@@ -37,19 +37,32 @@ async function load_keys() {
   const user_private_key =
     await local_storage_adapter.getItem('base_private_key')
   const user_public_key = await local_storage_adapter.getItem('base_public_key')
-  return { user_private_key, user_public_key }
+  const user_token = await local_storage_adapter.getItem('base_token')
+  return { user_private_key, user_public_key, user_token }
 }
 
 export function* load() {
   // Load stored authentication keys on app initialization
-  const { user_private_key, user_public_key } = yield call(load_keys)
+  const { user_private_key, user_public_key, user_token } =
+    yield call(load_keys)
 
   if (user_private_key && user_public_key) {
-    yield put(app_actions.load_keys({ user_private_key, user_public_key }))
+    yield put(
+      app_actions.load_keys({ user_private_key, user_public_key, user_token })
+    )
 
     // Always establish session to get user data (username, etc.)
     // Even if we have a stored token, we need to fetch the user info
     yield call(establish_user_session)
+  } else if (user_token) {
+    // If no keys but token exists, still load the token
+    yield put(
+      app_actions.load_keys({
+        user_private_key: null,
+        user_public_key: null,
+        user_token
+      })
+    )
   }
 
   yield put(app_actions.loaded())

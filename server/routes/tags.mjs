@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { base_uri, include_archived, search_term } = req.query
-    const user_public_key = req.auth?.user_public_key
+    const user_public_key = req.user?.user_public_key
     if (!user_public_key) {
       return res.status(401).send({ error: 'authentication required' })
     }

@@ -37,11 +37,11 @@ export function* load_directory_markdown({ payload }) {
 
     try {
       // Directly use API service instead of saga to avoid state conflicts
-      const { token } = yield select(get_app)
+      const { user_token } = yield select(get_app)
       const { request } = api_request(
         api.get_file_content,
         { path: markdown_path },
-        token
+        user_token
       )
 
       const file_data = yield call(request)

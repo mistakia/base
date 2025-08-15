@@ -12,17 +12,13 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import serveStatic from 'serve-static'
 import qs from 'qs'
-import { expressjwt } from 'express-jwt'
 import jwt from 'jsonwebtoken'
 
 import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
+import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { create_permission_middleware } from '#server/middleware/permissions.mjs'
-
-// Initialize inference providers
-import OllamaProvider from '#libs-server/inference-providers/ollama.mjs'
-import { provider_registry } from '#libs-server/inference-providers/index.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
@@ -68,21 +64,8 @@ api.use(
   })
 )
 
-// JWT middleware for API routes
-api.use(
-  '/api/*',
-  expressjwt(config.jwt).unless({
-    path: [
-      '/api/users',
-      '/api/users/session',
-      /^(?:)\/api\/users\/[^/]+\/tasks(?:\/.*)?$/,
-      /^(?:)\/api\/users\/public_keys\/[^/]+$/,
-      /^\/api\/filesystem(?:\/.*)?$/, // Allow public access but still check permissions
-      /^\/api\/threads(?:\/.*)?$/, // Allow public access but still check permissions
-      /^\/api\/models(?:\/.*)?$/ // Allow public access to models endpoint
-    ]
-  })
-)
+// JWT parsing middleware for all API routes - parses tokens but doesn't block
+api.use('/api/*', parse_jwt_token())
 
 // Permission middleware for API routes (after JWT auth)
 api.use(
@@ -96,41 +79,21 @@ api.use(
 api.use('/api/threads', routes.threads)
 api.use('/api/users', routes.users)
 api.use('/api/tags', routes.tags)
-api.use('/api/github', routes.github)
-api.use('/api/inference-providers', routes.inference_providers)
+// api.use('/api/github', routes.github)
 api.use('/api/models', routes.models)
-api.use('/api/entities', routes.entities)
 api.use('/api/filesystem', routes.filesystem)
 
-// JWT Error handler
+// General error handler
 api.use((err, req, res, next) => {
-  if (err.name === 'UnauthorizedError') {
-    log(`JWT Error: ${err.message}`)
-    log(`Request path: ${req.path}`)
-    log(
-      `Authorization header: ${req.headers.authorization ? 'Present' : 'Missing'}`
-    )
+  log(`Error: ${err.name} - ${err.message}`)
+  log(`Request path: ${req.path}`)
 
-    if (err.message === 'jwt malformed') {
-      log('JWT malformed error - token format issue')
-      const auth_header = req.headers.authorization
-      if (auth_header) {
-        const token_part = auth_header.replace('Bearer ', '')
-        log(`Token parts count: ${token_part.split('.').length} (should be 3)`)
-      }
-    }
-
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: err.message,
-      details: 'JWT authentication failed'
-    })
-  }
-  next(err)
+  // Handle other errors as needed
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message
+  })
 })
-
-// Register Ollama provider
-provider_registry.register('ollama', new OllamaProvider())
 
 if (IS_DEV) {
   api.get('*', (req, res) => {
@@ -183,7 +146,10 @@ server.on('upgrade', async (request, socket, head) => {
     const token = parsed.searchParams.get('token')
     if (token) {
       const decoded = await jwt.verify(token, config.jwt.secret)
-      request.auth = decoded
+      request.user = {
+        user_public_key: decoded.user_public_key,
+        ...decoded
+      }
     } else {
       const user_public_key = parsed.searchParams.get('user_public_key')
       if (user_public_key) {
@@ -193,15 +159,12 @@ server.on('upgrade', async (request, socket, head) => {
   } catch (error) {
     log(error)
     // Don't destroy the socket for invalid tokens, allow connection without auth
+    request.user = null
   }
 
   wss.handleUpgrade(request, socket, head, function (ws) {
     if (request.user && request.user.user_public_key) {
       ws.user_public_key = request.user.user_public_key
-      log(`websocket connected with user_public_key: ${ws.user_public_key}`)
-    }
-    if (request.auth && request.auth.user_public_key) {
-      ws.user_public_key = request.auth.user_public_key
       log(`websocket connected with user_public_key: ${ws.user_public_key}`)
     }
     wss.emit('connection', ws, request)

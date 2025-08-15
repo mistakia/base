@@ -20,7 +20,8 @@ export function app_reducer(state = initial_state(), { payload, type }) {
     case app_actions.LOAD_KEYS:
       return state.merge({
         user_private_key: payload.user_private_key,
-        user_public_key: payload.user_public_key
+        user_public_key: payload.user_public_key,
+        user_token: payload.user_token
       })
 
     case app_actions.LOAD_FROM_PRIVATE_KEY:
