@@ -39,7 +39,8 @@ import {
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
-  const { token } = yield select(get_app)
+  const app = yield select(get_app)
+  const token = app.get('user_token')
   const { abort, request } = api_request(api_function, opts, token)
   try {
     yield put(actions.pending({ opts }))

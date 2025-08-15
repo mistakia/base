@@ -511,7 +511,9 @@ const ThreadStats = ({
               value={tool_call_count.toLocaleString()}
             />
           )}
-          {thread_cost_display && <MetadataRow label='Cost' value={thread_cost_display} />}
+          {thread_cost_display && (
+            <MetadataRow label='Cost' value={thread_cost_display} />
+          )}
         </>
       )}
       {models.length > 0 && (

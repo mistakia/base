@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Provider } from 'react-redux'
 import { HistoryRouter as Router } from 'redux-first-history/rr6'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 
 import { store, history } from '@core/store.js'
 import StoreRegistry from '@core/store-registry.js'
+import { app_actions } from '@core/app/actions'
 import Routes from './routes.js'
 
 // Import styles
@@ -55,14 +56,20 @@ const theme = createTheme({
   }
 })
 
-const Root = () => (
-  <Provider store={store}>
-    <Router history={history}>
-      <ThemeProvider theme={theme}>
-        <Routes />
-      </ThemeProvider>
-    </Router>
-  </Provider>
-)
+const Root = () => {
+  useEffect(() => {
+    store.dispatch(app_actions.load())
+  }, [])
+
+  return (
+    <Provider store={store}>
+      <Router history={history}>
+        <ThemeProvider theme={theme}>
+          <Routes />
+        </ThemeProvider>
+      </Router>
+    </Provider>
+  )
+}
 
 export default Root

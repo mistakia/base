@@ -1,10 +1,7 @@
 import express from 'express'
 import debug from 'debug'
 
-import {
-  get_models_from_cache,
-  validate_cache_age
-} from '#libs-server/utils/models-cache.mjs'
+import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 
 const router = express.Router()
 const log = debug('api:models')
