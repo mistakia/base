@@ -193,38 +193,46 @@ if (IS_DEV) {
       return next()
     }
 
-    const filePath = path.join(build_path, req.path)
+    const file_path = path.join(build_path, req.path)
 
     try {
       // Check if the requested file exists in the build directory
-      const stats = await fsPromises.stat(filePath)
+      const stats = await fsPromises.stat(file_path)
 
       if (stats.isFile()) {
         // File exists, serve it with appropriate caching
-        const isAsset =
-          /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|json|txt)$/.test(
+        const is_asset =
+          /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|json|txt|gz)$/.test(
             req.path
           )
 
-        res.sendFile(filePath, {
+        res.sendFile(file_path, {
           headers: {
-            'Cache-Control': isAsset
+            'Cache-Control': is_asset
               ? 'public, max-age=31536000, immutable' // Long cache for assets
               : 'public, max-age=0, must-revalidate' // No cache for HTML
           }
         })
       } else {
-        // Not a file, continue to next middleware
-        next()
+        // Not a file (probably a directory), serve index.html for SPA routing
+        res.sendFile(path.join(build_path, 'index.html'), (send_err) => {
+          if (send_err) {
+            if (!res.headersSent) {
+              res.status(404).send('Page not found')
+            } else {
+              next(send_err)
+            }
+          }
+        })
       }
     } catch (err) {
       // File doesn't exist, serve index.html for client-side routing
-      res.sendFile(path.join(build_path, 'index.html'), (sendErr) => {
-        if (sendErr) {
+      res.sendFile(path.join(build_path, 'index.html'), (send_err) => {
+        if (send_err) {
           if (!res.headersSent) {
             res.status(404).send('Page not found')
           } else {
-            next(sendErr)
+            next(send_err)
           }
         }
       })
