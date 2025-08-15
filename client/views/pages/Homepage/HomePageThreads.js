@@ -120,32 +120,38 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
     }
   }, [handle_keydown])
 
+  if (is_loading_threads) {
+    return (
+      <div className='threads-container loading-home-threads'>
+        <div>Loading threads...</div>
+      </div>
+    )
+  }
+
+  if (threads.size === 0) {
+    return null
+  }
+
   const displayed_threads = get_displayed_threads()
 
   return (
     <div className='threads-container'>
-      {is_loading_threads ? (
-        <div>Loading threads...</div>
-      ) : threads.size === 0 ? (
-        <div>No active threads</div>
-      ) : (
-        <>
-          <div className='threads-grid' ref={grid_ref}>
-            {displayed_threads.map((thread, index) => (
-              <Thread
-                key={thread.id}
-                thread={thread}
-                is_focused={index === focused_index}
-              />
-            ))}
-          </div>
-          {threads.size > displayed_threads.size && (
-            <Link to='/thread' className='all-threads-link'>
-              All Threads
-            </Link>
-          )}
-        </>
-      )}
+      <>
+        <div className='threads-grid' ref={grid_ref}>
+          {displayed_threads.map((thread, index) => (
+            <Thread
+              key={thread.id}
+              thread={thread}
+              is_focused={index === focused_index}
+            />
+          ))}
+        </div>
+        {threads.size > displayed_threads.size && (
+          <Link to='/thread' className='all-threads-link'>
+            All Threads
+          </Link>
+        )}
+      </>
     </div>
   )
 }
