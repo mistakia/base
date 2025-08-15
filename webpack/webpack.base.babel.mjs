@@ -179,14 +179,13 @@ const base = (options) => ({
     ]
   },
   plugins: options.plugins.concat([
-    // Always expose NODE_ENV to webpack, in order to use `process.env.NODE_ENV`
-    // inside your code for any environment checks; Terser will automatically
-    // drop any unreachable code.
-    new webpack.EnvironmentPlugin({
-      NODE_ENV: 'development'
-    }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer']
+    }),
+    // Ignore shiki WASM modules during build
+    new webpack.IgnorePlugin({
+      resourceRegExp: /\.wasm$/,
+      contextRegExp: /shiki/
     })
   ]),
   resolve: {
@@ -216,11 +215,20 @@ const base = (options) => ({
       '@pages': path.resolve(__dirname, '../client/views/pages'),
       '@core': path.resolve(__dirname, '../client/core'),
       '@styles': path.resolve(__dirname, '../client/styles')
+    },
+    fallback: {
+      fs: false,
+      path: false,
+      crypto: false
     }
   },
   devtool: options.devtool,
   target: 'web', // Make web variables accessible to webpack, e.g. window
-  performance: options.performance || {}
+  performance: options.performance || {},
+  externals: {
+    // Prevent shiki from being bundled during build
+    'shiki': 'shiki'
+  }
 })
 
 export default base

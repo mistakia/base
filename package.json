@@ -34,7 +34,7 @@
     "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
     "deploy": "pm2 deploy server.pm2.config.js production --force",
     "deploy:setup": "pm2 deploy server.pm2.config.js production setup",
-    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/build"
+    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/current/build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
@@ -108,7 +108,7 @@
     "highlight.js": "^11.11.1",
     "history": "^5.3.0",
     "html-inline-script-webpack-plugin": "3.2.1",
-    "html-loader": "4.2.0",
+    "html-loader": "^5.0.0",
     "html-webpack-plugin": "^5.6.3",
     "immutable": "4.3.7",
     "markdown-it-highlightjs": "^4.2.0",

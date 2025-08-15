@@ -5,9 +5,6 @@ module.exports = {
       script: 'services/server.mjs',
       args: '--config /home/user/base/config/config.json',
       watch: false,
-      env_production: {
-        NODE_ENV: 'production'
-      },
       max_memory_restart: '2G',
       node_args: '--max-old-space-size=2048',
       instances: 1,
@@ -29,17 +26,12 @@ module.exports = {
       'pre-deploy': 'git pull',
       'pre-deploy-local': '',
       'post-deploy': [
-        'export NODE_ENV=production',
         'source ~/.nvm/nvm.sh',
         'nvm use',
         'yarn install',
-        'yarn build',
-        'pm2 reload server.pm2.config.js --env production'
+        'pm2 reload server.pm2.config.js'
       ].join(' && '),
-      'pre-setup': '',
-      env: {
-        NODE_ENV: 'production'
-      }
+      'pre-setup': ''
     }
   }
 }
