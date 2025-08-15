@@ -1,7 +1,6 @@
 // Important modules this config uses
 import path from 'path'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-import HtmlInlineScriptPlugin from 'html-inline-script-webpack-plugin'
 import webpack from 'webpack'
 import CompressionPlugin from 'compression-webpack-plugin'
 
@@ -47,6 +46,7 @@ export default base({
     new HtmlWebpackPlugin({
       template: 'client/index.html',
       favicon: 'static/favicon.ico',
+      scriptLoading: 'defer',
       minify: {
         removeComments: true,
         collapseWhitespace: true,
@@ -61,8 +61,6 @@ export default base({
       },
       inject: true
     }),
-
-    new HtmlInlineScriptPlugin(),
 
     new CompressionPlugin({
       algorithm: 'gzip',

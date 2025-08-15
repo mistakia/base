@@ -182,11 +182,6 @@ const base = (options) => ({
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer']
     }),
-    // Ignore shiki WASM modules during build
-    new webpack.IgnorePlugin({
-      resourceRegExp: /\.wasm$/,
-      contextRegExp: /shiki/
-    })
   ]),
   resolve: {
     modules: ['node_modules', 'app'],
@@ -224,11 +219,7 @@ const base = (options) => ({
   },
   devtool: options.devtool,
   target: 'web', // Make web variables accessible to webpack, e.g. window
-  performance: options.performance || {},
-  externals: {
-    // Prevent shiki from being bundled during build
-    'shiki': 'shiki'
-  }
+  performance: options.performance || {}
 })
 
 export default base

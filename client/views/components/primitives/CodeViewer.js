@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import { codeToHtml } from 'shiki'
+import { code_to_html } from '@core/shiki-highlighter.js'
 import { normalize_language } from '@views/utils/language-utils.js'
 import { StatusText, MonospaceText } from './styled/index.js'
 
@@ -36,7 +36,7 @@ const CodeViewer = ({ code, language, is_redacted }) => {
           return
         }
 
-        const html = await codeToHtml(code || '', {
+        const html = await code_to_html(code || '', {
           lang: normalized_language,
           theme: 'solarized-light',
           transformers: [

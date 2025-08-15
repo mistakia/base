@@ -39,6 +39,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@notionhq/client": "^2.3.0",
+    "@shikijs/langs": "^3.9.2",
+    "@shikijs/themes": "^3.9.2",
     "@trashman/ed25519-blake2b": "^0.0.7",
     "@tsmx/secure-config": "^2.3.0",
     "binary-uuid": "^2.0.3",
@@ -107,7 +109,6 @@
     "highcharts-react-official": "^3.2.1",
     "highlight.js": "^11.11.1",
     "history": "^5.3.0",
-    "html-inline-script-webpack-plugin": "3.2.1",
     "html-loader": "^5.0.0",
     "html-webpack-plugin": "^5.6.3",
     "immutable": "4.3.7",

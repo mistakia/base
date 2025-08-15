@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import { codeToHtml } from 'shiki'
+import { code_to_html } from '@core/shiki-highlighter.js'
 import { MonospaceText } from '@views/components/primitives/styled'
 
 const BashTool = ({ tool_call_event, tool_result_event }) => {
@@ -20,7 +20,7 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
 
     const highlight_command = async () => {
       try {
-        const html = await codeToHtml(command, {
+        const html = await code_to_html(command, {
           lang: 'bash',
           theme: 'github-dark',
           transformers: []

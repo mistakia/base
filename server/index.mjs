@@ -35,6 +35,25 @@ api.locals.log = log
 
 api.disable('x-powered-by')
 api.use(compression())
+
+// Add security headers for SPA
+api.use((req, res, next) => {
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+  
+  // SPA-specific headers
+  res.setHeader('Cache-Control', 'public, max-age=0')
+  
+  // Enable CORS for SPA
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  
+  next()
+})
+
 api.use(
   bodyParser.json({
     verify: (req, res, buf) => {
@@ -83,15 +102,68 @@ api.use('/api/tags', routes.tags)
 api.use('/api/models', routes.models)
 api.use('/api/filesystem', routes.filesystem)
 
+// Health check endpoint
+api.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString()
+  })
+})
+
+// Handle common SPA scenarios
+api.use((req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next()
+  }
+  
+  // Handle trailing slashes for better UX
+  if (req.path.length > 1 && req.path.endsWith('/')) {
+    return res.redirect(301, req.path.slice(0, -1))
+  }
+  
+  // Handle common SPA routing patterns
+  if (req.path.includes('.')) {
+    // This is likely a file request, let it pass through
+    return next()
+  }
+  
+  // Log SPA route requests for debugging
+  if (IS_DEV) {
+    log(`SPA Route Request: ${req.method} ${req.path}`)
+  }
+  
+  next()
+})
+
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)
   log(`Request path: ${req.path}`)
+  log(`Request method: ${req.method}`)
+  log(`User agent: ${req.get('User-Agent')}`)
+
+  // Handle different types of errors
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid or missing authentication token'
+    })
+  }
+
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'Validation Error',
+      message: err.message,
+      details: err.details
+    })
+  }
 
   // Handle other errors as needed
   res.status(500).json({
     error: 'Internal Server Error',
-    message: err.message
+    message: IS_DEV ? err.message : 'Something went wrong',
+    ...(IS_DEV && { stack: err.stack })
   })
 })
 
@@ -101,29 +173,41 @@ if (IS_DEV) {
   })
 } else {
   const buildPath = path.join(__dirname, '..', 'build')
-  api.use('/', async (req, res, next) => {
-    const filepath = req.url.replace(/\/$/, '')
-    const filename = `${filepath}/index.html`
-    const fullpath = path.join(buildPath, filename)
-    try {
-      const filestat = await fsPromise.stat(fullpath)
-      if (filestat.isFile()) {
-        return res.sendFile(fullpath, { cacheControl: false })
+  
+  // Serve static files from build directory with optimized caching
+  api.use('/', serveStatic(buildPath, {
+    // Enable aggressive caching for static assets
+    maxAge: '1y',
+    // Don't serve index.html for directory requests
+    index: false,
+    // Set proper cache headers for different file types
+    setHeaders: (res, path) => {
+      if (path.endsWith('.js') || path.endsWith('.css')) {
+        // Cache JavaScript and CSS files aggressively (they have content hashes)
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      } else if (path.endsWith('.html')) {
+        // Don't cache HTML files
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      } else if (path.match(/\.(ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/)) {
+        // Cache images and fonts
+        res.setHeader('Cache-Control', 'public, max-age=31536000')
       }
-      next()
-    } catch (error) {
-      log(error)
-      next()
     }
-  })
-  api.use('/', serveStatic(buildPath))
+  }))
+  
+  // SPA fallback: serve index.html for all routes that don't match static files
+  // This enables client-side routing to work properly
   api.get('*', (req, res) => {
-    const notFoundPath = path.join(__dirname, '../', 'build', '404.html')
-    res.sendFile(notFoundPath, { cacheControl: false })
+    const indexPath = path.join(buildPath, 'index.html')
+    res.sendFile(indexPath, { 
+      cacheControl: false,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   })
-
-  // redirect to ipfs page
-  // res.redirect(307, `${config.url}${req.path}`)
 }
 
 const create_server = () => {

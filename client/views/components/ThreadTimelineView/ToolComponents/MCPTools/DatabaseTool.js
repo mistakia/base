@@ -14,7 +14,7 @@ import {
 import { ExpandLess, ExpandMore } from '@mui/icons-material'
 import BaseToolComponent from '@views/components/ThreadTimelineView/ToolComponents/BaseToolComponent.js'
 import { MonospaceText } from '@views/components/primitives/styled'
-import { codeToHtml } from 'shiki'
+import { code_to_html } from '@core/shiki-highlighter.js'
 
 const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
   const [visible_rows_count, set_visible_rows_count] = useState(3)
@@ -61,12 +61,12 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
         ]
 
         const [full_html, truncated_html] = await Promise.all([
-          codeToHtml(sql || '', {
+          code_to_html(sql || '', {
             lang: 'sql',
             theme: 'solarized-light',
             transformers: common_transformers
           }),
-          codeToHtml(truncated_sql || '', {
+          code_to_html(truncated_sql || '', {
             lang: 'sql',
             theme: 'solarized-light',
             transformers: common_transformers
