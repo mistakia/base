@@ -1,6 +1,6 @@
 import https from 'https'
 import http from 'http'
-import fs from 'fs'
+import fs, { promises as fsPromises } from 'fs'
 import url, { fileURLToPath } from 'url'
 import path, { dirname } from 'path'
 
@@ -186,31 +186,49 @@ if (IS_DEV) {
     }
   )
 
-  // Serve built assets from root for backward compatibility
-  api.use(
-    express.static(build_path, {
-      fallthrough: true,
-      index: false, // Don't serve index.html for directory requests
-      setHeaders: (res, filepath) => {
-        // Only cache non-HTML files
-        if (!filepath.endsWith('.html')) {
-          res.set('Cache-Control', 'public, max-age=31536000, immutable')
-        }
-      }
-    })
-  )
+  // Serve assets from build directory only if they exist
+  api.use(async (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return next()
+    }
 
-  // Serve index.html for all other routes (SPA client-side routing)
-  api.use('/*', (req, res, next) => {
-    res.sendFile(path.join(build_path, 'index.html'), (err) => {
-      if (err) {
-        if (!res.headersSent) {
-          res.status(404).send('Page not found')
-        } else {
-          next(err)
-        }
+    const filePath = path.join(build_path, req.path)
+
+    try {
+      // Check if the requested file exists in the build directory
+      const stats = await fsPromises.stat(filePath)
+
+      if (stats.isFile()) {
+        // File exists, serve it with appropriate caching
+        const isAsset =
+          /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|json|txt)$/.test(
+            req.path
+          )
+
+        res.sendFile(filePath, {
+          headers: {
+            'Cache-Control': isAsset
+              ? 'public, max-age=31536000, immutable' // Long cache for assets
+              : 'public, max-age=0, must-revalidate' // No cache for HTML
+          }
+        })
+      } else {
+        // Not a file, continue to next middleware
+        next()
       }
-    })
+    } catch (err) {
+      // File doesn't exist, serve index.html for client-side routing
+      res.sendFile(path.join(build_path, 'index.html'), (sendErr) => {
+        if (sendErr) {
+          if (!res.headersSent) {
+            res.status(404).send('Page not found')
+          } else {
+            next(sendErr)
+          }
+        }
+      })
+    }
   })
 }
 
