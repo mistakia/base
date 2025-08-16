@@ -35,9 +35,12 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 <task>Execute a software implementation following an implementation plan</task>
 
-<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step. Follow the [[user:guideline/write-software.md]] for general software development practices and [[sys:system/guideline/write-javascript.md]] for JavaScript-specific guidelines.</context>
+<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step. Read and follow [[user:guideline/write-software.md]] for general software development practices and [[sys:system/guideline/write-javascript.md]] for JavaScript-specific guidelines.</context>
 
 <instructions>
+
+Before starting, read [[sys:system/guideline/implement-software-task.md]].
+
 ## Setup Phase
 
 1. **Locate Implementation Plan**
@@ -59,8 +62,8 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 3. **Work on First Task Only**
 
    - Select the first uncompleted task from the implementation plan
-   - Follow [[user:guideline/write-software.md]] for variable naming and DRY principles
-   - Follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
+   - Read and follow [[user:guideline/write-software.md]] for variable naming and DRY principles
+   - Read and follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
    - Make the required changes for that task only
    - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
 

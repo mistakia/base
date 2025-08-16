@@ -34,6 +34,9 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 <context>This workflow reviews the output from the implement-software-task workflow. It expects unstaged file changes in a git worktree, an updated implementation plan, and follows compliance guidelines from write-software.md and write-javascript.md. The workflow balances automation with human judgment at critical decision points.</context>
 
 <instructions>
+
+Before starting, read [[sys:system/guideline/review-software-implementation.md]].
+
 ## Setup Phase
 
 1. **Verify Working Environment**
