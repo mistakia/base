@@ -91,14 +91,20 @@ const MarkdownViewer = ({ content, is_redacted }) => {
   const html_content = useMemo(() => {
     if (!content) return ''
 
+    // Strip YAML frontmatter before rendering
+    const content_without_frontmatter = content.replace(
+      /^---\n[\s\S]*?\n---\n/,
+      ''
+    )
+
     // For redacted content, render the markdown structure with redacted styling
     if (is_redacted) {
       // The content is already redacted markdown from the server
       // Render it as markdown to preserve structure, then apply redacted styling
-      return render_markdown(content)
+      return render_markdown(content_without_frontmatter)
     }
 
-    return render_markdown(content)
+    return render_markdown(content_without_frontmatter)
   }, [content, is_redacted])
 
   return (
