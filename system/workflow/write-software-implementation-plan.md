@@ -9,6 +9,7 @@ entity_id: 2928d808-7e56-42aa-a888-8626046b35e8
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-software-implementation-plan.md]]
+  - uses [[sys:system/guideline/write-entity.md]]
 updated_at: '2025-06-18T00:44:36.062Z'
 user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
@@ -87,7 +88,7 @@ Create structured implementation plans by understanding requirements, analyzing 
 
 8. **Follow the guideline**:
 
-   - Use the template from [[sys:system/guideline/write-software-implementation-plan.md]]
+   - Read and Use the template from [[sys:system/guideline/write-software-implementation-plan.md]]
    - Ensure all sections are complete
    - Review for clarity and completeness
 
@@ -101,12 +102,13 @@ Create structured implementation plans by understanding requirements, analyzing 
 - If a task entity is known, update the task entity file with the implementation plan
 - If no task entity is known:
   - Create a new task entity using `entity_create` tool
-  - Use entity type "task" (see [[sys:system/schema/task.md]])
+  - Read [[sys:system/schema/task.md]] and use entity type "task"
   - Set `title` to the task name and include a brief `description`
   - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
   - Include the full implementation plan in the `entity_content` field
   - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`.
-  - Check the `tag/` directory for any applicable tags and add them to the entity metadata/relations using the base URI link format `[[user:tag/<tag>.md]]` (e.g., `[[user:tag/property-management.md]]`). See [[sys:system/text/base-uri.md]]
+  - Check the `tag/` directory for any applicable tags and add them to the entity metadata/relations using the base URI link format `[[user:tag/<tag>.md]]` (e.g., `[[user:tag/property-management.md]]`). Read [[sys:system/text/base-uri.md]]
+  - Read [[sys:system/guideline/write-entity.md]] and use it to write the entity file
 
 </instructions>
 
