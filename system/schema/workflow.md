@@ -2,7 +2,7 @@
 type: type_definition
 title: Workflow
 type_name: workflow
-extends: base
+extends: entity
 description: A prompt used to create an agentic workflow with structured inputs and outputs
 properties:
   - name: prompt_properties

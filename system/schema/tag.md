@@ -2,7 +2,7 @@
 type: type_definition
 type_name: tag
 title: Tag
-extends: base
+extends: entity
 description: A tag type for categorizing and organizing content
 properties:
   - name: color

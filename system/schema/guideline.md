@@ -2,7 +2,7 @@
 type: type_definition
 type_name: guideline
 title: Guideline
-extends: base
+extends: entity
 description: Guidelines represent standards, procedures, or best practices
 properties:
   - name: globs

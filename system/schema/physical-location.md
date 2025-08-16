@@ -2,7 +2,7 @@
 type: type_definition
 type_name: physical_location
 title: Physical Location
-extends: base
+extends: entity
 description: Physical locations represent places, addresses, or geographical points
 properties:
   - name: latitude

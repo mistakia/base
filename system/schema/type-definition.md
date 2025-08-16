@@ -2,7 +2,7 @@
 type: type_definition
 type_name: type_definition
 title: Type Definition
-extends: base
+extends: entity
 description: Type definitions define the structure of content types
 properties:
   - name: type_name

@@ -2,7 +2,7 @@
 type: type_definition
 type_name: database_item
 title: Database Item
-extends: base
+extends: entity
 description: Database items represent records within a database
 properties:
   - name: database_table_id

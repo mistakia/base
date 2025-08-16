@@ -3,7 +3,7 @@ title: Change Request
 type: type_definition
 type_name: change_request
 description: HISTORICAL - Defines the structure for a change request to the knowledge base. This system was removed in January 2025.
-extends: base
+extends: entity
 tags: []
 properties:
   - name: change_request_id

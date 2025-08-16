@@ -2,7 +2,7 @@
 type: type_definition
 type_name: database
 title: Database
-extends: base
+extends: entity
 description: Structured data collection with defined schema and configurable storage
 properties:
   - name: fields

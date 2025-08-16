@@ -2,7 +2,7 @@
 type: type_definition
 type_name: digital_item
 title: Digital Item
-extends: base
+extends: entity
 description: Digital items represent files, software, or digital artifacts
 properties:
   - name: file_mime_type

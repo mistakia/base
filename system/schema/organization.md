@@ -2,7 +2,7 @@
 type: type_definition
 type_name: organization
 title: Organization
-extends: base
+extends: entity
 description: Organizations represent companies, departments, teams, or other organizational units
 properties:
   - name: website_url

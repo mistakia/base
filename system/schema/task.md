@@ -2,7 +2,7 @@
 type: type_definition
 type_name: task
 title: Task
-extends: base
+extends: entity
 description: Tasks represent discrete units of work that need to be completed
 properties:
   - name: status

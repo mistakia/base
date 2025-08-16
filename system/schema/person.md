@@ -2,7 +2,7 @@
 type: type_definition
 type_name: person
 title: Person
-extends: base
+extends: entity
 description: Persons represent individual people
 properties:
   - name: first_name

@@ -2,7 +2,7 @@
 type: type_definition
 type_name: database_view
 title: Database View
-extends: base
+extends: entity
 description: Database views represent saved configurations of how to display database items
 properties:
   - name: view_name
