@@ -196,7 +196,7 @@ describe('Entity Schema Module', () => {
       })
     })
 
-    it('should warn about extensions for unknown base types', async () => {
+    it('should warn about extensions for unknown entity types', async () => {
       const original_warn = console.warn
       let warning_message = null
       console.warn = (message) => {
@@ -204,7 +204,7 @@ describe('Entity Schema Module', () => {
       }
       try {
         const result = await load_schema_definitions_from_git()
-        expect(warning_message).to.include('extends unknown base type')
+        expect(warning_message).to.include('extends unknown entity type')
         expect(result).to.be.an('object')
         expect(Object.keys(result).length).to.be.at.least(1)
         expect(result).to.have.property('task_extension')

@@ -117,10 +117,10 @@ export async function load_schema_definitions_from_git() {
         }
       } else {
         log(
-          `Definition ${definition.title} extends unknown base type ${base_type}`
+          `Definition ${definition.title} extends unknown entity type ${base_type}`
         )
         console.warn(
-          `Definition ${definition.title} extends unknown base type ${base_type}`
+          `Definition ${definition.title} extends unknown entity type ${base_type}`
         )
       }
     }
