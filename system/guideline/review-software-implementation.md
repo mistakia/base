@@ -17,18 +17,27 @@ updated_at: '2025-08-02T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
-# Review Software Implementation
-
 Standards for reviewing code during implementation reviews.
 
-## Code Comments
+### Development Artifacts
 
-### Remove Migration Artifacts
+- Debug scripts and exploration files MUST be removed from production branches
+- Temporary test files MUST be cleaned up before code review completion
+- Sample data files SHOULD be removed unless specifically needed for documentation
+- Files with naming patterns like debug-_, test-_, explore-\* require review for necessity
+- comments referencing removed functionality MUST be deleted
+  - keep migration context in implementation plans and commit messages instead
 
-Comments referencing removed functionality MUST be deleted:
+### Code Duplication Prevention
 
-- References to replaced systems (e.g., "Removed database transaction")
-- Migration notes that provide no ongoing value
-- Historical implementation details
+- Duplicate code MUST be identified and eliminated before completion
+- New implementations MUST be checked against existing codebase for overlap
+- Similar functionality SHOULD be consolidated into reusable components
+- Code patterns SHOULD leverage existing utilities rather than reimplementing
 
-Keep migration context in implementation plans and commit messages instead.
+### Readability and Maintainability
+
+- Code SHOULD be reviewed for opportunities to improve clarity and understanding
+- Complex logic SHOULD be broken down into smaller, well-named functions
+- Comments SHOULD explain the "why" not just the "what" for non-obvious code
+- Function and variable names SHOULD clearly communicate their purpose
