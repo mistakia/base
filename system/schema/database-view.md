@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: database_view
-title: Database View
-extends: entity
 description: Database views represent saved configurations of how to display database items
+created_at: '2025-08-16T17:56:08.202Z'
+entity_id: 2dc0616b-b7b1-40ba-8ee8-aee1568311e7
+extends: entity
 properties:
   - name: view_name
     type: string
@@ -21,6 +21,9 @@ properties:
     type: object
     required: false
     description: JSON configuration of view settings
+type_name: database_view
+updated_at: '2025-08-16T17:56:09.130Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Database View

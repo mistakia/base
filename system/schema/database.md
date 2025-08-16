@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: database
-title: Database
-extends: entity
 description: Structured data collection with defined schema and configurable storage
+created_at: '2025-08-16T17:56:08.202Z'
+entity_id: 086d9bd6-cc0a-4949-ad5a-eabfabdf0cbe
+extends: entity
 properties:
   - name: fields
     type: array
@@ -15,7 +15,13 @@ properties:
           description: Name of the field
         type:
           type: string
-          enum: [string, number, boolean, datetime, array, object]
+          enum:
+            - string
+            - number
+            - boolean
+            - datetime
+            - array
+            - object
           description: Data type of the field
         required:
           type: boolean
@@ -66,6 +72,9 @@ properties:
       type: string
     required: false
     description: Views defined for this database
+type_name: database
+updated_at: '2025-08-16T17:56:09.130Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Database

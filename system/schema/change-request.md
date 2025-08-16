@@ -1,10 +1,16 @@
 ---
 title: Change Request
 type: type_definition
-type_name: change_request
-description: HISTORICAL - Defines the structure for a change request to the knowledge base. This system was removed in January 2025.
+description: >-
+  HISTORICAL - Defines the structure for a change request to the knowledge base. This system was
+  removed in January 2025.
+created_at: '2025-08-16T17:56:08.201Z'
+entity_id: 8fe08922-fd6e-4962-8c0d-189a60b99bca
 extends: entity
-tags: []
+observations:
+  - '[design] Represents a proposed set of changes to knowledge base files.'
+  - '[workflow] Integrates with Git branching and optionally GitHub Pull Requests.'
+  - '[storage] Stored as both a DB record and a Markdown file for discoverability.'
 properties:
   - name: change_request_id
     type: string
@@ -59,13 +65,13 @@ properties:
     format: datetime
     required: false
     description: Timestamp when the change request was closed (if not merged).
-observations:
-  - '[design] Represents a proposed set of changes to knowledge base files.'
-  - '[workflow] Integrates with Git branching and optionally GitHub Pull Requests.'
-  - '[storage] Stored as both a DB record and a Markdown file for discoverability.'
 relations:
-  - 'relates_to [[sys:system/text/system-design.md]]'
-  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/knowledge-base-schema.md]]
+tags: []
+type_name: change_request
+updated_at: '2025-08-16T17:56:09.129Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Change Request Schema

@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: person
-title: Person
-extends: entity
 description: Persons represent individual people
+created_at: '2025-08-16T17:56:08.204Z'
+entity_id: 5abc7086-4eab-4b4a-a56f-2dab6ca8d791
+extends: entity
 properties:
   - name: first_name
     type: string
@@ -25,6 +25,9 @@ properties:
     type: string
     required: false
     description: Personal website
+type_name: person
+updated_at: '2025-08-16T17:56:09.132Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Person

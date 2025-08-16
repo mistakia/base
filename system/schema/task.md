@@ -1,24 +1,22 @@
 ---
 type: type_definition
-type_name: task
-title: Task
-extends: entity
 description: Tasks represent discrete units of work that need to be completed
+created_at: '2025-08-16T17:56:08.206Z'
+entity_id: 5bfafc54-c72a-43bb-8f77-61cbd843abaf
+extends: entity
 properties:
   - name: status
     type: string
     enum:
-      [
-        No status,
-        Waiting,
-        Paused,
-        Planned,
-        Started,
-        In Progress,
-        Completed,
-        Cancelled,
-        Blocked
-      ]
+      - No status
+      - Waiting
+      - Paused
+      - Planned
+      - Started
+      - In Progress
+      - Completed
+      - Cancelled
+      - Blocked
     required: false
     description: Current status of the task
   - name: start_by
@@ -75,9 +73,17 @@ properties:
     description: Person or team responsible for the task
   - name: priority
     type: string
-    enum: [None, Low, Medium, High, Critical]
+    enum:
+      - None
+      - Low
+      - Medium
+      - High
+      - Critical
     required: false
     description: Priority level of the task
+type_name: task
+updated_at: '2025-08-16T17:56:09.134Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Task

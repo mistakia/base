@@ -1,19 +1,22 @@
 ---
 type: type_definition
-type_name: tag
-title: Tag
-extends: entity
 description: A tag type for categorizing and organizing content
-properties:
-  - name: color
-    type: string
-    required: false
-    description: Optional color code for the tag (e.g., hex code)
+created_at: '2025-08-16T17:56:08.206Z'
+entity_id: 2cbaaa75-cac5-4228-b08f-7aa9e5705761
+extends: entity
 observations:
   - '[design] Tags provide cross-cutting organization capability'
   - '[feature] Tags can be referenced both in frontmatter and with tag property'
   - '[architecture] Tag hierarchy allows for more sophisticated organization'
   - '[usage] Proper noun tags help track project-specific content'
+properties:
+  - name: color
+    type: string
+    required: false
+    description: Optional color code for the tag (e.g., hex code)
+type_name: tag
+updated_at: '2025-08-16T17:56:09.133Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Tag

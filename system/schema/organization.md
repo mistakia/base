@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: organization
-title: Organization
-extends: entity
 description: Organizations represent companies, departments, teams, or other organizational units
+created_at: '2025-08-16T17:56:08.204Z'
+entity_id: 35757f6c-4c1c-4f0b-8f3a-c5cd5124ae72
+extends: entity
 properties:
   - name: website_url
     type: string
@@ -13,6 +13,9 @@ properties:
     type: string
     required: false
     description: Detailed description of the organization
+type_name: organization
+updated_at: '2025-08-16T17:56:09.132Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Organization

@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: physical_item
-title: Physical Item
-extends: entity
 description: Physical items represent tangible objects, equipment, or materials
+created_at: '2025-08-16T17:56:08.204Z'
+entity_id: 0eb4ada8-d30f-40a8-ad31-e60a3110a8d4
+extends: entity
 properties:
   # Standard physical item properties
   - name: manufacturer
@@ -128,12 +128,19 @@ properties:
     description: Desired quantity
   - name: importance
     type: string
-    enum: [Core, Standard, Premium, Potential]
+    enum:
+      - Core
+      - Standard
+      - Premium
+      - Potential
     required: false
     description: Importance classification
   - name: frequency_of_use
     type: string
-    enum: [Daily, Weekly, Infrequent]
+    enum:
+      - Daily
+      - Weekly
+      - Infrequent
     required: false
     description: How often the item is used
   - name: consumable
@@ -174,6 +181,9 @@ properties:
     type: string
     required: false
     description: Miscellaneous notes
+type_name: physical_item
+updated_at: '2025-08-16T17:56:09.132Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Physical Item

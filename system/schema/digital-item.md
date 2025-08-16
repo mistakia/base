@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: digital_item
-title: Digital Item
-extends: entity
 description: Digital items represent files, software, or digital artifacts
+created_at: '2025-08-16T17:56:08.203Z'
+entity_id: 10194a1c-e110-4cfd-9212-fd9a15160d97
+extends: entity
 properties:
   - name: file_mime_type
     type: string
@@ -29,6 +29,9 @@ properties:
     type: string
     required: false
     description: HTML content if applicable
+type_name: digital_item
+updated_at: '2025-08-16T17:56:09.131Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Digital Item

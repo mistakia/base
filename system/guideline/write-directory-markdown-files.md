@@ -1,9 +1,11 @@
 ---
 title: Write Directory Markdown Files
 type: guideline
-description: |
-  Guidelines for writing directory-level markdown documentation files that communicate essential context, standards, and relationships
+description: >-
+  Guidelines for writing directory-level markdown documentation files that communicate essential
+  context, standards, and relationships
 created_at: '2025-08-16T00:00:00.000Z'
+entity_id: 13ae9879-308e-4b8d-a252-8410d52ff740
 globs:
   - '**/ABOUT.md'
   - '**/INDEX.md'
@@ -14,10 +16,11 @@ observations:
   - '[principle] Focus on stable context rather than volatile file listings'
   - '[distinction] Each file type has specific audience and purpose'
 relations:
-  - 'implements [[sys:system/schema/guideline.md]]'
-  - 'follows [[user:guideline/starting-point-philosophy.md]]'
-  - 'related_to [[sys:system/guideline/write-documentation.md]]'
-  - 'related_to [[user:guideline/write-text.md]]'
+  - implements [[sys:system/schema/guideline.md]]
+  - follows [[user:guideline/starting-point-philosophy.md]]
+  - related_to [[sys:system/guideline/write-documentation.md]]
+  - related_to [[user:guideline/write-text.md]]
+updated_at: '2025-08-16T17:56:09.129Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

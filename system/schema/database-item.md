@@ -1,14 +1,17 @@
 ---
 type: type_definition
-type_name: database_item
-title: Database Item
-extends: entity
 description: Database items represent records within a database
+created_at: '2025-08-16T17:56:08.201Z'
+entity_id: b556b705-14e2-4797-8ef5-9c6af518f085
+extends: entity
 properties:
   - name: database_table_id
     type: string
     required: true
     description: Reference to the parent database table
+type_name: database_item
+updated_at: '2025-08-16T17:56:09.130Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Database Item

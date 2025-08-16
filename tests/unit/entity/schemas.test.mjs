@@ -38,7 +38,7 @@ describe('Entity Schema Module', () => {
         type_name: 'task',
         description: 'Task schema definition',
         user_public_key: test_user.user_public_key,
-        extends: 'base',
+        extends: 'entity',
         properties: [
           {
             name: 'status',
@@ -67,7 +67,7 @@ describe('Entity Schema Module', () => {
         type_name: 'person',
         description: 'Person schema definition',
         user_public_key: test_user.user_public_key,
-        extends: 'base',
+        extends: 'entity',
         properties: [
           {
             name: 'first_name',

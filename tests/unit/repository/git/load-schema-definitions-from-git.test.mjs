@@ -37,7 +37,7 @@ describe('load_schema_definitions_from_git', () => {
         type_name: 'task',
         description: 'Task schema definition',
         user_public_key: test_user.user_public_key,
-        extends: 'base',
+        extends: 'entity',
         properties: [
           {
             name: 'status',
@@ -66,7 +66,7 @@ describe('load_schema_definitions_from_git', () => {
         type_name: 'person',
         description: 'Person schema definition',
         user_public_key: test_user.user_public_key,
-        extends: 'base',
+        extends: 'entity',
         properties: [
           {
             name: 'first_name',

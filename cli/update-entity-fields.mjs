@@ -164,6 +164,12 @@ const update_entity_fields = async ({
           const { entity_properties, entity_content } = entity_result
           const entity_type = entity_properties.type
 
+          // Skip entities that are type definitions
+          if (entity_type === 'type_definition') {
+            log(`Skipping ${file.base_uri} (type_definition) `)
+            continue
+          }
+
           // Add missing fields to properties
           const updated_properties = {
             user_public_key: is_system_file

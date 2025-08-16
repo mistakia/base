@@ -1,8 +1,8 @@
 ---
 type: type_definition
-type_name: entity
-title: Entity Schema
 description: The entity schema that all other types inherit from - a thing that is independent and distinct
+created_at: '2025-08-16T17:56:08.203Z'
+entity_id: 570cd4c2-cd4d-4a9e-acb6-6e6855b50db5
 properties:
   - name: entity_id
     type: string
@@ -39,7 +39,9 @@ properties:
     items:
       type: string
     required: false
-    description: Array of relations to other entities in format "relation_type [[path/to/entity-file]] (optional context)"
+    description: >-
+      Array of relations to other entities in format "relation_type [[path/to/entity-file]]
+      (optional context)"
   - name: observations
     type: array
     items:
@@ -60,6 +62,9 @@ properties:
     type: datetime
     required: false
     description: Date when the item was archived
+type_name: entity
+updated_at: '2025-08-16T17:56:09.131Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Entity Schema

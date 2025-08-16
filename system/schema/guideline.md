@@ -1,9 +1,9 @@
 ---
 type: type_definition
-type_name: guideline
-title: Guideline
-extends: entity
 description: Guidelines represent standards, procedures, or best practices
+created_at: '2025-08-16T17:56:08.204Z'
+entity_id: d049333f-47af-415f-8c58-79646e5404de
+extends: entity
 properties:
   - name: globs
     type: array
@@ -42,6 +42,9 @@ properties:
           type: any
           required: false
           description: Default value for the property
+type_name: guideline
+updated_at: '2025-08-16T17:56:09.131Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Guideline
