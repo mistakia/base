@@ -36,16 +36,15 @@ Follow the [[user:guideline/starting-point-philosophy.md]] when creating workflo
   - System workflows MUST be stored in `system/workflow/`
   - User workflows MUST be stored in `user/workflow/`
 - Workflows MUST be named using descriptive, action-oriented names:
-  - Names MUST use kebab-case format (e.g., `find-storage-location.md`, `summarize-document.md`)
+  - Names MUST use kebab-case format (e.g., `write-general-implementation-plan.md`, `summarize-document.md`)
   - Names SHOULD start with a verb that describes the primary action
   - Names MUST be specific and descriptive of the workflow's purpose
   - Names SHOULD be concise while maintaining clarity
 - Examples of good naming:
   - `take-notes.md` (for note-taking workflow)
-  - `find-storage-location.md` (for storage determination workflow)
-  - `update-or-create-entity.md` (for entity management workflow)
-  - `summarize-document.md` (for document summarization workflow)
-- Workflows that are generic and would be used by every single user are considered system workflows
+  - `update-entity.md` (for entity management workflow)
+  - `merge-worktree.md`
+- Workflows that would be used by every single user are considered system workflows
 - Workflows that may be used by some users but not others are considered user workflows
 
 ### Frontmatter Requirements
