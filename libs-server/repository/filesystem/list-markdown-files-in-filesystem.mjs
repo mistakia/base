@@ -84,21 +84,25 @@ export async function list_markdown_files_in_filesystem({
 }
 
 if (is_main(import.meta.url)) {
-  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
+  const argv = add_directory_cli_options(
+    yargs(hideBin(process.argv)).parserConfiguration({
+      'comma-separated-values': true,
+      'flatten-duplicate-arrays': true
+    })
+  )
     .option('include_path_patterns', {
       alias: 'i',
       description:
         'Path patterns to include files by (e.g., "system/*.md,user/*.md")',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
     .option('exclude_path_patterns', {
       alias: 'e',
       description:
         'Path patterns to exclude files by (e.g., "system/temp/*.md")',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
+    .strict()
     .help().argv
 
   const main = async () => {

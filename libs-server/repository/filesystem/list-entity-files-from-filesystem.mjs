@@ -87,33 +87,35 @@ export default list_entity_files_from_filesystem
 
 // Add CLI functionality if run directly
 if (is_main(import.meta.url)) {
-  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
+  const argv = add_directory_cli_options(
+    yargs(hideBin(process.argv)).parserConfiguration({
+      'comma-separated-values': true,
+      'flatten-duplicate-arrays': true
+    })
+  )
     .option('include_entity_types', {
       alias: 'i',
       description: 'Entity types to include (e.g., guideline,rule)',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
     .option('exclude_entity_types', {
       alias: 'e',
       description: 'Entity types to exclude (e.g., guideline,rule)',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
     .option('include_path_patterns', {
       alias: 'ip',
       description:
         'Path patterns to include files by (e.g., "system/*.md,user/*.md")',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
     .option('exclude_path_patterns', {
       alias: 'ep',
       description:
         'Path patterns to exclude files by (e.g., "system/temp/*.md")',
-      type: 'string',
-      coerce: (arg) => (arg ? arg.split(',') : [])
+      type: 'array'
     })
+    .strict()
     .help().argv
 
   const main = async () => {
