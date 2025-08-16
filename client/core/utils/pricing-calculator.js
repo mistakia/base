@@ -54,11 +54,11 @@ function get_model_key(thread_metadata) {
  * Get model pricing data from models data
  */
 function get_model_pricing(models_data, model_key) {
-  if (!models_data || !models_data.models || !model_key) {
+  if (!models_data || !model_key) {
     return null
   }
 
-  const model = models_data.models[model_key]
+  const model = models_data[model_key]
   return model?.pricing || null
 }
 
@@ -165,14 +165,9 @@ export function calculate_thread_cost(thread_metadata, models_data) {
     return null
   }
 
-  console.log({ thread_metadata, models_data })
-
   // Get model pricing data
   const model_key = get_model_key(thread_metadata)
-  console.log({ model_key })
   const pricing = get_model_pricing(models_data, model_key)
-
-  console.log({ pricing, model_key })
 
   if (!pricing) {
     return {
@@ -197,9 +192,7 @@ export function calculate_thread_cost(thread_metadata, models_data) {
 
   // Try to calculate with specific token types first
   let calculation = calculate_specific_token_costs(thread_metadata, pricing)
-  console.log({ calculation })
   let is_estimate = !calculation.has_complete_data
-  console.log({ is_estimate })
 
   // If we don't have complete specific data, try estimation
   if (

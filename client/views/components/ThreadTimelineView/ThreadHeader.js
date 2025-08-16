@@ -6,6 +6,15 @@ import { useSelector } from 'react-redux'
 import '@styles/chip.styl'
 import { format_relative_time } from '@views/utils/date-formatting.js'
 import { get_thread_cost_display } from '@core/threads/selectors'
+import {
+  extract_message_counts,
+  extract_tool_call_count,
+  extract_total_tokens,
+  extract_duration,
+  extract_working_directory,
+  extract_session_provider,
+  extract_thread_state
+} from '@views/utils/thread-metadata-extractor.js'
 
 const extract_thread_title = (metadata) => {
   if (!metadata || !metadata.getIn) {
@@ -20,38 +29,6 @@ const extract_thread_title = (metadata) => {
     return ''
   }
   return summaries[0]
-}
-
-const extract_total_tokens = (metadata) => {
-  if (!metadata || !metadata.getIn) {
-    return 0
-  }
-  return (
-    metadata.getIn(['external_session', 'provider_metadata', 'total_tokens']) ||
-    0
-  )
-}
-
-const extract_duration = (metadata) => {
-  if (!metadata || !metadata.getIn) {
-    return null
-  }
-  const duration_minutes = metadata.getIn([
-    'external_session',
-    'provider_metadata',
-    'duration_minutes'
-  ])
-  if (!duration_minutes) return null
-
-  if (duration_minutes < 1) {
-    return `${Math.round(duration_minutes * 60)}s`
-  } else if (duration_minutes < 60) {
-    return `${Math.round(duration_minutes)}m`
-  } else {
-    const hours = Math.floor(duration_minutes / 60)
-    const minutes = Math.round(duration_minutes % 60)
-    return `${hours}h ${minutes}m`
-  }
 }
 
 const extract_models = (metadata) => {
@@ -108,13 +85,6 @@ const extract_external_session_info = (metadata) => {
   }
 }
 
-const extract_thread_state = (metadata) => {
-  if (!metadata || !metadata.get) {
-    return null
-  }
-  return metadata.get('thread_state') || null
-}
-
 const extract_dates = (metadata) => {
   if (!metadata || !metadata.get) {
     return { created_at: null, updated_at: null }
@@ -126,48 +96,30 @@ const extract_dates = (metadata) => {
   return { created_at, updated_at }
 }
 
-const extract_message_counts = (metadata) => {
-  if (!metadata || !metadata.get) {
-    return {
-      message_count: 0,
-      user_message_count: 0,
-      assistant_message_count: 0
-    }
-  }
-
-  return {
-    message_count: metadata.get('message_count') || 0,
-    user_message_count: metadata.get('user_message_count') || 0,
-    assistant_message_count: metadata.get('assistant_message_count') || 0
-  }
-}
-
-const extract_tool_call_count = (metadata) => {
-  if (!metadata || !metadata.get) {
-    return 0
-  }
-  return metadata.get('tool_call_count') || 0
-}
-
 // Custom hook for metadata processing
 const use_thread_metadata = (metadata) => {
   const dates = extract_dates(metadata)
   const message_counts = extract_message_counts(metadata)
   const tool_call_count = extract_tool_call_count(metadata)
+  const total_tokens = extract_total_tokens(metadata)
+  const duration = extract_duration(metadata)
+  const working_directory = extract_working_directory(metadata)
+  const thread_state = extract_thread_state(metadata)
 
   return {
     title: extract_thread_title(metadata),
-    total_tokens: extract_total_tokens(metadata),
-    duration: extract_duration(metadata),
+    total_tokens,
+    duration,
     models: extract_models(metadata),
     external_session_info: extract_external_session_info(metadata),
-    thread_state: extract_thread_state(metadata),
+    thread_state,
     created_at: dates.created_at,
     updated_at: dates.updated_at,
     message_count: message_counts.message_count,
     user_message_count: message_counts.user_message_count,
     assistant_message_count: message_counts.assistant_message_count,
-    tool_call_count
+    tool_call_count,
+    working_directory: working_directory.path
   }
 }
 

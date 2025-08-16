@@ -12,6 +12,15 @@ import {
   format_duration,
   format_shorthand_number
 } from '@views/utils/date-formatting.js'
+import {
+  extract_message_counts,
+  extract_tool_call_count,
+  extract_total_tokens,
+  extract_duration,
+  extract_working_directory,
+  extract_session_provider,
+  extract_thread_state
+} from '@views/utils/thread-metadata-extractor.js'
 import './ThreadsTable.styl'
 
 const ThreadsTable = ({ threads, is_loading = false }) => {
@@ -20,22 +29,18 @@ const ThreadsTable = ({ threads, is_loading = false }) => {
       return []
     }
     return threads.toJS().map((thread) => {
-      // Pre-format simple values to avoid unnecessary React components
-      const duration_minutes =
-        thread.external_session?.provider_metadata?.duration_minutes
-      const formatted_duration = duration_minutes
-        ? `${parseFloat(duration_minutes.toFixed(1))}m`
-        : format_duration(thread.created_at, thread.updated_at)
+      // Extract metadata using shared utilities
+      const message_counts = extract_message_counts(thread)
+      const tool_call_count = extract_tool_call_count(thread)
+      const total_tokens = extract_total_tokens(thread)
+      const duration = extract_duration(thread)
+      const working_directory = extract_working_directory(thread)
+      const session_provider = extract_session_provider(thread)
+      const thread_state = extract_thread_state(thread)
 
-      const working_directory_path =
-        thread.external_session?.provider_metadata?.working_directory
-      const formatted_directory = working_directory_path
-        ? working_directory_path.split('/').pop() || 'root'
-        : '—'
-
-      const message_count = thread.external_session?.message_count || 0
-      const token_count =
-        thread.external_session?.provider_metadata?.total_tokens || 0
+      // Format duration - use extracted duration if available, otherwise fallback to date-based calculation
+      const formatted_duration =
+        duration || format_duration(thread.created_at, thread.updated_at)
 
       return {
         ...thread,
@@ -43,12 +48,32 @@ const ThreadsTable = ({ threads, is_loading = false }) => {
         // Pre-formatted values for simple display
         formatted_updated_at: format_shorthand_time(thread.updated_at),
         formatted_duration: formatted_duration || '—',
-        formatted_directory,
-        formatted_directory_full_path: working_directory_path, // For title attribute
+        formatted_directory: working_directory.formatted,
+        formatted_directory_full_path: working_directory.path, // For title attribute
         formatted_message_count:
-          message_count > 0 ? format_shorthand_number(message_count) : '—',
+          message_counts.message_count > 0
+            ? format_shorthand_number(message_counts.message_count)
+            : '—',
+        formatted_user_message_count:
+          message_counts.user_message_count > 0
+            ? format_shorthand_number(message_counts.user_message_count)
+            : '—',
+        formatted_assistant_message_count:
+          message_counts.assistant_message_count > 0
+            ? format_shorthand_number(message_counts.assistant_message_count)
+            : '—',
         formatted_token_count:
-          token_count > 0 ? format_shorthand_number(token_count) : '—'
+          total_tokens > 0 ? format_shorthand_number(total_tokens) : '—',
+        formatted_tool_call_count:
+          tool_call_count > 0 ? format_shorthand_number(tool_call_count) : '—',
+        // Raw values for column accessors
+        message_count: message_counts.message_count,
+        user_message_count: message_counts.user_message_count,
+        assistant_message_count: message_counts.assistant_message_count,
+        tool_call_count,
+        total_tokens,
+        session_provider,
+        thread_state
       }
     })
   }, [threads])

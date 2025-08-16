@@ -37,3 +37,31 @@ export const get_thread_cost_display = createSelector(
     return format_cost_for_display(cost_calculation)
   }
 )
+
+// Selector to get cost display for a specific thread by ID
+export const get_thread_cost_by_id = createSelector(
+  [get_threads_state, (_, thread_id) => thread_id],
+  (threads_state, thread_id) => {
+    if (!thread_id) return null
+
+    const threads = threads_state.get('threads')
+    if (!threads) return null
+
+    const models_data = threads_state.getIn(['models_data', 'data'])
+
+    if (!models_data) return null
+
+    // Find the thread by ID - threads are plain objects inside the Immutable List
+    const thread = threads.find((t) => t.thread_id === thread_id)
+
+    if (!thread) return null
+
+    // Convert Immutable models_data to plain JS for calculation
+    // thread is already a plain object, so no conversion needed
+    const thread_metadata = thread
+    const models = models_data.toJS ? models_data.toJS() : models_data
+
+    const cost_calculation = calculate_thread_cost(thread_metadata, models)
+    return format_cost_for_display(cost_calculation)
+  }
+)

@@ -1,0 +1,179 @@
+// Shared utility functions for extracting thread metadata
+// Used by ThreadsTable and ThreadHeader components
+
+/**
+ * Extract message counts from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {Object} Object with message counts
+ */
+export const extract_message_counts = (thread) => {
+  if (!thread) {
+    return {
+      message_count: 0,
+      user_message_count: 0,
+      assistant_message_count: 0
+    }
+  }
+
+  // Handle both Immutable and plain JS objects
+  const get_value = (obj, path) => {
+    if (obj.get) {
+      // Immutable object
+      return obj.get(path) || 0
+    } else {
+      // Plain JS object
+      return obj[path] || 0
+    }
+  }
+
+  return {
+    message_count: get_value(thread, 'message_count'),
+    user_message_count: get_value(thread, 'user_message_count'),
+    assistant_message_count: get_value(thread, 'assistant_message_count')
+  }
+}
+
+/**
+ * Extract tool call count from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {number} Tool call count
+ */
+export const extract_tool_call_count = (thread) => {
+  if (!thread) return 0
+
+  if (thread.get) {
+    // Immutable object
+    return thread.get('tool_call_count') || 0
+  } else {
+    // Plain JS object
+    return thread.tool_call_count || 0
+  }
+}
+
+/**
+ * Extract token count from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {number} Total token count
+ */
+export const extract_total_tokens = (thread) => {
+  if (!thread) return 0
+
+  if (thread.get) {
+    // Immutable object
+    return (
+      thread.getIn(['external_session', 'provider_metadata', 'total_tokens']) ||
+      0
+    )
+  } else {
+    // Plain JS object
+    return thread.external_session?.provider_metadata?.total_tokens || 0
+  }
+}
+
+/**
+ * Extract duration from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string|null} Formatted duration string
+ */
+export const extract_duration = (thread) => {
+  if (!thread) return null
+
+  let duration_minutes
+
+  if (thread.get) {
+    // Immutable object
+    duration_minutes = thread.getIn([
+      'external_session',
+      'provider_metadata',
+      'duration_minutes'
+    ])
+  } else {
+    // Plain JS object
+    duration_minutes =
+      thread.external_session?.provider_metadata?.duration_minutes
+  }
+
+  if (!duration_minutes) return null
+
+  if (duration_minutes < 1) {
+    return `${Math.round(duration_minutes * 60)}s`
+  } else if (duration_minutes < 60) {
+    return `${Math.round(duration_minutes)}m`
+  } else {
+    const hours = Math.floor(duration_minutes / 60)
+    const minutes = Math.round(duration_minutes % 60)
+    return `${hours}h ${minutes}m`
+  }
+}
+
+/**
+ * Extract working directory from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {Object} Object with full path and formatted directory name
+ */
+export const extract_working_directory = (thread) => {
+  if (!thread) return { path: null, formatted: '—' }
+
+  let working_directory_path
+
+  if (thread.get) {
+    // Immutable object
+    working_directory_path = thread.getIn([
+      'external_session',
+      'provider_metadata',
+      'working_directory'
+    ])
+  } else {
+    // Plain JS object
+    working_directory_path =
+      thread.external_session?.provider_metadata?.working_directory
+  }
+
+  if (!working_directory_path) {
+    return { path: null, formatted: '—' }
+  }
+
+  const formatted_directory = working_directory_path.split('/').pop() || 'root'
+
+  return {
+    path: working_directory_path,
+    formatted: formatted_directory
+  }
+}
+
+/**
+ * Extract session provider from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string|null} Session provider name
+ */
+export const extract_session_provider = (thread) => {
+  if (!thread) return null
+
+  if (thread.get) {
+    // Immutable object
+    return (
+      thread.get('session_provider') ||
+      thread.getIn(['external_session', 'session_provider'])
+    )
+  } else {
+    // Plain JS object
+    return thread.session_provider || thread.external_session?.session_provider
+  }
+}
+
+/**
+ * Extract thread state from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string|null} Thread state
+ */
+export const extract_thread_state = (thread) => {
+  if (!thread) return null
+
+  if (thread.get) {
+    // Immutable object
+    return thread.get('thread_state')
+  } else {
+    // Plain JS object
+    return thread.thread_state
+  }
+}
