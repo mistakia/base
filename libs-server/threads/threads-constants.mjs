@@ -22,8 +22,6 @@ export function validate_thread_state(thread_state) {
 }
 
 export const THREAD_CONTEXT_DIR = 'thread'
-export const THREAD_DEFAULT_WORKFLOW_BASE_URI =
-  'sys:system/workflow/default-workflow.md'
 
 /**
  * Get the base directory for thread storage using the registry

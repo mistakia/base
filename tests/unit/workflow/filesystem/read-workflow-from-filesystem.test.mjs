@@ -222,15 +222,14 @@ describe('read_workflow_from_filesystem with git repository', () => {
     }
   })
 
-  it('should successfully read the default workflow in git repo', async () => {
+  it('should handle non-existent workflow in git repo', async () => {
     // Act
     const result = await read_workflow_from_filesystem({
-      base_uri: 'sys:system/workflow/default-workflow.md'
+      base_uri: 'sys:system/workflow/non-existent-workflow.md'
     })
 
     // Assert
-    expect(result.success).to.be.true
-    expect(result.entity_properties.type).to.equal('workflow')
-    expect(result.entity_properties.title).to.equal('General Purpose Role')
+    expect(result.success).to.be.false
+    expect(result.error).to.include('does not exist')
   })
 })

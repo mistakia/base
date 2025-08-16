@@ -131,16 +131,6 @@ describe('workflow_exists_in_filesystem with git repository', () => {
     }
   })
 
-  it('should return true for existing workflows in git repo', async () => {
-    // Act
-    const workflow_exists = await workflow_exists_in_filesystem({
-      base_uri: 'sys:system/workflow/default-workflow.md'
-    })
-
-    // Assert
-    expect(workflow_exists).to.be.true
-  })
-
   it('should return false for non-existent workflows in git repo', async () => {
     // Arrange
     const non_existent_path = 'sys:system/workflow/nonexistent-workflow.md'

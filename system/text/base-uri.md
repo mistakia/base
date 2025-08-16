@@ -42,7 +42,6 @@ References to core schemas, workflows, and system configuration. Uses path-only 
 Examples:
 
 - `sys:system/schema/task.md`
-- `sys:system/workflow/default-workflow.md`
 - `sys:system/text/system-design.md`
 
 ### `user:` - User Repository

@@ -2,19 +2,11 @@ import path from 'path'
 import fs from 'fs/promises'
 import { promisify } from 'util'
 import child_process from 'child_process'
-import { fileURLToPath } from 'url'
 
 import create_temp_test_directory from './create-temp-test-directory.mjs'
 import { register_base_directories } from '#libs-server/base-uri/index.mjs'
 
 const exec = promisify(child_process.exec)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const default_workflow_path = path.join(
-  __dirname,
-  '..',
-  'fixtures',
-  'default-workflow.md'
-)
 
 /**
  * Creates a temporary base repository with a separate user repository for testing purposes
@@ -46,19 +38,30 @@ export async function create_temp_test_repo({
     await fs.writeFile(readme_path, initial_content)
     await exec('git add README.md', { cwd: system_repo.path })
 
-    // Create system/workflow directory to match the real system structure
-    const workflow_dir = path.join(system_repo.path, 'system', 'workflow')
+    // Create system directory to match the real system structure
+    const system_dir = path.join(system_repo.path, 'system')
+    const workflow_dir = path.join(system_dir, 'workflow')
     await fs.mkdir(workflow_dir, { recursive: true })
 
-    // Read the default workflow file from fixtures
-    const workflow_content = await fs.readFile(default_workflow_path, 'utf-8')
+    // Create a simple test workflow
+    const test_workflow_content = `---
+title: 'Test Workflow'
+type: 'workflow'
+description: 'A test workflow for testing purposes'
+created_at: '2025-05-27T18:10:20.246Z'
+entity_id: '123e4567-e89b-12d3-a456-426614174000'
+updated_at: '2025-05-27T18:10:20.246Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+---
 
-    // Write to the test repo
-    const workflow_path = path.join(workflow_dir, 'default-workflow.md')
-    await fs.writeFile(workflow_path, workflow_content)
+This is a test workflow for testing purposes.
+`
+
+    const test_workflow_path = path.join(workflow_dir, 'test-workflow.md')
+    await fs.writeFile(test_workflow_path, test_workflow_content)
 
     // Add to git
-    await exec('git add system/workflow/default-workflow.md', {
+    await exec('git add system/workflow/test-workflow.md', {
       cwd: system_repo.path
     })
 

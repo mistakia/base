@@ -46,6 +46,7 @@ describe('create_thread', () => {
   it('should create a thread with minimal required parameters', async () => {
     const thread_data = {
       user_public_key: test_user.user_public_key,
+      workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       model: 'llama2',
       create_git_branches: true
@@ -107,6 +108,7 @@ describe('create_thread', () => {
   it('should create a thread with a main request', async () => {
     const thread_data = {
       user_public_key: test_user.user_public_key,
+      workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       model: 'llama2',
       thread_main_request: 'Hello, this is my first message',
@@ -128,6 +130,7 @@ describe('create_thread', () => {
   it('should create a thread with custom tools', async () => {
     const thread_data = {
       user_public_key: test_user.user_public_key,
+      workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       model: 'llama2',
       tools: ['web_search', 'calculator'],
@@ -148,6 +151,7 @@ describe('create_thread', () => {
   it('should create a thread with a specified state', async () => {
     const thread_data = {
       user_public_key: test_user.user_public_key,
+      workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       model: 'llama2',
       thread_state: THREAD_STATE.PAUSED,

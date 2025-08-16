@@ -3,10 +3,7 @@ import path from 'path'
 import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
-import {
-  get_thread_base_directory,
-  THREAD_DEFAULT_WORKFLOW_BASE_URI
-} from './threads-constants.mjs'
+import { get_thread_base_directory } from './threads-constants.mjs'
 import { thread_constants } from '#libs-shared'
 import git_operations from '#libs-server/git/index.mjs'
 import { create_worktree } from '#libs-server/git/worktree-operations.mjs'
@@ -188,7 +185,7 @@ export function build_thread_metadata({
  *
  * @param {Object} params Thread creation parameters
  * @param {string} params.user_public_key Public key of the user who owns the thread
- * @param {string} [params.workflow_base_uri] Workflow base relative path in format (optional for external sessions)
+ * @param {string} params.workflow_base_uri Workflow base relative path in format (required for non-external sessions)
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {string} [params.model] Model to use from the provider (legacy, single model)
  * @param {Array<string>} [params.models] Models used in the thread (preferred)
@@ -206,7 +203,7 @@ export function build_thread_metadata({
  */
 export default async function create_thread({
   user_public_key,
-  workflow_base_uri = THREAD_DEFAULT_WORKFLOW_BASE_URI,
+  workflow_base_uri,
   inference_provider,
   model,
   models,
@@ -241,7 +238,9 @@ export default async function create_thread({
   // For external sessions, workflow_base_uri can be undefined
   const is_external_session = !!external_session
   if (!is_external_session && !workflow_base_uri) {
-    throw new Error('workflow_base_uri is required for non-session threads')
+    throw new Error(
+      'workflow_base_uri is required for non-external session threads'
+    )
   }
 
   // Validate that the workflow exists (if provided)

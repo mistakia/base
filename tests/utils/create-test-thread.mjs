@@ -10,6 +10,7 @@ const { THREAD_STATE } = thread_constants
  *
  * @param {Object} options Thread options
  * @param {string} [options.user_public_key] User public key (creates test user if not provided)
+ * @param {string} [options.workflow_base_uri='sys:system/workflow/test-workflow.md'] Workflow to use
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
  * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, paused, terminated)
@@ -21,6 +22,7 @@ const { THREAD_STATE } = thread_constants
  */
 export default async function create_test_thread({
   user_public_key,
+  workflow_base_uri = 'sys:system/workflow/test-workflow.md',
   inference_provider = 'ollama',
   model = 'llama2',
   thread_state = THREAD_STATE.ACTIVE,
@@ -62,6 +64,7 @@ export default async function create_test_thread({
   // Create the thread using the actual implementation
   const thread = await create_thread({
     user_public_key: user.user_public_key,
+    workflow_base_uri,
     inference_provider,
     model,
     thread_state,
