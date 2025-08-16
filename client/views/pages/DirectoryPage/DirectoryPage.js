@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import PageLayout from '@views/layout/PageLayout.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
-import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
+import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 
 const DirectoryPage = ({
   directory_markdown,
@@ -11,32 +11,14 @@ const DirectoryPage = ({
   is_loading_directory_markdown,
   directory_markdown_error
 }) => {
-  // Only show the container if there's actual content to display
-  const has_directory_content =
-    directory_markdown ||
-    is_loading_directory_markdown ||
-    directory_markdown_error
-
   return (
     <PageLayout>
-      {is_directory && has_directory_content && (
-        <div className='directory-markdown-container'>
-          {is_loading_directory_markdown && (
-            <div className='directory-markdown-loading'>
-              Loading directory information...
-            </div>
-          )}
-          {directory_markdown_error && (
-            <div className='directory-markdown-error'>
-              Error loading directory information: {directory_markdown_error}
-            </div>
-          )}
-          {directory_markdown &&
-            !is_loading_directory_markdown &&
-            !directory_markdown_error && (
-              <MarkdownViewer content={directory_markdown} />
-            )}
-        </div>
+      {is_directory && (
+        <DirectoryMarkdown
+          directory_markdown={directory_markdown}
+          is_loading_directory_markdown={is_loading_directory_markdown}
+          directory_markdown_error={directory_markdown_error}
+        />
       )}
       <FileSystemBrowser />
     </PageLayout>

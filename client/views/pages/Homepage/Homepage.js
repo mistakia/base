@@ -4,13 +4,27 @@ import ImmutablePropTypes from 'react-immutable-proptypes'
 
 import PageLayout from '@views/layout/PageLayout.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
+import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import HomePageThreads from './HomePageThreads.js'
 
 import './Homepage.styl'
 
-const Homepage = ({ threads, is_loading_threads, load_threads }) => {
+const Homepage = ({
+  threads,
+  is_loading_threads,
+  load_threads,
+  directory_markdown,
+  is_loading_directory_markdown,
+  directory_markdown_error
+}) => {
   return (
     <PageLayout>
+      <DirectoryMarkdown
+        directory_markdown={directory_markdown}
+        is_loading_directory_markdown={is_loading_directory_markdown}
+        directory_markdown_error={directory_markdown_error}
+      />
+
       <div className='homepage-section'>
         <HomePageThreads
           threads={threads}
@@ -29,7 +43,10 @@ const Homepage = ({ threads, is_loading_threads, load_threads }) => {
 Homepage.propTypes = {
   threads: ImmutablePropTypes.list.isRequired,
   is_loading_threads: PropTypes.bool.isRequired,
-  load_threads: PropTypes.func.isRequired
+  load_threads: PropTypes.func.isRequired,
+  directory_markdown: PropTypes.string,
+  is_loading_directory_markdown: PropTypes.bool,
+  directory_markdown_error: PropTypes.string
 }
 
 export default Homepage
