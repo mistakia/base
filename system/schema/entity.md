@@ -6,6 +6,7 @@ entity_id: 570cd4c2-cd4d-4a9e-acb6-6e6855b50db5
 properties:
   - name: entity_id
     type: string
+    format: uuid
     required: true
     description: Unique identifier used for references
   - name: title

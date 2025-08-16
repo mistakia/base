@@ -19,6 +19,36 @@ const validator = new Validator({
  * @returns {Object} Transformed property schema
  */
 function transform_property_type(property) {
+  // Handle common string format validations
+  if (property && property.type === 'string' && property.format) {
+    // UUID (RFC 4122, versions 1-5)
+    if (property.format === 'uuid') {
+      return {
+        ...property,
+        // enforce canonical UUID with correct version and variant
+        pattern:
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
+      }
+    }
+
+    // ISO 8601 datetime via format
+    if (property.format === 'datetime') {
+      return {
+        ...property,
+        pattern:
+          /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+      }
+    }
+
+    // YYYY-MM-DD date via format
+    if (property.format === 'date') {
+      return {
+        ...property,
+        pattern: /^\d{4}-\d{2}-\d{2}$/
+      }
+    }
+  }
+
   // Handle datetime type - convert to string with ISO 8601 format pattern
   if (property.type === 'datetime') {
     return {
@@ -91,6 +121,7 @@ function build_property_schema(prop) {
   if (prop.max !== undefined) property_schema.max = prop.max
   if (prop.properties) property_schema.properties = prop.properties
   if (prop.description) property_schema.description = prop.description
+  if (prop.format) property_schema.format = prop.format
   property_schema = transform_property_type(property_schema)
   return { [prop.name]: property_schema }
 }
