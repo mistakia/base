@@ -122,86 +122,98 @@ const update_entity_fields = async ({
   const updated_files = []
   const error_files = []
 
-  // Process each file with missing fields
+  // Process each file and remove deprecated fields or add missing required ones
   for (const file of result.files) {
     const is_system_file = file.base_uri.startsWith('sys:')
 
-    if (file.errors && file.errors.length > 0) {
-      let needs_update = false
+    try {
+      // Read the entity directly for every file so we can detect deprecated fields
+      const entity_result = await read_entity_from_filesystem({
+        absolute_path: file.absolute_path
+      })
 
-      // Check for missing required fields
-      for (const error of file.errors) {
-        if (error.includes('entity_id') && error.includes('required')) {
-          needs_update = true
-        }
-        if (error.includes('user_public_key') && error.includes('required')) {
-          needs_update = true
-        }
-        if (error.includes('created_at') && error.includes('required')) {
-          needs_update = true
-        }
-        if (error.includes('updated_at') && error.includes('required')) {
-          needs_update = true
-        }
-        if (needs_update) {
-          break
+      if (!entity_result.success) {
+        throw new Error(`Failed to read entity: ${entity_result.error}`)
+      }
+
+      // Get existing properties and content
+      const { entity_properties, entity_content } = entity_result
+      const entity_type = entity_properties.type
+
+      // Skip entities that are type definitions
+      if (entity_type === 'type_definition') {
+        log(`Skipping ${file.base_uri} (type_definition) `)
+        continue
+      }
+
+      // Determine if we need to update based on validation errors (missing required fields)
+      let needs_update_for_missing_fields = false
+      if (file.errors && file.errors.length > 0) {
+        for (const error of file.errors) {
+          if (error.includes('entity_id') && error.includes('required')) {
+            needs_update_for_missing_fields = true
+          }
+          if (error.includes('user_public_key') && error.includes('required')) {
+            needs_update_for_missing_fields = true
+          }
+          if (error.includes('created_at') && error.includes('required')) {
+            needs_update_for_missing_fields = true
+          }
+          if (error.includes('updated_at') && error.includes('required')) {
+            needs_update_for_missing_fields = true
+          }
+          if (needs_update_for_missing_fields) {
+            break
+          }
         }
       }
 
-      // If we need to update this file
-      if (needs_update) {
-        try {
-          // Read the entity directly
-          const entity_result = await read_entity_from_filesystem({
-            absolute_path: file.absolute_path
-          })
+      // Determine if we need to remove deprecated fields
+      const has_user_id_field = Object.prototype.hasOwnProperty.call(
+        entity_properties,
+        'user_id'
+      )
 
-          if (!entity_result.success) {
-            throw new Error(`Failed to read entity: ${entity_result.error}`)
-          }
-
-          // Get existing properties and content
-          const { entity_properties, entity_content } = entity_result
-          const entity_type = entity_properties.type
-
-          // Skip entities that are type definitions
-          if (entity_type === 'type_definition') {
-            log(`Skipping ${file.base_uri} (type_definition) `)
-            continue
-          }
-
-          // Add missing fields to properties
-          const updated_properties = {
-            user_public_key: is_system_file
-              ? system_user_public_key
-              : user_public_key,
-            ...entity_properties
-          }
-
-          if (!dry_run) {
-            // Write updated entity
-            await write_entity_to_filesystem({
-              absolute_path: file.absolute_path,
-              entity_properties: updated_properties,
-              entity_type,
-              entity_content
-            })
-
-            updated_files.push(file.base_uri)
-            updated_count++
-            log(`Updated ${file.base_uri}`)
-          } else {
-            log(`[DRY RUN] Would update ${file.base_uri}`)
-            console.log(updated_properties)
-            updated_files.push(file.base_uri)
-            updated_count++
-          }
-        } catch (err) {
-          log(`Error updating ${file.base_uri}:`, err)
-          error_files.push(file.base_uri)
-          error_count++
-        }
+      // If nothing to do, skip
+      if (!needs_update_for_missing_fields && !has_user_id_field) {
+        continue
       }
+
+      // Build updated properties
+      const updated_properties = {
+        user_public_key: is_system_file
+          ? system_user_public_key
+          : user_public_key,
+        ...entity_properties
+      }
+
+      // Remove deprecated user_id field if present
+      if (Object.prototype.hasOwnProperty.call(updated_properties, 'user_id')) {
+        delete updated_properties.user_id
+      }
+
+      if (!dry_run) {
+        // Write updated entity
+        await write_entity_to_filesystem({
+          absolute_path: file.absolute_path,
+          entity_properties: updated_properties,
+          entity_type,
+          entity_content
+        })
+
+        updated_files.push(file.base_uri)
+        updated_count++
+        log(`Updated ${file.base_uri}`)
+      } else {
+        log(`[DRY RUN] Would update ${file.base_uri}`)
+        console.log(updated_properties)
+        updated_files.push(file.base_uri)
+        updated_count++
+      }
+    } catch (err) {
+      log(`Error updating ${file.base_uri}:`, err)
+      error_files.push(file.base_uri)
+      error_count++
     }
   }
 
