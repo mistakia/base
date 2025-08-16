@@ -1,4 +1,45 @@
 #!/usr/bin/env node
+
+/**
+ * Update Entity Fields CLI Tool
+ *
+ * Scans all entity files in the knowledge base and automatically adds missing required fields
+ * such as entity_id, user_public_key, created_at, and updated_at to ensure schema compliance.
+ *
+ * This tool is particularly useful after importing data from external sources or when
+ * upgrading entity schemas that require new mandatory fields.
+ *
+ * Features:
+ * - Dry-run mode to preview changes before applying them
+ * - Pattern-based filtering to target specific files or directories
+ * - Automatic field generation for missing required properties
+ * - Support for both system and user entity files
+ * - Comprehensive reporting of updates and errors
+ *
+ * Examples:
+ *
+ *   # Update all entities with missing fields
+ *   node cli/update-entity-fields.mjs
+ *
+ *   # Preview changes without applying them
+ *   node cli/update-entity-fields.mjs --dry_run
+ *
+ *   # Update only task entities
+ *   node cli/update-entity-fields.mjs --include_path_patterns "*\/task\/*.md"
+ *
+ *   # Update all except archived items
+ *   node cli/update-entity-fields.mjs --exclude_path_patterns "*\/archived\/*"
+ *
+ *   # Update with specific user public key
+ *   node cli/update-entity-fields.mjs --user_public_key "your-uuid-here"
+ *
+ *   # Update only user directory entities
+ *   node cli/update-entity-fields.mjs --user_base_directory "/path/to/user/base"
+ *
+ * Note: System entities (starting with 'sys:') automatically use the system user public key,
+ * while user entities use the provided or configured user public key.
+ */
+
 import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
@@ -12,6 +53,48 @@ import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
+
+// Configure CLI options
+const cli_config = (argv_parser) =>
+  add_directory_cli_options(argv_parser)
+    .scriptName('update-entity-fields')
+    .usage('$0 [options]')
+    .option('user_public_key', {
+      type: 'string',
+      description:
+        'User public key to assign to user entities (system entities use system key)',
+      default: config.user_public_key
+    })
+    .option('dry_run', {
+      type: 'boolean',
+      description: 'Preview changes without writing to files',
+      default: false
+    })
+    .option('include_path_patterns', {
+      type: 'array',
+      description: 'Glob patterns for files to include (e.g., "*/task/*.md")',
+      default: []
+    })
+    .option('exclude_path_patterns', {
+      type: 'array',
+      description: 'Glob patterns for files to exclude (e.g., "*/archived/*")',
+      default: []
+    })
+    .example('$0', 'Update all entities with missing fields')
+    .example(
+      '$0 --dry_run',
+      'Preview what would be updated without making changes'
+    )
+    .example(
+      '$0 --include_path_patterns "*/task/*.md"',
+      'Update only task entities'
+    )
+    .example(
+      '$0 --exclude_path_patterns "*/archived/*"',
+      'Skip archived entities'
+    )
+    .help()
+    .alias('help', 'h')
 
 const log = debug('update-entity-fields')
 debug.enable(
@@ -148,28 +231,7 @@ const update_entity_fields = async ({
 export default update_entity_fields
 
 const main = async () => {
-  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
-    .option('user_public_key', {
-      type: 'string',
-      description: 'User public key to use for the knowledge base',
-      default: config.user_public_key
-    })
-    .option('dry_run', {
-      type: 'boolean',
-      description: 'Run in dry-run mode without making actual changes',
-      default: false
-    })
-    .option('include_path_patterns', {
-      type: 'array',
-      description: 'Path patterns to include (glob patterns)',
-      default: []
-    })
-    .option('exclude_path_patterns', {
-      type: 'array',
-      description: 'Path patterns to exclude (glob patterns)',
-      default: []
-    })
-    .help().argv
+  const argv = cli_config(yargs(hideBin(process.argv))).argv
 
   // Handle directory registration using the reusable function
   handle_cli_directory_registration(argv)
