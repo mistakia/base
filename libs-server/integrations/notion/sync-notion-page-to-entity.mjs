@@ -9,8 +9,10 @@ import { normalize_notion_page } from './normalize-notion-page.mjs'
 import { normalize_notion_database_item } from './normalize-notion-database-item.mjs'
 import {
   get_entity_type_for_database,
-  get_database_mapping_config
+  get_database_mapping_config,
+  get_conversion_rules
 } from './notion-entity-mapper.mjs'
+import { load_schema_definitions_from_filesystem } from '#libs-server/repository/filesystem/load-schema-definitions-from-filesystem.mjs'
 import { update_entity_from_external_item } from '#libs-server/sync/index.mjs'
 import { create_entity_from_external_item } from '#libs-server/entity/index.mjs'
 import { generate_entity_paths_with_database_disambiguation } from './generate-entity-paths-with-disambiguation.mjs'
@@ -53,11 +55,17 @@ export async function sync_notion_page_to_entity(
       }
 
       const mapping_config = get_database_mapping_config(database_id)
+      const conversion_rules = get_conversion_rules()
+      
+      // Load schema definition for the entity type
+      const schemas = await load_schema_definitions_from_filesystem()
+      const entity_schema = schemas[entity_type]
+      
       const normalized_result = await normalize_notion_database_item(
         notion_page,
         mapping_config,
         database_id,
-        options
+        { ...options, conversion_rules, schema: entity_schema }
       )
       entity_properties = normalized_result.entity_properties
       entity_content = normalized_result.entity_content

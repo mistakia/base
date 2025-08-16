@@ -97,6 +97,15 @@ export function get_database_mapping_config_from_entity(entity) {
 }
 
 /**
+ * Get conversion rules from mapping configuration
+ * @returns {Object} Conversion rules
+ */
+export function get_conversion_rules() {
+  const config = load_mapping_config()
+  return config?.conversion_rules || {}
+}
+
+/**
  * Convert entity property to Notion property format
  * @param {string} database_id - The Notion database ID
  * @param {string} entity_field - The entity field name

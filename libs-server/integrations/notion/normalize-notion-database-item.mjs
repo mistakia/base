@@ -8,7 +8,8 @@ import {
   convert_blocks_to_markdown,
   create_base_entity_structure,
   extract_page_title,
-  validate_and_clean_entity
+  validate_and_clean_entity,
+  apply_property_conversions
 } from './notion-utils.mjs'
 
 const log = debug('integrations:notion:normalize-database-item')
@@ -33,14 +34,22 @@ export async function normalize_notion_database_item(
     const { extracted_properties, mapped_properties } =
       extract_and_map_properties(notion_page, mapping_config)
 
+    // Apply type conversions to mapped properties
+    const conversion_rules = options.conversion_rules || {}
+    const converted_properties = apply_property_conversions(
+      mapped_properties, 
+      mapping_config, 
+      conversion_rules
+    )
+
     // Attach extracted properties to notion_page for title extraction
     notion_page.extracted_properties = extracted_properties
 
     // Determine entity type from mapping config
     const entity_type = mapping_config?.entity_type || 'physical_item'
 
-    // Extract title using shared logic with mapped properties
-    const name = extract_page_title(notion_page, mapped_properties)
+    // Extract title using shared logic with converted properties
+    const name = extract_page_title(notion_page, converted_properties)
 
     // Convert page content blocks to markdown if available
     const content = await convert_blocks_to_markdown(notion_page.blocks || [])
@@ -56,7 +65,7 @@ export async function normalize_notion_database_item(
         external_id: `notion:database:${database_id}:${notion_page.id}`,
         user_public_key: options.user_public_key,
         additional_properties: {
-          ...mapped_properties,
+          ...converted_properties,
           notion_metadata: {
             notion_id: notion_page.id,
             database_id,
@@ -73,7 +82,9 @@ export async function normalize_notion_database_item(
     // Validate and clean entity before return
     const cleaned_entity = validate_and_clean_entity(entity_properties, {
       entity_type,
-      required_fields: ['name', 'title']
+      required_fields: ['name', 'title'],
+      schema: options.schema,
+      conversion_rules
     })
 
     log(
