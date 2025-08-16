@@ -52,7 +52,7 @@ const CodeViewer = ({ code, language, is_redacted }) => {
                   properties: {
                     class: 'line-number',
                     style:
-                      'display: inline-block; width: 3ch; color: #6e7781; text-align: right; padding-right: var(--space-base); user-select: none;'
+                      'display: inline-block; width: 6ch; color: #6e7781; text-align: right; padding-right: var(--space-lg); user-select: none;'
                   },
                   children: [{ type: 'text', value: String(line) }]
                 })

@@ -11,7 +11,7 @@ observations:
   - '[standard] Proper entity type selection ensures data consistency'
   - '[governance] Entity types determine required fields and validation rules'
 relations:
-  - 'implements [[sys:system/schema/base.md]]'
+  - 'implements [[sys:system/schema/entity.md]]'
   - 'related_to [[sys:system/guideline/write-entity.md]]'
   - 'related_to [[sys:system/guideline/write-guideline.md]]'
 updated_at: '2023-06-28T10:00:00.000Z'
@@ -69,7 +69,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 ### Type Extension and Compatibility
 
-- All entity types extend the `base` schema with common properties like title, description, and relations
+- All entity types extend the `entity` schema with common properties like title, description, and relations
 - Entity types MAY have specialized properties that support their specific purpose
 - You MUST include all required properties for the chosen entity type
 - You SHOULD use the appropriate relation types for the entity type

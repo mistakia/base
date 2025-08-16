@@ -1,8 +1,8 @@
 ---
 type: type_definition
-type_name: base
-title: Base Schema
-description: The base schema that all other types inherit from
+type_name: entity
+title: Entity Schema
+description: The entity schema that all other types inherit from - a thing that is independent and distinct
 properties:
   - name: entity_id
     type: string
@@ -62,7 +62,7 @@ properties:
     description: Date when the item was archived
 ---
 
-# Base Schema
+# Entity Schema
 
 This schema defines the core properties that all knowledge base items share. Every content type in the system inherits these properties.
 

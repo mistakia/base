@@ -1,17 +1,17 @@
 ---
 title: Prompt Schema
 type: type_definition
-extends: base
+extends: entity
 type_name: prompt
 description: Schema for prompt entities used in the system
 relations:
   - 'implements [[sys:system/text/knowledge-base-schema.md]]'
-  - 'extends [[sys:system/schema/base.md]]'
+  - 'extends [[sys:system/schema/entity.md]]'
 ---
 
 # Prompt Schema
 
-Prompt is a first-class content type in the knowledge base. It inherits all fields from the Base Schema.
+Prompt is a first-class content type in the knowledge base. It inherits all fields from the Entity Schema.
 
 ## Content Structure
 
