@@ -2,6 +2,10 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
 import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
+import {
+  process_links_in_markdown,
+  process_links_in_html
+} from './link-processor.js'
 import 'highlight.js/styles/github.css'
 
 // Initialize markdown-it with highlight.js
@@ -36,7 +40,15 @@ const md = new MarkdownIt({
 // Render markdown content
 export const render_markdown = (content) => {
   if (!content) return ''
-  return md.render(content)
+
+  // Process base URI links and wiki links before rendering
+  const processed_content = process_links_in_markdown(content)
+
+  // Render markdown to HTML
+  const html = md.render(processed_content)
+
+  // Process links in the rendered HTML to add attributes
+  return process_links_in_html(html)
 }
 
 export default render_markdown

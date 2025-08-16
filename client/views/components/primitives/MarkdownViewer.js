@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
+import { handle_link_click } from '@views/utils/link-processor.js'
 
 const get_normal_styles = {
   '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 1.5, mt: 2 },
@@ -61,8 +62,14 @@ const get_normal_styles = {
   },
   '& a': {
     color: 'inherit',
-    textDecoration: 'underline dotted',
-    cursor: 'not-allowed'
+    textDecoration: 'underline',
+    textDecorationColor: 'red',
+    textDecorationStyle: 'dotted',
+    cursor: 'pointer',
+    transition: 'color 0.2s'
+  },
+  '& a:hover': {
+    color: 'red'
   },
   '& hr': {
     border: 'none',
@@ -107,6 +114,10 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     return render_markdown(content_without_frontmatter)
   }, [content, is_redacted])
 
+  const on_click = useCallback((event) => {
+    handle_link_click(event)
+  }, [])
+
   return (
     <Box
       sx={{
@@ -119,6 +130,7 @@ const MarkdownViewer = ({ content, is_redacted }) => {
       }
       aria-label={is_redacted ? 'Redacted markdown content' : undefined}
       role={is_redacted ? 'text' : undefined}
+      onClick={on_click}
       dangerouslySetInnerHTML={{ __html: html_content }}
     />
   )
