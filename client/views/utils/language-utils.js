@@ -202,10 +202,57 @@ export const normalize_language = (language) => {
   }
 }
 
+export const detect_shell_script_from_content = (content) => {
+  if (!content) return null
+
+  // Check for shebang line
+  const first_line = content.split('\n')[0]
+  if (!first_line.startsWith('#!')) return null
+
+  // Common shell interpreters
+  if (first_line.includes('/bash') || first_line.includes('/sh')) return 'bash'
+  if (first_line.includes('/zsh')) return 'zsh'
+  if (first_line.includes('/fish')) return 'fish'
+  if (first_line.includes('/ksh')) return 'ksh'
+  if (first_line.includes('/csh') || first_line.includes('/tcsh')) return 'tcsh'
+  if (first_line.includes('/python')) return 'python'
+  if (first_line.includes('/perl')) return 'perl'
+  if (first_line.includes('/ruby')) return 'ruby'
+  if (first_line.includes('/node') || first_line.includes('/nodejs'))
+    return 'javascript'
+
+  // Default to bash for generic shell shebangs
+  if (first_line.includes('/env')) {
+    const parts = first_line.split(/\s+/)
+    if (parts.length > 2) {
+      const interpreter = parts[2].toLowerCase()
+      if (interpreter === 'bash' || interpreter === 'sh') return 'bash'
+      if (interpreter === 'zsh') return 'zsh'
+      if (interpreter === 'fish') return 'fish'
+      if (interpreter === 'python' || interpreter === 'python3') return 'python'
+      if (interpreter === 'ruby') return 'ruby'
+      if (interpreter === 'perl') return 'perl'
+      if (interpreter === 'node') return 'javascript'
+    }
+  }
+
+  // Default to bash for unrecognized shell scripts
+  return 'bash'
+}
+
 export const get_file_type_from_path = (path) => {
   if (!path) return 'unknown'
 
-  const ext = path.split('.').pop().toLowerCase()
+  // Check if the path has an extension
+  const last_segment = path.split('/').pop()
+  const parts = last_segment.split('.')
+
+  // If there's no extension (single part), return null to check content later
+  if (parts.length === 1) {
+    return 'unknown'
+  }
+
+  const ext = parts.pop().toLowerCase()
 
   // Code files
   const code_extensions = [

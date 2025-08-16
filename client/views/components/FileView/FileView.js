@@ -3,7 +3,10 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import { directory_actions, get_directory_state } from '@core/directory'
-import { get_file_type_from_path } from '@views/utils/language-utils.js'
+import {
+  get_file_type_from_path,
+  detect_shell_script_from_content
+} from '@views/utils/language-utils.js'
 
 import EntityRenderer from '@components/EntityRenderer/index.js'
 import CodeViewer from '@components/primitives/CodeViewer.js'
@@ -28,7 +31,19 @@ const FileView = ({ path }) => {
       return 'entity'
     }
 
-    return get_file_type_from_path(path)
+    const file_type = get_file_type_from_path(path)
+
+    // If file type is unknown (no extension), check content for shell scripts
+    if (file_type === 'unknown' && file_data?.content) {
+      const detected_language = detect_shell_script_from_content(
+        file_data.content
+      )
+      if (detected_language) {
+        return 'code'
+      }
+    }
+
+    return file_type
   }
 
   const render_content = () => {
@@ -54,7 +69,16 @@ const FileView = ({ path }) => {
         )
 
       case 'code': {
-        const language = path.split('.').pop().toLowerCase()
+        // Try to detect language from content first (for files without extensions)
+        let language = detect_shell_script_from_content(file_data?.content)
+
+        // If not detected from content, get from file extension
+        if (!language) {
+          const last_segment = path.split('/').pop()
+          const parts = last_segment.split('.')
+          language = parts.length > 1 ? parts.pop().toLowerCase() : 'text'
+        }
+
         return (
           <CodeViewer
             code={file_data?.content || ''}
