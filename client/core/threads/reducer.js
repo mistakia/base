@@ -78,7 +78,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.mergeIn(['models_data'], {
         loading: false,
         error: null,
-        data: Map(payload.data)
+        data: Map(payload.data.models || {})
       })
 
     case threads_action_types.GET_MODELS_FAILED:

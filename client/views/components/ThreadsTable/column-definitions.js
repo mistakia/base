@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
+import { get_thread_cost_by_id } from '@core/threads/selectors'
 
 const get_state_color = (state) => {
   switch (state) {
@@ -32,8 +34,7 @@ const get_state_icon = (state) => {
 
 const ProviderCell = ({ row }) => {
   const thread = row.original
-  const session_provider =
-    thread.session_provider || thread.external_session?.session_provider
+  const session_provider = thread.session_provider
 
   if (!session_provider) {
     return (
@@ -110,6 +111,36 @@ const WorkingDirectoryCell = ({ row }) => {
   )
 }
 
+const CostCell = ({ row }) => {
+  const thread = row.original
+  const thread_id = thread.thread_id || thread.id
+
+  // Get cost from Redux store using the thread ID
+  const cost_display = useSelector((state) =>
+    thread_id ? get_thread_cost_by_id(state, thread_id) : null
+  )
+
+  if (!cost_display) {
+    return (
+      <div className='cell-content' style={{ height: 'fit-content' }}>
+        <span style={{ color: '#999' }}>—</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className='cell-content' style={{ height: 'fit-content' }}>
+      <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+        {cost_display}
+      </span>
+    </div>
+  )
+}
+
+CostCell.propTypes = {
+  row: PropTypes.object.isRequired
+}
+
 export const thread_columns = {
   session_provider: {
     column_id: 'session_provider',
@@ -152,7 +183,7 @@ export const thread_columns = {
   working_directory: {
     column_id: 'working_directory',
     header_label: 'Working Directory',
-    accessorKey: 'working_directory',
+    accessorKey: 'formatted_directory',
     component: WorkingDirectoryCell,
     data_type: TABLE_DATA_TYPES.TEXT,
     size: 300,
@@ -161,16 +192,55 @@ export const thread_columns = {
   },
   message_count: {
     column_id: 'message_count',
-    header_label: 'Messages',
+    header_label: 'Total Messages',
     accessorKey: 'formatted_message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
-    size: 75
+    size: 100,
+    minSize: 80,
+    maxSize: 120
+  },
+  user_message_count: {
+    column_id: 'user_message_count',
+    header_label: 'User Messages',
+    accessorKey: 'formatted_user_message_count',
+    data_type: TABLE_DATA_TYPES.NUMBER,
+    size: 100,
+    minSize: 80,
+    maxSize: 120
+  },
+  assistant_message_count: {
+    column_id: 'assistant_message_count',
+    header_label: 'Assistant Messages',
+    accessorKey: 'formatted_assistant_message_count',
+    data_type: TABLE_DATA_TYPES.NUMBER,
+    size: 120,
+    minSize: 100,
+    maxSize: 140
+  },
+  tool_call_count: {
+    column_id: 'tool_call_count',
+    header_label: 'Tool Calls',
+    accessorKey: 'formatted_tool_call_count',
+    data_type: TABLE_DATA_TYPES.NUMBER,
+    size: 80,
+    minSize: 60,
+    maxSize: 100
   },
   token_count: {
     column_id: 'token_count',
     header_label: 'Tokens',
     accessorKey: 'formatted_token_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    size: 80,
+    minSize: 60,
+    maxSize: 100
+  },
+  cost: {
+    column_id: 'cost',
+    header_label: 'Cost',
+    accessorKey: 'thread_id',
+    component: CostCell,
+    data_type: TABLE_DATA_TYPES.TEXT,
     size: 80,
     minSize: 60,
     maxSize: 100
@@ -184,7 +254,11 @@ export const default_visible_columns = [
   'updated_at',
   'duration',
   'message_count',
-  'token_count'
+  'user_message_count',
+  'assistant_message_count',
+  'tool_call_count',
+  'token_count',
+  'cost'
 ]
 
 // PropTypes for remaining cell components

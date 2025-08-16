@@ -563,9 +563,6 @@ export class StorageSync extends EventEmitter {
    * @param {string} changed_path - Path that changed
    */
   handle_thread_directory_change(changed_path) {
-    console.log({
-      changed_path
-    })
     // Extract thread ID from path
     const relative_path = path.relative(this.thread_directory, changed_path)
     const thread_id = relative_path.split(path.sep)[0]
