@@ -1,6 +1,6 @@
 ---
-title: Change Request
 type: type_definition
+title: Change Request Schema
 description: >-
   HISTORICAL - Defines the structure for a change request to the knowledge base. This system was
   removed in January 2025.
@@ -10,7 +10,7 @@ extends: entity
 observations:
   - '[design] Represents a proposed set of changes to knowledge base files.'
   - '[workflow] Integrates with Git branching and optionally GitHub Pull Requests.'
-  - '[storage] Stored as both a DB record and a Markdown file for discoverability.'
+  - '[storage] Stored as a Markdown file for discoverability.'
 properties:
   - name: change_request_id
     type: string
@@ -88,7 +88,7 @@ This schema defines the structure for `change_request` items within the knowledg
 
 ## Usage
 
-Change request items are typically created automatically by tools or worker threads when proposing modifications to knowledge base files. They are stored as Markdown files in `user/change-request/` and have corresponding records in the `change_requests` database table for status tracking and querying.
+Change request items are typically created automatically by tools or worker threads when proposing modifications to knowledge base files. They are stored as Markdown files in `user/change-request/`.
 
 ### Example Frontmatter
 

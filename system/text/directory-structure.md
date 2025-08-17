@@ -26,17 +26,20 @@ This document outlines the directory structure for the human-in-the-loop agent s
 The system is organized into the following top-level directories:
 
 ```
-├── client/             # Client-side code only
-├── config/             # Configuration
-├── db/                 # Database Schema
-├── libs-server/        # Server-side code only
-├── libs-shared/        # Shared code (client & server)
+├── client/             # Client-side React application and components
 ├── cli/                # Command-line tools and utilities
-├── services/           # Long-running processes and servers
-├── server/             # Express API server
-├── static/             # Static resources (images, styles, etc.)
-├── system/             # System Knowledge Base
-└── tests/              # Test files
+├── config/             # Configuration files and settings
+├── docs/               # Project documentation
+├── examples/           # Example code and usage patterns
+├── libs-server/        # Server-side libraries and modules
+├── libs-shared/        # Shared code (client & server)
+├── server/             # API server
+├── services/           # Long-running processes and MCP servers
+├── static/             # Static resources (favicon, etc.)
+├── system/             # System Knowledge Base (schemas, guidelines, workflows)
+├── tests/              # Test files (unit, integration, e2e)
+├── tmp/                # Temporary files directory
+└── webpack/            # Webpack build configuration
 ```
 
 ## Detailed Structure
@@ -52,27 +55,61 @@ The `libs-server/` directory contains server-specific code organized by function
 ```
 └── libs-server/
     ├── index.mjs               # Main export file
+    ├── base-files/             # File operations and utilities
+    ├── base-uri/               # Base URI registry and utilities
     ├── blocks/                 # Block-related functionality
-    ├── entities/               # Entity management
+    ├── entity/                 # Entity management (filesystem, git, format, search)
+    ├── filesystem/             # Filesystem operations
     ├── git/                    # Git integration functionality
-    ├── inference_providers/    # Inference service providers
+    ├── guideline/              # Guideline management
+    ├── inference-providers/    # Inference service providers
     ├── integrations/           # External service integrations
+    │   ├── claude/             # Claude AI integration
+    │   ├── cursor/             # Cursor IDE integration
+    │   ├── github/             # GitHub API and sync
+    │   ├── notion/             # Notion API and sync
+    │   ├── openai/             # OpenAI integration
+    │   ├── shared/             # Shared integration utilities
+    │   └── thread/             # Thread integration utilities
     ├── markdown/               # Markdown processing
     ├── mcp/                    # Model Context Protocol service
-    ├── normalize_user_public_key.mjs   # User public key normalization utilities
-    ├── tags/                   # Tag management functionality
-    ├── tasks/                  # Task management functionality
+    ├── prompts/                # Prompt generation and management
+    ├── repository/             # Repository processing (filesystem & git)
+    ├── services/               # Service layer components
+    ├── sync/                   # Data synchronization utilities
+    ├── tag/                    # Tag management functionality
+    ├── task/                   # Task management functionality
     ├── threads/                # Thread management functionality
-    └── users/                  # User management functionality
+    ├── tools/                  # MCP tools implementation
+    ├── users/                  # User management functionality
+    ├── utils/                  # General utilities
+    └── workflow/               # Workflow management
 ```
 
 ### CLI
 
-The `cli/` directory contains command-line tools and utilities for development, system maintenance, and data processing.
+The `cli/` directory contains command-line tools and utilities for development, system maintenance, and data processing:
+
+```
+└── cli/
+    ├── github/                 # GitHub integration utilities
+    ├── import-history/         # Import history management
+    ├── notion/                 # Notion integration utilities
+    └── *.mjs                   # Various CLI scripts for development and maintenance
+```
 
 ### Services
 
-The `services/` directory contains long-running processes and servers, including the main API server and MCP servers.
+The `services/` directory contains long-running processes and servers:
+
+```
+└── services/
+    ├── claude-session-import-service.mjs  # Claude session import service
+    ├── mcp/                               # MCP server implementations
+    │   ├── mcp-server-sse.mjs            # Server-sent events MCP server
+    │   └── mcp-server-stdio.mjs          # Standard I/O MCP server
+    └── server.mjs                        # Main API server
+```
 
 ### Tests
 
@@ -80,9 +117,10 @@ The `tests/` directory contains test files organized by component:
 
 ```
 └── tests/
-    ├── unit/           # Unit tests
+    ├── fixtures/       # Test fixtures and mock data
     ├── integration/    # Integration tests
-    └── e2e/            # End-to-end tests
+    ├── unit/           # Unit tests
+    └── utils/          # Test utilities and helpers
 ```
 
 ## Data Storage
@@ -91,32 +129,64 @@ The system implements a dual knowledge base architecture:
 
 ```
 ├── system/             # System Knowledge Base (in root repository)
+│   ├── guideline/      # System guidelines and processes
+│   ├── prompt/         # System prompt templates
 │   ├── schema/         # Core schema definitions
-│   ├── workflow/       # System workflows
-│   ├── guideline/      # System guidelines
-│   └── text/           # System documentation
+│   ├── text/           # System documentation
+│   └── workflow/       # System workflows
 │
 └── <user-repository>/  # User Knowledge Base (separate git repository)
-    ├── schema/         # User schema extensions
-    ├── workflow/       # User workflow definitions
-    ├── guideline/      # User guideline definitions
-    ├── text/           # User-specific knowledge items
-    │   ├── projects/   # User projects
-    │   └── custom/     # User-defined custom types
-    ├── task/           # Task data
-    ├── thread/         # Inference request history
-    ├── tag/            # Tags
-    └── log/            # System logs
+    ├── change-request/ # Change management records
+    ├── config/         # User-specific configuration
+    ├── guideline/      # Personal guidelines and processes
+    ├── import-history/ # Historical data from external systems
+    ├── physical-item/  # Physical objects and equipment
+    ├── physical-location/ # Real estate and location entities
+    ├── repository/     # Git repository management
+    ├── tag/            # Taxonomy and categorization
+    ├── task/           # Task management and tracking
+    ├── text/           # Documentation and text content
+    ├── thread/         # Thread execution data
+    └── workflow/       # Personal workflows and automation
 ```
 
 Additional user repositories can be configured and will be automatically recognized and processed by the system. Each repository is treated as a separate user knowledge base and follows the same structure.
 
 The `system/` directory in the `base` project repository contains core definitions that provide the foundation for all knowledge items, while user repositories contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
 
+## Additional Directories
+
+### Client Structure
+
+The `client/` directory contains the React-based web application:
+
+```
+└── client/
+    ├── assets/         # Static assets (logos, images)
+    ├── components/     # Reusable React components
+    ├── core/           # Core application logic (Redux, sagas, API)
+    ├── styles/         # Stylus stylesheets
+    └── views/          # Page components and routing
+```
+
+### Configuration
+
+The `config/` directory contains system configuration:
+
+```
+└── config/
+    ├── config.json     # Main configuration file
+    ├── config-test.json # Test environment configuration
+    ├── index.mjs       # Configuration loader
+    └── labels.mjs      # Label definitions
+```
+
 ## Implementation Notes
 
 1. **Module System**: The system uses ES modules with the `.mjs` extension for clarity.
-2. **Path Aliases**: Configure path aliases in build tools to simplify imports.
-3. **Multiple Users**: Multiple user repositories can be configured independently and will be processed separately.
+2. **Build System**: Uses Webpack for client-side bundling and Babel for transpilation.
+3. **Package Management**: Uses Yarn for dependency management.
+4. **Process Management**: PM2 configuration for production deployment.
+5. **Multiple Users**: Multiple user repositories can be configured independently and will be processed separately.
 
 **Note**: User knowledge bases are stored in separate git repositories that can be located anywhere on the filesystem, configured via `config.user_base_directory` or runtime registration.

@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Database Item Schema
 description: Database items represent records within a database
 created_at: '2025-08-16T17:56:08.201Z'
 entity_id: b556b705-14e2-4797-8ef5-9c6af518f085

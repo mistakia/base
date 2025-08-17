@@ -31,9 +31,9 @@ Relations are defined in the frontmatter of markdown files as an array:
 
 ```yaml
 relations:
-  - 'implements [[sys:system/text/system-design]]'
-  - 'relates_to [[sys:system/text/other-document]] (provides context)'
-  - 'blocked_by [[sys:system/schema/dependency]]'
+  - 'implements [[sys:system/text/system-design.md]]'
+  - 'relates_to [[sys:system/text/other-document.md]] (provides context)'
+  - 'blocked_by [[sys:system/schema/dependency.md]]'
 ```
 
 ## Standard Relation Types
@@ -87,9 +87,9 @@ All entity relationships are managed through the `relations` property in the fro
 
 ```yaml
 relations:
-  - 'subtask_of [[user/tasks/parent-task]]'
-  - 'blocked_by [[user/tasks/dependent-task]]'
-  - 'assigned_to [[user/person/jane-doe]]'
+  - 'subtask_of [[user:task/parent-task.md]]'
+  - 'blocked_by [[user:task/dependent-task.md]]'
+  - 'assigned_to [[user:person/jane-doe.md]]'
 ```
 
 ## Common Entity Relation Patterns
@@ -128,12 +128,7 @@ While any entity can use any relation type, certain patterns are common:
 
 ## Relation Storage
 
-Relations are stored in the database in the `entity_relations` table with the following structure:
-
-- `source_entity_id`: The entity that has the relation
-- `target_entity_id`: The entity that is the target of the relation
-- `relation_type`: The type of relation
-- `context`: Optional context for the relation
+Relations are stored in entity frontmatter using the `relations` array.
 
 ## Functions
 

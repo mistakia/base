@@ -143,10 +143,6 @@ permissions:
 - **heading_level**: Heading level (1-6)
 - **block_cids**: Content identifiers
 
-### Redaction Templates
-
-Restricted content is replaced with type-specific placeholders like `[REDACTED HEADING]`, `[REDACTED CODE]`, or `[REDACTED CONTENT]`.
-
 ### User Context
 
 Permission checking uses `{ is_owner: boolean, user_public_key: string }` context.
@@ -156,14 +152,4 @@ Permission checking uses `{ is_owner: boolean, user_public_key: string }` contex
 1. Parse companion file
 2. Apply rules based on user context
 3. Redact restricted content
-4. Preserve block structure and relationships
-
-## Implementation
-
-Core modules in `libs-server/blocks/`:
-
-- `block-schemas.mjs`: Type definitions
-- `block-converter.mjs`: Markdown conversion
-- `block-store.mjs`: Storage operations
-- `block-operations.mjs`: High-level operations
-- `block-permissions.mjs`: Access control
+4. Preserve markdown syntax, block structure, and relationships

@@ -1,7 +1,7 @@
 ---
 type: type_definition
+title: Type Definition Schema
 type_name: type_definition
-title: Type Definition
 extends: entity
 description: Type definitions define the structure of content types
 properties:

@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Physical Item Schema
 description: Physical items represent tangible objects, equipment, or materials
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: 0eb4ada8-d30f-40a8-ad31-e60a3110a8d4

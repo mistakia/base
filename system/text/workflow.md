@@ -21,9 +21,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Workflow
 
-## Overview
-
-The system implements a design pattern where workflows define agent behaviors that run inside threads. Each thread executes one workflow, providing the execution environment and context. Workflows define behavior and interaction patterns through structured inputs, outputs, and tool integrations.
+Workflows define agent behaviors that run inside threads. Each thread should execute one workflow, providing the execution environment and context. Workflows define behavior and interaction patterns through structured inputs, outputs, and tool integrations.
 
 ## Key Concepts
 
@@ -31,7 +29,7 @@ The system implements a design pattern where workflows define agent behaviors th
 - **One-to-One Relationship**: Each thread executes one workflow (specified by `workflow_base_uri`)
 - **Workflow as Behavior Definition**: Workflows define agent behaviors with inputs, outputs, and tools
 - **Functional Structure**: Workflows accept inputs (`prompt_properties`) and produce outputs through completion tools
-- **Composition**: Workflows can invoke other workflows through tool calls, enabling complex operations
+- **Composition**: Workflows can invoke other workflows through tool calls enabling various complex patterns
 
 ## Advanced Workflow Capabilities
 

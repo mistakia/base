@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Digital Item Schema
 description: Digital items represent files, software, or digital artifacts
 created_at: '2025-08-16T17:56:08.203Z'
 entity_id: 10194a1c-e110-4cfd-9212-fd9a15160d97

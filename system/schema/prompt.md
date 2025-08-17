@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Prompt Schema
 description: Schema for prompt entities used in the system
 created_at: '2025-08-16T17:56:08.205Z'
 entity_id: e4ac31d5-f140-48a6-a122-4855426f91b8

@@ -27,7 +27,7 @@ Execution threads are the system's unified representation of sessions - whether 
 An **Execution Thread** is a session that captures conversations and agentic workflows. Sessions can originate from:
 
 1. **Base System Sessions**: Native workflows and conversations executing within the Base system
-2. **External Provider Sessions**: Conversations and agentic workflows from external LLM providers (Claude, Cursor, OpenAI, etc.)
+2. **External Provider Sessions**: Conversations and agentic workflows from external session providers (Claude, Cursor, OpenAI, etc.)
 
 The session provider is simply the choice of "engine" for the interaction. All threads follow the same structure and interfaces, allowing the system to handle them uniformly regardless of provider.
 
@@ -37,8 +37,8 @@ The session provider is simply the choice of "engine" for the interaction. All t
 - `user_public_key`: Owner of the thread
 - `workflow_base_uri`: For Base system sessions, references the executing workflow
 - `session_provider`: Origin of the session (e.g., 'base', 'claude', 'cursor', 'openai')
-- `thread_state`: Current state - `active`, `paused`, or `terminated`
-- `created_at`, `updated_at`, `terminated_at`: Lifecycle timestamps
+- `thread_state`: Current state - `active` or `archived`
+- `created_at`, `updated_at`, `archived_at`: Lifecycle timestamps
 
 ## External Session Providers
 
@@ -75,7 +75,7 @@ All external sessions are normalized to the standard thread format:
 
 Threads maintain a chronological timeline with standardized entry types:
 
-- **message**: User or assistant messages
+- **message**: User, system, or assistant messages
 - **tool_call**: Tool invocation requests
 - **tool_result**: Tool execution results
 - **error**: Error events
@@ -93,7 +93,7 @@ This unified structure enables:
 user:thread/{thread_id}/
   metadata.json     # Thread configuration and state
   timeline.json     # Chronological event log
-  memory/          # Working directory (git repository)
+  memory/          # Working memory directory (git repository)
   raw-data/        # Original provider data (external sessions only)
 ```
 

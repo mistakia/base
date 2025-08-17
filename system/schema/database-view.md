@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Database View Schema
 description: Database views represent saved configurations of how to display database items
 created_at: '2025-08-16T17:56:08.202Z'
 entity_id: 2dc0616b-b7b1-40ba-8ee8-aee1568311e7

@@ -18,8 +18,6 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Knowledge Base Schema
 
-## System vs User Knowledge Base
-
 The knowledge base architecture consists of two complementary components:
 
 ### System Knowledge Base
@@ -30,7 +28,6 @@ The knowledge base architecture consists of two complementary components:
 
 ### User Knowledge Base
 
-- Located in separate git repositories that can be anywhere on the filesystem
 - Each repository belongs to a different user and contains their specific content
 - Implements and extends the system schema for user-specific needs
 - Can customize and add properties to existing types
@@ -71,14 +68,14 @@ Users can extend the knowledge base schema in several ways:
 
 All schema extensions should be stored in the `schema/` directory within the user's repository to maintain separation from content items. This keeps schema definitions organized and discoverable.
 
-Example path: `<user-repository>/schema/custom_task_extension.md`
+Example path: `user:schema/custom-task-extension.md`
 
 ## Content Structure
 
 The body of each markdown file follows this general structure:
 
 ```markdown
-# Document Title
+# Document Title (optional)
 
 Body contains any content relevant to the document.
 ```
@@ -104,10 +101,10 @@ Relations must be defined in the frontmatter as an array of strings following a 
 
 ```yaml
 relations:
-  - 'relates_to [[sys:system/text/system-design]]'
-  - 'implements [[sys:system/schema/design-pattern]]'
-  - 'blocked_by [[sys:system/schema/database]]'
-  - 'assigned_to [[user:schema/person/jane-doe]]'
+  - 'relates_to [[sys:system/text/system-design.md]]'
+  - 'implements [[sys:system/schema/design-pattern.md]]'
+  - 'blocked_by [[sys:system/schema/database.md]]'
+  - 'assigned_to [[user:person/jane-doe.md]]'
 ```
 
 Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
@@ -152,42 +149,23 @@ Canonical relation types are centralized in the `entity_relations` namespace in 
 - **Involvement Relations**
   - `involves`: Involvement relationship
 
-## Permalinks and Referencing
-
-Each document has a unique permalink that serves as its stable identifier. These permalinks enable consistent referencing even if titles change:
-
-- Auto-generated from the title if not specified
-- Can be customized in frontmatter
-- The canonical reference for relations is the file path (relative to the knowledge base root) e.g. `[[sys:system/text/system-design.md]]`.
-
-## File Path Storage
-
-Entity files are stored in the database with two path references:
-
-- `absolute_path`: The full filesystem path to the file (e.g., `/Users/username/Projects/base/system/text/base-threads.md`)
-- `base_uri`: A standardized reference path that follows these conventions:
-  - For system knowledge base files: `sys:system/text/base-threads.md`
-  - For user knowledge base files: `<knowledge_base_name>:<relative_path>.md` (e.g., `user:guidelines/write-text.md`)
-
-The `base_uri` format is designed to be used for canonical references across the knowledge base and is the format used in wikilinks.
-
 ## Available Content Types
 
 The knowledge base supports the following content types. See the actual schema files in `sys:system/schema/` for detailed property definitions and usage guidance:
 
 - [Entity](../schema/entity.md) - Core properties shared by all content types
-- [Workflow](../schema/workflow.md) - Actions or processes
-- [Task](../schema/task.md) - Discrete units of work
+- [Workflow](../schema/workflow.md) - Defines agentic behavior
+- [Task](../schema/task.md) - Describes discrete units of work
 - [Guideline](../schema/guideline.md) - Standards, procedures, or best practices
 - [Physical Item](../schema/physical_item.md) - Tangible objects or materials
-- [Digital Item](../schema/digital_item.md) - Files, software, or digital artifacts
-- [Physical Location](../schema/physical_location.md) - Places, addresses, or geographical points
+- [Digital Item](../schema/digital_item.md) - Files (remote files or hyperlinks)
+- [Physical Location](../schema/physical_location.md) - Discreet physical space, addresses, or geographical points
 - [Person](../schema/person.md) - Individual people
 - [Organization](../schema/organization.md) - Companies, departments, or teams
-- [Text](../schema/text.md) - General content or documentation
-- [Database](../schema/database.md) - Collections of related database items
-- [Database Item](../schema/database_item.md) - Records within a database
-- [Database View](../schema/database_view.md) - Saved display configurations for databases
+- [Text](../schema/text.md) - General content, documentation, or notes
+- [Database](../schema/database.md) - Defines a structured dataset
+- [Database Item](../schema/database_item.md) - Records within a dataset
+- [Database View](../schema/database_view.md) - Saved display configurations for datasets
 - [Type Definition](../schema/type_definition.md) - Defines structure of content types
 - [Type Extension](../schema/type_extension.md) - Adds properties to existing types
 - [Prompt](../schema/prompt.md) - Structured input for models, used to guide response generation

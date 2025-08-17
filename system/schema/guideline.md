@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Guideline Schema
 description: Guidelines represent standards, procedures, or best practices
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: d049333f-47af-415f-8c58-79646e5404de

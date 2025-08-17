@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Organization Schema
 description: Organizations represent companies, departments, teams, or other organizational units
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: 35757f6c-4c1c-4f0b-8f3a-c5cd5124ae72

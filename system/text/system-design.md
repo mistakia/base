@@ -11,9 +11,10 @@ observations:
 relations:
   - 'relates_to [[sys:system/text/directory-structure.md]]'
   - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
-  - 'relates_to [[sys:system/text/change-request-design.md]]'
+  - 'relates_to [[sys:system/text/change-request.md]]'
   - 'relates_to [[sys:system/text/tool-information.md]]'
   - 'relates_to [[sys:system/text/workflow.md]]'
+  - 'relates_to [[sys:system/schema/database.md]]'
 tags:
 updated_at: '2025-05-27T18:10:20.246Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
@@ -21,15 +22,15 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Base System Design
 
-A human-in-the-loop LLM system that works alongside a user to manage and build a knowledge base, manage data, complete tasks as the user would, and improve itself — designed for maximum flexibility, simplicity, and to operate as the user would unprompted.
+A human-in-the-loop LLM system that works alongside a user to manage and build a knowledge base, manage data, complete tasks as the user would, and build itself — designed for maximum flexibility, sovereignty, independence, and simplicity.
 
-## 1. System Overview
+### 1. System Overview
 
-- **File-First Architecture**: Files are the source of truth, stored as markdown files with YAML frontmatter
+- **File-First Architecture**: Local files are the source of truth, stored as markdown files with YAML frontmatter
 - **Version Controlled**: Everything is tracked with git
 - **Change Tracking and Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
 - **Composable Workflows**: Workflows can embed other workflows, enabling complex operations
-- **Multi-Model Support**: Use the right model for each prompt and task
+- **Multi-Model Support**: Use the right model for a given prompt, task, or workflow
 - **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
 - **Granular Action Control**: Tool calls have configurable permission levels to control autonomy
 - **Async Collaboration**: Support for asynchronous human-system interaction
@@ -37,42 +38,53 @@ A human-in-the-loop LLM system that works alongside a user to manage and build a
 - **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control
 - **Self-Improvement**: The system can evaluate and improve itself through feedback loops
 
-## 2. Data Storage System
+### 2. Content Storage System
 
-### 3.1 Storage
+#### 2.1 Main File Storage
 
-Data is stored in two places:
+Data is mainly stored as files, particularly markdown files with YAML frontmatter.
 
-- **Git Repositories**
+- **User-specific git repository**
 
-  - Root repository holds system files and configuration
-  - User-specific content stored in separate git repositories
   - Everything is version controlled and can be worked on offline
   - This is our source of truth
+  - All context, configuration, and data is easily accessible and editable by the user and agentic workflows
 
-- **PostgreSQL Database**
-  - Stores structured data
-  - Indexes data to support fast and semantic retrieval
+#### 2.2 Structured data
 
-### 3.2 Knowledge Base Architecture
+In addition to file-based content, structured datasets can live in any storage system (PostgreSQL, SQLite, CSV/Parquet, embedded databases, HTTP APIs, etc.). Each structured dataset is registered with a companion `<dataset_name>.md` entity file that defines its schema and how to connect/access it.
+
+- The `<dataset_name>.md` file follows the `database` schema (see [[sys:system/schema/database.md]]) and typically includes:
+  - `fields`: typed columns and constraints
+  - `table_name`: logical name for the dataset
+  - `storage_config` (optional): connection details such as `connection_string`, `schema_name`, and `indexes`. When omitted, data is stored locally in the system's PostgreSQL instance
+  - `views` (optional): predefined `database_view` identifiers for display/filtering
+
+The system uses the `<dataset_name>.md` definition to connect to the underlying store through a unified API. Records are represented as `database_item` entities that reference their parent database and are validated against its schema.
+
+#### 2.3 Indexing
+
+There is flexibility to use any indexing or vector database, but the preference is to use embedded databases like [Kuzudb](https://github.com/kuzudb/kuzu), sqlite, and [duckdb](https://duckdb.org/).
+
+#### 2.4 Filesystem Architecture
 
 The system separates knowledge into two types:
 
 - **System Knowledge Base**
 
-  - Located in the `system/` directory of the root repository
+  - Located in the `system/` directory of the base project codebase
   - Contains core system definitions, schemas, and documentation
   - Relevant to core system functionality and relevant to all users
 
-- **User Knowledge Bases**
-  - Located in separate git repositories that can be anywhere on the filesystem
-  - Each repository belongs to a different user and contains their specific content
-  - Contains user-specific data, content, and configurations
+- **User Knowledge Base**
+
+  - A git repository belonging to a single user
+  - Contains user-specific data, content, guidelines, workflows, and configurations
   - Configured via `config.user_base_directory` or runtime registration
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 
-### 3.3 External Connections
+#### 2.5 External Connections
 
 Each external data connection has bidirectional sync:
 
@@ -83,17 +95,30 @@ Each external data connection has bidirectional sync:
 - Github Projects
 - Other git repos
 
-## 4. Glossary
-
-### 4.1 Key Terms
+### 3. Glossary
 
 - **Workflow**: Defines agent behavior as a composable, modular function that specifies inputs, outputs, and tool integrations. It is effectively a prompt that defines agent behavior that can be run repeatedly, have loops, branching, wait for human input, embed other workflows, and so on.
+- **Thread**: The system's standardized session representation for conversations and agentic workflows. See [[sys:system/text/execution-threads.md]].
 - **Change Request**: A proposal for modifications to the knowledge base that requires review and approval.
 - **Guideline**: A set of rules or recommendations accessed by workflows that MUST, SHOULD, or MAY be followed.
 - **Inference Request**: The process of submitting a prompt to models and receiving the generated outputs.
 - **Model**: A system capable of processing inference requests and generating outputs.
 - **Prompt**: A structured input provided to a model to guide its response generation.
 - **Task**: A discrete unit of work that can be assigned, tracked, and completed within the system.
-- **Tool**: A capability provided to workflows (agents) executing in a thread that allows them to perform specific actions or access resources.
+- **Tool**: A capability provided to workflows (agents) executing in a thread that allows them to perform specific actions or access resources. The main tool used is `Bash` and file system access (`Read`)
 - **Trigger**: An event or condition that activates a workflow.
 - **Tags**: Labels assigned to entities to define the domain they belong to, supporting classification, organization, and efficient retrieval.
+
+## Related System Documentation
+
+- [[sys:system/text/directory-structure.md]] - File organization and structure
+- [[sys:system/text/knowledge-base-schema.md]] - Entity schemas and data models
+- [[sys:system/text/change-request.md]] - Change management workflow
+- [[sys:system/text/tool-information.md]] - Tool capabilities and usage
+- [[sys:system/text/workflow.md]] - Workflow definitions and execution
+- [[sys:system/text/execution-threads.md]] - Thread lifecycle and management
+- [[sys:system/text/external-data-sync.md]] - External system integrations
+- [[sys:system/text/entity-relations.md]] - Entity relationship system
+- [[sys:system/text/mcp-server.md]] - Model Context Protocol server
+- [[sys:system/text/roadmap.md]] - Development roadmap and priorities
+- [[sys:system/text/base-uri.md]] - URI system for entity references

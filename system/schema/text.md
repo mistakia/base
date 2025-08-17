@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Text Schema
 description: Text represents general content, articles, or documentation
 created_at: '2025-08-16T17:56:08.207Z'
 entity_id: 76df2a75-8ac4-4fd0-a5a5-3a8f73eff378

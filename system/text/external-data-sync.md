@@ -43,9 +43,9 @@ Local modifications are overwritten by external changes, with additive merging o
 
 **Database Property Mapping**: Configuration-driven approach maps Notion database properties to entity fields with type conversion support. Handles complex property types including multi-select, relations, formulas, and rollups through a flexible mapping system.
 
-**Filesystem-Based Entity Matching**: Uses exact external_id matching followed by expected location search to prevent entity corruption. Avoids database queries that could match wrong entities during sync operations.
+**Filesystem-Based Entity Matching**: Uses exact external_id matching followed by expected location search to prevent entity corruption.
 
-## Ossified Specifications
+## Specifications
 
 ### External ID Format
 
@@ -71,7 +71,7 @@ Import history files use `{timestamp}_{content_id}.json` format where:
 2. **Historical Comparison**: Compare against previous import using content identifier
 3. **Field-Level Analysis**: Detect specific fields that changed between imports
 4. **Local Conflict Check**: Compare existing local entity against normalized external data
-5. **Transaction Execution**: Apply changes within database transaction scope
+5. **Apply Changes**: Perform file writes with atomic operations
 
 ### GitHub Integration Process
 
@@ -140,7 +140,7 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 
 **Import History Tracking**: Content-addressed storage of sync operations enables precise change detection and prevents unnecessary updates when external data hasn't changed.
 
-**Filesystem-Based Entity Search**: Exact external_id matching prevents entity corruption that could occur with fuzzy database searches, ensuring sync operations target correct entities.
+**Filesystem-Based Entity Search**: Exact external_id matching prevents entity corruption that could occur with fuzzy searches, ensuring sync operations target correct entities.
 
 ## Import History Management
 

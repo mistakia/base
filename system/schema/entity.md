@@ -1,5 +1,6 @@
 ---
 type: type_definition
+title: Entity Schema
 description: The entity schema that all other types inherit from - a thing that is independent and distinct
 created_at: '2025-08-16T17:56:08.203Z'
 entity_id: 570cd4c2-cd4d-4a9e-acb6-6e6855b50db5
