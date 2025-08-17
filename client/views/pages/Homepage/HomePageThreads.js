@@ -148,7 +148,7 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
         </div>
         {threads.size > displayed_threads.size && (
           <Link to='/thread' className='all-threads-link'>
-            All Threads
+            view all threads
           </Link>
         )}
       </>
