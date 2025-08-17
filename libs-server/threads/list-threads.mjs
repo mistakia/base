@@ -12,7 +12,6 @@ import {
 import { get_thread_base_directory } from './threads-constants.mjs'
 import {
   read_json_file,
-  add_backward_compatibility_fields,
   get_effective_updated_at,
   check_thread_permission
 } from './thread-utils.mjs'
