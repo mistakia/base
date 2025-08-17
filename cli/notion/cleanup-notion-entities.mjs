@@ -20,6 +20,10 @@ import { list_files_recursive } from '#libs-server/repository/filesystem/list-fi
 const log = debug('cli:notion:cleanup')
 
 const argv = yargs(hideBin(process.argv))
+  .scriptName('cleanup-notion-entities')
+  .usage(
+    'Cleanup Notion-synced entities from the local filesystem.\n\nUsage: $0 [options]'
+  )
   .option('dry-run', {
     describe: 'Show what would be deleted without actually deleting',
     type: 'boolean',
@@ -43,7 +47,20 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
-  .help().argv
+  .example(
+    '$0 --dry-run',
+    'Show which files would be deleted without removing them'
+  )
+  .example(
+    '$0 --entity-type physical_item',
+    'Only cleanup entities of a specific type'
+  )
+  .example(
+    '$0 --database-id 00000000-0000-0000-0000-000000000000',
+    'Only cleanup entities from a specific Notion database'
+  )
+  .help()
+  .alias('help', 'h').argv
 
 if (argv.verbose) {
   debug.enable('cli:notion:cleanup')
@@ -222,7 +239,7 @@ async function confirm_deletion(count) {
     return true
   }
 
-  console.log(`\n⚠️  This will delete ${count} files.`)
+  console.log(`\nWarning: This will delete ${count} files.`)
   console.log('This action cannot be undone.')
   console.log('\nPress Enter to continue or Ctrl+C to cancel...')
 
@@ -238,7 +255,7 @@ async function confirm_deletion(count) {
  */
 async function main() {
   try {
-    console.log('🔍 Searching for Notion-synced entities...')
+    console.log('Searching for Notion-synced entities...')
 
     // Find all Notion entities
     const entities = await find_notion_entities({
@@ -247,7 +264,7 @@ async function main() {
     })
 
     if (entities.length === 0) {
-      console.log('\n✅ No Notion-synced entities found.')
+      console.log('\nNo Notion-synced entities found.')
       return
     }
 
@@ -257,24 +274,24 @@ async function main() {
     // Confirm deletion
     const confirmed = await confirm_deletion(entities.length)
     if (!confirmed) {
-      console.log('\n❌ Cleanup cancelled.')
+      console.log('\nCleanup cancelled.')
       return
     }
 
     // Delete entities
-    console.log('\n🗑️  Deleting entities...')
+    console.log('\nDeleting entities...')
     const results = await delete_entities(entities, argv['dry-run'])
 
     // Display results
-    console.log('\n📊 Cleanup Results:')
+    console.log('\nCleanup Results:')
     console.log(`   Deleted: ${results.deleted}`)
     console.log(`   Errors: ${results.errors}`)
 
     if (argv['dry-run']) {
-      console.log('\n⚠️  This was a dry run. No files were actually deleted.')
+      console.log('\nThis was a dry run. No files were actually deleted.')
     }
   } catch (error) {
-    console.error('\n❌ Error during cleanup:', error.message)
+    console.error('\nError during cleanup:', error.message)
     if (argv.verbose) {
       console.error(error.stack)
     }
