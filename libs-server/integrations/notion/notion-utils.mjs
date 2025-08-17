@@ -519,7 +519,7 @@ export function clean_entity_fields_by_schema(
       )
 
       if (enum_conversion_rule) {
-        const [rule_name, rule] = enum_conversion_rule
+        const [rule_name] = enum_conversion_rule
         cleaned[field_name] = apply_type_conversion(
           field_value,
           rule_name,

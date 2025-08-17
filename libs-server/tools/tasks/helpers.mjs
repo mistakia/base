@@ -71,16 +71,13 @@ export const helpers = {
 
 /**
  * Format a task for efficient token usage and better inference
- * @param {Object} task The task to format (from read_task_from_filesystem)
+ * @param {Object} task The task to format (from read_task_from_filesystem or list_tasks_from_filesystem)
  * @returns {Object} Formatted task
  */
 export function format_task(task) {
-  if (!task) return null
+  if (!task || !task.entity_properties) return null
 
   const { entity_properties, file_info } = task
-
-  if (!entity_properties) return null
-
   const {
     title,
     description,
@@ -90,7 +87,18 @@ export function format_task(task) {
     started_at,
     entity_id,
     created_at,
-    updated_at
+    updated_at,
+    assigned_to,
+    start_by,
+    estimated_total_duration,
+    estimated_preparation_duration,
+    estimated_execution_duration,
+    estimated_cleanup_duration,
+    actual_duration,
+    planned_start,
+    planned_finish,
+    finished_at,
+    snooze_until
   } = entity_properties
 
   return {
@@ -103,6 +111,17 @@ export function format_task(task) {
     started_at,
     entity_id,
     created_at,
-    updated_at
+    updated_at,
+    assigned_to,
+    start_by,
+    estimated_total_duration,
+    estimated_preparation_duration,
+    estimated_execution_duration,
+    estimated_cleanup_duration,
+    actual_duration,
+    planned_start,
+    planned_finish,
+    finished_at,
+    snooze_until
   }
 }

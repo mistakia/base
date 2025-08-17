@@ -17,9 +17,9 @@ describe('Markdown Document Formatter', () => {
       })
 
       // Verify results
-      expect(result.document_properties.title).to.equal('Task')
+      expect(result.document_properties.title).to.equal('Task Schema')
       expect(result.document_properties.type).to.equal('type_definition')
-      expect(result.document_properties.extends).to.equal('base')
+      expect(result.document_properties.extends).to.equal('entity')
       expect(result.document_content).to.include('# Task')
       expect(result.document_content).to.include(
         'Tasks represent discrete units of work'
@@ -63,7 +63,7 @@ describe('Markdown Document Formatter', () => {
 
       // Verify results
       expect(result.document_properties.type).to.equal('type_definition')
-      expect(result.document_properties.title).to.equal('Person')
+      expect(result.document_properties.title).to.equal('Person Schema')
     })
 
     it('should clean invisible characters from content', async () => {

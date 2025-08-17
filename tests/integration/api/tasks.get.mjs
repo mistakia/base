@@ -57,15 +57,15 @@ describe('API /:user_public_key/tasks GET', () => {
 
       // Check first task has expected properties
       const task = res.body[0]
-      task.should.have.property('base_uri')
-      task.should.have.property('title')
-      task.should.have.property('description')
-      task.should.have.property('user_public_key')
-      task.should.have.property('created_at')
-      task.should.have.property('updated_at')
-      task.should.have.property('status')
-      task.should.have.property('priority')
-      task.should.have.property('finish_by')
+      task.should.have.nested.property('file_info.base_uri')
+      task.should.have.nested.property('entity_properties.title')
+      task.should.have.nested.property('entity_properties.description')
+      task.should.have.nested.property('entity_properties.user_public_key')
+      task.should.have.nested.property('entity_properties.created_at')
+      task.should.have.nested.property('entity_properties.updated_at')
+      task.should.have.nested.property('entity_properties.status')
+      task.should.have.nested.property('entity_properties.priority')
+      task.should.have.nested.property('entity_properties.finish_by')
       task.user_public_key.should.equal(user.user_public_key)
     })
 
@@ -91,7 +91,7 @@ describe('API /:user_public_key/tasks GET', () => {
 
       // All returned tasks should have the specified status
       res.body.forEach((task) => {
-        task.status.should.equal('Waiting')
+        task.entity_properties.status.should.equal('Waiting')
       })
     })
   })

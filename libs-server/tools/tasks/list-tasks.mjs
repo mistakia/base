@@ -1,7 +1,7 @@
 import debug from 'debug'
 import { register_tool } from '#libs-server/tools/registry.mjs'
 import { helpers, format_task } from './helpers.mjs'
-import { list_tasks_in_filesystem } from '#libs-server/task/filesystem/list-tasks-in-filesystem.mjs'
+import { list_tasks_from_filesystem } from '#libs-server/task/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 const log = debug('tools:tasks')
@@ -82,12 +82,16 @@ register_tool({
         ? exclude_status
         : [...new Set([...exclude_status, TASK_STATUS.COMPLETED])]
 
-      // Call the list_tasks_in_filesystem function
-      const tasks_from_filesystem = await list_tasks_in_filesystem({
+      // Fetch tasks for user from filesystem (list handles include/exclude)
+      const tasks_from_filesystem = await list_tasks_from_filesystem({
+        user_public_key,
+        status: undefined,
         include_status,
         exclude_status: final_exclude_status,
         include_priority,
-        exclude_priority
+        exclude_priority,
+        archived: false,
+        include_completed
       })
 
       // Format tasks for response
