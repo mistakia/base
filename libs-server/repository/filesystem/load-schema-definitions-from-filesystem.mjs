@@ -67,10 +67,10 @@ export async function load_schema_definitions_from_filesystem() {
       `Applying extends from ${type_definitions_with_extends.length} type definitions`
     )
     for (const definition of type_definitions_with_extends) {
-      const base_type = definition.extends
+      const entity_type = definition.extends
 
-      if (schema_map[base_type]) {
-        const base_schema = schema_map[base_type]
+      if (schema_map[entity_type]) {
+        const base_schema = schema_map[entity_type]
         const extending_schema = schema_map[definition.type_name]
 
         // Merge base properties into extending schema
@@ -106,14 +106,14 @@ export async function load_schema_definitions_from_filesystem() {
           ...extending_schema,
           properties: combined_properties,
           // Track inheritance
-          inherited_from: base_type
+          inherited_from: entity_type
         }
       } else {
         log(
-          `Definition ${definition.title} extends unknown entity type ${base_type}`
+          `Definition ${definition.title} extends unknown entity type ${entity_type}`
         )
         console.warn(
-          `Definition ${definition.title} extends unknown entity type ${base_type}`
+          `Definition ${definition.title} extends unknown entity type ${entity_type}`
         )
       }
     }

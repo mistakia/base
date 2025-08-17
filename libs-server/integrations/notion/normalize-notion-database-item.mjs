@@ -37,8 +37,8 @@ export async function normalize_notion_database_item(
     // Apply type conversions to mapped properties
     const conversion_rules = options.conversion_rules || {}
     const converted_properties = apply_property_conversions(
-      mapped_properties, 
-      mapping_config, 
+      mapped_properties,
+      mapping_config,
       conversion_rules
     )
 

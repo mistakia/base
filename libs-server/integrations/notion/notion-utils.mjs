@@ -358,7 +358,11 @@ export function extract_and_map_properties(notion_page, mapping_config = {}) {
  * @param {Object} conversion_rules - Conversion rules from config
  * @returns {any} Converted value
  */
-export function apply_type_conversion(value, conversion_type, conversion_rules = {}) {
+export function apply_type_conversion(
+  value,
+  conversion_type,
+  conversion_rules = {}
+) {
   if (value === null || value === undefined) return value
 
   const rule = conversion_rules[conversion_type]
@@ -368,7 +372,11 @@ export function apply_type_conversion(value, conversion_type, conversion_rules =
   }
 
   // Handle boolean conversions
-  if (conversion_type === 'select_to_boolean' || rule.true_values || rule.false_values) {
+  if (
+    conversion_type === 'select_to_boolean' ||
+    rule.true_values ||
+    rule.false_values
+  ) {
     if (rule.true_values?.includes(value)) return true
     if (rule.false_values?.includes(value)) return false
     return rule.default ?? false
@@ -376,13 +384,19 @@ export function apply_type_conversion(value, conversion_type, conversion_rules =
 
   // Handle enum conversions (any conversion with enum_mappings)
   if (rule.enum_mappings) {
-    for (const [enum_value, possible_inputs] of Object.entries(rule.enum_mappings)) {
+    for (const [enum_value, possible_inputs] of Object.entries(
+      rule.enum_mappings
+    )) {
       if (possible_inputs.includes(value)) {
-        log(`Converted enum value '${value}' -> '${enum_value}' (${conversion_type})`)
+        log(
+          `Converted enum value '${value}' -> '${enum_value}' (${conversion_type})`
+        )
         return enum_value
       }
     }
-    log(`Invalid enum value '${value}' for ${conversion_type}, using default: ${rule.default}`)
+    log(
+      `Invalid enum value '${value}' for ${conversion_type}, using default: ${rule.default}`
+    )
     return rule.default
   }
 
@@ -407,25 +421,41 @@ export function apply_type_conversion(value, conversion_type, conversion_rules =
  * @param {Object} conversion_rules - Global conversion rules
  * @returns {Object} Properties with conversions applied
  */
-export function apply_property_conversions(mapped_properties, mapping_config = {}, conversion_rules = {}) {
+export function apply_property_conversions(
+  mapped_properties,
+  mapping_config = {},
+  conversion_rules = {}
+) {
   const converted_properties = { ...mapped_properties }
-  
+
   if (!mapping_config.type_conversions) {
     return converted_properties
   }
 
   // Apply conversions for each property
-  for (const [notion_property, conversion_type] of Object.entries(mapping_config.type_conversions)) {
+  for (const [notion_property, conversion_type] of Object.entries(
+    mapping_config.type_conversions
+  )) {
     // Find the entity property that maps to this notion property
-    const entity_property = Object.entries(mapping_config.property_mappings || {})
-      .find(([entity_prop, notion_prop]) => notion_prop === notion_property)?.[0]
-    
-    if (entity_property && converted_properties[entity_property] !== undefined) {
+    const entity_property = Object.entries(
+      mapping_config.property_mappings || {}
+    ).find(([entity_prop, notion_prop]) => notion_prop === notion_property)?.[0]
+
+    if (
+      entity_property &&
+      converted_properties[entity_property] !== undefined
+    ) {
       const original_value = converted_properties[entity_property]
-      const converted_value = apply_type_conversion(original_value, conversion_type, conversion_rules)
-      
+      const converted_value = apply_type_conversion(
+        original_value,
+        conversion_type,
+        conversion_rules
+      )
+
       if (converted_value !== original_value) {
-        log(`Converted ${entity_property}: '${original_value}' -> '${converted_value}' (${conversion_type})`)
+        log(
+          `Converted ${entity_property}: '${original_value}' -> '${converted_value}' (${conversion_type})`
+        )
         converted_properties[entity_property] = converted_value
       }
     }
@@ -441,9 +471,13 @@ export function apply_property_conversions(mapped_properties, mapping_config = {
  * @param {Object} conversion_rules - Conversion rules from config
  * @returns {Object} Entity with cleaned field values
  */
-export function clean_entity_fields_by_schema(entity, schema = null, conversion_rules = {}) {
+export function clean_entity_fields_by_schema(
+  entity,
+  schema = null,
+  conversion_rules = {}
+) {
   const cleaned = { ...entity }
-  
+
   if (!schema || !schema.properties) {
     return cleaned
   }
@@ -454,7 +488,7 @@ export function clean_entity_fields_by_schema(entity, schema = null, conversion_
     if (!field_name || cleaned[field_name] === undefined) continue
 
     const field_value = cleaned[field_name]
-    
+
     // Apply conversions based on field type
     if (property.type === 'boolean' && typeof field_value === 'string') {
       // Use select_to_boolean rule if available, or fallback to default boolean conversion
@@ -463,33 +497,48 @@ export function clean_entity_fields_by_schema(entity, schema = null, conversion_
         false_values: ['False', 'false', 'No', 'no', '0', 0, false],
         default: false
       }
-      
-      cleaned[field_name] = apply_type_conversion(field_value, 'select_to_boolean', { 
-        select_to_boolean: boolean_rule 
-      })
+
+      cleaned[field_name] = apply_type_conversion(
+        field_value,
+        'select_to_boolean',
+        {
+          select_to_boolean: boolean_rule
+        }
+      )
     }
-    
+
     // Apply enum cleaning if field has enum values
     if (property.enum && Array.isArray(property.enum)) {
       // Look for a specific conversion rule for this field
-      const enum_conversion_rule = Object.entries(conversion_rules).find(([rule_name, rule]) => 
-        rule.enum_mappings && 
-        Object.keys(rule.enum_mappings).some(enum_key => property.enum.includes(enum_key))
+      const enum_conversion_rule = Object.entries(conversion_rules).find(
+        ([rule_name, rule]) =>
+          rule.enum_mappings &&
+          Object.keys(rule.enum_mappings).some((enum_key) =>
+            property.enum.includes(enum_key)
+          )
       )
-      
+
       if (enum_conversion_rule) {
         const [rule_name, rule] = enum_conversion_rule
-        cleaned[field_name] = apply_type_conversion(field_value, rule_name, conversion_rules)
+        cleaned[field_name] = apply_type_conversion(
+          field_value,
+          rule_name,
+          conversion_rules
+        )
       } else if (typeof field_value === 'string') {
         // Fallback: try to match case-insensitively or find in enum values
-        const exact_match = property.enum.find(enum_val => enum_val === field_value)
+        const exact_match = property.enum.find(
+          (enum_val) => enum_val === field_value
+        )
         if (!exact_match) {
-          const case_insensitive_match = property.enum.find(enum_val => 
-            enum_val.toLowerCase() === field_value.toLowerCase()
+          const case_insensitive_match = property.enum.find(
+            (enum_val) => enum_val.toLowerCase() === field_value.toLowerCase()
           )
           if (case_insensitive_match) {
             cleaned[field_name] = case_insensitive_match
-            log(`Fixed enum case: ${field_name} '${field_value}' -> '${case_insensitive_match}'`)
+            log(
+              `Fixed enum case: ${field_name} '${field_value}' -> '${case_insensitive_match}'`
+            )
           }
         }
       }
@@ -510,11 +559,11 @@ export function clean_entity_fields_by_schema(entity, schema = null, conversion_
  * @returns {Object} Cleaned entity
  */
 export function validate_and_clean_entity(entity, options = {}) {
-  const { 
-    entity_type, 
-    required_fields = [], 
-    schema = null, 
-    conversion_rules = {} 
+  const {
+    entity_type,
+    required_fields = [],
+    schema = null,
+    conversion_rules = {}
   } = options
 
   // Ensure required fields are present
@@ -522,7 +571,11 @@ export function validate_and_clean_entity(entity, options = {}) {
 
   // Apply schema-based field cleaning if schema is provided
   if (schema) {
-    cleaned_entity = clean_entity_fields_by_schema(cleaned_entity, schema, conversion_rules)
+    cleaned_entity = clean_entity_fields_by_schema(
+      cleaned_entity,
+      schema,
+      conversion_rules
+    )
   }
 
   // Ensure description exists

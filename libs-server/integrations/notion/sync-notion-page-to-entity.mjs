@@ -56,11 +56,11 @@ export async function sync_notion_page_to_entity(
 
       const mapping_config = get_database_mapping_config(database_id)
       const conversion_rules = get_conversion_rules()
-      
+
       // Load schema definition for the entity type
       const schemas = await load_schema_definitions_from_filesystem()
       const entity_schema = schemas[entity_type]
-      
+
       const normalized_result = await normalize_notion_database_item(
         notion_page,
         mapping_config,
