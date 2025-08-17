@@ -6,6 +6,7 @@ import {
   check_thread_permission,
   apply_redaction_interceptor
 } from '#server/middleware/permissions.mjs'
+import { process_table_request } from '#libs-server/threads/process-table-request.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -103,6 +104,38 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
     res.json(updated_thread)
   } catch (error) {
     handle_errors(res, error, 'updating thread state')
+  }
+})
+
+// Process table request for server-side filtering, sorting, and pagination
+router.post('/table', async (req, res) => {
+  try {
+    const { table_state, user_public_key } = req.body
+
+    // Validate table state against react-table schema
+    if (table_state && typeof table_state !== 'object') {
+      return res.status(400).json({
+        error: 'Invalid table_state',
+        message: 'table_state must be an object matching react-table schema'
+      })
+    }
+
+    // Use requesting user's permissions for filtering
+    const requesting_user_public_key =
+      req.user?.user_public_key ||
+      req.permission_context?.user_public_key ||
+      null
+
+    // Process the table request with server-side filtering and sorting
+    const result = await process_table_request({
+      table_state,
+      user_public_key: user_public_key || requesting_user_public_key,
+      requesting_user_public_key
+    })
+
+    res.json(result)
+  } catch (error) {
+    handle_errors(res, error, 'processing table request')
   }
 })
 

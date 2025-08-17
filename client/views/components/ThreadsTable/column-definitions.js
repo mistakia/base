@@ -3,8 +3,12 @@ import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
-import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
+import {
+  TABLE_DATA_TYPES,
+  TABLE_OPERATORS
+} from 'react-table/src/constants.mjs'
 import { get_thread_cost_by_id } from '@core/threads/selectors'
+import { format_shorthand_time } from '@views/utils/date-formatting.js'
 
 const get_state_color = (state) => {
   switch (state) {
@@ -95,14 +99,15 @@ const WorkingDirectoryCell = ({ row }) => {
   return (
     <div
       className='cell-content'
-      title={thread.formatted_directory_full_path || ''}
+      title={thread.working_directory_path || ''}
       onClick={handle_click}
       style={{
+        height: 'fit-content',
         cursor: 'pointer',
         textDecoration: 'underline',
         color: '#1976d2'
       }}>
-      {thread.formatted_directory}
+      {thread.working_directory || '—'}
     </div>
   )
 }
@@ -137,6 +142,58 @@ CostCell.propTypes = {
   row: PropTypes.object.isRequired
 }
 
+// Formatting cells for server-provided data
+const UpdatedAtCell = ({ row }) => {
+  const thread = row.original
+  const formatted_time = format_shorthand_time(thread.updated_at)
+
+  return (
+    <div className='cell-content' style={{ height: 'fit-content' }}>
+      <span>{formatted_time}</span>
+    </div>
+  )
+}
+
+const DurationCell = ({ row }) => {
+  const thread = row.original
+  let formatted_duration = '—'
+
+  if (thread.duration_minutes > 0) {
+    if (thread.duration_minutes < 1) {
+      formatted_duration = `${Math.round(thread.duration_minutes * 60)}s`
+    } else if (thread.duration_minutes < 60) {
+      formatted_duration = `${Math.round(thread.duration_minutes)}m`
+    } else {
+      const hours = Math.floor(thread.duration_minutes / 60)
+      const minutes = Math.round(thread.duration_minutes % 60)
+      formatted_duration = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+    }
+  }
+
+  // Get percentile styling if available
+  const percentile_style =
+    thread.percentile_data?.duration_minutes_percentile_style || {}
+
+  return (
+    <div
+      className='cell-content'
+      style={{
+        height: 'fit-content',
+        ...percentile_style
+      }}>
+      <span>{formatted_duration}</span>
+    </div>
+  )
+}
+
+UpdatedAtCell.propTypes = {
+  row: PropTypes.object.isRequired
+}
+
+DurationCell.propTypes = {
+  row: PropTypes.object.isRequired
+}
+
 export const thread_columns = {
   session_provider: {
     column_id: 'session_provider',
@@ -144,6 +201,14 @@ export const thread_columns = {
     accessorKey: 'session_provider',
     component: ProviderCell,
     data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IN,
+      TABLE_OPERATORS.NOT_IN,
+      TABLE_OPERATORS.IS_EMPTY,
+      TABLE_OPERATORS.IS_NOT_EMPTY
+    ],
     size: 40,
     minSize: 40,
     maxSize: 80
@@ -154,6 +219,12 @@ export const thread_columns = {
     accessorKey: 'thread_state',
     component: StateCell,
     data_type: TABLE_DATA_TYPES.SELECT,
+    operators: [
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IN,
+      TABLE_OPERATORS.NOT_IN
+    ],
     size: 50,
     minSize: 40,
     maxSize: 60
@@ -161,17 +232,32 @@ export const thread_columns = {
   updated_at: {
     column_id: 'updated_at',
     header_label: 'Last Updated',
-    accessorKey: 'formatted_updated_at',
+    accessorKey: 'updated_at',
+    component: UpdatedAtCell,
     data_type: TABLE_DATA_TYPES.DATE,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL
+    ],
     size: 110,
     minSize: 90,
     maxSize: 130
   },
-  duration: {
-    column_id: 'duration',
+  duration_minutes: {
+    column_id: 'duration_minutes',
     header_label: 'Duration',
-    accessorKey: 'formatted_duration',
-    data_type: TABLE_DATA_TYPES.TEXT,
+    accessorKey: 'duration_minutes',
+    data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 80,
     minSize: 60,
     maxSize: 100
@@ -179,9 +265,17 @@ export const thread_columns = {
   working_directory: {
     column_id: 'working_directory',
     header_label: 'Working Directory',
-    accessorKey: 'formatted_directory',
+    accessorKey: 'working_directory',
     component: WorkingDirectoryCell,
     data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [
+      TABLE_OPERATORS.LIKE,
+      TABLE_OPERATORS.NOT_LIKE,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IS_EMPTY,
+      TABLE_OPERATORS.IS_NOT_EMPTY
+    ],
     size: 300,
     minSize: 200,
     maxSize: 400
@@ -189,8 +283,16 @@ export const thread_columns = {
   message_count: {
     column_id: 'message_count',
     header_label: 'Total Messages',
-    accessorKey: 'formatted_message_count',
+    accessorKey: 'message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 100,
     minSize: 80,
     maxSize: 120
@@ -198,8 +300,16 @@ export const thread_columns = {
   user_message_count: {
     column_id: 'user_message_count',
     header_label: 'User Messages',
-    accessorKey: 'formatted_user_message_count',
+    accessorKey: 'user_message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 100,
     minSize: 80,
     maxSize: 120
@@ -207,8 +317,16 @@ export const thread_columns = {
   assistant_message_count: {
     column_id: 'assistant_message_count',
     header_label: 'Assistant Messages',
-    accessorKey: 'formatted_assistant_message_count',
+    accessorKey: 'assistant_message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 120,
     minSize: 100,
     maxSize: 140
@@ -216,8 +334,16 @@ export const thread_columns = {
   tool_call_count: {
     column_id: 'tool_call_count',
     header_label: 'Tool Calls',
-    accessorKey: 'formatted_tool_call_count',
+    accessorKey: 'tool_call_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 80,
     minSize: 60,
     maxSize: 100
@@ -225,8 +351,16 @@ export const thread_columns = {
   token_count: {
     column_id: 'token_count',
     header_label: 'Tokens',
-    accessorKey: 'formatted_token_count',
+    accessorKey: 'token_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL
+    ],
     size: 80,
     minSize: 60,
     maxSize: 100
@@ -237,25 +371,12 @@ export const thread_columns = {
     accessorKey: 'thread_id',
     component: CostCell,
     data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [],
     size: 80,
     minSize: 60,
     maxSize: 100
   }
 }
-
-export const default_visible_columns = [
-  'thread_state',
-  'session_provider',
-  'working_directory',
-  'updated_at',
-  'duration',
-  'message_count',
-  'user_message_count',
-  'assistant_message_count',
-  'tool_call_count',
-  'token_count',
-  'cost'
-]
 
 // PropTypes for remaining cell components
 StateCell.propTypes = {

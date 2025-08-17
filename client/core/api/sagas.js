@@ -28,7 +28,10 @@ import {
   put_thread_state_request_actions,
   post_thread_tool_request_actions
 } from '@core/thread/actions'
-import { get_models_actions } from '@core/threads/actions'
+import {
+  get_models_actions,
+  get_threads_table_actions
+} from '@core/threads/actions'
 
 import {
   get_directories_request_actions,
@@ -147,6 +150,13 @@ export const post_thread_execute_tool = fetch.bind(
 )
 
 export const get_models = fetch.bind(null, api.get_models, get_models_actions)
+
+// Threads table processing saga
+export const load_threads_table = fetch.bind(
+  null,
+  api.get_threads_table,
+  get_threads_table_actions
+)
 
 export const get_directories = fetch.bind(
   null,

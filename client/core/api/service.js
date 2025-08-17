@@ -67,6 +67,11 @@ export const api = {
     return { url }
   },
 
+  get_threads_table(params) {
+    const url = `${API_URL}/threads/table`
+    return { url, ...POST(params) }
+  },
+
   get_thread({ thread_id }) {
     const url = `${API_URL}/threads/${thread_id}`
     return { url }
