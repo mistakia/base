@@ -10,10 +10,8 @@ const get_state_color = (state) => {
   switch (state) {
     case 'active':
       return '#4caf50'
-    case 'paused':
-      return '#ff9800'
-    case 'terminated':
-      return '#f44336'
+    case 'archived':
+      return '#757575'
     default:
       return '#9e9e9e'
   }
@@ -23,9 +21,7 @@ const get_state_icon = (state) => {
   switch (state) {
     case 'active':
       return '●'
-    case 'paused':
-      return '⏸'
-    case 'terminated':
+    case 'archived':
       return '■'
     default:
       return '●'

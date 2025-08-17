@@ -14,39 +14,44 @@ import { get_registered_directories } from '#libs-server/base-uri/index.mjs'
 const log = debug('threads:tools')
 
 // Tool definitions
-export const THREAD_TERMINATE_TOOL = 'terminate_thread'
+export const THREAD_ARCHIVE_TOOL = 'archive_thread'
 export const THREAD_PAUSE_TOOL = 'pause_execution'
 export const THREAD_MESSAGE_NOTIFY_TOOL = 'message_notify'
 export const THREAD_MESSAGE_ASK_TOOL = 'message_ask'
 
 /**
- * Terminate the current thread
+ * Archive the current thread
  *
- * @param {Object} params Parameters for the terminate tool
+ * @param {Object} params Parameters for the archive tool
  * @param {string} params.summary Optional summary of thread results
+ * @param {string} params.archive_reason Reason for archiving (completed or user_abandoned)
  * @param {Object} context Execution context
- * @param {string} context.thread_id ID of the thread to terminate
+ * @param {string} context.thread_id ID of the thread to archive
  * @returns {Promise<Object>} Result of the tool execution
  */
-export const terminate_thread = async (params, context = {}) => {
-  const { summary = 'Thread execution terminated' } = params
+export const archive_thread = async (params, context = {}) => {
+  const {
+    summary = 'Thread execution archived',
+    archive_reason = 'completed'
+  } = params
   const { thread_id } = context
 
   if (!thread_id) {
     throw new Error('thread_id is required in context')
   }
 
-  log(`Terminating thread ${thread_id}`)
+  log(`Archiving thread ${thread_id}`)
 
   try {
-    // Update thread state to terminated
+    // Update thread state to archived
     const updated_thread = await update_thread_state({
       thread_id,
-      thread_state: 'terminated',
-      reason: 'Thread terminated via terminate_thread tool'
+      thread_state: 'archived',
+      archive_reason,
+      reason: 'Thread archived via archive_thread tool'
     })
 
-    // Add timeline entry for termination
+    // Add timeline entry for archiving
     await add_timeline_entry({
       thread_id,
       entry: {
@@ -55,8 +60,9 @@ export const terminate_thread = async (params, context = {}) => {
         type: 'state_change',
         content: {
           from_state: 'active',
-          to_state: 'terminated',
-          reason: 'Thread terminated via terminate_thread tool',
+          to_state: 'archived',
+          reason: 'Thread archived via archive_thread tool',
+          archive_reason,
           summary
         }
       }
@@ -76,7 +82,7 @@ export const terminate_thread = async (params, context = {}) => {
         })
       } catch (worktree_error) {
         log(`Error removing system worktree: ${worktree_error.message}`)
-        // Continue with termination even if worktree cleanup fails
+        // Continue with archiving even if worktree cleanup fails
       }
     }
 
@@ -91,20 +97,21 @@ export const terminate_thread = async (params, context = {}) => {
         })
       } catch (worktree_error) {
         log(`Error removing user worktree: ${worktree_error.message}`)
-        // Continue with termination even if worktree cleanup fails
+        // Continue with archiving even if worktree cleanup fails
       }
     }
 
     return {
       success: true,
-      message: 'Thread terminated successfully',
+      message: 'Thread archived successfully',
+      archive_reason,
       summary
     }
   } catch (error) {
-    log(`Error terminating thread: ${error.message}`)
+    log(`Error archiving thread: ${error.message}`)
     return {
       success: false,
-      message: `Failed to terminate thread: ${error.message}`,
+      message: `Failed to archive thread: ${error.message}`,
       error: error.message
     }
   }
@@ -311,10 +318,10 @@ export const message_ask = async (params, context = {}) => {
 }
 
 /**
- * Define the terminate_thread tool schema
+ * Define the archive_thread tool schema
  */
-const terminate_thread_schema = {
-  description: 'Terminate the thread execution and mark it as terminated',
+const archive_thread_schema = {
+  description: 'Archive the thread execution and mark it as archived',
   stops_execution: true,
   inputSchema: {
     type: 'object',
@@ -322,6 +329,12 @@ const terminate_thread_schema = {
       summary: {
         type: 'string',
         description: 'Optional summary of the thread results'
+      },
+      archive_reason: {
+        type: 'string',
+        description: 'Reason for archiving (completed or user_abandoned)',
+        enum: ['completed', 'user_abandoned'],
+        default: 'completed'
       }
     },
     required: []
@@ -398,11 +411,11 @@ const message_ask_schema = {
  * Register all thread tools with the central tool registry
  */
 export function register_thread_tools() {
-  // Register the terminate_thread tool
+  // Register the archive_thread tool
   register_tool({
-    tool_name: THREAD_TERMINATE_TOOL,
-    tool_definition: terminate_thread_schema,
-    implementation: terminate_thread
+    tool_name: THREAD_ARCHIVE_TOOL,
+    tool_definition: archive_thread_schema,
+    implementation: archive_thread
   })
 
   // Register the pause_execution tool
@@ -436,7 +449,7 @@ export function register_thread_tools() {
  */
 export const get_thread_tool_names = () => {
   return [
-    THREAD_TERMINATE_TOOL,
+    THREAD_ARCHIVE_TOOL,
     THREAD_PAUSE_TOOL,
     THREAD_MESSAGE_NOTIFY_TOOL,
     THREAD_MESSAGE_ASK_TOOL
@@ -466,7 +479,7 @@ export const is_blocking_tool_call = (tool_call) => {
 register_thread_tools()
 
 export default {
-  terminate_thread,
+  archive_thread,
   pause_execution,
   message_notify,
   message_ask,

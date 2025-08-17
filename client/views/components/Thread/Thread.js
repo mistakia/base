@@ -22,9 +22,7 @@ const Thread = ({ thread, is_focused = false }) => {
     switch (state) {
       case 'active':
         return '#28a745'
-      case 'paused':
-        return '#ffc107'
-      case 'terminated':
+      case 'archived':
         return '#6c757d'
       default:
         return '#6c757d'
@@ -35,9 +33,7 @@ const Thread = ({ thread, is_focused = false }) => {
     switch (state) {
       case 'active':
         return '●'
-      case 'paused':
-        return '⏸'
-      case 'terminated':
+      case 'archived':
         return '■'
       default:
         return '●'

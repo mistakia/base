@@ -5,7 +5,8 @@ import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
-const { THREAD_STATE, validate_thread_state } = thread_constants
+const { THREAD_STATE, validate_thread_state, validate_archive_reason } =
+  thread_constants
 const log = debug('threads:update')
 
 /**
@@ -14,7 +15,7 @@ const log = debug('threads:update')
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
  * @param {string} params.thread_state New thread state
- * @param {string} [params.reason] Reason for state change
+ * @param {string} [params.reason] Reason for state change (for archived state, must be valid archive reason)
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_state({ thread_id, thread_state, reason }) {
@@ -53,19 +54,18 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
   metadata.updated_at = new Date().toISOString()
 
   // Add thread_state-specific fields
-  if (thread_state === THREAD_STATE.PAUSED && reason) {
-    metadata.pause_reason = reason
-  } else if (thread_state === THREAD_STATE.TERMINATED && reason) {
-    metadata.termination_reason = reason
+  if (thread_state === THREAD_STATE.ARCHIVED) {
+    metadata.archived_at = new Date().toISOString()
+    if (reason) {
+      validate_archive_reason(reason)
+      metadata.archive_reason = reason
+    }
   }
 
   // Remove thread_state-specific fields if no longer applicable
-  if (thread_state !== THREAD_STATE.PAUSED) {
-    delete metadata.pause_reason
-  }
-
-  if (thread_state !== THREAD_STATE.TERMINATED) {
-    delete metadata.termination_reason
+  if (thread_state !== THREAD_STATE.ARCHIVED) {
+    delete metadata.archived_at
+    delete metadata.archive_reason
   }
 
   // Write updated metadata

@@ -4,8 +4,7 @@ import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 // Thread state constants
 export const THREAD_STATE = {
   ACTIVE: 'active',
-  PAUSED: 'paused',
-  TERMINATED: 'terminated'
+  ARCHIVED: 'archived'
 }
 
 // Valid thread state values
@@ -16,6 +15,25 @@ export function validate_thread_state(thread_state) {
   if (!VALID_THREAD_STATES.includes(thread_state)) {
     throw new Error(
       `Invalid thread state: ${thread_state}. Must be one of: ${VALID_THREAD_STATES.join(', ')}`
+    )
+  }
+  return true
+}
+
+// Thread archive reason constants
+export const ARCHIVE_REASON = {
+  COMPLETED: 'completed',
+  USER_ABANDONED: 'user_abandoned'
+}
+
+// Valid archive reason values
+export const VALID_ARCHIVE_REASONS = Object.values(ARCHIVE_REASON)
+
+// Validate that an archive reason is valid
+export function validate_archive_reason(archive_reason) {
+  if (!VALID_ARCHIVE_REASONS.includes(archive_reason)) {
+    throw new Error(
+      `Invalid archive reason: ${archive_reason}. Must be one of: ${VALID_ARCHIVE_REASONS.join(', ')}`
     )
   }
   return true
