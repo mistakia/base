@@ -54,7 +54,8 @@ describe('Threads API', () => {
 
       await create_test_thread({
         user_public_key: test_user.user_public_key,
-        thread_state: thread_constants.THREAD_STATE.PAUSED,
+        thread_state: thread_constants.THREAD_STATE.ARCHIVED,
+        archive_reason: thread_constants.ARCHIVE_REASON.COMPLETED,
         test_directories
       })
     })
@@ -222,6 +223,116 @@ describe('Threads API', () => {
         .post('/api/threads')
         .send(thread_data)
       // No authentication token
+
+      expect(response).to.have.status(401)
+    })
+  })
+
+  describe('PATCH /api/threads/:thread_id/state', () => {
+    let test_thread
+
+    beforeEach(async () => {
+      test_thread = await create_test_thread({
+        user_public_key: test_user.user_public_key,
+        test_directories
+      })
+    })
+
+    it('should update thread state to archived with reason', async () => {
+      const update_data = {
+        thread_state: thread_constants.THREAD_STATE.ARCHIVED,
+        archive_reason: thread_constants.ARCHIVE_REASON.COMPLETED
+      }
+
+      const response = await authenticate_request(
+        chai
+          .request(server)
+          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .send(update_data),
+        test_user
+      )
+
+      expect(response).to.have.status(200)
+      expect(response.body).to.be.an('object')
+      expect(response.body.thread_state).to.equal('archived')
+      expect(response.body.archive_reason).to.equal('completed')
+      expect(response.body.archived_at).to.be.a('string')
+    })
+
+    it('should reject archived state without reason', async () => {
+      const update_data = {
+        thread_state: thread_constants.THREAD_STATE.ARCHIVED
+        // Missing archive_reason
+      }
+
+      const response = await authenticate_request(
+        chai
+          .request(server)
+          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .send(update_data),
+        test_user
+      )
+
+      expect(response).to.have.status(400)
+      expect(response.body.error).to.include('archive_reason')
+    })
+
+    it('should reject invalid archive reason', async () => {
+      const update_data = {
+        thread_state: thread_constants.THREAD_STATE.ARCHIVED,
+        archive_reason: 'invalid_reason'
+      }
+
+      const response = await authenticate_request(
+        chai
+          .request(server)
+          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .send(update_data),
+        test_user
+      )
+
+      expect(response).to.have.status(400)
+      expect(response.body.error).to.include('Invalid archive reason')
+    })
+
+    it('should update thread state from archived back to active', async () => {
+      // First archive the thread
+      await authenticate_request(
+        chai
+          .request(server)
+          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .send({
+            thread_state: thread_constants.THREAD_STATE.ARCHIVED,
+            archive_reason: thread_constants.ARCHIVE_REASON.USER_ABANDONED
+          }),
+        test_user
+      )
+
+      // Then reactivate it
+      const response = await authenticate_request(
+        chai
+          .request(server)
+          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .send({
+            thread_state: thread_constants.THREAD_STATE.ACTIVE
+          }),
+        test_user
+      )
+
+      expect(response).to.have.status(200)
+      expect(response.body.thread_state).to.equal('active')
+      expect(response.body).to.not.have.property('archive_reason')
+      expect(response.body).to.not.have.property('archived_at')
+    })
+
+    it('should require authentication', async () => {
+      const response = await chai
+        .request(server)
+        .patch(`/api/threads/${test_thread.thread_id}/state`)
+        .send({
+          thread_state: thread_constants.THREAD_STATE.ARCHIVED,
+          archive_reason: thread_constants.ARCHIVE_REASON.COMPLETED
+        })
 
       expect(response).to.have.status(401)
     })

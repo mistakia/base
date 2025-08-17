@@ -148,15 +148,16 @@ describe('create_thread', () => {
     expect(metadata.tools).to.have.length(6) // 2 custom + 4 thread tools
   })
 
-  it('should create a thread with a specified state', async () => {
+  it('should create a thread with archived state', async () => {
     const thread_data = {
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       model: 'llama2',
-      thread_state: THREAD_STATE.PAUSED,
+      thread_state: THREAD_STATE.ARCHIVED,
       additional_metadata: {
-        pause_reason: 'waiting_for_user_input'
+        archive_reason: 'completed',
+        archived_at: new Date().toISOString()
       },
       create_git_branches: true
     }
@@ -167,8 +168,9 @@ describe('create_thread', () => {
     const metadata_path = path.join(thread.context_dir, 'metadata.json')
     const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
 
-    expect(metadata.thread_state).to.equal(THREAD_STATE.PAUSED)
-    expect(metadata.pause_reason).to.equal('waiting_for_user_input')
+    expect(metadata.thread_state).to.equal(THREAD_STATE.ARCHIVED)
+    expect(metadata.archive_reason).to.equal('completed')
+    expect(metadata.archived_at).to.be.a('string')
   })
 
   it('should reject invalid thread parameters', async () => {
@@ -200,6 +202,24 @@ describe('create_thread', () => {
       await create_thread(invalid_state_data)
       // Should not reach here
       expect.fail('Should have thrown an error for invalid thread state')
+    } catch (error) {
+      expect(error).to.be.an('error')
+      expect(error.message).to.include('thread state')
+    }
+  })
+
+  it('should reject deprecated thread states', async () => {
+    const deprecated_state_data = {
+      user_public_key: test_user.user_public_key,
+      inference_provider: 'ollama',
+      model: 'llama2',
+      thread_state: 'terminated' // Deprecated state
+    }
+
+    try {
+      await create_thread(deprecated_state_data)
+      // Should not reach here
+      expect.fail('Should have thrown an error for deprecated thread state')
     } catch (error) {
       expect(error).to.be.an('error')
       expect(error.message).to.include('thread state')

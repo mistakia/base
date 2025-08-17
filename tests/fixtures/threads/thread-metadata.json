@@ -21,24 +21,13 @@
     }
   },
   {
-    "name": "paused_thread",
-    "metadata": {
-      "inference_provider": "ollama",
-      "model": "llama2",
-      "thread_state": "paused",
-      "pause_reason": "waiting_for_human_input",
-      "tools": ["web_search"],
-      "message_count": 3,
-      "tool_call_count": 1
-    }
-  },
-  {
-    "name": "terminated_thread",
+    "name": "archived_thread",
     "metadata": {
       "inference_provider": "ollama",
       "model": "mistral",
-      "thread_state": "terminated",
-      "termination_reason": "completed",
+      "thread_state": "archived",
+      "archive_reason": "completed",
+      "archived_at": "2024-01-15T10:30:00.000Z",
       "tools": ["web_search", "calculator"],
       "message_count": 10,
       "tool_call_count": 4

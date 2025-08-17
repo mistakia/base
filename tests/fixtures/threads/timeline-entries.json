@@ -61,8 +61,8 @@
       "timestamp": "2023-05-10T14:31:00Z",
       "type": "state_change",
       "previous_state": "active",
-      "new_state": "paused",
-      "reason": "waiting_for_human_input"
+      "new_state": "archived",
+      "reason": "completed"
     }
   },
   {

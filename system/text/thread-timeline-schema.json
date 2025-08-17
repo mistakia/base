@@ -283,12 +283,12 @@
           "properties": {
             "previous_state": {
               "type": "string",
-              "enum": ["active", "paused", "terminated"],
+              "enum": ["active", "archived"],
               "description": "Previous thread state"
             },
             "new_state": {
               "type": "string",
-              "enum": ["active", "paused", "terminated"],
+              "enum": ["active", "archived"],
               "description": "New thread state"
             },
             "reason": {

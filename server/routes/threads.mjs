@@ -84,17 +84,20 @@ router.get('/:thread_id', check_thread_permission(), async (req, res) => {
 router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
   try {
     const { thread_id } = req.params
-    const { thread_state, reason } = req.body
+    const { thread_state, reason, archive_reason } = req.body
 
     if (!thread_state) {
       return res.status(400).json({ error: 'thread_state is required' })
     }
 
+    // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
+    const state_reason = archive_reason || reason
+
     // Update thread state
     const updated_thread = await threads.update_thread_state({
       thread_id,
       thread_state,
-      reason
+      reason: state_reason
     })
 
     res.json(updated_thread)

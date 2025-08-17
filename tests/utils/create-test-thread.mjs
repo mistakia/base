@@ -13,7 +13,8 @@ const { THREAD_STATE } = thread_constants
  * @param {string} [options.workflow_base_uri='sys:system/workflow/test-workflow.md'] Workflow to use
  * @param {string} [options.inference_provider='ollama'] Inference provider name
  * @param {string} [options.model='llama2'] Model name
- * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, paused, terminated)
+ * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, archived)
+ * @param {string} [options.archive_reason] Archive reason if thread_state is archived
  * @param {Object} [options.test_directories] Test directories object with system and user paths
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
  * @param {string} [options.thread_main_request] Main request for the thread
@@ -26,6 +27,7 @@ export default async function create_test_thread({
   inference_provider = 'ollama',
   model = 'llama2',
   thread_state = THREAD_STATE.ACTIVE,
+  archive_reason,
   test_directories,
   initial_timeline,
   thread_main_request,
@@ -68,6 +70,7 @@ export default async function create_test_thread({
     inference_provider,
     model,
     thread_state,
+    archive_reason,
     thread_main_request,
     create_git_branches
   })

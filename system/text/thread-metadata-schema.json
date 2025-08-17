@@ -47,7 +47,7 @@
     },
     "thread_state": {
       "type": "string",
-      "enum": ["active", "paused", "terminated"],
+      "enum": ["active", "archived"],
       "description": "Current lifecycle state of the thread"
     },
     "created_at": {
@@ -60,14 +60,15 @@
       "format": "date-time",
       "description": "Timestamp of last update (ISO 8601)"
     },
-    "terminated_at": {
+    "archived_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Timestamp of termination (ISO 8601) - only present if thread_state is 'terminated'"
+      "description": "Timestamp of archival (ISO 8601) - only present if thread_state is 'archived'"
     },
-    "termination_reason": {
+    "archive_reason": {
       "type": "string",
-      "description": "Reason for thread termination (e.g., 'session_import_complete', 'user_terminated', 'error')"
+      "enum": ["completed", "user_abandoned"],
+      "description": "Reason for thread archival - 'completed' for successful completion, 'user_abandoned' for user-initiated abandonment"
     },
     "tools": {
       "type": "array",

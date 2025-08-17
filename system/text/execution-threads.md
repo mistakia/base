@@ -39,6 +39,7 @@ The session provider is simply the choice of "engine" for the interaction. All t
 - `session_provider`: Origin of the session (e.g., 'base', 'claude', 'cursor', 'openai')
 - `thread_state`: Current state - `active` or `archived`
 - `created_at`, `updated_at`, `archived_at`: Lifecycle timestamps
+- `archive_reason`: When archived, reason for archiving (`completed` or `user_abandoned`)
 
 ## External Session Providers
 
