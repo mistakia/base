@@ -12,7 +12,6 @@ import {
 import { get_thread_base_directory } from './threads-constants.mjs'
 import {
   read_json_file,
-  add_backward_compatibility_fields,
   get_effective_updated_at,
   check_thread_permission
 } from './thread-utils.mjs'
@@ -113,7 +112,7 @@ export default async function list_threads({
 // CLI support when run directly
 if (is_main(import.meta.url)) {
   debug.enable('threads:list,threads:utils')
-  
+
   const argv = add_directory_cli_options(
     yargs(hideBin(process.argv))
   )
@@ -166,7 +165,7 @@ if (is_main(import.meta.url)) {
         offset: argv.offset,
         user_base_directory: argv.user_base_directory
       })
-      
+
       console.log(`Found ${threads.length} matching threads`)
       console.log(JSON.stringify(threads, null, 2))
     } catch (err) {
