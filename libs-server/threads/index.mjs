@@ -5,7 +5,8 @@
 import debug from 'debug'
 
 import create_thread from './create-thread.mjs'
-import get_thread, { list_threads } from './get-thread.mjs'
+import get_thread from './get-thread.mjs'
+import list_threads from './list-threads.mjs'
 import {
   update_thread_state,
   update_thread_metadata
