@@ -20,6 +20,181 @@ const log = debug('sync-notion-entities')
 // Enable debug logging for Notion integration
 debug.enable('sync-notion-entities,integrations:notion*')
 
+//
+// CLI configuration (placed at top to double as documentation)
+//
+const cli_description = `
+Sync Notion pages and databases to local entities.
+
+By default this runs in safety (read-only) mode and will NOT write changes back to Notion.
+Use --enable-notion-writes to allow writes, or --dry-run to preview changes without writing.
+`
+
+const cli_parser = yargs(hideBin(process.argv))
+  .scriptName('sync-notion-entities')
+  .usage('$0 [options]\n\n' + cli_description)
+  .option('since', {
+    alias: 's',
+    describe:
+      'Only sync items updated since this date (ISO format, e.g. 2024-01-01T00:00:00Z)',
+    type: 'string'
+  })
+  .option('force', {
+    alias: 'f',
+    describe: 'Force update all entities regardless of content changes',
+    type: 'boolean',
+    default: false
+  })
+  .option('databases-only', {
+    describe: 'Only sync database items, skip standalone pages',
+    type: 'boolean',
+    default: false
+  })
+  .option('pages-only', {
+    describe: 'Only sync standalone pages, skip database items',
+    type: 'boolean',
+    default: false
+  })
+  .option('database-id', {
+    alias: 'd',
+    describe: 'Sync only the specified database ID',
+    type: 'string'
+  })
+  .option('page-id', {
+    alias: 'p',
+    describe: 'Sync only the specified page ID',
+    type: 'string'
+  })
+  .option('notion-token', {
+    alias: 't',
+    describe: 'Notion API token (overrides config)',
+    type: 'string'
+  })
+  .option('page-size', {
+    describe: 'Number of items to fetch per API request',
+    type: 'number',
+    default: 50
+  })
+  .option('rate-limit', {
+    alias: 'r',
+    describe: 'Delay between API requests in milliseconds',
+    type: 'number',
+    default: 200
+  })
+  .option('timeout', {
+    describe: 'Request timeout in milliseconds',
+    type: 'number',
+    default: 30000
+  })
+  .option('max-retries', {
+    describe: 'Maximum number of retries for failed requests',
+    type: 'number',
+    default: 3
+  })
+  .option('verbose', {
+    alias: 'v',
+    describe: 'Enable verbose output with detailed results',
+    type: 'boolean',
+    default: false
+  })
+  .option('enable-notion-writes', {
+    describe:
+      'DANGER: Allow writing changes back to Notion (disabled by default for safety)',
+    type: 'boolean',
+    default: false
+  })
+  .option('dry-run', {
+    describe: 'Analyze what would be synced without making any changes',
+    type: 'boolean',
+    default: false
+  })
+  .option('import-history-base-directory', {
+    describe:
+      'Base directory for import history (defaults to user base directory)',
+    type: 'string'
+  })
+  .check((argv) => {
+    // Validate mutually exclusive options
+    if (argv.databasesOnly && argv.pagesOnly) {
+      throw new Error('Cannot specify both --databases-only and --pages-only')
+    }
+
+    // Validate page-id exclusivity
+    if (
+      argv.pageId &&
+      (argv.databaseId || argv.databasesOnly || argv.pagesOnly)
+    ) {
+      throw new Error(
+        'Cannot specify --page-id with --database-id, --databases-only, or --pages-only'
+      )
+    }
+
+    // Validate database-id with pages-only
+    if (argv.databaseId && argv.pagesOnly) {
+      throw new Error(
+        'Cannot specify --database-id with --pages-only (database items are not standalone pages)'
+      )
+    }
+
+    // Validate mutually exclusive sync modes
+    if (argv.dryRun && argv.enableNotionWrites) {
+      throw new Error(
+        'Cannot specify both --dry-run and --enable-notion-writes'
+      )
+    }
+
+    // Validate since date format if provided
+    if (argv.since) {
+      const date = new Date(argv.since)
+      if (isNaN(date.getTime())) {
+        throw new Error(
+          'Invalid date format for --since. Use ISO format like 2024-01-01T00:00:00Z'
+        )
+      }
+    }
+
+    return true
+  })
+  .help('help')
+  .alias('help', 'h')
+  .describe('help', 'Show help')
+  .example(
+    '$0',
+    'Sync all Notion content to local entities (READ-ONLY by default)'
+  )
+  .example(
+    '$0 --dry-run',
+    'Analyze what would be synced without making changes'
+  )
+  .example(
+    '$0 --enable-notion-writes',
+    'DANGER: Sync content AND write changes back to Notion'
+  )
+  .example(
+    '$0 --since 2024-01-01T00:00:00Z',
+    'Sync only items updated since January 1, 2024'
+  )
+  .example(
+    '$0 --database-id 7078f88d-0299-4f7a-a375-98c759d83f8e',
+    'Sync only items from the specified database (automatically excludes standalone pages)'
+  )
+  .example(
+    '$0 --database-id 7078f88d-0299-4f7a-a375-98c759d83f8e --since 2024-01-01T00:00:00Z',
+    'Sync only recent items from the specified database'
+  )
+  .example(
+    '$0 --page-id 12345678-1234-1234-1234-123456789abc',
+    'Sync only the specified page'
+  )
+  .example(
+    '$0 --pages-only --verbose',
+    'Sync only standalone pages with detailed output'
+  )
+  .example(
+    '$0 --force --rate-limit 500',
+    'Force sync all content with increased rate limiting'
+  )
+
 /**
  * Sync Notion entities to local entities
  * @param {Object} options - Sync options
@@ -167,168 +342,7 @@ export default async function sync_notion_entities({
 // Command-line interface
 const main = async () => {
   try {
-    const argv = yargs(hideBin(process.argv))
-      .option('since', {
-        alias: 's',
-        describe:
-          'Only sync items updated since this date (ISO format, e.g. 2024-01-01T00:00:00Z)',
-        type: 'string'
-      })
-      .option('force', {
-        alias: 'f',
-        describe: 'Force update all entities regardless of content changes',
-        type: 'boolean',
-        default: false
-      })
-      .option('databases-only', {
-        describe: 'Only sync database items, skip standalone pages',
-        type: 'boolean',
-        default: false
-      })
-      .option('pages-only', {
-        describe: 'Only sync standalone pages, skip database items',
-        type: 'boolean',
-        default: false
-      })
-      .option('database-id', {
-        alias: 'd',
-        describe: 'Sync only the specified database ID',
-        type: 'string'
-      })
-      .option('page-id', {
-        alias: 'p',
-        describe: 'Sync only the specified page ID',
-        type: 'string'
-      })
-      .option('notion-token', {
-        alias: 't',
-        describe: 'Notion API token (overrides config)',
-        type: 'string'
-      })
-      .option('page-size', {
-        describe: 'Number of items to fetch per API request',
-        type: 'number',
-        default: 50
-      })
-      .option('rate-limit', {
-        alias: 'r',
-        describe: 'Delay between API requests in milliseconds',
-        type: 'number',
-        default: 200
-      })
-      .option('timeout', {
-        describe: 'Request timeout in milliseconds',
-        type: 'number',
-        default: 30000
-      })
-      .option('max-retries', {
-        describe: 'Maximum number of retries for failed requests',
-        type: 'number',
-        default: 3
-      })
-      .option('verbose', {
-        alias: 'v',
-        describe: 'Enable verbose output with detailed results',
-        type: 'boolean',
-        default: false
-      })
-      .option('enable-notion-writes', {
-        describe:
-          'DANGER: Allow writing changes back to Notion (disabled by default for safety)',
-        type: 'boolean',
-        default: false
-      })
-      .option('dry-run', {
-        describe: 'Analyze what would be synced without making any changes',
-        type: 'boolean',
-        default: false
-      })
-      .option('import-history-base-directory', {
-        describe:
-          'Base directory for import history (defaults to user base directory)',
-        type: 'string'
-      })
-      .check((argv) => {
-        // Validate mutually exclusive options
-        if (argv.databasesOnly && argv.pagesOnly) {
-          throw new Error(
-            'Cannot specify both --databases-only and --pages-only'
-          )
-        }
-
-        // Validate page-id exclusivity
-        if (
-          argv.pageId &&
-          (argv.databaseId || argv.databasesOnly || argv.pagesOnly)
-        ) {
-          throw new Error(
-            'Cannot specify --page-id with --database-id, --databases-only, or --pages-only'
-          )
-        }
-
-        // Validate database-id with pages-only
-        if (argv.databaseId && argv.pagesOnly) {
-          throw new Error(
-            'Cannot specify --database-id with --pages-only (database items are not standalone pages)'
-          )
-        }
-
-        // Validate mutually exclusive sync modes
-        if (argv.dryRun && argv.enableNotionWrites) {
-          throw new Error(
-            'Cannot specify both --dry-run and --enable-notion-writes'
-          )
-        }
-
-        // Validate since date format if provided
-        if (argv.since) {
-          const date = new Date(argv.since)
-          if (isNaN(date.getTime())) {
-            throw new Error(
-              'Invalid date format for --since. Use ISO format like 2024-01-01T00:00:00Z'
-            )
-          }
-        }
-
-        return true
-      })
-      .help()
-      .example(
-        '$0',
-        'Sync all Notion content to local entities (READ-ONLY by default)'
-      )
-      .example(
-        '$0 --dry-run',
-        'Analyze what would be synced without making changes'
-      )
-      .example(
-        '$0 --enable-notion-writes',
-        'DANGER: Sync content AND write changes back to Notion'
-      )
-      .example(
-        '$0 --since 2024-01-01T00:00:00Z',
-        'Sync only items updated since January 1, 2024'
-      )
-      .example(
-        '$0 --database-id 7078f88d-0299-4f7a-a375-98c759d83f8e',
-        'Sync only items from the specified database (automatically excludes standalone pages)'
-      )
-      .example(
-        '$0 --database-id 7078f88d-0299-4f7a-a375-98c759d83f8e --since 2024-01-01T00:00:00Z',
-        'Sync only recent items from the specified database'
-      )
-      .example(
-        '$0 --page-id 12345678-1234-1234-1234-123456789abc',
-        'Sync only the specified page'
-      )
-      .example(
-        '$0 --pages-only --verbose',
-        'Sync only standalone pages with detailed output'
-      )
-      .example(
-        '$0 --force --rate-limit 500',
-        'Force sync all content with increased rate limiting'
-      ).argv
+    const argv = cli_parser.argv
 
     const results = await sync_notion_entities({
       since: argv.since,
