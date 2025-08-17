@@ -50,7 +50,11 @@ export async function read_json_file_or_default({ file_path, default_value }) {
  * @param {Array} params.timeline Thread timeline
  * @returns {Object} Enriched metadata with backward compatibility fields
  */
-export function add_backward_compatibility_fields({ metadata, thread_dir, timeline }) {
+export function add_backward_compatibility_fields({
+  metadata,
+  thread_dir,
+  timeline
+}) {
   const enriched = {
     ...metadata,
     timeline,
@@ -103,7 +107,9 @@ export async function check_thread_permission({ thread_id, user_public_key }) {
  * @throws {Error} If thread directory or metadata file doesn't exist
  */
 export async function read_thread_data({ thread_id, user_base_directory }) {
-  const thread_base_directory = get_thread_base_directory({ user_base_directory })
+  const thread_base_directory = get_thread_base_directory({
+    user_base_directory
+  })
   const thread_dir = path.join(thread_base_directory, thread_id)
 
   try {

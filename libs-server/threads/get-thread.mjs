@@ -115,7 +115,10 @@ export default async function get_thread({
     }
 
     let filtered_timeline = apply_timeline_filters(timeline, filter_criteria)
-    filtered_timeline = apply_timeline_slicing(filtered_timeline, slice_criteria)
+    filtered_timeline = apply_timeline_slicing(
+      filtered_timeline,
+      slice_criteria
+    )
 
     const thread_data = await process_thread_with_permissions({
       thread_id,
@@ -135,31 +138,36 @@ export default async function get_thread({
 // Helper function to parse comma-separated arrays
 function parse_array_option(value) {
   if (!value) return []
-  return value.split(',').map(s => s.trim()).filter(s => s.length > 0)
+  return value
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
 }
 
 // CLI support when run directly
 if (is_main(import.meta.url)) {
   debug.enable('threads:get,threads:utils,threads:timeline-filter-utils')
 
-  const argv = add_directory_cli_options(
-    yargs(hideBin(process.argv))
-  )
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     .default('user_base_directory', config.user_base_directory)
     .scriptName('get-thread')
-    .usage('Get thread data by ID with optional timeline filtering.\n\nUsage: $0 [options] <thread_id>')
+    .usage(
+      'Get thread data by ID with optional timeline filtering.\n\nUsage: $0 [options] <thread_id>'
+    )
     .positional('thread_id', {
       describe: 'Thread ID to retrieve',
       type: 'string'
     })
     .option('user_public_key', {
       alias: 'u',
-      describe: 'User public key for permission checking (defaults to config.user_public_key)',
+      describe:
+        'User public key for permission checking (defaults to config.user_public_key)',
       type: 'string',
       default: config.user_public_key
     })
     .option('include_types', {
-      describe: 'Timeline entry types to include (comma-separated, empty means all)',
+      describe:
+        'Timeline entry types to include (comma-separated, empty means all)',
       type: 'string',
       coerce: parse_array_option
     })

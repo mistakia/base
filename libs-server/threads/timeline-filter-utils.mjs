@@ -20,19 +20,21 @@ export function validate_filter_parameters(params) {
   } = params
 
   // Define the three mutually exclusive parameter groups
-  const pagination_params = [limit, offset].filter(p => p !== undefined)
-  const position_params = [take_first, take_last, skip_first, skip_last].filter(p => p !== undefined)
-  const index_params = [start_index, end_index].filter(p => p !== undefined)
+  const pagination_params = [limit, offset].filter((p) => p !== undefined)
+  const position_params = [take_first, take_last, skip_first, skip_last].filter(
+    (p) => p !== undefined
+  )
+  const index_params = [start_index, end_index].filter((p) => p !== undefined)
 
   const active_groups = [
     { name: 'pagination', count: pagination_params.length },
     { name: 'position-based', count: position_params.length },
     { name: 'index-based', count: index_params.length }
-  ].filter(group => group.count > 0)
+  ].filter((group) => group.count > 0)
 
   // Check if more than one group is used
   if (active_groups.length > 1) {
-    const group_names = active_groups.map(g => g.name).join(', ')
+    const group_names = active_groups.map((g) => g.name).join(', ')
     return {
       success: false,
       error: `Conflicting slice parameters: cannot use ${group_names} slicing methods simultaneously. Choose one approach.`
@@ -62,7 +64,12 @@ export function validate_filter_parameters(params) {
   }
 
   // Validate position-based parameters
-  const position_param_names = ['take_first', 'take_last', 'skip_first', 'skip_last']
+  const position_param_names = [
+    'take_first',
+    'take_last',
+    'skip_first',
+    'skip_last'
+  ]
   for (const param_name of position_param_names) {
     const value = params[param_name]
     if (value !== undefined && (value <= 0 || !Number.isInteger(value))) {
@@ -74,19 +81,29 @@ export function validate_filter_parameters(params) {
   }
 
   // Validate index-based parameters
-  if (start_index !== undefined && (start_index < 0 || !Number.isInteger(start_index))) {
+  if (
+    start_index !== undefined &&
+    (start_index < 0 || !Number.isInteger(start_index))
+  ) {
     return {
       success: false,
       error: 'start_index parameter must be a non-negative integer'
     }
   }
-  if (end_index !== undefined && (end_index < 0 || !Number.isInteger(end_index))) {
+  if (
+    end_index !== undefined &&
+    (end_index < 0 || !Number.isInteger(end_index))
+  ) {
     return {
       success: false,
       error: 'end_index parameter must be a non-negative integer'
     }
   }
-  if (start_index !== undefined && end_index !== undefined && start_index >= end_index) {
+  if (
+    start_index !== undefined &&
+    end_index !== undefined &&
+    start_index >= end_index
+  ) {
     return {
       success: false,
       error: 'start_index must be less than end_index'
@@ -138,10 +155,16 @@ export function passes_timeline_filters(entry, filters) {
 
   // Filter by tool name (AND logic for include/exclude)
   if (entry.type === 'tool_call' && entry.data?.tool_name) {
-    if (include_tool_names.length > 0 && !include_tool_names.includes(entry.data.tool_name)) {
+    if (
+      include_tool_names.length > 0 &&
+      !include_tool_names.includes(entry.data.tool_name)
+    ) {
       return false
     }
-    if (exclude_tool_names.length > 0 && exclude_tool_names.includes(entry.data.tool_name)) {
+    if (
+      exclude_tool_names.length > 0 &&
+      exclude_tool_names.includes(entry.data.tool_name)
+    ) {
       return false
     }
   }
@@ -158,7 +181,7 @@ export function passes_timeline_filters(entry, filters) {
 export function apply_timeline_filters(timeline, filters) {
   log(`Applying timeline filters: ${JSON.stringify(filters)}`)
 
-  return timeline.filter(entry => passes_timeline_filters(entry, filters))
+  return timeline.filter((entry) => passes_timeline_filters(entry, filters))
 }
 
 /**
@@ -182,7 +205,15 @@ export function apply_timeline_slicing(timeline, slice_params) {
   log(`Applying timeline slicing: ${JSON.stringify(slice_params)}`)
 
   // No slicing parameters provided
-  if (!limit && !take_first && !take_last && !skip_first && !skip_last && start_index === undefined && end_index === undefined) {
+  if (
+    !limit &&
+    !take_first &&
+    !take_last &&
+    !skip_first &&
+    !skip_last &&
+    start_index === undefined &&
+    end_index === undefined
+  ) {
     return timeline
   }
 

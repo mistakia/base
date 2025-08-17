@@ -23,7 +23,8 @@ register_tool({
         },
         limit: {
           type: 'number',
-          description: 'Optional: Maximum number of threads to return. Defaults to 50.',
+          description:
+            'Optional: Maximum number of threads to return. Defaults to 50.',
           default: 50
         },
         offset: {
@@ -33,11 +34,13 @@ register_tool({
         },
         user_base_directory: {
           type: 'string',
-          description: 'Optional: Custom user base directory (overrides registry)'
+          description:
+            'Optional: Custom user base directory (overrides registry)'
         },
         requesting_user_public_key: {
           type: 'string',
-          description: 'Optional: User requesting the list (for permission checking). Defaults to configured user.'
+          description:
+            'Optional: User requesting the list (for permission checking). Defaults to configured user.'
         }
       }
     }
@@ -53,7 +56,9 @@ register_tool({
         requesting_user_public_key
       } = parameters
 
-      log(`Getting filtered threads from filesystem${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`)
+      log(
+        `Getting filtered threads from filesystem${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`
+      )
 
       const threads = await list_threads({
         user_public_key,

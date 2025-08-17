@@ -9,7 +9,10 @@ function parse_string_array(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   if (typeof value === 'string') {
-    return value.split(',').map(s => s.trim()).filter(s => s.length > 0)
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
   }
   return []
 }
@@ -28,16 +31,19 @@ register_tool({
         },
         user_public_key: {
           type: 'string',
-          description: 'Optional: User public key for permission checking. Defaults to configured user.'
+          description:
+            'Optional: User public key for permission checking. Defaults to configured user.'
         },
         user_base_directory: {
           type: 'string',
-          description: 'Optional: Custom user base directory (overrides registry)'
+          description:
+            'Optional: Custom user base directory (overrides registry)'
         },
         include_types: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional: Timeline entry types to include (empty means all). Common types: message, tool_call, tool_response, metadata_update'
+          description:
+            'Optional: Timeline entry types to include (empty means all). Common types: message, tool_call, tool_response, metadata_update'
         },
         exclude_types: {
           type: 'array',
@@ -47,7 +53,8 @@ register_tool({
         include_roles: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional: Message roles to include (empty means all). Common roles: user, assistant, system'
+          description:
+            'Optional: Message roles to include (empty means all). Common roles: user, assistant, system'
         },
         exclude_roles: {
           type: 'array',
@@ -57,49 +64,60 @@ register_tool({
         include_tool_names: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional: Tool names to include (empty means all). Only applies to tool_call entries'
+          description:
+            'Optional: Tool names to include (empty means all). Only applies to tool_call entries'
         },
         exclude_tool_names: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional: Tool names to exclude. Only applies to tool_call entries'
+          description:
+            'Optional: Tool names to exclude. Only applies to tool_call entries'
         },
         include_sidechain: {
           type: 'boolean',
-          description: 'Optional: Whether to include sidechain entries. Defaults to true',
+          description:
+            'Optional: Whether to include sidechain entries. Defaults to true',
           default: true
         },
         limit: {
           type: 'number',
-          description: 'Optional: Limit number of timeline entries (pagination approach). Cannot be combined with position-based or index-based slicing'
+          description:
+            'Optional: Limit number of timeline entries (pagination approach). Cannot be combined with position-based or index-based slicing'
         },
         offset: {
           type: 'number',
-          description: 'Optional: Offset for timeline entries (requires limit). Cannot be combined with position-based or index-based slicing'
+          description:
+            'Optional: Offset for timeline entries (requires limit). Cannot be combined with position-based or index-based slicing'
         },
         take_first: {
           type: 'number',
-          description: 'Optional: Take first N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
+          description:
+            'Optional: Take first N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
         },
         take_last: {
           type: 'number',
-          description: 'Optional: Take last N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
+          description:
+            'Optional: Take last N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
         },
         skip_first: {
           type: 'number',
-          description: 'Optional: Skip first N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
+          description:
+            'Optional: Skip first N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
         },
         skip_last: {
           type: 'number',
-          description: 'Optional: Skip last N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
+          description:
+            'Optional: Skip last N entries (position-based approach). Cannot be combined with pagination or index-based slicing'
         },
         start_index: {
           type: 'number',
-          description: 'Optional: Start index for slicing (index-based approach). Cannot be combined with pagination or position-based slicing'
+          description:
+            'Optional: Start index for slicing (index-based approach). Cannot be combined with pagination or position-based slicing'
         },
         end_index: {
           type: 'number',
-          description: 'Optional: End index for slicing (index-based approach). Cannot be combined with pagination or position-based slicing'
+          description:
+            'Optional: End index for slicing (index-based approach). Cannot be combined with pagination or position-based slicing'
         }
       },
       required: ['thread_id']

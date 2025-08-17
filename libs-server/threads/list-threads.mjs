@@ -113,21 +113,21 @@ export default async function list_threads({
 if (is_main(import.meta.url)) {
   debug.enable('threads:list,threads:utils')
 
-  const argv = add_directory_cli_options(
-    yargs(hideBin(process.argv))
-  )
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     .default('user_base_directory', config.user_base_directory)
     .scriptName('list-threads')
     .usage('List threads with optional filtering.\n\nUsage: $0 [options]')
     .option('user_public_key', {
       alias: 'u',
-      describe: 'Filter by user public key (defaults to config.user_public_key)',
+      describe:
+        'Filter by user public key (defaults to config.user_public_key)',
       type: 'string',
       default: config.user_public_key
     })
     .option('requesting_user_public_key', {
       alias: 'r',
-      describe: 'User requesting the list for permission checking (defaults to config.user_public_key)',
+      describe:
+        'User requesting the list for permission checking (defaults to config.user_public_key)',
       type: 'string',
       default: config.user_public_key
     })
