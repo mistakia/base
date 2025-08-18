@@ -81,6 +81,48 @@ const StateCell = ({ row }) => {
   )
 }
 
+const TitleCell = ({ row }) => {
+  const thread = row.original
+  const navigate = useNavigate()
+
+  const handle_click = (event) => {
+    const thread_id = thread.thread_id || thread.id
+    if (!thread_id) return
+
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/thread/${thread_id}`, '_blank')
+    } else {
+      navigate(`/thread/${thread_id}`)
+    }
+  }
+
+  const title = thread.title || thread.working_directory || 'Untitled Thread'
+  const has_title = Boolean(thread.title)
+  const working_directory = thread.working_directory
+
+  return (
+    <div
+      className='cell-content'
+      title={thread.working_directory_path || ''}
+      onClick={handle_click}
+      style={{
+        height: 'fit-content',
+        cursor: 'pointer',
+        textDecoration: 'underline',
+        color: '#1976d2'
+      }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ fontWeight: '500' }}>{title}</div>
+        {has_title && working_directory && (
+          <div style={{ fontSize: '11px', color: '#666', opacity: 0.8 }}>
+            {working_directory}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const WorkingDirectoryCell = ({ row }) => {
   const thread = row.original
   const navigate = useNavigate()
@@ -195,6 +237,24 @@ DurationCell.propTypes = {
 }
 
 export const thread_columns = {
+  title: {
+    column_id: 'title',
+    header_label: 'Title',
+    accessorKey: 'title',
+    component: TitleCell,
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [
+      TABLE_OPERATORS.LIKE,
+      TABLE_OPERATORS.NOT_LIKE,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IS_EMPTY,
+      TABLE_OPERATORS.IS_NOT_EMPTY
+    ],
+    size: 350,
+    minSize: 250,
+    maxSize: 500
+  },
   session_provider: {
     column_id: 'session_provider',
     header_label: '',
@@ -379,6 +439,10 @@ export const thread_columns = {
 }
 
 // PropTypes for remaining cell components
+TitleCell.propTypes = {
+  row: PropTypes.object.isRequired
+}
+
 StateCell.propTypes = {
   row: PropTypes.object.isRequired
 }

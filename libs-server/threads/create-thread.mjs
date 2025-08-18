@@ -131,6 +131,8 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {Object} [params.additional_fields] - Any additional fields to merge
  * @param {string} [params.created_at] - Optional override for created_at timestamp (ISO string)
  * @param {string} [params.updated_at] - Optional override for updated_at timestamp (ISO string)
+ * @param {string} [params.title] - Optional human-readable title for the thread
+ * @param {string} [params.short_description] - Optional brief description of the thread
  * @returns {Object} Thread metadata object
  */
 export function build_thread_metadata({
@@ -146,7 +148,9 @@ export function build_thread_metadata({
   external_session = null,
   additional_fields = {},
   created_at = null,
-  updated_at = null
+  updated_at = null,
+  title = null,
+  short_description = null
 }) {
   const now = new Date().toISOString()
 
@@ -174,6 +178,14 @@ export function build_thread_metadata({
     tools,
     ...additional_fields
   }
+
+  // Add title and description if provided
+  if (title) {
+    metadata.title = title
+  }
+  if (short_description) {
+    metadata.short_description = short_description
+  }
   if (external_session) {
     metadata.external_session = external_session
   }
@@ -199,6 +211,8 @@ export function build_thread_metadata({
  * @param {Object} [params.additional_metadata={}] Additional metadata fields to include in thread metadata
  * @param {string} [params.created_at] Optional override for created_at timestamp (ISO string)
  * @param {string} [params.updated_at] Optional override for updated_at timestamp (ISO string)
+ * @param {string} [params.title] Optional human-readable title for the thread
+ * @param {string} [params.short_description] Optional brief description of the thread
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
@@ -216,7 +230,9 @@ export default async function create_thread({
   external_session = null,
   additional_metadata = {},
   created_at = null,
-  updated_at = null
+  updated_at = null,
+  title = null,
+  short_description = null
 }) {
   // Validate required parameters
   if (!user_public_key) {
@@ -234,6 +250,26 @@ export default async function create_thread({
 
   // Validate thread_state using shared function
   validate_thread_state(thread_state)
+
+  // Validate title format and length constraints
+  if (title !== null) {
+    if (typeof title !== 'string') {
+      throw new Error('title must be a string')
+    }
+    if (title.length === 0) {
+      throw new Error('title cannot be empty')
+    }
+  }
+
+  // Validate description format and length constraints
+  if (short_description !== null) {
+    if (typeof short_description !== 'string') {
+      throw new Error('short_description must be a string')
+    }
+    if (short_description.length === 0) {
+      throw new Error('short_description cannot be empty')
+    }
+  }
 
   // For external sessions, workflow_base_uri can be undefined
   const is_external_session = !!external_session
@@ -335,7 +371,9 @@ export default async function create_thread({
     external_session,
     additional_fields: additional_metadata,
     created_at,
-    updated_at
+    updated_at,
+    title,
+    short_description
   })
 
   // Initialize timeline

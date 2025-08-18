@@ -12,6 +12,14 @@
     "updated_at"
   ],
   "properties": {
+    "title": {
+      "type": "string",
+      "description": "Human-readable title for the thread (optional)"
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of the thread's purpose or content (optional)"
+    },
     "thread_id": {
       "type": "string",
       "format": "uuid",
