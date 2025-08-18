@@ -19,6 +19,23 @@ import {
 const log = debug('threads:list')
 
 /**
+ * Parse date parameter to timestamp
+ * @param {string|Date|null} date_param Date parameter
+ * @returns {number|null} Timestamp or null
+ */
+function parse_date_to_timestamp(date_param) {
+  if (!date_param) return null
+
+  const date = date_param instanceof Date ? date_param : new Date(date_param)
+
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid date format: ${date_param}`)
+  }
+
+  return date.getTime()
+}
+
+/**
  * List threads with optional filtering
  *
  * @param {Object} params Parameters
@@ -28,6 +45,10 @@ const log = debug('threads:list')
  * @param {number} [params.offset=0] Number of threads to skip
  * @param {string} [params.user_base_directory] Custom user base directory (overrides registry)
  * @param {string} [params.requesting_user_public_key] User requesting the list (for permission checking)
+ * @param {string|Date} [params.created_since] Filter threads created since this date (inclusive)
+ * @param {string|Date} [params.created_after] Filter threads created after this date (exclusive)
+ * @param {string|Date} [params.updated_since] Filter threads updated since this date (inclusive)
+ * @param {string|Date} [params.updated_after] Filter threads updated after this date (exclusive)
  * @returns {Promise<Array>} Array of thread summary objects
  */
 export default async function list_threads({
@@ -36,10 +57,20 @@ export default async function list_threads({
   limit = 50,
   offset = 0,
   user_base_directory,
-  requesting_user_public_key = null
+  requesting_user_public_key = null,
+  created_since = null,
+  created_after = null,
+  updated_since = null,
+  updated_after = null
 }) {
+  // Parse date filters
+  const created_since_ts = parse_date_to_timestamp(created_since)
+  const created_after_ts = parse_date_to_timestamp(created_after)
+  const updated_since_ts = parse_date_to_timestamp(updated_since)
+  const updated_after_ts = parse_date_to_timestamp(updated_after)
+
   log(
-    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}`
+    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}${created_since ? ` created since ${created_since}` : ''}${created_after ? ` created after ${created_after}` : ''}${updated_since ? ` updated since ${updated_since}` : ''}${updated_after ? ` updated after ${updated_after}` : ''}`
   )
 
   const threads_dir = get_thread_base_directory({ user_base_directory })
@@ -82,6 +113,22 @@ export default async function list_threads({
           if (user_public_key && metadata.user_public_key !== user_public_key)
             return null
           if (thread_state && metadata.thread_state !== thread_state)
+            return null
+
+          // Date filtering
+          const created_at_ts = metadata.created_at ? new Date(metadata.created_at).getTime() : null
+          const updated_at_ts = get_effective_updated_at({ metadata })
+
+          // Apply created_at filters
+          if (created_since_ts && (!created_at_ts || created_at_ts < created_since_ts))
+            return null
+          if (created_after_ts && (!created_at_ts || created_at_ts <= created_after_ts))
+            return null
+
+          // Apply updated_at filters
+          if (updated_since_ts && updated_at_ts < updated_since_ts)
+            return null
+          if (updated_after_ts && updated_at_ts <= updated_after_ts)
             return null
 
           // Check permissions for this thread if requesting user is provided
@@ -168,6 +215,22 @@ if (is_main(import.meta.url)) {
       type: 'number',
       default: 0
     })
+    .option('created_since', {
+      describe: 'Filter threads created since this date (inclusive, ISO format)',
+      type: 'string'
+    })
+    .option('created_after', {
+      describe: 'Filter threads created after this date (exclusive, ISO format)',
+      type: 'string'
+    })
+    .option('updated_since', {
+      describe: 'Filter threads updated since this date (inclusive, ISO format)',
+      type: 'string'
+    })
+    .option('updated_after', {
+      describe: 'Filter threads updated after this date (exclusive, ISO format)',
+      type: 'string'
+    })
     .strict()
     .help()
     .alias('help', 'h').argv
@@ -183,7 +246,11 @@ if (is_main(import.meta.url)) {
         thread_state: argv.thread_state,
         limit: argv.limit,
         offset: argv.offset,
-        user_base_directory: argv.user_base_directory
+        user_base_directory: argv.user_base_directory,
+        created_since: argv.created_since,
+        created_after: argv.created_after,
+        updated_since: argv.updated_since,
+        updated_after: argv.updated_after
       })
 
       console.log(`Found ${threads.length} matching threads`)
