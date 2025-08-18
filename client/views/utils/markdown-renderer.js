@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
+import markdownItXmlStyling from './markdown-it-xml-styling.mjs'
 import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
 import {
   process_links_in_markdown,
@@ -10,7 +11,7 @@ import 'highlight.js/styles/github.css'
 
 // Initialize markdown-it with highlight.js
 const md = new MarkdownIt({
-  html: false,
+  html: true, // Enable HTML tags to allow styled XML tags
   breaks: true,
   linkify: true,
   highlight: function (str, lang) {
@@ -29,6 +30,7 @@ const md = new MarkdownIt({
     inline: true,
     ignoreIllegals: true
   })
+  .use(markdownItXmlStyling)
   .use(markdownItTaskCheckbox, {
     disabled: true, // Disable checkbox interaction
     divWrap: false, // Don't wrap in div
