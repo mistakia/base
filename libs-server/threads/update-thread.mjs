@@ -1,9 +1,17 @@
 import path from 'path'
 import debug from 'debug'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 
 import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+import config from '#config'
+import is_main from '#libs-server/utils/is-main.mjs'
+import {
+  add_directory_cli_options,
+  handle_cli_directory_registration
+} from '#libs-server/base-uri/index.mjs'
 
 const { THREAD_STATE, validate_thread_state, validate_archive_reason } =
   thread_constants
@@ -185,3 +193,113 @@ export async function update_thread_metadata({
 
 // Export default function as update_thread_state for convenience
 export default update_thread_state
+
+// CLI support when run directly
+if (is_main(import.meta.url)) {
+  debug.enable('threads:update,threads:utils')
+
+  const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
+    .default('user_base_directory', config.user_base_directory)
+    .scriptName('update-thread')
+    .usage('Update thread state or metadata.\n\nUsage: $0 [options]')
+    .option('thread_id', {
+      alias: 't',
+      describe: 'Thread ID to update',
+      type: 'string',
+      required: true
+    })
+    .option('thread_state', {
+      alias: 's',
+      describe: 'New thread state',
+      type: 'string',
+      choices: Object.values(THREAD_STATE)
+    })
+    .option('reason', {
+      alias: 'r',
+      describe: 'Reason for state change (required for archived state)',
+      type: 'string'
+    })
+    .option('metadata', {
+      alias: 'm',
+      describe: 'JSON string of metadata fields to update',
+      type: 'string'
+    })
+    .option('name', {
+      alias: 'n',
+      describe: 'Update thread name',
+      type: 'string'
+    })
+    .option('description', {
+      describe: 'Update thread description',
+      type: 'string'
+    })
+    .check((argv) => {
+      if (!argv.thread_state && !argv.metadata && !argv.name && !argv.description) {
+        throw new Error('Must specify either --thread_state, --metadata, --name, or --description')
+      }
+      if (argv.thread_state === THREAD_STATE.ARCHIVED && !argv.reason) {
+        throw new Error('Reason is required when archiving a thread')
+      }
+      if (argv.metadata) {
+        try {
+          JSON.parse(argv.metadata)
+        } catch (error) {
+          throw new Error('Invalid JSON format for --metadata option')
+        }
+      }
+      return true
+    })
+    .strict()
+    .help()
+    .alias('help', 'h').argv
+
+  const main = async () => {
+    handle_cli_directory_registration(argv)
+
+    let error
+    try {
+      let updated_thread
+
+      if (argv.thread_state) {
+        // Update thread state
+        updated_thread = await update_thread_state({
+          thread_id: argv.thread_id,
+          thread_state: argv.thread_state,
+          reason: argv.reason
+        })
+        console.log(`Thread state updated to: ${argv.thread_state}`)
+      } else {
+        // Update metadata
+        let metadata = {}
+        
+        if (argv.metadata) {
+          metadata = { ...metadata, ...JSON.parse(argv.metadata) }
+        }
+        
+        if (argv.name) {
+          metadata.name = argv.name
+        }
+        
+        if (argv.description) {
+          metadata.description = argv.description
+        }
+
+        updated_thread = await update_thread_metadata({
+          thread_id: argv.thread_id,
+          metadata,
+          user_base_directory: argv.user_base_directory
+        })
+        console.log('Thread metadata updated')
+      }
+
+      console.log('Updated thread:')
+      console.log(JSON.stringify(updated_thread, null, 2))
+    } catch (err) {
+      error = err
+      console.error('Error:', error.message)
+    }
+    process.exit(error ? 1 : 0)
+  }
+
+  main()
+}
