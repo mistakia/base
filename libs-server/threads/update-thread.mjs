@@ -234,8 +234,15 @@ if (is_main(import.meta.url)) {
       type: 'string'
     })
     .check((argv) => {
-      if (!argv.thread_state && !argv.metadata && !argv.name && !argv.description) {
-        throw new Error('Must specify either --thread_state, --metadata, --name, or --description')
+      if (
+        !argv.thread_state &&
+        !argv.metadata &&
+        !argv.name &&
+        !argv.description
+      ) {
+        throw new Error(
+          'Must specify either --thread_state, --metadata, --name, or --description'
+        )
       }
       if (argv.thread_state === THREAD_STATE.ARCHIVED && !argv.reason) {
         throw new Error('Reason is required when archiving a thread')
@@ -271,15 +278,15 @@ if (is_main(import.meta.url)) {
       } else {
         // Update metadata
         let metadata = {}
-        
+
         if (argv.metadata) {
           metadata = { ...metadata, ...JSON.parse(argv.metadata) }
         }
-        
+
         if (argv.name) {
           metadata.name = argv.name
         }
-        
+
         if (argv.description) {
           metadata.description = argv.description
         }

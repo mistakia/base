@@ -116,20 +116,26 @@ export default async function list_threads({
             return null
 
           // Date filtering
-          const created_at_ts = metadata.created_at ? new Date(metadata.created_at).getTime() : null
+          const created_at_ts = metadata.created_at
+            ? new Date(metadata.created_at).getTime()
+            : null
           const updated_at_ts = get_effective_updated_at({ metadata })
 
           // Apply created_at filters
-          if (created_since_ts && (!created_at_ts || created_at_ts < created_since_ts))
+          if (
+            created_since_ts &&
+            (!created_at_ts || created_at_ts < created_since_ts)
+          )
             return null
-          if (created_after_ts && (!created_at_ts || created_at_ts <= created_after_ts))
+          if (
+            created_after_ts &&
+            (!created_at_ts || created_at_ts <= created_after_ts)
+          )
             return null
 
           // Apply updated_at filters
-          if (updated_since_ts && updated_at_ts < updated_since_ts)
-            return null
-          if (updated_after_ts && updated_at_ts <= updated_after_ts)
-            return null
+          if (updated_since_ts && updated_at_ts < updated_since_ts) return null
+          if (updated_after_ts && updated_at_ts <= updated_after_ts) return null
 
           // Check permissions for this thread if requesting user is provided
           const permission_result = await check_thread_permission({
@@ -216,19 +222,23 @@ if (is_main(import.meta.url)) {
       default: 0
     })
     .option('created_since', {
-      describe: 'Filter threads created since this date (inclusive, ISO format)',
+      describe:
+        'Filter threads created since this date (inclusive, ISO format)',
       type: 'string'
     })
     .option('created_after', {
-      describe: 'Filter threads created after this date (exclusive, ISO format)',
+      describe:
+        'Filter threads created after this date (exclusive, ISO format)',
       type: 'string'
     })
     .option('updated_since', {
-      describe: 'Filter threads updated since this date (inclusive, ISO format)',
+      describe:
+        'Filter threads updated since this date (inclusive, ISO format)',
       type: 'string'
     })
     .option('updated_after', {
-      describe: 'Filter threads updated after this date (exclusive, ISO format)',
+      describe:
+        'Filter threads updated after this date (exclusive, ISO format)',
       type: 'string'
     })
     .strict()

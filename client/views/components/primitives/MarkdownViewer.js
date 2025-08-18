@@ -91,6 +91,36 @@ const get_normal_styles = {
     backgroundColor:
       'color-mix(in srgb, var(--color-text-disabled) 15%, transparent)',
     fontWeight: 600
+  },
+  // XML tag styling - display XML tags as colored text
+  '& .xml-tag-opening': {
+    marginBottom: '8px'
+  },
+  '& .xml-tag-closing': {
+    marginTop: '8px',
+    marginBottom: '32px'
+  },
+  // XML tag content indentation - simple indentation with no other styling
+  '& .xml-tag-content': {
+    paddingLeft: '1.5rem',
+    '&[data-nesting-level="0"]': {
+      paddingLeft: '1.5rem'
+    },
+    '&[data-nesting-level="1"]': {
+      paddingLeft: '1.5rem'
+    },
+    '&[data-nesting-level="2"]': {
+      paddingLeft: '1.5rem'
+    },
+    '&[data-nesting-level="3"]': {
+      paddingLeft: '1.5rem'
+    },
+    '&[data-nesting-level="4"]': {
+      paddingLeft: '1.5rem'
+    },
+    '&[data-nesting-level="5"]': {
+      paddingLeft: '1.5rem'
+    }
   }
 }
 
