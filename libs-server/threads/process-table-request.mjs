@@ -162,6 +162,7 @@ export async function process_table_request({
     })
 
     // Extract and format thread metadata for table display
+    // This includes title and short_description extraction with fallback logic
     const processed_threads = await Promise.all(
       raw_threads.map(async (thread) => {
         return await extract_thread_metadata(thread)

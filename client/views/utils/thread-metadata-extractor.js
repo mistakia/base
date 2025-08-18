@@ -177,3 +177,49 @@ export const extract_thread_state = (thread) => {
     return thread.thread_state
   }
 }
+
+/**
+ * Extract thread title with fallback to working directory
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string} Thread title or fallback
+ */
+export const extract_thread_title = (thread) => {
+  if (!thread) return 'Untitled Thread'
+
+  let title
+  if (thread.get) {
+    // Immutable object
+    title = thread.get('title')
+  } else {
+    // Plain JS object
+    title = thread.title
+  }
+
+  // Return title if available
+  if (title) {
+    return title
+  }
+
+  // Fallback to working directory basename
+  const working_directory = extract_working_directory(thread)
+  if (working_directory.formatted && working_directory.formatted !== '—') {
+    return working_directory.formatted
+  }
+}
+
+/**
+ * Extract thread description
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string|null} Thread description
+ */
+export const extract_thread_description = (thread) => {
+  if (!thread) return null
+
+  if (thread.get) {
+    // Immutable object
+    return thread.get('short_description') || null
+  } else {
+    // Plain JS object
+    return thread.short_description || null
+  }
+}

@@ -12,23 +12,10 @@ import {
   extract_total_tokens,
   extract_duration,
   extract_working_directory,
-  extract_thread_state
+  extract_thread_state,
+  extract_thread_title,
+  extract_thread_description
 } from '@views/utils/thread-metadata-extractor.js'
-
-const extract_thread_title = (metadata) => {
-  if (!metadata || !metadata.getIn) {
-    return ''
-  }
-  const summaries = metadata.getIn([
-    'external_session',
-    'provider_metadata',
-    'summaries'
-  ])
-  if (!summaries || !summaries.length) {
-    return ''
-  }
-  return summaries[0]
-}
 
 const extract_models = (metadata) => {
   if (!metadata || !metadata.getIn) {
@@ -104,9 +91,12 @@ const use_thread_metadata = (metadata) => {
   const duration = extract_duration(metadata)
   const working_directory = extract_working_directory(metadata)
   const thread_state = extract_thread_state(metadata)
+  const title = extract_thread_title(metadata)
+  const description = extract_thread_description(metadata)
 
   return {
-    title: extract_thread_title(metadata),
+    title,
+    description,
     total_tokens,
     duration,
     models: extract_models(metadata),
@@ -118,29 +108,65 @@ const use_thread_metadata = (metadata) => {
     user_message_count: message_counts.user_message_count,
     assistant_message_count: message_counts.assistant_message_count,
     tool_call_count,
-    working_directory: working_directory.path
+    working_directory: working_directory.path,
+    working_directory_formatted: working_directory.formatted
   }
 }
 
 // Sub-components for better organization
-const ThreadTitle = ({ title }) => {
+const ThreadTitle = ({ title, description, working_directory_formatted }) => {
   if (!title) return null
 
   return (
-    <h5
-      style={{
-        marginBottom: '16px',
-        fontWeight: 'bold',
-        fontSize: '20px',
-        margin: 0
-      }}>
-      {title}
-    </h5>
+    <div>
+      <h5
+        style={{
+          marginBottom: description
+            ? '8px'
+            : working_directory_formatted
+              ? '8px'
+              : '16px',
+          fontWeight: 'bold',
+          fontSize: '20px',
+          margin: 0,
+          lineHeight: '1.2'
+        }}>
+        {title}
+      </h5>
+      {description && (
+        <p
+          style={{
+            margin: working_directory_formatted ? '0 0 8px 0' : '0 0 16px 0',
+            fontSize: '14px',
+            color: '#666',
+            lineHeight: '1.4'
+          }}>
+          {description}
+        </p>
+      )}
+      {working_directory_formatted && working_directory_formatted !== title && (
+        <p
+          style={{
+            margin: '0 0 16px 0',
+            fontSize: '12px',
+            color: '#888',
+            fontFamily: 'monospace',
+            backgroundColor: '#f5f5f5',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            display: 'inline-block'
+          }}>
+          {working_directory_formatted}
+        </p>
+      )}
+    </div>
   )
 }
 
 ThreadTitle.propTypes = {
-  title: PropTypes.string
+  title: PropTypes.string,
+  description: PropTypes.string,
+  working_directory_formatted: PropTypes.string
 }
 
 const ThreadStats = ({
@@ -535,6 +561,7 @@ ExternalSessionChips.propTypes = {
 const ThreadHeader = ({ metadata }) => {
   const {
     title,
+    description,
     total_tokens,
     duration,
     models,
@@ -545,7 +572,8 @@ const ThreadHeader = ({ metadata }) => {
     message_count,
     user_message_count,
     assistant_message_count,
-    tool_call_count
+    tool_call_count,
+    working_directory_formatted
   } = use_thread_metadata(metadata)
 
   // Get cost display from Redux store
@@ -560,7 +588,11 @@ const ThreadHeader = ({ metadata }) => {
         marginTop: '16px'
       }}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-        <ThreadTitle title={title} />
+        <ThreadTitle
+          title={title}
+          description={description}
+          working_directory_formatted={working_directory_formatted}
+        />
       </Box>
       <ThreadStats
         total_tokens={total_tokens}

@@ -116,7 +116,7 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
  *
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
- * @param {Object} params.metadata Metadata fields to update
+ * @param {Object} params.metadata Metadata fields to update (includes validation for title and short_description)
  * @param {string} [params.user_base_directory] Custom user base directory (overrides registry)
  * @returns {Promise<Object>} Updated thread data
  */
@@ -153,6 +153,30 @@ export async function update_thread_metadata({
   for (const field of protected_fields) {
     if (metadata[field] !== undefined) {
       delete metadata[field]
+    }
+  }
+
+  // Validate title format and length constraints
+  if (metadata.title !== undefined) {
+    if (metadata.title !== null) {
+      if (typeof metadata.title !== 'string') {
+        throw new Error('title must be a string')
+      }
+      if (metadata.title.length === 0) {
+        throw new Error('title cannot be empty')
+      }
+    }
+  }
+
+  // Validate description format and length constraints
+  if (metadata.short_description !== undefined) {
+    if (metadata.short_description !== null) {
+      if (typeof metadata.short_description !== 'string') {
+        throw new Error('short_description must be a string')
+      }
+      if (metadata.short_description.length === 0) {
+        throw new Error('short_description cannot be empty')
+      }
     }
   }
 
@@ -233,15 +257,25 @@ if (is_main(import.meta.url)) {
       describe: 'Update thread description',
       type: 'string'
     })
+    .option('title', {
+      describe: 'Update thread title',
+      type: 'string'
+    })
+    .option('short_description', {
+      describe: 'Update thread short description',
+      type: 'string'
+    })
     .check((argv) => {
       if (
         !argv.thread_state &&
         !argv.metadata &&
         !argv.name &&
-        !argv.description
+        !argv.description &&
+        !argv.title &&
+        !argv.short_description
       ) {
         throw new Error(
-          'Must specify either --thread_state, --metadata, --name, or --description'
+          'Must specify either --thread_state, --metadata, --name, --description, --title, or --short_description'
         )
       }
       if (argv.thread_state === THREAD_STATE.ARCHIVED && !argv.reason) {
@@ -289,6 +323,14 @@ if (is_main(import.meta.url)) {
 
         if (argv.description) {
           metadata.description = argv.description
+        }
+
+        if (argv.title) {
+          metadata.title = argv.title
+        }
+
+        if (argv.short_description) {
+          metadata.short_description = argv.short_description
         }
 
         updated_thread = await update_thread_metadata({

@@ -112,6 +112,32 @@ function extract_working_directory(thread) {
 }
 
 /**
+ * Extract thread title with fallback to working directory
+ */
+function extract_thread_title(thread) {
+  // Return title if available
+  if (thread.title) {
+    return thread.title
+  }
+
+  // Fallback to working directory basename
+  const working_directory = extract_working_directory(thread)
+  if (working_directory.formatted) {
+    return working_directory.formatted
+  }
+
+  // Final fallback to thread name or default
+  return thread.name || 'Untitled Thread'
+}
+
+/**
+ * Extract thread description
+ */
+function extract_thread_description(thread) {
+  return thread.short_description || null
+}
+
+/**
  * Format thread metadata for table display
  */
 function format_for_table_display(thread, extracted_data) {
@@ -122,13 +148,19 @@ function format_for_table_display(thread, extracted_data) {
     working_directory,
     duration_minutes,
     token_count,
-    tool_call_count
+    tool_call_count,
+    title,
+    description
   } = extracted_data
 
   return {
     // Core thread identifiers
     thread_id: thread.thread_id,
     name: thread.name || 'Untitled Thread',
+
+    // Title and description fields
+    title,
+    short_description: description,
 
     // State and status
     thread_state: thread.thread_state || 'unknown',
@@ -183,7 +215,9 @@ export async function extract_thread_metadata(thread) {
       duration_minutes: extract_duration_minutes(thread),
       working_directory: extract_working_directory(thread),
       cost_data: calculate_cost_data(thread),
-      provider_info: get_provider_info(thread)
+      provider_info: get_provider_info(thread),
+      title: extract_thread_title(thread),
+      description: extract_thread_description(thread)
     }
 
     // Format for table display
@@ -200,6 +234,8 @@ export async function extract_thread_metadata(thread) {
     return {
       thread_id: thread.thread_id || 'unknown',
       name: thread.name || 'Error Loading Thread',
+      title: 'Error Loading Thread',
+      short_description: null,
       thread_state: 'error',
       created_at: thread.created_at || null,
       updated_at: thread.updated_at || null,
