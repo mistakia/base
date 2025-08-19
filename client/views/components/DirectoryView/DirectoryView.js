@@ -150,7 +150,7 @@ const DirectoryView = ({ path, on_navigate }) => {
         borderBottomRightRadius: '6px',
         backgroundColor: 'white'
       }}>
-      <Table sx={{ minWidth: 650 }} size='small'>
+      <Table size='small'>
         <TableBody>
           {sorted_items.map((item, index) => (
             <TableRow
