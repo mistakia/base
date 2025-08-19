@@ -47,23 +47,36 @@ export const process_links_in_html = (html) => {
   const links = temp_div.querySelectorAll('a[href]')
 
   links.forEach((link) => {
-    const href = link.getAttribute('href')
+    let href = link.getAttribute('href')
     if (!href) return
 
-    // Handle absolute URLs - open in new window
+    // Normalize whitespace to avoid malformed URLs like ' //https://...'
+    href = href.trim()
+    link.setAttribute('href', href)
+
+    // External URLs - open in new tab and do not mark as internal
     if (is_absolute_url(href)) {
       link.setAttribute('target', '_blank')
       link.setAttribute('rel', 'noopener noreferrer')
+      link.removeAttribute('data-internal-link')
       return
     }
 
-    // Handle relative paths - resolve against current window path
-    if (!href.startsWith('/')) {
-      const resolved_path = resolve_relative_path(href)
-      link.setAttribute('href', resolved_path)
+    // Hash anchor - keep in-page navigation
+    if (href.startsWith('#')) {
+      link.setAttribute('data-internal-link', 'true')
+      return
     }
 
-    // Add click handler for internal links to prevent default and use client routing
+    // App-absolute path - treat as internal
+    if (href.startsWith('/')) {
+      link.setAttribute('data-internal-link', 'true')
+      return
+    }
+
+    // Relative path - resolve against current path
+    const resolved_path = resolve_relative_path(href)
+    link.setAttribute('href', resolved_path)
     link.setAttribute('data-internal-link', 'true')
   })
 
@@ -78,7 +91,10 @@ export const handle_link_click = (event) => {
   const href = link.getAttribute('href')
   if (!href) return
 
-  // Prevent default navigation
+  // Allow default behavior for in-page anchors
+  if (href.startsWith('#')) return
+
+  // Prevent default navigation for client-routed links
   event.preventDefault()
 
   // Use client-side routing (this would depend on your routing setup)

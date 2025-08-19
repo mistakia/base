@@ -7,20 +7,23 @@ export const BASE_URI_PATHS = {
 // Regex patterns for detecting base URI references
 export const BASE_URI_PATTERNS = {
   // Matches [[user:path/to/file.md]] or [[sys:path/to/file.md]]
-  WIKI_LINK: /\[\[([a-z]+):([^\]]+)\]\]/g,
+  WIKI_LINK: /\[\[(sys|user):([^\]]+)\]\]/g,
 
   // Matches [text](user:path/to/file.md) or [text](sys:path/to/file.md)
-  MARKDOWN_LINK: /\[([^\]]*)\]\(([a-z]+):([^)]+)\)/g
+  MARKDOWN_LINK: /\[([^\]]*)\]\((sys|user):([^)]+)\)/g
 }
 
 // Check if a URL is absolute
 export const is_absolute_url = (url) => {
-  try {
-    URL(url)
-    return true
-  } catch {
-    return false
-  }
+  if (typeof url !== 'string') return false
+
+  // Protocol-relative or explicit scheme with authority (e.g., https://, ssh://, git://)
+  if (/^(?:[a-z][a-z0-9+\-.]*:)?\/\//i.test(url)) return true
+
+  // Mail/telephone links
+  if (/^(?:mailto|tel):/i.test(url)) return true
+
+  return false
 }
 
 // Convert base URI to client path

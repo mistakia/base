@@ -21,7 +21,7 @@ const get_normal_styles = {
   },
   '& h5': { fontSize: '0.9rem', fontWeight: 600, mb: 0.7, mt: 1 },
   '& h6': { fontSize: '0.85rem', fontWeight: 600, mb: 0.7, mt: 1 },
-  '& p': { mb: 1, lineHeight: 1.6 },
+  '& p': { mb: 1, lineHeight: 1.3 },
   '& ul, & ol': { mb: 1.5, pl: 3 },
   '& ul': { listStyle: 'none' },
   '& ul li': { position: 'relative' },
