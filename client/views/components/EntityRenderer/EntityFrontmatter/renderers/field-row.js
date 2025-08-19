@@ -9,13 +9,16 @@ const label_sx = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
-  verticalAlign: 'top'
+  verticalAlign: 'top',
+  maxWidth: '100px'
 }
 
 const value_sx = {
   fontSize: '11px',
   wordWrap: 'break-word',
-  overflowWrap: 'break-word'
+  overflowWrap: 'break-word',
+  maxWidth: '0', // Forces text wrapping in table cells
+  wordBreak: 'break-word'
 }
 
 export const FieldRow = ({ label, children }) => (

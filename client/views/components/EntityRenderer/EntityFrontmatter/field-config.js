@@ -14,7 +14,6 @@ export const entity_field_config = {
       'user_public_key',
       'permalink',
       'tags',
-      'relations',
       'estimated_total_duration',
       'estimated_preparation_duration',
       'estimated_execution_duration',
@@ -45,7 +44,6 @@ export const entity_field_config = {
       'user_public_key',
       'permalink',
       'tags',
-      'relations',
       'serial_number',
       'acquisition_date',
       'target_location',
@@ -80,19 +78,12 @@ export const entity_field_config = {
     ]
   },
   default: {
-    always_visible: [
-      'status',
-      'priority',
-      'observations',
-      'created_at',
-      'updated_at'
-    ],
+    always_visible: ['status', 'priority', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
       'permalink',
       'tags',
-      'relations',
       'start_by',
       'finish_by',
       'estimated_total_duration',

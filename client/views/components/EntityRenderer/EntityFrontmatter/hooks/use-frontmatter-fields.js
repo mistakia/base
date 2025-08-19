@@ -19,7 +19,9 @@ export const use_frontmatter_fields = ({ frontmatter }) => {
       ...expandable,
       'title',
       'description',
-      'type'
+      'type',
+      'relations',
+      'observations'
     ])
 
     const other_keys = Object.keys(frontmatter).filter(
