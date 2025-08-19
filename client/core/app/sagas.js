@@ -8,6 +8,8 @@ import { app_actions } from './actions'
 import { get_app } from './selectors'
 import { local_storage_adapter } from '@core/utils'
 import { post_user_session } from '@core/api'
+import { directory_actions } from '@core/directory/actions'
+import { threads_actions } from '@core/threads/actions'
 
 function save_key({ user_private_key, user_public_key }) {
   local_storage_adapter.setItem('base_private_key', user_private_key)
@@ -77,12 +79,53 @@ export function save_token({ payload }) {
   local_storage_adapter.setItem('base_token', token)
 }
 
+function* handle_post_user_session_fulfilled({ payload }) {
+  save_token({ payload })
+  yield call(handle_page_refresh_after_session_success)
+}
+
 export function* clear_auth() {
   yield call(async () => {
     await local_storage_adapter.removeItem('base_private_key')
     await local_storage_adapter.removeItem('base_public_key')
     await local_storage_adapter.removeItem('base_token')
   })
+}
+
+function* handle_page_refresh_after_session_success() {
+  try {
+    const router = yield select((state) => state.get('router'))
+    const pathname = router.location.pathname
+
+    switch (true) {
+      case pathname === '/':
+        yield put(directory_actions.load_path_info())
+        yield put(threads_actions.load_threads())
+        break
+
+      case pathname === '/thread':
+        yield put(threads_actions.load_threads())
+        break
+
+      case pathname.startsWith('/thread/'): {
+        const threadId = pathname.split('/')[2]
+        if (threadId) {
+          yield put(threads_actions.load_thread(threadId))
+        }
+        break
+      }
+
+      default:
+        // For file and directory paths, refresh both path info and specific content
+        yield put(directory_actions.load_path_info(pathname))
+        yield put(directory_actions.load_directory(pathname))
+        yield put(directory_actions.load_file(pathname))
+        yield put(directory_actions.load_directory_markdown(pathname))
+        break
+    }
+  } catch (error) {
+    console.error('Error refreshing page after session success:', error)
+  }
 }
 
 //= ====================================
@@ -102,7 +145,10 @@ export function* watch_load_from_private_key() {
 }
 
 export function* watch_post_user_session_fulfilled() {
-  yield takeLatest(app_actions.POST_USER_SESSION_FULFILLED, save_token)
+  yield takeLatest(
+    app_actions.POST_USER_SESSION_FULFILLED,
+    handle_post_user_session_fulfilled
+  )
 }
 
 export function* watch_clear_auth() {
