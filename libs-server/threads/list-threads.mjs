@@ -83,7 +83,7 @@ export default async function list_threads({
   const updated_after_ts = parse_date_to_timestamp(updated_after)
 
   log(
-    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}${created_since ? ` created since ${created_since}` : ''}${created_after ? ` created after ${created_after}` : ''}${updated_since ? ` updated since ${updated_since}` : ''}${updated_after ? ` updated after ${updated_after}` : ''}${missing_title ? ` missing title` : ''}${missing_short_description ? ` missing short_description` : ''}`
+    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}${created_since ? ` created since ${created_since}` : ''}${created_after ? ` created after ${created_after}` : ''}${updated_since ? ` updated since ${updated_since}` : ''}${updated_after ? ` updated after ${updated_after}` : ''}${missing_title ? ' missing title' : ''}${missing_short_description ? ' missing short_description' : ''}`
   )
 
   const threads_dir = get_thread_base_directory({ user_base_directory })
@@ -152,7 +152,11 @@ export default async function list_threads({
 
           // Apply missing field filters
           if (missing_title && !is_field_missing(metadata.title)) return null
-          if (missing_short_description && !is_field_missing(metadata.short_description)) return null
+          if (
+            missing_short_description &&
+            !is_field_missing(metadata.short_description)
+          )
+            return null
 
           // Check permissions for this thread if requesting user is provided
           const permission_result = await check_thread_permission({

@@ -306,7 +306,6 @@ if (is_main(import.meta.url)) {
           metadata = { ...metadata, ...JSON.parse(argv.metadata) }
         }
 
-
         if (argv.title) {
           metadata.title = argv.title
         }
