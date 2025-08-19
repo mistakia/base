@@ -52,7 +52,7 @@ const Thread = ({ thread, is_focused = false }) => {
   const duration = duration_minutes
     ? `${parseFloat(duration_minutes.toFixed(1))}m`
     : format_duration(thread.created_at, thread.updated_at)
-  const message_count = thread.external_session?.message_count || 0
+  const message_count = thread.message_count || 0
   const token_count =
     thread.external_session?.provider_metadata?.total_tokens || 0
   const session_provider =
@@ -62,18 +62,9 @@ const Thread = ({ thread, is_focused = false }) => {
     <div
       className={`thread-card ${is_focused ? 'thread-card--focused' : ''}`}
       onClick={handle_click}>
-      <div className='thread-header-row'>
-        <div className='thread-status-info'>
-          <div
-            className='thread-state-indicator'
-            style={{ color: get_state_color(thread.thread_state) }}
-            title={`Status: ${thread.thread_state}`}>
-            {get_state_icon(thread.thread_state)}
-          </div>
-          <span className='thread-time-info'>{last_updated}</span>
-          {duration && <span className='thread-time-info'>{duration}</span>}
-        </div>
-        <div className='thread-provider-section'>
+      <div className='thread-main-row'>
+        <div className='thread-title'>{title || 'Untitled Thread'}</div>
+        <div className='thread-provider'>
           {session_provider && (
             <ProviderLogo
               provider={session_provider}
@@ -86,23 +77,25 @@ const Thread = ({ thread, is_focused = false }) => {
         </div>
       </div>
 
-      {title && <div className='thread-title'>{title}</div>}
-
-      <div className='thread-metrics-row'>
-        {message_count > 0 && (
-          <span className='thread-message-count' title='Messages'>
-            {message_count} msg{message_count !== 1 ? 's' : ''}
-          </span>
-        )}
-        {token_count > 0 && (
-          <span className='thread-token-count' title='Tokens'>
-            {format_shorthand_number(token_count)} tokens
-          </span>
-        )}
-      </div>
-      <div className='thread-working-directory-row'>
-        <span className='thread-working-directory-text'>
-          {working_directory}
+      <div className='thread-details-row'>
+        <div
+          className='thread-status'
+          style={{ color: get_state_color(thread.thread_state) }}
+          title={`Status: ${thread.thread_state}`}>
+          {get_state_icon(thread.thread_state)}
+        </div>
+        <span className='thread-time'>{last_updated}</span>
+        <span className='thread-separator'>•</span>
+        <span className='thread-working-directory'>{working_directory}</span>
+        <span className='thread-separator'>•</span>
+        <span className='thread-message-count'>
+          {message_count} msg{message_count !== 1 ? 's' : ''}
+        </span>
+        <span className='thread-separator'>•</span>
+        <span className='thread-duration'>{duration}</span>
+        <span className='thread-separator'>•</span>
+        <span className='thread-token-count'>
+          {format_shorthand_number(token_count)} tokens
         </span>
       </div>
     </div>

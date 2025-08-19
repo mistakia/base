@@ -2,8 +2,7 @@
   background: white
   border-radius: $radius_base
   border: 2px solid $color_border_light
-  padding: $space_base $space_base 0 $space_base
-  margin-bottom: $space_sm
+  padding: $space_sm $space_base
   cursor: pointer
   transition: all $transition_fast
   position: relative
@@ -19,71 +18,61 @@
     border-color: $color_primary
     box-shadow: 0 0 0 1px rgba($color_primary, 0.3)
 
-.thread-header-row
-  display: flex
-  justify-content: space-between
-  align-items: center
-  margin-bottom: $space_xs
-
-.thread-status-info
+.thread-main-row
   display: flex
   align-items: center
   gap: $space_xs
-
-.thread-provider-section
-  display: flex
-  align-items: center
-
-.thread-title
-  font-size: $font_size_base
-  font-weight: $font_weight_medium
-  color: $color_text
   margin-bottom: $space_xs
-  overflow: hidden
-  text-overflow: ellipsis
-  white-space: nowrap
 
-.thread-state-indicator
-  font-size: $font_size_base
-  font-weight: bold
+.thread-status
   flex-shrink: 0
-  line-height: 1
 
-.thread-time-info
+.thread-time
   font-size: $font_size_xs
   color: $color_text_tertiary
   font-family: $font_family_mono
+  flex-shrink: 0
 
-.thread-metrics-row
+.thread-title
+  font-size: $font_size_sm
+  line-height: 1.2
+  font-weight: $font_weight_medium
+  color: $color_text
+  flex: 1
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  margin-left: $space_xs
+
+.thread-provider
+  flex-shrink: 0
+
+.thread-details-row
   display: flex
-  gap: $space_sm
-  margin-bottom: $space_xs
-  font-size: $font_size_xs
-  color: $color_text_secondary
-
-.thread-message-count
-  font-family: $font_family_mono
-
-.thread-token-count
-  font-family: $font_family_mono
-
-.thread-id-text
-  font-family: $font_family_mono
-  font-size: $font_size_xs
-  color: $color_text_secondary
-
-.thread-working-directory-row
+  align-items: flex-start
+  gap: $space_xs
   margin: 0 -16px 0 -16px
   padding: $space_xs $space_base
-  overflow-x: auto
-  white-space: nowrap
   border-bottom-left-radius: $radius_base
   border-bottom-right-radius: $radius_base
-
-.thread-working-directory-text
-  font-family: $font_family_mono
   font-size: $font_size_xs
   color: $color_text_secondary
+  width: fit-content
+
+.thread-working-directory
+  font-family: $font_family_mono
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  flex: 1
+
+.thread-separator
+  color: $color_text_tertiary
+  flex-shrink: 0
+
+.thread-duration
+  font-family: $font_family_mono
+  flex-shrink: 0
 
 // Responsive adjustments for mobile
 @media (max-width: 768px)
@@ -94,12 +83,21 @@
     margin-left: (-$space_base)
     margin-right: (-$space_base)
 
-  .thread-header-row
-    flex-direction: column
-    align-items: stretch
+  .thread-main-row
+    flex-wrap: wrap
 
-  .thread-state-indicator
-    align-self: flex-end
-    position: absolute
-    top: $space_base
-    right: $space_base
+  .thread-title
+    order: 1
+    flex-basis: 100%
+    margin-left: 0
+    margin-bottom: $space_xs
+
+  .thread-status
+    order: 2
+
+  .thread-time
+    order: 3
+
+  .thread-provider
+    order: 4
+    margin-left: auto

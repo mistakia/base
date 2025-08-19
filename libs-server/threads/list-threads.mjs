@@ -272,6 +272,12 @@ if (is_main(import.meta.url)) {
       type: 'boolean',
       default: false
     })
+    .option('output_format', {
+      describe: 'Output format (text or json)',
+      type: 'string',
+      choices: ['text', 'json'],
+      default: 'text'
+    })
     .strict()
     .help()
     .alias('help', 'h').argv
@@ -296,8 +302,14 @@ if (is_main(import.meta.url)) {
         missing_short_description: argv.missing_short_description
       })
 
-      console.log(`Found ${threads.length} matching threads`)
-      console.log(JSON.stringify(threads, null, 2))
+      if (argv.output_format === 'json') {
+        // Pure JSON output for machine parsing
+        console.log(JSON.stringify(threads, null, 2))
+      } else {
+        // Text output with summary
+        console.log(`Found ${threads.length} matching threads`)
+        console.log(JSON.stringify(threads, null, 2))
+      }
     } catch (err) {
       error = err
       console.error('Error:', error.message)
