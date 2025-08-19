@@ -21,16 +21,19 @@ const get_normal_styles = {
   },
   '& h5': { fontSize: '0.9rem', fontWeight: 600, mb: 0.7, mt: 1 },
   '& h6': { fontSize: '0.85rem', fontWeight: 600, mb: 0.7, mt: 1 },
-  '& p': { mb: 1, lineHeight: 1.3 },
-  '& ul, & ol': { mb: 1.5, pl: 3 },
+  '& p': { mb: 3, lineHeight: 1.4 },
+  '& ul, & ol': { mb: 3, pl: 3 },
+  '& ul ul': { m: 1, pl: 3 },
   '& ul': { listStyle: 'none' },
   '& ul li': { position: 'relative' },
   '& ul li::before': {
     content: '"- "',
     position: 'absolute',
-    left: '-1.2em'
+    left: '-1.2em',
+    color: 'var(--color-text-tertiary)'
   },
   '& li': { mb: 0.5 },
+  '& li p': { mb: 0 },
   '& pre': {
     backgroundColor: 'var(--color-code-bg)',
     p: 2,
@@ -62,14 +65,16 @@ const get_normal_styles = {
   },
   '& a': {
     color: 'inherit',
-    textDecoration: 'underline',
-    textDecorationColor: 'red',
-    textDecorationStyle: 'dotted',
+    textDecoration: 'none',
+    borderBottom: '1px dotted var(--color-primary)',
     cursor: 'pointer',
-    transition: 'color 0.2s'
+    transition: 'color 0.2s, border-bottom-color 0.2s',
+    display: 'inline-block',
+    lineHeight: '1.2'
   },
   '& a:hover': {
-    color: 'red'
+    color: 'var(--color-primary)',
+    borderBottomColor: 'var(--color-primary-hover)'
   },
   '& hr': {
     border: 'none',
