@@ -168,6 +168,13 @@
       "type": "object",
       "description": "Workflow-specific properties and configuration",
       "additionalProperties": true
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of categorization tags following base-uri format (e.g., 'user:tag/project-alpha')"
     }
   },
   "additionalProperties": false,
