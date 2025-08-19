@@ -45,14 +45,6 @@ api.use((req, res, next) => {
   // SPA-specific headers
   res.setHeader('Cache-Control', 'public, max-age=0')
 
-  // Enable CORS for SPA
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET, POST, PUT, DELETE, OPTIONS'
-  )
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-
   next()
 })
 
@@ -85,7 +77,9 @@ api.use(
       }
       return callback(null, true)
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
 
