@@ -63,7 +63,7 @@ const Thread = ({ thread, is_focused = false }) => {
       className={`thread-card ${is_focused ? 'thread-card--focused' : ''}`}
       onClick={handle_click}>
       <div className='thread-main-row'>
-        <div className='thread-title'>{title || 'Untitled Thread'}</div>
+        <div className='thread-title'>{title || '-'}</div>
         <div className='thread-provider'>
           {session_provider && (
             <ProviderLogo
