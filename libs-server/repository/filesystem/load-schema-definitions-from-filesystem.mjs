@@ -1,5 +1,7 @@
 import debug from 'debug'
-import { list_entity_files_from_filesystem } from './list-entity-files-from-filesystem.mjs'
+import path from 'path'
+import { list_files_recursive } from './list-files-recursive.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   get_system_base_directory,
   get_user_base_directory
@@ -12,7 +14,8 @@ const SYSTEM_SCHEMA_RELATIVE_DIR = 'system/schema'
 const USER_SCHEMA_RELATIVE_DIR = 'schema'
 
 /**
- * Load schema definitions from filesystem using registry system
+ * Load schema definitions from filesystem using optimized direct scanning
+ * This avoids scanning the entire user base directory and targets only schema directories
  *
  * @returns {Promise<Object>} - Map of schema definitions by name
  */
@@ -22,26 +25,83 @@ export async function load_schema_definitions_from_filesystem() {
   const user_base_directory = get_user_base_directory()
 
   try {
-    // Collect all schema files from filesystem
-    log('Scanning filesystem for schema files')
+    // Collect all schema files from filesystem using optimized approach
+    log('Scanning filesystem for schema files (optimized)')
+    const start_time = Date.now()
 
-    // Get schemas from root directory
-    const root_entities = await list_entity_files_from_filesystem({
-      base_directory: system_base_directory,
-      include_entity_types: ['type_definition'],
-      path_pattern: `${SYSTEM_SCHEMA_RELATIVE_DIR}/*.md`
-    })
+    const all_entities = []
 
-    // Get schemas from user directory
-    const user_entities = await list_entity_files_from_filesystem({
-      base_directory: user_base_directory,
-      include_entity_types: ['type_definition'],
-      path_pattern: `${USER_SCHEMA_RELATIVE_DIR}/*.md`
-    })
+    // Get schemas from system directory - scan only the schema subdirectory
+    if (system_base_directory) {
+      const system_schema_dir = path.join(
+        system_base_directory,
+        SYSTEM_SCHEMA_RELATIVE_DIR
+      )
+      log(`Scanning system schema directory: ${system_schema_dir}`)
+      const system_files = await list_files_recursive({
+        directory: system_schema_dir,
+        file_extension: '.md',
+        absolute_paths: true
+      })
 
-    // Combine entities from both directories
-    const all_entities = [...root_entities, ...user_entities]
-    log(`Found ${all_entities.length} schema entities`)
+      for (const file_path of system_files) {
+        try {
+          const entity_result = await read_entity_from_filesystem({
+            absolute_path: file_path
+          })
+
+          if (
+            entity_result.success &&
+            entity_result.entity_properties?.type === 'type_definition'
+          ) {
+            all_entities.push({
+              entity_properties: entity_result.entity_properties
+            })
+          }
+        } catch (error) {
+          log(`Error reading system schema file ${file_path}: ${error.message}`)
+        }
+      }
+      log(`Found ${system_files.length} system schema files`)
+    }
+
+    // Get schemas from user directory - scan only the schema subdirectory
+    if (user_base_directory) {
+      const user_schema_dir = path.join(
+        user_base_directory,
+        USER_SCHEMA_RELATIVE_DIR
+      )
+      log(`Scanning user schema directory: ${user_schema_dir}`)
+      const user_files = await list_files_recursive({
+        directory: user_schema_dir,
+        file_extension: '.md',
+        absolute_paths: true
+      })
+
+      for (const file_path of user_files) {
+        try {
+          const entity_result = await read_entity_from_filesystem({
+            absolute_path: file_path
+          })
+
+          if (
+            entity_result.success &&
+            entity_result.entity_properties?.type === 'type_definition'
+          ) {
+            all_entities.push({
+              entity_properties: entity_result.entity_properties
+            })
+          }
+        } catch (error) {
+          log(`Error reading user schema file ${file_path}: ${error.message}`)
+        }
+      }
+      log(`Found ${user_files.length} user schema files`)
+    }
+
+    const scan_duration = Date.now() - start_time
+    log(`[TIMING] Schema file scanning completed in ${scan_duration}ms`)
+    log(`Found ${all_entities.length} schema entities total`)
 
     // Process schema files
     const schema_map = {}
@@ -63,6 +123,7 @@ export async function load_schema_definitions_from_filesystem() {
     }
 
     // Apply 'extends' property from type_definition files
+    const extends_start = Date.now()
     log(
       `Applying extends from ${type_definitions_with_extends.length} type definitions`
     )
@@ -118,6 +179,11 @@ export async function load_schema_definitions_from_filesystem() {
       }
     }
 
+    const extends_duration = Date.now() - extends_start
+    log(`[TIMING] Extends processing completed in ${extends_duration}ms`)
+
+    const total_duration = Date.now() - start_time
+    log(`[TIMING] Total schema loading completed in ${total_duration}ms`)
     log(`Loaded ${Object.keys(schema_map).length} schema definitions`)
     return schema_map
   } catch (error) {
