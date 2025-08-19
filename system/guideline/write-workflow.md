@@ -24,11 +24,7 @@ updated_at: '2025-05-27T18:10:20.237Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
-# Create Workflow Guideline
-
-Follow the [[user:guideline/starting-point-philosophy.md]] when creating workflows.
-
-## Guidelines
+Read [[sys:system/text/workflow.md]] to understand what a workflow is and how it is used. Follow the [[user:guideline/starting-point-philosophy.md]] when creating workflows.
 
 ### File Structure and Naming
 
