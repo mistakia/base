@@ -7,6 +7,7 @@ const DEFAULT_TABLE_STATE = new Map({
   columns: new List([
     'thread_state',
     'session_provider',
+    'title',
     'working_directory',
     'updated_at',
     'duration',
@@ -17,7 +18,7 @@ const DEFAULT_TABLE_STATE = new Map({
     'token_count',
     'cost'
   ]),
-  sort: new List([{ column_id: 'updated_at', direction: 'desc' }]),
+  sort: new List([{ column_id: 'updated_at', desc: true }]),
   where: new List(),
   splits: new List(),
   limit: 1000,

@@ -120,14 +120,7 @@ function extract_thread_title(thread) {
     return thread.title
   }
 
-  // Fallback to working directory basename
-  const working_directory = extract_working_directory(thread)
-  if (working_directory.formatted) {
-    return working_directory.formatted
-  }
-
-  // Final fallback to default
-  return 'Untitled Thread'
+  return null
 }
 
 /**

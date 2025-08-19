@@ -96,28 +96,16 @@ const TitleCell = ({ row }) => {
     }
   }
 
-  const title = thread.title || thread.working_directory || 'Untitled Thread'
-  const has_title = Boolean(thread.title)
-  const working_directory = thread.working_directory
-
   return (
     <div
       className='cell-content'
       title={thread.working_directory_path || ''}
       onClick={handle_click}
       style={{
-        height: 'fit-content',
-        cursor: 'pointer',
-        textDecoration: 'underline',
-        color: '#1976d2'
+        height: 'fit-content'
       }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <div style={{ fontWeight: '500' }}>{title}</div>
-        {has_title && working_directory && (
-          <div style={{ fontSize: '11px', color: '#666', opacity: 0.8 }}>
-            {working_directory}
-          </div>
-        )}
+        <div style={{ fontWeight: '500' }}>{thread.title}</div>
       </div>
     </div>
   )
