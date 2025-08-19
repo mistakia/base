@@ -8,7 +8,10 @@ import {
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
 import { get_thread_cost_by_id } from '@core/threads/selectors'
-import { format_shorthand_time } from '@views/utils/date-formatting.js'
+import {
+  format_shorthand_time,
+  format_shorthand_number
+} from '@views/utils/date-formatting.js'
 
 const get_state_color = (state) => {
   switch (state) {
@@ -102,7 +105,9 @@ const TitleCell = ({ row }) => {
       title={thread.working_directory_path || ''}
       onClick={handle_click}
       style={{
-        height: 'fit-content'
+        height: 'fit-content',
+        justifyContent: 'flex-start',
+        width: '100%'
       }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <div style={{ fontWeight: '500' }}>{thread.title}</div>
@@ -400,6 +405,7 @@ export const thread_columns = {
     column_id: 'token_count',
     header_label: 'Tokens',
     accessorKey: 'token_count',
+    accessorFn: ({ token_count }) => format_shorthand_number(token_count),
     data_type: TABLE_DATA_TYPES.NUMBER,
     operators: [
       TABLE_OPERATORS.GREATER_THAN,
