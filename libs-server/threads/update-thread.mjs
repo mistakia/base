@@ -248,15 +248,6 @@ if (is_main(import.meta.url)) {
       describe: 'JSON string of metadata fields to update',
       type: 'string'
     })
-    .option('name', {
-      alias: 'n',
-      describe: 'Update thread name',
-      type: 'string'
-    })
-    .option('description', {
-      describe: 'Update thread description',
-      type: 'string'
-    })
     .option('title', {
       describe: 'Update thread title',
       type: 'string'
@@ -269,13 +260,11 @@ if (is_main(import.meta.url)) {
       if (
         !argv.thread_state &&
         !argv.metadata &&
-        !argv.name &&
-        !argv.description &&
         !argv.title &&
         !argv.short_description
       ) {
         throw new Error(
-          'Must specify either --thread_state, --metadata, --name, --description, --title, or --short_description'
+          'Must specify either --thread_state, --metadata, --title, or --short_description'
         )
       }
       if (argv.thread_state === THREAD_STATE.ARCHIVED && !argv.reason) {
@@ -317,13 +306,6 @@ if (is_main(import.meta.url)) {
           metadata = { ...metadata, ...JSON.parse(argv.metadata) }
         }
 
-        if (argv.name) {
-          metadata.name = argv.name
-        }
-
-        if (argv.description) {
-          metadata.description = argv.description
-        }
 
         if (argv.title) {
           metadata.title = argv.title

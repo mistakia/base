@@ -36,6 +36,15 @@ function parse_date_to_timestamp(date_param) {
 }
 
 /**
+ * Check if a field is missing (undefined, null, or empty string)
+ * @param {any} value Field value to check
+ * @returns {boolean} True if field is missing
+ */
+function is_field_missing(value) {
+  return value === undefined || value === null || value === ''
+}
+
+/**
  * List threads with optional filtering
  *
  * @param {Object} params Parameters
@@ -49,6 +58,8 @@ function parse_date_to_timestamp(date_param) {
  * @param {string|Date} [params.created_after] Filter threads created after this date (exclusive)
  * @param {string|Date} [params.updated_since] Filter threads updated since this date (inclusive)
  * @param {string|Date} [params.updated_after] Filter threads updated after this date (exclusive)
+ * @param {boolean} [params.missing_title] Filter threads missing title field
+ * @param {boolean} [params.missing_short_description] Filter threads missing short_description field
  * @returns {Promise<Array>} Array of thread summary objects
  */
 export default async function list_threads({
@@ -61,7 +72,9 @@ export default async function list_threads({
   created_since = null,
   created_after = null,
   updated_since = null,
-  updated_after = null
+  updated_after = null,
+  missing_title = false,
+  missing_short_description = false
 }) {
   // Parse date filters
   const created_since_ts = parse_date_to_timestamp(created_since)
@@ -70,7 +83,7 @@ export default async function list_threads({
   const updated_after_ts = parse_date_to_timestamp(updated_after)
 
   log(
-    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}${created_since ? ` created since ${created_since}` : ''}${created_after ? ` created after ${created_after}` : ''}${updated_since ? ` updated since ${updated_since}` : ''}${updated_after ? ` updated after ${updated_after}` : ''}`
+    `Listing threads${user_public_key ? ` for user ${user_public_key}` : ''}${thread_state ? ` with state ${thread_state}` : ''}${created_since ? ` created since ${created_since}` : ''}${created_after ? ` created after ${created_after}` : ''}${updated_since ? ` updated since ${updated_since}` : ''}${updated_after ? ` updated after ${updated_after}` : ''}${missing_title ? ` missing title` : ''}${missing_short_description ? ` missing short_description` : ''}`
   )
 
   const threads_dir = get_thread_base_directory({ user_base_directory })
@@ -136,6 +149,10 @@ export default async function list_threads({
           // Apply updated_at filters
           if (updated_since_ts && updated_at_ts < updated_since_ts) return null
           if (updated_after_ts && updated_at_ts <= updated_after_ts) return null
+
+          // Apply missing field filters
+          if (missing_title && !is_field_missing(metadata.title)) return null
+          if (missing_short_description && !is_field_missing(metadata.short_description)) return null
 
           // Check permissions for this thread if requesting user is provided
           const permission_result = await check_thread_permission({
@@ -241,6 +258,16 @@ if (is_main(import.meta.url)) {
         'Filter threads updated after this date (exclusive, ISO format)',
       type: 'string'
     })
+    .option('missing_title', {
+      describe: 'Filter threads that are missing title field',
+      type: 'boolean',
+      default: false
+    })
+    .option('missing_short_description', {
+      describe: 'Filter threads that are missing short_description field',
+      type: 'boolean',
+      default: false
+    })
     .strict()
     .help()
     .alias('help', 'h').argv
@@ -260,7 +287,9 @@ if (is_main(import.meta.url)) {
         created_since: argv.created_since,
         created_after: argv.created_after,
         updated_since: argv.updated_since,
-        updated_after: argv.updated_after
+        updated_after: argv.updated_after,
+        missing_title: argv.missing_title,
+        missing_short_description: argv.missing_short_description
       })
 
       console.log(`Found ${threads.length} matching threads`)

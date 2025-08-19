@@ -126,8 +126,8 @@ function extract_thread_title(thread) {
     return working_directory.formatted
   }
 
-  // Final fallback to thread name or default
-  return thread.name || 'Untitled Thread'
+  // Final fallback to default
+  return 'Untitled Thread'
 }
 
 /**
@@ -156,7 +156,6 @@ function format_for_table_display(thread, extracted_data) {
   return {
     // Core thread identifiers
     thread_id: thread.thread_id,
-    name: thread.name || 'Untitled Thread',
 
     // Title and description fields
     title,
@@ -233,7 +232,6 @@ export async function extract_thread_metadata(thread) {
     // Return minimal data structure on error
     return {
       thread_id: thread.thread_id || 'unknown',
-      name: thread.name || 'Error Loading Thread',
       title: 'Error Loading Thread',
       short_description: null,
       thread_state: 'error',
@@ -253,7 +251,6 @@ export async function extract_thread_metadata(thread) {
       input_cost: 0,
       output_cost: 0,
       currency: 'USD',
-      description: '',
       tags: [],
       raw_thread: thread
     }
