@@ -101,9 +101,9 @@ Create structured implementation plans by understanding requirements, analyzing 
 
 - If a task entity is known, update the task entity file with the implementation plan
 - If no task entity is known:
-  - Read [[sys:system/schema/task.md]] and use entity type "task"
-  - Read [[sys:system/guideline/write-entity.md]] and use it to write the entity file
-  - Read [[sys:system/text/base-uri.md]]
+  - MUST read [[sys:system/schema/task.md]] and use entity type "task"
+  - MUST read [[sys:system/guideline/write-entity.md]] and use it to write the entity file
+  - MUST read [[sys:system/text/base-uri.md]]
   - Create a new task entity using `entity_create` tool
   - Set `title` to the task name and include a brief `description`
   - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
