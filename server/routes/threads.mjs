@@ -110,7 +110,7 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
 // Process table request for server-side filtering, sorting, and pagination
 router.post('/table', async (req, res) => {
   try {
-    const { table_state, user_public_key } = req.body
+    const { table_state } = req.body
 
     // Validate table state against react-table schema
     if (table_state && typeof table_state !== 'object') {
@@ -129,7 +129,6 @@ router.post('/table', async (req, res) => {
     // Process the table request with server-side filtering and sorting
     const result = await process_table_request({
       table_state,
-      user_public_key: user_public_key || requesting_user_public_key,
       requesting_user_public_key
     })
 

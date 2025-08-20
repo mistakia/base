@@ -135,20 +135,18 @@ function apply_pagination(threads, limit, offset) {
  *
  * @param {Object} params Parameters
  * @param {Object} [params.table_state] React-table state object (includes limit/offset)
- * @param {string} [params.user_public_key] User public key for filtering
  * @param {string} [params.requesting_user_public_key] Requesting user's public key for permissions
  * @returns {Promise<Object>} Processed table data
  */
 export async function process_table_request({
   table_state,
-  user_public_key,
   requesting_user_public_key
 }) {
   // Extract limit and offset from table_state with defaults
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
-  log('Processing table request', { table_state, user_public_key })
+  log('Processing table request', { table_state, requesting_user_public_key })
 
   const start_time = Date.now()
 
@@ -157,7 +155,6 @@ export async function process_table_request({
     const raw_threads = await list_threads({
       limit: Infinity,
       offset: 0,
-      user_public_key,
       requesting_user_public_key
     })
 
