@@ -1,6 +1,8 @@
 // Markdown-it plugin for XML tag styling with hierarchical color coding
 // Adds visual styling for XML tags within markdown content
 
+import { html_tag_whitelist } from './html-tag-whitelist.mjs'
+
 export default function (md, options) {
   options = Object.assign(
     {
@@ -9,60 +11,8 @@ export default function (md, options) {
     options
   )
 
-  // Common HTML tags that should NOT be styled as XML
-  const html_tags = new Set([
-    'div',
-    'span',
-    'p',
-    'a',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'ul',
-    'ol',
-    'li',
-    'table',
-    'tr',
-    'td',
-    'th',
-    'thead',
-    'tbody',
-    'img',
-    'br',
-    'hr',
-    'pre',
-    'code',
-    'strong',
-    'em',
-    'b',
-    'i',
-    'form',
-    'input',
-    'button',
-    'label',
-    'textarea',
-    'select',
-    'option',
-    'nav',
-    'header',
-    'footer',
-    'main',
-    'section',
-    'article',
-    'aside',
-    'blockquote',
-    'cite',
-    'abbr',
-    'address',
-    'time',
-    'figure',
-    'figcaption',
-    'details',
-    'summary'
-  ])
+  // Use shared HTML tag whitelist
+  const html_tags = html_tag_whitelist
 
   const tag_stack = []
   const tag_color_map = new Map() // Maps tag names to assigned colors

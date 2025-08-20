@@ -39,6 +39,7 @@ const get_normal_styles = {
     p: 2,
     borderRadius: 1,
     overflow: 'visible',
+    mt: 2,
     mb: 2,
     fontSize: '0.875rem',
     fontFamily: 'var(--font-family-mono)',

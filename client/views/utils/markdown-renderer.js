@@ -7,7 +7,40 @@ import {
   process_links_in_markdown,
   process_links_in_html
 } from './link-processor.js'
+import { html_tag_whitelist } from './html-tag-whitelist.mjs'
 import 'highlight.js/styles/github.css'
+
+// Escape unknown XML-like tags so markdown inside them is still parsed.
+// Later, the XML styling plugin will re-wrap these escaped tags for display.
+
+const escape_unknown_xml_tags_outside_code = (content) => {
+  if (!content) return content
+
+  const lines = content.split('\n')
+  let in_code_fence = false
+  const fence_regex = /^```/ // start or end of a fenced code block
+
+  const processed_lines = lines.map((line) => {
+    if (fence_regex.test(line)) {
+      in_code_fence = !in_code_fence
+      return line
+    }
+
+    if (in_code_fence) return line
+
+    // Replace unknown tags like <instructions> or </instructions>
+    return line.replace(
+      /<\/?([a-zA-Z][a-zA-Z0-9_-]*)([^<>]*?)>/g,
+      (match, tag_name) => {
+        const lower = tag_name.toLowerCase()
+        if (html_tag_whitelist.has(lower)) return match
+        return match.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      }
+    )
+  })
+
+  return processed_lines.join('\n')
+}
 
 // Initialize markdown-it with highlight.js
 const md = new MarkdownIt({
@@ -43,8 +76,11 @@ const md = new MarkdownIt({
 export const render_markdown = (content) => {
   if (!content) return ''
 
+  // Escape unknown XML-like tags so markdown inside is parsed
+  const content_with_escaped_xml = escape_unknown_xml_tags_outside_code(content)
+
   // Process base URI links and wiki links before rendering
-  const processed_content = process_links_in_markdown(content)
+  const processed_content = process_links_in_markdown(content_with_escaped_xml)
 
   // Render markdown to HTML
   const html = md.render(processed_content)
