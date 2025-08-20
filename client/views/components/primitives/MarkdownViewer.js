@@ -33,7 +33,6 @@ const get_normal_styles = {
     color: 'var(--color-text-tertiary)'
   },
   '& li': { mb: 0.5, lineHeight: 1.4 },
-  '& li p': { mb: 0 },
   '& pre': {
     backgroundColor: 'var(--color-code-bg)',
     p: 2,
