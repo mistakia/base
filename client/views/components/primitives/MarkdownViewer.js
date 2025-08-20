@@ -5,22 +5,22 @@ import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { handle_link_click } from '@views/utils/link-processor.js'
 
 const get_normal_styles = {
-  '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 1.5, mt: 2 },
+  '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 4 },
   '& h2': {
     fontSize: '1.125rem',
     fontWeight: 600,
-    mb: 1.2,
-    mt: 1.7
+    mb: 2,
+    mt: 4
   },
-  '& h3': { fontSize: '1rem', fontWeight: 600, mb: 1, mt: 1.5 },
+  '& h3': { fontSize: '1rem', fontWeight: 600, mb: 1, mt: 2 },
   '& h4': {
     fontSize: '0.95rem',
     fontWeight: 600,
-    mb: 0.8,
-    mt: 1.2
+    mb: 1.5,
+    mt: 3
   },
-  '& h5': { fontSize: '0.9rem', fontWeight: 600, mb: 0.7, mt: 1 },
-  '& h6': { fontSize: '0.85rem', fontWeight: 600, mb: 0.7, mt: 1 },
+  '& h5': { fontSize: '0.9rem', fontWeight: 600, mb: 1, mt: 2 },
+  '& h6': { fontSize: '0.85rem', fontWeight: 600, mb: 1, mt: 2 },
   '& p': { mb: 3, lineHeight: 1.4 },
   '& ul, & ol': { mb: 3, pl: 3 },
   '& ul ul': { m: 1, pl: 3 },
