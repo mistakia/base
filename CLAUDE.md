@@ -176,6 +176,6 @@ Threads execute workflows in isolated git worktrees:
 **CRITICAL: Never commit directly to `main` or `master` branches**
 
 - ALL development work MUST be done in feature branches or worktrees
-- Use the pattern: `git worktree add -b feature/description ../repo-worktrees/feature-description`
+- Use the pattern: `git worktree add -b feature/description ../base-worktrees/feature-description`
 - Changes MUST go through the pull request process
 - Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers

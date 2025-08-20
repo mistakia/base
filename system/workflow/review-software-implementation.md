@@ -16,7 +16,7 @@ prompt_properties:
     required: false
     description: Example review data for templates
     default:
-      working_directory: '../repo-worktrees/fix-16-no-auto-change-requests'
+      working_directory: '../base-worktrees/fix-16-no-auto-change-requests'
       files_changed: ['src/api/routes.mjs', 'src/utils/helper.mjs']
       implementation_plan_file: 'task/github/mistakia/base/16-modify-thread-creation.md'
 relations:

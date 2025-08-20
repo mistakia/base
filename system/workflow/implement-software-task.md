@@ -22,7 +22,7 @@ prompt_properties:
       task_name: 'modify-thread-creation'
       short_description: 'no-auto-change-requests'
       branch_name: 'fix/16-no-auto-change-requests'
-      worktree_path: '../repo-worktrees/fix-16-no-auto-change-requests'
+      worktree_path: '../base-worktrees/fix-16-no-auto-change-requests'
 relations:
   - 'implements [[sys:system/guideline/implement-software-task.md]]'
   - 'uses [[sys:system/guideline/write-workflow.md]]'
