@@ -236,14 +236,6 @@ export const redact_thread_data = (thread) => {
     })
   }
 
-  // Redact messages array if present
-  if (redacted.messages && Array.isArray(redacted.messages)) {
-    redacted.messages = redacted.messages.map((msg) => ({
-      ...msg,
-      content: redact_text_content(msg.content)
-    }))
-  }
-
   // Keep response shape identical to non-redacted responses
   return redacted
 }

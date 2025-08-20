@@ -54,6 +54,7 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
   const metadata = { ...thread }
 
+  delete metadata.is_redacted
   delete metadata.timeline
   delete metadata.context_dir
 
@@ -144,6 +145,7 @@ export async function update_thread_metadata({
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
   const current_metadata = { ...thread }
 
+  delete current_metadata.is_redacted
   delete current_metadata.timeline
   delete current_metadata.context_dir
 

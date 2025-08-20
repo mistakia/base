@@ -46,7 +46,7 @@ const log = debug('threads:get')
  */
 export default async function get_thread({
   thread_id,
-  user_public_key = null,
+  user_public_key = config.user_public_key,
   user_base_directory,
   include_types = [],
   exclude_types = [],
