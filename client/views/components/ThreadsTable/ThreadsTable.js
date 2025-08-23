@@ -1,20 +1,36 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
 import { thread_columns } from './column-definitions.js'
+import { threads_actions } from '@core/threads/actions.js'
+import { get_threads_table_props } from '@core/threads/selectors.js'
 import './ThreadsTable.styl'
 
-const ThreadsTable = ({
-  data = [],
-  table_state = {},
-  all_columns = {},
-  is_loading = false,
-  on_view_change,
-  fetch_more,
-  can_fetch_more = false,
-  table_error = null
-}) => {
+const ThreadsTable = () => {
+  const dispatch = useDispatch()
+  const table_props = useSelector(get_threads_table_props)
+
+  const {
+    data = [],
+    table_state = {},
+    all_columns = {},
+    is_loading = false,
+    can_fetch_more = false,
+    table_error = null
+  } = table_props
+
+  const handle_view_change = (view) => {
+    dispatch(
+      threads_actions.update_threads_table_state({
+        view
+      })
+    )
+  }
+
+  const handle_fetch_more = () => {
+    dispatch(threads_actions.load_threads_table({ is_append: true }))
+  }
   if (table_error) {
     return (
       <div className='threads-table-error'>
@@ -32,8 +48,8 @@ const ThreadsTable = ({
         }
         table_state={table_state}
         views={[]} // No view saving in initial implementation
-        on_view_change={on_view_change}
-        fetch_more={fetch_more}
+        on_view_change={handle_view_change}
+        fetch_more={handle_fetch_more}
         can_fetch_more={can_fetch_more}
         is_loading={is_loading}
         disable_rank_aggregation={true}
@@ -41,17 +57,6 @@ const ThreadsTable = ({
       />
     </div>
   )
-}
-
-ThreadsTable.propTypes = {
-  data: PropTypes.array,
-  table_state: PropTypes.object,
-  all_columns: PropTypes.object,
-  is_loading: PropTypes.bool,
-  on_view_change: PropTypes.func,
-  fetch_more: PropTypes.func,
-  can_fetch_more: PropTypes.bool,
-  table_error: PropTypes.string
 }
 
 export default ThreadsTable

@@ -13,8 +13,21 @@ export function get_threads(state) {
   return get_threads_state(state).get('threads')
 }
 
-export function get_table_threads(state) {
-  return get_threads_state(state).get('table_threads')
+export function get_selected_thread_table_view_id(state) {
+  return (
+    get_threads_state(state).get('selected_thread_table_view_id') || 'default'
+  )
+}
+
+export function get_selected_thread_table_view(state) {
+  const threads_state = get_threads_state(state)
+  const view_id = get_selected_thread_table_view_id(state)
+  return threads_state.getIn(['thread_table_views', view_id])
+}
+
+export function get_thread_table_threads(state) {
+  const selected_view = get_selected_thread_table_view(state)
+  return selected_view ? selected_view.get('thread_table_results') : null
 }
 
 // Cost calculation selectors
@@ -49,7 +62,15 @@ export const get_thread_cost_by_id = createSelector(
   (threads_state, thread_id) => {
     if (!thread_id) return null
 
-    const table_threads = threads_state.get('table_threads')
+    const selected_view_id =
+      threads_state.get('selected_thread_table_view_id') || 'default'
+    const selected_view = threads_state.getIn([
+      'thread_table_views',
+      selected_view_id
+    ])
+    const thread_table_results = selected_view
+      ? selected_view.get('thread_table_results')
+      : null
     const models_data = threads_state.getIn(['models_data', 'data'])
 
     if (!models_data) return null
@@ -57,8 +78,8 @@ export const get_thread_cost_by_id = createSelector(
     // Look for thread in both threads and table_threads
     let thread = null
 
-    if (table_threads) {
-      thread = table_threads.find((t) => t.thread_id === thread_id)
+    if (thread_table_results) {
+      thread = thread_table_results.find((t) => t.thread_id === thread_id)
     }
 
     if (!thread) return null
@@ -75,28 +96,48 @@ export const get_thread_cost_by_id = createSelector(
 
 // Main table props selector that provides all data needed for react-table
 export const get_threads_table_props = createSelector(
-  [get_threads_state],
-  (threads_state) => {
-    // Extract all needed data from threads state (using table-specific properties)
-    const table_threads = threads_state.get('table_threads')
-    const table_state = threads_state.get('table_state')
-    const all_columns = threads_state.get('all_columns')
-    const total_row_count = threads_state.get('total_row_count')
-    const total_rows_fetched = threads_state.get('total_rows_fetched')
-    const is_fetching = threads_state.get('is_fetching')
-    const is_fetching_more = threads_state.get('is_fetching_more')
-    const table_error = threads_state.get('table_error')
+  [get_threads_state, get_selected_thread_table_view_id],
+  (threads_state, view_id) => {
+    const selected_view = threads_state.getIn(['thread_table_views', view_id])
+    if (!selected_view) {
+      return {
+        data: [],
+        table_state: {},
+        all_columns: {},
+        total_row_count: 0,
+        total_rows_fetched: 0,
+        is_fetching: false,
+        is_fetching_more: false,
+        table_error: null,
+        has_data: false,
+        is_loading: false,
+        can_fetch_more: false,
+        view_id
+      }
+    }
 
-    const table_state_js = table_state?.toJS
-      ? table_state.toJS()
-      : table_state || {}
-    const all_columns_js = all_columns?.toJS
-      ? all_columns.toJS()
-      : all_columns || {}
+    // Extract all needed data from selected view
+    const thread_table_results = selected_view.get('thread_table_results')
+    const thread_table_state = selected_view.get('thread_table_state')
+    const thread_all_columns = threads_state.get('thread_all_columns')
+    const thread_total_row_count = selected_view.get('thread_total_row_count')
+    const thread_total_rows_fetched = selected_view.get(
+      'thread_total_rows_fetched'
+    )
+    const thread_is_fetching = selected_view.get('thread_is_fetching')
+    const thread_is_fetching_more = selected_view.get('thread_is_fetching_more')
+    const thread_table_error = selected_view.get('thread_table_error')
 
-    const table_threads_js = table_threads?.toJS
-      ? table_threads.toJS()
-      : table_threads || []
+    const table_state_js = thread_table_state?.toJS
+      ? thread_table_state.toJS()
+      : thread_table_state || {}
+    const all_columns_js = thread_all_columns?.toJS
+      ? thread_all_columns.toJS()
+      : thread_all_columns || {}
+
+    const table_threads_js = thread_table_results?.toJS
+      ? thread_table_results.toJS()
+      : thread_table_results || []
 
     // Add percentile calculations for cell styling
     const threads_with_percentiles =
@@ -113,18 +154,19 @@ export const get_threads_table_props = createSelector(
       all_columns: all_columns_js,
 
       // Pagination and loading states
-      total_row_count,
-      total_rows_fetched,
-      is_fetching,
-      is_fetching_more,
+      total_row_count: thread_total_row_count,
+      total_rows_fetched: thread_total_rows_fetched,
+      is_fetching: thread_is_fetching,
+      is_fetching_more: thread_is_fetching_more,
 
       // Error state
-      table_error,
+      table_error: thread_table_error,
 
       // Computed props
       has_data: table_threads_js.length > 0,
-      is_loading: is_fetching,
-      can_fetch_more: total_rows_fetched < total_row_count
+      is_loading: thread_is_fetching,
+      can_fetch_more: thread_total_rows_fetched < thread_total_row_count,
+      view_id
     }
   }
 )

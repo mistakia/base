@@ -17,9 +17,10 @@ export const threads_action_types = {
   SELECT_THREAD: 'SELECT_THREAD',
   CLEAR_SELECTED_THREAD: 'CLEAR_SELECTED_THREAD',
 
-  // Table state management actions
-  UPDATE_THREADS_TABLE_STATE: 'UPDATE_THREADS_TABLE_STATE',
-  RESET_THREADS_TABLE_STATE: 'RESET_THREADS_TABLE_STATE'
+  // Table view management actions
+  UPDATE_THREAD_TABLE_VIEW: 'UPDATE_THREAD_TABLE_VIEW',
+  SELECT_THREAD_TABLE_VIEW: 'SELECT_THREAD_TABLE_VIEW',
+  RESET_THREAD_TABLE_VIEW: 'RESET_THREAD_TABLE_VIEW'
 }
 
 export const get_threads_actions = create_api_actions(GET_THREADS)
@@ -46,22 +47,24 @@ export const threads_actions = {
     type: threads_action_types.CLEAR_SELECTED_THREAD
   }),
 
-  // Table state management actions
-  update_threads_table_state: ({ table_state }) => ({
-    type: threads_action_types.UPDATE_THREADS_TABLE_STATE,
-    payload: { table_state }
+  // Table view management actions - update_threads_table_state handles on_view_change
+  update_threads_table_state: ({ view }) => ({
+    type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
+    payload: { view }
   }),
 
-  reset_threads_table_state: () => ({
-    type: threads_action_types.RESET_THREADS_TABLE_STATE
+  select_thread_table_view: ({ view_id }) => ({
+    type: threads_action_types.SELECT_THREAD_TABLE_VIEW,
+    payload: { view_id }
   }),
 
-  load_threads_table: ({
-    table_state = null,
-    user_public_key = null,
-    is_append = false
-  } = {}) => ({
+  reset_thread_table_view: ({ view_id = 'default' } = {}) => ({
+    type: threads_action_types.RESET_THREAD_TABLE_VIEW,
+    payload: { view_id }
+  }),
+
+  load_threads_table: ({ view_id = 'default', is_append = false } = {}) => ({
     type: threads_action_types.LOAD_THREADS_TABLE,
-    payload: { table_state, user_public_key, is_append }
+    payload: { view_id, is_append }
   })
 }

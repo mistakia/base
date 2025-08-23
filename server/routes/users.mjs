@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import tasks from './tasks.mjs'
 import databases from './databases.mjs'
 
 const router = express.Router()
@@ -210,6 +209,5 @@ router.get('/:username', async (req, res) => {
 })
 
 router.use('/:user_public_key/databases', databases)
-router.use('/:user_public_key/tasks', tasks)
 
 export default router

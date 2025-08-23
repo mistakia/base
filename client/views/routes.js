@@ -5,6 +5,7 @@ import Homepage from '@pages/Homepage/index.js'
 import DirectoryPage from '@pages/DirectoryPage/index.js'
 import ThreadsPage from '@pages/ThreadsPage.js'
 import ThreadPage from '@pages/ThreadPage/index.js'
+import TasksPage from '@pages/TasksPage.js'
 
 const Routes = () => {
   return (
@@ -15,6 +16,9 @@ const Routes = () => {
       {/* Threads routes */}
       <Route path='/thread' element={<ThreadsPage />} />
       <Route path='/thread/:id' element={<ThreadPage />} />
+
+      {/* Tasks routes */}
+      <Route path='/task' element={<TasksPage />} />
 
       {/* Fallback to directory page for unmatched paths */}
       <Route path='/*' element={<DirectoryPage />} />

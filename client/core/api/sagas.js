@@ -2,11 +2,7 @@ import { call, put, cancelled, select } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
 import { api, api_request } from '@core/api/service'
-import {
-  post_user_task_request_actions,
-  get_user_tasks_request_actions,
-  get_task_request_actions
-} from '@core/tasks/actions'
+import { get_tasks_actions, get_tasks_table_actions } from '@core/tasks/actions'
 import {
   get_user_request_actions,
   get_users_request_actions
@@ -80,11 +76,6 @@ export const post_user_session = fetch.bind(
   api.post_user_session,
   post_user_session_request_actions
 )
-export const post_user_task = fetch.bind(
-  null,
-  api.post_user_task,
-  post_user_task_request_actions
-)
 export const get_database = fetch.bind(
   null,
   api.get_database,
@@ -105,13 +96,7 @@ export const delete_database_view = fetch.bind(
   api.delete_database_view,
   delete_database_view_request_actions
 )
-export const get_user_tasks = fetch.bind(
-  null,
-  api.get_user_tasks,
-  get_user_tasks_request_actions
-)
-
-export const get_task = fetch.bind(null, api.get_task, get_task_request_actions)
+export const get_tasks = fetch.bind(null, api.get_tasks, get_tasks_actions)
 
 export const get_threads = fetch.bind(
   null,
@@ -152,10 +137,17 @@ export const post_thread_execute_tool = fetch.bind(
 export const get_models = fetch.bind(null, api.get_models, get_models_actions)
 
 // Threads table processing saga
-export const load_threads_table = fetch.bind(
+export const get_threads_table = fetch.bind(
   null,
   api.get_threads_table,
   get_threads_table_actions
+)
+
+// Tasks table processing saga
+export const get_tasks_table = fetch.bind(
+  null,
+  api.get_tasks_table,
+  get_tasks_table_actions
 )
 
 export const get_directories = fetch.bind(

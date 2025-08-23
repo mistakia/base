@@ -10,6 +10,7 @@ import { local_storage_adapter } from '@core/utils'
 import { post_user_session } from '@core/api'
 import { directory_actions } from '@core/directory/actions'
 import { threads_actions } from '@core/threads/actions'
+import { tasks_actions } from '@core/tasks/actions'
 
 function save_key({ user_private_key, user_public_key }) {
   local_storage_adapter.setItem('base_private_key', user_private_key)
@@ -114,6 +115,10 @@ function* handle_page_refresh_after_session_success() {
         }
         break
       }
+
+      case pathname === '/task':
+        yield put(tasks_actions.load_tasks_table())
+        break
 
       default:
         // For file and directory paths, refresh both path info and specific content
