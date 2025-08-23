@@ -23,7 +23,7 @@ import {
 } from '@core/directory'
 import { RedactedContent } from '@components/primitives/styled'
 
-const DirectoryView = ({ path, on_navigate }) => {
+const DirectoryView = ({ path = '', on_navigate }) => {
   const dispatch = useDispatch()
   const items = useSelector(get_directory_items)
   const directory_state = useSelector(get_directory_state)
@@ -267,10 +267,6 @@ const DirectoryView = ({ path, on_navigate }) => {
 DirectoryView.propTypes = {
   path: PropTypes.string,
   on_navigate: PropTypes.func.isRequired
-}
-
-DirectoryView.defaultProps = {
-  path: ''
 }
 
 export default DirectoryView

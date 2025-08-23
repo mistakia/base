@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import './PathBreadcrumb.styl'
 
-const PathBreadcrumb = ({ path, on_navigate }) => {
+const PathBreadcrumb = ({ path = '', on_navigate }) => {
   const path_parts = path ? path.split('/').filter(Boolean) : []
 
   // Check if the last part looks like a file (has an extension)
@@ -109,10 +109,6 @@ const PathBreadcrumb = ({ path, on_navigate }) => {
 PathBreadcrumb.propTypes = {
   path: PropTypes.string,
   on_navigate: PropTypes.func.isRequired
-}
-
-PathBreadcrumb.defaultProps = {
-  path: ''
 }
 
 export default PathBreadcrumb
