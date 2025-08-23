@@ -26,10 +26,6 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
-  post_user_task({ user_public_key, task, signature }) {
-    const url = `${API_URL}/users/${user_public_key}/tasks`
-    return { url, ...POST({ task, signature }) }
-  },
   get_tag({ tag_name, user_public_key }) {
     const url = `${API_URL}/tags/${tag_name}?user_public_key=${user_public_key}`
     return { url }
@@ -52,13 +48,13 @@ export const api = {
     const url = `${API_URL}/users/${user_public_key}/databases/${table_name}/views/${view_id}`
     return { url, method: 'DELETE' }
   },
-  get_user_tasks({ user_public_key }) {
-    const url = `${API_URL}/users/${user_public_key}/tasks`
+  get_tasks(params = {}) {
+    const url = `${API_URL}/tasks`
     return { url }
   },
-  get_task({ task_id, user_public_key }) {
-    const url = `${API_URL}/users/${user_public_key}/tasks/${task_id}`
-    return { url }
+  get_tasks_table(params) {
+    const url = `${API_URL}/tasks/table`
+    return { url, ...POST(params) }
   },
 
   get_threads({ user_public_key, thread_state, limit, offset }) {

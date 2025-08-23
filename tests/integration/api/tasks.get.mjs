@@ -13,7 +13,7 @@ import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 chai.should()
 chai.use(chaiHttp)
 
-describe('API /:user_public_key/tasks GET', () => {
+describe('API /tasks GET', () => {
   let user
   // let task_entity_id
   let task_base_uri
@@ -49,7 +49,8 @@ describe('API /:user_public_key/tasks GET', () => {
     it('should get all tasks for a user', async () => {
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_public_key}/tasks`)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${user.jwt_token}`)
 
       res.should.have.status(200)
       res.body.should.be.an('array')
@@ -80,7 +81,8 @@ describe('API /:user_public_key/tasks GET', () => {
 
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_public_key}/tasks`)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({
           status: 'Waiting'
         })
@@ -100,7 +102,8 @@ describe('API /:user_public_key/tasks GET', () => {
     it('should get a specific task by base_uri', async () => {
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_public_key}/tasks`)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: task_base_uri })
 
       res.should.have.status(200)
@@ -123,7 +126,8 @@ describe('API /:user_public_key/tasks GET', () => {
       const non_existent_base_uri = 'user:task/non-existent-task.md'
       const res = await chai
         .request(server)
-        .get(`/api/users/${user.user_public_key}/tasks`)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: non_existent_base_uri })
 
       res.should.have.status(404)

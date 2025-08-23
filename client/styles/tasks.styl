@@ -1,0 +1,67 @@
+// Shared task styles and tokens
+
+// color maps to align with task constants usage
+$task_status_colors = {
+  completed: #4caf50,
+  in_progress: #2196f3,
+  started: #2196f3,
+  blocked: #f44336,
+  cancelled: #757575,
+  planned: #ff9800,
+  paused: #ffc107,
+  waiting: #9c27b0,
+  no_status: #9e9e9e
+}
+
+$task_priority_colors = {
+  critical: #d32f2f,
+  high: #f57c00,
+  medium: #fbc02d,
+  low: #689f38,
+  none: #9e9e9e
+}
+
+// Utility mixins for applying colors via data attributes
+.task-status
+  font-size 12px
+  font-weight 500
+  text-transform capitalize
+
+  &[data-status="completed"]
+    color $task_status_colors.completed
+  &[data-status="in_progress"]
+    color $task_status_colors.in_progress
+  &[data-status="started"]
+    color $task_status_colors.started
+  &[data-status="blocked"]
+    color $task_status_colors.blocked
+  &[data-status="cancelled"]
+    color $task_status_colors.cancelled
+  &[data-status="planned"]
+    color $task_status_colors.planned
+  &[data-status="paused"]
+    color $task_status_colors.paused
+  &[data-status="waiting"]
+    color $task_status_colors.waiting
+  &[data-status="no_status"],
+  &:not([data-status])
+    color $task_status_colors.no_status
+
+.task-priority
+  font-size 12px
+  font-weight 500
+  text-transform capitalize
+
+  &[data-priority="critical"]
+    color $task_priority_colors.critical
+  &[data-priority="high"]
+    color $task_priority_colors.high
+  &[data-priority="medium"]
+    color $task_priority_colors.medium
+  &[data-priority="low"]
+    color $task_priority_colors.low
+  &[data-priority="none"],
+  &:not([data-priority])
+    color $task_priority_colors.none
+
+

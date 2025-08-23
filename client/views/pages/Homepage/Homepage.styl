@@ -1,3 +1,6 @@
+$homepage_tasks_grid_template = 2fr 80px 80px 70px
+$homepage_tasks_grid_template_mobile = 1fr
+
 .threads-container
     padding 18px
     border 1px solid $color_border
@@ -8,3 +11,105 @@
 
     &.loading-home-threads
         max-width 1100px
+
+.tasks-container
+  max-width 1100px
+  margin 0 auto
+  padding 18px
+
+  &.loading-home-tasks
+    text-align center
+    padding 40px 18px
+    color #666
+
+.tasks-table
+  width 100%
+  overflow hidden
+  border 1px solid $color_border
+
+  .tasks-table-header
+    display grid
+    grid-template-columns $homepage_tasks_grid_template
+    gap 16px
+    padding 8px 20px
+    border-bottom 1px solid #e9ecef
+    font-weight 800
+    color #495057
+    font-size 11px
+    text-transform uppercase
+    letter-spacing 1px
+
+  .tasks-table-body
+    .task-row
+      display grid
+      grid-template-columns $homepage_tasks_grid_template
+      gap 16px
+      padding 8px 20px
+      border-bottom 1px solid #f1f3f4
+      align-items center
+      transition background-color 0.2s ease
+
+      &:hover
+        background-color #f8f9fa
+
+      &:last-child
+        border-bottom none
+
+      .task-title
+        font-weight 500
+        color #212529
+        font-size 14px
+        line-height 1.4
+
+      .task-finish-by
+        font-size 12px
+        color #6c757d
+        font-family monospace
+
+.all-tasks-link
+  display inline-block
+  color #007bff
+  text-decoration none
+  font-size 14px
+  font-weight 500
+  padding 8px 0
+  transition color 0.2s ease
+
+  &:hover
+    color #0056b3
+    text-decoration underline
+
+.no-ongoing-tasks
+  text-align center
+  padding 40px 18px
+  color #6c757d
+  font-size 16px
+  margin-bottom 20px
+
+// Responsive design for smaller screens
+@media (max-width 768px)
+  .tasks-table
+    .tasks-table-header,
+    .tasks-table-body .task-row
+      grid-template-columns $homepage_tasks_grid_template_mobile
+      gap 8px
+      padding 12px 16px
+
+    .tasks-table-header
+      display none
+
+    .task-row
+      border 1px solid #e9ecef
+      border-radius 6px
+      margin-bottom 12px
+      padding 16px
+
+      .task-title
+        font-size 16px
+        font-weight 600
+        margin-bottom 8px
+
+      .task-status,
+      .task-priority,
+      .task-finish-by
+        font-size 11px

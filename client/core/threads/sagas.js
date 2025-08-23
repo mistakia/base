@@ -1,19 +1,12 @@
-import {
-  takeLatest,
-  fork,
-  call,
-  select,
-  put,
-  debounce
-} from 'redux-saga/effects'
+import { takeLatest, fork, call, select, debounce } from 'redux-saga/effects'
 
 import {
   get_threads,
   get_thread,
   get_models,
-  load_threads_table
+  get_threads_table
 } from '@core/api/sagas'
-import { threads_action_types, threads_actions } from './actions'
+import { threads_action_types } from './actions'
 import { get_threads_state } from './selectors'
 
 function* ensure_models_data_loaded() {
@@ -34,41 +27,33 @@ export function* load_thread({ payload }) {
   yield call(ensure_models_data_loaded)
 }
 
-// Table state management sagas
-
-export function* update_threads_table_state({ payload }) {
-  // Update the table state in Redux
-  yield put(threads_actions.update_threads_table_state(payload.table_state))
-
-  // Debounced fetch will be triggered by watcher
-}
+// Table view management sagas
 
 export function* load_threads_table_data({ payload }) {
   try {
-    const { table_state, user_public_key, is_append = false } = payload
+    const { view_id = 'default', is_append = false } = payload
 
-    // If no table_state provided, use current state from Redux
-    let final_table_state = table_state
-    if (!final_table_state) {
-      const threads_state = yield select(get_threads_state)
-      final_table_state = threads_state.get('table_state')
-      final_table_state = final_table_state?.toJS
-        ? final_table_state.toJS()
-        : final_table_state
+    // Use current table state from the specified view
+    const threads_state = yield select(get_threads_state)
+    const selected_view = threads_state.getIn(['thread_table_views', view_id])
+    let table_state = selected_view.get('thread_table_state')
+    table_state = table_state?.toJS ? table_state.toJS() : table_state
+
+    // For append requests, adjust offset based on current rows fetched
+    if (is_append) {
+      const thread_total_rows_fetched = selected_view.get(
+        'thread_total_rows_fetched'
+      )
+      table_state = {
+        ...table_state,
+        offset: thread_total_rows_fetched
+      }
     }
 
-    // Ensure table_state has limit and offset, with defaults
-    if (!final_table_state.limit) {
-      final_table_state = { ...final_table_state, limit: 1000 }
-    }
-    if (!final_table_state.offset) {
-      final_table_state = { ...final_table_state, offset: 0 }
-    }
-
-    yield call(load_threads_table, {
-      table_state: final_table_state,
-      user_public_key,
-      is_append
+    yield call(get_threads_table, {
+      table_state,
+      is_append,
+      view_id
     })
 
     // Ensure models data is loaded for cost calculations
@@ -78,24 +63,38 @@ export function* load_threads_table_data({ payload }) {
   }
 }
 
-export function* debounced_table_state_fetch() {
-  // Get current table state and fetch data
-  const threads_state = yield select(get_threads_state)
-  const table_state = threads_state.get('table_state')
-  let serialized_state = table_state?.toJS ? table_state.toJS() : table_state
+export function* debounced_table_state_fetch({ payload }) {
+  try {
+    // Get the view from payload or use selected view
+    const threads_state = yield select(get_threads_state)
+    const { view } = payload
+    const view_id =
+      view?.view_id ||
+      threads_state.get('selected_thread_table_view_id') ||
+      'default'
+    const selected_view = threads_state.getIn(['thread_table_views', view_id])
 
-  // Ensure table_state has limit and offset, with defaults
-  if (!serialized_state.limit) {
-    serialized_state = { ...serialized_state, limit: 1000 }
-  }
-  if (!serialized_state.offset) {
-    serialized_state = { ...serialized_state, offset: 0 }
-  }
+    // Use table_state from the view object if provided, otherwise from selected_view
+    const table_state =
+      view?.table_state || selected_view.get('thread_table_state')
+    let serialized_state = table_state?.toJS ? table_state.toJS() : table_state
 
-  yield call(load_threads_table, {
-    table_state: serialized_state,
-    is_append: false
-  })
+    // Ensure table_state has limit and offset, with defaults
+    if (!serialized_state.limit) {
+      serialized_state = { ...serialized_state, limit: 1000 }
+    }
+    if (!serialized_state.offset) {
+      serialized_state = { ...serialized_state, offset: 0 }
+    }
+
+    yield call(get_threads_table, {
+      table_state: serialized_state,
+      is_append: false,
+      view_id
+    })
+  } catch (error) {
+    console.error('Error in debounced table state fetch:', error)
+  }
 }
 
 //= ====================================
@@ -110,12 +109,12 @@ export function* watch_load_thread() {
   yield takeLatest(threads_action_types.LOAD_THREAD, load_thread)
 }
 
-// Table state management watchers
-export function* watch_update_threads_table_state() {
-  // Debounce table state changes by 300ms to prevent excessive server calls
+// Table view management watchers
+export function* watch_update_thread_table_view() {
+  // Debounce table view changes by 300ms to prevent excessive server calls
   yield debounce(
     300,
-    threads_action_types.UPDATE_THREADS_TABLE_STATE,
+    threads_action_types.UPDATE_THREAD_TABLE_VIEW,
     debounced_table_state_fetch
   )
 }
@@ -134,6 +133,6 @@ export function* watch_load_threads_table() {
 export const threads_sagas = [
   fork(watch_load_threads),
   fork(watch_load_thread),
-  fork(watch_update_threads_table_state),
+  fork(watch_update_thread_table_view),
   fork(watch_load_threads_table)
 ]

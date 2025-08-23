@@ -4,14 +4,77 @@ import {
   list_tasks_from_filesystem,
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
+import get_tasks_table_view_results from '#libs-server/tasks/get-tasks-table-view-results.mjs'
 
 const router = express.Router({ mergeParams: true })
 
-// Get all tasks with optional filtering OR get a specific task by base_uri
+// POST /api/tasks/table - Server-side table processing
+router.post('/table', async (req, res) => {
+  const { log } = req.app.locals
+
+  try {
+    // Extract table_state from request body
+    const { table_state } = req.body
+
+    // Validate table_state structure
+    if (table_state && typeof table_state !== 'object') {
+      return res.status(400).json({
+        error: 'Invalid table_state',
+        message: 'table_state must be an object matching react-table schema'
+      })
+    }
+
+    // Use requesting user's permissions for filtering
+    const user_public_key =
+      req.user?.user_public_key ||
+      req.permission_context?.user_public_key ||
+      null
+
+    if (!user_public_key) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Valid JWT token required to access tasks'
+      })
+    }
+
+    // Get table results
+    const results = await get_tasks_table_view_results({
+      user_public_key,
+      table_state: table_state || {}
+    })
+
+    log(
+      `Tasks table request processed: ${results.rows.length}/${results.total_row_count} tasks`
+    )
+
+    res.status(200).json(results)
+  } catch (error) {
+    log('Error processing tasks table request:', error)
+    res.status(500).json({
+      error: 'Failed to process tasks table request',
+      message: error.message
+    })
+  }
+})
+
+// GET /api/tasks - Get all tasks with optional filtering OR get a specific task by base_uri
 router.get('/', async (req, res) => {
   const { log } = req.app.locals
-  const { user_public_key } = req.params
+
   try {
+    // Use requesting user's permissions for filtering
+    const user_public_key =
+      req.user?.user_public_key ||
+      req.permission_context?.user_public_key ||
+      null
+
+    if (!user_public_key) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Valid JWT token required to access tasks'
+      })
+    }
+
     const {
       base_uri,
       status,
@@ -28,10 +91,6 @@ router.get('/', async (req, res) => {
       max_planned_finish,
       archived
     } = req.query
-
-    if (!user_public_key) {
-      return res.status(400).send({ error: 'missing user_public_key' })
-    }
 
     // If base_uri is provided, get a specific task
     if (base_uri) {
