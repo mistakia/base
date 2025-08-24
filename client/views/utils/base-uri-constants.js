@@ -4,6 +4,12 @@ export const BASE_URI_PATHS = {
   'sys:': '/repository/active/base'
 }
 
+// Base filesystem directories (should match config/config.json)
+export const BASE_DIRECTORIES = {
+  user: '/Users/trashman/user-base',
+  system: '/Users/trashman/user-base/repository/active/base'
+}
+
 // Regex patterns for detecting base URI references
 export const BASE_URI_PATTERNS = {
   // Matches [[user:path/to/file.md]] or [[sys:path/to/file.md]]
@@ -43,6 +49,42 @@ export const convert_base_uri_to_path = (base_uri) => {
 // Get current window path for relative link resolution
 export const get_current_window_path = () => {
   return window.location.pathname
+}
+
+// Normalize URL path by removing leading slash
+export const normalize_url_path = (url_path) => {
+  if (!url_path) return ''
+  return url_path.startsWith('/') ? url_path.slice(1) : url_path
+}
+
+// Convert URL path to filesystem path
+export const convert_url_path_to_filesystem_path = (url_path) => {
+  if (!url_path) {
+    throw new Error('URL path is required')
+  }
+
+  const normalized_path = normalize_url_path(url_path)
+
+  // Handle thread paths specially
+  if (normalized_path.startsWith('thread/')) {
+    const thread_parts = normalized_path.split('/')
+    const thread_id = thread_parts[1]
+
+    if (!thread_id) {
+      throw new Error('Invalid thread path: missing thread ID')
+    }
+
+    // Always point to metadata.json for threads
+    return `${BASE_DIRECTORIES.user}/thread/${thread_id}/metadata.json`
+  }
+
+  // Check if path maps to system directory
+  if (normalized_path.startsWith(BASE_URI_PATHS['sys:'].slice(1))) {
+    return `${BASE_DIRECTORIES.system}/${normalized_path.substring(BASE_URI_PATHS['sys:'].length)}`
+  }
+
+  // Default to user directory for all other paths
+  return `${BASE_DIRECTORIES.user}/${normalized_path}`
 }
 
 // Resolve relative path against current window path

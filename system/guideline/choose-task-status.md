@@ -20,7 +20,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 ## Guidelines
 
-- The status of a task MUST be one of the following: 'No status', 'Waiting', 'Paused', 'Planned', 'Started', 'In Progress', 'Completed', 'Cancelled', 'Blocked'.
+- The status of a task MUST be one of the following: 'No status', 'Waiting', 'Paused', 'Planned', 'Started', 'In Progress', 'Completed', 'Abandoned', 'Blocked'.
 
 ### Status Descriptions
 
@@ -31,5 +31,5 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 - **Started**: Begun but hasn't been worked on in recent days
 - **In Progress**: Actively worked on each day
 - **Completed**: Finished successfully
-- **Cancelled**: Decided not to complete
+- **Abandoned**: Decided not to complete, with reason tracked
 - **Blocked**: Blocked by internal dependencies under our control

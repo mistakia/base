@@ -6,7 +6,7 @@ export const TASK_STATUS = {
   STARTED: 'Started',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  ABANDONED: 'Abandoned',
   BLOCKED: 'Blocked'
 }
 
@@ -16,4 +16,12 @@ export const TASK_PRIORITY = {
   MEDIUM: 'Medium',
   HIGH: 'High',
   CRITICAL: 'Critical'
+}
+
+export const TASK_PRIORITY_ORDER = {
+  [TASK_PRIORITY.NONE]: 0,
+  [TASK_PRIORITY.LOW]: 1,
+  [TASK_PRIORITY.MEDIUM]: 2,
+  [TASK_PRIORITY.HIGH]: 3,
+  [TASK_PRIORITY.CRITICAL]: 4
 }

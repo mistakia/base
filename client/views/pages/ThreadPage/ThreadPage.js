@@ -6,6 +6,7 @@ import { useParams } from 'react-router-dom'
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
+import CursorButton from '@components/CursorButton/index.js'
 
 const ThreadPage = ({
   thread_data,
@@ -16,6 +17,7 @@ const ThreadPage = ({
   clear_selected_thread
 }) => {
   const { id } = useParams()
+  const thread_path = id ? `/thread/${id}/metadata.json` : null
 
   useEffect(() => {
     if (id) {
@@ -62,8 +64,17 @@ const ThreadPage = ({
 
   return (
     <PageLayout>
-      <ThreadTimelineView />
-      <FileSystemBrowser />
+      <div style={{ position: 'relative' }}>
+        {thread_data && (
+          <CursorButton
+            path={thread_path}
+            title='Open thread metadata in Cursor'
+            style={{ top: '8px', right: '8px' }}
+          />
+        )}
+        <ThreadTimelineView />
+        <FileSystemBrowser />
+      </div>
     </PageLayout>
   )
 }

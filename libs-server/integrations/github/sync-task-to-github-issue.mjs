@@ -326,7 +326,10 @@ function format_github_issue_update_data({ updates }) {
   if ('status' in updates) {
     // Handle status updates based on the 'to' value
     github_update_data.state =
-      updates.status.to === TASK_STATUS.COMPLETED ? 'closed' : 'open'
+      updates.status.to === TASK_STATUS.COMPLETED ||
+      updates.status.to === TASK_STATUS.ABANDONED
+        ? 'closed'
+        : 'open'
   }
 
   // Handle tag updates if present
@@ -384,8 +387,8 @@ function map_task_status_to_github_project_status(task_status) {
       return 'Waiting'
     case TASK_STATUS.PAUSED:
       return 'Paused'
-    case TASK_STATUS.CANCELLED:
-      return 'Cancelled'
+    case TASK_STATUS.ABANDONED:
+      return 'Abandoned'
     case TASK_STATUS.NO_STATUS:
     default:
       return 'Planned'

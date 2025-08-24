@@ -6,7 +6,7 @@ $task_status_colors = {
   in_progress: #2196f3,
   started: #2196f3,
   blocked: #f44336,
-  cancelled: #757575,
+  abandoned: #757575,
   planned: #ff9800,
   paused: #ffc107,
   waiting: #9c27b0,
@@ -35,8 +35,8 @@ $task_priority_colors = {
     color $task_status_colors.started
   &[data-status="blocked"]
     color $task_status_colors.blocked
-  &[data-status="cancelled"]
-    color $task_status_colors.cancelled
+  &[data-status="abandoned"]
+    color $task_status_colors.abandoned
   &[data-status="planned"]
     color $task_status_colors.planned
   &[data-status="paused"]

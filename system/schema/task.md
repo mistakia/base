@@ -16,7 +16,7 @@ properties:
       - Started
       - In Progress
       - Completed
-      - Cancelled
+      - Abandoned
       - Blocked
     required: false
     description: Current status of the task
@@ -82,6 +82,10 @@ properties:
       - Critical
     required: false
     description: Priority level of the task
+  - name: abandoned_reason
+    type: string
+    required: false
+    description: Reason why the task was abandoned
 type_name: task
 updated_at: '2025-08-16T17:56:09.134Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

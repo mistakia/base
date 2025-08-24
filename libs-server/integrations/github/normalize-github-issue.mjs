@@ -39,7 +39,7 @@ export function format_status(status_string) {
       return TASK_STATUS.COMPLETED
     case 'cancelled':
     case 'canceled':
-      return TASK_STATUS.CANCELLED
+      return TASK_STATUS.ABANDONED
     case 'planned':
     case 'todo':
     case 'to do':
@@ -200,7 +200,7 @@ export function map_status({ data, direction = 'to_internal' }) {
     // Map to GitHub
     if (
       data.status === TASK_STATUS.COMPLETED ||
-      data.status === TASK_STATUS.CANCELLED
+      data.status === TASK_STATUS.ABANDONED
     ) {
       return 'closed'
     } else {

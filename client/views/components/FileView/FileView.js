@@ -12,6 +12,7 @@ import EntityRenderer from '@components/EntityRenderer/index.js'
 import CodeViewer from '@components/primitives/CodeViewer.js'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import { RedactedContent } from '@components/primitives/styled'
+import CursorButton from '@components/CursorButton/index.js'
 
 const FileView = ({ path }) => {
   const dispatch = useDispatch()
@@ -133,7 +134,12 @@ const FileView = ({ path }) => {
     )
   }
 
-  return <Box sx={{ height: '100%' }}>{render_content()}</Box>
+  return (
+    <Box sx={{ height: '100%', position: 'relative' }}>
+      <CursorButton path={path} />
+      {render_content()}
+    </Box>
+  )
 }
 
 FileView.propTypes = {
