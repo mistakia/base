@@ -1,6 +1,5 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box } from '@mui/material'
 
 import DirectoryView from '@components/DirectoryView/index.js'
 import FileView from '@components/FileView/index.js'
@@ -19,27 +18,29 @@ const FileSystemBrowser = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <div style={{ padding: 24 }}>
         <span>Loading...</span>
-      </Box>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <div style={{ padding: 24 }}>
         <span style={{ color: '#f44336' }}>Error: {error}</span>
-      </Box>
+      </div>
     )
   }
 
   return (
-    <Box
-      sx={{
+    <div
+      className='filesystem-browser-container'
+      style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         maxWidth: '1100px',
+        width: '100%',
         margin: '0 auto'
       }}>
       <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
@@ -48,7 +49,7 @@ const FileSystemBrowser = () => {
       ) : (
         <FileView path={current_path} />
       )}
-    </Box>
+    </div>
   )
 }
 

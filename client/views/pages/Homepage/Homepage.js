@@ -5,6 +5,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes'
 import PageLayout from '@views/layout/PageLayout.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
+import TwoColumnLayout from '@components/primitives/TwoColumnLayout'
 import HomePageThreads from './HomePageThreads.js'
 import HomePageTasks from './HomePageTasks.js'
 
@@ -24,30 +25,36 @@ const Homepage = ({
 }) => {
   return (
     <PageLayout>
-      <DirectoryMarkdown
-        directory_markdown={directory_markdown}
-        is_loading_directory_markdown={is_loading_directory_markdown}
-        directory_markdown_error={directory_markdown_error}
-      />
-
-      <div className='homepage-section'>
-        <HomePageThreads
-          threads={threads}
-          is_loading_threads={is_loading_threads}
-          load_threads={load_threads}
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+        <TwoColumnLayout
+          left_content={
+            <DirectoryMarkdown
+              directory_markdown={directory_markdown}
+              is_loading_directory_markdown={is_loading_directory_markdown}
+              directory_markdown_error={directory_markdown_error}
+            />
+          }
+          right_content={
+            <div className='homepage-right-column'>
+              <HomePageThreads
+                threads={threads}
+                is_loading_threads={is_loading_threads}
+                load_threads={load_threads}
+              />
+              <HomePageTasks
+                tasks={tasks}
+                is_loading_tasks={is_loading_tasks}
+                load_tasks={load_tasks}
+              />
+              <FileSystemBrowser />
+            </div>
+          }
+          left_column_width={6}
+          right_column_width={6}
+          container_padding={0}
+          sticky_left={true}
+          sticky_right={false}
         />
-      </div>
-
-      <div className='homepage-section'>
-        <HomePageTasks
-          tasks={tasks}
-          is_loading_tasks={is_loading_tasks}
-          load_tasks={load_tasks}
-        />
-      </div>
-
-      <div className='homepage-section'>
-        <FileSystemBrowser />
       </div>
     </PageLayout>
   )

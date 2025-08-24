@@ -1,22 +1,19 @@
 $homepage_tasks_grid_template = 2fr 80px 80px 70px
 $homepage_tasks_grid_template_mobile = 1fr
 
+.homepage-right-column
+  display grid
+  grid-template-columns 1fr
+  gap 16px
+  width 100%
+
 .threads-container
     padding 18px
     border 1px solid $color_border
     background rgba(0,0,0,0.02)
     border-radius 8px
-    max-width 1200px
-    margin 0 auto
-
-    &.loading-home-threads
-        max-width 1100px
 
 .tasks-container
-  max-width 1100px
-  margin 0 auto
-  padding 18px
-
   &.loading-home-tasks
     text-align center
     padding 40px 18px

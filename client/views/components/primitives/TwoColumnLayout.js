@@ -8,6 +8,7 @@ const TwoColumnLayout = ({
   left_column_width = 8,
   right_column_width = 4,
   container_padding = 3,
+  sticky_left = false,
   sticky_right = true
 }) => {
   const left_flex_ratio = left_column_width
@@ -32,7 +33,10 @@ const TwoColumnLayout = ({
   return (
     <Box sx={container_style}>
       <div className='two-column-container'>
-        <div className='two-column-left'>{left_content}</div>
+        <div
+          className={`two-column-left ${sticky_left ? 'two-column-left-sticky' : ''}`}>
+          {left_content}
+        </div>
 
         <div
           className={`two-column-right ${sticky_right ? 'two-column-right-sticky' : ''}`}>
@@ -49,6 +53,7 @@ TwoColumnLayout.propTypes = {
   left_column_width: PropTypes.number,
   right_column_width: PropTypes.number,
   container_padding: PropTypes.number,
+  sticky_left: PropTypes.bool,
   sticky_right: PropTypes.bool
 }
 
