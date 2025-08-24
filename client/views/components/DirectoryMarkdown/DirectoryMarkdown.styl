@@ -1,7 +1,16 @@
-// DirectoryMarkdown component styles - moved from DirectoryPage
+// Directory markdown viewer container
 .directory-markdown-container
-  margin-bottom: 20px
+  max-width 600px
+  margin 0 auto
+  margin-bottom: $space_xl
+  padding: $space_lg
+  background-color: rgba($color_surface, 0.5)
   
+  // Responsive adjustments
+  @media (max-width: 768px)
+    margin-bottom: $space_lg
+    padding: $space_base
+
 .directory-markdown-loading,
 .directory-markdown-error
   padding: 10px
