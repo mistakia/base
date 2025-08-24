@@ -3,7 +3,10 @@ import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import { Link } from 'react-router-dom'
 import Task from '@components/Task'
-import { TASK_STATUS } from '#libs-shared/task-constants.mjs'
+import {
+  TASK_STATUS,
+  TASK_PRIORITY_ORDER
+} from '#libs-shared/task-constants.mjs'
 
 const HomePageTasks = ({ tasks, is_loading_tasks, load_tasks }) => {
   useEffect(() => {
@@ -18,11 +21,25 @@ const HomePageTasks = ({ tasks, is_loading_tasks, load_tasks }) => {
     )
   }
 
-  const ongoing_tasks = tasks.filter(
-    (task) =>
-      task.entity_properties.status === TASK_STATUS.IN_PROGRESS ||
-      task.entity_properties.status === TASK_STATUS.STARTED
-  )
+  const ongoing_tasks = tasks
+    .filter(
+      (task) =>
+        task.entity_properties.status === TASK_STATUS.IN_PROGRESS ||
+        task.entity_properties.status === TASK_STATUS.STARTED
+    )
+    .sort((a, b) => {
+      // First sort by priority (higher priority first)
+      const priorityA = TASK_PRIORITY_ORDER[a.entity_properties.priority] || 0
+      const priorityB = TASK_PRIORITY_ORDER[b.entity_properties.priority] || 0
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA
+      }
+
+      // Then sort by updated_at (most recent first)
+      const updatedA = new Date(a.updated_at || a.created_at || 0)
+      const updatedB = new Date(b.updated_at || b.created_at || 0)
+      return updatedB - updatedA
+    })
 
   if (ongoing_tasks.size === 0) {
     return null
