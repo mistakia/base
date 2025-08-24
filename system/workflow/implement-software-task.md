@@ -27,6 +27,7 @@ relations:
   - 'implements [[sys:system/guideline/implement-software-task.md]]'
   - 'uses [[sys:system/guideline/write-workflow.md]]'
   - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
+  - 'follows [[sys:system/guideline/review-task.md]]'
   - 'uses [[user:guideline/write-software.md]]'
   - 'uses [[sys:system/guideline/write-javascript.md]]'
 updated_at: '2025-07-26T00:00:00.000Z'
@@ -39,7 +40,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 <instructions>
 
-Before starting, read [[sys:system/guideline/implement-software-task.md]].
+Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[sys:system/guideline/review-task.md]].
 
 ## Setup Phase
 
