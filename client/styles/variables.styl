@@ -24,9 +24,6 @@ $space_3xl = 64px
 $radius_sm = 2px
 $radius_base = 4px
 
-// Shadow Scale (Subtle)
-$shadow_sm = 0 4px 12px rgba(0, 0, 0, 0.05)
-
 // =====================================================
 // COLOR SYSTEM (Single Source of Truth)
 // =====================================================
@@ -89,6 +86,15 @@ $hover_lift = translateY(-1px)
 // RGB values for alpha operations
 $primary_color_rgb = 0, 123, 255
 
+// Shadow Scale - defined after RGB values
+$shadow_xs = 0 2px 8px rgba(0, 0, 0, 0.08)
+$shadow_sm = 0 4px 12px rgba(0, 0, 0, 0.05)
+$shadow_md = 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)
+$shadow_lg = 0 2px 8px rgba(0, 0, 0, 0.3)
+$shadow_focus = 0 0 0 2px rgba($primary_color_rgb, 0.2)
+$shadow_focus_subtle = 0 0 0 1px rgba($primary_color_rgb, 0.3)
+$shadow_none = none
+
 // =====================================================
 // CSS CUSTOM PROPERTIES (for JS access)
 // =====================================================
@@ -138,6 +144,15 @@ $primary_color_rgb = 0, 123, 255
   // Border radius
   --radius-sm: $radius_sm
   --radius-base: $radius_base
+  
+  // Shadows
+  --shadow-xs: $shadow_xs
+  --shadow-sm: $shadow_sm
+  --shadow-md: $shadow_md
+  --shadow-lg: $shadow_lg
+  --shadow-focus: $shadow_focus
+  --shadow-focus-subtle: $shadow_focus_subtle
+  --shadow-none: $shadow_none
   
   // Typography
   --font-family-mono: $font_family_mono

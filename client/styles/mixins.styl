@@ -65,7 +65,7 @@ form-control()
   &:focus
     outline none
     border-color $color_primary
-    box-shadow 0 0 0 2px rgba($primary_color_rgb, 0.2)
+    box-shadow $shadow_focus
     
   &:disabled
     background $color_border_light
@@ -97,7 +97,7 @@ button-base()
     opacity 0.6
     cursor not-allowed
     transform none
-    box-shadow none
+    box-shadow $shadow_none
 
 // Primary Button
 button-primary()

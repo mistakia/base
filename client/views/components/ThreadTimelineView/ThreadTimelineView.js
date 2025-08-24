@@ -22,7 +22,9 @@ const ThreadTimelineView = () => {
   const thread_error = threads_state.get('thread_error')
 
   // Extract thread ID from path like /thread/abc123
-  const thread_id = current_path.startsWith('/thread/') ? current_path.split('/')[2] : null
+  const thread_id = current_path.startsWith('/thread/')
+    ? current_path.split('/')[2]
+    : null
   const thread_path = thread_id ? `/thread/${thread_id}/metadata.json` : null
 
   const handle_navigate = (path) => {
@@ -67,7 +69,7 @@ const ThreadTimelineView = () => {
       {selected_thread_data && (
         <FileActions
           path={thread_path}
-          title="Open thread metadata in Cursor"
+          title='Open thread metadata in Cursor'
         />
       )}
     </Box>
