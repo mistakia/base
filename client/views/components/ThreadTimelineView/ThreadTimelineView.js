@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { get_threads_state } from '@core/threads/selectors'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
+import FileActions from '@components/FileActions/index.js'
 
 import ThreadHeader from './ThreadHeader'
 import TimelineList from './TimelineList'
@@ -19,6 +20,10 @@ const ThreadTimelineView = () => {
   const selected_thread_data = threads_state.get('selected_thread_data')
   const is_loading_thread = threads_state.get('is_loading_thread')
   const thread_error = threads_state.get('thread_error')
+
+  // Extract thread ID from path like /thread/abc123
+  const thread_id = current_path.startsWith('/thread/') ? current_path.split('/')[2] : null
+  const thread_path = thread_id ? `/thread/${thread_id}/metadata.json` : null
 
   const handle_navigate = (path) => {
     navigate(path || '/')
@@ -54,16 +59,26 @@ const ThreadTimelineView = () => {
     )
   }
 
-  const leftContent = <TimelineList timeline={timeline_to_display} />
+  const left_content = <TimelineList timeline={timeline_to_display} />
 
-  const rightContent = <ThreadHeader metadata={metadata} />
+  const right_content = (
+    <Box>
+      <ThreadHeader metadata={metadata} />
+      {selected_thread_data && (
+        <FileActions
+          path={thread_path}
+          title="Open thread metadata in Cursor"
+        />
+      )}
+    </Box>
+  )
 
   return (
     <Box sx={{ maxWidth: '1100px', margin: '0 auto' }}>
       <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       <TwoColumnLayout
-        left_content={leftContent}
-        right_content={rightContent}
+        left_content={left_content}
+        right_content={right_content}
         left_column_width={8}
         right_column_width={4}
         container_padding={0}

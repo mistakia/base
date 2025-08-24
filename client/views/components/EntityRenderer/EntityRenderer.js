@@ -5,7 +5,7 @@ import { Box } from '@mui/material'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import EntityFrontmatter from './EntityFrontmatter/index.js'
-import CursorButton from '@components/CursorButton/index.js'
+import FileActions from '@components/FileActions/index.js'
 
 const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
   const left_content = markdown ? (
@@ -15,42 +15,36 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
   ) : null
 
   const right_content = frontmatter ? (
-    <EntityFrontmatter
-      frontmatter={frontmatter}
-      is_sticky={Boolean(markdown)}
-    />
+    <Box>
+      <EntityFrontmatter
+        frontmatter={frontmatter}
+        is_sticky={Boolean(markdown)}
+      />
+      <FileActions path={path} />
+    </Box>
   ) : null
 
   // If there's no markdown content, center the frontmatter
   if (!markdown && frontmatter) {
     return (
-      <Box
-        sx={{
-          p: 3,
-          display: 'flex',
-          justifyContent: 'center',
-          position: 'relative'
-        }}>
-        <CursorButton path={path} />
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
         <Box sx={{ maxWidth: '600px', width: '100%' }}>
           <EntityFrontmatter frontmatter={frontmatter} is_sticky={false} />
+          <FileActions path={path} />
         </Box>
       </Box>
     )
   }
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      <CursorButton path={path} />
-      <TwoColumnLayout
-        left_content={left_content}
-        right_content={right_content}
-        left_column_width={8}
-        right_column_width={4}
-        container_padding={3}
-        sticky_right={true}
-      />
-    </Box>
+    <TwoColumnLayout
+      left_content={left_content}
+      right_content={right_content}
+      left_column_width={8}
+      right_column_width={4}
+      container_padding={3}
+      sticky_right={true}
+    />
   )
 }
 
