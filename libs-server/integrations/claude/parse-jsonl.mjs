@@ -7,6 +7,7 @@ import debug from 'debug'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 
 const log = debug('integrations:claude:parse-jsonl')
+const log_debug = debug('integrations:claude:parse-jsonl:debug')
 
 export const find_claude_project_files = async ({
   claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
@@ -24,7 +25,7 @@ export const find_claude_project_files = async ({
       absolute_paths: true
     })
 
-    log(`Found ${files.length} Claude project files`)
+    log(`Found ${files.length} Claude project files via recursive scan`)
     return files.map((file) => ({
       file_path: file,
       base_name: path.basename(file, '.jsonl')
@@ -37,7 +38,7 @@ export const find_claude_project_files = async ({
 
 export const parse_claude_jsonl_file = async (file_path) => {
   try {
-    log(`Parsing Claude JSONL file: ${file_path}`)
+    log_debug(`Parsing Claude JSONL file: ${file_path}`)
 
     const file_stream = createReadStream(file_path)
     const line_reader = createInterface({
@@ -127,7 +128,15 @@ export const parse_all_claude_files = async ({
   filter_sessions = null
 } = {}) => {
   try {
-    const files = await find_claude_project_files({ claude_projects_directory })
+    const start_time = Date.now()
+    const files = await find_claude_project_files({
+      claude_projects_directory
+    })
+
+    log(
+      `Performance: Found files in ${Date.now() - start_time}ms (recursive scan mode)`
+    )
+
     const all_sessions = []
 
     for (const { file_path } of files) {

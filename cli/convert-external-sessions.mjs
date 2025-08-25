@@ -50,10 +50,302 @@ import {
 
 const log = debug('convert-external-sessions')
 
-// Enable debug logging
-debug.enable(
-  'convert-external-sessions,integrations:claude*,integrations:cursor*,integrations:openai*'
-)
+/**
+ * Setup debug logging based on verbose and debug flags
+ * @param {Object} params
+ * @param {boolean} params.verbose - enable high-level progress logs
+ * @param {boolean} params.debug_flag - enable deep module debug logs
+ */
+function setup_debug_logging({ verbose, debug_flag }) {
+  const verbose_namespaces = [
+    'convert-external-sessions',
+    // high-level provider namespaces
+    'integrations:claude',
+    'integrations:cursor',
+    'integrations:openai',
+    'integrations:thread',
+    'integrations:thread:create-from-session-provider',
+    'integrations:thread:create-from-session'
+  ].join(',')
+
+  // exclude any :debug postfix when in verbose-only mode using debug's negate pattern
+  const verbose_exclude_debug = '-*:debug'
+
+  const debug_namespaces = [
+    // everything under integrations including :debug
+    'integrations:*',
+    // include cli logger
+    'convert-external-sessions'
+  ].join(',')
+
+  if (verbose && debug_flag) {
+    debug.enable(`${verbose_namespaces},${debug_namespaces}`)
+  } else if (verbose) {
+    debug.enable(`${verbose_namespaces},${verbose_exclude_debug}`)
+  } else if (debug_flag) {
+    debug.enable(debug_namespaces)
+  } else {
+    // Disable debug output for quiet mode
+    debug.enabled = () => false
+  }
+}
+
+/**
+ * Output minimal information for quiet mode
+ * @param {Object} result - Import results
+ * @param {Object} argv - Command line arguments
+ */
+function output_quiet(result, argv) {
+  // Show thread IDs for all processed sessions (created, updated, skipped)
+  if (result.results?.created?.length > 0) {
+    result.results.created.forEach((thread) => {
+      console.log(`${thread.thread_id} (created)`)
+    })
+  }
+
+  if (result.results?.updated?.length > 0) {
+    result.results.updated.forEach((thread) => {
+      console.log(`${thread.thread_id} (updated)`)
+    })
+  }
+
+  if (result.results?.skipped?.length > 0) {
+    result.results.skipped.forEach((thread) => {
+      console.log(`${thread.thread_id} (skipped)`)
+    })
+  }
+
+  // Show failures with session IDs
+  if (result.results?.failed?.length > 0) {
+    result.results.failed.forEach((failure) => {
+      const id = failure.session_id || failure.composer_id
+      console.log(`${id} (failed: ${failure.error})`)
+    })
+  }
+}
+
+/**
+ * Format error message with additional context and helpful hints
+ * @param {string} error - Original error message
+ * @param {string} sessionId - Session identifier
+ * @param {string} provider - Provider name (claude, cursor, openai)
+ * @returns {string} Enhanced error message
+ */
+function format_error_message(error, sessionId, provider) {
+  if (
+    error.toLowerCase().includes('not found') ||
+    error.toLowerCase().includes('does not exist')
+  ) {
+    if (provider === 'claude') {
+      return `${error}\n    Hint: Check if file ${sessionId}.jsonl exists in Claude projects directory`
+    } else if (provider === 'cursor') {
+      return `${error}\n    Hint: Verify session exists in Cursor database`
+    } else if (provider === 'openai') {
+      return `${error}\n    Hint: Check OpenAI authentication or conversation access`
+    }
+  }
+
+  if (
+    error.toLowerCase().includes('parse') ||
+    error.toLowerCase().includes('invalid')
+  ) {
+    return `${error}\n    Hint: Run with --verbose for detailed parsing information`
+  }
+
+  if (
+    error.toLowerCase().includes('permission') ||
+    error.toLowerCase().includes('access')
+  ) {
+    return `${error}\n    Hint: Check file permissions or authentication credentials`
+  }
+
+  // Default: suggest verbose mode for other errors
+  return `${error}\n    Hint: Use --verbose flag for more detailed error information`
+}
+
+/**
+ * Output session list with appropriate verbosity
+ * @param {Array} sessions - Array of sessions
+ * @param {Object} argv - Command line arguments
+ */
+function output_session_list(sessions, argv) {
+  if (argv.verbose) {
+    console.log(`\nFound ${sessions.length} ${argv.provider} sessions:\n`)
+
+    sessions.forEach((session, index) => {
+      console.log(
+        `${index + 1}. Session: ${session.session_id || session.composer_id}`
+      )
+
+      if (argv.provider === 'claude') {
+        console.log(`   File: ${session.file_source}`)
+        console.log(`   Entries: ${session.entry_count}`)
+        console.log(
+          `   Duration: ${session.duration_minutes?.toFixed(1) || 'unknown'} minutes`
+        )
+        console.log(`   Working Dir: ${session.working_directory}`)
+        console.log(
+          `   Time: ${session.start_time?.toLocaleString() || 'unknown'} - ${session.end_time?.toLocaleString() || 'unknown'}`
+        )
+
+        if (session.summaries?.length > 0) {
+          console.log('   Summaries:')
+          session.summaries.slice(0, 3).forEach((summary) => {
+            console.log(`     • ${summary}`)
+          })
+          if (session.summaries.length > 3) {
+            console.log(`     ... and ${session.summaries.length - 3} more`)
+          }
+        }
+      } else if (argv.provider === 'cursor') {
+        console.log(`   Messages: ${session.message_count}`)
+        console.log(
+          `   Duration: ${session.duration_minutes?.toFixed(1) || 'unknown'} minutes`
+        )
+        console.log(
+          `   Created: ${session.created_at ? new Date(session.created_at).toLocaleString() : 'unknown'}`
+        )
+        console.log(
+          `   Updated: ${session.last_updated_at ? new Date(session.last_updated_at).toLocaleString() : 'unknown'}`
+        )
+
+        if (session.summary) {
+          console.log(`   Summary: ${session.summary}`)
+        }
+        console.log(`   Code blocks: ${session.has_code_blocks ? 'Yes' : 'No'}`)
+        console.log(`   Model: ${session.model_used}`)
+      } else if (argv.provider === 'openai') {
+        console.log(`   Title: ${session.title}`)
+        console.log(
+          `   Created: ${session.created_at ? new Date(session.created_at).toLocaleString() : 'unknown'}`
+        )
+        console.log(
+          `   Updated: ${session.updated_at ? new Date(session.updated_at).toLocaleString() : 'unknown'}`
+        )
+        console.log(`   Archived: ${session.is_archived ? 'Yes' : 'No'}`)
+        console.log(`   Starred: ${session.is_starred ? 'Yes' : 'No'}`)
+        console.log(`   Memory: ${session.memory_scope || 'none'}`)
+        if (session.gizmo_id) {
+          console.log(`   GPT: ${session.gizmo_id}`)
+        }
+      }
+
+      console.log()
+    })
+  } else {
+    // Quiet mode: show summary count and session IDs only
+    console.log(`${sessions.length}`)
+    sessions.forEach((session) => {
+      console.log(session.session_id || session.composer_id)
+    })
+  }
+}
+
+/**
+ * Output detailed information for verbose mode
+ * @param {Object} result - Import results
+ * @param {Object} argv - Command line arguments
+ */
+function output_verbose(result, argv) {
+  console.log('\n=== Import Results ===')
+
+  if (argv.provider === 'claude') {
+    console.log(`Sessions found: ${result.sessions_found}`)
+    console.log(`Valid sessions: ${result.valid_sessions}`)
+    console.log(`Invalid sessions: ${result.invalid_sessions}`)
+  } else if (argv.provider === 'cursor') {
+    console.log(`Conversations found: ${result.conversations_found}`)
+    console.log(`Valid conversations: ${result.valid_conversations}`)
+    console.log(`Invalid conversations: ${result.invalid_conversations}`)
+  } else if (argv.provider === 'openai') {
+    console.log(`Conversations found: ${result.conversations_found}`)
+    console.log(`Conversations fetched: ${result.conversations_fetched}`)
+    console.log(`Valid sessions: ${result.valid_sessions}`)
+  }
+
+  if (argv.dryRun) {
+    console.log(`Would create threads: ${result.would_create}`)
+  } else {
+    console.log(`Threads created: ${result.threads_created}`)
+    if (result.threads_updated !== undefined) {
+      console.log(`Threads updated: ${result.threads_updated}`)
+    }
+    console.log(`Threads failed: ${result.threads_failed}`)
+    console.log(`Success rate: ${result.success_rate}%`)
+
+    if (result.results?.created?.length > 0) {
+      console.log('\nCreated threads:')
+      result.results.created.slice(0, 5).forEach((thread) => {
+        console.log(
+          `  ${thread.thread_id} (${thread.timeline_entries || 'unknown'} entries)`
+        )
+      })
+      if (result.results.created.length > 5) {
+        console.log(`  ... and ${result.results.created.length - 5} more`)
+      }
+    }
+
+    if (result.results?.updated?.length > 0) {
+      console.log('\nUpdated threads:')
+      result.results.updated.slice(0, 5).forEach((thread) => {
+        console.log(
+          `  ${thread.thread_id} (${thread.timeline_entries || 'unknown'} entries)`
+        )
+      })
+      if (result.results.updated.length > 5) {
+        console.log(`  ... and ${result.results.updated.length - 5} more`)
+      }
+    }
+
+    if (result.results?.failed?.length > 0) {
+      console.log('\nFailed threads:')
+      result.results.failed.forEach((failure) => {
+        const id = failure.session_id || failure.composer_id
+        console.log(
+          `  ${id}: ${format_error_message(failure.error, id, argv.provider)}`
+        )
+      })
+    }
+  }
+
+  // Display unsupported features summary in verbose mode
+  let unsupported
+  if (argv.provider === 'claude') {
+    unsupported = get_claude_unsupported()
+  } else if (argv.provider === 'cursor') {
+    unsupported = get_cursor_unsupported()
+  } else if (argv.provider === 'openai') {
+    unsupported = get_openai_unsupported()
+  }
+
+  if (unsupported && Object.keys(unsupported).length > 0) {
+    // Count total unsupported items
+    const totalUnsupported = Object.values(unsupported).reduce((sum, arr) => {
+      return sum + (Array.isArray(arr) ? arr.length : 0)
+    }, 0)
+
+    if (totalUnsupported === 0) {
+      return // No actual unsupported features found
+    }
+
+    if (argv.verbose) {
+      console.log('\n=== Unsupported Features Found ===')
+      Object.entries(unsupported).forEach(([feature, items]) => {
+        if (Array.isArray(items) && items.length > 0) {
+          console.log(`${feature}: ${items.length} occurrences`)
+          items.forEach((item) => {
+            console.log(`  • ${item}`)
+          })
+        }
+      })
+      console.log('\nNote: Unsupported features are logged but not imported.')
+    } else {
+      console.log(
+        `\nFound ${totalUnsupported} unsupported features. Use --verbose for details.`
+      )
+    }
+  }
+}
 
 /**
  * List available sessions from a provider
@@ -185,11 +477,14 @@ const main = async () => {
               type: 'boolean',
               default: false
             })
+            .option('debug', {
+              describe: 'Enable deep module debug logging',
+              type: 'boolean',
+              default: false
+            })
         },
         async (argv) => {
-          if (argv.verbose) {
-            debug.enabled = () => true
-          }
+          setup_debug_logging({ verbose: argv.verbose, debug_flag: argv.debug })
 
           // Clear unsupported tracking for fresh analysis
           clear_claude_unsupported()
@@ -224,73 +519,7 @@ const main = async () => {
             verbose: argv.verbose
           })
 
-          console.log(`\nFound ${sessions.length} ${argv.provider} sessions:\n`)
-
-          sessions.forEach((session, index) => {
-            console.log(
-              `${index + 1}. Session: ${session.session_id || session.composer_id}`
-            )
-
-            if (argv.provider === 'claude') {
-              console.log(`   File: ${session.file_source}`)
-              console.log(`   Entries: ${session.entry_count}`)
-              console.log(
-                `   Duration: ${session.duration_minutes?.toFixed(1) || 'unknown'} minutes`
-              )
-              console.log(`   Working Dir: ${session.working_directory}`)
-              console.log(
-                `   Time: ${session.start_time?.toLocaleString() || 'unknown'} - ${session.end_time?.toLocaleString() || 'unknown'}`
-              )
-
-              if (session.summaries?.length > 0) {
-                console.log('   Summaries:')
-                session.summaries.slice(0, 3).forEach((summary) => {
-                  console.log(`     • ${summary}`)
-                })
-                if (session.summaries.length > 3) {
-                  console.log(
-                    `     ... and ${session.summaries.length - 3} more`
-                  )
-                }
-              }
-            } else if (argv.provider === 'cursor') {
-              console.log(`   Messages: ${session.message_count}`)
-              console.log(
-                `   Duration: ${session.duration_minutes?.toFixed(1) || 'unknown'} minutes`
-              )
-              console.log(
-                `   Created: ${session.created_at ? new Date(session.created_at).toLocaleString() : 'unknown'}`
-              )
-              console.log(
-                `   Updated: ${session.last_updated_at ? new Date(session.last_updated_at).toLocaleString() : 'unknown'}`
-              )
-
-              if (session.summary) {
-                console.log(`   Summary: ${session.summary}`)
-              }
-              console.log(
-                `   Code blocks: ${session.has_code_blocks ? 'Yes' : 'No'}`
-              )
-              console.log(`   Model: ${session.model_used}`)
-            } else if (argv.provider === 'openai') {
-              console.log(`   Title: ${session.title}`)
-              console.log(
-                `   Created: ${session.created_at ? new Date(session.created_at).toLocaleString() : 'unknown'}`
-              )
-              console.log(
-                `   Updated: ${session.updated_at ? new Date(session.updated_at).toLocaleString() : 'unknown'}`
-              )
-              console.log(`   Archived: ${session.is_archived ? 'Yes' : 'No'}`)
-
-              console.log(`   Starred: ${session.is_starred ? 'Yes' : 'No'}`)
-              console.log(`   Memory: ${session.memory_scope || 'none'}`)
-              if (session.gizmo_id) {
-                console.log(`   GPT: ${session.gizmo_id}`)
-              }
-            }
-
-            console.log('')
-          })
+          output_session_list(sessions, argv)
         }
       )
       .command(
@@ -326,6 +555,11 @@ const main = async () => {
               describe: 'OpenAI device ID',
               type: 'string'
             })
+            .option('debug', {
+              describe: 'Enable deep module debug logging',
+              type: 'boolean',
+              default: false
+            })
             .option('user-base-dir', {
               alias: 'u',
               describe: 'User base directory',
@@ -334,6 +568,10 @@ const main = async () => {
             })
             .option('session-id', {
               describe: 'Import specific session ID only',
+              type: 'string'
+            })
+            .option('session-file', {
+              describe: 'Import from specific JSONL file path (absolute path)',
               type: 'string'
             })
             .option('from-date', {
@@ -391,9 +629,7 @@ const main = async () => {
             })
         },
         async (argv) => {
-          if (argv.verbose) {
-            debug.enabled = () => true
-          }
+          setup_debug_logging({ verbose: argv.verbose, debug_flag: argv.debug })
 
           // Clear unsupported tracking for fresh analysis
           clear_claude_unsupported()
@@ -435,6 +671,7 @@ const main = async () => {
             openai_auth,
             user_base_directory: argv.userBaseDir,
             session_id: argv.sessionId,
+            session_file: argv.sessionFile,
             from_date: argv.fromDate,
             to_date: argv.toDate,
             max_entries: argv.maxEntries,
@@ -444,133 +681,11 @@ const main = async () => {
             verbose: argv.verbose
           })
 
-          console.log('\n=== Import Results ===')
-
-          if (argv.provider === 'claude') {
-            console.log(`Sessions found: ${result.sessions_found}`)
-            console.log(`Valid sessions: ${result.valid_sessions}`)
-            console.log(`Invalid sessions: ${result.invalid_sessions}`)
-          } else if (argv.provider === 'cursor') {
-            console.log(`Conversations found: ${result.conversations_found}`)
-            console.log(`Valid conversations: ${result.valid_conversations}`)
-            console.log(
-              `Invalid conversations: ${result.invalid_conversations}`
-            )
-          } else if (argv.provider === 'openai') {
-            console.log(`Conversations found: ${result.conversations_found}`)
-            console.log(
-              `Conversations fetched: ${result.conversations_fetched}`
-            )
-            console.log(`Valid sessions: ${result.valid_sessions}`)
-          }
-
-          if (argv.dryRun) {
-            console.log(`Would create threads: ${result.would_create}`)
+          // Use appropriate output format based on verbose flag
+          if (argv.verbose) {
+            output_verbose(result, argv)
           } else {
-            console.log(`Threads created: ${result.threads_created}`)
-            if (result.threads_updated !== undefined) {
-              console.log(`Threads updated: ${result.threads_updated}`)
-            }
-            console.log(`Threads failed: ${result.threads_failed}`)
-            console.log(`Success rate: ${result.success_rate}%`)
-
-            if (result.results?.created?.length > 0) {
-              console.log('\nCreated threads:')
-              result.results.created.slice(0, 5).forEach((thread) => {
-                console.log(
-                  `  ${thread.thread_id} (${thread.timeline_entries || 'unknown'} entries)`
-                )
-              })
-              if (result.results.created.length > 5) {
-                console.log(
-                  `  ... and ${result.results.created.length - 5} more`
-                )
-              }
-            }
-
-            if (result.results?.updated?.length > 0) {
-              console.log('\nUpdated threads:')
-              result.results.updated.slice(0, 5).forEach((thread) => {
-                console.log(
-                  `  ${thread.thread_id} (${thread.timeline_entries || 'unknown'} entries)`
-                )
-              })
-              if (result.results.updated.length > 5) {
-                console.log(
-                  `  ... and ${result.results.updated.length - 5} more`
-                )
-              }
-            }
-
-            if (result.results?.failed?.length > 0) {
-              console.log('\nFailed threads:')
-              result.results.failed.forEach((failure) => {
-                const id = failure.session_id || failure.composer_id
-                console.log(`  ${id}: ${failure.error}`)
-              })
-            }
-          }
-
-          // Display unsupported features summary
-          let unsupported
-          if (argv.provider === 'claude') {
-            unsupported = get_claude_unsupported()
-          } else if (argv.provider === 'cursor') {
-            unsupported = get_cursor_unsupported()
-          } else if (argv.provider === 'openai') {
-            unsupported = get_openai_unsupported()
-          }
-
-          if (
-            argv.provider === 'claude' &&
-            Object.values(unsupported).some((arr) => arr.length > 0)
-          ) {
-            console.log('\n=== Unsupported Features Found ===')
-            console.log(
-              'The following Claude features were encountered but not fully supported:'
-            )
-
-            Object.entries(unsupported).forEach(([key, values]) => {
-              if (values.length > 0) {
-                console.log(`\n${key} (${values.length}):`)
-                values.forEach((value) => console.log(`  • ${value}`))
-              }
-            })
-
-            console.log(
-              '\nThese features have been preserved in the converted data.'
-            )
-          } else if (
-            argv.provider === 'cursor' &&
-            Object.values(unsupported).some((arr) => arr.length > 0)
-          ) {
-            console.log('\n=== Unsupported Features Found ===')
-            console.log(
-              'The following Cursor features were encountered but not fully supported:'
-            )
-            Object.entries(unsupported).forEach(([key, values]) => {
-              if (values.length > 0) {
-                console.log(`\n${key} (${values.length}):`)
-                values.forEach((value) => console.log(`  • ${value}`))
-              }
-            })
-          } else if (
-            argv.provider === 'openai' &&
-            Object.values(unsupported).some((arr) => arr.length > 0)
-          ) {
-            console.log('\n=== Unsupported Features Found ===')
-            console.log(
-              'The following OpenAI features were encountered but not fully supported:'
-            )
-            Object.entries(unsupported).forEach(([key, values]) => {
-              if (values.length > 0) {
-                console.log(`\n${key} (${values.length}):`)
-                values.forEach((value) => console.log(`  • ${value}`))
-              }
-            })
-            console.log(
-              '\nThese features have been preserved in the converted data.'
-            )
+            output_quiet(result, argv)
           }
 
           // Exit with appropriate code
@@ -624,11 +739,14 @@ const main = async () => {
               type: 'boolean',
               default: false
             })
+            .option('debug', {
+              describe: 'Enable deep module debug logging',
+              type: 'boolean',
+              default: false
+            })
         },
         async (argv) => {
-          if (argv.verbose) {
-            debug.enabled = () => true
-          }
+          setup_debug_logging({ verbose: argv.verbose, debug_flag: argv.debug })
 
           // Build OpenAI auth object if provider is OpenAI
           let openai_auth = {}
@@ -789,8 +907,35 @@ const main = async () => {
   } catch (error) {
     console.error('\nExternal session conversion failed:', error.message)
 
+    // Provide helpful hints for common errors
+    if (
+      error.message.includes('ENOENT') ||
+      error.message.includes('no such file')
+    ) {
+      console.error(
+        'Hint: Check that the specified directory or file path exists'
+      )
+    } else if (
+      error.message.includes('EACCES') ||
+      error.message.includes('permission denied')
+    ) {
+      console.error('Hint: Check file/directory permissions')
+    } else if (
+      error.message.includes('authentication') ||
+      error.message.includes('unauthorized')
+    ) {
+      console.error(
+        'Hint: Verify authentication credentials (tokens, cookies, etc.)'
+      )
+    } else {
+      console.error(
+        'Hint: Run with --verbose flag for more detailed error information'
+      )
+    }
+
     // Show stack trace in debug mode
     if (process.env.DEBUG) {
+      console.error('\nStack trace:')
       console.error(error.stack)
     }
 
@@ -799,8 +944,5 @@ const main = async () => {
 }
 
 if (isMain(import.meta.url)) {
-  debug.enable(
-    'convert-external-sessions,integrations:claude*,integrations:cursor*,integrations:openai*,integrations:thread*'
-  )
   main()
 }

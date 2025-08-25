@@ -9,6 +9,7 @@ import {
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
+const log_debug = debug('integrations:thread:build-timeline-entries:debug')
 
 // Track unsupported message types and content formats for timeline conversion
 const TIMELINE_UNSUPPORTED = {
@@ -32,7 +33,7 @@ export const build_timeline_from_session = async (
   options = {}
 ) => {
   try {
-    log(
+    log_debug(
       `Building timeline for thread ${thread_info.thread_id} from ${normalized_session.session_provider} session`
     )
 
@@ -462,7 +463,7 @@ const merge_with_existing_timeline = async ({ timeline_path, new_entries }) => {
           // Update the existing entry with new data
           existing_entries_map.set(new_entry.id, new_entry)
           updated_entries++
-          log(`Updated existing timeline entry: ${new_entry.id}`)
+          log_debug(`Updated existing timeline entry: ${new_entry.id}`)
         }
       } else {
         // This is a new entry

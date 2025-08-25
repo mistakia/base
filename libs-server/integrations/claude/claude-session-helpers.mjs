@@ -6,10 +6,14 @@
  */
 
 import debug from 'debug'
-import { parse_all_claude_files } from './parse-jsonl.mjs'
+import {
+  parse_all_claude_files,
+  parse_claude_jsonl_file
+} from './parse-jsonl.mjs'
 import { normalize_claude_session } from './normalize-session.mjs'
 
 const log = debug('integrations:claude:session-helpers')
+const log_debug = debug('integrations:claude:session-helpers:debug')
 
 /**
  * Find Claude sessions from provided data
@@ -30,13 +34,29 @@ export const find_claude_sessions_from_data = async ({ sessions = [] }) => {
  * @param {Object} params - Parameters object
  * @param {string} params.claude_projects_directory - Claude projects directory path
  * @param {Function} params.filter_sessions - Optional filter function
+ * @param {string} params.session_id - Optional session ID for direct lookup optimization
+ * @param {string} params.session_file - Optional absolute path to specific JSONL file
  * @returns {Promise<Array>} Array of raw Claude session objects
  */
 export const find_claude_sessions_from_filesystem = async ({
   claude_projects_directory,
-  filter_sessions = null
+  filter_sessions = null,
+  session_id = null,
+  session_file = null
 }) => {
   log(`Finding Claude sessions from filesystem: ${claude_projects_directory}`)
+
+  if (session_file) {
+    log_debug(`Using direct session file path: ${session_file}`)
+    // Import specific file directly
+    const sessions = await parse_claude_jsonl_file(session_file)
+    return sessions
+  }
+
+  if (session_id) {
+    log_debug(`Filtering sessions for specific session ID: ${session_id}`)
+  }
+
   const sessions = await parse_all_claude_files({
     claude_projects_directory,
     filter_sessions
@@ -156,7 +176,7 @@ export const filter_valid_claude_sessions = ({ sessions }) => {
   if (invalid_sessions.length > 0) {
     log(`Found ${invalid_sessions.length} invalid Claude sessions:`)
     invalid_sessions.forEach(({ session_id, errors }) => {
-      log(`  Session ${session_id}: ${errors.join(', ')}`)
+      log_debug(`  Session ${session_id}: ${errors.join(', ')}`)
     })
   }
 

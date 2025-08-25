@@ -35,7 +35,9 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
     // Find sessions using provider
     const claude_sessions = await provider.find_sessions({
       claude_projects_directory: config.claude_projects_directory,
-      filter_sessions: config.filter_sessions
+      filter_sessions: config.filter_sessions,
+      session_id: options.session_id,
+      session_file: options.session_file
     })
 
     log(`Found ${claude_sessions.length} Claude sessions`)
@@ -73,6 +75,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       threads_updated: results.updated.length,
       threads_failed: results.failed.length,
       threads_skipped: results.skipped.length,
+      success_rate: results.summary?.success_rate,
       results
     }
   } catch (error) {
