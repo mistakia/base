@@ -20,6 +20,37 @@ import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-s
 import { OpenAISessionProvider } from '#libs-server/integrations/openai/openai-session-provider.mjs'
 
 const log = debug('integrations:thread:create-from-session-provider')
+const log_debug = debug(
+  'integrations:thread:create-from-session-provider:debug'
+)
+
+/**
+ * Calculate success rate for thread operations
+ * Includes created, updated, and skipped sessions as successful operations
+ *
+ * @param {Object} params - Parameters object
+ * @param {number} params.created - Number of created threads
+ * @param {number} params.updated - Number of updated threads
+ * @param {number} params.skipped - Number of skipped sessions
+ * @param {number} params.total_sessions - Total number of sessions processed
+ * @returns {string} Success rate as percentage string (e.g., "85.5")
+ */
+const calculate_success_rate = ({
+  created,
+  updated,
+  skipped,
+  total_sessions
+}) => {
+  if (total_sessions === 0) {
+    return '0.0'
+  }
+
+  // Include skipped sessions as successful operations since they were processed correctly
+  const successful_operations = created + updated + skipped
+  const rate = (successful_operations / total_sessions) * 100
+
+  return rate.toFixed(1)
+}
 
 /**
  * Static map of session providers
@@ -287,10 +318,12 @@ const create_results_summary = (results, total_sessions) => {
   const skipped = results.skipped.length
   const failed = results.failed.length
 
-  const success_rate =
-    total_sessions > 0
-      ? (((created + updated) / total_sessions) * 100).toFixed(1)
-      : 0
+  const success_rate = calculate_success_rate({
+    created,
+    updated,
+    skipped,
+    total_sessions
+  })
 
   return {
     total: total_sessions,
@@ -312,17 +345,19 @@ const log_session_result = (session_result, provider_name) => {
 
   switch (status) {
     case 'created':
-      log(
-        `✓ Created thread ${data.thread_id} for ${provider_name} session ${session_id}`
+      log_debug(
+        `Created thread ${data.thread_id} for ${provider_name} session ${session_id}`
       )
       break
     case 'updated':
-      log(
-        `↻ Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (${data.new_entries_added} new entries, files ${data.files_modified ? 'modified' : 'unchanged'})`
+      log_debug(
+        `Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (${data.new_entries_added} new entries, files ${data.files_modified ? 'modified' : 'unchanged'})`
       )
       break
     case 'skipped':
-      log(`↷ Skipped ${provider_name} session ${session_id} (${data.reason})`)
+      log_debug(
+        `Skipped ${provider_name} session ${session_id} (${data.reason})`
+      )
       break
     default:
       log(

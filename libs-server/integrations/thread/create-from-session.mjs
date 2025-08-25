@@ -18,6 +18,7 @@ import {
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 const log = debug('integrations:thread:create-from-session')
+const log_debug = debug('integrations:thread:create-from-session:debug')
 
 export const create_thread_from_session = async ({
   normalized_session,
@@ -104,7 +105,7 @@ export const create_thread_from_session = async ({
       })
     }
 
-    log(
+    log_debug(
       `Created thread ${thread_result.thread_id} from ${normalized_session.session_provider} session ${normalized_session.session_id}`
     )
 
@@ -141,7 +142,7 @@ const save_raw_session_data = async ({
   const storage_config = get_raw_data_storage_config()
   const timestamp = get_timestamp_for_raw_data(storage_config.timestamp_format)
 
-  log(
+  log_debug(
     `Using timestamp format '${storage_config.timestamp_format}': ${timestamp}`
   )
 
@@ -184,7 +185,7 @@ const save_raw_session_data = async ({
     normalized_file,
     JSON.stringify(normalized_session, null, 2)
   )
-  log(`Saved normalized session data to ${normalized_file}`)
+  log_debug(`Saved normalized session data to ${normalized_file}`)
 }
 
 const save_claude_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
@@ -198,7 +199,7 @@ const save_claude_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
       `claude-session-${timestamp}.jsonl`
     )
     await fs.writeFile(jsonl_file, jsonl_content)
-    log(`Saved Claude JSONL data to ${jsonl_file}`)
+    log_debug(`Saved Claude JSONL data to ${jsonl_file}`)
   }
 
   // Save session metadata
@@ -211,7 +212,7 @@ const save_claude_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
       metadata_file,
       JSON.stringify(raw_data.metadata, null, 2)
     )
-    log(`Saved Claude metadata to ${metadata_file}`)
+    log_debug(`Saved Claude metadata to ${metadata_file}`)
   }
 }
 
@@ -222,7 +223,7 @@ const save_cursor_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
     `cursor-conversation-${timestamp}.json`
   )
   await fs.writeFile(conversation_file, JSON.stringify(raw_data, null, 2))
-  log(`Saved Cursor conversation data to ${conversation_file}`)
+  log_debug(`Saved Cursor conversation data to ${conversation_file}`)
 
   // Save just the messages in a separate file for easier analysis
   if (raw_data.messages && Array.isArray(raw_data.messages)) {
@@ -234,7 +235,7 @@ const save_cursor_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
       messages_file,
       JSON.stringify(raw_data.messages, null, 2)
     )
-    log(`Saved Cursor messages to ${messages_file}`)
+    log_debug(`Saved Cursor messages to ${messages_file}`)
   }
 }
 
@@ -245,7 +246,7 @@ const save_openai_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
     `openai-conversation-${timestamp}.json`
   )
   await fs.writeFile(conversation_file, JSON.stringify(raw_data, null, 2))
-  log(`Saved OpenAI conversation data to ${conversation_file}`)
+  log_debug(`Saved OpenAI conversation data to ${conversation_file}`)
 
   // Save just the mapping structure for easier analysis
   if (raw_data.mapping) {
@@ -254,7 +255,7 @@ const save_openai_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
       `openai-mapping-${timestamp}.json`
     )
     await fs.writeFile(mapping_file, JSON.stringify(raw_data.mapping, null, 2))
-    log(`Saved OpenAI mapping to ${mapping_file}`)
+    log_debug(`Saved OpenAI mapping to ${mapping_file}`)
   }
 }
 
@@ -299,7 +300,7 @@ export const update_existing_thread = async (
   try {
     const { thread_id, thread_dir, raw_session_data } = options
 
-    log(
+    log_debug(
       `Updating existing thread ${thread_id} for session ${normalized_session.session_id}`
     )
 
@@ -333,11 +334,13 @@ export const update_existing_thread = async (
     const files_modified = metadata_changed || timeline_result.timeline_modified
 
     if (files_modified) {
-      log(
+      log_debug(
         `Updated thread ${thread_id} with ${timeline_result.new_entries_added} new timeline entries (metadata: ${metadata_changed ? 'changed' : 'unchanged'}, timeline: ${timeline_result.timeline_modified ? 'changed' : 'unchanged'})`
       )
     } else {
-      log(`No changes detected for thread ${thread_id}, files not modified`)
+      log_debug(
+        `No changes detected for thread ${thread_id}, files not modified`
+      )
     }
 
     return {
@@ -412,9 +415,9 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
         metadata_path,
         JSON.stringify(updated_metadata, null, 2)
       )
-      log(`Updated thread metadata at ${metadata_path}`)
+      log_debug(`Updated thread metadata at ${metadata_path}`)
     } else {
-      log(`Metadata unchanged, skipping write for ${metadata_path}`)
+      log_debug(`Metadata unchanged, skipping write for ${metadata_path}`)
     }
 
     return metadata_changed
@@ -429,7 +432,7 @@ export const create_threads_from_sessions = async (
   normalized_sessions,
   options = {}
 ) => {
-  log(`Creating threads from ${normalized_sessions.length} sessions`)
+  log_debug(`Creating threads from ${normalized_sessions.length} sessions`)
 
   const { allow_updates = false } = options
 
@@ -452,7 +455,7 @@ export const create_threads_from_sessions = async (
       if (exists) {
         if (allow_updates) {
           // Update existing thread with new session data
-          log(
+          log_debug(
             `Thread ${thread_id} already exists for session ${session.session_id}, updating...`
           )
 
@@ -474,11 +477,11 @@ export const create_threads_from_sessions = async (
             new_entries_added: update_result.new_entries_added,
             files_modified: update_result.files_modified
           })
-          log(
+          log_debug(
             `Successfully updated thread ${thread_id} for session ${session.session_id} (${update_result.new_entries_added} new entries, files ${update_result.files_modified ? 'modified' : 'unchanged'})`
           )
         } else {
-          log(
+          log_debug(
             `Thread ${thread_id} already exists for session ${session.session_id}, skipping`
           )
           results.skipped.push({
@@ -521,7 +524,7 @@ export const create_threads_from_sessions = async (
         thread_dir: thread_result.thread_dir
       })
 
-      log(
+      log_debug(
         `Successfully created thread ${thread_result.thread_id} for session ${session.session_id}`
       )
     } catch (error) {

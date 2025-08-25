@@ -7,6 +7,7 @@ import {
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 
 const log = debug('integrations:claude:normalize-session')
+const log_debug = debug('integrations:claude:normalize-session:debug')
 
 // Track unsupported properties for future implementation
 const UNSUPPORTED_TRACKING = {
@@ -28,7 +29,7 @@ const log_unsupported = ({ category, value, context = '' }) => {
 
 export const normalize_claude_session = (claude_session) => {
   try {
-    log(`Normalizing Claude session: ${claude_session.session_id}`)
+    log_debug(`Normalizing Claude session: ${claude_session.session_id}`)
 
     const { session_id, entries, metadata } = claude_session
 
