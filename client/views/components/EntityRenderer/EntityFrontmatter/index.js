@@ -51,10 +51,23 @@ const format_field_value = (value) => {
 }
 
 const format_field_label = (key) => {
-  return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-const EntityTitle = ({ title, type, description }) => {
+const EntityTitle = ({ title, type, description, markdown }) => {
+  // Normalize content for comparison by removing extra whitespace and newlines
+  const normalize_content = (content) => {
+    if (!content) return ''
+    return content.replace(/\s+/g, ' ').trim()
+  }
+
+  const should_hide_description =
+    description &&
+    markdown &&
+    normalize_content(description) === normalize_content(markdown)
+
   return (
     <Box sx={{ px: 3, pt: 3, pb: 2 }}>
       <Box sx={{ position: 'relative' }}>
@@ -86,7 +99,7 @@ const EntityTitle = ({ title, type, description }) => {
           {title || 'Untitled'}
         </Typography>
 
-        {description && (
+        {description && !should_hide_description && (
           <Typography
             variant='body2'
             sx={{
@@ -107,7 +120,8 @@ const EntityTitle = ({ title, type, description }) => {
 EntityTitle.propTypes = {
   title: PropTypes.string,
   type: PropTypes.string,
-  description: PropTypes.string
+  description: PropTypes.string,
+  markdown: PropTypes.string
 }
 
 const RelationsSection = ({ relations }) => {
@@ -142,11 +156,11 @@ const RelationsSection = ({ relations }) => {
                     transition: 'border-color 0.2s ease',
                     cursor: 'pointer'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.borderBottomColor = '#0366d6'
+                  onMouseEnter={(event) => {
+                    event.target.style.borderBottomColor = '#0366d6'
                   }}
-                  onMouseLeave={(e) => {
-                    e.target.style.borderBottomColor = 'transparent'
+                  onMouseLeave={(event) => {
+                    event.target.style.borderBottomColor = 'transparent'
                   }}
                   onClick={handle_link_click}
                   data-internal-link='true'>
@@ -188,7 +202,7 @@ ObservationsSection.propTypes = {
   observations: PropTypes.array
 }
 
-const EntityFrontmatter = ({ frontmatter, is_sticky = false }) => {
+const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
   const [expanded, set_expanded] = useState(false)
 
   if (!frontmatter) return null
@@ -216,6 +230,7 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false }) => {
         title={display_title}
         type={type}
         description={description}
+        markdown={markdown}
       />
 
       {/* Core metadata section */}
@@ -293,13 +308,13 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false }) => {
                 transition: 'color 0.2s ease',
                 fontFamily: 'inherit'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.color = '#0451a5'
-                e.target.style.textDecoration = 'underline'
+              onMouseEnter={(event) => {
+                event.target.style.color = '#0451a5'
+                event.target.style.textDecoration = 'underline'
               }}
-              onMouseLeave={(e) => {
-                e.target.style.color = '#0366d6'
-                e.target.style.textDecoration = 'none'
+              onMouseLeave={(event) => {
+                event.target.style.color = '#0366d6'
+                event.target.style.textDecoration = 'none'
               }}>
               {expanded ? 'show less' : 'show more'}
             </button>
@@ -312,7 +327,8 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false }) => {
 
 EntityFrontmatter.propTypes = {
   frontmatter: PropTypes.object,
-  is_sticky: PropTypes.bool
+  is_sticky: PropTypes.bool,
+  markdown: PropTypes.string
 }
 
 export default EntityFrontmatter

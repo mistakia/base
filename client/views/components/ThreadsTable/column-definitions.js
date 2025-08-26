@@ -343,8 +343,8 @@ export const thread_columns = {
       TABLE_OPERATORS.EQUAL,
       TABLE_OPERATORS.NOT_EQUAL
     ],
-    size: 100,
-    minSize: 80,
+    size: 50,
+    minSize: 30,
     maxSize: 120
   },
   user_message_count: {
@@ -361,8 +361,8 @@ export const thread_columns = {
       TABLE_OPERATORS.EQUAL,
       TABLE_OPERATORS.NOT_EQUAL
     ],
-    size: 100,
-    minSize: 80,
+    size: 50,
+    minSize: 30,
     maxSize: 120
   },
   assistant_message_count: {
@@ -379,8 +379,8 @@ export const thread_columns = {
       TABLE_OPERATORS.EQUAL,
       TABLE_OPERATORS.NOT_EQUAL
     ],
-    size: 120,
-    minSize: 100,
+    size: 50,
+    minSize: 30,
     maxSize: 140
   },
   tool_call_count: {

@@ -19,6 +19,7 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
       <EntityFrontmatter
         frontmatter={frontmatter}
         is_sticky={Boolean(markdown)}
+        markdown={markdown}
       />
       <FileActions path={path} />
     </Box>
@@ -29,7 +30,11 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
         <Box sx={{ maxWidth: '600px', width: '100%' }}>
-          <EntityFrontmatter frontmatter={frontmatter} is_sticky={false} />
+          <EntityFrontmatter
+            frontmatter={frontmatter}
+            is_sticky={false}
+            markdown={markdown}
+          />
           <FileActions path={path} />
         </Box>
       </Box>
