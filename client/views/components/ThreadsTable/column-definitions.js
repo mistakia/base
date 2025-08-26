@@ -13,6 +13,15 @@ import {
   format_shorthand_number
 } from '@views/utils/date-formatting.js'
 
+// Column group definitions
+const COLUMN_GROUPS = {
+  messages: {
+    column_group_id: 'messages',
+    priority: 1,
+    label: 'Messages'
+  }
+}
+
 const get_state_color = (state) => {
   switch (state) {
     case 'active':
@@ -140,7 +149,10 @@ const WorkingDirectoryCell = ({ row }) => {
         height: 'fit-content',
         cursor: 'pointer',
         textDecoration: 'underline',
-        color: '#1976d2'
+        color: '#1976d2',
+        width: '80%',
+        justifyContent: 'flex-start',
+        textAlign: 'left'
       }}>
       {thread.working_directory || '—'}
     </div>
@@ -177,18 +189,6 @@ CostCell.propTypes = {
   row: PropTypes.object.isRequired
 }
 
-// Formatting cells for server-provided data
-const UpdatedAtCell = ({ row }) => {
-  const thread = row.original
-  const formatted_time = format_shorthand_time(thread.updated_at)
-
-  return (
-    <div className='cell-content' style={{ height: 'fit-content' }}>
-      <span>{formatted_time}</span>
-    </div>
-  )
-}
-
 const DurationCell = ({ row }) => {
   const thread = row.original
   let formatted_duration = '—'
@@ -221,10 +221,6 @@ const DurationCell = ({ row }) => {
   )
 }
 
-UpdatedAtCell.propTypes = {
-  row: PropTypes.object.isRequired
-}
-
 DurationCell.propTypes = {
   row: PropTypes.object.isRequired
 }
@@ -244,9 +240,9 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
-    size: 350,
+    size: 650,
     minSize: 250,
-    maxSize: 500
+    maxSize: 800
   },
   session_provider: {
     column_id: 'session_provider',
@@ -284,9 +280,9 @@ export const thread_columns = {
   },
   updated_at: {
     column_id: 'updated_at',
-    header_label: 'Last Updated',
+    header_label: 'Updated',
     accessorKey: 'updated_at',
-    component: UpdatedAtCell,
+    accessorFn: ({ updated_at }) => format_shorthand_time(updated_at),
     data_type: TABLE_DATA_TYPES.DATE,
     operators: [
       TABLE_OPERATORS.GREATER_THAN,
@@ -317,7 +313,7 @@ export const thread_columns = {
   },
   working_directory: {
     column_id: 'working_directory',
-    header_label: 'Working Directory',
+    header_label: 'Directory',
     accessorKey: 'working_directory',
     component: WorkingDirectoryCell,
     data_type: TABLE_DATA_TYPES.TEXT,
@@ -329,15 +325,16 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
-    size: 300,
-    minSize: 200,
-    maxSize: 400
+    size: 150,
+    minSize: 80,
+    maxSize: 500
   },
   message_count: {
     column_id: 'message_count',
-    header_label: 'Total Messages',
+    header_label: 'Total',
     accessorKey: 'message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    column_groups: [COLUMN_GROUPS.messages],
     operators: [
       TABLE_OPERATORS.GREATER_THAN,
       TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
@@ -352,9 +349,10 @@ export const thread_columns = {
   },
   user_message_count: {
     column_id: 'user_message_count',
-    header_label: 'User Messages',
+    header_label: 'Human',
     accessorKey: 'user_message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    column_groups: [COLUMN_GROUPS.messages],
     operators: [
       TABLE_OPERATORS.GREATER_THAN,
       TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
@@ -369,9 +367,10 @@ export const thread_columns = {
   },
   assistant_message_count: {
     column_id: 'assistant_message_count',
-    header_label: 'Assistant Messages',
+    header_label: 'Assistant',
     accessorKey: 'assistant_message_count',
     data_type: TABLE_DATA_TYPES.NUMBER,
+    column_groups: [COLUMN_GROUPS.messages],
     operators: [
       TABLE_OPERATORS.GREATER_THAN,
       TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
