@@ -64,13 +64,7 @@ const md = new MarkdownIt({
     ignoreIllegals: true
   })
   .use(markdownItXmlStyling)
-  .use(markdownItTaskCheckbox, {
-    disabled: true, // Disable checkbox interaction
-    divWrap: false, // Don't wrap in div
-    idPrefix: 'task_', // Prefix for checkbox IDs
-    ulClass: 'task-list', // Class for task lists
-    liClass: 'task-list-item' // Class for task list items
-  })
+  .use(markdownItTaskCheckbox)
 
 // Render markdown content
 export const render_markdown = (content) => {

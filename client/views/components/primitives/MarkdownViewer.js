@@ -4,6 +4,8 @@ import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { handle_link_click } from '@views/utils/link-processor.js'
 
+import '@styles/checkbox.styl'
+
 const get_normal_styles = {
   '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 4 },
   '& h2': {

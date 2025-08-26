@@ -1,136 +1,153 @@
 // Markdown-it plugin for task checkboxes
 // Based on: https://github.com/noootwo/markdown-it-task-checkbox-pro
 
-export default function (md, options) {
-  options = Object.assign(
-    {
-      disabled: true,
-      idPrefix: 'task_',
-      ulClass: 'task-list',
-      liClass: 'task-list-item',
-      nestedClass: 'nested-task-list',
-      baseListClass: 'base-list-item'
-    },
-    options
-  )
+export default function markdown_it_task_checkbox(md, options = {}) {
+  const { ul_class, li_class, nested_class } = normalize_options({ options })
 
-  // Plugin core
   md.core.ruler.after('inline', 'github-task-lists', function (state) {
-    const tokens = state.tokens
-    let last_id = 0
+    const token_list = state.tokens
 
-    // First pass: identify all lists and their nesting levels
-    const list_info = new Map()
-    let current_level = 0
+    const list_open_index_to_level = new Map()
+    let current_list_level = 0
 
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]
-
+    for (let index = 0; index < token_list.length; index++) {
+      const token = token_list[index]
       if (token.type === 'bullet_list_open') {
-        current_level++
-        list_info.set(i, { nesting_level: current_level - 1 })
+        list_open_index_to_level.set(index, current_list_level)
+        current_list_level++
       } else if (token.type === 'bullet_list_close') {
-        current_level = Math.max(0, current_level - 1)
+        current_list_level = Math.max(0, current_list_level - 1)
       }
     }
 
-    // Second pass: Process task items and set their nesting level
-    for (let i = 2; i < tokens.length; i++) {
-      if (is_todo_item(tokens, i)) {
-        todoify(tokens[i], last_id, options, state.Token)
-        last_id += 1
+    for (let index = 2; index < token_list.length; index++) {
+      if (is_task_list_item({ token_list, index })) {
+        convert_to_task_item({
+          token: token_list[index],
+          TokenConstructor: state.Token
+        })
 
-        // Set classes on the list item
-        set_attr(tokens[i - 2], 'class', options.liClass)
+        set_attribute({
+          token: token_list[index - 2],
+          name: 'class',
+          value: li_class
+        })
 
-        // Find parent list and set classes
-        const parent_list_index = find_parent_token(tokens, i - 2)
+        const parent_list_index = find_parent_token_index({
+          token_list,
+          target_index: index - 2
+        })
         if (parent_list_index >= 0) {
-          // Set base classes
-          let class_list = `${options.ulClass} ${options.baseListClass}`
+          let parent_class_list = `${ul_class}`
 
-          // Get nesting level from our map
-          const nesting_level = list_info.has(parent_list_index)
-            ? list_info.get(parent_list_index).nesting_level
+          const nesting_level = list_open_index_to_level.has(parent_list_index)
+            ? list_open_index_to_level.get(parent_list_index)
             : 0
 
-          // Store nesting level as data attribute
-          set_attr(
-            tokens[i - 2],
-            'data-nesting-level',
-            nesting_level.toString()
-          )
+          set_attribute({
+            token: token_list[index - 2],
+            name: 'data-nesting-level',
+            value: nesting_level.toString()
+          })
 
-          // Mark parent ul if it's nested
           if (nesting_level > 0) {
-            class_list += ` ${options.nestedClass}`
+            parent_class_list += ` ${nested_class}`
           }
 
-          // Set all classes at once
-          set_attr(tokens[parent_list_index], 'class', class_list)
+          set_attribute({
+            token: token_list[parent_list_index],
+            name: 'class',
+            value: parent_class_list
+          })
         }
       }
     }
   })
 }
 
-function set_attr(token, name, value) {
-  const index = token.attrIndex(name)
-  const attr = [name, value]
+function normalize_options({ options }) {
+  const default_ul_class = 'checkbox-list'
+  const default_li_class = 'checkbox-list-item'
+  const default_nested_class = 'nested-checkbox-list'
 
-  if (index < 0) {
-    token.attrPush(attr)
+  if (!options) {
+    return {
+      ul_class: default_ul_class,
+      li_class: default_li_class,
+      nested_class: default_nested_class
+    }
+  }
+
+  const ul_class = options.ul_class ?? options.ulClass ?? default_ul_class
+  const li_class = options.li_class ?? options.liClass ?? default_li_class
+  const nested_class =
+    options.nested_class ?? options.nestedClass ?? default_nested_class
+
+  return { ul_class, li_class, nested_class }
+}
+
+function set_attribute({ token, name, value }) {
+  const attr_index = token.attrIndex(name)
+  const attribute = [name, value]
+  if (attr_index < 0) {
+    token.attrPush(attribute)
   } else {
-    token.attrs[index] = attr
+    token.attrs[attr_index] = attribute
   }
 }
 
-function find_parent_token(tokens, index) {
-  const target_level = tokens[index].level - 1
-
-  for (let i = index - 1; i >= 0; i--) {
-    if (tokens[i].level === target_level) {
-      return i
-    }
+function find_parent_token_index({ token_list, target_index }) {
+  const target_level = token_list[target_index].level - 1
+  for (let index = target_index - 1; index >= 0; index--) {
+    if (token_list[index].level === target_level) return index
   }
   return -1
 }
 
-function is_todo_item(tokens, index) {
+function is_task_list_item({ token_list, index }) {
   return (
-    is_token_type(tokens[index], 'inline') &&
-    is_token_type(tokens[index - 1], 'paragraph_open') &&
-    is_token_type(tokens[index - 2], 'list_item_open') &&
-    starts_with_todo_markdown(tokens[index])
+    is_token_type({ token: token_list[index], type: 'inline' }) &&
+    is_token_type({ token: token_list[index - 1], type: 'paragraph_open' }) &&
+    is_token_type({ token: token_list[index - 2], type: 'list_item_open' }) &&
+    starts_with_task_markdown({ token: token_list[index] })
   )
 }
 
-function todoify(token, last_id, options, TokenConstructor) {
-  const id = options.idPrefix + last_id
+function convert_to_task_item({ token, TokenConstructor }) {
+  const checkbox_match = /^\[([ xX])\][ \u00A0](.*)/.exec(token.content)
+  if (!checkbox_match) return
 
-  // Extract checkbox pattern from the content
-  const match = /^\[([ xX])\][ \u00A0](.*)/.exec(token.content)
-  if (!match) return
+  const is_checked = /[xX]/.test(checkbox_match[1])
+  const label_text = checkbox_match[2]
 
-  const is_checked = /[xX]/.test(match[1])
-  const original_content = match[2]
+  const container_open = new TokenConstructor('html_inline', '', 0)
+  container_open.content =
+    '<div class="checkbox-item" data-task-status="' +
+    (is_checked ? 'completed' : 'pending') +
+    '">'
 
-  // Create checkbox input with a data attribute for the text
-  const checkbox = new TokenConstructor('html_inline', '', 0)
-  checkbox.content = `<input type="checkbox" class="mui-checkbox" id="${id}"${is_checked ? ' checked' : ''}${options.disabled ? ' disabled' : ''} data-text="${original_content}">`
+  const checkbox_html = new TokenConstructor('html_inline', '', 0)
+  checkbox_html.content = `<span class="checkbox-box" data-checkbox-status="${is_checked ? 'completed' : 'pending'}"></span>`
 
-  // Replace token's children with our new tokens
-  token.children = [checkbox]
+  const label_html = new TokenConstructor('html_inline', '', 0)
+  label_html.content = `<span class="checkbox-text">${label_text}</span>`
 
-  // Update the token content to just the checkbox
-  token.content = checkbox.content
+  const container_close = new TokenConstructor('html_inline', '', 0)
+  container_close.content = '</div>'
+
+  token.children = [container_open, checkbox_html, label_html, container_close]
+
+  token.content =
+    container_open.content +
+    checkbox_html.content +
+    label_html.content +
+    container_close.content
 }
 
-function is_token_type(token, type) {
+function is_token_type({ token, type }) {
   return token.type === type
 }
 
-function starts_with_todo_markdown(token) {
-  // Check for '[ ] ' or '[x] ' or '[X] ' at the start of the content
+function starts_with_task_markdown({ token }) {
   return /^\[[xX ]\][ \u00A0]/.test(token.content)
 }

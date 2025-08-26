@@ -2,18 +2,45 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Box, List, ListItem } from '@mui/material'
 import { AssignmentTurnedIn as TodoIcon } from '@mui/icons-material'
-import BaseToolComponent from '../BaseToolComponent'
-import { MonospaceText } from '@views/components/primitives/styled'
+
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
+import { MonospaceText } from '@components/primitives/styled'
+
+import '@styles/checkbox.styl'
+
+const CHECKBOX_STATUS = {
+  COMPLETED: 'completed',
+  IN_PROGRESS: 'in_progress',
+  PENDING: 'pending'
+}
 
 const TodoWriteTool = ({ tool_call_event, tool_result_event }) => {
-  const getTodoInfo = () => {
+  const get_todo_info = () => {
     const params = tool_call_event?.content?.tool_parameters || {}
     const todos = params.todos || []
 
     return { todos }
   }
 
-  const { todos } = getTodoInfo()
+  // Map task status to checkbox status for visual representation
+  const get_checkbox_status = (taskStatus) => {
+    if (!taskStatus) return CHECKBOX_STATUS.PENDING
+
+    switch (taskStatus.toLowerCase()) {
+      case 'completed':
+      case 'done':
+        return CHECKBOX_STATUS.COMPLETED
+      case 'in progress':
+      case 'in_progress':
+      case 'started':
+      case 'working':
+        return CHECKBOX_STATUS.IN_PROGRESS
+      default:
+        return CHECKBOX_STATUS.PENDING
+    }
+  }
+
+  const { todos } = get_todo_info()
 
   return (
     <BaseToolComponent
@@ -32,6 +59,7 @@ const TodoWriteTool = ({ tool_call_event, tool_result_event }) => {
           {todos.map((todo, idx) => (
             <ListItem
               key={todo.id || idx}
+              className='checkbox-item'
               sx={{
                 px: 1.5,
                 py: 0.5,
@@ -41,67 +69,21 @@ const TodoWriteTool = ({ tool_call_event, tool_result_event }) => {
                     : 'none'
               }}
               data-slot='item'
-              data-status={todo.status}>
+              data-task-status={get_checkbox_status(todo.status)}>
               <Box
+                component='span'
+                className='checkbox-box'
+                data-checkbox-status={get_checkbox_status(todo.status)}
+              />
+              <MonospaceText
+                variant='xs'
+                component='span'
+                className='checkbox-text'
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  width: '100%'
+                  fontSize: '11px'
                 }}>
-                <Box
-                  component='span'
-                  sx={{
-                    position: 'relative',
-                    display: 'inline-block',
-                    boxSizing: 'border-box',
-                    width: '14px',
-                    height: '14px',
-                    minWidth: '14px',
-                    minHeight: '14px',
-                    maxWidth: '14px',
-                    maxHeight: '14px',
-                    flex: '0 0 14px',
-                    flexShrink: 0,
-                    borderRadius: '2px',
-                    border: '1px solid',
-                    borderColor:
-                      todo.status === 'completed'
-                        ? 'success.main'
-                        : todo.status === 'in_progress'
-                          ? 'var(--sl-color-orange)'
-                          : 'grey.400',
-                    bgcolor:
-                      todo.status === 'completed'
-                        ? 'success.main'
-                        : 'transparent',
-                    '&::before':
-                      todo.status === 'in_progress'
-                        ? {
-                            content: '""',
-                            position: 'absolute',
-                            top: '2px',
-                            left: '2px',
-                            width: '8px',
-                            height: '8px',
-                            boxShadow:
-                              'inset 1rem 1rem var(--sl-color-orange-low)'
-                          }
-                        : {}
-                  }}
-                />
-                <MonospaceText
-                  variant='xs'
-                  component='span'
-                  sx={{
-                    fontSize: '11px',
-                    textDecoration:
-                      todo.status === 'completed' ? 'line-through' : 'none',
-                    color: todo.status === 'completed' ? '#666' : 'inherit'
-                  }}>
-                  {todo.content}
-                </MonospaceText>
-              </Box>
+                {todo.content}
+              </MonospaceText>
             </ListItem>
           ))}
         </List>

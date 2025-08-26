@@ -1,0 +1,136 @@
+// Shared checkbox styling system
+// Used by TodoWriteTool, markdown checkboxes, and other checkbox components
+
+// Base checkbox variables
+$checkbox_size = 14px
+$checkbox_border_radius = 2px
+$checkbox_spacing = 8px
+
+// Checkbox status colors
+$checkbox_colors = {
+  completed: #4caf50,
+  in_progress: #ff9800
+}
+
+$checkbox_text_colors = {
+  light: rgba(0, 0, 0, 0.7),
+  default: rgba(0, 0, 0, 0.9)
+}
+
+// Checkbox list container
+.checkbox-list
+  list-style none
+  padding 0
+  margin 0
+  
+  // Nested list indentation
+  &.nested-checkbox-list
+    margin 0
+    padding 0    
+
+// Checkbox list item container (li elements)
+.checkbox-list-item
+  width 100%
+  position relative
+  list-style none
+  
+  // Hide default list marker
+  &:before
+    display none
+  
+  // Nested item indentation based on data-nesting-level
+  &[data-nesting-level="1"]
+    padding-left 20px
+  
+  &[data-nesting-level="2"]
+    padding-left 40px
+  
+  &[data-nesting-level="3"]
+    padding-left 60px
+  
+  &[data-nesting-level="4"]
+    padding-left 80px
+  
+  &[data-nesting-level="5"]
+    padding-left 100px
+
+// Checkbox container (inner div within list items)
+.checkbox-item
+  display flex
+  align-items center
+  gap $checkbox_spacing
+  width 100%
+  
+  &[data-task-status="completed"]
+    .checkbox-text
+      text-decoration line-through
+      color $checkbox_text_colors.light
+  
+  &[data-task-status="pending"]
+    .checkbox-text
+      color $checkbox_text_colors.light
+
+// Checkbox box styles
+.checkbox-box
+  position relative
+  display inline-block
+  box-sizing border-box
+  width $checkbox_size
+  height $checkbox_size
+  min-width $checkbox_size
+  min-height $checkbox_size
+  max-width $checkbox_size
+  max-height $checkbox_size
+  flex 0 0 $checkbox_size
+  flex-shrink 0
+  border-radius $checkbox_border_radius
+  border 1px solid $color_border
+  background transparent
+  cursor pointer
+  transition all 0.2s ease
+  
+  &[data-checkbox-status="completed"]
+    background $checkbox_colors.completed
+    border-color $checkbox_colors.completed
+  
+  // In progress checkbox state - bordered with solid orange square inside
+  &[data-checkbox-status="in_progress"]
+    border 1px solid #ff9800
+    
+    &::before
+      content ''
+      position absolute
+      top 2px
+      left 2px
+      width 8px
+      height 8px
+      background #ff9800
+      border-radius 1px
+      z-index 1
+      display block
+  
+  &[data-checkbox-status="pending"]
+    border-color $checkbox_colors.pending
+  
+  // Disabled/read-only state
+  &[disabled], &.disabled
+    cursor default
+    opacity 0.6
+    
+    &[data-checkbox-status="completed"]
+      background $color_text_secondary
+      border-color $color_text_secondary
+
+// Checkbox text/label styles
+.checkbox-text
+  flex 1
+  font-size $font_size_base
+  line-height 1.4
+  color $color_text
+  cursor pointer
+  word-break break-word
+  
+  // When associated with disabled checkbox
+  .checkbox-box[disabled] + &,
+  .checkbox-box.disabled + &
+    cursor default
