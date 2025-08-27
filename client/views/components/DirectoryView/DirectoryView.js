@@ -144,13 +144,15 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   return (
     <TableContainer
       sx={{
-        overflow: 'visible',
+        overflow: 'auto',
         border: '1px solid #e1e4e8',
         borderBottomLeftRadius: '6px',
         borderBottomRightRadius: '6px',
-        backgroundColor: 'white'
+        backgroundColor: 'white',
+        width: '100%',
+        maxWidth: '100%'
       }}>
-      <Table size='small'>
+      <Table size='small' sx={{ width: '100%', tableLayout: 'fixed' }}>
         <TableBody>
           {sorted_items.map((item, index) => (
             <TableRow
@@ -171,12 +173,23 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                 sx={{
                   py: 0,
                   px: 2,
+                  width: '65%',
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8'
+                      : '1px solid #e1e4e8',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    minWidth: 0,
+                    width: '100%'
+                  }}>
                   <Box
                     sx={{
                       display: 'flex',
@@ -190,6 +203,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     <RedactedContent
                       content_type='filename'
                       show_tooltip={true}
+                      title={item.name}
                       sx={{
                         ...get_name_style(item),
                         color: '#666'
@@ -198,7 +212,15 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     </RedactedContent>
                   ) : (
                     <span
-                      style={get_name_style(item)}
+                      title={item.name}
+                      style={{
+                        ...get_name_style(item),
+                        minWidth: 0,
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
                       onMouseEnter={(e) => {
                         e.target.style.textDecoration = 'underline'
                       }}
@@ -215,10 +237,14 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                 sx={{
                   py: 0,
                   px: 2,
+                  width: '80px',
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8'
+                      : '1px solid #e1e4e8',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                 {item.is_redacted && item.type === 'file' ? (
                   <RedactedContent
@@ -239,10 +265,14 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                 sx={{
                   py: 0,
                   px: 2,
+                  width: '100px',
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8'
+                      : '1px solid #e1e4e8',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                 {item.is_redacted ? (
                   <RedactedContent
