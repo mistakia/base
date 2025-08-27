@@ -1,0 +1,31 @@
+.system-message
+  background-color: transparent
+  position: relative
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  line-height: 1.4
+  color: $color_text_tertiary
+  white-space: pre-wrap
+  word-break: break-word
+  overflow: hidden
+  
+  &--clickable
+    cursor: pointer
+    transition: background-color $transition_fast, border-color $transition_fast
+    
+    &:hover
+      background-color: transparent
+
+.system-message__content
+  margin-bottom: 0
+
+.system-message__text
+  white-space: pre-wrap
+  word-break: break-word
+  line-height: 1.4
+  
+  // Style ANSI rendered content
+  span
+    // Ensure ANSI styled spans maintain proper spacing and wrapping
+    white-space: pre-wrap
+    word-break: inherit

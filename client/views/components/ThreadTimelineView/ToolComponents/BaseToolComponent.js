@@ -15,7 +15,7 @@ const BaseToolComponent = ({
   const tool_params = tool_call_event?.content?.tool_parameters || {}
 
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       {show_header &&
         (header || (
           <DefaultToolHeader

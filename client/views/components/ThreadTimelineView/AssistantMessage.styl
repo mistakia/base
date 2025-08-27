@@ -1,26 +1,20 @@
-// =====================================================
-// ASSISTANT MESSAGE COMPONENT - Industrial Minimalist
-// =====================================================
-
-$assistant_message_border = $color_border
+$assistant_message_border = hsl(210, 60%, 80%)
 
 .assistant-message
   border-radius $radius_sm
   margin-bottom $space_xs
   background-color transparent
-  border 1px solid transparent
-  padding 0 8px
+  border 1px solid $assistant_message_border
+  padding $space_base
+  width 100%
   
   transition border-color $transition_fast
-  
-  &:hover
-    border-color darken($color_border, 15%)
   
   &--clickable
     cursor pointer
     
     &:hover
-      border-color $color_primary
+      border-color darken($assistant_message_border, 25%)
 
   &--latest
     background-color #fff

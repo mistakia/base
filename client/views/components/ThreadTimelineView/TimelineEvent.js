@@ -16,7 +16,9 @@ import {
 import UserMessage from './UserMessage'
 import AssistantMessage from './AssistantMessage'
 import ThinkingMessage from './ThinkingMessage'
+import SystemMessage from './SystemMessage'
 import ToolEvent from './ToolEvent'
+import HookMessage from './HookMessage'
 import { process_message_content } from './utils/message-processing.js'
 
 const TimelineEvent = ({
@@ -27,9 +29,16 @@ const TimelineEvent = ({
   render_nested_timeline,
   hide_timeline_dot = false
 }) => {
+  // Check if this is a hook message
+  const is_hook =
+    timeline_event?.type === 'message' &&
+    timeline_event.role === 'user' &&
+    typeof timeline_event.content === 'string' &&
+    /<.+-hook>/.test(timeline_event.content)
+
   // Determine if this event has no meaningful content and should be hidden entirely
   let should_hide_event = false
-  if (timeline_event?.type === 'message') {
+  if (timeline_event?.type === 'message' && !is_hook) {
     const processed = process_message_content({
       content: timeline_event.content
     })
@@ -95,6 +104,10 @@ const TimelineEvent = ({
     switch (timeline_event.type) {
       case 'message':
         if (timeline_event.role === 'user') {
+          // Check if this is a hook message
+          if (is_hook) {
+            return <HookMessage message={timeline_event} />
+          }
           return <UserMessage message={timeline_event} />
         } else {
           return (
@@ -107,6 +120,8 @@ const TimelineEvent = ({
         }
       case 'thinking':
         return <ThinkingMessage message={timeline_event} />
+      case 'system':
+        return <SystemMessage message={timeline_event} />
       case 'tool_use':
       case 'tool_call':
       case 'tool_result':
@@ -140,8 +155,7 @@ const TimelineEvent = ({
             position: 'relative',
             zIndex: 1,
             display: 'flex',
-            alignItems: 'flex-start',
-            pt: 0.5
+            alignItems: 'flex-start'
           }}>
           <Box
             sx={{
@@ -162,17 +176,13 @@ const TimelineEvent = ({
 
       {/* Timeline content */}
       <Box
-        sx={{ flex: 1, minWidth: 0, backgroundColor: 'var(--color-surface)' }}>
-        {timeline_event.type !== 'message' && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 1
-            }}></Box>
-        )}
-
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          backgroundColor: 'var(--color-surface)',
+          alignItems: 'center',
+          display: 'flex'
+        }}>
         {render_event_content()}
       </Box>
     </Box>
