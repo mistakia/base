@@ -16,6 +16,7 @@ export const threads_action_types = {
   LOAD_THREADS_TABLE: 'LOAD_THREADS_TABLE',
   SELECT_THREAD: 'SELECT_THREAD',
   CLEAR_SELECTED_THREAD: 'CLEAR_SELECTED_THREAD',
+  SET_THREAD_ARCHIVE_STATE: 'SET_THREAD_ARCHIVE_STATE',
 
   // Table view management actions
   UPDATE_THREAD_TABLE_VIEW: 'UPDATE_THREAD_TABLE_VIEW',
@@ -66,5 +67,10 @@ export const threads_actions = {
   load_threads_table: ({ view_id = 'default', is_append = false } = {}) => ({
     type: threads_action_types.LOAD_THREADS_TABLE,
     payload: { view_id, is_append }
+  }),
+
+  set_thread_archive_state: ({ thread_id, archive_reason, archived_at }) => ({
+    type: threads_action_types.SET_THREAD_ARCHIVE_STATE,
+    payload: { thread_id, archive_reason, archived_at }
   })
 }
