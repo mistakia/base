@@ -223,3 +223,20 @@ export const extract_thread_description = (thread) => {
     return thread.short_description || null
   }
 }
+
+/**
+ * Extract user public key from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {string|null} User public key or null
+ */
+export const extract_user_public_key = (thread) => {
+  if (!thread) return null
+
+  if (thread.get) {
+    // Immutable object
+    return thread.get('user_public_key') || null
+  } else {
+    // Plain JS object
+    return thread.user_public_key || null
+  }
+}

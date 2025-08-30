@@ -10,6 +10,7 @@ import StoreRegistry from '@core/store-registry.js'
 import { app_actions } from '@core/app/actions'
 import { get_app } from '@core/app/selectors'
 import Routes from './routes.js'
+import DialogContainer from '@components/DialogContainer'
 
 // Import styles
 import '@styles/normalize.css'
@@ -93,6 +94,7 @@ const Root = () => {
         <ThemeProvider theme={theme}>
           <AppInitializer>
             <Routes />
+            <DialogContainer />
           </AppInitializer>
         </ThemeProvider>
       </Router>

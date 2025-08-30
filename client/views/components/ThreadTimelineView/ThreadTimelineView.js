@@ -65,7 +65,7 @@ const ThreadTimelineView = () => {
 
   const right_content = (
     <Box>
-      <ThreadHeader metadata={metadata} />
+      <ThreadHeader metadata={metadata} thread_id={thread_id} />
       {selected_thread_data && (
         <FileActions
           path={thread_path}

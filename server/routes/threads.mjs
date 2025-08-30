@@ -91,6 +91,15 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
       return res.status(400).json({ error: 'thread_state is required' })
     }
 
+    // Check if user has permission to modify this thread
+    if (req.requires_redaction) {
+      log(`Access denied: User cannot modify thread ${thread_id}`)
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You can only modify threads that you own'
+      })
+    }
+
     // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
     const state_reason = archive_reason || reason
 

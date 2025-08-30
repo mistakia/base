@@ -1,11 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 
 import '@styles/chip.styl'
 import { format_relative_time } from '@views/utils/date-formatting.js'
 import { get_thread_cost_display } from '@core/threads/selectors'
+import { get_app } from '@core/app/selectors'
+import { dialog_actions } from '@core/dialog/actions'
 import {
   extract_message_counts,
   extract_tool_call_count,
@@ -14,7 +16,8 @@ import {
   extract_working_directory,
   extract_thread_state,
   extract_thread_title,
-  extract_thread_description
+  extract_thread_description,
+  extract_user_public_key
 } from '@views/utils/thread-metadata-extractor.js'
 
 const extract_models = (metadata) => {
@@ -93,6 +96,7 @@ const use_thread_metadata = (metadata) => {
   const thread_state = extract_thread_state(metadata)
   const title = extract_thread_title(metadata)
   const description = extract_thread_description(metadata)
+  const thread_user_public_key = extract_user_public_key(metadata)
 
   return {
     title,
@@ -109,7 +113,8 @@ const use_thread_metadata = (metadata) => {
     assistant_message_count: message_counts.assistant_message_count,
     tool_call_count,
     working_directory: working_directory.path,
-    working_directory_formatted: working_directory.formatted
+    working_directory_formatted: working_directory.formatted,
+    thread_user_public_key
   }
 }
 
@@ -182,7 +187,10 @@ const ThreadStats = ({
   user_message_count,
   assistant_message_count,
   tool_call_count,
-  thread_cost_display
+  thread_cost_display,
+  thread_id,
+  dispatch,
+  user_owns_thread
 }) => {
   const MetadataRow = ({
     label,
@@ -404,12 +412,18 @@ const ThreadStats = ({
           is_first={true}
         />
       )}
-      {has_thread_state && (
-        <MetadataRow
-          label='Thread State'
-          value={thread_state}
-          is_first={!has_session_provider}
-        />
+      {has_thread_state && thread_id && (
+        <Box
+          sx={{
+            borderTop: !has_session_provider ? 'none' : '1px solid #e0e0e0'
+          }}>
+          <ClickableThreadState
+            thread_state={thread_state}
+            thread_id={thread_id}
+            dispatch={dispatch}
+            user_owns_thread={user_owns_thread}
+          />
+        </Box>
       )}
       {has_working_directory && (
         <MetadataRow
@@ -525,7 +539,86 @@ ThreadStats.propTypes = {
   user_message_count: PropTypes.number,
   assistant_message_count: PropTypes.number,
   tool_call_count: PropTypes.number,
-  thread_cost_display: PropTypes.string
+  thread_cost_display: PropTypes.string,
+  thread_id: PropTypes.string,
+  dispatch: PropTypes.func,
+  user_owns_thread: PropTypes.bool.isRequired
+}
+
+const ClickableThreadState = ({
+  thread_state,
+  thread_id,
+  dispatch,
+  user_owns_thread
+}) => {
+  const handle_thread_state_click = () => {
+    if (!user_owns_thread) return
+
+    dispatch(
+      dialog_actions.show({
+        id: 'THREAD_STATE_CHANGE',
+        title:
+          thread_state === 'archived' ? 'Reactivate Thread' : 'Archive Thread',
+        data: { thread_id, current_state: thread_state }
+      })
+    )
+  }
+
+  return (
+    <Box
+      sx={{
+        borderTop: 'none',
+        borderBottom: 'none',
+        position: 'relative',
+        minHeight: '60px',
+        cursor: user_owns_thread ? 'pointer' : 'default',
+        '&:hover': user_owns_thread
+          ? {
+              backgroundColor: '#f5f5f5'
+            }
+          : {},
+        opacity: user_owns_thread ? 1 : 0.6
+      }}
+      onClick={handle_thread_state_click}
+      title={
+        user_owns_thread
+          ? 'Click to change thread state'
+          : 'You can only modify threads that you own'
+      }>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '8px',
+          left: '12px',
+          fontSize: '11px',
+          color: '#666',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+        Thread State
+      </Box>
+      <Box
+        sx={{
+          pt: '28px',
+          pb: '12px',
+          px: '12px',
+          fontSize: '14px',
+          color: '#333',
+          fontWeight: 400,
+          wordBreak: 'break-all'
+        }}>
+        {thread_state}
+      </Box>
+    </Box>
+  )
+}
+
+ClickableThreadState.propTypes = {
+  thread_state: PropTypes.string.isRequired,
+  thread_id: PropTypes.string.isRequired,
+  dispatch: PropTypes.func.isRequired,
+  user_owns_thread: PropTypes.bool.isRequired
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -558,7 +651,8 @@ ExternalSessionChips.propTypes = {
   thread_state: PropTypes.string
 }
 
-const ThreadHeader = ({ metadata }) => {
+const ThreadHeader = ({ metadata, thread_id }) => {
+  const dispatch = useDispatch()
   const {
     title,
     description,
@@ -573,11 +667,20 @@ const ThreadHeader = ({ metadata }) => {
     user_message_count,
     assistant_message_count,
     tool_call_count,
-    working_directory_formatted
+    working_directory_formatted,
+    thread_user_public_key
   } = use_thread_metadata(metadata)
 
-  // Get cost display from Redux store
+  // Get current user's public key and cost display from Redux store
+  const app_state = useSelector(get_app)
+  const current_user_public_key = app_state.get('user_public_key')
   const thread_cost_display = useSelector(get_thread_cost_display)
+
+  // Check if current user owns this thread
+  const user_owns_thread =
+    current_user_public_key &&
+    thread_user_public_key &&
+    current_user_public_key === thread_user_public_key
 
   return (
     <Box
@@ -608,13 +711,17 @@ const ThreadHeader = ({ metadata }) => {
         assistant_message_count={assistant_message_count}
         tool_call_count={tool_call_count}
         thread_cost_display={thread_cost_display}
+        thread_id={thread_id}
+        dispatch={dispatch}
+        user_owns_thread={user_owns_thread}
       />
     </Box>
   )
 }
 
 ThreadHeader.propTypes = {
-  metadata: PropTypes.object
+  metadata: PropTypes.object,
+  thread_id: PropTypes.string
 }
 
 export default ThreadHeader

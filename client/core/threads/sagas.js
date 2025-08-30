@@ -1,13 +1,22 @@
-import { takeLatest, fork, call, select, debounce } from 'redux-saga/effects'
+import {
+  takeLatest,
+  fork,
+  call,
+  select,
+  debounce,
+  put
+} from 'redux-saga/effects'
 
 import {
   get_threads,
   get_thread,
   get_models,
-  get_threads_table
+  get_threads_table,
+  put_thread_state
 } from '@core/api/sagas'
 import { threads_action_types } from './actions'
 import { get_threads_state } from './selectors'
+import { dialog_actions } from '@core/dialog/actions'
 
 function* ensure_models_data_loaded() {
   const threads_state = yield select(get_threads_state)
@@ -97,6 +106,30 @@ export function* debounced_table_state_fetch({ payload }) {
   }
 }
 
+export function* set_thread_archive_state_saga({ payload }) {
+  try {
+    const { thread_id, archive_reason } = payload
+
+    let thread_state, reason
+    if (archive_reason) {
+      thread_state = 'archived'
+      reason = archive_reason
+    } else {
+      thread_state = 'active'
+      reason = 'reactivated'
+    }
+
+    yield call(put_thread_state, { thread_id, thread_state, reason })
+    yield put(dialog_actions.cancel())
+
+    // Optionally reload thread data to reflect state change
+    yield call(get_thread, { thread_id })
+  } catch (error) {
+    console.error('Error setting thread archive state:', error)
+    // Could add error notification here
+  }
+}
+
 //= ====================================
 //  WATCHERS
 // -------------------------------------
@@ -126,6 +159,13 @@ export function* watch_load_threads_table() {
   )
 }
 
+export function* watch_set_thread_archive_state() {
+  yield takeLatest(
+    threads_action_types.SET_THREAD_ARCHIVE_STATE,
+    set_thread_archive_state_saga
+  )
+}
+
 //= ====================================
 //  ROOT
 // -------------------------------------
@@ -134,5 +174,6 @@ export const threads_sagas = [
   fork(watch_load_threads),
   fork(watch_load_thread),
   fork(watch_update_thread_table_view),
-  fork(watch_load_threads_table)
+  fork(watch_load_threads_table),
+  fork(watch_set_thread_archive_state)
 ]
