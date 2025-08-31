@@ -92,7 +92,7 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
     }
 
     // Check if user has permission to modify this thread
-    if (req.requires_redaction) {
+    if (!req.access?.write_allowed) {
       log(`Access denied: User cannot modify thread ${thread_id}`)
       return res.status(403).json({
         error: 'Access denied',

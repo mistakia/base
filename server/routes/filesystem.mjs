@@ -148,11 +148,13 @@ router.get('/directory', async (req, res) => {
           .replace(/\\/g, '/')
         const permission_result = file_permission_results[file_relative_path]
 
-        if (permission_result && !permission_result.allowed) {
-          file_info._requires_redaction = true
-        }
-
-        items.push(file_info)
+        // Set access information for each item
+        const item_read_allowed = !permission_result || !!permission_result.allowed
+        
+        items.push({
+          ...file_info,
+          access: { read_allowed: item_read_allowed }
+        })
       }
     }
 

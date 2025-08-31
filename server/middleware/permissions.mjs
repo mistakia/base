@@ -5,7 +5,8 @@ import config from '#config'
 import {
   check_user_permission,
   map_filesystem_path_to_base_uri,
-  map_thread_id_to_base_uri
+  map_thread_id_to_base_uri,
+  validate_thread_ownership
 } from './permission-checker.mjs'
 import {
   redact_file_info,
@@ -75,19 +76,23 @@ export const check_filesystem_permission = () => {
       const resource_path = map_filesystem_path_to_base_uri(full_path)
       log(`Checking filesystem permission for ${resource_path}`)
 
-      // Check permission
-      const permission_result = await check_user_permission({
+      // Check read permission
+      const read_result = await check_user_permission({
         user_public_key,
         resource_path
       })
 
-      // Store permission result on request
-      req.permission_result = permission_result
+      // Set structured access object
+      req.access = {
+        user_public_key,
+        resource_path,
+        read_allowed: !!read_result.allowed,
+        write_allowed: false, // Filesystem writes can be extended later if needed
+        reason: read_result.reason || null
+      }
 
-      if (!permission_result.allowed) {
-        log(`Access denied to ${resource_path}: ${permission_result.reason}`)
-        // Don't block the request, but mark it for redaction
-        req.requires_redaction = true
+      if (!read_result.allowed) {
+        log(`Access denied to ${resource_path}: ${read_result.reason}`)
       }
 
       next()
@@ -117,19 +122,29 @@ export const check_thread_permission = () => {
       const resource_path = map_thread_id_to_base_uri(thread_id)
       log(`Checking thread permission for ${resource_path}`)
 
-      // Check permission
-      const permission_result = await check_user_permission({
+      // Check read permission
+      const read_result = await check_user_permission({
         user_public_key,
         resource_path
       })
 
-      // Store permission result on request
-      req.permission_result = permission_result
+      // Check write permission (ownership)
+      const is_owner = await validate_thread_ownership({
+        thread_id,
+        user_public_key
+      })
 
-      if (!permission_result.allowed) {
-        log(`Access denied to thread ${thread_id}: ${permission_result.reason}`)
-        // Don't block the request, but mark it for redaction
-        req.requires_redaction = true
+      // Set structured access object
+      req.access = {
+        user_public_key,
+        resource_path,
+        read_allowed: !!read_result.allowed,
+        write_allowed: !!is_owner,
+        reason: read_result.reason || null
+      }
+
+      if (!read_result.allowed) {
+        log(`Access denied to thread ${thread_id}: ${read_result.reason}`)
       }
 
       next()
@@ -153,56 +168,51 @@ export const apply_response_redaction = (req, data) => {
     const request_path = req.path
 
     if (request_path === '/directory') {
-      // Redact directory listing items that require redaction
+      // Redact directory listing items based on per-item access
       if (data.items && Array.isArray(data.items)) {
         data.items = data.items.map((item) => {
-          // Clean up the redaction marker first
-          const requires_redaction = item._requires_redaction
-          delete item._requires_redaction
-
-          // If specific item requires redaction, redact it
-          if (requires_redaction) {
-            return redact_file_info({ file_info: item })
-          }
-
-          return item
+          const can_read = item.access?.read_allowed !== false
+          
+          // Clean up internal fields
+          delete item.access
+          
+          return can_read ? item : redact_file_info({ file_info: item })
         })
       }
 
-      // If the entire directory requires redaction, only mark the directory
-      // Do NOT blanket-redact items; per-item _requires_redaction already handled above
-      if (req.requires_redaction) {
+      // Check directory-level access
+      if (req.access && req.access.read_allowed === false) {
         return { ...data, is_redacted: true }
       }
 
       return data
     } else if (request_path === '/file') {
-      // Redact file content only if required
-      if (req.requires_redaction) {
+      // Redact file content based on access
+      if (req.access && req.access.read_allowed === false) {
         return redact_file_content_response(data)
       }
       return data
     } else if (request_path === '/info') {
-      // Redact file info only if required
-      if (req.requires_redaction) {
+      // Redact file info based on access
+      if (req.access && req.access.read_allowed === false) {
         return redact_file_info({ file_info: data })
       }
       return data
     }
   }
 
-  // Thread routes: only redact when required
+  // Thread routes: redact based on read access
   if ((req.baseUrl || req.originalUrl || '').includes('/api/threads')) {
-    if (!req.requires_redaction) {
-      return data
+    if (req.access && req.access.read_allowed === false) {
+      if (data.thread_id) {
+        // Single thread
+        return redact_thread_data(data)
+      } else if (Array.isArray(data)) {
+        // Thread list
+        return data.map((thread) => redact_thread_data(thread))
+      }
     }
-    if (data.thread_id) {
-      // Single thread
-      return redact_thread_data(data)
-    } else if (Array.isArray(data)) {
-      // Thread list
-      return data.map((thread) => redact_thread_data(thread))
-    }
+    return data
   }
 
   // Default: return data unchanged if no specific redaction needed
