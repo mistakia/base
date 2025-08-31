@@ -26,6 +26,17 @@ const format_short_date = (date_string) => {
   }
 }
 
+const is_valid_date = (date_string) => {
+  if (!date_string) return false
+  
+  try {
+    const date = new Date(date_string)
+    return !isNaN(date.getTime())
+  } catch {
+    return false
+  }
+}
+
 const DateDisplay = ({
   date,
   show_relative = true,
@@ -34,10 +45,14 @@ const DateDisplay = ({
   absolute_style = {},
   sx = {}
 }) => {
-  if (!date) return 'Unknown'
+  if (!date || !is_valid_date(date)) return '-'
 
   const relative_time = show_relative ? format_relative_time(date) : null
   const absolute_time = show_absolute ? format_short_date(date) : null
+
+  // Check if formatting returned valid results
+  if (show_relative && !relative_time) return '-'
+  if (show_absolute && !absolute_time) return '-'
 
   if (show_relative && show_absolute) {
     return (
