@@ -10,7 +10,9 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
     load_threads()
   }, [load_threads])
 
-  const active_threads = threads.filter(thread => thread.thread_state === 'active')
+  const active_threads = threads.filter(
+    (thread) => thread.thread_state === 'active'
+  )
 
   if (active_threads.size === 0) {
     return null

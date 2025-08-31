@@ -4,69 +4,83 @@ import { tasks_action_types } from './actions'
 import { task_columns } from '@views/components/TasksTable/index.js'
 import { TABLE_OPERATORS } from 'react-table/src/constants.mjs'
 import { TASK_STATUS } from '@libs-shared/task-constants.mjs'
+import { create_default_table_state } from '@core/table/create-default-table-state.js'
+import { create_view } from '@core/table/create-view.js'
+import {
+  update_view_on_config_change,
+  on_table_pending,
+  on_table_fulfilled,
+  on_table_failed
+} from '@core/table/table-reducer-helpers.js'
 
-// Default view configuration factory
-const create_default_view = ({
-  view_id,
-  view_name,
-  where_clause = new List()
-}) => {
-  const default_table_state = new Map({
-    columns: new List([
-      'title',
-      'status',
-      'priority',
-      'finish_by',
-      'assigned_to',
-      'created_at',
-      'updated_at'
-    ]),
-    sort: new List([{ column_id: 'created_at', desc: true }]),
-    where: where_clause,
-    splits: new List(),
-    limit: 1000,
-    offset: 0
-  })
-
-  return new Map({
-    task_view_id: view_id,
-    task_view_name: view_name,
-    task_table_state: default_table_state,
-    saved_table_state: default_table_state,
-    // Table-specific data for this view
-    task_table_results: new List(),
-    task_total_row_count: 0,
-    task_total_rows_fetched: 0,
-    task_is_fetching: false,
-    task_is_fetching_more: false,
-    task_table_error: null
-  })
-}
+const DEFAULT_TASK_TABLE_STATE = create_default_table_state({
+  columns: [
+    'title',
+    'status',
+    'priority',
+    'finish_by',
+    'assigned_to',
+    'created_at',
+    'updated_at'
+  ],
+  sort: [{ column_id: 'created_at', desc: true }]
+})
 
 // Default views
 const DEFAULT_VIEWS = {
-  default: create_default_view({ view_id: 'default', view_name: 'All Tasks' }),
-  active: create_default_view({
+  default: create_view({
+    entity_prefix: 'task',
+    view_id: 'default',
+    view_name: 'All Tasks',
+    table_state: DEFAULT_TASK_TABLE_STATE
+  }),
+  active: create_view({
+    entity_prefix: 'task',
     view_id: 'active',
     view_name: 'Active Tasks',
-    where_clause: new List([
-      new Map({
-        column_id: 'status',
-        operator: TABLE_OPERATORS.IN,
-        value: [TASK_STATUS.STARTED, TASK_STATUS.IN_PROGRESS]
-      })
-    ])
+    table_state: create_default_table_state({
+      columns: [
+        'title',
+        'status',
+        'priority',
+        'finish_by',
+        'assigned_to',
+        'created_at',
+        'updated_at'
+      ],
+      sort: [{ column_id: 'created_at', desc: true }],
+      where: new List([
+        new Map({
+          column_id: 'status',
+          operator: TABLE_OPERATORS.IN,
+          value: [TASK_STATUS.STARTED, TASK_STATUS.IN_PROGRESS]
+        })
+      ])
+    })
   }),
-  upcoming: create_default_view({
+  upcoming: create_view({
+    entity_prefix: 'task',
     view_id: 'upcoming',
     view_name: 'Upcoming Tasks',
-    where_clause: new List([
-      new Map({
-        column_id: 'status',
-        operator: TABLE_OPERATORS.IN,
-        value: [TASK_STATUS.PLANNED]
-      })
-    ])
+    table_state: create_default_table_state({
+      columns: [
+        'title',
+        'status',
+        'priority',
+        'finish_by',
+        'assigned_to',
+        'created_at',
+        'updated_at'
+      ],
+      sort: [{ column_id: 'created_at', desc: true }],
+      where: new List([
+        new Map({
+          column_id: 'status',
+          operator: TABLE_OPERATORS.IN,
+          value: [TASK_STATUS.PLANNED]
+        })
+      ])
+    })
   })
 }
 
@@ -107,22 +121,15 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
     case tasks_action_types.UPDATE_TASK_TABLE_VIEW: {
       const { view } = payload
       const view_id = view?.view_id || 'default'
-      return state.updateIn(['task_table_views', view_id], (existing_view) => {
-        const updates = {
-          task_view_id: view_id,
-          task_view_name:
-            view?.view_name || existing_view.get('task_view_name'),
-          task_table_state: new Map(view?.table_state || {}),
-          task_table_results: new List() // Clear tasks when table state changes
-        }
-
-        // Set saved_table_state on first load if it doesn't exist
-        if (!existing_view.has('saved_table_state') && view?.table_state) {
-          updates.saved_table_state = new Map(view.table_state)
-        }
-
-        return existing_view.merge(updates)
-      })
+      return state.updateIn(['task_table_views', view_id], (existing_view) =>
+        update_view_on_config_change({
+          view: existing_view,
+          entity_prefix: 'task',
+          view_id,
+          view_name: view?.view_name,
+          table_state: view?.table_state
+        })
+      )
     }
 
     case tasks_action_types.SELECT_TASK_TABLE_VIEW:
@@ -130,47 +137,44 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
 
     case tasks_action_types.GET_TASKS_TABLE_PENDING: {
       const view_id_pending = payload.view_id || 'default'
-      return state.updateIn(['task_table_views', view_id_pending], (view) => {
-        return view.merge({
-          task_is_fetching: !payload.opts?.is_append,
-          task_is_fetching_more: payload.opts?.is_append || false,
-          task_table_error: null
+      return state.updateIn(['task_table_views', view_id_pending], (view) =>
+        on_table_pending({
+          view,
+          entity_prefix: 'task',
+          is_append: payload.opts?.is_append
         })
-      })
+      )
     }
 
     case tasks_action_types.GET_TASKS_TABLE_FULFILLED: {
       const is_append = payload.opts?.is_append || false
       const view_id_fulfilled = payload.opts?.view_id || 'default'
-      // Convert task objects to plain JS objects for ImmutableJS compatibility
-      const task_data = payload.data?.rows || []
-      const tasks_list = Array.isArray(task_data) ? task_data : []
+      const rows = Array.isArray(payload.data?.rows) ? payload.data.rows : []
+      const task_total_row_count =
+        typeof payload.data?.total_row_count === 'number'
+          ? payload.data.total_row_count
+          : 0
 
-      return state.updateIn(['task_table_views', view_id_fulfilled], (view) => {
-        return view.merge({
-          task_table_results: is_append
-            ? view.get('task_table_results').concat(List(tasks_list))
-            : List(tasks_list),
-          task_total_row_count: payload.data?.total_row_count || 0,
-          task_total_rows_fetched: is_append
-            ? view.get('task_total_rows_fetched') + tasks_list.length
-            : tasks_list.length,
-          task_is_fetching: false,
-          task_is_fetching_more: false,
-          task_table_error: null
+      return state.updateIn(['task_table_views', view_id_fulfilled], (view) =>
+        on_table_fulfilled({
+          view,
+          entity_prefix: 'task',
+          rows,
+          is_append,
+          total_row_count: task_total_row_count
         })
-      })
+      )
     }
 
     case tasks_action_types.GET_TASKS_TABLE_FAILED: {
       const view_id_failed = payload.view_id || 'default'
-      return state.updateIn(['task_table_views', view_id_failed], (view) => {
-        return view.merge({
-          task_is_fetching: false,
-          task_is_fetching_more: false,
-          task_table_error: payload.error
+      return state.updateIn(['task_table_views', view_id_failed], (view) =>
+        on_table_failed({
+          view,
+          entity_prefix: 'task',
+          error: payload.error
         })
-      })
+      )
     }
 
     default:

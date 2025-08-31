@@ -28,7 +28,7 @@ const format_short_date = (date_string) => {
 
 const is_valid_date = (date_string) => {
   if (!date_string) return false
-  
+
   try {
     const date = new Date(date_string)
     return !isNaN(date.getTime())

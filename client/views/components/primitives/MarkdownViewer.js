@@ -72,7 +72,8 @@ const get_normal_styles = {
     cursor: 'pointer',
     transition: 'color 0.2s, border-bottom-color 0.2s',
     display: 'inline-block',
-    lineHeight: '1.2'
+    lineHeight: '1.2',
+    wordBreak: 'break-all'
   },
   '& a:hover': {
     color: 'var(--color-primary)',

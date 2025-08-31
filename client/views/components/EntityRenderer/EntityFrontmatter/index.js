@@ -44,9 +44,9 @@ const categorize_fields = (frontmatter) => {
 
 const format_field_value = (value) => {
   if (value === null || value === undefined) return 'N/A'
-  if (Array.isArray(value)) return value.join(', ')
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-  if (typeof value === 'object') return JSON.stringify(value, null, 2)
+  if (Array.isArray(value) || typeof value === 'object')
+    return JSON.stringify(value, null, 2)
   return String(value)
 }
 

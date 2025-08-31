@@ -172,10 +172,10 @@ export const apply_response_redaction = (req, data) => {
       if (data.items && Array.isArray(data.items)) {
         data.items = data.items.map((item) => {
           const can_read = item.access?.read_allowed !== false
-          
+
           // Clean up internal fields
           delete item.access
-          
+
           return can_read ? item : redact_file_info({ file_info: item })
         })
       }

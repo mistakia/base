@@ -2,7 +2,7 @@ export const format_date_time = (date) => {
   try {
     const d = new Date(date)
     if (isNaN(d.getTime())) return null
-    
+
     const months = [
       'Jan',
       'Feb',
@@ -37,11 +37,11 @@ export const format_relative_time = (date) => {
   try {
     const now = new Date()
     const then = new Date(date)
-    
+
     if (isNaN(then.getTime())) return null
-    
+
     const seconds = Math.floor((now - then) / 1000)
-    
+
     if (isNaN(seconds)) return null
 
     if (seconds < 60) return 'just now'
@@ -69,11 +69,11 @@ export const format_shorthand_time = (date) => {
   try {
     const now = new Date()
     const then = new Date(date)
-    
+
     if (isNaN(then.getTime())) return null
-    
+
     const seconds = Math.floor((now - then) / 1000)
-    
+
     if (isNaN(seconds)) return null
 
     if (seconds < 60) return 'now'
@@ -120,11 +120,11 @@ export const format_duration = (created_at, updated_at) => {
   try {
     const start = new Date(created_at)
     const end = new Date(updated_at)
-    
+
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
-    
+
     const seconds = Math.floor((end - start) / 1000)
-    
+
     if (isNaN(seconds)) return null
 
     if (seconds < 60) return `${seconds}s`
