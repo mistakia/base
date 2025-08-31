@@ -10,11 +10,13 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
     load_threads()
   }, [load_threads])
 
-  if (threads.size === 0) {
+  const active_threads = threads.filter(thread => thread.thread_state === 'active')
+
+  if (active_threads.size === 0) {
     return null
   }
 
-  const displayed_threads = threads.take(3)
+  const displayed_threads = active_threads.take(3)
 
   return (
     <div className='threads-container'>
@@ -24,7 +26,7 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
             <Thread key={thread.id} thread={thread} />
           ))}
         </div>
-        {threads.size > displayed_threads.size && (
+        {active_threads.size > displayed_threads.size && (
           <Link to='/thread' className='all-threads-link'>
             view all threads
           </Link>
