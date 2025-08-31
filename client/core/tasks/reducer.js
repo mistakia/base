@@ -10,26 +10,29 @@ const create_default_view = ({
   view_id,
   view_name,
   where_clause = new List()
-}) =>
-  new Map({
+}) => {
+  const default_table_state = new Map({
+    columns: new List([
+      'title',
+      'status',
+      'priority',
+      'finish_by',
+      'assigned_to',
+      'created_at',
+      'updated_at'
+    ]),
+    sort: new List([{ column_id: 'created_at', desc: true }]),
+    where: where_clause,
+    splits: new List(),
+    limit: 1000,
+    offset: 0
+  })
+
+  return new Map({
     task_view_id: view_id,
     task_view_name: view_name,
-    task_table_state: new Map({
-      columns: new List([
-        'title',
-        'status',
-        'priority',
-        'finish_by',
-        'assigned_to',
-        'created_at',
-        'updated_at'
-      ]),
-      sort: new List([{ column_id: 'created_at', desc: true }]),
-      where: where_clause,
-      splits: new List(),
-      limit: 1000,
-      offset: 0
-    }),
+    task_table_state: default_table_state,
+    saved_table_state: default_table_state,
     // Table-specific data for this view
     task_table_results: new List(),
     task_total_row_count: 0,
@@ -38,6 +41,7 @@ const create_default_view = ({
     task_is_fetching_more: false,
     task_table_error: null
   })
+}
 
 // Default views
 const DEFAULT_VIEWS = {
@@ -104,13 +108,20 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
       const { view } = payload
       const view_id = view?.view_id || 'default'
       return state.updateIn(['task_table_views', view_id], (existing_view) => {
-        return existing_view.merge({
+        const updates = {
           task_view_id: view_id,
           task_view_name:
             view?.view_name || existing_view.get('task_view_name'),
           task_table_state: new Map(view?.table_state || {}),
           task_table_results: new List() // Clear tasks when table state changes
-        })
+        }
+
+        // Set saved_table_state on first load if it doesn't exist
+        if (!existing_view.has('saved_table_state') && view?.table_state) {
+          updates.saved_table_state = new Map(view.table_state)
+        }
+
+        return existing_view.merge(updates)
       })
     }
 

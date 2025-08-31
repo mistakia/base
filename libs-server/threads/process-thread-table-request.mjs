@@ -27,7 +27,7 @@ const THREAD_COLUMN_TYPES = {
  * @param {string} [params.requesting_user_public_key] Requesting user's public key for permissions
  * @returns {Promise<Object>} Processed table data
  */
-export async function process_table_request({
+export async function process_thread_table_request({
   table_state,
   requesting_user_public_key
 }) {
@@ -45,17 +45,31 @@ export async function process_table_request({
     })
 
     // Use generic table processing with thread-specific configuration
-    return await process_generic_table_request({
+    const result = await process_generic_table_request({
       data: raw_threads,
       table_state,
       extract_metadata: extract_thread_metadata,
       default_sort: { column_id: 'created_at', desc: true },
       column_types: THREAD_COLUMN_TYPES
     })
+
+    // Normalize to unified response shape (match tasks)
+    return {
+      rows: result.data,
+      total_row_count: result.total_count,
+      metadata: {
+        fetched: result.data.length,
+        has_more: result.has_more,
+        limit: result.limit,
+        offset: result.offset,
+        processing_time_ms: result.processing_time_ms,
+        table_state: table_state || {}
+      }
+    }
   } catch (error) {
     log(`Error processing thread table request: ${error.message}`)
     throw error
   }
 }
 
-export default process_table_request
+export default process_thread_table_request

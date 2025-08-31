@@ -6,7 +6,7 @@ import {
   check_thread_permission,
   apply_redaction_interceptor
 } from '#server/middleware/permissions.mjs'
-import { process_table_request } from '#libs-server/threads/process-table-request.mjs'
+import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -136,7 +136,7 @@ router.post('/table', async (req, res) => {
       null
 
     // Process the table request with server-side filtering and sorting
-    const result = await process_table_request({
+    const result = await process_thread_table_request({
       table_state,
       requesting_user_public_key
     })

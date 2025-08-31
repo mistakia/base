@@ -4,7 +4,7 @@ import {
   list_tasks_from_filesystem,
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
-import get_tasks_table_view_results from '#libs-server/tasks/get-tasks-table-view-results.mjs'
+import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
 
 const router = express.Router({ mergeParams: true })
 
@@ -37,10 +37,10 @@ router.post('/table', async (req, res) => {
       })
     }
 
-    // Get table results
-    const results = await get_tasks_table_view_results({
-      user_public_key,
-      table_state: table_state || {}
+    // Get table results directly from processor (normalized shape)
+    const results = await process_task_table_request({
+      table_state: table_state || {},
+      requesting_user_public_key: user_public_key
     })
 
     log(

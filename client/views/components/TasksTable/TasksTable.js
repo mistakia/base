@@ -21,6 +21,7 @@ const TasksTable = () => {
   const {
     data = [],
     table_state = {},
+    saved_table_state = {},
     all_columns = {},
     is_loading = false,
     is_fetching = false,
@@ -31,7 +32,7 @@ const TasksTable = () => {
   } = table_props
 
   const handle_view_change = (view) => {
-    dispatch(tasks_actions.load_tasks_table({ view_id: view.view_id }))
+    dispatch(tasks_actions.update_task_table_view({ view }))
   }
 
   const handle_fetch_more = () => {
@@ -68,7 +69,7 @@ const TasksTable = () => {
       is_loading={is_loading}
       is_fetching={is_fetching}
       is_fetching_more={is_fetching_more}
-      saved_table_state={selected_view?.saved_table_state}
+      saved_table_state={saved_table_state}
       disable_rank_aggregation={true}
       disable_splits={true}
       disable_create_view={true}
