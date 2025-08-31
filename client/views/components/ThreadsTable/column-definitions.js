@@ -205,16 +205,11 @@ const DurationCell = ({ row }) => {
     }
   }
 
-  // Get percentile styling if available
-  const percentile_style =
-    thread.percentile_data?.duration_minutes_percentile_style || {}
-
   return (
     <div
       className='cell-content'
       style={{
-        height: 'fit-content',
-        ...percentile_style
+        height: 'fit-content'
       }}>
       <span>{formatted_duration}</span>
     </div>

@@ -109,13 +109,26 @@ export async function process_task_table_request({
     })
 
     // Use generic table processing with task-specific configuration
-    return await process_generic_table_request({
+    const result = await process_generic_table_request({
       data: raw_tasks,
       table_state,
       extract_metadata: extract_task_metadata,
       default_sort: { column_id: 'created_at', desc: true },
       column_types: TASK_COLUMN_TYPES
     })
+    // Normalize to unified response shape (match threads)
+    return {
+      rows: result.data,
+      total_row_count: result.total_count,
+      metadata: {
+        fetched: result.data.length,
+        has_more: result.has_more,
+        limit: result.limit,
+        offset: result.offset,
+        processing_time_ms: result.processing_time_ms,
+        table_state: table_state || {}
+      }
+    }
   } catch (error) {
     log(`Error processing task table request: ${error.message}`)
     throw error

@@ -3,30 +3,67 @@ import { Record, List, Map } from 'immutable'
 import { threads_action_types } from './actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
 
+const DEFAULT_TABLE_STATE = new Map({
+  columns: new List([
+    'thread_state',
+    'session_provider',
+    'title',
+    'working_directory',
+    'updated_at',
+    'duration',
+    'message_count',
+    'user_message_count',
+    'assistant_message_count',
+    'tool_call_count',
+    'token_count',
+    'cost'
+  ]),
+  sort: new List([{ column_id: 'updated_at', desc: true }]),
+  where: new List(),
+  splits: new List(),
+  limit: 1000,
+  offset: 0
+})
+
 const DEFAULT_THREAD_TABLE_VIEW = new Map({
   thread_view_id: 'default',
-  thread_view_name: 'Default View',
-  thread_table_state: new Map({
-    columns: new List([
-      'thread_state',
-      'session_provider',
-      'title',
-      'working_directory',
-      'updated_at',
-      'duration',
-      'message_count',
-      'user_message_count',
-      'assistant_message_count',
-      'tool_call_count',
-      'token_count',
-      'cost'
-    ]),
-    sort: new List([{ column_id: 'updated_at', desc: true }]),
-    where: new List(),
-    splits: new List(),
-    limit: 1000,
-    offset: 0
-  }),
+  thread_view_name: 'All Threads',
+  thread_table_state: DEFAULT_TABLE_STATE,
+  saved_table_state: DEFAULT_TABLE_STATE,
+  // Table-specific data for this view
+  thread_table_results: new List(),
+  thread_table_selected_thread: null,
+  thread_table_selected_thread_data: null,
+  thread_total_row_count: 0,
+  thread_total_rows_fetched: 0,
+  thread_is_fetching: false,
+  thread_is_fetching_more: false,
+  thread_table_error: null
+})
+
+const ACTIVE_THREADS_VIEW = new Map({
+  thread_view_id: 'active',
+  thread_view_name: 'Active Threads',
+  thread_table_state: DEFAULT_TABLE_STATE.setIn(
+    ['where'],
+    new List([
+      {
+        column_id: 'thread_state',
+        operator: '=',
+        value: 'active'
+      }
+    ])
+  ),
+  saved_table_state: DEFAULT_TABLE_STATE.setIn(
+    ['where'],
+    new List([
+      {
+        column_id: 'thread_state',
+        operator: '=',
+        value: 'active'
+      }
+    ])
+  ),
   // Table-specific data for this view
   thread_table_results: new List(),
   thread_table_selected_thread: null,
@@ -56,7 +93,8 @@ const ThreadsState = new Record({
 
   // Table views management
   thread_table_views: new Map({
-    default: DEFAULT_THREAD_TABLE_VIEW
+    default: DEFAULT_THREAD_TABLE_VIEW,
+    active: ACTIVE_THREADS_VIEW
   }),
   selected_thread_table_view_id: 'default',
   thread_all_columns: Map(thread_columns)
@@ -139,13 +177,20 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.updateIn(
         ['thread_table_views', view_id],
         (existing_view) => {
-          return existing_view.merge({
+          const updates = {
             thread_view_id: view_id,
             thread_view_name:
               view?.view_name || existing_view.get('thread_view_name'),
             thread_table_state: new Map(view?.table_state || {}),
             thread_table_results: new List() // Clear threads when table state changes
-          })
+          }
+
+          // Set saved_table_state on first load if it doesn't exist
+          if (!existing_view.has('saved_table_state') && view?.table_state) {
+            updates.saved_table_state = new Map(view.table_state)
+          }
+
+          return existing_view.merge(updates)
         }
       )
     }
@@ -166,22 +211,24 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
 
     case threads_action_types.GET_THREADS_TABLE_FULFILLED: {
       const is_append = payload.opts?.is_append || false
-      const view_id_fulfilled = payload.view_id || 'default'
-      // Convert thread objects to plain JS objects for ImmutableJS compatibility
-      const thread_data = payload.data?.data || []
-      const threads_list = Array.isArray(thread_data) ? thread_data : []
+      const view_id_fulfilled = payload.opts?.view_id || 'default'
+      const rows = Array.isArray(payload.data?.rows) ? payload.data.rows : []
+      const thread_total_row_count =
+        typeof payload.data?.total_row_count === 'number'
+          ? payload.data.total_row_count
+          : 0
 
       return state.updateIn(
         ['thread_table_views', view_id_fulfilled],
         (view) => {
           return view.merge({
             thread_table_results: is_append
-              ? view.get('thread_table_results').concat(List(threads_list))
-              : List(threads_list),
-            thread_total_row_count: payload.total_count || 0,
+              ? view.get('thread_table_results').concat(List(rows))
+              : List(rows),
+            thread_total_row_count,
             thread_total_rows_fetched: is_append
-              ? view.get('thread_total_rows_fetched') + threads_list.length
-              : threads_list.length,
+              ? view.get('thread_total_rows_fetched') + rows.length
+              : rows.length,
             thread_is_fetching: false,
             thread_is_fetching_more: false,
             thread_table_error: null

@@ -48,8 +48,14 @@ export const threads_actions = {
     type: threads_action_types.CLEAR_SELECTED_THREAD
   }),
 
-  // Table view management actions - update_threads_table_state handles on_view_change
+  // Table view management actions - prefer update_thread_table_view for parity with tasks
   update_threads_table_state: ({ view }) => ({
+    type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
+    payload: { view }
+  }),
+
+  // alias with clearer name matching tasks slice
+  update_thread_table_view: ({ view }) => ({
     type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
     payload: { view }
   }),
