@@ -2,21 +2,53 @@ import express from 'express'
 import debug from 'debug'
 
 import * as threads from '#libs-server/threads/index.mjs'
-import {
-  check_thread_permission,
-  apply_redaction_interceptor
-} from '#server/middleware/permissions.mjs'
+import { check_thread_permission } from '#server/middleware/permissions.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
+import { check_user_permission } from '#server/middleware/permission-checker.mjs'
+import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
 
-// Apply redaction interceptor to all thread routes
-router.use(apply_redaction_interceptor())
-
 /**
- * Handle errors consistently
+ * Helper functions
  */
+
+function get_requesting_user_key(req) {
+  return (
+    req.user?.user_public_key || req.permission_context?.user_public_key || null
+  )
+}
+
+function build_thread_resource_path(thread_id) {
+  return `user:thread/${thread_id}`
+}
+
+async function check_thread_access_permission(user_public_key, thread_id) {
+  if (!user_public_key) return false
+
+  const thread_resource_path = build_thread_resource_path(thread_id)
+  const permission_result = await check_user_permission({
+    user_public_key,
+    resource_path: thread_resource_path
+  })
+
+  return permission_result.allowed
+}
+
+async function apply_permission_based_redaction(thread, user_public_key) {
+  const has_permission = await check_thread_access_permission(
+    user_public_key,
+    thread.thread_id
+  )
+
+  if (!has_permission) {
+    return redact_thread_data(thread)
+  }
+
+  return thread
+}
+
 function handle_errors(res, error, operation) {
   log(`Error ${operation}: ${error.message}`)
   res.status(500).json({
@@ -25,58 +57,73 @@ function handle_errors(res, error, operation) {
   })
 }
 
+function validate_table_state(table_state) {
+  if (table_state && typeof table_state !== 'object') {
+    return {
+      valid: false,
+      error: 'table_state must be an object matching react-table schema'
+    }
+  }
+  return { valid: true }
+}
+
+/**
+ * Route handlers
+ */
+
 // Get all threads with optional filtering
 router.get('/', async (req, res) => {
   try {
     const { user_public_key, thread_state } = req.query
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
+    const requesting_user_key = get_requesting_user_key(req)
 
-    // Use provided public key or default to null for all users
-    const query_user_public_key = user_public_key
-
-    // Filter threads based on user permissions
-    const requesting_user_public_key =
-      req.user?.user_public_key ||
-      req.permission_context?.user_public_key ||
-      null
-
-    const thread_list = await threads.list_threads({
-      user_public_key: query_user_public_key,
+    // Get all threads from filesystem
+    const all_threads = await threads.list_threads({
+      user_public_key,
       thread_state,
       limit,
-      offset,
-      requesting_user_public_key
+      offset
     })
 
-    res.json(thread_list)
+    // Apply permission checking and redaction to each thread
+    const threads_with_permissions = await Promise.all(
+      all_threads.map((thread) =>
+        apply_permission_based_redaction(thread, requesting_user_key)
+      )
+    )
+
+    res.json(threads_with_permissions)
   } catch (error) {
     handle_errors(res, error, 'listing threads')
   }
 })
 
 // Get a specific thread
-router.get('/:thread_id', check_thread_permission(), async (req, res) => {
+router.get('/:thread_id', async (req, res) => {
   try {
-    log(`Getting thread ${req.params.thread_id}`)
     const { thread_id } = req.params
+    log(`Getting thread ${thread_id}`)
 
-    const user_public_key =
-      req.user?.user_public_key ||
-      req.permission_context?.user_public_key ||
-      null
-    const thread = await threads.get_thread({
-      thread_id,
-      user_public_key
-    })
+    const requesting_user_key = get_requesting_user_key(req)
+    const thread = await threads.get_thread({ thread_id })
 
-    log(`Thread retrieved successfully: ${thread.thread_id}`)
-    res.json(thread)
+    // Apply permission-based redaction
+    const response_thread = await apply_permission_based_redaction(
+      thread,
+      requesting_user_key
+    )
+
+    log(`Thread retrieved successfully: ${thread_id}`)
+    res.json(response_thread)
   } catch (error) {
     log(`Error getting thread: ${error.message}`)
+
     if (error.message.includes('Thread not found')) {
       return res.status(404).json({ error: 'Thread not found' })
     }
+
     handle_errors(res, error, 'getting thread')
   }
 })
@@ -120,25 +167,21 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
 router.post('/table', async (req, res) => {
   try {
     const { table_state } = req.body
+    const requesting_user_key = get_requesting_user_key(req)
 
-    // Validate table state against react-table schema
-    if (table_state && typeof table_state !== 'object') {
+    // Validate table state
+    const validation = validate_table_state(table_state)
+    if (!validation.valid) {
       return res.status(400).json({
         error: 'Invalid table_state',
-        message: 'table_state must be an object matching react-table schema'
+        message: validation.error
       })
     }
-
-    // Use requesting user's permissions for filtering
-    const requesting_user_public_key =
-      req.user?.user_public_key ||
-      req.permission_context?.user_public_key ||
-      null
 
     // Process the table request with server-side filtering and sorting
     const result = await process_thread_table_request({
       table_state,
-      requesting_user_public_key
+      requesting_user_public_key: requesting_user_key
     })
 
     res.json(result)

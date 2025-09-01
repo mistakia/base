@@ -171,6 +171,36 @@ export const check_user_permissions_batch = async ({
 }
 
 /**
+ * Checks if a user has permission to access a file by its absolute filesystem path
+ *
+ * @param {Object} params - Parameters for permission check
+ * @param {string} params.user_public_key - User's public key
+ * @param {string} params.absolute_path - Absolute filesystem path to check
+ * @returns {Promise<boolean>} True if user has access permission
+ */
+export const check_user_permission_for_file = async ({
+  user_public_key,
+  absolute_path
+}) => {
+  if (!absolute_path) {
+    log('No absolute_path provided for permission check')
+    return false
+  }
+
+  // Convert filesystem path to base_uri
+  const resource_path = map_filesystem_path_to_base_uri(absolute_path)
+  log(`Checking file permission: ${absolute_path} -> ${resource_path}`)
+
+  // Use existing permission check with base_uri
+  const result = await check_user_permission({
+    user_public_key,
+    resource_path
+  })
+
+  return result.allowed
+}
+
+/**
  * Validates if a user owns a thread
  *
  * @param {Object} params - Parameters for ownership check

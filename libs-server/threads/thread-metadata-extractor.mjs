@@ -184,6 +184,9 @@ function format_for_table_display(thread, extracted_data) {
     description: thread.description || '',
     tags: thread.tags || [],
 
+    // Include redaction flag for frontend
+    is_redacted: thread.is_redacted || false,
+
     // Raw thread data for navigation and detailed views
     raw_thread: thread
   }

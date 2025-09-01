@@ -14,11 +14,14 @@ const log = debug('task:filesystem:list')
 
 /**
  * List tasks from the filesystem based on provided filters
- * This replaces the database-based task listing with file-based operations
  *
  * @param {Object} params - Query parameters
- * @param {string} params.user_public_key - User public key to filter tasks by
  * @param {string} [params.status] - Task status to filter by
+ * @param {Array<string>} [params.include_status=[]] - Statuses to include
+ * @param {Array<string>} [params.exclude_status=[]] - Statuses to exclude
+ * @param {Array<string>} [params.include_priority=[]] - Priorities to include
+ * @param {Array<string>} [params.exclude_priority=[]] - Priorities to exclude
+ * @param {boolean} [params.include_completed=false] - Whether to include completed tasks
  * @param {Array<string>} [params.tag_entity_ids=[]] - Tag entity IDs to filter by
  * @param {Array<string>} [params.organization_ids=[]] - Organization IDs to filter by
  * @param {Array<string>} [params.person_ids=[]] - Person IDs to filter by
@@ -34,7 +37,6 @@ const log = debug('task:filesystem:list')
  * @returns {Promise<Array>} - List of tasks matching the filters
  */
 export async function list_tasks_from_filesystem({
-  user_public_key,
   status,
   include_status = [],
   exclude_status = [],
@@ -55,12 +57,11 @@ export async function list_tasks_from_filesystem({
   archived = false
 }) {
   try {
-    log(`Listing tasks from filesystem for user ${user_public_key}`)
+    log('Listing tasks from filesystem with filters')
 
-    // Use the proper entity listing function that handles entity validation and type filtering
     const task_entities = await list_entity_files_from_filesystem({
       include_entity_types: ['task'],
-      include_path_patterns: ['task/**/*.md'] // Focus on task directory
+      include_path_patterns: ['task/**/*.md']
     })
 
     const matching_tasks = []
@@ -68,11 +69,6 @@ export async function list_tasks_from_filesystem({
     for (const entity_file of task_entities) {
       try {
         const { entity_properties } = entity_file
-
-        // Skip if not belonging to the user
-        if (entity_properties.user_public_key !== user_public_key) {
-          continue
-        }
 
         // Apply filters
         if (
@@ -109,7 +105,7 @@ export async function list_tasks_from_filesystem({
     log(`Found ${matching_tasks.length} matching tasks`)
     return matching_tasks
   } catch (error) {
-    log('Error listing tasks from filesystem:', error)
+    log('Error listing tasks from filesystem:', error.message)
     throw error
   }
 }
@@ -278,13 +274,7 @@ if (is_main(import.meta.url)) {
     .default('user_base_directory', config.user_base_directory)
     .scriptName('list-tasks-from-filesystem')
     .usage('List tasks from filesystem with filters.\n\nUsage: $0 [options]')
-    .option('user_public_key', {
-      alias: 'u',
-      describe:
-        'User public key to filter tasks by (defaults to config.user_public_key)',
-      type: 'string',
-      default: config.user_public_key
-    })
+
     .option('status', {
       alias: 's',
       describe: 'Single status to match (legacy exact match)',
@@ -370,7 +360,6 @@ if (is_main(import.meta.url)) {
     let error
     try {
       const tasks = await list_tasks_from_filesystem({
-        user_public_key: argv.user_public_key,
         status: argv.status,
         include_status: argv.include_status,
         exclude_status: argv.exclude_status,

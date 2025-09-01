@@ -5,15 +5,64 @@ import {
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
 import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
+import { check_user_permission_for_file } from '../middleware/permission-checker.mjs'
+import { redact_entity_object } from '../middleware/content-redactor.mjs'
 
 const router = express.Router({ mergeParams: true })
+
+// Helper function to extract user public key from request
+const get_user_public_key = (req) => {
+  return (
+    req.user?.user_public_key || req.permission_context?.user_public_key || null
+  )
+}
+
+// Helper function to check user permissions for a file
+const check_file_permission = async (user_public_key, absolute_path) => {
+  if (!user_public_key) return false
+
+  return await check_user_permission_for_file({
+    user_public_key,
+    absolute_path
+  })
+}
+
+// Helper function to apply redaction to a task
+const apply_task_redaction = (task, has_permission) => {
+  if (has_permission) return task
+
+  return redact_entity_object(task, {
+    preserve_keys: ['type', 'entity_type', 'status', 'priority', 'archived'],
+    redact_keys: ['title', 'description', 'content_preview', 'user_public_key']
+  })
+}
+
+// Helper function to parse array query parameters
+const parse_array_params = (param) => {
+  if (!param) return []
+  return Array.isArray(param) ? param : [param]
+}
+
+// Helper function to build task response data
+const build_task_response = (task, base_uri, is_redacted = false) => {
+  const response_data = {
+    base_uri,
+    ...task.entity_properties,
+    content: task.entity_content
+  }
+
+  if (is_redacted) {
+    response_data.is_redacted = true
+  }
+
+  return response_data
+}
 
 // POST /api/tasks/table - Server-side table processing
 router.post('/table', async (req, res) => {
   const { log } = req.app.locals
 
   try {
-    // Extract table_state from request body
     const { table_state } = req.body
 
     // Validate table_state structure
@@ -24,20 +73,8 @@ router.post('/table', async (req, res) => {
       })
     }
 
-    // Use requesting user's permissions for filtering
-    const user_public_key =
-      req.user?.user_public_key ||
-      req.permission_context?.user_public_key ||
-      null
+    const user_public_key = get_user_public_key(req)
 
-    if (!user_public_key) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'Valid JWT token required to access tasks'
-      })
-    }
-
-    // Get table results directly from processor (normalized shape)
     const results = await process_task_table_request({
       table_state: table_state || {},
       requesting_user_public_key: user_public_key
@@ -62,100 +99,115 @@ router.get('/', async (req, res) => {
   const { log } = req.app.locals
 
   try {
-    // Use requesting user's permissions for filtering
-    const user_public_key =
-      req.user?.user_public_key ||
-      req.permission_context?.user_public_key ||
-      null
-
-    if (!user_public_key) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'Valid JWT token required to access tasks'
-      })
-    }
-
-    const {
-      base_uri,
-      status,
-      tag_entity_ids,
-      organization_ids,
-      person_ids,
-      min_finish_by,
-      max_finish_by,
-      min_estimated_total_duration,
-      max_estimated_total_duration,
-      min_planned_start,
-      max_planned_start,
-      min_planned_finish,
-      max_planned_finish,
-      archived
-    } = req.query
+    const user_public_key = get_user_public_key(req)
+    const { base_uri, archived, ...filter_params } = req.query
 
     // If base_uri is provided, get a specific task
     if (base_uri) {
-      try {
-        // Read task from filesystem using registry-based resolution
-        const task = await read_task_from_filesystem({
-          base_uri
-        })
-
-        if (!task.success) {
-          return res.status(404).send({ error: task.error || 'Task not found' })
-        }
-
-        res.status(200).send({
-          base_uri,
-          ...task.entity_properties,
-          content: task.entity_content
-        })
-      } catch (error) {
-        return res.status(404).send({
-          error: `Task ${base_uri} not found: ${error.message}`
-        })
-      }
-    } else {
-      // If no base_uri, list all tasks with optional filtering
-      // Convert array parameters from query strings
-      const parsed_tag_entity_ids = tag_entity_ids
-        ? Array.isArray(tag_entity_ids)
-          ? tag_entity_ids
-          : [tag_entity_ids]
-        : []
-      const parsed_organization_ids = organization_ids
-        ? Array.isArray(organization_ids)
-          ? organization_ids
-          : [organization_ids]
-        : []
-      const parsed_person_ids = person_ids
-        ? Array.isArray(person_ids)
-          ? person_ids
-          : [person_ids]
-        : []
-
-      const tasks = await list_tasks_from_filesystem({
-        user_public_key,
-        status,
-        tag_entity_ids: parsed_tag_entity_ids,
-        organization_ids: parsed_organization_ids,
-        person_ids: parsed_person_ids,
-        min_finish_by,
-        max_finish_by,
-        min_estimated_total_duration,
-        max_estimated_total_duration,
-        min_planned_start,
-        max_planned_start,
-        min_planned_finish,
-        max_planned_finish,
-        archived: archived === 'true'
-      })
-
-      res.status(200).send(tasks)
+      await handle_single_task_request(req, res, base_uri, user_public_key)
+      return
     }
+
+    // Otherwise, list all tasks with filtering
+    await handle_task_list_request(
+      req,
+      res,
+      filter_params,
+      archived,
+      user_public_key
+    )
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
   }
 })
+
+// Handle request for a single task
+async function handle_single_task_request(req, res, base_uri, user_public_key) {
+  try {
+    const task = await read_task_from_filesystem({ base_uri })
+
+    if (!task.success) {
+      return res.status(404).send({ error: task.error || 'Task not found' })
+    }
+
+    const has_permission = await check_file_permission(
+      user_public_key,
+      task.absolute_path
+    )
+
+    let response_data
+    if (!has_permission) {
+      const redacted_task = redact_entity_object({
+        entity_properties: task.entity_properties,
+        entity_content: task.entity_content
+      })
+
+      response_data = build_task_response(redacted_task, base_uri, true)
+    } else {
+      response_data = build_task_response(task, base_uri)
+    }
+
+    res.status(200).send(response_data)
+  } catch (error) {
+    res.status(404).send({
+      error: `Task ${base_uri} not found: ${error.message}`
+    })
+  }
+}
+
+// Handle request for list of tasks
+async function handle_task_list_request(
+  req,
+  res,
+  filter_params,
+  archived,
+  user_public_key
+) {
+  const {
+    status,
+    tag_entity_ids,
+    organization_ids,
+    person_ids,
+    min_finish_by,
+    max_finish_by,
+    min_estimated_total_duration,
+    max_estimated_total_duration,
+    min_planned_start,
+    max_planned_start,
+    min_planned_finish,
+    max_planned_finish
+  } = filter_params
+
+  const all_tasks = await list_tasks_from_filesystem({
+    status,
+    tag_entity_ids: parse_array_params(tag_entity_ids),
+    organization_ids: parse_array_params(organization_ids),
+    person_ids: parse_array_params(person_ids),
+    min_finish_by,
+    max_finish_by,
+    min_estimated_total_duration,
+    max_estimated_total_duration,
+    min_planned_start,
+    max_planned_start,
+    min_planned_finish,
+    max_planned_finish,
+    archived: archived === 'true'
+  })
+
+  // Apply redaction to tasks based on user permissions
+  const tasks = await Promise.all(
+    all_tasks.map(async (task) => {
+      const has_permission = await check_file_permission(
+        user_public_key,
+        task.file_info?.absolute_path
+      )
+
+      return apply_task_redaction(task, has_permission)
+    })
+  )
+
+  res.status(200).send(tasks)
+}
 
 export default router
