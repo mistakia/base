@@ -20,6 +20,10 @@ const Task = ({ task }) => {
 
   // Generate the href for the link
   const get_href = () => {
+    if (task.is_redacted) {
+      return null
+    }
+
     if (task.file_info.base_uri) {
       const navigation_path = convert_base_uri_to_path(task.file_info.base_uri)
       return navigation_path

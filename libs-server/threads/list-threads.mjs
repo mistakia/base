@@ -10,11 +10,7 @@ import {
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 import { get_thread_base_directory } from './threads-constants.mjs'
-import {
-  read_json_file,
-  get_effective_updated_at,
-  check_thread_permission
-} from './thread-utils.mjs'
+import { read_json_file, get_effective_updated_at } from './thread-utils.mjs'
 
 const log = debug('threads:list')
 
@@ -53,7 +49,6 @@ function is_field_missing(value) {
  * @param {number} [params.limit=50] Maximum number of threads to return
  * @param {number} [params.offset=0] Number of threads to skip
  * @param {string} [params.user_base_directory] Custom user base directory (overrides registry)
- * @param {string} [params.requesting_user_public_key] User requesting the list (for permission checking)
  * @param {string|Date} [params.created_since] Filter threads created since this date (inclusive)
  * @param {string|Date} [params.created_after] Filter threads created after this date (exclusive)
  * @param {string|Date} [params.updated_since] Filter threads updated since this date (inclusive)
@@ -68,7 +63,6 @@ export default async function list_threads({
   limit = 50,
   offset = 0,
   user_base_directory,
-  requesting_user_public_key = null,
   created_since = null,
   created_after = null,
   updated_since = null,
@@ -158,16 +152,6 @@ export default async function list_threads({
           )
             return null
 
-          // Check permissions for this thread if requesting user is provided
-          const permission_result = await check_thread_permission({
-            thread_id,
-            user_public_key: requesting_user_public_key
-          })
-
-          if (!permission_result.allowed) {
-            return null
-          }
-
           const thread_summary = { ...metadata }
 
           if (
@@ -218,13 +202,7 @@ if (is_main(import.meta.url)) {
       type: 'string',
       default: config.user_public_key
     })
-    .option('requesting_user_public_key', {
-      alias: 'r',
-      describe:
-        'User requesting the list for permission checking (defaults to config.user_public_key)',
-      type: 'string',
-      default: config.user_public_key
-    })
+
     .option('thread_state', {
       alias: 's',
       describe: 'Filter by thread state',
@@ -289,7 +267,6 @@ if (is_main(import.meta.url)) {
     try {
       const threads = await list_threads({
         user_public_key: argv.user_public_key,
-        requesting_user_public_key: argv.requesting_user_public_key,
         thread_state: argv.thread_state,
         limit: argv.limit,
         offset: argv.offset,

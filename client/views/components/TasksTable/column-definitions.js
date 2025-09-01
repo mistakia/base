@@ -15,6 +15,10 @@ const TitleCell = ({ row }) => {
   const task = row.original
 
   const handle_click = () => {
+    if (task.is_redacted) {
+      return
+    }
+
     if (task.base_uri) {
       // Use the proper base URI conversion utility
       // base_uri format is like "user:task/base/my-task.md"

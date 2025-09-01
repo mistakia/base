@@ -14,11 +14,6 @@ register_tool({
     inputSchema: {
       type: 'object',
       properties: {
-        user_public_key: {
-          type: 'string',
-          description:
-            'Optional: User public key to filter tasks by. Defaults to configured user.'
-        },
         include_status: {
           type: 'array',
           description: 'Optional: Array of statuses to include',
@@ -70,21 +65,15 @@ register_tool({
         include_completed = false
       } = parameters
 
-      const user_public_key = helpers.resolve_user_public_key(
-        parameters,
-        context
-      )
-
-      log(`Getting filtered tasks from filesystem for user ${user_public_key}`)
+      log('Getting filtered tasks from filesystem')
 
       // Add 'completed' to exclude_status if include_completed is false
       const final_exclude_status = include_completed
         ? exclude_status
         : [...new Set([...exclude_status, TASK_STATUS.COMPLETED])]
 
-      // Fetch tasks for user from filesystem (list handles include/exclude)
+      // Fetch tasks from filesystem with filters
       const tasks_from_filesystem = await list_tasks_from_filesystem({
-        user_public_key,
         status: undefined,
         include_status,
         exclude_status: final_exclude_status,

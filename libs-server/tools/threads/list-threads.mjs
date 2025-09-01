@@ -36,11 +36,6 @@ register_tool({
           type: 'string',
           description:
             'Optional: Custom user base directory (overrides registry)'
-        },
-        requesting_user_public_key: {
-          type: 'string',
-          description:
-            'Optional: User requesting the list (for permission checking). Defaults to configured user.'
         }
       }
     }
@@ -52,8 +47,7 @@ register_tool({
         thread_state,
         limit = 50,
         offset = 0,
-        user_base_directory,
-        requesting_user_public_key
+        user_base_directory
       } = parameters
 
       log(
@@ -65,8 +59,7 @@ register_tool({
         thread_state,
         limit,
         offset,
-        user_base_directory,
-        requesting_user_public_key
+        user_base_directory
       })
 
       return {
