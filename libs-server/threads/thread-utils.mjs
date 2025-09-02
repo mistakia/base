@@ -156,6 +156,12 @@ export async function process_thread_with_permissions({
     timeline
   })
 
+  // Check if thread has public_read enabled first
+  if (metadata.public_read === true) {
+    log(`Thread ${thread_id} has public_read enabled, granting access`)
+    return thread_data
+  }
+
   // Check user permissions for this thread
   const permission_result = await check_thread_permission({
     thread_id,

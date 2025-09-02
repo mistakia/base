@@ -1,46 +1,22 @@
-import path from 'path'
 import debug from 'debug'
-import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import { evaluate_permission_rules } from './rule-engine.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import {
+  resolve_base_uri,
+  create_base_uri_from_path
+} from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('permission:checker')
 
 /**
  * Maps a filesystem path to a base-uri path
+ * Uses the existing base-uri utility for consistency
  *
  * @param {string} filesystem_path - Filesystem path to map
  * @returns {string} Base-URI path (e.g., "user:task/example" or "sys:workflow/test")
  */
-export const map_filesystem_path_to_base_uri = (filesystem_path) => {
-  if (!filesystem_path || typeof filesystem_path !== 'string') {
-    return ''
-  }
-
-  // Get configured paths
-  const user_base_dir =
-    config.user_base_directory || process.env.USER_BASE_DIRECTORY
-  const system_base_dir = path.resolve(process.cwd()) // Base repository directory
-
-  // Normalize the filesystem path
-  const normalized_path = path.resolve(filesystem_path)
-
-  // Check if path is under user directory
-  if (user_base_dir && normalized_path.startsWith(user_base_dir)) {
-    const relative_path = path.relative(user_base_dir, normalized_path)
-    return `user:${relative_path.replace(/\\/g, '/')}`
-  }
-
-  // Check if path is under system directory
-  if (normalized_path.startsWith(system_base_dir)) {
-    const relative_path = path.relative(system_base_dir, normalized_path)
-    return `sys:${relative_path.replace(/\\/g, '/')}`
-  }
-
-  // Default to user path for unknown paths
-  const basename = path.basename(normalized_path)
-  return `user:${basename}`
-}
+export const map_filesystem_path_to_base_uri = create_base_uri_from_path
 
 /**
  * Maps a thread ID to a base-uri path
@@ -54,6 +30,42 @@ export const map_thread_id_to_base_uri = (thread_id) => {
   }
 
   return `user:thread/${thread_id}`
+}
+
+/**
+ * Checks if an entity has public_read enabled
+ *
+ * @param {string} resource_path - Base-URI path of the resource
+ * @returns {Promise<boolean>} True if entity has public_read enabled
+ */
+const check_entity_public_read = async (resource_path) => {
+  try {
+    // Convert base-uri to filesystem path
+    const absolute_path = resolve_base_uri(resource_path)
+
+    if (!absolute_path) {
+      log(`Could not map resource path to filesystem: ${resource_path}`)
+      return false
+    }
+
+    // Try to read the entity
+    const result = await read_entity_from_filesystem({ absolute_path })
+
+    if (!result.success) {
+      log(`Could not read entity at ${absolute_path}: ${result.error}`)
+      return false
+    }
+
+    // Check if public_read is enabled
+    const public_read = result.entity_properties?.public_read
+    const is_public = public_read === true
+
+    log(`Entity ${resource_path} public_read status: ${is_public}`)
+    return is_public
+  } catch (error) {
+    log(`Error checking public_read for ${resource_path}: ${error.message}`)
+    return false
+  }
 }
 
 /**
@@ -107,6 +119,7 @@ const get_user_permission_rules = async (user_public_key) => {
 
 /**
  * Checks if a user has permission to access a resource
+ * Note: This function is focused on read operations. Write permissions are limited to owner only.
  *
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access
@@ -118,8 +131,19 @@ export const check_user_permission = async ({
   resource_path
 }) => {
   log(
-    `Checking permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
+    `Checking read permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
   )
+
+  // Check for public_read access first
+  const is_public_readable = await check_entity_public_read(resource_path)
+
+  if (is_public_readable) {
+    log(`Public read access granted for resource: ${resource_path}`)
+    return {
+      allowed: true,
+      reason: 'Resource has public_read enabled'
+    }
+  }
 
   // Get user's permission rules
   const rules = await get_user_permission_rules(user_public_key)
@@ -139,7 +163,7 @@ export const check_user_permission = async ({
 }
 
 /**
- * Batch checks permissions for multiple resources
+ * Batch checks permissions for multiple resources (read operations only)
  *
  * @param {Object} params - Parameters for batch permission check
  * @param {string|null} params.user_public_key - User's public key
@@ -154,16 +178,12 @@ export const check_user_permissions_batch = async ({
     throw new Error('resource_paths must be an array')
   }
 
-  // Get user's permission rules once
-  const rules = await get_user_permission_rules(user_public_key)
-
-  // Check each resource path
+  // Check each resource path using the main permission check function
   const results = {}
   for (const resource_path of resource_paths) {
-    results[resource_path] = await evaluate_permission_rules({
-      rules,
-      resource_path,
-      user_public_key
+    results[resource_path] = await check_user_permission({
+      user_public_key,
+      resource_path
     })
   }
 
@@ -171,12 +191,12 @@ export const check_user_permissions_batch = async ({
 }
 
 /**
- * Checks if a user has permission to access a file by its absolute filesystem path
+ * Checks if a user has permission to access a file by its absolute filesystem path (read operations only)
  *
  * @param {Object} params - Parameters for permission check
  * @param {string} params.user_public_key - User's public key
  * @param {string} params.absolute_path - Absolute filesystem path to check
- * @returns {Promise<boolean>} True if user has access permission
+ * @returns {Promise<boolean>} True if user has read access permission
  */
 export const check_user_permission_for_file = async ({
   user_public_key,

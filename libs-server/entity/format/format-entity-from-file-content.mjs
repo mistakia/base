@@ -32,6 +32,17 @@ export function format_entity_from_file_content({ file_content, file_path }) {
     const entity_properties = document_properties
     const entity_content = document_content
 
+    // Validate and normalize public_read field
+    if ('public_read' in entity_properties) {
+      // Ensure public_read is a proper boolean, default to false for invalid values
+      if (typeof entity_properties.public_read !== 'boolean') {
+        log(
+          `Invalid public_read value in ${file_path}: ${entity_properties.public_read}, defaulting to false`
+        )
+        entity_properties.public_read = false
+      }
+    }
+
     // Extract entity metadata using the extractors
     const { property_tags } = extract_entity_tags({
       entity_properties
