@@ -8,6 +8,7 @@ import path from 'path'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { title_to_safe_filename } from '#libs-server/utils/sanitize-filename.mjs'
+import { lookup_entity, cache_entity } from '../cache/notion-entity-cache.mjs'
 import config from '#config'
 
 const log = debug('integrations:notion:entity:find')
@@ -26,6 +27,35 @@ function get_expected_entity_paths(normalized_entity) {
   const absolute_path = resolve_base_uri_from_registry(base_uri)
 
   return { base_uri, absolute_path }
+}
+
+/**
+ * Verify cached entity still exists and matches external_id
+ * @param {string} base_uri - Base URI from cache
+ * @param {string} target_external_id - External ID to verify
+ * @returns {Promise<Object|null>} Entity data if valid, null if stale
+ */
+async function verify_cached_entity(base_uri, target_external_id) {
+  try {
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+    const entity = await check_file_for_external_id(
+      absolute_path,
+      target_external_id
+    )
+
+    if (entity) {
+      log(`Cache entry verified: ${base_uri} -> ${absolute_path}`)
+      return entity
+    } else {
+      log(
+        `Cache entry stale: ${base_uri} (file not found or external_id mismatch)`
+      )
+      return null
+    }
+  } catch (error) {
+    log(`Cache verification failed for ${base_uri}: ${error.message}`)
+    return null
+  }
 }
 
 /**
@@ -186,12 +216,15 @@ async function find_entity_by_exact_name(name, entity_type) {
 }
 
 /**
- * Find entity for Notion page using a three-tier exact matching strategy
+ * Find entity for Notion page using a four-tier exact matching strategy
  *
  * This function implements a graduated search approach that prioritizes performance
  * while ensuring comprehensive coverage. The search strategies are:
  *
- * 1. **Expected Location Search**: Fastest - checks the exact path where we expect
+ * 0. **Cache Lookup**: Fastest - checks the TSV cache for external_id to base_uri mapping.
+ *    If found, verifies the cached path still exists and matches the external_id.
+ *
+ * 1. **Expected Location Search**: Fast - checks the exact path where we expect
  *    the entity to be based on its title and type. This works when entities follow
  *    standard naming conventions and haven't been moved.
  *
@@ -205,6 +238,8 @@ async function find_entity_by_exact_name(name, entity_type) {
  *
  * Each strategy only searches for exact external_id matches - no fuzzy matching is
  * performed to prevent data corruption from incorrect entity associations.
+ *
+ * When an entity is found via strategies 1-3, it is automatically cached for future lookups.
  *
  * @param {string} external_id - Notion external ID (e.g., "notion:page:abc123")
  * @param {Object} normalized_entity - Normalized entity data from Notion
@@ -225,8 +260,25 @@ export async function find_entity_for_notion_page(
       throw new Error('Missing required parameter: normalized_entity')
     }
 
+    // Strategy 0: Check cache first for external_id to base_uri mapping
+    // This is the fastest approach for previously found entities
+    log(`Strategy 0 - Checking cache for external_id: ${external_id}`)
+
+    const cached_base_uri = await lookup_entity(external_id)
+    if (cached_base_uri) {
+      const cached_entity = await verify_cached_entity(
+        cached_base_uri,
+        external_id
+      )
+      if (cached_entity) {
+        log('Found entity via cache lookup (Strategy 0 success)')
+        return cached_entity
+      }
+      // Cache entry was stale, continue with other strategies
+    }
+
     // Strategy 1: Check expected location based on title/name
-    // This is the fastest approach and works for entities that follow standard naming
+    // This is the second fastest approach and works for entities that follow standard naming
     const expected_paths = get_expected_entity_paths(normalized_entity)
     log(
       `Strategy 1 - Checking expected location: ${expected_paths.absolute_path}`
@@ -238,6 +290,8 @@ export async function find_entity_for_notion_page(
     )
     if (expected_entity) {
       log('Found entity at expected location (Strategy 1 success)')
+      // Cache the successful lookup for future reference
+      await cache_entity(external_id, expected_paths.base_uri)
       return expected_entity
     }
 
@@ -256,6 +310,19 @@ export async function find_entity_for_notion_page(
       log(
         `Found entity in type directory (Strategy 2 success): ${entity_type_directory}`
       )
+      // Generate base_uri from absolute_path for caching
+      const user_base_directory = config.user_base_directory
+      if (
+        user_base_directory &&
+        directory_entity.absolute_path.startsWith(user_base_directory)
+      ) {
+        const relative_path = path.relative(
+          user_base_directory,
+          directory_entity.absolute_path
+        )
+        const base_uri = `user:${relative_path}`
+        await cache_entity(external_id, base_uri)
+      }
       return directory_entity
     }
 
@@ -268,6 +335,19 @@ export async function find_entity_for_notion_page(
     const scanned_entity = await full_scan_for_external_id(external_id)
     if (scanned_entity) {
       log('Found entity via full scan (Strategy 3 success)')
+      // Generate base_uri from absolute_path for caching
+      const user_base_directory = config.user_base_directory
+      if (
+        user_base_directory &&
+        scanned_entity.absolute_path.startsWith(user_base_directory)
+      ) {
+        const relative_path = path.relative(
+          user_base_directory,
+          scanned_entity.absolute_path
+        )
+        const base_uri = `user:${relative_path}`
+        await cache_entity(external_id, base_uri)
+      }
       return scanned_entity
     }
 

@@ -3,6 +3,7 @@
  */
 
 import debug from 'debug'
+import path from 'path'
 import { extract_plain_text } from '../notion-utils.mjs'
 import {
   get_block_spacing,
@@ -11,8 +12,35 @@ import {
 } from './block-transition-rules.mjs'
 import { store_file_with_content_identifier } from '#libs-server/utils/store-file-with-content-identifier.mjs'
 import { sanitize_for_filename } from '#libs-server/utils/sanitize-filename.mjs'
+import { find_entity_for_notion_page } from '../entity/find-entity-for-notion-page.mjs'
+import config from '#config'
 
 const log = debug('integrations:notion:blocks:to-markdown')
+
+/**
+ * Extract heading level from block type
+ * @param {string} block_type - Block type string
+ * @returns {number} Heading level (1, 2, or 3)
+ */
+function get_heading_level(block_type) {
+  return parseInt(block_type.split('_')[1])
+}
+
+/**
+ * Convert rich text to plain text with optional formatting preservation
+ * @param {Array} rich_text - Rich text array
+ * @param {Object} options - Options object
+ * @returns {string} Plain text content
+ */
+function extract_text_content(rich_text, options = {}) {
+  if (!rich_text) return ''
+
+  const text = extract_plain_text(rich_text, {
+    preserve_formatting: options.preserve_formatting ?? true
+  })
+
+  return text.trim()
+}
 
 /**
  * Handle heading blocks (heading_1, heading_2, heading_3)
@@ -21,20 +49,14 @@ const log = debug('integrations:notion:blocks:to-markdown')
  * @param {string} indent - Current indentation
  * @returns {string} Markdown content
  */
-function handle_heading_block(block, options, indent) {
-  const level = parseInt(block.type.split('_')[1]) // Extract 1, 2, or 3
-  const rich_text = block[block.type]?.rich_text
+function convert_heading_block(block, options, indent) {
+  const level = get_heading_level(block.type)
+  const text = extract_text_content(block[block.type]?.rich_text, options)
 
-  if (rich_text) {
-    const text = extract_plain_text(rich_text, {
-      preserve_formatting: options.preserve_formatting
-    })
-    if (text.trim()) {
-      const hashes = '#'.repeat(level)
-      return `${indent}${hashes} ${text}\n\n`
-    }
-  }
-  return ''
+  if (!text) return ''
+
+  const hashes = '#'.repeat(level)
+  return `${indent}${hashes} ${text}\n\n`
 }
 
 /**
@@ -44,14 +66,9 @@ function handle_heading_block(block, options, indent) {
  * @param {string} indent - Current indentation
  * @returns {string} Markdown content
  */
-function handle_list_item_block(block, options, indent) {
-  const rich_text = block[block.type]?.rich_text
-  if (!rich_text) return ''
-
-  const text = extract_plain_text(rich_text, {
-    preserve_formatting: options.preserve_formatting
-  })
-  if (!text.trim()) return ''
+function convert_list_item_block(block, options, indent) {
+  const text = extract_text_content(block[block.type]?.rich_text, options)
+  if (!text) return ''
 
   switch (block.type) {
     case 'bulleted_list_item':
@@ -71,7 +88,7 @@ function handle_list_item_block(block, options, indent) {
 }
 
 /**
- * Download file from URL
+ * Download file from URL and return as buffer
  * @param {string} url - URL to download from
  * @returns {Promise<Buffer>} File content as buffer
  */
@@ -86,101 +103,138 @@ async function download_file(url) {
 }
 
 /**
+ * Store downloaded file and return storage result
+ * @param {Buffer} file_content - File content as buffer
+ * @param {string} filename - Original filename
+ * @returns {Promise<Object>} Storage result with base_uri
+ */
+async function store_downloaded_file(file_content, filename) {
+  return await store_file_with_content_identifier({
+    file_content,
+    original_filename: filename
+  })
+}
+
+/**
+ * Handle image block conversion
+ * @param {Object} block - Image block object
+ * @param {string} indent - Current indentation
+ * @returns {Promise<string>} Markdown content
+ */
+async function convert_image_block(block, indent) {
+  if (!block.image) return ''
+
+  const url = block.image.file?.url || block.image.external?.url
+  if (!url) return ''
+
+  const caption = extract_text_content(block.image.caption, {
+    preserve_formatting: false
+  })
+
+  // Handle Notion-hosted files
+  if (block.image.file?.url) {
+    try {
+      const file_content = await download_file(url)
+      const storage_result = await store_downloaded_file(
+        file_content,
+        `image-${block.id}`
+      )
+      return `${indent}![${caption}](${storage_result.base_uri})\n\n`
+    } catch (error) {
+      log(`Failed to download and store image: ${error.message}`)
+      return `${indent}![${caption}](${url})\n\n`
+    }
+  }
+
+  // External URL
+  return `${indent}![${caption}](${url})\n\n`
+}
+
+/**
+ * Handle video block conversion
+ * @param {Object} block - Video block object
+ * @param {string} indent - Current indentation
+ * @returns {Promise<string>} Markdown content
+ */
+async function convert_video_block(block, indent) {
+  if (!block.video) return ''
+
+  const url = block.video.file?.url || block.video.external?.url
+  if (!url) return ''
+
+  // Handle Notion-hosted files
+  if (block.video.file?.url) {
+    try {
+      const file_content = await download_file(url)
+      const storage_result = await store_downloaded_file(
+        file_content,
+        `video-${block.id}`
+      )
+      return `${indent}[Video](${storage_result.base_uri})\n\n`
+    } catch (error) {
+      log(`Failed to download and store video: ${error.message}`)
+      return `${indent}[Video](${url})\n\n`
+    }
+  }
+
+  return `${indent}[Video](${url})\n\n`
+}
+
+/**
+ * Handle file block conversion
+ * @param {Object} block - File block object
+ * @param {string} indent - Current indentation
+ * @returns {Promise<string>} Markdown content
+ */
+async function convert_file_block(block, indent) {
+  if (!block.file) return ''
+
+  const url = block.file.file?.url || block.file.external?.url
+  if (!url) return ''
+
+  const name = block.file.name || 'File'
+
+  // Handle Notion-hosted files
+  if (block.file.file?.url) {
+    try {
+      const file_content = await download_file(url)
+      const storage_result = await store_downloaded_file(
+        file_content,
+        name || `file-${block.id}`
+      )
+      return `${indent}[${name}](${storage_result.base_uri})\n\n`
+    } catch (error) {
+      log(`Failed to download and store file: ${error.message}`)
+      return `${indent}[${name}](${url})\n\n`
+    }
+  }
+
+  return `${indent}[${name}](${url})\n\n`
+}
+
+/**
  * Handle media blocks (image, video, file, bookmark, embed)
  * @param {Object} block - Notion block object
  * @param {string} indent - Current indentation
  * @returns {Promise<string>} Markdown content
  */
-async function handle_media_block(block, indent) {
+async function convert_media_block(block, indent) {
   switch (block.type) {
     case 'image':
-      if (block.image) {
-        const url = block.image.file?.url || block.image.external?.url
-        const caption = block.image.caption
-          ? extract_plain_text(block.image.caption, {
-              preserve_formatting: false
-            })
-          : ''
-
-        if (url) {
-          // Check if this is a Notion-hosted file (has file.url, not external.url)
-          if (block.image.file?.url) {
-            try {
-              const file_content = await download_file(url)
-              const storage_result = await store_file_with_content_identifier({
-                file_content,
-                original_filename: `image-${block.id}`
-              })
-              return `${indent}![${caption}](${storage_result.base_uri})\n\n`
-            } catch (error) {
-              log(`Failed to download and store image: ${error.message}`)
-              // Fallback to original URL
-              return `${indent}![${caption}](${url})\n\n`
-            }
-          } else {
-            // External URL, use as-is
-            return `${indent}![${caption}](${url})\n\n`
-          }
-        }
-      }
-      break
+      return await convert_image_block(block, indent)
 
     case 'video':
-      if (block.video) {
-        const url = block.video.file?.url || block.video.external?.url
-        if (url) {
-          // Check if this is a Notion-hosted file
-          if (block.video.file?.url) {
-            try {
-              const file_content = await download_file(url)
-              const storage_result = await store_file_with_content_identifier({
-                file_content,
-                original_filename: `video-${block.id}`
-              })
-              return `${indent}[Video](${storage_result.base_uri})\n\n`
-            } catch (error) {
-              log(`Failed to download and store video: ${error.message}`)
-              return `${indent}[Video](${url})\n\n`
-            }
-          } else {
-            return `${indent}[Video](${url})\n\n`
-          }
-        }
-      }
-      break
+      return await convert_video_block(block, indent)
 
     case 'file':
-      if (block.file) {
-        const url = block.file.file?.url || block.file.external?.url
-        const name = block.file.name || 'File'
-        if (url) {
-          // Check if this is a Notion-hosted file
-          if (block.file.file?.url) {
-            try {
-              const file_content = await download_file(url)
-              const storage_result = await store_file_with_content_identifier({
-                file_content,
-                original_filename: block.file.name || `file-${block.id}`
-              })
-              return `${indent}[${name}](${storage_result.base_uri})\n\n`
-            } catch (error) {
-              log(`Failed to download and store file: ${error.message}`)
-              return `${indent}[${name}](${url})\n\n`
-            }
-          } else {
-            return `${indent}[${name}](${url})\n\n`
-          }
-        }
-      }
-      break
+      return await convert_file_block(block, indent)
 
     case 'bookmark':
       if (block.bookmark?.url) {
-        const caption = block.bookmark.caption
-          ? extract_plain_text(block.bookmark.caption, {
-              preserve_formatting: false
-            })
-          : block.bookmark.url
+        const caption =
+          extract_text_content(block.bookmark.caption, {
+            preserve_formatting: false
+          }) || block.bookmark.url
         return `${indent}[${caption}](${block.bookmark.url})\n\n`
       }
       break
@@ -191,7 +245,61 @@ async function handle_media_block(block, indent) {
       }
       break
   }
+
   return ''
+}
+
+/**
+ * Handle child page block conversion with entity lookup
+ * @param {Object} block - Child page block object
+ * @param {string} indent - Current indentation
+ * @returns {Promise<string>} Markdown content
+ */
+async function convert_child_page_block(block, indent) {
+  if (!block.child_page?.title) return ''
+
+  const child_page_id = block.id
+  const child_external_id = `notion:page:${child_page_id}`
+
+  const normalized_child_entity = {
+    name: block.child_page.title,
+    title: block.child_page.title,
+    type: 'text'
+  }
+
+  try {
+    const existing_entity = await find_entity_for_notion_page(
+      child_external_id,
+      normalized_child_entity
+    )
+
+    if (existing_entity) {
+      const user_base_directory = config.user_base_directory
+      if (
+        user_base_directory &&
+        existing_entity.absolute_path.startsWith(user_base_directory)
+      ) {
+        const relative_path = path.relative(
+          user_base_directory,
+          existing_entity.absolute_path
+        )
+        const base_uri = `user:${relative_path}`
+        return `${indent}[[${base_uri}]]\n\n`
+      }
+    }
+  } catch (error) {
+    log(
+      `Error finding child page entity: ${error.message}, falling back to static logic`
+    )
+  }
+
+  // Fallback to static logic
+  const safe_name = sanitize_for_filename(block.child_page.title, {
+    maxLength: 100,
+    fallback: 'untitled-child-page'
+  })
+  const base_uri = `user:text/${safe_name}.md`
+  return `${indent}[[${base_uri}]]\n\n`
 }
 
 /**
@@ -211,7 +319,7 @@ async function convert_block_to_markdown(
   previous_depth = 0
 ) {
   const { preserve_formatting = true, include_ids = false } = options
-  const indent = '  '.repeat(depth) // 2 spaces per indent level
+  const indent = '  '.repeat(depth)
 
   // Get spacing context and apply transition rules
   const spacing_context = get_spacing_context(block, previous_block)
@@ -223,24 +331,27 @@ async function convert_block_to_markdown(
     spacing_context
   )
 
+  let markdown = ''
+
   // Add block ID as comment if requested
-  let markdown = include_ids ? `<!-- Block ID: ${block.id} -->\n` : ''
+  if (include_ids) {
+    markdown += `<!-- Block ID: ${block.id} -->\n`
+  }
 
   // Add transition spacing
   markdown += transition_spacing
 
+  // Convert block based on type
   switch (block.type) {
     case 'paragraph':
       if (block.paragraph?.rich_text) {
-        const text = extract_plain_text(block.paragraph.rich_text, {
+        const text = extract_text_content(block.paragraph.rich_text, {
           preserve_formatting
         })
-        if (text.trim()) {
-          // Handle embedded newlines in the text content properly
-          const cleanText = text.replace(/\n+/g, '\n').trim()
-          markdown += `${indent}${cleanText}\n\n`
+        if (text) {
+          const clean_text = text.replace(/\n+/g, '\n').trim()
+          markdown += `${indent}${clean_text}\n\n`
         } else if (block.paragraph.rich_text.length === 0) {
-          // Empty paragraph represents intentional spacing - add blank line
           markdown += '\n'
         }
       }
@@ -249,31 +360,33 @@ async function convert_block_to_markdown(
     case 'heading_1':
     case 'heading_2':
     case 'heading_3':
-      markdown += handle_heading_block(block, { preserve_formatting }, indent)
+      markdown += convert_heading_block(block, { preserve_formatting }, indent)
       break
 
     case 'bulleted_list_item':
     case 'numbered_list_item':
     case 'to_do':
-      markdown += handle_list_item_block(block, { preserve_formatting }, indent)
+      markdown += convert_list_item_block(
+        block,
+        { preserve_formatting },
+        indent
+      )
       break
 
     case 'toggle':
       if (block.toggle?.rich_text) {
-        const text = extract_plain_text(block.toggle.rich_text, {
+        const text = extract_text_content(block.toggle.rich_text, {
           preserve_formatting
         })
-        if (text.trim()) {
+        if (text) {
           markdown += `${indent}<details>\n${indent}<summary>${text}</summary>\n\n`
-          // Children will be added after this
-          // markdown += `${indent}</details>\n\n`
         }
       }
       break
 
     case 'code':
       if (block.code?.rich_text) {
-        const text = extract_plain_text(block.code.rich_text, {
+        const text = extract_text_content(block.code.rich_text, {
           preserve_formatting: false
         })
         const language = block.code.language || ''
@@ -283,11 +396,10 @@ async function convert_block_to_markdown(
 
     case 'quote':
       if (block.quote?.rich_text) {
-        const text = extract_plain_text(block.quote.rich_text, {
+        const text = extract_text_content(block.quote.rich_text, {
           preserve_formatting
         })
-        if (text.trim()) {
-          // Split multi-line quotes
+        if (text) {
           const lines = text.split('\n')
           for (const line of lines) {
             if (line.trim()) {
@@ -301,11 +413,11 @@ async function convert_block_to_markdown(
 
     case 'callout':
       if (block.callout?.rich_text) {
-        const text = extract_plain_text(block.callout.rich_text, {
+        const text = extract_text_content(block.callout.rich_text, {
           preserve_formatting
         })
         const icon = block.callout.icon?.emoji || 'Info'
-        if (text.trim()) {
+        if (text) {
           markdown += `${indent}> ${icon} ${text}\n\n`
         }
       }
@@ -316,7 +428,6 @@ async function convert_block_to_markdown(
       break
 
     case 'table':
-      // Tables are complex - simplified implementation
       markdown += `${indent}<!-- Table content not fully supported -->\n\n`
       break
 
@@ -325,7 +436,7 @@ async function convert_block_to_markdown(
     case 'file':
     case 'bookmark':
     case 'embed':
-      markdown += await handle_media_block(block, indent)
+      markdown += await convert_media_block(block, indent)
       break
 
     case 'equation':
@@ -335,38 +446,23 @@ async function convert_block_to_markdown(
       break
 
     case 'child_page':
-      if (block.child_page?.title) {
-        // Convert child page title to proper base-uri format for knowledge base linking
-        // Format: user:text/filename.md (following RFC 3986)
-        // Use shared sanitization function for consistency with main entity path generation
-        const safe_name = sanitize_for_filename(block.child_page.title, {
-          maxLength: 100,
-          fallback: 'untitled-child-page'
-        })
-
-        const base_uri = `user:text/${safe_name}.md`
-        markdown += `${indent}[[${base_uri}]]\n\n`
-      }
+      markdown += await convert_child_page_block(block, indent)
       break
 
     case 'table_of_contents':
-      // Table of contents - just add a placeholder since it's dynamic
       markdown += `${indent}<!-- Table of Contents -->\n\n`
       break
 
     case 'column_list':
-      // Column list container - process children in columns
       markdown += `${indent}<!-- Multi-column layout -->\n\n`
       break
 
     case 'column':
       // Individual column - process normally with slight indentation
-      // Children will be processed normally
       break
 
     case 'child_database':
       if (block.child_database?.title) {
-        // Convert child database reference to a simple link placeholder
         const database_title = block.child_database.title
         markdown += `${indent}**Database**: ${database_title}\n\n`
       } else {
@@ -378,10 +474,10 @@ async function convert_block_to_markdown(
       // For unsupported block types, try to extract any text content
       log(`Unsupported block type: ${block.type}`)
       if (block[block.type]?.rich_text) {
-        const text = extract_plain_text(block[block.type].rich_text, {
+        const text = extract_text_content(block[block.type].rich_text, {
           preserve_formatting
         })
-        if (text.trim()) {
+        if (text) {
           markdown += `${indent}${text}\n\n`
         }
       }
@@ -433,7 +529,7 @@ export async function notion_blocks_to_markdown(
 
     for (const block of blocks) {
       if (block && typeof block === 'object') {
-        // If the previous block had children, we need to track that we're coming back from a deeper level
+        // Track depth context for proper spacing
         const effective_previous_depth = had_children
           ? depth + 1
           : previous_depth
