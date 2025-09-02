@@ -25,7 +25,7 @@ export default function markdown_it_task_checkbox(md, options = {}) {
         convert_to_task_item({
           token: token_list[index],
           TokenConstructor: state.Token,
-          md: md,
+          md,
           env: state.env
         })
 
@@ -135,12 +135,16 @@ function convert_to_task_item({ token, TokenConstructor, md, env }) {
   const temp_token = new TokenConstructor('inline', '', 0)
   temp_token.content = label_text
   temp_token.children = []
-  
+
   // Process inline markdown in the label text
   md.inline.parse(label_text, md, env, temp_token.children)
-  
+
   // Render the processed tokens to HTML
-  const rendered_label = md.renderer.render(temp_token.children, md.options, env)
+  const rendered_label = md.renderer.render(
+    temp_token.children,
+    md.options,
+    env
+  )
 
   const label_html = new TokenConstructor('html_inline', '', 0)
   label_html.content = `<span class="checkbox-text">${rendered_label}</span>`
