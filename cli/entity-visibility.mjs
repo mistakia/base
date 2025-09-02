@@ -52,6 +52,7 @@ async function update_file(file_path, public_read, dry_run = false) {
         await write_entity_to_filesystem({
           absolute_path: file_path,
           entity_properties: { ...result.entity_properties, public_read },
+          entity_type: result.entity_properties.type,
           entity_content: result.entity_content
         })
       }
