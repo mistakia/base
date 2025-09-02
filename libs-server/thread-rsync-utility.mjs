@@ -131,7 +131,9 @@ async function check_thread_rsync_server_availability(rsync_config) {
   const { host, user, ssh_strict_host_key_checking } = rsync_config
 
   try {
-    thread_rsync_log(`Checking thread rsync server availability: ${user}@${host}`)
+    thread_rsync_log(
+      `Checking thread rsync server availability: ${user}@${host}`
+    )
 
     const strict_host_key_flag = ssh_strict_host_key_checking ? 'yes' : 'no'
     const ssh_test_command = `ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=${strict_host_key_flag} ${user}@${host} 'echo "connection_test"'`

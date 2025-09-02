@@ -140,7 +140,9 @@ async function check_task_permission(user_public_key, task_entity) {
   try {
     // First check if task has public_read enabled (highest precedence)
     if (task_entity.entity_properties?.public_read === true) {
-      log(`Task ${task_entity.entity_properties?.entity_id} has public_read enabled, granting access`)
+      log(
+        `Task ${task_entity.entity_properties?.entity_id} has public_read enabled, granting access`
+      )
       return true
     }
 
@@ -154,7 +156,9 @@ async function check_task_permission(user_public_key, task_entity) {
       absolute_path: task_entity.file_info?.absolute_path
     })
   } catch (error) {
-    log(`Error checking permission for task ${task_entity.entity_properties?.entity_id}: ${error.message}`)
+    log(
+      `Error checking permission for task ${task_entity.entity_properties?.entity_id}: ${error.message}`
+    )
     return false
   }
 }
@@ -177,10 +181,7 @@ function apply_redaction_if_needed(task, has_permission) {
 async function process_tasks_with_permissions(tasks, user_public_key) {
   return await Promise.all(
     tasks.map(async (task) => {
-      const has_permission = await check_task_permission(
-        user_public_key,
-        task
-      )
+      const has_permission = await check_task_permission(user_public_key, task)
 
       return apply_redaction_if_needed(task, has_permission)
     })
