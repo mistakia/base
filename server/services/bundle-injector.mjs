@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let script_cache = null
 
 /**
- * Scan build directory for JavaScript bundles and generate script tags
+ * Load bundle manifest and generate script tags from the manifest
  * 
- * @returns {Promise<string>} HTML script tags for all bundles
+ * @returns {Promise<string>} HTML script tags for required bundles
  */
 async function generate_script_tags() {
   if (script_cache) {
@@ -20,6 +20,27 @@ async function generate_script_tags() {
 
   try {
     const build_path = path.join(__dirname, '..', '..', 'build')
+    const manifest_path = path.join(build_path, 'bundle-manifest.json')
+
+    try {
+      // Try to load from manifest first
+      const manifest_content = await fs.readFile(manifest_path, 'utf-8')
+      const manifest = JSON.parse(manifest_content)
+      
+      if (manifest.scripts && Array.isArray(manifest.scripts)) {
+        const script_tags = manifest.scripts
+          .map(src => `<script defer="defer" src="${src}"></script>`)
+          .join('\n    ')
+
+        script_cache = script_tags
+        log(`Generated script tags from manifest for ${manifest.scripts.length} bundles`)
+        return script_tags
+      }
+    } catch (manifest_error) {
+      log(`Manifest not found or invalid, falling back to directory scan: ${manifest_error.message}`)
+    }
+
+    // Fallback: scan build directory for JavaScript bundles
     const files = await fs.readdir(build_path)
     
     // Filter for JavaScript files, excluding maps and gzipped files
@@ -40,7 +61,7 @@ async function generate_script_tags() {
       .join('\n    ')
 
     script_cache = script_tags
-    log(`Generated script tags for ${js_files.length} bundles`)
+    log(`Generated script tags from directory scan for ${js_files.length} bundles`)
     
     return script_tags
   } catch (error) {

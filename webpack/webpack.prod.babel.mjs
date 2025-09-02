@@ -5,6 +5,7 @@ import webpack from 'webpack'
 import CompressionPlugin from 'compression-webpack-plugin'
 
 import base from './webpack.base.babel.mjs'
+import BundleManifestPlugin from './bundle-manifest-plugin.mjs'
 
 export default base({
   mode: 'production',
@@ -77,6 +78,11 @@ export default base({
       hashFunction: 'sha256',
       hashDigest: 'hex',
       hashDigestLength: 20
+    }),
+
+    // Generate bundle manifest for server-side rendering
+    new BundleManifestPlugin({
+      filename: 'bundle-manifest.json'
     })
   ],
 

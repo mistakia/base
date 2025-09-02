@@ -34,7 +34,7 @@
     "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
     "deploy": "pm2 deploy server.pm2.config.js production --force",
     "deploy:setup": "pm2 deploy server.pm2.config.js production setup",
-    "deploy:dist": "rsync -av --exclude 'stats.html' build/ storage:/home/user/base/source/build"
+    "deploy:dist": "rsync -av --exclude 'stats.html' --include 'bundle-manifest.json' build/ storage:/home/user/base/source/build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
