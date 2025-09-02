@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
 import TimelineEvent from './TimelineEvent'
+import CollapsibleEventGroup from './CollapsibleEventGroup'
 import { group_tool_entries } from './utils/group-tool-entries'
 
 const TimelineList = ({
@@ -30,6 +31,134 @@ const TimelineList = ({
     return last_index
   })()
 
+  // Find last consecutive user message and last assistant message in grouped entries
+  const find_collapsible_boundaries = () => {
+    let last_consecutive_user_message_group_index = null
+    let last_assistant_message_group_index = null
+    let consecutive_user_messages_ended = false
+
+    grouped_entries.forEach((entry, group_index) => {
+      if (entry.type === 'tool_pair') {
+        // Tool pairs indicate the end of consecutive user messages
+        consecutive_user_messages_ended = true
+        return
+      }
+
+      // Regular event - check if it's a message
+      const timeline_event = entry.timeline_event
+      if (timeline_event?.type === 'message') {
+        if (timeline_event.role === 'user') {
+          if (!consecutive_user_messages_ended) {
+            // Still in consecutive user messages at the start
+            last_consecutive_user_message_group_index = group_index
+          }
+        } else if (timeline_event.role === 'assistant') {
+          // Any assistant message ends consecutive user messages
+          consecutive_user_messages_ended = true
+
+          if (entry.index === last_assistant_entry_index) {
+            last_assistant_message_group_index = group_index
+          }
+        }
+      } else {
+        // Any non-message event ends consecutive user messages
+        consecutive_user_messages_ended = true
+      }
+    })
+
+    return {
+      last_consecutive_user_message_group_index,
+      last_assistant_message_group_index
+    }
+  }
+
+  const {
+    last_consecutive_user_message_group_index,
+    last_assistant_message_group_index
+  } = find_collapsible_boundaries()
+
+  // Split entries into three sections: before, collapsible, after
+  const entries_before_collapsible =
+    last_consecutive_user_message_group_index !== null
+      ? grouped_entries.slice(0, last_consecutive_user_message_group_index + 1)
+      : []
+
+  const collapsible_entries =
+    last_consecutive_user_message_group_index !== null &&
+    last_assistant_message_group_index !== null
+      ? grouped_entries.slice(
+          last_consecutive_user_message_group_index + 1,
+          last_assistant_message_group_index
+        )
+      : []
+
+  const entries_after_collapsible =
+    last_assistant_message_group_index !== null
+      ? grouped_entries.slice(last_assistant_message_group_index)
+      : grouped_entries
+
+  const should_use_collapsible = collapsible_entries.length > 0
+
+  // Helper function to render a single timeline event
+  const render_timeline_event = React.useCallback(
+    (entry, index) => {
+      const entry_key = `${entry.type}-${entry.index || index}`
+
+      if (entry.type === 'tool_pair') {
+        // For tool pairs, use the tool call event as the main event
+        const timeline_event = entry.tool_call_event
+        const tool_name = timeline_event?.content?.tool_name
+        const hide_dot_for_main_subthread = tool_name === 'Task'
+
+        return (
+          <TimelineEvent
+            key={entry_key}
+            timeline_event={timeline_event}
+            tool_result_event={entry.tool_result_event}
+            is_last_assistant_message={false}
+            timeline={timeline}
+            hide_timeline_dot={hide_dot_for_main_subthread}
+            render_nested_timeline={(nested) => (
+              <TimelineList
+                timeline={nested}
+                include_sidechain={true}
+                hide_timeline_dot={false}
+                hide_timeline_line={false}
+              />
+            )}
+          />
+        )
+      }
+
+      // Regular events
+      const timeline_event = entry.timeline_event
+      const is_last_assistant_message =
+        timeline_event &&
+        timeline_event.type === 'message' &&
+        timeline_event.role === 'assistant' &&
+        entry.index === last_assistant_entry_index
+
+      return (
+        <TimelineEvent
+          key={entry_key}
+          timeline_event={timeline_event}
+          is_last_assistant_message={is_last_assistant_message}
+          timeline={timeline}
+          hide_timeline_dot={hide_timeline_dot}
+          render_nested_timeline={(nested) => (
+            <TimelineList
+              timeline={nested}
+              include_sidechain={true}
+              hide_timeline_dot={false}
+              hide_timeline_line={false}
+            />
+          )}
+        />
+      )
+    },
+    [timeline, last_assistant_entry_index, hide_timeline_dot]
+  )
+
   return (
     <Box sx={{ py: 3, position: 'relative' }}>
       {/* Timeline line */}
@@ -47,61 +176,37 @@ const TimelineList = ({
         />
       )}
 
-      {grouped_entries.map((entry, index) => {
-        const entry_key = `${entry.type}-${entry.index || index}`
+      {/* Render timeline events */}
+      {should_use_collapsible ? (
+        <>
+          {/* Render entries before collapsible section */}
+          {entries_before_collapsible.map((entry, index) =>
+            render_timeline_event(entry, index)
+          )}
 
-        if (entry.type === 'tool_pair') {
-          // For tool pairs, use the tool call event as the main event
-          const timeline_event = entry.tool_call_event
-          const tool_name = timeline_event?.content?.tool_name
-          const hide_dot_for_main_subthread = tool_name === 'Task'
-
-          return (
-            <TimelineEvent
-              key={entry_key}
-              timeline_event={timeline_event}
-              tool_result_event={entry.tool_result_event}
-              is_last_assistant_message={false}
-              timeline={timeline}
-              hide_timeline_dot={hide_dot_for_main_subthread}
-              render_nested_timeline={(nested) => (
-                <TimelineList
-                  timeline={nested}
-                  include_sidechain={true}
-                  hide_timeline_dot={false}
-                  hide_timeline_line={false}
-                />
-              )}
-            />
-          )
-        }
-
-        // Regular events
-        const timeline_event = entry.timeline_event
-        const is_last_assistant_message =
-          timeline_event &&
-          timeline_event.type === 'message' &&
-          timeline_event.role === 'assistant' &&
-          entry.index === last_assistant_entry_index
-
-        return (
-          <TimelineEvent
-            key={entry_key}
-            timeline_event={timeline_event}
-            is_last_assistant_message={is_last_assistant_message}
-            timeline={timeline}
-            hide_timeline_dot={hide_timeline_dot}
-            render_nested_timeline={(nested) => (
-              <TimelineList
-                timeline={nested}
-                include_sidechain={true}
-                hide_timeline_dot={false}
-                hide_timeline_line={false}
-              />
-            )}
+          {/* Render collapsible section */}
+          <CollapsibleEventGroup
+            events={collapsible_entries}
+            renderEvent={render_timeline_event}
+            hideTimelineDot={hide_timeline_dot}
+            hideTimelineLine={hide_timeline_line}
           />
+
+          {/* Render entries after collapsible section */}
+          {entries_after_collapsible.map((entry, index) =>
+            render_timeline_event(
+              entry,
+              index +
+                entries_before_collapsible.length +
+                collapsible_entries.length
+            )
+          )}
+        </>
+      ) : (
+        grouped_entries.map((entry, index) =>
+          render_timeline_event(entry, index)
         )
-      })}
+      )}
     </Box>
   )
 }
