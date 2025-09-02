@@ -37,6 +37,12 @@ async function check_thread_access_permission(user_public_key, thread_id) {
 }
 
 async function apply_permission_based_redaction(thread, user_public_key) {
+  // Check if thread has public_read enabled first
+  if (thread.public_read === true) {
+    log(`Thread ${thread.thread_id} has public_read enabled, granting access`)
+    return thread
+  }
+
   const has_permission = await check_thread_access_permission(
     user_public_key,
     thread.thread_id

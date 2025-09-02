@@ -51,6 +51,11 @@ export function register_entity_create_tool() {
             type: 'string',
             description:
               'Optional: User public key for ownership/context. Defaults to configured user.'
+          },
+          public_read: {
+            type: 'boolean',
+            description:
+              'Optional: Whether the entity can be read publicly without authentication. Defaults to false.'
           }
         },
         required: ['base_uri', 'title', 'entity_type']
@@ -74,6 +79,9 @@ export function register_entity_create_tool() {
             context.user_public_key ||
             config.user_public_key
         }
+
+        // Convert public_read to boolean (defaults to false if not provided)
+        entity_properties.public_read = Boolean(parameters.public_read)
 
         // Get the absolute path using registry
         const absolute_path = resolve_base_uri_from_registry(
