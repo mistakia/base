@@ -136,13 +136,27 @@ function process_task_for_table(task_entity) {
 /**
  * Check user permission for task
  */
-async function check_task_permission(user_public_key, absolute_path) {
-  if (!user_public_key) return false
+async function check_task_permission(user_public_key, task_entity) {
+  try {
+    // First check if task has public_read enabled (highest precedence)
+    if (task_entity.entity_properties?.public_read === true) {
+      log(`Task ${task_entity.entity_properties?.entity_id} has public_read enabled, granting access`)
+      return true
+    }
 
-  return await check_user_permission_for_file({
-    user_public_key,
-    absolute_path
-  })
+    // Fall back to user-based permission check if public_read is not enabled
+    if (!user_public_key) {
+      return false
+    }
+
+    return await check_user_permission_for_file({
+      user_public_key,
+      absolute_path: task_entity.file_info?.absolute_path
+    })
+  } catch (error) {
+    log(`Error checking permission for task ${task_entity.entity_properties?.entity_id}: ${error.message}`)
+    return false
+  }
 }
 
 /**
@@ -165,7 +179,7 @@ async function process_tasks_with_permissions(tasks, user_public_key) {
     tasks.map(async (task) => {
       const has_permission = await check_task_permission(
         user_public_key,
-        task.file_info?.absolute_path
+        task
       )
 
       return apply_redaction_if_needed(task, has_permission)
