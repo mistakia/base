@@ -24,7 +24,9 @@ export default function markdown_it_task_checkbox(md, options = {}) {
       if (is_task_list_item({ token_list, index })) {
         convert_to_task_item({
           token: token_list[index],
-          TokenConstructor: state.Token
+          TokenConstructor: state.Token,
+          md: md,
+          env: state.env
         })
 
         set_attribute({
@@ -113,7 +115,7 @@ function is_task_list_item({ token_list, index }) {
   )
 }
 
-function convert_to_task_item({ token, TokenConstructor }) {
+function convert_to_task_item({ token, TokenConstructor, md, env }) {
   const checkbox_match = /^\[([ xX])\][ \u00A0](.*)/.exec(token.content)
   if (!checkbox_match) return
 
@@ -129,8 +131,19 @@ function convert_to_task_item({ token, TokenConstructor }) {
   const checkbox_html = new TokenConstructor('html_inline', '', 0)
   checkbox_html.content = `<span class="checkbox-box" data-checkbox-status="${is_checked ? 'completed' : 'pending'}"></span>`
 
+  // Create a temporary token to process the label text through markdown-it inline parsing
+  const temp_token = new TokenConstructor('inline', '', 0)
+  temp_token.content = label_text
+  temp_token.children = []
+  
+  // Process inline markdown in the label text
+  md.inline.parse(label_text, md, env, temp_token.children)
+  
+  // Render the processed tokens to HTML
+  const rendered_label = md.renderer.render(temp_token.children, md.options, env)
+
   const label_html = new TokenConstructor('html_inline', '', 0)
-  label_html.content = `<span class="checkbox-text">${label_text}</span>`
+  label_html.content = `<span class="checkbox-text">${rendered_label}</span>`
 
   const container_close = new TokenConstructor('html_inline', '', 0)
   container_close.content = '</div>'
