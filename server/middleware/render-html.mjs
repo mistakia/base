@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import debug from 'debug'
 import { extract_thread_meta_data } from '../services/meta-extractor.mjs'
+import { generate_script_tags } from '../services/bundle-injector.mjs'
 import config from '#config'
 
 const log = debug('server:render-html')
@@ -163,6 +164,10 @@ export function create_render_html_middleware({
 
       // Update URLs to be absolute
       meta_data.OG_URL = `${base_url}${req.path}`
+
+      // Generate dynamic script tags
+      const script_tags = await generate_script_tags()
+      meta_data.SCRIPT_TAGS = script_tags
 
       // Load template (cached after first load)
       if (!template_cache) {
