@@ -3,6 +3,7 @@
  */
 
 import debug from 'debug'
+import path from 'path'
 import { normalize_notion_page } from '../normalize-notion-page.mjs'
 import { normalize_notion_database_item } from '../normalize-notion-database-item.mjs'
 import {
@@ -12,6 +13,8 @@ import {
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { detect_field_changes } from '#libs-server/sync/index.mjs'
 import { format_entity_path_for_notion } from './format-entity-path-for-notion.mjs'
+import { cache_entity } from '../cache/notion-entity-cache.mjs'
+import config from '#config'
 
 const log = debug('integrations:notion:entity:update')
 
@@ -100,6 +103,19 @@ export async function update_entity_from_notion_page(
       entity_type: updated_entity.type,
       entity_content: entity_content || ''
     })
+
+    // Update cache with entity mapping (in case file path changed)
+    if (updated_entity.external_id) {
+      const user_base_directory = config.user_base_directory
+      if (user_base_directory && file_path.startsWith(user_base_directory)) {
+        const relative_path = path.relative(user_base_directory, file_path)
+        const base_uri = `user:${relative_path}`
+        await cache_entity(updated_entity.external_id, base_uri)
+        log(
+          `Updated cache mapping: ${updated_entity.external_id} -> ${base_uri}`
+        )
+      }
+    }
 
     const result = {
       entity_id: updated_entity.entity_id,

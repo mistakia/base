@@ -3,6 +3,7 @@
  */
 
 import debug from 'debug'
+import path from 'path'
 import { normalize_notion_page } from '../normalize-notion-page.mjs'
 import { normalize_notion_database_item } from '../normalize-notion-database-item.mjs'
 import {
@@ -11,6 +12,8 @@ import {
 } from '../notion-entity-mapper.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { format_entity_path_for_notion } from './format-entity-path-for-notion.mjs'
+import { cache_entity } from '../cache/notion-entity-cache.mjs'
+import config from '#config'
 
 const log = debug('integrations:notion:entity:create')
 
@@ -64,6 +67,19 @@ export async function create_entity_from_notion_page(
       entity_type: entity_properties.type,
       entity_content: entity_content || ''
     })
+
+    // Update cache with new entity mapping
+    if (entity_properties.external_id) {
+      const user_base_directory = config.user_base_directory
+      if (user_base_directory && file_path.startsWith(user_base_directory)) {
+        const relative_path = path.relative(user_base_directory, file_path)
+        const base_uri = `user:${relative_path}`
+        await cache_entity(entity_properties.external_id, base_uri)
+        log(
+          `Cached new entity mapping: ${entity_properties.external_id} -> ${base_uri}`
+        )
+      }
+    }
 
     const result = {
       entity_id: entity_properties.entity_id,
