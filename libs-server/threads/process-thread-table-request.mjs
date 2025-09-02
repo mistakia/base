@@ -3,12 +3,15 @@
  */
 
 import debug from 'debug'
+import path from 'path'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { extract_thread_metadata } from '#libs-server/threads/thread-metadata-extractor.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { DATA_TYPES } from '#libs-server/table-processing/sorting-utilities.mjs'
 import { check_user_permission } from '#server/middleware/permission-checker.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
+import { get_thread_base_directory } from './threads-constants.mjs'
+import { read_json_file } from './thread-utils.mjs'
 
 const log = debug('threads:table')
 
@@ -52,13 +55,32 @@ const DEFAULT_SORT = {
  * @returns {Promise<boolean>} Whether user has permission
  */
 async function check_thread_permission(requesting_user_public_key, thread_id) {
-  if (!requesting_user_public_key) {
-    return false
-  }
-
-  const thread_resource_path = `user:thread/${thread_id}`
-
   try {
+    // First check if thread has public_read enabled (highest precedence)
+    const threads_dir = get_thread_base_directory()
+    const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
+
+    try {
+      const metadata = await read_json_file({ file_path: metadata_path })
+
+      // If public_read is explicitly set to true, grant read access immediately
+      if (metadata.public_read === true) {
+        log(`Thread ${thread_id} has public_read enabled, granting access`)
+        return true
+      }
+    } catch (metadata_error) {
+      log(
+        `Error reading metadata for thread ${thread_id}: ${metadata_error.message}`
+      )
+      // Fall through to user-based permission check if metadata can't be read
+    }
+
+    // Fall back to user-based permission check if public_read is not enabled
+    if (!requesting_user_public_key) {
+      return false
+    }
+
+    const thread_resource_path = `user:thread/${thread_id}`
     const permission_result = await check_user_permission({
       user_public_key: requesting_user_public_key,
       resource_path: thread_resource_path
