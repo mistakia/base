@@ -18,6 +18,7 @@ import config from '#config'
 import routes from '#server/routes/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { create_permission_middleware } from '#server/middleware/permissions.mjs'
+import { create_render_html_middleware } from '#server/middleware/render-html.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
@@ -85,8 +86,8 @@ api.use(
   })
 )
 
-// JWT parsing middleware for all API routes - parses tokens but doesn't block
-api.use('/api/*', parse_jwt_token())
+// JWT parsing middleware for all routes - parses tokens but doesn't block
+api.use(parse_jwt_token())
 
 // Permission middleware for API routes (after JWT auth)
 api.use(
@@ -176,6 +177,11 @@ if (IS_DEV) {
     }
   )
 
+  // Create dynamic HTML renderer middleware
+  const render_html = create_render_html_middleware({
+    base_url: config.production_url
+  })
+
   // Serve assets from build directory only if they exist
   api.use(async (req, res, next) => {
     // Skip API routes
@@ -204,28 +210,12 @@ if (IS_DEV) {
           }
         })
       } else {
-        // Not a file (probably a directory), serve index.html for SPA routing
-        res.sendFile(path.join(build_path, 'index.html'), (send_err) => {
-          if (send_err) {
-            if (!res.headersSent) {
-              res.status(404).send('Page not found')
-            } else {
-              next(send_err)
-            }
-          }
-        })
+        // Not a file (probably a directory), use dynamic HTML rendering for SPA routing
+        return render_html(req, res, next)
       }
     } catch (err) {
-      // File doesn't exist, serve index.html for client-side routing
-      res.sendFile(path.join(build_path, 'index.html'), (send_err) => {
-        if (send_err) {
-          if (!res.headersSent) {
-            res.status(404).send('Page not found')
-          } else {
-            next(send_err)
-          }
-        }
-      })
+      // File doesn't exist, use dynamic HTML rendering for client-side routing
+      return render_html(req, res, next)
     }
   })
 }
