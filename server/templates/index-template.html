@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- The first thing in any HTML file should be the charset -->
+    <meta charset="utf-8" />
+
+    <!-- Make the page mobile compatible -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Allow installing the app to the homescreen -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Page title -->
+    <title>{{PAGE_TITLE}}</title>
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="{{OG_TITLE}}" />
+    <meta property="og:description" content="{{OG_DESCRIPTION}}" />
+    <meta property="og:image" content="{{OG_IMAGE}}" />
+    <meta property="og:url" content="{{OG_URL}}" />
+    <meta property="og:type" content="{{OG_TYPE}}" />
+    <meta property="og:site_name" content="{{SITE_NAME}}" />
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="{{TWITTER_CARD}}" />
+    <meta name="twitter:title" content="{{TWITTER_TITLE}}" />
+    <meta name="twitter:description" content="{{TWITTER_DESCRIPTION}}" />
+    <meta name="twitter:image" content="{{TWITTER_IMAGE}}" />
+
+    <!-- Additional meta tags -->
+    <meta name="description" content="{{META_DESCRIPTION}}" />
+    <meta name="author" content="{{META_AUTHOR}}" />
+
+    <!-- Fallback meta tags (static defaults) -->
+    <meta property="og:title" content="Base - Human-in-the-Loop System" />
+    <meta
+      property="og:description"
+      content="Agentic knowledge base management and execution system" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="robots" content="index, follow" />
+  </head>
+
+  <body>
+    <!-- Display a message if JS has been disabled on the browser. -->
+    <noscript
+      >If you're seeing this message, that means
+      <strong>JavaScript has been disabled on your browser</strong>, please
+      <strong>enable JS</strong> to make this app work.</noscript
+    >
+
+    <!-- The app hooks into this div -->
+    <div id="app"></div>
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@100;200;300;400;600;700&family=Inter:wght@100;200;400;900&family=Roboto+Mono:wght@100;200;300;400;600;700&family=Montserrat:wght@100;300&display=swap"
+      rel="stylesheet" />
+
+    <!-- A lot of magic happens in this file. HtmlWebpackPlugin automatically injects all assets (e.g. bundle.js, main.css) with the correct HTML tags, which is why they are missing in this file. Don't add any assets here! (Check out webpack.dev.babel.js and webpack.prod.babel.js if you want to know more) -->
+  </body>
+</html>
