@@ -41,7 +41,7 @@ $homepage_tasks_grid_template_mobile = 1fr
       gap 16px
 
       .view-all-link
-        color $color_text_secondary
+        color $color_primary
         text-decoration none
         font-size $font_size_xs
         font-weight 400
@@ -50,7 +50,7 @@ $homepage_tasks_grid_template_mobile = 1fr
         transition color $transition_base
 
         &:hover
-          color $color_text
+          color $color_primary_hover
           text-decoration underline
 
   .tasks-table-body
@@ -79,6 +79,25 @@ $homepage_tasks_grid_template_mobile = 1fr
         font-size 12px
         color #6c757d
         font-family monospace
+
+  .tasks-toggle-container
+    padding 12px 20px
+    text-align center
+    border-top 1px solid #f1f3f4
+
+    .tasks-toggle-button
+      background none
+      border none
+      color $color_text_secondary
+      font-size 12px
+      cursor pointer
+      padding 4px 8px
+      border-radius 4px
+      transition all $transition_base
+
+      &:hover
+        color $color_text
+        background-color #f8f9fa
 
 .no-ongoing-tasks
   text-align center
