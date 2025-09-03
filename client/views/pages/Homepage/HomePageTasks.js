@@ -49,7 +49,12 @@ const HomePageTasks = ({ tasks, is_loading_tasks, load_tasks }) => {
     <div className='tasks-container'>
       <div className='tasks-table'>
         <div className='tasks-table-header'>
-          <div>Task</div>
+          <div className='task-header-with-link'>
+            <span>Task</span>
+            <Link to='/task' className='view-all-link'>
+              view all
+            </Link>
+          </div>
           <div>Status</div>
           <div>Priority</div>
           <div>Finish By</div>
@@ -60,9 +65,6 @@ const HomePageTasks = ({ tasks, is_loading_tasks, load_tasks }) => {
           ))}
         </div>
       </div>
-      <Link to='/task' className='all-tasks-link'>
-        view all tasks
-      </Link>
     </div>
   )
 }

@@ -22,7 +22,6 @@ $homepage_tasks_grid_template_mobile = 1fr
 .tasks-table
   width 100%
   overflow hidden
-  border 1px solid $color_border
 
   .tasks-table-header
     display grid
@@ -35,6 +34,24 @@ $homepage_tasks_grid_template_mobile = 1fr
     font-size 11px
     text-transform uppercase
     letter-spacing 1px
+
+    .task-header-with-link
+      display flex
+      align-items center
+      gap 16px
+
+      .view-all-link
+        color $color_text_secondary
+        text-decoration none
+        font-size $font_size_xs
+        font-weight 400
+        text-transform lowercase
+        letter-spacing 0
+        transition color $transition_base
+
+        &:hover
+          color $color_text
+          text-decoration underline
 
   .tasks-table-body
     .task-row
@@ -62,19 +79,6 @@ $homepage_tasks_grid_template_mobile = 1fr
         font-size 12px
         color #6c757d
         font-family monospace
-
-.all-tasks-link
-  display inline-block
-  color #007bff
-  text-decoration none
-  font-size 14px
-  font-weight 500
-  padding 8px 0
-  transition color 0.2s ease
-
-  &:hover
-    color #0056b3
-    text-decoration underline
 
 .no-ongoing-tasks
   text-align center
