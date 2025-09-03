@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import './SystemMessage.styl'
 import { ansi_to_html } from '@views/utils/ansi-to-html.js'
 
-const SystemMessage = ({ message }) => {
+const SystemMessage = ({ message, working_directory = null }) => {
   const [is_expanded, set_is_expanded] = useState(false)
 
   const on_toggle = useCallback(() => {
@@ -68,7 +68,8 @@ SystemMessage.propTypes = {
     metadata: PropTypes.shape({
       level: PropTypes.string
     })
-  }).isRequired
+  }).isRequired,
+  working_directory: PropTypes.string
 }
 
 export default SystemMessage

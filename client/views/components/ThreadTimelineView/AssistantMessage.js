@@ -3,9 +3,11 @@ import PropTypes from 'prop-types'
 
 import './AssistantMessage.styl'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
+import { process_message_content } from './utils/message-processing.js'
 
 const AssistantMessage = ({
   message,
+  working_directory = null,
   disable_truncation,
   is_last_assistant_message
 }) => {
@@ -15,12 +17,10 @@ const AssistantMessage = ({
     () => set_is_assistant_message_expanded((v) => !v),
     []
   )
-  let content = message.content || ''
-
-  // Handle string content
-  if (typeof content !== 'string') {
-    content = JSON.stringify(content, null, 2)
-  }
+  const { content } = process_message_content({
+    content: message.content,
+    working_directory
+  })
 
   const should_truncate = !disable_truncation && content.length > 200
   const display_content =
@@ -49,6 +49,7 @@ const AssistantMessage = ({
 
 AssistantMessage.propTypes = {
   message: PropTypes.object.isRequired,
+  working_directory: PropTypes.string,
   disable_truncation: PropTypes.bool,
   is_last_assistant_message: PropTypes.bool
 }
