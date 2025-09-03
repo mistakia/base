@@ -118,5 +118,5 @@ After completing each task:
 
 **Next Task**: [Description of the next uncompleted task from the implementation plan, or "All tasks completed" if finished]
 
-**Next Step**: Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
+Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
 </output_format>
