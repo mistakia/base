@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import debug from 'debug'
-import { extract_thread_meta_data } from '../services/meta-extractor.mjs'
+import { extract_meta_data } from '../services/meta-extractor.mjs'
 import { generate_script_tags } from '../services/bundle-injector.mjs'
 import config from '#config'
 
@@ -78,11 +78,34 @@ function parse_request_url(url_path) {
     }
   }
 
-  // Check for other potential entity types
-  if (parts[0] === 'entity' && parts[1]) {
+  // Check for entity file paths (*.md files)
+  if (clean_path.endsWith('.md')) {
     return {
       type: 'entity',
-      entity_id: parts[1]
+      entity_path: clean_path
+    }
+  }
+
+  // Check for directory requests that might contain entities
+  // Directory requests without file extension could be entity directories
+  if (parts.length > 0 && !clean_path.includes('.')) {
+    // Check if this looks like an entity type directory
+    const entity_types = [
+      'task',
+      'text',
+      'workflow',
+      'guideline',
+      'tag',
+      'thread',
+      'physical-item',
+      'physical-location'
+    ]
+    if (entity_types.includes(parts[0])) {
+      return {
+        type: 'directory',
+        path: clean_path,
+        entity_type: parts[0]
+      }
     }
   }
 
@@ -122,7 +145,7 @@ export function create_render_html_middleware({
           log(
             `Extracting thread meta data for thread: ${content_info.thread_id}`
           )
-          meta_data = await extract_thread_meta_data({
+          meta_data = await extract_meta_data({
             thread_id: content_info.thread_id,
             user_public_key,
             base_url
@@ -130,21 +153,34 @@ export function create_render_html_middleware({
           break
 
         case 'entity':
-          // Future: Add entity meta data extraction
-          log(`Entity page requested: ${content_info.entity_id}`)
-          meta_data = await extract_thread_meta_data({
-            thread_id: null,
+          log(`Entity page requested: ${content_info.entity_path}`)
+          meta_data = await extract_meta_data({
+            entity_path: content_info.entity_path,
             user_public_key,
             base_url
           })
-          meta_data.PAGE_TITLE = `Entity ${content_info.entity_id} - Base`
-          meta_data.OG_TITLE = `Entity ${content_info.entity_id}`
           break
+
+        case 'directory': {
+          log(`Directory page requested: ${content_info.path}`)
+          meta_data = await extract_meta_data({
+            user_public_key,
+            base_url
+          })
+          // Customize for directory pages
+          const entity_type_name = content_info.entity_type
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, (l) => l.toUpperCase())
+          meta_data.PAGE_TITLE = `${entity_type_name} Directory - Base`
+          meta_data.OG_TITLE = `${entity_type_name} Directory`
+          meta_data.OG_DESCRIPTION = `Browse ${entity_type_name.toLowerCase()} entities in the Base system`
+          meta_data.META_DESCRIPTION = meta_data.OG_DESCRIPTION
+          break
+        }
 
         case 'home':
           log('Home page requested')
-          meta_data = await extract_thread_meta_data({
-            thread_id: null,
+          meta_data = await extract_meta_data({
             user_public_key,
             base_url
           })
@@ -152,13 +188,14 @@ export function create_render_html_middleware({
 
         default:
           log(`General page requested: ${content_info.path}`)
-          meta_data = await extract_thread_meta_data({
-            thread_id: null,
+          meta_data = await extract_meta_data({
             user_public_key,
             base_url
           })
           meta_data.PAGE_TITLE = `${content_info.path} - Base`
           meta_data.OG_TITLE = content_info.path
+          meta_data.OG_DESCRIPTION = `Page: ${content_info.path}`
+          meta_data.META_DESCRIPTION = meta_data.OG_DESCRIPTION
           break
       }
 

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-  <head>
+  <head data-react-helmet="true">
     <!-- The first thing in any HTML file should be the charset -->
     <meta charset="utf-8" />
 
@@ -10,36 +10,56 @@
     <!-- Allow installing the app to the homescreen -->
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Page title -->
-    <title>{{PAGE_TITLE}}</title>
+    <!-- Page title (React Helmet can override) -->
+    <title data-react-helmet="true">{{PAGE_TITLE}}</title>
 
-    <!-- Open Graph meta tags -->
-    <meta property="og:title" content="{{OG_TITLE}}" />
-    <meta property="og:description" content="{{OG_DESCRIPTION}}" />
-    <meta property="og:image" content="{{OG_IMAGE}}" />
-    <meta property="og:url" content="{{OG_URL}}" />
-    <meta property="og:type" content="{{OG_TYPE}}" />
-    <meta property="og:site_name" content="{{SITE_NAME}}" />
+    <!-- Open Graph meta tags (React Helmet can override) -->
+    <meta property="og:title" content="{{OG_TITLE}}" data-react-helmet="true" />
+    <meta
+      property="og:description"
+      content="{{OG_DESCRIPTION}}"
+      data-react-helmet="true" />
+    <meta property="og:image" content="{{OG_IMAGE}}" data-react-helmet="true" />
+    <meta property="og:url" content="{{OG_URL}}" data-react-helmet="true" />
+    <meta property="og:type" content="{{OG_TYPE}}" data-react-helmet="true" />
+    <meta
+      property="og:site_name"
+      content="{{SITE_NAME}}"
+      data-react-helmet="true" />
 
-    <!-- Twitter Card meta tags -->
-    <meta name="twitter:card" content="{{TWITTER_CARD}}" />
-    <meta name="twitter:title" content="{{TWITTER_TITLE}}" />
-    <meta name="twitter:description" content="{{TWITTER_DESCRIPTION}}" />
-    <meta name="twitter:image" content="{{TWITTER_IMAGE}}" />
+    <!-- Twitter Card meta tags (React Helmet can override) -->
+    <meta
+      name="twitter:card"
+      content="{{TWITTER_CARD}}"
+      data-react-helmet="true" />
+    <meta
+      name="twitter:title"
+      content="{{TWITTER_TITLE}}"
+      data-react-helmet="true" />
+    <meta
+      name="twitter:description"
+      content="{{TWITTER_DESCRIPTION}}"
+      data-react-helmet="true" />
+    <meta
+      name="twitter:image"
+      content="{{TWITTER_IMAGE}}"
+      data-react-helmet="true" />
 
-    <!-- Additional meta tags -->
-    <meta name="description" content="{{META_DESCRIPTION}}" />
-    <meta name="author" content="{{META_AUTHOR}}" />
+    <!-- Additional meta tags (React Helmet can override) -->
+    <meta
+      name="description"
+      content="{{META_DESCRIPTION}}"
+      data-react-helmet="true" />
+    <meta name="author" content="{{META_AUTHOR}}" data-react-helmet="true" />
+    <meta name="robots" content="index, follow" data-react-helmet="true" />
 
-    <!-- Fallback meta tags (static defaults) -->
+    <!-- Fallback meta tags for social crawlers (when React Helmet is not available) -->
     <meta property="og:title" content="Base - Human-in-the-Loop System" />
     <meta
       property="og:description"
       content="Agentic knowledge base management and execution system" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-
-    <meta name="robots" content="index, follow" />
   </head>
 
   <body>

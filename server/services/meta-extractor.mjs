@@ -7,8 +7,115 @@ import {
   get_content_type_config
 } from '#config/social-sharing.mjs'
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
+import { resolve_entity_from_path } from './entity-resolver.mjs'
 
 const log = debug('server:meta-extractor')
+
+/**
+ * Extract meta tag data from content (thread or entity) with privacy handling
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} [params.thread_id] - Thread ID to extract meta data for
+ * @param {string} [params.entity_path] - Entity file path to extract meta data for
+ * @param {string} [params.user_public_key] - User public key for permission checking
+ * @param {string} params.base_url - Base URL for generating absolute URLs
+ * @returns {Promise<Object>} Meta tag data object for template replacement
+ */
+export async function extract_meta_data({
+  thread_id,
+  entity_path,
+  user_public_key = null,
+  base_url
+}) {
+  // Route to appropriate handler
+  if (entity_path) {
+    return extract_entity_meta_data({ entity_path, user_public_key, base_url })
+  } else if (thread_id) {
+    return extract_thread_meta_data({ thread_id, user_public_key, base_url })
+  }
+
+  // Default fallback
+  return get_default_meta_data(base_url)
+}
+
+/**
+ * Extract meta tag data from entity content with privacy handling
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.entity_path - Entity file path to extract meta data for
+ * @param {string} [params.user_public_key] - User public key for permission checking
+ * @param {string} params.base_url - Base URL for generating absolute URLs
+ * @returns {Promise<Object>} Meta tag data object for template replacement
+ */
+export async function extract_entity_meta_data({
+  entity_path,
+  user_public_key = null,
+  base_url
+}) {
+  try {
+    log(`Extracting meta data for entity ${entity_path}`)
+
+    // Get entity metadata with permission checking
+    const entity_metadata = await resolve_entity_from_path({
+      file_path: entity_path,
+      user_public_key: user_public_key || config.user_public_key
+    })
+
+    if (!entity_metadata.exists) {
+      log(`Entity ${entity_path} not found, using fallback meta`)
+      return get_default_meta_data(base_url, entity_path)
+    }
+
+    // Check if content is redacted/private
+    const is_redacted = entity_metadata.is_redacted || false
+
+    if (is_redacted) {
+      log(`Entity ${entity_path} is redacted, using generic meta tags`)
+      return get_redacted_meta_data(base_url, entity_path)
+    }
+
+    // Extract entity information for meta tags
+    const title = entity_metadata.title || `${entity_metadata.type} Entity`
+    const description =
+      entity_metadata.description || `${entity_metadata.type} from Base system`
+
+    // Format creation date if available
+    let author_info = 'Base System'
+    if (entity_metadata.created_at) {
+      const created_date = new Date(entity_metadata.created_at)
+      author_info = `Base System - ${created_date.toLocaleDateString()}`
+    }
+
+    // Get content type config for entity
+    const content_type = entity_metadata.type || 'entity'
+    const type_config = get_content_type_config(content_type)
+
+    // Generate entity-specific meta tags using default social image
+    const entity_meta = {
+      PAGE_TITLE: `${title} - ${social_sharing.site_name}`,
+      OG_TITLE: title,
+      OG_DESCRIPTION: description,
+      OG_IMAGE: get_social_image_url(social_sharing.default_image),
+      OG_URL: `${base_url}/${entity_path}`,
+      OG_TYPE: type_config.og_type,
+      SITE_NAME: social_sharing.site_name,
+      TWITTER_CARD: social_sharing.twitter_card_type,
+      TWITTER_TITLE: title,
+      TWITTER_DESCRIPTION: description,
+      TWITTER_IMAGE: get_social_image_url(social_sharing.default_image),
+      META_DESCRIPTION: description,
+      META_AUTHOR: author_info
+    }
+
+    log(`Meta data extracted successfully for entity ${entity_path}`)
+    return entity_meta
+  } catch (error) {
+    log(
+      `Error extracting meta data for entity ${entity_path}: ${error.message}`
+    )
+    return get_default_meta_data(base_url, entity_path)
+  }
+}
 
 /**
  * Extract meta tag data from thread content with privacy handling
@@ -233,4 +340,60 @@ function extract_description_from_timeline(timeline, should_redact = false) {
   return should_redact ? redact_text_content(description) : description
 }
 
-export default extract_thread_meta_data
+/**
+ * Get default meta data for fallback cases
+ *
+ * @param {string} base_url - Base URL for generating absolute URLs
+ * @param {string} [path] - Optional path for URL generation
+ * @returns {Object} Default meta tag data
+ */
+function get_default_meta_data(base_url, path = '') {
+  const content_type = path ? 'entity' : 'home'
+  const type_config = get_content_type_config(content_type)
+
+  return {
+    PAGE_TITLE: social_sharing.default_title,
+    OG_TITLE: social_sharing.default_title,
+    OG_DESCRIPTION: social_sharing.default_description,
+    OG_IMAGE: get_social_image_url(social_sharing.default_image),
+    OG_URL: path ? `${base_url}/${path}` : base_url,
+    OG_TYPE: type_config.og_type,
+    SITE_NAME: social_sharing.site_name,
+    TWITTER_CARD: social_sharing.twitter_card_type,
+    TWITTER_TITLE: social_sharing.default_title,
+    TWITTER_DESCRIPTION: social_sharing.default_description,
+    TWITTER_IMAGE: get_social_image_url(social_sharing.default_image),
+    META_DESCRIPTION: social_sharing.default_description,
+    META_AUTHOR: social_sharing.site_name
+  }
+}
+
+/**
+ * Get redacted meta data for private content
+ *
+ * @param {string} base_url - Base URL for generating absolute URLs
+ * @param {string} [path] - Optional path for URL generation
+ * @returns {Object} Redacted meta tag data
+ */
+function get_redacted_meta_data(base_url, path = '') {
+  const content_type = path ? 'entity' : 'home'
+  const type_config = get_content_type_config(content_type)
+
+  return {
+    PAGE_TITLE: social_sharing.redacted_content.title,
+    OG_TITLE: social_sharing.redacted_content.title,
+    OG_DESCRIPTION: social_sharing.redacted_content.description,
+    OG_IMAGE: get_social_image_url(social_sharing.default_image),
+    OG_URL: path ? `${base_url}/${path}` : base_url,
+    OG_TYPE: type_config.og_type,
+    SITE_NAME: social_sharing.site_name,
+    TWITTER_CARD: social_sharing.twitter_card_type,
+    TWITTER_TITLE: social_sharing.redacted_content.title,
+    TWITTER_DESCRIPTION: social_sharing.redacted_content.description,
+    TWITTER_IMAGE: get_social_image_url(social_sharing.default_image),
+    META_DESCRIPTION: social_sharing.redacted_content.description,
+    META_AUTHOR: social_sharing.site_name
+  }
+}
+
+export default extract_meta_data
