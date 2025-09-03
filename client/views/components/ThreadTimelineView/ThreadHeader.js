@@ -4,10 +4,18 @@ import { Box } from '@mui/material'
 import { useSelector, useDispatch } from 'react-redux'
 
 import '@styles/chip.styl'
-import { format_relative_time } from '@views/utils/date-formatting.js'
 import { get_thread_cost_display } from '@core/threads/selectors'
 import { get_app } from '@core/app/selectors'
-import { dialog_actions } from '@core/dialog/actions'
+import {
+  MetadataContainer,
+  MetadataRow,
+  TwoCellRow,
+  DateDisplay,
+  ThreadStateField,
+  TokenField,
+  ModelsField,
+  format_token_shorthand
+} from '@views/components/MetadataDisplay'
 import {
   extract_message_counts,
   extract_tool_call_count,
@@ -27,24 +35,6 @@ const extract_models = (metadata) => {
   return (
     metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
   )
-}
-
-const format_token_shorthand = ({ count }) => {
-  if (count == null || isNaN(count)) return '0'
-
-  const absolute_count = Math.abs(count)
-
-  const format_with_suffix = (value, suffix) => {
-    const fixed = value.toFixed(1)
-    const trimmed = fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed
-    return `${trimmed}${suffix}`
-  }
-
-  if (absolute_count >= 1e12) return format_with_suffix(count / 1e12, 'T')
-  if (absolute_count >= 1e9) return format_with_suffix(count / 1e9, 'B')
-  if (absolute_count >= 1e6) return format_with_suffix(count / 1e6, 'M')
-  if (absolute_count >= 1e3) return format_with_suffix(count / 1e3, 'K')
-  return `${count}`
 }
 
 const extract_external_session_info = (metadata) => {
@@ -192,210 +182,7 @@ const ThreadStats = ({
   dispatch,
   user_owns_thread
 }) => {
-  const MetadataRow = ({
-    label,
-    value,
-    scrollable = false,
-    is_first = false
-  }) => (
-    <Box
-      sx={{
-        borderTop: is_first ? 'none' : '1px solid #e0e0e0',
-        borderBottom: 'none',
-        position: 'relative',
-        minHeight: '60px'
-      }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '8px',
-          left: '12px',
-          fontSize: '11px',
-          color: '#666',
-          fontWeight: 500,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
-        {label}
-      </Box>
-      <Box
-        sx={{
-          pt: '28px',
-          pb: '12px',
-          px: '12px',
-          fontSize: '14px',
-          color: '#333',
-          fontWeight: 400,
-          ...(scrollable
-            ? {
-                overflowX: 'auto',
-                whiteSpace: 'nowrap',
-                fontFamily: 'monospace'
-              }
-            : {
-                wordBreak: 'break-all'
-              })
-        }}>
-        {value}
-      </Box>
-    </Box>
-  )
-
-  MetadataRow.propTypes = {
-    label: PropTypes.string.isRequired,
-    value: PropTypes.node.isRequired,
-    scrollable: PropTypes.bool,
-    is_first: PropTypes.bool
-  }
-
-  const LabeledCell = ({
-    label,
-    value,
-    scrollable = false,
-    add_left_border = false
-  }) => (
-    <Box
-      sx={{
-        position: 'relative',
-        flex: 1,
-        minWidth: 0,
-        borderLeft: add_left_border ? '1px solid #e0e0e0' : 'none'
-      }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '8px',
-          left: '12px',
-          fontSize: '11px',
-          color: '#666',
-          fontWeight: 500,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
-        {label}
-      </Box>
-      <Box
-        sx={{
-          pt: '28px',
-          pb: '12px',
-          px: '12px',
-          fontSize: '14px',
-          color: '#333',
-          fontWeight: 400,
-          ...(scrollable
-            ? {
-                overflowX: 'auto',
-                whiteSpace: 'nowrap',
-                fontFamily: 'monospace'
-              }
-            : {
-                wordBreak: 'break-all'
-              })
-        }}>
-        {value}
-      </Box>
-    </Box>
-  )
-
-  LabeledCell.propTypes = {
-    label: PropTypes.string.isRequired,
-    value: PropTypes.node.isRequired,
-    scrollable: PropTypes.bool,
-    add_left_border: PropTypes.bool
-  }
-
-  const TwoCellRow = ({
-    left_label,
-    left_value,
-    right_label,
-    right_value,
-    is_first = false
-  }) => (
-    <Box
-      sx={{
-        borderTop: is_first ? 'none' : '1px solid #e0e0e0',
-        borderBottom: 'none',
-        display: 'flex',
-        minHeight: '60px'
-      }}>
-      <LabeledCell label={left_label} value={left_value} />
-      <LabeledCell
-        label={right_label}
-        value={right_value}
-        add_left_border={true}
-      />
-    </Box>
-  )
-
-  TwoCellRow.propTypes = {
-    left_label: PropTypes.string.isRequired,
-    left_value: PropTypes.node.isRequired,
-    right_label: PropTypes.string.isRequired,
-    right_value: PropTypes.node.isRequired,
-    is_first: PropTypes.bool
-  }
-
-  const render_models_value = ({ models }) => (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-        fontSize: '12px'
-      }}>
-      {models.map((model) => (
-        <Box key={model} sx={{ fontFamily: 'monospace' }}>
-          {model}
-        </Box>
-      ))}
-    </Box>
-  )
-
   const working_directory = external_session_info?.working_directory
-
-  // Format date as YYYY/MM/DD HH:MM AM/PM
-  const format_short_date = (date_string) => {
-    if (!date_string) return null
-
-    try {
-      const date = new Date(date_string)
-      if (isNaN(date.getTime())) return null
-
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-
-      let hours = date.getHours()
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      const ampm = hours >= 12 ? 'PM' : 'AM'
-      hours = hours % 12
-      hours = hours || 12
-
-      return `${year}/${month}/${day} ${hours}:${minutes} ${ampm}`
-    } catch {
-      return null
-    }
-  }
-
-  // Create date display components with relative time and absolute timestamp
-  const DateDisplay = ({ date }) => {
-    if (!date) return 'Unknown'
-
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <Box sx={{ fontSize: '14px', color: '#333' }}>
-          {format_relative_time(date)}
-        </Box>
-        <Box sx={{ fontSize: '11px', color: '#999' }}>
-          {format_short_date(date)}
-        </Box>
-      </Box>
-    )
-  }
-
-  DateDisplay.propTypes = {
-    date: PropTypes.string
-  }
 
   // Determine which rows will be rendered to set is_first correctly
   const has_session_provider = external_session_info?.provider
@@ -413,17 +200,12 @@ const ThreadStats = ({
         />
       )}
       {has_thread_state && thread_id && (
-        <Box
-          sx={{
-            borderTop: !has_session_provider ? 'none' : '1px solid #e0e0e0'
-          }}>
-          <ClickableThreadState
-            thread_state={thread_state}
-            thread_id={thread_id}
-            dispatch={dispatch}
-            user_owns_thread={user_owns_thread}
-          />
-        </Box>
+        <ThreadStateField
+          thread_state={thread_state}
+          thread_id={thread_id}
+          user_owns_thread={user_owns_thread}
+          is_first={!has_session_provider}
+        />
       )}
       {has_working_directory && (
         <MetadataRow
@@ -459,9 +241,8 @@ const ThreadStats = ({
           }
         />
       ) : (
-        <MetadataRow
-          label='Tokens'
-          value={format_token_shorthand({ count: total_tokens })}
+        <TokenField
+          value={total_tokens}
           is_first={
             !has_session_provider &&
             !has_thread_state &&
@@ -507,9 +288,7 @@ const ThreadStats = ({
           )}
         </>
       )}
-      {models.length > 0 && (
-        <MetadataRow label='Models' value={render_models_value({ models })} />
-      )}
+      <ModelsField models={models} />
       {session_id && (
         <MetadataRow
           label='External Session ID'
@@ -542,82 +321,6 @@ ThreadStats.propTypes = {
   thread_cost_display: PropTypes.string,
   thread_id: PropTypes.string,
   dispatch: PropTypes.func,
-  user_owns_thread: PropTypes.bool.isRequired
-}
-
-const ClickableThreadState = ({
-  thread_state,
-  thread_id,
-  dispatch,
-  user_owns_thread
-}) => {
-  const handle_thread_state_click = () => {
-    if (!user_owns_thread) return
-
-    dispatch(
-      dialog_actions.show({
-        id: 'THREAD_STATE_CHANGE',
-        title:
-          thread_state === 'archived' ? 'Reactivate Thread' : 'Archive Thread',
-        data: { thread_id, current_state: thread_state }
-      })
-    )
-  }
-
-  return (
-    <Box
-      sx={{
-        borderTop: 'none',
-        borderBottom: 'none',
-        position: 'relative',
-        minHeight: '60px',
-        cursor: user_owns_thread ? 'pointer' : 'default',
-        '&:hover': user_owns_thread
-          ? {
-              backgroundColor: '#f5f5f5'
-            }
-          : {},
-        opacity: user_owns_thread ? 1 : 0.6
-      }}
-      onClick={handle_thread_state_click}
-      title={
-        user_owns_thread
-          ? 'Click to change thread state'
-          : 'You can only modify threads that you own'
-      }>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '8px',
-          left: '12px',
-          fontSize: '11px',
-          color: '#666',
-          fontWeight: 500,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
-        Thread State
-      </Box>
-      <Box
-        sx={{
-          pt: '28px',
-          pb: '12px',
-          px: '12px',
-          fontSize: '14px',
-          color: '#333',
-          fontWeight: 400,
-          wordBreak: 'break-all'
-        }}>
-        {thread_state}
-      </Box>
-    </Box>
-  )
-}
-
-ClickableThreadState.propTypes = {
-  thread_state: PropTypes.string.isRequired,
-  thread_id: PropTypes.string.isRequired,
-  dispatch: PropTypes.func.isRequired,
   user_owns_thread: PropTypes.bool.isRequired
 }
 
@@ -683,13 +386,10 @@ const ThreadHeader = ({ metadata, thread_id }) => {
     current_user_public_key === thread_user_public_key
 
   return (
-    <Box
-      sx={{
-        backgroundColor: 'white',
-        borderRadius: 2,
-        overflow: 'hidden',
-        marginTop: '16px'
-      }}>
+    <MetadataContainer
+      background_color='white'
+      border_radius={2}
+      sx={{ marginTop: '16px' }}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
         <ThreadTitle
           title={title}
@@ -715,7 +415,7 @@ const ThreadHeader = ({ metadata, thread_id }) => {
         dispatch={dispatch}
         user_owns_thread={user_owns_thread}
       />
-    </Box>
+    </MetadataContainer>
   )
 }
 
