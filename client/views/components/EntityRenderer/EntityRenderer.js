@@ -6,8 +6,19 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import EntityFrontmatter from './EntityFrontmatter/index.js'
 import FileActions from '@components/FileActions/index.js'
+import PageHead from '@views/components/PageHead/index.js'
 
 const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
+  const entity_metadata = React.useMemo(() => {
+    return {
+      title: frontmatter?.title || 'Untitled',
+      description: frontmatter?.description || frontmatter?.summary || '',
+      tags: frontmatter?.tags || [],
+      author: frontmatter?.author,
+      published_time: frontmatter?.date || frontmatter?.published,
+      modified_time: frontmatter?.modified || frontmatter?.updated
+    }
+  }, [frontmatter])
   const left_content = markdown ? (
     <Box sx={{ pr: 2 }}>
       <MarkdownViewer content={markdown} is_redacted={is_redacted} />
@@ -28,28 +39,54 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
   // If there's no markdown content, center the frontmatter
   if (!markdown && frontmatter) {
     return (
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ maxWidth: '600px', width: '100%' }}>
-          <EntityFrontmatter
-            frontmatter={frontmatter}
-            is_sticky={false}
-            markdown={markdown}
-          />
-          <FileActions path={path} />
+      <>
+        <PageHead
+          title={entity_metadata.title}
+          description={entity_metadata.description}
+          tags={entity_metadata.tags}
+          url={`${window.location.origin}${window.location.pathname}`}
+          type='article'
+          site_name='Base'
+          author={entity_metadata.author || 'Base System'}
+          published_time={entity_metadata.published_time}
+          modified_time={entity_metadata.modified_time}
+        />
+        <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ maxWidth: '600px', width: '100%' }}>
+            <EntityFrontmatter
+              frontmatter={frontmatter}
+              is_sticky={false}
+              markdown={markdown}
+            />
+            <FileActions path={path} />
+          </Box>
         </Box>
-      </Box>
+      </>
     )
   }
 
   return (
-    <TwoColumnLayout
-      left_content={left_content}
-      right_content={right_content}
-      left_column_width={8}
-      right_column_width={4}
-      container_padding={3}
-      sticky_right={true}
-    />
+    <>
+      <PageHead
+        title={entity_metadata.title}
+        description={entity_metadata.description}
+        tags={entity_metadata.tags}
+        url={`${window.location.origin}${window.location.pathname}`}
+        type='article'
+        site_name='Base'
+        author={entity_metadata.author || 'Base System'}
+        published_time={entity_metadata.published_time}
+        modified_time={entity_metadata.modified_time}
+      />
+      <TwoColumnLayout
+        left_content={left_content}
+        right_content={right_content}
+        left_column_width={8}
+        right_column_width={4}
+        container_padding={3}
+        sticky_right={true}
+      />
+    </>
   )
 }
 

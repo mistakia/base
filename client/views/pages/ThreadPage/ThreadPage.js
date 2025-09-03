@@ -6,6 +6,8 @@ import { useParams } from 'react-router-dom'
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
+import PageHead from '@views/components/PageHead/index.js'
+import use_page_meta from '@views/hooks/usePageMeta.js'
 
 const ThreadPage = ({
   thread_data,
@@ -16,6 +18,12 @@ const ThreadPage = ({
   clear_selected_thread
 }) => {
   const { id } = useParams()
+  const thread_data_js = thread_data?.toJS ? thread_data.toJS() : thread_data
+  const page_meta = use_page_meta({
+    thread_data: thread_data_js,
+    custom_title: is_loading ? 'Loading Thread...' : null,
+    custom_description: error ? 'Error loading thread content' : null
+  })
 
   useEffect(() => {
     if (id) {
@@ -32,39 +40,81 @@ const ThreadPage = ({
 
   if (is_loading) {
     return (
-      <PageLayout>
-        <div className='loading-state'>Loading thread...</div>
-      </PageLayout>
+      <>
+        <PageHead
+          title={page_meta.title}
+          description={page_meta.description}
+          tags={page_meta.tags}
+          url={page_meta.url}
+          type={page_meta.type}
+          site_name={page_meta.site_name}
+        />
+        <PageLayout>
+          <div className='loading-state'>Loading thread...</div>
+        </PageLayout>
+      </>
     )
   }
 
   if (error) {
     return (
-      <PageLayout>
-        <div className='error-state'>
-          <h2>Error Loading Thread</h2>
-          <p>{error}</p>
-        </div>
-      </PageLayout>
+      <>
+        <PageHead
+          title={page_meta.title}
+          description={page_meta.description}
+          tags={page_meta.tags}
+          url={page_meta.url}
+          type={page_meta.type}
+          site_name={page_meta.site_name}
+        />
+        <PageLayout>
+          <div className='error-state'>
+            <h2>Error Loading Thread</h2>
+            <p>{error}</p>
+          </div>
+        </PageLayout>
+      </>
     )
   }
 
   if (!thread_data) {
     return (
-      <PageLayout>
-        <div className='error-state'>
-          <h2>Thread Not Found</h2>
-          <p>The requested thread could not be found.</p>
-        </div>
-      </PageLayout>
+      <>
+        <PageHead
+          title='Thread Not Found - Base'
+          description='The requested thread could not be found'
+          url={page_meta.url}
+          type='website'
+        />
+        <PageLayout>
+          <div className='error-state'>
+            <h2>Thread Not Found</h2>
+            <p>The requested thread could not be found.</p>
+          </div>
+        </PageLayout>
+      </>
     )
   }
 
   return (
-    <PageLayout>
-      <ThreadTimelineView />
-      <FileSystemBrowser />
-    </PageLayout>
+    <>
+      <PageHead
+        title={page_meta.title}
+        description={page_meta.description}
+        tags={page_meta.tags}
+        url={page_meta.url}
+        image={page_meta.image}
+        type={page_meta.type}
+        site_name={page_meta.site_name}
+        author={page_meta.author}
+        published_time={page_meta.published_time}
+        modified_time={page_meta.modified_time}
+      />
+      <PageLayout>
+        <ThreadTimelineView />
+        <FileSystemBrowser />
+      </PageLayout>
+    </>
   )
 }
 
