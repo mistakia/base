@@ -8,6 +8,7 @@ import { group_tool_entries } from './utils/group-tool-entries'
 
 const TimelineList = ({
   timeline,
+  working_directory = null,
   include_sidechain = false,
   hide_timeline_dot = false,
   hide_timeline_line = false
@@ -117,10 +118,12 @@ const TimelineList = ({
             tool_result_event={entry.tool_result_event}
             is_last_assistant_message={false}
             timeline={timeline}
+            working_directory={working_directory}
             hide_timeline_dot={hide_dot_for_main_subthread}
             render_nested_timeline={(nested) => (
               <TimelineList
                 timeline={nested}
+                working_directory={working_directory}
                 include_sidechain={true}
                 hide_timeline_dot={false}
                 hide_timeline_line={false}
@@ -144,10 +147,12 @@ const TimelineList = ({
           timeline_event={timeline_event}
           is_last_assistant_message={is_last_assistant_message}
           timeline={timeline}
+          working_directory={working_directory}
           hide_timeline_dot={hide_timeline_dot}
           render_nested_timeline={(nested) => (
             <TimelineList
               timeline={nested}
+              working_directory={working_directory}
               include_sidechain={true}
               hide_timeline_dot={false}
               hide_timeline_line={false}
@@ -156,7 +161,7 @@ const TimelineList = ({
         />
       )
     },
-    [timeline, last_assistant_entry_index, hide_timeline_dot]
+    [timeline, last_assistant_entry_index, hide_timeline_dot, working_directory]
   )
 
   return (
@@ -213,6 +218,7 @@ const TimelineList = ({
 
 TimelineList.propTypes = {
   timeline: PropTypes.array.isRequired,
+  working_directory: PropTypes.string,
   include_sidechain: PropTypes.bool,
   hide_timeline_dot: PropTypes.bool,
   hide_timeline_line: PropTypes.bool

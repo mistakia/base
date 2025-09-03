@@ -26,6 +26,7 @@ const TimelineEvent = ({
   tool_result_event,
   is_last_assistant_message,
   timeline,
+  working_directory = null,
   render_nested_timeline,
   hide_timeline_dot = false
 }) => {
@@ -40,7 +41,8 @@ const TimelineEvent = ({
   let should_hide_event = false
   if (timeline_event?.type === 'message' && !is_hook) {
     const processed = process_message_content({
-      content: timeline_event.content
+      content: timeline_event.content,
+      working_directory
     })
     should_hide_event = processed.is_empty
   }
@@ -108,20 +110,36 @@ const TimelineEvent = ({
           if (is_hook) {
             return <HookMessage message={timeline_event} />
           }
-          return <UserMessage message={timeline_event} />
+          return (
+            <UserMessage
+              message={timeline_event}
+              working_directory={working_directory}
+            />
+          )
         } else {
           return (
             <AssistantMessage
               message={timeline_event}
+              working_directory={working_directory}
               disable_truncation={is_last_assistant_message}
               is_last_assistant_message={is_last_assistant_message}
             />
           )
         }
       case 'thinking':
-        return <ThinkingMessage message={timeline_event} />
+        return (
+          <ThinkingMessage
+            message={timeline_event}
+            working_directory={working_directory}
+          />
+        )
       case 'system':
-        return <SystemMessage message={timeline_event} />
+        return (
+          <SystemMessage
+            message={timeline_event}
+            working_directory={working_directory}
+          />
+        )
       case 'tool_use':
       case 'tool_call':
       case 'tool_result':
@@ -194,6 +212,7 @@ TimelineEvent.propTypes = {
   tool_result_event: PropTypes.object,
   is_last_assistant_message: PropTypes.bool,
   timeline: PropTypes.array,
+  working_directory: PropTypes.string,
   render_nested_timeline: PropTypes.func,
   hide_timeline_dot: PropTypes.bool
 }

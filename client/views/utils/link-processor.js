@@ -2,11 +2,15 @@ import {
   BASE_URI_PATTERNS,
   is_absolute_url,
   convert_base_uri_to_path,
-  resolve_relative_path
+  resolve_relative_path,
+  resolve_at_path
 } from './base-uri-constants.js'
 
 // Process markdown content to transform links before rendering
-export const process_links_in_markdown = (content) => {
+export const process_links_in_markdown = (
+  content,
+  working_directory = null
+) => {
   if (!content) return content
 
   let processed_content = content
@@ -29,6 +33,32 @@ export const process_links_in_markdown = (content) => {
       const base_uri = `${scheme}:${path}`
       const client_path = convert_base_uri_to_path(base_uri)
       return `[${text}](${client_path})`
+    }
+  )
+
+  // Transform @<relative-path> patterns to markdown links
+  if (working_directory) {
+    processed_content = processed_content.replace(
+      BASE_URI_PATTERNS.AT_PATH_PATTERN,
+      (match, at_path) => {
+        const base_uri = resolve_at_path(at_path, working_directory)
+        if (base_uri) {
+          const client_path = convert_base_uri_to_path(base_uri)
+          const filename = at_path.split('/').pop() // Keep full filename with extension
+          return `[${filename}](${client_path})`
+        }
+        return match // Return as-is if cannot resolve
+      }
+    )
+  }
+
+  // Transform bare base URI patterns to markdown links
+  processed_content = processed_content.replace(
+    BASE_URI_PATTERNS.BARE_BASE_URI_PATTERN,
+    (match, scheme) => {
+      const client_path = convert_base_uri_to_path(match)
+      const filename = match.split('/').pop() // Keep full filename with extension
+      return `[${filename}](${client_path})`
     }
   )
 
@@ -93,6 +123,12 @@ export const handle_link_click = (event) => {
 
   // Allow default behavior for in-page anchors
   if (href.startsWith('#')) return
+
+  // Check for modifier keys - if Cmd/Ctrl is pressed, open in new tab
+  if (event.metaKey || event.ctrlKey) {
+    // Allow default behavior which will open in new tab
+    return
+  }
 
   // Prevent default navigation for client-routed links
   event.preventDefault()

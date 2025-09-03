@@ -16,7 +16,14 @@ export const BASE_URI_PATTERNS = {
   WIKI_LINK: /\[\[(sys|user):([^\]]+)\]\]/g,
 
   // Matches [text](user:path/to/file.md) or [text](sys:path/to/file.md)
-  MARKDOWN_LINK: /\[([^\]]*)\]\((sys|user):([^)]+)\)/g
+  MARKDOWN_LINK: /\[([^\]]*)\]\((sys|user):([^)]+)\)/g,
+
+  // Matches @path/to/file.ext with supported extensions
+  AT_PATH_PATTERN: /(@[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml))\b/g,
+
+  // Matches bare base URI patterns like user:path/file.ext or sys:path/file.ext
+  BARE_BASE_URI_PATTERN:
+    /\b(user:|sys:)[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)\b/g
 }
 
 // Check if a URL is absolute
@@ -85,6 +92,79 @@ export const convert_url_path_to_filesystem_path = (url_path) => {
 
   // Default to user directory for all other paths
   return `${BASE_DIRECTORIES.user}/${normalized_path}`
+}
+
+// Resolve @<relative-path> to proper base URI using working directory context
+export const resolve_at_path = (at_path, working_directory) => {
+  if (!at_path || !at_path.startsWith('@')) {
+    return null
+  }
+
+  // Remove the @ prefix
+  const relative_path = at_path.substring(1)
+
+  if (!working_directory) {
+    // No working directory context, return as-is
+    return null
+  }
+
+  // Resolve the path relative to working directory
+  let resolved_path
+  if (relative_path.startsWith('./')) {
+    resolved_path = working_directory + '/' + relative_path.substring(2)
+  } else if (relative_path.startsWith('../')) {
+    let working_dir = working_directory
+    let remaining_path = relative_path
+
+    while (remaining_path.startsWith('../')) {
+      const last_slash = working_dir.lastIndexOf('/')
+      if (last_slash === -1) break
+      working_dir = working_dir.substring(0, last_slash)
+      remaining_path = remaining_path.substring(3)
+    }
+
+    resolved_path = working_dir + '/' + remaining_path
+  } else {
+    // Direct relative path
+    resolved_path = working_directory + '/' + relative_path
+  }
+
+  // Normalize the path (remove any redundant ./ or ../)
+  resolved_path = resolved_path.replace(/\/+/g, '/') // Remove double slashes
+  const path_parts = resolved_path.split('/')
+  const normalized_parts = []
+
+  for (const part of path_parts) {
+    if (part === '.' || part === '') {
+      continue
+    } else if (part === '..') {
+      normalized_parts.pop()
+    } else {
+      normalized_parts.push(part)
+    }
+  }
+
+  resolved_path = normalized_parts.join('/')
+
+  // Determine if this maps to user: or sys: based on the resolved path
+  if (resolved_path.startsWith(BASE_DIRECTORIES.system.replace(/^\//, ''))) {
+    // Maps to system directory - create sys: URI
+    const sys_relative_path = resolved_path.substring(
+      BASE_DIRECTORIES.system.replace(/^\//, '').length + 1
+    )
+    return `sys:${sys_relative_path}`
+  } else if (
+    resolved_path.startsWith(BASE_DIRECTORIES.user.replace(/^\//, ''))
+  ) {
+    // Maps to user directory - create user: URI
+    const user_relative_path = resolved_path.substring(
+      BASE_DIRECTORIES.user.replace(/^\//, '').length + 1
+    )
+    return `user:${user_relative_path}`
+  }
+
+  // If we can't determine the base directory, assume user:
+  return `user:${relative_path}`
 }
 
 // Resolve relative path against current window path

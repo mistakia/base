@@ -71,7 +71,7 @@ const parse_command_from_content = ({ content_string }) => {
   return null
 }
 
-const UserMessage = ({ message }) => {
+const UserMessage = ({ message, working_directory = null }) => {
   const [is_user_message_expanded, set_is_user_message_expanded] =
     useState(false)
   const on_toggle = useCallback(
@@ -80,7 +80,8 @@ const UserMessage = ({ message }) => {
   )
 
   const { content: content_processed } = process_message_content({
-    content: message.content
+    content: message.content,
+    working_directory
   })
   const content = content_processed
 
@@ -146,7 +147,8 @@ const UserMessage = ({ message }) => {
 }
 
 UserMessage.propTypes = {
-  message: PropTypes.object.isRequired
+  message: PropTypes.object.isRequired,
+  working_directory: PropTypes.string
 }
 
 export default UserMessage

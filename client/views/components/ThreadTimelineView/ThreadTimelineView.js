@@ -7,6 +7,7 @@ import { get_threads_state } from '@core/threads/selectors'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 import FileActions from '@components/FileActions/index.js'
+import { extract_working_directory } from '@views/utils/thread-metadata-extractor.js'
 
 import ThreadHeader from './ThreadHeader'
 import TimelineList from './TimelineList'
@@ -61,7 +62,15 @@ const ThreadTimelineView = () => {
     )
   }
 
-  const left_content = <TimelineList timeline={timeline_to_display} />
+  // Extract working directory for link processing
+  const working_directory = extract_working_directory(metadata)
+
+  const left_content = (
+    <TimelineList
+      timeline={timeline_to_display}
+      working_directory={working_directory.path}
+    />
+  )
 
   const right_content = (
     <Box>
