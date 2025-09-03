@@ -42,7 +42,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[sys:system/guideline/review-task.md]].
 
-## Setup Phase
+## Phase 1: Setup
 
 1. **Locate Implementation Plan**
 
@@ -58,9 +58,9 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Install dependencies: `yarn install`
    - Document working directory path
 
-## Execution Phase
+## Phase 2: Implementation (Single Task Focus)
 
-3. **Work on First Task Only**
+3. **Execute Current Task**
 
    - Select the first uncompleted task from the implementation plan
    - Read and follow [[user:guideline/write-software.md]] for variable naming and DRY principles
@@ -68,36 +68,36 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Make the required changes for that task only
    - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
 
-4. **Update Implementation Plan**
+4. **Handle Implementation Plan Changes**
 
-   - Update the implementation plan with task completion progress
    - If during implementation you discover the plan needs changes (drift detected):
      - STOP implementation immediately
      - Present the proposed changes and reasoning for review
      - Wait for explicit approval before updating the plan
      - Only continue after plan changes are approved
 
-5. **Stop for Review**
-   - Do NOT proceed to the next task automatically
+5. **Report and Pause**
+   - Update the implementation plan with task completion progress and git worktree absolute path
    - Present what was completed and current plan status
-   - Wait for explicit instruction to proceed with next task or all remaining tasks
+   - Identify the next uncompleted task
+   - STOP and wait for explicit instruction to proceed
 
-## Quality Assurance
+## Phase 3: Quality Assurance (Final Phase Only)
 
-6. **When All Tasks Complete** (only after explicit instruction)
+6. **Complete Testing and Review** (only when ALL tasks are finished)
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
    - Stage changes: `git add .`
 
-## Key Rules
+## Critical Rules
 
-- Work on ONE task at a time from the implementation plan
-- ALWAYS update the implementation plan with progress after each task
-- If plan changes are needed (drift), STOP and get approval before updating
-- STOP after each task for review unless explicitly told to continue with all remaining tasks
-- Use the worktree setup pattern from the guidelines
-- Document working directory and verify before each operation
+- **Single Task Focus**: Work on ONE task at a time from the implementation plan
+- **Progress Tracking**: ALWAYS update the implementation plan with progress and git worktree absolute path after each task completion
+- **Plan Drift Control**: If plan changes are needed, STOP and get approval before updating
+- **Review Gates**: STOP after each task for review unless explicitly told to continue with all remaining tasks
+- **Environment Management**: Use the worktree setup pattern and document working directory
+- **Quality Gates**: Run tests and quality checks only when ALL tasks are complete
   </instructions>
 
 <output_format>
@@ -112,9 +112,11 @@ After completing each task:
 - [List of file paths for edited files]
 - [List of file paths for created files]
 
-**Implementation Plan Updated**: [Confirmation that progress was marked and any plan changes made]
+**Implementation Plan Updated**: [Confirmation that progress was marked with git worktree absolute path and any plan changes made]
 
 **Working Directory**: [Current worktree path]
+
+**Next Task**: [Description of the next uncompleted task from the implementation plan, or "All tasks completed" if finished]
 
 **Next Step**: Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
 </output_format>
