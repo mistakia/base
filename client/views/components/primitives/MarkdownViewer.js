@@ -37,7 +37,7 @@ const get_normal_styles = {
   '& li': { mb: 0.5, lineHeight: 1.4 },
   '& pre': {
     backgroundColor: 'var(--color-code-bg)',
-    p: 2,
+    p: '0 16px',
     borderRadius: 1,
     overflow: 'visible',
     mt: 2,
@@ -56,7 +56,7 @@ const get_normal_styles = {
   },
   '& pre code': {
     backgroundColor: 'transparent',
-    padding: 0
+    padding: '24px 0'
   },
   '& blockquote': {
     borderLeft: '3px solid var(--color-text-disabled)',
