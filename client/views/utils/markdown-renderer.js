@@ -8,7 +8,11 @@ import {
   process_links_in_html
 } from './link-processor.js'
 import { html_tag_whitelist } from './html-tag-whitelist.mjs'
+import { process_plaintext_blocks } from './plaintext-number-highlighter.js'
 import 'highlight.js/styles/github.css'
+
+// Import plaintext language support
+import 'highlight.js/lib/languages/plaintext'
 
 // Escape unknown XML-like tags so markdown inside them is still parsed.
 // Later, the XML styling plugin will re-wrap these escaped tags for display.
@@ -80,7 +84,10 @@ export const render_markdown = (content) => {
   const html = md.render(processed_content)
 
   // Process links in the rendered HTML to add attributes
-  return process_links_in_html(html)
+  const html_with_links = process_links_in_html(html)
+
+  // Process plaintext blocks to highlight numbers
+  return process_plaintext_blocks(html_with_links)
 }
 
 export default render_markdown

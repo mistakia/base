@@ -5,6 +5,7 @@ import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { handle_link_click } from '@views/utils/link-processor.js'
 
 import '@styles/checkbox.styl'
+import '@styles/plaintext-highlighting.styl'
 
 const get_normal_styles = {
   '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 4 },
@@ -36,7 +37,7 @@ const get_normal_styles = {
   },
   '& li': { mb: 0.5, lineHeight: 1.4 },
   '& pre': {
-    backgroundColor: 'var(--color-code-bg)',
+    backgroundColor: '#f5f1eb',
     p: '0 16px',
     borderRadius: 1,
     overflow: 'visible',
@@ -44,10 +45,10 @@ const get_normal_styles = {
     mb: 2,
     fontSize: '0.875rem',
     fontFamily: 'var(--font-family-mono)',
-    border: '1px solid var(--color-code-border)'
+    border: '1px solid #e8ddd4'
   },
   '& code': {
-    backgroundColor: 'var(--color-code-bg)',
+    backgroundColor: '#f5f1eb',
     px: 0.5,
     py: 0.25,
     borderRadius: 0.5,
@@ -59,11 +60,25 @@ const get_normal_styles = {
     padding: '24px 0'
   },
   '& blockquote': {
-    borderLeft: '3px solid var(--color-text-disabled)',
-    paddingLeft: '12px',
-    margin: '0.75em 0',
-    fontStyle: 'italic',
-    opacity: 0.9
+    borderLeft: '2px solid var(--color-border)',
+    padding: '9px 20px',
+    margin: '1.25em 0',
+    fontSize: '0.8rem',
+    fontWeight: 300,
+    lineHeight: 1.4,
+    color: 'var(--color-text-secondary)',
+    backgroundColor: 'var(--color-surface)',
+    border: '1px solid var(--color-border-light)',
+    borderRadius: 'var(--radius-sm)',
+    '& p:first-of-type': {
+      marginTop: '0'
+    },
+    '& p:last-of-type': {
+      marginBottom: '0'
+    },
+    '& ul:last-of-type': {
+      marginBottom: '0'
+    }
   },
   '& a': {
     color: 'inherit',
@@ -141,13 +156,6 @@ const MarkdownViewer = ({ content, is_redacted }) => {
       /^---\n[\s\S]*?\n---\n/,
       ''
     )
-
-    // For redacted content, render the markdown structure with redacted styling
-    if (is_redacted) {
-      // The content is already redacted markdown from the server
-      // Render it as markdown to preserve structure, then apply redacted styling
-      return render_markdown(content_without_frontmatter)
-    }
 
     return render_markdown(content_without_frontmatter)
   }, [content, is_redacted])
