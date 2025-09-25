@@ -70,6 +70,14 @@ const md = new MarkdownIt({
   .use(markdownItXmlStyling)
   .use(markdownItTaskCheckbox)
 
+// Wrap tables in scrollable containers
+const wrap_tables_in_containers = (html) => {
+  return html.replace(
+    /<table[^>]*>[\s\S]*?<\/table>/g,
+    '<div class="table-container">$&</div>'
+  )
+}
+
 // Render markdown content
 export const render_markdown = (content) => {
   if (!content) return ''
@@ -86,8 +94,11 @@ export const render_markdown = (content) => {
   // Process links in the rendered HTML to add attributes
   const html_with_links = process_links_in_html(html)
 
+  // Wrap tables in scrollable containers
+  const html_with_table_containers = wrap_tables_in_containers(html_with_links)
+
   // Process plaintext blocks to highlight numbers
-  return process_plaintext_blocks(html_with_links)
+  return process_plaintext_blocks(html_with_table_containers)
 }
 
 export default render_markdown

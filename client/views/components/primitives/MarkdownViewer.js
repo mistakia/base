@@ -100,19 +100,28 @@ const get_normal_styles = {
     margin: '1em 0',
     opacity: 0.7
   },
+  '& .table-container': {
+    overflowX: 'auto',
+    margin: '0.75em 0',
+    borderRadius: '4px',
+    border: '1px solid #e8ddd4'
+  },
   '& table': {
     borderCollapse: 'collapse',
+    backgroundColor: '#f5f1eb',
+    fontFamily: 'var(--font-family-mono)',
+    fontSize: '0.875rem',
     width: '100%',
-    margin: '0.75em 0'
+    minWidth: 'max-content'
   },
   '& th, & td': {
-    border: '1px solid var(--color-text-disabled)',
+    border: '1px solid #e8ddd4',
     padding: '6px 12px',
-    textAlign: 'left'
+    textAlign: 'left',
+    whiteSpace: 'nowrap'
   },
   '& th': {
-    backgroundColor:
-      'color-mix(in srgb, var(--color-text-disabled) 15%, transparent)',
+    backgroundColor: '#e8ddd4',
     fontWeight: 600
   },
   // XML tag styling - display XML tags as colored text

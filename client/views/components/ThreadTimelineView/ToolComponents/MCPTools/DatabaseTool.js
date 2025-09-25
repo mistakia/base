@@ -230,7 +230,10 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
                       {Object.keys(rows[0] || {}).map((column) => (
                         <TableCell
                           key={column}
-                          sx={{ fontFamily: 'Monaco, Menlo, monospace' }}>
+                          sx={{
+                            fontFamily: 'Monaco, Menlo, monospace',
+                            whiteSpace: 'nowrap'
+                          }}>
                           {row[column] === null ? (
                             <span
                               style={{
