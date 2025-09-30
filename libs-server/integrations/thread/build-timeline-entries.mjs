@@ -63,9 +63,9 @@ export const build_timeline_from_session = async (
       })
     }
 
-    // Sort timeline entries by sequence
+    // Sort timeline entries by sequence with null-safe access
     final_timeline = final_timeline.sort(
-      (a, b) => a.ordering.sequence - b.ordering.sequence
+      (a, b) => (a.ordering?.sequence ?? 0) - (b.ordering?.sequence ?? 0)
     )
 
     // Validate and report tool interaction quality

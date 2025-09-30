@@ -208,6 +208,15 @@ export const normalize_claude_session = (claude_session) => {
 }
 
 const normalize_claude_entry = ({ entry, index }) => {
+  // Skip file-history-snapshot entries - these are filtered during parsing
+  // but this provides a safety check if any slip through
+  if (entry.type === 'file-history-snapshot') {
+    log_debug(
+      `Skipping file-history-snapshot entry in normalize (messageId: ${entry.messageId})`
+    )
+    return null
+  }
+
   // Track all properties found in the entry for completeness analysis
   const all_entry_keys = Object.keys(entry)
   const known_keys = [
@@ -234,7 +243,13 @@ const normalize_claude_entry = ({ entry, index }) => {
     'level',
     'metadata',
     'parse_line_number',
-    'toolUseID'
+    'toolUseID',
+    'messageId',
+    'snapshot',
+    'isSnapshotUpdate',
+    'cache_creation_input_tokens',
+    'cache_read_input_tokens',
+    'service_tier'
   ]
 
   all_entry_keys.forEach((key) => {
