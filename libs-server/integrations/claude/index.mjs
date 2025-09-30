@@ -49,6 +49,34 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       `Validation: ${valid_sessions.length} valid, ${invalid_sessions.length} invalid`
     )
 
+    // If session_file or session_id was specified and no valid sessions found, return early
+    // to prevent fallback to scanning all files
+    if (
+      (options.session_file || options.session_id) &&
+      valid_sessions.length === 0
+    ) {
+      const identifier = options.session_file || options.session_id
+      log(
+        `No valid sessions found for specified ${options.session_file ? 'file' : 'session ID'}: ${identifier}`
+      )
+      return {
+        sessions_found: claude_sessions.length,
+        valid_sessions: 0,
+        invalid_sessions: invalid_sessions.length,
+        threads_created: 0,
+        threads_updated: 0,
+        threads_failed: 0,
+        threads_skipped: 0,
+        success_rate: '0.0',
+        results: {
+          created: [],
+          updated: [],
+          failed: [],
+          skipped: []
+        }
+      }
+    }
+
     if (config.dry_run) {
       return {
         dry_run: true,
@@ -64,7 +92,14 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
       allow_updates: config.allow_updates,
-      provider_options: { claude_sessions: valid_sessions }
+      provider_options: {
+        claude_sessions: valid_sessions,
+        // Pass through session_id and session_file to ensure they're respected
+        // even when valid_sessions is empty (e.g., when the session is invalid)
+        session_id: options.session_id,
+        session_file: options.session_file,
+        claude_projects_directory: options.claude_projects_directory
+      }
     })
 
     return {

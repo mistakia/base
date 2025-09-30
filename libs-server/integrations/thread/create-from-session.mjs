@@ -11,10 +11,6 @@ import {
   calculate_detailed_message_counts,
   aggregate_token_counts
 } from './session-count-utilities.mjs'
-import {
-  get_raw_data_storage_config,
-  get_timestamp_for_raw_data
-} from './thread-integration-shared-config.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 const log = debug('integrations:thread:create-from-session')
@@ -138,35 +134,24 @@ const save_raw_session_data = async ({
     return
   }
 
-  // Get the configured timestamp format
-  const storage_config = get_raw_data_storage_config()
-  const timestamp = get_timestamp_for_raw_data(storage_config.timestamp_format)
-
-  log_debug(
-    `Using timestamp format '${storage_config.timestamp_format}': ${timestamp}`
-  )
-
   // Save provider-specific raw data format
   switch (session_provider) {
     case 'claude':
       await save_claude_raw_data({
         raw_data_dir,
-        raw_data: raw_session_data,
-        timestamp
+        raw_data: raw_session_data
       })
       break
     case 'cursor':
       await save_cursor_raw_data({
         raw_data_dir,
-        raw_data: raw_session_data,
-        timestamp
+        raw_data: raw_session_data
       })
       break
     case 'openai':
       await save_openai_raw_data({
         raw_data_dir,
-        raw_data: raw_session_data,
-        timestamp
+        raw_data: raw_session_data
       })
       break
     default: {
@@ -177,10 +162,7 @@ const save_raw_session_data = async ({
   }
 
   // Always save the normalized session for comparison
-  const normalized_file = path.join(
-    raw_data_dir,
-    `normalized-session-${timestamp}.json`
-  )
+  const normalized_file = path.join(raw_data_dir, 'normalized-session.json')
   await fs.writeFile(
     normalized_file,
     JSON.stringify(normalized_session, null, 2)
@@ -188,26 +170,20 @@ const save_raw_session_data = async ({
   log_debug(`Saved normalized session data to ${normalized_file}`)
 }
 
-const save_claude_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
+const save_claude_raw_data = async ({ raw_data_dir, raw_data }) => {
   // Save original JSONL entries if available
   if (raw_data.entries && Array.isArray(raw_data.entries)) {
     const jsonl_content = raw_data.entries
       .map((entry) => JSON.stringify(entry))
       .join('\n')
-    const jsonl_file = path.join(
-      raw_data_dir,
-      `claude-session-${timestamp}.jsonl`
-    )
+    const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
     await fs.writeFile(jsonl_file, jsonl_content)
     log_debug(`Saved Claude JSONL data to ${jsonl_file}`)
   }
 
   // Save session metadata
   if (raw_data.metadata) {
-    const metadata_file = path.join(
-      raw_data_dir,
-      `claude-metadata-${timestamp}.json`
-    )
+    const metadata_file = path.join(raw_data_dir, 'claude-metadata.json')
     await fs.writeFile(
       metadata_file,
       JSON.stringify(raw_data.metadata, null, 2)
@@ -216,21 +192,15 @@ const save_claude_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
   }
 }
 
-const save_cursor_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
+const save_cursor_raw_data = async ({ raw_data_dir, raw_data }) => {
   // Save the original conversation object structure
-  const conversation_file = path.join(
-    raw_data_dir,
-    `cursor-conversation-${timestamp}.json`
-  )
+  const conversation_file = path.join(raw_data_dir, 'cursor-conversation.json')
   await fs.writeFile(conversation_file, JSON.stringify(raw_data, null, 2))
   log_debug(`Saved Cursor conversation data to ${conversation_file}`)
 
   // Save just the messages in a separate file for easier analysis
   if (raw_data.messages && Array.isArray(raw_data.messages)) {
-    const messages_file = path.join(
-      raw_data_dir,
-      `cursor-messages-${timestamp}.json`
-    )
+    const messages_file = path.join(raw_data_dir, 'cursor-messages.json')
     await fs.writeFile(
       messages_file,
       JSON.stringify(raw_data.messages, null, 2)
@@ -239,21 +209,15 @@ const save_cursor_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
   }
 }
 
-const save_openai_raw_data = async ({ raw_data_dir, raw_data, timestamp }) => {
+const save_openai_raw_data = async ({ raw_data_dir, raw_data }) => {
   // Save the complete conversation response from OpenAI API
-  const conversation_file = path.join(
-    raw_data_dir,
-    `openai-conversation-${timestamp}.json`
-  )
+  const conversation_file = path.join(raw_data_dir, 'openai-conversation.json')
   await fs.writeFile(conversation_file, JSON.stringify(raw_data, null, 2))
   log_debug(`Saved OpenAI conversation data to ${conversation_file}`)
 
   // Save just the mapping structure for easier analysis
   if (raw_data.mapping) {
-    const mapping_file = path.join(
-      raw_data_dir,
-      `openai-mapping-${timestamp}.json`
-    )
+    const mapping_file = path.join(raw_data_dir, 'openai-mapping.json')
     await fs.writeFile(mapping_file, JSON.stringify(raw_data.mapping, null, 2))
     log_debug(`Saved OpenAI mapping to ${mapping_file}`)
   }

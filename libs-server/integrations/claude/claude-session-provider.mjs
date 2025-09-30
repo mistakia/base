@@ -39,13 +39,25 @@ export class ClaudeSessionProvider extends SessionProviderBase {
       return await find_claude_sessions_from_data({ sessions: claude_sessions })
     }
 
-    // Otherwise discover from filesystem
+    // If session_file or session_id is specified but no sessions provided,
+    // only scan the specified file/session, don't fall back to scanning all files
+    if (session_file || session_id) {
+      const config = get_claude_config({ claude_projects_directory })
+      return await find_claude_sessions_from_filesystem({
+        claude_projects_directory: config.claude_projects_directory,
+        filter_sessions,
+        session_id,
+        session_file
+      })
+    }
+
+    // Otherwise discover from filesystem (all files)
     const config = get_claude_config({ claude_projects_directory })
     return await find_claude_sessions_from_filesystem({
       claude_projects_directory: config.claude_projects_directory,
       filter_sessions,
-      session_id,
-      session_file
+      session_id: null,
+      session_file: null
     })
   }
 

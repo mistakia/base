@@ -92,15 +92,35 @@ export const validate_claude_session_structure = ({ session }) => {
     errors.push('Missing metadata')
   }
 
+  // Entry types that don't require uuid/timestamp (metadata/snapshot entries)
+  const SYSTEM_ENTRY_TYPES = ['file-history-snapshot', 'summary', 'metadata']
+
   if (session.entries) {
     const required_fields = ['uuid', 'timestamp', 'type']
+    let has_meaningful_entry = false
+
     session.entries.forEach((entry, index) => {
+      // Skip validation for system/metadata entry types
+      if (entry.type && SYSTEM_ENTRY_TYPES.includes(entry.type)) {
+        return
+      }
+
+      // Track that we have at least one non-system entry
+      has_meaningful_entry = true
+
       required_fields.forEach((field) => {
         if (!entry[field]) {
           errors.push(`Entry ${index} missing required field: ${field}`)
         }
       })
     })
+
+    // Session must have at least one meaningful entry (not just snapshots)
+    if (!has_meaningful_entry) {
+      errors.push(
+        'Session contains only system entries (snapshots/metadata) with no conversation data'
+      )
+    }
   }
 
   return {

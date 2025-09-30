@@ -264,7 +264,7 @@ function output_verbose(result, argv) {
   }
 
   if (argv.dryRun) {
-    console.log(`Would create threads: ${result.would_create}`)
+    console.log(`Would process threads: ${result.valid_sessions}`)
   } else {
     console.log(`Threads created: ${result.threads_created}`)
     if (result.threads_updated !== undefined) {
