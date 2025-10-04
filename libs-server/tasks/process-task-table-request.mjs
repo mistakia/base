@@ -138,12 +138,20 @@ function process_task_for_table(task_entity) {
  */
 async function check_task_permission(user_public_key, task_entity) {
   try {
-    // First check if task has public_read enabled (highest precedence)
-    if (task_entity.entity_properties?.public_read === true) {
-      log(
-        `Task ${task_entity.entity_properties?.entity_id} has public_read enabled, granting access`
-      )
-      return true
+    // First check if task has public_read explicitly set (highest precedence)
+    const public_read = task_entity.entity_properties?.public_read
+    if (public_read !== undefined && public_read !== null) {
+      if (public_read === true) {
+        log(
+          `Task ${task_entity.entity_properties?.entity_id} has public_read explicitly enabled, granting access`
+        )
+        return true
+      } else {
+        log(
+          `Task ${task_entity.entity_properties?.entity_id} has public_read explicitly disabled, denying access`
+        )
+        return false
+      }
     }
 
     // Fall back to user-based permission check if public_read is not enabled

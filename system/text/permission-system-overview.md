@@ -72,14 +72,15 @@ The permission system follows a specific precedence order:
 
 ### 1. Public Read (Highest Precedence)
 
-If a resource has `public_read: true`:
+If a resource has `public_read` explicitly set:
 
-- **Read operations**: Granted immediately, bypassing all other permission checks
+- **`public_read: true`**: Read operations granted immediately, bypassing all other permission checks
+- **`public_read: false`**: Read operations denied immediately, bypassing all other permission checks
 - **Write operations**: Still subject to ownership/permission rules (public_read only affects read access)
 
 ### 2. User-Based Rules
 
-If `public_read` is not enabled or is `false`:
+If `public_read` is not explicitly set (undefined):
 
 - Normal permission evaluation through rule engine
 - Checks user ownership and explicit permission rules
@@ -96,8 +97,10 @@ If `public_read` is not enabled or is `false`:
 
 The system follows a two-stage permission check:
 
-1. **Public Read Check**: For read operations, check if `public_read: true` is set
-2. **Rule-Based Check**: If public read is not enabled, evaluate user-based permission rules
+1. **Public Read Check**: For read operations, check if `public_read` is explicitly set
+   - If `public_read: true`: Grant access immediately
+   - If `public_read: false`: Deny access immediately
+2. **Rule-Based Check**: If `public_read` is not explicitly set, evaluate user-based permission rules
 
 ### Thread Processing
 

@@ -33,10 +33,10 @@ export const map_thread_id_to_base_uri = (thread_id) => {
 }
 
 /**
- * Checks if an entity has public_read enabled
+ * Checks if an entity has public_read explicitly set and its value
  *
  * @param {string} resource_path - Base-URI path of the resource
- * @returns {Promise<boolean>} True if entity has public_read enabled
+ * @returns {Promise<Object>} Object with explicit flag and value
  */
 const check_entity_public_read = async (resource_path) => {
   try {
@@ -45,7 +45,7 @@ const check_entity_public_read = async (resource_path) => {
 
     if (!absolute_path) {
       log(`Could not map resource path to filesystem: ${resource_path}`)
-      return false
+      return { explicit: false, value: false }
     }
 
     // Try to read the entity
@@ -53,18 +53,21 @@ const check_entity_public_read = async (resource_path) => {
 
     if (!result.success) {
       log(`Could not read entity at ${absolute_path}: ${result.error}`)
-      return false
+      return { explicit: false, value: false }
     }
 
-    // Check if public_read is enabled
+    // Check if public_read is explicitly set
     const public_read = result.entity_properties?.public_read
-    const is_public = public_read === true
+    const is_explicit = public_read !== undefined && public_read !== null
+    const value = public_read === true
 
-    log(`Entity ${resource_path} public_read status: ${is_public}`)
-    return is_public
+    log(
+      `Entity ${resource_path} public_read status: explicit=${is_explicit}, value=${value}`
+    )
+    return { explicit: is_explicit, value }
   } catch (error) {
     log(`Error checking public_read for ${resource_path}: ${error.message}`)
-    return false
+    return { explicit: false, value: false }
   }
 }
 
@@ -134,18 +137,31 @@ export const check_user_permission = async ({
     `Checking read permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
   )
 
-  // Check for public_read access first
-  const is_public_readable = await check_entity_public_read(resource_path)
+  // Check for public_read setting first
+  const public_read_result = await check_entity_public_read(resource_path)
 
-  if (is_public_readable) {
-    log(`Public read access granted for resource: ${resource_path}`)
-    return {
-      allowed: true,
-      reason: 'Resource has public_read enabled'
+  // If public_read is explicitly set, respect that value regardless of users.json
+  if (public_read_result.explicit) {
+    if (public_read_result.value) {
+      log(
+        `Public read access granted for resource: ${resource_path} (explicitly enabled)`
+      )
+      return {
+        allowed: true,
+        reason: 'Resource has public_read explicitly enabled'
+      }
+    } else {
+      log(
+        `Public read access denied for resource: ${resource_path} (explicitly disabled)`
+      )
+      return {
+        allowed: false,
+        reason: 'Resource has public_read explicitly disabled'
+      }
     }
   }
 
-  // Get user's permission rules
+  // If public_read is not explicitly set, fall back to user-based permission rules
   const rules = await get_user_permission_rules(user_public_key)
 
   // Evaluate rules against the resource path

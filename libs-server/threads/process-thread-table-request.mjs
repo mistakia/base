@@ -63,10 +63,19 @@ async function check_thread_permission(requesting_user_public_key, thread_id) {
     try {
       const metadata = await read_json_file({ file_path: metadata_path })
 
-      // If public_read is explicitly set to true, grant read access immediately
-      if (metadata.public_read === true) {
-        log(`Thread ${thread_id} has public_read enabled, granting access`)
-        return true
+      // If public_read is explicitly set, respect that value regardless of users.json
+      if (metadata.public_read !== undefined && metadata.public_read !== null) {
+        if (metadata.public_read === true) {
+          log(
+            `Thread ${thread_id} has public_read explicitly enabled, granting access`
+          )
+          return true
+        } else {
+          log(
+            `Thread ${thread_id} has public_read explicitly disabled, denying access`
+          )
+          return false
+        }
       }
     } catch (metadata_error) {
       log(
