@@ -179,19 +179,52 @@ RelationsSection.propTypes = {
   relations: PropTypes.array
 }
 
+// observations rendering styles
+const observations_container_sx = { display: 'flex', flexDirection: 'column', gap: '6px' }
+const observation_line_sx = { fontSize: '12px', color: '#555', lineHeight: 1.6, whiteSpace: 'normal', wordBreak: 'break-word' }
+const observation_label_sx = { fontWeight: 'bold', color: '#333', mr: '6px' }
+const observation_content_sx = { color: '#666' }
+
+// bracket label followed by content
+const bracket_and_content_regex = /(\[[^\]]+\])\s*(.*)/
+
 const ObservationsSection = ({ observations }) => {
   if (!Array.isArray(observations) || observations.length === 0) return null
+
+  const parse_observation_text = (text) => {
+    // Match text in brackets followed by content
+    const match = text.match(bracket_and_content_regex)
+    
+    if (match) {
+      const [, bracket_text, content] = match
+      return { bracket_text, content: content.trim() }
+    }
+    
+    // If no brackets found, return the whole text as content
+    return { bracket_text: null, content: text }
+  }
 
   return (
     <MetadataRow
       label='Observations'
       value={
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {observations.map((text, idx) => (
-            <Box key={idx} sx={{ fontSize: '12px', color: '#555' }}>
-              • {text}
-            </Box>
-          ))}
+        <Box sx={observations_container_sx}>
+          {observations.map((text, idx) => {
+            const { bracket_text, content } = parse_observation_text(text)
+
+            return (
+              <Box key={idx} sx={observation_line_sx}>
+                {bracket_text ? (
+                  <Box component="span" sx={observation_label_sx}>
+                    {bracket_text}
+                  </Box>
+                ) : null}
+                <Box component="span" sx={observation_content_sx}>
+                  {content}
+                </Box>
+              </Box>
+            )
+          })}
         </Box>
       }
     />
