@@ -235,34 +235,76 @@ const create_server = () => {
 const server = create_server()
 
 server.on('upgrade', async (request, socket, head) => {
-  const parsed = new url.URL(request.url, config.url)
   try {
-    const token = parsed.searchParams.get('token')
-    if (token) {
-      const decoded = await jwt.verify(token, config.jwt.secret)
-      request.user = {
-        user_public_key: decoded.user_public_key,
-        ...decoded
-      }
-    } else {
-      const user_public_key = parsed.searchParams.get('user_public_key')
-      if (user_public_key) {
-        request.user = { user_public_key }
-      }
+    // Parse URL - this can throw on malformed URLs
+    let parsed
+    try {
+      parsed = new url.URL(request.url, config.public_url)
+    } catch (urlError) {
+      // Handle malformed URLs from scanners/bots
+      log(`Invalid WebSocket upgrade URL: ${request.url}`)
+      socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+      socket.destroy()
+      return
     }
+
+    // Parse authentication tokens
+    try {
+      const token = parsed.searchParams.get('token')
+      if (token) {
+        const decoded = await jwt.verify(token, config.jwt.secret)
+        request.user = {
+          user_public_key: decoded.user_public_key,
+          ...decoded
+        }
+      } else {
+        const user_public_key = parsed.searchParams.get('user_public_key')
+        if (user_public_key) {
+          request.user = { user_public_key }
+        }
+      }
+    } catch (authError) {
+      log(`WebSocket auth error: ${authError.message}`)
+      // Don't destroy the socket for invalid tokens, allow connection without auth
+      request.user = null
+    }
+
+    // Handle the WebSocket upgrade
+    wss.handleUpgrade(request, socket, head, function (ws) {
+      if (request.user && request.user.user_public_key) {
+        ws.user_public_key = request.user.user_public_key
+        log(`websocket connected with user_public_key: ${ws.user_public_key}`)
+      }
+      wss.emit('connection', ws, request)
+    })
   } catch (error) {
-    log(error)
-    // Don't destroy the socket for invalid tokens, allow connection without auth
-    request.user = null
+    // Catch-all for any unexpected errors in upgrade handler
+    log(`WebSocket upgrade error: ${error.message}`)
+    log(error.stack)
+    try {
+      socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n')
+      socket.destroy()
+    } catch (destroyError) {
+      // Socket may already be closed
+      log(`Error destroying socket: ${destroyError.message}`)
+    }
+  }
+})
+
+// Handle client errors (malformed requests, early disconnects, etc.)
+server.on('clientError', (error, socket) => {
+  log(`Client error: ${error.message}`)
+
+  // Only attempt to send response if socket is still writable
+  if (socket.writable && !socket.destroyed) {
+    socket.write('HTTP/1.1 400 Bad Request\r\n')
+    socket.write('Connection: close\r\n')
+    socket.write('Content-Length: 0\r\n')
+    socket.write('\r\n')
   }
 
-  wss.handleUpgrade(request, socket, head, function (ws) {
-    if (request.user && request.user.user_public_key) {
-      ws.user_public_key = request.user.user_public_key
-      log(`websocket connected with user_public_key: ${ws.user_public_key}`)
-    }
-    wss.emit('connection', ws, request)
-  })
+  // Destroy the socket to free resources
+  socket.destroy()
 })
 
 export default server
