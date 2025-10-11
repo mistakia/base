@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import MetadataRow from '../MetadataRow.js'
-import { render_models_value } from '../formatters/index.js'
+import MetadataRow from '@components/MetadataDisplay/MetadataRow.js'
+import { render_models_value } from '@components/MetadataDisplay/formatters/index.js'
 
 const ModelsField = ({
   models,

@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import MetadataRow from '../MetadataRow.js'
-import { format_token_shorthand } from '../formatters/index.js'
+import MetadataRow from '@components/MetadataDisplay/MetadataRow.js'
+import { format_token_shorthand } from '@components/MetadataDisplay/formatters/index.js'
 
 const TokenField = ({
   value,

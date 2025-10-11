@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { entity_field_config } from '../field-config.js'
+import { entity_field_config } from '@components/EntityRenderer/EntityFrontmatter/field-config.js'
 
 export const use_frontmatter_fields = ({ frontmatter }) => {
   const { always_visible, expandable } =

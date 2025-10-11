@@ -1,8 +1,7 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
-import { handle_link_click } from '@views/utils/link-processor.js'
 
 import '@styles/checkbox.styl'
 import '@styles/plaintext-highlighting.styl'
@@ -169,10 +168,6 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     return render_markdown(content_without_frontmatter)
   }, [content, is_redacted])
 
-  const on_click = useCallback((event) => {
-    handle_link_click(event)
-  }, [])
-
   return (
     <Box
       sx={{
@@ -185,7 +180,6 @@ const MarkdownViewer = ({ content, is_redacted }) => {
       }
       aria-label={is_redacted ? 'Redacted markdown content' : undefined}
       role={is_redacted ? 'text' : undefined}
-      onClick={on_click}
       dangerouslySetInnerHTML={{ __html: html_content }}
     />
   )

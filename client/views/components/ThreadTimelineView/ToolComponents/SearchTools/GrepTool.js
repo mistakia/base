@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, List, ListItem } from '@mui/material'
 import { Search as SearchIcon } from '@mui/icons-material'
-import BaseToolComponent from '../BaseToolComponent'
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
-import { build_dual_tone_header } from '../shared/title-utils.js'
+import { build_dual_tone_header } from '@components/ThreadTimelineView/ToolComponents/shared/title-utils.js'
 
 const GrepTool = ({ tool_call_event, tool_result_event }) => {
   const [show_results, set_show_results] = useState(false)

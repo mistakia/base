@@ -1,4 +1,4 @@
-import { create_api_action_types, create_api_actions } from '../utils'
+import { create_api_action_types, create_api_actions } from '@core/utils'
 
 const GET_DATABASE = 'GET_DATABASE'
 const GET_DATABASE_ITEMS = 'GET_DATABASE_ITEMS'

@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Typography, TableRow, TableCell } from '@mui/material'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
-import { handle_link_click } from '@views/utils/link-processor.js'
 
 // Parse relation string and extract relation type and base URI
 export const parse_relation = (relation_string) => {
@@ -62,6 +61,8 @@ export const RelationsField = ({ key_name, value }) => {
                 </span>{' '}
                 <a
                   href={parsed.client_path}
+                  target='_blank'
+                  rel='noopener noreferrer'
                   style={{
                     color: '#0366d6',
                     textDecoration: 'none',
@@ -75,7 +76,6 @@ export const RelationsField = ({ key_name, value }) => {
                   onMouseLeave={(e) => {
                     e.target.style.borderBottomColor = 'transparent'
                   }}
-                  onClick={handle_link_click}
                   data-internal-link='true'>
                   {parsed.filename}
                 </a>

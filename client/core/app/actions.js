@@ -1,4 +1,4 @@
-import { create_api_action_types, create_api_actions } from '../utils/index.js'
+import { create_api_action_types, create_api_actions } from '@core/utils'
 
 export const app_actions = {
   APP_LOAD: 'APP_LOAD',

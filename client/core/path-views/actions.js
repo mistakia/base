@@ -1,4 +1,4 @@
-import { create_api_action_types, create_api_actions } from '../utils'
+import { create_api_action_types, create_api_actions } from '@core/utils'
 
 const POST_DATABASE_VIEW = 'POST_DATABASE_VIEW'
 const DELETE_DATABASE_VIEW = 'DELETE_DATABASE_VIEW'

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { Edit as EditIcon } from '@mui/icons-material'
 import { useSelector } from 'react-redux'
-import BaseToolComponent from '../BaseToolComponent'
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import {
   build_dual_tone_header,
   format_relative_path,

@@ -36,6 +36,8 @@ const Task = ({ task }) => {
     <div className='task-row'>
       <a
         href={get_href()}
+        target='_blank'
+        rel='noopener noreferrer'
         className='task-title'
         style={{ textDecoration: 'none', color: 'inherit' }}>
         {task.entity_properties.title}

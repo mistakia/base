@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import BaseToolComponent from '../BaseToolComponent'
-import { build_dual_tone_header } from '../shared/title-utils.js'
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
+import { build_dual_tone_header } from '@components/ThreadTimelineView/ToolComponents/shared/title-utils.js'
 import MarkdownViewer from '@views/components/primitives/MarkdownViewer.js'
 
 const WebFetchTool = ({ tool_call_event, tool_result_event }) => {

@@ -1,4 +1,4 @@
-import { create_api_action_types, create_api_actions } from '../utils'
+import { create_api_action_types, create_api_actions } from '@core/utils'
 
 const GET_USER = 'GET_USER'
 const GET_USERS = 'GET_USERS'

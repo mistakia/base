@@ -21,6 +21,9 @@ export const BASE_URI_PATTERNS = {
   // Matches @path/to/file.ext with supported extensions
   AT_PATH_PATTERN: /(@[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml))\b/g,
 
+  // Matches @directory/ or @directory patterns (directories without file extensions)
+  AT_DIRECTORY_PATTERN: /(@[^\s[\]()]+\/)(?=\s|$|[^\w/])/g,
+
   // Matches bare base URI patterns like user:path/file.ext or sys:path/file.ext
   BARE_BASE_URI_PATTERN:
     /\b(user:|sys:)[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)\b/g

@@ -8,7 +8,6 @@ import {
   DateDisplay
 } from '@views/components/MetadataDisplay'
 import { parse_relation } from './renderers/relations-field.js'
-import { handle_link_click } from '@views/utils/link-processor.js'
 import { entity_field_config } from './field-config.js'
 
 const categorize_fields = (frontmatter) => {
@@ -149,6 +148,8 @@ const RelationsSection = ({ relations }) => {
                 </span>{' '}
                 <a
                   href={parsed.client_path}
+                  target='_blank'
+                  rel='noopener noreferrer'
                   style={{
                     color: '#0366d6',
                     textDecoration: 'none',
@@ -162,7 +163,6 @@ const RelationsSection = ({ relations }) => {
                   onMouseLeave={(event) => {
                     event.target.style.borderBottomColor = 'transparent'
                   }}
-                  onClick={handle_link_click}
                   data-internal-link='true'>
                   {parsed.filename}
                 </a>
@@ -180,8 +180,18 @@ RelationsSection.propTypes = {
 }
 
 // observations rendering styles
-const observations_container_sx = { display: 'flex', flexDirection: 'column', gap: '6px' }
-const observation_line_sx = { fontSize: '12px', color: '#555', lineHeight: 1.6, whiteSpace: 'normal', wordBreak: 'break-word' }
+const observations_container_sx = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px'
+}
+const observation_line_sx = {
+  fontSize: '12px',
+  color: '#555',
+  lineHeight: 1.6,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word'
+}
 const observation_label_sx = { fontWeight: 'bold', color: '#333', mr: '6px' }
 const observation_content_sx = { color: '#666' }
 
@@ -194,12 +204,12 @@ const ObservationsSection = ({ observations }) => {
   const parse_observation_text = (text) => {
     // Match text in brackets followed by content
     const match = text.match(bracket_and_content_regex)
-    
+
     if (match) {
       const [, bracket_text, content] = match
       return { bracket_text, content: content.trim() }
     }
-    
+
     // If no brackets found, return the whole text as content
     return { bracket_text: null, content: text }
   }
@@ -215,11 +225,11 @@ const ObservationsSection = ({ observations }) => {
             return (
               <Box key={idx} sx={observation_line_sx}>
                 {bracket_text ? (
-                  <Box component="span" sx={observation_label_sx}>
+                  <Box component='span' sx={observation_label_sx}>
                     {bracket_text}
                   </Box>
                 ) : null}
-                <Box component="span" sx={observation_content_sx}>
+                <Box component='span' sx={observation_content_sx}>
                   {content}
                 </Box>
               </Box>

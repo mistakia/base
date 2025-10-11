@@ -50,6 +50,20 @@ export const process_links_in_markdown = (
         return match // Return as-is if cannot resolve
       }
     )
+
+    // Transform @<directory> patterns to markdown links
+    processed_content = processed_content.replace(
+      BASE_URI_PATTERNS.AT_DIRECTORY_PATTERN,
+      (match, at_directory) => {
+        const base_uri = resolve_at_path(at_directory, working_directory)
+        if (base_uri) {
+          const client_path = convert_base_uri_to_path(base_uri)
+          const directory_name = at_directory.slice(1, -1) // Remove @ and trailing /
+          return `[${directory_name}/](${client_path})`
+        }
+        return match // Return as-is if cannot resolve
+      }
+    )
   }
 
   // Transform bare base URI patterns to markdown links
@@ -92,52 +106,27 @@ export const process_links_in_html = (html) => {
       return
     }
 
-    // Hash anchor - keep in-page navigation
+    // Hash anchor - keep in-page navigation (no new tab)
     if (href.startsWith('#')) {
       link.setAttribute('data-internal-link', 'true')
       return
     }
 
-    // App-absolute path - treat as internal
+    // App-absolute path - treat as internal but open in new tab
     if (href.startsWith('/')) {
+      link.setAttribute('target', '_blank')
+      link.setAttribute('rel', 'noopener noreferrer')
       link.setAttribute('data-internal-link', 'true')
       return
     }
 
-    // Relative path - resolve against current path
+    // Relative path - resolve against current path and open in new tab
     const resolved_path = resolve_relative_path(href)
     link.setAttribute('href', resolved_path)
+    link.setAttribute('target', '_blank')
+    link.setAttribute('rel', 'noopener noreferrer')
     link.setAttribute('data-internal-link', 'true')
   })
 
   return temp_div.innerHTML
-}
-
-// Handle click events for internal links
-export const handle_link_click = (event) => {
-  const link = event.target.closest('a[data-internal-link]')
-  if (!link) return
-
-  const href = link.getAttribute('href')
-  if (!href) return
-
-  // Allow default behavior for in-page anchors
-  if (href.startsWith('#')) return
-
-  // Check for modifier keys - if Cmd/Ctrl is pressed, open in new tab
-  if (event.metaKey || event.ctrlKey) {
-    // Allow default behavior which will open in new tab
-    return
-  }
-
-  // Prevent default navigation for client-routed links
-  event.preventDefault()
-
-  // Use client-side routing (this would depend on your routing setup)
-  // For now, we'll use window.history.pushState and manually navigate
-  if (href.startsWith('/')) {
-    window.history.pushState(null, '', href)
-    // Trigger a popstate event to notify routing system
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  }
 }

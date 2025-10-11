@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { Extension as MCPIcon } from '@mui/icons-material'
-import BaseToolComponent from '../BaseToolComponent'
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled'
-import { build_dual_tone_header } from '../shared/title-utils.js'
+import { build_dual_tone_header } from '@components/ThreadTimelineView/ToolComponents/shared/title-utils.js'
 import CodeViewer from '@views/components/primitives/CodeViewer.js'
 
 const GenericMCPTool = ({ tool_call_event, tool_result_event }) => {

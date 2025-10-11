@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Button, List, ListItem } from '@mui/material'
 import { FindInPage as GlobIcon } from '@mui/icons-material'
-import BaseToolComponent from '../BaseToolComponent'
+import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
 const GlobTool = ({ tool_call_event, tool_result_event }) => {

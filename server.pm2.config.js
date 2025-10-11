@@ -11,11 +11,7 @@ module.exports = {
         'source/build/bundle-manifest.json'
       ],
       watch_delay: 1000,
-      ignore_watch: [
-        'node_modules',
-        'logs',
-        'tmp'
-      ],
+      ignore_watch: ['node_modules', 'logs', 'tmp'],
       max_memory_restart: '2G',
       node_args: '--max-old-space-size=2048',
       instances: 1,

@@ -1,4 +1,4 @@
-import { process_links_in_markdown } from '../../../utils/link-processor.js'
+import { process_links_in_markdown } from '@views/utils/link-processor.js'
 
 export const clean_trailing_backslashes = ({ content_string }) => {
   if (!content_string || typeof content_string !== 'string')
