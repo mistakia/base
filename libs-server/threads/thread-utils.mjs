@@ -3,10 +3,7 @@ import path from 'path'
 import debug from 'debug'
 
 import { get_thread_base_directory } from './threads-constants.mjs'
-import {
-  check_user_permission,
-  map_thread_id_to_base_uri
-} from '#server/middleware/permission-checker.mjs'
+import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('threads:utils')
@@ -80,25 +77,6 @@ export function get_effective_updated_at({ metadata }) {
 }
 
 /**
- * Check if a user has permission to access a thread
- * @param {Object} params Parameters
- * @param {string} params.thread_id Thread ID
- * @param {string|null} params.user_public_key User public key (null means no permission check)
- * @returns {Promise<Object>} Permission result object
- */
-export async function check_thread_permission({ thread_id, user_public_key }) {
-  if (user_public_key === undefined) {
-    return { allowed: true }
-  }
-
-  const thread_resource_path = map_thread_id_to_base_uri(thread_id)
-  return await check_user_permission({
-    user_public_key,
-    resource_path: thread_resource_path
-  })
-}
-
-/**
  * Read thread metadata and timeline from filesystem
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
@@ -156,25 +134,10 @@ export async function process_thread_with_permissions({
     timeline
   })
 
-  // Check if thread has public_read explicitly set first
-  if (metadata.public_read !== undefined && metadata.public_read !== null) {
-    if (metadata.public_read === true) {
-      log(
-        `Thread ${thread_id} has public_read explicitly enabled, granting access`
-      )
-      return thread_data
-    } else {
-      log(
-        `Thread ${thread_id} has public_read explicitly disabled, denying access`
-      )
-      return redact_thread_data(thread_data)
-    }
-  }
-
-  // Check user permissions for this thread
-  const permission_result = await check_thread_permission({
-    thread_id,
-    user_public_key
+  // Use centralized thread permission checking
+  const permission_result = await check_thread_permission_for_user({
+    user_public_key,
+    thread_id
   })
 
   if (!permission_result.allowed) {

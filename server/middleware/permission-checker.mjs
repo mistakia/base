@@ -1,4 +1,5 @@
 import debug from 'debug'
+import path from 'path'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import { evaluate_permission_rules } from './rule-engine.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
@@ -77,7 +78,7 @@ const check_entity_public_read = async (resource_path) => {
  * @param {string} user_public_key - User's public key
  * @returns {Array} Array of permission rules or empty array
  */
-const get_user_permission_rules = async (user_public_key) => {
+export const get_user_permission_rules = async (user_public_key) => {
   if (!user_public_key) {
     log('No user public key provided, checking for public user permissions')
     // Fall back to public user permissions for unauthenticated requests
@@ -121,26 +122,54 @@ const get_user_permission_rules = async (user_public_key) => {
 }
 
 /**
- * Checks if a user has permission to access a resource
- * Note: This function is focused on read operations. Write permissions are limited to owner only.
+ * Core permission checking logic with configurable public_read checking
+ *
+ * Priority order:
+ * 1. users.json rules (all users except public user)
+ * 2. public_read setting (entity file or custom checker)
+ * 3. public user from users.json
  *
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access
  * @param {string} params.resource_path - Base-URI path of the resource
+ * @param {Function} params.public_read_checker - Optional custom function to check public_read
  * @returns {Object} Permission result with allowed status and reason
  */
-export const check_user_permission = async ({
+const check_permission_core = async ({
   user_public_key = null,
-  resource_path
+  resource_path,
+  public_read_checker = null
 }) => {
   log(
     `Checking read permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
   )
 
-  // Check for public_read setting first
-  const public_read_result = await check_entity_public_read(resource_path)
+  // Step 1: Check users.json rules for authenticated users (excluding public user)
+  if (user_public_key && user_public_key !== 'public') {
+    const user_rules = await get_user_permission_rules(user_public_key)
 
-  // If public_read is explicitly set, respect that value regardless of users.json
+    // Evaluate user-specific rules against the resource path
+    const user_result = await evaluate_permission_rules({
+      rules: user_rules,
+      resource_path,
+      user_public_key
+    })
+
+    // If user has explicit permission rules, respect them
+    if (user_rules.length > 0) {
+      log(
+        `User permission check result: ${user_result.allowed ? 'ALLOWED' : 'DENIED'} - ${user_result.reason}`
+      )
+      return user_result
+    }
+  }
+
+  // Step 2: Check for public_read setting (entity file or custom)
+  const public_read_result = public_read_checker
+    ? await public_read_checker(resource_path)
+    : await check_entity_public_read(resource_path)
+
+  // If public_read is explicitly set, respect that value
   if (public_read_result.explicit) {
     if (public_read_result.value) {
       log(
@@ -161,14 +190,14 @@ export const check_user_permission = async ({
     }
   }
 
-  // If public_read is not explicitly set, fall back to user-based permission rules
-  const rules = await get_user_permission_rules(user_public_key)
+  // Step 3: Fall back to public user rules from users.json
+  const public_rules = await get_user_permission_rules('public')
 
-  // Evaluate rules against the resource path
+  // Evaluate public user rules against the resource path
   const result = await evaluate_permission_rules({
-    rules,
+    rules: public_rules,
     resource_path,
-    user_public_key
+    user_public_key: 'public'
   })
 
   log(
@@ -176,6 +205,31 @@ export const check_user_permission = async ({
   )
 
   return result
+}
+
+/**
+ * Checks if a user has permission to access a resource
+ * Note: This function is focused on read operations. Write permissions are limited to owner only.
+ *
+ * Priority order:
+ * 1. users.json rules (all users except public user)
+ * 2. file public_read setting
+ * 3. public user from users.json
+ *
+ * @param {Object} params - Parameters for permission check
+ * @param {string|null} params.user_public_key - User's public key, null for public access
+ * @param {string} params.resource_path - Base-URI path of the resource
+ * @returns {Object} Permission result with allowed status and reason
+ */
+export const check_user_permission = async ({
+  user_public_key = null,
+  resource_path
+}) => {
+  return check_permission_core({
+    user_public_key,
+    resource_path,
+    public_read_checker: check_entity_public_read
+  })
 }
 
 /**
@@ -234,6 +288,72 @@ export const check_user_permission_for_file = async ({
   })
 
   return result.allowed
+}
+
+/**
+ * Checks if a user has permission to access a thread
+ *
+ * Priority order:
+ * 1. users.json rules (all users except public user)
+ * 2. thread metadata public_read setting
+ * 3. public user from users.json
+ *
+ * @param {Object} params - Parameters for permission check
+ * @param {string|null} params.user_public_key - User's public key, null for public access
+ * @param {string} params.thread_id - Thread ID to check
+ * @returns {Promise<Object>} Permission result with allowed status and reason
+ */
+export const check_thread_permission_for_user = async ({
+  user_public_key = null,
+  thread_id
+}) => {
+  const thread_resource_path = `user:thread/${thread_id}`
+
+  // Create a custom public_read checker for thread metadata
+  const check_thread_public_read = async (resource_path) => {
+    try {
+      // Import thread utilities dynamically to avoid circular dependencies
+      const { get_thread_base_directory } = await import(
+        '#libs-server/threads/threads-constants.mjs'
+      )
+      const { read_json_file } = await import(
+        '#libs-server/threads/thread-utils.mjs'
+      )
+
+      const threads_dir = get_thread_base_directory()
+      const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
+
+      try {
+        const metadata = await read_json_file({ file_path: metadata_path })
+
+        // Check if public_read is explicitly set
+        const public_read = metadata.public_read
+        const is_explicit = public_read !== undefined && public_read !== null
+        const value = public_read === true
+
+        log(
+          `Thread ${thread_id} public_read status: explicit=${is_explicit}, value=${value}`
+        )
+        return { explicit: is_explicit, value }
+      } catch (metadata_error) {
+        log(
+          `Error reading metadata for thread ${thread_id}: ${metadata_error.message}`
+        )
+        return { explicit: false, value: false }
+      }
+    } catch (error) {
+      log(
+        `Error checking thread public_read for ${thread_id}: ${error.message}`
+      )
+      return { explicit: false, value: false }
+    }
+  }
+
+  return check_permission_core({
+    user_public_key,
+    resource_path: thread_resource_path,
+    public_read_checker: check_thread_public_read
+  })
 }
 
 /**

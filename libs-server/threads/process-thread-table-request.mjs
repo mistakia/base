@@ -3,15 +3,12 @@
  */
 
 import debug from 'debug'
-import path from 'path'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { extract_thread_metadata } from '#libs-server/threads/thread-metadata-extractor.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { DATA_TYPES } from '#libs-server/table-processing/sorting-utilities.mjs'
-import { check_user_permission } from '#server/middleware/permission-checker.mjs'
+import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
-import { get_thread_base_directory } from './threads-constants.mjs'
-import { read_json_file } from './thread-utils.mjs'
 
 const log = debug('threads:table')
 
@@ -49,53 +46,22 @@ const DEFAULT_SORT = {
 
 /**
  * Check if user has permission to view a thread
+ * Uses the centralized thread permission checking logic
  *
  * @param {string} requesting_user_public_key - User's public key
  * @param {string} thread_id - Thread ID to check
  * @returns {Promise<boolean>} Whether user has permission
  */
-async function check_thread_permission(requesting_user_public_key, thread_id) {
+async function check_thread_permission_local(
+  requesting_user_public_key,
+  thread_id
+) {
   try {
-    // First check if thread has public_read enabled (highest precedence)
-    const threads_dir = get_thread_base_directory()
-    const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
-
-    try {
-      const metadata = await read_json_file({ file_path: metadata_path })
-
-      // If public_read is explicitly set, respect that value regardless of users.json
-      if (metadata.public_read !== undefined && metadata.public_read !== null) {
-        if (metadata.public_read === true) {
-          log(
-            `Thread ${thread_id} has public_read explicitly enabled, granting access`
-          )
-          return true
-        } else {
-          log(
-            `Thread ${thread_id} has public_read explicitly disabled, denying access`
-          )
-          return false
-        }
-      }
-    } catch (metadata_error) {
-      log(
-        `Error reading metadata for thread ${thread_id}: ${metadata_error.message}`
-      )
-      // Fall through to user-based permission check if metadata can't be read
-    }
-
-    // Fall back to user-based permission check if public_read is not enabled
-    if (!requesting_user_public_key) {
-      return false
-    }
-
-    const thread_resource_path = `user:thread/${thread_id}`
-    const permission_result = await check_user_permission({
+    const result = await check_thread_permission_for_user({
       user_public_key: requesting_user_public_key,
-      resource_path: thread_resource_path
+      thread_id
     })
-
-    return permission_result.allowed
+    return result.allowed
   } catch (error) {
     log(`Error checking permission for thread ${thread_id}: ${error.message}`)
     return false
@@ -128,7 +94,7 @@ async function process_threads_with_permissions(
 ) {
   return Promise.all(
     threads.map(async (thread) => {
-      const has_permission = await check_thread_permission(
+      const has_permission = await check_thread_permission_local(
         requesting_user_public_key,
         thread.thread_id
       )
