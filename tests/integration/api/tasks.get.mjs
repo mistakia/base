@@ -5,7 +5,8 @@ import chaiHttp from 'chai-http'
 import server from '#server'
 import {
   create_test_user,
-  setup_api_test_registry
+  setup_api_test_registry,
+  create_auth_token
 } from '#tests/utils/index.mjs'
 import create_test_task from '#tests/utils/create-test-task.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
@@ -23,6 +24,7 @@ describe('API /tasks GET', () => {
   before(async () => {
     await reset_all_tables()
     user = await create_test_user()
+    user.jwt_token = create_auth_token(user)
   })
 
   beforeEach(async () => {
@@ -67,7 +69,7 @@ describe('API /tasks GET', () => {
       task.should.have.nested.property('entity_properties.status')
       task.should.have.nested.property('entity_properties.priority')
       task.should.have.nested.property('entity_properties.finish_by')
-      task.user_public_key.should.equal(user.user_public_key)
+      task.entity_properties.user_public_key.should.equal(user.user_public_key)
     })
 
     it('should filter tasks by status', async () => {
@@ -110,14 +112,14 @@ describe('API /tasks GET', () => {
       res.body.should.be.an('object')
       res.body.should.have.property('base_uri')
       res.body.base_uri.should.equal(task_base_uri)
-      res.body.should.have.property('title')
-      res.body.should.have.property('description')
-      res.body.should.have.property('user_public_key')
-      res.body.should.have.property('created_at')
-      res.body.should.have.property('updated_at')
-      res.body.should.have.property('status')
-      res.body.should.have.property('priority')
-      res.body.should.have.property('finish_by')
+      res.body.should.have.nested.property('entity_properties.title')
+      res.body.should.have.nested.property('entity_properties.description')
+      res.body.should.have.nested.property('entity_properties.user_public_key')
+      res.body.should.have.nested.property('entity_properties.created_at')
+      res.body.should.have.nested.property('entity_properties.updated_at')
+      res.body.should.have.nested.property('entity_properties.status')
+      res.body.should.have.nested.property('entity_properties.priority')
+      res.body.should.have.nested.property('entity_properties.finish_by')
 
       // TODO
     })

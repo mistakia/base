@@ -125,9 +125,12 @@ export const get_user_permission_rules = async (user_public_key) => {
  * Core permission checking logic with configurable public_read checking
  *
  * Priority order:
- * 1. users.json rules (all users except public user)
+ * 1. User-specific rules from users.json (authenticated users, excluding public user)
+ *    - Only takes precedence if a rule actually matches
  * 2. public_read setting (entity file or custom checker)
- * 3. public user from users.json
+ *    - Applies to all users when no user-specific rule matched
+ * 3. Public user rules from users.json
+ *    - Fallback for all users when neither user rules nor public_read apply
  *
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access
@@ -144,23 +147,59 @@ const check_permission_core = async ({
     `Checking read permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
   )
 
+  // Step 0: Check if user is the owner of the resource (for file-based resources)
+  if (user_public_key && user_public_key !== 'public') {
+    try {
+      // Convert resource_path (base URI) back to absolute path for ownership check
+      const absolute_path = resolve_base_uri(resource_path)
+      const entity_result = await read_entity_from_filesystem({ absolute_path })
+
+      if (
+        entity_result.success &&
+        entity_result.entity_properties?.user_public_key
+      ) {
+        const is_owner =
+          user_public_key === entity_result.entity_properties.user_public_key
+        if (is_owner) {
+          log(`User ${user_public_key} is owner of resource ${resource_path}`)
+          return {
+            allowed: true,
+            reason: 'User is owner of the resource'
+          }
+        }
+      }
+    } catch (error) {
+      log(
+        `Error checking ownership for resource ${resource_path}: ${error.message}`
+      )
+      // Continue with regular permission check if ownership check fails
+    }
+  }
+
   // Step 1: Check users.json rules for authenticated users (excluding public user)
   if (user_public_key && user_public_key !== 'public') {
     const user_rules = await get_user_permission_rules(user_public_key)
 
-    // Evaluate user-specific rules against the resource path
-    const user_result = await evaluate_permission_rules({
-      rules: user_rules,
-      resource_path,
-      user_public_key
-    })
-
-    // If user has explicit permission rules, respect them
+    // Evaluate user-specific rules against the resource path only if rules exist
     if (user_rules.length > 0) {
+      const user_result = await evaluate_permission_rules({
+        rules: user_rules,
+        resource_path,
+        user_public_key
+      })
+
+      // If a user-specific rule matched, respect that decision
+      if (user_result.matching_rule !== null) {
+        log(
+          `User permission check result: ${user_result.allowed ? 'ALLOWED' : 'DENIED'} - ${user_result.reason}`
+        )
+        return user_result
+      }
+
+      // If no user-specific rule matched, continue to public_read check
       log(
-        `User permission check result: ${user_result.allowed ? 'ALLOWED' : 'DENIED'} - ${user_result.reason}`
+        `No matching user-specific rules for ${user_public_key}, continuing to public_read check`
       )
-      return user_result
     }
   }
 
@@ -212,9 +251,12 @@ const check_permission_core = async ({
  * Note: This function is focused on read operations. Write permissions are limited to owner only.
  *
  * Priority order:
- * 1. users.json rules (all users except public user)
- * 2. file public_read setting
- * 3. public user from users.json
+ * 1. User-specific rules from users.json (authenticated users, excluding public user)
+ *    - Only takes precedence if a rule actually matches
+ * 2. File public_read setting
+ *    - Applies to all users when no user-specific rule matched
+ * 3. Public user rules from users.json
+ *    - Fallback for all users when neither user rules nor public_read apply
  *
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access
@@ -281,7 +323,7 @@ export const check_user_permission_for_file = async ({
   const resource_path = map_filesystem_path_to_base_uri(absolute_path)
   log(`Checking file permission: ${absolute_path} -> ${resource_path}`)
 
-  // Use existing permission check with base_uri
+  // Use existing permission check with base_uri (ownership check is now in check_permission_core)
   const result = await check_user_permission({
     user_public_key,
     resource_path
@@ -294,9 +336,12 @@ export const check_user_permission_for_file = async ({
  * Checks if a user has permission to access a thread
  *
  * Priority order:
- * 1. users.json rules (all users except public user)
- * 2. thread metadata public_read setting
- * 3. public user from users.json
+ * 1. User-specific rules from users.json (authenticated users, excluding public user)
+ *    - Only takes precedence if a rule actually matches
+ * 2. Thread metadata public_read setting
+ *    - Applies to all users when no user-specific rule matched
+ * 3. Public user rules from users.json
+ *    - Fallback for all users when neither user rules nor public_read apply
  *
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access

@@ -68,39 +68,58 @@ Thread metadata can include a `public_read: true` field:
 
 ## Permission Precedence
 
-The permission system follows a specific precedence order:
+The permission system follows a specific precedence order for determining access:
 
-### 1. Public Read (Highest Precedence)
+### 1. User-Specific Rules (Highest Precedence for Authenticated Users)
 
-If a resource has `public_read` explicitly set:
+For authenticated users (not the public user):
 
-- **`public_read: true`**: Read operations granted immediately, bypassing all other permission checks
-- **`public_read: false`**: Read operations denied immediately, bypassing all other permission checks
+- **If a user-specific rule matches**: That rule's decision (allow/deny) is respected immediately
+- **If no user-specific rule matches**: Continue to check public_read setting
+
+This ensures that explicit user permissions take precedence when they apply.
+
+### 2. Public Read File Permission
+
+If `public_read` is explicitly set on the resource:
+
+- **`public_read: true`**: Read access granted for all users (both authenticated and unauthenticated)
+- **`public_read: false`**: Read access denied for all users (both authenticated and unauthenticated)
 - **Write operations**: Still subject to ownership/permission rules (public_read only affects read access)
 
-### 2. User-Based Rules
+This applies to both signed-in and non-signed-in users when no user-specific rule matched.
 
-If `public_read` is not explicitly set (undefined):
+### 3. Public User Rules
 
-- Normal permission evaluation through rule engine
-- Checks user ownership and explicit permission rules
-- Falls back to deny by default
+If neither user-specific rules matched nor `public_read` is explicitly set:
 
-### 3. Default Behavior
+- Evaluate public user rules from users.json
+- These rules apply to all users as a fallback
+- Falls back to deny by default if no public rules match
 
-- Resources default to private access when `public_read` is not specified
-- Access denied unless explicitly permitted through user-based rules
+### 4. Default Behavior
+
+- Resources default to private access when no rules match
+- Access denied unless explicitly permitted
 
 ## Implementation Details
 
 ### Permission Check Flow
 
-The system follows a two-stage permission check:
+The system follows a multi-stage permission check:
 
-1. **Public Read Check**: For read operations, check if `public_read` is explicitly set
-   - If `public_read: true`: Grant access immediately
-   - If `public_read: false`: Deny access immediately
-2. **Rule-Based Check**: If `public_read` is not explicitly set, evaluate user-based permission rules
+1. **User-Specific Rules Check**: For authenticated users (excluding public user)
+   - Evaluate user-specific permission rules from users.json
+   - If a rule matches: Return that rule's decision (allow/deny)
+   - If no rule matches: Continue to next stage
+2. **Public Read Check**: Check if `public_read` is explicitly set on the resource
+   - If `public_read: true`: Grant read access immediately
+   - If `public_read: false`: Deny read access immediately
+   - If not set: Continue to next stage
+3. **Public User Rules Check**: Evaluate public user rules from users.json
+   - Apply public user permission rules as fallback
+   - Return the result (allow/deny based on rule matching)
+4. **Default Deny**: If no rules match at any stage, access is denied by default
 
 ### Thread Processing
 

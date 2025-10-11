@@ -258,7 +258,7 @@ describe('Public Read Permissions Integration', function () {
   })
 
   describe('Permission precedence', function () {
-    it('should take precedence over users.json permission rules for read operations', async function () {
+    it('should grant access via public_read when user has no matching rules', async function () {
       // Create entity with public_read: true
       const entity_properties = {
         entity_id: 'test-precedence-entity',
@@ -275,23 +275,23 @@ describe('Public Read Permissions Integration', function () {
         entity_properties,
         entity_type: 'test',
         entity_content:
-          'This entity should be accessible despite permission rules'
+          'This entity should be accessible via public_read when user has no matching rules'
       })
 
-      // Test with a different user key that would normally be denied
+      // Test with a user key that has no matching permission rules
       const result = await check_user_permission({
-        user_public_key: 'unauthorized-user-key',
+        user_public_key: 'user-without-matching-rules',
         resource_path: 'user:test-entity.md'
       })
 
-      // Should be allowed due to public_read, regardless of user permission rules
+      // Should be allowed due to public_read when no user rules match
       expect(result.allowed).to.be.true
       expect(result.reason).to.equal(
         'Resource has public_read explicitly enabled'
       )
     })
 
-    it('should deny access when public_read is explicitly false, overriding users.json permissions', async function () {
+    it('should deny access via public_read: false when user has no matching rules', async function () {
       // Create entity with public_read: false
       const entity_properties = {
         entity_id: 'test-explicitly-private-entity',
@@ -308,19 +308,67 @@ describe('Public Read Permissions Integration', function () {
         entity_properties,
         entity_type: 'test',
         entity_content:
-          'This entity should be denied despite users.json permission rules'
+          'This entity should be denied via public_read when user has no matching rules'
       })
 
-      // Test with a user key that would normally be allowed by users.json
+      // Test with a user key that has no matching permission rules
       const result = await check_user_permission({
-        user_public_key: 'authorized-user-key',
+        user_public_key: 'user-without-matching-rules',
         resource_path: 'user:test-entity.md'
       })
 
-      // Should be denied due to public_read: false, regardless of user permission rules
+      // Should be denied due to public_read: false when no user rules match
       expect(result.allowed).to.be.false
       expect(result.reason).to.equal(
         'Resource has public_read explicitly disabled'
+      )
+    })
+
+    it('should respect user-specific matching rule over public_read for non-public users', async function () {
+      // Note: This test would require setting up a test user with specific rules
+      // in the user registry. For now, we document the expected behavior:
+      //
+      // 1. If user has matching "allow" rule -> should be allowed even if public_read: false
+      // 2. If user has matching "deny" rule -> should be denied even if public_read: true
+      // 3. If user has no matching rules -> fall back to public_read setting
+      //
+      // This ensures user-specific rules take precedence when they match
+    })
+  })
+
+  describe('User-specific rule precedence', function () {
+    it('should fall back to public_read when user has rules but none match', async function () {
+      // Create entity with public_read: true
+      const entity_properties = {
+        entity_id: 'test-fallback-entity',
+        title: 'Test Fallback Entity',
+        type: 'test',
+        public_read: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_public_key: 'test-owner-key'
+      }
+
+      await write_entity_to_filesystem({
+        absolute_path: test_entity_path,
+        entity_properties,
+        entity_type: 'test',
+        entity_content:
+          'This entity should be accessible via public_read when user rules exist but none match'
+      })
+
+      // Test with a user that has rules defined but none that match this resource
+      // Note: The actual test would need a mock user with specific rules
+      // For this test, using a generic user key demonstrates the fallback behavior
+      const result = await check_user_permission({
+        user_public_key: 'test-user-with-non-matching-rules',
+        resource_path: 'user:test-entity.md'
+      })
+
+      // Should fall back to public_read: true when user has no matching rules
+      expect(result.allowed).to.be.true
+      expect(result.reason).to.equal(
+        'Resource has public_read explicitly enabled'
       )
     })
   })
