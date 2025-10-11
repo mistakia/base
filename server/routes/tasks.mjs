@@ -27,32 +27,55 @@ const check_file_permission = async (user_public_key, absolute_path) => {
   })
 }
 
-// Helper function to apply redaction to a task
-const apply_task_redaction = (task, has_permission) => {
-  if (has_permission) return task
-
-  return redact_entity_object(task, {
-    preserve_keys: ['type', 'entity_type', 'status', 'priority', 'archived'],
-    redact_keys: ['title', 'description', 'content_preview', 'user_public_key']
-  })
-}
-
 // Helper function to parse array query parameters
 const parse_array_params = (param) => {
   if (!param) return []
   return Array.isArray(param) ? param : [param]
 }
 
-// Helper function to build task response data
-const build_task_response = (task, base_uri, is_redacted = false) => {
-  const response_data = {
-    base_uri,
-    ...task.entity_properties,
-    content: task.entity_content
+// Centralized function to check task permissions and build response
+const check_task_permission_and_build_response = async ({
+  task,
+  user_public_key,
+  base_uri = null,
+  include_content = false
+}) => {
+  // Check file permissions (ownership check is now handled in check_file_permission)
+  const has_permission = await check_file_permission(
+    user_public_key,
+    task.file_info?.absolute_path || task.absolute_path
+  )
+
+  let response_data
+
+  if (!has_permission) {
+    const redacted_task = redact_entity_object({
+      entity_properties: task.entity_properties,
+      entity_content: task.entity_content
+    })
+
+    // Return nested structure with entity_properties
+    response_data = {
+      entity_properties: redacted_task.entity_properties,
+      file_info: task.file_info,
+      is_redacted: true
+    }
+  } else {
+    // Return nested structure with entity_properties
+    response_data = {
+      entity_properties: task.entity_properties,
+      file_info: task.file_info
+    }
   }
 
-  if (is_redacted) {
-    response_data.is_redacted = true
+  // Add base_uri if provided
+  if (base_uri) {
+    response_data.base_uri = base_uri
+  }
+
+  // Add content if requested
+  if (include_content) {
+    response_data.content = task.entity_content
   }
 
   return response_data
@@ -131,22 +154,12 @@ async function handle_single_task_request(req, res, base_uri, user_public_key) {
       return res.status(404).send({ error: task.error || 'Task not found' })
     }
 
-    const has_permission = await check_file_permission(
+    const response_data = await check_task_permission_and_build_response({
+      task,
       user_public_key,
-      task.absolute_path
-    )
-
-    let response_data
-    if (!has_permission) {
-      const redacted_task = redact_entity_object({
-        entity_properties: task.entity_properties,
-        entity_content: task.entity_content
-      })
-
-      response_data = build_task_response(redacted_task, base_uri, true)
-    } else {
-      response_data = build_task_response(task, base_uri)
-    }
+      base_uri,
+      include_content: true
+    })
 
     res.status(200).send(response_data)
   } catch (error) {
@@ -198,12 +211,10 @@ async function handle_task_list_request(
   // Apply redaction to tasks based on user permissions
   const tasks = await Promise.all(
     all_tasks.map(async (task) => {
-      const has_permission = await check_file_permission(
-        user_public_key,
-        task.file_info?.absolute_path
-      )
-
-      return apply_task_redaction(task, has_permission)
+      return await check_task_permission_and_build_response({
+        task,
+        user_public_key
+      })
     })
   )
 
