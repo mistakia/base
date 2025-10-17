@@ -21,7 +21,7 @@ prompt_properties:
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2025-10-17T00:00:00.000Z'
+updated_at: '2025-10-17T19:00:03.000Z'
 user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
 
@@ -39,14 +39,30 @@ This workflow handles the complete process for merging a worktree feature branch
 - Access to the main repository directory
 - Proper git permissions for pushing to main branch
 
+## Workflow Overview
+
+This workflow requires navigation between two directories:
+
+1. **Main Repository**: Where you perform checkout, merge, and push operations
+2. **Worktree Directory**: Where the feature branch is active and where you perform the rebase
+
+**Directory Navigation Flow**:
+```
+Main Repo → (Step 0-4: Setup & update main) →
+Worktree → (Step 5: Rebase) →
+Main Repo → (Step 6-11: Verify, merge, push, cleanup)
+```
+
 ## Instructions
 
-### 0. Pre-flight Setup
+### 0. Pre-flight Setup (Execute from main repository directory)
 
+- Navigate to the main repository directory first
 - Configure git pull behavior to avoid conflicts: `git config pull.rebase false`
 - Detect default branch name: `DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)`
 - List all worktrees to identify paths: `git worktree list`
 - Verify target worktree exists in the worktree list output
+- Store the worktree path for later use
 
 ### 1. Determine Branch Name
 
@@ -56,22 +72,24 @@ This workflow handles the complete process for merging a worktree feature branch
 ### 2. Find Associated Task
 
 - If `task_path` parameter is provided:
-  - If path ends with `.md`, treat as task file path
+  - If path ends with `.md`, treat as task file path and read it
   - If path is a directory, search for task file with matching `worktree_path` in frontmatter:
     ```bash
     grep -r "worktree_path: $task_path" task/ --include="*.md" -l
     ```
-  - Store the task file path for later use
+  - Store the task file path for later use (Step 9)
   - If no task file found, continue without task completion (no task exists)
 - If `task_path` not provided, check current directory for task reference
-- Extract worktree path from task frontmatter if task file found
+- **Extract worktree path from task frontmatter** - this is the actual worktree directory path to use
+- **Extract branch name** from worktree path or task if not provided as parameter
 - Note: This step always runs, but a task may not exist for every worktree
 
 ### 3. Navigate to Main Repository
 
-- Use `pwd` to check current location
-- If currently in a worktree directory, navigate to the main repository using the parent directory path
-- The main repository is typically in the parent directory of the worktrees
+- Ensure you're in the main repository directory (not a worktree)
+- Use `pwd` to verify current location
+- The main repository path can be found from `git worktree list` (first entry)
+- Navigate using `cd [main-repository-path]` if needed
 
 ### 4. Update Main Branch (Execute from main repository directory)
 
@@ -79,18 +97,25 @@ This workflow handles the complete process for merging a worktree feature branch
 - Switch to default branch: `git checkout $DEFAULT_BRANCH`
 - Pull latest changes: `git pull origin $DEFAULT_BRANCH`
 
-### 5. Rebase Feature Branch onto Main (Execute from main repository directory)
+### 5. Rebase Feature Branch onto Main (Execute from worktree directory)
 
-- Switch to the feature branch: `git checkout [branch-name]`
+- **IMPORTANT**: Navigate to the worktree directory using the path from Step 2 or Step 0
+  - Cannot checkout branch in main repository if it's active in a worktree
+  - Must perform rebase FROM the worktree where the branch is checked out
+- Verify you're in the worktree: `pwd` should show the worktree path
+- Verify you're on the correct branch: `git branch --show-current` should show the feature branch name
 - Rebase the feature branch onto the latest default branch: `git rebase $DEFAULT_BRANCH`
+  - Use the DEFAULT_BRANCH variable from Step 0 (e.g., `master` or `main`)
 - **If conflicts occur, do NOT attempt to resolve them yourself. Abort the rebase with `git rebase --abort` and report the issue to the team or reviewer.**
-- **If you get "fatal: 'branch-name' is already used by worktree" error, you are in the wrong directory. Ensure you are in the main repository directory, not a worktree directory.**
-- After successful rebase, ensure all changes are as expected
+- After successful rebase, the output should show "Current branch [branch-name] is up to date" or list rebased commits
 
 ### 6. Verify Feature Branch (Execute from main repository directory)
 
+- **Navigate back to the main repository directory** after rebase
+- Verify you're in main repository: `pwd` should show main repository path
 - Check branch exists: `git branch --list [branch-name]`
 - Show branch commits to verify there are changes: `git log $DEFAULT_BRANCH..[branch-name] --oneline`
+- This should display at least one commit that will be merged
 
 ### 7. Perform Merge (Execute from main repository directory)
 
@@ -145,11 +170,12 @@ The workflow should provide a summary including:
 ## Error Handling
 
 - **Branch doesn't exist**: Verify branch name and check `git branch -a` for all available branches
-- **"fatal: 'branch-name' is already used by worktree"**: You are in a worktree directory. Navigate to the main repository directory using the path from `git worktree list`
+- **"fatal: 'branch-name' is already used by worktree"**: This should NOT occur if following Step 5 correctly (rebase from worktree, not main repo). If seen, verify you're in the worktree directory for the rebase step.
 - **"fatal: Need to specify how to reconcile divergent branches"**: The pre-flight setup should prevent this. If encountered, run `git config pull.rebase false` and retry
 - **Rebase conflicts**: Do NOT resolve them yourself. Abort with `git rebase --abort` and report conflicts that need resolution
 - **Merge conflicts**: Do NOT resolve them yourself. Abort with `git merge --abort` and report conflicts that need resolution
 - **Push failures**: Report the error and current repository state using `git status` and `git log -1 --oneline`
+- **Worktree path not found**: Verify the worktree still exists with `git worktree list` and check the task file's `worktree_path` field is correct
 - **Task file not found**: This is not an error - task completion is optional. Continue with merge and cleanup
 - **Task file read/write errors**: Report the error but continue with merge and cleanup. Task can be updated manually
 - **Cleanup failures**: Report what was successfully cleaned up and what remains using `git worktree list` and `git branch -a`
