@@ -47,6 +47,7 @@ This workflow requires navigation between two directories:
 2. **Worktree Directory**: Where the feature branch is active and where you perform the rebase
 
 **Directory Navigation Flow**:
+
 ```
 Main Repo → (Step 0-4: Setup & update main) →
 Worktree → (Step 5: Rebase) →

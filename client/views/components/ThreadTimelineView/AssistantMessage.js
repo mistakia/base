@@ -8,8 +8,7 @@ import { process_message_content } from './utils/message-processing.js'
 const AssistantMessage = ({
   message,
   working_directory = null,
-  disable_truncation,
-  is_last_assistant_message
+  disable_truncation
 }) => {
   const [is_assistant_message_expanded, set_is_assistant_message_expanded] =
     useState(false)
@@ -31,7 +30,7 @@ const AssistantMessage = ({
   // Check for "stop_reasoning" in content
   const is_stop_reasoning = content.includes('stop_reasoning')
 
-  const container_class = `assistant-message${should_truncate ? ' assistant-message--clickable' : ''}${is_last_assistant_message ? ' assistant-message--latest' : ''}`
+  const container_class = `assistant-message${should_truncate ? ' assistant-message--clickable' : ''}`
 
   return (
     <div
@@ -50,8 +49,7 @@ const AssistantMessage = ({
 AssistantMessage.propTypes = {
   message: PropTypes.object.isRequired,
   working_directory: PropTypes.string,
-  disable_truncation: PropTypes.bool,
-  is_last_assistant_message: PropTypes.bool
+  disable_truncation: PropTypes.bool
 }
 
 export default AssistantMessage

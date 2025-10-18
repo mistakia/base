@@ -9,18 +9,16 @@ $assistant_message_border = hsl(210, 60%, 80%)
   width 100%
   overflow hidden
   transition border-color $transition_fast
+  background-color #fff
+  border-width 1px
+  padding $space_base
+  box-shadow $shadow_sm
   
   &--clickable
     cursor pointer
     
     &:hover
       border-color darken($assistant_message_border, 25%)
-
-  &--latest
-    background-color #fff
-    border-width 1px
-    padding $space_base
-    box-shadow $shadow_sm
 
 .assistant-message__content
   font-family $font_family_mono
