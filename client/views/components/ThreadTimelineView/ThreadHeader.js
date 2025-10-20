@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useSelector, useDispatch } from 'react-redux'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import CheckIcon from '@mui/icons-material/Check'
 
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
@@ -27,6 +29,20 @@ import {
   extract_thread_description,
   extract_user_public_key
 } from '@views/utils/thread-metadata-extractor.js'
+
+// Constants
+const COPY_SUCCESS_TIMEOUT_MS = 2000
+const SPACING = {
+  TITLE_MARGIN: '8px',
+  DESCRIPTION_MARGIN: '16px'
+}
+const COLORS = {
+  TEXT_LIGHT: '#888',
+  TEXT_MEDIUM: '#666',
+  TEXT_DARK: '#333',
+  BG_HOVER: '#f5f5f5',
+  BG_ACTIVE: '#e0e0e0'
+}
 
 const extract_models = (metadata) => {
   if (!metadata || !metadata.getIn) {
@@ -112,15 +128,20 @@ const use_thread_metadata = (metadata) => {
 const ThreadTitle = ({ title, description, working_directory_formatted }) => {
   if (!title) return null
 
+  const has_content_below = description || working_directory_formatted
+  const title_margin_bottom = has_content_below
+    ? SPACING.TITLE_MARGIN
+    : SPACING.DESCRIPTION_MARGIN
+
+  const description_margin_bottom = working_directory_formatted
+    ? SPACING.TITLE_MARGIN
+    : SPACING.DESCRIPTION_MARGIN
+
   return (
     <div>
       <h5
         style={{
-          marginBottom: description
-            ? '8px'
-            : working_directory_formatted
-              ? '8px'
-              : '16px',
+          marginBottom: title_margin_bottom,
           fontWeight: 'bold',
           fontSize: '20px',
           margin: 0,
@@ -131,9 +152,9 @@ const ThreadTitle = ({ title, description, working_directory_formatted }) => {
       {description && (
         <p
           style={{
-            margin: working_directory_formatted ? '0 0 8px 0' : '0 0 16px 0',
+            margin: `0 0 ${description_margin_bottom} 0`,
             fontSize: '14px',
-            color: '#666',
+            color: COLORS.TEXT_MEDIUM,
             lineHeight: '1.4'
           }}>
           {description}
@@ -142,11 +163,11 @@ const ThreadTitle = ({ title, description, working_directory_formatted }) => {
       {working_directory_formatted && working_directory_formatted !== title && (
         <p
           style={{
-            margin: '0 0 16px 0',
+            margin: `0 0 ${SPACING.DESCRIPTION_MARGIN} 0`,
             fontSize: '12px',
-            color: '#888',
+            color: COLORS.TEXT_LIGHT,
             fontFamily: 'monospace',
-            backgroundColor: '#f5f5f5',
+            backgroundColor: COLORS.BG_HOVER,
             padding: '4px 8px',
             borderRadius: '4px',
             display: 'inline-block'
@@ -162,6 +183,87 @@ ThreadTitle.propTypes = {
   title: PropTypes.string,
   description: PropTypes.string,
   working_directory_formatted: PropTypes.string
+}
+
+// Styles for ExternalSessionIdDisplay
+const SESSION_ID_STYLES = {
+  container: {
+    fontSize: '12px',
+    color: COLORS.TEXT_LIGHT,
+    fontFamily: 'monospace',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    position: 'relative',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: COLORS.BG_HOVER,
+      color: COLORS.TEXT_DARK
+    },
+    '&:active': {
+      backgroundColor: COLORS.BG_ACTIVE
+    }
+  },
+  icon_wrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '14px',
+    height: '14px',
+    fontSize: '10px',
+    opacity: 0.6,
+    transition: 'opacity 0.2s ease',
+    '&:hover': {
+      opacity: 1
+    }
+  }
+}
+
+const ExternalSessionIdDisplay = ({ session_id }) => {
+  const [copy_success, set_copy_success] = useState(false)
+
+  const copy_to_clipboard = () => {
+    navigator.clipboard
+      .writeText(session_id)
+      .then(() => {
+        set_copy_success(true)
+        setTimeout(() => set_copy_success(false), COPY_SUCCESS_TIMEOUT_MS)
+      })
+      .catch((err) => console.error('Failed to copy session ID: ', err))
+  }
+
+  return (
+    <Box onClick={copy_to_clipboard} sx={SESSION_ID_STYLES.container}>
+      <span>{session_id}</span>
+      <Box sx={SESSION_ID_STYLES.icon_wrapper}>
+        {copy_success ? (
+          <CheckIcon sx={{ fontSize: '12px' }} />
+        ) : (
+          <ContentCopyOutlinedIcon sx={{ fontSize: '10px' }} />
+        )}
+      </Box>
+    </Box>
+  )
+}
+
+ExternalSessionIdDisplay.propTypes = {
+  session_id: PropTypes.string.isRequired
+}
+
+// Helper to determine if a metadata row should be marked as first
+const use_first_row_tracker = () => {
+  let has_rendered_row = false
+
+  return () => {
+    if (has_rendered_row) {
+      return false
+    }
+    has_rendered_row = true
+    return true
+  }
 }
 
 const ThreadStats = ({
@@ -183,76 +285,69 @@ const ThreadStats = ({
   user_owns_thread
 }) => {
   const working_directory = external_session_info?.working_directory
-
-  // Determine which rows will be rendered to set is_first correctly
-  const has_session_provider = external_session_info?.provider
-  const has_thread_state = thread_state
-  const has_working_directory = working_directory
+  const session_provider = external_session_info?.provider
   const has_dates = created_at || updated_at
+  const has_message_breakdown =
+    user_message_count > 0 || assistant_message_count > 0
+  const has_both_tool_calls_and_cost =
+    tool_call_count > 0 && thread_cost_display
+
+  // Track which row is rendered first
+  const get_is_first = use_first_row_tracker()
 
   return (
     <Box>
-      {has_session_provider && (
+      {session_provider && (
         <MetadataRow
           label='Session Provider'
-          value={external_session_info.provider}
-          is_first={true}
+          value={session_provider}
+          is_first={get_is_first()}
         />
       )}
-      {has_thread_state && thread_id && (
+
+      {thread_state && thread_id && (
         <ThreadStateField
           thread_state={thread_state}
           thread_id={thread_id}
           user_owns_thread={user_owns_thread}
-          is_first={!has_session_provider}
+          is_first={get_is_first()}
         />
       )}
-      {has_working_directory && (
+
+      {working_directory && (
         <MetadataRow
           label='Directory'
           value={working_directory}
           scrollable={true}
-          is_first={!has_session_provider && !has_thread_state}
+          is_first={get_is_first()}
         />
       )}
+
       {has_dates && (
         <TwoCellRow
           left_label='Created'
           left_value={<DateDisplay date={created_at} />}
           right_label='Last Updated'
           right_value={<DateDisplay date={updated_at} />}
-          is_first={
-            !has_session_provider && !has_thread_state && !has_working_directory
-          }
+          is_first={get_is_first()}
         />
       )}
-      {/* Display tokens/duration OR tokens/cost based on what data is available */}
+
+      {/* Display tokens with duration if available */}
       {duration ? (
         <TwoCellRow
           left_label='Tokens'
           left_value={format_token_shorthand({ count: total_tokens })}
           right_label='Duration'
           right_value={duration}
-          is_first={
-            !has_session_provider &&
-            !has_thread_state &&
-            !has_working_directory &&
-            !has_dates
-          }
+          is_first={get_is_first()}
         />
       ) : (
-        <TokenField
-          value={total_tokens}
-          is_first={
-            !has_session_provider &&
-            !has_thread_state &&
-            !has_working_directory &&
-            !has_dates
-          }
-        />
+        <TokenField value={total_tokens} is_first={get_is_first()} />
       )}
+
       {/* Message counts - show detailed breakdown if available, otherwise show total */}
-      {user_message_count > 0 || assistant_message_count > 0 ? (
+      {has_message_breakdown ? (
         <TwoCellRow
           left_label='User Messages'
           left_value={user_message_count.toLocaleString()}
@@ -267,8 +362,9 @@ const ThreadStats = ({
           />
         )
       )}
+
       {/* Tool calls and cost - use TwoCellRow if both exist, otherwise show individually */}
-      {tool_call_count > 0 && thread_cost_display ? (
+      {has_both_tool_calls_and_cost ? (
         <TwoCellRow
           left_label='Tool Calls'
           left_value={tool_call_count.toLocaleString()}
@@ -288,13 +384,13 @@ const ThreadStats = ({
           )}
         </>
       )}
+
       <ModelsField models={models} />
+
       {session_id && (
         <MetadataRow
           label='External Session ID'
-          value={
-            <Box sx={{ fontSize: '12px', color: '#888' }}>{session_id}</Box>
-          }
+          value={<ExternalSessionIdDisplay session_id={session_id} />}
         />
       )}
     </Box>
