@@ -1,10 +1,51 @@
-import React from 'react'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
 import TimelineEvent from './TimelineEvent'
 import CollapsibleEventGroup from './CollapsibleEventGroup'
 import { group_tool_entries } from './utils/group-tool-entries'
+
+// Length threshold for considering an assistant message as "notable"
+const NOTABLE_ASSISTANT_MESSAGE_LENGTH = 500
+
+/**
+ * Calculate the content length of a timeline event message
+ */
+const get_message_content_length = (content) => {
+  if (typeof content === 'string') {
+    return content.length
+  }
+  return JSON.stringify(content).length
+}
+
+/**
+ * Check if an entry is a "notable" event worthy of display in notable events view
+ * - All user messages are notable
+ * - Assistant messages are notable if they exceed the length threshold
+ * - Tool pairs and other events are not notable
+ */
+const is_notable_event = (entry) => {
+  if (entry.type === 'tool_pair') {
+    return false
+  }
+  
+  const timeline_event = entry.timeline_event
+  if (timeline_event?.type !== 'message') {
+    return false
+  }
+  
+  if (timeline_event.role === 'user') {
+    return true
+  }
+  
+  if (timeline_event.role === 'assistant') {
+    const content_length = get_message_content_length(timeline_event.content)
+    return content_length >= NOTABLE_ASSISTANT_MESSAGE_LENGTH
+  }
+  
+  return false
+}
 
 const TimelineList = ({
   timeline,
@@ -13,6 +54,14 @@ const TimelineList = ({
   hide_timeline_dot = false,
   hide_timeline_line = false
 }) => {
+  /**
+   * View mode state:
+   * - 'default': Shows first user messages, last assistant message, everything between collapsed
+   * - 'notable_events': Shows all notable events (user messages + long assistant messages) 
+   *                     with smaller collapsible sections for non-notable events between them
+   */
+  const [view_mode, set_view_mode] = useState('default')
+
   const timeline_main = React.useMemo(() => {
     if (!Array.isArray(timeline)) return []
     if (include_sidechain) return timeline
@@ -77,6 +126,36 @@ const TimelineList = ({
     last_consecutive_user_message_group_index,
     last_assistant_message_group_index
   } = find_collapsible_boundaries()
+
+  /**
+   * Group collapsible entries into sections for notable events view.
+   * Creates alternating sections of notable events and collapsible groups.
+   * Returns array of: { type: 'notable', event, original_index } | { type: 'collapsible', events }
+   */
+  const group_by_notable_events = (entries) => {
+    const sections = []
+    let hidden_events_buffer = []
+    
+    entries.forEach((entry, index) => {
+      if (is_notable_event(entry)) {
+        // Flush any hidden events as a collapsible section
+        if (hidden_events_buffer.length > 0) {
+          sections.push({ type: 'collapsible', events: hidden_events_buffer })
+          hidden_events_buffer = []
+        }
+        sections.push({ type: 'notable', event: entry, original_index: index })
+      } else {
+        hidden_events_buffer.push(entry)
+      }
+    })
+    
+    // Flush remaining hidden events
+    if (hidden_events_buffer.length > 0) {
+      sections.push({ type: 'collapsible', events: hidden_events_buffer })
+    }
+    
+    return sections
+  }
 
   // Split entries into three sections: before, collapsible, after
   const entries_before_collapsible =
@@ -164,6 +243,108 @@ const TimelineList = ({
     [timeline, last_assistant_entry_index, hide_timeline_dot, working_directory]
   )
 
+  /**
+   * Render a single section from the notable events view
+   */
+  const render_notable_section = (section, section_index) => {
+    if (section.type === 'notable') {
+      return render_timeline_event(
+        section.event,
+        entries_before_collapsible.length + section.original_index
+      )
+    }
+    
+    if (section.type === 'collapsible') {
+      // If only one event, render it directly without collapsing
+      if (section.events.length === 1) {
+        return render_timeline_event(
+          section.events[0],
+          entries_before_collapsible.length + section_index
+        )
+      }
+      
+      // Multiple events: render as collapsible group
+      return (
+        <CollapsibleEventGroup
+          key={`collapsible-${section_index}`}
+          events={section.events}
+          renderEvent={render_timeline_event}
+          hideTimelineDot={hide_timeline_dot}
+          hideTimelineLine={hide_timeline_line}
+          mode="notable_events"
+        />
+      )
+    }
+    
+    return null
+  }
+
+  // Render content based on view mode
+  const render_content = () => {
+    if (view_mode === 'default') {
+      // Default view: first user messages, last assistant, everything between collapsed
+      if (should_use_collapsible) {
+        return (
+          <>
+            {/* Render entries before collapsible section */}
+            {entries_before_collapsible.map((entry, index) =>
+              render_timeline_event(entry, index)
+            )}
+
+            {/* Render collapsible section with mode="default" */}
+            <CollapsibleEventGroup
+              events={collapsible_entries}
+              renderEvent={render_timeline_event}
+              hideTimelineDot={hide_timeline_dot}
+              hideTimelineLine={hide_timeline_line}
+              mode="default"
+              onExpand={() => set_view_mode('notable_events')}
+            />
+
+            {/* Render entries after collapsible section */}
+            {entries_after_collapsible.map((entry, index) =>
+              render_timeline_event(
+                entry,
+                index +
+                  entries_before_collapsible.length +
+                  collapsible_entries.length
+              )
+            )}
+          </>
+        )
+      } else {
+        return grouped_entries.map((entry, index) =>
+          render_timeline_event(entry, index)
+        )
+      }
+    } else if (view_mode === 'notable_events') {
+      // Notable events view: show all notable events with collapsible sections between them
+      const notable_sections = group_by_notable_events(collapsible_entries)
+      
+      return (
+        <>
+          {/* Render entries before collapsible section */}
+          {entries_before_collapsible.map((entry, index) =>
+            render_timeline_event(entry, index)
+          )}
+
+          {/* Render notable sections (alternating notable events and collapsible groups) */}
+          {notable_sections.map(render_notable_section)}
+
+          {/* Render entries after collapsible section */}
+          {entries_after_collapsible.map((entry, index) =>
+            render_timeline_event(
+              entry,
+              index +
+                entries_before_collapsible.length +
+                collapsible_entries.length
+            )
+          )}
+        </>
+      )
+    }
+  }
+
   return (
     <Box sx={{ py: 3, position: 'relative' }}>
       {/* Timeline line */}
@@ -182,36 +363,7 @@ const TimelineList = ({
       )}
 
       {/* Render timeline events */}
-      {should_use_collapsible ? (
-        <>
-          {/* Render entries before collapsible section */}
-          {entries_before_collapsible.map((entry, index) =>
-            render_timeline_event(entry, index)
-          )}
-
-          {/* Render collapsible section */}
-          <CollapsibleEventGroup
-            events={collapsible_entries}
-            renderEvent={render_timeline_event}
-            hideTimelineDot={hide_timeline_dot}
-            hideTimelineLine={hide_timeline_line}
-          />
-
-          {/* Render entries after collapsible section */}
-          {entries_after_collapsible.map((entry, index) =>
-            render_timeline_event(
-              entry,
-              index +
-                entries_before_collapsible.length +
-                collapsible_entries.length
-            )
-          )}
-        </>
-      ) : (
-        grouped_entries.map((entry, index) =>
-          render_timeline_event(entry, index)
-        )
-      )}
+      {render_content()}
     </Box>
   )
 }
