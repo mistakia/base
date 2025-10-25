@@ -6,6 +6,9 @@ import { check_thread_permission } from '#server/middleware/permissions.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 import { check_user_permission } from '#server/middleware/permission-checker.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
+import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
+import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
+import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -193,6 +196,222 @@ router.post('/table', async (req, res) => {
     res.json(result)
   } catch (error) {
     handle_errors(res, error, 'processing table request')
+  }
+})
+
+// Create new thread with Claude CLI session
+router.post('/create-session', async (req, res) => {
+  try {
+    const { prompt, working_directory } = req.body
+    const user_public_key = get_requesting_user_key(req)
+
+    // Require authentication
+    if (!user_public_key) {
+      log('Thread creation attempted without authentication')
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'You must be logged in to create threads'
+      })
+    }
+
+    // Validate required parameters
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Invalid prompt',
+        message: 'Prompt is required and must be a non-empty string'
+      })
+    }
+
+    if (!working_directory) {
+      return res.status(400).json({
+        error: 'Invalid working_directory',
+        message: 'working_directory is required'
+      })
+    }
+
+    // Validate working directory
+    const user_base_directory = get_user_base_directory()
+    let validated_working_directory
+    try {
+      validated_working_directory = await validate_working_directory({
+        working_directory,
+        user_base_directory
+      })
+    } catch (validation_error) {
+      log(`Working directory validation failed: ${validation_error.message}`)
+      return res.status(400).json({
+        error: 'Invalid working directory',
+        message: validation_error.message
+      })
+    }
+
+    log(
+      `Queuing Claude CLI session for user ${user_public_key} with prompt length ${prompt.length} in ${validated_working_directory}`
+    )
+
+    // Add job to queue - thread will be created by hook after session completes
+    const job = await add_thread_creation_job({
+      prompt,
+      working_directory: validated_working_directory,
+      user_public_key
+    })
+
+    log(`Job queued: ${job.id} (position ${job.queue_position || 'unknown'})`)
+
+    // Return job information
+    // Note: thread_id will be available after the session completes and hook creates the thread
+    res.json({
+      job_id: job.id,
+      queue_position: job.queue_position,
+      status: 'queued',
+      message:
+        'Claude CLI session queued. Thread will be created after session completes.'
+    })
+  } catch (error) {
+    log(`Error creating thread session: ${error.message}`)
+    log(error.stack)
+
+    if (
+      error.message.includes('required') ||
+      error.message.includes('invalid')
+    ) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: error.message
+      })
+    }
+
+    handle_errors(res, error, 'creating thread session')
+  }
+})
+
+// Resume existing Claude session with new message
+router.post('/:thread_id/resume', async (req, res) => {
+  try {
+    const { thread_id } = req.params
+    const { prompt, working_directory } = req.body
+    const user_public_key = get_requesting_user_key(req)
+
+    // Require authentication
+    if (!user_public_key) {
+      log('Thread resume attempted without authentication')
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'You must be logged in to resume threads'
+      })
+    }
+
+    // Fetch thread to get Claude session ID
+    const thread = await threads.get_thread({ thread_id })
+    if (!thread) {
+      log(`Thread ${thread_id} not found`)
+      return res.status(404).json({
+        error: 'Thread not found',
+        message: `Thread ${thread_id} does not exist`
+      })
+    }
+
+    // Check permissions for this thread
+    const has_permission = await check_thread_access_permission(
+      user_public_key,
+      thread_id
+    )
+
+    if (!has_permission) {
+      log(
+        `User ${user_public_key} does not have permission to resume thread ${thread_id}`
+      )
+      return res.status(403).json({
+        error: 'Permission denied',
+        message: 'You do not have permission to resume this thread'
+      })
+    }
+
+    // Extract Claude session ID from thread metadata
+    const claude_session_id = thread.external_session?.session_id
+    if (!claude_session_id) {
+      log(`Thread ${thread_id} does not have an external Claude session ID`)
+      return res.status(400).json({
+        error: 'Invalid thread',
+        message: 'Thread does not have an associated Claude session to resume'
+      })
+    }
+
+    log(`Resuming Claude session ${claude_session_id} for thread ${thread_id}`)
+
+    // Validate required parameters
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Invalid prompt',
+        message: 'Prompt is required and must be a non-empty string'
+      })
+    }
+
+    if (!working_directory) {
+      return res.status(400).json({
+        error: 'Invalid working_directory',
+        message: 'working_directory is required'
+      })
+    }
+
+    // Validate working directory
+    const user_base_directory = get_user_base_directory()
+    let validated_working_directory
+    try {
+      validated_working_directory = await validate_working_directory({
+        working_directory,
+        user_base_directory
+      })
+    } catch (validation_error) {
+      log(`Working directory validation failed: ${validation_error.message}`)
+      return res.status(400).json({
+        error: 'Invalid working directory',
+        message: validation_error.message
+      })
+    }
+
+    log(
+      `Queuing Claude CLI session resume for thread ${thread_id} (Claude session: ${claude_session_id}) by user ${user_public_key} with prompt length ${prompt.length}`
+    )
+
+    // Add job to queue - thread will be updated by hook after session completes
+    // Pass the Claude session ID so the CLI can resume the correct session
+    const job = await add_thread_creation_job({
+      prompt,
+      working_directory: validated_working_directory,
+      user_public_key,
+      session_id: claude_session_id // Pass Claude session ID for resume
+    })
+
+    log(
+      `Resume job queued: ${job.id} for thread ${thread_id} (Claude session: ${claude_session_id})`
+    )
+
+    // Return job information
+    res.json({
+      job_id: job.id,
+      thread_id,
+      claude_session_id,
+      queue_position: job.queue_position,
+      status: 'queued',
+      message:
+        'Claude CLI session queued for resume. Thread will be updated after session completes.'
+    })
+  } catch (error) {
+    log(`Error resuming thread session: ${error.message}`)
+    log(error.stack)
+
+    if (
+      error.message.includes('required') ||
+      error.message.includes('invalid')
+    ) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: error.message
+      })
+    }
+
+    handle_errors(res, error, 'resuming thread session')
   }
 })
 

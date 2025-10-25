@@ -1,0 +1,110 @@
+// ============================================================================
+// Working Directory Picker Component Styles
+// ============================================================================
+
+.working-directory-picker
+  margin: 0
+
+  // --------------------------------------------------------------------------
+  // Directory Display Button
+  // --------------------------------------------------------------------------
+  .directory-display
+    // Layout
+    display: flex
+    align-items: center
+    gap: 10px
+    height: 32px
+    padding: 8px 12px
+
+    // Visual styling
+    background: var(--color-surface, #ffffff)
+    border: 1px solid var(--color-border, #d1d5da)
+    border-radius: 6px
+
+    // Interaction
+    cursor: pointer
+    transition: all 0.2s ease
+
+    &:hover
+      border-color: var(--color-border-hover, #959da5)
+      background: var(--color-surface-hover, #fafbfc)
+
+    // Content container with text overflow handling
+    .directory-content
+      flex: 1
+      min-width: 0 // Required for text-overflow to work in flex container
+
+      .picker-label
+        // Typography
+        font-weight: 500
+        font-size: 10px
+        line-height: 1
+        text-transform: uppercase
+        letter-spacing: 0.5px
+
+        // Spacing and color
+        margin-bottom: 2px
+        color: var(--color-text-secondary, #586069)
+
+        // Display
+        display: block
+
+      .directory-path
+        // Typography
+        font-weight: 400
+        font-size: 12px
+        line-height: 1.2
+        color: var(--color-text, #24292e)
+
+        // Text overflow
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+
+    // Expandable arrow indicator
+    .arrow-icon
+      flex-shrink: 0
+      color: var(--color-icon, #586069)
+      transition: transform 0.2s ease
+
+      &.open
+        transform: rotate(180deg)
+
+// ============================================================================
+// Dropdown Options Menu
+// ============================================================================
+
+.directory-options
+  min-width: 300px
+  max-width: 500px
+
+  // Material-UI list overrides
+  .MuiList-root
+    padding: 4px
+
+  .MuiListItemButton-root
+    padding: 10px 12px
+    border-radius: 4px
+    max-height: 45px
+
+    &.Mui-selected
+      background-color: transparent
+
+      &:hover
+        background-color: var(--color-surface-hover, #fafbfc)
+
+      .MuiListItemText-primary
+        color: var(--color-primary, #1976d2)
+        font-weight: 600
+
+      .MuiListItemText-secondary
+        color: var(--color-primary-dark, #1565c0)
+
+    .MuiListItemText-secondary
+      margin-top: 2px
+
+      // Text overflow
+      overflow: hidden
+      text-overflow: ellipsis
+      white-space: nowrap
+

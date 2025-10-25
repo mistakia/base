@@ -1,6 +1,7 @@
 import { call, takeLatest, select, fork, delay, put } from 'redux-saga/effects'
 
 import { websocket_actions } from './actions'
+import { app_actions } from '@core/app/actions'
 import { get_app } from '@core/app/selectors'
 import { open_websocket, close_websocket, websocket_is_open } from './service'
 
@@ -29,6 +30,10 @@ export function* reconnect() {
 //  WATCHERS
 // -------------------------------------
 
+export function* watch_load_keys() {
+  yield takeLatest(app_actions.LOAD_KEYS, connect)
+}
+
 export function* watch_websocket_close() {
   yield takeLatest(websocket_actions.WEBSOCKET_CLOSE, reconnect)
 }
@@ -37,4 +42,7 @@ export function* watch_websocket_close() {
 //  ROOT
 // -------------------------------------
 
-export const websocket_sagas = [fork(watch_websocket_close)]
+export const websocket_sagas = [
+  fork(watch_load_keys),
+  fork(watch_websocket_close)
+]

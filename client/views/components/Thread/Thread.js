@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -103,7 +102,7 @@ const Thread = ({ thread, is_focused = false }) => {
 }
 
 Thread.propTypes = {
-  thread: ImmutablePropTypes.map.isRequired,
+  thread: PropTypes.object.isRequired,
   is_focused: PropTypes.bool
 }
 

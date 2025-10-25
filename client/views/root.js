@@ -11,6 +11,8 @@ import { app_actions } from '@core/app/actions'
 import { get_app } from '@core/app/selectors'
 import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
+import Notification from '@components/Notification'
+import { get_notification_info } from '@core/notification/selectors'
 
 // Import styles
 import '@styles/normalize.css'
@@ -87,6 +89,11 @@ AppInitializer.propTypes = {
   children: PropTypes.node.isRequired
 }
 
+const NotificationContainer = () => {
+  const notification_info = useSelector(get_notification_info)
+  return <Notification info={notification_info} />
+}
+
 const Root = () => {
   return (
     <Provider store={store}>
@@ -95,6 +102,7 @@ const Root = () => {
           <AppInitializer>
             <Routes />
             <DialogContainer />
+            <NotificationContainer />
           </AppInitializer>
         </ThemeProvider>
       </Router>

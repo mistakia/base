@@ -92,9 +92,14 @@ router.post('/?', async (req, res) => {
       { user_public_key: data.user_public_key },
       config.jwt.secret
     )
-    res
-      .status(200)
-      .send({ token, user_public_key: data.user_public_key, ...user })
+    res.status(200).send({
+      token,
+      user_public_key: data.user_public_key,
+      ...user,
+      config: {
+        user_base_directory: config.user_base_directory
+      }
+    })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -142,9 +147,14 @@ router.post('/session', async (req, res) => {
       { user_public_key: data.user_public_key },
       config.jwt.secret
     )
-    res
-      .status(200)
-      .send({ token, user_public_key: data.user_public_key, ...user })
+    res.status(200).send({
+      token,
+      user_public_key: data.user_public_key,
+      ...user,
+      config: {
+        user_base_directory: config.user_base_directory
+      }
+    })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

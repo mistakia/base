@@ -121,6 +121,22 @@ export const api = {
     }
   },
 
+  create_thread_session({ prompt, working_directory }) {
+    const url = `${API_URL}/threads/create-session`
+    return {
+      url,
+      ...POST({ prompt, working_directory })
+    }
+  },
+
+  resume_thread_session({ thread_id, prompt, working_directory }) {
+    const url = `${API_URL}/threads/${thread_id}/resume`
+    return {
+      url,
+      ...POST({ prompt, working_directory })
+    }
+  },
+
   get_models() {
     const url = `${API_URL}/models`
     return { url }
