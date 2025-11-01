@@ -55,10 +55,12 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Verify clean state on main/master branch
    - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
    - Navigate to worktree directory
-   - **Initialize submodules (if repository has submodules)**:
+   - **Initialize submodules (if needed)**:
      - Check if repository has submodules: `git submodule status`
-     - If submodules exist, initialize them: `git submodule update --init --recursive`
-     - Verify submodules are properly initialized: `git submodule status` should show all submodules with commit hashes (no `-` prefix)
+     - If your task requires modifying specific submodules, initialize only those:
+       - Initialize specific submodule: `git submodule update --init [submodule-path]`
+       - Example: `git submodule update --init private`
+     - Verify submodule is properly initialized: `git submodule status [submodule-path]` should show commit hash (no `-` prefix)
      - **Important**: Submodules in worktrees start in detached HEAD state. Before making changes to submodule code, ensure you're on a proper branch:
        - Navigate into submodule: `cd [submodule-path]`
        - Check current state: `git branch --show-current` (empty output = detached HEAD)
@@ -122,7 +124,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 - **Environment Management**: Use the worktree setup pattern and document working directory
 - **Quality Gates**: Run tests and quality checks only when ALL tasks are complete
 - **Submodule Management**:
-  - Initialize submodules in worktrees with `git submodule update --init --recursive`
+  - Initialize only needed submodules with `git submodule update --init [submodule-path]`
   - Ensure submodules are on proper branches (not detached HEAD) before making changes
   - Commit and push submodule changes BEFORE committing parent repository changes
   - Update parent repository to reference new submodule commits

@@ -205,7 +205,6 @@ The workflow should provide a summary including:
 - **Cleanup failures**: Report what was successfully cleaned up and what remains using `git worktree list` and `git branch -a`
 - **Submodule detached HEAD**: If submodule is in detached HEAD state, follow Step 5.5 to create proper branch and commit
 - **Submodule push failures**: Ensure submodule changes are committed and you have push permissions to the submodule repository
-- **Lost submodule commits**: If submodule commits were made in detached HEAD state and worktree was deleted, commits may be lost. Check `git reflog` in the submodule to recover lost commits, or recreate the changes from the implementation plan
 
 ### Expected Success Output
 
