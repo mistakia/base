@@ -55,17 +55,9 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Verify clean state on main/master branch
    - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
    - Navigate to worktree directory
-   - **Initialize submodules (if needed)**:
-     - Check if repository has submodules: `git submodule status`
-     - If your task requires modifying specific submodules, initialize only those:
-       - Initialize specific submodule: `git submodule update --init [submodule-path]`
-       - Example: `git submodule update --init private`
-     - Verify submodule is properly initialized: `git submodule status [submodule-path]` should show commit hash (no `-` prefix)
-     - **Important**: Submodules in worktrees start in detached HEAD state. Before making changes to submodule code, ensure you're on a proper branch:
-       - Navigate into submodule: `cd [submodule-path]`
-       - Check current state: `git branch --show-current` (empty output = detached HEAD)
-       - If detached, checkout proper branch: `git checkout main` (or `master` depending on submodule)
-       - Navigate back to worktree root: `cd ..` (adjust path as needed)
+   - **Initialize submodules (if modifying submodule code)**:
+     - Initialize needed submodule: `git submodule update --init [submodule-path]`
+     - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
    - Install dependencies: `yarn install`
    - Document working directory path
 
@@ -99,20 +91,11 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
-   - **Handle submodule changes (if applicable)**:
-     - Check submodule status: `git submodule status`
-     - If submodules were modified (indicated by `+` prefix in status):
-       - For each modified submodule:
-         1. Navigate into submodule: `cd [submodule-path]`
-         2. Verify on proper branch (not detached HEAD): `git branch --show-current`
-         3. If detached HEAD (empty output), checkout branch: `git checkout main` (or appropriate branch)
-         4. Stage submodule changes: `git add -A`
-         5. Commit with descriptive message: `git commit -m "feat: [describe changes]"`
-         6. Push to submodule remote: `git push origin [branch-name]`
-         7. Navigate back to worktree root: `cd ..`
-       - Stage submodule reference in parent repo: `git add [submodule-path]`
-       - Commit submodule reference update in parent: `git commit -m "chore: update [submodule-name] submodule reference"`
-     - **Critical**: Submodule changes MUST be committed and pushed before merging the parent repository to avoid losing commits
+   - **Handle submodule changes (if modified)**:
+     - For each modified submodule:
+       - Commit and push: `cd [submodule-path] && git add -A && git commit -m "feat: [changes]" && git push origin main && cd ..`
+       - Update parent reference: `git add [submodule-path] && git commit -m "chore: update [submodule-name] reference"`
+     - **Critical**: Commit/push submodule changes BEFORE merging parent to avoid losing commits
    - Stage remaining changes in parent repo: `git add .`
 
 ## Critical Rules
