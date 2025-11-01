@@ -110,9 +110,32 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - **If conflicts occur, do NOT attempt to resolve them yourself. Abort the rebase with `git rebase --abort` and report the issue to the team or reviewer.**
 - After successful rebase, the output should show "Current branch [branch-name] is up to date" or list rebased commits
 
+### 5.5. Handle Submodule Changes (Execute from worktree directory if applicable)
+
+- **Check if repository contains submodules**: `git submodule status`
+- If submodules exist and were modified during feature development:
+  - For each modified submodule:
+    1. Navigate into the submodule directory: `cd [submodule-path]`
+    2. Verify submodule is on a proper branch (not detached HEAD): `git branch --show-current`
+    3. **If in detached HEAD state** (empty output from previous command):
+       - Determine the intended branch (usually `main` or `master`): `git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4`
+       - Create/checkout the intended branch: `git checkout -B [branch-name]`
+       - Example: `git checkout -B main`
+    4. **Commit submodule changes** if not yet committed:
+       - Check for uncommitted changes: `git status`
+       - Stage changes: `git add -A`
+       - Commit with descriptive message: `git commit -m "feat: [describe submodule changes]"`
+    5. **Push submodule changes**: `git push origin [branch-name]`
+    6. Navigate back to worktree root: `cd ../..` (adjust path as needed)
+  - **Update parent repository to reference new submodule commits**:
+    - Check submodule status: `git submodule status`
+    - Stage submodule reference updates: `git add [submodule-path]`
+    - Commit the reference update: `git commit -m "chore: update [submodule-name] submodule reference"`
+- Verify all submodule changes are committed and pushed before proceeding to merge
+
 ### 6. Verify Feature Branch (Execute from main repository directory)
 
-- **Navigate back to the main repository directory** after rebase
+- **Navigate back to the main repository directory** after rebase (and submodule handling if applicable)
 - Verify you're in main repository: `pwd` should show main repository path
 - Check branch exists: `git branch --list [branch-name]`
 - Show branch commits to verify there are changes: `git log $DEFAULT_BRANCH..[branch-name] --oneline`
@@ -180,6 +203,9 @@ The workflow should provide a summary including:
 - **Task file not found**: This is not an error - task completion is optional. Continue with merge and cleanup
 - **Task file read/write errors**: Report the error but continue with merge and cleanup. Task can be updated manually
 - **Cleanup failures**: Report what was successfully cleaned up and what remains using `git worktree list` and `git branch -a`
+- **Submodule detached HEAD**: If submodule is in detached HEAD state, follow Step 5.5 to create proper branch and commit
+- **Submodule push failures**: Ensure submodule changes are committed and you have push permissions to the submodule repository
+- **Lost submodule commits**: If submodule commits were made in detached HEAD state and worktree was deleted, commits may be lost. Check `git reflog` in the submodule to recover lost commits, or recreate the changes from the implementation plan
 
 ### Expected Success Output
 
