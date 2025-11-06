@@ -98,6 +98,24 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - Switch to default branch: `git checkout $DEFAULT_BRANCH`
 - Pull latest changes: `git pull origin $DEFAULT_BRANCH`
 
+### 4.5. Push Submodule Changes First (Execute from worktree directory)
+
+**CRITICAL**: Push submodule changes BEFORE rebase to prevent data loss when worktree is deleted.
+
+- Navigate to worktree: `cd [worktree-path]`
+- Check submodule status: `git submodule status`
+- For each modified submodule (shows `+` prefix):
+  - Enter submodule: `cd [submodule-path]`
+  - Check branch status: `git status`
+  - If uncommitted changes exist, commit them: `git add -A && git commit -m "feat: [description]"`
+  - Push to remote: `git push origin [current-branch]`
+  - Verify push succeeded: `git log origin/[current-branch]..HEAD` (should be empty)
+  - Return to worktree root: `cd ../..`
+  - Stage submodule reference: `git add [submodule-path]`
+  - Commit if needed: `git commit -m "chore: update [submodule] reference"`
+- Verify all submodules pushed: `git submodule foreach 'git log origin/HEAD..HEAD'` (should be empty for each)
+- If any unpushed commits remain, STOP and push them before continuing
+
 ### 5. Rebase Feature Branch onto Main (Execute from worktree directory)
 
 - **IMPORTANT**: Navigate to the worktree directory using the path from Step 2 or Step 0
@@ -110,20 +128,15 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - **If conflicts occur, do NOT attempt to resolve them yourself. Abort the rebase with `git rebase --abort` and report the issue to the team or reviewer.**
 - After successful rebase, the output should show "Current branch [branch-name] is up to date" or list rebased commits
 
-### 5.5. Handle Submodule Changes (Execute from worktree directory if modified)
-
-- For each modified submodule (`git submodule status` shows `+` prefix):
-  - Ensure on proper branch: `cd [submodule-path] && git checkout main` (if detached HEAD)
-  - Commit and push: `git add -A && git commit -m "feat: [changes]" && git push origin main && cd ..`
-  - Update parent reference: `git add [submodule-path] && git commit -m "chore: update [submodule-name] reference"`
-
 ### 6. Verify Feature Branch (Execute from main repository directory)
 
-- **Navigate back to the main repository directory** after rebase (and submodule handling if applicable)
+- **Navigate back to the main repository directory** after rebase
 - Verify you're in main repository: `pwd` should show main repository path
 - Check branch exists: `git branch --list [branch-name]`
 - Show branch commits to verify there are changes: `git log $DEFAULT_BRANCH..[branch-name] --oneline`
 - This should display at least one commit that will be merged
+- **Verify submodule commits are accessible**: `git submodule foreach 'git fetch origin && git log origin/HEAD..HEAD'` (should be empty)
+- If any submodule has unpushed commits, STOP and return to Step 4.5
 
 ### 7. Perform Merge (Execute from main repository directory)
 
@@ -151,8 +164,12 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 
 ### 10. Clean Up (Only After Successful Merge, Execute from main repository directory)
 
+- **Pre-cleanup verification**:
+  - Verify merge is pushed: `git log origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH` (should be empty)
+  - If unpushed changes exist, STOP and resolve before cleanup
 - Find worktree path from earlier `git worktree list` output
-- Remove the worktree using the discovered path: `git worktree remove [WORKTREE_PATH]`
+- Remove the worktree: `git worktree remove [WORKTREE_PATH]`
+  - If error "cannot remove working trees containing submodules": `rm -rf [WORKTREE_PATH] && git worktree prune`
 - Delete the local branch: `git branch -d [branch-name]`
 - Check if remote branch exists: `git ls-remote --heads origin | grep [branch-name]`
 - If remote branch exists, delete it: `git push origin --delete [branch-name]`
@@ -187,12 +204,14 @@ The workflow should provide a summary including:
 - **Task file not found**: This is not an error - task completion is optional. Continue with merge and cleanup
 - **Task file read/write errors**: Report the error but continue with merge and cleanup. Task can be updated manually
 - **Cleanup failures**: Report what was successfully cleaned up and what remains using `git worktree list` and `git branch -a`
-- **Submodule detached HEAD**: If submodule is in detached HEAD state, follow Step 5.5 to create proper branch and commit
-- **Submodule push failures**: Ensure submodule changes are committed and you have push permissions to the submodule repository
+- **Submodule has unpushed commits**: Do NOT proceed with merge. Return to Step 4.5 and push submodule commits before continuing
+- **Submodule commit not found on remote**: The merge will reference commits that don't exist remotely, causing failures for other developers. Push submodule commits in Step 4.5 before merging
+- **Worktree removal fails with "containing submodules"**: Manually remove with `rm -rf [path]` then run `git worktree prune`
 
 ### Expected Success Output
 
 ```
+✓ Verified and pushed all submodule changes
 ✓ Merged feature/new-component into [DEFAULT_BRANCH]
 ✓ Merge commit: abc1234 "Merge branch 'feature/new-component'"
 ✓ Pushed to origin/[DEFAULT_BRANCH]
