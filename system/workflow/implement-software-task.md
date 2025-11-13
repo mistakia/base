@@ -30,6 +30,7 @@ relations:
   - 'follows [[sys:system/guideline/review-task.md]]'
   - 'uses [[user:guideline/write-software.md]]'
   - 'uses [[sys:system/guideline/write-javascript.md]]'
+  - 'precedes [[sys:system/workflow/merge-worktree.md]]'
 updated_at: '2025-07-26T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
@@ -91,12 +92,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
-   - **Handle submodule changes (if modified)**:
-     - For each modified submodule:
-       - Commit and push: `cd [submodule-path] && git add -A && git commit -m "feat: [changes]" && git push origin main && cd ..`
-       - Update parent reference: `git add [submodule-path] && git commit -m "chore: update [submodule-name] reference"`
-     - **Critical**: Commit/push submodule changes BEFORE merging parent to avoid losing commits
-   - Stage remaining changes in parent repo: `git add .`
+   - **DO NOT commit any code** - committing is handled by [[sys:system/workflow/merge-worktree.md]]
 
 ## Critical Rules
 
@@ -106,11 +102,10 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 - **Review Gates**: STOP after each task for review unless explicitly told to continue with all remaining tasks
 - **Environment Management**: Use the worktree setup pattern and document working directory
 - **Quality Gates**: Run tests and quality checks only when ALL tasks are complete
+- **No Commits**: DO NOT commit any code during implementation - all commits are handled by [[sys:system/workflow/merge-worktree.md]]
 - **Submodule Management**:
   - Initialize only needed submodules with `git submodule update --init [submodule-path]`
   - Ensure submodules are on proper branches (not detached HEAD) before making changes
-  - Commit and push submodule changes BEFORE committing parent repository changes
-  - Update parent repository to reference new submodule commits
   </instructions>
 
 <output_format>
