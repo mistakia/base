@@ -4,7 +4,10 @@ import debug from 'debug'
 import * as threads from '#libs-server/threads/index.mjs'
 import { check_thread_permission } from '#server/middleware/permissions.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
-import { check_user_permission } from '#server/middleware/permission-checker.mjs'
+import {
+  check_user_permission,
+  check_create_threads_permission
+} from '#server/middleware/permission-checker.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
@@ -16,12 +19,6 @@ const log = debug('api:threads')
 /**
  * Helper functions
  */
-
-function get_requesting_user_key(req) {
-  return (
-    req.user?.user_public_key || req.permission_context?.user_public_key || null
-  )
-}
 
 function build_thread_resource_path(thread_id) {
   return `user:thread/${thread_id}`
@@ -86,7 +83,7 @@ router.get('/', async (req, res) => {
     const { user_public_key, thread_state } = req.query
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
-    const requesting_user_key = get_requesting_user_key(req)
+    const requesting_user_key = req.user?.user_public_key || null
 
     // Get all threads from filesystem
     const all_threads = await threads.list_threads({
@@ -115,7 +112,7 @@ router.get('/:thread_id', async (req, res) => {
     const { thread_id } = req.params
     log(`Getting thread ${thread_id}`)
 
-    const requesting_user_key = get_requesting_user_key(req)
+    const requesting_user_key = req.user?.user_public_key || null
     const thread = await threads.get_thread({ thread_id })
 
     // Apply permission-based redaction
@@ -176,7 +173,7 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
 router.post('/table', async (req, res) => {
   try {
     const { table_state } = req.body
-    const requesting_user_key = get_requesting_user_key(req)
+    const requesting_user_key = req.user?.user_public_key || null
 
     // Validate table state
     const validation = validate_table_state(table_state)
@@ -203,7 +200,7 @@ router.post('/table', async (req, res) => {
 router.post('/create-session', async (req, res) => {
   try {
     const { prompt, working_directory } = req.body
-    const user_public_key = get_requesting_user_key(req)
+    const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
     if (!user_public_key) {
@@ -211,6 +208,19 @@ router.post('/create-session', async (req, res) => {
       return res.status(401).json({
         error: 'Authentication required',
         message: 'You must be logged in to create threads'
+      })
+    }
+
+    // Check create_threads permission
+    const can_create = await check_create_threads_permission(user_public_key)
+    if (!can_create) {
+      log(
+        `Thread creation denied for user ${user_public_key}: missing create_threads permission`
+      )
+      return res.status(403).json({
+        error: 'Access denied',
+        message:
+          'You do not have permission to create threads. Contact administrator to enable create_threads permission.'
       })
     }
 
@@ -290,7 +300,7 @@ router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
     const { prompt, working_directory } = req.body
-    const user_public_key = get_requesting_user_key(req)
+    const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
     if (!user_public_key) {

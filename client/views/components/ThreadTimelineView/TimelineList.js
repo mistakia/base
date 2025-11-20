@@ -29,21 +29,21 @@ const is_notable_event = (entry) => {
   if (entry.type === 'tool_pair') {
     return false
   }
-  
+
   const timeline_event = entry.timeline_event
   if (timeline_event?.type !== 'message') {
     return false
   }
-  
+
   if (timeline_event.role === 'user') {
     return true
   }
-  
+
   if (timeline_event.role === 'assistant') {
     const content_length = get_message_content_length(timeline_event.content)
     return content_length >= NOTABLE_ASSISTANT_MESSAGE_LENGTH
   }
-  
+
   return false
 }
 
@@ -57,7 +57,7 @@ const TimelineList = ({
   /**
    * View mode state:
    * - 'default': Shows first user messages, last assistant message, everything between collapsed
-   * - 'notable_events': Shows all notable events (user messages + long assistant messages) 
+   * - 'notable_events': Shows all notable events (user messages + long assistant messages)
    *                     with smaller collapsible sections for non-notable events between them
    */
   const [view_mode, set_view_mode] = useState('default')
@@ -135,7 +135,7 @@ const TimelineList = ({
   const group_by_notable_events = (entries) => {
     const sections = []
     let hidden_events_buffer = []
-    
+
     entries.forEach((entry, index) => {
       if (is_notable_event(entry)) {
         // Flush any hidden events as a collapsible section
@@ -148,12 +148,12 @@ const TimelineList = ({
         hidden_events_buffer.push(entry)
       }
     })
-    
+
     // Flush remaining hidden events
     if (hidden_events_buffer.length > 0) {
       sections.push({ type: 'collapsible', events: hidden_events_buffer })
     }
-    
+
     return sections
   }
 
@@ -253,7 +253,7 @@ const TimelineList = ({
         entries_before_collapsible.length + section.original_index
       )
     }
-    
+
     if (section.type === 'collapsible') {
       // If only one event, render it directly without collapsing
       if (section.events.length === 1) {
@@ -262,7 +262,7 @@ const TimelineList = ({
           entries_before_collapsible.length + section_index
         )
       }
-      
+
       // Multiple events: render as collapsible group
       return (
         <CollapsibleEventGroup
@@ -271,11 +271,11 @@ const TimelineList = ({
           renderEvent={render_timeline_event}
           hideTimelineDot={hide_timeline_dot}
           hideTimelineLine={hide_timeline_line}
-          mode="notable_events"
+          mode='notable_events'
         />
       )
     }
-    
+
     return null
   }
 
@@ -297,7 +297,7 @@ const TimelineList = ({
               renderEvent={render_timeline_event}
               hideTimelineDot={hide_timeline_dot}
               hideTimelineLine={hide_timeline_line}
-              mode="default"
+              mode='default'
               onExpand={() => set_view_mode('notable_events')}
             />
 
@@ -320,7 +320,7 @@ const TimelineList = ({
     } else if (view_mode === 'notable_events') {
       // Notable events view: show all notable events with collapsible sections between them
       const notable_sections = group_by_notable_events(collapsible_entries)
-      
+
       return (
         <>
           {/* Render entries before collapsible section */}
