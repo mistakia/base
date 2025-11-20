@@ -12,6 +12,10 @@ import {
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
+import {
+  get_can_create_threads,
+  get_can_resume_thread
+} from '@core/app/selectors'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import './GlobalThreadInput.styl'
 
@@ -80,6 +84,17 @@ export default function GlobalThreadInput() {
     return state.getIn(['threads', 'loading', action_type], false)
   })
 
+  const can_create_threads = useSelector(get_can_create_threads)
+
+  const selected_thread = useSelector((state) => {
+    if (!is_thread_page) return null
+    return state.getIn(['threads', 'selected_thread_data'])?.toJS()
+  })
+
+  const can_resume_thread = useSelector((state) =>
+    get_can_resume_thread(state, selected_thread)
+  )
+
   // Event handlers
   const handle_submit = async (e) => {
     e.preventDefault()
@@ -142,6 +157,15 @@ export default function GlobalThreadInput() {
 
   const is_submit_disabled = is_loading || !message.trim()
   const show_options = is_focused || is_loading
+
+  // Determine if the input should be shown based on permissions
+  const should_show_input =
+    (is_resume_mode && can_resume_thread) || (!is_resume_mode && can_create_threads)
+
+  // Don't render the component if user lacks permission
+  if (!should_show_input) {
+    return null
+  }
 
   return (
     <ClickAwayListener onClickAway={handle_click_away}>

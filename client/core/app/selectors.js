@@ -33,3 +33,34 @@ export const get_authentication_state = createSelector([get_app], (app) => {
 
   return 'unknown'
 })
+
+export const get_user_permissions = createSelector([get_app], (app) => {
+  return app.get('user_permissions')
+})
+
+export const get_can_create_threads = createSelector(
+  [get_user_permissions],
+  (permissions) => {
+    if (!permissions) {
+      return false
+    }
+    return permissions.create_threads === true
+  }
+)
+
+export const get_can_resume_thread = createSelector(
+  [get_app, (_, thread) => thread],
+  (app, thread) => {
+    if (!thread) {
+      return false
+    }
+
+    const user_public_key = app.get('user_public_key')
+    if (!user_public_key) {
+      return false
+    }
+
+    // User can resume thread if they own it
+    return thread.user_public_key === user_public_key
+  }
+)
