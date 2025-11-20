@@ -160,7 +160,8 @@ export default function GlobalThreadInput() {
 
   // Determine if the input should be shown based on permissions
   const should_show_input =
-    (is_resume_mode && can_resume_thread) || (!is_resume_mode && can_create_threads)
+    (is_resume_mode && can_resume_thread) ||
+    (!is_resume_mode && can_create_threads)
 
   // Don't render the component if user lacks permission
   if (!should_show_input) {

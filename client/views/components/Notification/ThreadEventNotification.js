@@ -149,7 +149,7 @@ ThreadEventNotification.propTypes = {
   thread_title: PropTypes.string,
   entry: PropTypes.shape({
     type: PropTypes.string.isRequired,
-    content: PropTypes.object,
+    content: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     role: PropTypes.string,
     error_type: PropTypes.string
   }).isRequired,
