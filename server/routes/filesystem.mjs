@@ -115,7 +115,7 @@ router.get('/directory', async (req, res) => {
 
     // Batch check permissions for all files
     if (file_paths_to_check.length > 0) {
-      const user_public_key = req.permission_context?.user_public_key || null
+      const user_public_key = req.user?.user_public_key || null
       const resource_paths = file_paths_to_check.map((file_path) => {
         const full_file_path = path.join(USER_BASE_DIR, file_path)
         return map_filesystem_path_to_base_uri(full_file_path)

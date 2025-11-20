@@ -4,7 +4,7 @@ import { Box, Typography } from '@mui/material'
 
 /**
  * CollapsibleEventGroup
- * 
+ *
  * Displays a collapsed group of timeline events with two modes:
  * - 'default': Button shows "show hidden events" and switches to notable events view
  * - 'notable_events': Button shows "show N hidden events" and expands inline

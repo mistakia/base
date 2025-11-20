@@ -18,5 +18,19 @@
     "rate_limit_delay": 200,
     "batch_size": 50,
     "sync_frequency": "daily"
+  },
+  "threads": {
+    "cli": {
+      "command": "claude",
+      "session_timeout_minutes": 60,
+      "allow_custom_working_directory": true
+    },
+    "queue": {
+      "redis_url": "redis://localhost:6379",
+      "max_concurrent_jobs": 3,
+      "max_jobs_per_user": 2,
+      "retry_attempts": 3,
+      "retry_delay_seconds": 30
+    }
   }
 }

@@ -25,7 +25,7 @@ const HomePageThreads = ({ threads, is_loading_threads, load_threads }) => {
       <>
         <div className='threads-list'>
           {displayed_threads.map((thread) => (
-            <Thread key={thread.id} thread={thread} />
+            <Thread key={thread.thread_id} thread={thread} />
           ))}
         </div>
         {active_threads.size > displayed_threads.size && (

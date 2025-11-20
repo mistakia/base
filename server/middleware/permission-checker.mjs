@@ -439,3 +439,32 @@ export const validate_thread_ownership = async ({
     return false
   }
 }
+
+/**
+ * Check if user has permission to create threads
+ *
+ * @param {string} user_public_key - User's public key
+ * @returns {Promise<boolean>} True if user has create_threads permission
+ */
+export const check_create_threads_permission = async (user_public_key) => {
+  if (!user_public_key) {
+    return false
+  }
+
+  try {
+    const user = await user_registry.find_by_public_key(user_public_key)
+    if (!user) {
+      log(`User not found for permission check: ${user_public_key}`)
+      return false
+    }
+
+    const has_permission = user.permissions?.create_threads === true
+    log(
+      `Permission check for ${user_public_key}: create_threads = ${has_permission}`
+    )
+    return has_permission
+  } catch (error) {
+    log(`Error checking create_threads permission: ${error.message}`)
+    return false
+  }
+}

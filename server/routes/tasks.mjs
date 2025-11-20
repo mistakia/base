@@ -10,13 +10,6 @@ import { redact_entity_object } from '../middleware/content-redactor.mjs'
 
 const router = express.Router({ mergeParams: true })
 
-// Helper function to extract user public key from request
-const get_user_public_key = (req) => {
-  return (
-    req.user?.user_public_key || req.permission_context?.user_public_key || null
-  )
-}
-
 // Helper function to check user permissions for a file
 const check_file_permission = async (user_public_key, absolute_path) => {
   if (!user_public_key) return false
@@ -96,7 +89,7 @@ router.post('/table', async (req, res) => {
       })
     }
 
-    const user_public_key = get_user_public_key(req)
+    const user_public_key = req.user?.user_public_key || null
 
     const results = await process_task_table_request({
       table_state: table_state || {},
@@ -122,7 +115,7 @@ router.get('/', async (req, res) => {
   const { log } = req.app.locals
 
   try {
-    const user_public_key = get_user_public_key(req)
+    const user_public_key = req.user?.user_public_key || null
     const { base_uri, archived, ...filter_params } = req.query
 
     // If base_uri is provided, get a specific task

@@ -11,21 +11,89 @@ import {
   on_table_failed
 } from '@core/table/table-reducer-helpers.js'
 
+// ============================================================================
+// Helper Functions for Reducer Logic
+// ============================================================================
+
+/**
+ * Updates a thread in all table views
+ */
+function update_thread_in_all_views(state, thread_id, update_fn) {
+  return state.update('thread_table_views', (views) =>
+    views.map((view) =>
+      view.updateIn(['thread_table_data'], (data) =>
+        data
+          ? data.map((thread) =>
+              thread.get('thread_id') === thread_id ? update_fn(thread) : thread
+            )
+          : data
+      )
+    )
+  )
+}
+
+/**
+ * Adds a new thread to the beginning of all table views
+ */
+function add_thread_to_all_views(state, new_thread) {
+  return state.update('thread_table_views', (views) =>
+    views.map((view) =>
+      view.updateIn(['thread_table_data'], (data) =>
+        data ? data.unshift(new_thread) : List([new_thread])
+      )
+    )
+  )
+}
+
+/**
+ * Updates selected thread data if it matches the given thread_id
+ */
+function update_selected_thread_if_matches(state, thread_id, update_fn) {
+  const current_selected_id = state.getIn(['selected_thread_data', 'thread_id'])
+
+  if (state.get('selected_thread_data') && current_selected_id === thread_id) {
+    return state.update('selected_thread_data', update_fn)
+  }
+
+  return state
+}
+
+/**
+ * Appends a timeline entry to the selected thread
+ */
+function append_timeline_entry(state, thread_id, entry) {
+  return update_selected_thread_if_matches(state, thread_id, (thread_data) =>
+    thread_data.update('timeline', (timeline) => {
+      // Timeline is a plain JS array from Map(payload.data), not an Immutable List
+      if (timeline && Array.isArray(timeline)) {
+        return [...timeline, entry]
+      }
+      return [entry]
+    })
+  )
+}
+
+// ============================================================================
+// Default Table Configuration
+// ============================================================================
+
+const DEFAULT_TABLE_COLUMNS = [
+  'thread_state',
+  'session_provider',
+  'title',
+  'working_directory',
+  'updated_at',
+  'duration',
+  'message_count',
+  'user_message_count',
+  'assistant_message_count',
+  'tool_call_count',
+  'token_count',
+  'cost'
+]
+
 const DEFAULT_TABLE_STATE = create_default_table_state({
-  columns: [
-    'thread_state',
-    'session_provider',
-    'title',
-    'working_directory',
-    'updated_at',
-    'duration',
-    'message_count',
-    'user_message_count',
-    'assistant_message_count',
-    'tool_call_count',
-    'token_count',
-    'cost'
-  ],
+  columns: DEFAULT_TABLE_COLUMNS,
   sort: [{ column_id: 'updated_at', desc: true }]
 })
 
@@ -41,20 +109,7 @@ const ACTIVE_THREADS_VIEW = create_view({
   view_id: 'active',
   view_name: 'Active Threads',
   table_state: create_default_table_state({
-    columns: [
-      'thread_state',
-      'session_provider',
-      'title',
-      'working_directory',
-      'updated_at',
-      'duration',
-      'message_count',
-      'user_message_count',
-      'assistant_message_count',
-      'tool_call_count',
-      'token_count',
-      'cost'
-    ],
+    columns: DEFAULT_TABLE_COLUMNS,
     sort: [{ column_id: 'updated_at', desc: true }],
     where: new List([
       {
@@ -65,6 +120,10 @@ const ACTIVE_THREADS_VIEW = create_view({
     ])
   })
 })
+
+// ============================================================================
+// Initial State
+// ============================================================================
 
 const ThreadsState = new Record({
   // Basic threads list for simple get_threads API calls
@@ -91,8 +150,16 @@ const ThreadsState = new Record({
   thread_all_columns: Map(thread_columns)
 })
 
+// ============================================================================
+// Reducer Function
+// ============================================================================
+
 export function threads_reducer(state = new ThreadsState(), { payload, type }) {
   switch (type) {
+    // ========================================================================
+    // Basic Threads List Actions
+    // ========================================================================
+
     case threads_action_types.GET_THREADS_PENDING:
       return state.merge({
         is_loading_threads: true,
@@ -111,6 +178,10 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         is_loading_threads: false,
         threads_error: payload.error
       })
+
+    // ========================================================================
+    // Single Thread Actions
+    // ========================================================================
 
     case threads_action_types.GET_THREAD_PENDING:
       return state.merge({
@@ -142,6 +213,10 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         selected_thread_data: null
       })
 
+    // ========================================================================
+    // Models Data Actions
+    // ========================================================================
+
     case threads_action_types.GET_MODELS_PENDING:
       return state.mergeIn(['models_data'], {
         loading: true,
@@ -161,7 +236,10 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         error: payload.error
       })
 
-    // Table view management actions
+    // ========================================================================
+    // Table View Management Actions
+    // ========================================================================
+
     case threads_action_types.UPDATE_THREAD_TABLE_VIEW: {
       const { view } = payload
       const view_id = view?.view_id || 'default'
@@ -226,6 +304,51 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.setIn(
         ['thread_table_views', reset_view_id],
         DEFAULT_THREAD_TABLE_VIEW
+      )
+    }
+
+    // ========================================================================
+    // WebSocket Real-Time Thread Events
+    // ========================================================================
+
+    case threads_action_types.THREAD_CREATED: {
+      const new_thread = Map(payload.thread)
+      return add_thread_to_all_views(state, new_thread)
+    }
+
+    case threads_action_types.THREAD_UPDATED: {
+      const updated_thread = Map(payload.thread)
+      const thread_id = updated_thread.get('thread_id')
+
+      // Update thread in all table views
+      let new_state = update_thread_in_all_views(
+        state,
+        thread_id,
+        () => updated_thread
+      )
+
+      // Update selected thread if it matches - MERGE instead of replace to preserve timeline
+      new_state = update_selected_thread_if_matches(
+        new_state,
+        thread_id,
+        (current_data) =>
+          current_data ? current_data.merge(updated_thread) : updated_thread
+      )
+
+      return new_state
+    }
+
+    case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
+      const { thread_id, entry } = payload
+      return append_timeline_entry(state, thread_id, entry)
+    }
+
+    case threads_action_types.THREAD_JOB_FAILED: {
+      const { thread_id, error } = payload
+      const job_info = Map({ status: 'failed', error })
+
+      return update_thread_in_all_views(state, thread_id, (thread) =>
+        thread.merge({ job_info, thread_state: 'failed' })
       )
     }
 

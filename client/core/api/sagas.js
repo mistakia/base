@@ -26,7 +26,9 @@ import {
 } from '@core/thread/actions'
 import {
   get_models_actions,
-  get_threads_table_actions
+  get_threads_table_actions,
+  create_thread_session_actions,
+  resume_thread_session_actions
 } from '@core/threads/actions'
 
 import {
@@ -135,6 +137,20 @@ export const post_thread_execute_tool = fetch.bind(
 )
 
 export const get_models = fetch.bind(null, api.get_models, get_models_actions)
+
+// Create thread session via CLI
+export const create_thread_session = fetch.bind(
+  null,
+  api.create_thread_session,
+  create_thread_session_actions
+)
+
+// Resume thread session via CLI
+export const resume_thread_session = fetch.bind(
+  null,
+  api.resume_thread_session,
+  resume_thread_session_actions
+)
 
 // Threads table processing saga
 export const get_threads_table = fetch.bind(

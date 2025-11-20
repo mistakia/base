@@ -8,8 +8,10 @@ const initial_state = new Record({
   user_public_key: null,
   user_token: null,
   current_user: null,
+  user_permissions: null,
   is_establishing_session: false,
-  session_error: null
+  session_error: null,
+  config: null
 })
 
 export function app_reducer(state = initial_state(), { payload, type }) {
@@ -46,6 +48,8 @@ export function app_reducer(state = initial_state(), { payload, type }) {
               user_public_key: payload.data.user_public_key
             }
           : null,
+        user_permissions: payload.data.permissions || null,
+        config: payload.data.config || null,
         session_error: null
       })
 
@@ -61,8 +65,10 @@ export function app_reducer(state = initial_state(), { payload, type }) {
         user_public_key: null,
         user_token: null,
         current_user: null,
+        user_permissions: null,
         is_establishing_session: false,
-        session_error: null
+        session_error: null,
+        config: null
       })
 
     default:

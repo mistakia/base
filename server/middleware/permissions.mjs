@@ -42,17 +42,6 @@ export const create_permission_middleware = (options = {}) => {
       return next()
     }
 
-    // Extract user public key from request
-    const user_public_key = req.user?.user_public_key || null
-
-    // Store permission context on request for route handlers
-    req.permission_context = {
-      user_public_key,
-      check_permission: async (resource_path) => {
-        return check_user_permission({ user_public_key, resource_path })
-      }
-    }
-
     next()
   }
 }
