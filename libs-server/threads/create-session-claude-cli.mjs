@@ -1,5 +1,8 @@
 import { spawn } from 'child_process'
-import { join } from 'path'
+import { join, isAbsolute } from 'path'
+import { access } from 'fs/promises'
+import { constants } from 'fs'
+import { homedir } from 'os'
 import debug from 'debug'
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
@@ -15,6 +18,76 @@ const DEFAULT_CLI_COMMAND = 'claude'
 const DEFAULT_TIMEOUT_MINUTES = 60
 const FORCE_KILL_DELAY_MS = 10000
 const SESSION_DIRECTORY_NAME = '.claude'
+
+/**
+ * Common installation locations for Claude CLI
+ * These paths are checked when the config uses just "claude" instead of a full path
+ */
+const CLAUDE_CLI_PATHS = [join(homedir(), '.claude', 'local', 'claude')]
+
+// =============================================================================
+// Command Path Resolution
+// =============================================================================
+
+/**
+ * Verify that a file path exists and is executable
+ *
+ * @param {string} file_path - Path to check
+ * @returns {Promise<boolean>} True if file exists and is executable
+ */
+const is_executable = async (file_path) => {
+  try {
+    await access(file_path, constants.F_OK | constants.X_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Resolve the CLI command to an absolute path
+ *
+ * Since spawn() with shell: false doesn't use shell aliases, we need to
+ * resolve the command path explicitly. This function:
+ * 1. Returns absolute paths as-is (after verifying they exist)
+ * 2. Checks common locations for 'claude' command name
+ * 3. Throws descriptive error if command cannot be found
+ *
+ * @param {string} command - Command name or absolute path
+ * @returns {Promise<string>} Absolute path to executable
+ * @throws {Error} If command cannot be found or is not executable
+ */
+const resolve_cli_command = async (command) => {
+  // If already an absolute path, verify it exists and is executable
+  if (isAbsolute(command)) {
+    if (await is_executable(command)) {
+      return command
+    }
+    throw new Error(
+      `Claude CLI command not found or not executable: ${command}`
+    )
+  }
+
+  // For 'claude' command name, check common installation locations
+  if (command === DEFAULT_CLI_COMMAND) {
+    for (const cli_path of CLAUDE_CLI_PATHS) {
+      if (await is_executable(cli_path)) {
+        log(`Resolved claude command to: ${cli_path}`)
+        return cli_path
+      }
+    }
+  }
+
+  // Command not found - provide helpful error message
+  const attempted_paths =
+    command === DEFAULT_CLI_COMMAND
+      ? `\nChecked paths: ${CLAUDE_CLI_PATHS.join(', ')}`
+      : ''
+  throw new Error(
+    `Claude CLI command not found: ${command}.${attempted_paths}\n` +
+      'Please configure config.threads.cli.command with the full path to the claude executable.'
+  )
+}
 
 // =============================================================================
 // CLI Arguments Builder
@@ -168,13 +241,15 @@ export const create_session_claude_cli = async ({
   })
 
   // -------------------------
-  // 2. Get Configuration
+  // 2. Get Configuration & Resolve Command Path
   // -------------------------
 
-  const cli_command = config.threads?.cli?.command || DEFAULT_CLI_COMMAND
+  const cli_command_config = config.threads?.cli?.command || DEFAULT_CLI_COMMAND
   const timeout_minutes =
     config.threads?.cli?.session_timeout_minutes || DEFAULT_TIMEOUT_MINUTES
 
+  // Resolve command to absolute path (handles shell aliases and common locations)
+  const cli_command = await resolve_cli_command(cli_command_config)
   const cli_args = build_claude_cli_args({ prompt, session_id })
 
   log(`Command: ${cli_command} ${cli_args.join(' ')}`)

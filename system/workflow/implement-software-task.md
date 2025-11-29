@@ -106,7 +106,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 - **Submodule Management**:
   - Initialize only needed submodules with `git submodule update --init [submodule-path]`
   - Ensure submodules are on proper branches (not detached HEAD) before making changes
-  </instructions>
+    </instructions>
 
 <output_format>
 After completing each task:
