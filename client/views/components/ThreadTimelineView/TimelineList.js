@@ -69,7 +69,7 @@ const TimelineList = ({
   const [auto_scroll, set_auto_scroll] = useState(false)
   const [show_scroll_button, set_show_scroll_button] = useState(false)
   const timeline_container_ref = useRef(null)
-  
+
   // Helper to get timeline length (handles both arrays and Immutable Lists)
   const get_timeline_length = useCallback((timeline_data) => {
     if (Array.isArray(timeline_data)) return timeline_data.length
@@ -230,35 +230,39 @@ const TimelineList = ({
    */
   const is_near_bottom = useCallback(() => {
     const container = get_scroll_container()
-    const { scroll_height, scroll_top, client_height } = get_scroll_metrics(container)
-    
+    const { scroll_height, scroll_top, client_height } =
+      get_scroll_metrics(container)
+
     const distance_from_bottom = scroll_height - scroll_top - client_height
     const is_scrollable = scroll_height > client_height
-    
+
     return is_scrollable && distance_from_bottom < SCROLL_THRESHOLD_PX
   }, [get_scroll_container, get_scroll_metrics])
 
   /**
    * Scroll container to bottom with smooth behavior
    */
-  const scroll_to_bottom = useCallback((behavior = 'smooth') => {
-    const container = get_scroll_container()
-    const { scroll_height } = get_scroll_metrics(container)
-    
-    if (container === window) {
-      window.scrollTo({
-        top: scroll_height,
-        left: 0,
-        behavior
-      })
-    } else {
-      container.scrollTo({
-        top: scroll_height,
-        left: 0,
-        behavior
-      })
-    }
-  }, [get_scroll_container, get_scroll_metrics])
+  const scroll_to_bottom = useCallback(
+    (behavior = 'smooth') => {
+      const container = get_scroll_container()
+      const { scroll_height } = get_scroll_metrics(container)
+
+      if (container === window) {
+        window.scrollTo({
+          top: scroll_height,
+          left: 0,
+          behavior
+        })
+      } else {
+        container.scrollTo({
+          top: scroll_height,
+          left: 0,
+          behavior
+        })
+      }
+    },
+    [get_scroll_container, get_scroll_metrics]
+  )
 
   // ============================================================================
   // AUTO-SCROLL STATE MANAGEMENT
@@ -269,7 +273,7 @@ const TimelineList = ({
    */
   useEffect(() => {
     const container = get_scroll_container()
-    
+
     const handle_scroll = () => {
       const near_bottom = is_near_bottom()
       set_auto_scroll((prev) => {
@@ -316,7 +320,8 @@ const TimelineList = ({
     const container = get_scroll_container()
     if (container !== window) {
       setTimeout(() => {
-        const { scroll_height, scroll_top, client_height } = get_scroll_metrics(container)
+        const { scroll_height, scroll_top, client_height } =
+          get_scroll_metrics(container)
         const distance_from_bottom = scroll_height - scroll_top - client_height
 
         if (distance_from_bottom > 10) {
@@ -332,7 +337,7 @@ const TimelineList = ({
    */
   useEffect(() => {
     const container = get_scroll_container()
-    
+
     const update_button_visibility = () => {
       set_show_scroll_button(!is_near_bottom())
     }
@@ -345,8 +350,12 @@ const TimelineList = ({
     const layout_timeout = setTimeout(update_button_visibility, 500)
 
     // Listen to scroll and resize events
-    container.addEventListener('scroll', update_button_visibility, { passive: true })
-    window.addEventListener('resize', update_button_visibility, { passive: true })
+    container.addEventListener('scroll', update_button_visibility, {
+      passive: true
+    })
+    window.addEventListener('resize', update_button_visibility, {
+      passive: true
+    })
 
     // Periodic check as fallback
     const interval_id = setInterval(update_button_visibility, 1000)

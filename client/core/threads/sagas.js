@@ -218,7 +218,7 @@ export function* handle_thread_created({ payload }) {
 
 export function* handle_thread_timeline_entry_added({ payload }) {
   try {
-    const { thread_id, entry } = payload
+    const { thread_id, entry, thread_title } = payload
 
     // Skip notification if user is currently viewing this thread
     const current_path = history.location.pathname
@@ -231,7 +231,12 @@ export function* handle_thread_timeline_entry_added({ payload }) {
 
     console.log(`New timeline entry for thread ${thread_id}:`, entry.type)
 
-    const { thread_title } = yield call(get_thread_metadata, thread_id)
+    // Use thread_title from payload, fallback to fetching if not available
+    let final_thread_title = thread_title
+    if (!final_thread_title) {
+      const metadata = yield call(get_thread_metadata, thread_id)
+      final_thread_title = metadata.thread_title
+    }
 
     yield put(
       notification_actions.show_notification({
@@ -240,7 +245,7 @@ export function* handle_thread_timeline_entry_added({ payload }) {
         component: ThreadEventNotification,
         component_props: {
           thread_id,
-          thread_title,
+          thread_title: final_thread_title,
           entry
         }
       })

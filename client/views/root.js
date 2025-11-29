@@ -12,6 +12,7 @@ import { get_app } from '@core/app/selectors'
 import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
 import Notification from '@components/Notification'
+import NotificationDemoPanel from '@components/Notification/NotificationDemoPanel'
 import { get_notification_info } from '@core/notification/selectors'
 
 // Import styles
@@ -103,6 +104,7 @@ const Root = () => {
             <Routes />
             <DialogContainer />
             <NotificationContainer />
+            <NotificationDemoPanel />
           </AppInitializer>
         </ThemeProvider>
       </Router>

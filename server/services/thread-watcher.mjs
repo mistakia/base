@@ -287,11 +287,14 @@ const emit_timeline_entry_events = (thread_id, new_entries, metadata) => {
     `Emitting ${new_entries.length} new timeline entries for thread ${thread_id}`
   )
 
+  const thread_title = metadata.title || null
+
   for (const entry of new_entries) {
     emit_thread_timeline_entry_added({
       thread_id,
       entry,
-      user_public_key: metadata.user_public_key
+      user_public_key: metadata.user_public_key,
+      thread_title
     })
   }
 }

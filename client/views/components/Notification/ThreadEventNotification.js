@@ -5,79 +5,175 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import CodeIcon from '@mui/icons-material/Code'
-import BuildIcon from '@mui/icons-material/Build'
-import MessageIcon from '@mui/icons-material/Message'
-import ErrorIcon from '@mui/icons-material/Error'
-import NotificationsIcon from '@mui/icons-material/Notifications'
+import {
+  Message as MessageIcon,
+  CheckCircle as CompleteIcon,
+  Error as ErrorIcon,
+  TerminalOutlined as ToolIcon,
+  AccountCircleOutlined as UserIcon,
+  AutoAwesomeOutlined as AssistantIcon,
+  Language as BrowserIcon,
+  ErrorOutline as SystemIcon,
+  Lightbulb as ThinkingIcon
+} from '@mui/icons-material'
+
+import UserMessage from '@components/ThreadTimelineView/UserMessage'
+import AssistantMessage from '@components/ThreadTimelineView/AssistantMessage'
+import ThinkingMessage from '@components/ThreadTimelineView/ThinkingMessage'
+import SystemMessage from '@components/ThreadTimelineView/SystemMessage'
+import ToolEvent from '@components/ThreadTimelineView/ToolEvent'
+import HookMessage from '@components/ThreadTimelineView/HookMessage'
 
 /**
- * Get user-friendly message and icon for timeline entry type
+ * Get event icon using the same logic as TimelineEvent
  */
-const get_entry_display_info = (entry) => {
-  const entry_type = entry.type
+const get_tool_icon_by_name = (tool_name) => {
+  const icon_props = { fontSize: 'small' }
 
-  switch (entry_type) {
-    case 'tool_call':
-      return {
-        icon: <BuildIcon fontSize='small' />,
-        message: `Tool Call: ${entry.content?.tool_name || 'unknown'}`,
-        color: '#3498db'
-      }
-    case 'tool_result':
-      return {
-        icon: <CodeIcon fontSize='small' />,
-        message: 'Tool Result',
-        color: '#2ecc71'
-      }
-    case 'assistant_response':
-      return {
-        icon: <MessageIcon fontSize='small' />,
-        message: 'Assistant Response',
-        color: '#9b59b6'
-      }
-    case 'message':
-      return {
-        icon: <MessageIcon fontSize='small' />,
-        message: `Message from ${entry.role || 'unknown'}`,
-        color: '#95a5a6'
-      }
-    case 'error':
-      return {
-        icon: <ErrorIcon fontSize='small' />,
-        message: `Error: ${entry.error_type || 'unknown'}`,
-        color: '#e74c3c'
-      }
-    case 'thread_main_request':
-      return {
-        icon: <MessageIcon fontSize='small' />,
-        message: 'New Thread Request',
-        color: '#3498db'
-      }
-    case 'human_request':
-      return {
-        icon: <MessageIcon fontSize='small' />,
-        message: 'Human Request',
-        color: '#f39c12'
-      }
-    case 'notification':
-      return {
-        icon: <NotificationsIcon fontSize='small' />,
-        message: entry.content?.message || 'Notification',
-        color: '#1abc9c'
-      }
-    case 'state_change':
-      return {
-        icon: <NotificationsIcon fontSize='small' />,
-        message: 'State Changed',
-        color: '#34495e'
-      }
+  // Handle MCP browser tools
+  if (tool_name?.startsWith('mcp__playwright__browser_')) {
+    return <BrowserIcon {...icon_props} />
+  }
+
+  // Handle other specific tool patterns
+  switch (tool_name) {
+    case 'WebSearch':
+    case 'WebFetch':
+      return <BrowserIcon {...icon_props} />
     default:
-      return {
-        icon: <NotificationsIcon fontSize='small' />,
-        message: `New Event: ${entry_type}`,
-        color: '#95a5a6'
+      return <ToolIcon {...icon_props} />
+  }
+}
+
+/**
+ * Get event icon using the same logic as TimelineEvent
+ */
+const get_event_icon = (timeline_event) => {
+  const icon_props = { fontSize: 'small' }
+
+  switch (timeline_event.type) {
+    case 'message':
+      return timeline_event.role === 'user' ? (
+        <UserIcon {...icon_props} />
+      ) : (
+        <AssistantIcon {...icon_props} />
+      )
+    case 'tool_call':
+    case 'tool_use': {
+      // Use tool-specific icon based on tool name
+      const tool_name = timeline_event.content?.tool_name
+      return get_tool_icon_by_name(tool_name)
+    }
+    case 'tool_result': {
+      // Tool result doesn't have tool_name, use generic tool icon
+      return <ToolIcon {...icon_props} />
+    }
+    case 'completion':
+      return <CompleteIcon {...icon_props} />
+    case 'error':
+      return <ErrorIcon {...icon_props} />
+    case 'thinking':
+      return <ThinkingIcon {...icon_props} />
+    case 'system':
+      return <SystemIcon {...icon_props} />
+    default:
+      return <MessageIcon {...icon_props} />
+  }
+}
+
+/**
+ * Render event content using the same logic as TimelineEvent
+ */
+const render_event_content = ({ timeline_event, working_directory = null }) => {
+  // Check if this is a hook message
+  const is_hook =
+    timeline_event?.type === 'message' &&
+    timeline_event.role === 'user' &&
+    typeof timeline_event.content === 'string' &&
+    /<.+-hook>/.test(timeline_event.content)
+
+  switch (timeline_event.type) {
+    case 'message':
+      if (timeline_event.role === 'user') {
+        // Check if this is a hook message
+        if (is_hook) {
+          return <HookMessage message={timeline_event} />
+        }
+        return (
+          <UserMessage
+            message={timeline_event}
+            working_directory={working_directory}
+          />
+        )
+      } else {
+        return (
+          <AssistantMessage
+            message={timeline_event}
+            working_directory={working_directory}
+            disable_truncation={false}
+            is_last_assistant_message={false}
+          />
+        )
       }
+    case 'thinking':
+      return (
+        <ThinkingMessage
+          message={timeline_event}
+          working_directory={working_directory}
+        />
+      )
+    case 'system':
+      return (
+        <SystemMessage
+          message={timeline_event}
+          working_directory={working_directory}
+        />
+      )
+    case 'tool_use':
+    case 'tool_call':
+      return (
+        <ToolEvent
+          tool_call_event={timeline_event}
+          tool_result_event={null}
+          timeline={[]}
+          render_nested_timeline={() => null}
+        />
+      )
+    case 'tool_result':
+      // Tool result entries don't have tool_name, show result content
+      return (
+        <Box sx={{ fontSize: '14px', color: 'white' }}>
+          <Typography variant='body2' sx={{ color: 'white', mb: 1 }}>
+            Tool Result
+          </Typography>
+          {timeline_event.content?.error ? (
+            <Typography variant='body2' sx={{ color: '#ffcdd2' }}>
+              Error:{' '}
+              {typeof timeline_event.content.error === 'string'
+                ? timeline_event.content.error
+                : JSON.stringify(timeline_event.content.error)}
+            </Typography>
+          ) : (
+            <Typography variant='body2' sx={{ color: 'white', opacity: 0.9 }}>
+              {typeof timeline_event.content?.result === 'string'
+                ? timeline_event.content.result
+                : timeline_event.content?.result
+                  ? JSON.stringify(timeline_event.content.result, null, 2)
+                  : 'No result'}
+            </Typography>
+          )}
+        </Box>
+      )
+    default:
+      return (
+        <span style={{ whiteSpace: 'pre-wrap', fontSize: '14px' }}>
+          {typeof timeline_event.content === 'string'
+            ? timeline_event.content
+            : timeline_event.content
+              ? JSON.stringify(timeline_event.content, null, 2)
+              : 'No content'}
+        </span>
+      )
   }
 }
 
@@ -86,41 +182,63 @@ const get_entry_display_info = (entry) => {
  *
  * Rich notification component for thread timeline events
  * Displays thread title, event type, and provides a link to view the thread
+ *
+ * TEMPORARY: For testing different notification types, enable demo mode:
+ * - Add ?demo=true to URL, or
+ * - Run: localStorage.setItem('notificationDemo', 'true')
+ * A demo panel will appear in the top-right corner to test all event types.
  */
 const ThreadEventNotification = ({
   thread_id,
   thread_title,
   entry,
-  on_close
+  on_close,
+  working_directory = null
 }) => {
   const display_title = thread_title || thread_id
   const thread_link = `/thread/${thread_id}`
 
-  const display_info = get_entry_display_info(entry)
+  // Use entry as timeline_event for rendering
+  const timeline_event = entry
 
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 1
+        gap: 1.5
       }}>
+      {/* Thread title with event icon */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box
           sx={{
-            color: display_info.color,
+            color: 'white',
             display: 'flex',
             alignItems: 'center'
           }}>
-          {display_info.icon}
+          {get_event_icon(timeline_event)}
         </Box>
-        <Typography variant='body1' component='div' sx={{ fontWeight: 500 }}>
-          {display_info.message}
+        <Typography
+          variant='body1'
+          component='div'
+          sx={{ fontWeight: 500, color: 'white', flex: 1 }}>
+          {display_title}
         </Typography>
       </Box>
-      <Typography variant='body2' component='div' sx={{ opacity: 0.9, ml: 3 }}>
-        {display_title}
-      </Typography>
+
+      {/* Event content */}
+      <Box
+        sx={{
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: 1,
+          p: 1.5,
+          maxHeight: '300px',
+          overflow: 'auto'
+        }}>
+        {render_event_content({ timeline_event, working_directory })}
+      </Box>
+
+      {/* View thread button */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
         <Button
           component={Link}
@@ -130,7 +248,7 @@ const ThreadEventNotification = ({
           endIcon={<OpenInNewIcon />}
           onClick={on_close}
           sx={{
-            color: 'inherit',
+            color: 'white',
             borderColor: 'rgba(255, 255, 255, 0.5)',
             '&:hover': {
               borderColor: 'rgba(255, 255, 255, 0.8)',
@@ -153,7 +271,8 @@ ThreadEventNotification.propTypes = {
     role: PropTypes.string,
     error_type: PropTypes.string
   }).isRequired,
-  on_close: PropTypes.func.isRequired
+  on_close: PropTypes.func.isRequired,
+  working_directory: PropTypes.string
 }
 
 export default ThreadEventNotification

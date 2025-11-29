@@ -200,16 +200,18 @@ export const emit_thread_updated = (thread) => {
  * @param {string} params.thread_id - Thread UUID
  * @param {Object} params.entry - Timeline entry object
  * @param {string} params.user_public_key - Thread owner (included in payload for context)
+ * @param {string} [params.thread_title] - Thread title from metadata (falls back to thread_id if not available)
  */
 export const emit_thread_timeline_entry_added = ({
   thread_id,
   entry,
-  user_public_key
+  user_public_key,
+  thread_title
 }) => {
   emit_thread_event({
     thread_id,
     event_type: 'THREAD_TIMELINE_ENTRY_ADDED',
-    payload: { thread_id, entry, user_public_key }
+    payload: { thread_id, entry, user_public_key, thread_title }
   })
 }
 

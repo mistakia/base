@@ -72,7 +72,16 @@ const Notification = ({ info = null }) => {
     if (has_custom_component) {
       const CustomComponent = current_notification.component
       return (
-        <Alert severity={has_severity || 'info'} onClose={handle_close}>
+        <Alert
+          severity={has_severity || 'info'}
+          onClose={handle_close}
+          sx={{
+            backgroundColor: 'var(--color-primary) !important',
+            color: 'white !important',
+            '& .MuiAlert-icon': {
+              color: 'white !important'
+            }
+          }}>
           <CustomComponent
             {...current_notification.component_props}
             on_close={handle_close}
@@ -84,7 +93,16 @@ const Notification = ({ info = null }) => {
     // Default text notification
     if (has_severity) {
       return (
-        <Alert severity={current_notification.severity} onClose={handle_close}>
+        <Alert
+          severity={current_notification.severity}
+          onClose={handle_close}
+          sx={{
+            backgroundColor: 'var(--color-primary) !important',
+            color: 'white !important',
+            '& .MuiAlert-icon': {
+              color: 'white !important'
+            }
+          }}>
           {current_notification.message}
         </Alert>
       )
