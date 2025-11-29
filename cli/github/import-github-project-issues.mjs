@@ -7,7 +7,44 @@ import { isMain, github } from '#libs-server'
 
 const log = debug('import-github-project-issues')
 
-debug.enable('import-github-project-issues,github')
+const initialize_cli = () => {
+  return yargs(hideBin(process.argv))
+    .option('username', {
+      alias: 'u',
+      describe: 'GitHub username who owns the project',
+      type: 'string',
+      demandOption: true
+    })
+    .option('project', {
+      alias: 'p',
+      describe: 'GitHub project number',
+      type: 'number',
+      demandOption: true
+    })
+    .option('since', {
+      alias: 'd',
+      describe:
+        'Only import issues updated since this date (ISO format, e.g. 2023-01-01T00:00:00Z)',
+      type: 'string'
+    })
+    .option('force', {
+      alias: 'f',
+      describe: 'Force re-import even if issues already exist',
+      type: 'boolean',
+      default: false
+    })
+    .option('user-public-key', {
+      describe: 'User public key for entity ownership',
+      type: 'string'
+    })
+    .option('user-base-directory', {
+      describe: 'User base directory path',
+      type: 'string',
+      default: config.user_base_directory
+    })
+    .help()
+    .alias('help', 'h').argv
+}
 
 /**
  * Import issues from a GitHub project
@@ -183,32 +220,7 @@ export default async function import_github_project_issues({
 // Command-line interface
 const main = async () => {
   try {
-    const argv = yargs(hideBin(process.argv))
-      .option('username', {
-        alias: 'u',
-        describe: 'GitHub username who owns the project',
-        type: 'string',
-        demandOption: true
-      })
-      .option('project', {
-        alias: 'p',
-        describe: 'GitHub project number',
-        type: 'number',
-        demandOption: true
-      })
-      .option('since', {
-        alias: 'd',
-        describe:
-          'Only import issues updated since this date (ISO format, e.g. 2023-01-01T00:00:00Z)',
-        type: 'string'
-      })
-      .option('force', {
-        alias: 'f',
-        describe: 'Force update all tasks regardless of content',
-        type: 'boolean',
-        default: false
-      })
-      .help().argv
+    const argv = initialize_cli()
 
     const results = await import_github_project_issues({
       username: argv.username,

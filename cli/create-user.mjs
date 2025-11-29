@@ -7,43 +7,42 @@ import create_user from '#libs-server/users/create-user.mjs'
 
 // TODO change the system to have the user id be derived from the private key
 
-const argv = yargs(hideBin(process.argv))
-  .option('username', {
-    alias: 'u',
-    description: 'Username for the new user',
-    type: 'string'
-  })
-  .option('email', {
-    alias: 'e',
-    description: 'Email address for the new user',
-    type: 'string'
-  })
-  .option('public_key', {
-    alias: 'k',
-    description:
-      'User public key for the new user (hex, derived if not provided)',
-    type: 'string'
-  })
-  .option('private_key', {
-    alias: 'p',
-    description: 'Private key for the new user',
-    type: 'string',
-    default: crypto.randomBytes(32)
-  })
-  .help()
-  .alias('help', 'h').argv
-
 const log = debug('create-user')
-debug.enable('create-user')
 
-const run = async () => {
-  const {
-    username,
-    email,
-    private_key: user_private_key,
-    public_key: user_public_key
-  } = argv
+const initialize_cli = () => {
+  return yargs(hideBin(process.argv))
+    .option('username', {
+      alias: 'u',
+      description: 'Username for the new user',
+      type: 'string'
+    })
+    .option('email', {
+      alias: 'e',
+      description: 'Email address for the new user',
+      type: 'string'
+    })
+    .option('public_key', {
+      alias: 'k',
+      description:
+        'User public key for the new user (hex, derived if not provided)',
+      type: 'string'
+    })
+    .option('private_key', {
+      alias: 'p',
+      description: 'Private key for the new user',
+      type: 'string',
+      default: crypto.randomBytes(32)
+    })
+    .help()
+    .alias('help', 'h').argv
+}
 
+const run = async ({
+  username,
+  email,
+  private_key: user_private_key,
+  public_key: user_public_key
+}) => {
   log('Creating new user...')
   const user = await create_user({
     username,
@@ -66,7 +65,14 @@ export default run
 
 const main = async () => {
   try {
-    await run()
+    const argv = initialize_cli()
+    debug.enable('create-user')
+    await run({
+      username: argv.username,
+      email: argv.email,
+      private_key: argv.private_key,
+      public_key: argv.public_key
+    })
   } catch (err) {
     console.error('Error creating user:', err.message)
     process.exit(1)

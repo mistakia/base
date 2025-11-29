@@ -114,27 +114,31 @@ export default async function create_github_issues_from_local_tasks({
   }
 }
 
+const initialize_cli = () => {
+  return yargs(hideBin(process.argv))
+    .usage('Create GitHub issues from local tasks\n\nUsage: $0 [options]')
+    .option('repository', {
+      alias: 'r',
+      type: 'string',
+      description: 'Filter to specific repository (owner/repo format)'
+    })
+    .option('dry-run', {
+      type: 'boolean',
+      default: false,
+      description: 'Show what would be created without creating'
+    })
+    .example('$0', 'Create issues for all ready tasks')
+    .example('$0 -r mistakia/league', 'Create issues for specific repository')
+    .example('$0 --dry-run', 'Preview what would be created')
+    .help()
+    .parseSync()
+}
+
 // Command-line interface
 const main = async () => {
   let error
   try {
-    const argv = yargs(hideBin(process.argv))
-      .usage('Create GitHub issues from local tasks\n\nUsage: $0 [options]')
-      .option('repository', {
-        alias: 'r',
-        type: 'string',
-        description: 'Filter to specific repository (owner/repo format)'
-      })
-      .option('dry-run', {
-        type: 'boolean',
-        default: false,
-        description: 'Show what would be created without creating'
-      })
-      .example('$0', 'Create issues for all ready tasks')
-      .example('$0 -r mistakia/league', 'Create issues for specific repository')
-      .example('$0 --dry-run', 'Preview what would be created')
-      .help()
-      .parseSync()
+    const argv = initialize_cli()
 
     const github_token = process.env.GITHUB_TOKEN || config.github_access_token
 

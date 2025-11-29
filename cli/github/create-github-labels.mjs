@@ -120,42 +120,45 @@ const create_github_labels_for_repos = async ({ repos, sync = false }) => {
   }
 }
 
-const argv = yargs(hideBin(process.argv))
-  .usage(
-    'Usage: $0 (--repo <repository> | --repos <repository1,repository2,...> | --all) [--sync]'
-  )
-  .option('repo', {
-    describe: 'Single GitHub repository in the format "owner/repo"',
-    type: 'string',
-    conflicts: ['repos', 'all']
-  })
-  .option('repos', {
-    describe: 'Comma-separated list of GitHub repositories',
-    type: 'string',
-    conflicts: ['repo', 'all']
-  })
-  .option('all', {
-    describe: 'Apply to all default repositories defined in labels.mjs',
-    type: 'boolean',
-    conflicts: ['repo', 'repos']
-  })
-  .option('sync', {
-    describe:
-      'If provided, labels not in the default set will be removed from the repository',
-    type: 'boolean',
-    default: false
-  })
-  .check((argv) => {
-    if (!argv.repo && !argv.repos && !argv.all) {
-      throw new Error('Must provide either --repo, --repos, or --all')
-    }
-    return true
-  })
-  .help()
-  .alias('help', 'h').argv
+const initialize_cli = () => {
+  return yargs(hideBin(process.argv))
+    .usage(
+      'Usage: $0 (--repo <repository> | --repos <repository1,repository2,...> | --all) [--sync]'
+    )
+    .option('repo', {
+      describe: 'Single GitHub repository in the format "owner/repo"',
+      type: 'string',
+      conflicts: ['repos', 'all']
+    })
+    .option('repos', {
+      describe: 'Comma-separated list of GitHub repositories',
+      type: 'string',
+      conflicts: ['repo', 'all']
+    })
+    .option('all', {
+      describe: 'Apply to all default repositories defined in labels.mjs',
+      type: 'boolean',
+      conflicts: ['repo', 'repos']
+    })
+    .option('sync', {
+      describe:
+        'If provided, labels not in the default set will be removed from the repository',
+      type: 'boolean',
+      default: false
+    })
+    .check((argv) => {
+      if (!argv.repo && !argv.repos && !argv.all) {
+        throw new Error('Must provide either --repo, --repos, or --all')
+      }
+      return true
+    })
+    .help()
+    .alias('help', 'h').argv
+}
 
 if (isMain(import.meta.url)) {
   const main = async () => {
+    const argv = initialize_cli()
     let repos_to_process = []
 
     if (argv.all) {
