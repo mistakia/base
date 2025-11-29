@@ -21,7 +21,7 @@ prompt_properties:
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2025-10-17T19:00:03.000Z'
+updated_at: '2025-11-29T00:00:00.000Z'
 user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
 
@@ -100,21 +100,51 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 
 ### 4.5. Push Submodule Changes First (Execute from worktree directory)
 
-**CRITICAL**: Push submodule changes BEFORE rebase to prevent data loss when worktree is deleted.
+**CRITICAL**: Rebase and push submodule changes BEFORE committing submodule reference in parent repo.
 
 - Navigate to worktree: `cd [worktree-path]`
 - Check submodule status: `git submodule status`
 - For each modified submodule (shows `+` prefix):
   - Enter submodule: `cd [submodule-path]`
-  - Check branch status: `git status`
+  - **Detect submodule's default branch**:
+    ```bash
+    SUBMODULE_DEFAULT=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f4)
+    if [ -z "$SUBMODULE_DEFAULT" ]; then
+      # Fallback: check remote HEAD, then common branch names
+      git remote set-head origin --auto 2>/dev/null
+      SUBMODULE_DEFAULT=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f4)
+    fi
+    if [ -z "$SUBMODULE_DEFAULT" ]; then
+      # Final fallback: try main, then master
+      if git show-ref --verify --quiet refs/remotes/origin/main; then
+        SUBMODULE_DEFAULT="main"
+      elif git show-ref --verify --quiet refs/remotes/origin/master; then
+        SUBMODULE_DEFAULT="master"
+      else
+        echo "ERROR: Cannot determine default branch for submodule"; exit 1
+      fi
+    fi
+    echo "Submodule default branch: $SUBMODULE_DEFAULT"
+    ```
+  - **Check for detached HEAD state**:
+    ```bash
+    if ! git symbolic-ref HEAD >/dev/null 2>&1; then
+      echo "WARNING: Submodule is in detached HEAD state"
+      # Create a temporary branch from current HEAD to safely rebase
+      git checkout -b temp-submodule-merge-$(date +%s)
+    fi
+    ```
   - If uncommitted changes exist, commit them: `git add -A && git commit -m "feat: [description]"`
-  - Push to remote: `git push origin [current-branch]`
-  - Verify push succeeded: `git log origin/[current-branch]..HEAD` (should be empty)
-  - Return to worktree root: `cd ../..`
-  - Stage submodule reference: `git add [submodule-path]`
-  - Commit if needed: `git commit -m "chore: update [submodule] reference"`
-- Verify all submodules pushed: `git submodule foreach 'git log origin/HEAD..HEAD'` (should be empty for each)
-- If any unpushed commits remain, STOP and push them before continuing
+  - Fetch and rebase onto remote: `git fetch origin && git rebase origin/$SUBMODULE_DEFAULT`
+  - **If rebase fails or conflicts occur**: Abort with `git rebase --abort` and report the issue
+  - Push to remote: `git push origin HEAD:$SUBMODULE_DEFAULT`
+  - Verify push succeeded: `git log origin/$SUBMODULE_DEFAULT..HEAD` (should be empty)
+  - **If on a temporary branch**, clean up: `git checkout $SUBMODULE_DEFAULT && git branch -d temp-submodule-merge-*`
+  - Return to worktree root: `cd ..`
+- **AFTER all submodules are rebased and pushed**, commit references in parent:
+  - `git add [submodule-path]`
+  - `git commit -m "feat: [description of changes]"`
+- If any unpushed submodule commits remain, STOP and push them before continuing
 
 ### 5. Rebase Feature Branch onto Main (Execute from worktree directory)
 
@@ -135,7 +165,31 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - Check branch exists: `git branch --list [branch-name]`
 - Show branch commits to verify there are changes: `git log $DEFAULT_BRANCH..[branch-name] --oneline`
 - This should display at least one commit that will be merged
-- **Verify submodule commits are accessible**: `git submodule foreach 'git fetch origin && git log origin/HEAD..HEAD'` (should be empty)
+- **Verify submodule commits are accessible**:
+  ```bash
+  git submodule foreach '
+    # Detect submodule default branch with fallbacks
+    BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | cut -d"/" -f4)
+    if [ -z "$BRANCH" ]; then
+      git remote set-head origin --auto 2>/dev/null
+      BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | cut -d"/" -f4)
+    fi
+    if [ -z "$BRANCH" ]; then
+      if git show-ref --verify --quiet refs/remotes/origin/main; then
+        BRANCH="main"
+      elif git show-ref --verify --quiet refs/remotes/origin/master; then
+        BRANCH="master"
+      fi
+    fi
+    git fetch origin
+    UNPUSHED=$(git log origin/$BRANCH..HEAD --oneline 2>/dev/null)
+    if [ -n "$UNPUSHED" ]; then
+      echo "ERROR: Submodule has unpushed commits:"
+      echo "$UNPUSHED"
+      exit 1
+    fi
+  '
+  ```
 - If any submodule has unpushed commits, STOP and return to Step 4.5
 
 ### 7. Perform Merge (Execute from main repository directory)
@@ -177,6 +231,8 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 ### 11. Verify Success (Execute from main repository directory)
 
 - Check git log to confirm merge commit exists: `git log -1 --oneline`
+- Sync submodules to merged references: `git submodule update --init`
+- Verify submodules at correct commits: `git submodule status` (no `+` prefix)
 - Ensure working directory is clean: `git status`
 - Verify worktree was removed: `git worktree list`
 
@@ -206,6 +262,9 @@ The workflow should provide a summary including:
 - **Cleanup failures**: Report what was successfully cleaned up and what remains using `git worktree list` and `git branch -a`
 - **Submodule has unpushed commits**: Do NOT proceed with merge. Return to Step 4.5 and push submodule commits before continuing
 - **Submodule commit not found on remote**: The merge will reference commits that don't exist remotely, causing failures for other developers. Push submodule commits in Step 4.5 before merging
+- **Submodule in detached HEAD state**: This occurs when submodules are checked out at a specific commit rather than a branch. Step 4.5 handles this by creating a temporary branch. If issues persist, manually checkout the default branch in the submodule before making changes
+- **Cannot determine submodule default branch**: Run `git remote set-head origin --auto` inside the submodule to set origin/HEAD, or manually specify the branch if the remote doesn't support automatic detection
+- **Submodule rebase conflicts**: Abort with `git rebase --abort` inside the submodule. Resolve conflicts manually or coordinate with the submodule maintainer before retrying
 - **Worktree removal fails with "containing submodules"**: Manually remove with `rm -rf [path]` then run `git worktree prune`
 
 ### Expected Success Output
