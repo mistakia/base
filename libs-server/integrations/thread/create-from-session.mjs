@@ -9,7 +9,9 @@ import { generate_thread_id_from_session } from '#libs-server/threads/generate-t
 import {
   calculate_session_counts,
   calculate_detailed_message_counts,
-  aggregate_token_counts
+  aggregate_token_counts,
+  extract_initial_user_prompt_from_messages,
+  generate_default_thread_title_from_prompt
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
@@ -59,6 +61,14 @@ export const create_thread_from_session = async ({
         : session_metadata.end_time
       : null
 
+    // Extract default title from initial user prompt
+    const initial_prompt = extract_initial_user_prompt_from_messages({
+      messages: normalized_session.messages
+    })
+    const default_title = generate_default_thread_title_from_prompt({
+      prompt: initial_prompt
+    })
+
     // Use the unified create_thread function
     const thread_result = await create_thread({
       user_public_key,
@@ -72,6 +82,7 @@ export const create_thread_from_session = async ({
       create_git_branches: false,
       create_memory_repository: false,
       external_session,
+      title: default_title,
       additional_metadata: {
         system_worktree_path: null,
         user_worktree_path: null,
