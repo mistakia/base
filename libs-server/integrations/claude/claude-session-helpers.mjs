@@ -212,3 +212,246 @@ export const filter_valid_claude_sessions = ({ sessions }) => {
     total: sessions.length
   }
 }
+
+/**
+ * Check if a session is an agent session
+ * Agent sessions are identified by:
+ * - Filename starting with "agent-" (8-char hex)
+ * - Having agentId in the first entry
+ * - Having sessionId pointing to a parent session
+ *
+ * @param {Object} params - Parameters object
+ * @param {Object} params.session - Raw Claude session data
+ * @returns {boolean} True if session is an agent session
+ */
+export const is_agent_session = ({ session }) => {
+  // Check filename pattern (agent-{8-char-hex})
+  const session_id = session.session_id || ''
+  if (session_id.startsWith('agent-')) {
+    return true
+  }
+
+  // Check if first entry has agentId
+  if (session.entries && session.entries.length > 0) {
+    const first_entry = session.entries[0]
+    if (first_entry.agentId) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Check if an agent session is a "warm" initialization agent
+ * Warm agents should be excluded from import as they provide no analytical value.
+ *
+ * Warm agent patterns:
+ * - Single entry with assistant role containing "ready to help" message
+ * - First entry with user role and content "Warmup"
+ *
+ * @param {Object} params - Parameters object
+ * @param {Object} params.session - Raw Claude session data
+ * @returns {boolean} True if agent is a warm/initialization agent
+ */
+export const is_warm_agent = ({ session }) => {
+  if (!session.entries || session.entries.length === 0) {
+    return true // Empty sessions are considered warm
+  }
+
+  const entries = session.entries
+
+  // Pattern 1: Single entry with assistant "ready to help" message
+  if (entries.length === 1) {
+    const entry = entries[0]
+    if (entry.type === 'assistant') {
+      const content = extract_entry_text_content(entry)
+      if (content && content.toLowerCase().includes('ready to help')) {
+        return true
+      }
+    }
+  }
+
+  // Pattern 2: First entry is user with "Warmup" content
+  const first_entry = entries[0]
+  if (first_entry.type === 'user') {
+    const content = extract_entry_text_content(first_entry)
+    if (content && content.trim().toLowerCase() === 'warmup') {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Extract text content from an entry's message
+ * Handles both string and array content formats
+ *
+ * @param {Object} entry - Claude session entry
+ * @returns {string|null} Text content or null
+ */
+const extract_entry_text_content = (entry) => {
+  if (!entry.message || !entry.message.content) {
+    return null
+  }
+
+  const content = entry.message.content
+
+  if (typeof content === 'string') {
+    return content
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item
+        }
+        if (item.type === 'text') {
+          return item.text || ''
+        }
+        return ''
+      })
+      .join(' ')
+  }
+
+  return null
+}
+
+/**
+ * Get the parent session ID from an agent session
+ * Agent sessions store their parent's session ID in the sessionId field of entries
+ *
+ * @param {Object} params - Parameters object
+ * @param {Object} params.session - Raw Claude session data
+ * @returns {string|null} Parent session ID or null if not found
+ */
+export const get_agent_parent_session_id = ({ session }) => {
+  if (!session.entries || session.entries.length === 0) {
+    return null
+  }
+
+  // Look for sessionId in entries (this points to parent)
+  for (const entry of session.entries) {
+    if (entry.sessionId) {
+      return entry.sessionId
+    }
+  }
+
+  return null
+}
+
+/**
+ * Get the agent ID from an agent session
+ * Agent ID is the unique identifier for this agent (8-char hex)
+ *
+ * @param {Object} params - Parameters object
+ * @param {Object} params.session - Raw Claude session data
+ * @returns {string|null} Agent ID or null if not found
+ */
+export const get_agent_id = ({ session }) => {
+  // Try to extract from session_id (agent-{8-char-hex})
+  const session_id = session.session_id || ''
+  if (session_id.startsWith('agent-')) {
+    return session_id.replace('agent-', '')
+  }
+
+  // Try to get from first entry's agentId
+  if (session.entries && session.entries.length > 0) {
+    const first_entry = session.entries[0]
+    if (first_entry.agentId) {
+      return first_entry.agentId
+    }
+  }
+
+  return null
+}
+
+/**
+ * Group sessions with their agent sessions
+ * Creates a map of parent sessions with their associated agent sessions.
+ * Filters out warm agents during grouping.
+ *
+ * @param {Object} params - Parameters object
+ * @param {Array} params.sessions - Array of raw Claude sessions
+ * @param {boolean} params.include_warm_agents - Include warm agents (default: false)
+ * @returns {Object} { grouped: Map<parent_session_id, {parent_session, agent_sessions}>, orphan_agents: Array, standalone_sessions: Array }
+ */
+export const group_sessions_with_agents = ({
+  sessions,
+  include_warm_agents = false
+}) => {
+  const parent_sessions_map = new Map()
+  const agent_sessions_by_parent = new Map()
+  const orphan_agents = []
+  const standalone_sessions = []
+  let warm_agents_excluded = 0
+
+  // First pass: separate agents from regular sessions
+  for (const session of sessions) {
+    if (is_agent_session({ session })) {
+      // Check if warm agent should be excluded
+      if (!include_warm_agents && is_warm_agent({ session })) {
+        warm_agents_excluded++
+        log_debug(`Excluding warm agent: ${session.session_id}`)
+        continue
+      }
+
+      const parent_id = get_agent_parent_session_id({ session })
+      if (parent_id) {
+        if (!agent_sessions_by_parent.has(parent_id)) {
+          agent_sessions_by_parent.set(parent_id, [])
+        }
+        agent_sessions_by_parent.get(parent_id).push(session)
+      } else {
+        // Agent without parent reference
+        orphan_agents.push(session)
+      }
+    } else {
+      // Regular session - potential parent
+      parent_sessions_map.set(session.session_id, session)
+    }
+  }
+
+  // Second pass: group agents with their parents
+  const grouped = new Map()
+
+  for (const [session_id, parent_session] of parent_sessions_map) {
+    const agent_sessions = agent_sessions_by_parent.get(session_id) || []
+
+    if (agent_sessions.length > 0) {
+      grouped.set(session_id, {
+        parent_session,
+        agent_sessions
+      })
+      log_debug(
+        `Grouped ${agent_sessions.length} agents with parent session ${session_id}`
+      )
+    } else {
+      // Parent has no agents, treat as standalone
+      standalone_sessions.push(parent_session)
+    }
+  }
+
+  // Handle agents whose parents weren't found in this batch
+  for (const [parent_id, agents] of agent_sessions_by_parent) {
+    if (!parent_sessions_map.has(parent_id)) {
+      log_debug(
+        `Found ${agents.length} agents referencing missing parent ${parent_id}`
+      )
+      orphan_agents.push(...agents)
+    }
+  }
+
+  log(
+    `Session grouping: ${grouped.size} with agents, ${standalone_sessions.length} standalone, ${orphan_agents.length} orphan agents, ${warm_agents_excluded} warm agents excluded`
+  )
+
+  return {
+    grouped,
+    orphan_agents,
+    standalone_sessions,
+    warm_agents_excluded
+  }
+}

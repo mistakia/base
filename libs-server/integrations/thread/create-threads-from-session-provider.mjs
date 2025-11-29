@@ -18,6 +18,11 @@ import { build_timeline_from_session } from '#libs-server/integrations/thread/bu
 import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
 import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-session-provider.mjs'
 import { OpenAISessionProvider } from '#libs-server/integrations/openai/openai-session-provider.mjs'
+import {
+  group_sessions_with_agents,
+  is_agent_session
+} from '#libs-server/integrations/claude/claude-session-helpers.mjs'
+import { merge_and_sequence_agent_sessions } from '#libs-server/integrations/claude/merge-agent-sessions.mjs'
 
 const log = debug('integrations:thread:create-from-session-provider')
 const log_debug = debug(
@@ -70,6 +75,8 @@ const SESSION_PROVIDER_MAP = {
  * @param {string} params.user_base_directory - Base directory for user data
  * @param {boolean} params.allow_updates - Allow updating existing threads
  * @param {boolean} params.verbose - Enable verbose logging
+ * @param {boolean} params.merge_agents - Merge agent sessions into parent (default: true for Claude)
+ * @param {boolean} params.include_warm_agents - Include warm/initialization agents (default: false)
  * @param {Object} params.provider_options - Provider-specific options passed to find_sessions
  * @returns {Promise<Object>} Results object with created, updated, skipped, and failed arrays
  */
@@ -79,6 +86,8 @@ export const create_threads_from_session_provider = async ({
   user_base_directory = get_user_base_directory(),
   allow_updates = false,
   verbose = false,
+  merge_agents = true,
+  include_warm_agents = false,
   provider_options = {}
 }) => {
   if (!provider_name) {
@@ -120,14 +129,71 @@ export const create_threads_from_session_provider = async ({
     return create_empty_results_object()
   }
 
+  // For Claude provider, handle agent session merging
+  let sessions_to_process = valid_sessions
+  let agents_merged = 0
+  let warm_agents_excluded = 0
+
+  if (provider_name === 'claude' && merge_agents) {
+    const grouping_result = group_sessions_with_agents({
+      sessions: valid_sessions,
+      include_warm_agents
+    })
+
+    warm_agents_excluded = grouping_result.warm_agents_excluded
+
+    // Process grouped sessions (parent + agents merged)
+    const merged_sessions = []
+
+    for (const [
+      session_id,
+      { parent_session, agent_sessions }
+    ] of grouping_result.grouped) {
+      const merged_session = merge_and_sequence_agent_sessions({
+        parent_session,
+        agent_sessions
+      })
+      merged_sessions.push(merged_session)
+      agents_merged += agent_sessions.length
+
+      if (verbose) {
+        log_debug(
+          `Merged ${agent_sessions.length} agents into session ${session_id}`
+        )
+      }
+    }
+
+    // Combine merged sessions with standalone sessions
+    sessions_to_process = [
+      ...merged_sessions,
+      ...grouping_result.standalone_sessions
+    ]
+
+    // Note: orphan_agents are not processed as standalone threads
+    // They referenced parents that weren't found in this batch
+
+    log(
+      `Agent merging: ${agents_merged} agents merged, ${warm_agents_excluded} warm agents excluded, ${grouping_result.orphan_agents.length} orphans skipped`
+    )
+  }
+
   log(
-    `Processing ${valid_sessions.length} valid sessions from ${session_provider.name}`
+    `Processing ${sessions_to_process.length} sessions from ${session_provider.name}`
   )
 
   // Process each session individually
   const results = create_empty_results_object()
 
-  for (const raw_session of valid_sessions) {
+  for (const raw_session of sessions_to_process) {
+    // Skip agent sessions that weren't merged (when merge_agents is false)
+    if (!merge_agents && is_agent_session({ session: raw_session })) {
+      results.skipped.push({
+        session_id: raw_session.session_id,
+        reason: 'agent_session_not_merged'
+      })
+      continue
+    }
+
     try {
       const session_result = await process_single_session({
         raw_session,
@@ -157,7 +223,7 @@ export const create_threads_from_session_provider = async ({
   }
 
   // Log summary
-  const summary = create_results_summary(results, valid_sessions.length)
+  const summary = create_results_summary(results, sessions_to_process.length)
   log(
     `${session_provider.name} processing complete: ${summary.created} created, ` +
       `${summary.updated} updated, ${summary.skipped} skipped, ${summary.failed} failed`
@@ -166,7 +232,9 @@ export const create_threads_from_session_provider = async ({
   return {
     ...results,
     summary,
-    invalid_sessions_count: invalid_sessions.length
+    invalid_sessions_count: invalid_sessions.length,
+    agents_merged,
+    warm_agents_excluded
   }
 }
 
