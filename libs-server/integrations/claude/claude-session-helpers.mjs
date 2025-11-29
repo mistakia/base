@@ -92,8 +92,14 @@ export const validate_claude_session_structure = ({ session }) => {
     errors.push('Missing metadata')
   }
 
-  // Entry types that don't require uuid/timestamp (metadata/snapshot entries)
-  const SYSTEM_ENTRY_TYPES = ['file-history-snapshot', 'summary', 'metadata']
+  // Entry types that don't require uuid/timestamp (metadata/snapshot/internal entries)
+  // queue-operation entries are added when sessions are resumed and lack uuid fields
+  const SYSTEM_ENTRY_TYPES = [
+    'file-history-snapshot',
+    'summary',
+    'metadata',
+    'queue-operation'
+  ]
 
   if (session.entries) {
     const required_fields = ['uuid', 'timestamp', 'type']
