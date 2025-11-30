@@ -87,11 +87,15 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
     }
 
     // Create threads using unified provider system
+    // Agent sessions are always merged into parent timelines
+    // Warm/initialization agents are always excluded
     const results = await create_threads_from_session_provider({
       provider_name: 'claude',
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
       allow_updates: config.allow_updates,
+      merge_agents: true,
+      include_warm_agents: false,
       provider_options: {
         claude_sessions: valid_sessions,
         // Pass through session_id and session_file to ensure they're respected
@@ -110,6 +114,8 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       threads_updated: results.updated.length,
       threads_failed: results.failed.length,
       threads_skipped: results.skipped.length,
+      agents_merged: results.agents_merged || 0,
+      warm_agents_excluded: results.warm_agents_excluded || 0,
       success_rate: results.summary?.success_rate,
       results
     }

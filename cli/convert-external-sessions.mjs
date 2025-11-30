@@ -253,6 +253,14 @@ function output_verbose(result, argv) {
     console.log(`Sessions found: ${result.sessions_found}`)
     console.log(`Valid sessions: ${result.valid_sessions}`)
     console.log(`Invalid sessions: ${result.invalid_sessions}`)
+
+    // Show agent merging statistics
+    if (result.agents_merged !== undefined) {
+      console.log(`Agents merged: ${result.agents_merged}`)
+    }
+    if (result.warm_agents_excluded !== undefined) {
+      console.log(`Warm agents excluded: ${result.warm_agents_excluded}`)
+    }
   } else if (argv.provider === 'cursor') {
     console.log(`Conversations found: ${result.conversations_found}`)
     console.log(`Valid conversations: ${result.valid_conversations}`)
