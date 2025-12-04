@@ -6,6 +6,9 @@
  */
 
 import config from '#config'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
 /**
  * Constants for raw data timestamp formats
@@ -70,18 +73,94 @@ export const SHARED_DEFAULT_OPTIONS = {
 }
 
 /**
- * Build filter function for date/session filtering
+ * Load thread blacklist from user-base directory
+ * @param {string} user_base_directory - User base directory path
+ * @returns {Object|null} Blacklist object or null if file doesn't exist
+ */
+export function load_thread_blacklist(user_base_directory = null) {
+  try {
+    const base_dir = user_base_directory || get_user_base_directory()
+    const blacklist_path = join(base_dir, '.claude', 'thread-blacklist.json')
+
+    const blacklist_content = readFileSync(blacklist_path, 'utf-8')
+    return JSON.parse(blacklist_content)
+  } catch (error) {
+    // File doesn't exist or can't be read - return null (no blacklist)
+    if (error.code === 'ENOENT') {
+      return null
+    }
+    // Other errors - log but don't fail
+    console.warn(`Warning: Could not load thread blacklist: ${error.message}`)
+    return null
+  }
+}
+
+/**
+ * Check if session/thread is blacklisted
+ * @param {string} session_id - Session ID to check
+ * @param {string} thread_id - Thread ID to check (optional)
+ * @param {Object} blacklist - Blacklist object
+ * @returns {boolean} True if blacklisted
+ */
+export function is_blacklisted(session_id, thread_id = null, blacklist = null) {
+  if (!blacklist) {
+    return false
+  }
+
+  // Check thread_id array (covers both session_ids and thread_ids for consistency)
+  if (blacklist.thread_id && Array.isArray(blacklist.thread_id)) {
+    if (blacklist.thread_id.includes(session_id)) {
+      return true
+    }
+    if (thread_id && blacklist.thread_id.includes(thread_id)) {
+      return true
+    }
+  }
+
+  // Check patterns (regex matching)
+  if (blacklist.patterns && Array.isArray(blacklist.patterns)) {
+    for (const pattern of blacklist.patterns) {
+      try {
+        const regex = new RegExp(pattern)
+        if (regex.test(session_id) || (thread_id && regex.test(thread_id))) {
+          return true
+        }
+      } catch (error) {
+        // Invalid regex pattern - skip it
+        console.warn(`Warning: Invalid blacklist pattern: ${pattern}`)
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Build filter function for date/session filtering with blacklist support
  * @param {Object} options - Filter options
+ * @param {string} options.user_base_directory - User base directory for blacklist loading
  * @returns {Function|null} Filter function or null if no filtering needed
  */
 export function build_session_filter(options = {}) {
-  const { session_id, from_date, to_date, max_entries } = options
+  const { session_id, from_date, to_date, max_entries, user_base_directory } =
+    options
 
-  if (!session_id && !from_date && !to_date && !max_entries) {
+  // Load blacklist if user_base_directory is provided
+  const blacklist = user_base_directory
+    ? load_thread_blacklist(user_base_directory)
+    : null
+
+  // If no filters and no blacklist, return null
+  if (!session_id && !from_date && !to_date && !max_entries && !blacklist) {
     return null
   }
 
   return (session) => {
+    // Check blacklist first
+    if (blacklist && is_blacklisted(session.session_id, null, blacklist)) {
+      return false
+    }
+
     // Filter by specific session ID
     if (session_id && session.session_id !== session_id) {
       return false
@@ -115,5 +194,7 @@ export function build_session_filter(options = {}) {
 
 export default {
   SHARED_DEFAULT_OPTIONS,
-  build_session_filter
+  build_session_filter,
+  load_thread_blacklist,
+  is_blacklisted
 }

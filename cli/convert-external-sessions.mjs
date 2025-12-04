@@ -393,14 +393,20 @@ export async function import_sessions(options = {}) {
     )
 
     if (provider === 'claude') {
-      const filter_sessions = build_session_filter(options)
+      const filter_sessions = build_session_filter({
+        ...options,
+        user_base_directory: options.user_base_directory
+      })
 
       return await import_claude_sessions_to_threads({
         ...options,
         filter_sessions
       })
     } else if (provider === 'cursor') {
-      const filter_conversations = build_session_filter(options)
+      const filter_conversations = build_session_filter({
+        ...options,
+        user_base_directory: options.user_base_directory
+      })
 
       return await import_cursor_conversations_to_threads({
         ...options,

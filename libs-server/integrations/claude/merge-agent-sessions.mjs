@@ -102,7 +102,9 @@ export const merge_agent_entries_into_parent = ({
     return parent_session
   }
 
-  log(`Merging ${agent_sessions.length} agents into session ${parent_session.session_id}`)
+  log(
+    `Merging ${agent_sessions.length} agents into session ${parent_session.session_id}`
+  )
 
   // Create a copy of parent entries to modify
   const merged_entries = [...parent_session.entries]
@@ -116,7 +118,9 @@ export const merge_agent_entries_into_parent = ({
     const agent_id = get_agent_id({ session: agent_session })
 
     if (!agent_id) {
-      log(`Warning: Could not get agent_id for session ${agent_session.session_id}`)
+      log(
+        `Warning: Could not get agent_id for session ${agent_session.session_id}`
+      )
       continue
     }
 
@@ -127,7 +131,9 @@ export const merge_agent_entries_into_parent = ({
     })
 
     if (!spawn_point) {
-      log_debug(`Could not find spawn point for agent ${agent_id}, appending entries at end`)
+      log_debug(
+        `Could not find spawn point for agent ${agent_id}, appending entries at end`
+      )
     }
 
     // Prepare agent entries with sidechain marking

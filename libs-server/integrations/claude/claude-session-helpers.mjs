@@ -50,6 +50,14 @@ export const find_claude_sessions_from_filesystem = async ({
     log_debug(`Using direct session file path: ${session_file}`)
     // Import specific file directly
     const sessions = await parse_claude_jsonl_file(session_file)
+    // Apply filter_sessions if provided (e.g., for blacklist checking)
+    if (filter_sessions && sessions.length > 0) {
+      const filtered = sessions.filter(filter_sessions)
+      log_debug(
+        `Filtered ${sessions.length} sessions to ${filtered.length} sessions`
+      )
+      return filtered
+    }
     return sessions
   }
 
