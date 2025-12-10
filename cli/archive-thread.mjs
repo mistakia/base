@@ -29,6 +29,9 @@ import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
+import { thread_constants } from '#libs-shared'
+
+const { THREAD_STATE, ARCHIVE_REASON } = thread_constants
 
 // Configure debugging
 const log = debug('cli:archive-thread')
@@ -97,16 +100,16 @@ const run = async ({ thread_id, completed, user_abandoned, reactivate }) => {
     let thread_state, reason
 
     if (reactivate) {
-      thread_state = 'active'
-      reason = 'reactivated'
+      thread_state = THREAD_STATE.ACTIVE
+      // No reason needed for reactivation - timeline entry shows state change
       log(`Reactivating thread ${thread_id}`)
     } else {
-      thread_state = 'archived'
+      thread_state = THREAD_STATE.ARCHIVED
       if (completed) {
-        reason = 'completed'
+        reason = ARCHIVE_REASON.COMPLETED
         log(`Archiving thread ${thread_id} as completed`)
       } else if (user_abandoned) {
-        reason = 'user_abandoned'
+        reason = ARCHIVE_REASON.USER_ABANDONED
         log(`Archiving thread ${thread_id} as user abandoned`)
       }
     }
@@ -114,7 +117,7 @@ const run = async ({ thread_id, completed, user_abandoned, reactivate }) => {
     const updated_thread = await update_thread_state({
       thread_id,
       thread_state,
-      reason
+      reason: reason || undefined // Only include reason when archiving
     })
 
     // Success messages

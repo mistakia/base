@@ -170,9 +170,21 @@ export function* set_thread_archive_state_saga({ payload }) {
     const { thread_id, archive_reason } = payload
 
     const thread_state = archive_reason ? 'archived' : 'active'
-    const reason = archive_reason || 'reactivated'
 
-    yield call(put_thread_state, { thread_id, thread_state, reason })
+    // When archiving, send archive_reason; when reactivating, no reason needed
+    if (thread_state === 'archived') {
+      yield call(put_thread_state, {
+        thread_id,
+        thread_state,
+        archive_reason
+      })
+    } else {
+      // Reactivating - no reason needed, timeline entry shows state change
+      yield call(put_thread_state, {
+        thread_id,
+        thread_state
+      })
+    }
     yield put(dialog_actions.cancel())
     yield call(get_thread, { thread_id })
   } catch (error) {

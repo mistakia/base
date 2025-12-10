@@ -20,7 +20,8 @@ describe('Entity Visibility CLI Tool', function () {
     this.timeout(15000)
 
     // Create temporary test directory
-    test_dir = await create_temp_test_directory()
+    const temp_result = create_temp_test_directory()
+    test_dir = temp_result.path
 
     // Path to CLI tool
     cli_path = path.resolve('./cli/entity-visibility.mjs')
@@ -111,8 +112,8 @@ This is a test entity for CLI testing.`
         `NODE_ENV=test node ${cli_path} set "${test_entity_path}" true`
       )
 
-      expect(stdout).to.include('✅')
-      expect(stdout).to.include('undefined → true')
+      expect(stdout).to.include('SUCCESS')
+      expect(stdout).to.include('undefined -> true')
 
       // Verify the file was updated
       const result = await read_entity_from_filesystem({
@@ -135,8 +136,8 @@ This is a test entity for CLI testing.`
         `NODE_ENV=test node ${cli_path} set "${test_entity_path}" false`
       )
 
-      expect(stdout).to.include('✅')
-      expect(stdout).to.include('true → false')
+      expect(stdout).to.include('SUCCESS')
+      expect(stdout).to.include('true -> false')
 
       // Verify the file was updated
       const result = await read_entity_from_filesystem({
@@ -157,7 +158,7 @@ This is a test entity for CLI testing.`
         `NODE_ENV=test node ${cli_path} set "${test_entity_path}" true`
       )
 
-      expect(stdout).to.include('✅')
+      expect(stdout).to.include('SUCCESS')
       expect(stdout).to.include('true (no change)')
     })
   })
@@ -173,8 +174,8 @@ This is a test entity for CLI testing.`
         `NODE_ENV=test node ${cli_path} set "${metadata_path}" true`
       )
 
-      expect(stdout).to.include('✅')
-      expect(stdout).to.include('undefined → true')
+      expect(stdout).to.include('SUCCESS')
+      expect(stdout).to.include('undefined -> true')
 
       // Verify the file was updated
       const content = await fs.readFile(metadata_path, 'utf8')
@@ -197,8 +198,8 @@ This is a test entity for CLI testing.`
         `NODE_ENV=test node ${cli_path} set "${metadata_path}" false`
       )
 
-      expect(stdout).to.include('✅')
-      expect(stdout).to.include('true → false')
+      expect(stdout).to.include('SUCCESS')
+      expect(stdout).to.include('true -> false')
 
       // Verify the file was updated
       const content = await fs.readFile(metadata_path, 'utf8')
@@ -243,7 +244,7 @@ Test content for ${path.basename(entity_path)}.`
 
       expect(stdout).to.include('Found')
       expect(stdout).to.include('file(s) to process')
-      expect(stdout).to.include('✅')
+      expect(stdout).to.include('SUCCESS')
 
       // Verify files were updated
       const files = await fs.readdir(test_dir)
@@ -282,9 +283,9 @@ Test content for ${path.basename(entity_path)}.`
         `NODE_ENV=test node ${cli_path} set "${test_entity_path}" true --dry-run`
       )
 
-      expect(stdout).to.include('🏃 Running in dry-run mode')
-      expect(stdout).to.include('🔍 [DRY RUN]')
-      expect(stdout).to.include('undefined → true')
+      expect(stdout).to.include('Running in dry-run mode')
+      expect(stdout).to.include('[DRY RUN]')
+      expect(stdout).to.include('undefined -> true')
       expect(stdout).to.include('Run without --dry-run to apply these changes')
 
       // Verify the file was NOT updated
@@ -320,8 +321,7 @@ Test content for ${path.basename(entity_path)}.`
         `NODE_ENV=test node ${cli_path} set "${non_existent}" true`
       )
 
-      expect(stdout).to.include('❌')
-      expect(stdout).to.include('File not found')
+      expect(stdout).to.include('No supported files found matching pattern')
     })
 
     it('should reject unsupported file types', async function () {
@@ -335,8 +335,7 @@ Test content for ${path.basename(entity_path)}.`
         `NODE_ENV=test node ${cli_path} set "${txt_file}" true`
       )
 
-      expect(stdout).to.include('❌')
-      expect(stdout).to.include('Unsupported file type')
+      expect(stdout).to.include('No supported files found matching pattern')
     })
   })
 
@@ -371,7 +370,7 @@ Summary test content.`
         `NODE_ENV=test node ${cli_path} set "${pattern}" true`
       )
 
-      expect(stdout).to.include('📊 Summary:')
+      expect(stdout).to.include('Summary:')
       expect(stdout).to.include('Successful: 2')
       expect(stdout).to.include('Failed: 0')
       expect(stdout).to.include('Changed: 2')

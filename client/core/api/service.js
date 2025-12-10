@@ -101,12 +101,20 @@ export const api = {
     }
   },
 
-  put_thread_state({ thread_id, thread_state, reason }) {
+  put_thread_state({ thread_id, thread_state, reason, archive_reason }) {
     const url = `${API_URL}/threads/${thread_id}/state`
+    const body_data = { thread_state }
+
+    // Send archive_reason when archiving (required), reason is optional for other state changes
+    if (thread_state === 'archived' && archive_reason) {
+      body_data.archive_reason = archive_reason
+    } else if (reason) {
+      body_data.reason = reason
+    }
     return {
       url,
       method: 'PUT',
-      body: JSON.stringify({ thread_state, reason }),
+      body: JSON.stringify(body_data),
       headers: {
         'Content-Type': 'application/json'
       }

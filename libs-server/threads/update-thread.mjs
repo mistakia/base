@@ -13,8 +13,12 @@ import {
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 
-const { THREAD_STATE, validate_thread_state, validate_archive_reason } =
-  thread_constants
+const {
+  THREAD_STATE,
+  ARCHIVE_REASON,
+  validate_thread_state,
+  validate_archive_reason
+} = thread_constants
 const log = debug('threads:update')
 
 /**
@@ -23,7 +27,7 @@ const log = debug('threads:update')
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID to update
  * @param {string} params.thread_state New thread state
- * @param {string} [params.reason] Reason for state change (for archived state, must be valid archive reason)
+ * @param {string} [params.reason] Reason for state change. Required when archiving (must be valid archive reason), optional otherwise
  * @returns {Promise<Object>} Updated thread data
  */
 export async function update_thread_state({ thread_id, thread_state, reason }) {
@@ -65,10 +69,15 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
   // Add thread_state-specific fields
   if (thread_state === THREAD_STATE.ARCHIVED) {
     metadata.archived_at = new Date().toISOString()
-    if (reason) {
-      validate_archive_reason(reason)
-      metadata.archive_reason = reason
+    // Require archive_reason when archiving
+    if (!reason) {
+      const valid_reasons = Object.values(ARCHIVE_REASON).join(', ')
+      throw new Error(
+        `archive_reason is required when archiving a thread. Must be one of: ${valid_reasons}`
+      )
     }
+    validate_archive_reason(reason)
+    metadata.archive_reason = reason
   }
 
   // Remove thread_state-specific fields if no longer applicable

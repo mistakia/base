@@ -101,8 +101,44 @@ async function process_file(file_path, public_read, dry_run = false) {
 }
 
 async function find_matching_files(pattern, user_base_directory) {
-  const base_dir = user_base_directory || process.cwd()
-  const matcher = picomatch(pattern)
+  // Check if pattern is an absolute path without glob characters (single file)
+  const has_glob_chars = /[*?[\]{}]/.test(pattern)
+
+  if (path.isAbsolute(pattern) && !has_glob_chars) {
+    // Single absolute file path - check if it exists and is supported
+    try {
+      const stat = await fs.stat(pattern)
+      if (
+        stat.isFile() &&
+        (is_markdown_file(pattern) || is_thread_metadata(pattern))
+      ) {
+        return [pattern]
+      }
+    } catch {
+      // File doesn't exist
+    }
+    return []
+  }
+
+  // Handle glob patterns
+  let base_dir
+  let match_pattern
+
+  if (path.isAbsolute(pattern)) {
+    // For absolute paths with globs, find the first directory without glob characters
+    const pattern_parts = pattern.split(path.sep)
+    const glob_start_index = pattern_parts.findIndex((part) =>
+      /[*?[\]{}]/.test(part)
+    )
+
+    base_dir = pattern_parts.slice(0, glob_start_index).join(path.sep) || '/'
+    match_pattern = pattern_parts.slice(glob_start_index).join(path.sep)
+  } else {
+    base_dir = user_base_directory || process.cwd()
+    match_pattern = pattern
+  }
+
+  const matcher = picomatch(match_pattern)
   const files = []
 
   async function walk_directory(dir, relative_path = '') {
@@ -111,7 +147,9 @@ async function find_matching_files(pattern, user_base_directory) {
 
       for (const entry of entries) {
         const full_path = path.join(dir, entry.name)
-        const rel_path = path.join(relative_path, entry.name)
+        const rel_path = relative_path
+          ? path.join(relative_path, entry.name)
+          : entry.name
 
         if (entry.isDirectory()) {
           await walk_directory(full_path, rel_path)
@@ -134,9 +172,9 @@ async function find_matching_files(pattern, user_base_directory) {
 }
 
 async function handle_set_command(argv) {
-  const { pattern, value, dry_run } = argv
+  const { pattern, value, dryRun } = argv
   const user_base_directory =
-    argv.user_base_directory || config.user_base_directory
+    argv.userBaseDirectory || config.user_base_directory
 
   if (!validate_boolean(value)) {
     console.error(
@@ -149,7 +187,7 @@ async function handle_set_command(argv) {
 
   console.log(`Finding files matching pattern: ${pattern}`)
   console.log(`Setting public_read to: ${public_read}`)
-  if (dry_run) {
+  if (dryRun) {
     console.log('Running in dry-run mode (no changes will be made)')
   }
   console.log()
@@ -167,7 +205,7 @@ async function handle_set_command(argv) {
 
   const results = []
   for (const file of files) {
-    const result = await process_file(file, public_read, dry_run)
+    const result = await process_file(file, public_read, dryRun)
     results.push(result)
 
     const filename = path.basename(result.file_path)
@@ -195,7 +233,7 @@ async function handle_set_command(argv) {
   console.log(`   Failed: ${failed}`)
   console.log(`   Changed: ${changed}`)
 
-  if (dry_run && changed > 0) {
+  if (dryRun && changed > 0) {
     console.log()
     console.log('Run without --dry-run to apply these changes')
   }

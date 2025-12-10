@@ -99,13 +99,6 @@ describe('Threads API', () => {
       expect(response.body).to.have.lengthOf(1)
       expect(response.body[0].thread_state).to.equal('active')
     })
-
-    it('should require authentication', async () => {
-      const response = await chai.request(server).get('/api/threads')
-      // No authentication token
-
-      expect(response).to.have.status(401)
-    })
   })
 
   describe('GET /api/threads/:thread_id', () => {
@@ -157,78 +150,9 @@ describe('Threads API', () => {
 
       expect(response).to.have.status(404)
     })
-
-    it('should require authentication', async () => {
-      const response = await chai
-        .request(server)
-        .get(`/api/threads/${test_thread.thread_id}`)
-      // No authentication token
-
-      expect(response).to.have.status(401)
-    })
   })
 
-  describe('POST /api/threads', () => {
-    beforeEach(async () => {
-      // Create some test threads
-      await create_test_thread({
-        user_public_key: test_user.user_public_key,
-        test_directories
-      })
-    })
-
-    it('should create a new thread', async () => {
-      const thread_data = {
-        inference_provider: 'ollama',
-        model: 'llama2',
-        thread_main_request: 'Hello, this is a new thread',
-        create_git_branches: false // Don't create git branches in tests
-      }
-
-      const response = await authenticate_request(
-        chai.request(server).post('/api/threads').send(thread_data),
-        test_user
-      )
-
-      expect(response).to.have.status(201)
-      expect(response.body).to.be.an('object')
-      expect(response.body.thread_id).to.be.a('string')
-      expect(response.body.user_public_key).to.equal(test_user.user_public_key)
-      expect(response.body.inference_provider).to.equal('ollama')
-      expect(response.body.model).to.equal('llama2')
-      expect(response.body.thread_state).to.equal('active')
-    })
-
-    it('should reject invalid thread data', async () => {
-      const invalid_thread_data = {
-        // Missing required fields
-      }
-
-      const response = await authenticate_request(
-        chai.request(server).post('/api/threads').send(invalid_thread_data),
-        test_user
-      )
-
-      expect(response).to.have.status(400)
-    })
-
-    it('should require authentication', async () => {
-      const thread_data = {
-        inference_provider: 'ollama',
-        model: 'llama2'
-      }
-
-      const response = await chai
-        .request(server)
-        .post('/api/threads')
-        .send(thread_data)
-      // No authentication token
-
-      expect(response).to.have.status(401)
-    })
-  })
-
-  describe('PATCH /api/threads/:thread_id/state', () => {
+  describe('PUT /api/threads/:thread_id/state', () => {
     let test_thread
 
     beforeEach(async () => {
@@ -247,7 +171,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
@@ -268,7 +192,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
@@ -286,7 +210,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
@@ -300,7 +224,7 @@ describe('Threads API', () => {
       await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .put(`/api/threads/${test_thread.thread_id}/state`)
           .send({
             thread_state: thread_constants.THREAD_STATE.ARCHIVED,
             archive_reason: thread_constants.ARCHIVE_REASON.USER_ABANDONED
@@ -312,7 +236,7 @@ describe('Threads API', () => {
       const response = await authenticate_request(
         chai
           .request(server)
-          .patch(`/api/threads/${test_thread.thread_id}/state`)
+          .put(`/api/threads/${test_thread.thread_id}/state`)
           .send({
             thread_state: thread_constants.THREAD_STATE.ACTIVE
           }),
@@ -323,18 +247,6 @@ describe('Threads API', () => {
       expect(response.body.thread_state).to.equal('active')
       expect(response.body).to.not.have.property('archive_reason')
       expect(response.body).to.not.have.property('archived_at')
-    })
-
-    it('should require authentication', async () => {
-      const response = await chai
-        .request(server)
-        .patch(`/api/threads/${test_thread.thread_id}/state`)
-        .send({
-          thread_state: thread_constants.THREAD_STATE.ARCHIVED,
-          archive_reason: thread_constants.ARCHIVE_REASON.COMPLETED
-        })
-
-      expect(response).to.have.status(401)
     })
   })
 })

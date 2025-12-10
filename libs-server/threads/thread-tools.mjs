@@ -44,11 +44,11 @@ export const archive_thread = async (params, context = {}) => {
 
   try {
     // Update thread state to archived
+    // Pass archive_reason as reason parameter (update_thread_state validates and stores it as archive_reason)
     const updated_thread = await update_thread_state({
       thread_id,
       thread_state: 'archived',
-      archive_reason,
-      reason: 'Thread archived via archive_thread tool'
+      reason: archive_reason
     })
 
     // Add timeline entry for archiving
