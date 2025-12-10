@@ -102,7 +102,7 @@ api.use('/api/threads', routes.threads)
 api.use('/api/users', routes.users)
 api.use('/api/tasks', routes.tasks)
 api.use('/api/tags', routes.tags)
-// api.use('/api/github', routes.github)
+api.use('/api/github', routes.github)
 api.use('/api/models', routes.models)
 api.use('/api/filesystem', routes.filesystem)
 

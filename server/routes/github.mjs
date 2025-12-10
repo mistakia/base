@@ -49,22 +49,7 @@ router.post('/webhooks', async (req, res) => {
       `Received webhook: ${req.headers['x-github-event']} - ${req.headers['x-github-delivery']}`
     )
 
-    // Check authorization if token is set
-    const webhook_token = config.github?.webhook_token
-    if (webhook_token) {
-      const auth_header = req.headers.authorization
-      const expected = `Bearer ${webhook_token}`
-
-      if (!auth_header || auth_header !== expected) {
-        log('Invalid or missing authorization token')
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid or missing authorization token'
-        })
-      }
-    }
-
-    // Verify GitHub signature if enabled
+    // Verify GitHub webhook signature
     const webhook_secret = config.github?.webhook_secret
     if (webhook_secret) {
       const is_valid = verify_github_signature(req, webhook_secret)
@@ -230,6 +215,7 @@ router.post('/webhooks', async (req, res) => {
           github_repository_name,
           issue_number
         ] = issue_url_match
+
         log(
           `Processing project card event for ${github_repository_owner}/${github_repository_name}#${issue_number}`
         )
