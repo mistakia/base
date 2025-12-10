@@ -5,13 +5,14 @@ import * as threads from '#libs-server/threads/index.mjs'
 import { check_thread_permission } from '#server/middleware/permissions.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 import {
-  check_user_permission,
+  check_thread_permission_for_user,
   check_create_threads_permission
 } from '#server/middleware/permission-checker.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import { thread_constants } from '#libs-shared'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -20,35 +21,16 @@ const log = debug('api:threads')
  * Helper functions
  */
 
-function build_thread_resource_path(thread_id) {
-  return `user:thread/${thread_id}`
-}
-
-async function check_thread_access_permission(user_public_key, thread_id) {
-  if (!user_public_key) return false
-
-  const thread_resource_path = build_thread_resource_path(thread_id)
-  const permission_result = await check_user_permission({
+async function apply_permission_based_redaction(thread, user_public_key) {
+  const permission_result = await check_thread_permission_for_user({
     user_public_key,
-    resource_path: thread_resource_path
+    thread_id: thread.thread_id
   })
 
-  return permission_result.allowed
-}
-
-async function apply_permission_based_redaction(thread, user_public_key) {
-  // Check if thread has public_read enabled first
-  if (thread.public_read === true) {
-    log(`Thread ${thread.thread_id} has public_read enabled, granting access`)
-    return thread
-  }
-
-  const has_permission = await check_thread_access_permission(
-    user_public_key,
-    thread.thread_id
-  )
-
-  if (!has_permission) {
+  if (!permission_result.allowed) {
+    log(
+      `Access denied to thread ${thread.thread_id}: ${permission_result.reason}`
+    )
     return redact_thread_data(thread)
   }
 
@@ -61,6 +43,27 @@ function handle_errors(res, error, operation) {
     error: `Failed to ${operation}`,
     message: error.message
   })
+}
+
+/**
+ * Handles validation errors for thread state updates
+ * Returns 400 status for validation errors, otherwise re-throws
+ */
+function handle_validation_error(error) {
+  if (
+    error.message.includes('Invalid archive reason') ||
+    error.message.includes('archive_reason is required')
+  ) {
+    return {
+      handled: true,
+      status: 400,
+      response: {
+        error: error.message,
+        message: error.message
+      }
+    }
+  }
+  return { handled: false }
 }
 
 function validate_table_state(table_state) {
@@ -113,13 +116,12 @@ router.get('/:thread_id', async (req, res) => {
     log(`Getting thread ${thread_id}`)
 
     const requesting_user_key = req.user?.user_public_key || null
-    const thread = await threads.get_thread({ thread_id })
 
-    // Apply permission-based redaction
-    const response_thread = await apply_permission_based_redaction(
-      thread,
-      requesting_user_key
-    )
+    // Pass user_public_key to get_thread so it can do proper permission checking
+    const response_thread = await threads.get_thread({
+      thread_id,
+      user_public_key: requesting_user_key
+    })
 
     log(`Thread retrieved successfully: ${thread_id}`)
     res.json(response_thread)
@@ -153,17 +155,54 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
       })
     }
 
-    // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
-    const state_reason = archive_reason || reason
+    // Validate archive_reason requirement when archiving
+    if (thread_state === thread_constants.THREAD_STATE.ARCHIVED) {
+      // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
+      const state_reason = archive_reason || reason
+      if (!state_reason) {
+        const valid_reasons = Object.values(
+          thread_constants.ARCHIVE_REASON
+        ).join(', ')
+        return res.status(400).json({
+          error: 'archive_reason is required',
+          message: `archive_reason is required when archiving a thread. Must be one of: ${valid_reasons}`
+        })
+      }
+      try {
+        const updated_thread = await threads.update_thread_state({
+          thread_id,
+          thread_state,
+          reason: state_reason
+        })
+        return res.json(updated_thread)
+      } catch (error) {
+        const validation_error = handle_validation_error(error)
+        if (validation_error.handled) {
+          return res
+            .status(validation_error.status)
+            .json(validation_error.response)
+        }
+        throw error
+      }
+    }
 
-    // Update thread state
-    const updated_thread = await threads.update_thread_state({
-      thread_id,
-      thread_state,
-      reason: state_reason
-    })
-
-    res.json(updated_thread)
+    // For non-archived states, reason is optional
+    try {
+      const updated_thread = await threads.update_thread_state({
+        thread_id,
+        thread_state,
+        reason: reason || undefined
+      })
+      return res.json(updated_thread)
+    } catch (error) {
+      const validation_error = handle_validation_error(error)
+      if (validation_error.handled) {
+        return res
+          .status(validation_error.status)
+          .json(validation_error.response)
+      }
+      throw error
+    }
   } catch (error) {
     handle_errors(res, error, 'updating thread state')
   }
@@ -322,12 +361,12 @@ router.post('/:thread_id/resume', async (req, res) => {
     }
 
     // Check permissions for this thread
-    const has_permission = await check_thread_access_permission(
+    const permission_result = await check_thread_permission_for_user({
       user_public_key,
       thread_id
-    )
+    })
 
-    if (!has_permission) {
+    if (!permission_result.allowed) {
       log(
         `User ${user_public_key} does not have permission to resume thread ${thread_id}`
       )

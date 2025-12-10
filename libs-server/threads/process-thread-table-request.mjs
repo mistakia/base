@@ -8,7 +8,7 @@ import { extract_thread_metadata } from '#libs-server/threads/thread-metadata-ex
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { DATA_TYPES } from '#libs-server/table-processing/sorting-utilities.mjs'
 import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
-import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
+import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('threads:table')
 
@@ -22,63 +22,11 @@ const THREAD_COLUMN_TYPES = {
 }
 
 /**
- * Keys to preserve when redacting thread data
- */
-const PRESERVED_KEYS = ['thread_id', 'thread_state', 'created_at', 'updated_at']
-
-/**
- * Keys to redact when user lacks permission
- */
-const REDACTED_KEYS = [
-  'title',
-  'short_description',
-  'thread_main_request',
-  'user_public_key'
-]
-
-/**
  * Default sorting configuration for thread tables
  */
 const DEFAULT_SORT = {
   column_id: 'created_at',
   desc: true
-}
-
-/**
- * Check if user has permission to view a thread
- * Uses the centralized thread permission checking logic
- *
- * @param {string} requesting_user_public_key - User's public key
- * @param {string} thread_id - Thread ID to check
- * @returns {Promise<boolean>} Whether user has permission
- */
-async function check_thread_permission_local(
-  requesting_user_public_key,
-  thread_id
-) {
-  try {
-    const result = await check_thread_permission_for_user({
-      user_public_key: requesting_user_public_key,
-      thread_id
-    })
-    return result.allowed
-  } catch (error) {
-    log(`Error checking permission for thread ${thread_id}: ${error.message}`)
-    return false
-  }
-}
-
-/**
- * Apply redaction to thread data when user lacks permission
- *
- * @param {Object} thread - Thread object to redact
- * @returns {Object} Redacted thread object
- */
-function redact_thread_data(thread) {
-  return redact_entity_object(thread, {
-    preserve_keys: PRESERVED_KEYS,
-    redact_keys: REDACTED_KEYS
-  })
 }
 
 /**
@@ -94,12 +42,18 @@ async function process_threads_with_permissions(
 ) {
   return Promise.all(
     threads.map(async (thread) => {
-      const has_permission = await check_thread_permission_local(
-        requesting_user_public_key,
-        thread.thread_id
-      )
-
-      return has_permission ? thread : redact_thread_data(thread)
+      try {
+        const result = await check_thread_permission_for_user({
+          user_public_key: requesting_user_public_key,
+          thread_id: thread.thread_id
+        })
+        return result.allowed ? thread : redact_thread_data(thread)
+      } catch (error) {
+        log(
+          `Error checking permission for thread ${thread.thread_id}: ${error.message}`
+        )
+        return redact_thread_data(thread)
+      }
     })
   )
 }

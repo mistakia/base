@@ -4,8 +4,8 @@ import config from '#config'
 
 import {
   check_user_permission,
+  check_thread_permission_for_user,
   map_filesystem_path_to_base_uri,
-  map_thread_id_to_base_uri,
   validate_thread_ownership
 } from './permission-checker.mjs'
 import {
@@ -107,14 +107,12 @@ export const check_thread_permission = () => {
         return next() // No specific thread, might be listing
       }
 
-      // Convert thread ID to base-uri
-      const resource_path = map_thread_id_to_base_uri(thread_id)
-      log(`Checking thread permission for ${resource_path}`)
+      log(`Checking thread permission for thread ${thread_id}`)
 
-      // Check read permission
-      const read_result = await check_user_permission({
+      // Check read permission using thread-specific permission checker
+      const read_result = await check_thread_permission_for_user({
         user_public_key,
-        resource_path
+        thread_id
       })
 
       // Check write permission (ownership)
@@ -126,7 +124,7 @@ export const check_thread_permission = () => {
       // Set structured access object
       req.access = {
         user_public_key,
-        resource_path,
+        resource_path: `user:thread/${thread_id}`,
         read_allowed: !!read_result.allowed,
         write_allowed: !!is_owner,
         reason: read_result.reason || null

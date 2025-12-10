@@ -122,9 +122,38 @@ export const get_user_permission_rules = async (user_public_key) => {
 }
 
 /**
- * Core permission checking logic with configurable public_read checking
+ * Default ownership checker for file-based entities
+ * Reads entity from filesystem and checks user_public_key property
+ *
+ * @param {string} resource_path - Base-URI path of the resource
+ * @returns {Promise<Object>} Object with owner_public_key or null
+ */
+const check_entity_ownership = async (resource_path) => {
+  try {
+    const absolute_path = resolve_base_uri(resource_path)
+    const entity_result = await read_entity_from_filesystem({ absolute_path })
+
+    if (
+      entity_result.success &&
+      entity_result.entity_properties?.user_public_key
+    ) {
+      return {
+        owner_public_key: entity_result.entity_properties.user_public_key
+      }
+    }
+  } catch (error) {
+    log(
+      `Error checking entity ownership for ${resource_path}: ${error.message}`
+    )
+  }
+  return { owner_public_key: null }
+}
+
+/**
+ * Core permission checking logic with configurable ownership and public_read checking
  *
  * Priority order:
+ * 0. Ownership check (user owns the resource)
  * 1. User-specific rules from users.json (authenticated users, excluding public user)
  *    - Only takes precedence if a rule actually matches
  * 2. public_read setting (entity file or custom checker)
@@ -135,44 +164,32 @@ export const get_user_permission_rules = async (user_public_key) => {
  * @param {Object} params - Parameters for permission check
  * @param {string|null} params.user_public_key - User's public key, null for public access
  * @param {string} params.resource_path - Base-URI path of the resource
+ * @param {Function} params.ownership_checker - Optional custom function to check ownership
  * @param {Function} params.public_read_checker - Optional custom function to check public_read
  * @returns {Object} Permission result with allowed status and reason
  */
 const check_permission_core = async ({
   user_public_key = null,
   resource_path,
+  ownership_checker = null,
   public_read_checker = null
 }) => {
   log(
     `Checking read permission for user: ${user_public_key || 'public'}, resource: ${resource_path}`
   )
 
-  // Step 0: Check if user is the owner of the resource (for file-based resources)
+  // Step 0: Check if user is the owner of the resource
   if (user_public_key && user_public_key !== 'public') {
-    try {
-      // Convert resource_path (base URI) back to absolute path for ownership check
-      const absolute_path = resolve_base_uri(resource_path)
-      const entity_result = await read_entity_from_filesystem({ absolute_path })
+    const ownership_result = ownership_checker
+      ? await ownership_checker(resource_path)
+      : await check_entity_ownership(resource_path)
 
-      if (
-        entity_result.success &&
-        entity_result.entity_properties?.user_public_key
-      ) {
-        const is_owner =
-          user_public_key === entity_result.entity_properties.user_public_key
-        if (is_owner) {
-          log(`User ${user_public_key} is owner of resource ${resource_path}`)
-          return {
-            allowed: true,
-            reason: 'User is owner of the resource'
-          }
-        }
+    if (ownership_result.owner_public_key === user_public_key) {
+      log(`User ${user_public_key} is owner of resource ${resource_path}`)
+      return {
+        allowed: true,
+        reason: 'User is owner of the resource'
       }
-    } catch (error) {
-      log(
-        `Error checking ownership for resource ${resource_path}: ${error.message}`
-      )
-      // Continue with regular permission check if ownership check fails
     }
   }
 
@@ -251,6 +268,7 @@ const check_permission_core = async ({
  * Note: This function is focused on read operations. Write permissions are limited to owner only.
  *
  * Priority order:
+ * 0. Ownership check (user owns the resource)
  * 1. User-specific rules from users.json (authenticated users, excluding public user)
  *    - Only takes precedence if a rule actually matches
  * 2. File public_read setting
@@ -336,6 +354,7 @@ export const check_user_permission_for_file = async ({
  * Checks if a user has permission to access a thread
  *
  * Priority order:
+ * 0. Ownership check (user owns the thread)
  * 1. User-specific rules from users.json (authenticated users, excluding public user)
  *    - Only takes precedence if a rule actually matches
  * 2. Thread metadata public_read setting
@@ -352,40 +371,45 @@ export const check_thread_permission_for_user = async ({
   user_public_key = null,
   thread_id
 }) => {
-  const thread_resource_path = `user:thread/${thread_id}`
+  const thread_resource_path = map_thread_id_to_base_uri(thread_id)
 
-  // Create a custom public_read checker for thread metadata
-  const check_thread_public_read = async (resource_path) => {
+  // Helper to read thread metadata (used by both ownership and public_read checks)
+  const read_thread_metadata = async () => {
+    const { get_thread_base_directory } = await import(
+      '#libs-server/threads/threads-constants.mjs'
+    )
+    const { read_json_file } = await import(
+      '#libs-server/threads/thread-utils.mjs'
+    )
+
+    const threads_dir = get_thread_base_directory()
+    const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
+    return read_json_file({ file_path: metadata_path })
+  }
+
+  // Custom ownership checker for thread metadata
+  const check_thread_ownership = async () => {
     try {
-      // Import thread utilities dynamically to avoid circular dependencies
-      const { get_thread_base_directory } = await import(
-        '#libs-server/threads/threads-constants.mjs'
+      const metadata = await read_thread_metadata()
+      return { owner_public_key: metadata.user_public_key || null }
+    } catch (error) {
+      log(`Error checking thread ownership for ${thread_id}: ${error.message}`)
+      return { owner_public_key: null }
+    }
+  }
+
+  // Custom public_read checker for thread metadata
+  const check_thread_public_read = async () => {
+    try {
+      const metadata = await read_thread_metadata()
+      const public_read = metadata.public_read
+      const is_explicit = public_read !== undefined && public_read !== null
+      const value = public_read === true
+
+      log(
+        `Thread ${thread_id} public_read status: explicit=${is_explicit}, value=${value}`
       )
-      const { read_json_file } = await import(
-        '#libs-server/threads/thread-utils.mjs'
-      )
-
-      const threads_dir = get_thread_base_directory()
-      const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
-
-      try {
-        const metadata = await read_json_file({ file_path: metadata_path })
-
-        // Check if public_read is explicitly set
-        const public_read = metadata.public_read
-        const is_explicit = public_read !== undefined && public_read !== null
-        const value = public_read === true
-
-        log(
-          `Thread ${thread_id} public_read status: explicit=${is_explicit}, value=${value}`
-        )
-        return { explicit: is_explicit, value }
-      } catch (metadata_error) {
-        log(
-          `Error reading metadata for thread ${thread_id}: ${metadata_error.message}`
-        )
-        return { explicit: false, value: false }
-      }
+      return { explicit: is_explicit, value }
     } catch (error) {
       log(
         `Error checking thread public_read for ${thread_id}: ${error.message}`
@@ -397,6 +421,7 @@ export const check_thread_permission_for_user = async ({
   return check_permission_core({
     user_public_key,
     resource_path: thread_resource_path,
+    ownership_checker: check_thread_ownership,
     public_read_checker: check_thread_public_read
   })
 }
