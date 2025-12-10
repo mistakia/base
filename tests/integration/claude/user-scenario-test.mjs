@@ -5,7 +5,9 @@ import { normalize_claude_session } from '#libs-server/integrations/claude/norma
 
 describe('User Scenario Test - Claude Interrupt Message', () => {
   it('should normalize the exact user scenario as system message', () => {
-    // This is the exact message from the user's request
+    // Test data with made-up paths (not real user-base paths)
+    const test_working_directory =
+      '/tmp/test-user-base/repository/active/test-project/worktrees/feature-branch-name'
     const claude_session = {
       session_id: 'e491f7ab-3fbe-42d5-84d7-cbb35a46881e',
       entries: [
@@ -13,7 +15,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
           parentUuid: '9d9bc176-b3ef-4cd5-9516-84034bdf1a96',
           isSidechain: false,
           userType: 'external',
-          cwd: '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data',
+          cwd: test_working_directory,
           sessionId: 'e491f7ab-3fbe-42d5-84d7-cbb35a46881e',
           version: '1.0.61',
           gitBranch: 'refactor/244-separate-rankings-adp-data',
@@ -34,7 +36,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
         }
       ],
       metadata: {
-        cwd: '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data',
+        cwd: test_working_directory,
         version: '1.0.61',
         user_type: 'external'
       }
@@ -53,9 +55,7 @@ describe('User Scenario Test - Claude Interrupt Message', () => {
     // Should preserve metadata properly
     expect(message.metadata.original_type).to.equal('user')
     expect(message.metadata.is_interrupt).to.be.true
-    expect(message.metadata.working_directory).to.equal(
-      '/Users/trashman/user-base/repository/active/league-worktrees/refactor-244-separate-rankings-adp-data'
-    )
+    expect(message.metadata.working_directory).to.equal(test_working_directory)
     expect(message.metadata.user_type).to.equal('external')
     expect(message.metadata.git_branch).to.equal(
       'refactor/244-separate-rankings-adp-data'

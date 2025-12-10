@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import config from '#config'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -10,8 +11,16 @@ const __dirname = path.dirname(__filename)
 // Configuration for enum detection
 const ENUM_MAX_UNIQUE_VALUES = 20
 
-// Path to thread directory
-const normalized_session_thread_directory = '/Users/trashman/user-base/thread'
+// Path to thread directory - use config to support test mode
+if (!config.user_base_directory) {
+  throw new Error(
+    'user_base_directory not configured. Set config.user_base_directory or NODE_ENV=test for test mode.'
+  )
+}
+const normalized_session_thread_directory = path.join(
+  config.user_base_directory,
+  'thread'
+)
 
 // Function to deep merge objects for session analysis
 const deep_merge_session_data = (

@@ -14,8 +14,10 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import './WorkingDirectoryPicker.styl'
 
+import { BASE_DIRECTORIES } from '@views/utils/base-uri-constants'
+
 // Constants
-const USER_BASE_ROOT = '/Users/trashman/user-base'
+const USER_BASE_ROOT = BASE_DIRECTORIES.user
 const THREAD_PATH_PREFIX = '/thread/'
 
 /**

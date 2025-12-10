@@ -4,10 +4,24 @@ export const BASE_URI_PATHS = {
   'sys:': '/repository/active/base'
 }
 
-// Base filesystem directories (should match config/config.json)
+// Base filesystem directories (injected at build time via webpack DefinePlugin)
+// These values MUST be provided via webpack DefinePlugin - no hardcoded fallbacks
+
+/* global USER_BASE_DIRECTORY, SYSTEM_BASE_DIRECTORY */
+if (typeof USER_BASE_DIRECTORY === 'undefined') {
+  throw new Error(
+    'USER_BASE_DIRECTORY is not defined. This must be injected via webpack DefinePlugin.'
+  )
+}
+if (typeof SYSTEM_BASE_DIRECTORY === 'undefined') {
+  throw new Error(
+    'SYSTEM_BASE_DIRECTORY is not defined. This must be injected via webpack DefinePlugin.'
+  )
+}
+
 export const BASE_DIRECTORIES = {
-  user: '/Users/trashman/user-base',
-  system: '/Users/trashman/user-base/repository/active/base'
+  user: USER_BASE_DIRECTORY,
+  system: SYSTEM_BASE_DIRECTORY
 }
 
 // Regex patterns for detecting base URI references

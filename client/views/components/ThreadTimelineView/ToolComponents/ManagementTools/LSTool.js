@@ -203,10 +203,11 @@ const LSTool = ({ tool_call_event, tool_result_event }) => {
     }
   })()
 
+  const working_directory = tool_call_event?.metadata?.working_directory || null
+
   const relative_path = format_relative_path({
     file_path: path,
-    working_directory:
-      '/Users/trashman/user-base/repository/active/mistakia/base-worktrees/feature-client-app-rebuild'
+    working_directory
   })
 
   const header_node = build_dual_tone_header({

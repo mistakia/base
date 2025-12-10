@@ -17,10 +17,11 @@ import {
   get_can_resume_thread
 } from '@core/app/selectors'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
+import { BASE_DIRECTORIES } from '@views/utils/base-uri-constants'
 import './GlobalThreadInput.styl'
 
 // Constants
-const DEFAULT_WORKING_DIRECTORY = '/Users/trashman/user-base'
+const DEFAULT_WORKING_DIRECTORY = BASE_DIRECTORIES.user
 const KEYBOARD_HINT = 'Cmd+Enter to send'
 const PLACEHOLDER_NEW_THREAD = 'What would you like Trashman Jr to do?'
 const PLACEHOLDER_CONTINUE = 'Continue thread...'
