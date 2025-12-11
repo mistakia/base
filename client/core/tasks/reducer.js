@@ -34,6 +34,30 @@ const DEFAULT_VIEWS = {
     view_name: 'All Tasks',
     table_state: DEFAULT_TASK_TABLE_STATE
   }),
+  open: create_view({
+    entity_prefix: 'task',
+    view_id: 'open',
+    view_name: 'Open Tasks',
+    table_state: create_default_table_state({
+      columns: [
+        'title',
+        'status',
+        'priority',
+        'finish_by',
+        'assigned_to',
+        'created_at',
+        'updated_at'
+      ],
+      sort: [{ column_id: 'created_at', desc: true }],
+      where: new List([
+        new Map({
+          column_id: 'status',
+          operator: TABLE_OPERATORS.NOT_IN,
+          value: [TASK_STATUS.COMPLETED, TASK_STATUS.ABANDONED]
+        })
+      ])
+    })
+  }),
   active: create_view({
     entity_prefix: 'task',
     view_id: 'active',
@@ -92,7 +116,7 @@ const TasksState = new Record({
 
   // Table views management
   task_table_views: new Map(DEFAULT_VIEWS),
-  selected_task_table_view_id: 'default',
+  selected_task_table_view_id: 'open',
   task_all_columns: Map(task_columns)
 })
 

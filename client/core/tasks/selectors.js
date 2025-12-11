@@ -9,7 +9,7 @@ export function get_tasks(state) {
 }
 
 export function get_selected_task_table_view_id(state) {
-  return get_tasks_state(state).get('selected_task_table_view_id') || 'default'
+  return get_tasks_state(state).get('selected_task_table_view_id') || 'open'
 }
 
 export function get_selected_task_table_view(state) {

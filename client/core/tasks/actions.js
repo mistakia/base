@@ -34,7 +34,7 @@ export const tasks_actions = {
     payload: { view_id }
   }),
 
-  load_tasks_table: ({ view_id = 'default', is_append = false } = {}) => ({
+  load_tasks_table: ({ view_id, is_append = false } = {}) => ({
     type: tasks_action_types.LOAD_TASKS_TABLE,
     payload: { view_id, is_append }
   })

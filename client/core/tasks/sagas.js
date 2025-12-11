@@ -10,11 +10,18 @@ export function* load_tasks({ payload }) {
 
 export function* load_tasks_table_data({ payload }) {
   try {
-    const { view_id = 'default', is_append = false } = payload
+    const tasks_state = yield select(get_tasks_state)
+    const { view_id, is_append = false } = payload || {}
+
+    // Use provided view_id or get selected view from state, defaulting to 'open'
+    const resolved_view_id =
+      view_id || tasks_state.get('selected_task_table_view_id') || 'open'
 
     // Use current table state from the specified view
-    const tasks_state = yield select(get_tasks_state)
-    const selected_view = tasks_state.getIn(['task_table_views', view_id])
+    const selected_view = tasks_state.getIn([
+      'task_table_views',
+      resolved_view_id
+    ])
     let table_state = selected_view.get('task_table_state')
     table_state = table_state?.toJS ? table_state.toJS() : table_state
 
@@ -32,7 +39,7 @@ export function* load_tasks_table_data({ payload }) {
     yield call(get_tasks_table, {
       table_state,
       is_append,
-      view_id
+      view_id: resolved_view_id
     })
   } catch (error) {
     console.error('Error loading tasks table data:', error)
@@ -45,9 +52,7 @@ export function* debounced_table_state_fetch({ payload }) {
     const tasks_state = yield select(get_tasks_state)
     const { view } = payload
     const view_id =
-      view?.view_id ||
-      tasks_state.get('selected_task_table_view_id') ||
-      'default'
+      view?.view_id || tasks_state.get('selected_task_table_view_id') || 'open'
     const selected_view = tasks_state.getIn(['task_table_views', view_id])
 
     // Use table_state from the view object if provided, otherwise from selected_view
