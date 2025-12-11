@@ -8,6 +8,7 @@ import { process_generic_table_request } from '#libs-server/table-processing/pro
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
 import { check_user_permission_for_file } from '#server/middleware/permission-checker.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
+import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 
 const log = debug('tasks:table')
 
@@ -200,6 +201,24 @@ function normalize_response(result, table_state) {
 }
 
 /**
+ * Custom get_value function for task table that handles priority sorting
+ * Maps priority strings to numeric order for proper sorting
+ */
+function get_task_value_for_sorting(item, column_id) {
+  const value = item[column_id]
+
+  // Special handling for priority column to use semantic ordering
+  if (column_id === 'priority') {
+    // Map priority string to numeric order (higher number = higher priority)
+    // This ensures Critical > High > Medium > Low > None
+    return TASK_PRIORITY_ORDER[value] ?? 0
+  }
+
+  // For all other columns, return the value as-is
+  return value
+}
+
+/**
  * Process table request with server-side filtering, sorting, and pagination
  */
 export async function process_task_table_request({
@@ -229,6 +248,7 @@ export async function process_task_table_request({
       data: tasks_with_permissions,
       table_state,
       extract_metadata: process_task_for_table,
+      get_value: get_task_value_for_sorting,
       default_sort: CONFIG.table.default_sort,
       column_types: CONFIG.column_types
     })

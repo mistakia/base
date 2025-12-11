@@ -48,7 +48,10 @@ const DEFAULT_VIEWS = {
         'created_at',
         'updated_at'
       ],
-      sort: [{ column_id: 'created_at', desc: true }],
+      sort: [
+        { column_id: 'priority', desc: true },
+        { column_id: 'finish_by', desc: false }
+      ],
       where: new List([
         new Map({
           column_id: 'status',
