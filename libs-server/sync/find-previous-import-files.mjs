@@ -13,18 +13,21 @@ const log = debug('sync:history:find-previous-import-files')
  * @param {string} options.external_system - Name of external system
  * @param {string} options.entity_id - Entity UUID
  * @param {string} [options.import_history_base_directory=null] - Optional override for base directory
+ * @param {string} [options.import_source=null] - Optional import source identifier
  * @returns {Promise<Object|null>} Previous import info
  */
 export async function find_previous_import_files({
   external_system,
   entity_id,
-  import_history_base_directory = null
+  import_history_base_directory = null,
+  import_source = null
 }) {
   try {
     const dir_paths = get_import_directory_paths({
       external_system,
       entity_id,
-      import_history_base_directory
+      import_history_base_directory,
+      import_source
     })
 
     // Check if raw directory exists

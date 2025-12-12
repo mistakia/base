@@ -17,6 +17,7 @@ const log = debug('sync:save-import-data')
  * @param {Object} options.raw_data - Raw import data
  * @param {Object} [options.processed_data=null] - Processed/normalized data
  * @param {string} [options.import_history_base_directory=null] - Optional override for base directory
+ * @param {string} [options.import_source=null] - Optional import source identifier
  * @returns {Promise<Object>} Import info object
  */
 export async function save_import_data({
@@ -24,14 +25,16 @@ export async function save_import_data({
   entity_id,
   raw_data,
   processed_data = null,
-  import_history_base_directory = null
+  import_history_base_directory = null,
+  import_source = null
 }) {
   try {
     // Get directory paths
     const dir_paths = get_import_directory_paths({
       external_system,
       entity_id,
-      import_history_base_directory
+      import_history_base_directory,
+      import_source
     })
 
     // Create directories if they don't exist

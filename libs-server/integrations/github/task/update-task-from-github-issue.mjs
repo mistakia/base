@@ -69,6 +69,10 @@ export async function update_task_from_github_issue({
     // Use the external update time from the GitHub issue
     const external_update_time = github_issue.updated_at
 
+    // Determine import source based on whether project_number is provided
+    // This separates import history for issues vs project imports
+    const import_source = github_project_number ? 'project' : 'issues'
+
     // Use the generalized entity update function
     const update_result = await update_entity_from_external_item({
       external_item: github_issue,
@@ -80,6 +84,7 @@ export async function update_task_from_github_issue({
       external_update_time,
       import_cid,
       import_history_base_directory,
+      import_source,
       trx,
       force
     })

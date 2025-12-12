@@ -24,6 +24,7 @@ const log = debug('sync:update-external')
  * @param {Date} options.external_update_time - When the external item was last updated
  * @param {string} [options.import_cid] - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
+ * @param {string} [options.import_source] - Import source identifier (e.g., 'issues', 'project') to separate import histories
  * @param {Object} [options.trx=null] - Optional database transaction
  * @param {boolean} [options.force=false] - Force update all tasks regardless of content
  * @returns {Promise<Object>} - The update result with conflict information
@@ -39,6 +40,7 @@ export async function update_entity_from_external_item({
   external_update_time,
   import_cid = null,
   import_history_base_directory = null,
+  import_source = null,
   trx = null,
   force = false
 }) {
@@ -109,7 +111,8 @@ export async function update_entity_from_external_item({
     const previous_import = await find_previous_import_files({
       external_system,
       entity_id,
-      import_history_base_directory
+      import_history_base_directory,
+      import_source
     })
 
     const internal_updates = detect_field_changes({
@@ -130,7 +133,8 @@ export async function update_entity_from_external_item({
         entity_id,
         raw_data: external_item,
         processed_data: entity_properties,
-        import_history_base_directory
+        import_history_base_directory,
+        import_source
       })
     }
 
@@ -246,33 +250,39 @@ export async function update_entity_from_external_item({
         }
       }
 
-      const merged_properties = {
-        ...existing_entity_properties,
-        ...updates_to_apply
-      }
-
-      // Only update updated_at if there are actual changes to apply
-      // This prevents unnecessary timestamp updates when nothing changed
+      // Only proceed with update if there are actual changes to apply
+      // This prevents unnecessary updates when all differences are in ignored fields
       const has_actual_changes = Object.keys(updates_to_apply).length > 0
 
-      if (has_actual_changes || force) {
-        // There are actual changes or force update requested, so update the timestamp
+      if (!has_actual_changes && !force) {
+        // No actual changes to apply (all differences were in ignored fields)
+        // Skip the update entirely, including not updating updated_at
+        log(
+          `Skipping update for ${entity_type} ${external_id} - no actual changes after ignoring project-specific fields`
+        )
+      } else {
+        const merged_properties = {
+          ...existing_entity_properties,
+          ...updates_to_apply
+        }
+
+        // Update updated_at since we have actual changes to apply
         merged_properties.updated_at = new Date().toISOString()
+
+        const cleaned_properties = remove_stale_external_properties(
+          merged_properties,
+          entity_properties,
+          external_system
+        )
+
+        await write_entity_to_filesystem({
+          entity_properties: cleaned_properties,
+          entity_type,
+          absolute_path,
+          entity_content:
+            entity_content || existing_entity_result.entity_content
+        })
       }
-      // Otherwise, preserve existing updated_at (already in merged_properties from existing_entity_properties)
-
-      const cleaned_properties = remove_stale_external_properties(
-        merged_properties,
-        entity_properties,
-        external_system
-      )
-
-      await write_entity_to_filesystem({
-        entity_properties: cleaned_properties,
-        entity_type,
-        absolute_path,
-        entity_content: entity_content || existing_entity_result.entity_content
-      })
     }
 
     // Determine what needs to be synced back to external system
