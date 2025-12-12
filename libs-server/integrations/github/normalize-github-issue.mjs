@@ -348,8 +348,23 @@ export function normalize_github_issue({
   }
 
   // Add GitHub-specific fields
+  // Handle two different ID formats:
+  // - GraphQL node ID format: "I_kwDOD4Pg485mtEYT" (starts with "I_")
+  // - REST API numeric ID: 1723090451 (pure number)
   if (issue.id) {
-    normalized_github_issue.github_id = issue.id
+    const id_string = String(issue.id)
+    // Check if it's a GraphQL node ID (starts with "I_")
+    if (id_string.startsWith('I_')) {
+      // Store GraphQL node ID separately
+      normalized_github_issue.github_graphql_id = issue.id
+      // Use databaseId for numeric ID if available (from GraphQL)
+      if (issue.databaseId) {
+        normalized_github_issue.github_api_id = issue.databaseId
+      }
+    } else {
+      // Numeric ID from REST API
+      normalized_github_issue.github_api_id = issue.id
+    }
   }
 
   if (issue.number) {

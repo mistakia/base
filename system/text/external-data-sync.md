@@ -106,7 +106,7 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 
 - **Detection**: Tasks lacking `external_id` but containing `github_repository_owner` and `github_repository_name`
 - **API Integration**: GitHub Issues REST API for issue creation with title, body, and labels
-- **File Updates**: Atomic addition of `external_id`, `github_number`, `github_id`, and `github_url` fields
+- **File Updates**: Atomic addition of `external_id`, `github_number`, `github_api_id` (or `github_graphql_id`), and `github_url` fields
 - **Error Handling**: Preserves local state on GitHub API failures; validates required metadata before creation
 
 ## Notion Sync Implementation

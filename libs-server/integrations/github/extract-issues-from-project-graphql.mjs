@@ -28,7 +28,8 @@ export const extract_issues_from_project_graphql = (project_data) => {
 
     // Convert GraphQL issue format to REST API format for compatibility
     const normalized_issue = {
-      id: issue.id,
+      id: issue.id, // GraphQL node ID (e.g., "I_kwDOD4Pg485mtEYT")
+      databaseId: issue.databaseId, // Numeric ID from GraphQL (e.g., 1723090451)
       number: issue.number,
       title: issue.title,
       body: issue.body || issue.bodyText,

@@ -100,6 +100,7 @@ export const get_github_project = async ({
               content {
                 ... on Issue {
                   id
+                  databaseId
                   url
                   number
                   title

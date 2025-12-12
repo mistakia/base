@@ -201,6 +201,51 @@ export async function update_entity_from_external_item({
         }
       }
 
+      // Handle priority preservation for GitHub imports
+      // Preserve existing priority if it's more specific than "None",
+      // to prevent overwriting project-imported priorities when importing from issues directly
+      if (
+        external_system === 'github' &&
+        entity_properties.priority &&
+        existing_entity_properties.priority &&
+        entity_properties.priority === 'None' &&
+        existing_entity_properties.priority !== 'None'
+      ) {
+        log(
+          `Preserving existing priority '${existing_entity_properties.priority}' instead of overwriting with 'None' from issue import`
+        )
+        // Remove priority from updates_to_apply to preserve existing priority
+        delete updates_to_apply.priority
+      }
+
+      // Preserve project-specific fields that may not be in issue imports
+      // These are handled by PRESERVE_IF_EXISTS_PROPERTIES in clean-entity-properties,
+      // but we also need to ensure they're not overwritten in updates_to_apply
+      if (external_system === 'github') {
+        const project_fields_to_preserve = [
+          'github_graphql_id',
+          'github_project_item_id',
+          'github_project_number',
+          'finish_by',
+          'start_by'
+        ]
+
+        for (const field of project_fields_to_preserve) {
+          if (
+            existing_entity_properties[field] &&
+            !(field in entity_properties)
+          ) {
+            // Field exists in existing entity but not in new properties - preserve it
+            // Don't add to updates_to_apply, it will be preserved from existing_entity_properties
+            log(
+              `Preserving existing ${field} '${existing_entity_properties[field]}' as it's not in new import data`
+            )
+            // Ensure it's not in updates_to_apply (which would overwrite it)
+            delete updates_to_apply[field]
+          }
+        }
+      }
+
       const merged_properties = {
         ...existing_entity_properties,
         ...updates_to_apply

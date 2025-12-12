@@ -87,7 +87,7 @@ export async function create_github_issue_from_task({
       ...entity_properties,
       external_id,
       external_url: github_issue.html_url,
-      github_id: github_issue.id,
+      github_api_id: github_issue.id, // REST API returns numeric ID
       github_number: github_issue.number,
       github_url: github_issue.html_url,
       updated_at: new Date().toISOString()

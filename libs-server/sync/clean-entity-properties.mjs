@@ -36,7 +36,11 @@ const LOCAL_ONLY_PROPERTIES = new Set([
  */
 const PRESERVE_IF_EXISTS_PROPERTIES = new Set([
   'github_project_item_id', // Preserve project item ID even when importing from issues
-  'github_project_number' // Preserve project number even when importing from issues
+  'github_project_number', // Preserve project number even when importing from issues
+  'github_graphql_id', // Preserve GraphQL node ID even when importing from REST API
+  'priority', // Preserve priority set from projects even when importing from issues
+  'finish_by', // Preserve due date from projects even when importing from issues
+  'start_by' // Preserve start date from projects even when importing from issues
 ])
 
 /**
