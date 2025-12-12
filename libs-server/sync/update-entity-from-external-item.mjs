@@ -172,6 +172,35 @@ export async function update_entity_from_external_item({
         updates_to_apply.tags = merged_tags
       }
 
+      // Handle status preservation for GitHub imports
+      // Preserve existing status if it's more specific than "No status",
+      // unless the issue state has changed (e.g., closed -> Completed)
+      if (
+        external_system === 'github' &&
+        entity_properties.status &&
+        existing_entity_properties.status &&
+        entity_properties.status === 'No status' &&
+        existing_entity_properties.status !== 'No status'
+      ) {
+        // Check if the issue is closed - if so, we should update to Completed
+        // Otherwise, preserve the existing more specific status (likely from project import)
+        if (external_item && external_item.state === 'closed') {
+          // Issue is closed, so status should be Completed - allow the update
+          log(
+            `Issue is closed, updating status from '${existing_entity_properties.status}' to Completed`
+          )
+          // Don't override - let the normalized status (Completed) be applied
+        } else {
+          // Issue is open but normalized to "No status" - preserve existing more specific status
+          // This prevents overwriting project-imported statuses when importing from issues directly
+          log(
+            `Preserving existing status '${existing_entity_properties.status}' instead of overwriting with 'No status' from issue import`
+          )
+          // Remove status from updates_to_apply to preserve existing status
+          delete updates_to_apply.status
+        }
+      }
+
       const merged_properties = {
         ...existing_entity_properties,
         ...updates_to_apply

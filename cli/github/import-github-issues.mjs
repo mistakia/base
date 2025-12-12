@@ -69,6 +69,7 @@ export default async function import_github_issues({
   github_repository_name,
   github_token,
   user_public_key,
+  user_base_directory = config.user_base_directory,
   state = 'all',
   single_issue = null,
   start_page = 1,
@@ -188,6 +189,7 @@ export default async function import_github_issues({
       github_repository_owner,
       github_repository_name,
       user_public_key,
+      user_base_directory,
       import_history_base_directory,
       github_token,
       force,
@@ -262,6 +264,11 @@ const main = async () => {
         type: 'boolean',
         default: false
       })
+      .option('user-base-directory', {
+        describe: 'User base directory path',
+        type: 'string',
+        default: config.user_base_directory
+      })
       .help().argv
 
     const results = await import_github_issues({
@@ -269,6 +276,7 @@ const main = async () => {
       github_repository_name: args.repo,
       github_token: args.token || config.github_access_token,
       user_public_key: args.userPublicKey || config.user_public_key,
+      user_base_directory: args.userBaseDirectory || config.user_base_directory,
       state: args.state,
       verbose: args.verbose,
       force: args.force

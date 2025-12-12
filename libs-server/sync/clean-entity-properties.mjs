@@ -18,8 +18,26 @@ const PROTECTED_PROPERTIES = new Set([
 
 /**
  * Properties that are managed locally and not synced from external systems
+ * These properties should never be removed or overwritten by external imports
  */
-const LOCAL_ONLY_PROPERTIES = new Set(['tags', 'relations', 'observations'])
+const LOCAL_ONLY_PROPERTIES = new Set([
+  'tags',
+  'relations',
+  'observations',
+  'base_uri', // Local filesystem path identifier
+  'import_cid', // Content identifier for import tracking
+  'public_read' // Local access control setting
+])
+
+/**
+ * Properties that should be preserved if they exist, even if not in new external data
+ * These are typically metadata properties that may be set from different import sources
+ * (e.g., project imports vs issue imports) and should be preserved across imports
+ */
+const PRESERVE_IF_EXISTS_PROPERTIES = new Set([
+  'github_project_item_id', // Preserve project item ID even when importing from issues
+  'github_project_number' // Preserve project number even when importing from issues
+])
 
 /**
  * Remove stale properties that are no longer present in external data
@@ -54,6 +72,8 @@ export function remove_stale_external_properties(
       !PROTECTED_PROPERTIES.has(key) &&
       // Not a local-only property
       !LOCAL_ONLY_PROPERTIES.has(key) &&
+      // Not a preserve-if-exists property (preserve metadata from other import sources)
+      !PRESERVE_IF_EXISTS_PROPERTIES.has(key) &&
       // Not undefined/null (already clean)
       value !== undefined &&
       value !== null
@@ -87,6 +107,25 @@ export function add_protected_property(property_name) {
  */
 export function add_local_only_property(property_name) {
   LOCAL_ONLY_PROPERTIES.add(property_name)
+}
+
+/**
+ * Add a property to the preserve-if-exists properties set
+ * Use this for properties that should be preserved if they exist, even if not in new external data
+ *
+ * @param {string} property_name - Property name to preserve if exists
+ */
+export function add_preserve_if_exists_property(property_name) {
+  PRESERVE_IF_EXISTS_PROPERTIES.add(property_name)
+}
+
+/**
+ * Get the current set of preserve-if-exists properties
+ *
+ * @returns {Set<string>} Preserve-if-exists property names
+ */
+export function get_preserve_if_exists_properties() {
+  return new Set(PRESERVE_IF_EXISTS_PROPERTIES)
 }
 
 /**
