@@ -190,6 +190,7 @@ export async function sync_github_issue_to_task({
         external_id,
         import_cid,
         import_history_base_directory,
+        github_project_number,
         comments
       })
 

@@ -17,6 +17,7 @@ const log = debug('github:task')
  * @param {string} options.external_id - External identifier for the issue
  * @param {string} options.import_cid - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
+ * @param {string} [options.github_project_number] - GitHub project number (if importing from project)
  * @param {Object} [options.trx=null] - Optional database transaction
  * @returns {Promise<Object>} - The created task data with entity_id
  */
@@ -30,6 +31,7 @@ export async function create_task_from_github_issue({
   external_id,
   import_cid,
   import_history_base_directory = null,
+  github_project_number = null,
   trx = null
 }) {
   try {
@@ -71,6 +73,10 @@ export async function create_task_from_github_issue({
       github_issue_title: github_issue.title
     })
 
+    // Determine import source based on whether project_number is provided
+    // This separates import history for issues vs project imports
+    const import_source = github_project_number ? 'project' : 'issues'
+
     // Use the generic entity creation function
     const result = await create_entity_from_external_item({
       external_item: github_issue,
@@ -82,6 +88,7 @@ export async function create_task_from_github_issue({
       user_public_key,
       import_cid,
       import_history_base_directory,
+      import_source,
       trx
     })
 

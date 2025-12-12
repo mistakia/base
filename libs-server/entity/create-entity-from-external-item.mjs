@@ -18,6 +18,7 @@ const log = debug('entity:external')
  * @param {string} options.user_public_key - The user public key creating the entity
  * @param {string} [options.import_cid] - Content identifier for import
  * @param {string} [options.import_history_base_directory] - Base directory for import history
+ * @param {string} [options.import_source] - Import source identifier (e.g., 'issues', 'project') to separate import histories
  * @param {Object} [options.trx=null] - Optional database transaction
  * @returns {Promise<Object>} - The created entity data with entity_id
  */
@@ -32,6 +33,7 @@ export async function create_entity_from_external_item({
   user_public_key,
   import_cid,
   import_history_base_directory = null,
+  import_source = null,
   trx = null
 }) {
   try {
@@ -101,7 +103,8 @@ export async function create_entity_from_external_item({
       entity_id,
       raw_data: external_item,
       processed_data: entity_properties,
-      import_history_base_directory
+      import_history_base_directory,
+      import_source
     })
 
     return {

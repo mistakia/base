@@ -3,8 +3,8 @@
 /**
  * Import History Cleanup Script
  *
- * This script manages import history files by limiting the number of files
- * retained for each entity. Supports filtering by external system or entity ID.
+ * Manages import history files by limiting retention per entity.
+ * Supports both flat structure (notion) and nested structure with import sources (github).
  */
 
 import debug from 'debug'
@@ -20,11 +20,11 @@ import { list_import_history_files } from '#libs-server/sync/list-import-history
 
 const log = debug('cli:import-history:cleanup')
 
+// Parse command line arguments
 const argv = yargs(hideBin(process.argv))
   .option('external-system', {
-    describe: 'Filter by external system (github, notion)',
-    type: 'string',
-    choices: ['github', 'notion']
+    describe: 'Filter by external system (e.g., github, notion)',
+    type: 'string'
   })
   .option('entity-id', {
     describe: 'Process specific entity ID only',
@@ -66,7 +66,7 @@ const argv = yargs(hideBin(process.argv))
     'Keep 5 most recent files for GitHub entities'
   )
   .example(
-    '$0 --entity-id abc123 --dry-run',
+    '$0 --entity-id abc123 --external-system github --dry-run',
     'Preview cleanup for specific entity'
   )
   .example(
@@ -78,9 +78,7 @@ if (argv.verbose) {
   debug.enable('cli:import-history:cleanup')
 }
 
-/**
- * Format bytes to human readable format
- */
+// Utility functions
 function format_bytes(bytes) {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -89,13 +87,9 @@ function format_bytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
-/**
- * Display summary statistics
- */
+// Display functions
 function display_summary(summary) {
-  log('Displaying import history summary')
   console.log('Import History Summary:\n')
-
   console.log(`Total entities: ${summary.entities_total}`)
   console.log(
     `Entities with excess files: ${summary.entities_with_excess_files}`
@@ -108,7 +102,6 @@ function display_summary(summary) {
   if (Object.keys(summary.by_system).length > 0) {
     console.log('\nBy External System:')
     console.log('─'.repeat(50))
-
     for (const [system, stats] of Object.entries(summary.by_system)) {
       console.log(`\n${system}:`)
       console.log(`  Entities: ${stats.entities}`)
@@ -119,55 +112,55 @@ function display_summary(summary) {
   }
 }
 
-/**
- * Display entity list
- */
 function display_entity_list(entities) {
-  log(`Displaying entity list with ${entities.length} entities`)
   console.log(`Import History Entities (${entities.length}):\n`)
 
-  // Group by external system
-  const by_system = {}
+  // Group by external system and import source
+  const grouped = {}
   for (const entity of entities) {
-    if (!by_system[entity.external_system]) {
-      by_system[entity.external_system] = []
+    const key = `${entity.external_system}${entity.import_source ? `:${entity.import_source}` : ''}`
+    if (!grouped[key]) {
+      grouped[key] = []
     }
-    by_system[entity.external_system].push(entity)
+    grouped[key].push(entity)
   }
 
-  for (const [system, system_entities] of Object.entries(by_system)) {
-    console.log(`\n${system} (${system_entities.length} entities)`)
+  for (const [key, system_entities] of Object.entries(grouped)) {
+    const [system, import_source] = key.includes(':')
+      ? key.split(':')
+      : [key, null]
+    const label = import_source ? `${system} (${import_source})` : system
+    console.log(`\n${label} (${system_entities.length} entities)`)
     console.log('─'.repeat(50))
 
     for (const entity of system_entities) {
       console.log(`\nEntity ID: ${entity.entity_id}`)
+      if (entity.import_source) {
+        console.log(`  Import source: ${entity.import_source}`)
+      }
       console.log(`  Directory: ${entity.entity_import_directory}`)
       console.log(`  Raw files: ${entity.raw_files.length}`)
       console.log(`  Processed files: ${entity.processed_files.length}`)
       console.log(`  Total files: ${entity.total_files}`)
 
       if (entity.raw_files.length > 0) {
-        const latest_raw = entity.raw_files[0]
+        const latest = entity.raw_files[0]
         console.log(
-          `  Latest raw: ${latest_raw.filename} (${format_bytes(latest_raw.size)})`
+          `  Latest raw: ${latest.filename} (${format_bytes(latest.size)})`
         )
       }
 
       if (entity.processed_files.length > 0) {
-        const latest_processed = entity.processed_files[0]
+        const latest = entity.processed_files[0]
         console.log(
-          `  Latest processed: ${latest_processed.filename} (${format_bytes(latest_processed.size)})`
+          `  Latest processed: ${latest.filename} (${format_bytes(latest.size)})`
         )
       }
     }
   }
 }
 
-/**
- * Display cleanup results
- */
 function display_results(results) {
-  log('Displaying cleanup results')
   console.log('\nCleanup Results:')
   console.log('─'.repeat(50))
   console.log(`Entities processed: ${results.entities_processed}`)
@@ -188,9 +181,6 @@ function display_results(results) {
   }
 }
 
-/**
- * Prompt for confirmation
- */
 async function confirm_cleanup(summary) {
   if (argv.force) {
     return true
@@ -218,9 +208,6 @@ async function confirm_cleanup(summary) {
   })
 }
 
-/**
- * Validate arguments
- */
 function validate_arguments() {
   if (argv['entity-id'] && !argv['external-system']) {
     console.error(
@@ -240,9 +227,7 @@ function validate_arguments() {
   }
 }
 
-/**
- * Main execution
- */
+// Main execution
 async function main() {
   try {
     log('Starting import history cleanup script')
@@ -261,51 +246,41 @@ async function main() {
     console.log('Analyzing import history...')
 
     if (argv.list) {
-      // List entities and their import files
-      log('Listing import history files')
       const entities = await list_import_history_files(options)
       display_entity_list(entities)
       return
     }
 
     if (argv.summary) {
-      // Show summary statistics only
-      log('Showing summary statistics only')
       const summary = await get_cleanup_summary(options)
       display_summary(summary)
       return
     }
 
     // Get summary for confirmation
-    log('Getting cleanup summary for confirmation')
     const summary = await get_cleanup_summary(options)
     display_summary(summary)
 
     // Confirm cleanup
     const confirmed = await confirm_cleanup(summary)
     if (!confirmed) {
-      log('Cleanup cancelled by user')
       console.log('\nCleanup cancelled.')
       return
     }
 
     // Perform cleanup
-    log('Performing cleanup with dry_run:', argv['dry-run'])
     console.log('\nCleaning up import history files...')
     const results = await cleanup_import_history_files({
       ...options,
       dry_run: argv['dry-run']
     })
 
-    // Display results
     display_results(results)
 
     if (results.total_files_deleted > 0 && !argv['dry-run']) {
-      log('Cleanup completed successfully')
       console.log('\nCleanup completed successfully!')
     }
   } catch (error) {
-    log('Error during cleanup:', error.message)
     console.error('\nError during cleanup:', error.message)
     if (argv.verbose) {
       console.error(error.stack)
@@ -314,5 +289,4 @@ async function main() {
   }
 }
 
-// Run the script
 main()

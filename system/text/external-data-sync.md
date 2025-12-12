@@ -63,6 +63,37 @@ Import history files use `{timestamp}_{content_id}.json` format where:
 - Content ID: SHA-256 hash of file contents
 - Enables chronological sorting and content-based deduplication
 
+### Import History Directory Structure
+
+The system supports flexible directory structures to accommodate different external systems:
+
+**Flat Structure** (used by systems like Notion):
+
+```
+import-history/
+  └── notion/
+      └── {entity_id}/
+          ├── raw/
+          └── processed/
+```
+
+**Nested Structure with Import Sources** (used by systems like GitHub):
+
+```
+import-history/
+  └── github/
+      ├── issues/
+      │   └── {entity_id}/
+      │       ├── raw/
+      │       └── processed/
+      └── project/
+          └── {entity_id}/
+              ├── raw/
+              └── processed/
+```
+
+The system automatically discovers the structure by scanning directories. Import sources (like `issues` and `project` for GitHub) allow separating import histories for different pathways within the same external system, enabling independent tracking and cleanup while maintaining logical grouping under the parent system.
+
 ## Process Flow
 
 ### Change Detection Sequence
@@ -177,9 +208,17 @@ node cli/import-history/cleanup-import-history.mjs
 
 **Filtering Options**:
 
-- `--external-system`: Target specific sync system (github, notion)
+- `--external-system`: Target specific sync system (e.g., github, notion)
 - `--entity-id`: Process single entity when combined with external-system
 - `--keep-count`: Number of files to retain per entity (default: 10)
+
+**Structure Support**:
+
+The cleanup script automatically handles both flat and nested directory structures:
+
+- Systems with flat structure (like Notion) store entities directly under the system directory
+- Systems with nested structure (like GitHub) use import sources to separate pathways (e.g., `issues` vs `project`)
+- The script discovers and processes all structures automatically without requiring configuration
 
 **Operational Modes**:
 

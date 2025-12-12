@@ -29,13 +29,35 @@ export async function list_import_history_files({
 
     if (entity_id && external_system) {
       // List files for specific entity
-      const entity_files = await list_entity_import_files({
+      // First check without import_source (for systems that use flat structure)
+      const entity_files_no_source = await list_entity_import_files({
         external_system,
         entity_id,
+        import_history_base_directory,
+        import_source: null
+      })
+
+      if (entity_files_no_source && entity_files_no_source.total_files > 0) {
+        results.push(entity_files_no_source)
+      }
+
+      // Then check all discovered import sources for this system
+      const import_sources = await discover_import_sources_for_system({
+        external_system,
         import_history_base_directory
       })
-      if (entity_files) {
-        results.push(entity_files)
+
+      for (const import_source of import_sources) {
+        const entity_files = await list_entity_import_files({
+          external_system,
+          entity_id,
+          import_history_base_directory,
+          import_source
+        })
+
+        if (entity_files && entity_files.total_files > 0) {
+          results.push(entity_files)
+        }
       }
     } else {
       // List files for all entities in system(s)
@@ -66,18 +88,21 @@ export async function list_import_history_files({
  * @param {string} options.external_system - External system name
  * @param {string} options.entity_id - Entity UUID
  * @param {string} [options.import_history_base_directory] - Optional override for base directory
+ * @param {string} [options.import_source] - Optional import source identifier
  * @returns {Promise<Object|null>} Entity import files info or null if not found
  */
 async function list_entity_import_files({
   external_system,
   entity_id,
-  import_history_base_directory = null
+  import_history_base_directory = null,
+  import_source = null
 }) {
   try {
     const dir_paths = get_import_directory_paths({
       external_system,
       entity_id,
-      import_history_base_directory
+      import_history_base_directory,
+      import_source
     })
 
     // Check if entity import directory exists
@@ -143,6 +168,7 @@ async function list_entity_import_files({
     return {
       external_system,
       entity_id,
+      import_source,
       entity_import_directory: dir_paths.entity_import_directory,
       raw_files,
       processed_files,
@@ -156,6 +182,7 @@ async function list_entity_import_files({
 
 /**
  * List import files for all entities in an external system
+ * Automatically discovers structure: flat (entity_id directly) or nested (import_source/entity_id)
  *
  * @param {Object} options - Function options
  * @param {string} options.external_system - External system name
@@ -180,22 +207,71 @@ async function list_system_import_files({
       return results
     }
 
-    // List all entity directories
-    const entity_dirs = fs.readdirSync(system_directory).filter((item) => {
-      const full_path = path.join(system_directory, item)
-      return fs.statSync(full_path).isDirectory()
+    // Discover import sources by scanning directory structure
+    const import_sources = await discover_import_sources_for_system({
+      external_system,
+      import_history_base_directory
     })
 
-    // Process each entity directory
-    for (const entity_id of entity_dirs) {
-      const entity_files = await list_entity_import_files({
-        external_system,
-        entity_id,
-        import_history_base_directory
+    // UUID pattern: 8-4-4-4-12 hex characters
+    const uuid_pattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // Process each import source directory (nested structure)
+    for (const import_source of import_sources) {
+      const import_source_path = path.join(system_directory, import_source)
+
+      if (!fs.existsSync(import_source_path)) {
+        continue
+      }
+
+      // List all entity_id subdirectories within this import_source
+      const entity_dirs = fs.readdirSync(import_source_path).filter((item) => {
+        const full_path = path.join(import_source_path, item)
+        return fs.statSync(full_path).isDirectory()
       })
 
-      if (entity_files && entity_files.total_files > 0) {
-        results.push(entity_files)
+      for (const entity_id of entity_dirs) {
+        if (uuid_pattern.test(entity_id)) {
+          const entity_files = await list_entity_import_files({
+            external_system,
+            entity_id,
+            import_history_base_directory,
+            import_source
+          })
+
+          if (entity_files && entity_files.total_files > 0) {
+            results.push(entity_files)
+          }
+        }
+      }
+    }
+
+    // Also check for entities directly in system directory (flat structure)
+    // Skip directories that are import sources
+    const direct_entity_dirs = fs
+      .readdirSync(system_directory)
+      .filter((item) => {
+        const full_path = path.join(system_directory, item)
+        if (!fs.statSync(full_path).isDirectory()) {
+          return false
+        }
+        // Skip import_source directories we already processed
+        return !import_sources.includes(item)
+      })
+
+    for (const entity_id of direct_entity_dirs) {
+      if (uuid_pattern.test(entity_id)) {
+        const entity_files = await list_entity_import_files({
+          external_system,
+          entity_id,
+          import_history_base_directory,
+          import_source: null
+        })
+
+        if (entity_files && entity_files.total_files > 0) {
+          results.push(entity_files)
+        }
       }
     }
 
@@ -230,6 +306,77 @@ async function get_available_external_systems(
     })
   } catch (error) {
     log(`Error getting available external systems: ${error.message}`)
+    return []
+  }
+}
+
+/**
+ * Discover import sources for an external system by scanning directory structure
+ * This automatically detects whether a system uses flat structure (notion)
+ * or nested structure with import sources (github with issues/project)
+ *
+ * @param {Object} options - Function options
+ * @param {string} options.external_system - External system name
+ * @param {string} [options.import_history_base_directory] - Optional override for base directory
+ * @returns {Promise<Array<string>>} Array of discovered import source identifiers
+ */
+async function discover_import_sources_for_system({
+  external_system,
+  import_history_base_directory = null
+}) {
+  try {
+    const dir_paths = get_system_import_directory_paths({
+      external_system,
+      import_history_base_directory
+    })
+
+    const system_directory = dir_paths.external_system_import_directory
+
+    if (!fs.existsSync(system_directory)) {
+      return []
+    }
+
+    const import_sources = []
+    const uuid_pattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // Scan system directory for subdirectories
+    const subdirs = fs.readdirSync(system_directory).filter((item) => {
+      const full_path = path.join(system_directory, item)
+      return fs.statSync(full_path).isDirectory()
+    })
+
+    for (const subdir of subdirs) {
+      const subdir_path = path.join(system_directory, subdir)
+
+      // Check if this subdirectory contains entity_id subdirectories
+      // If it does, it's an import_source directory (nested structure)
+      const subdir_contents = fs.readdirSync(subdir_path).filter((item) => {
+        const full_path = path.join(subdir_path, item)
+        return fs.statSync(full_path).isDirectory()
+      })
+
+      // If subdirectory contains UUID-like directories, it's an import_source
+      const contains_entity_ids = subdir_contents.some((item) =>
+        uuid_pattern.test(item)
+      )
+
+      // Also check if it doesn't directly contain 'raw' or 'processed' directories
+      // (which would indicate it's an entity_id directory, not an import_source)
+      const has_raw_or_processed =
+        fs.existsSync(path.join(subdir_path, 'raw')) ||
+        fs.existsSync(path.join(subdir_path, 'processed'))
+
+      if (contains_entity_ids && !has_raw_or_processed) {
+        import_sources.push(subdir)
+      }
+    }
+
+    return import_sources
+  } catch (error) {
+    log(
+      `Error discovering import sources for ${external_system}: ${error.message}`
+    )
     return []
   }
 }
