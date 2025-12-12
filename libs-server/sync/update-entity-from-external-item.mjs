@@ -206,6 +206,16 @@ export async function update_entity_from_external_item({
         ...updates_to_apply
       }
 
+      // Only update updated_at if there are actual changes to apply
+      // This prevents unnecessary timestamp updates when nothing changed
+      const has_actual_changes = Object.keys(updates_to_apply).length > 0
+
+      if (has_actual_changes || force) {
+        // There are actual changes or force update requested, so update the timestamp
+        merged_properties.updated_at = new Date().toISOString()
+      }
+      // Otherwise, preserve existing updated_at (already in merged_properties from existing_entity_properties)
+
       const cleaned_properties = remove_stale_external_properties(
         merged_properties,
         entity_properties,

@@ -57,7 +57,11 @@ export function format_entity_properties_to_frontmatter({
 
   // Add auto-generated timestamp fields
   frontmatter.created_at = entity_properties.created_at || now
-  frontmatter.updated_at = now
+  // Preserve existing updated_at if provided (and not null), otherwise set to now
+  // This allows callers to control when updated_at changes while ensuring schema compliance
+  // Treat null the same as undefined since updated_at is required and auto-generated
+  frontmatter.updated_at =
+    entity_properties.updated_at != null ? entity_properties.updated_at : now
 
   // Add optional base fields if present
   if (entity_properties.permalink !== undefined) {

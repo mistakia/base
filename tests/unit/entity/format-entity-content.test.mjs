@@ -48,6 +48,44 @@ describe('Entity Content Formatting', () => {
       expect(result.updated_at).to.not.equal(created_at) // Should be current time
     })
 
+    it('should use existing updated_at when provided', () => {
+      const updated_at = '2023-02-01T00:00:00.000Z'
+      const entity_properties = {
+        entity_id: uuid(),
+        title: 'Test Entity',
+        description: 'Test description',
+        user_public_key: 'abc123',
+        updated_at
+      }
+
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
+        entity_type: 'test'
+      })
+
+      expect(result.updated_at).to.equal(updated_at)
+    })
+
+    it('should treat null updated_at the same as undefined and default to now', () => {
+      const entity_properties = {
+        entity_id: uuid(),
+        title: 'Test Entity',
+        description: 'Test description',
+        user_public_key: 'abc123',
+        updated_at: null
+      }
+
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
+        entity_type: 'test'
+      })
+
+      // Should default to current time, not null (since updated_at is required)
+      expect(result.updated_at).to.be.a('string')
+      expect(result.updated_at).to.not.be.null
+      expect(result.updated_at).to.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) // ISO format
+    })
+
     it('should include all optional base fields when provided', () => {
       const entity_properties = {
         entity_id: uuid(),
