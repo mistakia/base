@@ -422,6 +422,20 @@ export function normalize_github_issue({
   // Extract fields from project item if available
   if (project_item) {
     const extracted_fields = extract_project_fields(project_item)
+
+    // CRITICAL: Don't override status if issue is closed
+    // When an issue is closed, the status should always be COMPLETED
+    // Project status should only override when issue is open
+    const project_status = extracted_fields.status
+    if (project_status && issue.state === 'closed') {
+      // Issue is closed, so status should remain COMPLETED (from map_status)
+      // Don't override with project status which might be "Planned" or other
+      log(
+        `Issue #${issue.number} is closed, preserving COMPLETED status instead of project status "${project_status}"`
+      )
+      delete extracted_fields.status
+    }
+
     Object.assign(normalized_github_issue, extracted_fields)
 
     // Add project metadata

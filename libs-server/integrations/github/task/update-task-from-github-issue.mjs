@@ -85,16 +85,47 @@ export async function update_task_from_github_issue({
     })
 
     // Sync local changes back to GitHub if they don't conflict with external changes
+    // CRITICAL: Don't sync status back if it was just updated from GitHub
+    // This prevents feedback loops when project status changes trigger webhooks
+    // CRITICAL: Never sync status back if the issue is closed - this prevents reopening closed issues
     if (update_result.sync_to_external) {
-      log(`Syncing local changes back to GitHub issue #${github_issue.number}`)
-      await sync_task_to_github_issue({
-        github_issue_number: github_issue.number,
-        github_repository_owner,
-        github_repository_name,
-        updates: update_result.sync_to_external,
-        github_token,
-        github_project_number
-      })
+      const sync_updates = { ...update_result.sync_to_external }
+
+      // If status was updated from GitHub (internal_updates has status),
+      // don't sync it back immediately to prevent feedback loops
+      if (update_result.internal_updates?.status && sync_updates.status) {
+        log(
+          `Status was just updated from GitHub (${update_result.internal_updates.status.to}), skipping sync back to prevent feedback loop`
+        )
+        delete sync_updates.status
+      }
+
+      // CRITICAL: Never sync status changes back if the issue is closed
+      // This prevents reopening closed issues when project status differs from issue state
+      if (github_issue.state === 'closed' && sync_updates.status) {
+        log(
+          `Issue #${github_issue.number} is closed, skipping status sync back to prevent reopening (would sync: ${sync_updates.status.to || sync_updates.status})`
+        )
+        delete sync_updates.status
+      }
+
+      if (Object.keys(sync_updates).length > 0) {
+        log(
+          `Syncing local changes back to GitHub issue #${github_issue.number}`
+        )
+        await sync_task_to_github_issue({
+          github_issue_number: github_issue.number,
+          github_repository_owner,
+          github_repository_name,
+          updates: sync_updates,
+          github_token,
+          github_project_number
+        })
+      } else {
+        log(
+          `No changes to sync back to GitHub issue #${github_issue.number} (all changes were from GitHub)`
+        )
+      }
     }
 
     return update_result

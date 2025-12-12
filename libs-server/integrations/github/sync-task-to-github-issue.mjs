@@ -325,11 +325,22 @@ function format_github_issue_update_data({ updates }) {
 
   if ('status' in updates) {
     // Handle status updates based on the 'to' value
-    github_update_data.state =
+    // CRITICAL: Never set state to 'open' if we're trying to update a closed issue
+    // This should be prevented upstream, but this is a defensive check
+    const new_state =
       updates.status.to === TASK_STATUS.COMPLETED ||
       updates.status.to === TASK_STATUS.ABANDONED
         ? 'closed'
         : 'open'
+
+    github_update_data.state = new_state
+
+    // Log a warning if we're about to reopen an issue (shouldn't happen due to upstream checks)
+    if (new_state === 'open' && updates.status.from === TASK_STATUS.COMPLETED) {
+      log(
+        `WARNING: Attempting to reopen issue with status change from ${updates.status.from} to ${updates.status.to}. This should be prevented upstream.`
+      )
+    }
   }
 
   // Handle tag updates if present
