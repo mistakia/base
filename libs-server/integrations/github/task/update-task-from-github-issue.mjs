@@ -6,6 +6,96 @@ import { sync_task_to_github_issue } from '../sync-task-to-github-issue.mjs'
 const log = debug('github:task')
 
 /**
+ * Validates required parameters
+ */
+function validate_required_params({
+  github_issue,
+  github_repository_owner,
+  github_repository_name,
+  external_id,
+  absolute_path,
+  user_base_directory
+}) {
+  const required = {
+    github_issue,
+    github_repository_owner,
+    github_repository_name,
+    external_id,
+    absolute_path,
+    user_base_directory
+  }
+
+  for (const [name, value] of Object.entries(required)) {
+    if (!value) {
+      throw new Error(`Missing required parameter: ${name}`)
+    }
+  }
+}
+
+/**
+ * Prepares sync updates by filtering out status when it shouldn't be synced back
+ */
+function prepare_sync_updates({
+  sync_to_external,
+  internal_updates,
+  github_issue
+}) {
+  if (!sync_to_external) {
+    return null
+  }
+
+  const sync_updates = { ...sync_to_external }
+  const issue_state = github_issue.state?.toLowerCase()
+
+  // Don't sync status back if it was just updated from GitHub (prevents feedback loops)
+  if (internal_updates?.status && sync_updates.status) {
+    log(
+      `Status was just updated from GitHub (${internal_updates.status.to}), skipping sync back to prevent feedback loop`
+    )
+    delete sync_updates.status
+  }
+
+  // Never sync status back if issue is closed (prevents reopening closed issues)
+  if (issue_state === 'closed' && sync_updates.status) {
+    log(
+      `Issue #${github_issue.number} is closed, skipping status sync back to prevent reopening (would sync: ${sync_updates.status.to || sync_updates.status})`
+    )
+    delete sync_updates.status
+  }
+
+  return Object.keys(sync_updates).length > 0 ? sync_updates : null
+}
+
+/**
+ * Syncs local changes back to GitHub if needed
+ */
+async function sync_changes_to_github({
+  sync_updates,
+  github_issue,
+  github_repository_owner,
+  github_repository_name,
+  github_token,
+  github_project_number
+}) {
+  if (!sync_updates) {
+    log(
+      `No changes to sync back to GitHub issue #${github_issue.number} (all changes were from GitHub)`
+    )
+    return
+  }
+
+  log(`Syncing local changes back to GitHub issue #${github_issue.number}`)
+  await sync_task_to_github_issue({
+    github_issue_number: github_issue.number,
+    github_repository_owner,
+    github_repository_name,
+    updates: sync_updates,
+    github_token,
+    github_project_number
+  })
+}
+
+/**
  * Updates an existing task from GitHub issue changes with conflict resolution
  *
  * @param {Object} options - Function options
@@ -39,104 +129,48 @@ export async function update_task_from_github_issue({
   github_project_number = null,
   force = false
 }) {
-  try {
-    log(`Updating task from GitHub issue #${github_issue.number}`)
+  log(`Updating task from GitHub issue #${github_issue.number}`)
 
-    if (!github_issue) {
-      throw new Error('Missing required parameter: github_issue')
-    }
+  validate_required_params({
+    github_issue,
+    github_repository_owner,
+    github_repository_name,
+    external_id,
+    absolute_path,
+    user_base_directory
+  })
 
-    if (!github_repository_owner) {
-      throw new Error('Missing required parameter: github_repository_owner')
-    }
+  const import_source = github_project_number ? 'project' : 'issues'
 
-    if (!github_repository_name) {
-      throw new Error('Missing required parameter: github_repository_name')
-    }
+  const update_result = await update_entity_from_external_item({
+    external_item: github_issue,
+    entity_properties: normalized_github_issue,
+    entity_type: 'task',
+    external_system: 'github',
+    external_id,
+    absolute_path,
+    external_update_time: github_issue.updated_at,
+    import_cid,
+    import_history_base_directory,
+    import_source,
+    trx,
+    force
+  })
 
-    if (!user_base_directory) {
-      throw new Error('Missing required parameter: user_base_directory')
-    }
+  const sync_updates = prepare_sync_updates({
+    sync_to_external: update_result.sync_to_external,
+    internal_updates: update_result.internal_updates,
+    github_issue
+  })
 
-    if (!external_id) {
-      throw new Error('Missing required parameter: external_id')
-    }
+  await sync_changes_to_github({
+    sync_updates,
+    github_issue,
+    github_repository_owner,
+    github_repository_name,
+    github_token,
+    github_project_number
+  })
 
-    if (!absolute_path) {
-      throw new Error('Missing required parameter: absolute_path')
-    }
-
-    // Use the external update time from the GitHub issue
-    const external_update_time = github_issue.updated_at
-
-    // Determine import source based on whether project_number is provided
-    // This separates import history for issues vs project imports
-    const import_source = github_project_number ? 'project' : 'issues'
-
-    // Use the generalized entity update function
-    const update_result = await update_entity_from_external_item({
-      external_item: github_issue,
-      entity_properties: normalized_github_issue,
-      entity_type: 'task',
-      external_system: 'github',
-      external_id,
-      absolute_path,
-      external_update_time,
-      import_cid,
-      import_history_base_directory,
-      import_source,
-      trx,
-      force
-    })
-
-    // Sync local changes back to GitHub if they don't conflict with external changes
-    // CRITICAL: Don't sync status back if it was just updated from GitHub
-    // This prevents feedback loops when project status changes trigger webhooks
-    // CRITICAL: Never sync status back if the issue is closed - this prevents reopening closed issues
-    if (update_result.sync_to_external) {
-      const sync_updates = { ...update_result.sync_to_external }
-
-      // If status was updated from GitHub (internal_updates has status),
-      // don't sync it back immediately to prevent feedback loops
-      if (update_result.internal_updates?.status && sync_updates.status) {
-        log(
-          `Status was just updated from GitHub (${update_result.internal_updates.status.to}), skipping sync back to prevent feedback loop`
-        )
-        delete sync_updates.status
-      }
-
-      // CRITICAL: Never sync status changes back if the issue is closed
-      // This prevents reopening closed issues when project status differs from issue state
-      if (github_issue.state === 'closed' && sync_updates.status) {
-        log(
-          `Issue #${github_issue.number} is closed, skipping status sync back to prevent reopening (would sync: ${sync_updates.status.to || sync_updates.status})`
-        )
-        delete sync_updates.status
-      }
-
-      if (Object.keys(sync_updates).length > 0) {
-        log(
-          `Syncing local changes back to GitHub issue #${github_issue.number}`
-        )
-        await sync_task_to_github_issue({
-          github_issue_number: github_issue.number,
-          github_repository_owner,
-          github_repository_name,
-          updates: sync_updates,
-          github_token,
-          github_project_number
-        })
-      } else {
-        log(
-          `No changes to sync back to GitHub issue #${github_issue.number} (all changes were from GitHub)`
-        )
-      }
-    }
-
-    return update_result
-  } catch (error) {
-    console.log(error)
-    log(`Error updating task from GitHub issue: ${error.message}`)
-    throw error
-  }
+  return update_result
 }

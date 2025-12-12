@@ -6,16 +6,23 @@ import { extract_issue_relationships } from './extract-issue-relationships.mjs'
 const log = debug('normalize-github-issue')
 
 /**
- * Field mappings between internal task fields and GitHub issue fields
+ * Normalize GitHub issue state to lowercase for consistent comparison
+ *
+ * @param {Object} issue - GitHub issue object
+ * @returns {string|null} Normalized state or null
  */
-// TODO currently not used
-export const github_field_mappings = {
-  title: 'title',
-  description: 'body',
-  status: map_status,
-  priority: map_priority,
-  finish_by: null, // GitHub doesn't have native due date
-  start_by: null // GitHub doesn't have native start date
+function get_issue_state(issue) {
+  return issue?.state?.toLowerCase() || null
+}
+
+/**
+ * Check if GitHub issue is closed
+ *
+ * @param {Object} issue - GitHub issue object
+ * @returns {boolean} True if issue is closed
+ */
+function is_issue_closed(issue) {
+  return get_issue_state(issue) === 'closed'
 }
 
 /**
@@ -103,39 +110,23 @@ export function format_priority(priority_string) {
 }
 
 /**
- * Extract status from GitHub label
+ * Extract value from GitHub label by splitting on ':' or '/' and formatting
  *
  * @param {string} label_name - Label name
- * @returns {string} Extracted status
+ * @param {Function} formatter - Formatter function (format_status or format_priority)
+ * @returns {string} Extracted and formatted value
  */
-function extract_status_from_label(label_name) {
+function extract_value_from_label(label_name, formatter) {
   const name_lower = label_name.toLowerCase()
+  let value = name_lower
 
   if (name_lower.includes(':')) {
-    return format_status(name_lower.split(':')[1].trim())
+    value = name_lower.split(':')[1].trim()
   } else if (name_lower.includes('/')) {
-    return format_status(name_lower.split('/')[1].trim())
-  } else {
-    return format_status(name_lower)
+    value = name_lower.split('/')[1].trim()
   }
-}
 
-/**
- * Extract priority from GitHub label
- *
- * @param {string} label_name - Label name
- * @returns {string} Extracted priority
- */
-function extract_priority_from_label(label_name) {
-  const name_lower = label_name.toLowerCase()
-
-  if (name_lower.includes(':')) {
-    return format_priority(name_lower.split(':')[1].trim())
-  } else if (name_lower.includes('/')) {
-    return format_priority(name_lower.split('/')[1].trim())
-  } else {
-    return format_priority(name_lower)
-  }
+  return formatter(value)
 }
 
 /**
@@ -176,7 +167,7 @@ function find_matching_label({ labels, prefixes = [], exact_matches = [] }) {
 export function map_status({ data, direction = 'to_internal' }) {
   if (direction === 'to_internal') {
     // Extract from GitHub
-    if (data.state === 'closed') {
+    if (is_issue_closed(data)) {
       return TASK_STATUS.COMPLETED
     }
 
@@ -190,7 +181,7 @@ export function map_status({ data, direction = 'to_internal' }) {
       })
 
       if (status_label) {
-        return extract_status_from_label(status_label.name)
+        return extract_value_from_label(status_label.name, format_status)
       }
     }
 
@@ -232,7 +223,7 @@ export function map_priority({ data, direction = 'to_internal' }) {
     })
 
     if (priority_label) {
-      return extract_priority_from_label(priority_label.name)
+      return extract_value_from_label(priority_label.name, format_priority)
     }
 
     return TASK_PRIORITY.NONE
@@ -247,42 +238,62 @@ export function map_priority({ data, direction = 'to_internal' }) {
 }
 
 /**
+ * Field name mappings for project fields
+ */
+const PROJECT_FIELD_MAPPINGS = {
+  status: {
+    names: ['Status'],
+    extractor: (field_value) =>
+      field_value.name ? format_status(field_value.name) : null
+  },
+  priority: {
+    names: ['Priority'],
+    extractor: (field_value) =>
+      field_value.name ? format_priority(field_value.name) : null
+  },
+  finish_by: {
+    names: ['Due Date', 'finish_by', 'Finish By'],
+    extractor: (field_value) => field_value.date || null
+  },
+  start_by: {
+    names: ['Start Date', 'start_by', 'Start By'],
+    extractor: (field_value) => field_value.date || null
+  }
+}
+
+/**
  * Extract project field data from GitHub issue
  *
  * @param {Object} project_item - GitHub project item
  * @returns {Object} Extracted field values
  */
 export function extract_project_fields(project_item) {
-  if (!project_item) return {}
+  if (!project_item?.fieldValues?.nodes) return {}
 
   const extracted_fields = {}
+  const field_name_map = new Map()
+
+  // Build reverse mapping: field name -> field key
+  for (const [key, config] of Object.entries(PROJECT_FIELD_MAPPINGS)) {
+    for (const name of config.names) {
+      field_name_map.set(name.toLowerCase(), {
+        key,
+        extractor: config.extractor
+      })
+    }
+  }
 
   // Extract fields from project item
-  if (project_item.fieldValues && project_item.fieldValues.nodes) {
-    for (const field_value of project_item.fieldValues.nodes) {
-      if (!field_value.field) continue
+  for (const field_value of project_item.fieldValues.nodes) {
+    if (!field_value?.field?.name) continue
 
-      const field_name = field_value.field.name
+    const field_name_lower = field_value.field.name.toLowerCase()
+    const mapping = field_name_map.get(field_name_lower)
 
-      // Handle different field types
-      if (field_name === 'Status' && field_value.name) {
-        extracted_fields.status = format_status(field_value.name)
-      } else if (field_name === 'Priority' && field_value.name) {
-        extracted_fields.priority = format_priority(field_value.name)
-      } else if (
-        (field_name === 'Due Date' ||
-          field_name === 'finish_by' ||
-          field_name === 'Finish By') &&
-        field_value.date
-      ) {
-        extracted_fields.finish_by = field_value.date
-      } else if (
-        (field_name === 'Start Date' ||
-          field_name === 'start_by' ||
-          field_name === 'Start By') &&
-        field_value.date
-      ) {
-        extracted_fields.start_by = field_value.date
+    if (mapping) {
+      const value = mapping.extractor(field_value)
+      if (value) {
+        extracted_fields[mapping.key] = value
       }
     }
   }
@@ -343,6 +354,7 @@ export function normalize_github_issue({
     priority: map_priority({ data: issue, direction: 'to_internal' }),
     external_id,
     external_url: issue.html_url,
+    github_url: issue.html_url,
     created_at: issue.created_at,
     updated_at: issue.updated_at
   }
@@ -353,52 +365,30 @@ export function normalize_github_issue({
   // - REST API numeric ID: 1723090451 (pure number)
   if (issue.id) {
     const id_string = String(issue.id)
-    // Check if it's a GraphQL node ID (starts with "I_")
     if (id_string.startsWith('I_')) {
-      // Store GraphQL node ID separately
       normalized_github_issue.github_graphql_id = issue.id
-      // Use databaseId for numeric ID if available (from GraphQL)
       if (issue.databaseId) {
         normalized_github_issue.github_api_id = issue.databaseId
       }
     } else {
-      // Numeric ID from REST API
       normalized_github_issue.github_api_id = issue.id
     }
   }
 
-  if (issue.number) {
-    normalized_github_issue.github_number = issue.number
-  }
-
-  if (issue.html_url) {
-    normalized_github_issue.github_url = issue.html_url
-  }
-
-  if (github_repository_owner) {
+  // Add optional GitHub fields
+  if (issue.number) normalized_github_issue.github_number = issue.number
+  if (github_repository_owner)
     normalized_github_issue.github_repository_owner = github_repository_owner
-  }
-
-  if (github_repository_name) {
+  if (github_repository_name)
     normalized_github_issue.github_repository_name = github_repository_name
-  }
 
   // Extract dates if issue was closed
-  if (issue.state === 'closed' && issue.closed_at) {
+  if (is_issue_closed(issue) && issue.closed_at) {
     normalized_github_issue.finished_at = issue.closed_at
   }
 
-  // Process labels to extract tags and priority
-  if (issue.labels && issue.labels.length > 0) {
-    const has_high_priority = issue.labels.some(
-      (label) => label.name && label.name.toLowerCase().includes('high')
-    )
-
-    if (has_high_priority) {
-      normalized_github_issue.priority = TASK_PRIORITY.HIGH
-    }
-
-    // Extract tags from labels
+  // Process labels to extract tags
+  if (issue.labels?.length > 0) {
     const extracted_tags = extract_tags_from_issue_labels(issue.labels)
     if (extracted_tags.length > 0) {
       normalized_github_issue.tags = extracted_tags
@@ -406,9 +396,9 @@ export function normalize_github_issue({
   }
 
   // Add comments if they exist
-  if (comments && comments.length > 0) {
+  if (comments?.length > 0) {
     normalized_github_issue.github_comments = comments.map((comment) => ({
-      author: comment.user.login,
+      author: comment.user?.login,
       date: comment.created_at,
       content: comment.body
     }))
@@ -426,14 +416,13 @@ export function normalize_github_issue({
     // CRITICAL: Don't override status if issue is closed
     // When an issue is closed, the status should always be COMPLETED
     // Project status should only override when issue is open
-    const project_status = extracted_fields.status
-    if (project_status && issue.state === 'closed') {
-      // Issue is closed, so status should remain COMPLETED (from map_status)
-      // Don't override with project status which might be "Planned" or other
-      log(
-        `Issue #${issue.number} is closed, preserving COMPLETED status instead of project status "${project_status}"`
-      )
-      delete extracted_fields.status
+    if (is_issue_closed(issue) && extracted_fields.status) {
+      if (extracted_fields.status !== TASK_STATUS.COMPLETED) {
+        log(
+          `Issue #${issue.number} is closed, preserving COMPLETED status instead of project status "${extracted_fields.status}"`
+        )
+        delete extracted_fields.status
+      }
     }
 
     Object.assign(normalized_github_issue, extracted_fields)

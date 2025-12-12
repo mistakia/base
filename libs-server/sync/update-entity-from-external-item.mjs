@@ -6,9 +6,236 @@ import {
 import { detect_field_changes } from '#libs-server/sync/detect-field-changes.mjs'
 import { save_import_data } from '#libs-server/sync/save-import-data.mjs'
 import { find_previous_import_files } from '#libs-server/sync/find-previous-import-files.mjs'
-import { remove_stale_external_properties } from '#libs-server/sync/clean-entity-properties.mjs'
+import {
+  remove_stale_external_properties,
+  get_local_only_properties,
+  get_protected_properties
+} from '#libs-server/sync/clean-entity-properties.mjs'
 
 const log = debug('sync:update-external')
+
+/**
+ * Validates required parameters
+ */
+function validate_required_params(params) {
+  const required = [
+    'external_item',
+    'entity_properties',
+    'entity_type',
+    'external_system',
+    'external_id',
+    'absolute_path',
+    'external_update_time'
+  ]
+
+  for (const param of required) {
+    if (!params[param]) {
+      throw new Error(`Missing required parameter: ${param}`)
+    }
+  }
+}
+
+/**
+ * Validates external_id immutability
+ */
+function validate_external_id_immutability({
+  existing_entity_properties,
+  external_id,
+  entity_id,
+  absolute_path
+}) {
+  if (
+    existing_entity_properties.external_id &&
+    existing_entity_properties.external_id !== external_id
+  ) {
+    const error_message = [
+      'External ID immutability violation detected.',
+      `Entity ${entity_id} at ${absolute_path}`,
+      `has external_id "${existing_entity_properties.external_id}"`,
+      `but sync attempted to update it with "${external_id}".`,
+      'This indicates incorrect entity matching - entities should only be',
+      'updated by their original external source.'
+    ].join(' ')
+
+    log(error_message)
+    throw new Error(error_message)
+  }
+}
+
+/**
+ * Extracts field values from change objects
+ */
+function extract_changes_from_detection(changes) {
+  if (!changes || typeof changes !== 'object') {
+    return {}
+  }
+
+  const updates = {}
+  for (const [key, change] of Object.entries(changes)) {
+    if (change && typeof change === 'object' && change.changed === true) {
+      updates[key] = change.to
+    }
+  }
+  return updates
+}
+
+/**
+ * Handles GitHub-specific field preservation logic
+ */
+function apply_github_field_preservation({
+  external_system,
+  external_item,
+  entity_properties,
+  existing_entity_properties,
+  updates_to_apply
+}) {
+  if (external_system !== 'github') {
+    return
+  }
+
+  // Handle tags merging
+  if (entity_properties.tags && Array.isArray(entity_properties.tags)) {
+    const merged_tags = [...(existing_entity_properties.tags || [])]
+    for (const tag of entity_properties.tags) {
+      if (!merged_tags.includes(tag)) {
+        merged_tags.push(tag)
+      }
+    }
+    updates_to_apply.tags = merged_tags
+  }
+
+  // Preserve status if more specific than "No status"
+  if (
+    entity_properties.status &&
+    existing_entity_properties.status &&
+    entity_properties.status === 'No status' &&
+    existing_entity_properties.status !== 'No status'
+  ) {
+    const issue_state = external_item?.state?.toLowerCase()
+    if (external_item && issue_state === 'closed') {
+      log(
+        `Issue is closed, updating status from '${existing_entity_properties.status}' to Completed`
+      )
+    } else {
+      log(
+        `Preserving existing status '${existing_entity_properties.status}' instead of overwriting with 'No status' from issue import`
+      )
+      delete updates_to_apply.status
+    }
+  }
+
+  // Preserve priority if more specific than "None"
+  if (
+    entity_properties.priority &&
+    existing_entity_properties.priority &&
+    entity_properties.priority === 'None' &&
+    existing_entity_properties.priority !== 'None'
+  ) {
+    log(
+      `Preserving existing priority '${existing_entity_properties.priority}' instead of overwriting with 'None' from issue import`
+    )
+    delete updates_to_apply.priority
+  }
+
+  // Preserve project-specific fields and GitHub URL
+  const project_fields_to_preserve = [
+    'github_graphql_id',
+    'github_project_item_id',
+    'github_project_number',
+    'github_url',
+    'finish_by',
+    'start_by'
+  ]
+
+  for (const field of project_fields_to_preserve) {
+    if (existing_entity_properties[field] && !(field in entity_properties)) {
+      log(
+        `Preserving existing ${field} '${existing_entity_properties[field]}' as it's not in new import data`
+      )
+      delete updates_to_apply[field]
+    }
+  }
+}
+
+/**
+ * Builds updates to apply from detected changes
+ */
+function build_updates_to_apply({
+  file_updates,
+  internal_updates,
+  entity_properties,
+  force
+}) {
+  const updates_to_apply = {}
+
+  // Extract changes from detection results
+  const changes_to_apply = file_updates || internal_updates
+  Object.assign(
+    updates_to_apply,
+    extract_changes_from_detection(changes_to_apply)
+  )
+
+  // When force is true, apply all fields from entity_properties
+  if (force) {
+    Object.assign(updates_to_apply, entity_properties)
+  }
+
+  return updates_to_apply
+}
+
+/**
+ * Merges properties while preserving local-only and protected properties
+ */
+function merge_properties_with_preservation({
+  existing_entity_properties,
+  updates_to_apply
+}) {
+  const merged_properties = {
+    ...existing_entity_properties,
+    ...updates_to_apply
+  }
+
+  const local_only_properties = get_local_only_properties()
+  const protected_properties = get_protected_properties()
+
+  // Preserve local-only and protected properties from existing entity
+  for (const prop of local_only_properties) {
+    if (existing_entity_properties[prop] !== undefined) {
+      merged_properties[prop] = existing_entity_properties[prop]
+    }
+  }
+
+  for (const prop of protected_properties) {
+    if (existing_entity_properties[prop] !== undefined) {
+      merged_properties[prop] = existing_entity_properties[prop]
+    }
+  }
+
+  return merged_properties
+}
+
+/**
+ * Determines what needs to be synced back to external system
+ */
+function determine_sync_to_external({
+  external_updates,
+  internal_updates,
+  previous_import
+}) {
+  if (!external_updates || !previous_import) {
+    return null
+  }
+
+  const fields_to_sync = {}
+  for (const [field, change] of Object.entries(external_updates)) {
+    const external_field_changed = internal_updates && internal_updates[field]
+    if (!external_field_changed) {
+      fields_to_sync[field] = change
+    }
+  }
+
+  return Object.keys(fields_to_sync).length > 0 ? fields_to_sync : null
+}
 
 /**
  * Updates an internal entity from external system changes with conflict resolution
@@ -47,33 +274,15 @@ export async function update_entity_from_external_item({
   try {
     log(`Updating ${entity_type} from ${external_system} item ${external_id}`)
 
-    if (!external_item) {
-      throw new Error('Missing required parameter: external_item')
-    }
-
-    if (!entity_properties) {
-      throw new Error('Missing required parameter: entity_properties')
-    }
-
-    if (!entity_type) {
-      throw new Error('Missing required parameter: entity_type')
-    }
-
-    if (!external_system) {
-      throw new Error('Missing required parameter: external_system')
-    }
-
-    if (!external_id) {
-      throw new Error('Missing required parameter: external_id')
-    }
-
-    if (!absolute_path) {
-      throw new Error('Missing required parameter: absolute_path')
-    }
-
-    if (!external_update_time) {
-      throw new Error('Missing required parameter: external_update_time')
-    }
+    validate_required_params({
+      external_item,
+      entity_properties,
+      entity_type,
+      external_system,
+      external_id,
+      absolute_path,
+      external_update_time
+    })
 
     // Read the existing entity
     const existing_entity_result = await read_entity_from_filesystem({
@@ -89,25 +298,14 @@ export async function update_entity_from_external_item({
     const existing_entity_properties = existing_entity_result.entity_properties
     const entity_id = existing_entity_properties.entity_id
 
-    // CRITICAL: Validate external_id immutability
-    // The external_id is the source of truth and must never be changed
-    if (
-      existing_entity_properties.external_id &&
-      existing_entity_properties.external_id !== external_id
-    ) {
-      const error_message = [
-        'External ID immutability violation detected.',
-        `Entity ${entity_id} at ${absolute_path}`,
-        `has external_id "${existing_entity_properties.external_id}"`,
-        `but sync attempted to update it with "${external_id}".`,
-        'This indicates incorrect entity matching - entities should only be',
-        'updated by their original external source.'
-      ].join(' ')
+    validate_external_id_immutability({
+      existing_entity_properties,
+      external_id,
+      entity_id,
+      absolute_path
+    })
 
-      log(error_message)
-      throw new Error(error_message)
-    }
-
+    // Find previous import and detect changes
     const previous_import = await find_previous_import_files({
       external_system,
       entity_id,
@@ -127,6 +325,7 @@ export async function update_entity_from_external_item({
       ignore_fields: ['updated_at']
     })
 
+    // Save import data if there are changes or no previous import
     if (internal_updates || !previous_import) {
       await save_import_data({
         external_system,
@@ -138,175 +337,96 @@ export async function update_entity_from_external_item({
       })
     }
 
-    if (internal_updates || force) {
-      // Extract values from change objects
-      const updates_to_apply = {}
+    // Detect changes between normalized data and existing file
+    const local_only_properties_list = Array.from(get_local_only_properties())
+    const file_updates = detect_field_changes({
+      current_data: entity_properties,
+      previous_data: existing_entity_properties,
+      ignore_fields: [
+        'updated_at',
+        'entity_id',
+        'created_at',
+        'base_uri',
+        ...local_only_properties_list
+      ]
+    })
 
-      // Ensure internal_updates is an object before using Object.entries
-      if (internal_updates && typeof internal_updates === 'object') {
-        for (const [key, change] of Object.entries(internal_updates)) {
-          if (change && typeof change === 'object' && change.changed === true) {
-            updates_to_apply[key] = change.to
-          }
-        }
-      }
-
-      // When force is true, apply all fields from entity_properties
+    // Build and apply updates if needed
+    if (internal_updates || file_updates || force) {
       if (force) {
         log(`Force updating ${entity_type} from ${external_system}`)
-        // Only overwrite fields that exist in the external properties
-        for (const [key, value] of Object.entries(entity_properties)) {
-          updates_to_apply[key] = value
-        }
       }
 
-      // Handle tags from GitHub labels if present
-      if (entity_properties.tags && Array.isArray(entity_properties.tags)) {
-        // Merge with existing tags if they exist
-        const merged_tags = [...(existing_entity_properties.tags || [])]
+      const updates_to_apply = build_updates_to_apply({
+        file_updates,
+        internal_updates,
+        entity_properties,
+        force
+      })
 
-        // Add new tags that don't already exist
-        for (const tag of entity_properties.tags) {
-          if (!merged_tags.includes(tag)) {
-            merged_tags.push(tag)
-          }
-        }
+      // Apply GitHub-specific field preservation
+      apply_github_field_preservation({
+        external_system,
+        external_item,
+        entity_properties,
+        existing_entity_properties,
+        updates_to_apply
+      })
 
-        // Update the tags field
-        updates_to_apply.tags = merged_tags
-      }
-
-      // Handle status preservation for GitHub imports
-      // Preserve existing status if it's more specific than "No status",
-      // unless the issue state has changed (e.g., closed -> Completed)
-      if (
-        external_system === 'github' &&
-        entity_properties.status &&
-        existing_entity_properties.status &&
-        entity_properties.status === 'No status' &&
-        existing_entity_properties.status !== 'No status'
-      ) {
-        // Check if the issue is closed - if so, we should update to Completed
-        // Otherwise, preserve the existing more specific status (likely from project import)
-        if (external_item && external_item.state === 'closed') {
-          // Issue is closed, so status should be Completed - allow the update
-          log(
-            `Issue is closed, updating status from '${existing_entity_properties.status}' to Completed`
-          )
-          // Don't override - let the normalized status (Completed) be applied
-        } else {
-          // Issue is open but normalized to "No status" - preserve existing more specific status
-          // This prevents overwriting project-imported statuses when importing from issues directly
-          log(
-            `Preserving existing status '${existing_entity_properties.status}' instead of overwriting with 'No status' from issue import`
-          )
-          // Remove status from updates_to_apply to preserve existing status
-          delete updates_to_apply.status
-        }
-      }
-
-      // Handle priority preservation for GitHub imports
-      // Preserve existing priority if it's more specific than "None",
-      // to prevent overwriting project-imported priorities when importing from issues directly
-      if (
-        external_system === 'github' &&
-        entity_properties.priority &&
-        existing_entity_properties.priority &&
-        entity_properties.priority === 'None' &&
-        existing_entity_properties.priority !== 'None'
-      ) {
-        log(
-          `Preserving existing priority '${existing_entity_properties.priority}' instead of overwriting with 'None' from issue import`
-        )
-        // Remove priority from updates_to_apply to preserve existing priority
-        delete updates_to_apply.priority
-      }
-
-      // Preserve project-specific fields that may not be in issue imports
-      // These are handled by PRESERVE_IF_EXISTS_PROPERTIES in clean-entity-properties,
-      // but we also need to ensure they're not overwritten in updates_to_apply
-      if (external_system === 'github') {
-        const project_fields_to_preserve = [
-          'github_graphql_id',
-          'github_project_item_id',
-          'github_project_number',
-          'finish_by',
-          'start_by'
-        ]
-
-        for (const field of project_fields_to_preserve) {
-          if (
-            existing_entity_properties[field] &&
-            !(field in entity_properties)
-          ) {
-            // Field exists in existing entity but not in new properties - preserve it
-            // Don't add to updates_to_apply, it will be preserved from existing_entity_properties
-            log(
-              `Preserving existing ${field} '${existing_entity_properties[field]}' as it's not in new import data`
-            )
-            // Ensure it's not in updates_to_apply (which would overwrite it)
-            delete updates_to_apply[field]
-          }
-        }
-      }
-
-      // Only proceed with update if there are actual changes to apply
-      // This prevents unnecessary updates when all differences are in ignored fields
+      // Only proceed if there are actual changes
       const has_actual_changes = Object.keys(updates_to_apply).length > 0
 
       if (!has_actual_changes && !force) {
-        // No actual changes to apply (all differences were in ignored fields)
-        // Skip the update entirely, including not updating updated_at
         log(
           `Skipping update for ${entity_type} ${external_id} - no actual changes after ignoring project-specific fields`
         )
       } else {
-        const merged_properties = {
-          ...existing_entity_properties,
-          ...updates_to_apply
-        }
-
-        // Update updated_at since we have actual changes to apply
-        merged_properties.updated_at = new Date().toISOString()
-
-        const cleaned_properties = remove_stale_external_properties(
-          merged_properties,
-          entity_properties,
-          external_system
-        )
-
-        await write_entity_to_filesystem({
-          entity_properties: cleaned_properties,
-          entity_type,
-          absolute_path,
-          entity_content:
-            entity_content || existing_entity_result.entity_content
+        // Merge properties while preserving local-only and protected properties
+        const merged_properties = merge_properties_with_preservation({
+          existing_entity_properties,
+          updates_to_apply
         })
+
+        // Check for final changes after preservation
+        const final_changes = detect_field_changes({
+          current_data: merged_properties,
+          previous_data: existing_entity_properties,
+          ignore_fields: ['updated_at']
+        })
+
+        if (final_changes && Object.keys(final_changes).length > 0) {
+          merged_properties.updated_at = new Date().toISOString()
+          log(
+            `Updating ${entity_type} ${external_id} - ${Object.keys(final_changes).length} field change(s): ${Object.keys(final_changes).join(', ')}`
+          )
+
+          const cleaned_properties = remove_stale_external_properties(
+            merged_properties,
+            entity_properties,
+            external_system
+          )
+
+          await write_entity_to_filesystem({
+            entity_properties: cleaned_properties,
+            entity_type,
+            absolute_path,
+            entity_content:
+              entity_content || existing_entity_result.entity_content
+          })
+        } else {
+          log(
+            `Skipping file write for ${entity_type} ${external_id} - no actual changes after preserving local-only and protected properties`
+          )
+        }
       }
     }
 
     // Determine what needs to be synced back to external system
-    let sync_to_external = null
-
-    if (external_updates && previous_import) {
-      // Only sync fields where local has changed but external hasn't changed since last import
-      const fields_to_sync = {}
-
-      for (const [field, change] of Object.entries(external_updates)) {
-        // Check if this field has changed in the external system since last import
-        const external_field_changed =
-          internal_updates && internal_updates[field]
-
-        if (!external_field_changed) {
-          // External field hasn't changed, so we can safely sync local changes
-          fields_to_sync[field] = change
-        }
-      }
-
-      if (Object.keys(fields_to_sync).length > 0) {
-        sync_to_external = fields_to_sync
-      }
-    }
+    const sync_to_external = determine_sync_to_external({
+      external_updates,
+      internal_updates,
+      previous_import
+    })
 
     return {
       action:
