@@ -5,7 +5,7 @@ import {
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
 import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
-import { check_user_permission_for_file } from '../middleware/permission-checker.mjs'
+import { check_user_permission_for_file } from '../middleware/permission/index.mjs'
 import { redact_entity_object } from '../middleware/content-redactor.mjs'
 
 const router = express.Router({ mergeParams: true })

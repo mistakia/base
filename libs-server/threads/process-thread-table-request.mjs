@@ -3,11 +3,12 @@
  */
 
 import debug from 'debug'
+
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { extract_thread_metadata } from '#libs-server/threads/thread-metadata-extractor.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { DATA_TYPES } from '#libs-server/table-processing/sorting-utilities.mjs'
-import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
+import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('threads:table')

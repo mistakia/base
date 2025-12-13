@@ -3,7 +3,7 @@ import path from 'path'
 import debug from 'debug'
 
 import { get_thread_base_directory } from './threads-constants.mjs'
-import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
+import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('threads:utils')
@@ -134,13 +134,27 @@ export async function process_thread_with_permissions({
     timeline
   })
 
-  // Use centralized thread permission checking
-  const permission_result = await check_thread_permission_for_user({
+  // Build pre-loaded metadata to avoid duplicate filesystem reads
+  // The permission system can use this instead of re-reading the metadata file
+  const preloaded_metadata = {
+    owner_public_key: metadata.user_public_key || null,
+    public_read: {
+      explicit:
+        metadata.public_read !== undefined && metadata.public_read !== null,
+      value: metadata.public_read === true
+    },
+    resource_type: 'thread',
+    raw: metadata
+  }
+
+  // Use centralized thread permission checking with pre-loaded metadata
+  const permission_result = await check_thread_permission({
     user_public_key,
-    thread_id
+    thread_id,
+    metadata: preloaded_metadata
   })
 
-  if (!permission_result.allowed) {
+  if (!permission_result.read.allowed) {
     log(`Access denied to thread ${thread_id}, returning redacted content`)
     return redact_thread_data(thread_data)
   }

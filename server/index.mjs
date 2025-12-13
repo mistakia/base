@@ -17,7 +17,6 @@ import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
-import { create_permission_middleware } from '#server/middleware/permissions.mjs'
 import { create_render_html_middleware } from '#server/middleware/render-html.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
@@ -88,14 +87,6 @@ api.use(
 
 // JWT parsing middleware for all routes - parses tokens but doesn't block
 api.use(parse_jwt_token())
-
-// Permission middleware for API routes (after JWT auth)
-api.use(
-  '/api/*',
-  create_permission_middleware({
-    exclude_paths: ['/api/users/session', /^\/api\/models(?:\/.*)?$/]
-  })
-)
 
 // Register other API routes
 api.use('/api/threads', routes.threads)

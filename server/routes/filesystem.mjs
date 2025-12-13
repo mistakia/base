@@ -7,12 +7,10 @@ import fm from 'front-matter'
 import config from '#config'
 import {
   check_filesystem_permission,
-  apply_redaction_interceptor
-} from '#server/middleware/permissions.mjs'
-import {
-  check_user_permissions_batch,
-  map_filesystem_path_to_base_uri
-} from '#server/middleware/permission-checker.mjs'
+  check_permissions_batch
+} from '#server/middleware/permission/index.mjs'
+import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
+import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const router = express.Router()
 const log = debug('api:filesystem')
@@ -118,9 +116,9 @@ router.get('/directory', async (req, res) => {
       const user_public_key = req.user?.user_public_key || null
       const resource_paths = file_paths_to_check.map((file_path) => {
         const full_file_path = path.join(USER_BASE_DIR, file_path)
-        return map_filesystem_path_to_base_uri(full_file_path)
+        return create_base_uri_from_path(full_file_path)
       })
-      const batch_results = await check_user_permissions_batch({
+      const batch_results = await check_permissions_batch({
         user_public_key,
         resource_paths
       })
@@ -128,7 +126,7 @@ router.get('/directory', async (req, res) => {
       // Map results back to file paths
       file_paths_to_check.forEach((file_path, index) => {
         const resource_path = resource_paths[index]
-        file_permission_results[file_path] = batch_results[resource_path]
+        file_permission_results[file_path] = batch_results[resource_path]?.read
       })
     }
 

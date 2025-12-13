@@ -1,7 +1,7 @@
 import debug from 'debug'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
-import { check_user_permission } from '#server/middleware/permission-checker.mjs'
+import { check_user_permission } from '#server/middleware/permission/index.mjs'
 
 const log = debug('server:entity-resolver')
 

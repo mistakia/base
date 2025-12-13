@@ -1,146 +1,15 @@
-import debug from 'debug'
-import path from 'path'
-import config from '#config'
+/**
+ * Response redaction middleware
+ *
+ * Applies content redaction based on permission check results stored in req.access.
+ * Permission checking is handled by the permission module.
+ */
 
-import {
-  check_user_permission,
-  check_thread_permission_for_user,
-  map_filesystem_path_to_base_uri,
-  validate_thread_ownership
-} from './permission-checker.mjs'
 import {
   redact_file_info,
   redact_file_content_response,
   redact_thread_data
 } from './content-redactor.mjs'
-
-const log = debug('permission:middleware')
-
-/**
- * Creates permission middleware for Express routes
- *
- * @param {Object} options - Middleware options
- * @param {Array} options.exclude_paths - Paths to exclude from permission checking
- * @returns {Function} Express middleware function
- */
-export const create_permission_middleware = (options = {}) => {
-  const { exclude_paths = [] } = options
-
-  return async (req, res, next) => {
-    // Check if path should be excluded from permission checking
-    const should_exclude = exclude_paths.some((excluded_path) => {
-      if (typeof excluded_path === 'string') {
-        return req.path === excluded_path
-      } else if (excluded_path instanceof RegExp) {
-        return excluded_path.test(req.path)
-      }
-      return false
-    })
-
-    if (should_exclude) {
-      log(`Skipping permission check for excluded path: ${req.path}`)
-      return next()
-    }
-
-    next()
-  }
-}
-
-/**
- * Middleware to check filesystem path permissions
- *
- * @returns {Function} Express middleware function
- */
-export const check_filesystem_permission = () => {
-  return async (req, res, next) => {
-    try {
-      const user_public_key = req.user?.user_public_key || null
-      const request_path = req.query.path || req.params.path || ''
-
-      // Resolve path relative to user base directory for correct base-uri mapping
-      const user_base_dir = config.user_base_directory
-      const full_path = path.join(user_base_dir, request_path)
-
-      // Convert full filesystem path to base-uri
-      const resource_path = map_filesystem_path_to_base_uri(full_path)
-      log(`Checking filesystem permission for ${resource_path}`)
-
-      // Check read permission
-      const read_result = await check_user_permission({
-        user_public_key,
-        resource_path
-      })
-
-      // Set structured access object
-      req.access = {
-        user_public_key,
-        resource_path,
-        read_allowed: !!read_result.allowed,
-        write_allowed: false, // Filesystem writes can be extended later if needed
-        reason: read_result.reason || null
-      }
-
-      if (!read_result.allowed) {
-        log(`Access denied to ${resource_path}: ${read_result.reason}`)
-      }
-
-      next()
-    } catch (error) {
-      log(`Error checking filesystem permission: ${error.message}`)
-      next(error)
-    }
-  }
-}
-
-/**
- * Middleware to check thread access permissions
- *
- * @returns {Function} Express middleware function
- */
-export const check_thread_permission = () => {
-  return async (req, res, next) => {
-    try {
-      const user_public_key = req.user?.user_public_key || null
-      const thread_id = req.params.thread_id
-
-      if (!thread_id) {
-        return next() // No specific thread, might be listing
-      }
-
-      log(`Checking thread permission for thread ${thread_id}`)
-
-      // Check read permission using thread-specific permission checker
-      const read_result = await check_thread_permission_for_user({
-        user_public_key,
-        thread_id
-      })
-
-      // Check write permission (ownership)
-      const is_owner = await validate_thread_ownership({
-        thread_id,
-        user_public_key
-      })
-
-      // Set structured access object
-      req.access = {
-        user_public_key,
-        resource_path: `user:thread/${thread_id}`,
-        read_allowed: !!read_result.allowed,
-        write_allowed: !!is_owner,
-        reason: read_result.reason || null
-      }
-
-      if (!read_result.allowed) {
-        log(`Access denied to thread ${thread_id}: ${read_result.reason}`)
-      }
-
-      next()
-    } catch (error) {
-      log(`Error checking thread permission: ${error.message}`)
-      next(error)
-    }
-  }
-}
 
 /**
  * Applies redaction to response data based on permissions

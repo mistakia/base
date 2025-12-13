@@ -1,8 +1,9 @@
-import wss from '#server/websocket.mjs'
-import { WebSocket } from 'ws'
-import { check_thread_permission_for_user } from '#server/middleware/permission-checker.mjs'
-import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import debug from 'debug'
+import { WebSocket } from 'ws'
+
+import wss from '#server/websocket.mjs'
+import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
+import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('threads:events')
 

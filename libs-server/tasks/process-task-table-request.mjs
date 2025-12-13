@@ -6,7 +6,7 @@ import debug from 'debug'
 import { list_tasks_from_filesystem } from '#libs-server/task/filesystem/list-tasks-from-filesystem.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
-import { check_user_permission_for_file } from '#server/middleware/permission-checker.mjs'
+import { check_user_permission_for_file } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 

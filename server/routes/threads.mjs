@@ -2,12 +2,12 @@ import express from 'express'
 import debug from 'debug'
 
 import * as threads from '#libs-server/threads/index.mjs'
-import { check_thread_permission } from '#server/middleware/permissions.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 import {
+  check_thread_permission_middleware as check_thread_permission,
   check_thread_permission_for_user,
   check_create_threads_permission
-} from '#server/middleware/permission-checker.mjs'
+} from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'

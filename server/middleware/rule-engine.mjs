@@ -1,8 +1,46 @@
 import picomatch from 'picomatch'
 import debug from 'debug'
-import { check_resource_ownership } from './ownership-checker.mjs'
+
+import { validate_thread_ownership } from './permission/index.mjs'
 
 const log = debug('permission:rule-engine')
+
+/**
+ * Checks if a user owns a resource based on the resource path
+ *
+ * @param {string} resource_path - Base-URI path of the resource
+ * @param {string} user_public_key - User's public key
+ * @returns {boolean} True if user owns the resource
+ */
+const check_resource_ownership = async (resource_path, user_public_key) => {
+  if (!resource_path || !user_public_key) {
+    log('Missing resource_path or user_public_key for ownership check')
+    return false
+  }
+
+  // Parse the resource path to determine resource type
+  const path_parts = resource_path.split(':')
+  if (path_parts.length !== 2) {
+    log(`Invalid resource path format: ${resource_path}`)
+    return false
+  }
+
+  const [prefix, path] = path_parts
+
+  // Handle thread resources
+  if (prefix === 'user' && path.startsWith('thread/')) {
+    const thread_id = path.replace('thread/', '')
+    const is_owner = await validate_thread_ownership({
+      thread_id,
+      user_public_key
+    })
+    log(`Thread ownership check for ${thread_id}: ${is_owner}`)
+    return is_owner
+  }
+
+  log(`Ownership check not implemented for resource type: ${prefix}:${path}`)
+  return false
+}
 
 /**
  * Generates implicit parent directory patterns from a given pattern
