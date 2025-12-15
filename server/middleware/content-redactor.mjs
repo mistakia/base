@@ -591,12 +591,43 @@ export const redact_thread_data = (thread) => {
 
   const redacted = create_redacted_copy(thread)
 
+  // Redact title and description fields that may contain PII
+  if (redacted.title) {
+    redacted.title = redact_text_content(redacted.title)
+  }
+
+  if (redacted.short_description) {
+    redacted.short_description = redact_text_content(redacted.short_description)
+  }
+
+  if (redacted.description) {
+    redacted.description = redact_text_content(redacted.description)
+  }
+
+  // Redact working directory information
+  if (redacted.working_directory) {
+    redacted.working_directory = redact_text_content(redacted.working_directory)
+  }
+
+  if (redacted.working_directory_path) {
+    redacted.working_directory_path = redact_path_components(
+      redacted.working_directory_path
+    )
+  }
+
+  // Redact tags array
+  if (redacted.tags && Array.isArray(redacted.tags)) {
+    redacted.tags = redacted.tags.map(() => DEFAULT_REDACTED_ARRAY_ITEM)
+  }
+
+  // Redact thread main request content
   if (redacted.thread_main_request) {
     redacted.thread_main_request = redact_text_content(
       redacted.thread_main_request
     )
   }
 
+  // Redact timeline entries
   if (redacted.timeline && Array.isArray(redacted.timeline)) {
     redacted.timeline = redacted.timeline.map(redact_timeline_entry)
   }
