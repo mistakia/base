@@ -9,6 +9,9 @@ observations:
   - '[principle] All changes must go through proper merge process rather than direct commits to main'
   - '[requirement] Feature branch should be reviewed and ready for merge before using this workflow'
   - '[feature] Automatically completes associated tasks when worktree is successfully merged'
+  - '[improvement] Task search uses multiple fallback strategies (worktree_path, filename, project directory)'
+  - '[improvement] Documents submodule status prefixes for clearer interpretation'
+  - '[improvement] Notes command execution limitations for variable assignment in some environments'
 prompt_properties:
   - name: branch_name
     description: Name of the feature branch to merge (optional, defaults to current branch)
@@ -21,7 +24,7 @@ prompt_properties:
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2025-11-29T00:00:00.000Z'
+updated_at: '2025-12-13T21:50:00.000Z'
 user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---
 
@@ -58,10 +61,22 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 
 ### 0. Pre-flight Setup (Execute from main repository directory)
 
+- **Detect current location first**: You may be starting from either the main repo or a worktree
+
+  - Run `git worktree list` to see all worktrees and identify the main repository (first entry)
+  - If currently in a worktree, note the worktree path and branch name before navigating to main repo
+
 - Navigate to the main repository directory first
 - Configure git pull behavior to avoid conflicts: `git config pull.rebase false`
-- Detect default branch name: `DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)`
+- Detect default branch name: `git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4`
+
+  - Store result (typically `main` or `master`)
+  - **Note**: Complex bash variable assignment like `VAR=$(...)` may fail in some execution environments. Run commands separately and store results manually if needed.
+
 - List all worktrees to identify paths: `git worktree list`
+  - Output format: `[path] [commit-hash] [branch-name]`
+  - Example: `/path/to/repo-worktrees/feature-x  abc1234 [feature/x]`
+  - The branch name is shown in brackets
 - Verify target worktree exists in the worktree list output
 - Store the worktree path for later use
 
@@ -74,13 +89,28 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 
 - If `task_path` parameter is provided:
   - If path ends with `.md`, treat as task file path and read it
-  - If path is a directory, search for task file with matching `worktree_path` in frontmatter:
-    ```bash
-    grep -r "worktree_path: $task_path" task/ --include="*.md" -l
-    ```
-  - Store the task file path for later use (Step 9)
-  - If no task file found, continue without task completion (no task exists)
-- If `task_path` not provided, check current directory for task reference
+  - If path is a directory, use the search strategies below
+- If `task_path` not provided, use these search strategies in order:
+
+**Task Search Strategies** (try in order until found):
+
+1. Search by `worktree_path` frontmatter field:
+   ```bash
+   grep -r "worktree_path:.*[worktree-directory-name]" [user-base]/task/ --include="*.md" -l
+   ```
+2. Search by filename matching worktree/branch name:
+   ```bash
+   # Extract the feature name from branch (e.g., "refactor/player-status" -> "player-status")
+   find [user-base]/task/ -name "*[feature-name]*.md" -type f
+   ```
+3. Search in project-specific task directory:
+   ```bash
+   # For repository "league", check task/league/
+   ls [user-base]/task/[project-name]/*[feature-name]*.md
+   ```
+
+- Store the task file path for later use (Step 9)
+- If no task file found, continue without task completion (no task exists)
 - **Extract worktree path from task frontmatter** - this is the actual worktree directory path to use
 - **Extract branch name** from worktree path or task if not provided as parameter
 - Note: This step always runs, but a task may not exist for every worktree
@@ -104,6 +134,14 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 
 - Navigate to worktree: `cd [worktree-path]`
 - Check submodule status: `git submodule status`
+
+**Understanding submodule status prefixes**:
+
+- `-` (minus): Submodule not initialized (common in worktrees, usually not a problem)
+- ` ` (space): Submodule at the recorded commit (no action needed)
+- `+` (plus): Submodule has different commits than recorded (needs attention)
+- `U`: Submodule has merge conflicts
+
 - For each modified submodule (shows `+` prefix):
   - Enter submodule: `cd [submodule-path]`
   - **Detect submodule's default branch**:
