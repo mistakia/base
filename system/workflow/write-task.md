@@ -8,9 +8,9 @@ observations:
   - '[process] MCP entity creation ensures proper schema compliance'
   - '[pattern] Structured workflow reduces errors and omissions'
 relations:
-  - follows [[guideline/write-task.md]]
-  - implements [[repository/active/base/system/schema/task.md]]
-  - follows [[repository/active/base/system/guideline/write-workflow.md]]
+  - follows [[sys:system/guideline/write-task.md]]
+  - implements [[sys:system/schema/task.md]]
+  - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2025-06-26T01:12:24.554Z'
 user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
 ---

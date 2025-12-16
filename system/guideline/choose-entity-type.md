@@ -14,6 +14,7 @@ relations:
   - 'implements [[sys:system/schema/entity.md]]'
   - 'related_to [[sys:system/guideline/write-entity.md]]'
   - 'related_to [[sys:system/guideline/write-guideline.md]]'
+  - 'related_to [[sys:system/guideline/write-task.md]]'
 updated_at: '2023-06-28T10:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
