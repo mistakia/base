@@ -14,7 +14,7 @@ const TitleCell = ({ row }) => {
   const navigate = useNavigate()
   const task = row.original
 
-  const handle_click = () => {
+  const handle_click = (event) => {
     if (task.is_redacted) {
       return
     }
@@ -24,7 +24,17 @@ const TitleCell = ({ row }) => {
       // base_uri format is like "user:task/base/my-task.md"
       // convert_base_uri_to_path converts it to proper client path
       const navigation_path = convert_base_uri_to_path(task.base_uri)
-      navigate(navigation_path)
+
+      // Check if command (Mac) or ctrl (Windows/Linux) key is pressed
+      const is_modifier_pressed = event.metaKey || event.ctrlKey
+
+      if (is_modifier_pressed) {
+        // Open in new tab/window
+        window.open(navigation_path, '_blank')
+      } else {
+        // Navigate in same window
+        navigate(navigation_path)
+      }
     }
   }
 
