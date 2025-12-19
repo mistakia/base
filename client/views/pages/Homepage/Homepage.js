@@ -6,7 +6,7 @@ import PageLayout from '@views/layout/PageLayout.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout'
-import HomePageThreads from './HomePageThreads.js'
+import HomeSessionsPanel from '@components/SessionsPanel/HomeSessionsPanel.js'
 import HomePageTasks from './HomePageTasks.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
@@ -53,10 +53,11 @@ const Homepage = ({
             }
             right_content={
               <div className='homepage-right-column'>
-                <HomePageThreads
+                <HomeSessionsPanel
                   threads={threads}
                   is_loading_threads={is_loading_threads}
                   load_threads={load_threads}
+                  max_threads={3}
                 />
                 <HomePageTasks
                   tasks={tasks}

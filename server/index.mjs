@@ -96,6 +96,7 @@ api.use('/api/tags', routes.tags)
 api.use('/api/github', routes.github)
 api.use('/api/models', routes.models)
 api.use('/api/filesystem', routes.filesystem)
+api.use('/api/active-sessions', routes.active_sessions)
 
 // General error handler
 api.use((err, req, res, next) => {

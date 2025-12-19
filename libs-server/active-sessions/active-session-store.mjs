@@ -1,0 +1,248 @@
+import IORedis from 'ioredis'
+import debug from 'debug'
+import config from '#config'
+
+const log = debug('active-sessions:store')
+
+/**
+ * Redis-backed store for active Claude Code session state
+ * Tracks running sessions with automatic TTL-based cleanup
+ */
+
+// Configuration with defaults
+const STORE_CONFIG = {
+  redis_url:
+    config.active_sessions?.redis_url ||
+    config.threads?.queue?.redis_url ||
+    process.env.REDIS_URL ||
+    'redis://localhost:6379',
+  key_prefix: config.active_sessions?.redis_key_prefix || 'active-session',
+  stale_timeout_seconds:
+    config.active_sessions?.session_ttl_seconds ||
+    (config.active_sessions?.stale_timeout_minutes || 10) * 60
+}
+
+// Module-level singleton instance
+let redis_connection = null
+
+/**
+ * Initialize Redis connection with event handlers
+ *
+ * @returns {IORedis} Redis connection instance
+ */
+const initialize_redis_connection = () => {
+  log(`Connecting to Redis: ${STORE_CONFIG.redis_url}`)
+
+  const connection = new IORedis(STORE_CONFIG.redis_url, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    lazyConnect: true
+  })
+
+  connection.on('error', (error) => {
+    log('Redis connection error:', error.message)
+  })
+
+  connection.on('connect', () => {
+    log('Redis connected for active sessions')
+  })
+
+  return connection
+}
+
+/**
+ * Get or create Redis connection singleton
+ *
+ * @returns {IORedis} Redis connection instance
+ */
+const get_redis_connection = () => {
+  if (!redis_connection) {
+    redis_connection = initialize_redis_connection()
+  }
+  return redis_connection
+}
+
+/**
+ * Build Redis key for a session
+ *
+ * @param {string} session_id - Session ID
+ * @returns {string} Redis key
+ */
+const build_session_key = (session_id) => {
+  return `${STORE_CONFIG.key_prefix}:${session_id}`
+}
+
+/**
+ * Register a new active session
+ *
+ * @param {Object} params - Session parameters
+ * @param {string} params.session_id - Claude session ID
+ * @param {string} params.working_directory - Working directory for the session
+ * @param {string} params.transcript_path - Path to Claude transcript file
+ * @returns {Promise<Object>} Registered session record
+ */
+export const register_active_session = async ({
+  session_id,
+  working_directory,
+  transcript_path
+}) => {
+  const redis = get_redis_connection()
+  const key = build_session_key(session_id)
+
+  const session = {
+    session_id,
+    status: 'active',
+    thread_id: null,
+    working_directory,
+    transcript_path,
+    started_at: new Date().toISOString(),
+    last_activity_at: new Date().toISOString()
+  }
+
+  await redis.setex(
+    key,
+    STORE_CONFIG.stale_timeout_seconds,
+    JSON.stringify(session)
+  )
+
+  log(`Registered active session: ${session_id}`)
+  return session
+}
+
+/**
+ * Update an existing active session (with upsert behavior)
+ *
+ * @param {Object} params - Session update parameters
+ * @param {string} params.session_id - Claude session ID
+ * @param {string} [params.status] - New status (active/idle)
+ * @param {string} [params.thread_id] - Associated thread ID
+ * @param {string} [params.working_directory] - Working directory (for upsert)
+ * @param {string} [params.transcript_path] - Transcript path (for upsert)
+ * @returns {Promise<Object|null>} Updated session record or null if not found
+ */
+export const update_active_session = async ({
+  session_id,
+  status,
+  thread_id,
+  working_directory,
+  transcript_path
+}) => {
+  const redis = get_redis_connection()
+  const key = build_session_key(session_id)
+
+  // Get existing session
+  const existing = await redis.get(key)
+  let session
+
+  if (existing) {
+    // Update existing session
+    session = JSON.parse(existing)
+    if (status !== undefined) session.status = status
+    if (thread_id !== undefined) session.thread_id = thread_id
+    session.last_activity_at = new Date().toISOString()
+  } else {
+    // Upsert: create new session if missing (handles missed SessionStart)
+    session = {
+      session_id,
+      status: status || 'active',
+      thread_id: thread_id || null,
+      working_directory: working_directory || null,
+      transcript_path: transcript_path || null,
+      started_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString()
+    }
+    log(`Upserted new session (missed SessionStart): ${session_id}`)
+  }
+
+  await redis.setex(
+    key,
+    STORE_CONFIG.stale_timeout_seconds,
+    JSON.stringify(session)
+  )
+
+  log(`Updated active session: ${session_id} status=${session.status}`)
+  return session
+}
+
+/**
+ * Get a specific active session by ID
+ *
+ * @param {string} session_id - Claude session ID
+ * @returns {Promise<Object|null>} Session record or null if not found
+ */
+export const get_active_session = async (session_id) => {
+  const redis = get_redis_connection()
+  const key = build_session_key(session_id)
+
+  const data = await redis.get(key)
+  if (!data) {
+    return null
+  }
+
+  return JSON.parse(data)
+}
+
+/**
+ * Get all active sessions
+ *
+ * @returns {Promise<Array<Object>>} Array of session records
+ */
+export const get_all_active_sessions = async () => {
+  const redis = get_redis_connection()
+  const pattern = `${STORE_CONFIG.key_prefix}:*`
+
+  const keys = await redis.keys(pattern)
+  if (keys.length === 0) {
+    return []
+  }
+
+  const values = await redis.mget(keys)
+  const sessions = values.filter((v) => v !== null).map((v) => JSON.parse(v))
+
+  log(`Retrieved ${sessions.length} active sessions`)
+  return sessions
+}
+
+/**
+ * Remove an active session
+ *
+ * @param {string} session_id - Claude session ID
+ * @returns {Promise<boolean>} True if session was removed
+ */
+export const remove_active_session = async (session_id) => {
+  const redis = get_redis_connection()
+  const key = build_session_key(session_id)
+
+  const result = await redis.del(key)
+  const removed = result > 0
+
+  if (removed) {
+    log(`Removed active session: ${session_id}`)
+  }
+
+  return removed
+}
+
+/**
+ * Get active sessions for a specific thread
+ *
+ * @param {string} thread_id - Thread ID
+ * @returns {Promise<Object|null>} Session record or null if not found
+ */
+export const get_active_session_for_thread = async (thread_id) => {
+  const sessions = await get_all_active_sessions()
+  return sessions.find((s) => s.thread_id === thread_id) || null
+}
+
+/**
+ * Close the Redis connection gracefully
+ *
+ * @returns {Promise<void>}
+ */
+export const close_session_store = async () => {
+  if (redis_connection) {
+    await redis_connection.quit()
+    redis_connection = null
+    log('Active session store closed')
+  }
+}

@@ -1,0 +1,141 @@
+// Home Sessions Panel - Card-based design for homepage
+// Uses full-width cards for sessions and threads
+
+.home-sessions-panel
+  display: flex
+  flex-direction: column
+  gap: $space_base
+  width: 100%
+
+.home-sessions-panel__section
+  display: flex
+  flex-direction: column
+  gap: $space_sm
+
+.home-sessions-panel__header
+  display: flex
+  align-items: center
+  gap: $space_xs
+  padding: $space_xs 0
+  font-size: $font_size_xs
+  font-weight: $font_weight_semibold
+  text-transform: uppercase
+  letter-spacing: 0.5px
+  color: $color_text_secondary
+
+.home-sessions-panel__header-dot
+  width: 8px
+  height: 8px
+  border-radius: 50%
+  flex-shrink: 0
+
+  &--active
+    background-color: $color_success
+    animation: pulse 1.5s ease-in-out infinite
+
+  &--review
+    background-color: $color_warning
+
+.home-sessions-panel__header-title
+  flex: 1
+
+.home-sessions-panel__header-count
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text_tertiary
+  background: $color_surface_secondary
+  padding: 2px 6px
+  border-radius: $radius_sm
+
+.home-sessions-panel__list
+  display: flex
+  flex-direction: column
+  gap: $space_sm
+
+.home-sessions-panel__view-all
+  display: block
+  text-align: center
+  padding: $space_sm
+  font-size: $font_size_xs
+  color: $color_primary
+  text-decoration: none
+  transition: color $transition_base
+
+  &:hover
+    color: $color_primary_hover
+    text-decoration: underline
+
+// Active Session Card Styles
+.active-session-card
+  background: white
+  border-radius: $radius_base
+  border: 2px solid rgba(40, 167, 69, 0.3)
+  padding: $space_sm $space_base
+  transition: all $transition_fast
+  position: relative
+  display: flex
+  flex-direction: column
+
+  &--clickable
+    cursor: pointer
+
+    &:hover
+      background-color: $color_surface_hover
+      transform: $hover_lift
+      box-shadow: $shadow_sm
+
+.active-session-card__main-row
+  display: flex
+  align-items: center
+  gap: $space_xs
+  margin-bottom: $space_xs
+
+.active-session-card__dot
+  width: 8px
+  height: 8px
+  border-radius: 50%
+  background-color: $color_success
+  animation: pulse 1.5s ease-in-out infinite
+  flex-shrink: 0
+
+  &--idle
+    background-color: $color_text_tertiary
+    animation: none
+
+.active-session-card__directory
+  font-size: $font_size_sm
+  font-weight: $font_weight_medium
+  font-family: $font_family_mono
+  color: $color_text
+  flex: 1
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.active-session-card__provider
+  flex-shrink: 0
+
+.active-session-card__details-row
+  display: flex
+  align-items: center
+  gap: $space_xs
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.active-session-card__status
+  color: $color_success
+  font-weight: $font_weight_medium
+
+.active-session-card__separator
+  color: $color_text_tertiary
+
+.active-session-card__time
+  font-family: $font_family_mono
+  color: $color_text_tertiary
+
+.active-session-card__thread-link
+  color: $color_primary
+  font-weight: $font_weight_medium
+
+  .active-session-card:hover &
+    text-decoration: underline

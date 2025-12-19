@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 import { get_threads_state } from '@core/threads/selectors'
+import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 import FileActions from '@components/FileActions/index.js'
@@ -27,6 +28,11 @@ const ThreadTimelineView = () => {
     ? current_path.split('/')[2]
     : null
   const thread_path = thread_id ? `/thread/${thread_id}/metadata.json` : null
+
+  // Get active session for this thread if it exists
+  const active_session = useSelector((state) =>
+    get_active_session_for_thread(state, thread_id)
+  )
 
   const handle_navigate = (path) => {
     navigate(path || '/')
@@ -69,6 +75,7 @@ const ThreadTimelineView = () => {
     <TimelineList
       timeline={timeline_to_display}
       working_directory={working_directory.path}
+      active_session={active_session}
     />
   )
 

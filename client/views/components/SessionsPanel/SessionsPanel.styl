@@ -1,0 +1,165 @@
+// Sessions Panel - Compact, responsive design with 100px max height
+// Large screens: horizontal layout with sections side by side
+// Small screens: stacked sections with horizontal scrolling chips
+
+.sessions-panel
+  display: flex
+  flex-direction: row
+  gap: $space_base
+  width: 100%
+  max-height: 100px
+  overflow: hidden
+  padding: $space_sm 0
+
+  // Small screens: stack vertically
+  @media (max-width: 768px)
+    flex-direction: column
+    gap: $space_sm
+    max-height: 100px
+
+.sessions-panel__section
+  display: flex
+  flex-direction: column
+  gap: $space_xs
+  min-width: 0
+  flex: 1
+
+  // Large screens: limit width per section
+  @media (min-width: 769px)
+    max-width: 50%
+
+  &--active
+    flex-shrink: 0
+
+  &--review
+    flex: 1
+    min-width: 0
+
+.sessions-panel__label
+  display: flex
+  align-items: center
+  gap: $space_xs
+  font-size: $font_size_xs
+  font-weight: $font_weight_semibold
+  text-transform: uppercase
+  letter-spacing: 0.5px
+  color: $color_text_secondary
+  flex-shrink: 0
+  white-space: nowrap
+
+.sessions-panel__dot
+  width: 6px
+  height: 6px
+  border-radius: 50%
+  flex-shrink: 0
+
+  &--active
+    background-color: $color_success
+    animation: pulse 1.5s ease-in-out infinite
+
+  &--review
+    background-color: $color_warning
+
+.sessions-panel__label-text
+  flex-shrink: 0
+
+.sessions-panel__count
+  font-family: $font_family_mono
+  font-size: 10px
+  color: $color_text_tertiary
+  background: $color_surface_secondary
+  padding: 1px 5px
+  border-radius: $radius_sm
+  flex-shrink: 0
+
+.sessions-panel__items
+  display: flex
+  flex-wrap: wrap
+  gap: $space_xs
+  overflow: hidden
+  max-height: 52px
+
+  // Small screens: horizontal scroll instead of wrap
+  @media (max-width: 768px)
+    flex-wrap: nowrap
+    overflow-x: auto
+    max-height: 28px
+    padding-bottom: 2px
+
+    &::-webkit-scrollbar
+      height: 2px
+
+    &::-webkit-scrollbar-thumb
+      background-color: rgba(0, 0, 0, 0.15)
+      border-radius: 1px
+
+// Chip styles - compact clickable tags
+.sessions-panel__chip
+  display: inline-flex
+  align-items: center
+  gap: $space_xxs
+  padding: 3px 8px
+  border-radius: $radius_sm
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  white-space: nowrap
+  transition: all $transition_fast
+  text-decoration: none
+  max-width: 180px
+
+  &--session
+    background: rgba(40, 167, 69, 0.08)
+    border: 1px solid rgba(40, 167, 69, 0.25)
+    color: $color_text
+
+  &--idle
+    background: rgba(0, 0, 0, 0.03)
+    border: 1px solid $color_border_light
+    color: $color_text_secondary
+
+  &--thread
+    background: rgba(246, 106, 10, 0.08)
+    border: 1px solid rgba(246, 106, 10, 0.25)
+    color: $color_text
+
+  &--more
+    background: $color_surface_secondary
+    border: 1px solid $color_border_light
+    color: $color_primary
+    font-weight: $font_weight_medium
+
+    &:hover
+      background: $color_surface_hover
+      color: $color_primary_hover
+
+  &--clickable
+    cursor: pointer
+
+    &:hover
+      transform: translateY(-1px)
+      box-shadow: $shadow_xs
+
+  &--session&--clickable:hover
+    background: rgba(40, 167, 69, 0.15)
+    border-color: rgba(40, 167, 69, 0.4)
+
+  &--thread&--clickable:hover
+    background: rgba(246, 106, 10, 0.15)
+    border-color: rgba(246, 106, 10, 0.4)
+
+.sessions-panel__chip-dot
+  width: 5px
+  height: 5px
+  border-radius: 50%
+  background-color: $color_success
+  animation: pulse 1.5s ease-in-out infinite
+  flex-shrink: 0
+
+  &--idle
+    background-color: $color_text_tertiary
+    animation: none
+
+.sessions-panel__chip-text
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap

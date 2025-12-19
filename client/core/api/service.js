@@ -166,6 +166,11 @@ export const api = {
   get_path_info({ path }) {
     const url = `${API_URL}/filesystem/info?path=${encodeURIComponent(path)}`
     return { url }
+  },
+
+  get_active_sessions() {
+    const url = `${API_URL}/active-sessions`
+    return { url }
   }
 }
 

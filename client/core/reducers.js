@@ -6,6 +6,7 @@ import { threads_reducer } from './threads/index.js'
 import { tasks_reducer } from './tasks/index.js'
 import { directory_reducer } from './directory/index.js'
 import { notification_reducer } from './notification/index.js'
+import { active_sessions_reducer } from './active-sessions/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -15,7 +16,8 @@ const root_reducer = (router) =>
     threads: threads_reducer,
     tasks: tasks_reducer,
     directory: directory_reducer,
-    notification: notification_reducer
+    notification: notification_reducer,
+    active_sessions: active_sessions_reducer
   })
 
 export default root_reducer

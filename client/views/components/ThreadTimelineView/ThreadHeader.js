@@ -4,10 +4,12 @@ import { Box } from '@mui/material'
 import { useSelector, useDispatch } from 'react-redux'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
 import { get_app } from '@core/app/selectors'
+import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import {
   MetadataContainer,
   MetadataRow,
@@ -253,6 +255,82 @@ ExternalSessionIdDisplay.propTypes = {
   session_id: PropTypes.string.isRequired
 }
 
+// Active Session Status Component
+const ACTIVE_SESSION_STYLES = {
+  container: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  },
+  status_dot: {
+    fontSize: '10px',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  status_text: {
+    fontSize: '13px',
+    fontWeight: 500
+  },
+  elapsed_time: {
+    fontSize: '11px',
+    color: COLORS.TEXT_LIGHT,
+    marginLeft: '4px'
+  }
+}
+
+const format_elapsed_time = (last_activity_at) => {
+  if (!last_activity_at) return ''
+
+  const elapsed_ms = Date.now() - new Date(last_activity_at).getTime()
+  const seconds = Math.floor(elapsed_ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+
+  if (hours > 0) return `${hours}h ${minutes % 60}m ago`
+  if (minutes > 0) return `${minutes}m ago`
+  return `${seconds}s ago`
+}
+
+const ActiveSessionStatus = ({ session }) => {
+  if (!session) return null
+
+  const status = session.get ? session.get('status') : session.status
+  const last_activity_at = session.get
+    ? session.get('last_activity_at')
+    : session.last_activity_at
+
+  const is_active = status === 'active'
+  const status_color = is_active ? '#4caf50' : '#9e9e9e'
+  const status_label = is_active ? 'Active' : 'Idle'
+
+  return (
+    <Box sx={ACTIVE_SESSION_STYLES.container}>
+      <FiberManualRecordIcon
+        sx={{
+          ...ACTIVE_SESSION_STYLES.status_dot,
+          color: status_color,
+          animation: is_active ? 'pulse 1.5s ease-in-out infinite' : 'none'
+        }}
+      />
+      <span
+        style={{
+          ...ACTIVE_SESSION_STYLES.status_text,
+          color: status_color
+        }}>
+        {status_label}
+      </span>
+      {last_activity_at && (
+        <span style={ACTIVE_SESSION_STYLES.elapsed_time}>
+          {format_elapsed_time(last_activity_at)}
+        </span>
+      )}
+    </Box>
+  )
+}
+
+ActiveSessionStatus.propTypes = {
+  session: PropTypes.object
+}
+
 // Helper to determine if a metadata row should be marked as first
 const use_first_row_tracker = () => {
   let has_rendered_row = false
@@ -282,7 +360,8 @@ const ThreadStats = ({
   thread_cost_display,
   thread_id,
   dispatch,
-  user_owns_thread
+  user_owns_thread,
+  active_session
 }) => {
   const working_directory = external_session_info?.working_directory
   const session_provider = external_session_info?.provider
@@ -297,6 +376,14 @@ const ThreadStats = ({
 
   return (
     <Box>
+      {active_session && (
+        <MetadataRow
+          label='Live Session'
+          value={<ActiveSessionStatus session={active_session} />}
+          is_first={get_is_first()}
+        />
+      )}
+
       {session_provider && (
         <MetadataRow
           label='Session Provider'
@@ -417,7 +504,8 @@ ThreadStats.propTypes = {
   thread_cost_display: PropTypes.string,
   thread_id: PropTypes.string,
   dispatch: PropTypes.func,
-  user_owns_thread: PropTypes.bool.isRequired
+  user_owns_thread: PropTypes.bool.isRequired,
+  active_session: PropTypes.object
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -475,6 +563,11 @@ const ThreadHeader = ({ metadata, thread_id }) => {
   const current_user_public_key = app_state.get('user_public_key')
   const thread_cost_display = useSelector(get_thread_cost_display)
 
+  // Get active session for this thread
+  const active_session = useSelector((state) =>
+    get_active_session_for_thread(state, thread_id)
+  )
+
   // Check if current user owns this thread
   const user_owns_thread =
     current_user_public_key &&
@@ -510,6 +603,7 @@ const ThreadHeader = ({ metadata, thread_id }) => {
         thread_id={thread_id}
         dispatch={dispatch}
         user_owns_thread={user_owns_thread}
+        active_session={active_session}
       />
     </MetadataContainer>
   )

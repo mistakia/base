@@ -2,6 +2,7 @@ import express from 'express'
 import debug from 'debug'
 
 import * as threads from '#libs-server/threads/index.mjs'
+import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 import {
   check_thread_permission_middleware as check_thread_permission,
@@ -133,6 +134,27 @@ router.get('/:thread_id', async (req, res) => {
     }
 
     handle_errors(res, error, 'getting thread')
+  }
+})
+
+// Get active session for a thread
+router.get('/:thread_id/active-session', async (req, res) => {
+  try {
+    const { thread_id } = req.params
+    log(`Getting active session for thread ${thread_id}`)
+
+    const session = await get_active_session_for_thread(thread_id)
+
+    if (!session) {
+      return res.status(404).json({
+        error: 'No active session',
+        message: `No active session found for thread ${thread_id}`
+      })
+    }
+
+    res.json(session)
+  } catch (error) {
+    handle_errors(res, error, 'getting active session for thread')
   }
 })
 

@@ -5,6 +5,7 @@ import github from './github.mjs'
 import threads from './threads.mjs'
 import models from './models.mjs'
 import filesystem from './filesystem.mjs'
+import active_sessions from './active-sessions.mjs'
 
 export default {
   users,
@@ -13,5 +14,6 @@ export default {
   github,
   threads,
   models,
-  filesystem
+  filesystem,
+  active_sessions
 }
