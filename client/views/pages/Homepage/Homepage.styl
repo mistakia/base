@@ -6,14 +6,23 @@ $homepage_tasks_grid_template_mobile = 1fr
   grid-template-columns 1fr
   gap 16px
   width 100%
+  max-width 100%
+  min-width 0
 
 .threads-container
     padding 18px
     border 1px solid $color_border
     background rgba(0,0,0,0.02)
     border-radius 8px
+    width 100%
+    max-width 100%
+    min-width 0
 
 .tasks-container
+  width 100%
+  max-width 100%
+  min-width 0
+  
   &.loading-home-tasks
     text-align center
     padding 40px 18px
@@ -21,6 +30,8 @@ $homepage_tasks_grid_template_mobile = 1fr
 
 .tasks-table
   width 100%
+  max-width 100%
+  min-width 0
   overflow hidden
 
   .tasks-table-header
@@ -28,6 +39,7 @@ $homepage_tasks_grid_template_mobile = 1fr
     grid-template-columns $homepage_tasks_grid_template
     gap 16px
     padding 8px 20px
+    min-width 0
     border-bottom 1px solid #e9ecef
     font-weight 800
     color #495057
@@ -59,6 +71,7 @@ $homepage_tasks_grid_template_mobile = 1fr
       grid-template-columns $homepage_tasks_grid_template
       gap 16px
       padding 8px 20px
+      min-width 0
       border-bottom 1px solid #f1f3f4
       align-items center
       transition background-color 0.2s ease

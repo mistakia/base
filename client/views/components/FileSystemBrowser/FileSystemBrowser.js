@@ -39,9 +39,8 @@ const FileSystemBrowser = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        maxWidth: '1100px',
-        width: '100%',
-        margin: '0 auto'
+        maxWidth: '100%',
+        width: '100%'
       }}>
       <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       {is_directory ? (
