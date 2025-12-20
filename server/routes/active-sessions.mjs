@@ -73,6 +73,32 @@ async function get_thread_info_for_session(thread_id) {
   }
 }
 
+/**
+ * Enrich a session with fresh thread info from disk
+ *
+ * Reads the latest thread title and timeline event from the thread's files,
+ * ensuring we return current data rather than potentially stale Redis cache.
+ *
+ * @param {Object} session - Session to enrich
+ * @returns {Promise<Object>} Session with fresh thread_title and latest_timeline_event
+ */
+async function enrich_session_with_thread_info(session) {
+  if (!session || !session.thread_id) {
+    return session
+  }
+
+  const { thread_title, latest_timeline_event } =
+    await get_thread_info_for_session(session.thread_id)
+
+  return {
+    ...session,
+    // Use fresh data, falling back to cached if read fails
+    thread_title: thread_title || session.thread_title,
+    latest_timeline_event:
+      latest_timeline_event || session.latest_timeline_event
+  }
+}
+
 const router = express.Router({ mergeParams: true })
 
 /**
@@ -86,9 +112,15 @@ router.get('/', async (req, res) => {
   try {
     const sessions = await get_all_active_sessions()
 
+    // Enrich sessions with fresh thread info (title and latest timeline event)
+    // This ensures we always return the current latest event, not stale Redis data
+    const enriched_sessions = await Promise.all(
+      sessions.map(enrich_session_with_thread_info)
+    )
+
     // Apply permission-based redaction to each session
     const redacted_sessions = await Promise.all(
-      sessions.map((session) =>
+      enriched_sessions.map((session) =>
         apply_session_redaction(session, user_public_key)
       )
     )
@@ -123,9 +155,12 @@ router.get('/:session_id', async (req, res) => {
       })
     }
 
+    // Enrich session with fresh thread info (title and latest timeline event)
+    const enriched_session = await enrich_session_with_thread_info(session)
+
     // Apply permission-based redaction
     const redacted_session = await apply_session_redaction(
-      session,
+      enriched_session,
       user_public_key
     )
 
