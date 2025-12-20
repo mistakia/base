@@ -1,17 +1,24 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
 import CompactTimelineEvent from './CompactTimelineEvent.js'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { threads_actions } from '@core/threads/actions.js'
+import { get_thread_by_id } from '@core/threads/selectors.js'
 
 const ActiveSessionCard = ({ session }) => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
+
+  // Get thread state to check if archived
+  const thread = useSelector((state) =>
+    session.thread_id ? get_thread_by_id(state, session.thread_id) : null
+  )
+  const is_thread_archived = thread?.thread_state === 'archived'
 
   const handle_click = (event) => {
     if (!session.thread_id) return
@@ -65,8 +72,9 @@ const ActiveSessionCard = ({ session }) => {
   const has_thread = Boolean(session.thread_id)
   const is_redacted = Boolean(session.is_redacted)
 
-  // Only show actions if idle, has thread, and user has permission (not redacted)
-  const show_actions = is_idle && has_thread && !is_redacted
+  // Only show actions if idle, has thread, user has permission (not redacted), and thread is not archived
+  const show_actions =
+    is_idle && has_thread && !is_redacted && !is_thread_archived
 
   const get_status_label = () => {
     if (is_idle) return 'Idle'

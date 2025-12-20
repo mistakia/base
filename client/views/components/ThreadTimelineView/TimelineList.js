@@ -76,11 +76,6 @@ const LIVE_INDICATOR_STYLES = {
     fontSize: '13px',
     fontWeight: 500,
     color: '#4caf50'
-  },
-  subtext: {
-    fontSize: '12px',
-    color: '#666',
-    marginLeft: 'auto'
   }
 }
 
@@ -98,9 +93,6 @@ const LiveSessionIndicator = ({ active_session }) => {
     <Box sx={LIVE_INDICATOR_STYLES.container}>
       <FiberManualRecordIcon sx={LIVE_INDICATOR_STYLES.dot} />
       <span style={LIVE_INDICATOR_STYLES.text}>Live session in progress</span>
-      <span style={LIVE_INDICATOR_STYLES.subtext}>
-        Updates will appear here
-      </span>
     </Box>
   )
 }
