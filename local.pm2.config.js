@@ -38,7 +38,9 @@ module.exports = {
       env: {
         DEBUG: 'metadata:*',
         DEBUG_COLORS: 'false',
-        CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY
+        CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
+        // Fix chokidar FSEvents issue on macOS where /tmp is a symlink to /private/tmp
+        CHOKIDAR_USEPOLLING: '1'
       }
     }
   ]

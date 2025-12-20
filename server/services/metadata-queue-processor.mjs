@@ -210,6 +210,9 @@ const handle_queue_file_change = (event_type, file_path) => {
 /**
  * Create watcher configuration
  *
+ * On macOS, /tmp is a symlink to /private/tmp, and FSEvents may not
+ * reliably detect changes through symlinks. Use polling mode for reliability.
+ *
  * @returns {Object} Chokidar configuration
  */
 const create_watcher_config = () => ({
@@ -218,7 +221,10 @@ const create_watcher_config = () => ({
     pollInterval: QUEUE_CONFIG.POLL_INTERVAL_MS
   },
   persistent: true,
-  ignoreInitial: false
+  ignoreInitial: false,
+  // Use polling on macOS because /tmp -> /private/tmp symlink breaks FSEvents
+  usePolling: process.platform === 'darwin',
+  interval: 500
 })
 
 /**
@@ -290,11 +296,23 @@ export const stop_metadata_queue_processor = async () => {
 // Standalone Execution
 // ============================================================================
 
-// Run as standalone service when executed directly
-const is_main_module = process.argv[1]?.endsWith('metadata-queue-processor.mjs')
+// Run as standalone service when executed directly or via PM2
+// PM2 uses ProcessContainerFork.js as the entry point, so check pm_id env var
+const is_direct_execution = process.argv[1]?.endsWith(
+  'metadata-queue-processor.mjs'
+)
+const is_pm2_execution =
+  process.env.pm_id !== undefined &&
+  process.env.name === 'metadata-queue-processor'
+const is_main_module = is_direct_execution || is_pm2_execution
 
 if (is_main_module) {
-  debug.enable('metadata:*')
+  // Enable debug output - check env var or enable by default for standalone
+  if (process.env.DEBUG || is_pm2_execution) {
+    debug.enable(process.env.DEBUG || 'metadata:*')
+  } else {
+    debug.enable('metadata:*')
+  }
 
   log('Starting metadata queue processor as standalone service')
   start_metadata_queue_processor()
