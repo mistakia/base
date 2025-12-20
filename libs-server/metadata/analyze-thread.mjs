@@ -46,7 +46,16 @@ export const extract_first_user_message = (timeline) => {
 
   // Filter out warmup/test messages
   for (const message of user_messages) {
-    const content = message.content?.trim()
+    // Handle both string content and array content (some messages have content as array)
+    let content = message.content
+    if (Array.isArray(content)) {
+      // Extract text from content blocks
+      content = content
+        .filter((block) => typeof block === 'string' || block?.type === 'text')
+        .map((block) => (typeof block === 'string' ? block : block.text))
+        .join('')
+    }
+    content = typeof content === 'string' ? content.trim() : null
     if (!content) continue
 
     const is_warmup = ANALYSIS_CONFIG.WARMUP_PATTERNS.some((pattern) =>
