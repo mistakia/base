@@ -107,9 +107,9 @@ export const analyze_thread_for_metadata = async ({
   const thread = await get_thread({ thread_id })
 
   // Check if metadata already exists
-  // Skip if short_description exists (indicates AI analysis was already done)
-  // Title alone doesn't count since session import sets a default title from prompt
-  if (thread.short_description) {
+  // Skip only if BOTH title AND short_description exist
+  // If title is missing, we need to regenerate it even if short_description exists
+  if (thread.title && thread.short_description) {
     log(`Thread ${thread_id} already has metadata, skipping`)
     return {
       thread_id,
