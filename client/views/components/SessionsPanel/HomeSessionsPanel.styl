@@ -6,11 +6,16 @@
   flex-direction: column
   gap: $space_base
   width: 100%
+  max-width: 100%
+  min-width: 0
+  overflow: hidden
 
 .home-sessions-panel__section
   display: flex
   flex-direction: column
   gap: $space_sm
+  min-width: 0
+  max-width: 100%
 
 .home-sessions-panel__header
   display: flex
@@ -46,24 +51,21 @@
   background: $color_surface_secondary
   padding: 2px 6px
   border-radius: $radius_sm
+  text-decoration: none
+  transition: all $transition_fast
+
+  // When used as a link
+  &:hover
+    color: $color_primary
+    background: $color_surface_hover
+    text-decoration: none
 
 .home-sessions-panel__list
   display: flex
   flex-direction: column
   gap: $space_sm
-
-.home-sessions-panel__view-all
-  display: block
-  text-align: center
-  padding: $space_sm
-  font-size: $font_size_xs
-  color: $color_primary
-  text-decoration: none
-  transition: color $transition_base
-
-  &:hover
-    color: $color_primary_hover
-    text-decoration: underline
+  min-width: 0
+  max-width: 100%
 
 // Active Session Card Styles
 .active-session-card
@@ -75,6 +77,8 @@
   position: relative
   display: flex
   flex-direction: column
+  overflow: hidden
+  max-width: 100%
 
   &--clickable
     cursor: pointer
@@ -89,6 +93,8 @@
   align-items: center
   gap: $space_xs
   margin-bottom: $space_xs
+  min-width: 0
+  max-width: 100%
 
 .active-session-card__dot
   width: 8px
@@ -102,12 +108,12 @@
     background-color: $color_text_tertiary
     animation: none
 
-.active-session-card__directory
+.active-session-card__title
   font-size: $font_size_sm
   font-weight: $font_weight_medium
-  font-family: $font_family_mono
   color: $color_text
   flex: 1
+  min-width: 0
   overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
@@ -133,9 +139,91 @@
   font-family: $font_family_mono
   color: $color_text_tertiary
 
-.active-session-card__thread-link
-  color: $color_primary
-  font-weight: $font_weight_medium
+// Compact Timeline Event Display
+.compact-timeline-event
+  display: flex
+  align-items: center
+  gap: $space_xs
+  padding: $space_xs $space_sm
+  margin-top: $space_xs
+  background: $color_surface_secondary
+  border-radius: $radius_sm
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  overflow: hidden
+  max-width: 100%
 
-  .active-session-card:hover &
-    text-decoration: underline
+  // Message variant with multi-line support
+  &--message
+    flex-direction: column
+    align-items: stretch
+
+.compact-timeline-event__header
+  display: flex
+  align-items: center
+  gap: $space_xs
+  width: 100%
+
+.compact-timeline-event__icon
+  display: flex
+  align-items: center
+  flex-shrink: 0
+  font-size: 14px
+  color: $color_text_tertiary
+
+.compact-timeline-event__label
+  flex: 1
+  font-weight: $font_weight_medium
+  color: $color_text_secondary
+
+.compact-timeline-event__toggle
+  display: flex
+  align-items: center
+  gap: 2px
+  padding: 2px 6px
+  border: none
+  background: transparent
+  color: $color_primary
+  font-size: $font_size_xs
+  cursor: pointer
+  border-radius: $radius_sm
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.05)
+
+.compact-timeline-event__content
+  margin-top: $space_xs
+  font-size: $font_size_sm
+  line-height: 1.5
+  color: $color_text
+  overflow: hidden
+  word-break: break-word
+  overflow-wrap: break-word
+
+  // Override MarkdownViewer styles for compact display
+  :deep(p)
+    margin-bottom: $space_xs
+    word-break: break-word
+
+  :deep(p:last-child)
+    margin-bottom: 0
+
+  :deep(pre)
+    font-size: $font_size_xs
+    padding: $space_xs
+    margin: $space_xs 0
+    overflow-x: auto
+    word-break: break-all
+
+  :deep(code)
+    font-size: $font_size_xs
+    word-break: break-all
+
+.compact-timeline-event__summary
+  flex: 1
+  min-width: 0
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  word-break: break-all

@@ -86,21 +86,15 @@ const HomeSessionsPanel = ({
             <span className='home-sessions-panel__header-title'>
               Ready for Review
             </span>
-            <span className='home-sessions-panel__header-count'>
+            <Link to='/thread' className='home-sessions-panel__header-count'>
               {active_threads.size || active_threads.length}
-            </span>
+            </Link>
           </div>
           <div className='home-sessions-panel__list'>
             {threads_list.map((thread) => (
               <Thread key={thread.thread_id} thread={thread} />
             ))}
           </div>
-          {(active_threads.size > max_threads ||
-            active_threads.length > max_threads) && (
-            <Link to='/thread' className='home-sessions-panel__view-all'>
-              view all threads
-            </Link>
-          )}
         </div>
       )}
     </div>

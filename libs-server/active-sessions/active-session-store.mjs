@@ -93,6 +93,8 @@ export const register_active_session = async ({
     session_id,
     status: 'active',
     thread_id: null,
+    thread_title: null,
+    latest_timeline_event: null,
     working_directory,
     transcript_path,
     started_at: new Date().toISOString(),
@@ -116,6 +118,8 @@ export const register_active_session = async ({
  * @param {string} params.session_id - Claude session ID
  * @param {string} [params.status] - New status (active/idle)
  * @param {string} [params.thread_id] - Associated thread ID
+ * @param {string} [params.thread_title] - Thread title
+ * @param {Object} [params.latest_timeline_event] - Latest timeline event from thread
  * @param {string} [params.working_directory] - Working directory (for upsert)
  * @param {string} [params.transcript_path] - Transcript path (for upsert)
  * @returns {Promise<Object|null>} Updated session record or null if not found
@@ -124,6 +128,8 @@ export const update_active_session = async ({
   session_id,
   status,
   thread_id,
+  thread_title,
+  latest_timeline_event,
   working_directory,
   transcript_path
 }) => {
@@ -139,6 +145,9 @@ export const update_active_session = async ({
     session = JSON.parse(existing)
     if (status !== undefined) session.status = status
     if (thread_id !== undefined) session.thread_id = thread_id
+    if (thread_title !== undefined) session.thread_title = thread_title
+    if (latest_timeline_event !== undefined)
+      session.latest_timeline_event = latest_timeline_event
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)
@@ -146,6 +155,8 @@ export const update_active_session = async ({
       session_id,
       status: status || 'active',
       thread_id: thread_id || null,
+      thread_title: thread_title || null,
+      latest_timeline_event: latest_timeline_event || null,
       working_directory: working_directory || null,
       transcript_path: transcript_path || null,
       started_at: new Date().toISOString(),

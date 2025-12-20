@@ -11,20 +11,90 @@ import {
   emit_active_session_updated,
   emit_active_session_ended
 } from '#libs-server/active-sessions/index.mjs'
+import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
+import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
+import { redact_session_data } from '#server/middleware/content-redactor.mjs'
+
+/**
+ * Apply permission-based redaction to a session
+ *
+ * @param {Object} session - Session to potentially redact
+ * @param {string|null} user_public_key - Requesting user's public key
+ * @returns {Promise<Object>} Session (possibly redacted)
+ */
+async function apply_session_redaction(session, user_public_key) {
+  if (!session) return session
+
+  // Sessions with thread_id - check thread permission
+  if (session.thread_id) {
+    try {
+      const permission_result = await check_thread_permission_for_user({
+        user_public_key,
+        thread_id: session.thread_id
+      })
+
+      if (!permission_result.allowed) {
+        return redact_session_data(session)
+      }
+
+      return session
+    } catch {
+      // On permission check failure, redact to be safe
+      return redact_session_data(session)
+    }
+  }
+
+  // Sessions without thread - redact paths (can't verify ownership)
+  return redact_session_data(session)
+}
+
+/**
+ * Get thread info (title and latest timeline event) for a session
+ * @param {string} thread_id - Thread ID to fetch info for
+ * @returns {Promise<Object>} Object with thread_title and latest_timeline_event
+ */
+async function get_thread_info_for_session(thread_id) {
+  if (!thread_id) return { thread_title: null, latest_timeline_event: null }
+
+  try {
+    const { metadata, timeline } = await read_thread_data({ thread_id })
+
+    // Get title from metadata
+    const thread_title = metadata.title || null
+
+    // Get latest timeline event (last entry in timeline)
+    const latest_timeline_event =
+      timeline && timeline.length > 0 ? timeline[timeline.length - 1] : null
+
+    return { thread_title, latest_timeline_event }
+  } catch {
+    // Thread may not exist yet or be inaccessible
+    return { thread_title: null, latest_timeline_event: null }
+  }
+}
 
 const router = express.Router({ mergeParams: true })
 
 /**
  * GET /api/active-sessions
- * List all active sessions
+ * List all active sessions with permission-based redaction
  */
 router.get('/', async (req, res) => {
   const { log } = req.app.locals
+  const user_public_key = req.user?.user_public_key || null
 
   try {
     const sessions = await get_all_active_sessions()
-    log(`Retrieved ${sessions.length} active sessions`)
-    res.status(200).json(sessions)
+
+    // Apply permission-based redaction to each session
+    const redacted_sessions = await Promise.all(
+      sessions.map((session) =>
+        apply_session_redaction(session, user_public_key)
+      )
+    )
+
+    log(`Retrieved ${redacted_sessions.length} active sessions`)
+    res.status(200).json(redacted_sessions)
   } catch (error) {
     log('Error listing active sessions:', error)
     res.status(500).json({
@@ -36,11 +106,12 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/active-sessions/:session_id
- * Get a specific active session
+ * Get a specific active session with permission-based redaction
  */
 router.get('/:session_id', async (req, res) => {
   const { log } = req.app.locals
   const { session_id } = req.params
+  const user_public_key = req.user?.user_public_key || null
 
   try {
     const session = await get_active_session(session_id)
@@ -52,7 +123,13 @@ router.get('/:session_id', async (req, res) => {
       })
     }
 
-    res.status(200).json(session)
+    // Apply permission-based redaction
+    const redacted_session = await apply_session_redaction(
+      session,
+      user_public_key
+    )
+
+    res.status(200).json(redacted_session)
   } catch (error) {
     log(`Error getting active session ${session_id}:`, error)
     res.status(500).json({
@@ -92,16 +169,25 @@ router.post('/', async (req, res) => {
     })
 
     if (thread_id) {
-      // Update session with thread association
+      // Get thread info (title and latest timeline event)
+      const { thread_title, latest_timeline_event } =
+        await get_thread_info_for_session(thread_id)
+
+      // Update session with thread association and info
       session.thread_id = thread_id
+      session.thread_title = thread_title
+      session.latest_timeline_event = latest_timeline_event
+
       await update_active_session({
         session_id,
-        thread_id
+        thread_id,
+        thread_title,
+        latest_timeline_event
       })
     }
 
     // Emit WebSocket event
-    emit_active_session_started(session)
+    await emit_active_session_started(session)
 
     log(`Registered active session: ${session_id}`)
     res.status(201).json(session)
@@ -142,16 +228,38 @@ router.put('/:session_id', async (req, res) => {
       })
 
       if (found_thread_id) {
+        // Get thread info (title and latest timeline event)
+        const { thread_title, latest_timeline_event } =
+          await get_thread_info_for_session(found_thread_id)
+
         session.thread_id = found_thread_id
+        session.thread_title = thread_title
+        session.latest_timeline_event = latest_timeline_event
+
         await update_active_session({
           session_id,
-          thread_id: found_thread_id
+          thread_id: found_thread_id,
+          thread_title,
+          latest_timeline_event
         })
       }
+    } else {
+      // Thread already associated, refresh thread info
+      const { thread_title, latest_timeline_event } =
+        await get_thread_info_for_session(session.thread_id)
+
+      session.thread_title = thread_title
+      session.latest_timeline_event = latest_timeline_event
+
+      await update_active_session({
+        session_id,
+        thread_title,
+        latest_timeline_event
+      })
     }
 
     // Emit WebSocket event
-    emit_active_session_updated(session)
+    await emit_active_session_updated(session)
 
     log(`Updated active session: ${session_id} status=${session.status}`)
     res.status(200).json(session)
@@ -183,7 +291,7 @@ router.delete('/:session_id', async (req, res) => {
     }
 
     // Emit WebSocket event
-    emit_active_session_ended(session_id)
+    await emit_active_session_ended(session_id)
 
     log(`Removed active session: ${session_id}`)
     res.status(200).json({ success: true, session_id })

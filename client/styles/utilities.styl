@@ -78,18 +78,20 @@
   @media (min-width: 992px) // lg breakpoint
     flex: 2 // Default to 8/12 ratio (2:1)
 
-.two-column-right  
+.two-column-right
   flex: 1
   min-width: 0 // Prevent flex item overflow
   max-width: 100% // Ensure children don't exceed parent
+  overflow: hidden // Clip any overflowing content
   padding-bottom: $space_base
-  
+
   // Ensure all direct children respect parent width constraints
   > *
     width: 100%
     max-width: 100%
     min-width: 0
-  
+    overflow: hidden
+
   @media (min-width: 992px) // lg breakpoint
     flex: 1 // Default to 4/12 ratio (1:2 with left)
 

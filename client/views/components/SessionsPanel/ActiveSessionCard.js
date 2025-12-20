@@ -4,12 +4,18 @@ import { useNavigate } from 'react-router-dom'
 
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
+import CompactTimelineEvent from './CompactTimelineEvent.js'
 
 const ActiveSessionCard = ({ session }) => {
   const navigate = useNavigate()
 
-  const handle_click = () => {
-    if (session.thread_id) {
+  const handle_click = (event) => {
+    if (!session.thread_id) return
+
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/thread/${session.thread_id}`, '_blank')
+    } else {
       navigate(`/thread/${session.thread_id}`)
     }
   }
@@ -18,6 +24,9 @@ const ActiveSessionCard = ({ session }) => {
   const working_directory = working_directory_path
     ? working_directory_path.split('/').pop() || 'root'
     : 'Unknown'
+
+  // Use thread title if available, otherwise fall back to directory
+  const display_title = session.thread_title || working_directory
 
   const last_activity = session.last_activity_at
     ? format_shorthand_time(session.last_activity_at)
@@ -40,9 +49,7 @@ const ActiveSessionCard = ({ session }) => {
         <span
           className={`active-session-card__dot ${is_idle ? 'active-session-card__dot--idle' : ''}`}
         />
-        <span className='active-session-card__directory'>
-          {working_directory}
-        </span>
+        <span className='active-session-card__title'>{display_title}</span>
         <span className='active-session-card__provider'>
           <ProviderLogo
             provider='claude'
@@ -60,15 +67,11 @@ const ActiveSessionCard = ({ session }) => {
         </span>
         <span className='active-session-card__separator'>-</span>
         <span className='active-session-card__time'>{last_activity}</span>
-        {has_thread && (
-          <>
-            <span className='active-session-card__separator'>-</span>
-            <span className='active-session-card__thread-link'>
-              view thread
-            </span>
-          </>
-        )}
       </div>
+
+      {session.latest_timeline_event && (
+        <CompactTimelineEvent timeline_event={session.latest_timeline_event} />
+      )}
     </div>
   )
 }

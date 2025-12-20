@@ -755,6 +755,50 @@ export const redact_timeline_parameters = (
 }
 
 // ============================================================================
+// ACTIVE SESSION REDACTION
+// ============================================================================
+
+/**
+ * Redacts active session data while preserving structure
+ *
+ * Used for sessions where the user doesn't have permission to view
+ * the associated thread content.
+ *
+ * @param {Object} session - Active session record
+ * @returns {Object} Redacted session with is_redacted flag
+ */
+export const redact_session_data = (session) => {
+  if (!session) return session
+
+  const redacted = create_redacted_copy(session)
+
+  // Redact thread title
+  if (redacted.thread_title) {
+    redacted.thread_title = redact_text_content(redacted.thread_title)
+  }
+
+  // Redact latest timeline event using the same logic as thread timeline
+  if (redacted.latest_timeline_event) {
+    redacted.latest_timeline_event = redact_timeline_entry(
+      redacted.latest_timeline_event
+    )
+  }
+
+  // Redact file system paths
+  if (redacted.working_directory) {
+    redacted.working_directory = redact_path_components(
+      redacted.working_directory
+    )
+  }
+
+  if (redacted.transcript_path) {
+    redacted.transcript_path = redact_path_components(redacted.transcript_path)
+  }
+
+  return redacted
+}
+
+// ============================================================================
 // UTILITY EXPORTS
 // ============================================================================
 

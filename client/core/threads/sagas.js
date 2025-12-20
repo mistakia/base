@@ -20,11 +20,7 @@ import {
 import { threads_action_types } from './actions'
 import { get_threads_state } from './selectors'
 import { show_success_notification } from '@core/notification/sagas'
-import { notification_actions } from '@core/notification/actions'
 import { dialog_actions } from '@core/dialog/actions'
-import history from '@core/history'
-import ThreadCreatedNotification from '@views/components/Notification/ThreadCreatedNotification'
-import ThreadEventNotification from '@views/components/Notification/ThreadEventNotification'
 
 //= ====================================
 //  UTILITY SAGAS
@@ -59,26 +55,6 @@ function* get_view_id_from_payload(payload) {
     threads_state.get('selected_thread_table_view_id') ||
     'default'
   )
-}
-
-/**
- * Finds thread metadata by thread_id in loaded threads data
- */
-function* get_thread_metadata(thread_id) {
-  const threads_state = yield select(get_threads_state)
-  const all_threads = threads_state.get('threads_data')
-
-  if (all_threads && all_threads.size > 0) {
-    const thread = all_threads.find((t) => t.get('thread_id') === thread_id)
-    if (thread) {
-      return {
-        thread_id,
-        thread_title: thread.get('title') || thread.get('thread_id')
-      }
-    }
-  }
-
-  return { thread_id, thread_title: null }
 }
 
 //= ====================================
@@ -210,63 +186,6 @@ export function* resume_thread_session_saga({ payload }) {
 //  WEBSOCKET EVENT HANDLERS
 //= ====================================
 
-export function* handle_thread_created({ payload }) {
-  try {
-    const { thread } = payload
-    console.log('Thread created:', thread)
-
-    yield put(
-      notification_actions.show_notification({
-        severity: 'success',
-        duration: 8000,
-        component: ThreadCreatedNotification,
-        component_props: { thread }
-      })
-    )
-  } catch (error) {
-    console.error('Error handling thread created event:', error)
-  }
-}
-
-export function* handle_thread_timeline_entry_added({ payload }) {
-  try {
-    const { thread_id, entry, thread_title } = payload
-
-    // Skip notification if user is currently viewing this thread
-    const current_path = history.location.pathname
-    const is_viewing_thread = current_path === `/thread/${thread_id}`
-
-    if (is_viewing_thread) {
-      console.log(`Skipping notification - user is viewing thread ${thread_id}`)
-      return
-    }
-
-    console.log(`New timeline entry for thread ${thread_id}:`, entry.type)
-
-    // Use thread_title from payload, fallback to fetching if not available
-    let final_thread_title = thread_title
-    if (!final_thread_title) {
-      const metadata = yield call(get_thread_metadata, thread_id)
-      final_thread_title = metadata.thread_title
-    }
-
-    yield put(
-      notification_actions.show_notification({
-        severity: 'info',
-        duration: 6000,
-        component: ThreadEventNotification,
-        component_props: {
-          thread_id,
-          thread_title: final_thread_title,
-          entry
-        }
-      })
-    )
-  } catch (error) {
-    console.error('Error handling timeline entry added event:', error)
-  }
-}
-
 //= ====================================
 //  JOB QUEUE EVENT HANDLERS
 //= ====================================
@@ -334,18 +253,6 @@ export function* watch_resume_thread_session() {
   )
 }
 
-// WebSocket event watchers
-export function* watch_thread_created() {
-  yield takeEvery(threads_action_types.THREAD_CREATED, handle_thread_created)
-}
-
-export function* watch_thread_timeline_entry_added() {
-  yield takeEvery(
-    threads_action_types.THREAD_TIMELINE_ENTRY_ADDED,
-    handle_thread_timeline_entry_added
-  )
-}
-
 // Job queue event watchers
 export function* watch_thread_job_failed() {
   yield takeEvery(
@@ -370,9 +277,6 @@ export const threads_sagas = [
   // Thread sessions
   fork(watch_create_thread_session),
   fork(watch_resume_thread_session),
-  // WebSocket events
-  fork(watch_thread_created),
-  fork(watch_thread_timeline_entry_added),
   // Job queue events
   fork(watch_thread_job_failed)
 ]

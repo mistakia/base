@@ -58,14 +58,24 @@ const SessionsPanel = ({
     ? displayed_threads.toJS()
     : displayed_threads
 
-  const handle_session_click = (session) => {
-    if (session.thread_id) {
+  const handle_session_click = (event, session) => {
+    if (!session.thread_id) return
+
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/thread/${session.thread_id}`, '_blank')
+    } else {
       navigate(`/thread/${session.thread_id}`)
     }
   }
 
-  const handle_thread_click = (thread) => {
-    navigate(`/thread/${thread.thread_id}`)
+  const handle_thread_click = (event, thread) => {
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/thread/${thread.thread_id}`, '_blank')
+    } else {
+      navigate(`/thread/${thread.thread_id}`)
+    }
   }
 
   const format_directory = (path) => {
@@ -89,23 +99,25 @@ const SessionsPanel = ({
             {sessions_list.map((session) => {
               const is_idle = session.status === 'idle'
               const has_thread = Boolean(session.thread_id)
+              // Use thread title if available, otherwise fall back to directory
+              const display_text =
+                session.thread_title ||
+                format_directory(session.working_directory)
               return (
                 <div
                   key={session.session_id}
                   className={`sessions-panel__chip sessions-panel__chip--session ${is_idle ? 'sessions-panel__chip--idle' : ''} ${has_thread ? 'sessions-panel__chip--clickable' : ''}`}
                   onClick={
-                    has_thread ? () => handle_session_click(session) : undefined
-                  }
-                  title={
                     has_thread
-                      ? 'Click to view thread'
-                      : `Session: ${session.session_id}`
-                  }>
+                      ? (event) => handle_session_click(event, session)
+                      : undefined
+                  }
+                  title={display_text}>
                   <span
                     className={`sessions-panel__chip-dot ${is_idle ? 'sessions-panel__chip-dot--idle' : ''}`}
                   />
                   <span className='sessions-panel__chip-text'>
-                    {format_directory(session.working_directory)}
+                    {display_text}
                   </span>
                 </div>
               )
@@ -123,21 +135,24 @@ const SessionsPanel = ({
             <span className='sessions-panel__count'>{active_thread_count}</span>
           </div>
           <div className='sessions-panel__items'>
-            {threads_list.map((thread) => (
-              <div
-                key={thread.thread_id}
-                className='sessions-panel__chip sessions-panel__chip--thread sessions-panel__chip--clickable'
-                onClick={() => handle_thread_click(thread)}
-                title={thread.title || 'View thread'}>
-                <span className='sessions-panel__chip-text'>
-                  {thread.title ||
-                    format_directory(
-                      thread.external_session?.provider_metadata
-                        ?.working_directory
-                    )}
-                </span>
-              </div>
-            ))}
+            {threads_list.map((thread) => {
+              const display_text =
+                thread.title ||
+                format_directory(
+                  thread.external_session?.provider_metadata?.working_directory
+                )
+              return (
+                <div
+                  key={thread.thread_id}
+                  className='sessions-panel__chip sessions-panel__chip--thread sessions-panel__chip--clickable'
+                  onClick={(event) => handle_thread_click(event, thread)}
+                  title={display_text}>
+                  <span className='sessions-panel__chip-text'>
+                    {display_text}
+                  </span>
+                </div>
+              )
+            })}
             {active_thread_count > max_threads && (
               <Link
                 to='/thread'
