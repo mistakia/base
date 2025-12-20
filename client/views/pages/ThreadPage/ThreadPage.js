@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom'
 
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
-import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 
@@ -112,7 +111,6 @@ const ThreadPage = ({
       />
       <PageLayout>
         <ThreadTimelineView />
-        <FileSystemBrowser />
       </PageLayout>
     </>
   )

@@ -15,10 +15,13 @@ import {
   get_threads_table,
   put_thread_state,
   create_thread_session,
-  resume_thread_session
+  resume_thread_session,
+  delete_active_session
 } from '@core/api/sagas'
 import { threads_action_types } from './actions'
 import { get_threads_state } from './selectors'
+import { get_active_session_for_thread } from '@core/active-sessions/selectors'
+import { active_sessions_actions } from '@core/active-sessions/actions'
 import { show_success_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
 
@@ -154,6 +157,24 @@ export function* set_thread_archive_state_saga({ payload }) {
         thread_state,
         archive_reason
       })
+
+      // Remove active session if it exists for this thread
+      const active_session = yield select(
+        get_active_session_for_thread,
+        thread_id
+      )
+      if (active_session?.session_id) {
+        // Best effort deletion - update Redux state regardless of API result
+        // since session may have already been removed server-side
+        yield call(delete_active_session, {
+          session_id: active_session.session_id
+        })
+        yield put(
+          active_sessions_actions.active_session_ended(
+            active_session.session_id
+          )
+        )
+      }
     } else {
       // Reactivating - no reason needed, timeline entry shows state change
       yield call(put_thread_state, {

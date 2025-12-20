@@ -84,6 +84,57 @@ export const get_thread_cost_display = createSelector(
   }
 )
 
+// Selector to get a thread by ID from any available source
+export const get_thread_by_id = createSelector(
+  [get_threads_state, (_, thread_id) => thread_id],
+  (threads_state, thread_id) => {
+    if (!thread_id) return null
+
+    // Check selected_thread_data first
+    const selected_thread_data = threads_state.get('selected_thread_data')
+    if (
+      selected_thread_data &&
+      selected_thread_data.get('thread_id') === thread_id
+    ) {
+      return selected_thread_data.toJS
+        ? selected_thread_data.toJS()
+        : selected_thread_data
+    }
+
+    // Check threads list
+    const threads = threads_state.get('threads')
+    if (threads) {
+      const thread = threads.find((t) => {
+        const t_id = t.get ? t.get('thread_id') : t.thread_id
+        return t_id === thread_id
+      })
+      if (thread) {
+        return thread.toJS ? thread.toJS() : thread
+      }
+    }
+
+    // Check thread_table_results
+    const selected_view_id =
+      threads_state.get('selected_thread_table_view_id') || 'default'
+    const selected_view = threads_state.getIn([
+      'thread_table_views',
+      selected_view_id
+    ])
+    const thread_table_results = selected_view
+      ? selected_view.get('thread_table_results')
+      : null
+
+    if (thread_table_results) {
+      const thread = thread_table_results.find((t) => t.thread_id === thread_id)
+      if (thread) {
+        return thread.raw_thread || thread
+      }
+    }
+
+    return null
+  }
+)
+
 // Selector to get cost display for a specific thread by ID (checks both threads and table_threads)
 export const get_thread_cost_by_id = createSelector(
   [get_threads_state, (_, thread_id) => thread_id],

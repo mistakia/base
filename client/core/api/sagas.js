@@ -190,3 +190,26 @@ export const get_active_sessions = fetch.bind(
   api.get_active_sessions,
   get_active_sessions_actions
 )
+
+// Delete active session - best effort operation
+// Note: Caller should dispatch active_session_ended action to update Redux state
+export function* delete_active_session({ session_id }) {
+  const app = yield select(get_app)
+  const token = app.get('user_token')
+  const { abort, request } = api_request(
+    api.delete_active_session,
+    { session_id },
+    token
+  )
+  try {
+    yield call(request)
+  } catch (err) {
+    // Log but don't throw - session might already be removed server-side
+    // Caller should still update Redux state since deletion may have succeeded
+    console.log('Error deleting active session:', err)
+  } finally {
+    if (yield cancelled()) {
+      abort()
+    }
+  }
+}

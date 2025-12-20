@@ -171,6 +171,11 @@ export const api = {
   get_active_sessions() {
     const url = `${API_URL}/active-sessions`
     return { url }
+  },
+
+  delete_active_session({ session_id }) {
+    const url = `${API_URL}/active-sessions/${session_id}`
+    return { url, method: 'DELETE' }
   }
 }
 

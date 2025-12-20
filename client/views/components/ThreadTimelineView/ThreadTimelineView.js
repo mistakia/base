@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -8,6 +8,7 @@ import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 import FileActions from '@components/FileActions/index.js'
+import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import { extract_working_directory } from '@views/utils/thread-metadata-extractor.js'
 
 import ThreadHeader from './ThreadHeader'
@@ -22,6 +23,7 @@ const ThreadTimelineView = () => {
   const selected_thread_data = threads_state.get('selected_thread_data')
   const is_loading_thread = threads_state.get('is_loading_thread')
   const thread_error = threads_state.get('thread_error')
+  const [is_file_browser_visible, set_is_file_browser_visible] = useState(false)
 
   // Extract thread ID from path like /thread/abc123
   const thread_id = current_path.startsWith('/thread/')
@@ -71,6 +73,24 @@ const ThreadTimelineView = () => {
   // Extract working directory for link processing
   const working_directory = extract_working_directory(metadata)
 
+  // Keyboard shortcut handler for toggling file browser (Cmd/Ctrl+B)
+  useEffect(() => {
+    const handle_keydown = (event) => {
+      // Cmd/Ctrl+B to toggle file browser
+      if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+        event.preventDefault()
+        set_is_file_browser_visible((prev) => !prev)
+      }
+    }
+
+    document.addEventListener('keydown', handle_keydown)
+    return () => document.removeEventListener('keydown', handle_keydown)
+  }, [])
+
+  const toggle_file_browser = () => {
+    set_is_file_browser_visible((prev) => !prev)
+  }
+
   const left_content = (
     <TimelineList
       timeline={timeline_to_display}
@@ -83,10 +103,24 @@ const ThreadTimelineView = () => {
     <Box>
       <ThreadHeader metadata={metadata} thread_id={thread_id} />
       {selected_thread_data && (
-        <FileActions
-          path={thread_path}
-          title='Open thread metadata in Cursor'
-        />
+        <FileActions path={thread_path} title='Open thread metadata in Cursor'>
+          <button
+            className='file-browser-toggle-button'
+            onClick={toggle_file_browser}
+            title='Toggle file browser (⌘B / Ctrl+B)'
+            aria-label={
+              is_file_browser_visible
+                ? 'Hide file browser'
+                : 'Show file browser'
+            }>
+            {is_file_browser_visible ? 'hide files' : 'show files'}
+          </button>
+        </FileActions>
+      )}
+      {is_file_browser_visible && (
+        <div className='file-browser-container'>
+          <FileSystemBrowser />
+        </div>
       )}
     </Box>
   )
