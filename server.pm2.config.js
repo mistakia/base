@@ -20,6 +20,21 @@ module.exports = {
       out_file: '/home/user/logs/base-api-out.log',
       log_file: '/home/user/logs/base-api-combined.log',
       time: true
+    },
+    {
+      name: 'metadata-queue-processor',
+      script: 'server/services/metadata-queue-processor.mjs',
+      instances: 1,
+      exec_mode: 'fork',
+      max_memory_restart: '512M',
+      error_file: '/home/user/logs/metadata-processor-error.log',
+      out_file: '/home/user/logs/metadata-processor-out.log',
+      log_file: '/home/user/logs/metadata-processor-combined.log',
+      time: true,
+      // Environment for debug logging
+      env: {
+        DEBUG: 'metadata:*'
+      }
     }
   ],
 
