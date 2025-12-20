@@ -1,13 +1,17 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
 import CompactTimelineEvent from './CompactTimelineEvent.js'
+import { thread_prompt_actions } from '@core/thread-prompt/index.js'
+import { threads_actions } from '@core/threads/actions.js'
 
 const ActiveSessionCard = ({ session }) => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   const handle_click = (event) => {
     if (!session.thread_id) return
@@ -17,6 +21,30 @@ const ActiveSessionCard = ({ session }) => {
       window.open(`/thread/${session.thread_id}`, '_blank')
     } else {
       navigate(`/thread/${session.thread_id}`)
+    }
+  }
+
+  const handle_archive_click = (event) => {
+    event.stopPropagation()
+    if (session.thread_id) {
+      dispatch(
+        threads_actions.set_thread_archive_state({
+          thread_id: session.thread_id,
+          archive_reason: 'completed'
+        })
+      )
+    }
+  }
+
+  const handle_message_click = (event) => {
+    event.stopPropagation()
+    if (session.thread_id) {
+      dispatch(
+        thread_prompt_actions.open({
+          thread_id: session.thread_id,
+          mode: 'resume'
+        })
+      )
     }
   }
 
@@ -35,6 +63,10 @@ const ActiveSessionCard = ({ session }) => {
   const status = session.status || 'active'
   const is_idle = status === 'idle'
   const has_thread = Boolean(session.thread_id)
+  const is_redacted = Boolean(session.is_redacted)
+
+  // Only show actions if idle, has thread, and user has permission (not redacted)
+  const show_actions = is_idle && has_thread && !is_redacted
 
   const get_status_label = () => {
     if (is_idle) return 'Idle'
@@ -71,6 +103,25 @@ const ActiveSessionCard = ({ session }) => {
 
       {session.latest_timeline_event && (
         <CompactTimelineEvent timeline_event={session.latest_timeline_event} />
+      )}
+
+      {show_actions && (
+        <div className='active-session-card__actions'>
+          <button
+            className='active-session-card__action-button'
+            onClick={handle_message_click}
+            title='Send message'
+            aria-label='Send message to thread'>
+            msg
+          </button>
+          <button
+            className='active-session-card__action-button'
+            onClick={handle_archive_click}
+            title='Archive thread'
+            aria-label='Archive thread'>
+            archive
+          </button>
+        </div>
       )}
     </div>
   )

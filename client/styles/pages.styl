@@ -34,19 +34,21 @@ body
   overflow: auto
   overscroll-behavior: none
   overscroll-behavior-y: none
-  padding: 20px $space_base 30px
+  padding: 20px var(--space-base) 30px
   max-width: 100%
 
 // Sessions panel shown below header on non-homepage pages
 .page-sessions-panel
-  padding: $space_sm $space_base
-  margin: 0 (-$space_base) $space_base
+  padding: var(--space-sm) var(--space-base) 12px
+  margin: var(--space-base) auto
+  max-width: 1200px
   background: rgba(0, 0, 0, 0.02)
-  border-bottom: 1px solid $color_border_light
+  border-bottom: 1px solid var(--color-border-light)
+  overflow: visible
 
 // Homepage specific sections
 .homepage-section
-  margin-bottom: $space_2xl
+  margin-bottom: var(--space-2xl)
 
   &:last-child
     margin-bottom: 0
@@ -54,42 +56,42 @@ body
 .threads-grid
   display: grid
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr))
-  gap: $space_xs
+  gap: var(--space-xs)
   padding: 0
   margin: 0
 
 .all-threads-link
-  color: $color_text_secondary
+  color: var(--color-text-secondary)
   text-decoration: none
-  font-size: $font_size_sm
-  margin-top: $space_base
+  font-size: var(--font-size-sm)
+  margin-top: var(--space-base)
   display: inline-block
   
   &:hover
-    color: $color_text
+    color: var(--color-text)
     text-decoration: underline
 
 .thread-item
-  padding: $space_base
-  border-bottom: 1px solid $color_border_light
-  transition: background-color $transition_fast
+  padding: var(--space-base)
+  border-bottom: 1px solid var(--color-border-light)
+  transition: background-color 0.15s ease
   cursor: pointer
 
   &:hover
-    background-color: $color_surface_hover
+    background-color: var(--color-surface-hover)
 
   &:last-child
     border-bottom: none
 
 .thread-item-title
-  font-size: $font_size_base
-  font-weight: $font_weight_medium
-  color: $color_text
-  margin-bottom: $space_xs
+  font-size: var(--font-size-base)
+  font-weight: 500
+  color: var(--color-text)
+  margin-bottom: var(--space-xs)
 
 .thread-item-meta
-  font-size: $font_size_sm
-  color: $color_text_secondary
+  font-size: var(--font-size-sm)
+  color: var(--color-text-secondary)
 
 // Global bottom bar for breadcrumbs and input
 .bottom-bar
@@ -103,9 +105,9 @@ body
   z-index: 100
   display: flex
   flex-direction: column-reverse
-  font-family: $font_family_mono
-  font-size: $font_size_sm
-  color: $color_text
+  font-family: var(--font-family-mono)
+  font-size: var(--font-size-sm)
+  color: var(--color-text)
   overflow: visible
 
   // Refine MUI breadcrumbs inside the bar to match mono/compact Emacs feel
@@ -114,11 +116,11 @@ body
     font-size: inherit
 
   .MuiBreadcrumbs-separator
-    color: $color_text_tertiary
-    margin: 0 $space_xs
+    color: var(--color-text-tertiary)
+    margin: 0 var(--space-xs)
 
   .MuiLink-root
-    color: $color_text
+    color: var(--color-text)
     text-decoration: none
 
     &:hover
@@ -131,8 +133,8 @@ body
   align-items center
   justify-content center
   height 100%
-  color $color_text_secondary
+  color var(--color-text-secondary)
   padding 2rem
   text-align center
   background-color #f5f5f5
-  border-radius $radius_base
+  border-radius var(--radius-base)

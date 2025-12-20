@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import {
@@ -7,11 +7,13 @@ import {
   Button,
   CircularProgress,
   Typography,
-  Collapse,
-  ClickAwayListener
+  Modal,
+  Fade
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import CloseIcon from '@mui/icons-material/Close'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
+import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import {
   get_can_create_threads,
   get_can_resume_thread
@@ -42,40 +44,58 @@ const parse_thread_from_path = (path) => {
   return is_exact_thread_page ? thread_id : null
 }
 
-const should_show_working_directory_picker = (
-  is_thread_page,
-  should_resume
-) => {
-  return !is_thread_page || !should_resume
-}
+const should_show_working_directory_picker = (is_thread_page, should_resume) =>
+  !is_thread_page || !should_resume
 
 /**
  * GlobalThreadInput Component
  *
- * Fixed thread input that appears below breadcrumbs across all pages.
+ * Overlay thread input that can be opened via keyboard shortcut (Cmd/Ctrl+K).
  * Supports two modes:
  * - Creating new threads (default)
- * - Resuming existing threads (when on a thread page)
- *
- * Expands to show options (working directory, mode toggle) when focused.
+ * - Resuming existing threads (when target_thread_id is set or on thread page)
  */
 export default function GlobalThreadInput() {
   const dispatch = useDispatch()
   const location = useLocation()
   const current_path = location.pathname
+  const input_ref = useRef(null)
 
-  // State
+  // Redux state for overlay
+  const is_open = useSelector((state) =>
+    state.getIn(['thread_prompt', 'is_open'], false)
+  )
+  const target_thread_id = useSelector((state) =>
+    state.getIn(['thread_prompt', 'target_thread_id'], null)
+  )
+  const initial_mode = useSelector((state) =>
+    state.getIn(['thread_prompt', 'initial_mode'], 'new')
+  )
+
+  // Local state
   const [message, set_message] = useState('')
-  const [is_focused, set_is_focused] = useState(false)
   const [working_directory, set_working_directory] = useState(
     DEFAULT_WORKING_DIRECTORY
   )
   const [should_resume, set_should_resume] = useState(true)
 
-  // Derived state
-  const thread_id = parse_thread_from_path(current_path)
-  const is_thread_page = !!thread_id
-  const is_resume_mode = is_thread_page && should_resume
+  // Determine thread context
+  const path_thread_id = parse_thread_from_path(current_path)
+  const effective_thread_id = target_thread_id || path_thread_id
+  const is_thread_context = !!effective_thread_id
+  const is_resume_mode = is_thread_context && should_resume
+
+  // Reset state when overlay opens
+  useEffect(() => {
+    if (is_open) {
+      set_message('')
+      set_should_resume(initial_mode === 'resume')
+      // Focus input after a brief delay for animation
+      setTimeout(() => {
+        input_ref.current?.focus()
+      }, 100)
+    }
+  }, [is_open, initial_mode])
 
   // Redux selectors
   const is_loading = useSelector((state) => {
@@ -88,7 +108,7 @@ export default function GlobalThreadInput() {
   const can_create_threads = useSelector(get_can_create_threads)
 
   const selected_thread = useSelector((state) => {
-    if (!is_thread_page) return null
+    if (!is_thread_context) return null
     return state.getIn(['threads', 'selected_thread_data'])?.toJS()
   })
 
@@ -97,6 +117,12 @@ export default function GlobalThreadInput() {
   )
 
   // Event handlers
+  const handle_close = () => {
+    if (!is_loading) {
+      dispatch(thread_prompt_actions.close())
+    }
+  }
+
   const handle_submit = async (e) => {
     e.preventDefault()
 
@@ -105,10 +131,10 @@ export default function GlobalThreadInput() {
     }
 
     try {
-      if (is_resume_mode) {
+      if (is_resume_mode && effective_thread_id) {
         dispatch(
           threads_actions.resume_thread_session({
-            thread_id,
+            thread_id: effective_thread_id,
             prompt: message,
             working_directory
           })
@@ -122,17 +148,20 @@ export default function GlobalThreadInput() {
         )
       }
 
-      // Clear input and collapse options on success
+      // Clear input and close overlay on success
       set_message('')
-      set_is_focused(false)
+      dispatch(thread_prompt_actions.close())
     } catch (error) {
       console.error('Error submitting thread message:', error)
     }
   }
 
-  const handle_key_press = (e) => {
+  const handle_key_down = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       handle_submit(e)
+    }
+    if (e.key === 'Escape') {
+      handle_close()
     }
   }
 
@@ -140,9 +169,9 @@ export default function GlobalThreadInput() {
     set_should_resume(!should_resume)
   }
 
-  const handle_click_away = () => {
-    if (is_focused && !is_loading) {
-      set_is_focused(false)
+  const handle_backdrop_click = (e) => {
+    if (e.target === e.currentTarget) {
+      handle_close()
     }
   }
 
@@ -152,109 +181,123 @@ export default function GlobalThreadInput() {
     : PLACEHOLDER_NEW_THREAD
 
   const show_directory_picker = should_show_working_directory_picker(
-    is_thread_page,
+    is_thread_context,
     should_resume
   )
 
   const is_submit_disabled = is_loading || !message.trim()
-  const show_options = is_focused || is_loading
 
   // Determine if the input should be shown based on permissions
   const should_show_input =
     (is_resume_mode && can_resume_thread) ||
     (!is_resume_mode && can_create_threads)
 
-  // Don't render the component if user lacks permission
+  // Don't render if user lacks permission
   if (!should_show_input) {
     return null
   }
 
   return (
-    <ClickAwayListener onClickAway={handle_click_away}>
-      <Box className='global-thread-input'>
-        <Box className='thread-input-container'>
-          <form onSubmit={handle_submit}>
-            <Box className='two-column-layout'>
-              {/* Text Input */}
-              <Box className='input-column'>
-                <TextField
-                  multiline
-                  fullWidth
-                  minRows={1}
-                  maxRows={8}
-                  value={message}
-                  onChange={(e) => set_message(e.target.value)}
-                  onFocus={() => set_is_focused(true)}
-                  onKeyDown={handle_key_press}
-                  placeholder={placeholder_text}
-                  disabled={is_loading}
-                  variant='outlined'
-                  className='thread-input-field'
-                  size='small'
-                />
-              </Box>
-
-              {/* Options Panel */}
-              <Box className='options-column'>
-                <Collapse in={show_options} timeout={0}>
-                  <Box className='expanded-options'>
-                    {/* Left side: hints */}
-                    <Box className='options-left'>
-                      <Typography
-                        variant='caption'
-                        color='textSecondary'
-                        className='hint-text'>
-                        {KEYBOARD_HINT}
-                      </Typography>
-                    </Box>
-
-                    {/* Right side: controls */}
-                    <Box className='options-right'>
-                      {show_directory_picker && (
-                        <WorkingDirectoryPicker
-                          value={working_directory}
-                          onChange={set_working_directory}
-                          current_path={current_path}
-                        />
-                      )}
-
-                      {is_thread_page && (
-                        <Box
-                          className='mode-toggle'
-                          onClick={handle_toggle_mode}>
-                          <Box
-                            className={`toggle-option ${should_resume ? 'active' : ''}`}>
-                            Resume
-                          </Box>
-                          <Box
-                            className={`toggle-option ${!should_resume ? 'active' : ''}`}>
-                            New
-                          </Box>
-                        </Box>
-                      )}
-
-                      <Button
-                        type='submit'
-                        variant='contained'
-                        disabled={is_submit_disabled}
-                        className='send-button'>
-                        {is_loading ? (
-                          <CircularProgress
-                            size={16}
-                            className='loading-spinner'
-                          />
-                        ) : (
-                          <ArrowUpwardIcon className='send-icon' />
-                        )}
-                      </Button>
-                    </Box>
-                  </Box>
-                </Collapse>
-              </Box>
+    <Modal
+      open={is_open}
+      onClose={handle_close}
+      closeAfterTransition
+      slotProps={{
+        backdrop: {
+          timeout: 200
+        }
+      }}>
+      <Fade in={is_open}>
+        <Box
+          className='global-thread-input-backdrop'
+          onClick={handle_backdrop_click}>
+          <Box className='global-thread-input global-thread-input--overlay'>
+            <Box className='thread-input-header'>
+              <Typography variant='caption' className='header-label'>
+                {is_resume_mode ? 'Continue Thread' : 'New Thread'}
+              </Typography>
+              <Button
+                className='close-button'
+                onClick={handle_close}
+                size='small'
+                aria-label='Close'>
+                <CloseIcon fontSize='small' />
+              </Button>
             </Box>
-          </form>
+            <Box className='thread-input-container'>
+              <form onSubmit={handle_submit}>
+                <Box className='input-wrapper'>
+                  <TextField
+                    inputRef={input_ref}
+                    multiline
+                    fullWidth
+                    minRows={3}
+                    maxRows={12}
+                    value={message}
+                    onChange={(e) => set_message(e.target.value)}
+                    onKeyDown={handle_key_down}
+                    placeholder={placeholder_text}
+                    disabled={is_loading}
+                    variant='outlined'
+                    className='thread-input-field'
+                    size='small'
+                    autoFocus
+                  />
+                </Box>
+
+                <Box className='options-row'>
+                  <Box className='options-left'>
+                    <Typography
+                      variant='caption'
+                      color='textSecondary'
+                      className='hint-text'>
+                      {KEYBOARD_HINT}
+                    </Typography>
+                  </Box>
+
+                  <Box className='options-right'>
+                    {show_directory_picker && (
+                      <WorkingDirectoryPicker
+                        value={working_directory}
+                        onChange={set_working_directory}
+                        current_path={current_path}
+                      />
+                    )}
+
+                    {is_thread_context && (
+                      <Box className='mode-toggle' onClick={handle_toggle_mode}>
+                        <Box
+                          className={`toggle-option ${should_resume ? 'active' : ''}`}>
+                          Resume
+                        </Box>
+                        <Box
+                          className={`toggle-option ${!should_resume ? 'active' : ''}`}>
+                          New
+                        </Box>
+                      </Box>
+                    )}
+
+                    <Button
+                      type='submit'
+                      variant='contained'
+                      disabled={is_submit_disabled}
+                      className='send-button'>
+                      {is_loading ? (
+                        <CircularProgress
+                          size={16}
+                          className='loading-spinner'
+                        />
+                      ) : (
+                        <ArrowUpwardIcon className='send-icon' />
+                      )}
+                    </Button>
+                  </Box>
+                </Box>
+              </form>
+            </Box>
+          </Box>
         </Box>
-      </Box>
-    </ClickAwayListener>
+      </Fade>
+    </Modal>
   )
 }

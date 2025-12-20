@@ -1,13 +1,13 @@
 // ============================================================================
 // Global Thread Input Component Styles
 // ============================================================================
-// A responsive thread input component with two-column layout (mobile-first)
-// Mobile: stacked vertically | Desktop: input + options side-by-side
+// Overlay thread input component positioned on the right side of the viewport
 
 // Breakpoints
 $breakpoint-desktop = 768px
 
 // Spacing
+$spacing-xs = 8px
 $spacing-sm = 12px
 $spacing-md = 16px
 
@@ -17,203 +17,205 @@ $control-height = 32px
 // Border radius
 $border-radius = 6px
 
+// Overlay dimensions
+$overlay-max-width = 500px
+$overlay-margin = 24px
+
 // ============================================================================
-// Main Container
+// Backdrop (covers entire viewport)
+// ============================================================================
+
+.global-thread-input-backdrop
+  position: fixed
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  display: flex
+  justify-content: flex-end
+  align-items: flex-end
+  padding: $overlay-margin
+  box-sizing: border-box
+
+// ============================================================================
+// Main Overlay Container
 // ============================================================================
 
 .global-thread-input
   background: var(--color-bg, #ffffff)
-  padding: 0
-  display: flex
-  justify-content: center
-  
-  // ----------------------------------------------------------------------------
-  // Content Container (max-width wrapper)
-  // ----------------------------------------------------------------------------
-  
-  .thread-input-container
-    max-width: 1200px
-    width: 100%
-    margin: 0
-    padding: 0
-    
-    form
-      width: 100%
-      
-      // --------------------------------------------------------------------------
-      // Two Column Layout (responsive)
-      // --------------------------------------------------------------------------
-      
-      .two-column-layout
-        display: flex
-        flex-direction: column
-        gap: $spacing-sm
-        width: 100%
-        
-        // Desktop: side by side columns
-        @media (min-width: $breakpoint-desktop)
-          flex-direction: row
-          align-items: flex-start
-          gap: $spacing-md
-        
-        // ------------------------------------------------------------------------
-        // Left Column: Text Input
-        // ------------------------------------------------------------------------
-        
-        .input-column
-          flex: 1
-          min-width: 0 // Prevents flex item from overflowing
-          
-          .thread-input-field
-            width: 100%
-            
-            // Material-UI TextField overrides
-            .MuiOutlinedInput-root
-              background: transparent
-              padding: 0
-              
-              // Remove default border
-              fieldset
-                border: none
-              
-              // Remove focused state border
-              &.Mui-focused fieldset
-                border: none
-                
-              // Textarea styling
-              textarea
-                font-family: inherit
-                font-size: 14px
-                line-height: 1.5
-                padding: $spacing-md $spacing-sm $spacing-sm $spacing-sm
-        
-        // ------------------------------------------------------------------------
-        // Right Column: Options and Actions
-        // ------------------------------------------------------------------------
-        
-        .options-column
-          flex: 0 0 auto
-          width: 100%
-          padding: $spacing-sm
-          
-          // Desktop: fixed width for options
-          @media (min-width: $breakpoint-desktop)
-            width: auto
-            min-width: 400px
-          
-          .expanded-options
-            display: flex
-            align-items: center
-            justify-content: space-between
-            padding: 0
-            background: transparent
-            gap: $spacing-md
-            
-            // Mobile: stack vertically
-            @media (max-width: ($breakpoint-desktop - 1))
-              flex-direction: column
-              align-items: stretch
-            
-            // ----------------------------------------------------------------------
-            // Left Side: Helper Text and Secondary Controls
-            // ----------------------------------------------------------------------
-            
-            .options-left
-              display: flex
-              align-items: center
-              gap: $spacing-md
-              flex: 0 0 auto
-              
-              // Mobile: full width
-              @media (max-width: ($breakpoint-desktop - 1))
-                flex: 1
-                justify-content: flex-start
-              
-              .hint-text
-                white-space: nowrap
-            
-            // ----------------------------------------------------------------------
-            // Right Side: Mode Toggle and Send Button
-            // ----------------------------------------------------------------------
-            
-            .options-right
-              display: flex
-              align-items: center
-              gap: $spacing-md
-              flex: 0 0 auto
-              margin-left: auto
-              
-              // Mobile: full width
-              @media (max-width: ($breakpoint-desktop - 1))
-                flex: 1
-                justify-content: flex-end
-              
-              // --------------------------------------------------------------------
-              // Mode Toggle (segmented control)
-              // --------------------------------------------------------------------
-              
-              .mode-toggle
-                display: flex
-                align-items: center
-                gap: 0
-                background: var(--color-surface, #ffffff)
-                border-radius: $border-radius
-                overflow: hidden
-                cursor: pointer
-                border: 1px solid var(--color-border, #ced4da)
-                height: $control-height
-                
-                .toggle-option
-                  padding: 6px $spacing-md
-                  font-size: 11px
-                  font-weight: 500
-                  text-transform: uppercase
-                  letter-spacing: 0.5px
-                  color: var(--color-text-secondary, #6c757d)
-                  transition: all 0.2s ease
-                  white-space: nowrap
-                  height: 100%
-                  display: flex
-                  align-items: center
-                  justify-content: center
-                  
-                  // Active state
-                  &.active
-                    background: var(--color-breadcrumb-dark)
-                    color: #ffffff
-                  
-                  // Hover state (non-active only)
-                  &:hover:not(.active)
-                    background: var(--color-surface-hover, #fafafa)
-              
-              // --------------------------------------------------------------------
-              // Send Button
-              // --------------------------------------------------------------------
-              
-              .send-button
-                flex-shrink: 0
-                min-width: auto
-                width: $control-height
-                height: $control-height
-                padding: 0
-                border-radius: $border-radius
-                background-color: var(--color-breadcrumb-dark)
-                
-                // Hover state
-                &:hover
-                  background-color: var(--color-breadcrumb-dark)
-                  opacity: 0.9
-                
-                // Disabled state
-                &.Mui-disabled
-                  background-color: var(--color-border-light)
-                  color: var(--color-text-tertiary)
-                
-                // Loading spinner
-                .loading-spinner
-                  color: #fff
-                
-                // Send icon
-                .send-icon
-                  font-size: 16px
 
+  &.global-thread-input--overlay
+    width: 100%
+    max-width: $overlay-max-width
+    border-radius: $border-radius * 2
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)
+    border: 1px solid var(--color-border, #e1e4e8)
+    display: flex
+    flex-direction: column
+    max-height: calc(100vh - $overlay-margin * 2)
+    overflow: hidden
+
+    // Mobile: more width, less margin
+    @media (max-width: $breakpoint-desktop)
+      max-width: 100%
+      margin: $spacing-sm
+
+// ============================================================================
+// Header
+// ============================================================================
+
+.thread-input-header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: $spacing-sm $spacing-md
+  border-bottom: 1px solid var(--color-border-light, #f0f0f0)
+
+  .header-label
+    font-weight: 600
+    text-transform: uppercase
+    letter-spacing: 0.5px
+    color: var(--color-text-secondary, #6c757d)
+
+  .close-button
+    min-width: auto
+    padding: 4px
+    color: var(--color-text-tertiary, #adb5bd)
+
+    &:hover
+      color: var(--color-text, #24292e)
+      background: var(--color-surface-hover, #f6f8fa)
+
+// ============================================================================
+// Content Container
+// ============================================================================
+
+.thread-input-container
+  padding: $spacing-md
+  overflow-y: auto
+  flex: 1
+
+  form
+    width: 100%
+
+// ============================================================================
+// Input Wrapper
+// ============================================================================
+
+.input-wrapper
+  margin-bottom: $spacing-md
+
+  .thread-input-field
+    width: 100%
+
+    // Material-UI TextField overrides
+    .MuiOutlinedInput-root
+      background: var(--color-surface-secondary, #f6f8fa)
+      border-radius: $border-radius
+
+      fieldset
+        border-color: var(--color-border-light, #e1e4e8)
+
+      &:hover fieldset
+        border-color: var(--color-border, #d0d7de)
+
+      &.Mui-focused fieldset
+        border-color: var(--color-primary, #007bff)
+        border-width: 1px
+
+      textarea
+        font-family: inherit
+        font-size: 14px
+        line-height: 1.5
+        padding: $spacing-sm
+
+// ============================================================================
+// Options Row
+// ============================================================================
+
+.options-row
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: $spacing-md
+  flex-wrap: wrap
+
+  .options-left
+    display: flex
+    align-items: center
+    gap: $spacing-md
+    flex-shrink: 0
+
+    .hint-text
+      white-space: nowrap
+      color: var(--color-text-tertiary, #6c757d)
+
+  .options-right
+    display: flex
+    align-items: center
+    gap: $spacing-sm
+    flex-wrap: wrap
+    margin-left: auto
+
+// ============================================================================
+// Mode Toggle (segmented control)
+// ============================================================================
+
+.mode-toggle
+  display: flex
+  align-items: center
+  gap: 0
+  background: var(--color-surface, #ffffff)
+  border-radius: $border-radius
+  overflow: hidden
+  cursor: pointer
+  border: 1px solid var(--color-border, #ced4da)
+  height: $control-height
+
+  .toggle-option
+    padding: 6px $spacing-md
+    font-size: 11px
+    font-weight: 500
+    text-transform: uppercase
+    letter-spacing: 0.5px
+    color: var(--color-text-secondary, #6c757d)
+    transition: all 0.2s ease
+    white-space: nowrap
+    height: 100%
+    display: flex
+    align-items: center
+    justify-content: center
+
+    &.active
+      background: var(--color-breadcrumb-dark)
+      color: #ffffff
+
+    &:hover:not(.active)
+      background: var(--color-surface-hover, #fafafa)
+
+// ============================================================================
+// Send Button
+// ============================================================================
+
+.send-button
+  flex-shrink: 0
+  min-width: auto
+  width: $control-height
+  height: $control-height
+  padding: 0
+  border-radius: $border-radius
+  background-color: var(--color-breadcrumb-dark)
+
+  &:hover
+    background-color: var(--color-breadcrumb-dark)
+    opacity: 0.9
+
+  &.Mui-disabled
+    background-color: var(--color-border-light)
+    color: var(--color-text-tertiary)
+
+  .loading-spinner
+    color: #fff
+
+  .send-icon
+    font-size: 16px

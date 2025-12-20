@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { Provider, useSelector } from 'react-redux'
+import { Provider, useSelector, useDispatch } from 'react-redux'
 import { HistoryRouter as Router } from 'redux-first-history/rr6'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { CircularProgress, Box } from '@mui/material'
@@ -9,10 +9,12 @@ import { store, history } from '@core/store.js'
 import StoreRegistry from '@core/store-registry.js'
 import { app_actions } from '@core/app/actions'
 import { get_app } from '@core/app/selectors'
+import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
 import Notification from '@components/Notification'
 import NotificationDemoPanel from '@components/Notification/NotificationDemoPanel'
+import GlobalThreadInput from '@components/GlobalThreadInput'
 import { get_notification_info } from '@core/notification/selectors'
 
 // Import styles
@@ -95,6 +97,32 @@ const NotificationContainer = () => {
   return <Notification info={notification_info} />
 }
 
+const ThreadPromptContainer = () => {
+  const dispatch = useDispatch()
+  const is_open = useSelector((state) =>
+    state.getIn(['thread_prompt', 'is_open'], false)
+  )
+
+  useEffect(() => {
+    const handle_keydown = (event) => {
+      // Cmd/Ctrl+K to toggle thread prompt overlay
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        if (is_open) {
+          dispatch(thread_prompt_actions.close())
+        } else {
+          dispatch(thread_prompt_actions.open())
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handle_keydown)
+    return () => document.removeEventListener('keydown', handle_keydown)
+  }, [dispatch, is_open])
+
+  return <GlobalThreadInput />
+}
+
 const Root = () => {
   return (
     <Provider store={store}>
@@ -105,6 +133,7 @@ const Root = () => {
             <DialogContainer />
             <NotificationContainer />
             <NotificationDemoPanel />
+            <ThreadPromptContainer />
           </AppInitializer>
         </ThemeProvider>
       </Router>

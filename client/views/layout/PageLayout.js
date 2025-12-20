@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PathBreadcrumb from '@components/PathBreadcrumb/index.js'
 import AuthStatusBar from '@components/AuthStatusBar/index.js'
-import GlobalThreadInput from '@components/GlobalThreadInput'
 import SessionsPanelContainer from '@components/SessionsPanel/SessionsPanelContainer.js'
 
 const PageLayout = ({ children }) => {
@@ -28,7 +27,6 @@ const PageLayout = ({ children }) => {
       <div className='page-content-container'>{children}</div>
       <div className='bottom-bar'>
         <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
-        <GlobalThreadInput />
       </div>
     </div>
   )
