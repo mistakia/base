@@ -13,7 +13,6 @@ import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
 import Notification from '@components/Notification'
-import NotificationDemoPanel from '@components/Notification/NotificationDemoPanel'
 import GlobalThreadInput from '@components/GlobalThreadInput'
 import { get_notification_info } from '@core/notification/selectors'
 
@@ -132,7 +131,6 @@ const Root = () => {
             <Routes />
             <DialogContainer />
             <NotificationContainer />
-            <NotificationDemoPanel />
             <ThreadPromptContainer />
           </AppInitializer>
         </ThemeProvider>
