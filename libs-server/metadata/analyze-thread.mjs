@@ -20,8 +20,15 @@ const log = debug('metadata:analyze')
 // ============================================================================
 
 const ANALYSIS_CONFIG = {
-  // Skip messages that are just warmup
-  WARMUP_PATTERNS: [/^warmup$/i, /^test$/i, /^hello$/i, /^hi$/i]
+  // Skip messages that are just warmup greetings or slash commands (not substantive)
+  WARMUP_PATTERNS: [
+    /^warmup$/i,
+    /^test$/i,
+    /^hello$/i,
+    /^hi$/i,
+    // Slash commands like /clear, /help
+    /^<command-name>\/\w+<\/command-name>/i
+  ]
 }
 
 // ============================================================================

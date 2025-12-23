@@ -143,18 +143,28 @@ export const parse_metadata_response = (response_text) => {
  * @returns {string} Prompt for the model
  */
 export const generate_analysis_prompt = ({ user_message }) => {
-  return `Analyze this user message from a coding session and generate metadata.
+  return `Generate metadata for this coding session request.
 
-User message:
 """
 ${user_message}
 """
 
-Generate a JSON object with:
-- "title": Action-oriented title under 100 characters, format: "[Action] [Target]" (e.g., "Fix login authentication bug", "Add dark mode toggle")
-- "short_description": 1-2 sentence summary under 200 characters describing what the user wants to accomplish
+CRITICAL rules for globally unique titles:
+- EXTRACT specific entities: player names, URLs, dates, week numbers, thread IDs, file paths
+- For workflow invocations: include the unique parameters (thread_id short hash, player name, week number)
+- NEVER use generic titles like "Execute workflow", "Analyze thread", "Run analysis"
+- Include disambiguating context that makes this instance unique
 
-Response format (JSON only, no explanation):
+Examples:
+- "@workflow/analyze-and-update-thread.md thread_id: 9d82cecf-34c3-5ad6" → "Update metadata for thread 9d82cecf"
+- "@workflow/find-market-selections.md player: Trey McBride, week: 9" → "Find Trey McBride market selections Week 9"
+- "debug data view https://xo.football/u/cb3031028178" → "Debug data view cb303102 duplicate rows"
+- "profile Theodore Johnson with/without Malik Nabers" → "Profile Theodore Johnson usage without Malik Nabers"
+
+JSON response:
+- "title": Under 100 chars with specific identifiers
+- "short_description": 1-2 sentences under 200 chars
+
 \`\`\`json
 {
   "title": "...",
