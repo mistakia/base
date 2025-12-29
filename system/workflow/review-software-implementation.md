@@ -1,30 +1,32 @@
 ---
-title: 'Review Software Implementation Workflow'
-type: 'workflow'
-description: |
-  Review and validate software implementation output from implement-software-task workflow
+title: Review Software Implementation Workflow
+type: workflow
+description: Review and validate software implementation output from implement-software-task workflow
+base_uri: user:repository/active/base/system/workflow/review-software-implementation.md
 created_at: '2025-08-01T00:00:00.000Z'
-entity_id: 'a1b2c3d4-5e6f-7890-abcd-123456789def'
+entity_id: a1b2c3d4-5e6f-7890-abcd-123456789def
 guidelines:
-  - 'sys:system/guideline/write-workflow.md'
-  - 'user:guideline/write-software.md'
-  - 'sys:system/guideline/write-javascript.md'
-  - 'sys:system/guideline/review-software-implementation.md'
+  - sys:system/guideline/write-workflow.md
+  - user:guideline/write-software.md
+  - sys:system/guideline/write-javascript.md
+  - sys:system/guideline/review-software-implementation.md
 prompt_properties:
   - name: review_example
     type: object
     required: false
     description: Example review data for templates
     default:
-      working_directory: '../base-worktrees/fix-16-no-auto-change-requests'
-      files_changed: ['src/api/routes.mjs', 'src/utils/helper.mjs']
-      implementation_plan_file: 'task/github/mistakia/base/16-modify-thread-creation.md'
+      working_directory: ../base-worktrees/fix-16-no-auto-change-requests
+      files_changed:
+        - src/api/routes.mjs
+        - src/utils/helper.mjs
+      implementation_plan_file: task/github/mistakia/base/16-modify-thread-creation.md
 relations:
-  - 'follows [[sys:system/workflow/implement-software-task.md]]'
-  - 'uses [[sys:system/guideline/write-workflow.md]]'
-  - 'implements [[user:guideline/write-software.md]]'
-  - 'implements [[sys:system/guideline/write-javascript.md]]'
-  - 'implements [[sys:system/guideline/review-software-implementation.md]]'
+  - follows [[sys:system/workflow/implement-software-task.md]]
+  - uses [[sys:system/guideline/write-workflow.md]]
+  - implements [[user:guideline/write-software.md]]
+  - implements [[sys:system/guideline/write-javascript.md]]
+  - implements [[sys:system/guideline/review-software-implementation.md]]
 updated_at: '2025-08-01T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

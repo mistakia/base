@@ -19,7 +19,7 @@
       "Bash(grep:*)",
       "Bash(yarn test:*)",
       "Bash(yarn lint:*)",
-      "Bash(DEBUG=* yarn test:*)",
+      "Bash(DEBUG=:* yarn test::*)",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_snapshot",
