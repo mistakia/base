@@ -1,18 +1,16 @@
 ---
-title: Implement General Task Workflow
-type: workflow
-description: >-
-  Execute general task implementation by following implementation plans and managing work
-  environment
-base_uri: user:repository/active/base/system/workflow/implement-general-task.md
+title: 'Implement General Task Workflow'
+type: 'workflow'
+description: |
+  Execute general task implementation by following implementation plans and managing work environment
 created_at: '2025-08-23T00:00:00.000Z'
-entity_id: c3d4e5f6-7890-1234-abcd-efghijklmnop
+entity_id: 'c3d4e5f6-7890-1234-abcd-efghijklmnop'
 relations:
-  - implements [[sys:system/schema/workflow.md]]
-  - follows [[sys:system/guideline/write-workflow.md]]
-  - follows [[sys:system/workflow/write-general-implementation-plan.md]]
-  - follows [[sys:system/guideline/review-task.md]]
-  - uses [[user:guideline/write-text.md]]
+  - 'implements [[sys:system/schema/workflow.md]]'
+  - 'follows [[sys:system/guideline/write-workflow.md]]'
+  - 'follows [[sys:system/workflow/write-general-implementation-plan.md]]'
+  - 'follows [[sys:system/guideline/review-task.md]]'
+  - 'uses [[user:guideline/write-text.md]]'
 updated_at: '2025-08-23T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

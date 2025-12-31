@@ -1,36 +1,36 @@
 ---
-title: Implement Software Task Workflow
-type: workflow
-description: Execute software implementation by setting up work environment and following implementation plans
-base_uri: user:repository/active/base/system/workflow/implement-software-task.md
+title: 'Implement Software Task Workflow'
+type: 'workflow'
+description: |
+  Execute software implementation by setting up work environment and following implementation plans
 created_at: '2025-06-09T03:30:00.000Z'
-entity_id: b2c3d4e5-6f78-9012-cdef-123456789abc
+entity_id: 'b2c3d4e5-6f78-9012-cdef-123456789abc'
 guidelines:
-  - sys:system/guideline/implement-software-task.md
-  - sys:system/guideline/write-software-tests.md
-  - sys:system/guideline/write-javascript.md
-  - user:guideline/write-software.md
+  - 'sys:system/guideline/implement-software-task.md'
+  - 'sys:system/guideline/write-software-tests.md'
+  - 'sys:system/guideline/write-javascript.md'
+  - 'user:guideline/write-software.md'
 prompt_properties:
   - name: workflow_example
     type: object
     required: false
     description: Example workflow data to populate templates and examples
     default:
-      org: mistakia
-      repo: base
+      org: 'mistakia'
+      repo: 'base'
       issue_number: '16'
-      task_name: modify-thread-creation
-      short_description: no-auto-change-requests
-      branch_name: fix/16-no-auto-change-requests
-      worktree_path: ../base-worktrees/fix-16-no-auto-change-requests
+      task_name: 'modify-thread-creation'
+      short_description: 'no-auto-change-requests'
+      branch_name: 'fix/16-no-auto-change-requests'
+      worktree_path: '../base-worktrees/fix-16-no-auto-change-requests'
 relations:
-  - implements [[sys:system/guideline/implement-software-task.md]]
-  - uses [[sys:system/guideline/write-workflow.md]]
-  - follows [[sys:system/workflow/write-software-implementation-plan.md]]
-  - follows [[sys:system/guideline/review-task.md]]
-  - uses [[user:guideline/write-software.md]]
-  - uses [[sys:system/guideline/write-javascript.md]]
-  - precedes [[sys:system/workflow/merge-worktree.md]]
+  - 'implements [[sys:system/guideline/implement-software-task.md]]'
+  - 'uses [[sys:system/guideline/write-workflow.md]]'
+  - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
+  - 'follows [[sys:system/guideline/review-task.md]]'
+  - 'uses [[user:guideline/write-software.md]]'
+  - 'uses [[sys:system/guideline/write-javascript.md]]'
+  - 'precedes [[sys:system/workflow/merge-worktree.md]]'
 updated_at: '2025-07-26T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

@@ -74,7 +74,7 @@ properties:
 
   # Technical specifications
   - name: voltage
-    type: number
+    type: string
     required: false
     description: Voltage requirements
   - name: wattage

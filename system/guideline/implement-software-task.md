@@ -1,20 +1,21 @@
 ---
-title: Implement Software Task
-type: guideline
-description: Guidelines for setting up work environment and executing software implementations
-base_uri: user:repository/active/base/system/guideline/implement-software-task.md
+title: 'Implement Software Task'
+type: 'guideline'
+description: |
+  Guidelines for setting up work environment and executing software implementations
 created_at: '2025-06-09T03:30:00.000Z'
-entity_id: a1b2c3d4-5e6f-7890-abcd-ef1234567890
+entity_id: 'a1b2c3d4-5e6f-7890-abcd-ef1234567890'
 globs:
-  - task/**/*.md
+  - 'task/**/*.md'
 observations:
   - '[workflow] Isolated worktrees prevent conflicts with main development branch'
   - '[quality] Step-by-step execution with review stops ensures quality'
   - '[safety] Working directory verification prevents errors'
 relations:
-  - related_to [[sys:system/guideline/write-workflow.md]]
-  - implements [[sys:system/text/system-design.md]]
-  - follows [[sys:system/workflow/write-software-implementation-plan.md]]
+  - 'related_to [[sys:system/guideline/write-workflow.md]]'
+  - 'implements [[sys:system/text/system-design.md]]'
+  - 'follows [[sys:system/workflow/write-software-implementation-plan.md]]'
+tags:
 updated_at: '2025-07-26T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

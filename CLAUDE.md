@@ -38,6 +38,7 @@ yarn test:integration   # Integration tests only
 yarn test:api          # API tests
 yarn test:threads      # Thread system tests
 yarn test:git          # Git operations tests
+yarn test:blocks       # Block system tests
 yarn test:markdown     # Markdown processing tests
 yarn test:sync         # Synchronization tests
 
@@ -48,8 +49,6 @@ yarn test:file ./tests/unit/path/to/test.mjs
 yarn test -- --grep "test name"
 ```
 
-**Testing Guidelines**: Do not use mocks or stubs. Write tests that interact with real implementations using the actual database with proper setup/teardown.
-
 ### Code Quality
 
 ```bash
@@ -58,13 +57,6 @@ yarn lint
 
 # Run Prettier formatter
 yarn prettier
-```
-
-### Build
-
-```bash
-# Production build
-yarn build
 ```
 
 ### File-First Architecture
@@ -165,38 +157,11 @@ Threads execute workflows in isolated git worktrees:
 - Node.js 18+ required
 - Uses Yarn 4.2.2 for package management
 - File-first architecture with no database dependencies
-- All server-side files use ES modules (.mjs extension)
+- All file paths use ES modules (.mjs extension)
 - Test files follow pattern: `*.test.mjs`
-- Debug logging via DEBUG environment variable (e.g., `DEBUG=api:* yarn start:api`)
+- Debug logging available via DEBUG environment variable
 - JWT authentication for API endpoints
 - WebSocket for real-time client-server communication
-
-### Import Aliases
-
-Use these namespace prefixes defined in `package.json`:
-
-- `#server/*` - Server components
-- `#config/*` - Configuration modules
-- `#libs-server/*` - Server-side library functions
-- `#libs-shared/*` - Shared library functions (client/server)
-- `#tests/*` - Test utilities
-- `#cli/*` - CLI scripts
-- `#services/*` - Service entry points
-
-### ES Module Requirements
-
-- Local imports MUST include the `.mjs` extension explicitly
-- When importing from an index file, use the full path: `#libs-server/entity/index.mjs`
-- Separate external libraries from project imports with a blank line
-
-```js
-// External libraries first
-import express from 'express'
-
-// Project imports with explicit extensions
-import { create_entity } from '#libs-server/entity/index.mjs'
-import read_file from '#libs-server/base-files/read-file.mjs'
-```
 
 ## Naming Conventions
 
