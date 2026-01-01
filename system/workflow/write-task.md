@@ -29,19 +29,27 @@ User wants to create a new task. Tasks represent discrete units of work that nee
    - Determine if priority or deadline is needed
    - Identify any relationships to other entities
 
-2. **Create Entity**
+2. **Select Tags**
+
+   - Check the `tag/` directory for applicable tags
+   - Select ONE primary tag for grouping purposes
+   - Add to entity_properties as `tags: [user:tag/<tag-name>.md]`
+   - See [[user:guideline/tag-creation-standards.md]] for selection criteria
+
+3. **Create Entity**
 
    - Use `mcp__base__entity_create` with base_uri pattern `user:task/task-name.md`
    - Set entity_type to "task"
    - Include complete frontmatter per task schema
+   - Include tags in entity_properties
 
-3. **Structure Content**
+4. **Structure Content**
 
    - Write clear, concise task description
    - Use bullet points for multi-step work
    - Add context only if necessary for completion
 
-4. **Set Relationships**
+5. **Set Relationships**
    - Link to parent tasks, projects, or dependencies
    - Connect required items or tools
    - Specify assignments if applicable
