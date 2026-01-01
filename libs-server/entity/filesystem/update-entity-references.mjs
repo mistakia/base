@@ -1,0 +1,212 @@
+import debug from 'debug'
+
+import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+
+const log = debug('update-entity-references')
+
+/**
+ * Escape special regex characters in a string
+ * @param {string} string - The string to escape
+ * @returns {string} - Escaped string safe for use in regex
+ */
+function escape_regex_string(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Update references in entity relations array
+ * @param {Object} options - Function options
+ * @param {Array} options.relations - Array of relation strings
+ * @param {string} options.old_base_uri - The old base_uri to replace
+ * @param {string} options.new_base_uri - The new base_uri to use
+ * @returns {Object} - { updated_relations, update_count }
+ */
+function update_relations_references({
+  relations,
+  old_base_uri,
+  new_base_uri
+}) {
+  if (!relations || !Array.isArray(relations)) {
+    return { updated_relations: relations, update_count: 0 }
+  }
+
+  let update_count = 0
+  const updated_relations = relations.map((relation) => {
+    if (
+      typeof relation === 'string' &&
+      relation.includes(`[[${old_base_uri}]]`)
+    ) {
+      update_count++
+      return relation.replace(`[[${old_base_uri}]]`, `[[${new_base_uri}]]`)
+    }
+    return relation
+  })
+
+  return { updated_relations, update_count }
+}
+
+/**
+ * Update references in entity content (markdown body)
+ * @param {Object} options - Function options
+ * @param {string} options.entity_content - The entity markdown content
+ * @param {string} options.old_base_uri - The old base_uri to replace
+ * @param {string} options.new_base_uri - The new base_uri to use
+ * @returns {Object} - { updated_content, update_count }
+ */
+function update_content_references({
+  entity_content,
+  old_base_uri,
+  new_base_uri
+}) {
+  if (!entity_content || typeof entity_content !== 'string') {
+    return { updated_content: entity_content, update_count: 0 }
+  }
+
+  const escaped_old_uri = escape_regex_string(old_base_uri)
+  const pattern = new RegExp(`\\[\\[${escaped_old_uri}\\]\\]`, 'g')
+
+  const matches = entity_content.match(pattern)
+  const update_count = matches ? matches.length : 0
+
+  const updated_content = entity_content.replace(pattern, `[[${new_base_uri}]]`)
+
+  return { updated_content, update_count }
+}
+
+/**
+ * Scan all entity files and update references from old_base_uri to new_base_uri
+ *
+ * @param {Object} options - Function options
+ * @param {string} options.old_base_uri - The old base_uri to find and replace
+ * @param {string} options.new_base_uri - The new base_uri to use as replacement
+ * @param {boolean} [options.dry_run=false] - If true, preview changes without writing
+ * @param {string[]} [options.include_path_patterns=[]] - Path patterns to include
+ * @param {string[]} [options.exclude_path_patterns=[]] - Path patterns to exclude
+ * @returns {Promise<Object>} - Result with files_scanned, files_with_references, total_updates, errors
+ */
+export async function update_entity_references({
+  old_base_uri,
+  new_base_uri,
+  dry_run = false,
+  include_path_patterns = [],
+  exclude_path_patterns = []
+}) {
+  log(
+    `Updating references from ${old_base_uri} to ${new_base_uri} (dry_run: ${dry_run})`
+  )
+
+  if (!old_base_uri || !new_base_uri) {
+    throw new Error('Both old_base_uri and new_base_uri are required')
+  }
+
+  if (old_base_uri === new_base_uri) {
+    return {
+      files_scanned: 0,
+      files_with_references: [],
+      total_updates: 0,
+      errors: []
+    }
+  }
+
+  const files_with_references = []
+  const errors = []
+  let total_updates = 0
+
+  // Process all entity files
+  const process_result = await process_repositories_from_filesystem({
+    include_path_patterns,
+    exclude_path_patterns,
+    entity_processor: async ({ file }) => {
+      try {
+        // Read the full entity
+        const entity_result = await read_entity_from_filesystem({
+          absolute_path: file.absolute_path
+        })
+
+        if (!entity_result.success) {
+          log(`Failed to read ${file.absolute_path}: ${entity_result.error}`)
+          return false
+        }
+
+        const { entity_properties, entity_content } = entity_result
+        let file_update_count = 0
+        let relation_updates = 0
+        let content_updates = 0
+
+        // Check and update relations
+        const relations_result = update_relations_references({
+          relations: entity_properties.relations,
+          old_base_uri,
+          new_base_uri
+        })
+        relation_updates = relations_result.update_count
+
+        // Check and update content
+        const content_result = update_content_references({
+          entity_content,
+          old_base_uri,
+          new_base_uri
+        })
+        content_updates = content_result.update_count
+
+        file_update_count = relation_updates + content_updates
+
+        if (file_update_count > 0) {
+          log(
+            `Found ${file_update_count} references in ${file.absolute_path} (relations: ${relation_updates}, content: ${content_updates})`
+          )
+
+          files_with_references.push({
+            absolute_path: file.absolute_path,
+            base_uri: file.base_uri,
+            relation_updates,
+            content_updates,
+            total_updates: file_update_count
+          })
+
+          total_updates += file_update_count
+
+          // Write updates if not dry run
+          if (!dry_run) {
+            const updated_properties = {
+              ...entity_properties,
+              relations: relations_result.updated_relations
+            }
+
+            await write_entity_to_filesystem({
+              absolute_path: file.absolute_path,
+              entity_properties: updated_properties,
+              entity_type: entity_properties.type,
+              entity_content: content_result.updated_content
+            })
+
+            log(`Updated ${file.absolute_path}`)
+          }
+        }
+
+        return true
+      } catch (error) {
+        log(`Error processing ${file.absolute_path}: ${error.message}`)
+        errors.push({
+          absolute_path: file.absolute_path,
+          error: error.message
+        })
+        return false
+      }
+    }
+  })
+
+  log(
+    `Scanned ${process_result.total} files, found ${files_with_references.length} with references, ${total_updates} total updates`
+  )
+
+  return {
+    files_scanned: process_result.total,
+    files_with_references,
+    total_updates,
+    errors,
+    dry_run
+  }
+}
