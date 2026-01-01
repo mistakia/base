@@ -1,13 +1,13 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 
 import PageLayout from '@views/layout/PageLayout.js'
-import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout'
 import HomeSessionsPanel from '@components/SessionsPanel/HomeSessionsPanel.js'
 import HomePageTasks from './HomePageTasks.js'
+import HomeFileBrowser from './HomeFileBrowser.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 
@@ -24,9 +24,14 @@ const Homepage = ({
   load_tasks,
   directory_markdown,
   is_loading_directory_markdown,
-  directory_markdown_error
+  directory_markdown_error,
+  load_directory_markdown
 }) => {
   const page_meta = use_page_meta()
+
+  useEffect(() => {
+    load_directory_markdown('')
+  }, [load_directory_markdown])
 
   return (
     <>
@@ -66,7 +71,7 @@ const Homepage = ({
                   is_loading_tasks={is_loading_tasks}
                   load_tasks={load_tasks}
                 />
-                <FileSystemBrowser />
+                <HomeFileBrowser />
               </div>
             }
             left_column_width={6}
@@ -91,7 +96,8 @@ Homepage.propTypes = {
   load_tasks: PropTypes.func.isRequired,
   directory_markdown: PropTypes.string,
   is_loading_directory_markdown: PropTypes.bool,
-  directory_markdown_error: PropTypes.string
+  directory_markdown_error: PropTypes.string,
+  load_directory_markdown: PropTypes.func.isRequired
 }
 
 export default Homepage

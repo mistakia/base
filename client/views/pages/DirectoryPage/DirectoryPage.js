@@ -78,6 +78,9 @@ const DirectoryPage = ({
   }
 
   // Otherwise just show the file browser
+  // Use different max-widths: 1200 for directories, 1400 for files
+  const content_max_width = is_directory ? 1200 : 1400
+
   return (
     <>
       <PageHead
@@ -93,7 +96,14 @@ const DirectoryPage = ({
         modified_time={page_meta.modified_time}
       />
       <PageLayout>
-        <FileSystemBrowser />
+        <div
+          style={{
+            maxWidth: content_max_width,
+            margin: '0 auto',
+            width: '100%'
+          }}>
+          <FileSystemBrowser />
+        </div>
       </PageLayout>
     </>
   )

@@ -4,7 +4,7 @@ import { createSelector } from 'reselect'
 import { threads_actions, get_threads_state } from '@core/threads/index.js'
 import { tasks_actions } from '@core/tasks/actions.js'
 import { get_tasks_state } from '@core/tasks/selectors.js'
-import { get_directory_state } from '@core/directory'
+import { directory_actions, get_directory_state } from '@core/directory'
 
 import Homepage from './Homepage.js'
 
@@ -29,7 +29,8 @@ const map_state_to_props = createSelector(
 
 const map_dispatch_to_props = {
   load_threads: threads_actions.load_threads,
-  load_tasks: tasks_actions.load_tasks
+  load_tasks: tasks_actions.load_tasks,
+  load_directory_markdown: directory_actions.load_directory_markdown
 }
 
 export default connect(map_state_to_props, map_dispatch_to_props)(Homepage)

@@ -78,14 +78,16 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
         published_time={entity_metadata.published_time}
         modified_time={entity_metadata.modified_time}
       />
-      <TwoColumnLayout
-        left_content={left_content}
-        right_content={right_content}
-        left_column_width={8}
-        right_column_width={4}
-        container_padding={3}
-        sticky_right={true}
-      />
+      <Box sx={{ maxWidth: 1400, margin: '0 auto', width: '100%' }}>
+        <TwoColumnLayout
+          left_content={left_content}
+          right_content={right_content}
+          left_column_width={8}
+          right_column_width={4}
+          container_padding={3}
+          sticky_right={true}
+        />
+      </Box>
     </>
   )
 }
