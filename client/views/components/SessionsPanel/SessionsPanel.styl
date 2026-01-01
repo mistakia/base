@@ -78,13 +78,16 @@
   gap: $space_xs
   overflow: visible
   max-height: 52px
+  padding-top: 2px
 
   // Small screens: horizontal scroll instead of wrap
   @media (max-width: 768px)
     flex-wrap: nowrap
     overflow-x: auto
+    overflow-y: visible
     max-height: 28px
     padding-bottom: 2px
+    padding-top: 2px
 
     &::-webkit-scrollbar
       height: 2px

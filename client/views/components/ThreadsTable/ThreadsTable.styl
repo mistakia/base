@@ -40,3 +40,8 @@
     // Target by its distinctive width of 300px
     .cell[style*="width: 300px"]
       justify-content flex-start
+
+// Remove left padding on mobile screens
+@media (max-width: 768px)
+  .threads-table-container .table
+    padding-left: 0
