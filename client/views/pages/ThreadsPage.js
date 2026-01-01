@@ -15,8 +15,8 @@ const ThreadsPage = () => {
   })
 
   useEffect(() => {
-    // Load initial threads table data
-    dispatch(threads_actions.load_threads_table())
+    // Load initial threads table data with active view as default
+    dispatch(threads_actions.load_threads_table({ view_id: 'active' }))
   }, [dispatch])
 
   return (

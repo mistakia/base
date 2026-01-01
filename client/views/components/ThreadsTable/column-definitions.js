@@ -273,6 +273,22 @@ export const thread_columns = {
     minSize: 40,
     maxSize: 60
   },
+  created_at: {
+    column_id: 'created_at',
+    header_label: 'Created',
+    accessorKey: 'created_at',
+    accessorFn: ({ created_at }) => format_shorthand_time(created_at),
+    data_type: TABLE_DATA_TYPES.DATE,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL
+    ],
+    size: 110,
+    minSize: 90,
+    maxSize: 130
+  },
   updated_at: {
     column_id: 'updated_at',
     header_label: 'Updated',

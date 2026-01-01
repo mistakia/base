@@ -82,6 +82,7 @@ const DEFAULT_TABLE_COLUMNS = [
   'session_provider',
   'title',
   'working_directory',
+  'created_at',
   'updated_at',
   'duration',
   'message_count',
@@ -146,7 +147,7 @@ const ThreadsState = new Record({
     default: DEFAULT_THREAD_TABLE_VIEW,
     active: ACTIVE_THREADS_VIEW
   }),
-  selected_thread_table_view_id: 'default',
+  selected_thread_table_view_id: 'active',
   thread_all_columns: Map(thread_columns)
 })
 
