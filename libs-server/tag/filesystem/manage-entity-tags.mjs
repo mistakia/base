@@ -21,7 +21,11 @@ export const add_tags_to_entity = async ({ absolute_path, tags_to_add }) => {
       throw new Error('Absolute path is required')
     }
 
-    if (!tags_to_add || !Array.isArray(tags_to_add) || tags_to_add.length === 0) {
+    if (
+      !tags_to_add ||
+      !Array.isArray(tags_to_add) ||
+      tags_to_add.length === 0
+    ) {
       throw new Error('Tags to add must be a non-empty array')
     }
 
@@ -44,7 +48,9 @@ export const add_tags_to_entity = async ({ absolute_path, tags_to_add }) => {
 
     // Deduplicate input tags first, then filter out those already present
     const deduplicated_input = [...new Set(tags_to_add)]
-    const unique_new_tags = deduplicated_input.filter(tag => !current_tags.includes(tag))
+    const unique_new_tags = deduplicated_input.filter(
+      (tag) => !current_tags.includes(tag)
+    )
 
     if (unique_new_tags.length === 0) {
       log('No new tags to add - all tags already exist')
@@ -76,13 +82,17 @@ export const add_tags_to_entity = async ({ absolute_path, tags_to_add }) => {
     log('Successfully added tags to entity', {
       absolute_path,
       added_tags: unique_new_tags,
-      skipped_tags: deduplicated_input.filter(tag => current_tags.includes(tag))
+      skipped_tags: deduplicated_input.filter((tag) =>
+        current_tags.includes(tag)
+      )
     })
 
     return {
       success: true,
       added_tags: unique_new_tags,
-      skipped_tags: deduplicated_input.filter(tag => current_tags.includes(tag)),
+      skipped_tags: deduplicated_input.filter((tag) =>
+        current_tags.includes(tag)
+      ),
       total_tags: updated_tags.length,
       absolute_path
     }
@@ -104,7 +114,10 @@ export const add_tags_to_entity = async ({ absolute_path, tags_to_add }) => {
  * @param {string[]} options.tags_to_remove - Array of base-uri formatted tags to remove
  * @returns {Promise<Object>} Operation result with status information
  */
-export const remove_tags_from_entity = async ({ absolute_path, tags_to_remove }) => {
+export const remove_tags_from_entity = async ({
+  absolute_path,
+  tags_to_remove
+}) => {
   try {
     log('Removing tags from entity', { absolute_path, tags_to_remove })
 
@@ -112,7 +125,11 @@ export const remove_tags_from_entity = async ({ absolute_path, tags_to_remove })
       throw new Error('Absolute path is required')
     }
 
-    if (!tags_to_remove || !Array.isArray(tags_to_remove) || tags_to_remove.length === 0) {
+    if (
+      !tags_to_remove ||
+      !Array.isArray(tags_to_remove) ||
+      tags_to_remove.length === 0
+    ) {
       throw new Error('Tags to remove must be a non-empty array')
     }
 
@@ -137,7 +154,9 @@ export const remove_tags_from_entity = async ({ absolute_path, tags_to_remove })
     const deduplicated_input = [...new Set(tags_to_remove)]
 
     // Filter to find which tags can actually be removed
-    const tags_actually_removed = deduplicated_input.filter(tag => current_tags.includes(tag))
+    const tags_actually_removed = deduplicated_input.filter((tag) =>
+      current_tags.includes(tag)
+    )
 
     if (tags_actually_removed.length === 0) {
       log('No tags to remove - none of the specified tags exist')
@@ -150,7 +169,9 @@ export const remove_tags_from_entity = async ({ absolute_path, tags_to_remove })
       }
     }
 
-    const updated_tags = current_tags.filter(tag => !deduplicated_input.includes(tag))
+    const updated_tags = current_tags.filter(
+      (tag) => !deduplicated_input.includes(tag)
+    )
 
     // Update entity properties with filtered tags
     const updated_properties = {
@@ -169,13 +190,17 @@ export const remove_tags_from_entity = async ({ absolute_path, tags_to_remove })
     log('Successfully removed tags from entity', {
       absolute_path,
       removed_tags: tags_actually_removed,
-      not_found_tags: deduplicated_input.filter(tag => !current_tags.includes(tag))
+      not_found_tags: deduplicated_input.filter(
+        (tag) => !current_tags.includes(tag)
+      )
     })
 
     return {
       success: true,
       removed_tags: tags_actually_removed,
-      not_found_tags: deduplicated_input.filter(tag => !current_tags.includes(tag)),
+      not_found_tags: deduplicated_input.filter(
+        (tag) => !current_tags.includes(tag)
+      ),
       total_tags: updated_tags.length,
       absolute_path
     }

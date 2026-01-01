@@ -18,7 +18,7 @@ export function register_entity_create_tool() {
     tool_name: 'entity_create',
     tool_definition: {
       description:
-        'Creates a new entity file in the filesystem with the specified properties.',
+        'Creates a new entity file in the filesystem with the specified properties. IMPORTANT: Always use this tool instead of the Write file tool when creating entities. This tool auto-generates entity_id, timestamps, and applies proper schema compliance.',
       inputSchema: {
         type: 'object',
         properties: {

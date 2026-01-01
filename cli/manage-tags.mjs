@@ -37,7 +37,8 @@ const shared_options = (yargs, operation_verb) => {
     })
     .option('include_path_patterns', {
       type: 'array',
-      description: 'Glob patterns to match files. Patterns are relative to the user base directory.',
+      description:
+        'Glob patterns to match files. Patterns are relative to the user base directory.',
       default: ['*.md'],
       alias: 'i'
     })
@@ -59,32 +60,43 @@ const shared_options = (yargs, operation_verb) => {
 const cli_config = (argv_parser) =>
   add_directory_cli_options(argv_parser)
     .scriptName('manage-tags')
-    .usage(`$0 <command> [options]
+    .usage(
+      `$0 <command> [options]
 
 Batch add or remove tags from Base system entities.
 
 Tags can be specified as:
   - Shorthand: "javascript" resolves to "user:tag/javascript.md"
   - Full URI:  "user:tag/javascript.md" used as-is
-  - Multiple:  "javascript,react,frontend" (comma-separated)`)
-    .command(
-      'add',
-      'Add tags to matching entities',
-      (yargs) => shared_options(yargs, 'add')
+  - Multiple:  "javascript,react,frontend" (comma-separated)`
     )
-    .command(
-      'remove',
-      'Remove tags from matching entities',
-      (yargs) => shared_options(yargs, 'remove')
+    .command('add', 'Add tags to matching entities', (yargs) =>
+      shared_options(yargs, 'add')
+    )
+    .command('remove', 'Remove tags from matching entities', (yargs) =>
+      shared_options(yargs, 'remove')
     )
     .demandCommand(1, 'You must specify a command: add or remove')
     .example([
-      ['$0 add -t javascript -i "task/*.md"', 'Add javascript tag to all tasks'],
-      ['$0 add -t "react,frontend" -i "task/league/*.md"', 'Add multiple tags to league tasks'],
-      ['$0 remove -t legacy -i "**/*.md" -e "archive/*"', 'Remove tag, excluding archive'],
-      ['$0 add -t urgent -i "task/*.md" --dry_run', 'Preview changes without applying']
+      [
+        '$0 add -t javascript -i "task/*.md"',
+        'Add javascript tag to all tasks'
+      ],
+      [
+        '$0 add -t "react,frontend" -i "task/league/*.md"',
+        'Add multiple tags to league tasks'
+      ],
+      [
+        '$0 remove -t legacy -i "**/*.md" -e "archive/*"',
+        'Remove tag, excluding archive'
+      ],
+      [
+        '$0 add -t urgent -i "task/*.md" --dry_run',
+        'Preview changes without applying'
+      ]
     ])
-    .epilogue(`Tag Format:
+    .epilogue(
+      `Tag Format:
   Shorthand tags are automatically expanded:
     "javascript"     -> "user:tag/javascript.md"
     "base-project"   -> "user:tag/base-project.md"
@@ -100,7 +112,8 @@ Pattern Examples:
 
 Exit Codes:
   0  Success (all files processed)
-  1  Error (some files failed or invalid input)`)
+  1  Error (some files failed or invalid input)`
+    )
     .wrap(100)
     .help()
     .alias('help', 'h')
@@ -118,7 +131,13 @@ const manage_tags = async ({
   dry_run = false
 }) => {
   try {
-    log('Tag management process started', { operation, tags, include_path_patterns, exclude_path_patterns, dry_run })
+    log('Tag management process started', {
+      operation,
+      tags,
+      include_path_patterns,
+      exclude_path_patterns,
+      dry_run
+    })
 
     if (!operation || !['add', 'remove'].includes(operation)) {
       throw new Error('Operation must be either "add" or "remove"')
@@ -142,10 +161,10 @@ const manage_tags = async ({
       })
     )
 
-    const missing_tags = validation_results.filter(result => !result.exists)
+    const missing_tags = validation_results.filter((result) => !result.exists)
 
     if (missing_tags.length > 0) {
-      const missing_tag_list = missing_tags.map(t => t.tag).join(', ')
+      const missing_tag_list = missing_tags.map((t) => t.tag).join(', ')
       throw new Error(`The following tags do not exist: ${missing_tag_list}`)
     }
 
@@ -162,7 +181,6 @@ const manage_tags = async ({
     })
 
     return batch_result
-
   } catch (error) {
     log('Error in tag management orchestration:', error)
     return {

@@ -23,14 +23,14 @@ export const resolve_tag_shorthand = (tag_input) => {
   // Split by comma and trim whitespace
   const raw_tags = tag_input
     .split(',')
-    .map(tag => tag.trim())
-    .filter(tag => tag.length > 0)
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
 
   if (raw_tags.length === 0) {
     throw new Error('No valid tags found in input')
   }
 
-  const resolved_tags = raw_tags.map(tag => {
+  const resolved_tags = raw_tags.map((tag) => {
     // Check if already in full Base URI format
     if (tag.includes(':') && tag.includes('/') && tag.endsWith('.md')) {
       log('Tag already in Base URI format:', tag)
