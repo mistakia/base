@@ -6,6 +6,7 @@ $homepage_tasks_grid_template_mobile = 1fr
   border 1px solid darken($breadcrumb_light_color, 10%)
   border-radius 8px
   background $breadcrumb_light_color
+  overflow hidden
 
   .home-file-browser-header
     display flex
@@ -23,6 +24,11 @@ $homepage_tasks_grid_template_mobile = 1fr
     &:focus
       outline none
       background-color darken($breadcrumb_light_color, 5%)
+
+  // When expanded, header only has top border-radius
+  &.home-file-browser--expanded
+    .home-file-browser-header
+      border-radius 8px 8px 0 0
 
   .home-file-browser-title
     font-weight 600
@@ -42,6 +48,7 @@ $homepage_tasks_grid_template_mobile = 1fr
     border-top 1px solid darken($breadcrumb_light_color, 10%)
     padding 0
     background $color_surface
+    border-radius 0 0 8px 8px
 
 .homepage-right-column
   display grid

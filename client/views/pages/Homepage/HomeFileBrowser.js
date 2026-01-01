@@ -9,7 +9,7 @@ const HomeFileBrowser = () => {
   }
 
   return (
-    <div className='home-file-browser'>
+    <div className={`home-file-browser ${is_expanded ? 'home-file-browser--expanded' : ''}`}>
       <div
         className='home-file-browser-header'
         onClick={handle_toggle}
