@@ -5,8 +5,11 @@ import {
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
 import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
-import { check_user_permission_for_file } from '../middleware/permission/index.mjs'
-import { redact_entity_object } from '../middleware/content-redactor.mjs'
+import {
+  check_user_permission_for_file,
+  check_permission
+} from '#server/middleware/permission/index.mjs'
+import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 
 const router = express.Router({ mergeParams: true })
 
@@ -24,6 +27,41 @@ const check_file_permission = async (user_public_key, absolute_path) => {
 const parse_array_params = (param) => {
   if (!param) return []
   return Array.isArray(param) ? param : [param]
+}
+
+// Helper function to get tag visibility for a list of tasks
+// Uses the full permission system: ownership, user rules, public_read, public rules
+const get_tag_visibility = async (tasks, user_public_key) => {
+  // Collect unique tag URIs from all tasks
+  const tag_uris = new Set()
+  for (const task of tasks) {
+    const tags = task.entity_properties?.tags || []
+    for (const tag_uri of tags) {
+      tag_uris.add(tag_uri)
+    }
+  }
+
+  // Check visibility for each tag using the permission system
+  const tag_visibility = {}
+  for (const tag_uri of tag_uris) {
+    try {
+      // Use the full permission check which handles:
+      // 1. Ownership (user owns the tag)
+      // 2. User-specific rules
+      // 3. public_read setting
+      // 4. Public rules
+      const permission_result = await check_permission({
+        user_public_key,
+        resource_path: tag_uri
+      })
+      tag_visibility[tag_uri] = permission_result.read.allowed
+    } catch {
+      // If permission check fails, treat as not visible
+      tag_visibility[tag_uri] = false
+    }
+  }
+
+  return tag_visibility
 }
 
 // Centralized function to check task permissions and build response
@@ -211,7 +249,10 @@ async function handle_task_list_request(
     })
   )
 
-  res.status(200).send(tasks)
+  // Get tag visibility for all tags referenced in tasks
+  const tag_visibility = await get_tag_visibility(tasks, user_public_key)
+
+  res.status(200).send({ tasks, tag_visibility })
 }
 
 export default router

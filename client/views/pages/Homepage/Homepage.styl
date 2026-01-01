@@ -41,7 +41,6 @@ $homepage_tasks_grid_template_mobile = 1fr
     gap 16px
     padding 8px 20px
     min-width 0
-    border-bottom 1px solid #e9ecef
     font-weight 800
     color #495057
     font-size 11px
@@ -67,6 +66,45 @@ $homepage_tasks_grid_template_mobile = 1fr
           text-decoration underline
 
   .tasks-table-body
+    display flex
+    flex-direction column
+    gap 16px
+
+    .task-group
+      border-radius 8px
+      overflow hidden
+      border 1px solid #e9ecef
+
+      &.task-group-even
+        background-color #ffffff
+
+      &.task-group-odd
+        background-color #f8f9fa
+
+    .task-group-header
+      display flex
+      align-items center
+      gap 6px
+      padding 4px 20px
+      background-color mix($breadcrumb_light_color, #ffffff, 50%)
+      border-bottom 1px solid darken($breadcrumb_light_color, 8%)
+
+      .task-group-name
+        font-weight 600
+        font-size 10px
+        color #6c757d
+        text-transform uppercase
+        letter-spacing 0.5px
+
+      .task-group-count
+        font-size 10px
+        color #868e96
+        font-weight 400
+
+    .task-group-items
+      .task-row:last-child
+        border-bottom none
+
     .task-row
       display grid
       grid-template-columns $homepage_tasks_grid_template

@@ -8,6 +8,10 @@ export function get_tasks(state) {
   return get_tasks_state(state).get('tasks')
 }
 
+export function get_tag_visibility(state) {
+  return get_tasks_state(state).get('tag_visibility')
+}
+
 export function get_selected_task_table_view_id(state) {
   return get_tasks_state(state).get('selected_task_table_view_id') || 'open'
 }

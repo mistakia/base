@@ -19,6 +19,7 @@ const Homepage = ({
   is_loading_threads,
   load_threads,
   tasks,
+  tag_visibility,
   is_loading_tasks,
   load_tasks,
   directory_markdown,
@@ -61,6 +62,7 @@ const Homepage = ({
                 />
                 <HomePageTasks
                   tasks={tasks}
+                  tag_visibility={tag_visibility}
                   is_loading_tasks={is_loading_tasks}
                   load_tasks={load_tasks}
                 />
@@ -84,6 +86,7 @@ Homepage.propTypes = {
   is_loading_threads: PropTypes.bool.isRequired,
   load_threads: PropTypes.func.isRequired,
   tasks: ImmutablePropTypes.list.isRequired,
+  tag_visibility: ImmutablePropTypes.map,
   is_loading_tasks: PropTypes.bool.isRequired,
   load_tasks: PropTypes.func.isRequired,
   directory_markdown: PropTypes.string,

@@ -14,6 +14,7 @@ const map_state_to_props = createSelector(
     threads: threads_state.get('threads'),
     is_loading_threads: threads_state.get('is_loading_threads'),
     tasks: tasks_state.get('tasks'),
+    tag_visibility: tasks_state.get('tag_visibility'),
     is_loading_tasks:
       tasks_state.get('is_loading_tasks') ||
       tasks_state.get('is_fetching', false),

@@ -114,6 +114,7 @@ const DEFAULT_VIEWS = {
 const TasksState = new Record({
   // Basic tasks list for simple get_tasks API calls
   tasks: new List(),
+  tag_visibility: new Map(),
   is_loading_tasks: false,
   tasks_error: null,
 
@@ -131,12 +132,18 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
         tasks_error: null
       })
 
-    case tasks_action_types.GET_TASKS_FULFILLED:
+    case tasks_action_types.GET_TASKS_FULFILLED: {
+      // Handle both old array format and new object format
+      const data = payload.data || {}
+      const tasks = Array.isArray(data) ? data : data.tasks || []
+      const tag_visibility = data.tag_visibility || {}
       return state.merge({
-        tasks: new List(payload.data || []),
+        tasks: new List(tasks),
+        tag_visibility: new Map(tag_visibility),
         is_loading_tasks: false,
         tasks_error: null
       })
+    }
 
     case tasks_action_types.GET_TASKS_FAILED:
       return state.merge({
