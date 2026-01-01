@@ -53,28 +53,30 @@ const TasksTable = () => {
   }
 
   return (
-    <Table
-      data={data}
-      all_columns={
-        Object.keys(all_columns).length > 0 ? all_columns : task_columns
-      }
-      table_state={table_state}
-      views={available_views}
-      selected_view={selected_view}
-      on_view_change={handle_view_change}
-      select_view={select_view}
-      fetch_more={handle_fetch_more}
-      total_row_count={total_row_count}
-      total_rows_fetched={total_rows_fetched}
-      is_loading={is_loading}
-      is_fetching={is_fetching}
-      is_fetching_more={is_fetching_more}
-      saved_table_state={saved_table_state}
-      disable_rank_aggregation={true}
-      disable_splits={true}
-      disable_create_view={true}
-      disable_edit_view={true}
-    />
+    <div className='tasks-table-container'>
+      <Table
+        data={data}
+        all_columns={
+          Object.keys(all_columns).length > 0 ? all_columns : task_columns
+        }
+        table_state={table_state}
+        views={available_views}
+        selected_view={selected_view}
+        on_view_change={handle_view_change}
+        select_view={select_view}
+        fetch_more={handle_fetch_more}
+        total_row_count={total_row_count}
+        total_rows_fetched={total_rows_fetched}
+        is_loading={is_loading}
+        is_fetching={is_fetching}
+        is_fetching_more={is_fetching_more}
+        saved_table_state={saved_table_state}
+        disable_rank_aggregation={true}
+        disable_splits={true}
+        disable_create_view={true}
+        disable_edit_view={true}
+      />
+    </div>
   )
 }
 

@@ -28,13 +28,14 @@
   color $color_text_secondary
 
 .threads-table-container
-  width 100%
-  max-width 1400px
-  
+  width fit-content
+  min-width 100%
+
   // Ensure table can use column widths properly
   .table
     width auto
-    
+    min-width fit-content
+
     // Left-align the working directory column content
     // Target by its distinctive width of 300px
     .cell[style*="width: 300px"]

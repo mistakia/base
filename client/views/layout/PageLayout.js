@@ -18,12 +18,14 @@ const PageLayout = ({ children }) => {
 
   return (
     <div className='page-layout'>
-      <AuthStatusBar />
-      {!is_homepage && (
-        <div className='page-sessions-panel'>
-          <SessionsPanelContainer max_threads={2} />
-        </div>
-      )}
+      <div className='page-header-area'>
+        <AuthStatusBar />
+        {!is_homepage && (
+          <div className='page-sessions-panel'>
+            <SessionsPanelContainer max_threads={2} />
+          </div>
+        )}
+      </div>
       <div className='page-content-container'>{children}</div>
       <div className='bottom-bar'>
         <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
