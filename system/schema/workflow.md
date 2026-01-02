@@ -29,6 +29,43 @@ properties:
           type: string
           required: false
           description: Description of what the property is used for
+        - name: default
+          type: any
+          required: false
+          description: Default value for the property
+        - name: properties
+          type: array
+          required: false
+          description: Nested property definitions for object types
+          items:
+            type: object
+            properties:
+              - name: name
+                type: string
+                required: true
+              - name: type
+                type: string
+                required: true
+              - name: description
+                type: string
+                required: false
+              - name: required
+                type: boolean
+                required: false
+              - name: default
+                type: any
+                required: false
+              - name: enum
+                type: array
+                required: false
+        - name: enum
+          type: array
+          required: false
+          description: Allowed values for enum types
+        - name: items
+          type: object
+          required: false
+          description: Item schema for array types
   - name: tool_definition
     type: object
     description: Defines custom tools for the workflow
