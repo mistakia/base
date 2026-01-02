@@ -55,11 +55,12 @@ describe('API /tasks GET', () => {
         .set('Authorization', `Bearer ${user.jwt_token}`)
 
       res.should.have.status(200)
-      res.body.should.be.an('array')
-      res.body.length.should.be.at.least(1)
+      res.body.should.have.property('tasks')
+      res.body.tasks.should.be.an('array')
+      res.body.tasks.length.should.be.at.least(1)
 
       // Check first task has expected properties
-      const task = res.body[0]
+      const task = res.body.tasks[0]
       task.should.have.nested.property('file_info.base_uri')
       task.should.have.nested.property('entity_properties.title')
       task.should.have.nested.property('entity_properties.description')
@@ -90,11 +91,12 @@ describe('API /tasks GET', () => {
         })
 
       res.should.have.status(200)
-      res.body.should.be.an('array')
-      res.body.length.should.be.at.least(1)
+      res.body.should.have.property('tasks')
+      res.body.tasks.should.be.an('array')
+      res.body.tasks.length.should.be.at.least(1)
 
       // All returned tasks should have the specified status
-      res.body.forEach((task) => {
+      res.body.tasks.forEach((task) => {
         task.entity_properties.status.should.equal('Waiting')
       })
     })
