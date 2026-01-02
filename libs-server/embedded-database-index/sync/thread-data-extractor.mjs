@@ -69,6 +69,15 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     metadata.inference_provider ||
     null
 
+  // Extract inference provider (for cost calculation)
+  const inference_provider = metadata.inference_provider || null
+
+  // Extract primary model (first model used, for cost calculation)
+  const primary_model =
+    (metadata.models && metadata.models[0]) ||
+    (provider_metadata.models && provider_metadata.models[0]) ||
+    null
+
   // Extract tool call count
   const tool_call_count = metadata.tool_call_count || null
 
@@ -96,6 +105,8 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     working_directory,
     working_directory_path,
     session_provider,
+    inference_provider,
+    primary_model,
     user_public_key: metadata.user_public_key || null
   }
 }

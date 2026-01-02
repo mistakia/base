@@ -118,6 +118,8 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
     working_directory,
     working_directory_path,
     session_provider,
+    inference_provider,
+    primary_model,
     user_public_key
   } = thread_data
 
@@ -134,8 +136,9 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
       message_count, user_message_count, assistant_message_count, tool_call_count,
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
-      working_directory, working_directory_path, session_provider, user_public_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      working_directory, working_directory_path, session_provider,
+      inference_provider, primary_model, user_public_key
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -156,6 +159,8 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
       working_directory = excluded.working_directory,
       working_directory_path = excluded.working_directory_path,
       session_provider = excluded.session_provider,
+      inference_provider = excluded.inference_provider,
+      primary_model = excluded.primary_model,
       user_public_key = excluded.user_public_key
   `
 
@@ -183,6 +188,8 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
         working_directory || null,
         working_directory_path || null,
         session_provider || null,
+        inference_provider || null,
+        primary_model || null,
         user_public_key || null
       ]
     })

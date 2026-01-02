@@ -47,6 +47,8 @@ import {
   extract_relations_from_entity
 } from './sync/entity-data-extractor.mjs'
 import { extract_thread_index_data } from './sync/thread-data-extractor.mjs'
+import list_threads from '#libs-server/threads/list-threads.mjs'
+import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
 const log = debug('embedded-index')
 
@@ -165,9 +167,91 @@ class EmbeddedIndexManager {
       }
     }
 
-    // Note: Full entity/thread scanning would be triggered by the caller
-    // This method just resets the schema; actual data population is separate
-    log('Index schemas reset, ready for data population')
+    log('Index schemas reset, populating data from filesystem')
+
+    // Populate threads
+    await this._populate_threads_from_filesystem()
+
+    // Populate tasks
+    await this._populate_tasks_from_filesystem()
+
+    log('Index rebuild complete')
+  }
+
+  async _populate_threads_from_filesystem() {
+    if (!this.duckdb_ready) {
+      log('DuckDB not ready, skipping thread population')
+      return
+    }
+
+    try {
+      const threads = await list_threads({
+        limit: Infinity,
+        offset: 0
+      })
+
+      log('Populating %d threads to index', threads.length)
+
+      let synced = 0
+      let failed = 0
+
+      for (const thread of threads) {
+        try {
+          const duckdb_connection = await get_duckdb_connection()
+          const thread_index_data = extract_thread_index_data({
+            thread_id: thread.thread_id,
+            metadata: thread
+          })
+          await upsert_thread_to_duckdb({
+            connection: duckdb_connection,
+            thread_data: thread_index_data
+          })
+          synced++
+        } catch (error) {
+          log('Error syncing thread %s: %s', thread.thread_id, error.message)
+          failed++
+        }
+      }
+
+      log('Thread population complete: %d synced, %d failed', synced, failed)
+    } catch (error) {
+      log('Error populating threads: %s', error.message)
+    }
+  }
+
+  async _populate_tasks_from_filesystem() {
+    if (!this.duckdb_ready && !this.kuzu_ready) {
+      log('Neither DuckDB nor Kuzu ready, skipping task population')
+      return
+    }
+
+    try {
+      const entities = await list_entity_files_from_filesystem({
+        entity_type: 'task'
+      })
+
+      log('Populating %d tasks to index', entities.length)
+
+      let synced = 0
+      let failed = 0
+
+      for (const entity of entities) {
+        try {
+          await this.sync_entity({
+            base_uri: entity.base_uri,
+            entity_data: entity
+          })
+          synced++
+        } catch (error) {
+          log('Error syncing task %s: %s', entity.base_uri, error.message)
+          failed++
+        }
+      }
+
+      log('Task population complete: %d synced, %d failed', synced, failed)
+    } catch (error) {
+      log('Error populating tasks: %s', error.message)
+    }
   }
 
   async sync_entity({ base_uri, entity_data }) {

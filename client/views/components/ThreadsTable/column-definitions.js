@@ -1,14 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
 import {
   TABLE_DATA_TYPES,
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
 import { COLORS } from '@theme/colors.js'
-import { get_thread_cost_by_id } from '@core/threads/selectors'
+import { format_cost } from '@core/utils/pricing-calculator'
 import {
   format_shorthand_time,
   format_shorthand_number
@@ -162,12 +161,9 @@ const WorkingDirectoryCell = ({ row }) => {
 
 const CostCell = ({ row }) => {
   const thread = row.original
-  const thread_id = thread.thread_id || thread.id
 
-  // Get cost from Redux store using the thread ID
-  const cost_display = useSelector((state) =>
-    thread_id ? get_thread_cost_by_id(state, thread_id) : null
-  )
+  // Use server-provided cost directly
+  const cost_display = format_cost(thread.total_cost, thread.currency)
 
   if (!cost_display) {
     return (

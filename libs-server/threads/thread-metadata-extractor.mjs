@@ -3,6 +3,8 @@
  */
 
 import debug from 'debug'
+import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 
 const log = debug('threads:metadata')
 
@@ -25,17 +27,14 @@ function extract_tool_call_count(thread) {
 }
 
 /**
- * Calculate cost data (placeholder - will integrate with existing cost calculation)
+ * Calculate cost data using models pricing cache
+ *
+ * @param {Object} thread - Thread object with token counts and model info
+ * @param {Object} models_data - Cached models pricing data
+ * @returns {Object} Cost calculation result
  */
-function calculate_cost_data(thread) {
-  // This will be integrated with existing cost calculation logic
-  // For now, return placeholder structure
-  return {
-    total_cost: 0,
-    input_cost: 0,
-    output_cost: 0,
-    currency: 'USD'
-  }
+function calculate_cost_data(thread, models_data) {
+  return calculate_thread_cost(thread, models_data)
 }
 
 /**
@@ -202,6 +201,15 @@ export async function extract_thread_metadata(thread) {
   try {
     log(`Extracting metadata for thread ${thread.thread_id}`)
 
+    // Fetch models data for cost calculation (non-blocking on failure)
+    let models_data = null
+    try {
+      const cache_data = await get_models_from_cache()
+      models_data = cache_data?.models || null
+    } catch (error) {
+      log('Failed to fetch models data for cost calculation: %s', error.message)
+    }
+
     // Extract all relevant data using client-side matching patterns
     const extracted_data = {
       message_counts: extract_message_counts(thread),
@@ -209,7 +217,7 @@ export async function extract_thread_metadata(thread) {
       total_tokens: extract_total_tokens(thread),
       duration_minutes: extract_duration_minutes(thread),
       working_directory: extract_working_directory(thread),
-      cost_data: calculate_cost_data(thread),
+      cost_data: calculate_cost_data(thread, models_data),
       provider_info: get_provider_info(thread),
       title: extract_thread_title(thread),
       description: extract_thread_description(thread)

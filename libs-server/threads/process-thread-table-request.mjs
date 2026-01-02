@@ -16,14 +16,23 @@ import {
   count_threads_in_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 
 const log = debug('threads:table')
 
 /**
  * Normalize DuckDB thread row to match filesystem output structure
  * Adds computed fields that the filesystem path computes via extract_thread_metadata
+ *
+ * @param {Object} thread - DuckDB thread row
+ * @param {Object} models_data - Cached models pricing data
+ * @returns {Object} Normalized thread object
  */
-function normalize_duckdb_thread(thread) {
+function normalize_duckdb_thread(thread, models_data) {
+  // Calculate cost using thread data and models pricing
+  const cost_data = calculate_thread_cost(thread, models_data)
+
   return {
     // Core thread identifiers
     thread_id: thread.thread_id,
@@ -45,6 +54,8 @@ function normalize_duckdb_thread(thread) {
 
     // Provider and session info
     session_provider: thread.session_provider || 'base',
+    inference_provider: thread.inference_provider,
+    primary_model: thread.primary_model,
 
     // Working directory
     working_directory: thread.working_directory,
@@ -63,11 +74,11 @@ function normalize_duckdb_thread(thread) {
     cache_creation_input_tokens: thread.cache_creation_input_tokens || 0,
     cache_read_input_tokens: thread.cache_read_input_tokens || 0,
 
-    // Cost information (placeholder - matches filesystem path)
-    total_cost: 0,
-    input_cost: 0,
-    output_cost: 0,
-    currency: 'USD',
+    // Cost information (calculated from models pricing)
+    total_cost: cost_data.total_cost,
+    input_cost: cost_data.input_cost,
+    output_cost: cost_data.output_cost,
+    currency: cost_data.currency,
 
     // Additional metadata
     description: thread.description || '',
@@ -200,6 +211,15 @@ async function process_thread_table_request_indexed({
 }) {
   const start_time = Date.now()
 
+  // Fetch models data for cost calculation (non-blocking on failure)
+  let models_data = null
+  try {
+    const cache_data = await get_models_from_cache()
+    models_data = cache_data?.models || null
+  } catch (error) {
+    log('Failed to fetch models data for cost calculation: %s', error.message)
+  }
+
   const duckdb_connection = await get_duckdb_connection()
   const filters = convert_table_state_to_duckdb_filters(table_state)
   const sort = convert_table_state_to_duckdb_sort(table_state)
@@ -222,7 +242,9 @@ async function process_thread_table_request_indexed({
   })
 
   // Normalize DuckDB results to match filesystem output structure
-  const normalized_threads = threads.map(normalize_duckdb_thread)
+  const normalized_threads = threads.map((thread) =>
+    normalize_duckdb_thread(thread, models_data)
+  )
 
   // Apply permissions and redaction
   const threads_with_permissions = await Promise.all(
