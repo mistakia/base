@@ -137,6 +137,15 @@ const HomePageTasks = ({
         <div className='tasks-table-header'>
           <div className='task-header-with-link'>
             <span>Task</span>
+            {hidden_tasks_count > 0 && (
+              <button
+                className='tasks-toggle-button'
+                onClick={() => setIsExpanded(!is_expanded)}>
+                {is_expanded
+                  ? 'show less'
+                  : `show ${hidden_tasks_count} more task${hidden_tasks_count === 1 ? '' : 's'}`}
+              </button>
+            )}
             <Link to='/task' className='view-all-link'>
               view all
             </Link>
@@ -168,17 +177,6 @@ const HomePageTasks = ({
             </div>
           ))}
         </div>
-        {hidden_tasks_count > 0 && (
-          <div className='tasks-toggle-container'>
-            <button
-              className='tasks-toggle-button'
-              onClick={() => setIsExpanded(!is_expanded)}>
-              {is_expanded
-                ? 'show less'
-                : `show ${hidden_tasks_count} more task${hidden_tasks_count === 1 ? '' : 's'}`}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
