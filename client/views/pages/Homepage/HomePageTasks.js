@@ -67,30 +67,26 @@ const HomePageTasks = ({
     set_is_collapsed(!is_collapsed)
   }
 
-  const header_label = (
-    <span
-      className='home-section-header__label home-section-header__label--clickable'
-      onClick={handle_toggle}
-      role='button'
-      tabIndex={0}
-      aria-expanded={!is_collapsed}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          handle_toggle()
-        }
-      }}>
-      <span className='home-section-header__toggle'>
-        {is_collapsed ? '+' : '-'}
-      </span>
-      <span className='home-section-header__dot home-section-header__dot--tasks' />
-      <span className='home-section-header__title'>Tasks</span>
-    </span>
-  )
-
   if (is_loading_tasks) {
     return (
       <div className='tasks-container'>
-        <div className='home-section-header'>{header_label}</div>
+        <div
+          className='home-section-header home-section-header--clickable'
+          onClick={handle_toggle}
+          role='button'
+          tabIndex={0}
+          aria-expanded={!is_collapsed}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handle_toggle()
+            }
+          }}>
+          <span className='home-section-header__toggle'>
+            {is_collapsed ? '+' : '-'}
+          </span>
+          <span className='home-section-header__dot home-section-header__dot--tasks' />
+          <span className='home-section-header__title'>Tasks</span>
+        </div>
       </div>
     )
   }
@@ -141,9 +137,26 @@ const HomePageTasks = ({
 
   return (
     <div className='tasks-container'>
-      <div className='home-section-header'>
-        {header_label}
-        <Link to='/task' className='home-section-header__count'>
+      <div
+        className='home-section-header home-section-header--clickable'
+        onClick={handle_toggle}
+        role='button'
+        tabIndex={0}
+        aria-expanded={!is_collapsed}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handle_toggle()
+          }
+        }}>
+        <span className='home-section-header__toggle'>
+          {is_collapsed ? '+' : '-'}
+        </span>
+        <span className='home-section-header__dot home-section-header__dot--tasks' />
+        <span className='home-section-header__title'>Tasks</span>
+        <Link
+          to='/task'
+          className='home-section-header__count'
+          onClick={(e) => e.stopPropagation()}>
           {ongoing_tasks.size}
         </Link>
       </div>

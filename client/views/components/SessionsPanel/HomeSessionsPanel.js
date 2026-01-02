@@ -65,7 +65,7 @@ const HomeSessionsPanel = ({
       {has_active_sessions && (
         <div className='home-sessions-panel__section'>
           <div
-            className='home-sessions-panel__header home-sessions-panel__header--clickable'
+            className='home-section-header home-section-header--clickable'
             onClick={() => set_sessions_collapsed(!sessions_collapsed)}
             role='button'
             tabIndex={0}
@@ -75,14 +75,12 @@ const HomeSessionsPanel = ({
                 set_sessions_collapsed(!sessions_collapsed)
               }
             }}>
-            <span className='home-sessions-panel__toggle'>
+            <span className='home-section-header__toggle'>
               {sessions_collapsed ? '+' : '-'}
             </span>
-            <span className='home-sessions-panel__header-dot home-sessions-panel__header-dot--active' />
-            <span className='home-sessions-panel__header-title'>
-              Active Sessions
-            </span>
-            <span className='home-sessions-panel__header-count'>
+            <span className='home-section-header__dot home-section-header__dot--active' />
+            <span className='home-section-header__title'>Active Sessions</span>
+            <span className='home-section-header__count'>
               {active_session_count}
             </span>
           </div>
@@ -98,27 +96,26 @@ const HomeSessionsPanel = ({
 
       {has_active_threads && (
         <div className='home-sessions-panel__section'>
-          <div className='home-sessions-panel__header'>
-            <span
-              className='home-sessions-panel__header-label home-sessions-panel__header-label--clickable'
-              onClick={() => set_threads_collapsed(!threads_collapsed)}
-              role='button'
-              tabIndex={0}
-              aria-expanded={!threads_collapsed}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  set_threads_collapsed(!threads_collapsed)
-                }
-              }}>
-              <span className='home-sessions-panel__toggle'>
-                {threads_collapsed ? '+' : '-'}
-              </span>
-              <span className='home-sessions-panel__header-dot home-sessions-panel__header-dot--review' />
-              <span className='home-sessions-panel__header-title'>
-                Ready for Review
-              </span>
+          <div
+            className='home-section-header home-section-header--clickable'
+            onClick={() => set_threads_collapsed(!threads_collapsed)}
+            role='button'
+            tabIndex={0}
+            aria-expanded={!threads_collapsed}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                set_threads_collapsed(!threads_collapsed)
+              }
+            }}>
+            <span className='home-section-header__toggle'>
+              {threads_collapsed ? '+' : '-'}
             </span>
-            <Link to='/thread' className='home-sessions-panel__header-count'>
+            <span className='home-section-header__dot home-section-header__dot--review' />
+            <span className='home-section-header__title'>Ready for Review</span>
+            <Link
+              to='/thread'
+              className='home-section-header__count'
+              onClick={(e) => e.stopPropagation()}>
               {active_threads.size || active_threads.length}
             </Link>
           </div>
