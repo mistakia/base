@@ -35,6 +35,9 @@
     "deploy": "pm2 deploy server.pm2.config.js production --force",
     "deploy:setup": "pm2 deploy server.pm2.config.js production setup",
     "deploy:dist": "rsync -av --exclude 'stats.html' --include 'bundle-manifest.json' build/ storage:/home/user/base/source/build",
+    "sync:config": "./cli/sync-config.sh",
+    "sync:config:dry": "./cli/sync-config.sh --dry-run",
+    "sync:config:all": "./cli/sync-config.sh --all",
     "rebuild:index": "DEBUG='cli:rebuild-index,embedded-index*' node cli/rebuild-embedded-index.mjs"
   },
   "dependencies": {
