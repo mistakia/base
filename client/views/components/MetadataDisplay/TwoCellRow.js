@@ -1,6 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
+
+import { COLORS } from '@theme/colors.js'
 import LabeledCell from './LabeledCell.js'
 
 const TwoCellRow = ({
@@ -16,12 +18,12 @@ const TwoCellRow = ({
   sx = {}
 }) => {
   const default_border_style = {
-    borderTop: is_first ? 'none' : '1px solid #e0e0e0',
+    borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`,
     borderBottom: 'none'
   }
 
   const compact_border_style = {
-    borderTop: is_first ? 'none' : '1px solid #f0f0f0',
+    borderTop: is_first ? 'none' : `1px solid ${COLORS.border_light}`,
     borderBottom: 'none'
   }
 

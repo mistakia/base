@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Button } from '@mui/material'
+import { Box } from '@mui/material'
+
+import Button from '@components/primitives/Button'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
 const DefaultToolHeader = ({
@@ -104,18 +106,9 @@ const DefaultToolHeader = ({
             </MonospaceText>
             {action_button && (
               <Button
+                variant='ghost'
                 size='small'
-                variant='text'
-                onClick={action_button.onClick}
-                sx={{
-                  fontSize: '10px',
-                  minWidth: 'auto',
-                  px: 1,
-                  py: 0.25,
-                  textTransform: 'none',
-                  color: 'text.secondary',
-                  '&:hover': { bgcolor: 'action.hover' }
-                }}>
+                onClick={action_button.onClick}>
                 {action_button.label}
               </Button>
             )}

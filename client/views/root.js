@@ -21,6 +21,7 @@ import '@styles/normalize.css'
 import '@styles/typography.styl'
 import '@styles/pages.styl'
 import '@styles/utilities.styl'
+import '@styles/components/buttons.styl'
 
 StoreRegistry.register(store)
 

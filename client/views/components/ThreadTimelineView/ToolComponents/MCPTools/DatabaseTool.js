@@ -8,10 +8,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Button
+  Paper
 } from '@mui/material'
 import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import { COLORS } from '@theme/colors.js'
+
+import Button from '@components/primitives/Button'
 import BaseToolComponent from '@views/components/ThreadTimelineView/ToolComponents/BaseToolComponent.js'
 import { MonospaceText } from '@views/components/primitives/styled'
 import { code_to_html } from '@core/shiki-highlighter.js'
@@ -108,15 +110,15 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
     return (
       <Box
         sx={{
-          border: '1px solid #e5e7eb',
+          border: `1px solid ${COLORS.border_light}`,
           borderRadius: 1,
-          bgcolor: '#ffffff',
+          bgcolor: COLORS.surface_secondary,
           overflow: 'hidden',
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           mb: 'var(--space-sm)',
           position: 'relative'
         }}>
-        <Box sx={{ p: 2, bgcolor: '#ffffff' }}>
+        <Box sx={{ p: 2, bgcolor: COLORS.surface_secondary }}>
           {has_highlight ? (
             <Box
               onClick={() => set_show_full_sql(!show_full_sql)}
@@ -194,7 +196,7 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
               component={Paper}
               sx={{
                 height: rows_count < 3 ? 'auto' : `${table_height_px}px`,
-                borderTop: '1px solid #e5e7eb',
+                borderTop: `1px solid ${COLORS.border_light}`,
                 borderLeft: 0,
                 borderRight: 0,
                 borderBottom: 0,
@@ -265,35 +267,27 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
             </TableContainer>
 
             {rows_count > 3 && (
-              <Button
-                size='small'
-                variant='text'
-                aria-label='toggle rows height'
-                onClick={() =>
-                  set_visible_rows_count(visible_rows_count === 3 ? 10 : 3)
-                }
+              <Box
                 sx={{
                   position: 'absolute',
                   right: 8,
-                  bottom: 8,
-                  minWidth: 24,
-                  width: 24,
-                  height: 24,
-                  p: 0,
-                  color: 'text.secondary',
-                  border: '1px solid',
-                  borderColor: 'text.secondary',
-                  backgroundColor: '#fff',
-                  lineHeight: 1,
-                  borderRadius: '6px',
-                  '&:hover': { backgroundColor: 'background.paper' }
+                  bottom: 8
                 }}>
-                {visible_rows_count === 3 ? (
-                  <ExpandMore fontSize='inherit' />
-                ) : (
-                  <ExpandLess fontSize='inherit' />
-                )}
-              </Button>
+                <Button
+                  variant='secondary'
+                  size='small'
+                  icon
+                  aria-label='toggle rows height'
+                  onClick={() =>
+                    set_visible_rows_count(visible_rows_count === 3 ? 10 : 3)
+                  }>
+                  {visible_rows_count === 3 ? (
+                    <ExpandMore fontSize='inherit' />
+                  ) : (
+                    <ExpandLess fontSize='inherit' />
+                  )}
+                </Button>
+              </Box>
             )}
           </Box>
         )}

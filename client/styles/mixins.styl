@@ -3,53 +3,11 @@
 // =====================================================
 // MINIMALIST INDUSTRIAL MIXINS
 // =====================================================
+
+// Form input dimensions
 $input_padding_y = 12px
 $input_padding_x = 16px
 $input_border_width = 1px
-
-// Grid Layout Pattern (Industrial Grid)
-grid-layout()
-  display grid
-  grid-template-columns repeat(auto-fill, minmax($grid_min_column, 1fr))
-  gap $grid_gap
-  background $color_border
-  border 1px solid $color_border
-
-// Grid Item Pattern
-grid-item()
-  background $color_surface
-  padding $space_lg
-  text-decoration none
-  color $color_text
-  transition all $transition_fast
-  position relative
-  display flex
-  flex-direction column
-  
-  &:hover
-    background $color_surface_hover
-    transform $hover_lift
-    box-shadow $shadow_sm
-
-// Interactive List Pattern
-list-layout()
-  display block
-  border none
-  background transparent
-
-list-item()
-  display flex
-  flex-direction row
-  align-items center
-  padding $space_base 0
-  border-bottom 1px solid rgba($color_border, 0.3)
-  background transparent
-  text-decoration none
-  color $color_text
-  transition background $transition_fast
-  
-  &:hover
-    background rgba($primary_color_rgb, 0.02)
 
 // Form Control Pattern
 form-control()
@@ -61,78 +19,16 @@ form-control()
   background $color_surface
   color $color_text
   transition border-color $transition_base, box-shadow $transition_base
-  
+
   &:focus
     outline none
     border-color $color_primary
     box-shadow $shadow_focus
-    
+
   &:disabled
     background $color_border_light
     color $color_text_secondary
     cursor not-allowed
-
-// Button Pattern
-button-base()
-  font-family $font_family_mono
-  font-size $font_size_base
-  font-weight $font_weight_medium
-  padding $space_base $space_lg
-  border 1px solid $color_border
-  border-radius $radius_base
-  background $color_surface
-  color $color_text
-  cursor pointer
-  transition all $transition_fast
-  
-  &:hover
-    background $color_surface_hover
-    transform $hover_lift
-    box-shadow $shadow_sm
-    
-  &:active
-    transform translateY(0)
-    
-  &:disabled
-    opacity 0.6
-    cursor not-allowed
-    transform none
-    box-shadow $shadow_none
-
-// Primary Button
-button-primary()
-  button-base()
-  background $color_primary
-  border-color $color_primary
-  color white
-  
-  &:hover
-    background $color_primary_hover
-    border-color $color_primary_hover
-
-// Status Badge Pattern
-status-badge()
-  font-family $font_family_mono
-  font-size $font_size_xs
-  font-weight $font_weight_bold
-  letter-spacing 0.8px
-  text-transform uppercase
-  padding $space_xs $space_sm
-  border-radius $radius_sm
-  line-height 1
-
-// Header Separator Pattern
-header-separator()
-  position relative
-  
-  &::after
-    content ''
-    position absolute
-    bottom 0
-    left 0
-    width 100%
-    height 1px
-    background linear-gradient(90deg, $color_border 0%, transparent 100%)
 
 // Code Block Pattern
 code-block()
@@ -145,45 +41,7 @@ code-block()
   overflow-x auto
   line-height 1.5
 
-// Breadcrumb Pattern
-breadcrumb()
-  font-family $font_family_mono
-  font-size $font_size_sm
-  line-height 1.6
-  color $color_text_secondary
-  
-  .separator
-    margin 0 $space_sm
-    color $color_border
-    font-weight 300
-    
-  .link
-    color $color_text_secondary
-    text-decoration none
-    transition color $transition_base
-    
-    &:hover
-      color $color_text
-
-// Empty State Pattern
-empty-state()
-  text-align center
-  padding $space_3xl $space_xl
-  color $color_text_secondary
-  font-family $font_family_mono
-  font-size $font_size_base
-  background $color_surface
-  border 1px solid $color_border
-  
-  &::before
-    content '∅'
-    display block
-    font-size 48px
-    margin-bottom $space_base
-    opacity 0.3
-    font-weight 300
-
-// Loading State Pattern
+// Loading Shimmer Animation
 loading-shimmer()
   &::after
     content ''
@@ -194,56 +52,6 @@ loading-shimmer()
     bottom 0
     background linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)
     animation shimmer 1.5s infinite
-
-// Type Indicator Pattern (DIR/FILE/etc)
-type-indicator($bg-color = $color_text_secondary)
-  font-family $font_family_mono
-  font-size $font_size_xs
-  font-weight $font_weight_bold
-  letter-spacing 1px
-  text-transform uppercase
-  padding $space_xs $space_sm
-  border-radius $radius_sm
-  background $bg-color
-  color white
-  line-height 1
-
-// Metadata Grid Pattern
-metadata-grid()
-  display grid
-  grid-template-columns repeat(auto-fit, minmax(200px, 1fr))
-  gap $grid_gap
-  background $color_border
-  
-  @media (max-width 768px)
-    grid-template-columns 1fr
-
-metadata-item()
-  background $color_surface
-  padding $space_base $space_lg
-  display flex
-  flex-direction column
-  gap $space_xs
-  
-  .label
-    font-family $font_family_mono
-    font-size $font_size_xs
-    font-weight $font_weight_semibold
-    color $color_text_secondary
-    text-transform uppercase
-    letter-spacing 0.8px
-    
-  .value
-    font-family $font_family_mono
-    font-size $font_size_base
-    color $color_text
-    word-break break-word
-    line-height 1.4
-
-// Responsive Utilities
-mobile-only()
-  @media (max-width: 768px)
-    {block}
 
 // Animation Keyframes
 @keyframes shimmer

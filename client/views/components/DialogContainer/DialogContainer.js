@@ -5,10 +5,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions,
-  Button
+  DialogActions
 } from '@mui/material'
 
+import Button from '@components/primitives/Button'
 import { get_dialog_info } from '@core/dialog/selectors'
 import { dialog_actions } from '@core/dialog/actions'
 import ThreadStateDialog from '@components/ThreadStateDialog'
@@ -49,7 +49,14 @@ const DialogContainer = () => {
   // Generic confirmation dialog fallback
   if (dialog_id) {
     return (
-      <Dialog open={true} onClose={handle_close} maxWidth='sm' fullWidth>
+      <Dialog
+        open={true}
+        onClose={handle_close}
+        maxWidth='sm'
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 0 }
+        }}>
         {dialog_title && <DialogTitle>{dialog_title}</DialogTitle>}
 
         {dialog_description && (
@@ -58,13 +65,12 @@ const DialogContainer = () => {
           </DialogContent>
         )}
 
-        <DialogActions>
-          <Button onClick={handle_close}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant='secondary' onClick={handle_close}>
+            Cancel
+          </Button>
           {on_confirm && (
-            <Button
-              onClick={handle_confirm}
-              variant='contained'
-              color='primary'>
+            <Button variant='primary' onClick={handle_confirm}>
               Confirm
             </Button>
           )}

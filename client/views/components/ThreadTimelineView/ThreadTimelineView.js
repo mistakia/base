@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 import { get_threads_state } from '@core/threads/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
+import { COLORS } from '@theme/colors.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 import FileActions from '@components/FileActions/index.js'
@@ -51,7 +52,7 @@ const ThreadTimelineView = () => {
   if (thread_error) {
     return (
       <Box sx={{ p: 3 }}>
-        <span style={{ color: '#f44336' }}>
+        <span style={{ color: COLORS.error }}>
           Error loading thread: {thread_error}
         </span>
       </Box>

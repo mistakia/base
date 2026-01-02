@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom'
 import {
   Box,
   TextField,
-  Button,
   CircularProgress,
   Typography,
   Modal,
@@ -12,6 +11,8 @@ import {
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import CloseIcon from '@mui/icons-material/Close'
+
+import Button from '@components/primitives/Button'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import {
@@ -217,9 +218,11 @@ export default function GlobalThreadInput() {
                 {is_resume_mode ? 'Continue Thread' : 'New Thread'}
               </Typography>
               <Button
+                variant='ghost'
+                size='small'
+                icon
                 className='close-button'
                 onClick={handle_close}
-                size='small'
                 aria-label='Close'>
                 <CloseIcon fontSize='small' />
               </Button>
@@ -279,7 +282,8 @@ export default function GlobalThreadInput() {
 
                     <Button
                       type='submit'
-                      variant='contained'
+                      variant='primary'
+                      icon
                       disabled={is_submit_disabled}
                       className='send-button'>
                       {is_loading ? (

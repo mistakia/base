@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   FormControl,
   FormControlLabel,
   Radio,
@@ -15,14 +14,16 @@ import {
   Box
 } from '@mui/material'
 
+import Button from '@components/primitives/Button'
 import { dialog_actions } from '@core/dialog/actions'
 import { threads_actions } from '@core/threads/actions'
 
 const ThreadStateDialog = ({ open, onClose, thread_id, current_state }) => {
   const dispatch = useDispatch()
-  const [selected_action, set_selected_action] = useState('')
-
   const is_archived = current_state === 'archived'
+  const [selected_action, set_selected_action] = useState(
+    is_archived ? '' : 'completed'
+  )
 
   const handle_submit = () => {
     if (!selected_action) return
@@ -54,7 +55,14 @@ const ThreadStateDialog = ({ open, onClose, thread_id, current_state }) => {
   }
 
   return (
-    <Dialog open={open} onClose={handle_cancel} maxWidth='sm' fullWidth>
+    <Dialog
+      open={open}
+      onClose={handle_cancel}
+      maxWidth='sm'
+      fullWidth
+      PaperProps={{
+        sx: { borderRadius: 0 }
+      }}>
       <DialogTitle>
         {is_archived ? 'Reactivate Thread' : 'Archive Thread'}
       </DialogTitle>
@@ -105,13 +113,14 @@ const ThreadStateDialog = ({ open, onClose, thread_id, current_state }) => {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handle_cancel}>Cancel</Button>
+      <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+        <Button variant='secondary' onClick={handle_cancel}>
+          Cancel
+        </Button>
         <Button
+          variant={is_archived ? 'primary' : 'warning'}
           onClick={handle_submit}
-          variant='contained'
-          disabled={!selected_action}
-          color={is_archived ? 'primary' : 'warning'}>
+          disabled={!selected_action}>
           {is_archived ? 'Reactivate' : 'Archive'}
         </Button>
       </DialogActions>

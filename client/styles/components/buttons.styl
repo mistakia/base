@@ -1,0 +1,170 @@
+// =====================================================
+// BUTTON COMPONENT STYLES
+// =====================================================
+// Consolidated button styling for the design system.
+// Use with the Button primitive component.
+
+// =====================================================
+// BASE BUTTON
+// =====================================================
+
+.btn
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  gap: $space_xs
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  font-weight: $font_weight_medium
+  text-transform: uppercase
+  letter-spacing: 0.5px
+  border-radius: 0
+  border: none
+  cursor: pointer
+  transition: all $transition_fast
+  height: 32px
+  padding: 0 $space_base
+  text-decoration: none
+  white-space: nowrap
+  box-sizing: border-box
+
+  &:focus
+    outline: none
+    box-shadow: $shadow_focus
+
+  &:disabled
+    cursor: not-allowed
+    opacity: 0.6
+
+// =====================================================
+// VARIANTS
+// =====================================================
+
+// Primary - main actions
+.btn--primary
+  background-color: $breadcrumb_dark_color
+  color: $color_white
+
+  &:hover:not(:disabled)
+    opacity: 0.9
+
+  &:active:not(:disabled)
+    opacity: 0.8
+
+  &:disabled
+    background-color: $color_border_light
+    color: $color_text_tertiary
+
+// Secondary - cancel, dismiss
+.btn--secondary
+  background-color: transparent
+  color: $color_text_secondary
+  border: 1px solid $color_border
+
+  &:hover:not(:disabled)
+    background-color: $color_surface_hover
+    color: $color_text
+
+  &:active:not(:disabled)
+    background-color: $color_border_light
+
+  &:disabled
+    border-color: $color_border_light
+    color: $color_text_tertiary
+
+// Ghost - inline actions, minimal visual weight
+.btn--ghost
+  background-color: transparent
+  color: $color_text_secondary
+  border: none
+
+  &:hover:not(:disabled)
+    background-color: $color_surface_hover
+    color: $color_text
+
+  &:active:not(:disabled)
+    background-color: $color_border_light
+
+  &:disabled
+    color: $color_text_tertiary
+
+// Danger - destructive actions
+.btn--danger
+  background-color: $color_error
+  color: $color_white
+
+  &:hover:not(:disabled)
+    opacity: 0.9
+
+  &:active:not(:disabled)
+    opacity: 0.8
+
+  &:disabled
+    background-color: $color_border_light
+    color: $color_text_tertiary
+
+// Warning - archive, caution actions
+.btn--warning
+  background-color: $color_warning
+  color: $color_white
+
+  &:hover:not(:disabled)
+    opacity: 0.9
+
+  &:active:not(:disabled)
+    opacity: 0.8
+
+  &:disabled
+    background-color: $color_border_light
+    color: $color_text_tertiary
+
+// =====================================================
+// SIZES
+// =====================================================
+
+// Small - compact inline buttons
+.btn--small
+  height: 24px
+  padding: 0 $space_sm
+  font-size: 10px
+
+// Icon-only button (square)
+.btn--icon
+  width: 32px
+  padding: 0
+
+.btn--icon.btn--small
+  width: 24px
+
+// =====================================================
+// SPECIAL STATES
+// =====================================================
+
+// Loading state
+.btn--loading
+  position: relative
+  color: transparent !important
+
+  &::after
+    content: ''
+    position: absolute
+    width: 14px
+    height: 14px
+    border: 2px solid currentColor
+    border-right-color: transparent
+    border-radius: 50%
+    animation: btn-spin 0.6s linear infinite
+
+.btn--small.btn--loading::after
+  width: 10px
+  height: 10px
+
+@keyframes btn-spin
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)
+
+// Full width
+.btn--full-width
+  width: 100%

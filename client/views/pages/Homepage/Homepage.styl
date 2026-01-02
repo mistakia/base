@@ -76,7 +76,7 @@ $homepage_tasks_grid_template_mobile = 1fr
   &.loading-home-tasks
     text-align center
     padding 40px 18px
-    color #666
+    color $color_text_secondary
 
 .tasks-table
   width 100%
@@ -91,7 +91,7 @@ $homepage_tasks_grid_template_mobile = 1fr
     padding 8px 20px
     min-width 0
     font-weight 800
-    color #495057
+    color $color_text_secondary
     font-size 11px
     text-transform uppercase
     letter-spacing 1px
@@ -122,32 +122,32 @@ $homepage_tasks_grid_template_mobile = 1fr
     .task-group
       border-radius 8px
       overflow hidden
-      border 1px solid #e9ecef
+      border 1px solid $color_border_light
 
       &.task-group-even
-        background-color #ffffff
+        background-color $color_white
 
       &.task-group-odd
-        background-color #f8f9fa
+        background-color $color_surface_secondary
 
     .task-group-header
       display flex
       align-items center
       gap 6px
       padding 4px 20px
-      background-color mix($breadcrumb_light_color, #ffffff, 50%)
+      background-color mix($breadcrumb_light_color, $color_white, 50%)
       border-bottom 1px solid darken($breadcrumb_light_color, 8%)
 
       .task-group-name
         font-weight 600
         font-size 10px
-        color #6c757d
+        color $color_text_secondary
         text-transform uppercase
         letter-spacing 0.5px
 
       .task-group-count
         font-size 10px
-        color #868e96
+        color $color_text_tertiary
         font-weight 400
 
     .task-group-items
@@ -160,31 +160,31 @@ $homepage_tasks_grid_template_mobile = 1fr
       gap 16px
       padding 8px 20px
       min-width 0
-      border-bottom 1px solid #f1f3f4
+      border-bottom 1px solid $color_border_light
       align-items center
       transition background-color 0.2s ease
 
       &:hover
-        background-color #f8f9fa
+        background-color $color_surface_secondary
 
       &:last-child
         border-bottom none
 
       .task-title
         font-weight 500
-        color #212529
+        color $color_text
         font-size 14px
         line-height 1.4
 
       .task-finish-by
         font-size 12px
-        color #6c757d
+        color $color_text_secondary
         font-family monospace
 
   .tasks-toggle-container
     padding 12px 20px
     text-align center
-    border-top 1px solid #f1f3f4
+    border-top 1px solid $color_border_light
 
     .tasks-toggle-button
       background none
@@ -198,12 +198,12 @@ $homepage_tasks_grid_template_mobile = 1fr
 
       &:hover
         color $color_text
-        background-color #f8f9fa
+        background-color $color_surface_secondary
 
 .no-ongoing-tasks
   text-align center
   padding 40px 18px
-  color #6c757d
+  color $color_text_secondary
   font-size 16px
   margin-bottom 20px
 

@@ -7,6 +7,7 @@ import {
   TABLE_DATA_TYPES,
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
+import { COLORS } from '@theme/colors.js'
 import { get_thread_cost_by_id } from '@core/threads/selectors'
 import {
   format_shorthand_time,
@@ -25,11 +26,11 @@ const COLUMN_GROUPS = {
 const get_state_color = (state) => {
   switch (state) {
     case 'active':
-      return '#4caf50'
+      return COLORS.success
     case 'archived':
-      return '#757575'
+      return COLORS.text_secondary
     default:
-      return '#9e9e9e'
+      return COLORS.text_tertiary
   }
 }
 
@@ -51,7 +52,7 @@ const ProviderCell = ({ row }) => {
   if (!session_provider) {
     return (
       <div className='cell-content' style={{ height: 'fit-content' }}>
-        <span style={{ color: '#999' }}>—</span>
+        <span style={{ color: COLORS.text_tertiary }}>—</span>
       </div>
     )
   }
@@ -149,7 +150,7 @@ const WorkingDirectoryCell = ({ row }) => {
         height: 'fit-content',
         cursor: 'pointer',
         textDecoration: 'underline',
-        color: '#1976d2',
+        color: COLORS.primary,
         width: '80%',
         justifyContent: 'flex-start',
         textAlign: 'left'
@@ -171,7 +172,7 @@ const CostCell = ({ row }) => {
   if (!cost_display) {
     return (
       <div className='cell-content' style={{ height: 'fit-content' }}>
-        <span style={{ color: '#999' }}>—</span>
+        <span style={{ color: COLORS.text_tertiary }}>—</span>
       </div>
     )
   }

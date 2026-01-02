@@ -209,7 +209,8 @@ const base = (options) => ({
       '@views': path.resolve(__dirname, '../client/views'),
       '@pages': path.resolve(__dirname, '../client/views/pages'),
       '@core': path.resolve(__dirname, '../client/core'),
-      '@styles': path.resolve(__dirname, '../client/styles')
+      '@styles': path.resolve(__dirname, '../client/styles'),
+      '@theme': path.resolve(__dirname, '../client/theme')
     },
     fallback: {
       fs: false,

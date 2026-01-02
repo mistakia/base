@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Typography, Collapse } from '@mui/material'
+
+import { COLORS } from '@theme/colors.js'
 import {
   MetadataContainer,
   MetadataRow,
@@ -103,7 +105,7 @@ const EntityTitle = ({ title, type, description, markdown }) => {
             variant='body2'
             sx={{
               fontSize: '14px',
-              color: '#666',
+              color: COLORS.text_secondary,
               lineHeight: '1.4',
               margin: '0 0 16px 0',
               wordBreak: 'break-word'
@@ -135,15 +137,19 @@ const RelationsSection = ({ relations }) => {
             const parsed = parse_relation(relation)
             if (!parsed) {
               return (
-                <Box key={idx} sx={{ fontSize: '12px', color: '#555' }}>
-                  • {relation}
+                <Box
+                  key={idx}
+                  sx={{ fontSize: '12px', color: COLORS.text_secondary }}>
+                  {relation}
                 </Box>
               )
             }
 
             return (
-              <Box key={idx} sx={{ fontSize: '12px', color: '#555' }}>
-                <span style={{ fontWeight: 600, color: '#666' }}>
+              <Box
+                key={idx}
+                sx={{ fontSize: '12px', color: COLORS.text_secondary }}>
+                <span style={{ fontWeight: 600, color: COLORS.text_secondary }}>
                   {parsed.relation_type}
                 </span>{' '}
                 <a
@@ -151,14 +157,14 @@ const RelationsSection = ({ relations }) => {
                   target='_blank'
                   rel='noopener noreferrer'
                   style={{
-                    color: '#0366d6',
+                    color: COLORS.icon_link,
                     textDecoration: 'none',
                     borderBottom: '1px solid transparent',
                     transition: 'border-color 0.2s ease',
                     cursor: 'pointer'
                   }}
                   onMouseEnter={(event) => {
-                    event.target.style.borderBottomColor = '#0366d6'
+                    event.target.style.borderBottomColor = COLORS.icon_link
                   }}
                   onMouseLeave={(event) => {
                     event.target.style.borderBottomColor = 'transparent'
@@ -187,13 +193,17 @@ const observations_container_sx = {
 }
 const observation_line_sx = {
   fontSize: '12px',
-  color: '#555',
+  color: COLORS.text_secondary,
   lineHeight: 1.6,
   whiteSpace: 'normal',
   wordBreak: 'break-word'
 }
-const observation_label_sx = { fontWeight: 'bold', color: '#333', mr: '6px' }
-const observation_content_sx = { color: '#666' }
+const observation_label_sx = {
+  fontWeight: 'bold',
+  color: COLORS.text,
+  mr: '6px'
+}
+const observation_content_sx = { color: COLORS.text_secondary }
 
 // bracket label followed by content
 const bracket_and_content_regex = /(\[[^\]]+\])\s*(.*)/
@@ -344,7 +354,7 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
                 all: 'unset',
                 background: 'none',
                 border: 'none',
-                color: '#0366d6',
+                color: COLORS.icon_link,
                 fontSize: '12px',
                 padding: '4px 8px',
                 cursor: 'pointer',
@@ -352,11 +362,11 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
                 fontFamily: 'inherit'
               }}
               onMouseEnter={(event) => {
-                event.target.style.color = '#0451a5'
+                event.target.style.color = COLORS.info
                 event.target.style.textDecoration = 'underline'
               }}
               onMouseLeave={(event) => {
-                event.target.style.color = '#0366d6'
+                event.target.style.color = COLORS.icon_link
                 event.target.style.textDecoration = 'none'
               }}>
               {expanded ? 'show less' : 'show more'}

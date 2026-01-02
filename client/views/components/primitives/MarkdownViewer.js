@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
 
+import { COLORS } from '@theme/colors.js'
 import '@styles/checkbox.styl'
 import '@styles/plaintext-highlighting.styl'
 
@@ -36,7 +37,7 @@ const get_normal_styles = {
   },
   '& li': { mb: 0.5, lineHeight: 1.4 },
   '& pre': {
-    backgroundColor: '#f5f1eb',
+    backgroundColor: COLORS.code_bg,
     p: '0 16px',
     borderRadius: 1,
     overflow: 'visible',
@@ -44,10 +45,10 @@ const get_normal_styles = {
     mb: 2,
     fontSize: '0.875rem',
     fontFamily: 'var(--font-family-mono)',
-    border: '1px solid #e8ddd4'
+    border: `1px solid ${COLORS.code_border}`
   },
   '& code': {
-    backgroundColor: '#f5f1eb',
+    backgroundColor: COLORS.code_bg,
     px: 0.5,
     py: 0.25,
     borderRadius: 0.5,
@@ -103,24 +104,24 @@ const get_normal_styles = {
     overflowX: 'auto',
     margin: '0.75em 0',
     borderRadius: '4px',
-    border: '1px solid #e8ddd4'
+    border: `1px solid ${COLORS.code_border}`
   },
   '& table': {
     borderCollapse: 'collapse',
-    backgroundColor: '#f5f1eb',
+    backgroundColor: COLORS.code_bg,
     fontFamily: 'var(--font-family-mono)',
     fontSize: '0.875rem',
     width: '100%',
     minWidth: 'max-content'
   },
   '& th, & td': {
-    border: '1px solid #e8ddd4',
+    border: `1px solid ${COLORS.code_border}`,
     padding: '6px 12px',
     textAlign: 'left',
     whiteSpace: 'nowrap'
   },
   '& th': {
-    backgroundColor: '#e8ddd4',
+    backgroundColor: COLORS.code_border,
     fontWeight: 600
   },
   // XML tag styling - display XML tags as colored text

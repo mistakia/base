@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Button, List, ListItem } from '@mui/material'
+import { Box, List, ListItem } from '@mui/material'
 import { FindInPage as GlobIcon } from '@mui/icons-material'
+
+import Button from '@components/primitives/Button'
 import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
@@ -168,18 +170,9 @@ const GlobTool = ({ tool_call_event, tool_result_event }) => {
         const label = show_results ? 'hide' : `${files_len} files`
         return (
           <Button
+            variant='ghost'
             size='small'
-            variant='text'
-            onClick={() => set_show_results(!show_results)}
-            sx={{
-              fontSize: '10px',
-              minWidth: 'auto',
-              px: 1,
-              py: 0.25,
-              textTransform: 'none',
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'action.hover' }
-            }}>
+            onClick={() => set_show_results(!show_results)}>
             {label}
           </Button>
         )

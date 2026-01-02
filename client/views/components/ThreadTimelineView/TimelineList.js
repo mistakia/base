@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
+import { COLORS } from '@theme/colors.js'
 import TimelineEvent from './TimelineEvent'
 import CollapsibleEventGroup from './CollapsibleEventGroup'
 import { group_tool_entries } from './utils/group-tool-entries'
@@ -69,13 +70,13 @@ const LIVE_INDICATOR_STYLES = {
   },
   dot: {
     fontSize: '12px',
-    color: '#4caf50',
+    color: COLORS.success,
     animation: 'pulse 1.5s ease-in-out infinite'
   },
   text: {
     fontSize: '13px',
     fontWeight: 500,
-    color: '#4caf50'
+    color: COLORS.success
   }
 }
 

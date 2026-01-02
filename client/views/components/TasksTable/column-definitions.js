@@ -9,6 +9,7 @@ import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 import { to_snake_slug } from '@core/utils'
+import { COLORS } from '@theme/colors.js'
 
 const TitleCell = ({ row }) => {
   const navigate = useNavigate()
@@ -110,7 +111,7 @@ const FinishByCell = ({ row }) => {
   if (!finish_by) {
     return (
       <div className='cell-content' style={{ height: 'fit-content' }}>
-        <span style={{ color: '#999' }}>—</span>
+        <span style={{ color: COLORS.text_tertiary }}>—</span>
       </div>
     )
   }
@@ -122,7 +123,7 @@ const FinishByCell = ({ row }) => {
     <div
       className='cell-content'
       style={{ height: 'fit-content', minHeight: '32px' }}>
-      <span style={{ color: is_overdue ? '#f44336' : 'inherit' }}>
+      <span style={{ color: is_overdue ? COLORS.error : 'inherit' }}>
         {format_shorthand_time(date)}
       </span>
     </div>

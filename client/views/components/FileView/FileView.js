@@ -7,6 +7,7 @@ import {
   get_file_type_from_path,
   detect_shell_script_from_content
 } from '@views/utils/language-utils.js'
+import { COLORS } from '@theme/colors.js'
 
 import EntityRenderer from '@components/EntityRenderer/index.js'
 import CodeViewer from '@components/primitives/CodeViewer.js'
@@ -129,7 +130,7 @@ const FileView = ({ path }) => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <div style={{ color: '#f44336' }}>{error}</div>
+        <div style={{ color: COLORS.error }}>{error}</div>
       </Box>
     )
   }

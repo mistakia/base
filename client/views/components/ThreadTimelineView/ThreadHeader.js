@@ -6,6 +6,7 @@ import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
+import { COLORS } from '@theme/colors.js'
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
 import { get_app } from '@core/app/selectors'
@@ -38,12 +39,12 @@ const SPACING = {
   TITLE_MARGIN: '8px',
   DESCRIPTION_MARGIN: '16px'
 }
-const COLORS = {
-  TEXT_LIGHT: '#888',
-  TEXT_MEDIUM: '#666',
-  TEXT_DARK: '#333',
-  BG_HOVER: '#f5f5f5',
-  BG_ACTIVE: '#e0e0e0'
+const HEADER_STYLES = {
+  TEXT_LIGHT: COLORS.text_tertiary,
+  TEXT_MEDIUM: COLORS.text_secondary,
+  TEXT_DARK: COLORS.text,
+  BG_HOVER: COLORS.surface_hover,
+  BG_ACTIVE: COLORS.border_light
 }
 
 const extract_models = (metadata) => {
@@ -156,7 +157,7 @@ const ThreadTitle = ({ title, description, working_directory_formatted }) => {
           style={{
             margin: `0 0 ${description_margin_bottom} 0`,
             fontSize: '14px',
-            color: COLORS.TEXT_MEDIUM,
+            color: HEADER_STYLES.TEXT_MEDIUM,
             lineHeight: '1.4'
           }}>
           {description}
@@ -167,9 +168,9 @@ const ThreadTitle = ({ title, description, working_directory_formatted }) => {
           style={{
             margin: `0 0 ${SPACING.DESCRIPTION_MARGIN} 0`,
             fontSize: '12px',
-            color: COLORS.TEXT_LIGHT,
+            color: HEADER_STYLES.TEXT_LIGHT,
             fontFamily: 'monospace',
-            backgroundColor: COLORS.BG_HOVER,
+            backgroundColor: HEADER_STYLES.BG_HOVER,
             padding: '4px 8px',
             borderRadius: '4px',
             display: 'inline-block'
@@ -191,7 +192,7 @@ ThreadTitle.propTypes = {
 const SESSION_ID_STYLES = {
   container: {
     fontSize: '12px',
-    color: COLORS.TEXT_LIGHT,
+    color: HEADER_STYLES.TEXT_LIGHT,
     fontFamily: 'monospace',
     cursor: 'pointer',
     display: 'inline-flex',
@@ -202,11 +203,11 @@ const SESSION_ID_STYLES = {
     position: 'relative',
     transition: 'all 0.2s ease',
     '&:hover': {
-      backgroundColor: COLORS.BG_HOVER,
-      color: COLORS.TEXT_DARK
+      backgroundColor: HEADER_STYLES.BG_HOVER,
+      color: HEADER_STYLES.TEXT_DARK
     },
     '&:active': {
-      backgroundColor: COLORS.BG_ACTIVE
+      backgroundColor: HEADER_STYLES.BG_ACTIVE
     }
   },
   icon_wrapper: {
@@ -272,7 +273,7 @@ const ACTIVE_SESSION_STYLES = {
   },
   elapsed_time: {
     fontSize: '11px',
-    color: COLORS.TEXT_LIGHT,
+    color: HEADER_STYLES.TEXT_LIGHT,
     marginLeft: '4px'
   }
 }
@@ -299,7 +300,7 @@ const ActiveSessionStatus = ({ session }) => {
     : session.last_activity_at
 
   const is_active = status === 'active'
-  const status_color = is_active ? '#4caf50' : '#9e9e9e'
+  const status_color = is_active ? COLORS.success : COLORS.text_tertiary
   const status_label = is_active ? 'Active' : 'Idle'
 
   return (

@@ -8,6 +8,7 @@ import {
   format_duration
 } from '@views/utils/date-formatting.js'
 import ProviderLogo from '@views/components/primitives/ProviderLogo.js'
+import { COLORS } from '@theme/colors.js'
 import './Thread.styl'
 
 const Thread = ({ thread, is_focused = false }) => {
@@ -20,11 +21,11 @@ const Thread = ({ thread, is_focused = false }) => {
   const get_state_color = (state) => {
     switch (state) {
       case 'active':
-        return '#28a745'
+        return COLORS.success
       case 'archived':
-        return '#6c757d'
+        return COLORS.text_secondary
       default:
-        return '#6c757d'
+        return COLORS.text_secondary
     }
   }
 

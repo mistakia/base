@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { COLORS } from '@theme/colors.js'
 
 import DirectoryView from '@components/DirectoryView/index.js'
 import FileView from '@components/FileView/index.js'
@@ -27,7 +28,7 @@ const FileSystemBrowser = () => {
   if (error) {
     return (
       <div style={{ padding: 24 }}>
-        <span style={{ color: '#f44336' }}>Error: {error}</span>
+        <span style={{ color: COLORS.error }}>Error: {error}</span>
       </div>
     )
   }

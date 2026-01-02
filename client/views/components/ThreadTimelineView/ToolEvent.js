@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
+import { COLORS } from '@theme/colors.js'
 
 import { getToolComponent } from './ToolComponents/index'
 
@@ -19,7 +20,7 @@ const ToolEvent = ({
   if (!tool_name) {
     return (
       <Box className='tool-event tool-use'>
-        <span style={{ fontSize: '14px', color: '#f44336' }}>
+        <span style={{ fontSize: '14px', color: COLORS.error }}>
           Unknown tool call - missing tool_name
         </span>
       </Box>

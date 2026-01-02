@@ -1,26 +1,27 @@
 // Tool Components Styling
 // Extends the base Material-UI theme with tool-specific enhancements
+@import '../../../../styles/variables'
 
 // Color palette for tool types
 .tool-filesystem
-  border-left-color: #1976d2 !important // primary.main
-  background-color: rgba(25, 118, 210, 0.08) !important // primary.light with opacity
+  border-left-color: $color_tool_filesystem !important
+  background-color: rgba(25, 118, 210, 0.08) !important
 
 .tool-execution
-  border-left-color: #9c27b0 !important // secondary.main  
-  background-color: rgba(156, 39, 176, 0.08) !important // secondary.light with opacity
+  border-left-color: $color_tool_execution !important
+  background-color: rgba(156, 39, 176, 0.08) !important
 
 .tool-search
-  border-left-color: #0288d1 !important // info.main
-  background-color: rgba(2, 136, 209, 0.08) !important // info.light with opacity
+  border-left-color: $color_tool_search !important
+  background-color: rgba(2, 136, 209, 0.08) !important
 
 .tool-management
-  border-left-color: #ed6c02 !important // warning.main
-  background-color: rgba(237, 108, 2, 0.08) !important // warning.light with opacity
+  border-left-color: $color_tool_management !important
+  background-color: rgba(237, 108, 2, 0.08) !important
 
 .tool-mcp
-  border-left-color: #9c27b0 !important // secondary.main
-  background-color: rgba(156, 39, 176, 0.08) !important // secondary.light with opacity
+  border-left-color: $color_tool_mcp !important
+  background-color: rgba(156, 39, 176, 0.08) !important
 
 // Visual connection between tool calls and results
 .tool-pair-connection
@@ -42,63 +43,63 @@
   font-size: 11px !important
   line-height: 1.4 !important
   
-  // Syntax highlighting colors (basic)
+  // Syntax highlighting colors (basic) - GitHub light theme
   .keyword
-    color: #d73a49
+    color: $color_error
     font-weight: bold
-  
+
   .string
     color: #032f62
-  
+
   .number
-    color: #005cc5
-  
+    color: $color_info
+
   .comment
-    color: #6a737d
+    color: $color_text_secondary
     font-style: italic
-  
+
   .function
     color: #6f42c1
 
 // Diff view styling for Edit tools
 .diff-container
   display: flex
-  border: 1px solid #e1e4e8
-  border-radius: 4px
+  border: 1px solid $color_code_border
+  border-radius: $radius_base
   overflow: hidden
-  
+
   .diff-removed
-    background-color: #ffeef0
-    border-right: 1px solid #e1e4e8
-    
+    background-color: $color_diff_removed_bg
+    border-right: 1px solid $color_code_border
+
     &::before
       content: '- '
-      color: #d73a49
+      color: $color_error
       font-weight: bold
-  
+
   .diff-added
-    background-color: #e6ffed
-    
+    background-color: $color_diff_added_bg
+
     &::before
       content: '+ '
-      color: #28a745
+      color: $color_success
       font-weight: bold
 
 // Terminal-style output for Bash tools
 .terminal-output
-  background-color: #0d1117 !important
-  color: #f0f6fc !important
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important
-  
+  background-color: $color_terminal_bg !important
+  color: $color_terminal_text !important
+  font-family: $font_family_mono !important
+
   .terminal-prompt
-    color: #58a6ff !important
+    color: $color_terminal_prompt !important
     font-weight: bold !important
-  
+
   .terminal-success
-    color: #56d364 !important
-  
+    color: $color_terminal_success !important
+
   .terminal-error
-    color: #f85149 !important
+    color: $color_terminal_error !important
 
 // Database table styling enhancements
 .db-table-container
@@ -114,7 +115,7 @@
     
     &.null-value
       font-style: italic !important
-      color: #6a737d !important
+      color: $color_text_secondary !important
 
 // Search result highlighting
 
@@ -129,7 +130,7 @@
     
     .diff-removed
       border-right: none
-      border-bottom: 1px solid #e1e4e8
+      border-bottom: 1px solid $color_code_border
 
 // Dark theme support (if needed)
 @media (prefers-color-scheme: dark)

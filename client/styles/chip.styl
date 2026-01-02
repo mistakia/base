@@ -1,26 +1,21 @@
-$chip_padding_y = 3px
-$chip_padding_x = 8px
-$chip_font_size = 10px
-$chip_border_radius = 4px
-$chip_background = #f8f9fa
-$chip_border = 1px solid #e9ecef
-$chip_color = #6c757d
+// Chip component - uses design system variables
+@import './variables'
 
 .chip
   display inline-flex
   align-items center
-  padding $chip_padding_y $chip_padding_x
-  font-family 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
-  font-size $chip_font_size
-  font-weight 500
-  color $chip_color
-  background $chip_background
-  border $chip_border
-  border-radius $chip_border_radius
+  padding 3px $space_sm
+  font-family $font_family_mono
+  font-size 10px
+  font-weight $font_weight_medium
+  color $color_text_secondary
+  background $color_surface_secondary
+  border 1px solid $color_border_light
+  border-radius $radius_base
   line-height 1
   white-space nowrap
-  transition all 0.15s ease
-  
+  transition all $transition_fast
+
   &:hover
-    background darken($chip_background, 2%)
-    border-color darken(#e9ecef, 5%)
+    background darken($color_surface_secondary, 2%)
+    border-color darken($color_border_light, 5%)

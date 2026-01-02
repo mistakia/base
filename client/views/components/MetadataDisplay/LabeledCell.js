@@ -2,6 +2,8 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
+import { COLORS } from '@theme/colors.js'
+
 const LabeledCell = ({
   label,
   value,
@@ -26,7 +28,9 @@ const LabeledCell = ({
         flex: 1,
         minWidth: 0,
         minHeight: cell_min_height,
-        borderLeft: add_left_border ? '1px solid #e0e0e0' : 'none',
+        borderLeft: add_left_border
+          ? `1px solid ${COLORS.border_light}`
+          : 'none',
         ...sx
       }}>
       <Box
@@ -35,7 +39,7 @@ const LabeledCell = ({
           top: label_top,
           left: '12px',
           fontSize: label_font_size,
-          color: '#666',
+          color: COLORS.text_secondary,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
@@ -49,7 +53,7 @@ const LabeledCell = ({
           pb: value_padding_bottom,
           px: '12px',
           fontSize: value_font_size,
-          color: '#333',
+          color: COLORS.text,
           fontWeight: 400,
           ...(scrollable
             ? {

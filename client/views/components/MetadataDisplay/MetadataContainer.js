@@ -2,11 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
+import { COLORS } from '@theme/colors.js'
+
 const MetadataContainer = ({
   children,
   background_color = 'white',
   border_radius = 2,
-  border_color = '#e0e0e0',
+  border_color = COLORS.border,
   padding = 0,
   sx = {}
 }) => {

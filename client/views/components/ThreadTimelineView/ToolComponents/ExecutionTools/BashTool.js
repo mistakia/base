@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
+
+import { COLORS } from '@theme/colors.js'
 import { code_to_html } from '@core/shiki-highlighter.js'
 import { MonospaceText } from '@views/components/primitives/styled'
 
@@ -67,16 +69,16 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
     return (
       <Box
         sx={{
-          border: '1px solid #30363d',
+          border: `1px solid ${COLORS.terminal_border}`,
           borderRadius: 1,
-          bgcolor: '#0d1117',
+          bgcolor: COLORS.terminal_bg,
           overflow: 'hidden',
           boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
         }}>
         <Box
           sx={{
             p: 2,
-            bgcolor: '#0d1117'
+            bgcolor: COLORS.terminal_bg
           }}>
           <Box
             sx={{
@@ -87,7 +89,7 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
             <MonospaceText
               variant='xs'
               sx={{
-                color: '#7ee83f',
+                color: COLORS.terminal_success,
                 mr: 1,
                 fontWeight: 'bold',
                 userSelect: 'none',
@@ -119,7 +121,7 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
                 variant='xs'
                 component='pre'
                 sx={{
-                  color: '#e6edf3',
+                  color: COLORS.terminal_text,
                   m: 0,
                   whiteSpace: 'pre',
                   overflowX: 'auto',
@@ -138,12 +140,14 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
                 sx={{
                   m: 0,
                   whiteSpace: 'pre-wrap',
-                  color: execution_result.is_error ? '#f85149' : '#8b949e',
+                  color: execution_result.is_error
+                    ? COLORS.terminal_error
+                    : COLORS.terminal_muted,
                   fontSize: '13px',
                   lineHeight: 1.4,
                   maxHeight: '200px',
                   overflowY: 'auto',
-                  borderTop: '1px solid #30363d',
+                  borderTop: `1px solid ${COLORS.terminal_border}`,
                   pt: 1
                 }}>
                 {execution_result.output}

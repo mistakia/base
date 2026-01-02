@@ -2,6 +2,8 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useDispatch } from 'react-redux'
+
+import { COLORS } from '@theme/colors.js'
 import { dialog_actions } from '@core/dialog/actions'
 
 const ThreadStateField = ({
@@ -28,14 +30,14 @@ const ThreadStateField = ({
   return (
     <Box
       sx={{
-        borderTop: is_first ? 'none' : '1px solid #e0e0e0',
+        borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`,
         borderBottom: 'none',
         position: 'relative',
         minHeight: '60px',
         cursor: user_owns_thread ? 'pointer' : 'default',
         '&:hover': user_owns_thread
           ? {
-              backgroundColor: '#f5f5f5'
+              backgroundColor: COLORS.surface_hover
             }
           : {},
         opacity: user_owns_thread ? 1 : 0.6
@@ -52,7 +54,7 @@ const ThreadStateField = ({
           top: '8px',
           left: '12px',
           fontSize: '11px',
-          color: '#666',
+          color: COLORS.text_secondary,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
@@ -65,7 +67,7 @@ const ThreadStateField = ({
           pb: '12px',
           px: '12px',
           fontSize: '14px',
-          color: '#333',
+          color: COLORS.text,
           fontWeight: 400,
           wordBreak: 'break-all'
         }}>

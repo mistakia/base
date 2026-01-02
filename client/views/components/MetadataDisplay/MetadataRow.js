@@ -2,6 +2,8 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
+import { COLORS } from '@theme/colors.js'
+
 const MetadataRow = ({
   label,
   value,
@@ -13,12 +15,12 @@ const MetadataRow = ({
   sx = {}
 }) => {
   const default_border_style = {
-    borderTop: is_first ? 'none' : '1px solid #e0e0e0',
+    borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`,
     borderBottom: 'none'
   }
 
   const compact_border_style = {
-    borderTop: is_first ? 'none' : '1px solid #f0f0f0',
+    borderTop: is_first ? 'none' : `1px solid ${COLORS.border_light}`,
     borderBottom: 'none'
   }
 
@@ -42,7 +44,7 @@ const MetadataRow = ({
           top: '8px',
           left: '12px',
           fontSize: '11px',
-          color: '#666',
+          color: COLORS.text_secondary,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
@@ -56,7 +58,7 @@ const MetadataRow = ({
           pb: '12px',
           px: '12px',
           fontSize: '14px',
-          color: '#333',
+          color: COLORS.text,
           fontWeight: 400,
           ...(scrollable
             ? {

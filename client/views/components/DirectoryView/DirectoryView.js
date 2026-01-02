@@ -15,6 +15,8 @@ import {
   Description as DescriptionIcon,
   Code as CodeIcon
 } from '@mui/icons-material'
+
+import { COLORS } from '@theme/colors.js'
 import { format_relative_time } from '@views/utils/date-formatting.js'
 import {
   directory_actions,
@@ -50,22 +52,24 @@ const DirectoryView = ({ path = '', on_navigate }) => {
 
   const get_file_icon = (item) => {
     if (item.type === 'directory') {
-      return <FolderIcon sx={{ color: '#79b8ff', fontSize: 18 }} />
+      return <FolderIcon sx={{ color: COLORS.icon_folder, fontSize: 18 }} />
     }
 
     const ext = item.name.split('.').pop().toLowerCase()
     switch (ext) {
       case 'md':
       case 'txt':
-        return <DescriptionIcon sx={{ color: '#959da5', fontSize: 18 }} />
+        return (
+          <DescriptionIcon sx={{ color: COLORS.icon_file, fontSize: 18 }} />
+        )
       case 'js':
       case 'mjs':
       case 'json':
       case 'ts':
       case 'tsx':
-        return <CodeIcon sx={{ color: '#959da5', fontSize: 18 }} />
+        return <CodeIcon sx={{ color: COLORS.icon_file, fontSize: 18 }} />
       default:
-        return <FileIcon sx={{ color: '#959da5', fontSize: 18 }} />
+        return <FileIcon sx={{ color: COLORS.icon_file, fontSize: 18 }} />
     }
   }
 
@@ -124,13 +128,13 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <div style={{ color: '#f44336' }}>Error: {error}</div>
+        <div style={{ color: COLORS.error }}>Error: {error}</div>
       </Box>
     )
   }
 
   const name_style = {
-    color: '#0366d6',
+    color: COLORS.icon_link,
     fontSize: '13px',
     lineHeight: '20px',
     textDecoration: 'none'
@@ -145,7 +149,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
     <TableContainer
       sx={{
         overflow: 'auto',
-        border: '1px solid #e1e4e8',
+        border: `1px solid ${COLORS.border_light}`,
         borderBottomLeftRadius: '6px',
         borderBottomRightRadius: '6px',
         backgroundColor: 'white',
@@ -177,7 +181,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8',
+                      : `1px solid ${COLORS.border_light}`,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
@@ -206,7 +210,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                       title={item.name}
                       sx={{
                         ...get_name_style(item),
-                        color: '#666'
+                        color: COLORS.text_secondary
                       }}>
                       {item.name}
                     </RedactedContent>
@@ -241,7 +245,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8',
+                      : `1px solid ${COLORS.border_light}`,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
@@ -250,10 +254,11 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   <RedactedContent
                     content_type='file_size'
                     show_tooltip={true}
-                    sx={{ fontSize: '12px', color: '#666' }}
+                    sx={{ fontSize: '12px', color: COLORS.text_secondary }}
                   />
                 ) : (
-                  <span style={{ fontSize: '12px', color: '#666' }}>
+                  <span
+                    style={{ fontSize: '12px', color: COLORS.text_secondary }}>
                     {item.type === 'directory'
                       ? '-'
                       : format_file_size(item.size)}
@@ -269,7 +274,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   borderBottom:
                     index === sorted_items.length - 1
                       ? 'none'
-                      : '1px solid #e1e4e8',
+                      : `1px solid ${COLORS.border_light}`,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
@@ -278,10 +283,11 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   <RedactedContent
                     content_type='date'
                     show_tooltip={true}
-                    sx={{ fontSize: '12px', color: '#666' }}
+                    sx={{ fontSize: '12px', color: COLORS.text_secondary }}
                   />
                 ) : (
-                  <span style={{ fontSize: '12px', color: '#666' }}>
+                  <span
+                    style={{ fontSize: '12px', color: COLORS.text_secondary }}>
                     {item.modified ? format_relative_time(item.modified) : '-'}
                   </span>
                 )}
