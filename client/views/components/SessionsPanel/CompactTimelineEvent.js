@@ -1,15 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import {
-  Message as MessageIcon,
-  CheckCircle as CompleteIcon,
-  Error as ErrorIcon,
-  TerminalOutlined as ToolIcon,
-  AccountCircleOutlined as UserIcon,
-  AutoAwesomeOutlined as AssistantIcon,
-  Language as BrowserIcon,
-  ErrorOutline as SystemIcon,
-  Lightbulb as ThinkingIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon
 } from '@mui/icons-material'
@@ -18,60 +9,6 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import { process_message_content } from '@components/ThreadTimelineView/utils/message-processing.js'
 
 const MAX_COLLAPSED_LENGTH = 500
-
-/**
- * Get tool-specific icon based on tool name
- */
-const get_tool_icon_by_name = (tool_name) => {
-  const icon_props = { fontSize: 'inherit' }
-
-  // Handle MCP browser tools
-  if (tool_name?.startsWith('mcp__playwright__browser_')) {
-    return <BrowserIcon {...icon_props} />
-  }
-
-  // Handle other specific tool patterns
-  switch (tool_name) {
-    case 'WebSearch':
-    case 'WebFetch':
-      return <BrowserIcon {...icon_props} />
-    default:
-      return <ToolIcon {...icon_props} />
-  }
-}
-
-/**
- * Get event icon based on event type
- */
-const get_event_icon = (timeline_event) => {
-  const icon_props = { fontSize: 'inherit' }
-
-  switch (timeline_event.type) {
-    case 'message':
-      return timeline_event.role === 'user' ? (
-        <UserIcon {...icon_props} />
-      ) : (
-        <AssistantIcon {...icon_props} />
-      )
-    case 'tool_call':
-    case 'tool_use': {
-      const tool_name = timeline_event.content?.tool_name
-      return get_tool_icon_by_name(tool_name)
-    }
-    case 'tool_result':
-      return <ToolIcon {...icon_props} />
-    case 'completion':
-      return <CompleteIcon {...icon_props} />
-    case 'error':
-      return <ErrorIcon {...icon_props} />
-    case 'thinking':
-      return <ThinkingIcon {...icon_props} />
-    case 'system':
-      return <SystemIcon {...icon_props} />
-    default:
-      return <MessageIcon {...icon_props} />
-  }
-}
 
 /**
  * Truncate text to max length with ellipsis
@@ -269,7 +206,7 @@ const get_assistant_content = (timeline_event) => {
  * CompactTimelineEvent
  *
  * A compact display of a timeline event for use in session cards.
- * Shows an icon and a brief summary of the event.
+ * Shows a brief summary of the event.
  * For assistant messages, shows markdown content with expand/collapse.
  */
 const CompactTimelineEvent = ({ timeline_event }) => {
@@ -293,9 +230,6 @@ const CompactTimelineEvent = ({ timeline_event }) => {
     return (
       <div className='compact-timeline-event compact-timeline-event--message'>
         <div className='compact-timeline-event__header'>
-          <span className='compact-timeline-event__icon'>
-            {get_event_icon(timeline_event)}
-          </span>
           <span className='compact-timeline-event__label'>Assistant</span>
           {should_truncate && (
             <button
@@ -326,9 +260,6 @@ const CompactTimelineEvent = ({ timeline_event }) => {
   // Default compact display for other event types
   return (
     <div className='compact-timeline-event'>
-      <span className='compact-timeline-event__icon'>
-        {get_event_icon(timeline_event)}
-      </span>
       <span className='compact-timeline-event__summary'>
         {get_event_summary(timeline_event)}
       </span>
