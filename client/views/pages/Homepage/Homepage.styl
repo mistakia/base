@@ -1,88 +1,123 @@
 $homepage_tasks_grid_template = 2fr 80px 80px 70px
 $homepage_tasks_grid_template_mobile = 1fr
 
-.home-file-browser
-  width 100%
-  border 1px solid darken($breadcrumb_light_color, 10%)
-  border-radius 8px
-  background $breadcrumb_light_color
-  overflow hidden
+// Shared section header styles (used by tasks, files, etc.)
+.home-section-header
+  display flex
+  align-items center
+  gap $space_xs
+  padding $space_xs 0
+  font-size $font_size_xs
+  font-weight $font_weight_semibold
+  text-transform uppercase
+  letter-spacing 0.5px
+  color $color_text_secondary
 
-  .home-file-browser-header
-    display flex
-    justify-content space-between
-    align-items center
-    padding 12px 18px
+  &--clickable
     cursor pointer
     user-select none
-    transition background-color 0.2s
-    border-radius 8px
+    border-radius $radius_sm
+    margin 0 (-$space_xs)
+    padding $space_xs
 
     &:hover
-      background-color darken($breadcrumb_light_color, 5%)
+      background $color_surface_hover
 
     &:focus
       outline none
-      background-color darken($breadcrumb_light_color, 5%)
+      background $color_surface_hover
 
-  // When expanded, header only has top border-radius
-  &.home-file-browser--expanded
-    .home-file-browser-header
-      border-radius 8px 8px 0 0
+.home-section-header__label
+  display flex
+  align-items center
+  gap $space_xs
 
-  .home-file-browser-title
-    font-weight 600
-    font-size 14px
-    color $breadcrumb_dark_color
-
-  .home-file-browser-toggle
-    font-size 12px
-    color $breadcrumb_dark_color
-    opacity 0.7
-    transition opacity 0.2s
+  &--clickable
+    cursor pointer
+    user-select none
+    border-radius $radius_sm
+    padding $space_xs
+    margin 0 (-$space_xs)
 
     &:hover
-      opacity 1
+      background $color_surface_hover
+
+    &:focus
+      outline none
+      background $color_surface_hover
+
+.home-section-header__toggle
+  display flex
+  align-items center
+  justify-content center
+  width 16px
+  height 16px
+  padding 0
+  color $color_text_tertiary
+  font-size $font_size_xs
+  font-family $font_family_mono
+  flex-shrink 0
+
+.home-section-header__dot
+  width 8px
+  height 8px
+  border-radius 50%
+  flex-shrink 0
+
+  &--tasks
+    background-color $color_primary
+
+  &--files
+    background-color $color_text_tertiary
+
+.home-section-header__title
+  flex 0 0 auto
+
+.home-section-header__count
+  font-family $font_family_mono
+  font-size $font_size_xs
+  color $color_text_tertiary
+  background $color_surface_secondary
+  padding 2px 6px
+  border-radius $radius_sm
+  text-decoration none
+  transition all $transition_fast
+
+  &:hover
+    color $color_primary
+    background $color_surface_hover
+    text-decoration none
+
+.home-file-browser
+  width 100%
 
   .home-file-browser-content
-    border-top 1px solid darken($breadcrumb_light_color, 10%)
-    padding 0
+    margin-top $space_sm
+    border 1px solid $color_border_light
+    border-radius $radius_base
     background $color_surface
-    border-radius 0 0 8px 8px
+    overflow hidden
 
 .homepage-right-column
   display grid
   grid-template-columns 1fr
-  gap 16px
+  gap $space_sm
   width 100%
   max-width 100%
   min-width 0
   overflow hidden
-
-.threads-container
-    padding 18px
-    border 1px solid $color_border
-    background rgba(0,0,0,0.02)
-    border-radius 8px
-    width 100%
-    max-width 100%
-    min-width 0
 
 .tasks-container
   width 100%
   max-width 100%
   min-width 0
-  
-  &.loading-home-tasks
-    text-align center
-    padding 40px 18px
-    color $color_text_secondary
 
 .tasks-table
   width 100%
   max-width 100%
   min-width 0
   overflow hidden
+  margin-top $space_sm
 
   .tasks-table-header
     display grid
@@ -95,48 +130,6 @@ $homepage_tasks_grid_template_mobile = 1fr
     font-size 11px
     text-transform uppercase
     letter-spacing 1px
-
-    .task-header-with-link
-      display flex
-      align-items center
-      gap 16px
-
-      .tasks-toggle-button
-        background none
-        border none
-        color $color_primary
-        text-decoration none
-        font-size $font_size_xs
-        font-weight 400
-        text-transform lowercase
-        letter-spacing 0
-        cursor pointer
-        padding 0
-        margin 0
-        transition color $transition_base
-        -webkit-appearance none
-        -moz-appearance none
-        appearance none
-
-        &:hover
-          color $color_primary_hover
-          text-decoration underline
-
-        &:focus
-          outline none
-
-      .view-all-link
-        color $color_primary
-        text-decoration none
-        font-size $font_size_xs
-        font-weight 400
-        text-transform lowercase
-        letter-spacing 0
-        transition color $transition_base
-
-        &:hover
-          color $color_primary_hover
-          text-decoration underline
 
   .tasks-table-body
     display flex
@@ -204,13 +197,6 @@ $homepage_tasks_grid_template_mobile = 1fr
         font-size 12px
         color $color_text_secondary
         font-family monospace
-
-.no-ongoing-tasks
-  text-align center
-  padding 40px 18px
-  color $color_text_secondary
-  font-size 16px
-  margin-bottom 20px
 
 // Responsive design for smaller screens
 @media (max-width 768px)

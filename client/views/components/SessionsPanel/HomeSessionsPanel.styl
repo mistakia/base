@@ -4,12 +4,11 @@
 .home-sessions-panel
   display: flex
   flex-direction: column
-  gap: $space_base
+  gap: $space_sm
   width: 100%
   max-width: 100%
   min-width: 0
   overflow: visible
-  padding-bottom: 12px
 
 .home-sessions-panel__section
   display: flex
@@ -43,7 +42,52 @@
     background-color: $color_warning
 
 .home-sessions-panel__header-title
-  flex: 1
+  flex: 0 0 auto
+
+.home-sessions-panel__header--clickable
+  cursor: pointer
+  user-select: none
+  border-radius: $radius_sm
+  margin: 0 (-$space_xs)
+  padding: $space_xs
+
+  &:hover
+    background: $color_surface_hover
+
+  &:focus
+    outline: none
+    background: $color_surface_hover
+
+.home-sessions-panel__header-label
+  display: flex
+  align-items: center
+  gap: $space_xs
+
+  &--clickable
+    cursor: pointer
+    user-select: none
+    border-radius: $radius_sm
+    padding: $space_xs
+    margin: 0 (-$space_xs)
+
+    &:hover
+      background: $color_surface_hover
+
+    &:focus
+      outline: none
+      background: $color_surface_hover
+
+.home-sessions-panel__toggle
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 16px
+  height: 16px
+  padding: 0
+  color: $color_text_tertiary
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  flex-shrink: 0
 
 .home-sessions-panel__header-count
   font-family: $font_family_mono

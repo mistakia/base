@@ -227,7 +227,7 @@ class EmbeddedIndexManager {
 
     try {
       const entities = await list_entity_files_from_filesystem({
-        entity_type: 'task'
+        include_entity_types: ['task']
       })
 
       log('Populating %d tasks to index', entities.length)
@@ -237,13 +237,19 @@ class EmbeddedIndexManager {
 
       for (const entity of entities) {
         try {
+          const base_uri =
+            entity.entity_properties?.base_uri || entity.file_info?.base_uri
           await this.sync_entity({
-            base_uri: entity.base_uri,
-            entity_data: entity
+            base_uri,
+            entity_data: entity.entity_properties
           })
           synced++
         } catch (error) {
-          log('Error syncing task %s: %s', entity.base_uri, error.message)
+          log(
+            'Error syncing task %s: %s',
+            entity.entity_properties?.base_uri,
+            error.message
+          )
           failed++
         }
       }

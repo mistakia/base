@@ -2,11 +2,11 @@
  * Entity Constants
  *
  * This file contains constants related to entity types and operations.
- * The entity types match the PostgreSQL enum definition in the database schema.
+ * Entity types are defined in system schema files (sys:system/schema/).
  */
 
 /**
- * Entity types defined in the database schema
+ * Entity types defined in the system schema
  * @enum {string}
  */
 export const ENTITY_TYPES = {

@@ -70,11 +70,11 @@ CREATE TABLE IF NOT EXISTS entity_tags (
 
 const ENTITY_RELATIONS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS entity_relations (
-  id INTEGER PRIMARY KEY,
   source_base_uri VARCHAR NOT NULL,
   target_base_uri VARCHAR NOT NULL,
   relation_type VARCHAR,
-  context VARCHAR
+  context VARCHAR,
+  PRIMARY KEY (source_base_uri, target_base_uri, relation_type)
 )
 `
 

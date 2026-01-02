@@ -57,7 +57,7 @@ In addition to file-based content, structured datasets can live in any storage s
 - The `<dataset_name>.md` file follows the `database` schema (see [[sys:system/schema/database.md]]) and typically includes:
   - `fields`: typed columns and constraints
   - `table_name`: logical name for the dataset
-  - `storage_config` (optional): connection details such as `connection_string`, `schema_name`, and `indexes`. When omitted, data is stored locally in the system's PostgreSQL instance
+  - `storage_config` (optional): connection details such as `connection_string`, `schema_name`, and `indexes`. When omitted, data is stored as local files and indexed via embedded databases
   - `views` (optional): predefined `database_view` identifiers for display/filtering
 
 The system uses the `<dataset_name>.md` definition to connect to the underlying store through a unified API. Records are represented as `database_item` entities that reference their parent database and are validated against its schema.

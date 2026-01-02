@@ -269,11 +269,12 @@ export async function sync_entity_relations_to_duckdb({
         if (target_base_uri) {
           await execute_duckdb_run({
             query: `INSERT INTO entity_relations (source_base_uri, target_base_uri, relation_type, context)
-                    VALUES (?, ?, ?, ?)`,
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT DO UPDATE SET context = excluded.context`,
             parameters: [
               source_base_uri,
               target_base_uri,
-              relation_type || null,
+              relation_type || 'unknown',
               context || null
             ]
           })

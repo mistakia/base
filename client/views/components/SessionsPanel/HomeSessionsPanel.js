@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useSelector, useDispatch } from 'react-redux'
@@ -23,6 +23,8 @@ const HomeSessionsPanel = ({
   const dispatch = useDispatch()
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
+  const [sessions_collapsed, set_sessions_collapsed] = useState(true)
+  const [threads_collapsed, set_threads_collapsed] = useState(true)
 
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
@@ -62,7 +64,20 @@ const HomeSessionsPanel = ({
     <div className='home-sessions-panel'>
       {has_active_sessions && (
         <div className='home-sessions-panel__section'>
-          <div className='home-sessions-panel__header'>
+          <div
+            className='home-sessions-panel__header home-sessions-panel__header--clickable'
+            onClick={() => set_sessions_collapsed(!sessions_collapsed)}
+            role='button'
+            tabIndex={0}
+            aria-expanded={!sessions_collapsed}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                set_sessions_collapsed(!sessions_collapsed)
+              }
+            }}>
+            <span className='home-sessions-panel__toggle'>
+              {sessions_collapsed ? '+' : '-'}
+            </span>
             <span className='home-sessions-panel__header-dot home-sessions-panel__header-dot--active' />
             <span className='home-sessions-panel__header-title'>
               Active Sessions
@@ -71,30 +86,49 @@ const HomeSessionsPanel = ({
               {active_session_count}
             </span>
           </div>
-          <div className='home-sessions-panel__list'>
-            {sessions_list.map((session) => (
-              <ActiveSessionCard key={session.session_id} session={session} />
-            ))}
-          </div>
+          {!sessions_collapsed && (
+            <div className='home-sessions-panel__list'>
+              {sessions_list.map((session) => (
+                <ActiveSessionCard key={session.session_id} session={session} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {has_active_threads && (
         <div className='home-sessions-panel__section'>
           <div className='home-sessions-panel__header'>
-            <span className='home-sessions-panel__header-dot home-sessions-panel__header-dot--review' />
-            <span className='home-sessions-panel__header-title'>
-              Ready for Review
+            <span
+              className='home-sessions-panel__header-label home-sessions-panel__header-label--clickable'
+              onClick={() => set_threads_collapsed(!threads_collapsed)}
+              role='button'
+              tabIndex={0}
+              aria-expanded={!threads_collapsed}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  set_threads_collapsed(!threads_collapsed)
+                }
+              }}>
+              <span className='home-sessions-panel__toggle'>
+                {threads_collapsed ? '+' : '-'}
+              </span>
+              <span className='home-sessions-panel__header-dot home-sessions-panel__header-dot--review' />
+              <span className='home-sessions-panel__header-title'>
+                Ready for Review
+              </span>
             </span>
             <Link to='/thread' className='home-sessions-panel__header-count'>
               {active_threads.size || active_threads.length}
             </Link>
           </div>
-          <div className='home-sessions-panel__list'>
-            {threads_list.map((thread) => (
-              <Thread key={thread.thread_id} thread={thread} />
-            ))}
-          </div>
+          {!threads_collapsed && (
+            <div className='home-sessions-panel__list'>
+              {threads_list.map((thread) => (
+                <Thread key={thread.thread_id} thread={thread} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

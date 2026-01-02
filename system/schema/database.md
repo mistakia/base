@@ -49,7 +49,7 @@ properties:
     properties:
       connection_string:
         type: string
-        description: PostgreSQL connection string for external storage
+        description: Connection string for external database storage
       schema_name:
         type: string
         default: public
@@ -80,7 +80,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Database
 
-A database defines a structured data collection with a schema that governs how data is stored and accessed. Databases support both local storage within the system's PostgreSQL instance and external storage in separate databases for large datasets.
+A database defines a structured data collection with a schema that governs how data is stored and accessed. Databases support both local file-based storage and external storage in separate databases for large datasets.
 
 ## What is a Database
 
@@ -95,14 +95,15 @@ In this system, a database is:
 
 **Local Storage** (default):
 
-- Items stored as JSONB in system PostgreSQL database
-- No configuration required
+- Items stored as markdown files with YAML frontmatter
+- Indexed via embedded databases (DuckDB for SQL queries, Kuzu for graph queries)
+- No external database configuration required
 - Full integration with entity system features
 
 **External Storage**:
 
-- Items stored in dedicated PostgreSQL tables
-- Activated by providing `storage_config`
+- Items stored in external database tables
+- Activated by providing `storage_config` with connection details
 - Supports large datasets
 - Maintains same API and functionality
 

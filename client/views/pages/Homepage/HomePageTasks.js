@@ -5,8 +5,7 @@ import { Link } from 'react-router-dom'
 import Task from '@components/Task'
 import {
   TASK_STATUS,
-  TASK_PRIORITY_ORDER,
-  TASK_PRIORITY
+  TASK_PRIORITY_ORDER
 } from '#libs-shared/task-constants.mjs'
 
 // Get primary tag URI from task (returns full URI or 'General')
@@ -18,10 +17,12 @@ const get_primary_tag_uri = (task) => {
   return tags[0]
 }
 
-// Extract tag name from base URI format (e.g., 'user:tag/league-xo-football.md' -> 'league-xo-football')
+// Extract name from base URI format (e.g., 'user:tag/league-xo-football.md' -> 'league-xo-football')
+// Handles any path pattern (tag/, physical-location/, etc.)
 const extract_tag_name = (tag_uri) => {
   if (tag_uri === 'General') return 'General'
-  const match = tag_uri.match(/tag\/([^.]+)\.md$/)
+  // Match the filename (without .md extension) from any path
+  const match = tag_uri.match(/\/([^/]+)\.md$/)
   return match ? match[1] : 'General'
 }
 
@@ -56,20 +57,45 @@ const HomePageTasks = ({
   is_loading_tasks,
   load_tasks
 }) => {
-  const [is_expanded, setIsExpanded] = useState(false)
+  const [is_collapsed, set_is_collapsed] = useState(true)
 
   useEffect(() => {
     load_tasks()
   }, [load_tasks])
 
+  const handle_toggle = () => {
+    set_is_collapsed(!is_collapsed)
+  }
+
+  const header_label = (
+    <span
+      className='home-section-header__label home-section-header__label--clickable'
+      onClick={handle_toggle}
+      role='button'
+      tabIndex={0}
+      aria-expanded={!is_collapsed}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          handle_toggle()
+        }
+      }}>
+      <span className='home-section-header__toggle'>
+        {is_collapsed ? '+' : '-'}
+      </span>
+      <span className='home-section-header__dot home-section-header__dot--tasks' />
+      <span className='home-section-header__title'>Tasks</span>
+    </span>
+  )
+
   if (is_loading_tasks) {
     return (
-      <div className='tasks-container loading-home-tasks'>
-        <div>Loading tasks...</div>
+      <div className='tasks-container'>
+        <div className='home-section-header'>{header_label}</div>
       </div>
     )
   }
 
+  // Filter to ongoing tasks and sort by priority, then by updated_at
   const ongoing_tasks = tasks
     .filter(
       (task) =>
@@ -77,14 +103,12 @@ const HomePageTasks = ({
         task.entity_properties.status === TASK_STATUS.STARTED
     )
     .sort((a, b) => {
-      // First sort by priority (higher priority first)
       const priority_a = TASK_PRIORITY_ORDER[a.entity_properties.priority] || 0
       const priority_b = TASK_PRIORITY_ORDER[b.entity_properties.priority] || 0
       if (priority_a !== priority_b) {
         return priority_b - priority_a
       }
 
-      // Then sort by updated_at (most recent first)
       const updated_a = new Date(
         a.entity_properties.updated_at || a.entity_properties.created_at || 0
       )
@@ -94,24 +118,8 @@ const HomePageTasks = ({
       return updated_b - updated_a
     })
 
-  // Filter tasks based on expansion state
-  const high_priority_tasks = ongoing_tasks.filter(
-    (task) =>
-      task.entity_properties.priority === TASK_PRIORITY.CRITICAL ||
-      task.entity_properties.priority === TASK_PRIORITY.HIGH
-  )
-
-  const lower_priority_tasks = ongoing_tasks.filter(
-    (task) =>
-      task.entity_properties.priority !== TASK_PRIORITY.CRITICAL &&
-      task.entity_properties.priority !== TASK_PRIORITY.HIGH
-  )
-
-  const displayed_tasks = is_expanded ? ongoing_tasks : high_priority_tasks
-  const hidden_tasks_count = lower_priority_tasks.size
-
   // Group tasks by primary tag URI
-  const tasks_by_tag = displayed_tasks.reduce((groups, task) => {
+  const tasks_by_tag = ongoing_tasks.reduce((groups, task) => {
     const tag_uri = get_primary_tag_uri(task)
     if (!groups[tag_uri]) {
       groups[tag_uri] = []
@@ -133,51 +141,45 @@ const HomePageTasks = ({
 
   return (
     <div className='tasks-container'>
-      <div className='tasks-table'>
-        <div className='tasks-table-header'>
-          <div className='task-header-with-link'>
-            <span>Task</span>
-            {hidden_tasks_count > 0 && (
-              <button
-                className='tasks-toggle-button'
-                onClick={() => setIsExpanded(!is_expanded)}>
-                {is_expanded
-                  ? 'show less'
-                  : `show ${hidden_tasks_count} more task${hidden_tasks_count === 1 ? '' : 's'}`}
-              </button>
-            )}
-            <Link to='/task' className='view-all-link'>
-              view all
-            </Link>
-          </div>
-          <div>Status</div>
-          <div>Priority</div>
-          <div>Finish By</div>
-        </div>
-        <div className='tasks-table-body'>
-          {sorted_tags.map((tag_uri, index) => (
-            <div
-              key={tag_uri}
-              className={`task-group ${index % 2 === 0 ? 'task-group-even' : 'task-group-odd'}`}>
-              {sorted_tags.length > 1 && (
-                <div className='task-group-header'>
-                  <span className='task-group-name'>
-                    {get_tag_display_name(tag_uri, tag_visibility)}
-                  </span>
-                  <span className='task-group-count'>
-                    ({tasks_by_tag[tag_uri].length})
-                  </span>
-                </div>
-              )}
-              <div className='task-group-items'>
-                {tasks_by_tag[tag_uri].map((task) => (
-                  <Task key={task.entity_properties.entity_id} task={task} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className='home-section-header'>
+        {header_label}
+        <Link to='/task' className='home-section-header__count'>
+          {ongoing_tasks.size}
+        </Link>
       </div>
+      {!is_collapsed && (
+        <div className='tasks-table'>
+          <div className='tasks-table-header'>
+            <div>Task</div>
+            <div>Status</div>
+            <div>Priority</div>
+            <div>Finish By</div>
+          </div>
+          <div className='tasks-table-body'>
+            {sorted_tags.map((tag_uri, index) => (
+              <div
+                key={tag_uri}
+                className={`task-group ${index % 2 === 0 ? 'task-group-even' : 'task-group-odd'}`}>
+                {sorted_tags.length > 1 && (
+                  <div className='task-group-header'>
+                    <span className='task-group-name'>
+                      {get_tag_display_name(tag_uri, tag_visibility)}
+                    </span>
+                    <span className='task-group-count'>
+                      ({tasks_by_tag[tag_uri].length})
+                    </span>
+                  </div>
+                )}
+                <div className='task-group-items'>
+                  {tasks_by_tag[tag_uri].map((task) => (
+                    <Task key={task.entity_properties.entity_id} task={task} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
