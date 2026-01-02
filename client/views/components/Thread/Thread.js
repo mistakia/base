@@ -54,7 +54,9 @@ const Thread = ({ thread, is_focused = false }) => {
     : format_duration(thread.created_at, thread.updated_at)
   const message_count = thread.message_count || 0
   const token_count =
-    thread.external_session?.provider_metadata?.total_tokens || 0
+    thread.total_tokens ||
+    thread.external_session?.provider_metadata?.total_tokens ||
+    0
   const session_provider =
     thread.session_provider || thread.external_session?.session_provider
 

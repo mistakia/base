@@ -89,7 +89,7 @@ const DEFAULT_TABLE_COLUMNS = [
   'user_message_count',
   'assistant_message_count',
   'tool_call_count',
-  'token_count',
+  'total_tokens',
   'cost'
 ]
 

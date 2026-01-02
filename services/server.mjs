@@ -8,9 +8,10 @@ import {
   stop_thread_watcher
 } from '#server/services/thread-watcher.mjs'
 import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 const logger = debug('server')
-debug.enable('server,api,threads:*')
+debug.enable('server,api,threads:*,embedded-index*')
 
 try {
   const { server_port } = config
@@ -36,6 +37,18 @@ try {
       logger(`Failed to start job worker: ${worker_error.message}`)
       logger(worker_error)
     }
+
+    // Initialize embedded database index
+    try {
+      await embedded_index_manager.initialize()
+      const status = embedded_index_manager.get_index_status()
+      logger(
+        `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
+      )
+    } catch (index_error) {
+      logger(`Failed to initialize embedded index: ${index_error.message}`)
+      logger(index_error)
+    }
   })
 } catch (err) {
   // TODO move to stderr
@@ -60,6 +73,14 @@ const shutdown = async (signal) => {
     logger('Thread watcher stopped')
   } catch (error) {
     logger(`Error stopping thread watcher: ${error.message}`)
+  }
+
+  try {
+    // Shutdown embedded index
+    await embedded_index_manager.shutdown()
+    logger('Embedded index shut down')
+  } catch (error) {
+    logger(`Error shutting down embedded index: ${error.message}`)
   }
 
   // Close server
