@@ -177,7 +177,8 @@ export async function query_threads_from_duckdb({
       message_count, user_message_count, assistant_message_count, tool_call_count,
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
-      working_directory, working_directory_path, session_provider, user_public_key
+      working_directory, working_directory_path, session_provider,
+      inference_provider, primary_model, user_public_key
     FROM threads
     ${where_sql}
     ${order_sql}

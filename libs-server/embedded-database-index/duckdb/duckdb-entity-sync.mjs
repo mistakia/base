@@ -119,9 +119,15 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
     working_directory_path,
     session_provider,
     inference_provider,
-    primary_model,
     user_public_key
   } = thread_data
+
+  // Derive primary_model from nested path if not directly set
+  const primary_model =
+    thread_data.primary_model ||
+    (thread_data.models && thread_data.models[0]) ||
+    thread_data.external_session?.provider_metadata?.models?.[0] ||
+    null
 
   if (!thread_id) {
     log('Cannot upsert thread without thread_id')
