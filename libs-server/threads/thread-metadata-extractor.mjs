@@ -66,9 +66,9 @@ function get_provider_info(thread) {
 }
 
 /**
- * Extract token count (matching client-side logic)
+ * Extract total tokens (matching DuckDB field name and client-side expectations)
  */
-function extract_token_count(thread) {
+function extract_total_tokens(thread) {
   return thread.external_session?.provider_metadata?.total_tokens || 0
 }
 
@@ -140,7 +140,7 @@ function format_for_table_display(thread, extracted_data) {
     provider_info,
     working_directory,
     duration_minutes,
-    token_count,
+    total_tokens,
     tool_call_count,
     title,
     description
@@ -177,7 +177,7 @@ function format_for_table_display(thread, extracted_data) {
     tool_call_count,
 
     // Token and cost information
-    token_count,
+    total_tokens,
     ...cost_data,
 
     // Additional metadata
@@ -206,7 +206,7 @@ export async function extract_thread_metadata(thread) {
     const extracted_data = {
       message_counts: extract_message_counts(thread),
       tool_call_count: extract_tool_call_count(thread),
-      token_count: extract_token_count(thread),
+      total_tokens: extract_total_tokens(thread),
       duration_minutes: extract_duration_minutes(thread),
       working_directory: extract_working_directory(thread),
       cost_data: calculate_cost_data(thread),
@@ -242,12 +242,13 @@ export async function extract_thread_metadata(thread) {
       user_message_count: 0,
       assistant_message_count: 0,
       tool_call_count: 0,
-      token_count: 0,
+      total_tokens: 0,
       total_cost: 0,
       input_cost: 0,
       output_cost: 0,
       currency: 'USD',
       tags: [],
+      is_redacted: false,
       raw_thread: thread
     }
   }

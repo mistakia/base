@@ -32,5 +32,10 @@
       "retry_attempts": 3,
       "retry_delay_seconds": 30
     }
+  },
+  "embedded_database_index": {
+    "enabled": true,
+    "rebuild_on_startup": false,
+    "file_watcher_enabled": false
   }
 }

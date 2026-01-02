@@ -412,11 +412,11 @@ export const thread_columns = {
     minSize: 60,
     maxSize: 100
   },
-  token_count: {
-    column_id: 'token_count',
+  total_tokens: {
+    column_id: 'total_tokens',
     header_label: 'Tokens',
-    accessorKey: 'token_count',
-    accessorFn: ({ token_count }) => format_shorthand_number(token_count),
+    accessorKey: 'total_tokens',
+    accessorFn: ({ total_tokens }) => format_shorthand_number(total_tokens),
     data_type: TABLE_DATA_TYPES.NUMBER,
     operators: [
       TABLE_OPERATORS.GREATER_THAN,

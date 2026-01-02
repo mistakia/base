@@ -6,11 +6,60 @@ import debug from 'debug'
 import { list_tasks_from_filesystem } from '#libs-server/task/filesystem/list-tasks-from-filesystem.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
-import { check_user_permission_for_file } from '#server/middleware/permission/index.mjs'
+import {
+  check_user_permission_for_file,
+  check_user_permission
+} from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import {
+  query_tasks_from_duckdb,
+  count_tasks_in_duckdb
+} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 
 const log = debug('tasks:table')
+
+/**
+ * Normalize DuckDB task row to match filesystem output structure
+ * Adds default values and computed fields that the filesystem path applies
+ */
+function normalize_duckdb_task(task, defaults) {
+  return {
+    // Basic properties with fallback defaults
+    entity_id: task.entity_id,
+    base_uri: task.base_uri,
+    title: task.title || defaults.title,
+    status: task.status || defaults.status,
+    priority: task.priority || defaults.priority,
+    description: task.description || defaults.description,
+    created_at: task.created_at,
+    updated_at: task.updated_at,
+    user_public_key: task.user_public_key,
+
+    // Timing properties
+    start_by: task.start_by,
+    finish_by: task.finish_by,
+    planned_start: task.planned_start,
+    planned_finish: task.planned_finish,
+    started_at: task.started_at,
+    finished_at: task.finished_at,
+    snooze_until: task.snooze_until,
+
+    // Duration properties
+    estimated_total_duration: task.estimated_total_duration,
+
+    // Metadata with defaults
+    archived: task.archived || defaults.archived,
+    relations: task.relations || [],
+    tags: task.tags || [],
+
+    // File info - absolute_path not available from DuckDB index (only base_uri is stored)
+    absolute_path: null,
+    content_preview: ''
+  }
+}
 
 // Configuration constants
 const CONFIG = {
@@ -219,6 +268,166 @@ function get_task_value_for_sorting(item, column_id) {
 }
 
 /**
+ * Convert react-table filters to DuckDB format
+ */
+function convert_table_state_to_duckdb_filters(table_state) {
+  const filters = []
+
+  if (table_state?.where) {
+    for (const filter of table_state.where) {
+      if (filter.column_id && filter.operator) {
+        filters.push({
+          column_id: filter.column_id,
+          operator: filter.operator,
+          value: filter.value
+        })
+      }
+    }
+  }
+
+  return filters
+}
+
+/**
+ * Convert react-table sort to DuckDB format
+ * Handles both 'sort' and 'sorting' keys (react-table uses 'sorting')
+ */
+function convert_table_state_to_duckdb_sort(table_state) {
+  const sort = []
+
+  // Check for both 'sort' and 'sorting' (react-table format uses 'sorting')
+  const sort_config = table_state?.sort || table_state?.sorting
+
+  if (sort_config) {
+    for (const sort_item of sort_config) {
+      sort.push({
+        column_id: sort_item.column_id || sort_item.id,
+        desc: sort_item.desc || false
+      })
+    }
+  }
+
+  // Apply default sort if no sort specified
+  if (sort.length === 0) {
+    sort.push(CONFIG.table.default_sort)
+  }
+
+  return sort
+}
+
+/**
+ * Process task table request using DuckDB index
+ */
+async function process_task_table_request_indexed({
+  table_state,
+  requesting_user_public_key
+}) {
+  const start_time = Date.now()
+
+  const duckdb_connection = await get_duckdb_connection()
+  const filters = convert_table_state_to_duckdb_filters(table_state)
+  const sort = convert_table_state_to_duckdb_sort(table_state)
+  const limit = table_state?.limit || 1000
+  const offset = table_state?.offset || 0
+
+  // Query tasks from DuckDB
+  const tasks = await query_tasks_from_duckdb({
+    connection: duckdb_connection,
+    filters,
+    sort,
+    limit,
+    offset
+  })
+
+  // Get total count for pagination
+  const total_count = await count_tasks_in_duckdb({
+    connection: duckdb_connection,
+    filters
+  })
+
+  // Normalize DuckDB results to match filesystem output structure
+  const normalized_tasks = tasks.map((task) =>
+    normalize_duckdb_task(task, CONFIG.defaults)
+  )
+
+  // Apply permissions and redaction using proper permission service
+  const tasks_with_permissions = await Promise.all(
+    normalized_tasks.map(async (task) => {
+      try {
+        // Use the proper permission check with base_uri
+        const result = await check_user_permission({
+          user_public_key: requesting_user_public_key,
+          resource_path: task.base_uri
+        })
+
+        if (result.allowed) {
+          return { ...task, is_redacted: false }
+        }
+      } catch (error) {
+        log(
+          `Error checking permission for task ${task.entity_id}: ${error.message}`
+        )
+      }
+
+      return redact_entity_object(task, {
+        preserve_keys: CONFIG.redaction.preserved_keys,
+        redact_keys: CONFIG.redaction.redacted_keys
+      })
+    })
+  )
+
+  const processing_time_ms = Date.now() - start_time
+
+  return {
+    rows: tasks_with_permissions,
+    total_row_count: total_count,
+    metadata: {
+      fetched: tasks_with_permissions.length,
+      has_more: offset + tasks_with_permissions.length < total_count,
+      limit,
+      offset,
+      processing_time_ms,
+      table_state: table_state || {},
+      source: 'duckdb_index'
+    }
+  }
+}
+
+/**
+ * Process task table request using filesystem (fallback)
+ */
+async function process_task_table_request_filesystem({
+  table_state,
+  requesting_user_public_key
+}) {
+  // Get tasks from filesystem
+  const all_tasks = await list_tasks_from_filesystem({
+    include_completed: true,
+    archived: false
+  })
+
+  // Apply permissions and redaction
+  const tasks_with_permissions = await process_tasks_with_permissions(
+    all_tasks,
+    requesting_user_public_key
+  )
+
+  // Process with generic table processor
+  const result = await process_generic_table_request({
+    data: tasks_with_permissions,
+    table_state,
+    extract_metadata: process_task_for_table,
+    get_value: get_task_value_for_sorting,
+    default_sort: CONFIG.table.default_sort,
+    column_types: CONFIG.column_types
+  })
+
+  const response = normalize_response(result, table_state)
+  response.metadata.source = 'filesystem'
+  return response
+}
+
+/**
  * Process table request with server-side filtering, sorting, and pagination
  */
 export async function process_task_table_request({
@@ -231,29 +440,28 @@ export async function process_task_table_request({
   })
 
   try {
-    // Get tasks from filesystem
-    const all_tasks = await list_tasks_from_filesystem({
-      include_completed: true,
-      archived: false
-    })
+    // Try to use indexed query if available
+    if (embedded_index_manager.is_duckdb_ready()) {
+      log('Using DuckDB index for task query')
+      try {
+        return await process_task_table_request_indexed({
+          table_state,
+          requesting_user_public_key
+        })
+      } catch (index_error) {
+        log(
+          'DuckDB index query failed, falling back to filesystem: %s',
+          index_error.message
+        )
+      }
+    }
 
-    // Apply permissions and redaction
-    const tasks_with_permissions = await process_tasks_with_permissions(
-      all_tasks,
-      requesting_user_public_key
-    )
-
-    // Process with generic table processor
-    const result = await process_generic_table_request({
-      data: tasks_with_permissions,
+    // Fallback to filesystem-based query
+    log('Using filesystem for task query')
+    return await process_task_table_request_filesystem({
       table_state,
-      extract_metadata: process_task_for_table,
-      get_value: get_task_value_for_sorting,
-      default_sort: CONFIG.table.default_sort,
-      column_types: CONFIG.column_types
+      requesting_user_public_key
     })
-
-    return normalize_response(result, table_state)
   } catch (error) {
     log(`Error processing task table request: ${error.message}`)
     throw error
