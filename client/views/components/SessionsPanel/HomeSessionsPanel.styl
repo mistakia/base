@@ -73,7 +73,7 @@
 .active-session-card
   background: white
   border-radius: $radius_base
-  border: 2px solid rgba(40, 167, 69, 0.3)
+  border: none
   padding: $space_sm $space_base
   transition: all $transition_fast
   position: relative
@@ -82,11 +82,13 @@
   overflow: visible
   max-width: 100%
 
+  &--active
+    border: 1px solid rgba(40, 167, 69, 0.3)
+
   &--clickable
     cursor: pointer
 
     &:hover
-      background-color: $color_surface_hover
       transform: $hover_lift
       box-shadow: $shadow_sm
 

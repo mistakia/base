@@ -83,7 +83,7 @@ const ActiveSessionCard = ({ session }) => {
 
   return (
     <div
-      className={`active-session-card ${has_thread ? 'active-session-card--clickable' : ''}`}
+      className={`active-session-card ${!is_idle ? 'active-session-card--active' : ''} ${has_thread ? 'active-session-card--clickable' : ''}`}
       onClick={has_thread ? handle_click : undefined}>
       <div className='active-session-card__main-row'>
         <span
