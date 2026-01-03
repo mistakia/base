@@ -112,6 +112,59 @@ export async function read_thread_data({ thread_id, user_base_directory }) {
 }
 
 /**
+ * Get the latest timeline event for a thread
+ * @param {Object} params Parameters
+ * @param {string} params.thread_id Thread ID
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<Object|null>} Latest timeline event or null
+ */
+export async function get_latest_timeline_event({
+  thread_id,
+  user_base_directory
+}) {
+  try {
+    const { timeline } = await read_thread_data({
+      thread_id,
+      user_base_directory
+    })
+    return timeline && timeline.length > 0
+      ? timeline[timeline.length - 1]
+      : null
+  } catch (error) {
+    log(
+      `Error getting latest timeline event for ${thread_id}: ${error.message}`
+    )
+    return null
+  }
+}
+
+/**
+ * Enrich a thread object with its latest timeline event
+ * @param {Object} params Parameters
+ * @param {Object} params.thread Thread object to enrich
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<Object>} Thread with latest_timeline_event field added
+ */
+export async function enrich_thread_with_timeline({
+  thread,
+  user_base_directory
+}) {
+  if (!thread || !thread.thread_id) {
+    return thread
+  }
+
+  const latest_timeline_event = await get_latest_timeline_event({
+    thread_id: thread.thread_id,
+    user_base_directory
+  })
+
+  return {
+    ...thread,
+    latest_timeline_event
+  }
+}
+
+/**
  * Process thread data with permission checking and redaction
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID

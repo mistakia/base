@@ -83,3 +83,5 @@ export {
   start_index_file_watcher,
   stop_index_file_watcher
 } from './sync/index-file-watcher.mjs'
+
+export { start_index_sync_watcher } from './sync/start-index-sync-watcher.mjs'

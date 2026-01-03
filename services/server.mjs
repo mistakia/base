@@ -9,6 +9,10 @@ import {
 } from '#server/services/thread-watcher.mjs'
 import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import {
+  start_index_sync_watcher,
+  stop_index_file_watcher
+} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
@@ -49,6 +53,18 @@ try {
       logger(`Failed to initialize embedded index: ${index_error.message}`)
       logger(index_error)
     }
+
+    // Start index file watcher for database sync
+    try {
+      const index_config = embedded_index_manager._get_index_config()
+      if (index_config.enabled && index_config.file_watcher_enabled) {
+        start_index_sync_watcher()
+        logger('Index file watcher started')
+      }
+    } catch (watcher_error) {
+      logger(`Failed to start index file watcher: ${watcher_error.message}`)
+      logger(watcher_error)
+    }
   })
 } catch (err) {
   // TODO move to stderr
@@ -73,6 +89,14 @@ const shutdown = async (signal) => {
     logger('Thread watcher stopped')
   } catch (error) {
     logger(`Error stopping thread watcher: ${error.message}`)
+  }
+
+  try {
+    // Stop index file watcher
+    await stop_index_file_watcher()
+    logger('Index file watcher stopped')
+  } catch (error) {
+    logger(`Error stopping index file watcher: ${error.message}`)
   }
 
   try {

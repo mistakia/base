@@ -14,6 +14,7 @@ import validate_working_directory from '#libs-server/threads/validate-working-di
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { thread_constants } from '#libs-shared'
+import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -88,6 +89,7 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
+    const include_timeline = req.query.include_timeline !== 'false'
 
     // Get all threads from filesystem
     const all_threads = await threads.list_threads({
@@ -97,9 +99,16 @@ router.get('/', async (req, res) => {
       offset
     })
 
+    // Enrich threads with latest timeline event (for homepage display)
+    const enriched_threads = include_timeline
+      ? await Promise.all(
+          all_threads.map((thread) => enrich_thread_with_timeline({ thread }))
+        )
+      : all_threads
+
     // Apply permission checking and redaction to each thread
     const threads_with_permissions = await Promise.all(
-      all_threads.map((thread) =>
+      enriched_threads.map((thread) =>
         apply_permission_based_redaction(thread, requesting_user_key)
       )
     )

@@ -3,6 +3,33 @@ import Validator from 'fastest-validator'
 
 const log = debug('entity:validation:schema')
 
+/**
+ * Deep clone an object while preserving RegExp patterns
+ * @param {*} obj Object to clone
+ * @returns {*} Cloned object
+ */
+function deep_clone_with_regex(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj
+  }
+
+  if (obj instanceof RegExp) {
+    return new RegExp(obj.source, obj.flags)
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(deep_clone_with_regex)
+  }
+
+  const cloned = {}
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deep_clone_with_regex(obj[key])
+    }
+  }
+  return cloned
+}
+
 // Create validator instance with proper configuration
 const validator = new Validator({
   useNewCustomCheckerFunction: true, // Enable new custom validator feature
@@ -79,19 +106,36 @@ function build_property_schema(prop) {
     prop.type === 'array' &&
     prop.items &&
     prop.items.type === 'object' &&
-    Array.isArray(prop.items.properties)
+    prop.items.properties
   ) {
+    // Handle BOTH array-of-objects AND object-of-objects formats
+    const nested_props = Array.isArray(prop.items.properties)
+      ? prop.items.properties
+      : Object.entries(prop.items.properties).map(([key, val]) => ({
+          name: key,
+          ...val
+        }))
+
     const item_properties = {}
-    prop.items.properties.forEach((nested_prop) => {
+    nested_props.forEach((nested_prop) => {
       if (nested_prop && nested_prop.name) {
-        item_properties[nested_prop.name] = {
+        const nested_schema = {
           type: nested_prop.type,
           required: nested_prop.required === true,
-          optional: nested_prop.required === false,
-          ...(nested_prop.description
-            ? { description: nested_prop.description }
-            : {})
+          optional:
+            nested_prop.required === false || nested_prop.optional === true
         }
+
+        // Copy additional property fields
+        if (nested_prop.description)
+          nested_schema.description = nested_prop.description
+        if (nested_prop.enum) nested_schema.enum = nested_prop.enum
+        if (nested_prop.min !== undefined) nested_schema.min = nested_prop.min
+        if (nested_prop.max !== undefined) nested_schema.max = nested_prop.max
+        if (nested_prop.format) nested_schema.format = nested_prop.format
+        if (nested_prop.pattern) nested_schema.pattern = nested_prop.pattern
+
+        item_properties[nested_prop.name] = nested_schema
       }
     })
     return {
@@ -240,8 +284,8 @@ export async function validate_entity_properties({
     let schema_to_use = validation_schema
 
     if (is_meta_schema) {
-      // Create a copy to modify
-      schema_to_use = JSON.parse(JSON.stringify(validation_schema))
+      // Create a copy to modify (use deep clone to preserve RegExp patterns)
+      schema_to_use = deep_clone_with_regex(validation_schema)
 
       // For the meta-schema that defines type_definition itself, be lenient
       if (
