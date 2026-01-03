@@ -49,53 +49,69 @@ async function apply_session_redaction(session, user_public_key) {
 }
 
 /**
- * Get thread info (title and latest timeline event) for a session
+ * Get thread info for a session including metadata and latest timeline event
  * @param {string} thread_id - Thread ID to fetch info for
- * @returns {Promise<Object>} Object with thread_title and latest_timeline_event
+ * @returns {Promise<Object>} Object with thread metadata fields
  */
 async function get_thread_info_for_session(thread_id) {
-  if (!thread_id) return { thread_title: null, latest_timeline_event: null }
+  const empty_result = {
+    thread_title: null,
+    latest_timeline_event: null,
+    message_count: null,
+    duration_minutes: null,
+    total_tokens: null,
+    session_provider: null
+  }
+
+  if (!thread_id) return empty_result
 
   try {
     const { metadata, timeline } = await read_thread_data({ thread_id })
-
-    // Get title from metadata
-    const thread_title = metadata.title || null
 
     // Get latest timeline event (last entry in timeline)
     const latest_timeline_event =
       timeline && timeline.length > 0 ? timeline[timeline.length - 1] : null
 
-    return { thread_title, latest_timeline_event }
+    return {
+      thread_title: metadata.title || null,
+      latest_timeline_event,
+      message_count: metadata.message_count || null,
+      duration_minutes: metadata.duration_minutes || null,
+      total_tokens: metadata.total_tokens || null,
+      session_provider: metadata.session_provider || null
+    }
   } catch {
     // Thread may not exist yet or be inaccessible
-    return { thread_title: null, latest_timeline_event: null }
+    return empty_result
   }
 }
 
 /**
  * Enrich a session with fresh thread info from disk
  *
- * Reads the latest thread title and timeline event from the thread's files,
+ * Reads the latest thread metadata and timeline event from the thread's files,
  * ensuring we return current data rather than potentially stale Redis cache.
  *
  * @param {Object} session - Session to enrich
- * @returns {Promise<Object>} Session with fresh thread_title and latest_timeline_event
+ * @returns {Promise<Object>} Session with fresh thread data
  */
 async function enrich_session_with_thread_info(session) {
   if (!session || !session.thread_id) {
     return session
   }
 
-  const { thread_title, latest_timeline_event } =
-    await get_thread_info_for_session(session.thread_id)
+  const thread_info = await get_thread_info_for_session(session.thread_id)
 
   return {
     ...session,
     // Use fresh data, falling back to cached if read fails
-    thread_title: thread_title || session.thread_title,
+    thread_title: thread_info.thread_title || session.thread_title,
     latest_timeline_event:
-      latest_timeline_event || session.latest_timeline_event
+      thread_info.latest_timeline_event || session.latest_timeline_event,
+    message_count: thread_info.message_count,
+    duration_minutes: thread_info.duration_minutes,
+    total_tokens: thread_info.total_tokens,
+    session_provider: thread_info.session_provider
   }
 }
 
@@ -204,20 +220,27 @@ router.post('/', async (req, res) => {
     })
 
     if (thread_id) {
-      // Get thread info (title and latest timeline event)
-      const { thread_title, latest_timeline_event } =
-        await get_thread_info_for_session(thread_id)
+      // Get thread info (title, timeline event, and metadata)
+      const thread_info = await get_thread_info_for_session(thread_id)
 
       // Update session with thread association and info
       session.thread_id = thread_id
-      session.thread_title = thread_title
-      session.latest_timeline_event = latest_timeline_event
+      session.thread_title = thread_info.thread_title
+      session.latest_timeline_event = thread_info.latest_timeline_event
+      session.message_count = thread_info.message_count
+      session.duration_minutes = thread_info.duration_minutes
+      session.total_tokens = thread_info.total_tokens
+      session.session_provider = thread_info.session_provider
 
       await update_active_session({
         session_id,
         thread_id,
-        thread_title,
-        latest_timeline_event
+        thread_title: thread_info.thread_title,
+        latest_timeline_event: thread_info.latest_timeline_event,
+        message_count: thread_info.message_count,
+        duration_minutes: thread_info.duration_minutes,
+        total_tokens: thread_info.total_tokens,
+        session_provider: thread_info.session_provider
       })
     }
 
@@ -263,33 +286,47 @@ router.put('/:session_id', async (req, res) => {
       })
 
       if (found_thread_id) {
-        // Get thread info (title and latest timeline event)
-        const { thread_title, latest_timeline_event } =
-          await get_thread_info_for_session(found_thread_id)
+        // Get thread info (title, timeline event, and metadata)
+        const thread_info = await get_thread_info_for_session(found_thread_id)
 
         session.thread_id = found_thread_id
-        session.thread_title = thread_title
-        session.latest_timeline_event = latest_timeline_event
+        session.thread_title = thread_info.thread_title
+        session.latest_timeline_event = thread_info.latest_timeline_event
+        session.message_count = thread_info.message_count
+        session.duration_minutes = thread_info.duration_minutes
+        session.total_tokens = thread_info.total_tokens
+        session.session_provider = thread_info.session_provider
 
         await update_active_session({
           session_id,
           thread_id: found_thread_id,
-          thread_title,
-          latest_timeline_event
+          thread_title: thread_info.thread_title,
+          latest_timeline_event: thread_info.latest_timeline_event,
+          message_count: thread_info.message_count,
+          duration_minutes: thread_info.duration_minutes,
+          total_tokens: thread_info.total_tokens,
+          session_provider: thread_info.session_provider
         })
       }
     } else {
       // Thread already associated, refresh thread info
-      const { thread_title, latest_timeline_event } =
-        await get_thread_info_for_session(session.thread_id)
+      const thread_info = await get_thread_info_for_session(session.thread_id)
 
-      session.thread_title = thread_title
-      session.latest_timeline_event = latest_timeline_event
+      session.thread_title = thread_info.thread_title
+      session.latest_timeline_event = thread_info.latest_timeline_event
+      session.message_count = thread_info.message_count
+      session.duration_minutes = thread_info.duration_minutes
+      session.total_tokens = thread_info.total_tokens
+      session.session_provider = thread_info.session_provider
 
       await update_active_session({
         session_id,
-        thread_title,
-        latest_timeline_event
+        thread_title: thread_info.thread_title,
+        latest_timeline_event: thread_info.latest_timeline_event,
+        message_count: thread_info.message_count,
+        duration_minutes: thread_info.duration_minutes,
+        total_tokens: thread_info.total_tokens,
+        session_provider: thread_info.session_provider
       })
     }
 

@@ -1,5 +1,5 @@
 // Home Sessions Panel - Card-based design for homepage
-// Uses full-width cards for sessions and threads
+// Unified styling for session/thread cards
 
 .home-sessions-panel
   display: flex
@@ -27,11 +27,14 @@
   max-width: 100%
   overflow: visible
 
-// Active Session Card Styles
-.active-session-card
+// =============================================================================
+// Session Card - Unified styling for both sessions and threads
+// =============================================================================
+
+.session-card
   background: white
   border-radius: $radius_base
-  border: 1px solid transparent
+  border: 1px solid $color_border_light
   padding: $space_sm $space_base
   transition: all $transition_fast
   position: relative
@@ -40,7 +43,7 @@
   overflow: visible
   max-width: 100%
 
-  &--active
+  &--running
     animation: border-pulse 1.5s ease-in-out infinite
 
   &--clickable
@@ -50,45 +53,80 @@
       transform: $hover_lift
       box-shadow: $shadow_sm
 
+  &--focused
+    border-color: $color_primary
+    box-shadow: $shadow_focus_subtle
+
 @keyframes border-pulse
   0%, 100%
     border-color: rgba(40, 167, 69, 0.3)
   50%
     border-color: rgba(40, 167, 69, 0.7)
 
-.active-session-card__header-row
+// Main Row - Title and time
+.session-card__main-row
   display: flex
   align-items: center
   gap: $space_xs
   min-width: 0
   max-width: 100%
 
-.active-session-card__status
-  font-size: $font_size_xs
-  color: $color_success
-  font-weight: $font_weight_medium
-  flex-shrink: 0
-
-.active-session-card__time
+.session-card__time
   font-size: $font_size_xs
   font-family: $font_family_mono
   color: $color_text_tertiary
   flex-shrink: 0
-  margin-right: $space_sm
 
-.active-session-card__title
+.session-card__title
   font-size: $font_size_sm
   font-weight: $font_weight_medium
   color: $color_text
   flex: 1
   min-width: 0
-  overflow-x: hidden
-  overflow-y: visible
+  overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
   line-height: 1.4
 
+// Footer Row - Details on left, actions on right
+.session-card__footer
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: $space_sm
+  margin-top: $space_xs
+  padding-top: $space_xs
+  border-top: 1px solid $color_border_light
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.session-card__details
+  display: flex
+  align-items: center
+  gap: $space_xs
+  min-width: 0
+  flex: 1
+
+.session-card__directory
+  font-family: $font_family_mono
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  flex-shrink: 1
+  min-width: 0
+
+.session-card__separator
+  color: $color_text_tertiary
+  flex-shrink: 0
+
+.session-card__stat
+  font-family: $font_family_mono
+  flex-shrink: 0
+
+// =============================================================================
 // Compact Timeline Event Display
+// =============================================================================
+
 .compact-timeline-event
   display: flex
   align-items: center
@@ -170,17 +208,17 @@
   white-space: nowrap
   word-break: break-all
 
-// Action Buttons for Idle Sessions
-.active-session-card__actions
+// =============================================================================
+// Action Buttons - For idle sessions
+// =============================================================================
+
+.session-card__actions
   display: flex
   align-items: center
-  justify-content: flex-end
   gap: $space_xs
-  margin-top: $space_sm
-  padding-top: $space_sm
-  border-top: 1px solid $color_border_light
+  flex-shrink: 0
 
-.active-session-card__action-button
+.session-card__action-button
   display: flex
   align-items: center
   justify-content: center
@@ -206,3 +244,15 @@
 
   &:active
     background: $color_surface_secondary
+
+// =============================================================================
+// Responsive Design
+// =============================================================================
+
+@media (max-width: 768px)
+  .session-card
+    border-radius: 0
+    border-left: none
+    border-right: none
+    margin-left: (-$space_base)
+    margin-right: (-$space_base)

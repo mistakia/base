@@ -122,6 +122,10 @@ export const register_active_session = async ({
  * @param {Object} [params.latest_timeline_event] - Latest timeline event from thread
  * @param {string} [params.working_directory] - Working directory (for upsert)
  * @param {string} [params.transcript_path] - Transcript path (for upsert)
+ * @param {number} [params.message_count] - Number of messages in thread
+ * @param {number} [params.duration_minutes] - Duration in minutes
+ * @param {number} [params.total_tokens] - Total token count
+ * @param {string} [params.session_provider] - Session provider name
  * @returns {Promise<Object|null>} Updated session record or null if not found
  */
 export const update_active_session = async ({
@@ -131,7 +135,11 @@ export const update_active_session = async ({
   thread_title,
   latest_timeline_event,
   working_directory,
-  transcript_path
+  transcript_path,
+  message_count,
+  duration_minutes,
+  total_tokens,
+  session_provider
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
@@ -148,6 +156,12 @@ export const update_active_session = async ({
     if (thread_title !== undefined) session.thread_title = thread_title
     if (latest_timeline_event !== undefined)
       session.latest_timeline_event = latest_timeline_event
+    if (message_count !== undefined) session.message_count = message_count
+    if (duration_minutes !== undefined)
+      session.duration_minutes = duration_minutes
+    if (total_tokens !== undefined) session.total_tokens = total_tokens
+    if (session_provider !== undefined)
+      session.session_provider = session_provider
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)
@@ -159,6 +173,10 @@ export const update_active_session = async ({
       latest_timeline_event: latest_timeline_event || null,
       working_directory: working_directory || null,
       transcript_path: transcript_path || null,
+      message_count: message_count || null,
+      duration_minutes: duration_minutes || null,
+      total_tokens: total_tokens || null,
+      session_provider: session_provider || null,
       started_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString()
     }
