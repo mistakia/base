@@ -33,9 +33,20 @@ const SessionsPanel = ({
     }
   }, [load_threads])
 
-  // Filter threads that are active (need attention)
+  // Get thread IDs that have active sessions
+  const active_session_thread_ids = new Set(
+    (active_sessions || [])
+      .filter((session) => session.thread_id)
+      .map((session) => session.thread_id)
+  )
+
+  // Filter threads that are active (need attention) and don't have an active session
   const active_threads = threads
-    ? threads.filter((thread) => thread.thread_state === 'active')
+    ? threads.filter(
+        (thread) =>
+          thread.thread_state === 'active' &&
+          !active_session_thread_ids.has(thread.thread_id)
+      )
     : []
 
   const displayed_threads = List.isList(active_threads)

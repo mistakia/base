@@ -1,0 +1,189 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+
+import {
+  format_shorthand_time,
+  format_shorthand_number
+} from '@views/utils/date-formatting.js'
+import CompactTimelineEvent from './CompactTimelineEvent.js'
+import { thread_prompt_actions } from '@core/thread-prompt/index.js'
+import { threads_actions } from '@core/threads/actions.js'
+
+/**
+ * Unified card component for displaying both active sessions and threads.
+ * Renders identical UI for visual consistency across homepage sections.
+ *
+ * @param {Object} props
+ * @param {Object} props.item - Normalized session/thread data
+ * @param {string} props.item.id - Thread ID for navigation
+ * @param {string} props.item.title - Display title
+ * @param {string} props.item.status - Status: 'running' | 'idle' | 'review' | 'archived'
+ * @param {string} props.item.updated_at - ISO timestamp for last activity
+ * @param {string} [props.item.working_directory] - Working directory path
+ * @param {number} [props.item.message_count] - Number of messages
+ * @param {number} [props.item.duration_minutes] - Duration in minutes
+ * @param {number} [props.item.total_tokens] - Total token count
+ * @param {Object} [props.item.latest_timeline_event] - Latest timeline event
+ * @param {boolean} [props.item.show_actions] - Whether to show action buttons
+ */
+const SessionCard = ({ item }) => {
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+
+  const handle_click = (event) => {
+    if (!item.id) return
+
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/thread/${item.id}`, '_blank')
+    } else {
+      navigate(`/thread/${item.id}`)
+    }
+  }
+
+  const handle_archive_click = (event) => {
+    event.stopPropagation()
+    if (item.id) {
+      dispatch(
+        threads_actions.set_thread_archive_state({
+          thread_id: item.id,
+          archive_reason: 'completed'
+        })
+      )
+    }
+  }
+
+  const handle_message_click = (event) => {
+    event.stopPropagation()
+    if (item.id) {
+      dispatch(
+        thread_prompt_actions.open({
+          thread_id: item.id,
+          mode: 'resume'
+        })
+      )
+    }
+  }
+
+  const last_updated = item.updated_at
+    ? format_shorthand_time(item.updated_at)
+    : 'just now'
+
+  const working_directory = item.working_directory
+    ? item.working_directory.split('/').pop() || 'root'
+    : null
+
+  const duration = item.duration_minutes
+    ? `${parseFloat(item.duration_minutes.toFixed(1))}m`
+    : null
+
+  const card_classes = [
+    'session-card',
+    item.status === 'running' ? 'session-card--running' : '',
+    item.id ? 'session-card--clickable' : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  // Check if we have any details to show
+  const has_details =
+    working_directory ||
+    item.message_count != null ||
+    duration ||
+    item.total_tokens != null
+
+  // Show footer row if we have details or actions
+  const show_footer = has_details || item.show_actions
+
+  return (
+    <div className={card_classes} onClick={item.id ? handle_click : undefined}>
+      <div className='session-card__main-row'>
+        <span className='session-card__title'>{item.title || '-'}</span>
+        <span className='session-card__time'>{last_updated}</span>
+      </div>
+
+      {item.latest_timeline_event && (
+        <CompactTimelineEvent timeline_event={item.latest_timeline_event} />
+      )}
+
+      {show_footer && (
+        <div className='session-card__footer'>
+          <div className='session-card__details'>
+            {working_directory && (
+              <>
+                <span className='session-card__directory'>
+                  {working_directory}
+                </span>
+                {(item.message_count != null ||
+                  duration ||
+                  item.total_tokens != null) && (
+                  <span className='session-card__separator'>•</span>
+                )}
+              </>
+            )}
+            {item.message_count != null && (
+              <>
+                <span className='session-card__stat'>
+                  {item.message_count} msg{item.message_count !== 1 ? 's' : ''}
+                </span>
+                {(duration || item.total_tokens != null) && (
+                  <span className='session-card__separator'>•</span>
+                )}
+              </>
+            )}
+            {duration && (
+              <>
+                <span className='session-card__stat'>{duration}</span>
+                {item.total_tokens != null && (
+                  <span className='session-card__separator'>•</span>
+                )}
+              </>
+            )}
+            {item.total_tokens != null && (
+              <span className='session-card__stat'>
+                {format_shorthand_number(item.total_tokens)} tokens
+              </span>
+            )}
+          </div>
+          {item.show_actions && (
+            <div className='session-card__actions'>
+              <button
+                className='session-card__action-button'
+                onClick={handle_message_click}
+                title='Send message'
+                aria-label='Send message to thread'>
+                msg
+              </button>
+              <button
+                className='session-card__action-button'
+                onClick={handle_archive_click}
+                title='Archive thread'
+                aria-label='Archive thread'>
+                archive
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+SessionCard.propTypes = {
+  item: PropTypes.shape({
+    id: PropTypes.string,
+    title: PropTypes.string,
+    status: PropTypes.oneOf(['running', 'idle', 'review', 'archived']),
+    updated_at: PropTypes.string,
+    working_directory: PropTypes.string,
+    message_count: PropTypes.number,
+    duration_minutes: PropTypes.number,
+    total_tokens: PropTypes.number,
+    latest_timeline_event: PropTypes.object,
+    show_actions: PropTypes.bool
+  }).isRequired
+}
+
+export default SessionCard

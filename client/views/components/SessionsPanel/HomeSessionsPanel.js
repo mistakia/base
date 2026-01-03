@@ -10,9 +10,80 @@ import {
   get_all_active_sessions,
   get_active_sessions_count
 } from '@core/active-sessions/selectors'
-import Thread from '@components/Thread/index.js'
-import ActiveSessionCard from './ActiveSessionCard.js'
+import { get_thread_by_id } from '@core/threads/selectors.js'
+import SessionCard from './SessionCard.js'
 import './HomeSessionsPanel.styl'
+
+/**
+ * Normalize an active session to the unified card format
+ * @param {Object} session - Active session from Redux
+ * @param {Function} get_thread - Function to get thread by ID from state
+ * @returns {Object} Normalized item for SessionCard
+ */
+const normalize_session = (session, get_thread) => {
+  const is_running = session.status === 'active'
+  const is_idle = session.status === 'idle'
+  const has_thread = Boolean(session.thread_id)
+  const is_redacted = Boolean(session.is_redacted)
+
+  // Check if associated thread is archived
+  const thread = has_thread ? get_thread(session.thread_id) : null
+  const is_thread_archived = thread?.thread_state === 'archived'
+
+  // Show actions only for idle sessions with non-archived threads
+  const show_actions =
+    is_idle && has_thread && !is_redacted && !is_thread_archived
+
+  return {
+    id: session.thread_id,
+    title:
+      session.thread_title ||
+      (session.working_directory
+        ? session.working_directory.split('/').pop() || 'root'
+        : 'Unknown'),
+    status: is_running ? 'running' : 'idle',
+    updated_at: session.last_activity_at,
+    working_directory: session.working_directory,
+    message_count: session.message_count,
+    duration_minutes: session.duration_minutes,
+    total_tokens: session.total_tokens,
+    latest_timeline_event: session.latest_timeline_event,
+    show_actions
+  }
+}
+
+/**
+ * Normalize a thread to the unified card format
+ * @param {Object} thread - Thread from Redux
+ * @returns {Object} Normalized item for SessionCard
+ */
+const normalize_thread = (thread) => {
+  const working_directory =
+    thread.working_directory ||
+    thread.external_session?.provider_metadata?.working_directory
+
+  const duration_minutes =
+    thread.duration_minutes ||
+    thread.external_session?.provider_metadata?.duration_minutes
+
+  // Show actions for active threads (ready for review)
+  const show_actions = thread.thread_state === 'active'
+
+  return {
+    id: thread.thread_id,
+    title: thread.title,
+    status: thread.thread_state === 'active' ? 'review' : 'archived',
+    updated_at: thread.updated_at,
+    working_directory,
+    message_count: thread.message_count,
+    duration_minutes,
+    total_tokens:
+      thread.total_tokens ||
+      thread.external_session?.provider_metadata?.total_tokens,
+    latest_timeline_event: thread.latest_timeline_event || null,
+    show_actions
+  }
+}
 
 const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
   const dispatch = useDispatch()
@@ -20,6 +91,10 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
   const active_session_count = useSelector(get_active_sessions_count)
   const [sessions_collapsed, set_sessions_collapsed] = useState(true)
   const [threads_collapsed, set_threads_collapsed] = useState(true)
+
+  // Create a getter function for thread lookup
+  const state = useSelector((s) => s)
+  const get_thread = (thread_id) => get_thread_by_id(state, thread_id)
 
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
@@ -31,9 +106,20 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
     }
   }, [load_threads])
 
-  // Filter threads that are active (need attention)
+  // Get thread IDs that have active sessions
+  const active_session_thread_ids = new Set(
+    (active_sessions || [])
+      .filter((session) => session.thread_id)
+      .map((session) => session.thread_id)
+  )
+
+  // Filter threads that are active (need attention) and don't have an active session
   const active_threads = threads
-    ? threads.filter((thread) => thread.thread_state === 'active')
+    ? threads.filter(
+        (thread) =>
+          thread.thread_state === 'active' &&
+          !active_session_thread_ids.has(thread.thread_id)
+      )
     : []
 
   const displayed_threads = List.isList(active_threads)
@@ -50,7 +136,6 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
   }
 
   const sessions_list = active_sessions || []
-
   const threads_list = displayed_threads.toJS
     ? displayed_threads.toJS()
     : displayed_threads
@@ -82,7 +167,10 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
           {!sessions_collapsed && (
             <div className='home-sessions-panel__list'>
               {sessions_list.map((session) => (
-                <ActiveSessionCard key={session.session_id} session={session} />
+                <SessionCard
+                  key={session.session_id}
+                  item={normalize_session(session, get_thread)}
+                />
               ))}
             </div>
           )}
@@ -117,7 +205,10 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
           {!threads_collapsed && (
             <div className='home-sessions-panel__list'>
               {threads_list.map((thread) => (
-                <Thread key={thread.thread_id} thread={thread} />
+                <SessionCard
+                  key={thread.thread_id}
+                  item={normalize_thread(thread)}
+                />
               ))}
             </div>
           )}
