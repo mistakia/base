@@ -134,10 +134,10 @@ client/
 
 ### Code Block Colors
 
-| Token       | Value   | Usage                 |
-| ----------- | ------- | --------------------- |
+| Token       | Value   | Usage                                                           |
+| ----------- | ------- | --------------------------------------------------------------- |
 | code_bg     | #f5eee6 | Code block background (lighter shade of breadcrumb/theme color) |
-| code_border | #e8dcc8 | Code block border (lighter brown) |
+| code_border | #e8dcc8 | Code block border (lighter brown)                               |
 
 ### Diff Colors
 
