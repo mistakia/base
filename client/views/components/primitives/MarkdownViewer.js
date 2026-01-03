@@ -104,24 +104,24 @@ const get_normal_styles = {
     overflowX: 'auto',
     margin: '0.75em 0',
     borderRadius: '4px',
-    border: `1px solid ${COLORS.code_border}`
+    border: `1px solid ${COLORS.breadcrumb_light}`
   },
   '& table': {
     borderCollapse: 'collapse',
-    backgroundColor: COLORS.code_bg,
+    backgroundColor: COLORS.surface,
     fontFamily: 'var(--font-family-mono)',
     fontSize: '0.875rem',
     width: '100%',
     minWidth: 'max-content'
   },
   '& th, & td': {
-    border: `1px solid ${COLORS.code_border}`,
+    border: `1px solid ${COLORS.breadcrumb_light}`,
     padding: '6px 12px',
     textAlign: 'left',
     whiteSpace: 'nowrap'
   },
   '& th': {
-    backgroundColor: COLORS.code_border,
+    backgroundColor: COLORS.breadcrumb_light,
     fontWeight: 600
   },
   // XML tag styling - display XML tags as colored text

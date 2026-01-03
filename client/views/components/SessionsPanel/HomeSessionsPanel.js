@@ -14,12 +14,7 @@ import Thread from '@components/Thread/index.js'
 import ActiveSessionCard from './ActiveSessionCard.js'
 import './HomeSessionsPanel.styl'
 
-const HomeSessionsPanel = ({
-  threads,
-  is_loading_threads,
-  load_threads,
-  max_threads = 3
-}) => {
+const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
   const dispatch = useDispatch()
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
@@ -134,7 +129,6 @@ const HomeSessionsPanel = ({
 
 HomeSessionsPanel.propTypes = {
   threads: ImmutablePropTypes.list,
-  is_loading_threads: PropTypes.bool,
   load_threads: PropTypes.func,
   max_threads: PropTypes.number
 }

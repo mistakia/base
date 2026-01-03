@@ -31,7 +31,7 @@
 .active-session-card
   background: white
   border-radius: $radius_base
-  border: none
+  border: 1px solid transparent
   padding: $space_sm $space_base
   transition: all $transition_fast
   position: relative
@@ -41,7 +41,7 @@
   max-width: 100%
 
   &--active
-    border: 1px solid rgba(40, 167, 69, 0.3)
+    animation: border-pulse 1.5s ease-in-out infinite
 
   &--clickable
     cursor: pointer
@@ -50,25 +50,31 @@
       transform: $hover_lift
       box-shadow: $shadow_sm
 
-.active-session-card__main-row
+@keyframes border-pulse
+  0%, 100%
+    border-color: rgba(40, 167, 69, 0.3)
+  50%
+    border-color: rgba(40, 167, 69, 0.7)
+
+.active-session-card__header-row
   display: flex
   align-items: center
   gap: $space_xs
-  margin-bottom: $space_xs
   min-width: 0
   max-width: 100%
 
-.active-session-card__dot
-  width: 8px
-  height: 8px
-  border-radius: 50%
-  background-color: $color_success
-  animation: pulse 1.5s ease-in-out infinite
+.active-session-card__status
+  font-size: $font_size_xs
+  color: $color_success
+  font-weight: $font_weight_medium
   flex-shrink: 0
 
-  &--idle
-    background-color: $color_text_tertiary
-    animation: none
+.active-session-card__time
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  color: $color_text_tertiary
+  flex-shrink: 0
+  margin-right: $space_sm
 
 .active-session-card__title
   font-size: $font_size_sm
@@ -82,27 +88,6 @@
   white-space: nowrap
   line-height: 1.4
 
-.active-session-card__provider
-  flex-shrink: 0
-
-.active-session-card__details-row
-  display: flex
-  align-items: center
-  gap: $space_xs
-  font-size: $font_size_xs
-  color: $color_text_secondary
-
-.active-session-card__status
-  color: $color_success
-  font-weight: $font_weight_medium
-
-.active-session-card__separator
-  color: $color_text_tertiary
-
-.active-session-card__time
-  font-family: $font_family_mono
-  color: $color_text_tertiary
-
 // Compact Timeline Event Display
 .compact-timeline-event
   display: flex
@@ -110,7 +95,7 @@
   gap: $space_xs
   padding: $space_xs $space_sm
   margin-top: $space_xs
-  background: $color_surface_secondary
+  background: rgba($breadcrumb_light_color, 0.4)
   border-radius: $radius_sm
   font-size: $font_size_xs
   color: $color_text_secondary
@@ -159,21 +144,21 @@
   overflow-wrap: break-word
 
   // Override MarkdownViewer styles for compact display
-  :deep(p)
+  p
     margin-bottom: $space_xs
     word-break: break-word
 
-  :deep(p:last-child)
+  p:last-child
     margin-bottom: 0
 
-  :deep(pre)
+  pre
     font-size: $font_size_xs
     padding: $space_xs
     margin: $space_xs 0
     overflow-x: auto
     word-break: break-all
 
-  :deep(code)
+  code
     font-size: $font_size_xs
     word-break: break-all
 
