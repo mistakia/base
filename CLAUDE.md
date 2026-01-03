@@ -209,6 +209,38 @@ node cli/archive-thread.mjs --thread-id abc123 --reactivate
 
 # Rebuild embedded database index
 node cli/rebuild-embedded-index.mjs
+
+# Analyze thread for metadata updates (title, relations)
+node cli/analyze-thread-metadata.mjs <thread-id> --dry-run
+
+# Sync threads to remote storage
+node cli/rsync-threads.mjs sync <thread-id>
+node cli/rsync-threads.mjs sync-all
+node cli/rsync-threads.mjs status
+```
+
+### External Session Import
+
+```bash
+# Import Claude Code sessions as threads
+node cli/convert-external-sessions.mjs list --provider claude
+node cli/convert-external-sessions.mjs import --provider claude --dry-run
+node cli/convert-external-sessions.mjs import --provider claude --session-id "uuid"
+
+# Import Cursor conversations
+node cli/convert-external-sessions.mjs import --provider cursor --from-date "2025-01-01"
+
+# Validate session files without importing
+node cli/convert-external-sessions.mjs validate --provider claude --verbose
+```
+
+### Entity Visibility
+
+```bash
+# Manage entity public_read visibility
+./cli/entity-visibility.sh set <base-uri> --public
+./cli/entity-visibility.sh set <base-uri> --private
+./cli/entity-visibility.sh get <base-uri>
 ```
 
 ### GitHub Integration
@@ -220,6 +252,27 @@ node cli/github/create-github-issues-from-local-tasks.mjs
 # Import GitHub issues into local entities
 node cli/github/import-github-issues.mjs
 node cli/github/import-github-project-issues.mjs
+
+# Create GitHub labels from tag entities
+node cli/github/create-github-labels.mjs
+```
+
+### Notion Integration
+
+```bash
+# Sync Notion databases to local entities
+node cli/notion/sync-notion-entities.mjs
+
+# Clean up orphaned Notion entity files
+node cli/notion/cleanup-notion-entities.mjs
+```
+
+### Configuration and Deployment
+
+```bash
+# Sync config files to remote storage server
+./cli/sync-config.sh --dry-run
+./cli/sync-config.sh --all          # Include PM2 config
 ```
 
 ## Git Workflow Rules
