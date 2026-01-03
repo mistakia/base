@@ -4,9 +4,26 @@ html, body, #app
   overscroll-behavior: none
   overscroll-behavior-y: none
 
+// iOS Status Bar background color - matches breadcrumb bar background
+// When using black-translucent, the status bar shows the page background behind it
+html
+  background-color: var(--color-breadcrumb-bar-bg)
+  // Create a status bar background that matches breadcrumb bar background
+  &::before
+    content: ""
+    position: fixed
+    top: 0
+    left: 0
+    right: 0
+    height: env(safe-area-inset-top, 0px)
+    background-color: var(--color-breadcrumb-bar-bg)
+    z-index: 10000
+    pointer-events: none
+
 body
   overflow: hidden
   -webkit-overflow-scrolling: auto
+  background-color: var(--color-surface)
 
   &::after
     content: "";

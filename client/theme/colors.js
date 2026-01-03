@@ -23,6 +23,9 @@ export const COLOR_SURFACE_SECONDARY = '#f8f9fa'
 // Accent Colors
 export const COLOR_BREADCRUMB_DARK = '#4a3520'
 export const COLOR_BREADCRUMB_LIGHT = '#e8d4c1'
+// Breadcrumb bar background - mix of light color (60%) and surface (40%)
+// Matches: mix(#E8D4C1, #F7F7F4, 60%)
+export const COLOR_BREADCRUMB_BAR_BG = '#eee2d5'
 export const COLOR_PRIMARY = '#007bff'
 export const COLOR_PRIMARY_HOVER = '#0069d9'
 
@@ -71,6 +74,7 @@ export const COLORS = {
   // Accent
   breadcrumb_dark: COLOR_BREADCRUMB_DARK,
   breadcrumb_light: COLOR_BREADCRUMB_LIGHT,
+  breadcrumb_bar_bg: COLOR_BREADCRUMB_BAR_BG,
   primary: COLOR_PRIMARY,
   primary_hover: COLOR_PRIMARY_HOVER,
 
