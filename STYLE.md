@@ -136,8 +136,8 @@ client/
 
 | Token       | Value   | Usage                 |
 | ----------- | ------- | --------------------- |
-| code_bg     | #f1f3f0 | Code block background |
-| code_border | #e1e4e8 | Code block border     |
+| code_bg     | #f5eee6 | Code block background (lighter shade of breadcrumb/theme color) |
+| code_border | #e8dcc8 | Code block border (lighter brown) |
 
 ### Diff Colors
 

@@ -32,9 +32,9 @@ export const COLOR_SUCCESS = '#28a745'
 export const COLOR_WARNING = '#f66a0a'
 export const COLOR_INFO = '#0969da'
 
-// Code/Terminal Colors
-export const COLOR_CODE_BG = '#f1f3f0'
-export const COLOR_CODE_BORDER = '#e1e4e8'
+// Code/Terminal Colors - using breadcrumb color scheme (lighter shade)
+export const COLOR_CODE_BG = '#f5eee6'  // Lighter cream matching breadcrumb/theme color
+export const COLOR_CODE_BORDER = '#e8dcc8'  // Lighter brown border
 export const COLOR_TERMINAL_BG = '#0d1117'
 export const COLOR_TERMINAL_TEXT = '#e6edf3'
 export const COLOR_TERMINAL_SUCCESS = '#7ee83f'
