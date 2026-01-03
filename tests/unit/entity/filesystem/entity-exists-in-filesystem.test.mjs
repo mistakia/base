@@ -101,7 +101,7 @@ describe('entity_exists_in_filesystem', () => {
     await fs.chmod(absolute_path, 0o644)
   })
 
-  it('should return false when path is a directory', async () => {
+  it('should return true when path is a readable directory', async () => {
     // Arrange
     const dir_path = path.join(temp_dir, 'entity-dir')
     await fs.mkdir(dir_path)
@@ -112,6 +112,39 @@ describe('entity_exists_in_filesystem', () => {
     })
 
     // Assert
+    expect(exists).to.be.true
+  })
+
+  it('should return false when directory does not exist', async () => {
+    // Arrange
+    const non_existent_dir = path.join(temp_dir, 'non-existent-dir')
+
+    // Act
+    const exists = await entity_exists_in_filesystem({
+      absolute_path: non_existent_dir
+    })
+
+    // Assert
     expect(exists).to.be.false
+  })
+
+  it('should return false when directory exists but is not readable', async () => {
+    // Arrange
+    const dir_path = path.join(temp_dir, 'unreadable-dir')
+    await fs.mkdir(dir_path)
+
+    // Make directory unreadable
+    await fs.chmod(dir_path, 0o000)
+
+    // Act
+    const exists = await entity_exists_in_filesystem({
+      absolute_path: dir_path
+    })
+
+    // Assert
+    expect(exists).to.be.false
+
+    // Cleanup - make directory readable again so it can be deleted
+    await fs.chmod(dir_path, 0o755)
   })
 })
