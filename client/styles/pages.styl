@@ -30,6 +30,10 @@ body
   padding: 0 var(--space-base) 30px
   max-width: 100%
 
+  // On mobile, add top padding for breadcrumb bar at top
+  @media (max-width: 768px)
+    padding: 30px var(--space-base) 0
+
 // Header area - scrolls away vertically, stays in place horizontally
 .page-header-area
   position: sticky
@@ -45,6 +49,10 @@ body
   box-sizing: border-box
   padding-bottom: 100px
   padding-top: 32px
+
+  // On mobile, adjust padding for breadcrumb at top
+  @media (max-width: 768px)
+    padding-top: 12px
 
 // Sessions panel shown below header on non-homepage pages
 .page-sessions-panel
@@ -82,6 +90,13 @@ body
   font-size: var(--font-size-sm)
   color: var(--color-text)
   overflow: visible
+
+  // On mobile, move to top instead of bottom
+  @media (max-width: 768px)
+    top: 0
+    bottom: auto
+    border-top: none
+    border-bottom: 1px solid var(--color-border, #e1e4e8)
 
   // Refine MUI breadcrumbs inside the bar to match mono/compact Emacs feel
   .MuiBreadcrumbs-root

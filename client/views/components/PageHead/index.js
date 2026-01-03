@@ -84,6 +84,14 @@ const PageHead = ({
       <meta name='robots' content='index, follow' />
       <meta name='viewport' content='width=device-width, initial-scale=1' />
 
+      {/* iOS Status Bar and Theme Color - matches breadcrumb background */}
+      <meta name='apple-mobile-web-app-capable' content='yes' />
+      <meta
+        name='apple-mobile-web-app-status-bar-style'
+        content='black-translucent'
+      />
+      <meta name='theme-color' content='#eee2d5' />
+
       {/* Structured Data for Articles */}
       {type === 'article' && (
         <script type='application/ld+json'>
