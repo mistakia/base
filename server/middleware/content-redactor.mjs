@@ -632,6 +632,13 @@ export const redact_thread_data = (thread) => {
     redacted.timeline = redacted.timeline.map(redact_timeline_entry)
   }
 
+  // Redact latest timeline event (added by enrich_thread_with_timeline)
+  if (redacted.latest_timeline_event) {
+    redacted.latest_timeline_event = redact_timeline_entry(
+      redacted.latest_timeline_event
+    )
+  }
+
   return redacted
 }
 
