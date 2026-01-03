@@ -6,7 +6,7 @@ description: >-
   environment
 base_uri: user:repository/active/base/system/workflow/implement-general-task.md
 created_at: '2025-08-23T00:00:00.000Z'
-entity_id: c3d4e5f6-7890-1234-abcd-efghijklmnop
+entity_id: c3d4e5f6-7890-4234-abcd-ef0123456789
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]

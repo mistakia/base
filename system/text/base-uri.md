@@ -10,7 +10,7 @@ relations:
   - implements [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
 updated_at: '2025-06-14T17:43:40.949Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Base URI Specification

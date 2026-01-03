@@ -11,7 +11,7 @@ relations:
   - follows [[sys:system/guideline/write-software-implementation-plan.md]]
   - uses [[sys:system/guideline/write-entity.md]]
 updated_at: '2025-06-18T00:44:36.062Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 <task>Write a software implementation plan by analyzing a task and breaking it into specific file changes</task>

@@ -24,7 +24,7 @@ relations:
   - uses [[sys:system/schema/workflow.md]]
   - uses [[sys:system/schema/guideline.md]]
 updated_at: '2025-06-06T16:51:43.604Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Write Claude Code Slash Command

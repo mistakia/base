@@ -11,7 +11,7 @@ observations:
   - '[governance] Limited set of priorities helps with workflow automation'
   - '[organization] Clear priority levels improve resource allocation and planning'
 updated_at: '2025-06-04T15:45:43.271Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Choose Task Priority Guideline

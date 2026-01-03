@@ -25,7 +25,7 @@ relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2025-12-13T21:50:00.000Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Merge Worktree Feature Branch

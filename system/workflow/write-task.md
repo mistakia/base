@@ -12,7 +12,7 @@ relations:
   - implements [[sys:system/schema/task.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2025-06-26T01:12:24.554Z'
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Write Task
