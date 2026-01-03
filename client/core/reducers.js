@@ -8,6 +8,7 @@ import { directory_reducer } from './directory/index.js'
 import { notification_reducer } from './notification/index.js'
 import { active_sessions_reducer } from './active-sessions/index.js'
 import { thread_prompt_reducer } from './thread-prompt/index.js'
+import { activity_reducer } from './activity/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -19,7 +20,8 @@ const root_reducer = (router) =>
     directory: directory_reducer,
     notification: notification_reducer,
     active_sessions: active_sessions_reducer,
-    thread_prompt: thread_prompt_reducer
+    thread_prompt: thread_prompt_reducer,
+    activity: activity_reducer
   })
 
 export default root_reducer

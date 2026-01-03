@@ -7989,6 +7989,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"echarts-for-react@npm:^3.0.2":
+  version: 3.0.5
+  resolution: "echarts-for-react@npm:3.0.5"
+  dependencies:
+    fast-deep-equal: "npm:^3.1.3"
+    size-sensor: "npm:^1.0.1"
+  peerDependencies:
+    echarts: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0
+    react: ^15.0.0 || >=16.0.0
+  checksum: 10/9961cc60ceee1df7d193a18ca834d1e44a96faeeb84d43f215d84b8129664d980a9e9585a092b6a81734bbbb45a71e6e35c474870148130ba7f5013a33837bfc
+  languageName: node
+  linkType: hard
+
+"echarts@npm:^5.6.0":
+  version: 5.6.0
+  resolution: "echarts@npm:5.6.0"
+  dependencies:
+    tslib: "npm:2.3.0"
+    zrender: "npm:5.6.1"
+  checksum: 10/e73344abb777fd8401c0b89a5d83b65c7a81a11540e2047d51f4aae9419baf4dc2524a5d9561f9ca0fe8d6b432c58b7a1d518f2a4338041046506db8257a1332
+  languageName: node
+  linkType: hard
+
 "ee-first@npm:1.1.1":
   version: 1.1.1
   resolution: "ee-first@npm:1.1.1"
@@ -14143,6 +14166,8 @@ __metadata:
     debug: "npm:^4.4.0"
     deep-extend: "npm:^0.6.0"
     duckdb: "npm:^1.1.0"
+    echarts: "npm:^5.6.0"
+    echarts-for-react: "npm:^3.0.2"
     eslint: "npm:8.57.1"
     eslint-config-standard: "npm:17.1.0"
     eslint-plugin-import: "npm:2.31.0"
@@ -14750,6 +14775,13 @@ __metadata:
   dependencies:
     semver: "npm:^7.5.3"
   checksum: 10/40bd4f96aa89aedbf717ae9f4ab8fca70e8f7511e8b766feb15471cca3f6fe4fe673743309b08b4ba8abfe0965c9cd927e1de46550a757b819b70fc7430cc85d
+  languageName: node
+  linkType: hard
+
+"size-sensor@npm:^1.0.1":
+  version: 1.0.2
+  resolution: "size-sensor@npm:1.0.2"
+  checksum: 10/de7050178ae9afee3388eb9191af0902b30ef83c26e8c9d9c203e1b560e270b947d978e4f56d211802112d09ef296931fa612f69155a483900f3b4717a0750d7
   languageName: node
   linkType: hard
 
@@ -15544,6 +15576,13 @@ __metadata:
     minimist: "npm:^1.2.6"
     strip-bom: "npm:^3.0.0"
   checksum: 10/2041beaedc6c271fc3bedd12e0da0cc553e65d030d4ff26044b771fac5752d0460944c0b5e680f670c2868c95c664a256cec960ae528888db6ded83524e33a14
+  languageName: node
+  linkType: hard
+
+"tslib@npm:2.3.0":
+  version: 2.3.0
+  resolution: "tslib@npm:2.3.0"
+  checksum: 10/9c55c9abd5ecd94e5fd37573db27e26933fb6c33506431403fb4627dcb8aa9a45b772afa6d05dd2c25dc1de22a213193251e6303742f3bcdc179e523a9295bfd
   languageName: node
   linkType: hard
 
@@ -16598,6 +16637,15 @@ __metadata:
   version: 3.24.2
   resolution: "zod@npm:3.24.2"
   checksum: 10/604c62a8cf8e330d78b106a557f4b44f5d14845d20b1360a423ccc09b58cb8525ccf7e4b40cf1bd4852d22393d2c67774b5817ec5a2fedab25f543b36ed15943
+  languageName: node
+  linkType: hard
+
+"zrender@npm:5.6.1":
+  version: 5.6.1
+  resolution: "zrender@npm:5.6.1"
+  dependencies:
+    tslib: "npm:2.3.0"
+  checksum: 10/25dfd476be243f051614f131675855d184eb05e8b9a39dc41146a3a553a17aad5ceba77e166d525be9c4adc2bb237c56dfdfb3456667940bbeddb05eef3deac7
   languageName: node
   linkType: hard
 

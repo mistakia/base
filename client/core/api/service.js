@@ -176,6 +176,11 @@ export const api = {
   delete_active_session({ session_id }) {
     const url = `${API_URL}/active-sessions/${session_id}`
     return { url, method: 'DELETE' }
+  },
+
+  get_activity_heatmap({ days = 365 } = {}) {
+    const url = `${API_URL}/activity/heatmap?days=${days}`
+    return { url }
   }
 }
 

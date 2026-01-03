@@ -6,6 +6,7 @@ import threads from './threads.mjs'
 import models from './models.mjs'
 import filesystem from './filesystem.mjs'
 import active_sessions from './active-sessions.mjs'
+import activity from './activity.mjs'
 
 export default {
   users,
@@ -15,5 +16,6 @@ export default {
   threads,
   models,
   filesystem,
-  active_sessions
+  active_sessions,
+  activity
 }

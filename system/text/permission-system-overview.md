@@ -4,10 +4,10 @@ type: text
 description: >-
   Comprehensive overview of the permission system including user-based access control,
   public read functionality, and precedence rules
-created_at: 2025-01-20T00:00:00.000Z
-updated_at: 2025-01-20T00:00:00.000Z
-entity_id: permission-system-overview
-user_public_key: 0000000000000000000000000000000000000000000000000000000000000000
+created_at: '2025-01-20T00:00:00.000Z'
+updated_at: '2025-01-20T00:00:00.000Z'
+entity_id: 'a7b8c9d0-1234-5678-9abc-def012345678'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Permission System Overview

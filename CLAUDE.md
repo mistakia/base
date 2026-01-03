@@ -171,6 +171,57 @@ Threads execute workflows in isolated git worktrees:
 - **Variable Names**: Use snake_case for variables and function names
 - **CSS Classes**: Use BEM methodology with kebab-case
 
+## CLI Tools
+
+The `cli/` directory contains utilities for managing entities and validating the knowledge base.
+
+### Validation and Maintenance
+
+```bash
+# Validate all markdown entities against schemas
+node cli/validate-filesystem-markdown.mjs /path/to/user-base
+node cli/validate-filesystem-markdown.mjs --exclude_path_patterns "thread/**" /path/to/user-base
+
+# Fix missing required fields (entity_id, user_public_key, timestamps)
+node cli/update-entity-fields.mjs                    # Apply fixes
+node cli/update-entity-fields.mjs --dry_run          # Preview changes
+node cli/update-entity-fields.mjs --include_path_patterns "task/*.md"
+```
+
+### Entity Management
+
+```bash
+# Move entity and update all references
+node cli/move-entity.mjs task/old-name.md task/new-name.md
+node cli/move-entity.mjs user:task/old.md user:task/subdir/new.md --dry_run
+
+# Batch add/remove tags from entities
+node cli/manage-tags.mjs add -t javascript -i "task/*.md"
+node cli/manage-tags.mjs remove -t legacy -i "**/*.md" --dry_run
+```
+
+### Thread Management
+
+```bash
+# Archive or reactivate threads
+node cli/archive-thread.mjs --thread-id abc123 --completed
+node cli/archive-thread.mjs --thread-id abc123 --reactivate
+
+# Rebuild embedded database index
+node cli/rebuild-embedded-index.mjs
+```
+
+### GitHub Integration
+
+```bash
+# Create GitHub issues from local task entities
+node cli/github/create-github-issues-from-local-tasks.mjs
+
+# Import GitHub issues into local entities
+node cli/github/import-github-issues.mjs
+node cli/github/import-github-project-issues.mjs
+```
+
 ## Git Workflow Rules
 
 **CRITICAL: Never commit directly to `main` or `master` branches**

@@ -6,6 +6,7 @@ import PageLayout from '@views/layout/PageLayout.js'
 import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout'
 import HomeSessionsPanel from '@components/SessionsPanel/HomeSessionsPanel.js'
+import ActivityHeatmap from '@components/ActivityHeatmap/index.js'
 import HomePageTasks from './HomePageTasks.js'
 import HomeFileBrowser from './HomeFileBrowser.js'
 import PageHead from '@views/components/PageHead/index.js'
@@ -59,6 +60,7 @@ const Homepage = ({
             }
             right_content={
               <div className='homepage-right-column'>
+                <ActivityHeatmap />
                 <HomeSessionsPanel
                   threads={threads}
                   is_loading_threads={is_loading_threads}
