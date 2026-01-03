@@ -83,7 +83,10 @@ const PageHead = ({
 
       {/* Additional Meta Tags for Rich Snippets */}
       <meta name='robots' content='index, follow' />
-      <meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover' />
+      <meta
+        name='viewport'
+        content='width=device-width, initial-scale=1, viewport-fit=cover'
+      />
 
       {/* iOS Status Bar and Theme Color - matches breadcrumb bar background */}
       <meta name='apple-mobile-web-app-capable' content='yes' />

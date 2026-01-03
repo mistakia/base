@@ -2,6 +2,7 @@ import { Record, List, Map } from 'immutable'
 
 import { threads_action_types } from './actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
+import { TABLE_OPERATORS } from 'react-table/src/constants.mjs'
 import { create_default_table_state } from '@core/table/create-default-table-state.js'
 import { create_view } from '@core/table/create-view.js'
 import {
@@ -122,6 +123,45 @@ const ACTIVE_THREADS_VIEW = create_view({
   })
 })
 
+// Calculate dates for time-based views
+const now = new Date()
+const last_48_hours = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+const last_7_days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+const LAST_48_HOURS_VIEW = create_view({
+  entity_prefix: 'thread',
+  view_id: 'last_48_hours',
+  view_name: 'Last 48 Hours',
+  table_state: create_default_table_state({
+    columns: DEFAULT_TABLE_COLUMNS,
+    sort: [{ column_id: 'created_at', desc: true }],
+    where: new List([
+      {
+        column_id: 'created_at',
+        operator: TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+        value: last_48_hours.toISOString()
+      }
+    ])
+  })
+})
+
+const LAST_7_DAYS_VIEW = create_view({
+  entity_prefix: 'thread',
+  view_id: 'last_7_days',
+  view_name: 'Last 7 Days',
+  table_state: create_default_table_state({
+    columns: DEFAULT_TABLE_COLUMNS,
+    sort: [{ column_id: 'created_at', desc: true }],
+    where: new List([
+      {
+        column_id: 'created_at',
+        operator: TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+        value: last_7_days.toISOString()
+      }
+    ])
+  })
+})
+
 // ============================================================================
 // Initial State
 // ============================================================================
@@ -145,7 +185,9 @@ const ThreadsState = new Record({
   // Table views management
   thread_table_views: new Map({
     default: DEFAULT_THREAD_TABLE_VIEW,
-    active: ACTIVE_THREADS_VIEW
+    active: ACTIVE_THREADS_VIEW,
+    last_48_hours: LAST_48_HOURS_VIEW,
+    last_7_days: LAST_7_DAYS_VIEW
   }),
   selected_thread_table_view_id: 'active',
   thread_all_columns: Map(thread_columns)
