@@ -179,6 +179,19 @@
     "public_read": {
       "type": "boolean",
       "description": "Whether this thread can be read by anyone without authentication. Only affects read access - write operations are always limited to owner."
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z_]+ \\[\\[.+\\]\\]$"
+      },
+      "description": "Array of entity relations in format 'relation_type [[base_uri]]' (e.g., 'accesses [[user:task/my-task.md]]')"
+    },
+    "relations_analyzed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when relation analysis was last performed (ISO 8601). Prevents duplicate analysis runs."
     }
   },
   "additionalProperties": false,
