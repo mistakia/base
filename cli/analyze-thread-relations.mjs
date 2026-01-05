@@ -21,7 +21,10 @@ import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
-import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
+import {
+  analyze_thread_relations,
+  SUPPORTED_MODELS
+} from '#libs-server/metadata/analyze-thread-relations.mjs'
 
 const log = debug('cli:analyze-thread-relations')
 
@@ -54,6 +57,29 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     type: 'boolean',
     default: false
   })
+  .option('model', {
+    alias: 'm',
+    describe: `Model to use for LLM classification. Available: ${Object.keys(SUPPORTED_MODELS).join(', ')}`,
+    type: 'string'
+  })
+  .option('json-output', {
+    alias: 'j',
+    describe:
+      'Request structured JSON output from LLM (includes confidence scores)',
+    type: 'boolean',
+    default: false
+  })
+  .option('list-models', {
+    describe: 'List available models and exit',
+    type: 'boolean',
+    default: false
+  })
+  .option('force', {
+    alias: 'f',
+    describe: 'Force re-analysis even if thread was previously analyzed',
+    type: 'boolean',
+    default: false
+  })
   .option('output-format', {
     alias: 'o',
     describe: 'Output format',
@@ -67,11 +93,30 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     '$0 --thread-id abc123 --skip-related-threads',
     'Skip LLM thread discovery'
   )
+  .example(
+    '$0 --thread-id abc123 --model qwen-coder --json-output',
+    'Use Qwen model with JSON output'
+  )
+  .example('$0 --list-models', 'List available models')
+  .example(
+    '$0 --thread-id abc123 --force',
+    'Force re-analysis of already analyzed thread'
+  )
   .strict()
   .help()
   .alias('help', 'h').argv
 
 const main = async () => {
+  // Handle --list-models
+  if (argv.listModels) {
+    console.log('\nAvailable models for thread relation analysis:\n')
+    for (const [alias, full_id] of Object.entries(SUPPORTED_MODELS)) {
+      console.log(`  ${alias.padEnd(20)} -> ${full_id}`)
+    }
+    console.log('\nUsage: --model <alias> or --model <full-model-id>')
+    process.exit(0)
+  }
+
   handle_cli_directory_registration(argv)
 
   let error
@@ -81,7 +126,10 @@ const main = async () => {
     const result = await analyze_thread_relations({
       thread_id: argv.threadId,
       dry_run: argv.dryRun,
-      skip_related_threads: argv.skipRelatedThreads
+      skip_related_threads: argv.skipRelatedThreads,
+      model: argv.model,
+      use_json_output: argv.jsonOutput,
+      force: argv.force
     })
 
     if (argv.outputFormat === 'json') {
@@ -101,16 +149,33 @@ const main = async () => {
         console.log(`Thread relations: ${result.thread_relations_count}`)
         console.log(`Total relations: ${result.total_relations_count}`)
 
+        if (result.model_used) {
+          console.log(`\nModel used: ${result.model_used}`)
+        }
+        if (result.candidates_evaluated) {
+          console.log(`Candidates evaluated: ${result.candidates_evaluated}`)
+        }
         if (result.related_threads_duration_ms > 0) {
           console.log(
             `Related threads discovery took: ${result.related_threads_duration_ms}ms`
           )
         }
 
+        if (result.reasoning) {
+          console.log(`\nLLM reasoning: ${result.reasoning}`)
+        }
+
         if (result.relations && result.relations.length > 0) {
           console.log('\nRelations:')
           for (const relation of result.relations) {
-            console.log(`  - ${relation}`)
+            // Check if we have confidence scores for this relation
+            const thread_id_match = relation.match(/user:thread\/([a-f0-9-]+)/)
+            const confidence =
+              thread_id_match && result.confidence_scores
+                ? result.confidence_scores[thread_id_match[1]]
+                : null
+            const confidence_str = confidence ? ` [${confidence}]` : ''
+            console.log(`  - ${relation}${confidence_str}`)
           }
         }
 
