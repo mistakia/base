@@ -1,6 +1,6 @@
 // Tool Components Styling
 // Extends the base Material-UI theme with tool-specific enhancements
-@import '../../../../styles/variables'
+@import '@styles/variables'
 
 // Color palette for tool types
 .tool-filesystem
@@ -85,21 +85,8 @@
       color: $color_success
       font-weight: bold
 
-// Terminal-style output for Bash tools
-.terminal-output
-  background-color: $color_terminal_bg !important
-  color: $color_terminal_text !important
-  font-family: $font_family_mono !important
-
-  .terminal-prompt
-    color: $color_terminal_prompt !important
-    font-weight: bold !important
-
-  .terminal-success
-    color: $color_terminal_success !important
-
-  .terminal-error
-    color: $color_terminal_error !important
+// Terminal styles moved to components/terminal.styl
+@import '@styles/components/terminal'
 
 // Database table styling enhancements
 .db-table-container

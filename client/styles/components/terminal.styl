@@ -1,0 +1,26 @@
+// =====================================================
+// TERMINAL STYLES
+// =====================================================
+// Consolidated terminal/code styling for execution tools.
+// Single location for all terminal color definitions.
+
+@import '@styles/variables'
+
+// Terminal-style output for Bash tools and code execution
+.terminal-output
+  background-color: $color_terminal_bg !important
+  color: $color_terminal_text !important
+  font-family: $font_family_mono !important
+
+  .terminal-prompt
+    color: $color_terminal_prompt !important
+    font-weight: bold !important
+
+  .terminal-success
+    color: $color_terminal_success !important
+
+  .terminal-error
+    color: $color_terminal_error !important
+
+  .terminal-muted
+    color: $color_terminal_muted !important
