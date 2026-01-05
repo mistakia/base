@@ -3,11 +3,12 @@ import PropTypes from 'prop-types'
 import Container from '@mui/material/Container'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
-import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
 import Convert from 'nanocurrency-web/dist/lib/util/convert'
 
+import Button from '@views/components/primitives/Button/Button.js'
+import { COLORS } from '@theme/colors.js'
 import './auth.styl'
 
 function generate_key_pair() {
@@ -99,10 +100,10 @@ export default function AuthPage({
         spacing={2}
         divider={<Divider orientation='horizontal' flexItem />}>
         <div>
-          <Button variant='contained' onClick={generateKey}>
+          <Button variant='primary' onClick={generateKey}>
             Generate New Keypair
           </Button>
-          <p style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
+          <p style={{ marginTop: '8px', fontSize: '14px', color: COLORS.text_secondary }}>
             Create a new cryptographic keypair for authentication
           </p>
         </div>

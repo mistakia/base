@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Typography, TableRow, TableCell } from '@mui/material'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
+import { COLORS } from '@theme/colors.js'
 
 // Parse relation string and extract relation type and base URI
 export const parse_relation = (relation_string) => {
@@ -56,7 +57,7 @@ export const RelationsField = ({ key_name, value }) => {
           <TableRow key={idx}>
             <TableCell sx={relation_cell_sx} colSpan={2}>
               <Typography variant='caption' sx={{ fontSize: '10px' }}>
-                <span style={{ fontWeight: 600, color: '#666' }}>
+                <span style={{ fontWeight: 600, color: COLORS.text_secondary }}>
                   {parsed.relation_type}
                 </span>{' '}
                 <a
@@ -64,14 +65,14 @@ export const RelationsField = ({ key_name, value }) => {
                   target='_blank'
                   rel='noopener noreferrer'
                   style={{
-                    color: '#0366d6',
+                    color: COLORS.icon_link,
                     textDecoration: 'none',
                     borderBottom: '1px solid transparent',
                     transition: 'border-color 0.2s ease',
                     cursor: 'pointer'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.borderBottomColor = '#0366d6'
+                    e.target.style.borderBottomColor = COLORS.icon_link
                   }}
                   onMouseLeave={(e) => {
                     e.target.style.borderBottomColor = 'transparent'

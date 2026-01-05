@@ -240,7 +240,7 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
                             <span
                               style={{
                                 fontStyle: 'italic',
-                                color: '#666',
+                                color: COLORS.text_secondary,
                                 fontSize: '10px'
                               }}>
                               NULL

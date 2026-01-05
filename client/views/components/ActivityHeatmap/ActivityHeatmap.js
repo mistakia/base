@@ -11,6 +11,7 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 
+import { COLORS } from '@theme/colors.js'
 import './ActivityHeatmap.styl'
 
 // Register ECharts components
@@ -158,13 +159,13 @@ const ActivityHeatmap = ({
         monthLabel: {
           show: true,
           fontSize: 10,
-          color: '#666'
+          color: COLORS.text_secondary
         },
         dayLabel: {
           show: true,
           firstDay: 0,
           fontSize: 10,
-          color: '#666',
+          color: COLORS.text_secondary,
           nameMap: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
         },
         splitLine: {
