@@ -72,16 +72,26 @@ export async function execute_kuzu_query({ query, parameters = {} }) {
 
 export async function close_kuzu_connection() {
   if (kuzu_connection) {
-    // Kuzu connections are automatically cleaned up
+    try {
+      await kuzu_connection.close()
+      log('Kuzu connection closed')
+    } catch (error) {
+      log('Error closing Kuzu connection: %s', error.message)
+    }
     kuzu_connection = null
   }
 
   if (kuzu_database) {
+    try {
+      await kuzu_database.close()
+      log('Kuzu database closed')
+    } catch (error) {
+      log('Error closing Kuzu database: %s', error.message)
+    }
     kuzu_database = null
   }
 
   database_path = null
-  log('Kuzu connection closed')
 }
 
 export function get_kuzu_database_path() {
