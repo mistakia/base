@@ -27,22 +27,28 @@ const BINARY_PATH =
  * @param {string} params.prompt - The prompt to send to OpenCode
  * @param {string} [params.model] - Model to use (default: devstral-small-2:24b)
  * @param {number} [params.timeout_ms] - Timeout in milliseconds
+ * @param {string} [params.mode] - OpenCode mode (e.g., 'plan' to reduce tool usage)
  * @returns {Promise<{output: string, duration_ms: number}>} Raw output and execution time
  */
 export const run_opencode = async ({
   prompt,
   model = DEFAULT_MODEL,
-  timeout_ms = TIMEOUT_MS
+  timeout_ms = TIMEOUT_MS,
+  mode = null
 }) => {
   if (!prompt) {
     throw new Error('prompt is required')
   }
 
-  log(`Running OpenCode with model: ${model}`)
+  log(`Running OpenCode with model: ${model}${mode ? `, mode: ${mode}` : ''}`)
   const start_time = Date.now()
 
   return new Promise((resolve, reject) => {
-    const args = ['run', '-m', model, prompt]
+    const args = ['run', '-m', model]
+    if (mode) {
+      args.push('--mode', mode)
+    }
+    args.push(prompt)
     const process_handle = spawn(BINARY_PATH, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env }

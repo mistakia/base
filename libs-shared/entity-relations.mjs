@@ -39,6 +39,16 @@ export const RELATION_USES_ITEM = 'uses_item'
 // Involvement relations
 export const RELATION_INVOLVES = 'involves'
 
+// Thread-Entity relations (forward)
+export const RELATION_ACCESSES = 'accesses'
+export const RELATION_MODIFIES = 'modifies'
+export const RELATION_CREATES = 'creates'
+
+// Thread-Entity relations (reverse)
+export const RELATION_ACCESSED_BY = 'accessed_by'
+export const RELATION_MODIFIED_BY = 'modified_by'
+export const RELATION_CREATED_BY = 'created_by'
+
 /**
  * Common relation types used across the system
  */
@@ -59,7 +69,13 @@ export const common_relation_types = [
   RELATION_NEEDS_ITEM,
   RELATION_USES_ITEM,
   RELATION_PRECEDES,
-  RELATION_SUCCEEDS
+  RELATION_SUCCEEDS,
+  RELATION_ACCESSES,
+  RELATION_MODIFIES,
+  RELATION_CREATES,
+  RELATION_ACCESSED_BY,
+  RELATION_MODIFIED_BY,
+  RELATION_CREATED_BY
 ]
 
 /**
@@ -78,7 +94,15 @@ export const relation_type_categories = {
   assignment: [RELATION_ASSIGNED_TO],
   membership: [RELATION_MEMBER_OF, RELATION_HAS_MEMBER],
   resource: [RELATION_NEEDS_ITEM, RELATION_USES_ITEM],
-  involvement: [RELATION_INVOLVES]
+  involvement: [RELATION_INVOLVES],
+  thread_entity: [
+    RELATION_ACCESSES,
+    RELATION_MODIFIES,
+    RELATION_CREATES,
+    RELATION_ACCESSED_BY,
+    RELATION_MODIFIED_BY,
+    RELATION_CREATED_BY
+  ]
 }
 
 /**

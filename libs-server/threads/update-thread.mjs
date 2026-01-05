@@ -6,6 +6,7 @@ import { hideBin } from 'yargs/helpers'
 import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import config from '#config'
 import is_main from '#libs-server/utils/is-main.mjs'
 import {
@@ -112,6 +113,22 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     absolute_path: path.join(thread.context_dir, 'timeline.json'),
     file_content: JSON.stringify(timeline, null, 2)
   })
+
+  // Queue relation analysis when archiving (if not already analyzed)
+  if (
+    thread_state === THREAD_STATE.ARCHIVED &&
+    !metadata.relations_analyzed_at
+  ) {
+    try {
+      await queue_relation_analysis(thread_id)
+      log(`Queued thread ${thread_id} for relation analysis`)
+    } catch (error) {
+      // Don't fail the archive operation if queuing fails
+      log(
+        `Failed to queue relation analysis for ${thread_id}: ${error.message}`
+      )
+    }
+  }
 
   // Return updated thread data
   return {
