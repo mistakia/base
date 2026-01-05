@@ -84,12 +84,16 @@ test('list_import_history_files - should list files for specific entity', async 
 test('list_import_history_files - should list files for external system', async () => {
   const temp_dir = await create_temp_import_history()
   const external_system = 'notion'
+  // Use UUID format entity_ids (required for directory scanning)
+  const entity_1 = 'c1d2e3f4-a5b6-7890-abcd-ef1234567801'
+  const entity_2 = 'c1d2e3f4-a5b6-7890-abcd-ef1234567802'
+  const entity_3 = 'c1d2e3f4-a5b6-7890-abcd-ef1234567803'
 
   try {
     // Create sample data for multiple entities
-    await create_sample_import_data(temp_dir, external_system, 'entity-1', 2)
-    await create_sample_import_data(temp_dir, external_system, 'entity-2', 3)
-    await create_sample_import_data(temp_dir, 'github', 'entity-3', 1) // Different system
+    await create_sample_import_data(temp_dir, external_system, entity_1, 2)
+    await create_sample_import_data(temp_dir, external_system, entity_2, 3)
+    await create_sample_import_data(temp_dir, 'github', entity_3, 1) // Different system
 
     // List files for specific external system
     const result = await list_import_history_files({
@@ -100,7 +104,7 @@ test('list_import_history_files - should list files for external system', async 
     assert.strictEqual(result.length, 2) // Only notion entities
 
     const entity_ids = result.map((r) => r.entity_id).sort()
-    assert.deepStrictEqual(entity_ids, ['entity-1', 'entity-2'])
+    assert.deepStrictEqual(entity_ids, [entity_1, entity_2].sort())
 
     // Verify total files
     const total_files = result.reduce((sum, r) => sum + r.total_files, 0)
@@ -112,12 +116,16 @@ test('list_import_history_files - should list files for external system', async 
 
 test('list_import_history_files - should list all entities when no filters', async () => {
   const temp_dir = await create_temp_import_history()
+  // Use UUID format entity_ids (required for directory scanning)
+  const entity_1 = 'd1e2f3a4-b5c6-7890-abcd-ef1234567801'
+  const entity_2 = 'd1e2f3a4-b5c6-7890-abcd-ef1234567802'
+  const entity_3 = 'd1e2f3a4-b5c6-7890-abcd-ef1234567803'
 
   try {
     // Create sample data for multiple systems and entities
-    await create_sample_import_data(temp_dir, 'github', 'entity-1', 2)
-    await create_sample_import_data(temp_dir, 'notion', 'entity-2', 1)
-    await create_sample_import_data(temp_dir, 'notion', 'entity-3', 3)
+    await create_sample_import_data(temp_dir, 'github', entity_1, 2)
+    await create_sample_import_data(temp_dir, 'notion', entity_2, 1)
+    await create_sample_import_data(temp_dir, 'notion', entity_3, 3)
 
     // List all files
     const result = await list_import_history_files({

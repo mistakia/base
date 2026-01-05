@@ -137,11 +137,15 @@ test('cleanup_import_history_files - should handle dry run mode', async () => {
 test('cleanup_import_history_files - should handle multiple entities', async () => {
   const temp_dir = await create_temp_import_history()
   const external_system = 'github'
+  // Use UUID format entity_ids (required for directory scanning)
+  const entity_1 = 'a1b2c3d4-e5f6-7890-abcd-ef1234567801'
+  const entity_2 = 'a1b2c3d4-e5f6-7890-abcd-ef1234567802'
+  const entity_3 = 'a1b2c3d4-e5f6-7890-abcd-ef1234567803'
 
   try {
-    await create_sample_import_data(temp_dir, external_system, 'entity-1', 3)
-    await create_sample_import_data(temp_dir, external_system, 'entity-2', 4)
-    await create_sample_import_data(temp_dir, 'notion', 'entity-3', 2) // Different system
+    await create_sample_import_data(temp_dir, external_system, entity_1, 3)
+    await create_sample_import_data(temp_dir, external_system, entity_2, 4)
+    await create_sample_import_data(temp_dir, 'notion', entity_3, 2) // Different system
 
     const result = await cleanup_import_history_files({
       external_system, // Only github
@@ -155,7 +159,7 @@ test('cleanup_import_history_files - should handle multiple entities', async () 
     assert.strictEqual(result.total_files_deleted, 10)
 
     // Verify notion entity untouched
-    const notion_raw_dir = path.join(temp_dir, 'notion', 'entity-3', 'raw')
+    const notion_raw_dir = path.join(temp_dir, 'notion', entity_3, 'raw')
     assert.strictEqual(await count_files_in_directory(notion_raw_dir), 2)
   } finally {
     await fs.rm(temp_dir, { recursive: true, force: true })
@@ -198,10 +202,13 @@ test('cleanup_import_history_files - should not delete when files <= keep_count'
 
 test('get_cleanup_summary - should provide accurate statistics', async () => {
   const temp_dir = await create_temp_import_history()
+  // Use UUID format entity_ids (required for directory scanning)
+  const entity_1 = 'b1c2d3e4-f5a6-7890-abcd-ef1234567801'
+  const entity_2 = 'b1c2d3e4-f5a6-7890-abcd-ef1234567802'
 
   try {
-    await create_sample_import_data(temp_dir, 'github', 'entity-1', 5)
-    await create_sample_import_data(temp_dir, 'notion', 'entity-2', 3)
+    await create_sample_import_data(temp_dir, 'github', entity_1, 5)
+    await create_sample_import_data(temp_dir, 'notion', entity_2, 3)
 
     const summary = await get_cleanup_summary({
       keep_count: 2,

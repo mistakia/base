@@ -11,13 +11,18 @@ import create_temp_test_repo from '#tests/utils/create-temp-test-repo.mjs'
 import create_test_user from '#tests/utils/create-test-user.mjs'
 import { write_entity_to_git } from '#libs-server/entity/git/write-entity-to-git.mjs'
 
-describe('Entity Schema Module', () => {
+describe('Entity Schema Module', function () {
   let system_base_directory
   let user_base_directory
   let test_user
   let cleanup
 
-  before(async () => {
+  before(async function () {
+    this.timeout(30000) // Set timeout for before hook
+
+    // Clear any existing registry state from previous tests
+    clear_registered_directories()
+
     test_user = await create_test_user()
 
     // Create a temp root repo and user repository
@@ -136,6 +141,9 @@ describe('Entity Schema Module', () => {
   })
 
   after(async () => {
+    // Clear registry state
+    clear_registered_directories()
+
     if (cleanup) await cleanup()
   })
 

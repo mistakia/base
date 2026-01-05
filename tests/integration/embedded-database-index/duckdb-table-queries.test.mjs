@@ -22,6 +22,8 @@ import {
 
 describe('DuckDB Table Queries Integration', () => {
   before(async () => {
+    // Ensure clean state by closing any existing connection
+    await close_duckdb_connection()
     // Initialize DuckDB with in-memory database for tests
     await initialize_duckdb_client({ in_memory: true })
 
@@ -92,7 +94,11 @@ describe('DuckDB Table Queries Integration', () => {
   })
 
   after(async () => {
-    await close_duckdb_connection()
+    try {
+      await close_duckdb_connection()
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   })
 
   describe('query_tasks_from_duckdb', () => {

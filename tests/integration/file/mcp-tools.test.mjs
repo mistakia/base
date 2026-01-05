@@ -140,10 +140,20 @@ describe('MCP File Tools Integration', function () {
   })
 
   after(async function () {
-    // Disconnect the MCP client
+    this.timeout(10000)
+    // Disconnect the MCP client with error handling
     if (mcp_client) {
-      await mcp_client.close()
+      try {
+        await mcp_client.close()
+      } catch (error) {
+        // Ignore EPIPE and other cleanup errors
+        if (!error.message?.includes('EPIPE')) {
+          console.error('Error closing MCP client:', error.message)
+        }
+      }
     }
+    // Allow time for subprocess to fully terminate
+    await new Promise((resolve) => setTimeout(resolve, 100))
   })
 
   it('should write to a file with file_write using branch', async function () {
