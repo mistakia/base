@@ -31,7 +31,6 @@ properties:
     type: string
     required: false
     description: HTML content if applicable
-relations:
 type_name: digital_item
 updated_at: '2026-01-05T19:24:58.833Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

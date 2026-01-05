@@ -11,7 +11,6 @@ observations:
   - '[standard] Standardized status values ensure consistent task management'
   - '[governance] Limited set of statuses helps with workflow automation'
   - '[organization] Clear status values improve task tracking and reporting'
-relations:
 updated_at: '2026-01-05T19:24:58.348Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

@@ -7,7 +7,6 @@ description: >-
 base_uri: user:repository/active/base/system/text/permission-system-overview.md
 created_at: '2025-01-20T00:00:00.000Z'
 entity_id: a7b8c9d0-1234-5678-9abc-def012345678
-relations:
 updated_at: '2026-01-05T19:25:18.047Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

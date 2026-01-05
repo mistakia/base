@@ -74,7 +74,6 @@ properties:
       type: string
     required: false
     description: Views defined for this database
-relations:
 type_name: database
 updated_at: '2026-01-05T19:25:18.021Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

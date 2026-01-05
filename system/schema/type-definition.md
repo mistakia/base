@@ -4,6 +4,11 @@ title: Type Definition Schema
 type_name: type_definition
 extends: entity
 description: Type definitions define the structure of content types
+base_uri: sys:system/schema/type-definition.md
+created_at: '2025-08-16T17:56:08.206Z'
+entity_id: eb3b9603-02e5-4642-b51c-08f286a72742
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+updated_at: '2026-01-05T19:25:18.000Z'
 properties:
   - name: type_name
     type: string

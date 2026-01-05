@@ -11,7 +11,6 @@ observations:
   - '[principle] Avoiding stubbing creates more reliable tests #reliability'
   - '[strategy] Proper test structure improves readability and maintainability #structure'
   - '[standard] Consistent database management ensures test isolation #isolation'
-relations:
 updated_at: '2026-01-05T19:25:11.815Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

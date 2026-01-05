@@ -16,7 +16,6 @@ properties:
     type: string
     required: false
     description: Optional color code for the tag (e.g., hex code)
-relations:
 type_name: tag
 updated_at: '2026-01-05T19:24:58.796Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

@@ -11,7 +11,6 @@ observations:
   - '[standard] Standardized priority values ensure consistent task management'
   - '[governance] Limited set of priorities helps with workflow automation'
   - '[organization] Clear priority levels improve resource allocation and planning'
-relations:
 updated_at: '2026-01-05T19:25:18.071Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
