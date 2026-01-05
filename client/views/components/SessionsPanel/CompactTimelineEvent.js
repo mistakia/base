@@ -210,10 +210,19 @@ const get_assistant_content = (timeline_event) => {
  * For assistant messages, shows markdown content with expand/collapse.
  */
 const CompactTimelineEvent = ({ timeline_event }) => {
-  const [is_expanded, set_is_expanded] = useState(false)
-  const toggle_expanded = useCallback((e) => {
+  // State for collapsing/expanding the entire message (default: collapsed)
+  const [is_message_collapsed, set_is_message_collapsed] = useState(true)
+  // State for more/less toggle when message is expanded
+  const [is_content_expanded, set_is_content_expanded] = useState(false)
+
+  const toggle_message = useCallback((e) => {
     e.stopPropagation()
-    set_is_expanded((v) => !v)
+    set_is_message_collapsed((v) => !v)
+  }, [])
+
+  const toggle_content = useCallback((e) => {
+    e.stopPropagation()
+    set_is_content_expanded((v) => !v)
   }, [])
 
   if (!timeline_event) return null
@@ -223,7 +232,7 @@ const CompactTimelineEvent = ({ timeline_event }) => {
     const full_content = get_assistant_content(timeline_event)
     const should_truncate = full_content.length > MAX_COLLAPSED_LENGTH
     const display_content =
-      should_truncate && !is_expanded
+      should_truncate && !is_content_expanded
         ? full_content.substring(0, MAX_COLLAPSED_LENGTH) + '...'
         : full_content
 
@@ -231,28 +240,48 @@ const CompactTimelineEvent = ({ timeline_event }) => {
       <div className='compact-timeline-event compact-timeline-event--message'>
         <div className='compact-timeline-event__header'>
           <span className='compact-timeline-event__label'>Assistant</span>
-          {should_truncate && (
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {!is_message_collapsed && should_truncate && (
+              <button
+                className='compact-timeline-event__toggle'
+                onClick={toggle_content}
+                type='button'>
+                {is_content_expanded ? (
+                  <>
+                    <ExpandLessIcon fontSize='inherit' />
+                    <span>Less</span>
+                  </>
+                ) : (
+                  <>
+                    <ExpandMoreIcon fontSize='inherit' />
+                    <span>More</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               className='compact-timeline-event__toggle'
-              onClick={toggle_expanded}
+              onClick={toggle_message}
               type='button'>
-              {is_expanded ? (
+              {is_message_collapsed ? (
                 <>
-                  <ExpandLessIcon fontSize='inherit' />
-                  <span>Less</span>
+                  <ExpandMoreIcon fontSize='inherit' />
+                  <span>Expand</span>
                 </>
               ) : (
                 <>
-                  <ExpandMoreIcon fontSize='inherit' />
-                  <span>More</span>
+                  <ExpandLessIcon fontSize='inherit' />
+                  <span>Collapse</span>
                 </>
               )}
             </button>
-          )}
+          </div>
         </div>
-        <div className='compact-timeline-event__content'>
-          <MarkdownViewer content={display_content} />
-        </div>
+        {!is_message_collapsed && (
+          <div className='compact-timeline-event__content'>
+            <MarkdownViewer content={display_content} />
+          </div>
+        )}
       </div>
     )
   }
