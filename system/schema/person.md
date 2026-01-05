@@ -27,7 +27,6 @@ properties:
     type: string
     required: false
     description: Personal website
-relations:
 type_name: person
 updated_at: '2026-01-05T19:24:59.834Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

@@ -77,7 +77,6 @@ properties:
     required: false
     items:
       type: string
-relations:
 type_name: workflow
 updated_at: '2026-01-05T19:25:18.020Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

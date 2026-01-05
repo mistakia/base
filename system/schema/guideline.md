@@ -44,7 +44,6 @@ properties:
           type: any
           required: false
           description: Default value for the property
-relations:
 type_name: guideline
 updated_at: '2026-01-05T19:25:16.429Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

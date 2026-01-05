@@ -87,7 +87,6 @@ properties:
     type: string
     required: false
     description: Reason why the task was abandoned
-relations:
 type_name: task
 updated_at: '2026-01-05T19:25:18.586Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

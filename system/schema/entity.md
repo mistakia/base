@@ -65,7 +65,6 @@ properties:
     type: datetime
     required: false
     description: Date when the item was archived
-relations:
 type_name: entity
 updated_at: '2026-01-05T19:25:18.083Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
