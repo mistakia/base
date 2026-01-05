@@ -76,6 +76,7 @@ describe('Base URI Utilities', () => {
         authority: '',
         path: 'schema/task.md',
         branch: null,
+        fragment: null,
         original: 'sys:schema/task.md'
       })
     })
@@ -87,6 +88,7 @@ describe('Base URI Utilities', () => {
         authority: 'database',
         path: 'etc/config.md',
         branch: null,
+        fragment: null,
         original: 'ssh://database/etc/config.md'
       })
     })
@@ -100,7 +102,37 @@ describe('Base URI Utilities', () => {
         authority: 'github.com',
         path: 'owner/repo/docs/api.md',
         branch: 'main',
+        fragment: null,
         original: 'git://github.com/owner/repo/docs/api.md@main'
+      })
+    })
+
+    it('should parse URI with fragment identifier', () => {
+      const result = parse_base_uri(
+        'user:repository/active/league/docs/glossary.md#play-by-play-columns'
+      )
+      expect(result).to.deep.equal({
+        scheme: 'user',
+        authority: '',
+        path: 'repository/active/league/docs/glossary.md',
+        branch: null,
+        fragment: 'play-by-play-columns',
+        original:
+          'user:repository/active/league/docs/glossary.md#play-by-play-columns'
+      })
+    })
+
+    it('should parse URI with both branch and fragment', () => {
+      const result = parse_base_uri(
+        'git://github.com/owner/repo/docs/api.md@main#section'
+      )
+      expect(result).to.deep.equal({
+        scheme: 'git',
+        authority: 'github.com',
+        path: 'owner/repo/docs/api.md',
+        branch: 'main',
+        fragment: 'section',
+        original: 'git://github.com/owner/repo/docs/api.md@main#section'
       })
     })
 

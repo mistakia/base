@@ -62,7 +62,7 @@ export async function validate_references_from_filesystem({ references }) {
     return {
       valid: false,
       errors: missing_references.map(
-        (ref) => `Reference not found: ${ref.reference_base_uri} (${ref.path})`
+        (ref) => `Reference not found: ${ref.reference_base_uri}`
       )
     }
   } catch (error) {

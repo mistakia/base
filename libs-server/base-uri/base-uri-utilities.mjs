@@ -85,7 +85,7 @@ export function create_base_uri_from_git_file({
 /**
  * Parse a base_uri into its components
  * @param {string} base_uri - The base_uri to parse
- * @returns {Object} - Parsed components { scheme, authority, path, branch }
+ * @returns {Object} - Parsed components { scheme, authority, path, branch, fragment }
  */
 export function parse_base_uri(base_uri) {
   if (!base_uri || typeof base_uri !== 'string') {
@@ -93,7 +93,23 @@ export function parse_base_uri(base_uri) {
   }
 
   // Handle branch notation (e.g., git://repo/file@branch)
-  const [uri_part, branch] = base_uri.split('@')
+  // Note: branch notation uses @, fragment uses #, so we need to handle both
+  // The fragment can appear after the branch: git://repo/file@branch#fragment
+  const [uri_part_without_branch, branch_and_fragment] = base_uri.split('@')
+
+  // Strip fragment identifier from URI (RFC 3986: fragment is separated by #)
+  // Fragment is for client-side navigation, not part of file path
+  const [uri_part, uri_fragment] = uri_part_without_branch.split('#')
+
+  // If branch contains a fragment (e.g., "main#section"), extract it
+  let branch = branch_and_fragment || null
+  let fragment = uri_fragment || null
+
+  if (branch && branch.includes('#')) {
+    const [branch_part, branch_fragment] = branch.split('#')
+    branch = branch_part
+    fragment = branch_fragment
+  }
 
   // First try to match path-only schemes (sys:, user:)
   const path_only_match = uri_part.match(/^(sys|user):(.*)$/)
@@ -104,6 +120,7 @@ export function parse_base_uri(base_uri) {
       authority: '',
       path,
       branch: branch || null,
+      fragment: fragment || null,
       original: base_uri
     }
   }
@@ -125,6 +142,7 @@ export function parse_base_uri(base_uri) {
       authority: remainder,
       path: '',
       branch: branch || null,
+      fragment: fragment || null,
       original: base_uri
     }
   }
@@ -137,6 +155,7 @@ export function parse_base_uri(base_uri) {
     authority,
     path,
     branch: branch || null,
+    fragment: fragment || null,
     original: base_uri
   }
 }
@@ -239,16 +258,19 @@ export function create_base_uri_from_path(absolute_path, options = {}) {
       options.user_base_directory || config.user_base_directory
   }
 
+  // Check system directory FIRST (it may be nested inside user directory)
+  if (
+    system_base_directory &&
+    absolute_path.startsWith(system_base_directory)
+  ) {
+    const relative_path = path.relative(system_base_directory, absolute_path)
+    return create_system_uri(relative_path)
+  }
+
   // Check if path is within user directory
   if (user_base_directory && absolute_path.startsWith(user_base_directory)) {
     const relative_path = path.relative(user_base_directory, absolute_path)
     return create_user_uri(relative_path)
-  }
-
-  // Check if path is within system directory
-  if (absolute_path.startsWith(system_base_directory)) {
-    const relative_path = path.relative(system_base_directory, absolute_path)
-    return create_system_uri(relative_path)
   }
 
   // External paths are not supported - only managed repositories
