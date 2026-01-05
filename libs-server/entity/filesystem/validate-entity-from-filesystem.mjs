@@ -40,6 +40,24 @@ export async function validate_entity_from_filesystem({
   try {
     log(`Validating entity from filesystem: ${entity_properties.entity_id}`)
 
+    // Validate that relations property is not empty - if present, it must have values
+    // Empty arrays or null/undefined values for relations should be omitted entirely
+    if (Object.prototype.hasOwnProperty.call(entity_properties, 'relations')) {
+      const relations = entity_properties.relations
+      if (
+        relations === null ||
+        relations === undefined ||
+        (Array.isArray(relations) && relations.length === 0)
+      ) {
+        return {
+          success: false,
+          errors: [
+            'Empty relations property is not allowed. If there are no relations, omit the relations property entirely.'
+          ]
+        }
+      }
+    }
+
     // Run schema validation if schemas are provided
     const schema_result = schemas
       ? await validate_entity_properties({
