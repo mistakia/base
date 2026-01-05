@@ -1,20 +1,27 @@
 ---
-title: 'Execution Threads'
-type: 'text'
-description: |
-  Defines execution threads as a unified session model for handling both conversations and agentic workflows across different providers within the system.
+title: Execution Threads
+type: text
+description: >-
+  Defines execution threads as a unified session model for handling both conversations and agentic
+  workflows across different providers within the system.
+base_uri: user:repository/active/base/system/text/execution-threads.md
 created_at: '2025-05-27T18:10:20.241Z'
-entity_id: '576c86bd-3ff4-4d88-b246-f168f3f11700'
+entity_id: 576c86bd-3ff4-4d88-b246-f168f3f11700
 observations:
-  - '[design] Threads provide a standardized session format for all interactions, whether Base system sessions or external provider sessions'
-  - '[architecture] Unified timeline structure enables consistent handling across different session providers'
-  - '[integration] Session provider acts as the "engine" choice - external providers are normalized to common thread format'
+  - >-
+    [design] Threads provide a standardized session format for all interactions, whether Base system
+    sessions or external provider sessions
+  - >-
+    [architecture] Unified timeline structure enables consistent handling across different session
+    providers
+  - >-
+    [integration] Session provider acts as the "engine" choice - external providers are normalized
+    to common thread format
   - '[focus] Agentic workflows are the primary use case, with conversations as a secondary pattern'
 relations:
-  - 'relates_to [[sys:system/text/system-design.md]]'
-  - 'relates_to [[sys:system/text/workflow.md]]'
-tags:
-updated_at: '2025-07-20T18:10:20.242Z'
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/workflow.md]]
+updated_at: '2026-01-05T19:24:56.466Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

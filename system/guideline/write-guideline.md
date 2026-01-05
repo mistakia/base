@@ -1,24 +1,23 @@
 ---
-title: 'Create Guideline'
-type: 'guideline'
-description: |
-  Guidelines for creating new guidelines that define standards and principles
+title: Create Guideline
+type: guideline
+description: Guidelines for creating new guidelines that define standards and principles
+base_uri: user:repository/active/base/system/guideline/write-guideline.md
 created_at: '2025-05-27T18:10:20.239Z'
-entity_id: '55c0f40b-3c54-44f9-8366-8c0d91d72986'
+entity_id: 55c0f40b-3c54-44f9-8366-8c0d91d72986
 globs:
-  - 'guideline/**/*.md'
+  - guideline/**/*.md
 observations:
   - '[governance] Clear naming conventions improve discoverability #naming'
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
   - '[distinction] Guidelines define reusable standards, workflows define specific processes'
   - '[philosophy] Start with core beliefs and iterate based on actual needs'
 relations:
-  - 'related_to [[sys:system/guideline/write-workflow.md]]'
-  - 'implements [[sys:system/text/system-design.md]]'
-  - 'implements [[sys:system/schema/guideline.md]]'
-  - 'follows [[user:guideline/starting-point-philosophy.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.239Z'
+  - related_to [[sys:system/guideline/write-workflow.md]]
+  - implements [[sys:system/text/system-design.md]]
+  - implements [[sys:system/schema/guideline.md]]
+  - follows [[user:guideline/starting-point-philosophy.md]]
+updated_at: '2026-01-05T19:25:02.704Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Physical Item Schema
+type: type_definition
 description: Physical items represent tangible objects, equipment, or materials
+base_uri: user:repository/active/base/system/schema/physical-item.md
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: 0eb4ada8-d30f-40a8-ad31-e60a3110a8d4
 extends: entity
@@ -183,7 +184,7 @@ properties:
     required: false
     description: Miscellaneous notes
 type_name: physical_item
-updated_at: '2025-08-16T17:56:09.132Z'
+updated_at: '2026-01-05T19:25:18.554Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

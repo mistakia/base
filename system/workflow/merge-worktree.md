@@ -1,7 +1,10 @@
 ---
 title: Merge Worktree Feature Branch
 type: workflow
-description: Merge a worktree feature branch into the main branch following proper git workflow, with automatic task completion
+description: >-
+  Merge a worktree feature branch into the main branch following proper git workflow, with automatic
+  task completion
+base_uri: user:repository/active/base/system/workflow/merge-worktree.md
 created_at: '2025-06-14T17:43:40.946Z'
 entity_id: a37c88c1-97d3-483a-b30e-7871c3a243bb
 observations:
@@ -9,7 +12,9 @@ observations:
   - '[principle] All changes must go through proper merge process rather than direct commits to main'
   - '[requirement] Feature branch should be reviewed and ready for merge before using this workflow'
   - '[feature] Automatically completes associated tasks when worktree is successfully merged'
-  - '[improvement] Task search uses multiple fallback strategies (worktree_path, filename, project directory)'
+  - >-
+    [improvement] Task search uses multiple fallback strategies (worktree_path, filename, project
+    directory)
   - '[improvement] Documents submodule status prefixes for clearer interpretation'
   - '[improvement] Notes command execution limitations for variable assignment in some environments'
 prompt_properties:
@@ -24,7 +29,7 @@ prompt_properties:
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2025-12-13T21:50:00.000Z'
+updated_at: '2026-01-05T19:25:18.079Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

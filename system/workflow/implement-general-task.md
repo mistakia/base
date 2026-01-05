@@ -13,7 +13,7 @@ relations:
   - follows [[sys:system/workflow/write-general-implementation-plan.md]]
   - follows [[sys:system/guideline/review-task.md]]
   - uses [[user:guideline/write-text.md]]
-updated_at: '2025-08-23T00:00:00.000Z'
+updated_at: '2026-01-05T19:25:18.081Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

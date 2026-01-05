@@ -1,20 +1,19 @@
 ---
-title: 'Create Task Relationships'
-type: 'guideline'
-description: |
-  Guidelines for creating and selecting appropriate task relationships
+title: Create Task Relationships
+type: guideline
+description: Guidelines for creating and selecting appropriate task relationships
+base_uri: user:repository/active/base/system/guideline/create-task-relationships.md
 created_at: '2025-05-27T18:10:20.235Z'
-entity_id: '68470987-1a98-4228-8bce-abee8a848517'
+entity_id: 68470987-1a98-4228-8bce-abee8a848517
 globs:
-  - 'task/**/*.md'
+  - task/**/*.md
 observations:
-  - 'Task relationships create structure and context in a task management system'
-  - 'Clear relationship definitions improve task planning and execution'
-  - 'Consistent relationship usage enhances reporting and visibility'
+  - Task relationships create structure and context in a task management system
+  - Clear relationship definitions improve task planning and execution
+  - Consistent relationship usage enhances reporting and visibility
 relations:
-  - 'implements [[sys:system/schema/task.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.235Z'
+  - implements [[sys:system/schema/task.md]]
+updated_at: '2026-01-05T19:24:59.839Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

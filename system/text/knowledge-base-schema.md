@@ -1,18 +1,17 @@
 ---
-title: 'Knowledge Base Schema'
-type: 'text'
-description: |
-  Documentation for the knowledge base schema architecture and extension mechanisms
+title: Knowledge Base Schema
+type: text
+description: Documentation for the knowledge base schema architecture and extension mechanisms
+base_uri: user:repository/active/base/system/text/knowledge-base-schema.md
 created_at: '2025-05-27T18:10:20.245Z'
-entity_id: 'e773b4d1-83c1-4fa2-85a8-b22d2d04667a'
+entity_id: e773b4d1-83c1-4fa2-85a8-b22d2d04667a
 observations:
   - '[design] Knowledge base schema is a dual-system architecture'
   - '[implementation] System schema is in system/schema and user schema is in separate repositories'
   - '[feature] Schema extensions allow for user-specific customization'
 relations:
-  - 'relates_to [[sys:system/text/system-design.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.245Z'
+  - relates_to [[sys:system/text/system-design.md]]
+updated_at: '2026-01-05T19:25:18.033Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

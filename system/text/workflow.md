@@ -1,21 +1,20 @@
 ---
-title: 'Workflow'
-type: 'text'
-description: |
-  Design for workflow-based agent specialization and orchestration
+title: Workflow
+type: text
+description: Design for workflow-based agent specialization and orchestration
+base_uri: user:repository/active/base/system/text/workflow.md
 created_at: '2025-05-27T18:10:20.241Z'
-entity_id: '7ab1422d-533d-4967-972a-7fb8167604ff'
+entity_id: 7ab1422d-533d-4967-972a-7fb8167604ff
 observations:
   - '[architecture] Workflows define agent behaviors that run inside threads'
   - '[execution] Each thread executes exactly one workflow with defined inputs/outputs'
   - '[principle] Tool integration enables complex agent capabilities'
 relations:
-  - 'relates_to [[sys:system/text/system-design.md]]'
-  - 'relates_to [[sys:system/text/execution-threads.md]]'
-  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
-  - 'relates_to [[sys:system/schema/workflow.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.241Z'
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/execution-threads.md]]
+  - relates_to [[sys:system/text/knowledge-base-schema.md]]
+  - relates_to [[sys:system/schema/workflow.md]]
+updated_at: '2026-01-05T19:24:57.362Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

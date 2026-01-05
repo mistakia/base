@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Person Schema
+type: type_definition
 description: Persons represent individual people
+base_uri: user:repository/active/base/system/schema/person.md
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: 5abc7086-4eab-4b4a-a56f-2dab6ca8d791
 extends: entity
@@ -26,8 +27,9 @@ properties:
     type: string
     required: false
     description: Personal website
+relations:
 type_name: person
-updated_at: '2025-08-16T17:56:09.132Z'
+updated_at: '2026-01-05T19:24:59.834Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

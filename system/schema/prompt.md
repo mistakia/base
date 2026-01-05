@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Prompt Schema
+type: type_definition
 description: Schema for prompt entities used in the system
+base_uri: user:repository/active/base/system/schema/prompt.md
 created_at: '2025-08-16T17:56:08.205Z'
 entity_id: e4ac31d5-f140-48a6-a122-4855426f91b8
 extends: entity
@@ -9,7 +10,7 @@ relations:
   - implements [[sys:system/text/knowledge-base-schema.md]]
   - extends [[sys:system/schema/entity.md]]
 type_name: prompt
-updated_at: '2025-08-16T17:56:09.133Z'
+updated_at: '2026-01-05T19:24:56.018Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

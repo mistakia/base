@@ -4,10 +4,11 @@ type: guideline
 description: >-
   Guidelines for creating lean, focused technical documentation that emphasizes unique design
   decisions and process flows
+base_uri: user:repository/active/base/system/guideline/write-documentation.md
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 12dc5b4c-365c-4e7f-b7f4-10c9851b1be2
 globs:
-  - 'text/**/*.md'
+  - text/**/*.md
   - '*.md'
 observations:
   - '[clarity] Specific design choices provide more value than generic descriptions #design-decisions'
@@ -15,7 +16,7 @@ observations:
   - '[focus] Unique architectural decisions distinguish systems from common patterns #architecture'
 relations:
   - implements [[sys:system/text/system-design.md]]
-updated_at: '2025-06-06T16:51:43.606Z'
+updated_at: '2026-01-05T19:25:18.072Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

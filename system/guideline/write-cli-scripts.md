@@ -1,14 +1,14 @@
 ---
-title: 'Write CLI Scripts'
-type: 'guideline'
-description: |
-  Guidelines for writing CLI scripts based on existing patterns
+title: Write CLI Scripts
+type: guideline
+description: Guidelines for writing CLI scripts based on existing patterns
+base_uri: user:repository/active/base/system/guideline/write-cli-scripts.md
 created_at: '2025-05-27T18:10:20.237Z'
-entity_id: '25991601-4814-49b0-837c-60527876bdf4'
+entity_id: 25991601-4814-49b0-837c-60527876bdf4
 globs:
-  - 'cli/**/*'
-tags:
-updated_at: '2025-05-27T18:10:20.237Z'
+  - cli/**/*
+relations:
+updated_at: '2026-01-05T19:25:06.988Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

@@ -2,6 +2,7 @@
 title: Write Task
 type: guideline
 description: Standards for creating task entities
+base_uri: user:repository/active/base/system/guideline/write-task.md
 created_at: '2025-06-26T01:12:08.170Z'
 entity_id: d76a09ed-c569-4727-b7e9-98f9c68fd203
 globs:
@@ -16,7 +17,7 @@ relations:
   - follows [[user:guideline/write-text.md]]
   - relates_to [[sys:system/guideline/choose-task-status.md]]
   - relates_to [[sys:system/guideline/choose-task-priority.md]]
-updated_at: '2025-06-26T01:12:08.170Z'
+updated_at: '2026-01-05T19:25:18.073Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

@@ -1,18 +1,18 @@
 ---
-title: 'Choose Task Status Guideline'
-type: 'guideline'
-description: |
-  Guidelines for choosing appropriate task statuses
+title: Choose Task Status Guideline
+type: guideline
+description: Guidelines for choosing appropriate task statuses
+base_uri: user:repository/active/base/system/guideline/choose-task-status.md
 created_at: '2025-05-27T18:10:20.237Z'
+entity_id: 3ba5ef17-c90a-463c-8890-5c8e635e3297
 globs:
-  - 'task/**/*.md'
-entity_id: '3ba5ef17-c90a-463c-8890-5c8e635e3297'
+  - task/**/*.md
 observations:
   - '[standard] Standardized status values ensure consistent task management'
   - '[governance] Limited set of statuses helps with workflow automation'
   - '[organization] Clear status values improve task tracking and reporting'
-tags:
-updated_at: '2025-05-27T18:10:20.237Z'
+relations:
+updated_at: '2026-01-05T19:24:58.348Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

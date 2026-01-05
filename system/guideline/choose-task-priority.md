@@ -2,15 +2,17 @@
 title: Choose Task Priority Guideline
 type: guideline
 description: Guidelines for choosing appropriate task priorities
+base_uri: user:repository/active/base/system/guideline/choose-task-priority.md
 created_at: '2023-06-04T12:00:00.000Z'
 entity_id: fd9843c8-14a2-4736-83b2-873a6a8f5816
 globs:
-  - 'task/**/*.md'
+  - task/**/*.md
 observations:
   - '[standard] Standardized priority values ensure consistent task management'
   - '[governance] Limited set of priorities helps with workflow automation'
   - '[organization] Clear priority levels improve resource allocation and planning'
-updated_at: '2025-06-04T15:45:43.271Z'
+relations:
+updated_at: '2026-01-05T19:25:18.071Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

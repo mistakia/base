@@ -31,7 +31,7 @@ relations:
   - uses [[user:guideline/write-software.md]]
   - uses [[sys:system/guideline/write-javascript.md]]
   - precedes [[sys:system/workflow/merge-worktree.md]]
-updated_at: '2025-07-26T00:00:00.000Z'
+updated_at: '2026-01-05T19:25:18.081Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

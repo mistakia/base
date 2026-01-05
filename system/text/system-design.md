@@ -1,22 +1,21 @@
 ---
-title: 'System Design'
-type: 'text'
-description: |
-  Architecture and design principles for the human-in-the-loop LLM system
+title: System Design
+type: text
+description: Architecture and design principles for the human-in-the-loop LLM system
+base_uri: user:repository/active/base/system/text/system-design.md
 created_at: '2025-05-27T18:10:20.246Z'
-entity_id: 'b75fe9b3-4a83-427c-9e62-3105019df96c'
+entity_id: b75fe9b3-4a83-427c-9e62-3105019df96c
 observations:
   - '[design] Uses a human-in-the-loop approach'
   - '[principle] File-first approach with git version control'
 relations:
-  - 'relates_to [[sys:system/text/directory-structure.md]]'
-  - 'relates_to [[sys:system/text/knowledge-base-schema.md]]'
-  - 'relates_to [[sys:system/text/change-request.md]]'
-  - 'relates_to [[sys:system/text/tool-information.md]]'
-  - 'relates_to [[sys:system/text/workflow.md]]'
-  - 'relates_to [[sys:system/schema/database.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.246Z'
+  - relates_to [[sys:system/text/directory-structure.md]]
+  - relates_to [[sys:system/text/knowledge-base-schema.md]]
+  - relates_to [[sys:system/text/change-request.md]]
+  - relates_to [[sys:system/text/tool-information.md]]
+  - relates_to [[sys:system/text/workflow.md]]
+  - relates_to [[sys:system/schema/database.md]]
+updated_at: '2026-01-05T19:25:18.031Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

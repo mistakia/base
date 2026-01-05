@@ -2,6 +2,7 @@
 title: Review Task Entity
 type: guideline
 description: Ensure task entities comply with task schema during workflow execution
+base_uri: user:repository/active/base/system/guideline/review-task.md
 created_at: '2025-08-23T23:47:47.792Z'
 entity_id: 2ba6a096-6c5b-4648-90aa-9491764abdc0
 observations:
@@ -14,7 +15,7 @@ relations:
   - applies [[sys:system/schema/task.md]]
   - supports [[sys:system/workflow/implement-software-task.md]]
   - supports [[sys:system/workflow/implement-general-task.md]]
-updated_at: '2025-08-23T23:47:47.792Z'
+updated_at: '2026-01-05T19:25:18.012Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 ---
 

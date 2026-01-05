@@ -1,12 +1,12 @@
 ---
-title: 'Create Workflow Guideline'
-type: 'guideline'
-description: |
-  Guidelines for creating new workflows
+title: Create Workflow Guideline
+type: guideline
+description: Guidelines for creating new workflows
+base_uri: user:repository/active/base/system/guideline/write-workflow.md
 created_at: '2025-05-27T18:10:20.237Z'
-entity_id: 'e1cfc594-78bb-49ef-a1f3-3575f4ecefe8'
+entity_id: e1cfc594-78bb-49ef-a1f3-3575f4ecefe8
 globs:
-  - 'workflow/**/*.md'
+  - workflow/**/*.md
 observations:
   - '[governance] Proper workflow location ensures system organization'
   - '[principle] Clear naming conventions improve discoverability'
@@ -15,12 +15,11 @@ observations:
   - '[pattern] XML tags provide clear structure for workflow prompts'
   - '[philosophy] Start with core beliefs and iterate based on actual needs'
 relations:
-  - 'implements [[sys:system/text/system-design.md]]'
-  - 'implements [[sys:system/schema/workflow.md]]'
-  - 'related_to [[sys:system/guideline/write-guideline.md]]'
-  - 'follows [[user:guideline/starting-point-philosophy.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.237Z'
+  - implements [[sys:system/text/system-design.md]]
+  - implements [[sys:system/schema/workflow.md]]
+  - related_to [[sys:system/guideline/write-guideline.md]]
+  - follows [[user:guideline/starting-point-philosophy.md]]
+updated_at: '2026-01-05T19:25:18.038Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

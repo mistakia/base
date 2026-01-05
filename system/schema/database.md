@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Database Schema
+type: type_definition
 description: Structured data collection with defined schema and configurable storage
+base_uri: user:repository/active/base/system/schema/database.md
 created_at: '2025-08-16T17:56:08.202Z'
 entity_id: 086d9bd6-cc0a-4949-ad5a-eabfabdf0cbe
 extends: entity
@@ -73,8 +74,9 @@ properties:
       type: string
     required: false
     description: Views defined for this database
+relations:
 type_name: database
-updated_at: '2025-08-16T17:56:09.130Z'
+updated_at: '2026-01-05T19:25:18.021Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

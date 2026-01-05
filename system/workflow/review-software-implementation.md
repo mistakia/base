@@ -27,7 +27,7 @@ relations:
   - implements [[user:guideline/write-software.md]]
   - implements [[sys:system/guideline/write-javascript.md]]
   - implements [[sys:system/guideline/review-software-implementation.md]]
-updated_at: '2025-08-01T00:00:00.000Z'
+updated_at: '2026-01-05T19:25:18.082Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

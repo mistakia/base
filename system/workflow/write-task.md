@@ -2,6 +2,7 @@
 title: Write Task
 type: workflow
 description: Process for creating well-structured task entities
+base_uri: user:repository/active/base/system/workflow/write-task.md
 created_at: '2025-06-26T01:12:24.554Z'
 entity_id: 1b971f77-1344-45bf-8119-a277cc618237
 observations:
@@ -11,7 +12,7 @@ relations:
   - follows [[sys:system/guideline/write-task.md]]
   - implements [[sys:system/schema/task.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2025-06-26T01:12:24.554Z'
+updated_at: '2026-01-05T19:25:18.076Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

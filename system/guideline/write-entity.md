@@ -1,20 +1,19 @@
 ---
-title: 'Write Entity'
-type: 'guideline'
-description: |
-  Guidelines for creating new entity files that conform to the entity schema
+title: Write Entity
+type: guideline
+description: Guidelines for creating new entity files that conform to the entity schema
+base_uri: user:repository/active/base/system/guideline/write-entity.md
 created_at: '2025-05-27T18:10:20.239Z'
-entity_id: '544ca576-6602-4332-b02a-18c5e06122e0'
+entity_id: 544ca576-6602-4332-b02a-18c5e06122e0
 globs:
   - '**/*.md'
 observations:
   - '[standard] Entity files must follow schema requirements'
 relations:
-  - 'implements [[sys:system/schema/entity.md]]'
-  - 'related_to [[sys:system/guideline/write-guideline.md]]'
-  - 'related_to [[sys:system/text/base-uri.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.239Z'
+  - implements [[sys:system/schema/entity.md]]
+  - related_to [[sys:system/guideline/write-guideline.md]]
+  - related_to [[sys:system/text/base-uri.md]]
+updated_at: '2026-01-05T19:25:18.593Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

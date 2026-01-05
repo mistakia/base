@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Tag Schema
+type: type_definition
 description: A tag type for categorizing and organizing content
+base_uri: user:repository/active/base/system/schema/tag.md
 created_at: '2025-08-16T17:56:08.206Z'
 entity_id: 2cbaaa75-cac5-4228-b08f-7aa9e5705761
 extends: entity
@@ -15,8 +16,9 @@ properties:
     type: string
     required: false
     description: Optional color code for the tag (e.g., hex code)
+relations:
 type_name: tag
-updated_at: '2025-08-16T17:56:09.133Z'
+updated_at: '2026-01-05T19:24:58.796Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

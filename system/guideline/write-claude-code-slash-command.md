@@ -2,8 +2,9 @@
 title: Write Claude Code Slash Command
 type: guideline
 description: >-
-  Guidelines for creating custom slash commands for Claude Code that wrap workflows and
-  reference guidelines to automate common development tasks
+  Guidelines for creating custom slash commands for Claude Code that wrap workflows and reference
+  guidelines to automate common development tasks
+base_uri: user:repository/active/base/system/guideline/write-claude-code-slash-command.md
 created_at: '2025-06-06T16:51:43.604Z'
 entity_id: d8071403-69de-49c3-87d4-2633ad8c20a8
 globs:
@@ -23,7 +24,7 @@ relations:
   - uses [[sys:system/text/workflow.md]]
   - uses [[sys:system/schema/workflow.md]]
   - uses [[sys:system/schema/guideline.md]]
-updated_at: '2025-06-06T16:51:43.604Z'
+updated_at: '2026-01-05T19:25:18.077Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

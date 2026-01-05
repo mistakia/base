@@ -4,13 +4,14 @@ type: workflow
 description: >-
   Write implementation plans for software tasks by understanding requirements, analyzing codebase,
   and planning changes
+base_uri: user:repository/active/base/system/workflow/write-software-implementation-plan.md
 created_at: '2025-06-18T00:44:36.058Z'
 entity_id: 2928d808-7e56-42aa-a888-8626046b35e8
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-software-implementation-plan.md]]
   - uses [[sys:system/guideline/write-entity.md]]
-updated_at: '2025-06-18T00:44:36.062Z'
+updated_at: '2026-01-05T19:25:18.907Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

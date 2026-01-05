@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Entity Schema
+type: type_definition
 description: The entity schema that all other types inherit from - a thing that is independent and distinct
+base_uri: user:repository/active/base/system/schema/entity.md
 created_at: '2025-08-16T17:56:08.203Z'
 entity_id: 570cd4c2-cd4d-4a9e-acb6-6e6855b50db5
 properties:
@@ -64,8 +65,9 @@ properties:
     type: datetime
     required: false
     description: Date when the item was archived
+relations:
 type_name: entity
-updated_at: '2025-08-16T17:56:09.131Z'
+updated_at: '2026-01-05T19:25:18.083Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

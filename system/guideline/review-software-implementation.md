@@ -9,7 +9,7 @@ relations:
   - supports [[sys:system/workflow/review-software-implementation.md]]
   - related_to [[sys:system/guideline/write-javascript.md]]
 tags: []
-updated_at: '2025-08-02T00:00:00.000Z'
+updated_at: '2026-01-05T19:25:18.080Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 workflows:
   - sys:system/workflow/review-software-implementation.md

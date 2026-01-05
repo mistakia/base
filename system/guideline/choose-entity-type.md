@@ -1,21 +1,21 @@
 ---
-title: 'Choose Entity Type'
-type: 'guideline'
-description: |
-  Guidelines for selecting the appropriate entity type when creating new entities
+title: Choose Entity Type
+type: guideline
+description: Guidelines for selecting the appropriate entity type when creating new entities
+base_uri: user:repository/active/base/system/guideline/choose-entity-type.md
 created_at: '2023-06-28T10:00:00.000Z'
-entity_id: '44f5b239-8c30-4de5-a3a8-f5c983a51f22'
+entity_id: 44f5b239-8c30-4de5-a3a8-f5c983a51f22
 globs:
   - '**/*.md'
 observations:
   - '[standard] Proper entity type selection ensures data consistency'
   - '[governance] Entity types determine required fields and validation rules'
 relations:
-  - 'implements [[sys:system/schema/entity.md]]'
-  - 'related_to [[sys:system/guideline/write-entity.md]]'
-  - 'related_to [[sys:system/guideline/write-guideline.md]]'
-  - 'related_to [[sys:system/guideline/write-task.md]]'
-updated_at: '2023-06-28T10:00:00.000Z'
+  - implements [[sys:system/schema/entity.md]]
+  - related_to [[sys:system/guideline/write-entity.md]]
+  - related_to [[sys:system/guideline/write-guideline.md]]
+  - related_to [[sys:system/guideline/write-task.md]]
+updated_at: '2026-01-05T19:25:13.919Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

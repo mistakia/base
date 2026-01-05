@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Guideline Schema
+type: type_definition
 description: Guidelines represent standards, procedures, or best practices
+base_uri: user:repository/active/base/system/schema/guideline.md
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: d049333f-47af-415f-8c58-79646e5404de
 extends: entity
@@ -43,8 +44,9 @@ properties:
           type: any
           required: false
           description: Default value for the property
+relations:
 type_name: guideline
-updated_at: '2025-08-16T17:56:09.131Z'
+updated_at: '2026-01-05T19:25:16.429Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

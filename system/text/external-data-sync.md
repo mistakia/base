@@ -1,15 +1,13 @@
 ---
-title: 'External Data Sync'
-type: 'text'
-description: |
-  System for synchronizing external data with conflict resolution
+title: External Data Sync
+type: text
+description: System for synchronizing external data with conflict resolution
+base_uri: user:repository/active/base/system/text/external-data-sync.md
 created_at: '2025-05-27T18:10:20.244Z'
-entity_id: '11dc5b4c-365c-4e7f-b7f4-10c9851b1be1'
-observations:
+entity_id: 11dc5b4c-365c-4e7f-b7f4-10c9851b1be1
 relations:
-  - 'part_of [[sys:system/text/system-design.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.244Z'
+  - part_of [[sys:system/text/system-design.md]]
+updated_at: '2026-01-05T19:24:59.754Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

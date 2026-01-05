@@ -15,7 +15,7 @@ relations:
   - related_to [[sys:system/guideline/write-workflow.md]]
   - implements [[sys:system/text/system-design.md]]
   - follows [[sys:system/workflow/write-software-implementation-plan.md]]
-updated_at: '2025-07-26T00:00:00.000Z'
+updated_at: '2026-01-05T19:25:18.079Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

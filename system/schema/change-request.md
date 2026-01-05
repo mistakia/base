@@ -1,9 +1,10 @@
 ---
-type: type_definition
 title: Change Request Schema
+type: type_definition
 description: >-
   HISTORICAL - Defines the structure for a change request to the knowledge base. This system was
   removed in January 2025.
+base_uri: user:repository/active/base/system/schema/change-request.md
 created_at: '2025-08-16T17:56:08.201Z'
 entity_id: 8fe08922-fd6e-4962-8c0d-189a60b99bca
 extends: entity
@@ -70,7 +71,7 @@ relations:
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
 tags: []
 type_name: change_request
-updated_at: '2025-08-16T17:56:09.129Z'
+updated_at: '2026-01-05T19:25:08.414Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

@@ -1,19 +1,18 @@
 ---
-title: 'Directory Structure'
-type: 'text'
-description: |
-  Documentation for the system directory structure and organization
+title: Directory Structure
+type: text
+description: Documentation for the system directory structure and organization
+base_uri: user:repository/active/base/system/text/directory-structure.md
 created_at: '2025-05-27T18:10:20.243Z'
-entity_id: '655f72d5-82dc-49c5-9aa4-90ca5840b739'
+entity_id: 655f72d5-82dc-49c5-9aa4-90ca5840b739
 observations:
   - '[architecture] Dual knowledge base separates system from user-specific content'
   - '[principle] Clear directory structure improves navigation and discoverability'
   - '[design] Organization follows separation of concerns principle'
 relations:
-  - 'relates_to [[sys:system/text/system-design.md]]'
-  - 'implements [[sys:system/text/knowledge-base-schema.md]]'
-tags:
-updated_at: '2025-05-27T18:10:20.243Z'
+  - relates_to [[sys:system/text/system-design.md]]
+  - implements [[sys:system/text/knowledge-base-schema.md]]
+updated_at: '2026-01-05T19:24:56.910Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
