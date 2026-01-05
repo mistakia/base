@@ -87,7 +87,7 @@ async function add_back_reference_to_entity({
   thread_id,
   relation_type
 }) {
-  const thread_base_uri = `thread:${thread_id}`
+  const thread_base_uri = `user:thread/${thread_id}`
 
   try {
     // Resolve base URI to file path
@@ -171,7 +171,7 @@ export async function add_thread_back_references({ references, thread_id }) {
     const { base_uri, access_type } = ref
 
     // Skip thread references (don't add back-references to threads)
-    if (base_uri.startsWith('thread:')) {
+    if (base_uri.startsWith('user:thread/')) {
       continue
     }
 
