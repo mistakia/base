@@ -103,7 +103,12 @@ export default function AuthPage({
           <Button variant='primary' onClick={generateKey}>
             Generate New Keypair
           </Button>
-          <p style={{ marginTop: '8px', fontSize: '14px', color: COLORS.text_secondary }}>
+          <p
+            style={{
+              marginTop: '8px',
+              fontSize: '14px',
+              color: COLORS.text_secondary
+            }}>
             Create a new cryptographic keypair for authentication
           </p>
         </div>
