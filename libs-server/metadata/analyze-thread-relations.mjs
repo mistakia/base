@@ -18,7 +18,13 @@ import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { extract_timeline_references } from './extract-timeline-references.mjs'
-import { find_related_threads } from './find-related-threads.mjs'
+import {
+  find_related_threads,
+  SUPPORTED_MODELS
+} from './find-related-threads.mjs'
+
+// Re-export SUPPORTED_MODELS for CLI use
+export { SUPPORTED_MODELS }
 
 const log = debug('metadata:analyze-relations')
 
@@ -87,7 +93,7 @@ function build_entity_relations({ references }) {
  */
 function build_thread_relations({ related_thread_ids }) {
   return related_thread_ids.map((thread_id) =>
-    format_relation(RELATION_RELATES_TO, `thread:${thread_id}`)
+    format_relation(RELATION_RELATES_TO, `user:thread/${thread_id}`)
   )
 }
 
@@ -178,12 +184,18 @@ export async function queue_relation_analysis(thread_id) {
  * @param {string} params.thread_id - Thread ID to analyze
  * @param {boolean} [params.dry_run=false] - If true, don't update metadata
  * @param {boolean} [params.skip_related_threads=false] - Skip LLM thread discovery
+ * @param {string} [params.model] - Model to use for LLM classification
+ * @param {boolean} [params.use_json_output=false] - Use structured JSON output
+ * @param {boolean} [params.force=false] - Force re-analysis even if already analyzed
  * @returns {Promise<Object>} Analysis result
  */
 export async function analyze_thread_relations({
   thread_id,
   dry_run = false,
-  skip_related_threads = false
+  skip_related_threads = false,
+  model,
+  use_json_output = false,
+  force = false
 }) {
   if (!thread_id) {
     throw new Error('thread_id is required')
@@ -194,8 +206,8 @@ export async function analyze_thread_relations({
   // Load thread data
   const { metadata, timeline } = await read_thread_data({ thread_id })
 
-  // Check if already analyzed
-  if (metadata.relations_analyzed_at) {
+  // Check if already analyzed (unless force is true)
+  if (metadata.relations_analyzed_at && !force) {
     log(
       `Thread ${thread_id} already analyzed at ${metadata.relations_analyzed_at}`
     )
@@ -204,6 +216,12 @@ export async function analyze_thread_relations({
       status: 'already_analyzed',
       relations_analyzed_at: metadata.relations_analyzed_at
     }
+  }
+
+  if (force && metadata.relations_analyzed_at) {
+    log(
+      `Force re-analyzing thread ${thread_id} (previously analyzed at ${metadata.relations_analyzed_at})`
+    )
   }
 
   // Extract entity references from timeline
@@ -217,21 +235,24 @@ export async function analyze_thread_relations({
   let thread_relations = []
   let related_threads_duration_ms = 0
 
+  let llm_result = null
   if (!skip_related_threads && metadata.title) {
     try {
       const recent_threads = await get_recent_threads({ thread_id })
       log(`Found ${recent_threads.length} recent threads for comparison`)
 
       if (recent_threads.length > 0) {
-        const result = await find_related_threads({
+        llm_result = await find_related_threads({
           thread: metadata,
-          recent_threads
+          recent_threads,
+          model,
+          use_json_output
         })
         thread_relations = build_thread_relations({
-          related_thread_ids: result.related_thread_ids
+          related_thread_ids: llm_result.related_thread_ids
         })
-        related_threads_duration_ms = result.duration_ms
-        log(`Found ${result.related_thread_ids.length} related threads`)
+        related_threads_duration_ms = llm_result.duration_ms
+        log(`Found ${llm_result.related_thread_ids.length} related threads`)
       }
     } catch (error) {
       log(`Error finding related threads: ${error.message}`)
@@ -253,6 +274,21 @@ export async function analyze_thread_relations({
     related_threads_duration_ms,
     relations: all_relations,
     dry_run
+  }
+
+  // Add LLM-specific results if available
+  if (llm_result) {
+    result.model_used = llm_result.model_used
+    result.candidates_evaluated = llm_result.candidates_evaluated
+    if (
+      llm_result.confidence_scores &&
+      Object.keys(llm_result.confidence_scores).length > 0
+    ) {
+      result.confidence_scores = llm_result.confidence_scores
+    }
+    if (llm_result.reasoning) {
+      result.reasoning = llm_result.reasoning
+    }
   }
 
   // Update thread metadata (unless dry run)

@@ -8,13 +8,90 @@ const log = debug('metadata:opencode')
 // Constants
 // ============================================================================
 
-const DEFAULT_MODEL =
-  config.opencode?.default_model || 'ollama/devstral-small-2:24b'
+const DEFAULT_MODEL = config.opencode?.default_model || 'ollama/qwen2.5:72b'
 const TIMEOUT_MS = config.opencode?.timeout_ms || 120000
+const OLLAMA_BASE_URL =
+  process.env.OLLAMA_BASE_URL ||
+  config.ollama?.base_url ||
+  'http://127.0.0.1:11434'
 const BINARY_PATH =
   process.env.OPENCODE_BINARY_PATH ||
   config.opencode?.binary_path ||
   '/opt/homebrew/bin/opencode'
+
+// Use direct ollama API by default (faster, more reliable)
+const USE_DIRECT_OLLAMA = config.opencode?.use_direct !== false
+
+// ============================================================================
+// Direct Ollama API
+// ============================================================================
+
+/**
+ * Extract model name from ollama/ prefixed model ID
+ * @param {string} model - Model ID (e.g., 'ollama/qwen3:32b')
+ * @returns {string} Model name for ollama API
+ */
+function extract_ollama_model_name(model) {
+  if (model.startsWith('ollama/')) {
+    return model.slice(7)
+  }
+  return model
+}
+
+/**
+ * Call Ollama API directly
+ *
+ * @param {Object} params
+ * @param {string} params.prompt - The prompt to send
+ * @param {string} params.model - Model ID (ollama/model:tag format)
+ * @param {number} [params.timeout_ms] - Timeout in milliseconds
+ * @returns {Promise<{output: string, duration_ms: number}>} Response and execution time
+ */
+async function call_ollama_direct({ prompt, model, timeout_ms = TIMEOUT_MS }) {
+  const model_name = extract_ollama_model_name(model)
+  const url = `${OLLAMA_BASE_URL}/api/generate`
+
+  log(`Calling Ollama directly: ${model_name}`)
+  const start_time = Date.now()
+
+  const controller = new AbortController()
+  const timeout_id = setTimeout(() => controller.abort(), timeout_ms)
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model_name,
+        prompt,
+        stream: false
+      }),
+      signal: controller.signal
+    })
+
+    clearTimeout(timeout_id)
+    const duration_ms = Date.now() - start_time
+
+    if (!response.ok) {
+      const error_text = await response.text()
+      throw new Error(`Ollama API error ${response.status}: ${error_text}`)
+    }
+
+    const data = await response.json()
+    log(`Ollama completed in ${duration_ms}ms`)
+
+    return {
+      output: data.response || '',
+      duration_ms
+    }
+  } catch (error) {
+    clearTimeout(timeout_id)
+    if (error.name === 'AbortError') {
+      throw new Error(`Ollama timed out after ${timeout_ms}ms`)
+    }
+    throw error
+  }
+}
 
 // ============================================================================
 // OpenCode Execution
@@ -25,7 +102,7 @@ const BINARY_PATH =
  *
  * @param {Object} params
  * @param {string} params.prompt - The prompt to send to OpenCode
- * @param {string} [params.model] - Model to use (default: devstral-small-2:24b)
+ * @param {string} [params.model] - Model to use
  * @param {number} [params.timeout_ms] - Timeout in milliseconds
  * @param {string} [params.mode] - OpenCode mode (e.g., 'plan' to reduce tool usage)
  * @returns {Promise<{output: string, duration_ms: number}>} Raw output and execution time
@@ -38,6 +115,11 @@ export const run_opencode = async ({
 }) => {
   if (!prompt) {
     throw new Error('prompt is required')
+  }
+
+  // Use direct Ollama API for ollama models (faster, more reliable)
+  if (USE_DIRECT_OLLAMA && model.startsWith('ollama/')) {
+    return call_ollama_direct({ prompt, model, timeout_ms })
   }
 
   log(`Running OpenCode with model: ${model}${mode ? `, mode: ${mode}` : ''}`)
