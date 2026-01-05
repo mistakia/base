@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Button } from '@mui/material'
+import { Box } from '@mui/material'
+import Button from '@views/components/primitives/Button/Button.js'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
 // Consolidated dual-tone header used by tools that need a simple "Label Value" header
@@ -51,17 +52,9 @@ export const build_dual_tone_header = ({
       {action_button && (
         <Button
           size='small'
-          variant='text'
+          variant='ghost'
           onClick={action_button.onClick}
-          sx={{
-            fontSize: '10px',
-            minWidth: 'fit-content',
-            px: 1,
-            py: 0.25,
-            textTransform: 'none',
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.hover' }
-          }}>
+          className='title-utils-action-button'>
           {action_button.label}
         </Button>
       )}
