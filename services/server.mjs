@@ -46,37 +46,46 @@ try {
       logger(worker_error)
     }
 
-    // Initialize embedded database index
-    try {
-      await embedded_index_manager.initialize()
-      const status = embedded_index_manager.get_index_status()
-      logger(
-        `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
-      )
-    } catch (index_error) {
-      logger(`Failed to initialize embedded index: ${index_error.message}`)
-      logger(index_error)
-    }
+    // Start cache warmer and embedded index initialization in parallel
+    let embedded_index_ready = false
 
-    // Start index file watcher for database sync
-    try {
-      const index_config = embedded_index_manager._get_index_config()
-      if (index_config.enabled && index_config.file_watcher_enabled) {
-        start_index_sync_watcher()
-        logger('Index file watcher started')
+    const cache_warmer_promise = start_cache_warmer()
+      .then(() => logger('Cache warmer service started'))
+      .catch((error) => {
+        logger(`Failed to start cache warmer: ${error.message}`)
+        logger(error)
+      })
+
+    const embedded_index_promise = embedded_index_manager
+      .initialize()
+      .then(() => {
+        const status = embedded_index_manager.get_index_status()
+        logger(
+          `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
+        )
+        // Only mark ready if at least one database is actually initialized
+        embedded_index_ready = status.kuzu_ready || status.duckdb_ready
+      })
+      .catch((error) => {
+        logger(`Failed to initialize embedded index: ${error.message}`)
+        logger(error)
+      })
+
+    // Wait for both to complete
+    await Promise.all([cache_warmer_promise, embedded_index_promise])
+
+    // Start index file watcher for database sync (only if index initialized successfully)
+    if (embedded_index_ready) {
+      try {
+        const index_config = embedded_index_manager._get_index_config()
+        if (index_config.enabled && index_config.file_watcher_enabled) {
+          start_index_sync_watcher()
+          logger('Index file watcher started')
+        }
+      } catch (watcher_error) {
+        logger(`Failed to start index file watcher: ${watcher_error.message}`)
+        logger(watcher_error)
       }
-    } catch (watcher_error) {
-      logger(`Failed to start index file watcher: ${watcher_error.message}`)
-      logger(watcher_error)
-    }
-
-    // Start cache warmer service for proactive cache maintenance
-    try {
-      await start_cache_warmer()
-      logger('Cache warmer service started')
-    } catch (cache_error) {
-      logger(`Failed to start cache warmer: ${cache_error.message}`)
-      logger(cache_error)
     }
   })
 } catch (err) {
