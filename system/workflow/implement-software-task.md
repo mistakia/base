@@ -81,7 +81,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Read and follow [[user:guideline/write-software.md]] for variable naming and DRY principles
    - Read and follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
    - Make the required changes for that task only
-   - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
+   - Mark the task as "Completed" in the implementation plan using checkbox format: `- [x]`
 
 5. **Handle Implementation Plan Changes**
 
@@ -103,6 +103,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
+   - Update implementation plan status to "Completed"
    - **DO NOT commit any code** - committing is handled by [[sys:system/workflow/merge-worktree.md]]
 
 ## Critical Rules

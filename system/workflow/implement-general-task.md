@@ -51,7 +51,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - Select the first uncompleted task from the implementation plan
    - Make the required changes for that task only
    - Follow any specific guidelines referenced in the task
-   - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
+   - Mark the task as "Completed" in the implementation plan using checkbox format: `- [x]`
 
 5. **Update Implementation Plan**
 
@@ -73,6 +73,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - Review all changes made
    - Verify task completion against original requirements
    - Check for any cleanup or follow-up actions needed
+   - Update implementation plan status to "Completed"
 
 ## Key Rules
 
