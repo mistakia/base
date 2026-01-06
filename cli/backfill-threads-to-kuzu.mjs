@@ -90,7 +90,12 @@ export async function backfill_threads_to_kuzu({
       stats.failed++
       stats.errors.push({
         thread_id: thread.thread_id,
-        error: 'Sync failed (kuzu: ' + result.kuzu_synced + ', duckdb: ' + result.duckdb_synced + ')'
+        error:
+          'Sync failed (kuzu: ' +
+          result.kuzu_synced +
+          ', duckdb: ' +
+          result.duckdb_synced +
+          ')'
       })
       log('Error syncing thread %s', thread.thread_id)
     }

@@ -276,7 +276,12 @@ const compute_base_uri_from_path = (path) => {
   return `user:${normalized_path}`
 }
 
-const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown, path }) => {
+const EntityFrontmatter = ({
+  frontmatter,
+  is_sticky = false,
+  markdown,
+  path
+}) => {
   const [expanded, set_expanded] = useState(false)
 
   if (!frontmatter) return null

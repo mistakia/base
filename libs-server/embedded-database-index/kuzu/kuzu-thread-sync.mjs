@@ -24,13 +24,8 @@ async function execute_parameterized_query(connection, query, params) {
  * Thread base_uri format: user:thread/<thread-id>
  */
 export async function upsert_thread_to_kuzu({ connection, thread_data }) {
-  const {
-    thread_id,
-    title,
-    created_at,
-    updated_at,
-    user_public_key
-  } = thread_data
+  const { thread_id, title, created_at, updated_at, user_public_key } =
+    thread_data
 
   if (!thread_id) {
     log('Cannot upsert thread without thread_id')
@@ -202,11 +197,7 @@ export async function sync_thread_file_references_to_kuzu({
     return
   }
 
-  log(
-    'Syncing %d file references for thread: %s',
-    total_refs,
-    thread_id
-  )
+  log('Syncing %d file references for thread: %s', total_refs, thread_id)
 
   // Delete existing file/directory relations from this thread
   try {

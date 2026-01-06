@@ -171,7 +171,9 @@ export async function analyze_thread_relations({
   )
 
   // Build entity relations
-  const entity_relations = build_entity_relations({ references: entity_references })
+  const entity_relations = build_entity_relations({
+    references: entity_references
+  })
 
   // Extract file paths for storage
   const file_paths = file_references.map((ref) => ref.path)

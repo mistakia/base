@@ -130,9 +130,7 @@ const RelatedEntitiesGroup = ({
 
         {has_more && (
           <Collapse in={!expanded}>
-            <button
-              onClick={() => set_expanded(true)}
-              style={expand_button_sx}>
+            <button onClick={() => set_expanded(true)} style={expand_button_sx}>
               Show {remaining_count} more...
             </button>
           </Collapse>
