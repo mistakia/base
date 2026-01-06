@@ -9,7 +9,7 @@ import PropTypes from 'prop-types'
 import { Box, Collapse } from '@mui/material'
 
 import { COLORS } from '@theme/colors.js'
-import { base_uri_to_client_path } from '@libs-shared/base-uri-utilities.mjs'
+import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 
 const group_container_sx = {
   px: 2,
@@ -73,7 +73,7 @@ const expand_button_sx = {
 
 const get_entity_link = (base_uri) => {
   try {
-    return base_uri_to_client_path(base_uri)
+    return convert_base_uri_to_path(base_uri)
   } catch (error) {
     // Fallback for file references
     if (base_uri.startsWith('file:')) {

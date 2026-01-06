@@ -171,7 +171,11 @@ export async function find_related_entities({
     entity_type
   )
 
-  const params = { base_uri, offset, limit }
+  // Ensure limit and offset are valid integers (KuzuDB requires literal values for SKIP/LIMIT)
+  const limit_int = Math.max(0, Math.floor(Number(limit) || 100))
+  const offset_int = Math.max(0, Math.floor(Number(offset) || 0))
+
+  const params = { base_uri }
   const where_clauses = []
 
   if (relation_type) {
@@ -196,8 +200,8 @@ export async function find_related_entities({
            target.title AS title,
            r.relation_type AS relation_type,
            r.context AS context
-    SKIP $offset
-    LIMIT $limit
+    SKIP ${offset_int}
+    LIMIT ${limit_int}
   `
 
   try {
@@ -238,7 +242,11 @@ export async function find_entities_relating_to({
     entity_type
   )
 
-  const params = { base_uri, offset, limit }
+  // Ensure limit and offset are valid integers (KuzuDB requires literal values for SKIP/LIMIT)
+  const limit_int = Math.max(0, Math.floor(Number(limit) || 100))
+  const offset_int = Math.max(0, Math.floor(Number(offset) || 0))
+
+  const params = { base_uri }
   const where_clauses = []
 
   if (relation_type) {
@@ -263,8 +271,8 @@ export async function find_entities_relating_to({
            source.title AS title,
            r.relation_type AS relation_type,
            r.context AS context
-    SKIP $offset
-    LIMIT $limit
+    SKIP ${offset_int}
+    LIMIT ${limit_int}
   `
 
   try {
