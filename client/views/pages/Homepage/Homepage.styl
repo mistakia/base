@@ -209,6 +209,7 @@ $homepage_tasks_grid_template_mobile = 1fr
       border-bottom 1px solid $color_border_light
       align-items center
       transition background-color 0.2s ease
+      background-color $color_white
 
       &:hover
         background-color $color_surface_secondary
@@ -230,22 +231,34 @@ $homepage_tasks_grid_template_mobile = 1fr
 // Responsive design for smaller screens
 @media (max-width 768px)
   .tasks-table
-    .tasks-table-header,
-    .tasks-table-body .task-row
-      grid-template-columns $homepage_tasks_grid_template_mobile
-      gap 8px
-      padding 12px 16px
-
     .tasks-table-header
       display none
 
+    .tasks-table-body .task-row
+      grid-template-columns 1fr 1fr 1fr
+      grid-template-rows auto auto
+      gap 8px
+      padding 12px 16px
+
     .task-row
       .task-title
+        grid-column 1 / -1
+        grid-row 1
         font-size 16px
         font-weight 600
-        margin-bottom 8px
+        margin-bottom 0
 
-      .task-status,
-      .task-priority,
+      .task-status
+        grid-column 1
+        grid-row 2
+        font-size 11px
+
+      .task-priority
+        grid-column 2
+        grid-row 2
+        font-size 11px
+
       .task-finish-by
+        grid-column 3
+        grid-row 2
         font-size 11px
