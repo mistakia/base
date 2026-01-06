@@ -10,7 +10,7 @@ const log = debug('metadata:relation-queue')
  * Queue processor for thread relation analysis
  *
  * Watches a queue file for thread IDs to process and runs relation
- * analysis using OpenCode with LLM for thread classification.
+ * analysis to extract entity references from thread timelines.
  */
 
 // ============================================================================
@@ -164,13 +164,12 @@ const process_queue = async () => {
       // Log the result with details
       await log_processed(thread_id, result.status, {
         entity_relations: result.entity_relations_count,
-        thread_relations: result.thread_relations_count,
         total: result.total_relations_count
       })
 
-      // Brief delay between processing to avoid overwhelming LLM
+      // Brief delay between processing
       if (queue.indexOf(thread_id) < queue.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
     }
 

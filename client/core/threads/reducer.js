@@ -60,6 +60,26 @@ function update_selected_thread_if_matches(state, thread_id, update_fn) {
 }
 
 /**
+ * Updates a thread in the basic threads list
+ */
+function update_thread_in_basic_list(state, thread_id, updated_data) {
+  return state.update('threads', (threads) => {
+    if (!threads) return threads
+    return threads.map((thread) => {
+      const id = thread.thread_id || thread.get?.('thread_id')
+      if (id === thread_id) {
+        // Merge updated data into the thread
+        if (thread.merge) {
+          return thread.merge(updated_data)
+        }
+        return { ...thread, ...updated_data }
+      }
+      return thread
+    })
+  })
+}
+
+/**
  * Appends a timeline entry to the selected thread
  */
 function append_timeline_entry(state, thread_id, entry) {
@@ -232,12 +252,24 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         thread_error: null
       })
 
-    case threads_action_types.GET_THREAD_FULFILLED:
-      return state.merge({
-        selected_thread_data: Map(payload.data),
+    case threads_action_types.GET_THREAD_FULFILLED: {
+      const thread_data = payload.data
+      const thread_id = thread_data?.thread_id
+      let new_state = state.merge({
+        selected_thread_data: Map(thread_data),
         is_loading_thread: false,
         thread_error: null
       })
+      // Also update the thread in the basic threads list if it exists
+      if (thread_id) {
+        new_state = update_thread_in_basic_list(
+          new_state,
+          thread_id,
+          thread_data
+        )
+      }
+      return new_state
+    }
 
     case threads_action_types.GET_THREAD_FAILED:
       return state.merge({
@@ -376,6 +408,13 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         thread_id,
         (current_data) =>
           current_data ? current_data.merge(updated_thread) : updated_thread
+      )
+
+      // Also update the basic threads list
+      new_state = update_thread_in_basic_list(
+        new_state,
+        thread_id,
+        payload.thread
       )
 
       return new_state

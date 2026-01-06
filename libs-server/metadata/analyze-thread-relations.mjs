@@ -1,8 +1,7 @@
 /**
  * Analyze thread relations
  *
- * Orchestrates extraction of entity references from thread timeline
- * and discovery of related threads using LLM classification.
+ * Orchestrates extraction of entity references from thread timeline.
  */
 
 import fs from 'fs/promises'
@@ -16,15 +15,7 @@ import {
 } from '#libs-shared/entity-relations.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
-import list_threads from '#libs-server/threads/list-threads.mjs'
 import { extract_timeline_references } from './extract-timeline-references.mjs'
-import {
-  find_related_threads,
-  SUPPORTED_MODELS
-} from './find-related-threads.mjs'
-
-// Re-export SUPPORTED_MODELS for CLI use
-export { SUPPORTED_MODELS }
 
 const log = debug('metadata:analyze-relations')
 
@@ -33,8 +24,6 @@ const log = debug('metadata:analyze-relations')
 // ============================================================================
 
 export const RELATION_ANALYSIS_CONFIG = {
-  RECENT_THREADS_DAYS: 30,
-  MAX_CANDIDATE_THREADS: 50,
   QUEUE_FILE_PATH: '/tmp/claude-pending-relation-analysis.queue'
 }
 
@@ -85,50 +74,6 @@ function build_entity_relations({ references }) {
   return relations
 }
 
-/**
- * Build relations array from related thread IDs
- * @param {Object} params
- * @param {Array<string>} params.related_thread_ids - Array of related thread IDs
- * @returns {Array<string>} Array of formatted relation strings
- */
-function build_thread_relations({ related_thread_ids }) {
-  return related_thread_ids.map((thread_id) =>
-    format_relation(RELATION_RELATES_TO, `user:thread/${thread_id}`)
-  )
-}
-
-// ============================================================================
-// Recent Threads Gathering
-// ============================================================================
-
-/**
- * Get recent threads for comparison
- * @param {Object} params
- * @param {string} params.thread_id - Current thread ID to exclude
- * @param {number} [params.days] - Number of days to look back
- * @param {number} [params.limit] - Maximum threads to return
- * @returns {Promise<Array>} Array of thread metadata
- */
-async function get_recent_threads({
-  thread_id,
-  days = RELATION_ANALYSIS_CONFIG.RECENT_THREADS_DAYS,
-  limit = RELATION_ANALYSIS_CONFIG.MAX_CANDIDATE_THREADS
-}) {
-  const since_date = new Date()
-  since_date.setDate(since_date.getDate() - days)
-
-  const threads = await list_threads({
-    updated_since: since_date.toISOString(),
-    limit: limit + 1 // +1 to account for excluding current thread
-  })
-
-  // Filter out current thread and ensure we have title/description
-  return threads
-    .filter((t) => t.thread_id !== thread_id)
-    .filter((t) => t.title || t.short_description)
-    .slice(0, limit)
-}
-
 // ============================================================================
 // Queue Management
 // ============================================================================
@@ -177,24 +122,17 @@ export async function queue_relation_analysis(thread_id) {
 /**
  * Analyze thread relations
  *
- * Extracts entity references from timeline and discovers related threads
- * using LLM classification.
+ * Extracts entity references from timeline.
  *
  * @param {Object} params
  * @param {string} params.thread_id - Thread ID to analyze
  * @param {boolean} [params.dry_run=false] - If true, don't update metadata
- * @param {boolean} [params.skip_related_threads=false] - Skip LLM thread discovery
- * @param {string} [params.model] - Model to use for LLM classification
- * @param {boolean} [params.use_json_output=false] - Use structured JSON output
  * @param {boolean} [params.force=false] - Force re-analysis even if already analyzed
  * @returns {Promise<Object>} Analysis result
  */
 export async function analyze_thread_relations({
   thread_id,
   dry_run = false,
-  skip_related_threads = false,
-  model,
-  use_json_output = false,
   force = false
 }) {
   if (!thread_id) {
@@ -231,70 +169,21 @@ export async function analyze_thread_relations({
   // Build entity relations
   const entity_relations = build_entity_relations({ references })
 
-  // Find related threads (unless skipped)
-  let thread_relations = []
-  let related_threads_duration_ms = 0
-
-  let llm_result = null
-  if (!skip_related_threads && metadata.title) {
-    try {
-      const recent_threads = await get_recent_threads({ thread_id })
-      log(`Found ${recent_threads.length} recent threads for comparison`)
-
-      if (recent_threads.length > 0) {
-        llm_result = await find_related_threads({
-          thread: metadata,
-          recent_threads,
-          model,
-          use_json_output
-        })
-        thread_relations = build_thread_relations({
-          related_thread_ids: llm_result.related_thread_ids
-        })
-        related_threads_duration_ms = llm_result.duration_ms
-        log(`Found ${llm_result.related_thread_ids.length} related threads`)
-      }
-    } catch (error) {
-      log(`Error finding related threads: ${error.message}`)
-      // Continue without related threads - don't fail the whole analysis
-    }
-  }
-
-  // Combine all relations
-  const all_relations = [...entity_relations, ...thread_relations]
-
   // Prepare result
   const result = {
     thread_id,
     status: 'success',
     entity_references_count: references.length,
     entity_relations_count: entity_relations.length,
-    thread_relations_count: thread_relations.length,
-    total_relations_count: all_relations.length,
-    related_threads_duration_ms,
-    relations: all_relations,
+    total_relations_count: entity_relations.length,
+    relations: entity_relations,
     dry_run
-  }
-
-  // Add LLM-specific results if available
-  if (llm_result) {
-    result.model_used = llm_result.model_used
-    result.candidates_evaluated = llm_result.candidates_evaluated
-    if (
-      llm_result.confidence_scores &&
-      Object.keys(llm_result.confidence_scores).length > 0
-    ) {
-      result.confidence_scores = llm_result.confidence_scores
-    }
-    if (llm_result.reasoning) {
-      result.reasoning = llm_result.reasoning
-    }
   }
 
   // Update thread metadata (unless dry run)
   if (!dry_run) {
     const metadata_update = {
-      relations: all_relations,
+      relations: entity_relations,
       relations_analyzed_at: new Date().toISOString()
     }
 
@@ -303,7 +192,7 @@ export async function analyze_thread_relations({
       metadata: metadata_update
     })
 
-    log(`Updated thread ${thread_id} with ${all_relations.length} relations`)
+    log(`Updated thread ${thread_id} with ${entity_relations.length} relations`)
     result.metadata_updated = true
   }
 
