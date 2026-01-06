@@ -11,7 +11,10 @@ import {
   emit_active_session_updated,
   emit_active_session_ended
 } from '#libs-server/active-sessions/index.mjs'
-import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
+import {
+  read_thread_data,
+  get_latest_timeline_event
+} from '#libs-server/threads/thread-utils.mjs'
 import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 
@@ -66,11 +69,13 @@ async function get_thread_info_for_session(thread_id) {
   if (!thread_id) return empty_result
 
   try {
-    const { metadata, timeline } = await read_thread_data({ thread_id })
+    const { metadata } = await read_thread_data({ thread_id })
 
-    // Get latest timeline event (last entry in timeline)
-    const latest_timeline_event =
-      timeline && timeline.length > 0 ? timeline[timeline.length - 1] : null
+    // Get latest non-system timeline event
+    const latest_timeline_event = await get_latest_timeline_event({
+      thread_id,
+      exclude_system: true
+    })
 
     return {
       thread_title: metadata.title || null,

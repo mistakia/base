@@ -116,20 +116,37 @@ export async function read_thread_data({ thread_id, user_base_directory }) {
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} [params.user_base_directory] Custom user base directory
+ * @param {boolean} [params.exclude_system] Whether to exclude system events (default: true)
  * @returns {Promise<Object|null>} Latest timeline event or null
  */
 export async function get_latest_timeline_event({
   thread_id,
-  user_base_directory
+  user_base_directory,
+  exclude_system = true
 }) {
   try {
     const { timeline } = await read_thread_data({
       thread_id,
       user_base_directory
     })
-    return timeline && timeline.length > 0
-      ? timeline[timeline.length - 1]
-      : null
+    if (!timeline || timeline.length === 0) {
+      return null
+    }
+
+    // If excluding system events, find the last non-system event
+    if (exclude_system) {
+      for (let i = timeline.length - 1; i >= 0; i--) {
+        const event = timeline[i]
+        if (event.type !== 'system') {
+          return event
+        }
+      }
+      // If all events are system events, return null
+      return null
+    }
+
+    // Otherwise, return the last event
+    return timeline[timeline.length - 1]
   } catch (error) {
     log(
       `Error getting latest timeline event for ${thread_id}: ${error.message}`
