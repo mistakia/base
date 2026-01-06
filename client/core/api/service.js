@@ -181,6 +181,21 @@ export const api = {
   get_activity_heatmap({ days = 365 } = {}) {
     const url = `${API_URL}/activity/heatmap?days=${days}`
     return { url }
+  },
+
+  get_entity_relations({
+    base_uri,
+    direction = 'both',
+    relation_type,
+    entity_type,
+    limit = 50,
+    offset = 0
+  }) {
+    const params = { base_uri, direction, limit, offset }
+    if (relation_type) params.relation_type = relation_type
+    if (entity_type) params.entity_type = entity_type
+    const url = `${API_URL}/entities/relations?${qs.stringify(params)}`
+    return { url }
   }
 }
 

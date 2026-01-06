@@ -269,6 +269,116 @@ export function convert_paths_to_base_uris({ references }) {
   return converted
 }
 
+/**
+ * Separate references into entity files, code files, and directories
+ * Entity references: .md files that resolve to base URIs
+ * File references: code files (.js, .mjs, .ts, etc.)
+ * Directory references: paths identified as directories
+ * @param {Object} params
+ * @param {Array} params.references - Array of references with path or base_uri
+ * @returns {Object} { entity_references, file_references, directory_references }
+ */
+export function separate_reference_types({ references }) {
+  const entity_references = []
+  const file_references = []
+  const directory_references = []
+
+  // File extensions to track as code files
+  const code_extensions = [
+    '.js',
+    '.mjs',
+    '.cjs',
+    '.ts',
+    '.tsx',
+    '.jsx',
+    '.json',
+    '.yaml',
+    '.yml',
+    '.sh',
+    '.py',
+    '.rb',
+    '.go',
+    '.rs',
+    '.java',
+    '.c',
+    '.cpp',
+    '.h',
+    '.css',
+    '.scss',
+    '.html',
+    '.sql',
+    '.graphql'
+  ]
+
+  for (const ref of references) {
+    // Already has base_uri - it's an entity reference
+    if (ref.base_uri) {
+      entity_references.push(ref)
+      continue
+    }
+
+    // Skip if no path
+    if (!ref.path) continue
+
+    const path = ref.path
+
+    // Check if it's a directory (ends with / or no extension)
+    if (path.endsWith('/')) {
+      directory_references.push({
+        path: path.replace(/\/$/, ''), // Remove trailing slash for storage
+        access_type: ref.access_type,
+        confidence: ref.confidence,
+        source: ref.source
+      })
+      continue
+    }
+
+    // Check if it's a .md entity file
+    if (path.endsWith('.md')) {
+      try {
+        const base_uri = create_base_uri_from_path(path)
+        entity_references.push({
+          ...ref,
+          base_uri,
+          path: undefined
+        })
+      } catch (error) {
+        // Path is outside managed repositories - skip it
+        log(`Skipping entity path outside managed repos: ${path}`)
+      }
+      continue
+    }
+
+    // Check if it's a code file
+    const has_code_extension = code_extensions.some((ext) => path.endsWith(ext))
+    if (has_code_extension) {
+      file_references.push({
+        path,
+        access_type: ref.access_type,
+        confidence: ref.confidence,
+        source: ref.source
+      })
+      continue
+    }
+
+    // Check if path looks like a directory (no extension and contains /)
+    if (!path.includes('.') && path.includes('/')) {
+      directory_references.push({
+        path,
+        access_type: ref.access_type,
+        confidence: ref.confidence,
+        source: ref.source
+      })
+    }
+  }
+
+  return {
+    entity_references,
+    file_references,
+    directory_references
+  }
+}
+
 // ============================================================================
 // Deduplication
 // ============================================================================
@@ -320,6 +430,47 @@ export function deduplicate_references({ references }) {
 // ============================================================================
 
 /**
+ * Deduplicate file references by path
+ * @param {Object} params
+ * @param {Array} params.references - Array of file references with path
+ * @returns {Array} Deduplicated array of file references
+ */
+function deduplicate_file_references({ references }) {
+  const access_priority = {
+    create: 4,
+    modify: 3,
+    delete: 3,
+    read: 2,
+    reference: 1
+  }
+  const by_path = new Map()
+
+  for (const ref of references) {
+    if (!ref.path) continue
+
+    const existing = by_path.get(ref.path)
+    if (!existing) {
+      by_path.set(ref.path, { ...ref })
+      continue
+    }
+
+    // Merge: keep higher priority access type and higher confidence
+    const existing_priority = access_priority[existing.access_type] || 0
+    const new_priority = access_priority[ref.access_type] || 0
+
+    if (new_priority > existing_priority) {
+      existing.access_type = ref.access_type
+    }
+
+    if (ref.confidence === 'high' && existing.confidence !== 'high') {
+      existing.confidence = 'high'
+    }
+  }
+
+  return Array.from(by_path.values())
+}
+
+/**
  * Extract all entity references from a thread timeline
  * @param {Object} params
  * @param {Array} params.timeline - Thread timeline entries
@@ -346,6 +497,57 @@ export function extract_timeline_references({ timeline }) {
   log(`Extracted ${deduplicated.length} unique entity references from timeline`)
 
   return { references: deduplicated }
+}
+
+/**
+ * Extract all references from a thread timeline, separated by type
+ * @param {Object} params
+ * @param {Array} params.timeline - Thread timeline entries
+ * @returns {Object} {
+ *   entity_references: [{ base_uri, access_type, confidence }],
+ *   file_references: [{ path, access_type, confidence }],
+ *   directory_references: [{ path, access_type, confidence }]
+ * }
+ */
+export function extract_timeline_references_separated({ timeline }) {
+  if (!timeline || !Array.isArray(timeline)) {
+    return {
+      entity_references: [],
+      file_references: [],
+      directory_references: []
+    }
+  }
+
+  // Collect references from all sources
+  const tool_refs = extract_from_tool_calls({ timeline })
+  const message_refs = extract_from_messages({ timeline })
+  const bash_refs = extract_from_bash_commands({ timeline })
+
+  const all_refs = [...tool_refs, ...message_refs, ...bash_refs]
+
+  // Separate into entity, file, and directory references
+  const separated = separate_reference_types({ references: all_refs })
+
+  // Deduplicate each type
+  const entity_references = deduplicate_references({
+    references: separated.entity_references
+  })
+  const file_references = deduplicate_file_references({
+    references: separated.file_references
+  })
+  const directory_references = deduplicate_file_references({
+    references: separated.directory_references
+  })
+
+  log(
+    `Extracted ${entity_references.length} entity refs, ${file_references.length} file refs, ${directory_references.length} dir refs`
+  )
+
+  return {
+    entity_references,
+    file_references,
+    directory_references
+  }
 }
 
 export default extract_timeline_references

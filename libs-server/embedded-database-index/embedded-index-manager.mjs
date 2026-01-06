@@ -24,6 +24,12 @@ import {
   sync_entity_relations_to_kuzu
 } from './kuzu/kuzu-entity-sync.mjs'
 import {
+  upsert_thread_to_kuzu,
+  delete_thread_from_kuzu,
+  sync_thread_relations_to_kuzu,
+  sync_thread_file_references_to_kuzu
+} from './kuzu/kuzu-thread-sync.mjs'
+import {
   get_duckdb_connection,
   close_duckdb_connection,
   initialize_duckdb_client
@@ -46,7 +52,11 @@ import {
   extract_tags_from_entity,
   extract_relations_from_entity
 } from './sync/entity-data-extractor.mjs'
-import { extract_thread_index_data } from './sync/thread-data-extractor.mjs'
+import {
+  extract_thread_index_data,
+  extract_thread_entity_data,
+  extract_thread_relations_for_kuzu
+} from './sync/thread-data-extractor.mjs'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
@@ -179,8 +189,8 @@ class EmbeddedIndexManager {
   }
 
   async _populate_threads_from_filesystem() {
-    if (!this.duckdb_ready) {
-      log('DuckDB not ready, skipping thread population')
+    if (!this.duckdb_ready && !this.kuzu_ready) {
+      log('Neither DuckDB nor Kuzu ready, skipping thread population')
       return
     }
 
@@ -196,19 +206,13 @@ class EmbeddedIndexManager {
       let failed = 0
 
       for (const thread of threads) {
-        try {
-          const duckdb_connection = await get_duckdb_connection()
-          const thread_index_data = extract_thread_index_data({
-            thread_id: thread.thread_id,
-            metadata: thread
-          })
-          await upsert_thread_to_duckdb({
-            connection: duckdb_connection,
-            thread_data: thread_index_data
-          })
+        const result = await this.sync_thread({
+          thread_id: thread.thread_id,
+          metadata: thread
+        })
+        if (result.success) {
           synced++
-        } catch (error) {
-          log('Error syncing thread %s: %s', thread.thread_id, error.message)
+        } else {
           failed++
         }
       }
@@ -236,20 +240,15 @@ class EmbeddedIndexManager {
       let failed = 0
 
       for (const entity of entities) {
-        try {
-          const base_uri =
-            entity.entity_properties?.base_uri || entity.file_info?.base_uri
-          await this.sync_entity({
-            base_uri,
-            entity_data: entity.entity_properties
-          })
+        const base_uri =
+          entity.entity_properties?.base_uri || entity.file_info?.base_uri
+        const result = await this.sync_entity({
+          base_uri,
+          entity_data: entity.entity_properties
+        })
+        if (result.success) {
           synced++
-        } catch (error) {
-          log(
-            'Error syncing task %s: %s',
-            entity.entity_properties?.base_uri,
-            error.message
-          )
+        } else {
           failed++
         }
       }
@@ -260,10 +259,16 @@ class EmbeddedIndexManager {
     }
   }
 
+  /**
+   * Sync an entity to the embedded databases
+   * @returns {{ success: boolean, kuzu_synced: boolean, duckdb_synced: boolean }}
+   */
   async sync_entity({ base_uri, entity_data }) {
+    const result = { success: true, kuzu_synced: false, duckdb_synced: false }
+
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity sync')
-      return
+      return { success: false, kuzu_synced: false, duckdb_synced: false }
     }
 
     const entity_index_data = extract_entity_index_data({
@@ -293,8 +298,10 @@ class EmbeddedIndexManager {
           entity_base_uri: base_uri,
           relations
         })
+        result.kuzu_synced = true
       } catch (error) {
         log('Error syncing entity to Kuzu: %s', error.message)
+        result.success = false
       }
     }
 
@@ -318,10 +325,14 @@ class EmbeddedIndexManager {
           source_base_uri: base_uri,
           relations
         })
+        result.duckdb_synced = true
       } catch (error) {
         log('Error syncing task to DuckDB: %s', error.message)
+        result.success = false
       }
     }
+
+    return result
   }
 
   async remove_entity({ base_uri }) {
@@ -352,41 +363,111 @@ class EmbeddedIndexManager {
     }
   }
 
+  /**
+   * Sync a thread to the embedded databases
+   * @returns {{ success: boolean, kuzu_synced: boolean, duckdb_synced: boolean }}
+   */
   async sync_thread({ thread_id, metadata }) {
-    if (!this.initialized || !this.duckdb_ready) {
-      log('Index manager not ready, skipping thread sync')
-      return
+    const result = { success: true, kuzu_synced: false, duckdb_synced: false }
+
+    if (!this.initialized) {
+      log('Index manager not initialized, skipping thread sync')
+      return { success: false, kuzu_synced: false, duckdb_synced: false }
     }
 
-    try {
-      const duckdb_connection = await get_duckdb_connection()
-      const thread_index_data = extract_thread_index_data({
-        thread_id,
-        metadata
-      })
-      await upsert_thread_to_duckdb({
-        connection: duckdb_connection,
-        thread_data: thread_index_data
-      })
-    } catch (error) {
-      log('Error syncing thread to DuckDB: %s', error.message)
+    // Sync to DuckDB
+    if (this.duckdb_ready) {
+      try {
+        const duckdb_connection = await get_duckdb_connection()
+        const thread_index_data = extract_thread_index_data({
+          thread_id,
+          metadata
+        })
+        await upsert_thread_to_duckdb({
+          connection: duckdb_connection,
+          thread_data: thread_index_data
+        })
+        result.duckdb_synced = true
+      } catch (error) {
+        log('Error syncing thread to DuckDB: %s', error.message)
+        result.success = false
+      }
     }
+
+    // Sync to Kuzu
+    if (this.kuzu_ready) {
+      try {
+        const kuzu_connection = await get_kuzu_connection()
+
+        // Upsert thread as entity
+        const thread_entity_data = extract_thread_entity_data({
+          thread_id,
+          metadata
+        })
+        await upsert_thread_to_kuzu({
+          connection: kuzu_connection,
+          thread_data: thread_entity_data
+        })
+
+        // Sync thread relations
+        const thread_relations = extract_thread_relations_for_kuzu({ metadata })
+        await sync_thread_relations_to_kuzu({
+          connection: kuzu_connection,
+          thread_id,
+          relations: thread_relations
+        })
+
+        // Sync file references if present
+        const file_references = metadata.file_references || []
+        const directory_references = metadata.directory_references || []
+        if (file_references.length > 0 || directory_references.length > 0) {
+          await sync_thread_file_references_to_kuzu({
+            connection: kuzu_connection,
+            thread_id,
+            file_references,
+            directory_references
+          })
+        }
+        result.kuzu_synced = true
+      } catch (error) {
+        log('Error syncing thread to Kuzu: %s', error.message)
+        result.success = false
+      }
+    }
+
+    return result
   }
 
   async remove_thread({ thread_id }) {
-    if (!this.initialized || !this.duckdb_ready) {
-      log('Index manager not ready, skipping thread removal')
+    if (!this.initialized) {
+      log('Index manager not initialized, skipping thread removal')
       return
     }
 
-    try {
-      const duckdb_connection = await get_duckdb_connection()
-      await delete_thread_from_duckdb({
-        connection: duckdb_connection,
-        thread_id
-      })
-    } catch (error) {
-      log('Error removing thread from DuckDB: %s', error.message)
+    // Remove from DuckDB
+    if (this.duckdb_ready) {
+      try {
+        const duckdb_connection = await get_duckdb_connection()
+        await delete_thread_from_duckdb({
+          connection: duckdb_connection,
+          thread_id
+        })
+      } catch (error) {
+        log('Error removing thread from DuckDB: %s', error.message)
+      }
+    }
+
+    // Remove from Kuzu
+    if (this.kuzu_ready) {
+      try {
+        const kuzu_connection = await get_kuzu_connection()
+        await delete_thread_from_kuzu({
+          connection: kuzu_connection,
+          thread_id
+        })
+      } catch (error) {
+        log('Error removing thread from Kuzu: %s', error.message)
+      }
     }
   }
 

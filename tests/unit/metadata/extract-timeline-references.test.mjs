@@ -4,10 +4,12 @@ import { expect } from 'chai'
 
 import {
   extract_timeline_references,
+  extract_timeline_references_separated,
   extract_from_tool_calls,
   extract_from_messages,
   extract_from_bash_commands,
   convert_paths_to_base_uris,
+  separate_reference_types,
   deduplicate_references,
   TOOL_ACCESS_TYPES
 } from '#libs-server/metadata/extract-timeline-references.mjs'
@@ -357,6 +359,142 @@ describe('extract-timeline-references', () => {
 
       // Should have references from both messages and tool calls
       expect(result.references.length).to.be.greaterThan(0)
+    })
+  })
+
+  describe('separate_reference_types', () => {
+    it('should separate entity references from file references', () => {
+      const references = [
+        { base_uri: 'user:task/my-task.md', access_type: 'read' },
+        { path: '/path/to/code.js', access_type: 'read' },
+        { path: '/path/to/script.mjs', access_type: 'modify' }
+      ]
+
+      const result = separate_reference_types({ references })
+
+      expect(result.entity_references).to.have.length(1)
+      expect(result.entity_references[0].base_uri).to.equal(
+        'user:task/my-task.md'
+      )
+      expect(result.file_references).to.have.length(2)
+      expect(result.file_references[0].path).to.equal('/path/to/code.js')
+      expect(result.file_references[1].path).to.equal('/path/to/script.mjs')
+    })
+
+    it('should identify directory references by trailing slash', () => {
+      const references = [
+        { path: '/path/to/directory/', access_type: 'read' },
+        { path: '/path/to/file.js', access_type: 'read' }
+      ]
+
+      const result = separate_reference_types({ references })
+
+      expect(result.directory_references).to.have.length(1)
+      expect(result.directory_references[0].path).to.equal('/path/to/directory')
+      expect(result.file_references).to.have.length(1)
+    })
+
+    it('should identify directories by lack of extension with path separator', () => {
+      const references = [{ path: '/path/to/directory', access_type: 'read' }]
+
+      const result = separate_reference_types({ references })
+
+      expect(result.directory_references).to.have.length(1)
+    })
+
+    it('should recognize common code extensions', () => {
+      const code_files = [
+        '.js',
+        '.mjs',
+        '.ts',
+        '.tsx',
+        '.py',
+        '.go',
+        '.rs',
+        '.json',
+        '.yaml',
+        '.sh'
+      ]
+      const references = code_files.map((ext) => ({
+        path: `/path/to/file${ext}`,
+        access_type: 'read'
+      }))
+
+      const result = separate_reference_types({ references })
+
+      expect(result.file_references).to.have.length(code_files.length)
+      expect(result.entity_references).to.have.length(0)
+    })
+
+    it('should return empty arrays for empty input', () => {
+      const result = separate_reference_types({ references: [] })
+
+      expect(result.entity_references).to.deep.equal([])
+      expect(result.file_references).to.deep.equal([])
+      expect(result.directory_references).to.deep.equal([])
+    })
+  })
+
+  describe('extract_timeline_references_separated', () => {
+    it('should return empty arrays for null timeline', () => {
+      const result = extract_timeline_references_separated({ timeline: null })
+
+      expect(result.entity_references).to.deep.equal([])
+      expect(result.file_references).to.deep.equal([])
+      expect(result.directory_references).to.deep.equal([])
+    })
+
+    it('should separate entity refs from file refs in tool calls', () => {
+      const timeline = [
+        {
+          type: 'tool_call',
+          content: {
+            tool_name: 'mcp__base__entity_create',
+            tool_parameters: { base_uri: 'user:task/new-task.md' }
+          }
+        },
+        {
+          type: 'tool_call',
+          content: {
+            tool_name: 'Read',
+            tool_parameters: { file_path: '/path/to/code.js' }
+          }
+        }
+      ]
+
+      const result = extract_timeline_references_separated({ timeline })
+
+      expect(result.entity_references).to.have.length(1)
+      expect(result.entity_references[0].base_uri).to.equal(
+        'user:task/new-task.md'
+      )
+      expect(result.file_references).to.have.length(1)
+      expect(result.file_references[0].path).to.equal('/path/to/code.js')
+    })
+
+    it('should deduplicate file references by path', () => {
+      const timeline = [
+        {
+          type: 'tool_call',
+          content: {
+            tool_name: 'Read',
+            tool_parameters: { file_path: '/path/to/code.js' }
+          }
+        },
+        {
+          type: 'tool_call',
+          content: {
+            tool_name: 'Edit',
+            tool_parameters: { file_path: '/path/to/code.js' }
+          }
+        }
+      ]
+
+      const result = extract_timeline_references_separated({ timeline })
+
+      // Should be deduplicated to single entry with higher access type
+      expect(result.file_references).to.have.length(1)
+      expect(result.file_references[0].access_type).to.equal('modify')
     })
   })
 })

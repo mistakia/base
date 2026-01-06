@@ -9,6 +9,7 @@ import {
   TwoCellRow,
   DateDisplay
 } from '@views/components/MetadataDisplay'
+import RelatedEntities from '@views/components/RelatedEntities'
 import { parse_relation } from './renderers/relations-field.js'
 import { entity_field_config } from './field-config.js'
 
@@ -255,13 +256,36 @@ ObservationsSection.propTypes = {
   observations: PropTypes.array
 }
 
-const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
+/**
+ * Compute base_uri from file path
+ * @param {string} path - File path like "task/my-task.md" or "/task/my-task.md"
+ * @returns {string|null} Base URI like "user:task/my-task.md" or "sys:system/schema/task.md"
+ */
+const compute_base_uri_from_path = (path) => {
+  if (!path) return null
+
+  // Strip leading slashes
+  const normalized_path = path.replace(/^\/+/, '')
+
+  // System entities use sys: prefix
+  if (normalized_path.startsWith('system/')) {
+    return `sys:${normalized_path}`
+  }
+
+  // User entities use user: prefix
+  return `user:${normalized_path}`
+}
+
+const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown, path }) => {
   const [expanded, set_expanded] = useState(false)
 
   if (!frontmatter) return null
 
   const { title, name, type, description, relations, observations } =
     frontmatter
+
+  // Use base_uri from frontmatter if available, otherwise compute from path
+  const base_uri = frontmatter.base_uri || compute_base_uri_from_path(path)
 
   // Categorize fields based on entity type configuration
   const { always_visible, expandable, uncategorized } =
@@ -290,6 +314,18 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
       <Box>
         {relations && <RelationsSection relations={relations} />}
         {observations && <ObservationsSection observations={observations} />}
+
+        {/* Reverse relations - threads and entities referencing this entity */}
+        {base_uri && (
+          <RelatedEntities
+            base_uri={base_uri}
+            direction='reverse'
+            exclude_types={['file', 'directory']}
+            limit_per_group={10}
+            show_header={true}
+            header_text='Referenced By'
+          />
+        )}
 
         {/* Always visible fields */}
         {Object.entries(always_visible).map(([key, value], index) => {
@@ -381,7 +417,8 @@ const EntityFrontmatter = ({ frontmatter, is_sticky = false, markdown }) => {
 EntityFrontmatter.propTypes = {
   frontmatter: PropTypes.object,
   is_sticky: PropTypes.bool,
-  markdown: PropTypes.string
+  markdown: PropTypes.string,
+  path: PropTypes.string
 }
 
 export default EntityFrontmatter

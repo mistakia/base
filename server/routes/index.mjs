@@ -7,6 +7,7 @@ import models from './models.mjs'
 import filesystem from './filesystem.mjs'
 import active_sessions from './active-sessions.mjs'
 import activity from './activity.mjs'
+import entities from './entities.mjs'
 
 export default {
   users,
@@ -17,5 +18,6 @@ export default {
   models,
   filesystem,
   active_sessions,
-  activity
+  activity,
+  entities
 }
