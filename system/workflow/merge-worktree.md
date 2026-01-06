@@ -130,6 +130,7 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 ### 4. Update Main Branch (Execute from main repository directory)
 
 - Ensure you're in the main repository: `pwd` should show main repository path
+- **Stash any uncommitted changes**: `git stash --include-untracked` (preserves local work)
 - Switch to default branch: `git checkout $DEFAULT_BRANCH`
 - Pull latest changes: `git pull origin $DEFAULT_BRANCH`
 
@@ -276,6 +277,7 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - Check git log to confirm merge commit exists: `git log -1 --oneline`
 - Sync submodules to merged references: `git submodule update --init`
 - Verify submodules at correct commits: `git submodule status` (no `+` prefix)
+- **Restore stashed changes**: `git stash pop` (if stash was created in Step 4)
 - Ensure working directory is clean: `git status`
 - Verify worktree was removed: `git worktree list`
 
