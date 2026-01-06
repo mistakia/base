@@ -136,6 +136,7 @@ Threads are automatically analyzed to extract entity relations from their timeli
 ### Thread-as-Entity Model
 
 Threads are treated as entities in KuzuDB with:
+
 - `base_uri`: `user:thread/<thread-id>`
 - `type`: `thread`
 
@@ -158,6 +159,7 @@ In addition to entity relations, threads track file and directory references as 
 - Directory `type`: `directory`
 
 File references are stored in thread metadata:
+
 ```json
 {
   "file_references": ["/path/to/file.js", "/path/to/other.ts"],
@@ -168,6 +170,7 @@ File references are stored in thread metadata:
 ### Relation Analysis
 
 Thread relations are analyzed:
+
 - On session end (via sync-claude-session.sh hook)
 - On session updates (when existing threads are modified)
 - Via batch processing (cli/backfill-thread-relations.mjs)
@@ -179,6 +182,7 @@ The analysis timestamp is stored in `relations_analyzed_at` in thread metadata.
 ### Forward Relations
 
 Forward relations query what entities a source entity points to:
+
 ```
 GET /api/entities/relations?base_uri=user:thread/abc-123&direction=forward
 ```
@@ -186,6 +190,7 @@ GET /api/entities/relations?base_uri=user:thread/abc-123&direction=forward
 ### Reverse Relations
 
 Reverse relations query what entities point to a target entity:
+
 ```
 GET /api/entities/relations?base_uri=user:task/my-task.md&direction=reverse
 ```
@@ -204,6 +209,7 @@ This is useful for finding all threads that accessed or modified a particular en
 ## KuzuDB Integration
 
 Relations are stored in KuzuDB as graph edges:
+
 - `Entity` nodes represent entities (tasks, threads, files, etc.)
 - `RELATES_TO` edges connect entities with relation type and context
 - `Tag` nodes and `HAS_TAG` edges represent entity tags
