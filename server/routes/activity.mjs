@@ -2,15 +2,14 @@ import express from 'express'
 import debug from 'debug'
 
 import { get_activity_heatmap_data } from '#libs-server/activity/index.mjs'
+import { get_cached_activity_heatmap } from '#server/services/cache-warmer.mjs'
 
 const log = debug('api:activity')
 const router = express.Router({ mergeParams: true })
 
-// Cache for heatmap data (15 minute TTL)
-const CACHE_TTL_MS = 15 * 60 * 1000
-let heatmap_cache = null
-let cache_timestamp = 0
-let cache_days = 0
+// HTTP cache: serve cached for 5 min, stale-while-revalidate for 4 hours
+const HTTP_MAX_AGE = 5 * 60
+const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 /**
  * GET /api/activity/heatmap
@@ -22,27 +21,23 @@ let cache_days = 0
 router.get('/heatmap', async (req, res) => {
   try {
     const days = parseInt(req.query.days, 10) || 365
-    const now = Date.now()
 
-    // Check cache validity
-    const cache_valid =
-      heatmap_cache &&
-      cache_days === days &&
-      now - cache_timestamp < CACHE_TTL_MS
+    // Set HTTP cache headers for public caching
+    res.set(
+      'Cache-Control',
+      `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+    )
 
-    if (cache_valid) {
+    // Check centralized cache (maintained by cache-warmer service)
+    const cached_data = get_cached_activity_heatmap({ days })
+    if (cached_data) {
       log(`Returning cached activity heatmap data for ${days} days`)
-      return res.json(heatmap_cache)
+      return res.json(cached_data)
     }
 
-    log(`Fetching activity heatmap data for ${days} days`)
-
+    // Cache miss - fetch fresh data
+    log(`Fetching activity heatmap data for ${days} days (cache miss)`)
     const heatmap_data = await get_activity_heatmap_data({ days })
-
-    // Update cache
-    heatmap_cache = heatmap_data
-    cache_timestamp = now
-    cache_days = days
 
     res.json(heatmap_data)
   } catch (error) {

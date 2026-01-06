@@ -169,10 +169,8 @@ const HomePageTasks = ({
             <div>Finish By</div>
           </div>
           <div className='tasks-table-body'>
-            {sorted_tags.map((tag_uri, index) => (
-              <div
-                key={tag_uri}
-                className={`task-group ${index % 2 === 0 ? 'task-group-even' : 'task-group-odd'}`}>
+            {sorted_tags.map((tag_uri) => (
+              <div key={tag_uri} className='task-group'>
                 {sorted_tags.length > 1 && (
                   <div className='task-group-header'>
                     <span className='task-group-name'>

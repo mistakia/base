@@ -13,6 +13,10 @@ import {
   start_index_sync_watcher,
   stop_index_file_watcher
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
+import {
+  start_cache_warmer,
+  stop_cache_warmer
+} from '#server/services/cache-warmer.mjs'
 
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
@@ -65,6 +69,15 @@ try {
       logger(`Failed to start index file watcher: ${watcher_error.message}`)
       logger(watcher_error)
     }
+
+    // Start cache warmer service for proactive cache maintenance
+    try {
+      await start_cache_warmer()
+      logger('Cache warmer service started')
+    } catch (cache_error) {
+      logger(`Failed to start cache warmer: ${cache_error.message}`)
+      logger(cache_error)
+    }
   })
 } catch (err) {
   // TODO move to stderr
@@ -105,6 +118,14 @@ const shutdown = async (signal) => {
     logger('Embedded index shut down')
   } catch (error) {
     logger(`Error shutting down embedded index: ${error.message}`)
+  }
+
+  try {
+    // Stop cache warmer service
+    stop_cache_warmer()
+    logger('Cache warmer service stopped')
+  } catch (error) {
+    logger(`Error stopping cache warmer: ${error.message}`)
   }
 
   // Close server

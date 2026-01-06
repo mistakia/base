@@ -10,6 +10,10 @@ import fs from 'fs/promises'
 
 import embedded_index_manager from '../embedded-index-manager.mjs'
 import {
+  invalidate_tasks_cache,
+  invalidate_threads_cache
+} from '#server/services/cache-warmer.mjs'
+import {
   start_index_file_watcher,
   stop_index_file_watcher,
   extract_thread_id_from_path,
@@ -35,6 +39,9 @@ export function start_index_sync_watcher() {
   start_index_file_watcher({
     on_task_change: async (file_path) => {
       try {
+        // Invalidate HTTP cache for public task list requests
+        invalidate_tasks_cache()
+
         const base_uri = extract_base_uri_from_task_path(file_path)
         if (!base_uri) {
           log('Could not extract base_uri from path: %s', file_path)
@@ -61,6 +68,9 @@ export function start_index_sync_watcher() {
 
     on_task_delete: async (file_path) => {
       try {
+        // Invalidate HTTP cache for public task list requests
+        invalidate_tasks_cache()
+
         const base_uri = extract_base_uri_from_task_path(file_path)
         if (!base_uri) {
           log('Could not extract base_uri from path: %s', file_path)
@@ -76,6 +86,9 @@ export function start_index_sync_watcher() {
 
     on_thread_change: async (file_path) => {
       try {
+        // Invalidate HTTP cache for public thread list requests
+        invalidate_threads_cache()
+
         const thread_id = extract_thread_id_from_path(file_path)
         if (!thread_id) {
           log('Could not extract thread_id from path: %s', file_path)
@@ -96,6 +109,9 @@ export function start_index_sync_watcher() {
 
     on_thread_delete: async (file_path) => {
       try {
+        // Invalidate HTTP cache for public thread list requests
+        invalidate_threads_cache()
+
         const thread_id = extract_thread_id_from_path(file_path)
         if (!thread_id) {
           log('Could not extract thread_id from path: %s', file_path)

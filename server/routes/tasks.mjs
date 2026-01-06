@@ -1,4 +1,5 @@
 import express from 'express'
+import debug from 'debug'
 
 import {
   list_tasks_from_filesystem,
@@ -10,8 +11,14 @@ import {
   check_permission
 } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
+import { get_cached_tasks } from '#server/services/cache-warmer.mjs'
 
+const log = debug('api:tasks')
 const router = express.Router({ mergeParams: true })
+
+// HTTP cache headers for public requests
+const HTTP_MAX_AGE = 5 * 60
+const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 // Helper function to check user permissions for a file
 const check_file_permission = async (user_public_key, absolute_path) => {
@@ -222,6 +229,60 @@ async function handle_task_list_request(
     min_planned_finish,
     max_planned_finish
   } = filter_params
+
+  // Check if we have filter params (don't use cached data for filtered requests)
+  const has_filters =
+    status ||
+    tag_entity_ids ||
+    organization_ids ||
+    person_ids ||
+    min_finish_by ||
+    max_finish_by ||
+    min_estimated_total_duration ||
+    max_estimated_total_duration ||
+    min_planned_start ||
+    max_planned_start ||
+    min_planned_finish ||
+    max_planned_finish ||
+    archived === 'true'
+
+  // For public (unauthenticated) requests without filters, use caching
+  const is_public_request = !user_public_key
+  const is_cacheable = is_public_request && !has_filters
+
+  // Set HTTP cache headers for public requests
+  if (is_public_request) {
+    res.set(
+      'Cache-Control',
+      `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+    )
+  }
+
+  // Check centralized cache (maintained by cache-warmer service)
+  if (is_cacheable) {
+    const cached_data = get_cached_tasks()
+    if (cached_data) {
+      log('Returning cached tasks list')
+
+      // Apply redaction to tasks based on user permissions
+      const tasks = await Promise.all(
+        cached_data.map(async (task) => {
+          return await check_task_permission_and_build_response({
+            task,
+            user_public_key
+          })
+        })
+      )
+
+      // Get tag visibility for all tags referenced in tasks
+      const tag_visibility = await get_tag_visibility(tasks, user_public_key)
+
+      return res.status(200).send({ tasks, tag_visibility })
+    }
+  }
+
+  // Cache miss or filtered request - fetch fresh data
+  log('Fetching tasks (cache miss or filtered)')
 
   const all_tasks = await list_tasks_from_filesystem({
     status,

@@ -15,9 +15,14 @@ import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { thread_constants } from '#libs-shared'
 import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
+import { get_cached_threads } from '#server/services/cache-warmer.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
+
+// HTTP cache headers for public requests
+const HTTP_MAX_AGE = 5 * 60
+const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 /**
  * Helper functions
@@ -90,6 +95,37 @@ router.get('/', async (req, res) => {
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
     const include_timeline = req.query.include_timeline !== 'false'
+
+    // For public (unauthenticated) requests with default pagination, use caching
+    const is_public_request = !requesting_user_key
+    const is_cacheable =
+      is_public_request && limit === 1000 && offset === 0 && include_timeline
+
+    // Set HTTP cache headers for public requests
+    if (is_public_request) {
+      res.set(
+        'Cache-Control',
+        `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+      )
+    }
+
+    // Check centralized cache (maintained by cache-warmer service)
+    if (is_cacheable) {
+      const cached_data = get_cached_threads({ thread_state })
+      if (cached_data) {
+        log(`Returning cached threads list for state=${thread_state || 'all'}`)
+        // Apply permission-based redaction (public users see redacted data)
+        const threads_with_permissions = await Promise.all(
+          cached_data.map((thread) =>
+            apply_permission_based_redaction(thread, requesting_user_key)
+          )
+        )
+        return res.json(threads_with_permissions)
+      }
+    }
+
+    // Cache miss or authenticated request - fetch fresh data
+    log('Fetching threads (cache miss or authenticated)')
 
     // Get all threads from filesystem
     const all_threads = await threads.list_threads({
