@@ -85,11 +85,10 @@ describe('analyze-thread-relations integration', () => {
       JSON.stringify(timeline, null, 2)
     )
 
-    // Run analysis in dry-run mode (skip LLM calls)
+    // Run analysis in dry-run mode
     const result = await analyze_thread_relations({
       thread_id,
-      dry_run: true,
-      skip_related_threads: true
+      dry_run: true
     })
 
     expect(result.status).to.equal('success')
@@ -108,8 +107,7 @@ describe('analyze-thread-relations integration', () => {
 
     const result = await analyze_thread_relations({
       thread_id,
-      dry_run: false,
-      skip_related_threads: true
+      dry_run: false
     })
 
     expect(result.status).to.equal('already_analyzed')
