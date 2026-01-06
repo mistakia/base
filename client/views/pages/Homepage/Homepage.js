@@ -65,7 +65,6 @@ const Homepage = ({
                   threads={threads}
                   is_loading_threads={is_loading_threads}
                   load_threads={load_threads}
-                  max_threads={3}
                 />
                 <HomePageTasks
                   tasks={tasks}

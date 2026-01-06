@@ -85,7 +85,11 @@ const normalize_thread = (thread) => {
   }
 }
 
-const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
+// Constants for display logic
+const MIN_THREADS_TO_SHOW = 5
+const RECENT_HOURS_THRESHOLD = 72
+
+const HomeSessionsPanel = ({ threads, load_threads }) => {
   const dispatch = useDispatch()
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
@@ -122,9 +126,29 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
       )
     : []
 
-  const displayed_threads = List.isList(active_threads)
-    ? active_threads.take(max_threads)
-    : active_threads.slice(0, max_threads)
+  // Calculate threads to display:
+  // - Show all threads created within the last 72 hours
+  // - Show at least 5 if there are more than 5 total
+  const now = Date.now()
+  const recent_cutoff = now - RECENT_HOURS_THRESHOLD * 60 * 60 * 1000
+
+  const active_threads_list = List.isList(active_threads)
+    ? active_threads.toJS()
+    : active_threads
+
+  // Count threads created in the last 72 hours
+  const recent_thread_count = active_threads_list.filter((thread) => {
+    const created_at = new Date(thread.created_at).getTime()
+    return created_at >= recent_cutoff
+  }).length
+
+  // Show the maximum of: recent threads count, or MIN_THREADS_TO_SHOW (if we have enough)
+  const threads_to_show = Math.max(
+    recent_thread_count,
+    Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length)
+  )
+
+  const displayed_threads = active_threads_list.slice(0, threads_to_show)
 
   const has_active_sessions = active_session_count > 0
   const has_active_threads =
@@ -136,9 +160,7 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
   }
 
   const sessions_list = active_sessions || []
-  const threads_list = displayed_threads.toJS
-    ? displayed_threads.toJS()
-    : displayed_threads
+  const threads_list = displayed_threads
 
   return (
     <div className='home-sessions-panel'>
@@ -220,8 +242,7 @@ const HomeSessionsPanel = ({ threads, load_threads, max_threads = 3 }) => {
 
 HomeSessionsPanel.propTypes = {
   threads: ImmutablePropTypes.list,
-  load_threads: PropTypes.func,
-  max_threads: PropTypes.number
+  load_threads: PropTypes.func
 }
 
 export default HomeSessionsPanel
