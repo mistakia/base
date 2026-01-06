@@ -31,7 +31,7 @@ relations:
   - uses [[user:guideline/write-software.md]]
   - uses [[sys:system/guideline/write-javascript.md]]
   - precedes [[sys:system/workflow/merge-worktree.md]]
-updated_at: '2026-01-05T19:25:18.081Z'
+updated_at: '2026-01-06T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -56,6 +56,12 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Verify clean state on main/master branch
    - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
    - Navigate to worktree directory
+   - **Copy config files from main repository** (required for scripts and testing):
+     - Config files are typically gitignored and must be copied manually to the worktree
+     - Common patterns to copy (check .gitignore for project-specific patterns):
+       - Root config files: `cp ../repo/config.*.js .` (e.g., config.production.js, config.development.js)
+       - Config directory: `cp ../repo/config/config*.json ./config/` (e.g., config.json)
+     - Do NOT read config file contents to avoid exposing sensitive information
    - **Initialize submodules (if modifying submodule code)**:
      - Initialize needed submodule: `git submodule update --init [submodule-path]`
      - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
