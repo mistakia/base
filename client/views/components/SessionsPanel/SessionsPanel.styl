@@ -1,38 +1,29 @@
-// Sessions Panel - Compact, responsive design with 100px max height
-// Large screens: horizontal layout with sections side by side
-// Small screens: stacked sections with horizontal scrolling chips
+// Sessions Panel - Compact, responsive design
+// Desktop: stacked sections (active on top, review below) with expandable rows
+// Mobile: full width with horizontal scrolling chips
 
 .sessions-panel
   display: flex
-  flex-direction: row
-  gap: $space_base
+  flex-direction: column
+  gap: $space_sm
   width: 100%
-  max-height: 100px
   overflow: visible
-  padding: $space_sm 0 12px
 
-  // Small screens: stack vertically
+  // Mobile: add horizontal padding for child content
   @media (max-width: 768px)
-    flex-direction: column
-    gap: $space_sm
-    max-height: 100px
+    gap: $space_xs
 
 .sessions-panel__section
   display: flex
   flex-direction: column
   gap: $space_xs
   min-width: 0
-  flex: 1
-
-  // Large screens: limit width per section
-  @media (min-width: 769px)
-    max-width: 50%
+  width: 100%
 
   &--active
     flex-shrink: 0
 
   &--review
-    flex: 1
     min-width: 0
 
 .sessions-panel__label
@@ -46,6 +37,11 @@
   color: $color_text_secondary
   flex-shrink: 0
   white-space: nowrap
+
+  // On mobile, add horizontal padding
+  @media (max-width: 768px)
+    padding-left: $space_base
+    padding-right: $space_base
 
 .sessions-panel__dot
   width: 6px
@@ -76,18 +72,18 @@
   display: flex
   flex-wrap: wrap
   gap: $space_xs
-  overflow: visible
-  max-height: 52px
   padding-top: 2px
+  align-items: center
 
   // Small screens: horizontal scroll instead of wrap
   @media (max-width: 768px)
     flex-wrap: nowrap
     overflow-x: auto
     overflow-y: visible
-    max-height: 28px
     padding-bottom: 2px
     padding-top: 2px
+    padding-left: $space_base
+    padding-right: $space_base
 
     &::-webkit-scrollbar
       height: 2px

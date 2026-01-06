@@ -153,9 +153,13 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   })
 
   // Show all recent threads, or at least MIN_THREADS_TO_SHOW if we have enough total threads
-  const displayed_threads = recent_threads.length >= MIN_THREADS_TO_SHOW
-    ? recent_threads
-    : active_threads_list.slice(0, Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length))
+  const displayed_threads =
+    recent_threads.length >= MIN_THREADS_TO_SHOW
+      ? recent_threads
+      : active_threads_list.slice(
+          0,
+          Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length)
+        )
 
   const has_active_sessions = active_session_count > 0
   const has_active_threads =

@@ -80,6 +80,17 @@ body
   border: 1px solid var(--color-border-light)
   overflow: visible
 
+  // On mobile, make full width with no horizontal padding
+  @media (max-width: 768px)
+    margin-left: calc(-1 * var(--space-base))
+    margin-right: calc(-1 * var(--space-base))
+    padding-left: 0
+    padding-right: 0
+    border-left: none
+    border-right: none
+    max-width: none
+    width: calc(100% + 2 * var(--space-base))
+
 .all-threads-link
   color: var(--color-text-secondary)
   text-decoration: none

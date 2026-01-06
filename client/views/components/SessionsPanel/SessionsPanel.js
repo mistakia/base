@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useSelector, useDispatch } from 'react-redux'
@@ -12,6 +12,10 @@ import {
 } from '@core/active-sessions/selectors'
 import './SessionsPanel.styl'
 
+// Maximum items to show before "+N more" (approximate items that fit in rows)
+const MAX_ACTIVE_ITEMS_COLLAPSED = 6 // ~2 rows
+const MAX_REVIEW_ITEMS = 3 // ~1 row
+
 const SessionsPanel = ({
   threads,
   is_loading_threads,
@@ -22,6 +26,9 @@ const SessionsPanel = ({
   const navigate = useNavigate()
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
+
+  // Expansion state for active section only (review uses link instead)
+  const [active_expanded, set_active_expanded] = useState(false)
 
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
@@ -49,10 +56,6 @@ const SessionsPanel = ({
       )
     : []
 
-  const displayed_threads = List.isList(active_threads)
-    ? active_threads.take(max_threads)
-    : active_threads.slice(0, max_threads)
-
   const has_active_sessions = active_session_count > 0
   const has_active_threads =
     active_threads.size > 0 || active_threads.length > 0
@@ -64,10 +67,21 @@ const SessionsPanel = ({
   }
 
   const sessions_list = active_sessions || []
+  const threads_list = List.isList(active_threads)
+    ? active_threads.toJS()
+    : Array.isArray(active_threads)
+      ? active_threads
+      : []
 
-  const threads_list = displayed_threads.toJS
-    ? displayed_threads.toJS()
-    : displayed_threads
+  // Calculate which items to display
+  const active_sessions_to_show = active_expanded
+    ? sessions_list
+    : sessions_list.slice(0, MAX_ACTIVE_ITEMS_COLLAPSED)
+  const active_overflow_count =
+    sessions_list.length - MAX_ACTIVE_ITEMS_COLLAPSED
+
+  const threads_to_show = threads_list.slice(0, MAX_REVIEW_ITEMS)
+  const review_overflow_count = threads_list.length - MAX_REVIEW_ITEMS
 
   const handle_session_click = (event, session) => {
     if (!session.thread_id) return
@@ -94,6 +108,10 @@ const SessionsPanel = ({
     return path.split('/').pop() || 'root'
   }
 
+  const handle_active_expand_toggle = () => {
+    set_active_expanded(!active_expanded)
+  }
+
   return (
     <div className='sessions-panel'>
       {/* Active Sessions Section */}
@@ -106,8 +124,8 @@ const SessionsPanel = ({
               {active_session_count}
             </span>
           </div>
-          <div className='sessions-panel__items'>
-            {sessions_list.map((session) => {
+          <div className='sessions-panel__items sessions-panel__items--active'>
+            {active_sessions_to_show.map((session) => {
               const is_idle = session.status === 'idle'
               const has_thread = Boolean(session.thread_id)
               // Use thread title if available, otherwise fall back to directory
@@ -133,6 +151,22 @@ const SessionsPanel = ({
                 </div>
               )
             })}
+            {!active_expanded && active_overflow_count > 0 && (
+              <button
+                type='button'
+                className='sessions-panel__chip sessions-panel__chip--more'
+                onClick={handle_active_expand_toggle}>
+                +{active_overflow_count} more
+              </button>
+            )}
+            {active_expanded && active_overflow_count > 0 && (
+              <button
+                type='button'
+                className='sessions-panel__chip sessions-panel__chip--more'
+                onClick={handle_active_expand_toggle}>
+                show less
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -145,8 +179,8 @@ const SessionsPanel = ({
             <span className='sessions-panel__label-text'>Review</span>
             <span className='sessions-panel__count'>{active_thread_count}</span>
           </div>
-          <div className='sessions-panel__items'>
-            {threads_list.map((thread) => {
+          <div className='sessions-panel__items sessions-panel__items--review'>
+            {threads_to_show.map((thread) => {
               const display_text =
                 thread.title ||
                 format_directory(
@@ -164,11 +198,11 @@ const SessionsPanel = ({
                 </div>
               )
             })}
-            {active_thread_count > max_threads && (
+            {review_overflow_count > 0 && (
               <Link
-                to='/thread'
+                to='/thread?state=active'
                 className='sessions-panel__chip sessions-panel__chip--more'>
-                +{active_thread_count - max_threads} more
+                +{review_overflow_count} more
               </Link>
             )}
           </div>
