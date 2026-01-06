@@ -67,7 +67,11 @@ const SessionCard = ({ item }) => {
     }
   }
 
-  const last_updated = item.updated_at
+  const created_time = item.created_at
+    ? format_shorthand_time(item.created_at)
+    : null
+
+  const updated_time = item.updated_at
     ? format_shorthand_time(item.updated_at)
     : 'just now'
 
@@ -101,7 +105,21 @@ const SessionCard = ({ item }) => {
     <div className={card_classes} onClick={item.id ? handle_click : undefined}>
       <div className='session-card__main-row'>
         <span className='session-card__title'>{item.title || '-'}</span>
-        <span className='session-card__time'>{last_updated}</span>
+        <span className='session-card__time'>
+          {created_time && created_time !== updated_time ? (
+            <>
+              <span className='session-card__time-updated' title='Updated'>
+                {updated_time}
+              </span>
+              <span className='session-card__time-separator'>/</span>
+              <span className='session-card__time-created' title='Created'>
+                {created_time}
+              </span>
+            </>
+          ) : (
+            updated_time
+          )}
+        </span>
       </div>
 
       {item.latest_timeline_event && (
@@ -176,6 +194,7 @@ SessionCard.propTypes = {
     id: PropTypes.string,
     title: PropTypes.string,
     status: PropTypes.oneOf(['running', 'idle', 'review', 'archived']),
+    created_at: PropTypes.string,
     updated_at: PropTypes.string,
     working_directory: PropTypes.string,
     message_count: PropTypes.number,

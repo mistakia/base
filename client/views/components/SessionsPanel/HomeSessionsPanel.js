@@ -42,6 +42,7 @@ const normalize_session = (session, get_thread) => {
         ? session.working_directory.split('/').pop() || 'root'
         : 'Unknown'),
     status: is_running ? 'running' : 'idle',
+    created_at: session.created_at,
     updated_at: session.last_activity_at,
     working_directory: session.working_directory,
     message_count: session.message_count,
@@ -73,6 +74,7 @@ const normalize_thread = (thread) => {
     id: thread.thread_id,
     title: thread.title,
     status: thread.thread_state === 'active' ? 'review' : 'archived',
+    created_at: thread.created_at,
     updated_at: thread.updated_at,
     working_directory,
     message_count: thread.message_count,
@@ -87,7 +89,13 @@ const normalize_thread = (thread) => {
 
 // Constants for display logic
 const MIN_THREADS_TO_SHOW = 5
-const RECENT_HOURS_THRESHOLD = 72
+
+// Time period options in hours
+const TIME_PERIODS = {
+  '3d': { label: '3d', hours: 72 },
+  '1w': { label: '1w', hours: 168 },
+  '1m': { label: '1m', hours: 720 }
+}
 
 const HomeSessionsPanel = ({ threads, load_threads }) => {
   const dispatch = useDispatch()
@@ -95,6 +103,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   const active_session_count = useSelector(get_active_sessions_count)
   const [sessions_collapsed, set_sessions_collapsed] = useState(true)
   const [threads_collapsed, set_threads_collapsed] = useState(true)
+  const [selected_period, set_selected_period] = useState('3d')
 
   // Create a getter function for thread lookup
   const state = useSelector((s) => s)
@@ -127,28 +136,26 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
     : []
 
   // Calculate threads to display:
-  // - Show all threads created within the last 72 hours
+  // - Show all threads created within the selected time period
   // - Show at least 5 if there are more than 5 total
   const now = Date.now()
-  const recent_cutoff = now - RECENT_HOURS_THRESHOLD * 60 * 60 * 1000
+  const recent_hours = TIME_PERIODS[selected_period].hours
+  const recent_cutoff = now - recent_hours * 60 * 60 * 1000
 
   const active_threads_list = List.isList(active_threads)
     ? active_threads.toJS()
     : active_threads
 
-  // Count threads created in the last 72 hours
-  const recent_thread_count = active_threads_list.filter((thread) => {
+  // Filter threads by selected time period
+  const recent_threads = active_threads_list.filter((thread) => {
     const created_at = new Date(thread.created_at).getTime()
     return created_at >= recent_cutoff
-  }).length
+  })
 
-  // Show the maximum of: recent threads count, or MIN_THREADS_TO_SHOW (if we have enough)
-  const threads_to_show = Math.max(
-    recent_thread_count,
-    Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length)
-  )
-
-  const displayed_threads = active_threads_list.slice(0, threads_to_show)
+  // Show all recent threads, or at least MIN_THREADS_TO_SHOW if we have enough total threads
+  const displayed_threads = recent_threads.length >= MIN_THREADS_TO_SHOW
+    ? recent_threads
+    : active_threads_list.slice(0, Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length))
 
   const has_active_sessions = active_session_count > 0
   const has_active_threads =
@@ -201,28 +208,46 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
 
       {has_active_threads && (
         <div className='home-sessions-panel__section'>
-          <div
-            className='home-section-header home-section-header--clickable'
-            onClick={() => set_threads_collapsed(!threads_collapsed)}
-            role='button'
-            tabIndex={0}
-            aria-expanded={!threads_collapsed}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                set_threads_collapsed(!threads_collapsed)
-              }
-            }}>
-            <span className='home-section-header__toggle'>
-              {threads_collapsed ? '+' : '-'}
-            </span>
-            <span className='home-section-header__dot home-section-header__dot--review' />
-            <span className='home-section-header__title'>Ready for Review</span>
-            <Link
-              to='/thread'
-              className='home-section-header__count'
-              onClick={(e) => e.stopPropagation()}>
-              {active_threads.size || active_threads.length}
-            </Link>
+          <div className='home-section-header home-section-header--with-controls'>
+            <div
+              className='home-section-header__left home-section-header--clickable'
+              onClick={() => set_threads_collapsed(!threads_collapsed)}
+              role='button'
+              tabIndex={0}
+              aria-expanded={!threads_collapsed}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  set_threads_collapsed(!threads_collapsed)
+                }
+              }}>
+              <span className='home-section-header__toggle'>
+                {threads_collapsed ? '+' : '-'}
+              </span>
+              <span className='home-section-header__dot home-section-header__dot--review' />
+              <span className='home-section-header__title'>
+                Ready for Review
+              </span>
+              <Link
+                to='/thread'
+                className='home-section-header__count'
+                onClick={(e) => e.stopPropagation()}>
+                {active_threads.size || active_threads.length}
+              </Link>
+            </div>
+            {!threads_collapsed && (
+              <div
+                className='time-period-toggle'
+                onClick={(e) => e.stopPropagation()}>
+                {Object.entries(TIME_PERIODS).map(([key, { label }]) => (
+                  <button
+                    key={key}
+                    className={`time-period-toggle__button ${selected_period === key ? 'time-period-toggle__button--active' : ''}`}
+                    onClick={() => set_selected_period(key)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {!threads_collapsed && (
             <div className='home-sessions-panel__list'>

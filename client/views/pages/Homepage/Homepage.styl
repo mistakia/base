@@ -76,6 +76,54 @@ $homepage_tasks_grid_template_mobile = 1fr
     background $color_surface_hover
     text-decoration none
 
+// Header variant with controls (toggle buttons) on the right
+.home-section-header--with-controls
+  justify-content space-between
+
+.home-section-header__left
+  display flex
+  align-items center
+  gap $space_xs
+
+// Time period toggle button group (similar to nano-community style)
+.time-period-toggle
+  display flex
+  flex-shrink 0
+  border-radius $radius_sm
+  border 1px solid $color_border_light
+  border-radius $radius_sm
+  background $color_white
+  overflow hidden
+  padding $space_sm
+
+  &__button
+    border none
+    background transparent
+    color $color_text_secondary
+    font-size 10px
+    font-family $font_family_mono
+    font-weight $font_weight_medium
+    border-radius $radius_sm
+    padding 3px 8px
+    cursor pointer
+    transition all $transition_fast
+    text-transform lowercase
+
+    &:hover
+      background $color_surface_hover
+      color $color_text
+
+    &--active
+      background $color_primary
+      color $color_white
+
+      &:hover
+        background darken($color_primary, 10%)
+        color $color_white
+
+    &:focus
+      outline none
+
 .home-file-browser
   width 100%
 
