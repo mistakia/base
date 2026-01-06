@@ -15,7 +15,7 @@ import {
 } from '#libs-shared/entity-relations.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
-import { extract_timeline_references } from './extract-timeline-references.mjs'
+import { extract_timeline_references_separated } from './extract-timeline-references.mjs'
 
 const log = debug('metadata:analyze-relations')
 
@@ -162,21 +162,33 @@ export async function analyze_thread_relations({
     )
   }
 
-  // Extract entity references from timeline
-  const { references } = extract_timeline_references({ timeline })
-  log(`Extracted ${references.length} entity references`)
+  // Extract all references from timeline, separated by type
+  const { entity_references, file_references, directory_references } =
+    extract_timeline_references_separated({ timeline })
+
+  log(
+    `Extracted ${entity_references.length} entity refs, ${file_references.length} file refs, ${directory_references.length} dir refs`
+  )
 
   // Build entity relations
-  const entity_relations = build_entity_relations({ references })
+  const entity_relations = build_entity_relations({ references: entity_references })
+
+  // Extract file paths for storage
+  const file_paths = file_references.map((ref) => ref.path)
+  const directory_paths = directory_references.map((ref) => ref.path)
 
   // Prepare result
   const result = {
     thread_id,
     status: 'success',
-    entity_references_count: references.length,
+    entity_references_count: entity_references.length,
     entity_relations_count: entity_relations.length,
+    file_references_count: file_references.length,
+    directory_references_count: directory_references.length,
     total_relations_count: entity_relations.length,
     relations: entity_relations,
+    file_references: file_paths,
+    directory_references: directory_paths,
     dry_run
   }
 
@@ -184,6 +196,8 @@ export async function analyze_thread_relations({
   if (!dry_run) {
     const metadata_update = {
       relations: entity_relations,
+      file_references: file_paths,
+      directory_references: directory_paths,
       relations_analyzed_at: new Date().toISOString()
     }
 
@@ -192,7 +206,9 @@ export async function analyze_thread_relations({
       metadata: metadata_update
     })
 
-    log(`Updated thread ${thread_id} with ${entity_relations.length} relations`)
+    log(
+      `Updated thread ${thread_id} with ${entity_relations.length} relations, ${file_paths.length} file refs, ${directory_paths.length} dir refs`
+    )
     result.metadata_updated = true
   }
 

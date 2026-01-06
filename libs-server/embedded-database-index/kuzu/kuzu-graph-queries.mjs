@@ -155,39 +155,50 @@ export async function find_entities_by_tags({
 export async function find_related_entities({
   connection,
   base_uri,
-  relation_type = null
+  relation_type = null,
+  entity_type = null,
+  limit = 100,
+  offset = 0
 }) {
   if (!base_uri) {
     return []
   }
 
-  log('Finding entities related from: %s (type: %s)', base_uri, relation_type)
+  log(
+    'Finding entities related from: %s (relation_type: %s, entity_type: %s)',
+    base_uri,
+    relation_type,
+    entity_type
+  )
 
-  let query
-  const params = { base_uri }
+  const params = { base_uri, offset, limit }
+  const where_clauses = []
 
   if (relation_type) {
-    query = `
-      MATCH (source:Entity {base_uri: $base_uri})-[r:RELATES_TO {relation_type: $relation_type}]->(target:Entity)
-      RETURN target.base_uri AS base_uri,
-             target.entity_id AS entity_id,
-             target.type AS type,
-             target.title AS title,
-             r.relation_type AS relation_type,
-             r.context AS context
-    `
+    where_clauses.push('r.relation_type = $relation_type')
     params.relation_type = relation_type
-  } else {
-    query = `
-      MATCH (source:Entity {base_uri: $base_uri})-[r:RELATES_TO]->(target:Entity)
-      RETURN target.base_uri AS base_uri,
-             target.entity_id AS entity_id,
-             target.type AS type,
-             target.title AS title,
-             r.relation_type AS relation_type,
-             r.context AS context
-    `
   }
+
+  if (entity_type) {
+    where_clauses.push('target.type = $entity_type')
+    params.entity_type = entity_type
+  }
+
+  const where_clause =
+    where_clauses.length > 0 ? `WHERE ${where_clauses.join(' AND ')}` : ''
+
+  const query = `
+    MATCH (source:Entity {base_uri: $base_uri})-[r:RELATES_TO]->(target:Entity)
+    ${where_clause}
+    RETURN target.base_uri AS base_uri,
+           target.entity_id AS entity_id,
+           target.type AS type,
+           target.title AS title,
+           r.relation_type AS relation_type,
+           r.context AS context
+    SKIP $offset
+    LIMIT $limit
+  `
 
   try {
     const result = await execute_parameterized_query(connection, query, params)
@@ -211,39 +222,50 @@ export async function find_related_entities({
 export async function find_entities_relating_to({
   connection,
   base_uri,
-  relation_type = null
+  relation_type = null,
+  entity_type = null,
+  limit = 100,
+  offset = 0
 }) {
   if (!base_uri) {
     return []
   }
 
-  log('Finding entities relating to: %s (type: %s)', base_uri, relation_type)
+  log(
+    'Finding entities relating to: %s (relation_type: %s, entity_type: %s)',
+    base_uri,
+    relation_type,
+    entity_type
+  )
 
-  let query
-  const params = { base_uri }
+  const params = { base_uri, offset, limit }
+  const where_clauses = []
 
   if (relation_type) {
-    query = `
-      MATCH (source:Entity)-[r:RELATES_TO {relation_type: $relation_type}]->(target:Entity {base_uri: $base_uri})
-      RETURN source.base_uri AS base_uri,
-             source.entity_id AS entity_id,
-             source.type AS type,
-             source.title AS title,
-             r.relation_type AS relation_type,
-             r.context AS context
-    `
+    where_clauses.push('r.relation_type = $relation_type')
     params.relation_type = relation_type
-  } else {
-    query = `
-      MATCH (source:Entity)-[r:RELATES_TO]->(target:Entity {base_uri: $base_uri})
-      RETURN source.base_uri AS base_uri,
-             source.entity_id AS entity_id,
-             source.type AS type,
-             source.title AS title,
-             r.relation_type AS relation_type,
-             r.context AS context
-    `
   }
+
+  if (entity_type) {
+    where_clauses.push('source.type = $entity_type')
+    params.entity_type = entity_type
+  }
+
+  const where_clause =
+    where_clauses.length > 0 ? `WHERE ${where_clauses.join(' AND ')}` : ''
+
+  const query = `
+    MATCH (source:Entity)-[r:RELATES_TO]->(target:Entity {base_uri: $base_uri})
+    ${where_clause}
+    RETURN source.base_uri AS base_uri,
+           source.entity_id AS entity_id,
+           source.type AS type,
+           source.title AS title,
+           r.relation_type AS relation_type,
+           r.context AS context
+    SKIP $offset
+    LIMIT $limit
+  `
 
   try {
     const result = await execute_parameterized_query(connection, query, params)

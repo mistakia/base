@@ -21,6 +21,7 @@ import {
   ModelsField,
   format_token_shorthand
 } from '@views/components/MetadataDisplay'
+import RelatedEntities from '@views/components/RelatedEntities'
 import {
   extract_message_counts,
   extract_tool_call_count,
@@ -606,6 +607,17 @@ const ThreadHeader = ({ metadata, thread_id }) => {
         user_owns_thread={user_owns_thread}
         active_session={active_session}
       />
+
+      {/* Related resources - entities and files this thread accessed */}
+      {thread_id && (
+        <RelatedEntities
+          base_uri={`user:thread/${thread_id}`}
+          direction='forward'
+          limit_per_group={10}
+          show_header={true}
+          header_text='Related Resources'
+        />
+      )}
     </MetadataContainer>
   )
 }

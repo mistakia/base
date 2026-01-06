@@ -129,6 +129,87 @@ While any entity can use any relation type, certain patterns are common:
 
 Relations are stored in entity frontmatter using the `relations` array.
 
+## Thread Relations
+
+Threads are automatically analyzed to extract entity relations from their timeline. This creates a connection between threads and the entities they interact with.
+
+### Thread-as-Entity Model
+
+Threads are treated as entities in KuzuDB with:
+- `base_uri`: `user:thread/<thread-id>`
+- `type`: `thread`
+
+### Thread Relation Types
+
+Thread relations are extracted from tool calls and message content:
+
+- `accesses`: Thread read an entity (Read tool)
+- `modifies`: Thread modified an entity (Edit/Write tool)
+- `creates`: Thread created an entity (mcp__base__entity_create)
+- `relates_to`: Thread referenced an entity (wikilink in message)
+
+### File and Directory References
+
+In addition to entity relations, threads track file and directory references as pseudo-entities:
+
+- File `base_uri`: `file:<absolute-path>` (e.g., `file:/path/to/code.js`)
+- File `type`: `file`
+- Directory `base_uri`: `dir:<absolute-path>` (e.g., `dir:/path/to/src/`)
+- Directory `type`: `directory`
+
+File references are stored in thread metadata:
+```json
+{
+  "file_references": ["/path/to/file.js", "/path/to/other.ts"],
+  "directory_references": ["/path/to/src"]
+}
+```
+
+### Relation Analysis
+
+Thread relations are analyzed:
+- On session end (via sync-claude-session.sh hook)
+- On session updates (when existing threads are modified)
+- Via batch processing (cli/backfill-thread-relations.mjs)
+
+The analysis timestamp is stored in `relations_analyzed_at` in thread metadata.
+
+## Querying Relations
+
+### Forward Relations
+
+Forward relations query what entities a source entity points to:
+```
+GET /api/entities/relations?base_uri=user:thread/abc-123&direction=forward
+```
+
+### Reverse Relations
+
+Reverse relations query what entities point to a target entity:
+```
+GET /api/entities/relations?base_uri=user:task/my-task.md&direction=reverse
+```
+
+This is useful for finding all threads that accessed or modified a particular entity.
+
+### Query Parameters
+
+- `base_uri`: The entity to query relations for (required)
+- `direction`: `forward`, `reverse`, or `both` (default: `both`)
+- `relation_type`: Filter by relation type (e.g., `modifies`)
+- `entity_type`: Filter by target entity type (e.g., `thread`, `task`, `file`)
+- `limit`: Max results per direction (default: 50)
+- `offset`: Pagination offset
+
+## KuzuDB Integration
+
+Relations are stored in KuzuDB as graph edges:
+- `Entity` nodes represent entities (tasks, threads, files, etc.)
+- `RELATES_TO` edges connect entities with relation type and context
+- `Tag` nodes and `HAS_TAG` edges represent entity tags
+
+This enables graph traversal queries like finding all threads that modified a specific task, or all entities accessed by threads in a particular working directory.
+
 ## Functions
 
 The following functions are available in the `entity-relations` module:
