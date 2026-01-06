@@ -2,7 +2,7 @@
 title: Write Software Implementation Plan
 type: guideline
 description: Guidelines for writing software implementation plans
-base_uri: user:repository/active/base/system/guideline/write-software-implementation-plan.md
+base_uri: sys:system/guideline/write-software-implementation-plan.md
 created_at: '2025-05-27T18:10:20.238Z'
 entity_id: e76459ed-cea8-4e1e-8601-8d3d1fc5ccb5
 updated_at: '2026-01-05T19:25:18.915Z'

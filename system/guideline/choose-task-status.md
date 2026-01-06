@@ -2,7 +2,7 @@
 title: Choose Task Status Guideline
 type: guideline
 description: Guidelines for choosing appropriate task statuses
-base_uri: user:repository/active/base/system/guideline/choose-task-status.md
+base_uri: sys:system/guideline/choose-task-status.md
 created_at: '2025-05-27T18:10:20.237Z'
 entity_id: 3ba5ef17-c90a-463c-8890-5c8e635e3297
 globs:

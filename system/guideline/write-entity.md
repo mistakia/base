@@ -2,7 +2,7 @@
 title: Write Entity
 type: guideline
 description: Guidelines for creating new entity files that conform to the entity schema
-base_uri: user:repository/active/base/system/guideline/write-entity.md
+base_uri: sys:system/guideline/write-entity.md
 created_at: '2025-05-27T18:10:20.239Z'
 entity_id: 544ca576-6602-4332-b02a-18c5e06122e0
 globs:

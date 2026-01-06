@@ -2,7 +2,7 @@
 title: Write JavaScript
 type: guideline
 description: Guidelines for writing JavaScript/ECMAScript code
-base_uri: user:repository/active/base/system/guideline/write-javascript.md
+base_uri: sys:system/guideline/write-javascript.md
 created_at: '2025-05-27T18:10:20.240Z'
 entity_id: 1d8b6928-ca52-4eb0-bda2-a6bc23bf1a5b
 globs:

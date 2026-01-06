@@ -2,7 +2,7 @@
 title: Entity Relations
 type: text
 description: Documentation for standard entity relation types and their usage
-base_uri: user:repository/active/base/system/text/entity-relations.md
+base_uri: sys:system/text/entity-relations.md
 created_at: '2025-05-27T18:10:20.243Z'
 entity_id: d87b4201-ce8b-4596-b323-936f8449a0c8
 observations:

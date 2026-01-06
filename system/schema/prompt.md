@@ -2,7 +2,7 @@
 title: Prompt Schema
 type: type_definition
 description: Schema for prompt entities used in the system
-base_uri: user:repository/active/base/system/schema/prompt.md
+base_uri: sys:system/schema/prompt.md
 created_at: '2025-08-16T17:56:08.205Z'
 entity_id: e4ac31d5-f140-48a6-a122-4855426f91b8
 extends: entity

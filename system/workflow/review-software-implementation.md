@@ -2,7 +2,7 @@
 title: Review Software Implementation Workflow
 type: workflow
 description: Review and validate software implementation output from implement-software-task workflow
-base_uri: user:repository/active/base/system/workflow/review-software-implementation.md
+base_uri: sys:system/workflow/review-software-implementation.md
 created_at: '2025-08-01T00:00:00.000Z'
 entity_id: a1b2c3d4-5e6f-4890-abcd-123456789def
 guidelines:

@@ -2,7 +2,7 @@
 title: Write General Implementation Plan
 type: guideline
 description: Guidelines for writing general implementation plans
-base_uri: user:repository/active/base/system/guideline/write-general-implementation-plan.md
+base_uri: sys:system/guideline/write-general-implementation-plan.md
 created_at: '2025-08-16T17:56:08.200Z'
 entity_id: 70e29ce5-4339-41a7-98b3-c8e2ce0ea071
 relations:

@@ -4,7 +4,7 @@ type: text
 description: >-
   Defines execution threads as a unified session model for handling both conversations and agentic
   workflows across different providers within the system.
-base_uri: user:repository/active/base/system/text/execution-threads.md
+base_uri: sys:system/text/execution-threads.md
 created_at: '2025-05-27T18:10:20.241Z'
 entity_id: 576c86bd-3ff4-4d88-b246-f168f3f11700
 observations:

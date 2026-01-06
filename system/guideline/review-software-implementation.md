@@ -2,7 +2,7 @@
 title: Review Software Implementation
 type: guideline
 description: Standards for reviewing software implementations during code review process
-base_uri: user:repository/active/base/system/guideline/review-software-implementation.md
+base_uri: sys:system/guideline/review-software-implementation.md
 created_at: '2025-08-02T00:00:00.000Z'
 entity_id: b3c4d5e6-7f80-4012-bcde-345678901234
 relations:

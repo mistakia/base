@@ -2,7 +2,7 @@
 title: Database Schema
 type: type_definition
 description: Structured data collection with defined schema and configurable storage
-base_uri: user:repository/active/base/system/schema/database.md
+base_uri: sys:system/schema/database.md
 created_at: '2025-08-16T17:56:08.202Z'
 entity_id: 086d9bd6-cc0a-4949-ad5a-eabfabdf0cbe
 extends: entity

@@ -2,7 +2,7 @@
 title: Implement Software Task Workflow
 type: workflow
 description: Execute software implementation by setting up work environment and following implementation plans
-base_uri: user:repository/active/base/system/workflow/implement-software-task.md
+base_uri: sys:system/workflow/implement-software-task.md
 created_at: '2025-06-09T03:30:00.000Z'
 entity_id: 10368602-286c-4784-a8e6-a3c1cf256afc
 guidelines:

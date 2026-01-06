@@ -2,7 +2,7 @@
 title: Workflow Schema
 type: type_definition
 description: A prompt used to create an agentic workflow with structured inputs and outputs
-base_uri: user:repository/active/base/system/schema/workflow.md
+base_uri: sys:system/schema/workflow.md
 created_at: '2025-08-16T17:56:08.207Z'
 entity_id: 209fd254-b77f-4a57-ac3b-f7b9c45cc787
 extends: entity

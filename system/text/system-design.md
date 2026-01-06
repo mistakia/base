@@ -2,7 +2,7 @@
 title: System Design
 type: text
 description: Architecture and design principles for the human-in-the-loop LLM system
-base_uri: user:repository/active/base/system/text/system-design.md
+base_uri: sys:system/text/system-design.md
 created_at: '2025-05-27T18:10:20.246Z'
 entity_id: b75fe9b3-4a83-427c-9e62-3105019df96c
 observations:

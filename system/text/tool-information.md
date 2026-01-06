@@ -2,7 +2,7 @@
 title: Tool Information
 type: text
 description: Documentation on tools, their registration model, and usage within the system.
-base_uri: user:repository/active/base/system/text/tool-information.md
+base_uri: sys:system/text/tool-information.md
 created_at: '2025-06-04T15:45:43.273Z'
 entity_id: 64198ad4-c77b-42d5-813a-e26605bcada4
 observations:

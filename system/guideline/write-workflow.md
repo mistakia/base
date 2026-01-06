@@ -2,7 +2,7 @@
 title: Create Workflow Guideline
 type: guideline
 description: Guidelines for creating new workflows
-base_uri: user:repository/active/base/system/guideline/write-workflow.md
+base_uri: sys:system/guideline/write-workflow.md
 created_at: '2025-05-27T18:10:20.237Z'
 entity_id: e1cfc594-78bb-49ef-a1f3-3575f4ecefe8
 globs:

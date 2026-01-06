@@ -2,7 +2,7 @@
 title: Implement Software Task
 type: guideline
 description: Guidelines for setting up work environment and executing software implementations
-base_uri: user:repository/active/base/system/guideline/implement-software-task.md
+base_uri: sys:system/guideline/implement-software-task.md
 created_at: '2025-06-09T03:30:00.000Z'
 entity_id: a1b2c3d4-5e6f-4890-abcd-ef1234567890
 globs:

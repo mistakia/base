@@ -4,7 +4,7 @@ type: workflow
 description: >-
   Write implementation plans for general tasks by understanding requirements, analyzing context, and
   planning actions
-base_uri: user:repository/active/base/system/workflow/write-general-implementation-plan.md
+base_uri: sys:system/workflow/write-general-implementation-plan.md
 created_at: '2025-08-16T17:56:08.207Z'
 entity_id: d37369cd-8791-42dd-b696-6f9fc2389fa7
 relations:

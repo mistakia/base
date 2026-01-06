@@ -2,7 +2,7 @@
 title: Review Task Entity
 type: guideline
 description: Ensure task entities comply with task schema during workflow execution
-base_uri: user:repository/active/base/system/guideline/review-task.md
+base_uri: sys:system/guideline/review-task.md
 created_at: '2025-08-23T23:47:47.792Z'
 entity_id: 2ba6a096-6c5b-4648-90aa-9491764abdc0
 observations:

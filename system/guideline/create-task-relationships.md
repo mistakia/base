@@ -2,7 +2,7 @@
 title: Create Task Relationships
 type: guideline
 description: Guidelines for creating and selecting appropriate task relationships
-base_uri: user:repository/active/base/system/guideline/create-task-relationships.md
+base_uri: sys:system/guideline/create-task-relationships.md
 created_at: '2025-05-27T18:10:20.235Z'
 entity_id: 68470987-1a98-4228-8bce-abee8a848517
 globs:

@@ -2,7 +2,7 @@
 title: Task Schema
 type: type_definition
 description: Tasks represent discrete units of work that need to be completed
-base_uri: user:repository/active/base/system/schema/task.md
+base_uri: sys:system/schema/task.md
 created_at: '2025-08-16T17:56:08.206Z'
 entity_id: 5bfafc54-c72a-43bb-8f77-61cbd843abaf
 extends: entity

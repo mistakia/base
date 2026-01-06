@@ -2,7 +2,7 @@
 title: External Data Sync
 type: text
 description: System for synchronizing external data with conflict resolution
-base_uri: user:repository/active/base/system/text/external-data-sync.md
+base_uri: sys:system/text/external-data-sync.md
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 11dc5b4c-365c-4e7f-b7f4-10c9851b1be1
 relations:

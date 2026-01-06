@@ -2,7 +2,7 @@
 title: Tag Schema
 type: type_definition
 description: A tag type for categorizing and organizing content
-base_uri: user:repository/active/base/system/schema/tag.md
+base_uri: sys:system/schema/tag.md
 created_at: '2025-08-16T17:56:08.206Z'
 entity_id: 2cbaaa75-cac5-4228-b08f-7aa9e5705761
 extends: entity

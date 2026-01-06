@@ -4,7 +4,7 @@ type: workflow
 description: >-
   Merge a worktree feature branch into the main branch following proper git workflow, with automatic
   task completion
-base_uri: user:repository/active/base/system/workflow/merge-worktree.md
+base_uri: sys:system/workflow/merge-worktree.md
 created_at: '2025-06-14T17:43:40.946Z'
 entity_id: a37c88c1-97d3-483a-b30e-7871c3a243bb
 observations:

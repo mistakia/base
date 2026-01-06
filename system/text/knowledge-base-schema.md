@@ -2,7 +2,7 @@
 title: Knowledge Base Schema
 type: text
 description: Documentation for the knowledge base schema architecture and extension mechanisms
-base_uri: user:repository/active/base/system/text/knowledge-base-schema.md
+base_uri: sys:system/text/knowledge-base-schema.md
 created_at: '2025-05-27T18:10:20.245Z'
 entity_id: e773b4d1-83c1-4fa2-85a8-b22d2d04667a
 observations:

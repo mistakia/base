@@ -2,7 +2,7 @@
 title: Write CLI Scripts
 type: guideline
 description: Guidelines for writing CLI scripts based on existing patterns
-base_uri: user:repository/active/base/system/guideline/write-cli-scripts.md
+base_uri: sys:system/guideline/write-cli-scripts.md
 created_at: '2025-05-27T18:10:20.237Z'
 entity_id: 25991601-4814-49b0-837c-60527876bdf4
 globs:

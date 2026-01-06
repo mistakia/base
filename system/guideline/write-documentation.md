@@ -4,7 +4,7 @@ type: guideline
 description: >-
   Guidelines for creating lean, focused technical documentation that emphasizes unique design
   decisions and process flows
-base_uri: user:repository/active/base/system/guideline/write-documentation.md
+base_uri: sys:system/guideline/write-documentation.md
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 12dc5b4c-365c-4e7f-b7f4-10c9851b1be2
 globs:

@@ -2,7 +2,7 @@
 title: File Naming
 type: guideline
 description: Guidelines for file naming conventions across the system
-base_uri: user:repository/active/base/system/guideline/name-file.md
+base_uri: sys:system/guideline/name-file.md
 created_at: '2025-05-27T18:10:20.236Z'
 entity_id: dff6679f-73a3-42fe-825a-94b802270a67
 globs:

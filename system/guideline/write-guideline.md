@@ -2,7 +2,7 @@
 title: Create Guideline
 type: guideline
 description: Guidelines for creating new guidelines that define standards and principles
-base_uri: user:repository/active/base/system/guideline/write-guideline.md
+base_uri: sys:system/guideline/write-guideline.md
 created_at: '2025-05-27T18:10:20.239Z'
 entity_id: 55c0f40b-3c54-44f9-8366-8c0d91d72986
 globs:

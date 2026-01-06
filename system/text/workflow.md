@@ -2,7 +2,7 @@
 title: Workflow
 type: text
 description: Design for workflow-based agent specialization and orchestration
-base_uri: user:repository/active/base/system/text/workflow.md
+base_uri: sys:system/text/workflow.md
 created_at: '2025-05-27T18:10:20.241Z'
 entity_id: 7ab1422d-533d-4967-972a-7fb8167604ff
 observations:

@@ -4,7 +4,7 @@ type: text
 description: >-
   Universal resource identifier scheme for distributed knowledge systems across local and remote
   infrastructure
-base_uri: user:repository/active/base/system/text/base-uri.md
+base_uri: sys:system/text/base-uri.md
 created_at: '2025-06-06T20:45:00.000Z'
 entity_id: 27efa635-3493-41eb-adbc-7ceeff2eff90
 relations:
