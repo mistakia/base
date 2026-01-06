@@ -146,7 +146,7 @@ Thread relations are extracted from tool calls and message content:
 
 - `accesses`: Thread read an entity (Read tool)
 - `modifies`: Thread modified an entity (Edit/Write tool)
-- `creates`: Thread created an entity (mcp__base__entity_create)
+- `creates`: Thread created an entity (mcp_base_entity_create)
 - `relates_to`: Thread referenced an entity (wikilink in message)
 
 ### File and Directory References
