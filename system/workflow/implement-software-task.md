@@ -51,7 +51,12 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Confirm the plan includes specific file changes and tasks
    - Note the location and format of the implementation plan
 
-2. **Set Up Work Environment**
+2. **Update Plan Status**
+
+   - If the implementation plan status is not already "In Progress", update it to "In Progress"
+   - This signals that active work has begun on the implementation
+
+3. **Set Up Work Environment**
    - Navigate to the target repository (not user-base)
    - Verify clean state on main/master branch
    - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
@@ -70,7 +75,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 
 ## Phase 2: Implementation (Single Task Focus)
 
-3. **Execute Current Task**
+4. **Execute Current Task**
 
    - Select the first uncompleted task from the implementation plan
    - Read and follow [[user:guideline/write-software.md]] for variable naming and DRY principles
@@ -78,7 +83,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Make the required changes for that task only
    - Mark the task as completed in the implementation plan using checkbox format: `- [x]`
 
-4. **Handle Implementation Plan Changes**
+5. **Handle Implementation Plan Changes**
 
    - If during implementation you discover the plan needs changes (drift detected):
      - STOP implementation immediately
@@ -86,7 +91,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
      - Wait for explicit approval before updating the plan
      - Only continue after plan changes are approved
 
-5. **Report and Pause**
+6. **Report and Pause**
    - Update the implementation plan with task completion progress and git worktree absolute path
    - Present what was completed and current plan status
    - Identify the next uncompleted task
@@ -94,7 +99,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 
 ## Phase 3: Quality Assurance (Final Phase Only)
 
-6. **Complete Testing and Review** (only when ALL tasks are finished)
+7. **Complete Testing and Review** (only when ALL tasks are finished)
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
