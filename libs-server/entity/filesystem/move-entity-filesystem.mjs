@@ -4,7 +4,10 @@ import path from 'path'
 
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { update_entity_references } from '#libs-server/entity/filesystem/update-entity-references.mjs'
+import {
+  update_entity_references,
+  update_thread_metadata_references
+} from '#libs-server/entity/filesystem/update-entity-references.mjs'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 import {
   create_base_uri_from_path,
@@ -66,9 +69,11 @@ export async function move_entity_filesystem({
     success: false,
     source_base_uri: null,
     destination_base_uri: null,
-    files_updated: [],
+    files_with_references: [],
+    threads_with_references: [],
     file_moved: false,
-    reference_updates: 0,
+    entity_reference_updates: 0,
+    thread_reference_updates: 0,
     errors: [],
     dry_run
   }
@@ -138,11 +143,27 @@ export async function move_entity_filesystem({
       exclude_path_patterns
     })
 
-    result.files_updated = reference_result.files_with_references
-    result.reference_updates = reference_result.total_updates
+    result.files_with_references = reference_result.files_with_references
+    result.entity_reference_updates = reference_result.total_updates
 
     if (reference_result.errors.length > 0) {
       result.errors.push(...reference_result.errors.map((e) => e.error))
+    }
+
+    // Update references in thread metadata.json files
+    log('Scanning thread metadata for references to update...')
+    const thread_reference_result = await update_thread_metadata_references({
+      old_base_uri: source_resolved.base_uri,
+      new_base_uri: destination_resolved.base_uri,
+      dry_run
+    })
+
+    result.threads_with_references =
+      thread_reference_result.threads_with_references
+    result.thread_reference_updates = thread_reference_result.total_updates
+
+    if (thread_reference_result.errors.length > 0) {
+      result.errors.push(...thread_reference_result.errors.map((e) => e.error))
     }
 
     if (!dry_run) {

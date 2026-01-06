@@ -5,8 +5,46 @@
  */
 
 import debug from 'debug'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { read_file_from_filesystem } from '#libs-server/filesystem/read-file-from-filesystem.mjs'
+import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
 
 const log = debug('embedded-index:kuzu:sync')
+
+/**
+ * Attempt to fetch entity metadata from filesystem using base_uri
+ * Returns entity_data suitable for upsert, or minimal data if lookup fails
+ * @param {string} base_uri - The base URI to resolve
+ * @returns {Promise<Object>} - Entity data with metadata if found
+ */
+async function fetch_entity_metadata_from_filesystem(base_uri) {
+  try {
+    const absolute_path = resolve_base_uri(base_uri)
+    const file_content = await read_file_from_filesystem({ absolute_path })
+    const { entity_properties } = format_entity_from_file_content({
+      file_content,
+      file_path: absolute_path
+    })
+
+    if (entity_properties) {
+      log('Fetched metadata for relation target: %s', base_uri)
+      return {
+        base_uri,
+        entity_id: entity_properties.entity_id,
+        type: entity_properties.type,
+        title: entity_properties.title,
+        user_public_key: entity_properties.user_public_key,
+        created_at: entity_properties.created_at,
+        updated_at: entity_properties.updated_at
+      }
+    }
+  } catch (error) {
+    log('Could not fetch metadata for %s: %s', base_uri, error.message)
+  }
+
+  // Return minimal data if lookup fails
+  return { base_uri }
+}
 
 /**
  * Helper to execute parameterized Kuzu queries
@@ -171,10 +209,12 @@ export async function sync_entity_relations_to_kuzu({
     }
 
     try {
-      // Ensure target entity node exists (minimal node)
+      // Ensure target entity node exists with metadata if available
+      const target_entity_data =
+        await fetch_entity_metadata_from_filesystem(target_base_uri)
       await upsert_entity_to_kuzu({
         connection,
-        entity_data: { base_uri: target_base_uri }
+        entity_data: target_entity_data
       })
 
       // Create relationship

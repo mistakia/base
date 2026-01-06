@@ -19,15 +19,39 @@ const container_sx = {
   gap: '8px'
 }
 
-const header_sx = {
-  fontSize: '12px',
-  fontWeight: 600,
+// Priority order for relation types (lower number = higher priority)
+const RELATION_TYPE_PRIORITY = {
+  creates: 1,
+  modifies: 2,
+  implements: 3,
+  follows: 4,
+  subtask_of: 5,
+  has_subtask: 6,
+  blocked_by: 7,
+  blocks: 8,
+  precedes: 9,
+  succeeds: 10,
+  assigned_to: 11,
+  calls: 12,
+  relates: 20,
+  relates_to: 20,
+  accesses: 30
+}
+
+const get_relation_priority = (relation_type) => {
+  if (!relation_type) return 100
+  return RELATION_TYPE_PRIORITY[relation_type] || 50
+}
+
+const get_header_sx = (is_first) => ({
+  fontSize: '11px',
+  fontWeight: 500,
   color: COLORS.text_secondary,
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
-  padding: '8px 16px',
-  borderBottom: `1px solid ${COLORS.border}`
-}
+  padding: '8px 12px',
+  borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`
+})
 
 const loading_sx = {
   display: 'flex',
@@ -52,6 +76,7 @@ const RelatedEntities = ({
   limit_per_group = 10,
   show_header = true,
   header_text = 'Related Entities',
+  is_first = false,
   token
 }) => {
   const [loading, set_loading] = useState(true)
@@ -87,7 +112,7 @@ const RelatedEntities = ({
     fetch_relations()
   }, [fetch_relations])
 
-  // Group entities by type
+  // Group entities by type and sort by relation type priority
   const group_by_type = (entities) => {
     const groups = {}
     for (const entity of entities) {
@@ -102,6 +127,16 @@ const RelatedEntities = ({
       }
       groups[type].push(entity)
     }
+
+    // Sort entities within each group by relation type priority
+    for (const type of Object.keys(groups)) {
+      groups[type].sort(
+        (a, b) =>
+          get_relation_priority(a.relation_type) -
+          get_relation_priority(b.relation_type)
+      )
+    }
+
     return groups
   }
 
@@ -131,7 +166,9 @@ const RelatedEntities = ({
 
   return (
     <Box sx={container_sx}>
-      {show_header && <Typography sx={header_sx}>{header_text}</Typography>}
+      {show_header && (
+        <Typography sx={get_header_sx(is_first)}>{header_text}</Typography>
+      )}
 
       {/* Forward relations (this entity -> targets) */}
       {has_forward && (
@@ -198,6 +235,7 @@ RelatedEntities.propTypes = {
   limit_per_group: PropTypes.number,
   show_header: PropTypes.bool,
   header_text: PropTypes.string,
+  is_first: PropTypes.bool,
   token: PropTypes.string
 }
 

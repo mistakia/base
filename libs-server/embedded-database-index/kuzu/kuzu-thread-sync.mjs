@@ -7,8 +7,32 @@
  */
 
 import debug from 'debug'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { read_file_from_filesystem } from '#libs-server/filesystem/read-file-from-filesystem.mjs'
+import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
 
 const log = debug('embedded-index:kuzu:thread-sync')
+
+/**
+ * Attempt to fetch entity metadata from filesystem using base_uri
+ * Returns entity properties if found, null otherwise
+ * @param {string} base_uri - The base URI to resolve
+ * @returns {Promise<Object|null>} - Entity properties or null
+ */
+async function fetch_entity_metadata(base_uri) {
+  try {
+    const absolute_path = resolve_base_uri(base_uri)
+    const file_content = await read_file_from_filesystem({ absolute_path })
+    const { entity_properties } = format_entity_from_file_content({
+      file_content,
+      file_path: absolute_path
+    })
+    return entity_properties
+  } catch (error) {
+    log('Could not fetch metadata for %s: %s', base_uri, error.message)
+    return null
+  }
+}
 
 /**
  * Helper to execute parameterized Kuzu queries
@@ -107,13 +131,40 @@ export async function sync_thread_relations_to_kuzu({
     }
 
     try {
-      // Ensure target entity node exists (minimal node)
-      const ensure_target_query = `
-        MERGE (e:Entity {base_uri: $target_base_uri})
-      `
-      await execute_parameterized_query(connection, ensure_target_query, {
-        target_base_uri
-      })
+      // Ensure target entity node exists with metadata if available
+      const entity_props = await fetch_entity_metadata(target_base_uri)
+
+      if (entity_props) {
+        // Full upsert with metadata
+        const upsert_query = `
+          MERGE (e:Entity {base_uri: $target_base_uri})
+          SET e.entity_id = $entity_id,
+              e.type = $type,
+              e.title = $title,
+              e.user_public_key = $user_public_key,
+              e.created_at = $created_at,
+              e.updated_at = $updated_at
+        `
+        await execute_parameterized_query(connection, upsert_query, {
+          target_base_uri,
+          entity_id: entity_props.entity_id || '',
+          type: entity_props.type || '',
+          title: entity_props.title || '',
+          user_public_key: entity_props.user_public_key || '',
+          created_at: entity_props.created_at || '',
+          updated_at: entity_props.updated_at || ''
+        })
+        log('Upserted target entity with metadata: %s', target_base_uri)
+      } else {
+        // Minimal node if entity file not found
+        const ensure_target_query = `
+          MERGE (e:Entity {base_uri: $target_base_uri})
+        `
+        await execute_parameterized_query(connection, ensure_target_query, {
+          target_base_uri
+        })
+        log('Created minimal target entity node: %s', target_base_uri)
+      }
 
       // Create relationship
       const create_query = `

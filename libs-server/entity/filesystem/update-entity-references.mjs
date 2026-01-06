@@ -1,8 +1,12 @@
 import debug from 'debug'
+import fs from 'fs/promises'
+import path from 'path'
+import { execSync } from 'child_process'
 
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 
 const log = debug('update-entity-references')
 
@@ -13,6 +17,17 @@ const log = debug('update-entity-references')
  */
 function escape_regex_string(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Escape a string for safe use in shell commands by wrapping in single quotes
+ * and escaping any single quotes within the string
+ * @param {string} string - The string to escape for shell use
+ * @returns {string} - Shell-escaped string safe for command execution
+ */
+function escape_shell_string(string) {
+  // Replace any single quotes with '\'' (end quote, escaped quote, start quote)
+  return "'" + string.replace(/'/g, "'\\''") + "'"
 }
 
 /**
@@ -205,6 +220,145 @@ export async function update_entity_references({
   return {
     files_scanned: process_result.total,
     files_with_references,
+    total_updates,
+    errors,
+    dry_run
+  }
+}
+
+/**
+ * Update references in thread metadata.json files
+ *
+ * Thread metadata.json files store relations in a `relations` array that
+ * may reference entity base_uris. This function uses grep pre-filtering to
+ * efficiently find only threads containing the old_base_uri, then updates
+ * those references when an entity is moved.
+ *
+ * @param {Object} options - Function options
+ * @param {string} options.old_base_uri - The old base_uri to find and replace
+ * @param {string} options.new_base_uri - The new base_uri to use as replacement
+ * @param {boolean} [options.dry_run=false] - If true, preview changes without writing
+ * @returns {Promise<Object>} - Result with threads_with_references, total_updates, errors
+ */
+export async function update_thread_metadata_references({
+  old_base_uri,
+  new_base_uri,
+  dry_run = false
+}) {
+  log(
+    `Updating thread metadata references from ${old_base_uri} to ${new_base_uri} (dry_run: ${dry_run})`
+  )
+
+  if (!old_base_uri || !new_base_uri) {
+    throw new Error('Both old_base_uri and new_base_uri are required')
+  }
+
+  if (old_base_uri === new_base_uri) {
+    return {
+      threads_with_references: [],
+      total_updates: 0,
+      errors: [],
+      dry_run
+    }
+  }
+
+  const thread_directory = get_thread_base_directory()
+  const threads_updated = []
+  const errors = []
+  let total_updates = 0
+  let metadata_files = []
+
+  try {
+    // Pre-filter using grep to find only metadata files containing the old_base_uri
+    // This avoids parsing JSON for threads that don't have any matching references
+    const shell_escaped_uri = escape_shell_string(old_base_uri)
+
+    try {
+      const grep_result = execSync(
+        `grep -l ${shell_escaped_uri} */metadata.json 2>/dev/null || true`,
+        {
+          cwd: thread_directory,
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large results
+        }
+      )
+
+      metadata_files = grep_result
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map((file) => path.join(thread_directory, file))
+    } catch (grep_error) {
+      // grep returns exit code 1 when no matches found, which is fine
+      log(`Grep completed with no matches or error: ${grep_error.message}`)
+    }
+
+    log(
+      `Found ${metadata_files.length} thread metadata files with potential matches`
+    )
+
+    for (const metadata_path of metadata_files) {
+      try {
+        const content = await fs.readFile(metadata_path, 'utf-8')
+        const metadata = JSON.parse(content)
+
+        if (!metadata.relations || !Array.isArray(metadata.relations)) {
+          continue
+        }
+
+        // Check if any relations contain the old base_uri
+        const relations_result = update_relations_references({
+          relations: metadata.relations,
+          old_base_uri,
+          new_base_uri
+        })
+
+        if (relations_result.update_count > 0) {
+          const thread_id = path.basename(path.dirname(metadata_path))
+          log(
+            `Found ${relations_result.update_count} references in thread ${thread_id}`
+          )
+
+          threads_updated.push({
+            thread_id,
+            metadata_path,
+            update_count: relations_result.update_count
+          })
+
+          total_updates += relations_result.update_count
+
+          if (!dry_run) {
+            metadata.relations = relations_result.updated_relations
+            await fs.writeFile(
+              metadata_path,
+              JSON.stringify(metadata, null, 2),
+              'utf-8'
+            )
+            log(`Updated thread metadata: ${metadata_path}`)
+          }
+        }
+      } catch (error) {
+        log(`Error processing ${metadata_path}: ${error.message}`)
+        errors.push({
+          metadata_path,
+          error: error.message
+        })
+      }
+    }
+  } catch (error) {
+    log(`Error scanning thread directory: ${error.message}`)
+    errors.push({
+      metadata_path: thread_directory,
+      error: error.message
+    })
+  }
+
+  log(
+    `Found ${metadata_files.length} threads with matches, updated ${threads_updated.length} with ${total_updates} reference updates`
+  )
+
+  return {
+    threads_with_references: threads_updated,
     total_updates,
     errors,
     dry_run

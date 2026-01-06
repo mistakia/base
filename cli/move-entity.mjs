@@ -116,11 +116,11 @@ const format_move_result = (result) => {
   lines.push(`Destination: ${result.destination_base_uri}`)
   lines.push('')
 
-  if (result.files_updated.length > 0) {
+  if (result.files_with_references.length > 0) {
     lines.push(
-      `Files with references to update (${result.files_updated.length}):`
+      `Entity files with references (${result.files_with_references.length}):`
     )
-    for (const file of result.files_updated) {
+    for (const file of result.files_with_references) {
       const relation_str =
         file.relation_updates > 0 ? `${file.relation_updates} relation(s)` : ''
       const content_str =
@@ -129,9 +129,27 @@ const format_move_result = (result) => {
       lines.push(`  - ${file.base_uri} (${details})`)
     }
     lines.push('')
-    lines.push(`Total reference updates: ${result.reference_updates}`)
+    lines.push(
+      `Total entity reference updates: ${result.entity_reference_updates}`
+    )
   } else {
-    lines.push('No references found in other files')
+    lines.push('No references found in entity files')
+  }
+
+  if (
+    result.threads_with_references &&
+    result.threads_with_references.length > 0
+  ) {
+    lines.push('')
+    lines.push(
+      `Threads with references (${result.threads_with_references.length}):`
+    )
+    for (const thread of result.threads_with_references) {
+      lines.push(`  - ${thread.thread_id} (${thread.update_count} relation(s))`)
+    }
+    lines.push(
+      `Total thread reference updates: ${result.thread_reference_updates}`
+    )
   }
 
   if (result.errors.length > 0) {

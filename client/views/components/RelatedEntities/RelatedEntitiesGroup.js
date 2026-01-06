@@ -35,6 +35,8 @@ const entity_item_sx = {
   alignItems: 'center',
   gap: '6px',
   fontSize: '12px',
+  lineHeight: '1.4',
+  minHeight: '20px',
   color: COLORS.text_secondary
 }
 
@@ -47,6 +49,7 @@ const link_sx = {
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
   maxWidth: '300px',
+  lineHeight: 'inherit',
   '&:hover': {
     color: COLORS.info
   }
