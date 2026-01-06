@@ -213,6 +213,9 @@ node cli/rebuild-embedded-index.mjs
 # Analyze thread for metadata updates (title, relations)
 node cli/analyze-thread-metadata.mjs <thread-id> --dry-run
 
+# Analyze thread relations (entity references, related threads)
+node cli/analyze-thread-relations.mjs --thread-id <uuid>
+
 # Sync threads to remote storage
 node cli/rsync-threads.mjs sync <thread-id>
 node cli/rsync-threads.mjs sync-all
