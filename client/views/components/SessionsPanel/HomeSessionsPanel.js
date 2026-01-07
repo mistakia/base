@@ -152,14 +152,26 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
     return created_at >= recent_cutoff
   })
 
+  // Sort threads by created_at descending
+  const sort_threads_by_created_at = (threads) => {
+    return [...threads].sort((a, b) => {
+      const a_created = new Date(a.created_at).getTime()
+      const b_created = new Date(b.created_at).getTime()
+      return b_created - a_created // Descending order
+    })
+  }
+
   // Show all recent threads, or at least MIN_THREADS_TO_SHOW if we have enough total threads
-  const displayed_threads =
+  const threads_to_display =
     recent_threads.length >= MIN_THREADS_TO_SHOW
       ? recent_threads
       : active_threads_list.slice(
           0,
           Math.min(MIN_THREADS_TO_SHOW, active_threads_list.length)
         )
+
+  // Sort by created_at descending
+  const displayed_threads = sort_threads_by_created_at(threads_to_display)
 
   const has_active_sessions = active_session_count > 0
   const has_active_threads =
