@@ -13,9 +13,63 @@ import {
   find_related_entities,
   find_entities_relating_to
 } from '#libs-server/embedded-database-index/kuzu/kuzu-graph-queries.mjs'
+import { PermissionContext } from '#server/middleware/permission/permission-context.mjs'
+import {
+  redact_base_uri,
+  DEFAULT_REDACTED_STRING
+} from '#server/middleware/content-redactor.mjs'
 
 const log = debug('api:entities')
 const router = express.Router({ mergeParams: true })
+
+/**
+ * Apply permission-based redaction to relations array
+ * Returns all relations, but redacts those the user cannot access
+ * @param {Object} params
+ * @param {Array} params.relations - Array of relation objects with base_uri
+ * @param {PermissionContext} params.permission_context - Permission context for checking access
+ * @returns {Promise<Array>} Array of relations with unauthorized ones redacted
+ */
+async function redact_relations_by_permission({
+  relations,
+  permission_context
+}) {
+  if (!relations || relations.length === 0) {
+    return []
+  }
+
+  const results = await Promise.all(
+    relations.map(async (relation, index) => {
+      if (!relation.base_uri) {
+        return {
+          relation_type: relation.relation_type || null,
+          base_uri: DEFAULT_REDACTED_STRING,
+          redacted: true,
+          unique_key: `redacted-api-${index}`
+        }
+      }
+
+      const result = await permission_context.check_permission({
+        resource_path: relation.base_uri
+      })
+
+      if (result.read.allowed) {
+        return relation
+      }
+
+      // Return redacted placeholder for unauthorized relations
+      // Preserve relation_type and redact base_uri (keeping only `-` characters)
+      return {
+        relation_type: relation.relation_type || null,
+        base_uri: redact_base_uri(relation.base_uri),
+        redacted: true,
+        unique_key: `redacted-api-${index}`
+      }
+    })
+  )
+
+  return results
+}
 
 /**
  * GET /api/entities/relations
@@ -32,10 +86,8 @@ const router = express.Router({ mergeParams: true })
  */
 router.get('/relations', async (req, res) => {
   try {
-    const user_public_key = req.user?.user_public_key
-    if (!user_public_key) {
-      return res.status(401).send({ error: 'authentication required' })
-    }
+    // Allow unauthenticated requests - permission context will handle access control
+    const user_public_key = req.user?.user_public_key || null
 
     const {
       base_uri,
@@ -55,6 +107,9 @@ router.get('/relations', async (req, res) => {
       return res.status(503).send({ error: 'Graph database not available' })
     }
 
+    // Create permission context for filtering results
+    const permission_context = new PermissionContext({ user_public_key })
+
     const kuzu_connection = await get_kuzu_connection()
     const limit_num = parseInt(limit, 10) || 50
     const offset_num = parseInt(offset, 10) || 0
@@ -64,19 +119,25 @@ router.get('/relations', async (req, res) => {
 
     // Fetch forward relations (this entity -> targets)
     if (direction === 'forward' || direction === 'both') {
-      forward_relations = await find_related_entities({
+      const raw_forward = await find_related_entities({
         connection: kuzu_connection,
         base_uri,
         relation_type: relation_type || null,
         entity_type: entity_type || null,
         limit: limit_num,
         offset: offset_num
+      })
+
+      // Apply permission-based redaction
+      forward_relations = await redact_relations_by_permission({
+        relations: raw_forward,
+        permission_context
       })
     }
 
     // Fetch reverse relations (sources -> this entity)
     if (direction === 'reverse' || direction === 'both') {
-      reverse_relations = await find_entities_relating_to({
+      const raw_reverse = await find_entities_relating_to({
         connection: kuzu_connection,
         base_uri,
         relation_type: relation_type || null,
@@ -84,10 +145,16 @@ router.get('/relations', async (req, res) => {
         limit: limit_num,
         offset: offset_num
       })
+
+      // Apply permission-based redaction
+      reverse_relations = await redact_relations_by_permission({
+        relations: raw_reverse,
+        permission_context
+      })
     }
 
     log(
-      'Relations query for %s: %d forward, %d reverse',
+      'Relations query for %s: %d forward, %d reverse (with permission-based redaction)',
       base_uri,
       forward_relations.length,
       reverse_relations.length

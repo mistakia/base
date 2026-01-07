@@ -11,6 +11,7 @@ import {
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
 import { entity_field_config } from './field-config.js'
+import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
 const categorize_fields = (frontmatter) => {
   const entity_type = frontmatter.type || 'default'
@@ -126,67 +127,19 @@ EntityTitle.propTypes = {
 }
 
 /**
- * Parse a relation string and extract base_uri
- * @param {string} relation_string - Relation string like "follows [[sys:path.md]]"
- * @returns {Object|null} Object with relation_type and base_uri, or null if invalid
- */
-const parse_relation_with_base_uri = (relation_string) => {
-  // Match pattern: "relation_type [[scheme:path]]"
-  const match = relation_string.match(/^(.+?)\s+\[\[(sys|user):([^\]]+)\]\]$/)
-  if (!match) return null
-
-  const [, relation_type, scheme, path] = match
-  return {
-    relation_type: relation_type.trim(),
-    base_uri: `${scheme}:${path}`
-  }
-}
-
-/**
- * Parse frontmatter relations array into relation objects for RelatedEntities
- * @param {Array} relations - Array of relation strings like "follows [[sys:path.md]]"
- * @returns {Array} Array of relation objects with relation_type and base_uri, including malformed ones
- */
-const parse_frontmatter_relations = (relations) => {
-  if (!Array.isArray(relations)) return []
-
-  return relations.map((relation_string, index) => {
-    const parsed = parse_relation_with_base_uri(relation_string)
-    if (!parsed) {
-      // Return malformed relation for display as plain text
-      return {
-        relation_type: null,
-        base_uri: null,
-        title: null,
-        malformed: true,
-        raw_string: relation_string,
-        // Use index to ensure unique keys for malformed relations
-        unique_key: `malformed-${index}`
-      }
-    }
-
-    return {
-      relation_type: parsed.relation_type,
-      base_uri: parsed.base_uri,
-      title: null // Frontmatter relations don't have titles, will show filename
-    }
-  })
-}
-
-/**
  * Determine if RelatedEntities will render content
  * @param {string} base_uri - Entity base URI
- * @param {Array} frontmatter_relations - Parsed frontmatter relations
+ * @param {Array} forward_relations - Parsed forward relations
  * @returns {boolean} True if RelatedEntities will render content
  */
-const will_related_entities_render = (base_uri, frontmatter_relations) => {
+const will_related_entities_render = (base_uri, forward_relations) => {
   // RelatedEntities won't render if no base_uri
   if (!base_uri) return false
 
-  // If there are frontmatter relations, it will render
-  if (frontmatter_relations && frontmatter_relations.length > 0) return true
+  // If there are forward relations, it will render
+  if (forward_relations && forward_relations.length > 0) return true
 
-  // If there are no frontmatter relations, we can't know for sure without
+  // If there are no forward relations, we can't know for sure without
   // fetching API data, but we should assume it might render to be safe
   // with border styling (better to have an extra border than missing one)
   return true
@@ -329,7 +282,7 @@ const EntityFrontmatter = ({
         {base_uri && (
           <RelatedEntities
             base_uri={base_uri}
-            frontmatter_relations={parse_frontmatter_relations(relations)}
+            forward_relations={parse_relations_for_display({ relations })}
             exclude_types={['file', 'directory']}
             show_header={true}
             header_text='Relations'
@@ -343,11 +296,12 @@ const EntityFrontmatter = ({
             return null // Handle dates separately below
           }
 
-          const parsed_frontmatter_relations =
-            parse_frontmatter_relations(relations)
+          const parsed_forward_relations = parse_relations_for_display({
+            relations
+          })
           const has_content_above =
             observations ||
-            will_related_entities_render(base_uri, parsed_frontmatter_relations)
+            will_related_entities_render(base_uri, parsed_forward_relations)
 
           return (
             <MetadataRow

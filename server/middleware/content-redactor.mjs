@@ -6,6 +6,8 @@ import { visit } from 'unist-util-visit'
 import picomatch from 'picomatch'
 import debug from 'debug'
 
+import { RELATION_STRING_REGEX } from '#libs-shared/relation-parser.mjs'
+
 const log = debug('redaction:rule-engine')
 
 // ============================================================================
@@ -14,13 +16,50 @@ const log = debug('redaction:rule-engine')
 
 const REDACT_CHAR = '█'
 const DEFAULT_REDACTED_NUMBER = 9999
-const DEFAULT_REDACTED_STRING = '████████'
+export const DEFAULT_REDACTED_STRING = '████████'
 const DEFAULT_REDACTED_UUID = '████████-████-████-████-████████████'
 const DEFAULT_REDACTED_DATETIME = '████-██-██T██:██:██.███Z'
 const DEFAULT_REDACTED_USER_KEY =
   '████████████████████████████████████████████████████████████████'
 const DEFAULT_REDACTED_ARRAY_ITEM =
   '████████████████████████████████████████████████'
+
+/**
+ * Redacts a base_uri string, preserving only `-` characters
+ * @param {string} base_uri - The base URI to redact
+ * @returns {string} Redacted string with block characters
+ */
+export const redact_base_uri = (base_uri) => {
+  if (!base_uri) return DEFAULT_REDACTED_STRING
+  return base_uri.replace(/[^-]/g, REDACT_CHAR)
+}
+
+/**
+ * Redacts a relation string while preserving structure
+ * Input: "follows [[user:task/my-task.md]]"
+ * Output: "follows [[████-████/██-████.██]]"
+ * @param {string} relation_string - The relation string to redact
+ * @returns {string} Redacted relation string preserving structure
+ */
+const redact_relation_string = (relation_string) => {
+  if (!is_valid_string(relation_string)) return DEFAULT_REDACTED_ARRAY_ITEM
+
+  const match = relation_string.match(RELATION_STRING_REGEX)
+  if (!match) {
+    // Not a valid relation format, return fully redacted
+    return DEFAULT_REDACTED_ARRAY_ITEM
+  }
+
+  const [, relation_type, base_uri, context] = match
+  const redacted_uri = redact_base_uri(base_uri)
+
+  let result = `${relation_type} [[${redacted_uri}]]`
+  if (context) {
+    result += ` (${REDACT_CHAR.repeat(context.length)})`
+  }
+
+  return result
+}
 
 // Sensitive property patterns that should trigger redaction
 const SENSITIVE_PROPERTY_PATTERNS = [
@@ -618,6 +657,13 @@ export const redact_thread_data = (thread) => {
   // Redact tags array
   if (redacted.tags && Array.isArray(redacted.tags)) {
     redacted.tags = redacted.tags.map(() => DEFAULT_REDACTED_ARRAY_ITEM)
+  }
+
+  // Redact relations array (preserving relation_type and structure, redacting base_uri)
+  if (redacted.relations && Array.isArray(redacted.relations)) {
+    redacted.relations = redacted.relations.map((relation) =>
+      redact_relation_string(relation)
+    )
   }
 
   // Redact thread main request content

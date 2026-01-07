@@ -71,13 +71,46 @@ const malformed_relation_sx = {
   border: '1px solid rgba(255, 0, 0, 0.2)'
 }
 
+const redacted_relation_sx = {
+  fontSize: '12px',
+  color: COLORS.text_tertiary,
+  padding: '2px 4px',
+  backgroundColor: COLORS.surface_hover,
+  borderRadius: '2px',
+  userSelect: 'none',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  maxWidth: '300px'
+}
+
 const RelationItem = ({
   relation_type,
   base_uri,
   title,
   malformed,
-  raw_string
+  raw_string,
+  redacted
 }) => {
+  // Handle redacted relations (permission-denied content)
+  if (redacted) {
+    return (
+      <Box sx={item_container_sx}>
+        {relation_type && (
+          <Box component='span' sx={relation_type_sx}>
+            {relation_type}
+          </Box>
+        )}
+        <Box
+          component='span'
+          sx={redacted_relation_sx}
+          title='Redacted - insufficient permissions'>
+          {base_uri || '████████'}
+        </Box>
+      </Box>
+    )
+  }
+
   // Handle malformed relations
   if (malformed) {
     return (
@@ -126,7 +159,8 @@ RelationItem.propTypes = {
   base_uri: PropTypes.string,
   title: PropTypes.string,
   malformed: PropTypes.bool,
-  raw_string: PropTypes.string
+  raw_string: PropTypes.string,
+  redacted: PropTypes.bool
 }
 
 export default RelationItem

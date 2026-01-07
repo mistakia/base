@@ -2,7 +2,8 @@
  * RelatedEntities Component
  *
  * Displays a unified list of entity relations (both forward and reverse).
- * Forward relations come from frontmatter, reverse relations from the API.
+ * Forward relations come from the parent component (parsed from frontmatter or metadata).
+ * Reverse relations are fetched from the API.
  * Uses the /api/entities/relations endpoint for fetching reverse relations.
  */
 
@@ -46,7 +47,7 @@ const relations_list_sx = {
 
 const RelatedEntities = ({
   base_uri,
-  frontmatter_relations = [],
+  forward_relations = [],
   exclude_types = [],
   show_header = true,
   header_text = 'Relations',
@@ -80,6 +81,11 @@ const RelatedEntities = ({
   // Convert reverse relations to use semantically correct reverse relation types
   const convert_reverse_relations = (reverse_relations) => {
     return reverse_relations.map((relation) => {
+      // Skip conversion for redacted relations (no relation_type to convert)
+      if (relation.redacted) {
+        return relation
+      }
+
       const reverse_type = get_reverse_relation_type({
         relation_type: relation.relation_type
       })
@@ -99,16 +105,16 @@ const RelatedEntities = ({
 
     // Helper function to create composite key for deduplication
     const create_relation_key = (relation) => {
-      if (relation.malformed) {
-        // Use unique_key for malformed relations to avoid conflicts
+      if (relation.malformed || relation.redacted) {
+        // Use unique_key for malformed/redacted relations to avoid conflicts
         return relation.unique_key
       }
       // Use relation_type + base_uri as composite key to allow multiple relation types to same entity
       return `${relation.relation_type || 'unknown'}:${relation.base_uri || ''}`
     }
 
-    // Add frontmatter relations first (they take precedence)
-    for (const relation of frontmatter_relations) {
+    // Add forward relations first (they take precedence)
+    for (const relation of forward_relations) {
       const key = create_relation_key(relation)
       relation_map.set(key, relation)
     }
@@ -117,8 +123,8 @@ const RelatedEntities = ({
     for (const relation of converted_api) {
       const key = create_relation_key(relation)
       if (!relation_map.has(key)) {
-        // Apply exclude_types filter
-        if (!exclude_types.includes(relation.type)) {
+        // Apply exclude_types filter (skip for redacted relations which have no type)
+        if (relation.redacted || !exclude_types.includes(relation.type)) {
           relation_map.set(key, relation)
         }
       }
@@ -150,9 +156,10 @@ const RelatedEntities = ({
       <Box sx={relations_list_sx}>
         {sorted_relations.map((relation, idx) => {
           // Generate React key using same logic as deduplication to ensure uniqueness
-          const react_key = relation.malformed
-            ? relation.unique_key
-            : `${relation.relation_type || 'unknown'}:${relation.base_uri || ''}`
+          const react_key =
+            relation.malformed || relation.redacted
+              ? relation.unique_key
+              : `${relation.relation_type || 'unknown'}:${relation.base_uri || ''}`
 
           return (
             <RelationItem
@@ -162,6 +169,7 @@ const RelatedEntities = ({
               title={relation.title}
               malformed={relation.malformed}
               raw_string={relation.raw_string}
+              redacted={relation.redacted}
             />
           )
         })}
@@ -172,11 +180,15 @@ const RelatedEntities = ({
 
 RelatedEntities.propTypes = {
   base_uri: PropTypes.string.isRequired,
-  frontmatter_relations: PropTypes.arrayOf(
+  forward_relations: PropTypes.arrayOf(
     PropTypes.shape({
       relation_type: PropTypes.string,
       base_uri: PropTypes.string,
-      title: PropTypes.string
+      title: PropTypes.string,
+      malformed: PropTypes.bool,
+      raw_string: PropTypes.string,
+      redacted: PropTypes.bool,
+      unique_key: PropTypes.string
     })
   ),
   exclude_types: PropTypes.arrayOf(PropTypes.string),

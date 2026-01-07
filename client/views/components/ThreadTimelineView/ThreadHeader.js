@@ -33,6 +33,7 @@ import {
   extract_thread_description,
   extract_user_public_key
 } from '@views/utils/thread-metadata-extractor.js'
+import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
 // Constants
 const COPY_SUCCESS_TIMEOUT_MS = 2000
@@ -95,6 +96,18 @@ const extract_dates = (metadata) => {
   return { created_at, updated_at }
 }
 
+const extract_relations = (metadata) => {
+  if (!metadata || !metadata.get) {
+    return []
+  }
+
+  const relations = metadata.get('relations')
+  if (!relations) return []
+
+  // Handle Immutable.js List - convert to plain array
+  return relations.toJS ? relations.toJS() : relations
+}
+
 // Custom hook for metadata processing
 const use_thread_metadata = (metadata) => {
   const dates = extract_dates(metadata)
@@ -107,6 +120,7 @@ const use_thread_metadata = (metadata) => {
   const title = extract_thread_title(metadata)
   const description = extract_thread_description(metadata)
   const thread_user_public_key = extract_user_public_key(metadata)
+  const relations = extract_relations(metadata)
 
   return {
     title,
@@ -124,7 +138,8 @@ const use_thread_metadata = (metadata) => {
     tool_call_count,
     working_directory: working_directory.path,
     working_directory_formatted: working_directory.formatted,
-    thread_user_public_key
+    thread_user_public_key,
+    relations
   }
 }
 
@@ -363,7 +378,8 @@ const ThreadStats = ({
   thread_id,
   dispatch,
   user_owns_thread,
-  active_session
+  active_session,
+  relations
 }) => {
   const working_directory = external_session_info?.working_directory
   const session_provider = external_session_info?.provider
@@ -403,7 +419,7 @@ const ThreadStats = ({
         />
       )}
 
-      {/* Related resources - entities and files this thread accessed.
+      {/* Related resources - forward relations from thread metadata + reverse from API.
           Note: RelatedEntities does not participate in is_first tracking because
           it loads asynchronously and may return null after loading completes,
           which would incorrectly consume the is_first flag. It always shows a
@@ -411,8 +427,8 @@ const ThreadStats = ({
       {thread_id && (
         <RelatedEntities
           base_uri={`user:thread/${thread_id}`}
-          direction='forward'
-          limit_per_group={10}
+          forward_relations={parse_relations_for_display({ relations })}
+          exclude_types={['file', 'directory']}
           show_header={true}
           header_text='Relations'
         />
@@ -522,7 +538,8 @@ ThreadStats.propTypes = {
   thread_id: PropTypes.string,
   dispatch: PropTypes.func,
   user_owns_thread: PropTypes.bool.isRequired,
-  active_session: PropTypes.object
+  active_session: PropTypes.object,
+  relations: PropTypes.array
 }
 
 const ExternalSessionChips = ({ external_session_info, thread_state }) => {
@@ -572,7 +589,8 @@ const ThreadHeader = ({ metadata, thread_id }) => {
     assistant_message_count,
     tool_call_count,
     working_directory_formatted,
-    thread_user_public_key
+    thread_user_public_key,
+    relations
   } = use_thread_metadata(metadata)
 
   // Get current user's public key and cost display from Redux store
@@ -621,6 +639,7 @@ const ThreadHeader = ({ metadata, thread_id }) => {
         dispatch={dispatch}
         user_owns_thread={user_owns_thread}
         active_session={active_session}
+        relations={relations}
       />
     </MetadataContainer>
   )
