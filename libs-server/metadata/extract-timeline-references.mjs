@@ -322,14 +322,23 @@ export function separate_reference_types({ references }) {
 
     const path = ref.path
 
-    // Check if it's a directory (ends with / or no extension)
+    // Check if it's a directory (ends with /)
     if (path.endsWith('/')) {
-      directory_references.push({
-        path: path.replace(/\/$/, ''), // Remove trailing slash for storage
-        access_type: ref.access_type,
-        confidence: ref.confidence,
-        source: ref.source
-      })
+      const path_without_slash = path.replace(/\/$/, '') // Remove trailing slash
+      try {
+        const base_uri = create_base_uri_from_path(path_without_slash)
+        directory_references.push({
+          base_uri,
+          access_type: ref.access_type,
+          confidence: ref.confidence,
+          source: ref.source
+        })
+      } catch (error) {
+        // Path is outside managed repositories - skip it
+        log(
+          `Skipping directory path outside managed repos: ${path_without_slash}`
+        )
+      }
       continue
     }
 
@@ -352,23 +361,35 @@ export function separate_reference_types({ references }) {
     // Check if it's a code file
     const has_code_extension = code_extensions.some((ext) => path.endsWith(ext))
     if (has_code_extension) {
-      file_references.push({
-        path,
-        access_type: ref.access_type,
-        confidence: ref.confidence,
-        source: ref.source
-      })
+      try {
+        const base_uri = create_base_uri_from_path(path)
+        file_references.push({
+          base_uri,
+          access_type: ref.access_type,
+          confidence: ref.confidence,
+          source: ref.source
+        })
+      } catch (error) {
+        // Path is outside managed repositories - skip it
+        log(`Skipping file path outside managed repos: ${path}`)
+      }
       continue
     }
 
     // Check if path looks like a directory (no extension and contains /)
     if (!path.includes('.') && path.includes('/')) {
-      directory_references.push({
-        path,
-        access_type: ref.access_type,
-        confidence: ref.confidence,
-        source: ref.source
-      })
+      try {
+        const base_uri = create_base_uri_from_path(path)
+        directory_references.push({
+          base_uri,
+          access_type: ref.access_type,
+          confidence: ref.confidence,
+          source: ref.source
+        })
+      } catch (error) {
+        // Path is outside managed repositories - skip it
+        log(`Skipping directory path outside managed repos: ${path}`)
+      }
     }
   }
 
@@ -430,9 +451,9 @@ export function deduplicate_references({ references }) {
 // ============================================================================
 
 /**
- * Deduplicate file references by path
+ * Deduplicate file references by base_uri
  * @param {Object} params
- * @param {Array} params.references - Array of file references with path
+ * @param {Array} params.references - Array of file references with base_uri
  * @returns {Array} Deduplicated array of file references
  */
 function deduplicate_file_references({ references }) {
@@ -443,14 +464,14 @@ function deduplicate_file_references({ references }) {
     read: 2,
     reference: 1
   }
-  const by_path = new Map()
+  const by_uri = new Map()
 
   for (const ref of references) {
-    if (!ref.path) continue
+    if (!ref.base_uri) continue
 
-    const existing = by_path.get(ref.path)
+    const existing = by_uri.get(ref.base_uri)
     if (!existing) {
-      by_path.set(ref.path, { ...ref })
+      by_uri.set(ref.base_uri, { ...ref })
       continue
     }
 
@@ -467,7 +488,7 @@ function deduplicate_file_references({ references }) {
     }
   }
 
-  return Array.from(by_path.values())
+  return Array.from(by_uri.values())
 }
 
 /**

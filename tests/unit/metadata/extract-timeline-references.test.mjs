@@ -1,6 +1,7 @@
-/* global describe, it */
+/* global describe, it, before, after */
 
 import { expect } from 'chai'
+import setup_test_directories from '../../utils/setup-test-directories.mjs'
 
 import {
   extract_timeline_references,
@@ -15,6 +16,21 @@ import {
 } from '#libs-server/metadata/extract-timeline-references.mjs'
 
 describe('extract-timeline-references', () => {
+  let test_dirs
+  let system_path
+
+  before(() => {
+    // Create temp directories and register them for base_uri conversion tests
+    test_dirs = setup_test_directories()
+    system_path = test_dirs.system_path
+  })
+
+  after(() => {
+    if (test_dirs) {
+      test_dirs.cleanup()
+    }
+  })
+
   describe('TOOL_ACCESS_TYPES', () => {
     it('should map Read to read access', () => {
       expect(TOOL_ACCESS_TYPES.Read).to.equal('read')
@@ -363,11 +379,19 @@ describe('extract-timeline-references', () => {
   })
 
   describe('separate_reference_types', () => {
+    // Note: Tests use paths within the temp system_path to test base_uri conversion
+
     it('should separate entity references from file references', () => {
       const references = [
         { base_uri: 'user:task/my-task.md', access_type: 'read' },
-        { path: '/path/to/code.js', access_type: 'read' },
-        { path: '/path/to/script.mjs', access_type: 'modify' }
+        {
+          path: `${system_path}/code.js`,
+          access_type: 'read'
+        },
+        {
+          path: `${system_path}/script.mjs`,
+          access_type: 'modify'
+        }
       ]
 
       const result = separate_reference_types({ references })
@@ -377,33 +401,47 @@ describe('extract-timeline-references', () => {
         'user:task/my-task.md'
       )
       expect(result.file_references).to.have.length(2)
-      expect(result.file_references[0].path).to.equal('/path/to/code.js')
-      expect(result.file_references[1].path).to.equal('/path/to/script.mjs')
+      // File references now have base_uri instead of path
+      expect(result.file_references[0].base_uri).to.equal('sys:code.js')
+      expect(result.file_references[1].base_uri).to.equal('sys:script.mjs')
     })
 
     it('should identify directory references by trailing slash', () => {
       const references = [
-        { path: '/path/to/directory/', access_type: 'read' },
-        { path: '/path/to/file.js', access_type: 'read' }
+        {
+          path: `${system_path}/directory/`,
+          access_type: 'read'
+        },
+        {
+          path: `${system_path}/file.js`,
+          access_type: 'read'
+        }
       ]
 
       const result = separate_reference_types({ references })
 
       expect(result.directory_references).to.have.length(1)
-      expect(result.directory_references[0].path).to.equal('/path/to/directory')
+      // Directory references now have base_uri
+      expect(result.directory_references[0].base_uri).to.equal('sys:directory')
       expect(result.file_references).to.have.length(1)
     })
 
     it('should identify directories by lack of extension with path separator', () => {
-      const references = [{ path: '/path/to/directory', access_type: 'read' }]
+      const references = [
+        {
+          path: `${system_path}/directory`,
+          access_type: 'read'
+        }
+      ]
 
       const result = separate_reference_types({ references })
 
       expect(result.directory_references).to.have.length(1)
+      expect(result.directory_references[0].base_uri).to.equal('sys:directory')
     })
 
     it('should recognize common code extensions', () => {
-      const code_files = [
+      const code_extensions = [
         '.js',
         '.mjs',
         '.ts',
@@ -415,15 +453,32 @@ describe('extract-timeline-references', () => {
         '.yaml',
         '.sh'
       ]
-      const references = code_files.map((ext) => ({
-        path: `/path/to/file${ext}`,
+      const references = code_extensions.map((ext) => ({
+        path: `${system_path}/file${ext}`,
         access_type: 'read'
       }))
 
       const result = separate_reference_types({ references })
 
-      expect(result.file_references).to.have.length(code_files.length)
+      expect(result.file_references).to.have.length(code_extensions.length)
       expect(result.entity_references).to.have.length(0)
+      // Verify all file references have base_uri
+      result.file_references.forEach((ref) => {
+        expect(ref.base_uri).to.be.a('string')
+        expect(ref.base_uri).to.match(/^sys:file\.\w+$/)
+      })
+    })
+
+    it('should skip files outside managed repositories', () => {
+      const references = [
+        { path: '/tmp/outside/code.js', access_type: 'read' },
+        { path: '/var/log/something.json', access_type: 'read' }
+      ]
+
+      const result = separate_reference_types({ references })
+
+      // Files outside managed repos are skipped
+      expect(result.file_references).to.have.length(0)
     })
 
     it('should return empty arrays for empty input', () => {
@@ -457,7 +512,9 @@ describe('extract-timeline-references', () => {
           type: 'tool_call',
           content: {
             tool_name: 'Read',
-            tool_parameters: { file_path: '/path/to/code.js' }
+            tool_parameters: {
+              file_path: `${system_path}/code.js`
+            }
           }
         }
       ]
@@ -469,23 +526,28 @@ describe('extract-timeline-references', () => {
         'user:task/new-task.md'
       )
       expect(result.file_references).to.have.length(1)
-      expect(result.file_references[0].path).to.equal('/path/to/code.js')
+      // File references now have base_uri instead of path
+      expect(result.file_references[0].base_uri).to.equal('sys:code.js')
     })
 
-    it('should deduplicate file references by path', () => {
+    it('should deduplicate file references by base_uri', () => {
       const timeline = [
         {
           type: 'tool_call',
           content: {
             tool_name: 'Read',
-            tool_parameters: { file_path: '/path/to/code.js' }
+            tool_parameters: {
+              file_path: `${system_path}/code.js`
+            }
           }
         },
         {
           type: 'tool_call',
           content: {
             tool_name: 'Edit',
-            tool_parameters: { file_path: '/path/to/code.js' }
+            tool_parameters: {
+              file_path: `${system_path}/code.js`
+            }
           }
         }
       ]
@@ -495,6 +557,24 @@ describe('extract-timeline-references', () => {
       // Should be deduplicated to single entry with higher access type
       expect(result.file_references).to.have.length(1)
       expect(result.file_references[0].access_type).to.equal('modify')
+      expect(result.file_references[0].base_uri).to.equal('sys:code.js')
+    })
+
+    it('should skip file references outside managed repositories', () => {
+      const timeline = [
+        {
+          type: 'tool_call',
+          content: {
+            tool_name: 'Read',
+            tool_parameters: { file_path: '/tmp/outside/code.js' }
+          }
+        }
+      ]
+
+      const result = extract_timeline_references_separated({ timeline })
+
+      // Files outside managed repos are skipped
+      expect(result.file_references).to.have.length(0)
     })
   })
 })
