@@ -1,6 +1,5 @@
 import { DateField } from './date-field.js'
 import { TagsField } from './tags-field.js'
-import { RelationsField } from './relations-field.js'
 import { DefaultField } from './default-field.js'
 import { BooleanField } from './boolean-field.js'
 import { ListField } from './list-field.js'
@@ -31,7 +30,6 @@ const list_join_keys = new Set(['home_areas', 'home_attribute', 'kit_items'])
 
 export const resolve_renderer = ({ key_name }) => {
   if (key_name === 'tags') return TagsField
-  if (key_name === 'relations') return RelationsField
   if (date_keys.has(key_name)) return DateField
   if (boolean_keys.has(key_name)) return BooleanField
   if (list_join_keys.has(key_name)) return ListField

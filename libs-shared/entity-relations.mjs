@@ -112,3 +112,81 @@ export const relation_type_categories = {
 export function get_all_standard_relation_types() {
   return [...common_relation_types]
 }
+
+/**
+ * Bidirectional mapping between forward and reverse relation types.
+ * Each entry maps a relation type to its inverse.
+ */
+export const RELATION_PAIRS = {
+  // Dependency relations
+  [RELATION_BLOCKED_BY]: RELATION_BLOCKS,
+  [RELATION_BLOCKS]: RELATION_BLOCKED_BY,
+
+  // Hierarchy relations
+  [RELATION_SUBTASK_OF]: RELATION_HAS_SUBTASK,
+  [RELATION_HAS_SUBTASK]: RELATION_SUBTASK_OF,
+  [RELATION_PART_OF]: RELATION_CONTAINS,
+  [RELATION_CONTAINS]: RELATION_PART_OF,
+
+  // Membership relations
+  [RELATION_MEMBER_OF]: RELATION_HAS_MEMBER,
+  [RELATION_HAS_MEMBER]: RELATION_MEMBER_OF,
+
+  // Sequence relations
+  [RELATION_PRECEDES]: RELATION_SUCCEEDS,
+  [RELATION_SUCCEEDS]: RELATION_PRECEDES,
+
+  // Thread-entity relations
+  [RELATION_ACCESSES]: RELATION_ACCESSED_BY,
+  [RELATION_ACCESSED_BY]: RELATION_ACCESSES,
+  [RELATION_MODIFIES]: RELATION_MODIFIED_BY,
+  [RELATION_MODIFIED_BY]: RELATION_MODIFIES,
+  [RELATION_CREATES]: RELATION_CREATED_BY,
+  [RELATION_CREATED_BY]: RELATION_CREATES
+}
+
+/**
+ * Priority ordering for relation types (lower number = higher priority).
+ * Used for sorting relations in display contexts.
+ */
+export const RELATION_TYPE_PRIORITY = {
+  [RELATION_CREATES]: 1,
+  created_by: 1,
+  [RELATION_MODIFIES]: 2,
+  modified_by: 2,
+  implements: 3,
+  follows: 4,
+  [RELATION_SUBTASK_OF]: 5,
+  [RELATION_HAS_SUBTASK]: 6,
+  [RELATION_BLOCKED_BY]: 7,
+  [RELATION_BLOCKS]: 8,
+  [RELATION_PRECEDES]: 9,
+  [RELATION_SUCCEEDS]: 10,
+  [RELATION_ASSIGNED_TO]: 11,
+  calls: 12,
+  relates: 20,
+  [RELATION_RELATES_TO]: 20,
+  [RELATION_ACCESSES]: 30,
+  accessed_by: 30
+}
+
+/**
+ * Get the reverse relation type for a given relation type
+ * @param {Object} params
+ * @param {string} params.relation_type - The relation type to get the reverse of
+ * @returns {string|null} The reverse relation type, or null if no reverse exists
+ */
+export function get_reverse_relation_type({ relation_type }) {
+  return RELATION_PAIRS[relation_type] || null
+}
+
+/**
+ * Get the priority value for a relation type (lower = higher priority)
+ * @param {Object} params
+ * @param {string} params.relation_type - The relation type to get priority for
+ * @returns {number} Priority value (lower is higher priority, default 50)
+ */
+export function get_relation_priority({ relation_type }) {
+  if (!relation_type) return 100
+  return RELATION_TYPE_PRIORITY[relation_type] || 50
+}

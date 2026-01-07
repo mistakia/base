@@ -10,9 +10,7 @@ import {
   RELATION_ACCESSES,
   RELATION_MODIFIES,
   RELATION_CREATES,
-  RELATION_ACCESSED_BY,
-  RELATION_MODIFIED_BY,
-  RELATION_CREATED_BY
+  get_reverse_relation_type
 } from '#libs-shared/entity-relations.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
@@ -21,30 +19,8 @@ import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write
 const log = debug('metadata:update-entity-relations')
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-/**
- * Maps forward relation types to their reverse counterparts
- */
-const REVERSE_RELATION_MAP = {
-  [RELATION_ACCESSES]: RELATION_ACCESSED_BY,
-  [RELATION_MODIFIES]: RELATION_MODIFIED_BY,
-  [RELATION_CREATES]: RELATION_CREATED_BY
-}
-
-// ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Get the reverse relation type for a forward relation
- * @param {string} forward_type - Forward relation type
- * @returns {string|null} Reverse relation type or null
- */
-export function get_reverse_relation_type(forward_type) {
-  return REVERSE_RELATION_MAP[forward_type] || null
-}
 
 /**
  * Format a relation string
@@ -189,7 +165,9 @@ export async function add_thread_back_references({ references, thread_id }) {
     }
 
     // Get reverse relation type
-    const reverse_type = get_reverse_relation_type(forward_type)
+    const reverse_type = get_reverse_relation_type({
+      relation_type: forward_type
+    })
     if (!reverse_type) {
       log(`No reverse relation for: ${forward_type}`)
       continue

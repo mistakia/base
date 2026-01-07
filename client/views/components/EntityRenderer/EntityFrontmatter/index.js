@@ -10,7 +10,6 @@ import {
   DateDisplay
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
-import { parse_relation } from './renderers/relations-field.js'
 import { entity_field_config } from './field-config.js'
 
 const categorize_fields = (frontmatter) => {
@@ -126,64 +125,71 @@ EntityTitle.propTypes = {
   markdown: PropTypes.string
 }
 
-const RelationsSection = ({ relations }) => {
-  if (!Array.isArray(relations) || relations.length === 0) return null
+/**
+ * Parse a relation string and extract base_uri
+ * @param {string} relation_string - Relation string like "follows [[sys:path.md]]"
+ * @returns {Object|null} Object with relation_type and base_uri, or null if invalid
+ */
+const parse_relation_with_base_uri = (relation_string) => {
+  // Match pattern: "relation_type [[scheme:path]]"
+  const match = relation_string.match(/^(.+?)\s+\[\[(sys|user):([^\]]+)\]\]$/)
+  if (!match) return null
 
-  return (
-    <MetadataRow
-      label='Relations'
-      value={
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {relations.map((relation, idx) => {
-            const parsed = parse_relation(relation)
-            if (!parsed) {
-              return (
-                <Box
-                  key={idx}
-                  sx={{ fontSize: '12px', color: COLORS.text_secondary }}>
-                  {relation}
-                </Box>
-              )
-            }
-
-            return (
-              <Box
-                key={idx}
-                sx={{ fontSize: '12px', color: COLORS.text_secondary }}>
-                <span style={{ fontWeight: 600, color: COLORS.text_secondary }}>
-                  {parsed.relation_type}
-                </span>{' '}
-                <a
-                  href={parsed.client_path}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  style={{
-                    color: COLORS.icon_link,
-                    textDecoration: 'none',
-                    borderBottom: '1px solid transparent',
-                    transition: 'border-color 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(event) => {
-                    event.target.style.borderBottomColor = COLORS.icon_link
-                  }}
-                  onMouseLeave={(event) => {
-                    event.target.style.borderBottomColor = 'transparent'
-                  }}
-                  data-internal-link='true'>
-                  {parsed.filename}
-                </a>
-              </Box>
-            )
-          })}
-        </Box>
-      }
-    />
-  )
+  const [, relation_type, scheme, path] = match
+  return {
+    relation_type: relation_type.trim(),
+    base_uri: `${scheme}:${path}`
+  }
 }
 
-RelationsSection.propTypes = {
-  relations: PropTypes.array
+/**
+ * Parse frontmatter relations array into relation objects for RelatedEntities
+ * @param {Array} relations - Array of relation strings like "follows [[sys:path.md]]"
+ * @returns {Array} Array of relation objects with relation_type and base_uri, including malformed ones
+ */
+const parse_frontmatter_relations = (relations) => {
+  if (!Array.isArray(relations)) return []
+
+  return relations.map((relation_string, index) => {
+    const parsed = parse_relation_with_base_uri(relation_string)
+    if (!parsed) {
+      // Return malformed relation for display as plain text
+      return {
+        relation_type: null,
+        base_uri: null,
+        title: null,
+        malformed: true,
+        raw_string: relation_string,
+        // Use index to ensure unique keys for malformed relations
+        unique_key: `malformed-${index}`
+      }
+    }
+
+    return {
+      relation_type: parsed.relation_type,
+      base_uri: parsed.base_uri,
+      title: null // Frontmatter relations don't have titles, will show filename
+    }
+  })
+}
+
+/**
+ * Determine if RelatedEntities will render content
+ * @param {string} base_uri - Entity base URI
+ * @param {Array} frontmatter_relations - Parsed frontmatter relations
+ * @returns {boolean} True if RelatedEntities will render content
+ */
+const will_related_entities_render = (base_uri, frontmatter_relations) => {
+  // RelatedEntities won't render if no base_uri
+  if (!base_uri) return false
+
+  // If there are frontmatter relations, it will render
+  if (frontmatter_relations && frontmatter_relations.length > 0) return true
+
+  // If there are no frontmatter relations, we can't know for sure without
+  // fetching API data, but we should assume it might render to be safe
+  // with border styling (better to have an extra border than missing one)
+  return true
 }
 
 // observations rendering styles
@@ -317,18 +323,16 @@ const EntityFrontmatter = ({
 
       {/* Core metadata section */}
       <Box>
-        {relations && <RelationsSection relations={relations} />}
         {observations && <ObservationsSection observations={observations} />}
 
-        {/* Reverse relations - threads and entities referencing this entity */}
+        {/* Unified relations - forward from frontmatter + reverse from API */}
         {base_uri && (
           <RelatedEntities
             base_uri={base_uri}
-            direction='reverse'
+            frontmatter_relations={parse_frontmatter_relations(relations)}
             exclude_types={['file', 'directory']}
-            limit_per_group={10}
             show_header={true}
-            header_text='Referenced By'
+            header_text='Relations'
           />
         )}
 
@@ -339,6 +343,12 @@ const EntityFrontmatter = ({
             return null // Handle dates separately below
           }
 
+          const parsed_frontmatter_relations =
+            parse_frontmatter_relations(relations)
+          const has_content_above =
+            observations ||
+            will_related_entities_render(base_uri, parsed_frontmatter_relations)
+
           return (
             <MetadataRow
               key={key}
@@ -346,7 +356,7 @@ const EntityFrontmatter = ({
               value={format_field_value(value)}
               border_style='compact'
               scrollable={typeof value === 'string' && value.length > 50}
-              is_first={index === 0 && !relations && !observations}
+              is_first={index === 0 && !has_content_above}
             />
           )
         })}

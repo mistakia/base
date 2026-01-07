@@ -1,238 +1,185 @@
 /**
  * RelatedEntities Component
  *
- * Displays related entities grouped by type with expansion support.
- * Uses the /api/entities/relations endpoint for fetching relations.
+ * Displays a unified list of entity relations (both forward and reverse).
+ * Forward relations come from frontmatter, reverse relations from the API.
+ * Uses the /api/entities/relations endpoint for fetching reverse relations.
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Typography, CircularProgress } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 
 import { COLORS } from '@theme/colors.js'
 import { api, api_request } from '@core/api/service'
-import RelatedEntitiesGroup from './RelatedEntitiesGroup.js'
+import {
+  get_reverse_relation_type,
+  get_relation_priority
+} from '#libs-shared/entity-relations.mjs'
+import RelationItem from './RelationItem.js'
 
-const container_sx = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px'
-}
+const get_container_sx = (is_first) => ({
+  position: 'relative',
+  minHeight: '60px',
+  borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`
+})
 
-// Priority order for relation types (lower number = higher priority)
-const RELATION_TYPE_PRIORITY = {
-  creates: 1,
-  modifies: 2,
-  implements: 3,
-  follows: 4,
-  subtask_of: 5,
-  has_subtask: 6,
-  blocked_by: 7,
-  blocks: 8,
-  precedes: 9,
-  succeeds: 10,
-  assigned_to: 11,
-  calls: 12,
-  relates: 20,
-  relates_to: 20,
-  accesses: 30
-}
-
-const get_relation_priority = (relation_type) => {
-  if (!relation_type) return 100
-  return RELATION_TYPE_PRIORITY[relation_type] || 50
-}
-
-const get_header_sx = (is_first) => ({
+const header_sx = {
+  position: 'absolute',
+  top: '8px',
+  left: '12px',
   fontSize: '11px',
   fontWeight: 500,
   color: COLORS.text_secondary,
   textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  padding: '8px 12px',
-  borderTop: is_first ? 'none' : `1px solid ${COLORS.border}`
-})
-
-const loading_sx = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  padding: '16px',
-  color: COLORS.text_secondary,
-  fontSize: '12px'
+  letterSpacing: '0.5px'
 }
 
-const error_sx = {
-  padding: '16px',
-  color: COLORS.error,
-  fontSize: '12px'
+const relations_list_sx = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+  pt: '28px',
+  pb: '12px',
+  px: '12px'
 }
 
 const RelatedEntities = ({
   base_uri,
-  direction = 'both',
-  filter_types = [],
+  frontmatter_relations = [],
   exclude_types = [],
-  limit_per_group = 10,
   show_header = true,
-  header_text = 'Related Entities',
+  header_text = 'Relations',
   is_first = false,
   token
 }) => {
-  const [loading, set_loading] = useState(true)
-  const [error, set_error] = useState(null)
-  const [relations, set_relations] = useState({ forward: [], reverse: [] })
+  const [api_relations, set_api_relations] = useState([])
 
   const fetch_relations = useCallback(async () => {
     if (!base_uri) {
-      set_loading(false)
       return
     }
-
-    set_loading(true)
-    set_error(null)
 
     try {
       const { request } = api_request(
         api.get_entity_relations,
-        { base_uri, direction, limit: 100 },
+        { base_uri, direction: 'reverse', limit: 100 },
         token
       )
       const data = await request()
-      set_relations(data)
+      set_api_relations(data.reverse || [])
     } catch (err) {
       console.error('Error fetching entity relations:', err)
-      set_error(err.message || 'Failed to load relations')
-    } finally {
-      set_loading(false)
     }
-  }, [base_uri, direction, token])
+  }, [base_uri, token])
 
   useEffect(() => {
     fetch_relations()
   }, [fetch_relations])
 
-  // Group entities by type and sort by relation type priority
-  const group_by_type = (entities) => {
-    const groups = {}
-    for (const entity of entities) {
-      const type = entity.type || 'unknown'
-
-      // Apply filters
-      if (filter_types.length > 0 && !filter_types.includes(type)) continue
-      if (exclude_types.includes(type)) continue
-
-      if (!groups[type]) {
-        groups[type] = []
+  // Convert reverse relations to use semantically correct reverse relation types
+  const convert_reverse_relations = (reverse_relations) => {
+    return reverse_relations.map((relation) => {
+      const reverse_type = get_reverse_relation_type({
+        relation_type: relation.relation_type
+      })
+      return {
+        ...relation,
+        relation_type: reverse_type || relation.relation_type
       }
-      groups[type].push(entity)
-    }
-
-    // Sort entities within each group by relation type priority
-    for (const type of Object.keys(groups)) {
-      groups[type].sort(
-        (a, b) =>
-          get_relation_priority(a.relation_type) -
-          get_relation_priority(b.relation_type)
-      )
-    }
-
-    return groups
+    })
   }
 
-  const forward_groups = group_by_type(relations.forward || [])
-  const reverse_groups = group_by_type(relations.reverse || [])
+  // Merge frontmatter and API relations, deduplicate by composite key (relation_type + base_uri)
+  const merge_relations = () => {
+    const converted_api = convert_reverse_relations(api_relations)
 
-  const has_forward = Object.keys(forward_groups).length > 0
-  const has_reverse = Object.keys(reverse_groups).length > 0
-  const has_any = has_forward || has_reverse
+    // Create a map for deduplication using composite key (frontmatter takes precedence)
+    const relation_map = new Map()
 
-  if (loading) {
-    return (
-      <Box sx={loading_sx}>
-        <CircularProgress size={14} />
-        <span>Loading relations...</span>
-      </Box>
+    // Helper function to create composite key for deduplication
+    const create_relation_key = (relation) => {
+      if (relation.malformed) {
+        // Use unique_key for malformed relations to avoid conflicts
+        return relation.unique_key
+      }
+      // Use relation_type + base_uri as composite key to allow multiple relation types to same entity
+      return `${relation.relation_type || 'unknown'}:${relation.base_uri || ''}`
+    }
+
+    // Add frontmatter relations first (they take precedence)
+    for (const relation of frontmatter_relations) {
+      const key = create_relation_key(relation)
+      relation_map.set(key, relation)
+    }
+
+    // Add API relations (skip if same relation_type + base_uri already exists from frontmatter)
+    for (const relation of converted_api) {
+      const key = create_relation_key(relation)
+      if (!relation_map.has(key)) {
+        // Apply exclude_types filter
+        if (!exclude_types.includes(relation.type)) {
+          relation_map.set(key, relation)
+        }
+      }
+    }
+
+    return Array.from(relation_map.values())
+  }
+
+  // Sort relations by priority
+  const sort_relations = (relations) => {
+    return [...relations].sort(
+      (a, b) =>
+        get_relation_priority({ relation_type: a.relation_type }) -
+        get_relation_priority({ relation_type: b.relation_type })
     )
   }
 
-  if (error) {
-    return <Box sx={error_sx}>Error: {error}</Box>
-  }
+  const merged_relations = merge_relations()
+  const sorted_relations = sort_relations(merged_relations)
 
-  if (!has_any) {
-    return null // Don't render anything if no relations
+  if (sorted_relations.length === 0) {
+    return null
   }
 
   return (
-    <Box sx={container_sx}>
-      {show_header && (
-        <Typography sx={get_header_sx(is_first)}>{header_text}</Typography>
-      )}
+    <Box sx={get_container_sx(is_first)}>
+      {show_header && <Typography sx={header_sx}>{header_text}</Typography>}
 
-      {/* Forward relations (this entity -> targets) */}
-      {has_forward && (
-        <Box>
-          {direction === 'both' && (
-            <Typography
-              sx={{
-                fontSize: '11px',
-                color: COLORS.text_secondary,
-                px: 2,
-                py: 0.5,
-                fontWeight: 500
-              }}>
-              References
-            </Typography>
-          )}
-          {Object.entries(forward_groups).map(([type, entities]) => (
-            <RelatedEntitiesGroup
-              key={`forward-${type}`}
-              group_type={type}
-              entities={entities}
-              limit={limit_per_group}
-              show_relation_type={true}
-            />
-          ))}
-        </Box>
-      )}
+      <Box sx={relations_list_sx}>
+        {sorted_relations.map((relation, idx) => {
+          // Generate React key using same logic as deduplication to ensure uniqueness
+          const react_key = relation.malformed
+            ? relation.unique_key
+            : `${relation.relation_type || 'unknown'}:${relation.base_uri || ''}`
 
-      {/* Reverse relations (sources -> this entity) */}
-      {has_reverse && (
-        <Box>
-          {direction === 'both' && (
-            <Typography
-              sx={{
-                fontSize: '11px',
-                color: COLORS.text_secondary,
-                px: 2,
-                py: 0.5,
-                fontWeight: 500
-              }}>
-              Referenced By
-            </Typography>
-          )}
-          {Object.entries(reverse_groups).map(([type, entities]) => (
-            <RelatedEntitiesGroup
-              key={`reverse-${type}`}
-              group_type={type}
-              entities={entities}
-              limit={limit_per_group}
-              show_relation_type={true}
+          return (
+            <RelationItem
+              key={react_key || idx}
+              relation_type={relation.relation_type}
+              base_uri={relation.base_uri}
+              title={relation.title}
+              malformed={relation.malformed}
+              raw_string={relation.raw_string}
             />
-          ))}
-        </Box>
-      )}
+          )
+        })}
+      </Box>
     </Box>
   )
 }
 
 RelatedEntities.propTypes = {
   base_uri: PropTypes.string.isRequired,
-  direction: PropTypes.oneOf(['forward', 'reverse', 'both']),
-  filter_types: PropTypes.arrayOf(PropTypes.string),
+  frontmatter_relations: PropTypes.arrayOf(
+    PropTypes.shape({
+      relation_type: PropTypes.string,
+      base_uri: PropTypes.string,
+      title: PropTypes.string
+    })
+  ),
   exclude_types: PropTypes.arrayOf(PropTypes.string),
-  limit_per_group: PropTypes.number,
   show_header: PropTypes.bool,
   header_text: PropTypes.string,
   is_first: PropTypes.bool,

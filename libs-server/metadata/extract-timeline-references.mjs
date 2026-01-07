@@ -5,6 +5,7 @@
  * Supports tool calls, messages with wikilinks, and bash commands.
  */
 
+import path from 'path'
 import debug from 'debug'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { extract_entity_references } from '#libs-server/entity/format/extractors/reference-extractor.mjs'
@@ -102,6 +103,29 @@ export function extract_from_tool_calls({ timeline }) {
 // ============================================================================
 
 /**
+ * Resolve a potentially relative path to an absolute path
+ * @param {string} file_path - Path that may be relative or absolute
+ * @param {string} [working_directory] - Working directory to resolve against
+ * @returns {string} Absolute path
+ */
+function resolve_path(file_path, working_directory) {
+  if (!file_path) return file_path
+
+  // Already absolute
+  if (path.isAbsolute(file_path)) {
+    return file_path
+  }
+
+  // Resolve relative path against working directory
+  if (working_directory) {
+    return path.resolve(working_directory, file_path)
+  }
+
+  // Cannot resolve - return as-is
+  return file_path
+}
+
+/**
  * Extract entity references from messages (wikilinks and @path mentions)
  * @param {Object} params
  * @param {Array} params.timeline - Thread timeline entries
@@ -129,11 +153,15 @@ export function extract_from_messages({ timeline }) {
 
     // Extract @path/to/file patterns from user messages
     if (entry.role === 'user') {
+      const working_directory = entry.metadata?.working_directory
       const at_path_regex = /@([^\s]+\.\w+)/g
       let match
       while ((match = at_path_regex.exec(entry.content)) !== null) {
+        const raw_path = match[1]
+        const resolved_path = resolve_path(raw_path, working_directory)
+
         references.push({
-          path: match[1],
+          path: resolved_path,
           access_type: 'reference',
           confidence: 'medium',
           source: 'message_at_path'
