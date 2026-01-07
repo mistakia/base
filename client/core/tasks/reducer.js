@@ -211,6 +211,41 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
       )
     }
 
+    // Task property update actions (optimistic updates)
+    case tasks_action_types.UPDATE_TASK_PROPERTY: {
+      const { base_uri, property_name, value } = payload
+      return state.update('task_table_views', (views) =>
+        views.map((view) =>
+          view.update('task_table_results', (rows) => {
+            if (!rows) return rows
+            const index = rows.findIndex((row) => row.base_uri === base_uri)
+            if (index === -1) return rows
+            return rows.update(index, (row) => ({
+              ...row,
+              [property_name]: value
+            }))
+          })
+        )
+      )
+    }
+
+    case tasks_action_types.REVERT_TASK_UPDATE: {
+      const { base_uri, property_name, previous_value } = payload
+      return state.update('task_table_views', (views) =>
+        views.map((view) =>
+          view.update('task_table_results', (rows) => {
+            if (!rows) return rows
+            const index = rows.findIndex((row) => row.base_uri === base_uri)
+            if (index === -1) return rows
+            return rows.update(index, (row) => ({
+              ...row,
+              [property_name]: previous_value
+            }))
+          })
+        )
+      )
+    }
+
     default:
       return state
   }

@@ -8,8 +8,11 @@ import {
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
-import { to_snake_slug } from '@core/utils'
 import { COLORS } from '@theme/colors.js'
+import {
+  EditableStatusField,
+  EditablePriorityField
+} from '@views/components/InlineSelect'
 
 const TitleCell = ({ row }) => {
   const navigate = useNavigate()
@@ -60,47 +63,23 @@ const TitleCell = ({ row }) => {
 
 const StatusCell = ({ row }) => {
   const task = row.original
-  const status = task.status || TASK_STATUS.NO_STATUS
-  const status_slug = to_snake_slug(status) || 'no_status'
-
   return (
-    <div
-      className='cell-content'
-      style={{
-        height: 'fit-content',
-        justifyContent: 'flex-start',
-        width: '100%'
-      }}>
-      <span
-        data-status={status_slug}
-        className='task-status'
-        style={{ fontWeight: 500, fontSize: '0.875rem', lineHeight: '1.2' }}>
-        {status}
-      </span>
-    </div>
+    <EditableStatusField
+      value={task.status}
+      base_uri={task.base_uri}
+      context='table'
+    />
   )
 }
 
 const PriorityCell = ({ row }) => {
   const task = row.original
-  const priority = task.priority || TASK_PRIORITY.NONE
-  const priority_slug = to_snake_slug(priority) || 'none'
-
   return (
-    <div
-      className='cell-content'
-      style={{
-        height: 'fit-content',
-        justifyContent: 'flex-start',
-        width: '100%'
-      }}>
-      <span
-        data-priority={priority_slug}
-        className='task-priority'
-        style={{ fontWeight: 500, fontSize: '0.875rem', lineHeight: '1.2' }}>
-        {priority}
-      </span>
-    </div>
+    <EditablePriorityField
+      value={task.priority}
+      base_uri={task.base_uri}
+      context='table'
+    />
   )
 }
 

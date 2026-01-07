@@ -196,6 +196,18 @@ export const api = {
     if (entity_type) params.entity_type = entity_type
     const url = `${API_URL}/entities/relations?${qs.stringify(params)}`
     return { url }
+  },
+
+  patch_task({ base_uri, properties }) {
+    const url = `${API_URL}/tasks`
+    return {
+      url,
+      method: 'PATCH',
+      body: JSON.stringify({ base_uri, properties }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
   }
 }
 

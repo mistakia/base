@@ -10,6 +10,10 @@ import {
   DateDisplay
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
+import {
+  EditableStatusField,
+  EditablePriorityField
+} from '@views/components/InlineSelect'
 import { entity_field_config } from './field-config.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
@@ -302,6 +306,43 @@ const EntityFrontmatter = ({
           const has_content_above =
             observations ||
             will_related_entities_render(base_uri, parsed_forward_relations)
+
+          // Render editable fields for task status and priority
+          if (type === 'task' && key === 'status' && base_uri) {
+            return (
+              <MetadataRow
+                key={key}
+                label={format_field_label(key)}
+                value={
+                  <EditableStatusField
+                    value={value}
+                    base_uri={base_uri}
+                    context='entity-page'
+                  />
+                }
+                border_style='compact'
+                is_first={index === 0 && !has_content_above}
+              />
+            )
+          }
+
+          if (type === 'task' && key === 'priority' && base_uri) {
+            return (
+              <MetadataRow
+                key={key}
+                label={format_field_label(key)}
+                value={
+                  <EditablePriorityField
+                    value={value}
+                    base_uri={base_uri}
+                    context='entity-page'
+                  />
+                }
+                border_style='compact'
+                is_first={index === 0 && !has_content_above}
+              />
+            )
+          }
 
           return (
             <MetadataRow

@@ -2,7 +2,11 @@ import { call, put, cancelled, select } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
 import { api, api_request } from '@core/api/service'
-import { get_tasks_actions, get_tasks_table_actions } from '@core/tasks/actions'
+import {
+  get_tasks_actions,
+  get_tasks_table_actions,
+  patch_task_actions
+} from '@core/tasks/actions'
 import {
   get_user_request_actions,
   get_users_request_actions
@@ -101,6 +105,7 @@ export const delete_database_view = fetch.bind(
   delete_database_view_request_actions
 )
 export const get_tasks = fetch.bind(null, api.get_tasks, get_tasks_actions)
+export const patch_task = fetch.bind(null, api.patch_task, patch_task_actions)
 
 export const get_threads = fetch.bind(
   null,

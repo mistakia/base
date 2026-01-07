@@ -1,7 +1,14 @@
-import { takeLatest, fork, call, select, debounce } from 'redux-saga/effects'
+import {
+  takeLatest,
+  fork,
+  call,
+  select,
+  debounce,
+  put
+} from 'redux-saga/effects'
 
-import { get_tasks, get_tasks_table } from '@core/api/sagas'
-import { tasks_action_types } from './actions'
+import { get_tasks, get_tasks_table, patch_task } from '@core/api/sagas'
+import { tasks_action_types, tasks_actions } from './actions'
 import { get_tasks_state } from './selectors'
 
 export function* load_tasks({ payload }) {
@@ -78,12 +85,53 @@ export function* debounced_table_state_fetch({ payload }) {
   }
 }
 
+export function* update_task_property({ payload }) {
+  const { base_uri, property_name, value, previous_value } = payload
+
+  // Call the API to update the task
+  // Pass previous_value in opts so it's available in PATCH_TASK_FAILED for revert
+  yield call(patch_task, {
+    base_uri,
+    properties: { [property_name]: value },
+    // These are passed through opts and available in the failed action payload
+    property_name,
+    previous_value
+  })
+}
+
+export function* handle_patch_task_failed({ payload }) {
+  const { opts } = payload
+  const { base_uri, property_name, previous_value } = opts || {}
+
+  // Revert the optimistic update using the previous value from opts
+  if (previous_value !== undefined && base_uri && property_name) {
+    yield put(
+      tasks_actions.revert_task_update({
+        base_uri,
+        property_name,
+        previous_value
+      })
+    )
+  }
+}
+
 //= ====================================
 //  WATCHERS
 // -------------------------------------
 
 export function* watch_load_tasks() {
   yield takeLatest(tasks_action_types.LOAD_TASKS, load_tasks)
+}
+
+export function* watch_update_task_property() {
+  yield takeLatest(
+    tasks_action_types.UPDATE_TASK_PROPERTY,
+    update_task_property
+  )
+}
+
+export function* watch_patch_task_failed() {
+  yield takeLatest(tasks_action_types.PATCH_TASK_FAILED, handle_patch_task_failed)
 }
 
 // Table view management watchers
@@ -107,5 +155,7 @@ export function* watch_load_tasks_table() {
 export const tasks_sagas = [
   fork(watch_load_tasks),
   fork(watch_update_task_table_view),
-  fork(watch_load_tasks_table)
+  fork(watch_load_tasks_table),
+  fork(watch_update_task_property),
+  fork(watch_patch_task_failed)
 ]

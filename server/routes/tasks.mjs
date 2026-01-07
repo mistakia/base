@@ -3,8 +3,10 @@ import debug from 'debug'
 
 import {
   list_tasks_from_filesystem,
-  read_task_from_filesystem
+  read_task_from_filesystem,
+  write_task_to_filesystem
 } from '#libs-server/task/index.mjs'
+import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
 import {
   check_user_permission_for_file,
@@ -315,5 +317,110 @@ async function handle_task_list_request(
 
   res.status(200).send({ tasks, tag_visibility })
 }
+
+// PATCH /api/tasks - Update task status and/or priority
+router.patch('/', async (req, res) => {
+  const { log } = req.app.locals
+
+  try {
+    const user_public_key = req.user?.user_public_key
+    if (!user_public_key) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
+    const { base_uri, properties } = req.body
+
+    // Validate required fields
+    if (!base_uri) {
+      return res.status(400).json({ error: 'base_uri is required' })
+    }
+
+    if (!properties || typeof properties !== 'object') {
+      return res.status(400).json({ error: 'properties object is required' })
+    }
+
+    // Whitelist only status and priority fields
+    const allowed_fields = ['status', 'priority']
+    const update_properties = {}
+
+    for (const field of allowed_fields) {
+      if (field in properties) {
+        update_properties[field] = properties[field]
+      }
+    }
+
+    if (Object.keys(update_properties).length === 0) {
+      return res.status(400).json({
+        error:
+          'No valid properties to update. Only status and priority are allowed.'
+      })
+    }
+
+    // Validate status value
+    if ('status' in update_properties) {
+      const valid_statuses = Object.values(TASK_STATUS)
+      if (!valid_statuses.includes(update_properties.status)) {
+        return res.status(400).json({
+          error: `Invalid status value. Must be one of: ${valid_statuses.join(', ')}`
+        })
+      }
+    }
+
+    // Validate priority value
+    if ('priority' in update_properties) {
+      const valid_priorities = Object.values(TASK_PRIORITY)
+      if (!valid_priorities.includes(update_properties.priority)) {
+        return res.status(400).json({
+          error: `Invalid priority value. Must be one of: ${valid_priorities.join(', ')}`
+        })
+      }
+    }
+
+    // Read existing task
+    const task = await read_task_from_filesystem({ base_uri })
+
+    if (!task.success) {
+      return res.status(404).json({ error: task.error || 'Task not found' })
+    }
+
+    // Check write permission
+    const permission_result = await check_permission({
+      user_public_key,
+      resource_path: base_uri
+    })
+
+    if (!permission_result.write.allowed) {
+      return res.status(403).json({ error: 'Permission denied' })
+    }
+
+    // Merge properties and write back
+    const merged_properties = {
+      ...task.entity_properties,
+      ...update_properties,
+      updated_at: new Date().toISOString()
+    }
+
+    const write_result = await write_task_to_filesystem({
+      base_uri,
+      task_properties: merged_properties,
+      task_content: task.entity_content || ''
+    })
+
+    if (!write_result.success) {
+      return res.status(500).json({ error: write_result.error })
+    }
+
+    log(`Task ${base_uri} updated: ${JSON.stringify(update_properties)}`)
+
+    res.status(200).json({
+      success: true,
+      base_uri,
+      updated_properties: update_properties
+    })
+  } catch (error) {
+    log('Error updating task:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
 
 export default router
