@@ -175,9 +175,9 @@ export async function analyze_thread_relations({
     references: entity_references
   })
 
-  // Extract file paths for storage
-  const file_paths = file_references.map((ref) => ref.path)
-  const directory_paths = directory_references.map((ref) => ref.path)
+  // Extract file base_uris for storage
+  const file_base_uris = file_references.map((ref) => ref.base_uri)
+  const directory_base_uris = directory_references.map((ref) => ref.base_uri)
 
   // Prepare result
   const result = {
@@ -189,8 +189,8 @@ export async function analyze_thread_relations({
     directory_references_count: directory_references.length,
     total_relations_count: entity_relations.length,
     relations: entity_relations,
-    file_references: file_paths,
-    directory_references: directory_paths,
+    file_references: file_base_uris,
+    directory_references: directory_base_uris,
     dry_run
   }
 
@@ -198,8 +198,8 @@ export async function analyze_thread_relations({
   if (!dry_run) {
     const metadata_update = {
       relations: entity_relations,
-      file_references: file_paths,
-      directory_references: directory_paths,
+      file_references: file_base_uris,
+      directory_references: directory_base_uris,
       relations_analyzed_at: new Date().toISOString()
     }
 
@@ -209,7 +209,7 @@ export async function analyze_thread_relations({
     })
 
     log(
-      `Updated thread ${thread_id} with ${entity_relations.length} relations, ${file_paths.length} file refs, ${directory_paths.length} dir refs`
+      `Updated thread ${thread_id} with ${entity_relations.length} relations, ${file_base_uris.length} file refs, ${directory_base_uris.length} dir refs`
     )
     result.metadata_updated = true
   }

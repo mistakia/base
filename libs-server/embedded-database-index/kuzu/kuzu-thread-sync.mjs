@@ -186,26 +186,26 @@ export async function sync_thread_relations_to_kuzu({
 
 /**
  * Upsert a file reference as a pseudo-entity in Kuzu
- * File base_uri format: file:<absolute-path>
+ * Uses standard base_uri format (user: or sys:) with entity_type 'file' or 'directory'
  */
 export async function upsert_file_reference_to_kuzu({
   connection,
-  file_path,
+  base_uri,
   file_type = 'file'
 }) {
-  if (!file_path) {
-    log('Cannot upsert file reference without file_path')
+  if (!base_uri) {
+    log('Cannot upsert file reference without base_uri')
     return
   }
 
-  const file_base_uri = `file:${file_path}`
   const entity_type = file_type === 'directory' ? 'directory' : 'file'
 
-  // Extract filename/dirname for title
-  const path_parts = file_path.split('/')
-  const title = path_parts[path_parts.length - 1] || file_path
+  // Extract filename/dirname for title from base_uri path
+  const path_part = base_uri.includes(':') ? base_uri.split(':')[1] : base_uri
+  const path_parts = path_part.split('/')
+  const title = path_parts[path_parts.length - 1] || base_uri
 
-  log('Upserting file reference to Kuzu: %s', file_base_uri)
+  log('Upserting file reference to Kuzu: %s', base_uri)
 
   const query = `
     MERGE (e:Entity {base_uri: $base_uri})
@@ -215,11 +215,11 @@ export async function upsert_file_reference_to_kuzu({
 
   try {
     await execute_parameterized_query(connection, query, {
-      base_uri: file_base_uri,
+      base_uri,
       type: entity_type,
       title
     })
-    log('File reference upserted: %s', file_base_uri)
+    log('File reference upserted: %s', base_uri)
   } catch (error) {
     log('Error upserting file reference: %s', error.message)
     throw error
@@ -265,15 +265,14 @@ export async function sync_thread_file_references_to_kuzu({
   }
 
   // Create file reference entities and relations
-  for (const file_path of file_references) {
+  for (const file_base_uri of file_references) {
     try {
       await upsert_file_reference_to_kuzu({
         connection,
-        file_path,
+        base_uri: file_base_uri,
         file_type: 'file'
       })
 
-      const file_base_uri = `file:${file_path}`
       const create_rel_query = `
         MATCH (t:Entity {base_uri: $thread_base_uri})
         MATCH (f:Entity {base_uri: $file_base_uri})
@@ -286,20 +285,19 @@ export async function sync_thread_file_references_to_kuzu({
         context: ''
       })
     } catch (error) {
-      log('Error syncing file reference %s: %s', file_path, error.message)
+      log('Error syncing file reference %s: %s', file_base_uri, error.message)
     }
   }
 
   // Create directory reference entities and relations
-  for (const dir_path of directory_references) {
+  for (const dir_base_uri of directory_references) {
     try {
       await upsert_file_reference_to_kuzu({
         connection,
-        file_path: dir_path,
+        base_uri: dir_base_uri,
         file_type: 'directory'
       })
 
-      const dir_base_uri = `file:${dir_path}`
       const create_rel_query = `
         MATCH (t:Entity {base_uri: $thread_base_uri})
         MATCH (d:Entity {base_uri: $dir_base_uri})
@@ -312,7 +310,11 @@ export async function sync_thread_file_references_to_kuzu({
         context: ''
       })
     } catch (error) {
-      log('Error syncing directory reference %s: %s', dir_path, error.message)
+      log(
+        'Error syncing directory reference %s: %s',
+        dir_base_uri,
+        error.message
+      )
     }
   }
 }
