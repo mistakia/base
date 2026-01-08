@@ -7,6 +7,7 @@ import { tasks_sagas } from './tasks/index.js'
 import { directory_sagas } from './directory/index.js'
 import { active_sessions_sagas } from './active-sessions/index.js'
 import { activity_sagas } from './activity/index.js'
+import { git_sagas } from './git/index.js'
 
 export default function* root_saga() {
   yield all([
@@ -16,6 +17,7 @@ export default function* root_saga() {
     ...tasks_sagas,
     ...directory_sagas,
     ...active_sessions_sagas,
-    ...activity_sagas
+    ...activity_sagas,
+    ...git_sagas
   ])
 }

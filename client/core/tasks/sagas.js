@@ -131,7 +131,10 @@ export function* watch_update_task_property() {
 }
 
 export function* watch_patch_task_failed() {
-  yield takeLatest(tasks_action_types.PATCH_TASK_FAILED, handle_patch_task_failed)
+  yield takeLatest(
+    tasks_action_types.PATCH_TASK_FAILED,
+    handle_patch_task_failed
+  )
 }
 
 // Table view management watchers

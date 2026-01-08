@@ -26,6 +26,8 @@ export class PermissionContext {
     this._public_rules = null
     this._user_rules_loaded = false
     this._public_rules_loaded = false
+    this._global_write = null
+    this._global_write_checked = false
   }
 
   /**
@@ -208,9 +210,44 @@ export class PermissionContext {
   }
 
   /**
+   * Get user's global_write permission
+   *
+   * @returns {Promise<boolean>} True if user has global_write permission
+   */
+  async get_global_write_permission() {
+    if (this._global_write_checked) {
+      return this._global_write ?? false
+    }
+
+    this._global_write_checked = true
+
+    if (!this.user_public_key || this.user_public_key === 'public') {
+      this._global_write = false
+      return false
+    }
+
+    try {
+      const user = await user_registry.find_by_public_key(this.user_public_key)
+      if (user?.permissions?.global_write === true) {
+        this._global_write = true
+        log(`User ${this.user_public_key} has global_write permission`)
+        return true
+      }
+      this._global_write = false
+      return false
+    } catch (error) {
+      log(`Error checking global_write permission: ${error.message}`)
+      this._global_write = false
+      return false
+    }
+  }
+
+  /**
    * Check write permission for a resource
    *
-   * Write access is limited to resource owners only.
+   * Priority order:
+   * 1. Ownership (user owns the resource)
+   * 2. Global write permission (user has global_write: true)
    *
    * @param {Object} params - Parameters
    * @param {string} params.resource_path - Base-URI path of the resource
@@ -228,10 +265,20 @@ export class PermissionContext {
     const resource_metadata =
       metadata || (await this.get_resource_metadata(resource_path))
 
+    // Step 1: Check ownership
     if (resource_metadata?.owner_public_key === this.user_public_key) {
       return {
         allowed: true,
         reason: 'User is owner of the resource'
+      }
+    }
+
+    // Step 2: Check global_write permission
+    const has_global_write = await this.get_global_write_permission()
+    if (has_global_write) {
+      return {
+        allowed: true,
+        reason: 'User has global write permission'
       }
     }
 
@@ -284,5 +331,7 @@ export class PermissionContext {
     this._public_rules = null
     this._user_rules_loaded = false
     this._public_rules_loaded = false
+    this._global_write = null
+    this._global_write_checked = false
   }
 }

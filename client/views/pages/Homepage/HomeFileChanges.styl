@@ -1,0 +1,355 @@
+// Home File Changes - Git status and commit UI
+// Follows Homepage section patterns
+
+.home-file-changes
+  display: flex
+  flex-direction: column
+  gap: $space_sm
+  width: 100%
+
+// Add yellow dot for changes
+.home-section-header__dot--changes
+  background-color: $color_warning
+
+.home-file-changes__content
+  display: flex
+  flex-direction: column
+  gap: $space_sm
+  min-width: 0
+
+.home-file-changes__loading
+  padding: $space_base
+  text-align: center
+  color: $color_text_tertiary
+  font-size: $font_size_sm
+
+// =============================================================================
+// Repository Section
+// =============================================================================
+
+.repo-section
+  background: white
+  border-radius: $radius_base
+  border: 1px solid $color_border_light
+  overflow: hidden
+  min-width: 0
+
+.repo-section__header
+  display: flex
+  align-items: center
+  gap: $space_xs
+  padding: $space_sm $space_base
+  background: $color_surface_secondary
+  cursor: pointer
+  user-select: none
+  transition: background $transition_fast
+
+  &:hover
+    background: $color_surface_hover
+
+.repo-section__toggle
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 16px
+  height: 16px
+  color: $color_text_tertiary
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  flex-shrink: 0
+
+.repo-section__name
+  font-weight: $font_weight_semibold
+  font-size: $font_size_sm
+  color: $color_text
+
+.repo-section__branch
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  background: $color_surface
+  padding: 2px 6px
+  border-radius: $radius_sm
+
+.repo-section__count
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text_tertiary
+  margin-left: auto
+
+.repo-section__stage-all
+  margin-left: $space_sm
+  padding: 4px 8px
+  border: 1px solid $color_border_light
+  border-radius: $radius_sm
+  background: transparent
+  color: $color_text_secondary
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  cursor: pointer
+  transition: all $transition_fast
+
+  &:hover
+    background: $color_surface_hover
+    border-color: $color_border
+    color: $color_text
+
+.repo-section__content
+  padding: $space_sm
+  min-width: 0
+
+.repo-section__files
+  display: flex
+  flex-direction: column
+  gap: $space_xs
+  min-width: 0
+
+// =============================================================================
+// File Change Card
+// =============================================================================
+
+.file-change-card
+  border: 1px solid $color_border_light
+  border-radius: $radius_sm
+  background: $color_surface
+  overflow: hidden
+  min-width: 0
+
+.file-change-card__header
+  display: flex
+  align-items: center
+  gap: $space_xs
+  padding: $space_xs $space_sm
+  cursor: pointer
+  user-select: none
+  transition: background $transition_fast
+
+  &:hover
+    background: $color_surface_hover
+
+.file-change-card__toggle
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 14px
+  height: 14px
+  color: $color_text_tertiary
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  flex-shrink: 0
+
+.file-change-card__status
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 16px
+  height: 16px
+  font-size: 10px
+  font-family: $font_family_mono
+  font-weight: $font_weight_bold
+  border-radius: 2px
+  flex-shrink: 0
+
+  &--modified
+    background: rgba(0, 123, 255, 0.15)
+    color: #007bff
+
+  &--added
+    background: rgba(40, 167, 69, 0.15)
+    color: $color_success
+
+  &--deleted
+    background: rgba(220, 53, 69, 0.15)
+    color: $color_danger
+
+  &--untracked
+    background: rgba(108, 117, 125, 0.15)
+    color: $color_text_tertiary
+
+.file-change-card__path
+  flex: 1
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  color: $color_text
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  min-width: 0
+  padding-left: 2px
+
+.file-change-card__actions
+  display: flex
+  gap: $space_xs
+  flex-shrink: 0
+
+.file-change-card__action-button
+  padding: 2px 6px
+  border: 1px solid $color_border_light
+  border-radius: $radius_sm
+  background: transparent
+  color: $color_text_tertiary
+  font-size: 10px
+  font-family: $font_family_mono
+  cursor: pointer
+  transition: all $transition_fast
+
+  &:hover
+    background: $color_surface_hover
+    border-color: $color_border
+    color: $color_text
+
+  &--primary
+    border-color: $color_primary
+    color: $color_primary
+
+    &:hover
+      background: $color_primary
+      color: white
+
+.file-change-card__body
+  border-top: 1px solid $color_border_light
+  background: white
+  max-height: 300px
+  overflow: auto
+  contain: inline-size
+
+.file-change-card__loading
+.file-change-card__new-file
+.file-change-card__deleted
+.file-change-card__no-diff
+  padding: $space_sm
+  font-size: $font_size_xs
+  color: $color_text_tertiary
+  text-align: center
+
+.file-change-card__diff
+  font-family: $font_family_mono
+  font-size: 11px
+  line-height: 1.5
+  display: inline-block
+  min-width: 100%
+
+// =============================================================================
+// Diff Display
+// =============================================================================
+
+.diff-hunk
+  &:not(:first-child)
+    border-top: 1px solid $color_border_light
+
+.diff-hunk__header
+  padding: $space_xs $space_sm
+  background: $color_surface_secondary
+  color: $color_text_secondary
+  font-size: 10px
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  position: sticky
+  left: 0
+
+.diff-line
+  padding: 0 $space_sm
+  white-space: pre
+  min-height: 18px
+
+  &--add
+    background: rgba(40, 167, 69, 0.12)
+
+    .diff-line__content::before
+      content: '+'
+      color: $color_success
+      margin-right: $space_xs
+
+  &--delete
+    background: rgba(220, 53, 69, 0.12)
+
+    .diff-line__content::before
+      content: '-'
+      color: $color_danger
+      margin-right: $space_xs
+
+  &--context
+    .diff-line__content::before
+      content: ' '
+      margin-right: $space_xs
+
+  &--meta
+    color: $color_text_tertiary
+    font-style: italic
+
+    .diff-line__content::before
+      content: '\\'
+      margin-right: $space_xs
+
+.diff-line__content
+  display: inline
+
+// =============================================================================
+// Commit Section
+// =============================================================================
+
+.commit-section
+  margin-top: $space_sm
+  padding-top: $space_sm
+  border-top: 1px solid $color_border_light
+
+.commit-section__input
+  width: 100%
+  padding: $space_sm
+  border: 1px solid $color_border_light
+  border-radius: $radius_sm
+  font-family: $font_family_mono
+  font-size: $font_size_sm
+  resize: vertical
+  min-height: 60px
+
+  &:focus
+    outline: none
+    border-color: $color_primary
+
+  &::placeholder
+    color: $color_text_tertiary
+
+.commit-section__footer
+  display: flex
+  align-items: center
+  justify-content: space-between
+  margin-top: $space_xs
+
+.commit-section__hint
+  font-size: $font_size_xs
+  color: $color_text_tertiary
+
+.commit-section__button
+  padding: $space_xs $space_base
+  border: none
+  border-radius: $radius_sm
+  background: $color_primary
+  color: white
+  font-size: $font_size_sm
+  font-weight: $font_weight_medium
+  cursor: pointer
+  transition: all $transition_fast
+
+  &:hover:not(:disabled)
+    background: darken($color_primary, 10%)
+
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+// =============================================================================
+// Responsive Design
+// =============================================================================
+
+@media (max-width: 768px)
+  .repo-section
+    border-radius: 0
+    border-left: none
+    border-right: none
+    margin-left: (-$space_base)
+    margin-right: (-$space_base)
+
+  .file-change-card__path
+    max-width: 150px

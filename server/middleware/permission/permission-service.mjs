@@ -210,6 +210,35 @@ export const check_create_threads_permission = async (user_public_key) => {
 }
 
 /**
+ * Check if user has global write permission
+ *
+ * @param {string} user_public_key - User's public key
+ * @returns {Promise<boolean>} True if user has global_write permission
+ */
+export const check_global_write_permission = async (user_public_key) => {
+  if (!user_public_key) {
+    return false
+  }
+
+  try {
+    const user = await user_registry.find_by_public_key(user_public_key)
+    if (!user) {
+      log(`User not found for permission check: ${user_public_key}`)
+      return false
+    }
+
+    const has_permission = user.permissions?.global_write === true
+    log(
+      `Permission check for ${user_public_key}: global_write = ${has_permission}`
+    )
+    return has_permission
+  } catch (error) {
+    log(`Error checking global_write permission: ${error.message}`)
+    return false
+  }
+}
+
+/**
  * Load resource metadata (re-exported for convenience)
  */
 export {

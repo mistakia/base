@@ -6,6 +6,9 @@ import search_operations from './search-operations.mjs'
 import commit_operations from './commit-operations.mjs'
 import repository_operations from './repository-operations.mjs'
 import git_files from './git-files/index.mjs'
+import status_operations from './status.mjs'
+import sync_operations from './sync.mjs'
+import conflict_operations from './conflicts.mjs'
 
 // Export all operations
 export const {
@@ -37,12 +40,28 @@ export const {
   get_merge_commit_info
 } = search_operations
 
-export const { add_files, commit_changes } = commit_operations
+export const { add_files, commit_changes, unstage_files, discard_changes } =
+  commit_operations
 
 export const { get_repo_info, git_init, list_submodules } =
   repository_operations
 
 export const { write_file_to_git, delete_file_from_git } = git_files
+
+export const { get_status, get_multi_repo_status } = status_operations
+
+export const { pull, fetch_remote } = sync_operations
+
+export const {
+  get_conflicts,
+  get_conflict_versions,
+  resolve_conflict,
+  abort_merge,
+  is_merging
+} = conflict_operations
+
+export const { get_working_tree_diff, get_file_content_for_diff } =
+  search_operations
 
 // Export default as a single object with all operations
 export default {
@@ -75,13 +94,32 @@ export default {
   get_diff,
   search_repository,
   get_commits_with_diffs,
+  get_working_tree_diff,
+  get_file_content_for_diff,
 
   // Commit operations
   add_files,
   commit_changes,
+  unstage_files,
+  discard_changes,
 
   // Core operations
   get_repo_info,
   git_init,
-  list_submodules
+  list_submodules,
+
+  // Status operations
+  get_status,
+  get_multi_repo_status,
+
+  // Sync operations
+  pull,
+  fetch_remote,
+
+  // Conflict operations
+  get_conflicts,
+  get_conflict_versions,
+  resolve_conflict,
+  abort_merge,
+  is_merging
 }

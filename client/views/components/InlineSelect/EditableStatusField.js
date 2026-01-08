@@ -12,7 +12,9 @@ const STATUS_OPTIONS = Object.values(TASK_STATUS)
 const EditableStatusField = ({ value, base_uri, context }) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
-  const [local_status, set_local_status] = useState(value || TASK_STATUS.NO_STATUS)
+  const [local_status, set_local_status] = useState(
+    value || TASK_STATUS.NO_STATUS
+  )
   const anchor_ref = useRef(null)
 
   // Sync local state with prop changes (e.g., from parent refetch)

@@ -19,7 +19,9 @@ const PRIORITY_OPTIONS = [
 const EditablePriorityField = ({ value, base_uri, context }) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
-  const [local_priority, set_local_priority] = useState(value || TASK_PRIORITY.NONE)
+  const [local_priority, set_local_priority] = useState(
+    value || TASK_PRIORITY.NONE
+  )
   const anchor_ref = useRef(null)
 
   // Sync local state with prop changes (e.g., from parent refetch)

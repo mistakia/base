@@ -42,6 +42,18 @@ import {
 } from '@core/directory/actions'
 import { get_active_sessions_actions } from '@core/active-sessions/actions'
 import { get_activity_heatmap_actions } from '@core/activity/actions'
+import {
+  get_git_status_all_actions,
+  get_git_status_actions,
+  get_git_diff_actions,
+  stage_files_actions,
+  unstage_files_actions,
+  commit_changes_actions,
+  pull_changes_actions,
+  push_changes_actions,
+  get_conflicts_actions,
+  resolve_conflict_actions
+} from '@core/git/actions'
 import { get_app } from '@core/app/selectors'
 
 function* fetchAPI(api_function, actions, opts = {}) {
@@ -225,3 +237,64 @@ export function* delete_active_session({ session_id }) {
     }
   }
 }
+
+// Git operations
+export const get_git_status_all = fetch.bind(
+  null,
+  api.get_git_status_all,
+  get_git_status_all_actions
+)
+
+export const get_git_status = fetch.bind(
+  null,
+  api.get_git_status,
+  get_git_status_actions
+)
+
+export const get_git_diff = fetch.bind(
+  null,
+  api.get_git_diff,
+  get_git_diff_actions
+)
+
+export const stage_files = fetch.bind(
+  null,
+  api.stage_files,
+  stage_files_actions
+)
+
+export const unstage_files = fetch.bind(
+  null,
+  api.unstage_files,
+  unstage_files_actions
+)
+
+export const commit_changes = fetch.bind(
+  null,
+  api.commit_changes,
+  commit_changes_actions
+)
+
+export const pull_changes = fetch.bind(
+  null,
+  api.pull_changes,
+  pull_changes_actions
+)
+
+export const push_changes = fetch.bind(
+  null,
+  api.push_changes,
+  push_changes_actions
+)
+
+export const get_conflicts = fetch.bind(
+  null,
+  api.get_conflicts,
+  get_conflicts_actions
+)
+
+export const resolve_conflict = fetch.bind(
+  null,
+  api.resolve_conflict,
+  resolve_conflict_actions
+)

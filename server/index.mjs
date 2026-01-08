@@ -99,6 +99,7 @@ api.use('/api/filesystem', routes.filesystem)
 api.use('/api/active-sessions', routes.active_sessions)
 api.use('/api/activity', routes.activity)
 api.use('/api/entities', routes.entities)
+api.use('/api/git', routes.git)
 
 // General error handler
 api.use((err, req, res, next) => {

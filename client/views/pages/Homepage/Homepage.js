@@ -9,6 +9,7 @@ import HomeSessionsPanel from '@components/SessionsPanel/HomeSessionsPanel.js'
 import ActivityHeatmap from '@components/ActivityHeatmap/index.js'
 import HomePageTasks from './HomePageTasks.js'
 import HomeFileBrowser from './HomeFileBrowser.js'
+import HomeFileChanges from './HomeFileChanges.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 
@@ -66,6 +67,7 @@ const Homepage = ({
                   is_loading_threads={is_loading_threads}
                   load_threads={load_threads}
                 />
+                <HomeFileChanges />
                 <HomePageTasks
                   tasks={tasks}
                   tag_visibility={tag_visibility}

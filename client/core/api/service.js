@@ -208,6 +208,66 @@ export const api = {
         'Content-Type': 'application/json'
       }
     }
+  },
+
+  // Git operations
+  get_git_status_all() {
+    const url = `${API_URL}/git/status/all`
+    return { url }
+  },
+
+  get_git_status({ repo_path }) {
+    const url = `${API_URL}/git/status?repo_path=${encodeURIComponent(repo_path)}`
+    return { url }
+  },
+
+  get_git_diff({ repo_path, file_path, staged }) {
+    let url = `${API_URL}/git/diff?repo_path=${encodeURIComponent(repo_path)}`
+    if (file_path) {
+      url += `&file_path=${encodeURIComponent(file_path)}`
+    }
+    if (staged) {
+      url += '&staged=true'
+    }
+    return { url }
+  },
+
+  stage_files({ repo_path, files }) {
+    const url = `${API_URL}/git/stage`
+    return { url, ...POST({ repo_path, files }) }
+  },
+
+  unstage_files({ repo_path, files }) {
+    const url = `${API_URL}/git/unstage`
+    return { url, ...POST({ repo_path, files }) }
+  },
+
+  commit_changes({ repo_path, message }) {
+    const url = `${API_URL}/git/commit`
+    return { url, ...POST({ repo_path, message }) }
+  },
+
+  pull_changes({ repo_path, remote, branch, stash_changes }) {
+    const url = `${API_URL}/git/pull`
+    return { url, ...POST({ repo_path, remote, branch, stash_changes }) }
+  },
+
+  push_changes({ repo_path, remote, branch }) {
+    const url = `${API_URL}/git/push`
+    return { url, ...POST({ repo_path, remote, branch }) }
+  },
+
+  get_conflicts({ repo_path }) {
+    const url = `${API_URL}/git/conflicts?repo_path=${encodeURIComponent(repo_path)}`
+    return { url }
+  },
+
+  resolve_conflict({ repo_path, file_path, resolution, merged_content }) {
+    const url = `${API_URL}/git/resolve-conflict`
+    return {
+      url,
+      ...POST({ repo_path, file_path, resolution, merged_content })
+    }
   }
 }
 
@@ -231,6 +291,11 @@ export const dispatch_fetch = async (options) => {
     const res = await response.json()
     const error = new Error(res.error || response.statusText)
     error.response = response
+    error.status = response.status
+    // Preserve additional error details from server response
+    error.permission_denied = res.permission_denied || false
+    error.denied_files = res.denied_files || null
+    error.message_details = res.message || null
     throw error
   }
 }

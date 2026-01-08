@@ -4,8 +4,27 @@ import debug from 'debug'
 import { list_files_recursive } from './file-operations.mjs'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { quote_path, quote_arg } from './utils.mjs'
 
 const log = debug('git:search-operations')
+
+/**
+ * Populate diff content for each file in an array
+ * @param {Object} params Parameters
+ * @param {Array<Object>} params.files Array of file objects with path property
+ * @param {String} params.commit_hash Git commit hash
+ * @param {String} params.repo_path Path to the repository
+ * @returns {Promise<void>} Modifies files array in place
+ */
+async function populate_file_diffs({ files, commit_hash, repo_path }) {
+  for (const file of files) {
+    const { stdout: diff_output } = await execute_shell_command(
+      `git show ${commit_hash} -- ${quote_path(file.path)}`,
+      { cwd: repo_path }
+    )
+    file.diff = diff_output
+  }
+}
 
 /**
  * Get diff between two git references
@@ -44,7 +63,7 @@ export async function get_diff({
         break
     }
 
-    const path_filter = path ? `-- ${path}` : ''
+    const path_filter = path ? `-- ${quote_path(path)}` : ''
     log(
       `Getting diff between ${from_ref} and ${to_ref} in ${repo_path} with path filter ${path_filter}`
     )
@@ -81,14 +100,14 @@ export async function search_repository({
 }) {
   try {
     const case_option = case_sensitive ? '' : '-i'
-    const path_filter = path ? `-- ${path}` : ''
+    const path_filter = path ? `-- ${quote_path(path)}` : ''
 
     log(
-      `Searching for "${query}" in reference "${git_ref}" in ${repo_path} ${path_filter ? `with path filter ${path_filter}` : ''}`
+      `Searching for "${query}" in reference "${git_ref}" in ${repo_path} ${path ? `with path filter ${path}` : ''}`
     )
 
     const { stdout } = await execute_shell_command(
-      `git grep ${case_option} -n -I --no-color "${query}" "${git_ref}" -- ${path_filter}`,
+      `git grep ${case_option} -n -I --no-color -e ${quote_arg(query)} ${quote_arg(git_ref)} ${path_filter}`,
       {
         cwd: repo_path,
         maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large results
@@ -247,14 +266,11 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
             })
 
           // Get the actual diff for each file
-          for (const file of files) {
-            const { stdout: diff_output } = await execute_shell_command(
-              `git show ${commit.hash} -- "${file.path}"`,
-              { cwd: repo_path }
-            )
-
-            file.diff = diff_output
-          }
+          await populate_file_diffs({
+            files,
+            commit_hash: commit.hash,
+            repo_path
+          })
 
           commit.files = files
         }
@@ -359,14 +375,7 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
         })
 
       // Get the actual diff for each file
-      for (const file of files) {
-        const { stdout: diff_output } = await execute_shell_command(
-          `git show ${commit_hash} -- "${file.path}"`,
-          { cwd: repo_path }
-        )
-
-        file.diff = diff_output
-      }
+      await populate_file_diffs({ files, commit_hash, repo_path })
 
       commit.files = files
     }
@@ -378,9 +387,151 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
   }
 }
 
+/**
+ * Get diff for working tree changes (uncommitted changes)
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @param {string} [params.file_path] Optional specific file to diff
+ * @param {boolean} [params.staged=false] If true, show staged changes; if false, show unstaged changes
+ * @returns {Promise<Object>} Diff information with hunks
+ */
+export async function get_working_tree_diff({
+  repo_path,
+  file_path,
+  staged = false
+}) {
+  try {
+    const staged_flag = staged ? '--cached' : ''
+    const path_filter = file_path ? `-- ${quote_path(file_path)}` : ''
+
+    log(
+      `Getting ${staged ? 'staged' : 'unstaged'} diff for ${repo_path} ${file_path || '(all files)'}`
+    )
+
+    const { stdout } = await execute_shell_command(
+      `git diff ${staged_flag} ${path_filter}`,
+      { cwd: repo_path }
+    )
+
+    // Parse diff into structured hunks
+    const hunks = parse_diff_hunks(stdout)
+
+    return {
+      diff_text: stdout,
+      hunks,
+      staged,
+      file_path: file_path || null
+    }
+  } catch (error) {
+    log('Failed to get working tree diff:', error)
+    throw new Error(
+      `Failed to get working tree diff: ${error.message} - ${error.stderr || error.stdout || error}`
+    )
+  }
+}
+
+/**
+ * Get file content for untracked or new files
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @param {string} params.file_path Path to the file relative to repo_path
+ * @returns {Promise<string>} File content
+ */
+export async function get_file_content_for_diff({ repo_path, file_path }) {
+  try {
+    log(`Reading file content for ${file_path} in ${repo_path}`)
+    const full_path = path.join(repo_path, file_path)
+    const content = await fs.readFile(full_path, 'utf8')
+    return content
+  } catch (error) {
+    log(`Failed to read file ${file_path}:`, error)
+    throw new Error(`Failed to read file: ${error.message}`)
+  }
+}
+
+/**
+ * Parse diff output into structured hunks
+ * @param {string} diff_text Raw diff output
+ * @returns {Array<Object>} Array of hunk objects
+ */
+function parse_diff_hunks(diff_text) {
+  if (!diff_text.trim()) {
+    return []
+  }
+
+  const hunks = []
+  const lines = diff_text.split('\n')
+
+  let current_file = null
+  let current_hunk = null
+
+  for (const line of lines) {
+    // File header
+    if (line.startsWith('diff --git')) {
+      if (current_hunk && current_file) {
+        hunks.push({ file: current_file, ...current_hunk })
+      }
+      // Extract file path from diff header
+      // Handles both unquoted: "diff --git a/path b/path"
+      // and quoted: 'diff --git "a/path with spaces" "b/path with spaces"'
+      let match = line.match(/diff --git "a\/(.+)" "b\/(.+)"/)
+      if (!match) {
+        match = line.match(/diff --git a\/(.+) b\/(.+)/)
+      }
+      current_file = match ? match[2] : null
+      current_hunk = null
+      continue
+    }
+
+    // Hunk header
+    if (line.startsWith('@@')) {
+      if (current_hunk && current_file) {
+        hunks.push({ file: current_file, ...current_hunk })
+      }
+      // Parse hunk header: @@ -start,count +start,count @@
+      const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)/)
+      if (match) {
+        current_hunk = {
+          old_start: parseInt(match[1], 10),
+          old_count: parseInt(match[2] || '1', 10),
+          new_start: parseInt(match[3], 10),
+          new_count: parseInt(match[4] || '1', 10),
+          header: line,
+          context: match[5]?.trim() || '',
+          lines: []
+        }
+      }
+      continue
+    }
+
+    // Hunk content
+    if (current_hunk) {
+      if (line.startsWith('+')) {
+        current_hunk.lines.push({ type: 'add', content: line.slice(1) })
+      } else if (line.startsWith('-')) {
+        current_hunk.lines.push({ type: 'delete', content: line.slice(1) })
+      } else if (line.startsWith(' ') || line === '') {
+        current_hunk.lines.push({ type: 'context', content: line.slice(1) })
+      } else if (line.startsWith('\\')) {
+        // Handle special markers like "\ No newline at end of file"
+        current_hunk.lines.push({ type: 'meta', content: line.slice(1) })
+      }
+    }
+  }
+
+  // Don't forget the last hunk
+  if (current_hunk && current_file) {
+    hunks.push({ file: current_file, ...current_hunk })
+  }
+
+  return hunks
+}
+
 export default {
   get_diff,
   search_repository,
   get_commits_with_diffs,
-  get_merge_commit_info
+  get_merge_commit_info,
+  get_working_tree_diff,
+  get_file_content_for_diff
 }

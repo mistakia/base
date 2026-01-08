@@ -8,6 +8,7 @@ import filesystem from './filesystem.mjs'
 import active_sessions from './active-sessions.mjs'
 import activity from './activity.mjs'
 import entities from './entities.mjs'
+import git from './git.mjs'
 
 export default {
   users,
@@ -19,5 +20,6 @@ export default {
   filesystem,
   active_sessions,
   activity,
-  entities
+  entities,
+  git
 }
