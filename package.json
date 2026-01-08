@@ -114,6 +114,7 @@
     "css-loader": "6.11.0",
     "dayjs": "^1.11.13",
     "eslint": "8.57.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-n": "^15.7.0",
