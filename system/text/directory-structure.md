@@ -138,18 +138,20 @@ The system implements a dual knowledge base architecture:
     ├── change-request/ # Change management records
     ├── config/         # User-specific configuration
     ├── guideline/      # Personal guidelines and processes
-    ├── import-history/ # Historical data from external systems
+    ├── import-history/ # Historical data from external systems [submodule]
     ├── physical-item/  # Physical objects and equipment
     ├── physical-location/ # Real estate and location entities
     ├── repository/     # Git repository management
     ├── tag/            # Taxonomy and categorization
     ├── task/           # Task management and tracking
     ├── text/           # Documentation and text content
-    ├── thread/         # Thread execution data
+    ├── thread/         # Thread execution data [submodule]
     └── workflow/       # Personal workflows and automation
 ```
 
 Additional user repositories can be configured and will be automatically recognized and processed by the system. Each repository is treated as a separate user knowledge base and follows the same structure.
+
+**Submodule Architecture**: High-churn directories like `thread/` and `import-history/` may be configured as git submodules with separate bare repositories. This isolates frequently-updated data from the main user-base history and enables dual-machine workflows where multiple machines can commit independently using normal git flow.
 
 The `system/` directory in the `base` project repository contains core definitions that provide the foundation for all knowledge items, while user repositories contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
 
