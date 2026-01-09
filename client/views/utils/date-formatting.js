@@ -91,6 +91,7 @@ export const format_shorthand_time = (date) => {
     if (weeks < 4) return `${weeks}w`
 
     const months = Math.floor(days / 30)
+    if (months === 0) return `${weeks}w`
     if (months < 12) return `${months}mo`
 
     const years = Math.floor(months / 12)
