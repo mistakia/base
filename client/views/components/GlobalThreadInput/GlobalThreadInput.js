@@ -6,11 +6,9 @@ import {
   TextField,
   CircularProgress,
   Typography,
-  Modal,
   Fade
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
-import CloseIcon from '@mui/icons-material/Close'
 
 import Button from '@components/primitives/Button'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
@@ -198,110 +196,85 @@ export default function GlobalThreadInput() {
     return null
   }
 
+  if (!is_open) {
+    return null
+  }
+
   return (
-    <Modal
-      open={is_open}
-      onClose={handle_close}
-      closeAfterTransition
-      slotProps={{
-        backdrop: {
-          timeout: 200
-        }
-      }}>
-      <Fade in={is_open}>
-        <Box
-          className='global-thread-input-backdrop'
-          onClick={handle_backdrop_click}>
-          <Box className='global-thread-input global-thread-input--overlay'>
-            <Box className='thread-input-header'>
-              <Typography variant='caption' className='header-label'>
-                {is_resume_mode ? 'Continue Thread' : 'New Thread'}
-              </Typography>
-              <Button
-                variant='ghost'
-                size='small'
-                icon
-                className='close-button'
-                onClick={handle_close}
-                aria-label='Close'>
-                <CloseIcon fontSize='small' />
-              </Button>
-            </Box>
-            <Box className='thread-input-container'>
-              <form onSubmit={handle_submit}>
-                <Box className='input-wrapper'>
-                  <TextField
-                    inputRef={input_ref}
-                    multiline
-                    fullWidth
-                    minRows={3}
-                    maxRows={12}
-                    value={message}
-                    onChange={(e) => set_message(e.target.value)}
-                    onKeyDown={handle_key_down}
-                    placeholder={placeholder_text}
-                    disabled={is_loading}
-                    variant='outlined'
-                    className='thread-input-field'
-                    size='small'
-                    autoFocus
+    <Fade in={is_open}>
+      <Box
+        className='global-thread-input-backdrop'
+        onClick={handle_backdrop_click}>
+        <Box className='global-thread-input'>
+          <form onSubmit={handle_submit}>
+            <TextField
+              inputRef={input_ref}
+              multiline
+              fullWidth
+              minRows={2}
+              maxRows={10}
+              value={message}
+              onChange={(e) => set_message(e.target.value)}
+              onKeyDown={handle_key_down}
+              placeholder={placeholder_text}
+              disabled={is_loading}
+              variant='standard'
+              className='thread-input-field'
+              InputProps={{
+                disableUnderline: true
+              }}
+              autoFocus
+            />
+
+            <Box className='input-bottom-row'>
+              <Box className='bottom-row-left'>
+                {show_directory_picker && (
+                  <WorkingDirectoryPicker
+                    value={working_directory}
+                    onChange={set_working_directory}
+                    current_path={current_path}
                   />
-                </Box>
+                )}
 
-                <Box className='options-row'>
-                  <Box className='options-left'>
-                    <Typography
-                      variant='caption'
-                      color='textSecondary'
-                      className='hint-text'>
-                      {KEYBOARD_HINT}
-                    </Typography>
+                {is_thread_context && (
+                  <Box className='mode-toggle' onClick={handle_toggle_mode}>
+                    <Box
+                      className={`toggle-option ${should_resume ? 'active' : ''}`}>
+                      Resume
+                    </Box>
+                    <Box
+                      className={`toggle-option ${!should_resume ? 'active' : ''}`}>
+                      New
+                    </Box>
                   </Box>
+                )}
 
-                  <Box className='options-right'>
-                    {show_directory_picker && (
-                      <WorkingDirectoryPicker
-                        value={working_directory}
-                        onChange={set_working_directory}
-                        current_path={current_path}
-                      />
-                    )}
+                <Typography
+                  variant='caption'
+                  color='textSecondary'
+                  className='hint-text'>
+                  {KEYBOARD_HINT}
+                </Typography>
+              </Box>
 
-                    {is_thread_context && (
-                      <Box className='mode-toggle' onClick={handle_toggle_mode}>
-                        <Box
-                          className={`toggle-option ${should_resume ? 'active' : ''}`}>
-                          Resume
-                        </Box>
-                        <Box
-                          className={`toggle-option ${!should_resume ? 'active' : ''}`}>
-                          New
-                        </Box>
-                      </Box>
-                    )}
-
-                    <Button
-                      type='submit'
-                      variant='primary'
-                      icon
-                      disabled={is_submit_disabled}
-                      className='send-button'>
-                      {is_loading ? (
-                        <CircularProgress
-                          size={16}
-                          className='loading-spinner'
-                        />
-                      ) : (
-                        <ArrowUpwardIcon className='send-icon' />
-                      )}
-                    </Button>
-                  </Box>
-                </Box>
-              </form>
+              <Box className='bottom-row-right'>
+                <Button
+                  type='submit'
+                  variant='primary'
+                  icon
+                  disabled={is_submit_disabled}
+                  className='send-button'>
+                  {is_loading ? (
+                    <CircularProgress size={16} className='loading-spinner' />
+                  ) : (
+                    <ArrowUpwardIcon className='send-icon' />
+                  )}
+                </Button>
+              </Box>
             </Box>
-          </Box>
+          </form>
         </Box>
-      </Fade>
-    </Modal>
+      </Box>
+    </Fade>
   )
 }

@@ -98,19 +98,8 @@ export default function WorkingDirectoryPicker({
 
   // Update the selected directory when the page changes
   useEffect(() => {
-    // Determine the appropriate default directory based on available options
-    let default_directory
-
-    if (options.length > 1) {
-      // If we have a current directory option, default to it
-      default_directory = options[1].value
-    } else {
-      // Otherwise use the root
-      default_directory = options[0].value
-    }
-
-    // Update to the default directory
-    onChange(default_directory)
+    // Always default to the root directory
+    onChange(options[0].value)
   }, [current_path]) // Only depend on current_path, not value or onChange
 
   // Don't render if there's only one option (root)

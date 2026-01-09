@@ -1,7 +1,7 @@
 // ============================================================================
 // Global Thread Input Component Styles
 // ============================================================================
-// Overlay thread input component positioned on the right side of the viewport
+// Centered bottom input overlay with drop shadow
 
 // Breakpoints
 $breakpoint-desktop = 768px
@@ -15,14 +15,14 @@ $spacing-md = 16px
 $control-height = 32px
 
 // Border radius
-$border-radius = 6px
+$border-radius = 12px
 
 // Overlay dimensions
-$overlay-max-width = 500px
+$overlay-max-width = 720px
 $overlay-margin = 24px
 
 // ============================================================================
-// Backdrop (covers entire viewport)
+// Backdrop (transparent, just for click detection)
 // ============================================================================
 
 .global-thread-input-backdrop
@@ -32,130 +32,93 @@ $overlay-margin = 24px
   right: 0
   bottom: 0
   display: flex
-  justify-content: flex-end
+  justify-content: center
   align-items: flex-end
   padding: $overlay-margin
+  padding-bottom: 48px
   box-sizing: border-box
+  // Transparent backdrop - no overlay color
+  background: transparent
+  pointer-events: auto
 
 // ============================================================================
-// Main Overlay Container
+// Main Input Container
 // ============================================================================
 
 .global-thread-input
+  width: 100%
+  max-width: $overlay-max-width
   background: var(--color-bg, #ffffff)
-
-  &.global-thread-input--overlay
-    width: 100%
-    max-width: $overlay-max-width
-    border-radius: $border-radius * 2
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)
-    border: 1px solid var(--color-border, #e1e4e8)
-    display: flex
-    flex-direction: column
-    max-height: calc(100vh - $overlay-margin * 2)
-    overflow: hidden
-
-    // Mobile: more width, less margin
-    @media (max-width: $breakpoint-desktop)
-      max-width: 100%
-      margin: $spacing-sm
-
-// ============================================================================
-// Header
-// ============================================================================
-
-.thread-input-header
+  border-radius: $border-radius
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
+  border: 1px solid var(--color-border, #e1e4e8)
   display: flex
-  align-items: center
-  justify-content: space-between
-  padding: $spacing-sm $spacing-md
-  border-bottom: 1px solid var(--color-border-light, #f0f0f0)
-
-  .header-label
-    font-weight: 600
-    text-transform: uppercase
-    letter-spacing: 0.5px
-    color: var(--color-text-secondary, #6c757d)
-
-  .close-button
-    min-width: auto
-    padding: 4px
-    color: var(--color-text-tertiary, #adb5bd)
-
-    &:hover
-      color: var(--color-text, #24292e)
-      background: var(--color-surface-hover, #f6f8fa)
-
-// ============================================================================
-// Content Container
-// ============================================================================
-
-.thread-input-container
+  flex-direction: column
+  overflow: hidden
   padding: $spacing-md
-  overflow-y: auto
-  flex: 1
+
+  // Mobile: more width, less margin
+  @media (max-width: $breakpoint-desktop)
+    max-width: calc(100% - $spacing-md * 2)
+    margin: 0 $spacing-sm
 
   form
     width: 100%
+    display: flex
+    flex-direction: column
 
 // ============================================================================
-// Input Wrapper
+// Text Input Field
 // ============================================================================
 
-.input-wrapper
-  margin-bottom: $spacing-md
+.thread-input-field
+  width: 100%
 
-  .thread-input-field
-    width: 100%
+  .MuiInputBase-root
+    padding: 0
+    font-family: inherit
+    font-size: 15px
+    line-height: 1.5
+    color: var(--color-text, #24292e)
 
-    // Material-UI TextField overrides
-    .MuiOutlinedInput-root
-      background: var(--color-surface-secondary, #f6f8fa)
-      border-radius: $border-radius
+    textarea
+      padding: 0
+      resize: none
 
-      fieldset
-        border-color: var(--color-border-light, #e1e4e8)
-
-      &:hover fieldset
-        border-color: var(--color-border, #d0d7de)
-
-      &.Mui-focused fieldset
-        border-color: var(--color-primary, #007bff)
-        border-width: 1px
-
-      textarea
-        font-family: inherit
-        font-size: 14px
-        line-height: 1.5
-        padding: $spacing-sm
+      &::placeholder
+        color: var(--color-text-tertiary, #6c757d)
+        opacity: 1
 
 // ============================================================================
-// Options Row
+// Bottom Row (within input container)
 // ============================================================================
 
-.options-row
+.input-bottom-row
   display: flex
   align-items: center
   justify-content: space-between
-  gap: $spacing-md
-  flex-wrap: wrap
+  margin-top: $spacing-sm
+  padding-top: $spacing-xs
+  border-top: 1px solid var(--color-border-light, #f0f0f0)
+  gap: $spacing-xs
 
-  .options-left
-    display: flex
-    align-items: center
-    gap: $spacing-md
-    flex-shrink: 0
-
-    .hint-text
-      white-space: nowrap
-      color: var(--color-text-tertiary, #6c757d)
-
-  .options-right
+  .bottom-row-left
     display: flex
     align-items: center
     gap: $spacing-sm
     flex-wrap: wrap
-    margin-left: auto
+    flex: 1
+    min-width: 0
+
+    .hint-text
+      white-space: nowrap
+      color: var(--color-text-tertiary, #6c757d)
+      font-size: 11px
+
+  .bottom-row-right
+    display: flex
+    align-items: center
+    flex-shrink: 0
 
 // ============================================================================
 // Mode Toggle (segmented control)
@@ -166,14 +129,14 @@ $overlay-margin = 24px
   align-items: center
   gap: 0
   background: var(--color-surface, #ffffff)
-  border-radius: $border-radius
+  border-radius: 6px
   overflow: hidden
   cursor: pointer
   border: 1px solid var(--color-border, #ced4da)
-  height: $control-height
+  height: 28px
 
   .toggle-option
-    padding: 6px $spacing-md
+    padding: 4px $spacing-sm
     font-size: 11px
     font-weight: 500
     text-transform: uppercase
@@ -203,7 +166,7 @@ $overlay-margin = 24px
   width: $control-height
   height: $control-height
   padding: 0
-  border-radius: $border-radius
+  border-radius: 6px
   background-color: var(--color-breadcrumb-dark)
 
   &:hover
