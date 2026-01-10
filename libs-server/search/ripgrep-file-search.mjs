@@ -1,0 +1,379 @@
+import { spawn } from 'child_process'
+import path from 'path'
+import debug from 'debug'
+
+import config from '#config'
+import { load_search_config } from './search-config.mjs'
+
+const log = debug('search:ripgrep')
+
+/**
+ * Execute ripgrep command with timeout protection
+ *
+ * @param {Object} params - Parameters
+ * @param {string[]} params.args - Ripgrep arguments
+ * @param {string} params.cwd - Working directory
+ * @param {number} params.timeout_ms - Timeout in milliseconds
+ * @returns {Promise<{stdout: string, stderr: string, code: number}>}
+ */
+async function execute_ripgrep({ args, cwd, timeout_ms = 30000 }) {
+  return new Promise((resolve, reject) => {
+    log(`Executing: rg ${args.join(' ')} in ${cwd}`)
+
+    const rg_process = spawn('rg', args, { cwd })
+    let stdout = ''
+    let stderr = ''
+
+    const timer = setTimeout(() => {
+      rg_process.kill('SIGTERM')
+      reject(new Error('Ripgrep search timed out'))
+    }, timeout_ms)
+
+    rg_process.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    rg_process.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    rg_process.on('close', (code) => {
+      clearTimeout(timer)
+      // Ripgrep exits with code 1 when no matches found, which is not an error
+      if (code === 0 || code === 1) {
+        resolve({ stdout, stderr, code })
+      } else {
+        reject(new Error(`Ripgrep failed with code ${code}: ${stderr}`))
+      }
+    })
+
+    rg_process.on('error', (error) => {
+      clearTimeout(timer)
+      reject(new Error(`Failed to execute ripgrep: ${error.message}`))
+    })
+  })
+}
+
+/**
+ * Build ripgrep arguments from configuration and options
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.pattern - Search pattern
+ * @param {Object} params.rg_config - Ripgrep configuration
+ * @param {Object} params.options - Search options
+ * @returns {string[]} Ripgrep arguments
+ */
+function build_ripgrep_args({ pattern, rg_config, options }) {
+  const {
+    files_only = false,
+    paths_only = false,
+    include_line_numbers = false,
+    case_sensitive = false,
+    file_types = [],
+    directory = null
+  } = options
+
+  // For multi-word queries, convert to regex pattern that matches words in sequence
+  // "transition secure" -> "transition.*secure" (matches both words on same line)
+  const words = pattern.trim().split(/\s+/)
+  const search_pattern = words.length > 1 ? words.join('.*') : pattern
+
+  const args = [search_pattern]
+
+  // Output format
+  if (paths_only || files_only) {
+    args.push('--files-with-matches')
+  } else {
+    args.push('--no-heading')
+    if (include_line_numbers) {
+      args.push('--line-number')
+    }
+  }
+
+  // Case sensitivity
+  args.push(case_sensitive ? '--case-sensitive' : '--ignore-case')
+
+  // File size limit
+  if (rg_config.max_filesize) {
+    args.push('--max-filesize', rg_config.max_filesize)
+  }
+
+  // Exclude patterns from config
+  for (const exclude_pattern of rg_config.exclude_patterns || []) {
+    args.push('--glob', `!${exclude_pattern}`)
+  }
+
+  // Hidden files
+  if (!rg_config.include_hidden) {
+    args.push('--no-hidden')
+  }
+
+  // Symlinks
+  if (rg_config.follow_symlinks) {
+    args.push('--follow')
+  }
+
+  // File type filters
+  for (const file_type of file_types) {
+    args.push('--type', file_type)
+  }
+
+  // Directory scope - use '.' if no directory specified (search cwd)
+  args.push(directory || '.')
+
+  return args
+}
+
+/**
+ * Parse ripgrep output into structured results
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.output - Ripgrep stdout
+ * @param {string} params.base_dir - Base directory for relative paths
+ * @param {boolean} params.paths_only - Whether output is paths only
+ * @param {boolean} params.include_line_numbers - Whether line numbers are included
+ * @returns {Array<Object>} Parsed results
+ */
+function parse_ripgrep_output({
+  output,
+  base_dir,
+  paths_only = false,
+  include_line_numbers = false
+}) {
+  if (!output.trim()) {
+    return []
+  }
+
+  const lines = output.trim().split('\n')
+  const results = []
+
+  for (const line of lines) {
+    if (!line.trim()) continue
+
+    let file_path, line_number, match_content
+
+    if (paths_only) {
+      file_path = line.trim()
+    } else if (include_line_numbers) {
+      // Format: file:line:content
+      const match = line.match(/^([^:]+):(\d+):(.*)$/)
+      if (match) {
+        file_path = match[1]
+        line_number = parseInt(match[2], 10)
+        match_content = match[3]
+      }
+    } else {
+      // Format: file:content
+      const colon_index = line.indexOf(':')
+      if (colon_index > 0) {
+        file_path = line.substring(0, colon_index)
+        match_content = line.substring(colon_index + 1)
+      } else {
+        file_path = line
+      }
+    }
+
+    if (file_path) {
+      const result = {
+        file_path: file_path.startsWith(base_dir)
+          ? path.relative(base_dir, file_path)
+          : file_path,
+        absolute_path: file_path.startsWith('/')
+          ? file_path
+          : path.join(base_dir, file_path),
+        type: 'file'
+      }
+
+      if (line_number !== undefined) {
+        result.line_number = line_number
+      }
+
+      if (match_content !== undefined) {
+        result.match_content = match_content.trim()
+      }
+
+      results.push(result)
+    }
+  }
+
+  return results
+}
+
+/**
+ * Search file contents using ripgrep
+ *
+ * @param {Object} params - Search parameters
+ * @param {string} params.pattern - Search pattern
+ * @param {string} [params.directory] - Optional directory to scope search
+ * @param {boolean} [params.paths_only=false] - Return only file paths
+ * @param {boolean} [params.include_line_numbers=false] - Include line numbers in results
+ * @param {boolean} [params.case_sensitive=false] - Case sensitive search
+ * @param {number} [params.max_results=100] - Maximum results to return
+ * @param {string[]} [params.file_types] - File types to search (e.g., 'md', 'js')
+ * @returns {Promise<Array<Object>>} Search results
+ */
+export async function search_file_contents({
+  pattern,
+  directory = null,
+  paths_only = false,
+  include_line_numbers = false,
+  case_sensitive = false,
+  max_results = 100,
+  file_types = []
+}) {
+  if (!pattern || !pattern.trim()) {
+    return []
+  }
+
+  const search_config = await load_search_config()
+  const rg_config = search_config.ripgrep || {}
+
+  const user_base_dir =
+    config.user_base_directory || process.env.USER_BASE_DIRECTORY
+
+  if (!user_base_dir) {
+    throw new Error('USER_BASE_DIRECTORY not configured')
+  }
+
+  const cwd = directory ? path.join(user_base_dir, directory) : user_base_dir
+
+  const args = build_ripgrep_args({
+    pattern,
+    rg_config,
+    options: {
+      paths_only,
+      include_line_numbers,
+      case_sensitive,
+      file_types
+    }
+  })
+
+  try {
+    const result = await execute_ripgrep({
+      args,
+      cwd,
+      timeout_ms: search_config.search?.timeout_ms || 10000
+    })
+
+    const results = parse_ripgrep_output({
+      output: result.stdout,
+      base_dir: user_base_dir,
+      paths_only,
+      include_line_numbers
+    })
+
+    // Apply max_results limit
+    return results.slice(0, max_results)
+  } catch (error) {
+    log(`Content search failed: ${error.message}`)
+    return []
+  }
+}
+
+/**
+ * Search for files by path pattern using ripgrep
+ *
+ * @param {Object} params - Search parameters
+ * @param {string} params.pattern - Filename/path pattern to match
+ * @param {string} [params.directory] - Optional directory to scope search
+ * @param {number} [params.max_results=100] - Maximum results to return
+ * @returns {Promise<Array<Object>>} Matching file paths
+ */
+export async function search_file_paths({
+  pattern,
+  directory = null,
+  max_results = 100
+}) {
+  if (!pattern || !pattern.trim()) {
+    return []
+  }
+
+  const search_config = await load_search_config()
+  const rg_config = search_config.ripgrep || {}
+
+  const user_base_dir =
+    config.user_base_directory || process.env.USER_BASE_DIRECTORY
+
+  if (!user_base_dir) {
+    throw new Error('USER_BASE_DIRECTORY not configured')
+  }
+
+  const cwd = directory ? path.join(user_base_dir, directory) : user_base_dir
+
+  // Use --files to list files, then filter with glob pattern
+  const args = ['--files']
+
+  // Exclude patterns from config
+  for (const exclude_pattern of rg_config.exclude_patterns || []) {
+    args.push('--glob', `!${exclude_pattern}`)
+  }
+
+  // Hidden files
+  if (!rg_config.include_hidden) {
+    args.push('--no-hidden')
+  }
+
+  // Symlinks
+  if (rg_config.follow_symlinks) {
+    args.push('--follow')
+  }
+
+  // Add glob pattern for the search
+  // Convert spaces to wildcards for multi-word queries (e.g., "transition secure" -> "*transition*secure*")
+  const glob_pattern = pattern.trim().split(/\s+/).join('*')
+  args.push('--glob', `*${glob_pattern}*`)
+
+  try {
+    const result = await execute_ripgrep({
+      args,
+      cwd,
+      timeout_ms: search_config.search?.timeout_ms || 30000
+    })
+
+    const paths = result.stdout
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim())
+      .slice(0, max_results)
+
+    return paths.map((file_path) => ({
+      file_path: file_path.startsWith(user_base_dir)
+        ? path.relative(user_base_dir, file_path)
+        : file_path,
+      absolute_path: file_path.startsWith('/')
+        ? file_path
+        : path.join(cwd, file_path),
+      type: 'file'
+    }))
+  } catch (error) {
+    log(`Path search failed: ${error.message}`)
+    return []
+  }
+}
+
+/**
+ * Check if ripgrep is available on the system
+ *
+ * @returns {Promise<boolean>} True if ripgrep is available
+ */
+export async function check_ripgrep_availability() {
+  try {
+    const rg_process = spawn('rg', ['--version'])
+    return new Promise((resolve) => {
+      rg_process.on('close', (code) => {
+        resolve(code === 0)
+      })
+      rg_process.on('error', () => {
+        resolve(false)
+      })
+    })
+  } catch (error) {
+    return false
+  }
+}
+
+export default {
+  search_file_contents,
+  search_file_paths,
+  check_ripgrep_availability
+}

@@ -268,6 +268,21 @@ export const api = {
       url,
       ...POST({ repo_path, file_path, resolution, merged_content })
     }
+  },
+
+  // Search operations
+  search({ q, mode = 'full', types, directory, limit }) {
+    const params = { q, mode }
+    if (types) params.types = types
+    if (directory) params.directory = directory
+    if (limit) params.limit = limit
+    const url = `${API_URL}/search?${qs.stringify(params)}`
+    return { url }
+  },
+
+  get_search_capabilities() {
+    const url = `${API_URL}/search/capabilities`
+    return { url }
   }
 }
 

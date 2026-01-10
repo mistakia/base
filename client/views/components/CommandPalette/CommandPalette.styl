@@ -1,0 +1,101 @@
+// Shared overlay variables (matches GlobalThreadInput)
+$overlay-border-radius = 12px
+$overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
+
+.command-palette
+  &__paper
+    background-color var(--color-bg, #ffffff)
+    border 1px solid var(--color-border, #e1e4e8)
+    box-shadow $overlay-box-shadow
+    border-radius $overlay-border-radius
+    height 440px
+    display flex
+    flex-direction column
+
+  &__input-container
+    display flex
+    align-items center
+    padding 6px 12px
+    border-bottom 1px solid var(--color-border)
+    gap 8px
+    height 32px
+
+  &__search-icon
+    color var(--color-text-secondary)
+    font-size 16px !important
+
+  &__input
+    flex 1
+    background transparent
+    border none
+    outline none
+    font-family var(--font-family-mono)
+    font-size var(--font-size-sm)
+    color var(--color-text)
+    height 20px
+    line-height 20px
+
+    &::placeholder
+      color var(--color-text-tertiary)
+
+  &__loading
+    color var(--color-text-secondary)
+
+  &__result-count
+    color var(--color-text-tertiary)
+    font-size 10px
+    flex-shrink 0
+
+  &__results
+    flex 1
+    overflow-y auto
+
+  &__result-item
+    display flex
+    align-items center
+    height 20px
+    padding 0 12px
+    gap 8px
+    cursor pointer
+    font-family var(--font-family-mono)
+    font-size var(--font-size-sm)
+    line-height 20px
+
+    &:hover
+      background-color var(--color-surface-hover)
+
+    &--selected
+      background-color var(--color-primary)
+      color var(--color-white)
+
+      .command-palette__result-type
+        color var(--color-white)
+        opacity 0.7
+
+      .command-palette__result-text
+        color var(--color-white)
+
+  &__result-type
+    color var(--color-text-tertiary)
+    font-size 10px
+    text-transform uppercase
+    width 56px
+    flex-shrink 0
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
+
+  &__result-text
+    flex 1
+    color var(--color-text)
+    white-space nowrap
+    overflow hidden
+    text-overflow ellipsis
+    min-width 0
+
+
+  &__empty
+    padding 12px
+    text-align center
+    color var(--color-text-secondary)
+    font-size var(--font-size-sm)

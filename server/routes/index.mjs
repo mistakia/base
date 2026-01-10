@@ -9,6 +9,7 @@ import active_sessions from './active-sessions.mjs'
 import activity from './activity.mjs'
 import entities from './entities.mjs'
 import git from './git.mjs'
+import search from './search.mjs'
 
 export default {
   users,
@@ -21,5 +22,6 @@ export default {
   active_sessions,
   activity,
   entities,
-  git
+  git,
+  search
 }

@@ -10,10 +10,15 @@ import StoreRegistry from '@core/store-registry.js'
 import { app_actions } from '@core/app/actions'
 import { get_app } from '@core/app/selectors'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
+import {
+  search_actions,
+  get_is_command_palette_open
+} from '@core/search/index.js'
 import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
 import Notification from '@components/Notification'
 import GlobalThreadInput from '@components/GlobalThreadInput'
+import CommandPalette from '@components/CommandPalette'
 import { get_notification_info } from '@core/notification/selectors'
 
 // Import styles
@@ -123,6 +128,34 @@ const ThreadPromptContainer = () => {
   return <GlobalThreadInput />
 }
 
+const SearchPaletteContainer = () => {
+  const dispatch = useDispatch()
+  const is_open = useSelector(get_is_command_palette_open)
+
+  useEffect(() => {
+    const handle_keydown = (event) => {
+      // Cmd/Ctrl+Shift+P to toggle command palette
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key === 'p'
+      ) {
+        event.preventDefault()
+        if (is_open) {
+          dispatch(search_actions.close())
+        } else {
+          dispatch(search_actions.open())
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handle_keydown)
+    return () => document.removeEventListener('keydown', handle_keydown)
+  }, [dispatch, is_open])
+
+  return <CommandPalette />
+}
+
 const Root = () => {
   return (
     <Provider store={store}>
@@ -133,6 +166,7 @@ const Root = () => {
             <DialogContainer />
             <NotificationContainer />
             <ThreadPromptContainer />
+            <SearchPaletteContainer />
           </AppInitializer>
         </ThemeProvider>
       </Router>

@@ -100,6 +100,7 @@ api.use('/api/active-sessions', routes.active_sessions)
 api.use('/api/activity', routes.activity)
 api.use('/api/entities', routes.entities)
 api.use('/api/git', routes.git)
+api.use('/api/search', routes.search)
 
 // General error handler
 api.use((err, req, res, next) => {
