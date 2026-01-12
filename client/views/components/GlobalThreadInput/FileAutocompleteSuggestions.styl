@@ -1,0 +1,166 @@
+// ============================================================================
+// File Autocomplete Suggestions Styles
+// ============================================================================
+// Positioned above the thread input, displays file/folder suggestions
+
+// Spacing
+$spacing-xs = 4px
+$spacing-sm = 8px
+$spacing-md = 12px
+
+// Dimensions
+$suggestions-max-height = 300px
+$icon-size = 18px
+
+// Colors (using CSS variables from theme)
+$border-color = var(--color-border, #e1e4e8)
+$bg-color = var(--color-bg, #ffffff)
+$bg-selected = var(--color-surface-hover, #f6f8fa)
+$text-color = var(--color-text, #24292e)
+$text-muted = var(--color-text-tertiary, #6c757d)
+
+// ============================================================================
+// Main Container
+// ============================================================================
+
+.file-autocomplete-suggestions
+  position: absolute
+  // Position to connect with the input container (8px gap for visual breathing room)
+  bottom: calc(100% + 8px)
+  // Extend to align with the .global-thread-input edges (16px padding + 1px border)
+  left: -17px
+  right: -17px
+  background: $bg-color
+  border: 1px solid $border-color
+  // Round top corners only - bottom connects to input
+  border-radius: 12px 12px 0 0
+  // Shadow cast upward
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08), 0 -1px 3px rgba(0, 0, 0, 0.04)
+  z-index: 1000
+  overflow: hidden
+
+// ============================================================================
+// Suggestions List
+// ============================================================================
+
+.suggestions-list
+  max-height: $suggestions-max-height
+  overflow-y: auto
+  overflow-x: hidden
+  padding: $spacing-xs 0
+
+  // Custom scrollbar
+  &::-webkit-scrollbar
+    width: 6px
+
+  &::-webkit-scrollbar-track
+    background: transparent
+
+  &::-webkit-scrollbar-thumb
+    background: var(--color-border-light, #ddd)
+    border-radius: 3px
+
+    &:hover
+      background: var(--color-border, #ccc)
+
+// ============================================================================
+// Suggestion Item
+// ============================================================================
+
+.suggestion-item
+  display: flex
+  align-items: center
+  padding: $spacing-sm $spacing-md
+  cursor: pointer
+  transition: background-color 0.1s ease
+  gap: $spacing-sm
+  min-height: 32px
+
+  &:hover
+    background: $bg-selected
+
+  &.selected
+    background: $bg-selected
+
+    // Slightly stronger highlight for keyboard selection
+    &::before
+      content: ''
+      position: absolute
+      left: 0
+      top: 0
+      bottom: 0
+      width: 3px
+      background: var(--color-breadcrumb-dark, #0366d6)
+
+  // Make items relative for the selection indicator
+  position: relative
+
+// ============================================================================
+// Suggestion Icon
+// ============================================================================
+
+.suggestion-icon
+  display: flex
+  align-items: center
+  justify-content: center
+  flex-shrink: 0
+  width: $icon-size
+  height: $icon-size
+
+  .folder-icon
+    font-size: $icon-size
+    color: var(--color-warning, #dbab09)
+
+  .file-icon
+    font-size: $icon-size
+    color: $text-muted
+
+// ============================================================================
+// Suggestion Path
+// ============================================================================
+
+.suggestion-path
+  flex: 1
+  min-width: 0
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  font-size: 13px
+  line-height: 1.4
+
+.suggestion-directory
+  color: $text-muted
+
+.suggestion-filename
+  color: $text-color
+  font-weight: 500
+
+// ============================================================================
+// Loading State
+// ============================================================================
+
+.suggestions-loading
+  display: flex
+  align-items: center
+  justify-content: center
+  gap: $spacing-sm
+  padding: $spacing-md
+  color: $text-muted
+  font-size: 13px
+
+.suggestions-loading-inline
+  display: flex
+  align-items: center
+  justify-content: center
+  padding: $spacing-xs
+  border-top: 1px solid $border-color
+
+// ============================================================================
+// Empty State
+// ============================================================================
+
+.suggestions-empty
+  padding: $spacing-md
+  text-align: center
+  color: $text-muted
+  font-size: 13px

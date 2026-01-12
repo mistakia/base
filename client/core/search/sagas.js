@@ -1,4 +1,11 @@
-import { call, put, takeLatest, debounce, select, fork } from 'redux-saga/effects'
+import {
+  call,
+  put,
+  takeLatest,
+  debounce,
+  select,
+  fork
+} from 'redux-saga/effects'
 import { push } from 'redux-first-history'
 
 import { search_action_types, search_actions } from './actions.js'

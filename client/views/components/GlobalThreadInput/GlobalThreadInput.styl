@@ -54,7 +54,8 @@ $overlay-margin = 24px
   border: 1px solid var(--color-border, #e1e4e8)
   display: flex
   flex-direction: column
-  overflow: hidden
+  // overflow: visible to allow autocomplete suggestions to extend above
+  overflow: visible
   padding: $spacing-md
 
   // Mobile: more width, less margin
@@ -66,6 +67,14 @@ $overlay-margin = 24px
     width: 100%
     display: flex
     flex-direction: column
+
+// ============================================================================
+// Input Container with Autocomplete
+// ============================================================================
+
+.input-container-with-autocomplete
+  position: relative
+  width: 100%
 
 // ============================================================================
 // Text Input Field

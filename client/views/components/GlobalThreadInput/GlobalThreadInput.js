@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import {
@@ -18,6 +18,8 @@ import {
   get_can_resume_thread
 } from '@core/app/selectors'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
+import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
+import useFileAutocomplete from './use-file-autocomplete.js'
 import { BASE_DIRECTORIES } from '@views/utils/base-uri-constants'
 import './GlobalThreadInput.styl'
 
@@ -71,12 +73,40 @@ export default function GlobalThreadInput() {
     state.getIn(['thread_prompt', 'initial_mode'], 'new')
   )
 
+  // Auth token for API requests
+  const user_token = useSelector((state) => state.getIn(['app', 'user_token']))
+
   // Local state
   const [message, set_message] = useState('')
+  const [cursor_position, set_cursor_position] = useState(0)
   const [working_directory, set_working_directory] = useState(
     DEFAULT_WORKING_DIRECTORY
   )
   const [should_resume, set_should_resume] = useState(true)
+
+  // Autocomplete selection handler
+  const handle_autocomplete_select = useCallback((new_text, new_cursor_pos) => {
+    set_message(new_text)
+    set_cursor_position(new_cursor_pos)
+
+    // Update cursor position in the input after React re-renders
+    requestAnimationFrame(() => {
+      const input = input_ref.current
+      if (input) {
+        input.setSelectionRange(new_cursor_pos, new_cursor_pos)
+        input.focus()
+      }
+    })
+  }, [])
+
+  // File autocomplete hook
+  const autocomplete = useFileAutocomplete({
+    text: message,
+    cursor_position,
+    working_directory,
+    on_select: handle_autocomplete_select,
+    token: user_token
+  })
 
   // Determine thread context
   const path_thread_id = parse_thread_from_path(current_path)
@@ -88,6 +118,7 @@ export default function GlobalThreadInput() {
   useEffect(() => {
     if (is_open) {
       set_message('')
+      set_cursor_position(0)
       set_should_resume(initial_mode === 'resume')
       // Focus input after a brief delay for animation
       setTimeout(() => {
@@ -156,12 +187,31 @@ export default function GlobalThreadInput() {
   }
 
   const handle_key_down = (e) => {
+    // Escape always closes the overlay (and dismisses autocomplete if visible)
+    if (e.key === 'Escape') {
+      autocomplete.handle_escape()
+      handle_close()
+      return
+    }
+
+    // Delegate to autocomplete for other keys if suggestions are visible
+    if (autocomplete.handle_keydown(e)) {
+      return
+    }
+
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       handle_submit(e)
     }
-    if (e.key === 'Escape') {
-      handle_close()
-    }
+  }
+
+  // Track cursor position on input changes and selection changes
+  const handle_input_change = (e) => {
+    set_message(e.target.value)
+    set_cursor_position(e.target.selectionStart || 0)
+  }
+
+  const handle_input_select = (e) => {
+    set_cursor_position(e.target.selectionEnd || 0)
   }
 
   const handle_toggle_mode = () => {
@@ -207,24 +257,35 @@ export default function GlobalThreadInput() {
         onClick={handle_backdrop_click}>
         <Box className='global-thread-input'>
           <form onSubmit={handle_submit}>
-            <TextField
-              inputRef={input_ref}
-              multiline
-              fullWidth
-              minRows={2}
-              maxRows={10}
-              value={message}
-              onChange={(e) => set_message(e.target.value)}
-              onKeyDown={handle_key_down}
-              placeholder={placeholder_text}
-              disabled={is_loading}
-              variant='standard'
-              className='thread-input-field'
-              InputProps={{
-                disableUnderline: true
-              }}
-              autoFocus
-            />
+            <Box className='input-container-with-autocomplete'>
+              <FileAutocompleteSuggestions
+                suggestions={autocomplete.suggestions}
+                selected_index={autocomplete.selected_index}
+                is_loading={autocomplete.is_loading}
+                is_visible={autocomplete.is_visible}
+                on_select={autocomplete.handle_click_select}
+                search_term={autocomplete.search_term}
+              />
+              <TextField
+                inputRef={input_ref}
+                multiline
+                fullWidth
+                minRows={2}
+                maxRows={10}
+                value={message}
+                onChange={handle_input_change}
+                onSelect={handle_input_select}
+                onKeyDown={handle_key_down}
+                placeholder={placeholder_text}
+                disabled={is_loading}
+                variant='standard'
+                className='thread-input-field'
+                InputProps={{
+                  disableUnderline: true
+                }}
+                autoFocus
+              />
+            </Box>
 
             <Box className='input-bottom-row'>
               <Box className='bottom-row-left'>

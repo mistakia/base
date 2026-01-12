@@ -8,6 +8,38 @@ import { load_search_config } from './search-config.mjs'
 const log = debug('search:ripgrep')
 
 /**
+ * Resolve search directory, handling both absolute and relative paths
+ *
+ * @param {string} user_base_dir - Base directory for user files
+ * @param {string|null} directory - Directory to search (absolute or relative)
+ * @returns {string} Resolved directory path
+ */
+function resolve_search_directory(user_base_dir, directory) {
+  const normalized_base = path.normalize(user_base_dir)
+
+  if (!directory) {
+    return normalized_base
+  }
+
+  // Join and normalize the path (handles both absolute and relative)
+  const joined_path = path.isAbsolute(directory)
+    ? path.normalize(directory)
+    : path.normalize(path.join(normalized_base, directory))
+
+  // Validate the resolved path is within the base directory
+  if (
+    joined_path === normalized_base ||
+    joined_path.startsWith(normalized_base + path.sep)
+  ) {
+    return joined_path
+  }
+
+  // Fall back to user_base_dir for paths outside the allowed directory
+  log(`Directory ${directory} is outside user_base_dir, using ${normalized_base}`)
+  return normalized_base
+}
+
+/**
  * Execute ripgrep command with timeout protection
  *
  * @param {Object} params - Parameters
@@ -235,7 +267,7 @@ export async function search_file_contents({
     throw new Error('USER_BASE_DIRECTORY not configured')
   }
 
-  const cwd = directory ? path.join(user_base_dir, directory) : user_base_dir
+  const cwd = resolve_search_directory(user_base_dir, directory)
 
   const args = build_ripgrep_args({
     pattern,
@@ -298,7 +330,7 @@ export async function search_file_paths({
     throw new Error('USER_BASE_DIRECTORY not configured')
   }
 
-  const cwd = directory ? path.join(user_base_dir, directory) : user_base_dir
+  const cwd = resolve_search_directory(user_base_dir, directory)
 
   // Use --files to list files, then filter with glob pattern
   const args = ['--files']
