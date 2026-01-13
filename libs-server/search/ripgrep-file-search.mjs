@@ -35,7 +35,9 @@ function resolve_search_directory(user_base_dir, directory) {
   }
 
   // Fall back to user_base_dir for paths outside the allowed directory
-  log(`Directory ${directory} is outside user_base_dir, using ${normalized_base}`)
+  log(
+    `Directory ${directory} is outside user_base_dir, using ${normalized_base}`
+  )
   return normalized_base
 }
 

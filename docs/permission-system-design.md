@@ -65,26 +65,26 @@ Authorization determines what an authenticated (or public) user can do.
 
 **Permission Types:**
 
-| Type | Scope | Description |
-|------|-------|-------------|
-| User permissions | Per-user | Stored in `users.json`, defines what a user can access |
+| Type                 | Scope      | Description                                                     |
+| -------------------- | ---------- | --------------------------------------------------------------- |
+| User permissions     | Per-user   | Stored in `users.json`, defines what a user can access          |
 | Resource permissions | Per-entity | Stored in entity frontmatter (`public_read`, `user_public_key`) |
-| Permission rules | Per-user | Pattern-based rules for fine-grained access control |
+| Permission rules     | Per-user   | Pattern-based rules for fine-grained access control             |
 
 **User Permission Flags:**
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `create_threads` | boolean | Allows user to create new threads |
-| `global_write` | boolean | Grants write access to all owned resources (admin-like) |
-| `rules` | array | Pattern-based permission rules |
+| Flag             | Type    | Description                                             |
+| ---------------- | ------- | ------------------------------------------------------- |
+| `create_threads` | boolean | Allows user to create new threads                       |
+| `global_write`   | boolean | Grants write access to all owned resources (admin-like) |
+| `rules`          | array   | Pattern-based permission rules                          |
 
 **Resource Permission Fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `user_public_key` | string | Owner's public key (required on all entities) |
-| `public_read` | boolean | If `true`, anyone can read; if `false`, only authenticated users or owner |
+| Field             | Type    | Description                                                               |
+| ----------------- | ------- | ------------------------------------------------------------------------- |
+| `user_public_key` | string  | Owner's public key (required on all entities)                             |
+| `public_read`     | boolean | If `true`, anyone can read; if `false`, only authenticated users or owner |
 
 ### 2.3 Permission Rules
 
@@ -137,19 +137,23 @@ When an `allow` rule grants access to a nested path, parent directories are impl
 Read permissions are checked in this order (first match wins):
 
 1. **Ownership Check**
+
    - If `user_public_key === resource.owner_public_key` → ALLOW
    - Reason: "User is owner of the resource"
 
 2. **User-Specific Rules** (authenticated users only)
+
    - Load user's rules from `users.json`
    - Evaluate rules using rule engine
    - If match found → use rule's action (allow/deny)
 
 3. **Explicit public_read Setting**
+
    - If `public_read === true` → ALLOW ("Resource has public_read explicitly enabled")
    - If `public_read === false` → DENY ("Resource has public_read explicitly disabled")
 
 4. **Public User Rules** (fallback)
+
    - Load rules for the "public" user entry
    - Evaluate rules using rule engine
    - If match found → use rule's action
@@ -161,14 +165,17 @@ Read permissions are checked in this order (first match wins):
 Write permissions are more restrictive:
 
 1. **Authentication Required**
+
    - If no `user_public_key` or user is "public" → DENY
    - Reason: "Write access requires authentication"
 
 2. **Ownership Check**
+
    - If `user_public_key === resource.owner_public_key` → ALLOW
    - Reason: "User is owner of the resource"
 
 3. **Global Write Check**
+
    - If user has `global_write: true` → ALLOW
    - Reason: "User has global write permission"
 
@@ -260,13 +267,13 @@ server/middleware/
 
 **Module Responsibilities:**
 
-| Module | Responsibility |
-|--------|----------------|
-| `permission-service.mjs` | High-level API: `check_permission()`, `check_permissions_batch()`, `check_thread_permission()` |
-| `permission-context.mjs` | Request-scoped caching, implements permission checking logic |
-| `middleware.mjs` | Express middleware: `attach_permission_context()`, `check_thread_permission_middleware()`, `check_filesystem_permission()` |
-| `resource-metadata.mjs` | Loads metadata from threads (`metadata.json`) and entities (frontmatter) |
-| `rule-engine.mjs` | Evaluates permission rules using picomatch glob matching |
+| Module                   | Responsibility                                                                                                             |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `permission-service.mjs` | High-level API: `check_permission()`, `check_permissions_batch()`, `check_thread_permission()`                             |
+| `permission-context.mjs` | Request-scoped caching, implements permission checking logic                                                               |
+| `middleware.mjs`         | Express middleware: `attach_permission_context()`, `check_thread_permission_middleware()`, `check_filesystem_permission()` |
+| `resource-metadata.mjs`  | Loads metadata from threads (`metadata.json`) and entities (frontmatter)                                                   |
+| `rule-engine.mjs`        | Evaluates permission rules using picomatch glob matching                                                                   |
 
 ### 4.2 Request Lifecycle
 
@@ -333,9 +340,9 @@ evaluate_permission_rules({ rules, resource_path, user_public_key })
 // Returns: { allowed: boolean, reason: string, matching_rule: object|null }
 
 // Helper functions
-generate_parent_directory_patterns(pattern)  // For implicit parent access
-validate_permission_rule(rule)               // Validates rule structure
-validate_permission_rules(rules)             // Validates array of rules
+generate_parent_directory_patterns(pattern) // For implicit parent access
+validate_permission_rule(rule) // Validates rule structure
+validate_permission_rules(rules) // Validates array of rules
 ```
 
 **Resource Metadata** (`resource-metadata.mjs`)
@@ -343,10 +350,10 @@ validate_permission_rules(rules)             // Validates array of rules
 Loads metadata from different resource types:
 
 ```javascript
-load_resource_metadata({ resource_path })  // Unified loader (auto-detects type)
-load_thread_metadata({ thread_id })        // Thread-specific
-load_entity_metadata({ resource_path })    // Entity-specific
-map_thread_id_to_base_uri(thread_id)       // Converts thread ID to base-uri
+load_resource_metadata({ resource_path }) // Unified loader (auto-detects type)
+load_thread_metadata({ thread_id }) // Thread-specific
+load_entity_metadata({ resource_path }) // Entity-specific
+map_thread_id_to_base_uri(thread_id) // Converts thread ID to base-uri
 ```
 
 ## 5. Integration Guide
@@ -547,17 +554,13 @@ User permissions are stored in `users.json` in the user base directory.
       "permissions": {
         "create_threads": true,
         "global_write": false,
-        "rules": [
-          { "action": "allow", "pattern": "pattern" }
-        ]
+        "rules": [{ "action": "allow", "pattern": "pattern" }]
       }
     },
     "public": {
       "username": "public",
       "permissions": {
-        "rules": [
-          { "action": "allow", "pattern": "user:task/**" }
-        ]
+        "rules": [{ "action": "allow", "pattern": "user:task/**" }]
       }
     }
   }
@@ -580,7 +583,7 @@ Entity-level permissions are set in the YAML frontmatter.
 
 ```yaml
 ---
-user_public_key: "10ba842b1307..."  # Owner's public key (required)
+user_public_key: '10ba842b1307...' # Owner's public key (required)
 ---
 ```
 
@@ -588,8 +591,8 @@ user_public_key: "10ba842b1307..."  # Owner's public key (required)
 
 ```yaml
 ---
-user_public_key: "10ba842b1307..."
-public_read: true   # Explicitly allow public read access
+user_public_key: '10ba842b1307...'
+public_read: true # Explicitly allow public read access
 ---
 ```
 
@@ -631,7 +634,7 @@ public_read: true   # Explicitly allow public read access
 2. Use `check_permissions_batch()` for listing operations to avoid N+1 queries
 3. Set `public_read: false` explicitly on sensitive entities
 4. Review `public` user rules to understand default access
-5. Use DEBUG=permission:* to troubleshoot permission issues
+5. Use DEBUG=permission:\* to troubleshoot permission issues
 
 ## 8. Content Redaction System
 
@@ -659,6 +662,7 @@ const REDACT_CHAR = '█'
 The redaction system applies different strategies based on content type:
 
 **Text Content:**
+
 ```javascript
 // Input:  "This is secret content"
 // Output: "████ ██ ██████ ███████"
@@ -666,6 +670,7 @@ The redaction system applies different strategies based on content type:
 ```
 
 **Code Content:**
+
 ```javascript
 // Input:  "  const secret = 'value'"
 // Output: "  █████ ██████ █ ███████"
@@ -673,11 +678,13 @@ The redaction system applies different strategies based on content type:
 ```
 
 **Markdown Content:**
+
 - Parses AST using `unified` + `remark`
 - Redacts text nodes, code blocks, links, images
 - Preserves: headings, lists, formatting structure
 
 **Filenames:**
+
 ```javascript
 // Input:  "secret-document.md"
 // Output: "███████████████.md"
@@ -685,6 +692,7 @@ The redaction system applies different strategies based on content type:
 ```
 
 **Paths:**
+
 ```javascript
 // Input:  "/home/user/private/file.txt"
 // Output: "/████/████/███████/████.txt"
@@ -692,6 +700,7 @@ The redaction system applies different strategies based on content type:
 ```
 
 **Base URIs:**
+
 ```javascript
 // Input:  "user:task/my-secret-task.md"
 // Output: "████:████/██-██████-████.██"
@@ -699,6 +708,7 @@ The redaction system applies different strategies based on content type:
 ```
 
 **Relations:**
+
 ```javascript
 // Input:  "follows [[user:task/secret.md]]"
 // Output: "follows [[████:████/██████.██]]"
@@ -709,13 +719,13 @@ The redaction system applies different strategies based on content type:
 
 Properties are redacted based on their semantic type:
 
-| Property Pattern | Redacted Format |
-|------------------|-----------------|
-| `*_at` (timestamps) | `████-██-██T██:██:██.███Z` |
+| Property Pattern    | Redacted Format                        |
+| ------------------- | -------------------------------------- |
+| `*_at` (timestamps) | `████-██-██T██:██:██.███Z`             |
 | `entity_id`, `*_id` | `████████-████-████-████-████████████` |
-| `user_public_key` | 64 `█` characters |
-| Numbers | `9999` |
-| Booleans | `false` |
+| `user_public_key`   | 64 `█` characters                      |
+| Numbers             | `9999`                                 |
+| Booleans            | `false`                                |
 
 ### Sensitive Property Patterns
 
@@ -759,7 +769,7 @@ export const apply_redaction_interceptor = () => {
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
 
 router.use(check_filesystem_permission())
-router.use(apply_redaction_interceptor())  // Must come after permission check
+router.use(apply_redaction_interceptor()) // Must come after permission check
 
 router.get('/file', async (req, res) => {
   // Response automatically redacted if req.access.read_allowed === false
@@ -808,14 +818,14 @@ Clients can check this flag to render appropriate UI (e.g., greyed out, with acc
 
 Thread timelines receive specialized redaction by entry type:
 
-| Entry Type | Redaction Behavior |
-|------------|-------------------|
-| `message` | Content text redacted |
-| `tool_call` | Parameters redacted (preserving structural params like `limit`, `offset`) |
-| `tool_result` | Result content and error messages redacted |
-| `thinking` | Thinking content and signatures redacted |
-| `human_request` | Prompt and response redacted |
-| `state_change` | Reason and metadata redacted |
+| Entry Type      | Redaction Behavior                                                        |
+| --------------- | ------------------------------------------------------------------------- |
+| `message`       | Content text redacted                                                     |
+| `tool_call`     | Parameters redacted (preserving structural params like `limit`, `offset`) |
+| `tool_result`   | Result content and error messages redacted                                |
+| `thinking`      | Thinking content and signatures redacted                                  |
+| `human_request` | Prompt and response redacted                                              |
+| `state_change`  | Reason and metadata redacted                                              |
 
 ### Client-Side Rendering
 
@@ -823,14 +833,13 @@ The client provides a `RedactedContent` component for consistent rendering:
 
 ```javascript
 // client/views/components/primitives/styled/RedactedContent.js
-<RedactedContent content_type="filename">
-  {item.name}
-</RedactedContent>
+<RedactedContent content_type='filename'>{item.name}</RedactedContent>
 ```
 
 **Supported content types:** `text`, `filename`, `file_size`, `date`, `path`, `content`
 
 **Styling:**
+
 - Greyed out color with subtle background
 - `cursor: not-allowed`
 - `user-select: none`
@@ -842,12 +851,12 @@ For fine-grained control, particularly in timeline parameters, a rule engine eva
 
 ```javascript
 const rules = [
-  { pattern: 'limit', action: 'preserve' },       // Keep structural params
+  { pattern: 'limit', action: 'preserve' }, // Keep structural params
   { pattern: 'offset', action: 'preserve' },
   { pattern: 'timeout', action: 'preserve' },
   { pattern: 'status', action: 'preserve' },
   { pattern: 'todos.*.status', action: 'preserve' }, // Glob patterns
-  { pattern: 'all_strings', action: 'redact' }    // Default for strings
+  { pattern: 'all_strings', action: 'redact' } // Default for strings
 ]
 
 const result = evaluate_redaction_rules({ rules, key_path, value })
@@ -856,64 +865,64 @@ const result = evaluate_redaction_rules({ rules, key_path, value })
 
 ### Key Functions
 
-| Function | Purpose |
-|----------|---------|
-| `redact_text_content(content)` | Replace non-whitespace with `█` |
-| `redact_code_content(code)` | Preserve indentation, redact code |
-| `redact_markdown_content(md)` | AST-aware markdown redaction |
-| `redact_file_info({ file_info })` | Redact directory listing items |
-| `redact_file_content_response(response)` | Redact file read responses |
-| `redact_entity_object(entity)` | Redact entity with properties |
-| `redact_thread_data(thread)` | Redact thread with timeline |
-| `redact_session_data(session)` | Redact active session records |
-| `apply_response_redaction(req, data)` | Route-aware response redaction |
+| Function                                 | Purpose                           |
+| ---------------------------------------- | --------------------------------- |
+| `redact_text_content(content)`           | Replace non-whitespace with `█`   |
+| `redact_code_content(code)`              | Preserve indentation, redact code |
+| `redact_markdown_content(md)`            | AST-aware markdown redaction      |
+| `redact_file_info({ file_info })`        | Redact directory listing items    |
+| `redact_file_content_response(response)` | Redact file read responses        |
+| `redact_entity_object(entity)`           | Redact entity with properties     |
+| `redact_thread_data(thread)`             | Redact thread with timeline       |
+| `redact_session_data(session)`           | Redact active session records     |
+| `apply_response_redaction(req, data)`    | Route-aware response redaction    |
 
 ## 9. File Reference
 
 ### Permission System Files
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `server/middleware/permission/index.mjs` | ~43 | Public API exports |
-| `server/middleware/permission/permission-service.mjs` | ~249 | High-level permission checking functions |
-| `server/middleware/permission/permission-context.mjs` | ~338 | Request-scoped caching and permission engine |
-| `server/middleware/permission/middleware.mjs` | ~135 | Express middleware for routes |
-| `server/middleware/permission/resource-metadata.mjs` | ~174 | Metadata loading for threads and entities |
+| File                                                  | Lines | Description                                  |
+| ----------------------------------------------------- | ----- | -------------------------------------------- |
+| `server/middleware/permission/index.mjs`              | ~43   | Public API exports                           |
+| `server/middleware/permission/permission-service.mjs` | ~249  | High-level permission checking functions     |
+| `server/middleware/permission/permission-context.mjs` | ~338  | Request-scoped caching and permission engine |
+| `server/middleware/permission/middleware.mjs`         | ~135  | Express middleware for routes                |
+| `server/middleware/permission/resource-metadata.mjs`  | ~174  | Metadata loading for threads and entities    |
 
 ### Authentication Files
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `server/middleware/jwt-parser.mjs` | ~44 | JWT token parsing middleware |
-| `libs-server/users/user-registry.mjs` | ~170 | User registry with file-based storage |
+| File                                  | Lines | Description                           |
+| ------------------------------------- | ----- | ------------------------------------- |
+| `server/middleware/jwt-parser.mjs`    | ~44   | JWT token parsing middleware          |
+| `libs-server/users/user-registry.mjs` | ~170  | User registry with file-based storage |
 
 ### Rule Engine Files
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `server/middleware/rule-engine.mjs` | ~246 | Permission rule evaluation with picomatch |
+| File                                | Lines | Description                               |
+| ----------------------------------- | ----- | ----------------------------------------- |
+| `server/middleware/rule-engine.mjs` | ~246  | Permission rule evaluation with picomatch |
 
 ### Content Redaction Files
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `server/middleware/content-redactor.mjs` | ~862 | Core redaction functions for all content types |
-| `server/middleware/permissions.mjs` | ~98 | Response interceptor applying redaction based on `req.access` |
-| `client/views/components/primitives/styled/RedactedContent.js` | ~160 | React component for rendering redacted content |
+| File                                                           | Lines | Description                                                   |
+| -------------------------------------------------------------- | ----- | ------------------------------------------------------------- |
+| `server/middleware/content-redactor.mjs`                       | ~862  | Core redaction functions for all content types                |
+| `server/middleware/permissions.mjs`                            | ~98   | Response interceptor applying redaction based on `req.access` |
+| `client/views/components/primitives/styled/RedactedContent.js` | ~160  | React component for rendering redacted content                |
 
 ### Configuration Files
 
-| File | Description |
-|------|-------------|
-| `config/config.json` | JWT secret and user base directory |
-| `<user_base>/users.json` | User permissions and rules |
+| File                     | Description                        |
+| ------------------------ | ---------------------------------- |
+| `config/config.json`     | JWT secret and user base directory |
+| `<user_base>/users.json` | User permissions and rules         |
 
 ### Test Files
 
-| File | Description |
-|------|-------------|
+| File                                                 | Description                                |
+| ---------------------------------------------------- | ------------------------------------------ |
 | `tests/integration/public-read-permissions.test.mjs` | Integration tests for permission scenarios |
-| `tests/integration/entity-visibility-cli.test.mjs` | CLI visibility management tests |
+| `tests/integration/entity-visibility-cli.test.mjs`   | CLI visibility management tests            |
 
 ### Debugging
 
