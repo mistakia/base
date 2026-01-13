@@ -17,6 +17,7 @@ import {
   get_can_create_threads,
   get_can_resume_thread
 } from '@core/app/selectors'
+import { get_directory_state } from '@core/directory'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
 import useFileAutocomplete from './use-file-autocomplete.js'
@@ -76,6 +77,10 @@ export default function GlobalThreadInput() {
   // Auth token for API requests
   const user_token = useSelector((state) => state.getIn(['app', 'user_token']))
 
+  // Directory state for detecting file pages
+  const directory_state = useSelector(get_directory_state)
+  const path_info = directory_state.get('path_info')
+
   // Local state
   const [message, set_message] = useState('')
   const [cursor_position, set_cursor_position] = useState(0)
@@ -117,15 +122,30 @@ export default function GlobalThreadInput() {
   // Reset state when overlay opens
   useEffect(() => {
     if (is_open) {
-      set_message('')
-      set_cursor_position(0)
+      // Check if we're on a file page (not a thread page and path_info indicates file)
+      const is_thread_page = parse_thread_from_path(current_path) !== null
+      const is_file_page = !is_thread_page && path_info?.type === 'file'
+
+      if (is_file_page) {
+        // Pre-populate with file mention - strip leading slash from path
+        const normalized_path = current_path.startsWith('/')
+          ? current_path.slice(1)
+          : current_path
+        const initial_content = `@${normalized_path} `
+        set_message(initial_content)
+        set_cursor_position(initial_content.length)
+      } else {
+        set_message('')
+        set_cursor_position(0)
+      }
+
       set_should_resume(initial_mode === 'resume')
       // Focus input after a brief delay for animation
       setTimeout(() => {
         input_ref.current?.focus()
       }, 100)
     }
-  }, [is_open, initial_mode])
+  }, [is_open, initial_mode, current_path, path_info])
 
   // Redux selectors
   const is_loading = useSelector((state) => {
