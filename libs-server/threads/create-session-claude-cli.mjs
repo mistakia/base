@@ -99,23 +99,36 @@ const resolve_cli_command = async (command) => {
  * Flags:
  * - `-p`: Non-interactive mode (programmatic)
  * - `-r <session_id>`: Resume existing session
+ * - `--dangerously-skip-permissions`: Skip permission prompts (required for headless operation)
  * - `--`: Separator to prevent prompts starting with `-` from being parsed as flags
  *
  * @param {Object} params
  * @param {string} params.prompt - User prompt text
  * @param {string} [params.session_id] - Session ID to resume (optional)
+ * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true for headless)
  * @returns {string[]} CLI arguments array
  */
-const build_claude_cli_args = ({ prompt, session_id }) => {
-  const base_args = ['-p', '--', prompt]
+const build_claude_cli_args = ({
+  prompt,
+  session_id,
+  skip_permissions = true
+}) => {
+  const args = ['-p']
 
-  if (session_id) {
-    // Resume existing session: claude -r <session_id> -p -- <prompt>
-    return ['-r', session_id, ...base_args]
+  // Skip permissions for headless/programmatic execution
+  // Without this, commands requiring approval will fail repeatedly
+  if (skip_permissions) {
+    args.push('--dangerously-skip-permissions')
   }
 
-  // New session: claude -p -- <prompt>
-  return base_args
+  if (session_id) {
+    args.push('-r', session_id)
+  }
+
+  // Separator and prompt must come last
+  args.push('--', prompt)
+
+  return args
 }
 
 // =============================================================================
@@ -213,6 +226,7 @@ const build_success_result = ({ working_directory, session_id, exit_code }) => {
  * @param {string} params.working_directory - Directory to execute CLI in
  * @param {string} params.user_public_key - User public key for permissions
  * @param {string} [params.session_id] - Session ID to resume (creates new if omitted)
+ * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true)
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
  */
@@ -220,7 +234,8 @@ export const create_session_claude_cli = async ({
   prompt,
   working_directory,
   user_public_key,
-  session_id = null
+  session_id = null,
+  skip_permissions = true
 }) => {
   // -------------------------
   // 1. Validate & Log
@@ -250,10 +265,15 @@ export const create_session_claude_cli = async ({
 
   // Resolve command to absolute path (handles shell aliases and common locations)
   const cli_command = await resolve_cli_command(cli_command_config)
-  const cli_args = build_claude_cli_args({ prompt, session_id })
+  const cli_args = build_claude_cli_args({
+    prompt,
+    session_id,
+    skip_permissions
+  })
 
   log(`Command: ${cli_command} ${cli_args.join(' ')}`)
   log(`Timeout: ${timeout_minutes} minutes`)
+  log(`Skip permissions: ${skip_permissions}`)
 
   // -------------------------
   // 3. Spawn Process
