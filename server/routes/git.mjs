@@ -23,6 +23,7 @@ import { attach_permission_context } from '#server/middleware/permission/middlew
 import { check_permissions_batch } from '#server/middleware/permission/permission-service.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
+import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
 const router = express.Router()
 const log = debug('api:git')
@@ -102,31 +103,83 @@ const validate_repo_path = async (repo_path) => {
 }
 
 /**
- * Get list of known repositories (user_base and repository/active/*)
+ * Parse git submodule status output and return initialized submodule paths
+ * @param {string} output - Output from git submodule status --recursive
+ * @returns {string[]} Array of relative submodule paths that are initialized
+ */
+const parse_submodule_status = (output) => {
+  if (!output.trim()) {
+    return []
+  }
+
+  const submodule_paths = []
+  const lines = output.trim().split('\n')
+
+  for (const line of lines) {
+    // Format: " <sha> path (description)" or "+<sha> path" or "-<sha> path"
+    // First char: ' ' = initialized, '+' = different commit, '-' = not initialized, 'U' = conflict
+    const match = line.match(/^([ +\-U])([0-9a-f]+)\s+(\S+)/)
+    if (!match) continue
+
+    const [, status_char, , relative_path] = match
+    const is_initialized = status_char !== '-'
+
+    if (is_initialized) {
+      submodule_paths.push(relative_path)
+    }
+  }
+
+  return submodule_paths
+}
+
+/**
+ * Get list of known repositories (user_base, repository/active/*, and git submodules)
  * @returns {Promise<string[]>} Array of repository paths
  */
 const get_known_repositories = async () => {
   const repos = [USER_BASE_DIR]
+  const seen = new Set([USER_BASE_DIR])
 
-  // Check repository/active directory
+  const add_repo = async (repo_path) => {
+    if (seen.has(repo_path)) return false
+    try {
+      await fs.access(path.join(repo_path, '.git'))
+      repos.push(repo_path)
+      seen.add(repo_path)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // Scan repository/active directory
   const active_repos_path = path.join(USER_BASE_DIR, 'repository', 'active')
   try {
     const entries = await fs.readdir(active_repos_path, { withFileTypes: true })
     for (const entry of entries) {
       if (entry.isDirectory() || entry.isSymbolicLink()) {
-        const repo_path = path.join(active_repos_path, entry.name)
-        // Check if it's a git repository
-        try {
-          await fs.access(path.join(repo_path, '.git'))
-          repos.push(repo_path)
-        } catch {
-          // Not a git repo, skip
-        }
+        await add_repo(path.join(active_repos_path, entry.name))
       }
     }
   } catch {
-    // repository/active may not exist
     log('repository/active directory not found')
+  }
+
+  // Detect git submodules (includes nested submodules and those outside repository/active)
+  try {
+    const { stdout } = await execute_shell_command(
+      'git submodule status --recursive',
+      { cwd: USER_BASE_DIR }
+    )
+    const submodule_paths = parse_submodule_status(stdout)
+    for (const relative_path of submodule_paths) {
+      const added = await add_repo(path.join(USER_BASE_DIR, relative_path))
+      if (added) {
+        log(`Added submodule: ${relative_path}`)
+      }
+    }
+  } catch (error) {
+    log('Failed to get submodule status:', error.message)
   }
 
   return repos
