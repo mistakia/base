@@ -25,6 +25,10 @@ export function get_diffs_map(state) {
   return get_git_state(state).get('diffs')
 }
 
+export function get_file_at_ref_map(state) {
+  return get_git_state(state).get('file_at_ref')
+}
+
 // ============================================================================
 // Loading State Selectors
 // ============================================================================
@@ -35,6 +39,10 @@ export function get_is_loading_status(state) {
 
 export function get_is_loading_diff(state) {
   return get_git_state(state).get('is_loading_diff')
+}
+
+export function get_is_loading_file_at_ref(state) {
+  return get_git_state(state).get('is_loading_file_at_ref')
 }
 
 export function get_is_committing(state) {
@@ -130,6 +138,18 @@ export function get_file_diff(state, repo_path, file_path) {
 
   const diff = repo_diffs.get(diff_key)
   return diff ? (diff.toJS ? diff.toJS() : diff) : null
+}
+
+/**
+ * Get file content at a specific git ref
+ */
+export function get_file_at_ref(state, repo_path, file_path, ref = 'HEAD') {
+  const file_at_ref_map = get_file_at_ref_map(state)
+  if (!file_at_ref_map) return null
+
+  const cache_key = `${repo_path}:${file_path}:${ref}`
+  const file_data = file_at_ref_map.get(cache_key)
+  return file_data ? (file_data.toJS ? file_data.toJS() : file_data) : null
 }
 
 /**

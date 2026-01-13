@@ -46,6 +46,7 @@ import {
   get_git_status_all_actions,
   get_git_status_actions,
   get_git_diff_actions,
+  get_file_at_ref_actions,
   stage_files_actions,
   unstage_files_actions,
   commit_changes_actions,
@@ -255,6 +256,12 @@ export const get_git_diff = fetch.bind(
   null,
   api.get_git_diff,
   get_git_diff_actions
+)
+
+export const get_file_at_ref = fetch.bind(
+  null,
+  api.get_file_at_ref,
+  get_file_at_ref_actions
 )
 
 export const stage_files = fetch.bind(

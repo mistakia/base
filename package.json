@@ -45,6 +45,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@notionhq/client": "^2.3.0",
+    "@pierre/diffs": "^1.0.4",
     "@shikijs/langs": "^3.9.2",
     "@shikijs/themes": "^3.9.2",
     "@trashman/ed25519-blake2b": "^0.0.7",

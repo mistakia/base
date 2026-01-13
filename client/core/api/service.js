@@ -232,6 +232,14 @@ export const api = {
     return { url }
   },
 
+  get_file_at_ref({ repo_path, file_path, ref = 'HEAD' }) {
+    let url = `${API_URL}/git/file-at-ref?repo_path=${encodeURIComponent(repo_path)}&file_path=${encodeURIComponent(file_path)}`
+    if (ref && ref !== 'HEAD') {
+      url += `&ref=${encodeURIComponent(ref)}`
+    }
+    return { url }
+  },
+
   stage_files({ repo_path, files }) {
     const url = `${API_URL}/git/stage`
     return { url, ...POST({ repo_path, files }) }
