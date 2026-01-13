@@ -4,6 +4,7 @@ import {
   get_git_status_all,
   get_git_status,
   get_git_diff,
+  get_file_at_ref,
   stage_files,
   unstage_files,
   commit_changes,
@@ -56,6 +57,15 @@ export function* load_git_status({ payload }) {
 export function* load_git_diff({ payload }) {
   const { repo_path, file_path, staged } = payload
   yield call(get_git_diff, { repo_path, file_path, staged })
+}
+
+// ============================================================================
+// Load File at Ref Saga
+// ============================================================================
+
+export function* load_file_at_ref({ payload }) {
+  const { repo_path, file_path, ref } = payload
+  yield call(get_file_at_ref, { repo_path, file_path, ref })
 }
 
 // ============================================================================
@@ -209,6 +219,10 @@ export function* watch_load_git_diff() {
   yield takeLatest(git_action_types.LOAD_GIT_DIFF, load_git_diff)
 }
 
+export function* watch_load_file_at_ref() {
+  yield takeLatest(git_action_types.LOAD_FILE_AT_REF, load_file_at_ref)
+}
+
 export function* watch_stage_files() {
   yield takeLatest(git_action_types.REQUEST_STAGE_FILES, request_stage_files)
 }
@@ -247,6 +261,7 @@ export const git_sagas = [
   fork(watch_load_git_status_all),
   fork(watch_load_git_status),
   fork(watch_load_git_diff),
+  fork(watch_load_file_at_ref),
   fork(watch_stage_files),
   fork(watch_unstage_files),
   fork(watch_commit),

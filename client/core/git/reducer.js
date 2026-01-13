@@ -15,9 +15,12 @@ const GitState = new Record({
   selected_file: null,
   // Map of repo_path -> file_path -> diff data
   diffs: new Map(),
+  // Map of "${repo_path}:${file_path}:${ref}" -> { content, is_redacted }
+  file_at_ref: new Map(),
   // Loading states
   is_loading_status: false,
   is_loading_diff: false,
+  is_loading_file_at_ref: false,
   is_committing: false,
   is_pulling: false,
   is_pushing: false,
@@ -133,6 +136,43 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     case git_action_types.GET_GIT_DIFF_FAILED:
       return state.merge({
         is_loading_diff: false,
+        error: payload.error
+      })
+
+    // ========================================================================
+    // File at Ref Loading
+    // ========================================================================
+
+    case git_action_types.GET_FILE_AT_REF_PENDING:
+      return state.merge({
+        is_loading_file_at_ref: true,
+        error: null
+      })
+
+    case git_action_types.GET_FILE_AT_REF_FULFILLED: {
+      const { repo_path, file_path, ref } = payload.opts || {}
+      if (!repo_path || !file_path) return state
+
+      const cache_key = `${repo_path}:${file_path}:${ref || 'HEAD'}`
+
+      return state
+        .setIn(
+          ['file_at_ref', cache_key],
+          fromJS({
+            content: payload.data?.content,
+            is_redacted: payload.data?.is_redacted || false,
+            is_new_file: payload.data?.is_new_file || false
+          })
+        )
+        .merge({
+          is_loading_file_at_ref: false,
+          error: null
+        })
+    }
+
+    case git_action_types.GET_FILE_AT_REF_FAILED:
+      return state.merge({
+        is_loading_file_at_ref: false,
         error: payload.error
       })
 

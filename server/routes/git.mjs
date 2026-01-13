@@ -16,20 +16,34 @@ import {
   pull,
   get_conflicts,
   get_conflict_versions,
-  resolve_conflict
+  resolve_conflict,
+  read_file_from_ref
 } from '#libs-server/git/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { attach_permission_context } from '#server/middleware/permission/middleware.mjs'
 import { check_permissions_batch } from '#server/middleware/permission/permission-service.mjs'
-import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import {
+  create_base_uri_from_path,
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
 const router = express.Router()
 const log = debug('api:git')
 
-// Get user base directory from config
-const USER_BASE_DIR = config.user_base_directory
+/**
+ * Get user base directory dynamically
+ * Falls back to config if registry is not initialized
+ * @returns {string} User base directory path
+ */
+const get_user_base_dir = () => {
+  try {
+    return get_user_base_directory()
+  } catch {
+    return config.user_base_directory
+  }
+}
 
 // Apply authentication and permission context middleware to all git routes
 router.use(parse_jwt_token())
@@ -46,22 +60,24 @@ const validate_repo_path = async (repo_path) => {
     return { valid: false, error: 'repo_path is required' }
   }
 
+  const user_base_dir = get_user_base_dir()
+
   // Resolve to absolute path
   let resolved_path = repo_path
   if (!path.isAbsolute(repo_path)) {
-    resolved_path = path.resolve(USER_BASE_DIR, repo_path)
+    resolved_path = path.resolve(user_base_dir, repo_path)
   }
 
   // Normalize and ensure it doesn't escape base directory
   resolved_path = path.normalize(resolved_path)
 
   // Check if it's the user_base_directory itself
-  if (resolved_path === USER_BASE_DIR) {
+  if (resolved_path === user_base_dir) {
     return { valid: true, resolved_path }
   }
 
   // Check if it's within user_base_directory
-  if (!resolved_path.startsWith(USER_BASE_DIR + path.sep)) {
+  if (!resolved_path.startsWith(user_base_dir + path.sep)) {
     return {
       valid: false,
       error: 'Repository path must be within user base directory'
@@ -82,7 +98,7 @@ const validate_repo_path = async (repo_path) => {
       // May be inside a git repo but not the root
       // Check parent directories for .git
       let check_path = resolved_path
-      while (check_path.startsWith(USER_BASE_DIR)) {
+      while (check_path.startsWith(user_base_dir)) {
         const parent_git_path = path.join(check_path, '.git')
         try {
           await fs.access(parent_git_path)
@@ -137,8 +153,9 @@ const parse_submodule_status = (output) => {
  * @returns {Promise<string[]>} Array of repository paths
  */
 const get_known_repositories = async () => {
-  const repos = [USER_BASE_DIR]
-  const seen = new Set([USER_BASE_DIR])
+  const user_base_dir = get_user_base_dir()
+  const repos = [user_base_dir]
+  const seen = new Set([user_base_dir])
 
   const add_repo = async (repo_path) => {
     if (seen.has(repo_path)) return false
@@ -153,7 +170,7 @@ const get_known_repositories = async () => {
   }
 
   // Scan repository/active directory
-  const active_repos_path = path.join(USER_BASE_DIR, 'repository', 'active')
+  const active_repos_path = path.join(user_base_dir, 'repository', 'active')
   try {
     const entries = await fs.readdir(active_repos_path, { withFileTypes: true })
     for (const entry of entries) {
@@ -169,11 +186,11 @@ const get_known_repositories = async () => {
   try {
     const { stdout } = await execute_shell_command(
       'git submodule status --recursive',
-      { cwd: USER_BASE_DIR }
+      { cwd: user_base_dir }
     )
     const submodule_paths = parse_submodule_status(stdout)
     for (const relative_path of submodule_paths) {
-      const added = await add_repo(path.join(USER_BASE_DIR, relative_path))
+      const added = await add_repo(path.join(user_base_dir, relative_path))
       if (added) {
         log(`Added submodule: ${relative_path}`)
       }
@@ -467,6 +484,7 @@ router.get('/status', require_repo_read_permission, async (req, res) => {
  */
 router.get('/status/all', async (req, res) => {
   try {
+    const user_base_dir = get_user_base_dir()
     const repo_paths = await get_known_repositories()
     const user_public_key = req.user?.user_public_key
 
@@ -527,7 +545,7 @@ router.get('/status/all', async (req, res) => {
         return {
           repo_path,
           repo_name: path.basename(repo_path),
-          is_user_base: repo_path === USER_BASE_DIR,
+          is_user_base: repo_path === user_base_dir,
           ...status,
           staged: filtered_staged,
           unstaged: filtered_unstaged,
@@ -643,6 +661,72 @@ router.get('/file-content', require_repo_read_permission, async (req, res) => {
     log('Error getting file content:', error.message)
     res.status(500).json({
       error: 'Failed to get file content',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/git/file-at-ref
+ * Get file content at a specific git ref
+ * Query params: repo_path (required), file_path (required), ref (optional, defaults to HEAD)
+ */
+router.get('/file-at-ref', require_repo_read_permission, async (req, res) => {
+  try {
+    const repo_path = req.validated_repo_path
+    const { file_path, ref = 'HEAD' } = req.query
+
+    if (!file_path) {
+      return res.status(400).json({ error: 'file_path is required' })
+    }
+
+    // Check file-level permission
+    const file_permission = await check_file_permission({
+      repo_path,
+      file_path,
+      user_public_key: req.user?.user_public_key,
+      permission_type: 'read',
+      permission_context: req.permission_context
+    })
+
+    let content
+    let is_new_file = false
+    try {
+      content = await read_file_from_ref({
+        repo_path,
+        ref,
+        file_path
+      })
+    } catch (error) {
+      // File might not exist at this ref (e.g., new/untracked file)
+      if (
+        error.message.includes('does not exist') ||
+        error.message.includes('fatal:')
+      ) {
+        // Return empty content for new files instead of 404
+        content = ''
+        is_new_file = true
+      } else {
+        throw error
+      }
+    }
+
+    // Return redacted content if no permission
+    if (!file_permission.allowed) {
+      return res.json({
+        content: redact_text_content(content || ''),
+        file_path,
+        ref,
+        is_redacted: true,
+        is_new_file
+      })
+    }
+
+    res.json({ content, file_path, ref, is_redacted: false, is_new_file })
+  } catch (error) {
+    log('Error getting file at ref:', error.message)
+    res.status(500).json({
+      error: 'Failed to get file at ref',
       message: error.message
     })
   }

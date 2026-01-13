@@ -1,0 +1,24 @@
+.diff-viewer
+  width 100%
+  overflow auto
+
+  &--loading
+    min-height 200px
+
+  &__content
+    width 100%
+
+    // Ensure the diff fits the container
+    [data-diffs]
+      width 100%
+      font-size 13px
+      line-height 1.5
+
+    // Override any fixed widths from the library
+    pre
+      margin 0
+
+    // Ensure split view panels are equal width
+    .diffs-grid
+      display grid
+      grid-template-columns 1fr 1fr

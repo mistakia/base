@@ -9,6 +9,8 @@ import git_files from './git-files/index.mjs'
 import status_operations from './status.mjs'
 import sync_operations from './sync.mjs'
 import conflict_operations from './conflicts.mjs'
+import { find_git_root } from './find-git-root.mjs'
+import { get_file_status, get_file_diff_stats } from './file-status.mjs'
 
 // Export all operations
 export const {
@@ -62,6 +64,10 @@ export const {
 
 export const { get_working_tree_diff, get_file_content_for_diff } =
   search_operations
+
+export { find_git_root }
+
+export { get_file_status, get_file_diff_stats }
 
 // Export default as a single object with all operations
 export default {
@@ -121,5 +127,12 @@ export default {
   get_conflict_versions,
   resolve_conflict,
   abort_merge,
-  is_merging
+  is_merging,
+
+  // Find git root
+  find_git_root,
+
+  // File status
+  get_file_status,
+  get_file_diff_stats
 }

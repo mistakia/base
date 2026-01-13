@@ -316,6 +316,85 @@ describe('Git API', () => {
     })
   })
 
+  describe('GET /api/git/file-at-ref', () => {
+    it('should return file content at HEAD', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/git/file-at-ref').query({
+          repo_path: test_repo.user_path,
+          file_path: 'README.md'
+        }),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body).to.be.an('object')
+      expect(res.body.content).to.be.a('string')
+      expect(res.body.file_path).to.equal('README.md')
+      expect(res.body.is_redacted).to.equal(false)
+      expect(res.body.is_new_file).to.equal(false)
+    })
+
+    it('should return file content at specific ref', async () => {
+      // Modify and commit a file to create history
+      const readme_path = path.join(test_repo.user_path, 'README.md')
+      await fs.writeFile(readme_path, '# New Version')
+      await exec('git add README.md', { cwd: test_repo.user_path })
+      await exec('git commit -m "Update README"', { cwd: test_repo.user_path })
+
+      // Get content at HEAD~1
+      const res = await authenticate_request(
+        chai.request(server).get('/api/git/file-at-ref').query({
+          repo_path: test_repo.user_path,
+          file_path: 'README.md',
+          ref: 'HEAD~1'
+        }),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.content).to.not.equal('# New Version')
+
+      // Verify current HEAD has new content
+      const head_res = await authenticate_request(
+        chai.request(server).get('/api/git/file-at-ref').query({
+          repo_path: test_repo.user_path,
+          file_path: 'README.md',
+          ref: 'HEAD'
+        }),
+        test_user
+      )
+
+      expect(head_res.body.content).to.equal('# New Version')
+    })
+
+    it('should return 400 for missing file_path', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/git/file-at-ref').query({
+          repo_path: test_repo.user_path
+        }),
+        test_user
+      )
+
+      expect(res).to.have.status(400)
+      expect(res.body).to.have.property('error')
+    })
+
+    it('should return empty content for non-existent file (new file)', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/git/file-at-ref').query({
+          repo_path: test_repo.user_path,
+          file_path: 'non-existent-file.txt'
+        }),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.content).to.equal('')
+      expect(res.body.is_new_file).to.equal(true)
+      expect(res.body.is_redacted).to.equal(false)
+    })
+  })
+
   describe('Authentication', () => {
     it('should return 401 for unauthenticated request', async () => {
       const res = await chai

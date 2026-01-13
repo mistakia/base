@@ -11,6 +11,11 @@ import {
 } from '#server/middleware/permission/index.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import {
+  find_git_root,
+  get_file_status,
+  get_file_diff_stats
+} from '#libs-server/git/index.mjs'
 
 const router = express.Router()
 const log = debug('api:filesystem')
@@ -229,6 +234,43 @@ router.get('/file', async (req, res) => {
       }
     }
 
+    // Get git context for the file
+    let git_context = null
+    try {
+      const repo_path = find_git_root({ file_path: full_path })
+      if (repo_path) {
+        const file_relative_to_repo = path.relative(repo_path, full_path)
+        const { status, is_staged } = await get_file_status({
+          repo_path,
+          file_path: file_relative_to_repo
+        })
+
+        // Get diff stats if file has changes
+        let additions = 0
+        let deletions = 0
+        if (status) {
+          const stats = await get_file_diff_stats({
+            repo_path,
+            file_path: file_relative_to_repo,
+            staged: is_staged
+          })
+          additions = stats.additions
+          deletions = stats.deletions
+        }
+
+        git_context = {
+          repo_path,
+          relative_path: file_relative_to_repo,
+          status,
+          is_staged,
+          additions,
+          deletions
+        }
+      }
+    } catch (error) {
+      log(`Error getting git context for ${full_path}:`, error.message)
+    }
+
     res.json({
       path: relative_path,
       type: 'file',
@@ -236,7 +278,8 @@ router.get('/file', async (req, res) => {
       frontmatter,
       markdown,
       size: stats.size,
-      modified: stats.mtime.toISOString()
+      modified: stats.mtime.toISOString(),
+      git_context
     })
   } catch (error) {
     log('Error reading file:', error.message)

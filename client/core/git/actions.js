@@ -4,6 +4,7 @@ import { create_api_action_types, create_api_actions } from '@core/utils'
 const GET_GIT_STATUS_ALL = 'GET_GIT_STATUS_ALL'
 const GET_GIT_STATUS = 'GET_GIT_STATUS'
 const GET_GIT_DIFF = 'GET_GIT_DIFF'
+const GET_FILE_AT_REF = 'GET_FILE_AT_REF'
 const STAGE_FILES = 'STAGE_FILES'
 const UNSTAGE_FILES = 'UNSTAGE_FILES'
 const COMMIT_CHANGES = 'COMMIT_CHANGES'
@@ -17,6 +18,7 @@ export const git_action_types = {
   ...create_api_action_types(GET_GIT_STATUS_ALL),
   ...create_api_action_types(GET_GIT_STATUS),
   ...create_api_action_types(GET_GIT_DIFF),
+  ...create_api_action_types(GET_FILE_AT_REF),
   ...create_api_action_types(STAGE_FILES),
   ...create_api_action_types(UNSTAGE_FILES),
   ...create_api_action_types(COMMIT_CHANGES),
@@ -29,6 +31,7 @@ export const git_action_types = {
   LOAD_GIT_STATUS_ALL: 'LOAD_GIT_STATUS_ALL',
   LOAD_GIT_STATUS: 'LOAD_GIT_STATUS',
   LOAD_GIT_DIFF: 'LOAD_GIT_DIFF',
+  LOAD_FILE_AT_REF: 'LOAD_FILE_AT_REF',
   REQUEST_STAGE_FILES: 'REQUEST_STAGE_FILES',
   REQUEST_UNSTAGE_FILES: 'REQUEST_UNSTAGE_FILES',
   REQUEST_COMMIT: 'REQUEST_COMMIT',
@@ -46,6 +49,7 @@ export const git_action_types = {
 export const get_git_status_all_actions = create_api_actions(GET_GIT_STATUS_ALL)
 export const get_git_status_actions = create_api_actions(GET_GIT_STATUS)
 export const get_git_diff_actions = create_api_actions(GET_GIT_DIFF)
+export const get_file_at_ref_actions = create_api_actions(GET_FILE_AT_REF)
 export const stage_files_actions = create_api_actions(STAGE_FILES)
 export const unstage_files_actions = create_api_actions(UNSTAGE_FILES)
 export const commit_changes_actions = create_api_actions(COMMIT_CHANGES)
@@ -71,6 +75,12 @@ export const git_actions = {
   load_git_diff: ({ repo_path, file_path, staged }) => ({
     type: git_action_types.LOAD_GIT_DIFF,
     payload: { repo_path, file_path, staged }
+  }),
+
+  // Load file content at a specific ref
+  load_file_at_ref: ({ repo_path, file_path, ref = 'HEAD' }) => ({
+    type: git_action_types.LOAD_FILE_AT_REF,
+    payload: { repo_path, file_path, ref }
   }),
 
   // Stage files

@@ -1,14 +1,58 @@
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
+import { useDispatch, useSelector } from 'react-redux'
 
+import { git_actions } from '@core/git/actions'
+import {
+  get_file_at_ref,
+  get_is_loading_file_at_ref,
+  get_git_error
+} from '@core/git/selectors'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import EntityFrontmatter from './EntityFrontmatter/index.js'
 import FileActions from '@components/FileActions/index.js'
+import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
+import DiffViewer from '@components/DiffViewer/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 
-const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
+const EntityRenderer = ({
+  frontmatter,
+  markdown,
+  content,
+  is_redacted,
+  path,
+  git_context
+}) => {
+  const dispatch = useDispatch()
+  const [is_diff_view_active, set_is_diff_view_active] = useState(false)
+
+  const is_loading_file_at_ref = useSelector(get_is_loading_file_at_ref)
+  const git_error = useSelector(get_git_error)
+  const file_at_ref_data = useSelector((state) =>
+    git_context
+      ? get_file_at_ref(
+          state,
+          git_context.repo_path,
+          git_context.relative_path,
+          'HEAD'
+        )
+      : null
+  )
+
+  const handle_diff_toggle = useCallback(() => {
+    if (!is_diff_view_active && git_context) {
+      dispatch(
+        git_actions.load_file_at_ref({
+          repo_path: git_context.repo_path,
+          file_path: git_context.relative_path,
+          ref: 'HEAD'
+        })
+      )
+    }
+    set_is_diff_view_active(!is_diff_view_active)
+  }, [is_diff_view_active, git_context, dispatch])
   const entity_metadata = React.useMemo(() => {
     return {
       title: frontmatter?.title || 'Untitled',
@@ -19,9 +63,28 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
       modified_time: frontmatter?.modified || frontmatter?.updated
     }
   }, [frontmatter])
+  const render_diff_toggle = () => (
+    <FileDiffToggle
+      git_context={git_context}
+      is_active={is_diff_view_active}
+      on_toggle={handle_diff_toggle}
+    />
+  )
+
   const left_content = markdown ? (
     <Box sx={{ pr: 2 }}>
-      <MarkdownViewer content={markdown} is_redacted={is_redacted} />
+      {is_diff_view_active && git_context ? (
+        <DiffViewer
+          original_content={file_at_ref_data?.content}
+          current_content={content || ''}
+          file_path={path}
+          is_redacted={file_at_ref_data?.is_redacted}
+          is_loading={is_loading_file_at_ref}
+          error={git_error}
+        />
+      ) : (
+        <MarkdownViewer content={markdown} is_redacted={is_redacted} />
+      )}
     </Box>
   ) : null
 
@@ -33,7 +96,7 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
         markdown={markdown}
         path={path}
       />
-      <FileActions path={path} />
+      <FileActions path={path}>{render_diff_toggle()}</FileActions>
     </Box>
   ) : null
 
@@ -60,7 +123,7 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
               markdown={markdown}
               path={path}
             />
-            <FileActions path={path} />
+            <FileActions path={path}>{render_diff_toggle()}</FileActions>
           </Box>
         </Box>
       </>
@@ -97,8 +160,23 @@ const EntityRenderer = ({ frontmatter, markdown, is_redacted, path }) => {
 EntityRenderer.propTypes = {
   frontmatter: PropTypes.object,
   markdown: PropTypes.string,
+  content: PropTypes.string,
   is_redacted: PropTypes.bool,
-  path: PropTypes.string
+  path: PropTypes.string,
+  git_context: PropTypes.shape({
+    repo_path: PropTypes.string,
+    relative_path: PropTypes.string,
+    status: PropTypes.oneOf([
+      'modified',
+      'added',
+      'deleted',
+      'untracked',
+      null
+    ]),
+    is_staged: PropTypes.bool,
+    additions: PropTypes.number,
+    deletions: PropTypes.number
+  })
 }
 
 export default EntityRenderer
