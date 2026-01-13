@@ -8,7 +8,8 @@
 import debug from 'debug'
 import {
   parse_all_claude_files,
-  parse_claude_jsonl_file
+  parse_session_with_subagents,
+  find_session_file_by_id
 } from './parse-jsonl.mjs'
 import { normalize_claude_session } from './normalize-session.mjs'
 
@@ -48,8 +49,11 @@ export const find_claude_sessions_from_filesystem = async ({
 
   if (session_file) {
     log_debug(`Using direct session file path: ${session_file}`)
-    // Import specific file directly
-    const sessions = await parse_claude_jsonl_file(session_file)
+    // Import specific file and its associated subagent sessions
+    const sessions = await parse_session_with_subagents(session_file)
+    log_debug(
+      `Loaded ${sessions.length} sessions (including subagents) from ${session_file}`
+    )
     // Apply filter_sessions if provided (e.g., for blacklist checking)
     if (filter_sessions && sessions.length > 0) {
       const filtered = sessions.filter(filter_sessions)
@@ -61,8 +65,41 @@ export const find_claude_sessions_from_filesystem = async ({
     return sessions
   }
 
+  // Optimize: if session_id is specified, find and load just that file
   if (session_id) {
-    log_debug(`Filtering sessions for specific session ID: ${session_id}`)
+    log_debug(`Looking up specific session ID: ${session_id}`)
+    const found_file = await find_session_file_by_id({
+      session_id,
+      claude_projects_directory
+    })
+
+    if (found_file) {
+      log_debug(`Found session file for ID ${session_id}: ${found_file}`)
+      const sessions = await parse_session_with_subagents(found_file)
+      log_debug(
+        `Loaded ${sessions.length} sessions (including subagents) for session ${session_id}`
+      )
+      // Apply filter_sessions if provided, but skip session_id filtering
+      // since we already found the specific session and its subagents
+      if (filter_sessions && sessions.length > 0) {
+        const filtered = sessions.filter((s) => {
+          // Allow agent sessions that belong to this parent
+          if (is_agent_session({ session: s })) {
+            const parent_id = get_agent_parent_session_id({ session: s })
+            if (parent_id === session_id) {
+              return true
+            }
+          }
+          return filter_sessions(s)
+        })
+        return filtered
+      }
+      return sessions
+    }
+
+    log(
+      `Session file not found for ID: ${session_id}, falling back to full scan`
+    )
   }
 
   const sessions = await parse_all_claude_files({

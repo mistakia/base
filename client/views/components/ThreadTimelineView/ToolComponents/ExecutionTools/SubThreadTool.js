@@ -22,18 +22,32 @@ const SubThreadTool = ({
   const get_subthread_events = useMemo(() => {
     if (!Array.isArray(timeline)) return []
 
-    const start_seq = tool_call_event?.ordering?.sequence
-    const end_seq = tool_result_event?.ordering?.sequence
+    // Get timestamp range from tool_call and tool_result
+    const start_ts = tool_call_event?.timestamp
+      ? new Date(tool_call_event.timestamp).getTime()
+      : null
+    const end_ts = tool_result_event?.timestamp
+      ? new Date(tool_result_event.timestamp).getTime()
+      : null
 
-    if (typeof start_seq !== 'number') return []
+    // Use explicit null check to handle zero timestamps correctly
+    if (start_ts === null) return []
 
+    // Filter sidechain events by timestamp range (more reliable than sequence)
     return timeline.filter((evt) => {
       const is_sidechain = evt?.provider_data?.is_sidechain === true
-      const evt_seq = evt?.ordering?.sequence
-      if (!is_sidechain || typeof evt_seq !== 'number') return false
-      if (typeof end_seq === 'number')
-        return evt_seq >= start_seq && evt_seq <= end_seq
-      return evt_seq >= start_seq
+      if (!is_sidechain) return false
+
+      const evt_ts = evt?.timestamp ? new Date(evt.timestamp).getTime() : null
+      // Use explicit null check to handle zero timestamps correctly
+      if (evt_ts === null) return false
+
+      // Event must be after tool_call timestamp
+      if (evt_ts < start_ts) return false
+      // If we have an end timestamp, event must be before or at tool_result
+      if (end_ts !== null && evt_ts > end_ts) return false
+
+      return true
     })
   }, [timeline, tool_call_event, tool_result_event])
 
