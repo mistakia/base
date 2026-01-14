@@ -9,6 +9,7 @@ import {
   format_relative_path,
   format_count_label
 } from '@views/components/ThreadTimelineView/ToolComponents/shared/title-utils'
+import { ensure_string_result } from '@views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
 import { get_threads_state } from '@core/threads/selectors'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
@@ -49,8 +50,8 @@ const MultiEditTool = ({ tool_call_event }) => {
   })
 
   const render_edit_block = (edit, index) => {
-    const old_text = edit.old_string || ''
-    const new_text = edit.new_string || ''
+    const old_text = ensure_string_result(edit.old_string)
+    const new_text = ensure_string_result(edit.new_string)
     const old_lines = old_text.split('\n')
     const new_lines = new_text.split('\n')
     const old_prefixed = old_text

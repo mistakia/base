@@ -12,6 +12,7 @@ import {
   build_dual_tone_header,
   format_relative_path
 } from '@views/components/ThreadTimelineView/ToolComponents/shared/title-utils'
+import { get_line_count } from '@views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
 import { get_threads_state } from '@core/threads/selectors'
 
 const ReadTool = ({ tool_call_event, tool_result_event }) => {
@@ -159,11 +160,12 @@ const ReadTool = ({ tool_call_event, tool_result_event }) => {
   const get_action_button = () => {
     if (!tool_result_event) return null
 
-    const content = tool_result_event?.content?.result || ''
-    const lines = content.split('\n')
+    const result = tool_result_event?.content?.result
+    const line_count = get_line_count(result)
+    if (line_count === 0) return null
 
     return {
-      label: `${lines.length} lines`,
+      label: `${line_count} lines`,
       onClick: () => set_show_content(!show_content)
     }
   }

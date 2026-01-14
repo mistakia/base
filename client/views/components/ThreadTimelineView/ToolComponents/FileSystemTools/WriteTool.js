@@ -8,6 +8,7 @@ import {
   build_dual_tone_header,
   format_relative_path
 } from '@views/components/ThreadTimelineView/ToolComponents/shared/title-utils'
+import { ensure_string_result } from '@views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
 import { get_threads_state } from '@core/threads/selectors'
 
 const WriteTool = ({ tool_call_event, tool_result_event }) => {
@@ -16,7 +17,7 @@ const WriteTool = ({ tool_call_event, tool_result_event }) => {
     const params = tool_call_event?.content?.tool_parameters || {}
     const file_path = params.file_path || 'Unknown file'
     const file_name = file_path.split('/').pop()
-    const content = params.content || ''
+    const content = ensure_string_result(params.content)
     const file_ext = file_name?.split('.').pop()?.toLowerCase() || ''
 
     return { file_path, file_name, content, file_ext }
