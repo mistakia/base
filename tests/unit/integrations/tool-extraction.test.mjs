@@ -1,5 +1,4 @@
-import { describe, it, before, after } from 'node:test'
-import assert from 'node:assert'
+import { expect } from 'chai'
 import path from 'path'
 import fs from 'fs/promises'
 
@@ -32,14 +31,14 @@ describe('Tool Extraction Integration Tests', () => {
           provider_data: { test: true }
         })
 
-        assert.strictEqual(entry.type, 'tool_call')
-        assert.strictEqual(entry.content.tool_name, 'test_tool')
-        assert.strictEqual(entry.content.tool_call_id, 'call-456')
-        assert.strictEqual(entry.content.execution_status, 'pending')
-        assert.deepStrictEqual(entry.content.tool_parameters, {
+        expect(entry.type).to.equal('tool_call')
+        expect(entry.content.tool_name).to.equal('test_tool')
+        expect(entry.content.tool_call_id).to.equal('call-456')
+        expect(entry.content.execution_status).to.equal('pending')
+        expect(entry.content.tool_parameters).to.deep.equal({
           param1: 'value1'
         })
-        assert.strictEqual(entry.ordering.parent_id, 'parent-123')
+        expect(entry.ordering.parent_id).to.equal('parent-123')
       })
 
       it('should handle missing optional parameters', () => {
@@ -49,9 +48,9 @@ describe('Tool Extraction Integration Tests', () => {
           tool_call_id: 'call-456'
         })
 
-        assert.strictEqual(entry.type, 'tool_call')
-        assert.deepStrictEqual(entry.content.tool_parameters, {})
-        assert.ok(entry.timestamp)
+        expect(entry.type).to.equal('tool_call')
+        expect(entry.content.tool_parameters).to.deep.equal({})
+        expect(entry.timestamp).to.exist
       })
 
       it('should return null for missing required parameters', () => {
@@ -61,7 +60,7 @@ describe('Tool Extraction Integration Tests', () => {
           // missing tool_call_id
         })
 
-        assert.strictEqual(entry, null)
+        expect(entry).to.be.null
       })
     })
 
@@ -74,10 +73,10 @@ describe('Tool Extraction Integration Tests', () => {
           provider_data: { test: true }
         })
 
-        assert.strictEqual(entry.type, 'tool_result')
-        assert.strictEqual(entry.content.tool_call_id, 'call-456')
-        assert.strictEqual(entry.content.result, 'execution completed')
-        assert.strictEqual(entry.content.error, undefined)
+        expect(entry.type).to.equal('tool_result')
+        expect(entry.content.tool_call_id).to.equal('call-456')
+        expect(entry.content.result).to.equal('execution completed')
+        expect(entry.content.error).to.be.undefined
       })
 
       it('should handle error results', () => {
@@ -86,8 +85,8 @@ describe('Tool Extraction Integration Tests', () => {
           error: 'execution failed'
         })
 
-        assert.strictEqual(entry.content.error, 'execution failed')
-        assert.strictEqual(entry.content.result, null)
+        expect(entry.content.error).to.equal('execution failed')
+        expect(entry.content.result).to.be.null
       })
 
       it('should return null for missing tool_call_id', () => {
@@ -95,7 +94,7 @@ describe('Tool Extraction Integration Tests', () => {
           result: 'some result'
         })
 
-        assert.strictEqual(entry, null)
+        expect(entry).to.be.null
       })
     })
 
@@ -108,7 +107,7 @@ describe('Tool Extraction Integration Tests', () => {
         })
 
         const errors = validate_tool_call_entry(entry)
-        assert.strictEqual(errors.length, 0)
+        expect(errors.length).to.equal(0)
       })
 
       it('should validate correct tool result entry', () => {
@@ -118,7 +117,7 @@ describe('Tool Extraction Integration Tests', () => {
         })
 
         const errors = validate_tool_result_entry(entry)
-        assert.strictEqual(errors.length, 0)
+        expect(errors.length).to.equal(0)
       })
 
       it('should detect validation errors', () => {
@@ -127,7 +126,7 @@ describe('Tool Extraction Integration Tests', () => {
           content: {}
         })
 
-        assert.ok(errors.length > 0)
+        expect(errors.length).to.be.greaterThan(0)
       })
     })
 
@@ -157,11 +156,10 @@ describe('Tool Extraction Integration Tests', () => {
         const orphaned_calls = find_orphaned_tool_calls(timeline_entries)
         const orphaned_results = find_orphaned_tool_results(timeline_entries)
 
-        assert.strictEqual(orphaned_calls.length, 1)
-        assert.strictEqual(orphaned_calls[0].content.tool_call_id, 'call-2')
-        assert.strictEqual(orphaned_results.length, 1)
-        assert.strictEqual(
-          orphaned_results[0].content.tool_call_id,
+        expect(orphaned_calls.length).to.equal(1)
+        expect(orphaned_calls[0].content.tool_call_id).to.equal('call-2')
+        expect(orphaned_results.length).to.equal(1)
+        expect(orphaned_results[0].content.tool_call_id).to.equal(
           'call-orphaned'
         )
       })
@@ -182,11 +180,8 @@ describe('Tool Extraction Integration Tests', () => {
           tool_call_entry,
           tool_result_entry
         )
-        assert.strictEqual(linked, true)
-        assert.strictEqual(
-          tool_call_entry.content.execution_status,
-          'completed'
-        )
+        expect(linked).to.equal(true)
+        expect(tool_call_entry.content.execution_status).to.equal('completed')
       })
     })
 
@@ -242,18 +237,18 @@ describe('Tool Extraction Integration Tests', () => {
             provider_config
           )
 
-        assert.strictEqual(tool_calls.length, 1)
-        assert.strictEqual(tool_results.length, 1)
-        assert.strictEqual(tool_calls[0].content.tool_name, 'test_tool')
-        assert.strictEqual(tool_calls[0].content.tool_call_id, 'call-xyz')
-        assert.strictEqual(tool_results[0].content.tool_call_id, 'call-xyz')
+        expect(tool_calls.length).to.equal(1)
+        expect(tool_results.length).to.equal(1)
+        expect(tool_calls[0].content.tool_name).to.equal('test_tool')
+        expect(tool_calls[0].content.tool_call_id).to.equal('call-xyz')
+        expect(tool_results[0].content.tool_call_id).to.equal('call-xyz')
 
         // original 4 items -> 2 tool items replaced by summaries => still 4 items
-        assert.ok(Array.isArray(filtered_content))
-        assert.strictEqual(filtered_content.length, 4)
+        expect(Array.isArray(filtered_content)).to.be.true
+        expect(filtered_content.length).to.equal(4)
         // first and third positions remain text
-        assert.strictEqual(filtered_content[0].type, 'text')
-        assert.strictEqual(filtered_content[2].type, 'text')
+        expect(filtered_content[0].type).to.equal('text')
+        expect(filtered_content[2].type).to.equal('text')
       })
     })
   })
@@ -294,10 +289,10 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_calls = result.messages.filter(
           (msg) => msg.type === 'tool_call'
         )
-        assert.strictEqual(tool_calls.length, 1)
-        assert.strictEqual(tool_calls[0].content.tool_name, 'file_read')
-        assert.strictEqual(tool_calls[0].content.tool_call_id, 'tool-call-1')
-        assert.deepStrictEqual(tool_calls[0].content.tool_parameters, {
+        expect(tool_calls.length).to.equal(1)
+        expect(tool_calls[0].content.tool_name).to.equal('file_read')
+        expect(tool_calls[0].content.tool_call_id).to.equal('tool-call-1')
+        expect(tool_calls[0].content.tool_parameters).to.deep.equal({
           path: '/test/file.txt'
         })
       })
@@ -330,9 +325,9 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_results = result.messages.filter(
           (msg) => msg.type === 'tool_result'
         )
-        assert.strictEqual(tool_results.length, 1)
-        assert.strictEqual(tool_results[0].content.tool_call_id, 'tool-call-1')
-        assert.strictEqual(tool_results[0].content.result, 'File content here')
+        expect(tool_results.length).to.equal(1)
+        expect(tool_results[0].content.tool_call_id).to.equal('tool-call-1')
+        expect(tool_results[0].content.result).to.equal('File content here')
       })
 
       it('should extract tool_use with metadata format', () => {
@@ -371,13 +366,12 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_calls = result.messages.filter(
           (msg) => msg.type === 'tool_call'
         )
-        assert.strictEqual(tool_calls.length, 1)
-        assert.strictEqual(tool_calls[0].content.tool_name, 'TodoWrite')
-        assert.strictEqual(
-          tool_calls[0].content.tool_call_id,
+        expect(tool_calls.length).to.equal(1)
+        expect(tool_calls[0].content.tool_name).to.equal('TodoWrite')
+        expect(tool_calls[0].content.tool_call_id).to.equal(
           'toolu_01YCoW13nJZmDVQkzQids5ZN'
         )
-        assert.deepStrictEqual(tool_calls[0].content.tool_parameters, {
+        expect(tool_calls[0].content.tool_parameters).to.deep.equal({
           todos: []
         })
       })
@@ -416,9 +410,9 @@ describe('Tool Extraction Integration Tests', () => {
         )
 
         // Tool use should be filtered out, only text content should remain
-        assert.ok(Array.isArray(main_message.content))
-        assert.strictEqual(main_message.content.length, 1)
-        assert.strictEqual(main_message.content[0], 'I will use a tool.')
+        expect(Array.isArray(main_message.content)).to.be.true
+        expect(main_message.content.length).to.equal(1)
+        expect(main_message.content[0]).to.equal('I will use a tool.')
       })
     })
 
@@ -452,10 +446,10 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_calls = result.messages.filter(
           (msg) => msg.type === 'tool_call'
         )
-        assert.strictEqual(tool_calls.length, 1)
-        assert.strictEqual(tool_calls[0].content.tool_name, 'code_interpreter')
-        assert.strictEqual(tool_calls[0].content.tool_call_id, 'inv-1')
-        assert.deepStrictEqual(tool_calls[0].content.tool_parameters, {
+        expect(tool_calls.length).to.equal(1)
+        expect(tool_calls[0].content.tool_name).to.equal('code_interpreter')
+        expect(tool_calls[0].content.tool_call_id).to.equal('inv-1')
+        expect(tool_calls[0].content.tool_parameters).to.deep.equal({
           code: 'print("hello")'
         })
       })
@@ -491,9 +485,9 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_results = result.messages.filter(
           (msg) => msg.type === 'tool_result'
         )
-        assert.strictEqual(tool_results.length, 1)
-        assert.strictEqual(tool_results[0].content.tool_call_id, 'inv-1')
-        assert.strictEqual(tool_results[0].content.result, 'hello')
+        expect(tool_results.length).to.equal(1)
+        expect(tool_results[0].content.tool_call_id).to.equal('inv-1')
+        expect(tool_results[0].content.result).to.equal('hello')
       })
     })
 
@@ -517,8 +511,8 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_calls = result.messages.filter(
           (msg) => msg.type === 'tool_call'
         )
-        assert.strictEqual(tool_calls.length, 1)
-        assert.strictEqual(tool_calls[0].content.tool_name, 'code_interpreter')
+        expect(tool_calls.length).to.equal(1)
+        expect(tool_calls[0].content.tool_name).to.equal('code_interpreter')
       })
 
       it('should extract tool role messages as tool results', () => {
@@ -539,11 +533,8 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_results = result.messages.filter(
           (msg) => msg.type === 'tool_result'
         )
-        assert.strictEqual(tool_results.length, 1)
-        assert.strictEqual(
-          tool_results[0].content.result,
-          'Tool execution result'
-        )
+        expect(tool_results.length).to.equal(1)
+        expect(tool_results[0].content.result).to.equal('Tool execution result')
       })
     })
   })
@@ -615,12 +606,12 @@ describe('Tool Extraction Integration Tests', () => {
         thread_info
       )
 
-      assert.strictEqual(result.entry_count, 3)
-      assert.ok(result.tool_validation)
-      assert.strictEqual(result.tool_validation.tool_call_count, 1)
-      assert.strictEqual(result.tool_validation.tool_result_count, 1)
-      assert.strictEqual(result.tool_validation.linked_pairs_count, 1)
-      assert.strictEqual(result.tool_validation.linking_success_rate, 1)
+      expect(result.entry_count).to.equal(3)
+      expect(result.tool_validation).to.exist
+      expect(result.tool_validation.tool_call_count).to.equal(1)
+      expect(result.tool_validation.tool_result_count).to.equal(1)
+      expect(result.tool_validation.linked_pairs_count).to.equal(1)
+      expect(result.tool_validation.linking_success_rate).to.equal(1)
 
       // Verify timeline file was created
       const timeline_content = await fs.readFile(
@@ -632,16 +623,16 @@ describe('Tool Extraction Integration Tests', () => {
       const tool_call_entry = timeline.find(
         (entry) => entry.type === 'tool_call'
       )
-      assert.ok(tool_call_entry)
-      assert.strictEqual(tool_call_entry.content.tool_name, 'file_read')
-      assert.strictEqual(tool_call_entry.content.tool_call_id, 'call-1')
+      expect(tool_call_entry).to.exist
+      expect(tool_call_entry.content.tool_name).to.equal('file_read')
+      expect(tool_call_entry.content.tool_call_id).to.equal('call-1')
 
       const tool_result_entry = timeline.find(
         (entry) => entry.type === 'tool_result'
       )
-      assert.ok(tool_result_entry)
-      assert.strictEqual(tool_result_entry.content.tool_call_id, 'call-1')
-      assert.strictEqual(tool_result_entry.content.result, 'File contents here')
+      expect(tool_result_entry).to.exist
+      expect(tool_result_entry.content.tool_call_id).to.equal('call-1')
+      expect(tool_result_entry.content.result).to.equal('File contents here')
     })
 
     it('should detect orphaned tool calls and results', async () => {
@@ -682,10 +673,10 @@ describe('Tool Extraction Integration Tests', () => {
         thread_info
       )
 
-      assert.strictEqual(result.tool_validation.orphaned_calls.length, 1)
-      assert.strictEqual(result.tool_validation.orphaned_results.length, 1)
-      assert.strictEqual(result.tool_validation.linked_pairs_count, 0)
-      assert.strictEqual(result.tool_validation.linking_success_rate, 0)
+      expect(result.tool_validation.orphaned_calls.length).to.equal(1)
+      expect(result.tool_validation.orphaned_results.length).to.equal(1)
+      expect(result.tool_validation.linked_pairs_count).to.equal(0)
+      expect(result.tool_validation.linking_success_rate).to.equal(0)
     })
   })
 
@@ -703,20 +694,20 @@ describe('Tool Extraction Integration Tests', () => {
       })
 
       // Basic schema validation - entries should have required fields
-      assert.ok(tool_call.id)
-      assert.ok(tool_call.timestamp)
-      assert.strictEqual(tool_call.type, 'tool_call')
-      assert.ok(tool_call.content)
-      assert.ok(tool_call.content.tool_name)
-      assert.ok(tool_call.content.tool_call_id)
-      assert.ok(tool_call.content.tool_parameters)
+      expect(tool_call.id).to.exist
+      expect(tool_call.timestamp).to.exist
+      expect(tool_call.type).to.equal('tool_call')
+      expect(tool_call.content).to.exist
+      expect(tool_call.content.tool_name).to.exist
+      expect(tool_call.content.tool_call_id).to.exist
+      expect(tool_call.content.tool_parameters).to.exist
 
-      assert.ok(tool_result.id)
-      assert.ok(tool_result.timestamp)
-      assert.strictEqual(tool_result.type, 'tool_result')
-      assert.ok(tool_result.content)
-      assert.ok(tool_result.content.tool_call_id)
-      assert.ok(tool_result.content.result !== undefined)
+      expect(tool_result.id).to.exist
+      expect(tool_result.timestamp).to.exist
+      expect(tool_result.type).to.equal('tool_result')
+      expect(tool_result.content).to.exist
+      expect(tool_result.content.tool_call_id).to.exist
+      expect(tool_result.content.result).to.not.be.undefined
     })
   })
 
@@ -760,8 +751,8 @@ describe('Tool Extraction Integration Tests', () => {
       const result = normalize_claude_session(claude_session)
 
       // Should only have message entries, no tool entries
-      assert.strictEqual(result.messages.length, 2)
-      assert.ok(result.messages.every((msg) => msg.type === 'message'))
+      expect(result.messages.length).to.equal(2)
+      expect(result.messages.every((msg) => msg.type === 'message')).to.be.true
     })
 
     it('should maintain existing message structure', () => {
@@ -806,15 +797,15 @@ describe('Tool Extraction Integration Tests', () => {
         (msg) => msg.type === 'tool_call'
       )
 
-      assert.strictEqual(message_entries.length, 1)
-      assert.strictEqual(tool_entries.length, 1)
+      expect(message_entries.length).to.equal(1)
+      expect(tool_entries.length).to.equal(1)
 
       // Message content should have tool_use filtered out
       const message_content = message_entries[0].content
-      assert.ok(Array.isArray(message_content))
-      assert.strictEqual(message_content.length, 2)
-      assert.strictEqual(message_content[0], 'I will help you.')
-      assert.strictEqual(message_content[1], 'Tool completed successfully.')
+      expect(Array.isArray(message_content)).to.be.true
+      expect(message_content.length).to.equal(2)
+      expect(message_content[0]).to.equal('I will help you.')
+      expect(message_content[1]).to.equal('Tool completed successfully.')
     })
   })
 })
