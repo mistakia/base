@@ -6,6 +6,7 @@ import { promisify } from 'util'
 import child_process from 'child_process'
 
 import server from '#server'
+import user_registry from '#libs-server/users/user-registry.mjs'
 import {
   reset_all_tables,
   create_test_user,
@@ -27,6 +28,13 @@ describe('Git API', () => {
     await reset_all_tables()
     test_user = await create_test_user()
 
+    // Git operations require global_write permission for staging/committing
+    const users = await user_registry.load_users()
+    if (users[test_user.user_public_key]) {
+      users[test_user.user_public_key].permissions.global_write = true
+      await user_registry.save_users(users)
+    }
+
     // Set up temporary repo for git operations
     test_repo = await create_temp_test_repo()
 
@@ -47,6 +55,18 @@ describe('Git API', () => {
     }
 
     await reset_all_tables()
+  })
+
+  // Reset repo to clean state before each test to prevent contamination
+  beforeEach(async () => {
+    if (test_repo) {
+      // Reset any unstaged changes
+      await exec('git checkout -- .', { cwd: test_repo.user_path }).catch(
+        () => {}
+      )
+      // Remove untracked files
+      await exec('git clean -fd', { cwd: test_repo.user_path }).catch(() => {})
+    }
   })
 
   describe('GET /api/git/status', () => {
@@ -81,7 +101,8 @@ describe('Git API', () => {
       )
 
       expect(res).to.have.status(200)
-      expect(res.body.untracked).to.include('untracked.txt')
+      expect(res.body.untracked.some((f) => f.path === 'untracked.txt')).to.be
+        .true
 
       // Clean up
       await fs.unlink(untracked_file)
@@ -215,7 +236,8 @@ describe('Git API', () => {
 
       expect(status_res.body.staged.some((f) => f.path === 'to-unstage.txt')).to
         .be.false
-      expect(status_res.body.untracked).to.include('to-unstage.txt')
+      expect(status_res.body.untracked.some((f) => f.path === 'to-unstage.txt'))
+        .to.be.true
 
       // Clean up
       await fs.unlink(test_file)
@@ -250,7 +272,8 @@ describe('Git API', () => {
       )
 
       expect(status_res.body.staged).to.have.length(0)
-      expect(status_res.body.untracked).to.not.include('to-commit.txt')
+      expect(status_res.body.untracked.some((f) => f.path === 'to-commit.txt'))
+        .to.be.false
     })
 
     it('should return 400 for missing message', async () => {
@@ -283,8 +306,8 @@ describe('Git API', () => {
 
       expect(res).to.have.status(200)
       expect(res.body).to.be.an('object')
-      expect(res.body.diff).to.be.a('string')
-      expect(res.body.diff).to.include('Changed README')
+      expect(res.body.diff_text).to.be.a('string')
+      expect(res.body.diff_text).to.include('Changed README')
 
       // Reset the file
       await fs.writeFile(readme_path, original_content)
@@ -299,7 +322,7 @@ describe('Git API', () => {
       )
 
       expect(res).to.have.status(200)
-      expect(res.body.diff).to.equal('')
+      expect(res.body.diff_text).to.equal('')
     })
   })
 
@@ -396,13 +419,15 @@ describe('Git API', () => {
   })
 
   describe('Authentication', () => {
-    it('should return 401 for unauthenticated request', async () => {
+    it('should return 403 for unauthenticated request without public permissions', async () => {
       const res = await chai
         .request(server)
         .get('/api/git/status')
         .query({ repo_path: test_repo.user_path })
 
-      expect(res).to.have.status(401)
+      // Returns 403 (Forbidden) because no permission rules allow public access
+      // This is distinct from 401 (Unauthorized) which means "authentication required"
+      expect(res).to.have.status(403)
     })
   })
 })

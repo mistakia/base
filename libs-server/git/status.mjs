@@ -19,7 +19,9 @@ function parse_porcelain_status(porcelain_output) {
     return { staged, unstaged, untracked, conflicts }
   }
 
-  const lines = porcelain_output.trim().split('\n')
+  // Use trimEnd() to preserve leading whitespace which is significant in git status
+  // The first character of each line indicates index status (space = not staged)
+  const lines = porcelain_output.trimEnd().split('\n')
 
   for (const line of lines) {
     if (line.length < 4) continue

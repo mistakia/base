@@ -37,13 +37,18 @@ export default async function create_user({
     updated_at: new Date().toISOString()
   }
 
-  // Add user to registry for testing purposes
+  // Add user to registry with permissions for accessing resources
+  // Users get read access to user and system resources via pattern rules
+  // Write access is ownership-based by default (no global_write)
   const users = await user_registry.load_users()
   users[user_public_key.toString('hex')] = {
     username,
     created_at: new Date().toISOString(),
     permissions: {
-      rules: [{ action: 'allow', pattern: 'is_owner' }]
+      rules: [
+        { action: 'allow', pattern: 'user:**' },
+        { action: 'allow', pattern: 'sys:**' }
+      ]
     }
   }
   await user_registry.save_users(users)
