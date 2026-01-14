@@ -111,6 +111,11 @@ function extract_metadata_text(metadata) {
     parts.push(metadata.title)
   }
 
+  // Short description
+  if (metadata.short_description) {
+    parts.push(metadata.short_description)
+  }
+
   // Working directory
   if (metadata.external_session?.provider_metadata?.working_directory) {
     parts.push(metadata.external_session.provider_metadata.working_directory)
