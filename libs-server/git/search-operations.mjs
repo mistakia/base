@@ -100,19 +100,19 @@ export async function search_repository({
 }) {
   try {
     const case_option = case_sensitive ? '' : '-i'
-    const path_filter = path ? `-- ${quote_path(path)}` : ''
+    // Use -- to separate revision from paths to avoid ambiguity when branch names
+    // match directory names (e.g., thread/xxx branch with a thread/ directory)
+    const path_filter = path ? quote_path(path) : ''
 
+    const cmd = `git grep ${case_option} -n -I --no-color -e ${quote_arg(query)} ${quote_arg(git_ref)} -- ${path_filter}`
     log(
       `Searching for "${query}" in reference "${git_ref}" in ${repo_path} ${path ? `with path filter ${path}` : ''}`
     )
 
-    const { stdout } = await execute_shell_command(
-      `git grep ${case_option} -n -I --no-color -e ${quote_arg(query)} ${quote_arg(git_ref)} ${path_filter}`,
-      {
-        cwd: repo_path,
-        maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large results
-      }
-    )
+    const { stdout } = await execute_shell_command(cmd, {
+      cwd: repo_path,
+      maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large results
+    })
 
     // Parse results
     const results = stdout
