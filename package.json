@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start:api\"",
     "start": "node cli/dev-server.mjs",
-    "start:api": "nodemon services/server.mjs",
+    "start:api": "NODE_OPTIONS='--max-old-space-size=8192' nodemon services/server.mjs",
     "lint": "eslint . --ext js,mjs --ignore-pattern build",
     "prettier": "prettier --write .",
     "find-large-files": "node cli/find-large-files.mjs",
