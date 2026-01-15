@@ -12,6 +12,7 @@ import {
   format_shorthand_time,
   format_shorthand_number
 } from '@views/utils/date-formatting.js'
+import { THREAD_STATE } from '#libs-shared/thread-constants.mjs'
 
 // Column group definitions
 const COLUMN_GROUPS = {
@@ -241,7 +242,7 @@ export const thread_columns = {
     header_label: '',
     accessorKey: 'session_provider',
     component: ProviderCell,
-    data_type: TABLE_DATA_TYPES.TEXT,
+    data_type: TABLE_DATA_TYPES.SELECT,
     operators: [
       TABLE_OPERATORS.EQUAL,
       TABLE_OPERATORS.NOT_EQUAL,
@@ -250,6 +251,7 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
+    column_values: ['claude', 'cursor', 'openai'],
     size: 40,
     minSize: 40,
     maxSize: 80
@@ -266,6 +268,7 @@ export const thread_columns = {
       TABLE_OPERATORS.IN,
       TABLE_OPERATORS.NOT_IN
     ],
+    column_values: Object.values(THREAD_STATE),
     size: 50,
     minSize: 40,
     maxSize: 60
