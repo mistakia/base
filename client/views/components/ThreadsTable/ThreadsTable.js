@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
@@ -11,7 +12,7 @@ import {
 } from '@core/threads/selectors.js'
 import './ThreadsTable.styl'
 
-const ThreadsTable = () => {
+const ThreadsTable = ({ on_view_select }) => {
   const dispatch = useDispatch()
   const table_props = useSelector(get_threads_table_props)
   const available_views = useSelector(get_thread_table_views)
@@ -35,6 +36,10 @@ const ThreadsTable = () => {
   }
 
   const handle_select_view = (view_id) => {
+    // Navigate to URL if callback provided
+    if (on_view_select) {
+      on_view_select(view_id)
+    }
     dispatch(threads_actions.select_thread_table_view({ view_id }))
     dispatch(threads_actions.load_threads_table({ view_id }))
   }
@@ -81,6 +86,10 @@ const ThreadsTable = () => {
       />
     </div>
   )
+}
+
+ThreadsTable.propTypes = {
+  on_view_select: PropTypes.func
 }
 
 export default ThreadsTable

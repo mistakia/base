@@ -16,7 +16,7 @@ const ThreadPage = ({
   select_thread,
   clear_selected_thread
 }) => {
-  const { id } = useParams()
+  const { view_id: id } = useParams()
   const thread_data_js = thread_data?.toJS ? thread_data.toJS() : thread_data
   const page_meta = use_page_meta({
     thread_data: thread_data_js,

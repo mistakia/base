@@ -4,7 +4,6 @@ import { Routes as RouterRoutes, Route } from 'react-router-dom'
 import Homepage from '@pages/Homepage/index.js'
 import DirectoryPage from '@pages/DirectoryPage/index.js'
 import ThreadsPage from '@pages/ThreadsPage.js'
-import ThreadPage from '@pages/ThreadPage/index.js'
 import TasksPage from '@pages/TasksPage.js'
 
 const Routes = () => {
@@ -14,11 +13,11 @@ const Routes = () => {
       <Route path='/' element={<Homepage />} />
 
       {/* Threads routes */}
-      <Route path='/thread' element={<ThreadsPage />} />
-      <Route path='/thread/:id' element={<ThreadPage />} />
+      {/* ThreadsPage handles list views - checks if param is a known view slug */}
+      <Route path='/thread/:view_id?' element={<ThreadsPage />} />
 
       {/* Tasks routes */}
-      <Route path='/task' element={<TasksPage />} />
+      <Route path='/task/:view_id?' element={<TasksPage />} />
 
       {/* Fallback to directory page for unmatched paths */}
       <Route path='/*' element={<DirectoryPage />} />

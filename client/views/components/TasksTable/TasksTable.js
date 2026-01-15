@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react'
+import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
@@ -14,7 +15,7 @@ import {
 import '@styles/tasks.styl'
 import './TasksTable.styl'
 
-const TasksTable = () => {
+const TasksTable = ({ on_view_select }) => {
   const dispatch = useDispatch()
   const table_props = useSelector(get_tasks_table_props)
   const available_views = useSelector(get_task_table_views)
@@ -66,9 +67,13 @@ const TasksTable = () => {
     )
   }
 
-  const select_view = (viewId) => {
-    dispatch(tasks_actions.select_task_table_view({ view_id: viewId }))
-    dispatch(tasks_actions.load_tasks_table({ view_id: viewId }))
+  const select_view = (view_id) => {
+    // Navigate to URL if callback provided
+    if (on_view_select) {
+      on_view_select(view_id)
+    }
+    dispatch(tasks_actions.select_task_table_view({ view_id }))
+    dispatch(tasks_actions.load_tasks_table({ view_id }))
   }
   if (table_error) {
     return <div className='tasks-table-error'>{table_error}</div>
@@ -98,6 +103,10 @@ const TasksTable = () => {
       />
     </div>
   )
+}
+
+TasksTable.propTypes = {
+  on_view_select: PropTypes.func
 }
 
 export default TasksTable
