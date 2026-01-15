@@ -18,9 +18,11 @@ const CollapsibleEventGroup = ({
   const [expanded, set_expanded] = useState(false)
 
   const handle_expand = () => {
-    if (mode === 'default' && onExpand) {
-      // Default mode: switch to notable events view
-      onExpand()
+    if (mode === 'default') {
+      // Default mode: switch to notable events view (no-op if no callback)
+      if (onExpand) {
+        onExpand()
+      }
     } else {
       // Notable events mode: expand this section inline
       set_expanded(true)
@@ -41,39 +43,26 @@ const CollapsibleEventGroup = ({
   // Determine collapsed button text based on mode
   const collapsed_text =
     mode === 'default'
-      ? 'show hidden events'
-      : `show ${event_count} hidden ${event_count === 1 ? 'event' : 'events'}`
+      ? 'show hidden events >'
+      : `show ${event_count} hidden ${event_count === 1 ? 'event' : 'events'} >`
 
   return (
     <Box className='collapsible-event-group'>
-      <Box
-        className='collapsed-container'
+      <Typography
+        className='collapsed-text'
+        component='div'
         onClick={handle_expand}
         sx={{
-          border: '1px solid var(--color-border)',
-          borderRadius: 1,
-          padding: '4px 16px',
-          margin: '16px 0',
-          fontSize: 'var(--font-size-sm)',
+          display: 'block',
+          padding: '8px 0',
+          margin: '8px 0',
           cursor: 'pointer',
-          backgroundColor: 'var(--color-surface)',
-          position: 'relative',
-          transition: 'background-color 0.2s',
-          '&:hover': {
-            backgroundColor: 'var(--color-surface-hover)'
-          }
+          color: 'var(--color-text-tertiary)',
+          fontSize: '0.75rem',
+          textAlign: 'left'
         }}>
-        <Typography
-          className='collapsed-text'
-          variant='body2'
-          sx={{
-            textAlign: 'center',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.875rem'
-          }}>
-          {collapsed_text}
-        </Typography>
-      </Box>
+        {collapsed_text}
+      </Typography>
     </Box>
   )
 }
