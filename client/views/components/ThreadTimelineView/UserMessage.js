@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import '@styles/chip.styl'
 import './UserMessage.styl'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
+import ExpandToggle from '@components/primitives/ExpandToggle'
 import {
   clean_trailing_backslashes,
   process_message_content
@@ -74,10 +75,10 @@ const parse_command_from_content = ({ content_string }) => {
 const UserMessage = ({ message, working_directory = null }) => {
   const [is_user_message_expanded, set_is_user_message_expanded] =
     useState(false)
-  const on_toggle = useCallback(
-    () => set_is_user_message_expanded((v) => !v),
-    []
-  )
+  const on_toggle = useCallback((e) => {
+    e.stopPropagation()
+    set_is_user_message_expanded((v) => !v)
+  }, [])
 
   const { content: content_processed } = process_message_content({
     content: message.content,
@@ -102,10 +103,18 @@ const UserMessage = ({ message, working_directory = null }) => {
       : content
 
   return (
-    <div
-      className={`user-message${should_truncate ? ' user-message--clickable' : ''}`}
-      onClick={should_truncate ? on_toggle : undefined}>
-      <span className='chip user-message__chip'>user</span>
+    <div className='user-message'>
+      <div className='user-message__header'>
+        {should_truncate && (
+          <ExpandToggle
+            is_expanded={is_user_message_expanded}
+            on_toggle={on_toggle}
+            expanded_label='Collapse'
+            collapsed_label='Expand'
+          />
+        )}
+        <span className='chip user-message__chip'>user</span>
+      </div>
       <div
         className={`user-message__content${should_truncate ? ' user-message__content--truncated' : ''}`}>
         {is_command ? (
@@ -137,11 +146,6 @@ const UserMessage = ({ message, working_directory = null }) => {
           </div>
         )}
       </div>
-      {should_truncate && (
-        <span className='user-message__toggle'>
-          {is_user_message_expanded ? 'Show less' : 'Show more'}
-        </span>
-      )}
     </div>
   )
 }

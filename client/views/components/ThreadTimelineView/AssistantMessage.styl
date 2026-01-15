@@ -5,6 +5,16 @@
   width 100%
   overflow hidden
   background-color $color_white
+  position relative
+
+.assistant-message__header
+  position absolute
+  top 8px
+  right 8px
+  z-index 1
+  display flex
+  align-items center
+  gap 4px
 
 .assistant-message__content
   font-family $font_family_mono
@@ -14,6 +24,7 @@
   white-space pre-wrap
   word-break break-word
   margin 0
+  padding-top $space_lg
     
   &--reasoning
     font-style italic

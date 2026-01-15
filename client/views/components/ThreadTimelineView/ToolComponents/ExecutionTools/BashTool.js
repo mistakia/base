@@ -77,14 +77,15 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
         }}>
         <Box
           sx={{
-            p: 2,
             bgcolor: COLORS.terminal_bg
           }}>
           <Box
             sx={{
               display: 'flex',
               alignItems: 'flex-start',
-              mb: execution_result?.has_output ? 1 : 0
+              mb: execution_result?.has_output ? 1 : 0,
+              px: 2,
+              pt: 2
             }}>
             <MonospaceText
               variant='xs'
@@ -133,7 +134,12 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
             )}
           </Box>
           {execution_result?.has_output && (
-            <Box sx={{ mt: 1 }}>
+            <Box
+              sx={{
+                mt: 1,
+                px: 2,
+                borderTop: `1px solid ${COLORS.terminal_border}`
+              }}>
               <MonospaceText
                 variant='xs'
                 component='pre'
@@ -146,9 +152,9 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
                   fontSize: '13px',
                   lineHeight: 1.4,
                   maxHeight: '200px',
-                  overflowY: 'auto',
-                  borderTop: `1px solid ${COLORS.terminal_border}`,
-                  pt: 1
+                  pt: 1,
+                  pb: 1,
+                  overflowY: 'auto'
                 }}>
                 {execution_result.output}
               </MonospaceText>

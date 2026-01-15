@@ -16,21 +16,16 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
   word-break: break-word
   overflow: hidden
 
-  &--clickable
-    cursor: pointer
-    transition: background-color $transition_fast
-
-    &:hover
-      background-color: darken($user_message_bg, 4%)
-
-      .user-message__toggle
-        color: $color_text
-
-.user-message__chip
+.user-message__header
   position: absolute
   top: 8px
   right: 8px
   z-index: 1
+  display: flex
+  align-items: center
+  gap: 4px
+
+.user-message__chip
   text-transform: uppercase
   background: darken($user_message_bg, 6%)
   border-color: darken($user_message_bg, 6%)
@@ -41,7 +36,8 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
 
 .user-message__content
   margin-bottom: 0
-  
+  padding-top: $space_lg
+
   &--truncated
     margin-bottom: $space_sm
 
@@ -82,30 +78,3 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
 .user-message__command-message-text
   white-space: normal
   word-break: break-word
-
-.user-message__toggle
-  // Minimal, brutalist-style button
-  background: none
-  border: none
-  color: $color_text_secondary
-  font-size: $font_size_sm
-  font-family: $font_family_mono
-  font-weight: $font_weight_medium
-  cursor: pointer
-  padding: 0
-  margin: 0
-  text-decoration: none
-  letter-spacing: 0.5px
-  text-transform: uppercase
-  user-select: none
-  
-  // Subtle interaction states
-  transition: color $transition_fast
-  
-  &:focus
-    outline: 1px solid $color_border
-    outline-offset: 2px
-  
-  // Remove browser button styles
-  -webkit-appearance: none
-  -moz-appearance: none

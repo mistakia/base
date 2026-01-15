@@ -1,0 +1,31 @@
+// =====================================================
+// EXPAND TOGGLE COMPONENT STYLES
+// =====================================================
+// Consolidated expand/collapse toggle styling for the design system.
+// Use with the ExpandToggle primitive component.
+
+// =====================================================
+// BASE TOGGLE
+// =====================================================
+
+.expand-toggle
+  display: inline-flex
+  align-items: center
+  gap: 2px
+  padding: 2px 6px
+  border: none
+  background: transparent
+  color: $color_primary
+  font-size: $font_size_xs
+  font-family: $font_family_mono
+  cursor: pointer
+  border-radius: $radius_sm
+  transition: background $transition_fast
+  white-space: nowrap
+
+  &:hover
+    background: rgba(0, 0, 0, 0.05)
+
+  &:focus
+    outline: 1px solid $color_border
+    outline-offset: 2px
