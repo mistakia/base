@@ -144,7 +144,7 @@
     "react-immutable-proptypes": "^2.2.0",
     "react-redux": "8.1.3",
     "react-router-dom": "6.30.0",
-    "react-table": "mistakia/react-table#4454c8f6123780ec57807075b600a4ee7c3d77da",
+    "react-table": "mistakia/react-table#a82a3dd2d7c6e2b86c0901417984164a9f0ed118",
     "redux": "4.2.1",
     "redux-first-history": "5.2.0",
     "redux-immutable": "^4.0.0",

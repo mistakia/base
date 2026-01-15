@@ -102,6 +102,75 @@ const PRIORITY_CASE_EXPRESSION = `
     ELSE 0
   END`
 
+/**
+ * Combine base WHERE clause with additional conditions
+ * Handles the logic of appending AND or creating new WHERE clause
+ */
+function combine_where_clauses({ base_where, additional_condition }) {
+  if (!additional_condition) return base_where
+  if (base_where) return `${base_where} AND ${additional_condition}`
+  return `WHERE ${additional_condition}`
+}
+
+/**
+ * Separate tag filters from regular filters and build tag conditions
+ * Returns tag conditions SQL/parameters and the remaining regular filters
+ */
+function separate_and_build_tag_filters({ filters }) {
+  const tag_filters = filters.filter((f) => f.column_id === 'tags')
+  const regular_filters = filters.filter((f) => f.column_id !== 'tags')
+
+  if (tag_filters.length === 0) {
+    return {
+      tag_conditions: { sql: '', parameters: [] },
+      regular_filters
+    }
+  }
+
+  const conditions = []
+  const parameters = []
+
+  for (const filter of tag_filters) {
+    const { operator, value } = filter
+
+    if (operator === 'IN' && Array.isArray(value) && value.length > 0) {
+      // Task has at least one of the specified tags
+      const placeholders = value.map(() => '?').join(', ')
+      conditions.push(
+        `EXISTS (SELECT 1 FROM entity_tags et_filter WHERE et_filter.entity_base_uri = t.base_uri AND et_filter.tag_base_uri IN (${placeholders}))`
+      )
+      parameters.push(...value)
+    } else if (
+      operator === 'NOT IN' &&
+      Array.isArray(value) &&
+      value.length > 0
+    ) {
+      // Task has none of the specified tags
+      const placeholders = value.map(() => '?').join(', ')
+      conditions.push(
+        `NOT EXISTS (SELECT 1 FROM entity_tags et_filter WHERE et_filter.entity_base_uri = t.base_uri AND et_filter.tag_base_uri IN (${placeholders}))`
+      )
+      parameters.push(...value)
+    } else if (operator === 'IS_EMPTY') {
+      // Task has no tags
+      conditions.push(
+        `NOT EXISTS (SELECT 1 FROM entity_tags et_filter WHERE et_filter.entity_base_uri = t.base_uri)`
+      )
+    } else if (operator === 'IS_NOT_EMPTY') {
+      // Task has at least one tag
+      conditions.push(
+        `EXISTS (SELECT 1 FROM entity_tags et_filter WHERE et_filter.entity_base_uri = t.base_uri)`
+      )
+    }
+  }
+
+  const sql = conditions.length > 0 ? conditions.join(' AND ') : ''
+  return {
+    tag_conditions: { sql, parameters },
+    regular_filters
+  }
+}
+
 export function build_duckdb_order_clause({ sort }) {
   if (!sort || sort.length === 0) {
     return ''
@@ -130,17 +199,33 @@ export async function query_tasks_from_duckdb({
 }) {
   log('Querying tasks from DuckDB')
 
-  const { where_sql, parameters } = build_duckdb_where_clause({ filters })
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters
+  })
   const order_sql = build_duckdb_order_clause({ sort })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
 
   const query = `
     SELECT
-      entity_id, base_uri, title, status, priority, description,
-      created_at, updated_at, start_by, finish_by,
-      planned_start, planned_finish, started_at, finished_at,
-      snooze_until, estimated_total_duration, archived, user_public_key
-    FROM tasks
-    ${where_sql}
+      t.entity_id, t.base_uri, t.title, t.status, t.priority, t.description,
+      t.created_at, t.updated_at, t.start_by, t.finish_by,
+      t.planned_start, t.planned_finish, t.started_at, t.finished_at,
+      t.snooze_until, t.estimated_total_duration, t.archived, t.user_public_key,
+      STRING_AGG(et.tag_base_uri, '||') AS tags_aggregated
+    FROM tasks t
+    LEFT JOIN entity_tags et ON et.entity_base_uri = t.base_uri
+    ${final_where}
+    GROUP BY
+      t.entity_id, t.base_uri, t.title, t.status, t.priority, t.description,
+      t.created_at, t.updated_at, t.start_by, t.finish_by,
+      t.planned_start, t.planned_finish, t.started_at, t.finished_at,
+      t.snooze_until, t.estimated_total_duration, t.archived, t.user_public_key
     ${order_sql}
     LIMIT ? OFFSET ?
   `
@@ -148,11 +233,19 @@ export async function query_tasks_from_duckdb({
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, limit, offset]
+      parameters: [...parameters, ...tag_conditions.parameters, limit, offset]
     })
 
-    log('Found %d tasks', results.length)
-    return results
+    // Parse tags_aggregated string into array (inline)
+    const tasks_with_tags = results.map((task) => ({
+      ...task,
+      tags: task.tags_aggregated
+        ? task.tags_aggregated.split('||').filter(Boolean)
+        : []
+    }))
+
+    log('Found %d tasks', tasks_with_tags.length)
+    return tasks_with_tags
   } catch (error) {
     log('Error querying tasks: %s', error.message)
     throw error
@@ -202,12 +295,25 @@ export async function query_threads_from_duckdb({
 export async function count_tasks_in_duckdb({ connection, filters = [] }) {
   log('Counting tasks in DuckDB')
 
-  const { where_sql, parameters } = build_duckdb_where_clause({ filters })
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters
+  })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
 
-  const query = `SELECT COUNT(*) as count FROM tasks ${where_sql}`
+  // Use alias 't' for tasks table to match tag filter conditions
+  const query = `SELECT COUNT(*) as count FROM tasks t ${final_where}`
 
   try {
-    const results = await execute_duckdb_query({ query, parameters })
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...tag_conditions.parameters]
+    })
     const count_value = results[0]?.count
     // Convert BigInt to Number if necessary
     const count =

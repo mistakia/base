@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
@@ -7,7 +7,8 @@ import { tasks_actions } from '@core/tasks/actions.js'
 import {
   get_tasks_table_props,
   get_task_table_views,
-  get_selected_task_table_view
+  get_selected_task_table_view,
+  get_available_tags_for_filter
 } from '@core/tasks/selectors.js'
 
 import '@styles/tasks.styl'
@@ -18,6 +19,12 @@ const TasksTable = () => {
   const table_props = useSelector(get_tasks_table_props)
   const available_views = useSelector(get_task_table_views)
   const selected_view = useSelector(get_selected_task_table_view)
+  const available_tags = useSelector(get_available_tags_for_filter)
+
+  // Load available tags on mount
+  useEffect(() => {
+    dispatch(tasks_actions.load_available_tags())
+  }, [dispatch])
   const {
     data = [],
     table_state = {},
@@ -30,6 +37,21 @@ const TasksTable = () => {
     total_rows_fetched = 0,
     table_error = null
   } = table_props
+
+  // Merge available tags into column definitions
+  const columns_with_tags = useMemo(() => {
+    const base_columns =
+      Object.keys(all_columns).length > 0 ? all_columns : task_columns
+    if (!base_columns.tags) return base_columns
+
+    return {
+      ...base_columns,
+      tags: {
+        ...base_columns.tags,
+        column_values: available_tags
+      }
+    }
+  }, [all_columns, available_tags])
 
   const handle_view_change = (view) => {
     dispatch(tasks_actions.update_task_table_view({ view }))
@@ -56,9 +78,7 @@ const TasksTable = () => {
     <div className='tasks-table-container'>
       <Table
         data={data}
-        all_columns={
-          Object.keys(all_columns).length > 0 ? all_columns : task_columns
-        }
+        all_columns={columns_with_tags}
         table_state={table_state}
         views={available_views}
         selected_view={selected_view}

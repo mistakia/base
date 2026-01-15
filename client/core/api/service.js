@@ -52,6 +52,10 @@ export const api = {
     const url = `${API_URL}/tasks`
     return { url }
   },
+  get_available_tags() {
+    const url = `${API_URL}/tags`
+    return { url }
+  },
   get_tasks_table(params) {
     const url = `${API_URL}/tasks/table`
     return { url, ...POST(params) }

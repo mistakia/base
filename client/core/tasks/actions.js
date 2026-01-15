@@ -3,14 +3,17 @@ import { create_api_action_types, create_api_actions } from '@core/utils'
 const GET_TASKS = 'GET_TASKS'
 const GET_TASKS_TABLE = 'GET_TASKS_TABLE'
 const PATCH_TASK = 'PATCH_TASK'
+const GET_AVAILABLE_TAGS = 'GET_AVAILABLE_TAGS'
 
 export const tasks_action_types = {
   ...create_api_action_types(GET_TASKS),
   ...create_api_action_types(GET_TASKS_TABLE),
   ...create_api_action_types(PATCH_TASK),
+  ...create_api_action_types(GET_AVAILABLE_TAGS),
 
   LOAD_TASKS: 'LOAD_TASKS',
   LOAD_TASKS_TABLE: 'LOAD_TASKS_TABLE',
+  LOAD_AVAILABLE_TAGS: 'LOAD_AVAILABLE_TAGS',
 
   // Table view management actions
   UPDATE_TASK_TABLE_VIEW: 'UPDATE_TASK_TABLE_VIEW',
@@ -24,6 +27,7 @@ export const tasks_action_types = {
 export const get_tasks_actions = create_api_actions(GET_TASKS)
 export const get_tasks_table_actions = create_api_actions(GET_TASKS_TABLE)
 export const patch_task_actions = create_api_actions(PATCH_TASK)
+export const get_available_tags_actions = create_api_actions(GET_AVAILABLE_TAGS)
 
 export const tasks_actions = {
   load_tasks: () => ({
@@ -59,5 +63,9 @@ export const tasks_actions = {
   revert_task_update: ({ base_uri, property_name, previous_value }) => ({
     type: tasks_action_types.REVERT_TASK_UPDATE,
     payload: { base_uri, property_name, previous_value }
+  }),
+
+  load_available_tags: () => ({
+    type: tasks_action_types.LOAD_AVAILABLE_TAGS
   })
 }

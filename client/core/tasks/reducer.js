@@ -18,6 +18,7 @@ const DEFAULT_TASK_TABLE_STATE = create_default_table_state({
     'title',
     'status',
     'priority',
+    'tags',
     'finish_by',
     'assigned_to',
     'created_at',
@@ -43,6 +44,7 @@ const DEFAULT_VIEWS = {
         'title',
         'status',
         'priority',
+        'tags',
         'finish_by',
         'assigned_to',
         'created_at',
@@ -70,6 +72,7 @@ const DEFAULT_VIEWS = {
         'title',
         'status',
         'priority',
+        'tags',
         'finish_by',
         'assigned_to',
         'created_at',
@@ -94,6 +97,7 @@ const DEFAULT_VIEWS = {
         'title',
         'status',
         'priority',
+        'tags',
         'finish_by',
         'assigned_to',
         'created_at',
@@ -117,6 +121,11 @@ const TasksState = new Record({
   tag_visibility: new Map(),
   is_loading_tasks: false,
   tasks_error: null,
+
+  // Available tags for filter dropdown
+  available_tags: new List(),
+  is_loading_available_tags: false,
+  available_tags_error: null,
 
   // Table views management
   task_table_views: new Map(DEFAULT_VIEWS),
@@ -149,6 +158,28 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
       return state.merge({
         is_loading_tasks: false,
         tasks_error: payload.error
+      })
+
+    // Available tags actions
+    case tasks_action_types.GET_AVAILABLE_TAGS_PENDING:
+      return state.merge({
+        is_loading_available_tags: true,
+        available_tags_error: null
+      })
+
+    case tasks_action_types.GET_AVAILABLE_TAGS_FULFILLED: {
+      const tags = Array.isArray(payload.data) ? payload.data : []
+      return state.merge({
+        available_tags: new List(tags),
+        is_loading_available_tags: false,
+        available_tags_error: null
+      })
+    }
+
+    case tasks_action_types.GET_AVAILABLE_TAGS_FAILED:
+      return state.merge({
+        is_loading_available_tags: false,
+        available_tags_error: payload.error
       })
 
     // Table view management actions

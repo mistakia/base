@@ -72,3 +72,27 @@ export const get_tasks_table_props = createSelector(
     })
   }
 )
+
+/**
+ * Get available tags formatted for column filter dropdown
+ * Returns array of { label: string, value: string, color: string } objects
+ */
+export const get_available_tags_for_filter = createSelector(
+  [get_tasks_state],
+  (tasks_state) => {
+    const available_tags = tasks_state.get('available_tags')
+    if (!available_tags) return []
+
+    return available_tags
+      .map((tag) => ({
+        label: tag.title || tag.base_uri,
+        value: tag.base_uri,
+        color: tag.color || null
+      }))
+      .toArray()
+  }
+)
+
+export function get_is_loading_available_tags(state) {
+  return get_tasks_state(state).get('is_loading_available_tags')
+}

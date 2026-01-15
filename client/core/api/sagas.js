@@ -5,7 +5,8 @@ import { api, api_request } from '@core/api/service'
 import {
   get_tasks_actions,
   get_tasks_table_actions,
-  patch_task_actions
+  patch_task_actions,
+  get_available_tags_actions
 } from '@core/tasks/actions'
 import {
   get_user_request_actions,
@@ -119,6 +120,11 @@ export const delete_database_view = fetch.bind(
 )
 export const get_tasks = fetch.bind(null, api.get_tasks, get_tasks_actions)
 export const patch_task = fetch.bind(null, api.patch_task, patch_task_actions)
+export const get_available_tags = fetch.bind(
+  null,
+  api.get_available_tags,
+  get_available_tags_actions
+)
 
 export const get_threads = fetch.bind(
   null,

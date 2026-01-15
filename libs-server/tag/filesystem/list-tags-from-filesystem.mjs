@@ -64,6 +64,7 @@ export async function list_tags_from_filesystem({
         // Build the tag object
         const tag = {
           tag_entity_id: entity_properties.entity_id,
+          base_uri: entity_properties.base_uri,
           title: entity_properties.title,
           description: entity_properties.description,
           user_public_key: entity_properties.user_public_key,

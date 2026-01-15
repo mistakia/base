@@ -7,7 +7,12 @@ import {
   put
 } from 'redux-saga/effects'
 
-import { get_tasks, get_tasks_table, patch_task } from '@core/api/sagas'
+import {
+  get_tasks,
+  get_tasks_table,
+  patch_task,
+  get_available_tags
+} from '@core/api/sagas'
 import { tasks_action_types, tasks_actions } from './actions'
 import { get_tasks_state } from './selectors'
 
@@ -115,6 +120,10 @@ export function* handle_patch_task_failed({ payload }) {
   }
 }
 
+export function* load_available_tags() {
+  yield call(get_available_tags, {})
+}
+
 //= ====================================
 //  WATCHERS
 // -------------------------------------
@@ -151,6 +160,10 @@ export function* watch_load_tasks_table() {
   yield takeLatest(tasks_action_types.LOAD_TASKS_TABLE, load_tasks_table_data)
 }
 
+export function* watch_load_available_tags() {
+  yield takeLatest(tasks_action_types.LOAD_AVAILABLE_TAGS, load_available_tags)
+}
+
 //= ====================================
 //  ROOT
 // -------------------------------------
@@ -160,5 +173,6 @@ export const tasks_sagas = [
   fork(watch_update_task_table_view),
   fork(watch_load_tasks_table),
   fork(watch_update_task_property),
-  fork(watch_patch_task_failed)
+  fork(watch_patch_task_failed),
+  fork(watch_load_available_tags)
 ]
