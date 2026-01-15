@@ -1,3 +1,5 @@
+import { is_displayable_system_event } from './system-event-utils.js'
+
 // Utility to group tool calls with their corresponding results
 export const group_tool_entries = (timeline_events) => {
   const grouped_entries = []
@@ -96,6 +98,14 @@ export const group_tool_entries = (timeline_events) => {
       }
     } else {
       // Other event types (error, system, thinking, etc.)
+      // Filter system events to only show displayable ones (warnings, errors, interrupts)
+      if (
+        timeline_event.type === 'system' &&
+        !is_displayable_system_event(timeline_event)
+      ) {
+        return // Skip non-displayable system events
+      }
+
       grouped_entries.push({
         type: 'regular',
         timeline_event,

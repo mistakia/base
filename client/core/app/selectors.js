@@ -9,9 +9,8 @@ export const get_has_private_key = createSelector(
   (app) => !!app.get('user_private_key')
 )
 
-export const get_user_token = createSelector(
-  [get_app],
-  (app) => app.get('user_token')
+export const get_user_token = createSelector([get_app], (app) =>
+  app.get('user_token')
 )
 
 export const get_has_valid_session = createSelector(

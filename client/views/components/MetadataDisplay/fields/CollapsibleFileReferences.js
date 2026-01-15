@@ -168,10 +168,7 @@ ReferenceLink.propTypes = {
   title: PropTypes.string
 }
 
-const CollapsibleFileReferences = ({
-  base_uri,
-  is_first = false
-}) => {
+const CollapsibleFileReferences = ({ base_uri, is_first = false }) => {
   const [expanded, set_expanded] = useState(false)
   const [file_references, set_file_references] = useState([])
   const [directory_references, set_directory_references] = useState([])
@@ -198,7 +195,12 @@ const CollapsibleFileReferences = ({
       // Fetch directory references
       const { request: dir_request } = api_request(
         api.get_entity_relations,
-        { base_uri, direction: 'forward', entity_type: 'directory', limit: 100 },
+        {
+          base_uri,
+          direction: 'forward',
+          entity_type: 'directory',
+          limit: 100
+        },
         token
       )
       const dir_data = await dir_request()
@@ -234,10 +236,7 @@ const CollapsibleFileReferences = ({
 
   return (
     <Box sx={{ ...container_sx, ...get_border_sx(is_first) }}>
-      <Box
-        component='button'
-        onClick={toggle_expanded}
-        sx={header_button_sx}>
+      <Box component='button' onClick={toggle_expanded} sx={header_button_sx}>
         <Box sx={label_container_sx}>
           <Box component='span' sx={label_sx}>
             File References
