@@ -23,31 +23,18 @@ const GlobTool = ({ tool_call_event, tool_result_event }) => {
     const result = tool_result_event?.content?.result || ''
 
     if (typeof result !== 'string') {
-      return { files: [], directories: [], total_count: 0 }
+      return { files: [], total_count: 0 }
     }
 
-    const lines = result.split('\n').filter((line) => line.trim())
-
-    const files = []
-    const directories = []
-
-    lines.forEach((line) => {
-      const trimmed = line.trim()
-      if (trimmed.endsWith('/')) {
-        directories.push(trimmed.slice(0, -1))
-      } else {
-        files.push(trimmed)
-      }
-    })
-
-    // Sort directories first, then files
-    directories.sort()
-    files.sort()
+    const files = result
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.endsWith('/'))
+      .sort()
 
     return {
       files,
-      directories,
-      total_count: files.length + directories.length
+      total_count: files.length
     }
   }
 
@@ -153,13 +140,13 @@ const GlobTool = ({ tool_call_event, tool_result_event }) => {
         <MonospaceText
           variant='sm'
           color='text.secondary'
-          sx={{ fontWeight: 500 }}>
+          sx={{ fontWeight: 500, fontSize: '12px' }}>
           Glob
         </MonospaceText>
         <MonospaceText
           variant='sm'
           color='text.primary'
-          sx={{ fontWeight: 700 }}>
+          sx={{ fontWeight: 600, fontSize: '12px' }}>
           {`"${pattern}"`}
         </MonospaceText>
       </Box>

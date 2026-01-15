@@ -6,32 +6,26 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import { process_message_content } from './utils/message-processing.js'
 
 const ThinkingMessage = ({ message, working_directory = null }) => {
-  const [is_thinking_expanded, set_is_thinking_expanded] = useState(false)
-  const on_toggle = useCallback(() => set_is_thinking_expanded((v) => !v), [])
+  const [is_expanded, set_is_expanded] = useState(false)
+  const on_toggle = useCallback(() => set_is_expanded((v) => !v), [])
 
   const { content } = process_message_content({
     content: message.content,
     working_directory
   })
 
-  const should_truncate = content.length > 200
-  const display_content =
-    should_truncate && !is_thinking_expanded
-      ? content.substring(0, 200) + '...'
-      : content
-
-  const container_class = `thinking-message${should_truncate ? ' thinking-message--clickable' : ''}`
-
   return (
-    <div
-      className={container_class}
-      onClick={should_truncate ? on_toggle : undefined}>
-      <div className='thinking-message__title'>thinking...</div>
-      <div className='thinking-message__content'>
-        <div style={{ whiteSpace: 'normal', wordBreak: 'normal' }}>
-          <MarkdownViewer content={display_content} />
+    <div className='thinking-message'>
+      <button className='thinking-message__toggle' onClick={on_toggle}>
+        {is_expanded ? 'hide thinking' : 'show thinking'} &gt;
+      </button>
+      {is_expanded && (
+        <div className='thinking-message__content'>
+          <div style={{ whiteSpace: 'normal', wordBreak: 'normal' }}>
+            <MarkdownViewer content={content} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

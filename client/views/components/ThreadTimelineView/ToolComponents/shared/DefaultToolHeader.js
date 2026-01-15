@@ -93,6 +93,7 @@ const DefaultToolHeader = ({
               variant='sm'
               sx={{
                 fontWeight: 600,
+                fontSize: '12px',
                 cursor: 'pointer',
                 wordBreak: 'break-all'
               }}

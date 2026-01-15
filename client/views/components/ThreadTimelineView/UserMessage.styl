@@ -1,14 +1,13 @@
-$user_message_bg =hsl(32, 21.30%, 88.00%)
+$user_message_bg = hsl(32, 21.30%, 94.00%)
 
 .user-message
-  background-color: transparent
-  border: 2px solid $user_message_bg
+  background-color: $user_message_bg
   border-radius: $radius_sm
   padding: $space_base
   margin-bottom: $space_xs
   position: relative
   width: 100%
-  
+
   font-family: $font_family_mono
   font-size: $font_size_base
   line-height: 1.5
@@ -16,15 +15,14 @@ $user_message_bg =hsl(32, 21.30%, 88.00%)
   white-space: pre-wrap
   word-break: break-word
   overflow: hidden
-  
+
   &--clickable
     cursor: pointer
-    transition: background-color $transition_fast, border-color $transition_fast
-    
+    transition: background-color $transition_fast
+
     &:hover
-      background-color: transparent
-      border-color: darken($user_message_bg, 6%)
-      
+      background-color: darken($user_message_bg, 4%)
+
       .user-message__toggle
         color: $color_text
 
@@ -34,13 +32,12 @@ $user_message_bg =hsl(32, 21.30%, 88.00%)
   right: 8px
   z-index: 1
   text-transform: uppercase
-  background: $user_message_bg
-  border-color: $user_message_bg
-  
+  background: darken($user_message_bg, 6%)
+  border-color: darken($user_message_bg, 6%)
+
   &:hover
-    // Neutralize global .chip hover styles for the user chip
-    background: $user_message_bg
-    border-color: $user_message_bg
+    background: darken($user_message_bg, 6%)
+    border-color: darken($user_message_bg, 6%)
 
 .user-message__content
   margin-bottom: 0

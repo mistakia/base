@@ -12,8 +12,6 @@ import { Box, Typography } from '@mui/material'
 const CollapsibleEventGroup = ({
   events,
   renderEvent,
-  hideTimelineDot,
-  hideTimelineLine,
   mode = 'notable_events', // 'default' | 'notable_events'
   onExpand = null // Callback for mode="default" to switch to notable events view
 }) => {
@@ -35,9 +33,7 @@ const CollapsibleEventGroup = ({
   if (expanded) {
     return (
       <Box className='collapsible-event-group expanded'>
-        {events.map((entry, index) =>
-          renderEvent(entry, index, hideTimelineDot, hideTimelineLine)
-        )}
+        {events.map((entry, index) => renderEvent(entry, index))}
       </Box>
     )
   }
@@ -85,8 +81,6 @@ const CollapsibleEventGroup = ({
 CollapsibleEventGroup.propTypes = {
   events: PropTypes.array.isRequired,
   renderEvent: PropTypes.func.isRequired,
-  hideTimelineDot: PropTypes.bool,
-  hideTimelineLine: PropTypes.bool,
   mode: PropTypes.oneOf(['default', 'notable_events']),
   onExpand: PropTypes.func
 }

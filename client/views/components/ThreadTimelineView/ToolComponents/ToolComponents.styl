@@ -2,41 +2,6 @@
 // Extends the base Material-UI theme with tool-specific enhancements
 @import '@styles/variables'
 
-// Color palette for tool types
-.tool-filesystem
-  border-left-color: $color_tool_filesystem !important
-  background-color: rgba(25, 118, 210, 0.08) !important
-
-.tool-execution
-  border-left-color: $color_tool_execution !important
-  background-color: rgba(156, 39, 176, 0.08) !important
-
-.tool-search
-  border-left-color: $color_tool_search !important
-  background-color: rgba(2, 136, 209, 0.08) !important
-
-.tool-management
-  border-left-color: $color_tool_management !important
-  background-color: rgba(237, 108, 2, 0.08) !important
-
-.tool-mcp
-  border-left-color: $color_tool_mcp !important
-  background-color: rgba(156, 39, 176, 0.08) !important
-
-// Visual connection between tool calls and results
-.tool-pair-connection
-  position: relative
-  
-  &::before
-    content: ''
-    position: absolute
-    left: -8px
-    top: 0
-    bottom: 0
-    width: 2px
-    background-color: rgba(0, 0, 0, 0.12)
-    border-radius: 1px
-
 // Code highlighting improvements
 .tool-code-block
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important
@@ -108,10 +73,6 @@
 
 // Responsive design adjustments
 @media (max-width: 768px)
-  .tool-pair-connection
-    &::before
-      display: none
-  
   .diff-container
     flex-direction: column
     

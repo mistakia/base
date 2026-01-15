@@ -1,23 +1,22 @@
 .thinking-message
-  border-radius $radius_sm
   margin-bottom $space_xs
-  background-color transparent
-  border 1px dashed $color_border_light
-  padding 0 8px
-  transition border-color $transition_fast
+  padding $space_xs 0
 
-  &--clickable
-    cursor pointer
-    &:hover
-      border-color $color_primary
-
-.thinking-message__title
+.thinking-message__toggle
+  background none
+  border none
   font-family $font_family_mono
   font-size $font_size_sm
-  color $color_text
-  font-style italic
-  font-weight 600
-  margin 6px 0
+  color $color_text_secondary
+  cursor pointer
+  padding 0
+  margin 0
+
+  &:hover
+    color $color_text
+
+  &:focus
+    outline none
 
 .thinking-message__content
   font-family $font_family_mono
@@ -27,6 +26,7 @@
   font-style italic
   white-space pre-wrap
   word-break break-word
-  margin 0 0 $space_xs 0
+  margin $space_xs 0 0 0
+  padding-left $space_base
 
 

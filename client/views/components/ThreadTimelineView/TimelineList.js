@@ -61,7 +61,7 @@ const LIVE_INDICATOR_STYLES = {
     alignItems: 'center',
     gap: '8px',
     padding: '12px 16px',
-    marginLeft: '32px',
+    marginLeft: '0',
     marginTop: '8px',
     marginBottom: '8px',
     borderRadius: '8px',
@@ -106,8 +106,6 @@ const TimelineList = ({
   timeline,
   working_directory = null,
   include_sidechain = false,
-  hide_timeline_dot = false,
-  hide_timeline_line = false,
   active_session = null
 }) => {
   /**
@@ -428,8 +426,6 @@ const TimelineList = ({
       if (entry.type === 'tool_pair') {
         // For tool pairs, use the tool call event as the main event
         const timeline_event = entry.tool_call_event
-        const tool_name = timeline_event?.content?.tool_name
-        const hide_dot_for_main_subthread = tool_name === 'Task'
 
         return (
           <TimelineEvent
@@ -439,14 +435,11 @@ const TimelineList = ({
             is_last_assistant_message={false}
             timeline={timeline}
             working_directory={working_directory}
-            hide_timeline_dot={hide_dot_for_main_subthread}
             render_nested_timeline={(nested) => (
               <TimelineList
                 timeline={nested}
                 working_directory={working_directory}
                 include_sidechain={true}
-                hide_timeline_dot={false}
-                hide_timeline_line={false}
               />
             )}
           />
@@ -468,20 +461,17 @@ const TimelineList = ({
           is_last_assistant_message={is_last_assistant_message}
           timeline={timeline}
           working_directory={working_directory}
-          hide_timeline_dot={hide_timeline_dot}
           render_nested_timeline={(nested) => (
             <TimelineList
               timeline={nested}
               working_directory={working_directory}
               include_sidechain={true}
-              hide_timeline_dot={false}
-              hide_timeline_line={false}
             />
           )}
         />
       )
     },
-    [timeline, last_assistant_entry_index, hide_timeline_dot, working_directory]
+    [timeline, last_assistant_entry_index, working_directory]
   )
 
   /**
@@ -510,8 +500,6 @@ const TimelineList = ({
           key={`collapsible-${section_index}`}
           events={section.events}
           renderEvent={render_timeline_event}
-          hideTimelineDot={hide_timeline_dot}
-          hideTimelineLine={hide_timeline_line}
           mode='notable_events'
         />
       )
@@ -536,8 +524,6 @@ const TimelineList = ({
             <CollapsibleEventGroup
               events={collapsible_entries}
               renderEvent={render_timeline_event}
-              hideTimelineDot={hide_timeline_dot}
-              hideTimelineLine={hide_timeline_line}
               mode='default'
               onExpand={() => set_view_mode('notable_events')}
             />
@@ -588,21 +574,6 @@ const TimelineList = ({
 
   return (
     <Box sx={{ py: 3, position: 'relative' }} ref={timeline_container_ref}>
-      {/* Timeline line */}
-      {!hide_timeline_line && (
-        <Box
-          sx={{
-            position: 'absolute',
-            left: '15px',
-            top: '30px',
-            bottom: '20px',
-            width: '2px',
-            backgroundColor: 'var(--timeline-accent)',
-            zIndex: 0
-          }}
-        />
-      )}
-
       {/* Render timeline events */}
       {render_content()}
 
@@ -649,8 +620,6 @@ TimelineList.propTypes = {
   timeline: PropTypes.array.isRequired,
   working_directory: PropTypes.string,
   include_sidechain: PropTypes.bool,
-  hide_timeline_dot: PropTypes.bool,
-  hide_timeline_line: PropTypes.bool,
   active_session: PropTypes.object
 }
 

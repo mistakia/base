@@ -31,14 +31,20 @@ export const build_dual_tone_header = ({
         <MonospaceText
           variant='sm'
           color='text.secondary'
-          sx={{ fontWeight: 500, whiteSpace: 'nowrap', flex: '0 0 auto' }}>
+          sx={{
+            fontWeight: 500,
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            flex: '0 0 auto'
+          }}>
           {left_label}
         </MonospaceText>
         <MonospaceText
           variant='sm'
           color='text.primary'
           sx={{
-            fontWeight: 700,
+            fontWeight: 600,
+            fontSize: '12px',
             overflowWrap: 'anywhere',
             wordBreak: 'break-all',
             whiteSpace: 'normal',
