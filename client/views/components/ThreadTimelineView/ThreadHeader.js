@@ -19,6 +19,7 @@ import {
   ThreadStateField,
   TokenField,
   ModelsField,
+  CollapsibleFileReferences,
   format_token_shorthand
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
@@ -432,6 +433,11 @@ const ThreadStats = ({
           show_header={true}
           header_text='Relations'
         />
+      )}
+
+      {/* File and directory references - displayed collapsed with count */}
+      {thread_id && (
+        <CollapsibleFileReferences base_uri={`user:thread/${thread_id}`} />
       )}
 
       {has_dates && (
