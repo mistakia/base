@@ -184,7 +184,8 @@ export async function find_related_entities({
   }
 
   if (entity_type) {
-    where_clauses.push('target.type = $entity_type')
+    // Explicitly check for non-NULL type to avoid Kuzu NULL comparison issues
+    where_clauses.push('target.type IS NOT NULL AND target.type = $entity_type')
     params.entity_type = entity_type
   }
 

@@ -24,8 +24,6 @@ export class PermissionContext {
     this._resource_cache = new Map()
     this._user_rules = null
     this._public_rules = null
-    this._user_rules_loaded = false
-    this._public_rules_loaded = false
     this._global_write = null
     this._global_write_checked = false
   }
@@ -54,34 +52,33 @@ export class PermissionContext {
    * @returns {Promise<Array>} Array of permission rules
    */
   async get_user_rules() {
-    if (this._user_rules_loaded) {
-      return this._user_rules || []
-    }
-
-    this._user_rules_loaded = true
-
-    if (!this.user_public_key || this.user_public_key === 'public') {
-      this._user_rules = []
+    if (this._user_rules !== null) {
       return this._user_rules
+    }
+    this._user_rules = await this._load_user_rules()
+    return this._user_rules
+  }
+
+  async _load_user_rules() {
+    if (!this.user_public_key || this.user_public_key === 'public') {
+      return []
     }
 
     try {
       const user = await user_registry.find_by_public_key(this.user_public_key)
       if (user?.permissions?.rules && Array.isArray(user.permissions.rules)) {
-        this._user_rules = user.permissions.rules
         log(
-          `Loaded ${this._user_rules.length} rules for user ${this.user_public_key}`
+          `Loaded ${user.permissions.rules.length} rules for user ${this.user_public_key}`
         )
+        return user.permissions.rules
       } else {
-        this._user_rules = []
         log(`No permission rules found for user: ${this.user_public_key}`)
+        return []
       }
     } catch (error) {
       log(`Error loading user rules: ${error.message}`)
-      this._user_rules = []
+      return []
     }
-
-    return this._user_rules
   }
 
   /**
@@ -90,30 +87,30 @@ export class PermissionContext {
    * @returns {Promise<Array>} Array of public permission rules
    */
   async get_public_rules() {
-    if (this._public_rules_loaded) {
-      return this._public_rules || []
+    if (this._public_rules !== null) {
+      return this._public_rules
     }
+    this._public_rules = await this._load_public_rules()
+    return this._public_rules
+  }
 
-    this._public_rules_loaded = true
-
+  async _load_public_rules() {
     try {
       const public_user = await user_registry.find_by_public_key('public')
       if (
         public_user?.permissions?.rules &&
         Array.isArray(public_user.permissions.rules)
       ) {
-        this._public_rules = public_user.permissions.rules
-        log(`Loaded ${this._public_rules.length} public rules`)
+        log(`Loaded ${public_user.permissions.rules.length} public rules`)
+        return public_user.permissions.rules
       } else {
-        this._public_rules = []
         log('No public permission rules found')
+        return []
       }
     } catch (error) {
       log(`Error loading public rules: ${error.message}`)
-      this._public_rules = []
+      return []
     }
-
-    return this._public_rules
   }
 
   /**
@@ -329,8 +326,6 @@ export class PermissionContext {
     this._resource_cache.clear()
     this._user_rules = null
     this._public_rules = null
-    this._user_rules_loaded = false
-    this._public_rules_loaded = false
     this._global_write = null
     this._global_write_checked = false
   }
