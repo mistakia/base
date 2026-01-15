@@ -87,6 +87,12 @@ function append_timeline_entry(state, thread_id, entry) {
     thread_data.update('timeline', (timeline) => {
       // Timeline is a plain JS array from Map(payload.data), not an Immutable List
       if (timeline && Array.isArray(timeline)) {
+        // Check if entry already exists by id to prevent duplicates
+        // This can happen when websocket events arrive after get_thread already updated the data
+        const exists = timeline.some((e) => e.id === entry.id)
+        if (exists) {
+          return timeline
+        }
         return [...timeline, entry]
       }
       return [entry]
