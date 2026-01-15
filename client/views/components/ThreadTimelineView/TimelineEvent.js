@@ -10,13 +10,15 @@ import {
   AutoAwesomeOutlined as AssistantIcon,
   Language as BrowserIcon,
   ErrorOutline as SystemIcon,
-  Lightbulb as ThinkingIcon
+  Lightbulb as ThinkingIcon,
+  SwapHoriz as StateChangeIcon
 } from '@mui/icons-material'
 
 import UserMessage from './UserMessage'
 import AssistantMessage from './AssistantMessage'
 import ThinkingMessage from './ThinkingMessage'
 import SystemMessage from './SystemMessage'
+import ThreadStateChangeMessage from './ThreadStateChangeMessage'
 import ToolEvent from './ToolEvent'
 import HookMessage from './HookMessage'
 import { process_message_content } from './utils/message-processing.js'
@@ -97,6 +99,9 @@ const TimelineEvent = ({
       case 'system':
         return <SystemIcon {...icon_props} />
 
+      case 'thread_state_change':
+        return <StateChangeIcon {...icon_props} />
+
       default:
         return <MessageIcon {...icon_props} />
     }
@@ -140,6 +145,8 @@ const TimelineEvent = ({
             working_directory={working_directory}
           />
         )
+      case 'thread_state_change':
+        return <ThreadStateChangeMessage event={timeline_event} />
       case 'tool_use':
       case 'tool_call':
       case 'tool_result':
