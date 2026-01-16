@@ -101,12 +101,21 @@ router.get('/', async (req, res) => {
     const is_cacheable =
       is_public_request && limit === 1000 && offset === 0 && include_timeline
 
-    // Set HTTP cache headers for public requests
+    // Set HTTP cache headers based on authentication status
+    // Use Vary: Authorization to ensure browsers cache authenticated and
+    // unauthenticated responses separately, preventing stale redacted data
+    // from being served after login
+    res.set('Vary', 'Authorization')
+
     if (is_public_request) {
       res.set(
         'Cache-Control',
         `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
       )
+    } else {
+      // Authenticated requests should not be cached by shared caches
+      // and browsers should revalidate on each request
+      res.set('Cache-Control', 'private, no-cache')
     }
 
     // Check centralized cache (maintained by cache-warmer service)
@@ -162,6 +171,18 @@ router.get('/:thread_id', async (req, res) => {
     log(`Getting thread ${thread_id}`)
 
     const requesting_user_key = req.user?.user_public_key || null
+    const is_public_request = !requesting_user_key
+
+    // Set HTTP cache headers based on authentication status
+    res.set('Vary', 'Authorization')
+    if (is_public_request) {
+      res.set(
+        'Cache-Control',
+        `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+      )
+    } else {
+      res.set('Cache-Control', 'private, no-cache')
+    }
 
     // Pass user_public_key to get_thread so it can do proper permission checking
     const response_thread = await threads.get_thread({
