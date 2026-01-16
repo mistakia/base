@@ -39,35 +39,25 @@ export const get_search_total = createSelector(
 )
 
 // Get all results flattened into a single list for keyboard navigation
+// Order: entities, threads, directories, files
 export const get_all_results_flat = createSelector(
   [get_search_results],
   (results) => {
     if (!results) return new List()
 
-    const files = results.get('files') || new List()
-    const threads = results.get('threads') || new List()
-    const entities = results.get('entities') || new List()
+    // Helper to add category to items from a list
+    const add_category = (list, category) =>
+      list && list.size > 0
+        ? list.toArray().map((item) => ({ ...item, category }))
+        : []
 
-    // Add category markers for display
-    const categorized = []
-
-    if (entities.size > 0) {
-      categorized.push(
-        ...entities.toArray().map((item) => ({ ...item, category: 'entity' }))
-      )
-    }
-
-    if (threads.size > 0) {
-      categorized.push(
-        ...threads.toArray().map((item) => ({ ...item, category: 'thread' }))
-      )
-    }
-
-    if (files.size > 0) {
-      categorized.push(
-        ...files.toArray().map((item) => ({ ...item, category: 'file' }))
-      )
-    }
+    // Combine results in display order
+    const categorized = [
+      ...add_category(results.get('entities'), 'entity'),
+      ...add_category(results.get('threads'), 'thread'),
+      ...add_category(results.get('directories'), 'directory'),
+      ...add_category(results.get('files'), 'file')
+    ]
 
     return new List(categorized)
   }

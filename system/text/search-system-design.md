@@ -6,7 +6,7 @@ base_uri: sys:system/text/search-system-design.md
 created_at: '2026-01-14T05:11:24.063Z'
 entity_id: 42df8f5c-24e8-4889-a9d9-c474fd84ace6
 public_read: false
-updated_at: '2026-01-14T05:35:00.000Z'
+updated_at: '2026-01-16T18:30:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 ---
 
@@ -14,18 +14,33 @@ user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349
 
 ## Overview
 
-The search system provides unified search across files, entities, and threads using external binaries (ripgrep, fzf) for performance. Results are permission-filtered and ranked by relevance.
+The search system provides unified search across files, directories, entities, and threads using ripgrep for file discovery and a native fuzzy scoring algorithm for ranking. Results are permission-filtered and ranked by relevance.
 
 ## Search Modes
 
 Two distinct modes optimize for different use cases:
 
-1. **Paths Mode**: Fast filename matching using ripgrep's `--files` with glob patterns. Multi-word queries are converted to wildcards (e.g., "foo bar" becomes `*foo*bar*`). Used for autocomplete features.
+1. **Paths Mode**: Fast path matching combining files and directories. Ripgrep's `--files` enumerates all files, and directories are derived from file paths. Both are scored using a native fuzzy algorithm that supports full path matching. Multi-word queries match each word independently against the full path. Used for autocomplete features.
 
-2. **Full Mode**: Content search combining three parallel searches:
+2. **Full Mode**: Content search combining four parallel searches:
    - File content search via ripgrep
    - Entity search (markdown files in designated entity directories)
+   - Directory search
    - Thread metadata search
+
+## Directory Search
+
+Directories are derived from file paths returned by ripgrep, rather than using separate filesystem traversal. This approach is significantly faster because:
+
+1. Ripgrep already respects .gitignore and exclude patterns
+2. No separate traversal into node_modules or other excluded directories
+3. Processes paths already in memory
+
+Results include:
+
+- Relative path with trailing slash (e.g., "repository/active/league/")
+- Absolute path for permission checking
+- Category marker for UI display
 
 ## Thread Search Architecture
 
@@ -48,7 +63,35 @@ Threads present a unique challenge: metadata is stored in individual JSON files 
 
 ## Result Ranking
 
-Results pass through fzf for fuzzy ranking when available, with fallback to simple substring matching. This provides consistent ranking behavior across result types.
+Results are ranked using a native fuzzy scoring algorithm inspired by VS Code's Quick Open feature.
+
+**VS Code Approach: Score Before Limit**
+
+Following VS Code's architecture, all files (up to 20,000) are collected first, then fuzzy scored, then limited to the top results. This ensures high-quality matches are never truncated before scoring. The flow is:
+
+1. Ripgrep returns all file paths (up to `max_search_results: 20000`)
+2. All paths are fuzzy scored against the query
+3. Top results selected by score (e.g., 512 for UI display)
+
+This differs from approaches that truncate results before scoring, which can miss highly relevant files that appear later in the directory traversal order.
+
+**Scoring Components** (values configurable in `search-config.json`):
+
+- Base match score for character matching
+- Consecutive match bonus for sequential character matches
+- Word boundary bonuses (highest at start, then after path separators, then other separators)
+- CamelCase bonus for uppercase after lowercase
+- Case match bonus for exact case
+- Path length penalty to prefer shorter paths
+
+**Multi-word Handling:**
+
+- Query is split on whitespace
+- Each word is scored independently against the full path
+- Final score is the sum of word scores
+- All words must match for a result to be included (AND logic)
+
+This native implementation removes the previous dependency on the fzf external binary while providing similar ranking quality.
 
 ## Permission Integration
 
@@ -70,9 +113,22 @@ Search behavior is controlled by a JSON configuration file in the user base dire
 
 ## Trade-offs
 
-| Decision                 | Trade-off                                                               |
-| ------------------------ | ----------------------------------------------------------------------- |
-| PCRE2 field regex        | Slower than simple search (~300ms vs ~100ms) vs. precise field matching |
-| Timeline search disabled | Missing conversation content vs. sub-second response                    |
-| External binaries        | Dependency on ripgrep/fzf vs. native search performance                 |
-| Read-after-match         | Additional file reads for matched threads vs. streaming results         |
+| Decision                 | Trade-off                                                                   |
+| ------------------------ | --------------------------------------------------------------------------- |
+| PCRE2 field regex        | Slower than simple search vs. precise field matching                        |
+| Timeline search disabled | Missing conversation content vs. sub-second response                        |
+| Native fuzzy scorer      | Simpler architecture (no external dependency) vs. potential ranking quality |
+| Score-then-limit (20k)   | Higher memory for large codebases vs. accurate multi-word path matching     |
+| Dirs from file paths     | Cannot discover empty directories vs. fast extraction                       |
+| Read-after-match         | Additional file reads for matched threads vs. streaming results             |
+
+## Performance
+
+Target response times are sub-second for typical queries. The bottleneck is usually ripgrep file enumeration, not fuzzy scoring. Fuzzy scoring thousands of items takes only a few milliseconds.
+
+Key performance characteristics:
+
+- Paths mode is fastest (file enumeration + scoring only)
+- Full mode adds content search and thread metadata search
+- Directory extraction from file paths is essentially free (~0ms)
+- Score-then-limit approach has minimal overhead for codebases under 20k files

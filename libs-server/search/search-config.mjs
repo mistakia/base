@@ -27,12 +27,6 @@ const DEFAULT_CONFIG = {
     include_hidden: false,
     follow_symlinks: false
   },
-  fzf: {
-    algorithm: 'v2',
-    case_mode: 'smart-case',
-    tiebreak: ['index', 'length'],
-    sort: true
-  },
   result_types: {
     files: {
       enabled: true,
@@ -46,6 +40,9 @@ const DEFAULT_CONFIG = {
     entities: {
       enabled: true,
       types: ['task', 'workflow', 'guideline', 'text', 'person', 'tag']
+    },
+    directories: {
+      enabled: true
     }
   },
   paths: {

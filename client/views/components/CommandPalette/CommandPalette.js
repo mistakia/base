@@ -24,6 +24,9 @@ const get_type_label = (item) => {
   if (item.category === 'thread') {
     return 'thread'
   }
+  if (item.category === 'directory') {
+    return 'dir'
+  }
   if (item.category === 'entity' && item.file_path) {
     // Extract entity type from path (e.g., "task/foo.md" -> "task")
     const first_segment = item.file_path.split('/')[0]

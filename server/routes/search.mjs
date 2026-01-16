@@ -113,17 +113,17 @@ router.get('/', async (req, res) => {
     }
 
     // Parse types
-    let types = ['files', 'threads', 'entities']
+    let types = ['files', 'threads', 'entities', 'directories']
     if (types_param) {
       types = types_param
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean)
-      const valid_types = ['files', 'threads', 'entities']
+      const valid_types = ['files', 'threads', 'entities', 'directories']
       const invalid_types = types.filter((t) => !valid_types.includes(t))
       if (invalid_types.length > 0) {
         return res.status(400).json({
-          error: `Invalid types: ${invalid_types.join(', ')}. Valid types: files, threads, entities`,
+          error: `Invalid types: ${invalid_types.join(', ')}. Valid types: files, threads, entities, directories`,
           param: 'types'
         })
       }
@@ -169,22 +169,17 @@ router.get('/', async (req, res) => {
       search_results.total = search_results.results.length
     } else {
       // Full mode - filter each category
-      search_results.files = await filter_results_by_permission(
-        search_results.files,
-        user_public_key
+      const result_types = ['files', 'threads', 'entities', 'directories']
+      for (const type of result_types) {
+        search_results[type] = await filter_results_by_permission(
+          search_results[type],
+          user_public_key
+        )
+      }
+      search_results.total = result_types.reduce(
+        (sum, type) => sum + search_results[type].length,
+        0
       )
-      search_results.threads = await filter_results_by_permission(
-        search_results.threads,
-        user_public_key
-      )
-      search_results.entities = await filter_results_by_permission(
-        search_results.entities,
-        user_public_key
-      )
-      search_results.total =
-        search_results.files.length +
-        search_results.threads.length +
-        search_results.entities.length
     }
 
     res.json(search_results)

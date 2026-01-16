@@ -8,7 +8,8 @@ const SearchState = new Record({
   results: new Map({
     files: new List(),
     threads: new List(),
-    entities: new List()
+    entities: new List(),
+    directories: new List()
   }),
   is_loading: false,
   error: null,
@@ -43,7 +44,8 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
         results: new Map({
           files: new List(results.files || []),
           threads: new List(results.threads || []),
-          entities: new List(results.entities || [])
+          entities: new List(results.entities || []),
+          directories: new List(results.directories || [])
         }),
         total: results.total || 0,
         selected_index: 0
@@ -62,7 +64,8 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
         results: new Map({
           files: new List(),
           threads: new List(),
-          entities: new List()
+          entities: new List(),
+          directories: new List()
         }),
         selected_index: 0,
         total: 0
