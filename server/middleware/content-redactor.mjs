@@ -666,6 +666,23 @@ export const redact_thread_data = (thread) => {
     )
   }
 
+  // Redact file_references array (base_uri strings)
+  if (redacted.file_references && Array.isArray(redacted.file_references)) {
+    redacted.file_references = redacted.file_references.map((base_uri) =>
+      redact_base_uri(base_uri)
+    )
+  }
+
+  // Redact directory_references array (base_uri strings)
+  if (
+    redacted.directory_references &&
+    Array.isArray(redacted.directory_references)
+  ) {
+    redacted.directory_references = redacted.directory_references.map(
+      (base_uri) => redact_base_uri(base_uri)
+    )
+  }
+
   // Redact thread main request content
   if (redacted.thread_main_request) {
     redacted.thread_main_request = redact_text_content(
