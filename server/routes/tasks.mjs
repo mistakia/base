@@ -163,10 +163,24 @@ router.get('/', async (req, res) => {
 
   try {
     const user_public_key = req.user?.user_public_key || null
+    const is_public_request = !user_public_key
     const { base_uri, archived, ...filter_params } = req.query
+
+    // Set Vary header for all requests to ensure browsers cache authenticated
+    // and unauthenticated responses separately
+    res.set('Vary', 'Authorization')
 
     // If base_uri is provided, get a specific task
     if (base_uri) {
+      // Set cache headers for single task requests
+      if (is_public_request) {
+        res.set(
+          'Cache-Control',
+          `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+        )
+      } else {
+        res.set('Cache-Control', 'private, no-cache')
+      }
       await handle_single_task_request(req, res, base_uri, user_public_key)
       return
     }
@@ -252,12 +266,16 @@ async function handle_task_list_request(
   const is_public_request = !user_public_key
   const is_cacheable = is_public_request && !has_filters
 
-  // Set HTTP cache headers for public requests
+  // Set Cache-Control header (Vary: Authorization is set at main handler level)
   if (is_public_request) {
     res.set(
       'Cache-Control',
       `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
     )
+  } else {
+    // Authenticated requests should not be cached by shared caches
+    // and browsers should revalidate on each request
+    res.set('Cache-Control', 'private, no-cache')
   }
 
   // Check centralized cache (maintained by cache-warmer service)
