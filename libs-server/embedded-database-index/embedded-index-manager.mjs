@@ -41,14 +41,17 @@ import {
 import {
   upsert_task_to_duckdb,
   upsert_thread_to_duckdb,
+  upsert_entity_to_duckdb,
   delete_task_from_duckdb,
   delete_thread_from_duckdb,
+  delete_entity_from_duckdb,
   sync_entity_tags_to_duckdb,
   sync_entity_relations_to_duckdb
 } from './duckdb/duckdb-entity-sync.mjs'
 import {
   extract_task_index_data,
   extract_entity_index_data,
+  extract_unified_entity_data,
   extract_tags_from_entity,
   extract_relations_from_entity
 } from './sync/entity-data-extractor.mjs'
@@ -274,6 +277,9 @@ class EmbeddedIndexManager {
     const entity_index_data = extract_entity_index_data({
       entity_properties: entity_data
     })
+    const unified_entity_data = extract_unified_entity_data({
+      entity_properties: entity_data
+    })
     const tag_base_uris = extract_tags_from_entity({
       entity_properties: entity_data
     })
@@ -305,29 +311,34 @@ class EmbeddedIndexManager {
       }
     }
 
-    if (this.duckdb_ready && entity_data.type === 'task') {
+    if (this.duckdb_ready) {
       try {
-        const duckdb_connection = await get_duckdb_connection()
-        const task_index_data = extract_task_index_data({
-          entity_properties: entity_data
-        })
-        await upsert_task_to_duckdb({
-          connection: duckdb_connection,
-          task_data: task_index_data
-        })
+        // Sync to unified entities table (all entity types)
+        if (unified_entity_data) {
+          await upsert_entity_to_duckdb({ entity_data: unified_entity_data })
+        }
+
+        // MIGRATION: Also sync to legacy tasks table while table views still use it
+        // The tasks table is used by process-task-table-request.mjs for the UI
+        // TODO: Update table processors to use query_entities_from_duckdb, then remove this
+        if (entity_data.type === 'task') {
+          const task_index_data = extract_task_index_data({
+            entity_properties: entity_data
+          })
+          await upsert_task_to_duckdb({ task_data: task_index_data })
+        }
+
         await sync_entity_tags_to_duckdb({
-          connection: duckdb_connection,
           entity_base_uri: base_uri,
           tag_base_uris
         })
         await sync_entity_relations_to_duckdb({
-          connection: duckdb_connection,
           source_base_uri: base_uri,
           relations
         })
         result.duckdb_synced = true
       } catch (error) {
-        log('Error syncing task to DuckDB: %s', error.message)
+        log('Error syncing entity to DuckDB: %s', error.message)
         result.success = false
       }
     }
@@ -352,11 +363,10 @@ class EmbeddedIndexManager {
 
     if (this.duckdb_ready) {
       try {
-        const duckdb_connection = await get_duckdb_connection()
-        await delete_task_from_duckdb({
-          connection: duckdb_connection,
-          base_uri
-        })
+        // Delete from unified entities table
+        await delete_entity_from_duckdb({ base_uri })
+        // Also delete from legacy tasks table
+        await delete_task_from_duckdb({ base_uri })
       } catch (error) {
         log('Error removing entity from DuckDB: %s', error.message)
       }
@@ -378,15 +388,11 @@ class EmbeddedIndexManager {
     // Sync to DuckDB
     if (this.duckdb_ready) {
       try {
-        const duckdb_connection = await get_duckdb_connection()
         const thread_index_data = extract_thread_index_data({
           thread_id,
           metadata
         })
-        await upsert_thread_to_duckdb({
-          connection: duckdb_connection,
-          thread_data: thread_index_data
-        })
+        await upsert_thread_to_duckdb({ thread_data: thread_index_data })
         result.duckdb_synced = true
       } catch (error) {
         log('Error syncing thread to DuckDB: %s', error.message)
@@ -447,11 +453,7 @@ class EmbeddedIndexManager {
     // Remove from DuckDB
     if (this.duckdb_ready) {
       try {
-        const duckdb_connection = await get_duckdb_connection()
-        await delete_thread_from_duckdb({
-          connection: duckdb_connection,
-          thread_id
-        })
+        await delete_thread_from_duckdb({ thread_id })
       } catch (error) {
         log('Error removing thread from DuckDB: %s', error.message)
       }

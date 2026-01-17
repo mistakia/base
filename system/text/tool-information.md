@@ -46,23 +46,6 @@ Each tool defines whether it stops execution through the `stops_execution` prope
 
 Universal tools are available to all threads and provide core system functionality. These tools are automatically registered when the system starts.
 
-**File Tools**:
-
-- `file_read` - Read file contents
-- `file_write` - Write content to files
-- `file_list` - List directory contents
-- `file_delete` - Delete files
-- `file_diff` - Compare file differences
-- `file_search` - Search files by path
-
-**Task Tools**:
-
-- `task_get` - Retrieve specific task details
-- `task_create` - Create new tasks
-- `task_update` - Update existing tasks
-- `task_delete` - Delete tasks
-- `list_tasks` - List tasks with filtering
-
 **Entity Tools**:
 
 - `entity_create` - Create new entities

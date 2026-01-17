@@ -9,6 +9,34 @@ import { execute_duckdb_run } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:schema')
 
+const ENTITIES_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS entities (
+  base_uri VARCHAR PRIMARY KEY,
+  entity_id VARCHAR UNIQUE NOT NULL,
+  type VARCHAR NOT NULL,
+  title VARCHAR,
+  description VARCHAR,
+  status VARCHAR,
+  priority VARCHAR,
+  archived BOOLEAN DEFAULT FALSE,
+  user_public_key VARCHAR NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+  archived_at TIMESTAMP,
+  frontmatter JSON NOT NULL
+)
+`
+
+const ENTITIES_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_status ON entities(status)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_priority ON entities(priority)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_user ON entities(user_public_key)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_updated ON entities(updated_at)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_archived ON entities(archived)',
+  'CREATE INDEX IF NOT EXISTS idx_entities_entity_id ON entities(entity_id)'
+]
+
 const TASKS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS tasks (
   entity_id VARCHAR PRIMARY KEY,
@@ -107,7 +135,17 @@ export async function create_duckdb_schema({ connection }) {
   log('Creating DuckDB schema')
 
   try {
-    // Create tables
+    // Create unified entities table
+    await execute_duckdb_run({ query: ENTITIES_TABLE_SCHEMA })
+    log('Entities table created')
+
+    // Create entities indexes
+    for (const index_sql of ENTITIES_INDEXES) {
+      await execute_duckdb_run({ query: index_sql })
+    }
+    log('Entities indexes created')
+
+    // Create legacy tables (kept during migration)
     await execute_duckdb_run({ query: TASKS_TABLE_SCHEMA })
     log('Tasks table created')
 
@@ -156,6 +194,7 @@ export async function drop_duckdb_schema({ connection }) {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_tags' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS threads' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS tasks' })
+    await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entities' })
     log('DuckDB schema dropped')
   } catch (error) {
     log('Error dropping DuckDB schema: %s', error.message)
@@ -164,6 +203,7 @@ export async function drop_duckdb_schema({ connection }) {
 }
 
 export const DUCKDB_SCHEMA = {
+  ENTITIES_TABLE_SCHEMA,
   TASKS_TABLE_SCHEMA,
   THREADS_TABLE_SCHEMA,
   ENTITY_TAGS_TABLE_SCHEMA,

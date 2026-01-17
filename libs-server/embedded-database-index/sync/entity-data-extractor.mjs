@@ -132,3 +132,37 @@ export function extract_tag_index_data({ entity_properties, file_info = {} }) {
     title: entity_properties.title
   }
 }
+
+/**
+ * Extract data for unified entities table sync
+ *
+ * @param {Object} params - Parameters
+ * @param {Object} params.entity_properties - Entity frontmatter properties
+ * @param {Object} [params.file_info] - File metadata
+ * @returns {Object|null} Entity data for unified table sync
+ */
+export function extract_unified_entity_data({
+  entity_properties,
+  file_info = {}
+}) {
+  if (!entity_properties) {
+    return null
+  }
+
+  const base_uri = entity_properties.base_uri || file_info.base_uri
+  const entity_id = entity_properties.entity_id
+  const type = entity_properties.type
+
+  if (!base_uri || !entity_id || !type) {
+    log('Cannot extract entity data without base_uri, entity_id, and type')
+    return null
+  }
+
+  return {
+    base_uri,
+    entity_id,
+    type,
+    frontmatter: entity_properties,
+    user_public_key: entity_properties.user_public_key
+  }
+}

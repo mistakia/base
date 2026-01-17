@@ -9,7 +9,7 @@ import { execute_duckdb_run } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:sync')
 
-export async function upsert_task_to_duckdb({ connection, task_data }) {
+export async function upsert_task_to_duckdb({ task_data }) {
   const {
     entity_id,
     base_uri,
@@ -96,7 +96,7 @@ export async function upsert_task_to_duckdb({ connection, task_data }) {
   }
 }
 
-export async function upsert_thread_to_duckdb({ connection, thread_data }) {
+export async function upsert_thread_to_duckdb({ thread_data }) {
   const {
     thread_id,
     title,
@@ -207,7 +207,6 @@ export async function upsert_thread_to_duckdb({ connection, thread_data }) {
 }
 
 export async function sync_entity_tags_to_duckdb({
-  connection,
   entity_base_uri,
   tag_base_uris
 }) {
@@ -247,7 +246,6 @@ export async function sync_entity_tags_to_duckdb({
 }
 
 export async function sync_entity_relations_to_duckdb({
-  connection,
   source_base_uri,
   relations
 }) {
@@ -295,11 +293,7 @@ export async function sync_entity_relations_to_duckdb({
   }
 }
 
-export async function delete_task_from_duckdb({
-  connection,
-  entity_id,
-  base_uri
-}) {
+export async function delete_task_from_duckdb({ entity_id, base_uri }) {
   log('Deleting task from DuckDB: %s', entity_id || base_uri)
 
   try {
@@ -334,7 +328,7 @@ export async function delete_task_from_duckdb({
   }
 }
 
-export async function delete_thread_from_duckdb({ connection, thread_id }) {
+export async function delete_thread_from_duckdb({ thread_id }) {
   if (!thread_id) {
     return
   }
@@ -349,6 +343,143 @@ export async function delete_thread_from_duckdb({ connection, thread_id }) {
     log('Thread deleted: %s', thread_id)
   } catch (error) {
     log('Error deleting thread: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Upsert any entity type to unified entities table
+ *
+ * @param {Object} params - Parameters
+ * @param {Object} params.entity_data - Entity data with frontmatter
+ * @param {Object} params.entity_data.frontmatter - Full frontmatter object
+ * @param {string} params.entity_data.base_uri - Entity base URI
+ * @param {string} params.entity_data.entity_id - Entity UUID
+ * @param {string} params.entity_data.type - Entity type
+ */
+export async function upsert_entity_to_duckdb({ entity_data }) {
+  const { frontmatter, base_uri, entity_id, type } = entity_data
+
+  if (!base_uri || !entity_id || !type) {
+    log('Cannot upsert entity without base_uri, entity_id, and type')
+    return
+  }
+
+  log('Upserting entity to DuckDB: %s (%s)', base_uri, type)
+
+  // Extract common columns from frontmatter
+  const title = frontmatter?.title || null
+  const description = frontmatter?.description || null
+  const status = frontmatter?.status || null
+  const priority = frontmatter?.priority || null
+  const archived = frontmatter?.archived || false
+  const user_public_key =
+    frontmatter?.user_public_key || entity_data.user_public_key
+  // created_at and updated_at are NOT NULL in schema, provide defaults
+  const now = new Date().toISOString()
+  const created_at = frontmatter?.created_at || now
+  const updated_at = frontmatter?.updated_at || now
+  const archived_at = frontmatter?.archived_at || null
+
+  const query = `
+    INSERT INTO entities (
+      base_uri, entity_id, type, title, description, status, priority,
+      archived, user_public_key, created_at, updated_at, archived_at, frontmatter
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT (base_uri) DO UPDATE SET
+      entity_id = excluded.entity_id,
+      type = excluded.type,
+      title = excluded.title,
+      description = excluded.description,
+      status = excluded.status,
+      priority = excluded.priority,
+      archived = excluded.archived,
+      user_public_key = excluded.user_public_key,
+      created_at = excluded.created_at,
+      updated_at = excluded.updated_at,
+      archived_at = excluded.archived_at,
+      frontmatter = excluded.frontmatter
+  `
+
+  try {
+    await execute_duckdb_run({
+      query,
+      parameters: [
+        base_uri,
+        entity_id,
+        type,
+        title,
+        description,
+        status,
+        priority,
+        archived,
+        user_public_key,
+        created_at,
+        updated_at,
+        archived_at,
+        JSON.stringify(frontmatter || {})
+      ]
+    })
+    log('Entity upserted: %s', base_uri)
+  } catch (error) {
+    log('Error upserting entity: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Delete entity from unified entities table
+ *
+ * @param {Object} params - Parameters
+ * @param {string} [params.entity_id] - Entity UUID
+ * @param {string} [params.base_uri] - Entity base URI (required for proper cleanup)
+ */
+export async function delete_entity_from_duckdb({ entity_id, base_uri }) {
+  if (!base_uri && !entity_id) {
+    log('Cannot delete entity without base_uri or entity_id')
+    return
+  }
+
+  log('Deleting entity from DuckDB: %s', entity_id || base_uri)
+
+  try {
+    // Resolve base_uri for consistent cleanup of all related data
+    let resolved_base_uri = base_uri
+    if (!resolved_base_uri && entity_id) {
+      const { execute_duckdb_query } = await import(
+        './duckdb-database-client.mjs'
+      )
+      const results = await execute_duckdb_query({
+        query: 'SELECT base_uri FROM entities WHERE entity_id = ?',
+        parameters: [entity_id]
+      })
+      resolved_base_uri = results[0]?.base_uri
+
+      if (!resolved_base_uri) {
+        log('Entity not found with entity_id: %s, skipping deletion', entity_id)
+        return
+      }
+    }
+
+    // Delete from entities table using resolved base_uri for consistency
+    await execute_duckdb_run({
+      query: 'DELETE FROM entities WHERE base_uri = ?',
+      parameters: [resolved_base_uri]
+    })
+
+    // Delete related tags and relations
+    await execute_duckdb_run({
+      query: 'DELETE FROM entity_tags WHERE entity_base_uri = ?',
+      parameters: [resolved_base_uri]
+    })
+    await execute_duckdb_run({
+      query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
+      parameters: [resolved_base_uri]
+    })
+
+    log('Entity deleted: %s', resolved_base_uri)
+  } catch (error) {
+    log('Error deleting entity: %s', error.message)
     throw error
   }
 }
