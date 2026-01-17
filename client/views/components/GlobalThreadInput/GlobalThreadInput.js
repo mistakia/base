@@ -139,7 +139,8 @@ export default function GlobalThreadInput() {
         set_cursor_position(0)
       }
 
-      set_should_resume(initial_mode === 'resume')
+      // Default to resume mode on thread pages, otherwise use initial_mode
+      set_should_resume(is_thread_page || initial_mode === 'resume')
       // Focus input after a brief delay for animation
       setTimeout(() => {
         input_ref.current?.focus()
