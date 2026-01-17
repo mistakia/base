@@ -39,7 +39,8 @@ $overlay-margin = 24px
   box-sizing: border-box
   // Transparent backdrop - no overlay color
   background: transparent
-  pointer-events: auto
+  // Allow scroll events to pass through to the page
+  pointer-events: none
   // Above bottom-bar (z-index: 100) and breadcrumb items (z-index: 20 on hover)
   z-index: 150
 
@@ -59,6 +60,8 @@ $overlay-margin = 24px
   // overflow: visible to allow autocomplete suggestions to extend above
   overflow: visible
   padding: $spacing-md
+  // Re-enable pointer events for the input container
+  pointer-events: auto
 
   // Mobile: more width, less margin
   @media (max-width: $breakpoint-desktop)
