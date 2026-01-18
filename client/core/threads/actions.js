@@ -50,8 +50,9 @@ export const resume_thread_session_actions = create_api_actions(
 )
 
 export const threads_actions = {
-  load_threads: () => ({
-    type: threads_action_types.LOAD_THREADS
+  load_threads: (params = {}) => ({
+    type: threads_action_types.LOAD_THREADS,
+    payload: params
   }),
 
   load_thread: (thread_id) => ({

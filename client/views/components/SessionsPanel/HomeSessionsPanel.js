@@ -115,7 +115,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
 
   useEffect(() => {
     if (load_threads) {
-      load_threads()
+      load_threads({ thread_state: 'active' })
     }
   }, [load_threads])
 
