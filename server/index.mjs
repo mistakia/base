@@ -33,7 +33,25 @@ api.set('query parser', function (str) {
 api.locals.log = log
 
 api.disable('x-powered-by')
-api.use(compression())
+api.use(
+  compression({
+    // Compression level 6 balances speed and compression ratio
+    // Higher levels (7-9) offer marginally better compression but significantly slower
+    level: 6,
+    // Compress responses larger than 1KB (default)
+    threshold: 1024,
+    // Custom filter to ensure large JSON responses are always compressed
+    filter: (req, res) => {
+      const content_type = res.getHeader('Content-Type')
+      // Always compress JSON responses (handles large thread timelines)
+      if (content_type && content_type.includes('application/json')) {
+        return true
+      }
+      // Fall back to default compression filter for other content types
+      return compression.filter(req, res)
+    }
+  })
+)
 
 // Add security headers for SPA
 api.use((req, res, next) => {
