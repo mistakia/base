@@ -8,6 +8,7 @@ import {
 } from '#libs-server/task/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
+import { apply_tag_redaction_to_tasks } from '#libs-server/tasks/tag-visibility.mjs'
 import {
   check_user_permission_for_file,
   check_permission
@@ -36,41 +37,6 @@ const check_file_permission = async (user_public_key, absolute_path) => {
 const parse_array_params = (param) => {
   if (!param) return []
   return Array.isArray(param) ? param : [param]
-}
-
-// Helper function to get tag visibility for a list of tasks
-// Uses the full permission system: ownership, user rules, public_read, public rules
-const get_tag_visibility = async (tasks, user_public_key) => {
-  // Collect unique tag URIs from all tasks
-  const tag_uris = new Set()
-  for (const task of tasks) {
-    const tags = task.entity_properties?.tags || []
-    for (const tag_uri of tags) {
-      tag_uris.add(tag_uri)
-    }
-  }
-
-  // Check visibility for each tag using the permission system
-  const tag_visibility = {}
-  for (const tag_uri of tag_uris) {
-    try {
-      // Use the full permission check which handles:
-      // 1. Ownership (user owns the tag)
-      // 2. User-specific rules
-      // 3. public_read setting
-      // 4. Public rules
-      const permission_result = await check_permission({
-        user_public_key,
-        resource_path: tag_uri
-      })
-      tag_visibility[tag_uri] = permission_result.read.allowed
-    } catch {
-      // If permission check fails, treat as not visible
-      tag_visibility[tag_uri] = false
-    }
-  }
-
-  return tag_visibility
 }
 
 // Centralized function to check task permissions and build response
@@ -208,14 +174,22 @@ async function handle_single_task_request(req, res, base_uri, user_public_key) {
       return res.status(404).send({ error: task.error || 'Task not found' })
     }
 
-    const response_data = await check_task_permission_and_build_response({
+    // Apply task-level redaction
+    const task_with_redaction = await check_task_permission_and_build_response({
       task,
       user_public_key,
       base_uri,
       include_content: true
     })
 
-    res.status(200).send(response_data)
+    // Apply tag-level redaction
+    const { tasks, tag_visibility } = await apply_tag_redaction_to_tasks({
+      tasks: [task_with_redaction],
+      user_public_key
+    })
+
+    // Return single task with tag_visibility
+    res.status(200).send({ ...tasks[0], tag_visibility })
   } catch (error) {
     res.status(404).send({
       error: `Task ${base_uri} not found: ${error.message}`
@@ -284,8 +258,8 @@ async function handle_task_list_request(
     if (cached_data) {
       log('Returning cached tasks list')
 
-      // Apply redaction to tasks based on user permissions
-      const tasks = await Promise.all(
+      // Apply task-level redaction based on user permissions
+      const redacted_tasks = await Promise.all(
         cached_data.map(async (task) => {
           return await check_task_permission_and_build_response({
             task,
@@ -294,8 +268,11 @@ async function handle_task_list_request(
         })
       )
 
-      // Get tag visibility for all tags referenced in tasks
-      const tag_visibility = await get_tag_visibility(tasks, user_public_key)
+      // Apply tag-level redaction (redact non-visible tag URIs)
+      const { tasks, tag_visibility } = await apply_tag_redaction_to_tasks({
+        tasks: redacted_tasks,
+        user_public_key
+      })
 
       return res.status(200).send({ tasks, tag_visibility })
     }
@@ -320,8 +297,8 @@ async function handle_task_list_request(
     archived: archived === 'true'
   })
 
-  // Apply redaction to tasks based on user permissions
-  const tasks = await Promise.all(
+  // Apply task-level redaction based on user permissions
+  const redacted_tasks = await Promise.all(
     all_tasks.map(async (task) => {
       return await check_task_permission_and_build_response({
         task,
@@ -330,8 +307,11 @@ async function handle_task_list_request(
     })
   )
 
-  // Get tag visibility for all tags referenced in tasks
-  const tag_visibility = await get_tag_visibility(tasks, user_public_key)
+  // Apply tag-level redaction (redact non-visible tag URIs)
+  const { tasks, tag_visibility } = await apply_tag_redaction_to_tasks({
+    tasks: redacted_tasks,
+    user_public_key
+  })
 
   res.status(200).send({ tasks, tag_visibility })
 }

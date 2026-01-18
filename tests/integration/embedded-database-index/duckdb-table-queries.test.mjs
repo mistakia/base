@@ -213,7 +213,9 @@ describe('DuckDB Table Queries Integration', () => {
 
     it('should include tags in query results', async () => {
       const tasks = await query_tasks_from_entities({
-        filters: [{ column_id: 'base_uri', operator: '=', value: 'user:task/task-1.md' }],
+        filters: [
+          { column_id: 'base_uri', operator: '=', value: 'user:task/task-1.md' }
+        ],
         sort: [],
         limit: 100,
         offset: 0
@@ -227,7 +229,9 @@ describe('DuckDB Table Queries Integration', () => {
 
     it('should filter by tags using IN operator', async () => {
       const tasks = await query_tasks_from_entities({
-        filters: [{ column_id: 'tags', operator: 'IN', value: ['user:tag/test-tag.md'] }],
+        filters: [
+          { column_id: 'tags', operator: 'IN', value: ['user:tag/test-tag.md'] }
+        ],
         sort: [],
         limit: 100,
         offset: 0
@@ -240,7 +244,9 @@ describe('DuckDB Table Queries Integration', () => {
 
     it('should extract task-specific fields from frontmatter', async () => {
       const tasks = await query_tasks_from_entities({
-        filters: [{ column_id: 'base_uri', operator: '=', value: 'user:task/task-1.md' }],
+        filters: [
+          { column_id: 'base_uri', operator: '=', value: 'user:task/task-1.md' }
+        ],
         sort: [],
         limit: 100,
         offset: 0
@@ -285,7 +291,13 @@ describe('DuckDB Table Queries Integration', () => {
 
     it('should filter by frontmatter column start_by with equality', async () => {
       const tasks = await query_tasks_from_entities({
-        filters: [{ column_id: 'start_by', operator: '=', value: '2025-02-01T00:00:00Z' }],
+        filters: [
+          {
+            column_id: 'start_by',
+            operator: '=',
+            value: '2025-02-01T00:00:00Z'
+          }
+        ],
         sort: [],
         limit: 100,
         offset: 0
@@ -316,7 +328,9 @@ describe('DuckDB Table Queries Integration', () => {
 
     it('should count tasks with tag filter', async () => {
       const count = await count_tasks_from_entities({
-        filters: [{ column_id: 'tags', operator: 'IN', value: ['user:tag/test-tag.md'] }]
+        filters: [
+          { column_id: 'tags', operator: 'IN', value: ['user:tag/test-tag.md'] }
+        ]
       })
 
       expect(count).to.equal(1)

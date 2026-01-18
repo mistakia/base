@@ -83,7 +83,9 @@ export function build_duckdb_where_clause({
     }
 
     if (operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY') {
-      conditions.push(`(${column_ref} IS NULL OR ${column_ref} ${sql_operator})`)
+      conditions.push(
+        `(${column_ref} IS NULL OR ${column_ref} ${sql_operator})`
+      )
       continue
     }
 
@@ -294,7 +296,11 @@ function transform_entity_result(entity) {
     try {
       frontmatter = JSON.parse(entity.frontmatter)
     } catch (error) {
-      log('Failed to parse frontmatter JSON for %s: %s', entity.base_uri, error.message)
+      log(
+        'Failed to parse frontmatter JSON for %s: %s',
+        entity.base_uri,
+        error.message
+      )
       frontmatter = {}
     }
   }
@@ -468,7 +474,11 @@ function extract_task_from_entity(entity) {
     try {
       frontmatter = JSON.parse(entity.frontmatter)
     } catch (error) {
-      log('Failed to parse frontmatter JSON for %s: %s', entity.base_uri, error.message)
+      log(
+        'Failed to parse frontmatter JSON for %s: %s',
+        entity.base_uri,
+        error.message
+      )
     }
   } else {
     frontmatter = entity.frontmatter || {}

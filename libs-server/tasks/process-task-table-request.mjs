@@ -17,6 +17,7 @@ import {
   query_tasks_from_entities,
   count_tasks_from_entities
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { apply_tag_redaction_to_tasks } from './tag-visibility.mjs'
 
 const log = debug('tasks:table')
 
@@ -347,8 +348,8 @@ async function process_task_table_request_indexed({
     normalize_task_for_table_response(task, CONFIG.defaults)
   )
 
-  // Apply permissions and redaction using proper permission service
-  const tasks_with_permissions = await Promise.all(
+  // Apply task-level permissions and redaction using proper permission service
+  const redacted_tasks = await Promise.all(
     normalized_tasks.map(async (task) => {
       try {
         // Use the proper permission check with base_uri
@@ -373,14 +374,22 @@ async function process_task_table_request_indexed({
     })
   )
 
+  // Apply tag-level redaction (redact non-visible tag URIs)
+  const { tasks: final_tasks, tag_visibility } =
+    await apply_tag_redaction_to_tasks({
+      tasks: redacted_tasks,
+      user_public_key: requesting_user_public_key
+    })
+
   const processing_time_ms = Date.now() - start_time
 
   return {
-    rows: tasks_with_permissions,
+    rows: final_tasks,
     total_row_count: total_count,
+    tag_visibility,
     metadata: {
-      fetched: tasks_with_permissions.length,
-      has_more: offset + tasks_with_permissions.length < total_count,
+      fetched: final_tasks.length,
+      has_more: offset + final_tasks.length < total_count,
       limit,
       offset,
       processing_time_ms,
@@ -403,15 +412,15 @@ async function process_task_table_request_filesystem({
     archived: false
   })
 
-  // Apply permissions and redaction
-  const tasks_with_permissions = await process_tasks_with_permissions(
+  // Apply task-level permissions and redaction
+  const redacted_tasks = await process_tasks_with_permissions(
     all_tasks,
     requesting_user_public_key
   )
 
   // Process with generic table processor
   const result = await process_generic_table_request({
-    data: tasks_with_permissions,
+    data: redacted_tasks,
     table_state,
     extract_metadata: process_task_for_table,
     get_value: get_task_value_for_sorting,
@@ -419,7 +428,18 @@ async function process_task_table_request_filesystem({
     column_types: CONFIG.column_types
   })
 
-  const response = normalize_response(result, table_state)
+  // Apply tag-level redaction to the processed result
+  const { tasks: final_rows, tag_visibility } =
+    await apply_tag_redaction_to_tasks({
+      tasks: result.data,
+      user_public_key: requesting_user_public_key
+    })
+
+  const response = normalize_response(
+    { ...result, data: final_rows },
+    table_state
+  )
+  response.tag_visibility = tag_visibility
   response.metadata.source = 'filesystem'
   return response
 }
