@@ -255,6 +255,7 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 - If task file was found in step 2:
   - Read the current task file to get its frontmatter
   - Update the `status` field from current value to `Completed`
+  - Update the `finished_at` field to current ISO 8601 timestamp
   - Update the `updated_at` field to current ISO 8601 timestamp
   - Write the updated task file back
   - Report task completion: "Task [task_path] marked as Completed"

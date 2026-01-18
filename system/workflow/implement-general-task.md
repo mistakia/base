@@ -36,6 +36,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
 2. **Update Plan Status**
 
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
+   - If `started_at` is not already set, update it to current ISO 8601 timestamp
    - This signals that active work has begun on the implementation
 
 3. **Prepare Work Environment**
@@ -74,6 +75,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - Verify task completion against original requirements
    - Check for any cleanup or follow-up actions needed
    - Update implementation plan status to "Completed"
+   - Update `finished_at` to current ISO 8601 timestamp
 
 ## Key Rules
 

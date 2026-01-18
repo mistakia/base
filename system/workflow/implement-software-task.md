@@ -54,6 +54,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 2. **Update Plan Status**
 
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
+   - If `started_at` is not already set, update it to current ISO 8601 timestamp
    - This signals that active work has begun on the implementation
 
 3. **Set Up Work Environment**
@@ -104,6 +105,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
    - Update implementation plan status to "Completed"
+   - Update `finished_at` to current ISO 8601 timestamp
    - **DO NOT commit any code** - committing is handled by [[sys:system/workflow/merge-worktree.md]]
 
 ## Critical Rules
