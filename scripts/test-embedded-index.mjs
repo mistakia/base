@@ -5,10 +5,9 @@
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
-  query_tasks_from_duckdb,
-  count_tasks_in_duckdb
+  query_tasks_from_entities,
+  count_tasks_from_entities
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import {
   find_entities_by_tag,
   find_related_entities
@@ -77,18 +76,14 @@ try {
   })
   console.log('   Synced test thread')
 
-  // Test DuckDB queries
+  // Test DuckDB queries (via entities table)
   if (embedded_index_manager.is_duckdb_ready()) {
-    console.log('\n3. Testing DuckDB queries...')
-    const duckdb_connection = await get_duckdb_connection()
+    console.log('\n3. Testing DuckDB queries via entities table...')
 
-    const task_count = await count_tasks_in_duckdb({
-      connection: duckdb_connection
-    })
+    const task_count = await count_tasks_from_entities({})
     console.log('   Task count:', task_count)
 
-    const tasks = await query_tasks_from_duckdb({
-      connection: duckdb_connection,
+    const tasks = await query_tasks_from_entities({
       filters: [{ column_id: 'status', operator: '=', value: 'In Progress' }],
       limit: 5
     })

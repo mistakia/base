@@ -9,6 +9,26 @@ import { execute_duckdb_query } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:queries')
 
+/**
+ * Task-specific columns stored in frontmatter JSON
+ * Maps column names to DuckDB JSON extraction expressions
+ * These columns are not indexed but can be filtered/sorted via JSON extraction
+ *
+ * Note: Parentheses are required around JSON extraction expressions due to
+ * DuckDB operator precedence (-> and ->> have low precedence for lambda overlap)
+ */
+const TASK_FRONTMATTER_COLUMNS = {
+  start_by: "(frontmatter->>'start_by')",
+  finish_by: "(frontmatter->>'finish_by')",
+  planned_start: "(frontmatter->>'planned_start')",
+  planned_finish: "(frontmatter->>'planned_finish')",
+  started_at: "(frontmatter->>'started_at')",
+  finished_at: "(frontmatter->>'finished_at')",
+  snooze_until: "(frontmatter->>'snooze_until')",
+  estimated_total_duration:
+    "CAST((frontmatter->>'estimated_total_duration') AS DOUBLE)"
+}
+
 // Map client filter operators to SQL operators
 // Keys match TABLE_OPERATORS values from react-table (e.g., 'NOT IN' with space)
 const FILTER_OPERATOR_MAP = {
@@ -28,7 +48,11 @@ const FILTER_OPERATOR_MAP = {
   IS_NOT_EMPTY: "!= ''"
 }
 
-export function build_duckdb_where_clause({ filters, column_types = {} }) {
+export function build_duckdb_where_clause({
+  filters,
+  column_types = {},
+  frontmatter_columns = {}
+}) {
   if (!filters || filters.length === 0) {
     return { where_sql: '', parameters: [] }
   }
@@ -49,14 +73,17 @@ export function build_duckdb_where_clause({ filters, column_types = {} }) {
       continue
     }
 
+    // Resolve column reference - use JSON extraction if in frontmatter mapping
+    const column_ref = frontmatter_columns[column_id] || column_id
+
     // Handle special operators that don't need values
     if (operator === 'IS NULL' || operator === 'IS NOT NULL') {
-      conditions.push(`${column_id} ${sql_operator}`)
+      conditions.push(`${column_ref} ${sql_operator}`)
       continue
     }
 
     if (operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY') {
-      conditions.push(`(${column_id} IS NULL OR ${column_id} ${sql_operator})`)
+      conditions.push(`(${column_ref} IS NULL OR ${column_ref} ${sql_operator})`)
       continue
     }
 
@@ -64,7 +91,7 @@ export function build_duckdb_where_clause({ filters, column_types = {} }) {
     if (operator === 'IN' || operator === 'NOT IN') {
       if (Array.isArray(value) && value.length > 0) {
         const placeholders = value.map(() => '?').join(', ')
-        conditions.push(`${column_id} ${sql_operator} (${placeholders})`)
+        conditions.push(`${column_ref} ${sql_operator} (${placeholders})`)
         parameters.push(...value)
       }
       continue
@@ -72,13 +99,13 @@ export function build_duckdb_where_clause({ filters, column_types = {} }) {
 
     // Handle LIKE operators
     if (operator === 'LIKE' || operator === 'NOT LIKE') {
-      conditions.push(`${column_id} ${sql_operator} ?`)
+      conditions.push(`${column_ref} ${sql_operator} ?`)
       parameters.push(`%${value}%`)
       continue
     }
 
     // Handle standard comparison operators
-    conditions.push(`${column_id} ${sql_operator} ?`)
+    conditions.push(`${column_ref} ${sql_operator} ?`)
     parameters.push(value)
   }
 
@@ -175,7 +202,7 @@ function separate_and_build_tag_filters({ filters, table_alias = 't' }) {
   }
 }
 
-export function build_duckdb_order_clause({ sort }) {
+export function build_duckdb_order_clause({ sort, frontmatter_columns = {} }) {
   if (!sort || sort.length === 0) {
     return ''
   }
@@ -188,71 +215,13 @@ export function build_duckdb_order_clause({ sort }) {
       return `${PRIORITY_CASE_EXPRESSION} ${direction} NULLS LAST`
     }
 
-    return `${column_id} ${direction} NULLS LAST`
+    // Resolve column reference - use JSON extraction if in frontmatter mapping
+    const column_ref = frontmatter_columns[column_id] || column_id
+
+    return `${column_ref} ${direction} NULLS LAST`
   })
 
   return `ORDER BY ${order_parts.join(', ')}`
-}
-
-export async function query_tasks_from_duckdb({
-  filters = [],
-  sort = [],
-  limit = 1000,
-  offset = 0
-}) {
-  log('Querying tasks from DuckDB')
-
-  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
-    filters
-  })
-  const { where_sql, parameters } = build_duckdb_where_clause({
-    filters: regular_filters
-  })
-  const order_sql = build_duckdb_order_clause({ sort })
-  const final_where = combine_where_clauses({
-    base_where: where_sql,
-    additional_condition: tag_conditions.sql
-  })
-
-  const query = `
-    SELECT
-      t.entity_id, t.base_uri, t.title, t.status, t.priority, t.description,
-      t.created_at, t.updated_at, t.start_by, t.finish_by,
-      t.planned_start, t.planned_finish, t.started_at, t.finished_at,
-      t.snooze_until, t.estimated_total_duration, t.archived, t.user_public_key,
-      STRING_AGG(et.tag_base_uri, '||') AS tags_aggregated
-    FROM tasks t
-    LEFT JOIN entity_tags et ON et.entity_base_uri = t.base_uri
-    ${final_where}
-    GROUP BY
-      t.entity_id, t.base_uri, t.title, t.status, t.priority, t.description,
-      t.created_at, t.updated_at, t.start_by, t.finish_by,
-      t.planned_start, t.planned_finish, t.started_at, t.finished_at,
-      t.snooze_until, t.estimated_total_duration, t.archived, t.user_public_key
-    ${order_sql}
-    LIMIT ? OFFSET ?
-  `
-
-  try {
-    const results = await execute_duckdb_query({
-      query,
-      parameters: [...parameters, ...tag_conditions.parameters, limit, offset]
-    })
-
-    // Parse tags_aggregated string into array (inline)
-    const tasks_with_tags = results.map((task) => ({
-      ...task,
-      tags: task.tags_aggregated
-        ? task.tags_aggregated.split('||').filter(Boolean)
-        : []
-    }))
-
-    log('Found %d tasks', tasks_with_tags.length)
-    return tasks_with_tags
-  } catch (error) {
-    log('Error querying tasks: %s', error.message)
-    throw error
-  }
 }
 
 export async function query_threads_from_duckdb({
@@ -294,40 +263,6 @@ export async function query_threads_from_duckdb({
   }
 }
 
-export async function count_tasks_in_duckdb({ filters = [] }) {
-  log('Counting tasks in DuckDB')
-
-  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
-    filters
-  })
-  const { where_sql, parameters } = build_duckdb_where_clause({
-    filters: regular_filters
-  })
-  const final_where = combine_where_clauses({
-    base_where: where_sql,
-    additional_condition: tag_conditions.sql
-  })
-
-  // Use alias 't' for tasks table to match tag filter conditions
-  const query = `SELECT COUNT(*) as count FROM tasks t ${final_where}`
-
-  try {
-    const results = await execute_duckdb_query({
-      query,
-      parameters: [...parameters, ...tag_conditions.parameters]
-    })
-    const count_value = results[0]?.count
-    // Convert BigInt to Number if necessary
-    const count =
-      typeof count_value === 'bigint' ? Number(count_value) : count_value || 0
-    log('Task count: %d', count)
-    return count
-  } catch (error) {
-    log('Error counting tasks: %s', error.message)
-    throw error
-  }
-}
-
 export async function count_threads_in_duckdb({ filters = [] }) {
   log('Counting threads in DuckDB')
 
@@ -349,63 +284,27 @@ export async function count_threads_in_duckdb({ filters = [] }) {
   }
 }
 
-export async function query_tasks_by_tag({
-  tag_base_uri,
-  filters = [],
-  sort = [],
-  limit = 1000,
-  offset = 0
-}) {
-  log('Querying tasks by tag: %s', tag_base_uri)
-
-  const { where_sql, parameters } = build_duckdb_where_clause({ filters })
-  const order_sql = build_duckdb_order_clause({ sort })
-
-  // Modify WHERE clause to include tag filter
-  const tag_condition =
-    'EXISTS (SELECT 1 FROM entity_tags et WHERE et.entity_base_uri = tasks.base_uri AND et.tag_base_uri = ?)'
-  const final_where = where_sql
-    ? `${where_sql} AND ${tag_condition}`
-    : `WHERE ${tag_condition}`
-
-  const query = `
-    SELECT
-      entity_id, base_uri, title, status, priority, description,
-      created_at, updated_at, archived, user_public_key
-    FROM tasks
-    ${final_where}
-    ${order_sql}
-    LIMIT ? OFFSET ?
-  `
-
-  try {
-    const results = await execute_duckdb_query({
-      query,
-      parameters: [...parameters, tag_base_uri, limit, offset]
-    })
-
-    log('Found %d tasks with tag', results.length)
-    return results
-  } catch (error) {
-    log('Error querying tasks by tag: %s', error.message)
-    throw error
-  }
-}
-
 /**
  * Transform entity result from database format to API format
  * Parses tags_aggregated and frontmatter JSON
  */
 function transform_entity_result(entity) {
+  let frontmatter = entity.frontmatter
+  if (typeof entity.frontmatter === 'string') {
+    try {
+      frontmatter = JSON.parse(entity.frontmatter)
+    } catch (error) {
+      log('Failed to parse frontmatter JSON for %s: %s', entity.base_uri, error.message)
+      frontmatter = {}
+    }
+  }
+
   return {
     ...entity,
     tags: entity.tags_aggregated
       ? entity.tags_aggregated.split('||').filter(Boolean)
       : [],
-    frontmatter:
-      typeof entity.frontmatter === 'string'
-        ? JSON.parse(entity.frontmatter)
-        : entity.frontmatter
+    frontmatter
   }
 }
 
@@ -555,6 +454,145 @@ export async function count_entities_in_duckdb({ filters = [] }) {
     return count
   } catch (error) {
     log('Error counting entities: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Extract task from entity result
+ * Parses frontmatter JSON and extracts task-specific fields into flat structure
+ */
+function extract_task_from_entity(entity) {
+  let frontmatter = {}
+  if (typeof entity.frontmatter === 'string') {
+    try {
+      frontmatter = JSON.parse(entity.frontmatter)
+    } catch (error) {
+      log('Failed to parse frontmatter JSON for %s: %s', entity.base_uri, error.message)
+    }
+  } else {
+    frontmatter = entity.frontmatter || {}
+  }
+
+  return {
+    // Core entity fields (already columns in entities table)
+    entity_id: entity.entity_id,
+    base_uri: entity.base_uri,
+    title: entity.title,
+    status: entity.status,
+    priority: entity.priority,
+    description: entity.description,
+    created_at: entity.created_at,
+    updated_at: entity.updated_at,
+    archived: entity.archived,
+    user_public_key: entity.user_public_key,
+
+    // Task-specific fields from frontmatter
+    start_by: frontmatter.start_by || null,
+    finish_by: frontmatter.finish_by || null,
+    planned_start: frontmatter.planned_start || null,
+    planned_finish: frontmatter.planned_finish || null,
+    started_at: frontmatter.started_at || null,
+    finished_at: frontmatter.finished_at || null,
+    snooze_until: frontmatter.snooze_until || null,
+    estimated_total_duration: frontmatter.estimated_total_duration || null,
+
+    // Tags from aggregation
+    tags: entity.tags_aggregated
+      ? entity.tags_aggregated.split('||').filter(Boolean)
+      : []
+  }
+}
+
+/**
+ * Query tasks from entities table with type='task' filter
+ * Wraps query_entities_from_duckdb with task-specific transformations
+ */
+export async function query_tasks_from_entities({
+  filters = [],
+  sort = [],
+  limit = 1000,
+  offset = 0
+}) {
+  log('Querying tasks from entities table')
+
+  // Add type='task' filter
+  const type_filter = { column_id: 'type', operator: '=', value: 'task' }
+  const filters_with_type = [type_filter, ...filters]
+
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters: filters_with_type,
+    table_alias: 'e'
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters,
+    frontmatter_columns: TASK_FRONTMATTER_COLUMNS
+  })
+  const order_sql = build_duckdb_order_clause({
+    sort,
+    frontmatter_columns: TASK_FRONTMATTER_COLUMNS
+  })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
+
+  const query =
+    build_entity_query({ where_clause: final_where, order_clause: order_sql }) +
+    'LIMIT ? OFFSET ?'
+
+  try {
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...tag_conditions.parameters, limit, offset]
+    })
+
+    const tasks = results.map(extract_task_from_entity)
+    log('Found %d tasks from entities table', tasks.length)
+    return tasks
+  } catch (error) {
+    log('Error querying tasks from entities: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Count tasks from entities table with type='task' filter
+ */
+export async function count_tasks_from_entities({ filters = [] }) {
+  log('Counting tasks from entities table')
+
+  // Add type='task' filter
+  const type_filter = { column_id: 'type', operator: '=', value: 'task' }
+  const filters_with_type = [type_filter, ...filters]
+
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters: filters_with_type,
+    table_alias: 'e'
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters,
+    frontmatter_columns: TASK_FRONTMATTER_COLUMNS
+  })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
+
+  const query = `SELECT COUNT(*) as count FROM entities e ${final_where}`
+
+  try {
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...tag_conditions.parameters]
+    })
+    const count_value = results[0]?.count
+    const count =
+      typeof count_value === 'bigint' ? Number(count_value) : count_value || 0
+    log('Task count from entities: %d', count)
+    return count
+  } catch (error) {
+    log('Error counting tasks from entities: %s', error.message)
     throw error
   }
 }

@@ -10,10 +10,9 @@ import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
-  count_tasks_in_duckdb,
+  count_tasks_from_entities,
   count_threads_in_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 
 async function get_files_recursive(dir, pattern) {
   const files = []
@@ -126,13 +125,8 @@ async function main() {
     await populate_threads()
 
     console.log('\n4. Verifying counts...')
-    const duckdb_connection = await get_duckdb_connection()
-    const task_count = await count_tasks_in_duckdb({
-      connection: duckdb_connection
-    })
-    const thread_count = await count_threads_in_duckdb({
-      connection: duckdb_connection
-    })
+    const task_count = await count_tasks_from_entities({})
+    const thread_count = await count_threads_in_duckdb({})
     console.log(`   Tasks in index: ${task_count}`)
     console.log(`   Threads in index: ${thread_count}`)
 

@@ -29,35 +29,6 @@ export function extract_entity_index_data({
   }
 }
 
-export function extract_task_index_data({ entity_properties, file_info = {} }) {
-  if (!entity_properties) {
-    return null
-  }
-
-  const base_uri = entity_properties.base_uri || file_info.base_uri
-
-  return {
-    entity_id: entity_properties.entity_id,
-    base_uri,
-    title: entity_properties.title,
-    status: entity_properties.status,
-    priority: entity_properties.priority,
-    description: entity_properties.description,
-    created_at: entity_properties.created_at,
-    updated_at: entity_properties.updated_at,
-    start_by: entity_properties.start_by,
-    finish_by: entity_properties.finish_by,
-    planned_start: entity_properties.planned_start,
-    planned_finish: entity_properties.planned_finish,
-    started_at: entity_properties.started_at,
-    finished_at: entity_properties.finished_at,
-    snooze_until: entity_properties.snooze_until,
-    estimated_total_duration: entity_properties.estimated_total_duration,
-    archived: entity_properties.archived || false,
-    user_public_key: entity_properties.user_public_key
-  }
-}
-
 export function extract_tags_from_entity({ entity_properties }) {
   if (!entity_properties || !entity_properties.tags) {
     return []

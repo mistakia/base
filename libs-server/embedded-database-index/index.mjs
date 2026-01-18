@@ -52,18 +52,18 @@ export {
 } from './duckdb/duckdb-schema-definitions.mjs'
 
 export {
-  upsert_task_to_duckdb,
+  upsert_entity_to_duckdb,
   upsert_thread_to_duckdb,
   sync_entity_tags_to_duckdb,
   sync_entity_relations_to_duckdb,
-  delete_task_from_duckdb,
+  delete_entity_from_duckdb,
   delete_thread_from_duckdb
 } from './duckdb/duckdb-entity-sync.mjs'
 
 export {
-  query_tasks_from_duckdb,
+  query_tasks_from_entities,
+  count_tasks_from_entities,
   query_threads_from_duckdb,
-  count_tasks_in_duckdb,
   count_threads_in_duckdb,
   build_duckdb_where_clause,
   build_duckdb_order_clause
@@ -71,7 +71,6 @@ export {
 
 // Sync utilities
 export {
-  extract_task_index_data,
   extract_entity_index_data,
   extract_tags_from_entity,
   extract_relations_from_entity

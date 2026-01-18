@@ -37,29 +37,6 @@ const ENTITIES_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_entities_entity_id ON entities(entity_id)'
 ]
 
-const TASKS_TABLE_SCHEMA = `
-CREATE TABLE IF NOT EXISTS tasks (
-  entity_id VARCHAR PRIMARY KEY,
-  base_uri VARCHAR UNIQUE NOT NULL,
-  title VARCHAR,
-  status VARCHAR,
-  priority VARCHAR,
-  description VARCHAR,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP,
-  start_by TIMESTAMP,
-  finish_by TIMESTAMP,
-  planned_start TIMESTAMP,
-  planned_finish TIMESTAMP,
-  started_at TIMESTAMP,
-  finished_at TIMESTAMP,
-  snooze_until TIMESTAMP,
-  estimated_total_duration DOUBLE,
-  archived BOOLEAN DEFAULT FALSE,
-  user_public_key VARCHAR
-)
-`
-
 const THREADS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS threads (
   thread_id VARCHAR PRIMARY KEY,
@@ -106,14 +83,6 @@ CREATE TABLE IF NOT EXISTS entity_relations (
 )
 `
 
-const TASKS_INDEXES = [
-  'CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)',
-  'CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)',
-  'CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at)',
-  'CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_public_key)',
-  'CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived)'
-]
-
 const THREADS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_threads_state ON threads(thread_state)',
   'CREATE INDEX IF NOT EXISTS idx_threads_created ON threads(created_at)',
@@ -145,10 +114,6 @@ export async function create_duckdb_schema({ connection }) {
     }
     log('Entities indexes created')
 
-    // Create legacy tables (kept during migration)
-    await execute_duckdb_run({ query: TASKS_TABLE_SCHEMA })
-    log('Tasks table created')
-
     await execute_duckdb_run({ query: THREADS_TABLE_SCHEMA })
     log('Threads table created')
 
@@ -157,12 +122,6 @@ export async function create_duckdb_schema({ connection }) {
 
     await execute_duckdb_run({ query: ENTITY_RELATIONS_TABLE_SCHEMA })
     log('Entity relations table created')
-
-    // Create indexes
-    for (const index_sql of TASKS_INDEXES) {
-      await execute_duckdb_run({ query: index_sql })
-    }
-    log('Tasks indexes created')
 
     for (const index_sql of THREADS_INDEXES) {
       await execute_duckdb_run({ query: index_sql })
@@ -193,7 +152,6 @@ export async function drop_duckdb_schema({ connection }) {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_relations' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_tags' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS threads' })
-    await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS tasks' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entities' })
     log('DuckDB schema dropped')
   } catch (error) {
@@ -204,7 +162,6 @@ export async function drop_duckdb_schema({ connection }) {
 
 export const DUCKDB_SCHEMA = {
   ENTITIES_TABLE_SCHEMA,
-  TASKS_TABLE_SCHEMA,
   THREADS_TABLE_SCHEMA,
   ENTITY_TAGS_TABLE_SCHEMA,
   ENTITY_RELATIONS_TABLE_SCHEMA
