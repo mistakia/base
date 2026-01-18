@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useLocation } from 'react-router-dom'
 import {
   Box,
   TextField,
@@ -17,37 +16,16 @@ import {
   get_can_create_threads,
   get_can_resume_thread
 } from '@core/app/selectors'
-import { get_directory_state } from '@core/directory'
+import { get_thread_by_id } from '@core/threads/selectors.js'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
 import useFileAutocomplete from './use-file-autocomplete.js'
-import { BASE_DIRECTORIES } from '@views/utils/base-uri-constants'
 import './GlobalThreadInput.styl'
 
 // Constants
-const DEFAULT_WORKING_DIRECTORY = BASE_DIRECTORIES.user
 const KEYBOARD_HINT = 'Cmd+Enter to send'
 const PLACEHOLDER_NEW_THREAD = 'What would you like Trashman Jr to do?'
 const PLACEHOLDER_CONTINUE = 'Continue thread...'
-
-// Helper functions
-const parse_thread_from_path = (path) => {
-  if (!path.startsWith('/thread/')) {
-    return null
-  }
-
-  const parts = path.split('/')
-  const thread_id = parts[2]
-
-  // Verify we're exactly on the thread page (not a subpath)
-  const is_exact_thread_page =
-    parts.length === 3 || (parts.length === 4 && parts[3] === '')
-
-  return is_exact_thread_page ? thread_id : null
-}
-
-const should_show_working_directory_picker = (is_thread_page, should_resume) =>
-  !is_thread_page || !should_resume
 
 /**
  * GlobalThreadInput Component
@@ -55,54 +33,94 @@ const should_show_working_directory_picker = (is_thread_page, should_resume) =>
  * Overlay thread input that can be opened via keyboard shortcut (Cmd/Ctrl+K).
  * Supports two modes:
  * - Creating new threads (default)
- * - Resuming existing threads (when target_thread_id is set or on thread page)
+ * - Resuming existing threads (when thread_id is set or on thread page)
+ *
+ * Draft state (message, cursor, working_directory, should_resume) is stored in Redux
+ * to persist during navigation while the overlay is open.
  */
 export default function GlobalThreadInput() {
   const dispatch = useDispatch()
-  const location = useLocation()
-  const current_path = location.pathname
   const input_ref = useRef(null)
+  const prev_is_open_ref = useRef(false)
 
   // Redux state for overlay
   const is_open = useSelector((state) =>
     state.getIn(['thread_prompt', 'is_open'], false)
   )
-  const target_thread_id = useSelector((state) =>
-    state.getIn(['thread_prompt', 'target_thread_id'], null)
+  // Thread context captured at open time - persists during navigation
+  const thread_id = useSelector((state) =>
+    state.getIn(['thread_prompt', 'thread_id'], null)
   )
-  const initial_mode = useSelector((state) =>
-    state.getIn(['thread_prompt', 'initial_mode'], 'new')
+  const captured_path = useSelector((state) =>
+    state.getIn(['thread_prompt', 'captured_path'], null)
+  )
+
+  // Draft state from Redux - persists during navigation
+  const message = useSelector((state) =>
+    state.getIn(['thread_prompt', 'draft_message'], '')
+  )
+  const cursor_position = useSelector((state) =>
+    state.getIn(['thread_prompt', 'draft_cursor_position'], 0)
+  )
+  const working_directory = useSelector((state) =>
+    state.getIn(['thread_prompt', 'draft_working_directory'], 'user:')
+  )
+  const should_resume = useSelector((state) =>
+    state.getIn(['thread_prompt', 'draft_should_resume'], true)
   )
 
   // Auth token for API requests
   const user_token = useSelector((state) => state.getIn(['app', 'user_token']))
 
-  // Directory state for detecting file pages
-  const directory_state = useSelector(get_directory_state)
-  const path_info = directory_state.get('path_info')
-
-  // Local state
-  const [message, set_message] = useState('')
-  const [cursor_position, set_cursor_position] = useState(0)
-  const [working_directory, set_working_directory] = useState(
-    DEFAULT_WORKING_DIRECTORY
+  // Update draft state helpers
+  const set_message = useCallback(
+    (value) =>
+      dispatch(thread_prompt_actions.update_draft({ draft_message: value })),
+    [dispatch]
   )
-  const [should_resume, set_should_resume] = useState(true)
+  const set_cursor_position = useCallback(
+    (value) =>
+      dispatch(
+        thread_prompt_actions.update_draft({ draft_cursor_position: value })
+      ),
+    [dispatch]
+  )
+  const set_working_directory = useCallback(
+    (value) =>
+      dispatch(
+        thread_prompt_actions.update_draft({ draft_working_directory: value })
+      ),
+    [dispatch]
+  )
+  const set_should_resume = useCallback(
+    (value) =>
+      dispatch(
+        thread_prompt_actions.update_draft({ draft_should_resume: value })
+      ),
+    [dispatch]
+  )
 
   // Autocomplete selection handler
-  const handle_autocomplete_select = useCallback((new_text, new_cursor_pos) => {
-    set_message(new_text)
-    set_cursor_position(new_cursor_pos)
+  const handle_autocomplete_select = useCallback(
+    (new_text, new_cursor_pos) => {
+      dispatch(
+        thread_prompt_actions.update_draft({
+          draft_message: new_text,
+          draft_cursor_position: new_cursor_pos
+        })
+      )
 
-    // Update cursor position in the input after React re-renders
-    requestAnimationFrame(() => {
-      const input = input_ref.current
-      if (input) {
-        input.setSelectionRange(new_cursor_pos, new_cursor_pos)
-        input.focus()
-      }
-    })
-  }, [])
+      // Update cursor position in the input after React re-renders
+      requestAnimationFrame(() => {
+        const input = input_ref.current
+        if (input) {
+          input.setSelectionRange(new_cursor_pos, new_cursor_pos)
+          input.focus()
+        }
+      })
+    },
+    [dispatch]
+  )
 
   // File autocomplete hook
   const autocomplete = useFileAutocomplete({
@@ -113,40 +131,20 @@ export default function GlobalThreadInput() {
     token: user_token
   })
 
-  // Determine thread context
-  const path_thread_id = parse_thread_from_path(current_path)
-  const effective_thread_id = target_thread_id || path_thread_id
-  const is_thread_context = !!effective_thread_id
+  // Derived state
+  const is_thread_context = !!thread_id
   const is_resume_mode = is_thread_context && should_resume
 
-  // Reset state when overlay opens
+  // Focus input when overlay opens
   useEffect(() => {
-    if (is_open) {
-      // Check if we're on a file page (not a thread page and path_info indicates file)
-      const is_thread_page = parse_thread_from_path(current_path) !== null
-      const is_file_page = !is_thread_page && path_info?.type === 'file'
-
-      if (is_file_page) {
-        // Pre-populate with file mention - strip leading slash from path
-        const normalized_path = current_path.startsWith('/')
-          ? current_path.slice(1)
-          : current_path
-        const initial_content = `@${normalized_path} `
-        set_message(initial_content)
-        set_cursor_position(initial_content.length)
-      } else {
-        set_message('')
-        set_cursor_position(0)
-      }
-
-      // Default to resume mode on thread pages, otherwise use initial_mode
-      set_should_resume(is_thread_page || initial_mode === 'resume')
+    if (is_open && !prev_is_open_ref.current) {
       // Focus input after a brief delay for animation
       setTimeout(() => {
         input_ref.current?.focus()
       }, 100)
     }
-  }, [is_open, initial_mode, current_path, path_info])
+    prev_is_open_ref.current = is_open
+  }, [is_open])
 
   // Redux selectors
   const is_loading = useSelector((state) => {
@@ -158,9 +156,10 @@ export default function GlobalThreadInput() {
 
   const can_create_threads = useSelector(get_can_create_threads)
 
+  // Look up thread by ID from any available source (threads list, table, or selected_thread_data)
   const selected_thread = useSelector((state) => {
-    if (!is_thread_context) return null
-    return state.getIn(['threads', 'selected_thread_data'])?.toJS()
+    if (!thread_id) return null
+    return get_thread_by_id(state, thread_id)
   })
 
   const can_resume_thread = useSelector((state) =>
@@ -174,37 +173,33 @@ export default function GlobalThreadInput() {
     }
   }
 
-  const handle_submit = async (e) => {
+  const handle_submit = (e) => {
     e.preventDefault()
 
     if (!message.trim()) {
       return
     }
 
-    try {
-      if (is_resume_mode && effective_thread_id) {
-        dispatch(
-          threads_actions.resume_thread_session({
-            thread_id: effective_thread_id,
-            prompt: message,
-            working_directory
-          })
-        )
-      } else {
-        dispatch(
-          threads_actions.create_thread_session({
-            prompt: message,
-            working_directory
-          })
-        )
-      }
-
-      // Clear input and close overlay on success
-      set_message('')
-      dispatch(thread_prompt_actions.close())
-    } catch (error) {
-      console.error('Error submitting thread message:', error)
+    if (is_resume_mode && thread_id) {
+      dispatch(
+        threads_actions.resume_thread_session({
+          thread_id,
+          prompt: message,
+          working_directory
+        })
+      )
+    } else {
+      dispatch(
+        threads_actions.create_thread_session({
+          prompt: message,
+          working_directory
+        })
+      )
     }
+
+    // Clear input and close overlay - async errors handled via notifications
+    set_message('')
+    dispatch(thread_prompt_actions.close())
   }
 
   const handle_key_down = (e) => {
@@ -250,12 +245,14 @@ export default function GlobalThreadInput() {
     ? PLACEHOLDER_CONTINUE
     : PLACEHOLDER_NEW_THREAD
 
-  const show_directory_picker = should_show_working_directory_picker(
-    is_thread_context,
-    should_resume
-  )
+  // Show directory picker when creating new thread or not in thread context
+  const show_directory_picker = !is_thread_context || !should_resume
 
   const is_submit_disabled = is_loading || !message.trim()
+
+  // Show thread context indicator when resuming a thread
+  const show_thread_context = is_resume_mode && selected_thread
+  const thread_title = selected_thread?.title
 
   // Determine if the input should be shown based on permissions
   const should_show_input =
@@ -277,6 +274,19 @@ export default function GlobalThreadInput() {
         className='global-thread-input-backdrop'
         onClick={handle_backdrop_click}>
         <Box className='global-thread-input'>
+          {show_thread_context && (
+            <Box className='thread-context-indicator'>
+              <Typography variant='caption' className='thread-context-label'>
+                Resuming:
+              </Typography>
+              <Typography
+                variant='caption'
+                className='thread-context-title'
+                title={thread_title}>
+                {thread_title || 'Untitled thread'}
+              </Typography>
+            </Box>
+          )}
           <form onSubmit={handle_submit}>
             <Box className='input-container-with-autocomplete'>
               <FileAutocompleteSuggestions
@@ -314,7 +324,7 @@ export default function GlobalThreadInput() {
                   <WorkingDirectoryPicker
                     value={working_directory}
                     onChange={set_working_directory}
-                    current_path={current_path}
+                    current_path={captured_path}
                   />
                 )}
 

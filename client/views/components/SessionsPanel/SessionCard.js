@@ -60,8 +60,7 @@ const SessionCard = ({ item }) => {
     if (item.id) {
       dispatch(
         thread_prompt_actions.open({
-          thread_id: item.id,
-          mode: 'resume'
+          thread_id: item.id
         })
       )
     }

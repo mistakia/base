@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { Provider, useSelector, useDispatch } from 'react-redux'
 import { HistoryRouter as Router } from 'redux-first-history/rr6'
@@ -102,28 +102,81 @@ const NotificationContainer = () => {
   return <Notification info={notification_info} />
 }
 
+// UUID pattern for thread ID detection
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Parse thread ID from path if on a thread page
+const parse_thread_from_path = (path) => {
+  if (!path.startsWith('/thread/')) {
+    return null
+  }
+  const parts = path.split('/')
+  const thread_id = parts[2]
+  if (!thread_id || !UUID_PATTERN.test(thread_id)) {
+    return null
+  }
+  return thread_id
+}
+
 const ThreadPromptContainer = () => {
   const dispatch = useDispatch()
   const is_open = useSelector((state) =>
     state.getIn(['thread_prompt', 'is_open'], false)
   )
+  const directory_state = useSelector((state) => state.get('directory'))
+  const router = useSelector((state) => state.get('router'))
+
+  // Use refs for values accessed in keydown handler to avoid stale closures
+  const is_open_ref = useRef(is_open)
+  const current_path_ref = useRef(router?.location?.pathname || '/')
+  const path_info_ref = useRef(directory_state?.get('path_info'))
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    is_open_ref.current = is_open
+  }, [is_open])
+
+  useEffect(() => {
+    current_path_ref.current = router?.location?.pathname || '/'
+  }, [router])
+
+  useEffect(() => {
+    path_info_ref.current = directory_state?.get('path_info')
+  }, [directory_state])
 
   useEffect(() => {
     const handle_keydown = (event) => {
       // Cmd/Ctrl+K to toggle thread prompt overlay
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
-        if (is_open) {
+        if (is_open_ref.current) {
           dispatch(thread_prompt_actions.close())
         } else {
-          dispatch(thread_prompt_actions.open())
+          // Capture context at open time using current ref values
+          const current_path = current_path_ref.current
+          const path_info = path_info_ref.current
+          const thread_id = parse_thread_from_path(current_path)
+          const is_file_page = !thread_id && path_info?.get('type') === 'file'
+
+          dispatch(
+            thread_prompt_actions.open({
+              thread_id,
+              file_path: is_file_page
+                ? current_path.startsWith('/')
+                  ? current_path.slice(1)
+                  : current_path
+                : null,
+              current_path
+            })
+          )
         }
       }
     }
 
     document.addEventListener('keydown', handle_keydown)
     return () => document.removeEventListener('keydown', handle_keydown)
-  }, [dispatch, is_open])
+  }, [dispatch])
 
   return <GlobalThreadInput />
 }
