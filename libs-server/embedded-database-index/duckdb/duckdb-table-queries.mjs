@@ -606,3 +606,61 @@ export async function count_tasks_from_entities({ filters = [] }) {
     throw error
   }
 }
+
+/**
+ * Query tag statistics - entity counts per tag
+ * Returns all tags with their usage counts, sorted by count descending
+ *
+ * @param {Object} params - Parameters
+ * @param {boolean} [params.include_zero_count=false] - Include tags with no entities
+ * @returns {Promise<Array<{tag_base_uri: string, title: string, entity_count: number}>>}
+ */
+export async function query_tag_statistics_from_duckdb({
+  include_zero_count = false
+} = {}) {
+  log('Querying tag statistics from DuckDB')
+
+  // Join with entities table to get tag titles
+  // LEFT JOIN entity_tags to include tags with zero usage when requested
+  const query = include_zero_count
+    ? `
+      SELECT
+        t.base_uri AS tag_base_uri,
+        t.title,
+        COUNT(et.entity_base_uri) AS entity_count
+      FROM entities t
+      LEFT JOIN entity_tags et ON et.tag_base_uri = t.base_uri
+      WHERE t.type = 'tag' AND (t.archived = false OR t.archived IS NULL)
+      GROUP BY t.base_uri, t.title
+      ORDER BY entity_count DESC, t.title ASC
+    `
+    : `
+      SELECT
+        et.tag_base_uri,
+        t.title,
+        COUNT(*) AS entity_count
+      FROM entity_tags et
+      LEFT JOIN entities t ON t.base_uri = et.tag_base_uri
+      GROUP BY et.tag_base_uri, t.title
+      ORDER BY entity_count DESC, t.title ASC
+    `
+
+  try {
+    const results = await execute_duckdb_query({ query, parameters: [] })
+
+    const stats = results.map((row) => ({
+      tag_base_uri: row.tag_base_uri,
+      title: row.title || row.tag_base_uri,
+      entity_count:
+        typeof row.entity_count === 'bigint'
+          ? Number(row.entity_count)
+          : row.entity_count || 0
+    }))
+
+    log('Found statistics for %d tags', stats.length)
+    return stats
+  } catch (error) {
+    log('Error querying tag statistics: %s', error.message)
+    throw error
+  }
+}

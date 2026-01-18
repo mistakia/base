@@ -34,7 +34,8 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import {
   query_entities_from_duckdb,
   get_entity_by_base_uri,
-  get_entity_by_id
+  get_entity_by_id,
+  query_tag_statistics_from_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import config from '#config'
 
@@ -338,11 +339,30 @@ if (is_main(import.meta.url)) {
       type: 'boolean',
       default: false
     })
+    .option('tag-stats', {
+      describe: 'Show tag usage statistics (entity counts per tag)',
+      type: 'boolean',
+      default: false
+    })
+    .option('include-zero-count', {
+      describe: 'Include tags with zero entities (use with --tag-stats)',
+      type: 'boolean',
+      default: false
+    })
+    .option('below-threshold', {
+      describe: 'Show only tags below this entity count (use with --tag-stats)',
+      type: 'number'
+    })
     .example('$0 -t task', 'List all tasks')
     .example('$0 -t task --status "In Progress"', 'List in-progress tasks')
     .example('$0 --one --base-uri "user:task/my-task.md"', 'Get single entity')
     .example('$0 -s "feature" -t task', 'Search tasks by title')
     .example('$0 --without-tags -t task', 'List tasks without tags')
+    .example('$0 --tag-stats', 'Show entity counts per tag')
+    .example(
+      '$0 --tag-stats --below-threshold 15',
+      'Show tags below minimum threshold'
+    )
     .strict()
     .help()
     .alias('help', 'h')
@@ -352,6 +372,64 @@ if (is_main(import.meta.url)) {
     let exit_code = 0
 
     try {
+      // Handle tag statistics mode
+      if (argv['tag-stats']) {
+        await embedded_index_manager.initialize()
+
+        if (!embedded_index_manager.is_ready()) {
+          throw new Error(
+            'Embedded index manager failed to initialize. Check configuration.'
+          )
+        }
+
+        let stats = await query_tag_statistics_from_duckdb({
+          include_zero_count: argv['include-zero-count']
+        })
+
+        // Filter by threshold if specified
+        if (argv['below-threshold'] !== undefined) {
+          stats = stats.filter((s) => s.entity_count < argv['below-threshold'])
+        }
+
+        if (stats.length === 0) {
+          if (!argv.json) {
+            console.log('No tags found')
+          } else {
+            console.log('[]')
+          }
+        } else if (argv.json) {
+          console.log(JSON.stringify(stats, null, 2))
+        } else {
+          // Calculate column widths for alignment
+          const max_count_width = Math.max(
+            ...stats.map((s) => String(s.entity_count).length),
+            5
+          )
+
+          for (const stat of stats) {
+            const count_str = String(stat.entity_count).padStart(
+              max_count_width
+            )
+            console.log(`${count_str}\t${stat.tag_base_uri}\t${stat.title}`)
+          }
+
+          // Print summary
+          console.log('')
+          const total_tags = stats.length
+          const total_entities = stats.reduce(
+            (sum, s) => sum + s.entity_count,
+            0
+          )
+          console.log(
+            `Total: ${total_tags} tags, ${total_entities} tag assignments`
+          )
+        }
+
+        await embedded_index_manager.shutdown()
+        process.exit(exit_code)
+        return
+      }
+
       const entities = await list_entities({
         one: argv.one,
         base_uri: argv['base-uri'],
