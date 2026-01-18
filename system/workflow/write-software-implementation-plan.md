@@ -110,7 +110,7 @@ Create structured implementation plans by understanding requirements, analyzing 
   - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
   - Include the full implementation plan in the `entity_content` field
   - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`.
-  - Check the `tag/` directory for applicable tags and add them to the `tags:` frontmatter field (e.g., `tags: [user:tag/base-project.md]`). Select ONE primary tag for grouping. See [[user:guideline/tag-creation-standards.md]].
+  - Check the `tag/` directory for applicable tags and add them to the `tags:` frontmatter field (e.g., `tags: [user:tag/base-project.md]`). Select ONE primary tag for grouping. See [[user:guideline/tag-standards.md]].
   - Save the entity file to the filesystem using the `entity_create` tool
 
 </instructions>

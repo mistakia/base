@@ -35,7 +35,7 @@ User wants to create a new task. Tasks represent discrete units of work that nee
    - Check the `tag/` directory for applicable tags
    - Select ONE primary tag for grouping purposes
    - Add to entity_properties as `tags: [user:tag/<tag-name>.md]`
-   - See [[user:guideline/tag-creation-standards.md]] for selection criteria
+   - See [[user:guideline/tag-standards.md]] for selection criteria
 
 3. **Create Entity**
 
