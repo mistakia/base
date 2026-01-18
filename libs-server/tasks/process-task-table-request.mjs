@@ -14,18 +14,18 @@ import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
-  query_tasks_from_duckdb,
-  count_tasks_in_duckdb
+  query_tasks_from_entities,
+  count_tasks_from_entities
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 
 const log = debug('tasks:table')
 
 /**
- * Normalize DuckDB task row to match filesystem output structure
- * Adds default values and computed fields that the filesystem path applies
+ * Normalize task for table API response
+ * Applies default values and adds filesystem-compat fields (absolute_path, content_preview)
+ * to ensure consistent output structure between DuckDB and filesystem query paths
  */
-function normalize_duckdb_task(task, defaults) {
+function normalize_task_for_table_response(task, defaults) {
   return {
     // Basic properties with fallback defaults
     entity_id: task.entity_id,
@@ -316,7 +316,7 @@ function convert_table_state_to_duckdb_sort(table_state) {
 }
 
 /**
- * Process task table request using DuckDB index
+ * Process task table request using DuckDB index (via entities table)
  */
 async function process_task_table_request_indexed({
   table_state,
@@ -324,15 +324,13 @@ async function process_task_table_request_indexed({
 }) {
   const start_time = Date.now()
 
-  const duckdb_connection = await get_duckdb_connection()
   const filters = convert_table_state_to_duckdb_filters(table_state)
   const sort = convert_table_state_to_duckdb_sort(table_state)
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
-  // Query tasks from DuckDB
-  const tasks = await query_tasks_from_duckdb({
-    connection: duckdb_connection,
+  // Query tasks from entities table (type='task' filter applied internally)
+  const tasks = await query_tasks_from_entities({
     filters,
     sort,
     limit,
@@ -340,14 +338,13 @@ async function process_task_table_request_indexed({
   })
 
   // Get total count for pagination
-  const total_count = await count_tasks_in_duckdb({
-    connection: duckdb_connection,
+  const total_count = await count_tasks_from_entities({
     filters
   })
 
-  // Normalize DuckDB results to match filesystem output structure
+  // Normalize results to match filesystem output structure
   const normalized_tasks = tasks.map((task) =>
-    normalize_duckdb_task(task, CONFIG.defaults)
+    normalize_task_for_table_response(task, CONFIG.defaults)
   )
 
   // Apply permissions and redaction using proper permission service

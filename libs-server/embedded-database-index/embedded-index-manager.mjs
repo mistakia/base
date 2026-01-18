@@ -39,17 +39,14 @@ import {
   drop_duckdb_schema
 } from './duckdb/duckdb-schema-definitions.mjs'
 import {
-  upsert_task_to_duckdb,
   upsert_thread_to_duckdb,
   upsert_entity_to_duckdb,
-  delete_task_from_duckdb,
   delete_thread_from_duckdb,
   delete_entity_from_duckdb,
   sync_entity_tags_to_duckdb,
   sync_entity_relations_to_duckdb
 } from './duckdb/duckdb-entity-sync.mjs'
 import {
-  extract_task_index_data,
   extract_entity_index_data,
   extract_unified_entity_data,
   extract_tags_from_entity,
@@ -318,16 +315,6 @@ class EmbeddedIndexManager {
           await upsert_entity_to_duckdb({ entity_data: unified_entity_data })
         }
 
-        // MIGRATION: Also sync to legacy tasks table while table views still use it
-        // The tasks table is used by process-task-table-request.mjs for the UI
-        // TODO: Update table processors to use query_entities_from_duckdb, then remove this
-        if (entity_data.type === 'task') {
-          const task_index_data = extract_task_index_data({
-            entity_properties: entity_data
-          })
-          await upsert_task_to_duckdb({ task_data: task_index_data })
-        }
-
         await sync_entity_tags_to_duckdb({
           entity_base_uri: base_uri,
           tag_base_uris
@@ -363,10 +350,7 @@ class EmbeddedIndexManager {
 
     if (this.duckdb_ready) {
       try {
-        // Delete from unified entities table
         await delete_entity_from_duckdb({ base_uri })
-        // Also delete from legacy tasks table
-        await delete_task_from_duckdb({ base_uri })
       } catch (error) {
         log('Error removing entity from DuckDB: %s', error.message)
       }

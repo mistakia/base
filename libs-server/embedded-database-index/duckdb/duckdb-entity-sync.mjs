@@ -9,93 +9,6 @@ import { execute_duckdb_run } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:sync')
 
-export async function upsert_task_to_duckdb({ task_data }) {
-  const {
-    entity_id,
-    base_uri,
-    title,
-    status,
-    priority,
-    description,
-    created_at,
-    updated_at,
-    start_by,
-    finish_by,
-    planned_start,
-    planned_finish,
-    started_at,
-    finished_at,
-    snooze_until,
-    estimated_total_duration,
-    archived,
-    user_public_key
-  } = task_data
-
-  if (!entity_id || !base_uri) {
-    log('Cannot upsert task without entity_id and base_uri')
-    return
-  }
-
-  log('Upserting task to DuckDB: %s', base_uri)
-
-  const query = `
-    INSERT INTO tasks (
-      entity_id, base_uri, title, status, priority, description,
-      created_at, updated_at, start_by, finish_by,
-      planned_start, planned_finish, started_at, finished_at,
-      snooze_until, estimated_total_duration, archived, user_public_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (entity_id) DO UPDATE SET
-      base_uri = excluded.base_uri,
-      title = excluded.title,
-      status = excluded.status,
-      priority = excluded.priority,
-      description = excluded.description,
-      created_at = excluded.created_at,
-      updated_at = excluded.updated_at,
-      start_by = excluded.start_by,
-      finish_by = excluded.finish_by,
-      planned_start = excluded.planned_start,
-      planned_finish = excluded.planned_finish,
-      started_at = excluded.started_at,
-      finished_at = excluded.finished_at,
-      snooze_until = excluded.snooze_until,
-      estimated_total_duration = excluded.estimated_total_duration,
-      archived = excluded.archived,
-      user_public_key = excluded.user_public_key
-  `
-
-  try {
-    await execute_duckdb_run({
-      query,
-      parameters: [
-        entity_id,
-        base_uri,
-        title || null,
-        status || null,
-        priority || null,
-        description || null,
-        created_at || null,
-        updated_at || null,
-        start_by || null,
-        finish_by || null,
-        planned_start || null,
-        planned_finish || null,
-        started_at || null,
-        finished_at || null,
-        snooze_until || null,
-        estimated_total_duration || null,
-        archived || false,
-        user_public_key || null
-      ]
-    })
-    log('Task upserted: %s', base_uri)
-  } catch (error) {
-    log('Error upserting task: %s', error.message)
-    throw error
-  }
-}
-
 export async function upsert_thread_to_duckdb({ thread_data }) {
   const {
     thread_id,
@@ -289,41 +202,6 @@ export async function sync_entity_relations_to_duckdb({
     log('Entity relations synced: %s', source_base_uri)
   } catch (error) {
     log('Error syncing entity relations: %s', error.message)
-    throw error
-  }
-}
-
-export async function delete_task_from_duckdb({ entity_id, base_uri }) {
-  log('Deleting task from DuckDB: %s', entity_id || base_uri)
-
-  try {
-    if (entity_id) {
-      await execute_duckdb_run({
-        query: 'DELETE FROM tasks WHERE entity_id = ?',
-        parameters: [entity_id]
-      })
-    } else if (base_uri) {
-      await execute_duckdb_run({
-        query: 'DELETE FROM tasks WHERE base_uri = ?',
-        parameters: [base_uri]
-      })
-    }
-
-    // Also delete related tags and relations
-    if (base_uri) {
-      await execute_duckdb_run({
-        query: 'DELETE FROM entity_tags WHERE entity_base_uri = ?',
-        parameters: [base_uri]
-      })
-      await execute_duckdb_run({
-        query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
-        parameters: [base_uri]
-      })
-    }
-
-    log('Task deleted')
-  } catch (error) {
-    log('Error deleting task: %s', error.message)
     throw error
   }
 }
