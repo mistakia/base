@@ -71,9 +71,13 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - **Initialize submodules (if modifying submodule code)**:
      - Initialize needed submodule: `git submodule update --init [submodule-path]`
      - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
-   - **Install dependencies**: `yarn install`
-     - Projects configured with `enableGlobalCache: true` and `nmMode: hardlinks-global` will install quickly as compiled native modules are cached globally and hardlinked
-     - For projects without this configuration, installation may be slower due to recompiling native dependencies (better-sqlite3, sharp, etc.)
+   - **Install dependencies** (choose based on native module complexity):
+     - **Fast path** (for projects with native dependencies like duckdb, kuzu, sqlite3):
+       - Copy node_modules from main repo: `cp -r ../repo/node_modules .`
+       - Run `yarn install` to verify and link (typically < 1 second)
+     - **Standard path**: `yarn install`
+       - With `enableGlobalCache: true` and `nmMode: hardlinks-global`, JS packages are fetched instantly via hardlinks
+       - Native modules still rebuild per-worktree (build artifacts are project-local, not globally cached)
    - Document working directory path
 
 ## Phase 2: Implementation (Single Task Focus)
