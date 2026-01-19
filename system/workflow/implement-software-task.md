@@ -31,7 +31,7 @@ relations:
   - uses [[user:guideline/write-software.md]]
   - uses [[sys:system/guideline/write-javascript.md]]
   - precedes [[sys:system/workflow/merge-worktree.md]]
-updated_at: '2026-01-06T00:00:00.000Z'
+updated_at: '2026-01-19T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -71,7 +71,9 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - **Initialize submodules (if modifying submodule code)**:
      - Initialize needed submodule: `git submodule update --init [submodule-path]`
      - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
-   - Install dependencies: `yarn install`
+   - **Install dependencies**: `yarn install`
+     - Projects configured with `enableGlobalCache: true` and `nmMode: hardlinks-global` will install quickly as compiled native modules are cached globally and hardlinked
+     - For projects without this configuration, installation may be slower due to recompiling native dependencies (better-sqlite3, sharp, etc.)
    - Document working directory path
 
 ## Phase 2: Implementation (Single Task Focus)
