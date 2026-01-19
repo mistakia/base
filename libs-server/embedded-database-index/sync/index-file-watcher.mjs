@@ -9,12 +9,16 @@ import debug from 'debug'
 import chokidar from 'chokidar'
 
 import config from '#config'
+import { ENTITY_DIRECTORIES, ENTITY_FILE_PATTERN } from './sync-constants.mjs'
 
 const log = debug('embedded-index:sync:watcher')
 
-let task_watcher = null
+// Re-export for external use
+export { ENTITY_DIRECTORIES }
+
+// Store watchers in a Map for cleanup
+const entity_watchers = new Map()
 let thread_watcher = null
-let tag_watcher = null
 let is_watching = false
 
 // Debounce map to prevent rapid re-indexing
@@ -40,12 +44,10 @@ function debounced_callback(file_path, callback) {
 }
 
 export function start_index_file_watcher({
-  on_task_change,
-  on_task_delete,
+  on_entity_change,
+  on_entity_delete,
   on_thread_change,
-  on_thread_delete,
-  on_tag_change,
-  on_tag_delete
+  on_thread_delete
 }) {
   if (is_watching) {
     log('File watcher already running')
@@ -60,36 +62,42 @@ export function start_index_file_watcher({
 
   log('Starting index file watcher for %s', user_base_dir)
 
-  // Watch task directory for .md files
-  const task_dir = path.join(user_base_dir, 'task')
-  task_watcher = chokidar.watch(`${task_dir}/**/*.md`, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 300,
-      pollInterval: 100
-    }
-  })
+  // Create watchers for all entity directories
+  for (const entity_dir of ENTITY_DIRECTORIES) {
+    const dir_path = path.join(user_base_dir, entity_dir)
 
-  task_watcher
-    .on('add', (file_path) => {
-      log('Task file added: %s', file_path)
-      if (on_task_change) {
-        debounced_callback(file_path, on_task_change)
+    const watcher = chokidar.watch(`${dir_path}/${ENTITY_FILE_PATTERN}`, {
+      persistent: true,
+      ignoreInitial: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 300,
+        pollInterval: 100
       }
     })
-    .on('change', (file_path) => {
-      log('Task file changed: %s', file_path)
-      if (on_task_change) {
-        debounced_callback(file_path, on_task_change)
-      }
-    })
-    .on('unlink', (file_path) => {
-      log('Task file deleted: %s', file_path)
-      if (on_task_delete) {
-        on_task_delete(file_path)
-      }
-    })
+
+    watcher
+      .on('add', (file_path) => {
+        log('Entity file added (%s): %s', entity_dir, file_path)
+        if (on_entity_change) {
+          debounced_callback(file_path, on_entity_change)
+        }
+      })
+      .on('change', (file_path) => {
+        log('Entity file changed (%s): %s', entity_dir, file_path)
+        if (on_entity_change) {
+          debounced_callback(file_path, on_entity_change)
+        }
+      })
+      .on('unlink', (file_path) => {
+        log('Entity file deleted (%s): %s', entity_dir, file_path)
+        if (on_entity_delete) {
+          on_entity_delete(file_path)
+        }
+      })
+
+    entity_watchers.set(entity_dir, watcher)
+    log('Started watcher for %s directory', entity_dir)
+  }
 
   // Watch thread directory for metadata.json files
   const thread_dir = path.join(user_base_dir, 'thread')
@@ -122,37 +130,6 @@ export function start_index_file_watcher({
       }
     })
 
-  // Watch tag directory for .md files
-  const tag_dir = path.join(user_base_dir, 'tag')
-  tag_watcher = chokidar.watch(`${tag_dir}/**/*.md`, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 300,
-      pollInterval: 100
-    }
-  })
-
-  tag_watcher
-    .on('add', (file_path) => {
-      log('Tag file added: %s', file_path)
-      if (on_tag_change) {
-        debounced_callback(file_path, on_tag_change)
-      }
-    })
-    .on('change', (file_path) => {
-      log('Tag file changed: %s', file_path)
-      if (on_tag_change) {
-        debounced_callback(file_path, on_tag_change)
-      }
-    })
-    .on('unlink', (file_path) => {
-      log('Tag file deleted: %s', file_path)
-      if (on_tag_delete) {
-        on_tag_delete(file_path)
-      }
-    })
-
   is_watching = true
   log('Index file watcher started')
 }
@@ -166,46 +143,58 @@ export async function stop_index_file_watcher() {
   }
   debounce_timers.clear()
 
-  // Close watchers
-  if (task_watcher) {
-    await task_watcher.close()
-    task_watcher = null
+  // Close all entity watchers
+  for (const [entity_dir, watcher] of entity_watchers) {
+    await watcher.close()
+    log('Closed watcher for %s directory', entity_dir)
   }
+  entity_watchers.clear()
 
+  // Close thread watcher
   if (thread_watcher) {
     await thread_watcher.close()
     thread_watcher = null
-  }
-
-  if (tag_watcher) {
-    await tag_watcher.close()
-    tag_watcher = null
   }
 
   is_watching = false
   log('Index file watcher stopped')
 }
 
-export function is_file_watcher_running() {
-  return is_watching
-}
-
-export function extract_thread_id_from_path(file_path) {
-  // Extract thread UUID from path like: /path/to/thread/uuid-here/metadata.json
-  const uuid_regex =
-    /\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\//i
-  const match = file_path.match(uuid_regex)
-  return match ? match[1] : null
-}
-
-export function extract_base_uri_from_task_path(file_path) {
-  // Convert absolute path to base_uri
-  // Example: /path/to/user-base/task/base/my-task.md -> user:task/base/my-task.md
+/**
+ * Extract base_uri from any entity file path
+ * @param {string} file_path - Absolute path to entity file
+ * @returns {string|null} Base URI (e.g., user:guideline/my-guideline.md)
+ */
+export function extract_base_uri_from_entity_path(file_path) {
   const user_base_dir = get_user_base_directory()
   if (!user_base_dir || !file_path.startsWith(user_base_dir)) {
     return null
   }
 
-  const relative_path = file_path.slice(user_base_dir.length + 1) // +1 for the trailing slash
+  const relative_path = file_path.slice(user_base_dir.length + 1)
   return `user:${relative_path}`
+}
+
+/**
+ * Extract entity type from file path based on directory
+ * @param {string} file_path - Absolute or relative path to entity file
+ * @returns {string|null} Entity type (e.g., task, guideline, tag)
+ */
+export function extract_entity_type_from_path(file_path) {
+  const user_base_dir = get_user_base_directory()
+  let relative_path = file_path
+
+  if (user_base_dir && file_path.startsWith(user_base_dir)) {
+    relative_path = file_path.slice(user_base_dir.length + 1)
+  }
+
+  // Get the first directory component
+  const first_dir = relative_path.split('/')[0]
+
+  // Check if it's an entity directory
+  if (ENTITY_DIRECTORIES.includes(first_dir)) {
+    return first_dir
+  }
+
+  return null
 }

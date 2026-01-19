@@ -16,9 +16,10 @@ import {
 import {
   start_index_file_watcher,
   stop_index_file_watcher,
-  extract_thread_id_from_path,
-  extract_base_uri_from_task_path
+  extract_base_uri_from_entity_path,
+  extract_entity_type_from_path
 } from './index-file-watcher.mjs'
+import { extract_thread_id_from_path } from './sync-constants.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 
 const log = debug('embedded-index:sync:watcher')
@@ -37,20 +38,26 @@ export function start_index_sync_watcher() {
   log('Starting index sync watcher')
 
   start_index_file_watcher({
-    on_task_change: async (file_path) => {
+    // Generic entity change handler for all entity types
+    on_entity_change: async (file_path) => {
       try {
-        // Invalidate HTTP cache for public task list requests
-        invalidate_tasks_cache()
+        const entity_type = extract_entity_type_from_path(file_path)
+        const base_uri = extract_base_uri_from_entity_path(file_path)
 
-        const base_uri = extract_base_uri_from_task_path(file_path)
         if (!base_uri) {
           log('Could not extract base_uri from path: %s', file_path)
           return
         }
 
+        // Invalidate appropriate caches
+        if (entity_type === 'task') {
+          invalidate_tasks_cache()
+        }
+
         const result = await read_entity_from_filesystem({
           absolute_path: file_path
         })
+
         if (!result.success) {
           log('Failed to read entity %s: %s', file_path, result.error)
           return
@@ -60,27 +67,32 @@ export function start_index_sync_watcher() {
           base_uri,
           entity_data: result.entity_properties
         })
-        log('Synced task: %s', base_uri)
+        log('Synced entity (%s): %s', entity_type, base_uri)
       } catch (error) {
-        log('Error handling task change %s: %s', file_path, error.message)
+        log('Error handling entity change %s: %s', file_path, error.message)
       }
     },
 
-    on_task_delete: async (file_path) => {
+    // Generic entity delete handler for all entity types
+    on_entity_delete: async (file_path) => {
       try {
-        // Invalidate HTTP cache for public task list requests
-        invalidate_tasks_cache()
+        const entity_type = extract_entity_type_from_path(file_path)
+        const base_uri = extract_base_uri_from_entity_path(file_path)
 
-        const base_uri = extract_base_uri_from_task_path(file_path)
         if (!base_uri) {
           log('Could not extract base_uri from path: %s', file_path)
           return
         }
 
+        // Invalidate appropriate caches
+        if (entity_type === 'task') {
+          invalidate_tasks_cache()
+        }
+
         await embedded_index_manager.remove_entity({ base_uri })
-        log('Removed task: %s', base_uri)
+        log('Removed entity (%s): %s', entity_type, base_uri)
       } catch (error) {
-        log('Error handling task delete %s: %s', file_path, error.message)
+        log('Error handling entity delete %s: %s', file_path, error.message)
       }
     },
 
@@ -123,17 +135,6 @@ export function start_index_sync_watcher() {
       } catch (error) {
         log('Error handling thread delete %s: %s', file_path, error.message)
       }
-    },
-
-    on_tag_change: async (file_path) => {
-      // Tags are synced via entity relations when entities reference them
-      // No direct tag indexing needed at this time
-      log('Tag changed: %s', file_path)
-    },
-
-    on_tag_delete: async (file_path) => {
-      // Tag deletion handling - relations are cleaned up when entities are synced
-      log('Tag deleted: %s', file_path)
     }
   })
 

@@ -30,7 +30,6 @@ import {
   sync_thread_file_references_to_kuzu
 } from './kuzu/kuzu-thread-sync.mjs'
 import {
-  get_duckdb_connection,
   close_duckdb_connection,
   initialize_duckdb_client
 } from './duckdb/duckdb-database-client.mjs'
@@ -57,6 +56,20 @@ import {
   extract_thread_entity_data,
   extract_thread_relations_for_kuzu
 } from './sync/thread-data-extractor.mjs'
+import { sync_index_on_startup } from './sync/incremental-sync.mjs'
+import { resync_full_index } from './sync/resync-full-index.mjs'
+import {
+  get_index_metadata,
+  set_index_metadata,
+  set_repo_sync_state,
+  INDEX_METADATA_KEYS,
+  CURRENT_SCHEMA_VERSION
+} from './duckdb/duckdb-metadata-operations.mjs'
+import { ENTITY_DIRECTORIES } from './sync/sync-constants.mjs'
+import {
+  discover_repositories,
+  get_repository_head_sha
+} from './sync/repository-discovery.mjs'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
@@ -68,6 +81,60 @@ class EmbeddedIndexManager {
     this.kuzu_ready = false
     this.duckdb_ready = false
     this.index_config = null
+    this.sync_in_progress = false
+    this._sync_lock_queue = []
+  }
+
+  /**
+   * Acquire sync lock to prevent concurrent sync operations.
+   * Returns a release function that must be called when done.
+   *
+   * Uses a simple queue-based lock. When released, if there are waiters,
+   * the lock is directly transferred (sync_in_progress stays true).
+   * Only when no waiters remain does sync_in_progress become false.
+   *
+   * THREAD SAFETY: The check-then-set pattern (lines below) is safe because
+   * JavaScript is single-threaded. No await exists between the check and set,
+   * so no interleaving can occur. The event loop only yields at await points.
+   *
+   * @returns {Promise<Function>} Release function
+   */
+  async _acquire_sync_lock() {
+    // Safe: synchronous check-and-set, no await between these two lines
+    if (!this.sync_in_progress) {
+      this.sync_in_progress = true
+      log('Sync lock acquired')
+      return this._create_release_function()
+    }
+
+    // Wait in queue for lock to be released
+    return new Promise((resolve) => {
+      log('Waiting for sync lock')
+      this._sync_lock_queue.push(() => {
+        // Lock is transferred directly - sync_in_progress is already true
+        log('Sync lock acquired (from queue)')
+        resolve(this._create_release_function())
+      })
+    })
+  }
+
+  /**
+   * Create a release function for the sync lock.
+   * Transfers lock to next waiter or releases if none waiting.
+   */
+  _create_release_function() {
+    return () => {
+      if (this._sync_lock_queue.length > 0) {
+        // Transfer lock directly to next waiter (don't release)
+        log('Sync lock transferred to next waiter')
+        const next = this._sync_lock_queue.shift()
+        next()
+      } else {
+        // No waiters, release the lock
+        this.sync_in_progress = false
+        log('Sync lock released')
+      }
+    }
   }
 
   _get_index_config() {
@@ -86,7 +153,6 @@ class EmbeddedIndexManager {
       duckdb_path:
         embedded_config.duckdb_path ||
         `${user_base_directory}/embedded-database-index/duckdb.db`,
-      rebuild_on_startup: embedded_config.rebuild_on_startup || false,
       file_watcher_enabled: embedded_config.file_watcher_enabled !== false
     }
 
@@ -128,9 +194,9 @@ class EmbeddedIndexManager {
 
     this.initialized = true
 
-    if (index_config.rebuild_on_startup) {
-      log('Rebuild on startup enabled, rebuilding index')
-      await this.rebuild_full_index()
+    // Perform startup sync with fallback chain
+    if (this.duckdb_ready) {
+      await this._perform_startup_sync()
     }
 
     log(
@@ -148,11 +214,146 @@ class EmbeddedIndexManager {
 
   async _initialize_duckdb(index_config) {
     await initialize_duckdb_client({ database_path: index_config.duckdb_path })
-    const duckdb_connection = await get_duckdb_connection()
-    await create_duckdb_schema({ connection: duckdb_connection })
+    await create_duckdb_schema()
   }
 
-  async rebuild_full_index() {
+  /**
+   * Perform startup sync with fallback chain:
+   * 1. Check schema version - if mismatch, do reset_and_rebuild
+   * 2. Try incremental sync
+   * 3. On failure, try resync (update-in-place)
+   * 4. On failure, try reset_and_rebuild (last resort)
+   */
+  async _perform_startup_sync() {
+    log('Performing startup sync')
+
+    const release_lock = await this._acquire_sync_lock()
+
+    try {
+      // Check if schema version matches current version
+      let schema_matches = false
+      try {
+        const stored_version = await get_index_metadata({
+          key: INDEX_METADATA_KEYS.SCHEMA_VERSION
+        })
+        schema_matches = stored_version === CURRENT_SCHEMA_VERSION
+      } catch {
+        schema_matches = false
+      }
+
+      if (!schema_matches) {
+        log('Schema version mismatch, performing reset and rebuild')
+        await this._reset_and_rebuild_index_internal()
+        return
+      }
+
+      // Try incremental sync first
+      log('Attempting incremental sync')
+      const incremental_result = await sync_index_on_startup({
+        index_manager: this
+      })
+
+      if (incremental_result.success) {
+        log('Incremental sync successful: %o', incremental_result.stats)
+        return
+      }
+
+      // Incremental failed, try resync
+      log('Incremental sync failed, attempting resync')
+      const resync_result = await resync_full_index({ index_manager: this })
+
+      if (resync_result.success) {
+        log('Resync successful: %o', resync_result.stats)
+        return
+      }
+
+      // Resync failed, last resort: reset and rebuild
+      log('Resync failed, performing reset and rebuild')
+      await this._reset_and_rebuild_index_internal()
+    } catch (error) {
+      log(
+        'Startup sync error: %s, falling back to reset and rebuild',
+        error.message
+      )
+      try {
+        await this._reset_and_rebuild_index_internal()
+      } catch (rebuild_error) {
+        log('Reset and rebuild also failed: %s', rebuild_error.message)
+      }
+    } finally {
+      release_lock()
+    }
+  }
+
+  /**
+   * Perform update-in-place resync (index remains available)
+   * Acquires sync lock to prevent concurrent operations.
+   * @returns {Promise<Object>} Resync result
+   */
+  async perform_resync() {
+    if (!this.initialized) {
+      log('Index manager not initialized, cannot resync')
+      return { success: false, error: 'Not initialized' }
+    }
+
+    const release_lock = await this._acquire_sync_lock()
+    try {
+      return await resync_full_index({ index_manager: this })
+    } finally {
+      release_lock()
+    }
+  }
+
+  /**
+   * Perform sync based on mode
+   * Acquires sync lock to prevent concurrent operations.
+   * @param {Object} params
+   * @param {'incremental'|'resync'|'reset'} params.mode - Sync mode
+   * @returns {Promise<Object>} Sync result
+   */
+  async perform_sync({ mode }) {
+    if (!this.initialized) {
+      log('Index manager not initialized, cannot sync')
+      return { success: false, error: 'Not initialized' }
+    }
+
+    const release_lock = await this._acquire_sync_lock()
+    try {
+      switch (mode) {
+        case 'incremental':
+          return await sync_index_on_startup({ index_manager: this })
+        case 'resync':
+          return await resync_full_index({ index_manager: this })
+        case 'reset':
+          await this._reset_and_rebuild_index_internal()
+          return { success: true, method: 'reset' }
+        default:
+          return { success: false, error: `Unknown sync mode: ${mode}` }
+      }
+    } finally {
+      release_lock()
+    }
+  }
+
+  /**
+   * Reset and rebuild index (destructive - drops all tables)
+   * Acquires sync lock to prevent concurrent operations.
+   * Use for schema migrations or corruption recovery.
+   * Index is NOT available during this operation.
+   */
+  async reset_and_rebuild_index() {
+    const release_lock = await this._acquire_sync_lock()
+    try {
+      await this._reset_and_rebuild_index_internal()
+    } finally {
+      release_lock()
+    }
+  }
+
+  /**
+   * Internal reset and rebuild (assumes lock is already held)
+   */
+  async _reset_and_rebuild_index_internal() {
     log('Rebuilding full index from filesystem')
 
     if (this.kuzu_ready) {
@@ -168,9 +369,8 @@ class EmbeddedIndexManager {
 
     if (this.duckdb_ready) {
       try {
-        const duckdb_connection = await get_duckdb_connection()
-        await drop_duckdb_schema({ connection: duckdb_connection })
-        await create_duckdb_schema({ connection: duckdb_connection })
+        await drop_duckdb_schema()
+        await create_duckdb_schema()
         log('DuckDB schema rebuilt')
       } catch (error) {
         log('Error rebuilding DuckDB schema: %s', error.message)
@@ -182,8 +382,41 @@ class EmbeddedIndexManager {
     // Populate threads
     await this._populate_threads_from_filesystem()
 
-    // Populate tasks
-    await this._populate_tasks_from_filesystem()
+    // Populate all entity types
+    await this._populate_entities_from_filesystem()
+
+    // Set schema version and sync state for all repositories
+    if (this.duckdb_ready) {
+      try {
+        const user_base_directory = config.user_base_directory
+
+        const repositories = await discover_repositories({
+          repo_path: user_base_directory
+        })
+
+        const new_sync_state = {}
+        for (const repo of repositories) {
+          try {
+            const sha = await get_repository_head_sha({ repo_path: repo.path })
+            new_sync_state[repo.relative_path] = { sha }
+          } catch (error) {
+            log(
+              'Failed to get HEAD for %s: %s',
+              repo.relative_path,
+              error.message
+            )
+          }
+        }
+
+        await set_repo_sync_state({ state: new_sync_state })
+        await set_index_metadata({
+          key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
+          value: CURRENT_SCHEMA_VERSION
+        })
+      } catch (error) {
+        log('Error updating sync metadata after rebuild: %s', error.message)
+      }
+    }
 
     log('Index rebuild complete')
   }
@@ -195,10 +428,20 @@ class EmbeddedIndexManager {
     }
 
     try {
+      // KNOWN LIMITATION: Loads all threads into memory at once.
+      // See resync-full-index.mjs for details on expected usage and alternatives.
+      const THREAD_COUNT_WARNING_THRESHOLD = 10000
       const threads = await list_threads({
         limit: Infinity,
         offset: 0
       })
+
+      if (threads.length > THREAD_COUNT_WARNING_THRESHOLD) {
+        log(
+          'WARNING: Large thread count (%d) may cause memory pressure.',
+          threads.length
+        )
+      }
 
       log('Populating %d threads to index', threads.length)
 
@@ -223,18 +466,18 @@ class EmbeddedIndexManager {
     }
   }
 
-  async _populate_tasks_from_filesystem() {
+  async _populate_entities_from_filesystem() {
     if (!this.duckdb_ready && !this.kuzu_ready) {
-      log('Neither DuckDB nor Kuzu ready, skipping task population')
+      log('Neither DuckDB nor Kuzu ready, skipping entity population')
       return
     }
 
     try {
       const entities = await list_entity_files_from_filesystem({
-        include_entity_types: ['task']
+        include_entity_types: ENTITY_DIRECTORIES
       })
 
-      log('Populating %d tasks to index', entities.length)
+      log('Populating %d entities to index', entities.length)
 
       let synced = 0
       let failed = 0
@@ -253,9 +496,9 @@ class EmbeddedIndexManager {
         }
       }
 
-      log('Task population complete: %d synced, %d failed', synced, failed)
+      log('Entity population complete: %d synced, %d failed', synced, failed)
     } catch (error) {
-      log('Error populating tasks: %s', error.message)
+      log('Error populating entities: %s', error.message)
     }
   }
 
