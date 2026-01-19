@@ -15,7 +15,10 @@ import validate_working_directory from '#libs-server/threads/validate-working-di
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { thread_constants } from '#libs-shared'
-import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
+import {
+  enrich_thread_with_timeline,
+  get_latest_timeline_events_batch
+} from '#libs-server/threads/thread-utils.mjs'
 import { get_cached_threads } from '#server/services/cache-warmer.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
@@ -295,6 +298,89 @@ router.get('/', async (req, res) => {
     res.json(threads_with_permissions)
   } catch (error) {
     handle_errors(res, error, 'listing threads')
+  }
+})
+
+// Get latest timeline events for multiple threads (batch endpoint)
+router.get('/latest-events', async (req, res) => {
+  try {
+    const { ids } = req.query
+    const requesting_user_key = req.user?.user_public_key || null
+
+    // Validate ids parameter
+    if (!ids || typeof ids !== 'string') {
+      return res.status(400).json({
+        error: 'Missing ids parameter',
+        message: 'ids query parameter is required (comma-separated thread IDs)'
+      })
+    }
+
+    // Parse and validate thread IDs
+    const thread_ids = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0)
+
+    if (thread_ids.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid ids parameter',
+        message: 'At least one valid thread ID is required'
+      })
+    }
+
+    // Enforce max limit to prevent abuse
+    const MAX_THREAD_IDS = 100
+    if (thread_ids.length > MAX_THREAD_IDS) {
+      return res.status(400).json({
+        error: 'Too many thread IDs',
+        message: `Maximum ${MAX_THREAD_IDS} thread IDs allowed per request`
+      })
+    }
+
+    log(`Fetching latest events for ${thread_ids.length} threads`)
+
+    // Check permissions first to avoid expensive file reads for unauthorized threads
+    const resource_paths = thread_ids.map((id) => `user:thread/${id}`)
+    let permissions = {}
+    try {
+      permissions = await check_permissions_batch({
+        user_public_key: requesting_user_key,
+        resource_paths
+      })
+    } catch (error) {
+      log(
+        `Error batch checking thread permissions (applying default deny): ${error.message}`
+      )
+    }
+
+    // Filter to only authorized thread IDs
+    const authorized_thread_ids = thread_ids.filter((id) => {
+      const base_uri = `user:thread/${id}`
+      return permissions[base_uri]?.read?.allowed ?? false
+    })
+
+    // Fetch latest events only for authorized threads
+    const events_map =
+      authorized_thread_ids.length > 0
+        ? await get_latest_timeline_events_batch({
+            thread_ids: authorized_thread_ids
+          })
+        : {}
+
+    // Build result: authorized threads get their events, others get null
+    const result = {}
+    for (const thread_id of thread_ids) {
+      if (authorized_thread_ids.includes(thread_id)) {
+        result[thread_id] = events_map[thread_id] || null
+      } else {
+        // Return null for threads user cannot access
+        result[thread_id] = null
+      }
+    }
+
+    res.json(result)
+  } catch (error) {
+    handle_errors(res, error, 'fetching latest timeline events')
   }
 })
 

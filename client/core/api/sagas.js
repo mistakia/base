@@ -32,6 +32,7 @@ import {
 import {
   get_models_actions,
   get_threads_table_actions,
+  get_threads_latest_events_actions,
   create_thread_session_actions,
   resume_thread_session_actions
 } from '@core/threads/actions'
@@ -183,6 +184,13 @@ export const get_threads_table = fetch.bind(
   null,
   api.get_threads_table,
   get_threads_table_actions
+)
+
+// Get latest timeline events for multiple threads
+export const get_threads_latest_events = fetch.bind(
+  null,
+  api.get_threads_latest_events,
+  get_threads_latest_events_actions
 )
 
 // Tasks table processing saga

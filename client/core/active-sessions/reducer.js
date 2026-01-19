@@ -1,6 +1,7 @@
 import { Record, Map } from 'immutable'
 
 import { active_sessions_action_types } from './actions'
+import { threads_action_types } from '@core/threads/actions'
 
 // ============================================================================
 // Initial State
@@ -69,6 +70,35 @@ export function active_sessions_reducer(
     case active_sessions_action_types.ACTIVE_SESSION_ENDED: {
       const { session_id } = payload
       return state.deleteIn(['sessions', session_id])
+    }
+
+    // ========================================================================
+    // Thread Timeline Events (from threads slice)
+    // ========================================================================
+
+    case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
+      const { thread_id, entry } = payload
+
+      // Skip system events (should not be shown as latest)
+      if (entry.type === 'system') {
+        return state
+      }
+
+      // Find session with matching thread_id and update its latest_timeline_event
+      const sessions = state.get('sessions')
+      const session_entry = sessions.findEntry(
+        (session) => session.get('thread_id') === thread_id
+      )
+
+      if (session_entry) {
+        const [session_id] = session_entry
+        return state.setIn(
+          ['sessions', session_id, 'latest_timeline_event'],
+          entry
+        )
+      }
+
+      return state
     }
 
     default:
