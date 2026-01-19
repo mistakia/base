@@ -109,52 +109,53 @@ export async function get_status({ repo_path }) {
   try {
     log(`Getting status for ${repo_path}`)
 
-    // Get branch name
-    const { stdout: branch_output } = await execute_shell_command(
-      'git rev-parse --abbrev-ref HEAD',
-      { cwd: repo_path }
-    )
-    const branch = branch_output.trim()
+    // Run git commands in parallel for better performance
+    const [branch_result, status_result, tracking_result, remote_result] =
+      await Promise.allSettled([
+        execute_shell_command('git rev-parse --abbrev-ref HEAD', {
+          cwd: repo_path
+        }),
+        execute_shell_command('git status --porcelain=v1', { cwd: repo_path }),
+        execute_shell_command(
+          'git rev-list --left-right --count HEAD...@{upstream}',
+          { cwd: repo_path }
+        ),
+        execute_shell_command('git remote get-url origin', { cwd: repo_path })
+      ])
 
-    // Get porcelain status
-    const { stdout: status_output } = await execute_shell_command(
-      'git status --porcelain=v1',
-      { cwd: repo_path }
-    )
+    // Extract branch name
+    const branch =
+      branch_result.status === 'fulfilled'
+        ? branch_result.value.stdout.trim()
+        : 'unknown'
 
+    // Parse status
+    const status_output =
+      status_result.status === 'fulfilled' ? status_result.value.stdout : ''
     const { staged, unstaged, untracked, conflicts } =
       parse_porcelain_status(status_output)
 
-    // Get ahead/behind counts
+    // Extract ahead/behind counts
     let ahead = 0
     let behind = 0
     let has_upstream = false
 
-    try {
-      const { stdout: tracking_output } = await execute_shell_command(
-        'git rev-list --left-right --count HEAD...@{upstream}',
-        { cwd: repo_path }
-      )
-      const [ahead_str, behind_str] = tracking_output.trim().split(/\s+/)
+    if (tracking_result.status === 'fulfilled') {
+      const [ahead_str, behind_str] = tracking_result.value.stdout
+        .trim()
+        .split(/\s+/)
       ahead = parseInt(ahead_str, 10) || 0
       behind = parseInt(behind_str, 10) || 0
       has_upstream = true
-    } catch {
-      // No upstream branch configured
+    } else {
       log(`No upstream branch configured for ${repo_path}`)
     }
 
-    // Get remote URL if available
-    let remote_url = null
-    try {
-      const { stdout: remote_output } = await execute_shell_command(
-        'git remote get-url origin',
-        { cwd: repo_path }
-      )
-      remote_url = remote_output.trim()
-    } catch {
-      // No remote configured
-    }
+    // Extract remote URL
+    const remote_url =
+      remote_result.status === 'fulfilled'
+        ? remote_result.value.stdout.trim()
+        : null
 
     return {
       branch,
@@ -188,31 +189,35 @@ export async function get_status({ repo_path }) {
  * @returns {Promise<Object>} Map of repo_path to status
  */
 export async function get_multi_repo_status({ repo_paths }) {
-  const results = {}
-
-  for (const repo_path of repo_paths) {
-    try {
-      results[repo_path] = await get_status({ repo_path })
-    } catch (error) {
-      log(`Failed to get status for ${repo_path}:`, error.message)
-      results[repo_path] = {
-        error: error.message,
-        branch: null,
-        ahead: 0,
-        behind: 0,
-        has_upstream: false,
-        remote_url: null,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        conflicts: [],
-        has_changes: false,
-        has_conflicts: false
+  // Run all repo status checks in parallel and build results map directly
+  const entries = await Promise.all(
+    repo_paths.map(async (repo_path) => {
+      try {
+        return [repo_path, await get_status({ repo_path })]
+      } catch (error) {
+        log(`Failed to get status for ${repo_path}:`, error.message)
+        return [
+          repo_path,
+          {
+            error: error.message,
+            branch: null,
+            ahead: 0,
+            behind: 0,
+            has_upstream: false,
+            remote_url: null,
+            staged: [],
+            unstaged: [],
+            untracked: [],
+            conflicts: [],
+            has_changes: false,
+            has_conflicts: false
+          }
+        ]
       }
-    }
-  }
+    })
+  )
 
-  return results
+  return Object.fromEntries(entries)
 }
 
 export default {

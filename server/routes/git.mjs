@@ -157,17 +157,8 @@ const get_known_repositories = async () => {
   const repos = [user_base_dir]
   const seen = new Set([user_base_dir])
 
-  const add_repo = async (repo_path) => {
-    if (seen.has(repo_path)) return false
-    try {
-      await fs.access(path.join(repo_path, '.git'))
-      repos.push(repo_path)
-      seen.add(repo_path)
-      return true
-    } catch {
-      return false
-    }
-  }
+  // Collect potential repos for parallel checking
+  const potential_repos = []
 
   // Scan repository/active directory
   const active_repos_path = path.join(user_base_dir, 'repository', 'active')
@@ -175,7 +166,7 @@ const get_known_repositories = async () => {
     const entries = await fs.readdir(active_repos_path, { withFileTypes: true })
     for (const entry of entries) {
       if (entry.isDirectory() || entry.isSymbolicLink()) {
-        await add_repo(path.join(active_repos_path, entry.name))
+        potential_repos.push(path.join(active_repos_path, entry.name))
       }
     }
   } catch {
@@ -190,13 +181,31 @@ const get_known_repositories = async () => {
     )
     const submodule_paths = parse_submodule_status(stdout)
     for (const relative_path of submodule_paths) {
-      const added = await add_repo(path.join(user_base_dir, relative_path))
-      if (added) {
-        log(`Added submodule: ${relative_path}`)
-      }
+      potential_repos.push(path.join(user_base_dir, relative_path))
     }
   } catch (error) {
     log('Failed to get submodule status:', error.message)
+  }
+
+  // Check all potential repos in parallel
+  const check_results = await Promise.all(
+    potential_repos.map(async (repo_path) => {
+      if (seen.has(repo_path)) return null
+      try {
+        await fs.access(path.join(repo_path, '.git'))
+        return repo_path
+      } catch {
+        return null
+      }
+    })
+  )
+
+  // Add valid repos
+  for (const repo_path of check_results) {
+    if (repo_path && !seen.has(repo_path)) {
+      repos.push(repo_path)
+      seen.add(repo_path)
+    }
   }
 
   return repos
@@ -265,42 +274,67 @@ const check_file_permission = async ({
 }
 
 /**
- * Filter a list of files based on read permissions
+ * Filter file lists by permission, only checking .md files
+ * Non-.md files are allowed by default (inherit from repo permission)
+ * .md files require explicit read permission (default deny)
+ *
  * @param {Object} params - Parameters
- * @param {Array} params.files - Array of file objects with path property or strings
- * @param {string} params.repo_path - Absolute repository path
- * @param {Object} params.permission_context - Permission context from request
- * @returns {Promise<Array>} Filtered array of files user can access
+ * @param {Object} params.file_lists - Object with arrays of files keyed by list name
+ * @param {string} params.repo_path - Repository path for building resource URIs
+ * @param {string|null} params.user_public_key - User's public key
+ * @returns {Promise<Object>} Object with same keys as file_lists, filtered arrays as values
  */
-const filter_files_by_permission = async ({
-  files,
+const filter_md_files_by_permission = async ({
+  file_lists,
   repo_path,
-  permission_context
+  user_public_key
 }) => {
-  if (!files || files.length === 0) {
-    return files
-  }
-
-  // Build list of resource paths to check
-  const resource_paths = files.map((file) => {
+  // Collect all .md files across all lists
+  const all_files = Object.values(file_lists).flat()
+  const md_files = all_files.filter((file) => {
     const file_path = typeof file === 'string' ? file : file.path
-    const absolute_file_path = path.join(repo_path, file_path)
-    return create_base_uri_from_path(absolute_file_path)
+    return file_path.endsWith('.md')
   })
 
-  // Batch check permissions
-  const user_public_key = permission_context.user_public_key
+  // If no .md files, return original lists (non-.md files allowed by default)
+  if (md_files.length === 0) {
+    return file_lists
+  }
+
+  // Build permission map for .md files
+  const resource_paths = md_files.map((file) => {
+    const file_path = typeof file === 'string' ? file : file.path
+    return create_base_uri_from_path(path.join(repo_path, file_path))
+  })
+
   const permissions = await check_permissions_batch({
     user_public_key,
     resource_paths
   })
 
-  // Filter files based on permissions
-  return files.filter((file, index) => {
-    const resource_path = resource_paths[index]
-    const result = permissions[resource_path]
-    return result?.read?.allowed ?? false
+  // Build lookup map: file_path -> allowed
+  const md_permission_map = new Map()
+  md_files.forEach((file, index) => {
+    const file_path = typeof file === 'string' ? file : file.path
+    md_permission_map.set(
+      file_path,
+      permissions[resource_paths[index]]?.read?.allowed === true
+    )
   })
+
+  // Filter each list
+  const filter_fn = (file) => {
+    const file_path = typeof file === 'string' ? file : file.path
+    if (!file_path.endsWith('.md')) return true
+    return md_permission_map.get(file_path) ?? false
+  }
+
+  const result = {}
+  for (const [key, files] of Object.entries(file_lists)) {
+    result[key] = (files || []).filter(filter_fn)
+  }
+
+  return result
 }
 
 /**
@@ -416,45 +450,42 @@ const redact_diff_content = (diff) => {
 router.get('/status', require_repo_read_permission, async (req, res) => {
   try {
     const repo_path = req.validated_repo_path
+    const user_public_key = req.user?.user_public_key
 
     const status = await get_status({ repo_path })
 
     // Check write permission for the repository
     const write_permission = await check_repo_permission({
       repo_path,
-      user_public_key: req.user?.user_public_key,
+      user_public_key,
       permission_type: 'write',
       permission_context: req.permission_context
     })
 
-    // Filter file lists based on permissions
-    const [
-      filtered_staged,
-      filtered_unstaged,
-      filtered_untracked,
-      filtered_conflicts
-    ] = await Promise.all([
-      filter_files_by_permission({
-        files: status.staged || [],
-        repo_path,
-        permission_context: req.permission_context
-      }),
-      filter_files_by_permission({
-        files: status.unstaged || [],
-        repo_path,
-        permission_context: req.permission_context
-      }),
-      filter_files_by_permission({
-        files: status.untracked || [],
-        repo_path,
-        permission_context: req.permission_context
-      }),
-      filter_files_by_permission({
-        files: status.conflicts || [],
-        repo_path,
-        permission_context: req.permission_context
+    // If user has write access, skip file filtering entirely
+    if (write_permission.allowed) {
+      return res.json({
+        ...status,
+        write_allowed: true
       })
-    ])
+    }
+
+    // Filter files by permission (only checks .md files, non-.md allowed by default)
+    const filtered = await filter_md_files_by_permission({
+      file_lists: {
+        staged: status.staged,
+        unstaged: status.unstaged,
+        untracked: status.untracked,
+        conflicts: status.conflicts
+      },
+      repo_path,
+      user_public_key
+    })
+
+    const filtered_staged = filtered.staged
+    const filtered_unstaged = filtered.unstaged
+    const filtered_untracked = filtered.untracked
+    const filtered_conflicts = filtered.conflicts
 
     res.json({
       ...status,
@@ -467,7 +498,7 @@ router.get('/status', require_repo_read_permission, async (req, res) => {
         filtered_unstaged.length > 0 ||
         filtered_untracked.length > 0,
       has_conflicts: filtered_conflicts.length > 0,
-      write_allowed: write_permission.allowed
+      write_allowed: false
     })
   } catch (error) {
     log('Error getting git status:', error.message)
@@ -485,8 +516,29 @@ router.get('/status', require_repo_read_permission, async (req, res) => {
 router.get('/status/all', async (req, res) => {
   try {
     const user_base_dir = get_user_base_dir()
-    const repo_paths = await get_known_repositories()
     const user_public_key = req.user?.user_public_key
+
+    // Check if user has global_write permission - if so, skip all file-level permission checks
+    const has_global_write =
+      req.permission_context &&
+      (await req.permission_context.get_global_write_permission())
+
+    const repo_paths = await get_known_repositories()
+
+    // For users with global_write, skip permission filtering entirely
+    if (has_global_write) {
+      const statuses = await get_multi_repo_status({ repo_paths })
+
+      const repos = Object.entries(statuses).map(([repo_path, status]) => ({
+        repo_path,
+        repo_name: path.basename(repo_path),
+        is_user_base: repo_path === user_base_dir,
+        ...status,
+        write_allowed: true
+      }))
+
+      return res.json({ repos })
+    }
 
     // Check permissions for all repositories
     const repo_base_uris = repo_paths.map((rp) => create_base_uri_from_path(rp))
@@ -505,61 +557,125 @@ router.get('/status/all', async (req, res) => {
       repo_paths: accessible_repos
     })
 
-    // Filter file lists for each repo and convert to array format
-    const repos = await Promise.all(
-      Object.entries(statuses).map(async ([repo_path, status]) => {
-        // Get base URI for this repo to look up write permission
-        const base_uri = create_base_uri_from_path(repo_path)
-        const repo_permissions = permissions[base_uri]
-        const write_allowed = repo_permissions?.write?.allowed ?? false
+    // Build a map of repo path -> base_uri for reliable lookups
+    const repo_uri_map = new Map(
+      repo_paths.map((rp, i) => [rp, repo_base_uris[i]])
+    )
 
-        // Filter file lists based on permissions
-        const [
-          filtered_staged,
-          filtered_unstaged,
-          filtered_untracked,
-          filtered_conflicts
-        ] = await Promise.all([
-          filter_files_by_permission({
-            files: status.staged || [],
-            repo_path,
-            permission_context: req.permission_context
-          }),
-          filter_files_by_permission({
-            files: status.unstaged || [],
-            repo_path,
-            permission_context: req.permission_context
-          }),
-          filter_files_by_permission({
-            files: status.untracked || [],
-            repo_path,
-            permission_context: req.permission_context
-          }),
-          filter_files_by_permission({
-            files: status.conflicts || [],
-            repo_path,
-            permission_context: req.permission_context
-          })
-        ])
+    // Build a map of repo write permissions for quick lookup
+    const repo_write_permissions = new Map()
+    accessible_repos.forEach((rp) => {
+      const base_uri = repo_uri_map.get(rp)
+      repo_write_permissions.set(
+        rp,
+        permissions[base_uri]?.write?.allowed ?? false
+      )
+    })
 
+    // Collect files ONLY from repos where user has read-only access
+    // AND only .md files (non-md files can't have explicit permissions)
+    const all_file_info = [] // { repo_path, file, resource_path }
+    for (const [repo_path, status] of Object.entries(statuses)) {
+      // Skip file checks for repos user has write access to
+      if (repo_write_permissions.get(repo_path)) {
+        continue
+      }
+
+      const all_files = [
+        ...(status.staged || []),
+        ...(status.unstaged || []),
+        ...(status.untracked || []),
+        ...(status.conflicts || [])
+      ]
+
+      for (const file of all_files) {
+        const file_path = typeof file === 'string' ? file : file.path
+        // Only check .md files - other files can't have entity permissions
+        if (!file_path.endsWith('.md')) {
+          continue
+        }
+        const absolute_file_path = path.join(repo_path, file_path)
+        all_file_info.push({
+          repo_path,
+          file,
+          file_path,
+          resource_path: create_base_uri_from_path(absolute_file_path)
+        })
+      }
+    }
+
+    // Single batch permission check for .md files in read-only repos
+    let file_permissions = {}
+    if (all_file_info.length > 0) {
+      const resource_paths = all_file_info.map((info) => info.resource_path)
+      file_permissions = await check_permissions_batch({
+        user_public_key,
+        resource_paths
+      })
+    }
+
+    // Build permission lookup map for .md files in read-only repos
+    const md_file_permissions = new Map()
+    for (const info of all_file_info) {
+      const key = `${info.repo_path}:${info.file_path}`
+      md_file_permissions.set(
+        key,
+        file_permissions[info.resource_path]?.read?.allowed ?? false
+      )
+    }
+
+    // Build response with filtered files
+    const repos = Object.entries(statuses).map(([repo_path, status]) => {
+      const write_allowed = repo_write_permissions.get(repo_path) ?? false
+
+      // If user has write access to repo, include all files (no filtering needed)
+      if (write_allowed) {
         return {
           repo_path,
           repo_name: path.basename(repo_path),
           is_user_base: repo_path === user_base_dir,
           ...status,
-          staged: filtered_staged,
-          unstaged: filtered_unstaged,
-          untracked: filtered_untracked,
-          conflicts: filtered_conflicts,
-          has_changes:
-            filtered_staged.length > 0 ||
-            filtered_unstaged.length > 0 ||
-            filtered_untracked.length > 0,
-          has_conflicts: filtered_conflicts.length > 0,
           write_allowed
         }
-      })
-    )
+      }
+
+      // For read-only repos, filter files:
+      // - Non-.md files: allowed (inherit from repo read permission)
+      // - .md files: check explicit permission lookup
+      const filter_files = (files) =>
+        (files || []).filter((file) => {
+          const file_path = typeof file === 'string' ? file : file.path
+          // Non-.md files inherit repo permission (user has read access to repo)
+          if (!file_path.endsWith('.md')) {
+            return true
+          }
+          // .md files: check explicit permission (default deny if not in map)
+          const key = `${repo_path}:${file_path}`
+          return md_file_permissions.get(key) ?? false
+        })
+
+      const filtered_staged = filter_files(status.staged)
+      const filtered_unstaged = filter_files(status.unstaged)
+      const filtered_untracked = filter_files(status.untracked)
+      const filtered_conflicts = filter_files(status.conflicts)
+
+      return {
+        repo_path,
+        repo_name: path.basename(repo_path),
+        is_user_base: repo_path === user_base_dir,
+        ...status,
+        staged: filtered_staged,
+        unstaged: filtered_unstaged,
+        untracked: filtered_untracked,
+        conflicts: filtered_conflicts,
+        has_changes:
+          filtered_staged.length > 0 ||
+          filtered_unstaged.length > 0 ||
+          filtered_untracked.length > 0,
+        has_conflicts: filtered_conflicts.length > 0,
+        write_allowed
+      }
+    })
 
     res.json({ repos })
   } catch (error) {
@@ -953,17 +1069,35 @@ router.post('/push', require_repo_write_permission, async (req, res) => {
 router.get('/conflicts', require_repo_read_permission, async (req, res) => {
   try {
     const repo_path = req.validated_repo_path
+    const user_public_key = req.user?.user_public_key
 
     const conflicts = await get_conflicts({ repo_path })
 
-    // Filter conflicts based on file permissions
-    const filtered_conflicts = await filter_files_by_permission({
-      files: conflicts,
+    // If user has write access to repo, return all conflicts
+    if (req.repo_permission?.is_owner) {
+      return res.json({ conflicts })
+    }
+
+    // Check write permission for the repository
+    const write_permission = await check_repo_permission({
       repo_path,
+      user_public_key,
+      permission_type: 'write',
       permission_context: req.permission_context
     })
 
-    res.json({ conflicts: filtered_conflicts })
+    if (write_permission.allowed) {
+      return res.json({ conflicts })
+    }
+
+    // Filter conflicts by permission (only checks .md files, non-.md allowed by default)
+    const filtered = await filter_md_files_by_permission({
+      file_lists: { conflicts },
+      repo_path,
+      user_public_key
+    })
+
+    res.json({ conflicts: filtered.conflicts })
   } catch (error) {
     log('Error getting conflicts:', error.message)
     res.status(500).json({

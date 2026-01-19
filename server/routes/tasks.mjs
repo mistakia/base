@@ -11,10 +11,13 @@ import { process_task_table_request } from '#libs-server/tasks/process-task-tabl
 import { apply_tag_redaction_to_tasks } from '#libs-server/tasks/tag-visibility.mjs'
 import {
   check_user_permission_for_file,
-  check_permission
+  check_permission,
+  check_permissions_batch
 } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { get_cached_tasks } from '#server/services/cache-warmer.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { query_tasks_from_entities } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 
 const log = debug('api:tasks')
 const router = express.Router({ mergeParams: true })
@@ -197,6 +200,165 @@ async function handle_single_task_request(req, res, base_uri, user_public_key) {
   }
 }
 
+// Convert DuckDB task result to API response format (nested entity_properties)
+function convert_duckdb_task_to_response_format(task) {
+  return {
+    entity_properties: {
+      entity_id: task.entity_id,
+      base_uri: task.base_uri,
+      title: task.title,
+      status: task.status,
+      priority: task.priority,
+      description: task.description,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+      user_public_key: task.user_public_key,
+      start_by: task.start_by,
+      finish_by: task.finish_by,
+      planned_start: task.planned_start,
+      planned_finish: task.planned_finish,
+      started_at: task.started_at,
+      finished_at: task.finished_at,
+      snooze_until: task.snooze_until,
+      estimated_total_duration: task.estimated_total_duration,
+      archived: task.archived,
+      tags: task.tags || []
+    },
+    file_info: {
+      base_uri: task.base_uri,
+      absolute_path: null // Not available from DuckDB
+    }
+  }
+}
+
+// Build DuckDB filters from query params
+function build_duckdb_filters_from_query(params) {
+  const { status, archived, include_completed } = params
+  const filters = []
+
+  // Exclude archived by default (unless archived=true)
+  if (archived !== 'true') {
+    filters.push({ column_id: 'archived', operator: '!=', value: true })
+  }
+
+  // Exclude completed by default (matches filesystem behavior)
+  if (!include_completed && !status) {
+    filters.push({
+      column_id: 'status',
+      operator: '!=',
+      value: TASK_STATUS.COMPLETED
+    })
+  }
+
+  if (status) {
+    filters.push({ column_id: 'status', operator: '=', value: status })
+  }
+
+  // Range filters: column_id -> { min_param, max_param, transform }
+  const range_filters = [
+    { column: 'finish_by', min: 'min_finish_by', max: 'max_finish_by' },
+    {
+      column: 'planned_start',
+      min: 'min_planned_start',
+      max: 'max_planned_start'
+    },
+    {
+      column: 'planned_finish',
+      min: 'min_planned_finish',
+      max: 'max_planned_finish'
+    },
+    {
+      column: 'estimated_total_duration',
+      min: 'min_estimated_total_duration',
+      max: 'max_estimated_total_duration',
+      transform: Number
+    }
+  ]
+
+  for (const { column, min, max, transform } of range_filters) {
+    if (params[min]) {
+      const value = transform ? transform(params[min]) : params[min]
+      filters.push({ column_id: column, operator: '>=', value })
+    }
+    if (params[max]) {
+      const value = transform ? transform(params[max]) : params[max]
+      filters.push({ column_id: column, operator: '<=', value })
+    }
+  }
+
+  return filters
+}
+
+// Handle task list request using DuckDB index
+async function handle_task_list_request_indexed(
+  filter_params,
+  archived,
+  user_public_key
+) {
+  const filters = build_duckdb_filters_from_query({
+    ...filter_params,
+    archived
+  })
+
+  // Query from DuckDB with high limit (no pagination for GET endpoint)
+  const tasks = await query_tasks_from_entities({
+    filters,
+    sort: [{ column_id: 'created_at', desc: true }],
+    limit: 10000,
+    offset: 0
+  })
+
+  // Convert to API response format
+  const formatted_tasks = tasks.map(convert_duckdb_task_to_response_format)
+
+  // Batch permission check for all tasks
+  const resource_paths = formatted_tasks.map(
+    (task) => task.entity_properties.base_uri
+  )
+  let permissions = {}
+  if (resource_paths.length > 0) {
+    try {
+      permissions = await check_permissions_batch({
+        user_public_key,
+        resource_paths
+      })
+    } catch (error) {
+      log(
+        `Error batch checking permissions (applying default deny): ${error.message}`
+      )
+    }
+  }
+
+  // Apply redaction based on batch permission results
+  const redacted_tasks = formatted_tasks.map((task) => {
+    const base_uri = task.entity_properties.base_uri
+    const allowed = permissions[base_uri]?.read?.allowed ?? false
+
+    if (allowed) {
+      return task
+    }
+
+    // Redact if no permission
+    return {
+      entity_properties: redact_entity_object({
+        entity_properties: task.entity_properties,
+        entity_content: null
+      }).entity_properties,
+      file_info: task.file_info,
+      is_redacted: true
+    }
+  })
+
+  // Apply tag-level redaction
+  const { tasks: final_tasks, tag_visibility } =
+    await apply_tag_redaction_to_tasks({
+      tasks: redacted_tasks,
+      user_public_key
+    })
+
+  return { tasks: final_tasks, tag_visibility }
+}
+
 // Handle request for list of tasks
 async function handle_task_list_request(
   req,
@@ -278,8 +440,32 @@ async function handle_task_list_request(
     }
   }
 
-  // Cache miss or filtered request - fetch fresh data
-  log('Fetching tasks (cache miss or filtered)')
+  // For authenticated requests, try DuckDB first for better performance
+  if (user_public_key && embedded_index_manager.is_duckdb_ready()) {
+    // Note: tag_entity_ids, organization_ids, person_ids not yet supported in DuckDB path
+    const has_unsupported_filters =
+      tag_entity_ids || organization_ids || person_ids
+
+    if (!has_unsupported_filters) {
+      try {
+        log('Using DuckDB index for authenticated task query')
+        const result = await handle_task_list_request_indexed(
+          filter_params,
+          archived,
+          user_public_key
+        )
+        return res.status(200).send(result)
+      } catch (error) {
+        log(
+          'DuckDB query failed, falling back to filesystem: %s',
+          error.message
+        )
+      }
+    }
+  }
+
+  // Fallback: Cache miss or filtered request - fetch fresh data from filesystem
+  log('Fetching tasks from filesystem')
 
   const all_tasks = await list_tasks_from_filesystem({
     status,

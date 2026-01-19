@@ -74,6 +74,7 @@ export const check_thread_permission_for_user = async ({
  *
  * This function is optimized for checking permissions on multiple resources
  * by reusing the same context (and thus cached rules) for all checks.
+ * Permission checks are parallelized in chunks to avoid overwhelming the filesystem.
  *
  * @param {Object} params - Parameters
  * @param {string|null} params.user_public_key - User's public key or null for public access
@@ -94,11 +95,27 @@ export const check_permissions_batch = async ({
 
   // Create a single context for all checks (rules are loaded once and cached)
   const context = new PermissionContext({ user_public_key })
+
+  // Pre-warm the rules cache so parallel checks don't race to load rules
+  await Promise.all([context.get_user_rules(), context.get_public_rules()])
+
+  // CHUNK_SIZE limits concurrent permission checks since each may load resource
+  // metadata from filesystem. Prevents exhausting file descriptors on large batches.
+  const CHUNK_SIZE = 50
   const results = {}
 
-  // Check each resource using the shared context
-  for (const resource_path of resource_paths) {
-    results[resource_path] = await context.check_permission({ resource_path })
+  for (let i = 0; i < resource_paths.length; i += CHUNK_SIZE) {
+    const chunk = resource_paths.slice(i, i + CHUNK_SIZE)
+    const chunk_results = await Promise.all(
+      chunk.map(async (resource_path) => ({
+        resource_path,
+        permission: await context.check_permission({ resource_path })
+      }))
+    )
+
+    for (const { resource_path, permission } of chunk_results) {
+      results[resource_path] = permission
+    }
   }
 
   return results

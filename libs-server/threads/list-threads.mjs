@@ -85,27 +85,15 @@ export default async function list_threads({
   try {
     await fs.mkdir(threads_dir, { recursive: true })
 
-    const all_items = await fs.readdir(threads_dir)
+    // Use withFileTypes to get directory info without separate stat calls
+    const all_items = await fs.readdir(threads_dir, { withFileTypes: true })
 
     // Filter to only include items that look like UUID directories
-    const thread_dirs = []
-    for (const item of all_items) {
-      const item_path = path.join(threads_dir, item)
-      try {
-        const stat = await fs.stat(item_path)
-        // Only include directories that match UUID pattern
-        if (
-          stat.isDirectory() &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-            item
-          )
-        ) {
-          thread_dirs.push(item)
-        }
-      } catch (error) {
-        log(`Error checking item ${item}: ${error.message}`)
-      }
-    }
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const thread_dirs = all_items
+      .filter((item) => item.isDirectory() && UUID_PATTERN.test(item.name))
+      .map((item) => item.name)
 
     const results = await Promise.allSettled(
       thread_dirs.map(async (thread_id) => {

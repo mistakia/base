@@ -40,39 +40,52 @@ export async function list_entity_files_from_filesystem({
       `Found ${all_files.length} markdown files, filtering by entity types...`
     )
 
-    // Read and filter entities
+    // Read and filter entities - process in parallel chunks for performance
+    // CHUNK_SIZE limits concurrent file reads to avoid exhausting file descriptors
+    // and to provide backpressure on large directory scans
+    const CHUNK_SIZE = 50
     const entities = []
-    for (const file of all_files) {
-      try {
-        const entity_result = await read_entity_from_filesystem({
-          absolute_path: file.absolute_path
+    for (let i = 0; i < all_files.length; i += CHUNK_SIZE) {
+      const chunk = all_files.slice(i, i + CHUNK_SIZE)
+
+      const chunk_results = await Promise.all(
+        chunk.map(async (file) => {
+          try {
+            const entity_result = await read_entity_from_filesystem({
+              absolute_path: file.absolute_path
+            })
+
+            if (!entity_result.success || !entity_result.entity_properties) {
+              return null
+            }
+
+            const entity_type = entity_result.entity_properties.type
+
+            // Check if entity type should be included/excluded
+            const should_include =
+              include_entity_types.length === 0 ||
+              include_entity_types.includes(entity_type)
+            const should_exclude =
+              exclude_entity_types.length > 0 &&
+              exclude_entity_types.includes(entity_type)
+
+            if (should_include && !should_exclude) {
+              return {
+                entity_properties: entity_result.entity_properties,
+                file_info: file
+              }
+            }
+
+            return null
+          } catch (error) {
+            log(`Error processing file ${file.absolute_path}: ${error.message}`)
+            return null
+          }
         })
+      )
 
-        if (!entity_result.success || !entity_result.entity_properties) {
-          continue
-        }
-
-        const entity_type = entity_result.entity_properties.type
-
-        // Check if entity type should be included/excluded
-        const should_include =
-          include_entity_types.length === 0 ||
-          include_entity_types.includes(entity_type)
-        const should_exclude =
-          exclude_entity_types.length > 0 &&
-          exclude_entity_types.includes(entity_type)
-
-        if (should_include && !should_exclude) {
-          // Add to results with consistent format
-          // Include base_uri to match the original function's output
-          entities.push({
-            entity_properties: entity_result.entity_properties,
-            file_info: file
-          })
-        }
-      } catch (error) {
-        log(`Error processing file ${file.absolute_path}: ${error.message}`)
-      }
+      // Filter out null results and add to entities
+      entities.push(...chunk_results.filter(Boolean))
     }
 
     log(`Found ${entities.length} entity files matching criteria`)

@@ -7,7 +7,8 @@ import { process_thread_table_request } from '#libs-server/threads/process-threa
 import {
   check_thread_permission_middleware as check_thread_permission,
   check_thread_permission_for_user,
-  check_create_threads_permission
+  check_create_threads_permission,
+  check_permissions_batch
 } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
@@ -16,6 +17,10 @@ import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { thread_constants } from '#libs-shared'
 import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import { get_cached_threads } from '#server/services/cache-warmer.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -84,6 +89,116 @@ function validate_table_state(table_state) {
 }
 
 /**
+ * Normalize DuckDB thread to API response format
+ */
+function normalize_duckdb_thread_for_response(thread, models_data) {
+  const { total_cost, input_cost, output_cost, currency } =
+    calculate_thread_cost(thread, models_data)
+
+  return {
+    thread_id: thread.thread_id,
+    title: thread.title,
+    short_description: thread.short_description,
+    thread_state: thread.thread_state || 'unknown',
+    created_at: thread.created_at,
+    updated_at: thread.updated_at,
+    duration_minutes: thread.duration_minutes || 0,
+    user_public_key: thread.user_public_key,
+    session_provider: thread.session_provider || 'base',
+    inference_provider: thread.inference_provider,
+    primary_model: thread.primary_model,
+    working_directory: thread.working_directory,
+    working_directory_path: thread.working_directory_path,
+    message_count: thread.message_count || 0,
+    user_message_count: thread.user_message_count || 0,
+    assistant_message_count: thread.assistant_message_count || 0,
+    tool_call_count: thread.tool_call_count || 0,
+    total_tokens: thread.total_tokens || 0,
+    total_input_tokens: thread.total_input_tokens || 0,
+    total_output_tokens: thread.total_output_tokens || 0,
+    cache_creation_input_tokens: thread.cache_creation_input_tokens || 0,
+    cache_read_input_tokens: thread.cache_read_input_tokens || 0,
+    total_cost,
+    input_cost,
+    output_cost,
+    currency,
+    description: thread.description || '',
+    tags: thread.tags || [],
+    // Note: latest_timeline_event not available from DuckDB (would require separate query)
+    latest_timeline_event: null
+  }
+}
+
+/**
+ * Handle thread list request using DuckDB index
+ */
+async function handle_thread_list_request_indexed({
+  thread_state,
+  limit,
+  offset,
+  requesting_user_key
+}) {
+  // Build filters
+  const filters = []
+  if (thread_state) {
+    filters.push({
+      column_id: 'thread_state',
+      operator: '=',
+      value: thread_state
+    })
+  }
+
+  // Fetch models data for cost calculation
+  let models_data = null
+  try {
+    const cache_data = await get_models_from_cache()
+    models_data = cache_data?.models || null
+  } catch (error) {
+    log('Failed to fetch models data for cost calculation: %s', error.message)
+  }
+
+  // Query from DuckDB
+  const duckdb_threads = await query_threads_from_duckdb({
+    filters,
+    sort: [{ column_id: 'created_at', desc: true }],
+    limit,
+    offset
+  })
+
+  // Normalize to API format
+  const normalized_threads = duckdb_threads.map((thread) =>
+    normalize_duckdb_thread_for_response(thread, models_data)
+  )
+
+  // Batch permission check for all threads using base URIs
+  const resource_paths = normalized_threads.map(
+    (thread) => `user:thread/${thread.thread_id}`
+  )
+  let permissions = {}
+  if (resource_paths.length > 0) {
+    try {
+      permissions = await check_permissions_batch({
+        user_public_key: requesting_user_key,
+        resource_paths
+      })
+    } catch (error) {
+      log(
+        `Error batch checking thread permissions (applying default deny): ${error.message}`
+      )
+    }
+  }
+
+  // Apply redaction based on batch permission results
+  const threads_with_permissions = normalized_threads.map((thread) => {
+    const base_uri = `user:thread/${thread.thread_id}`
+    const allowed = permissions[base_uri]?.read?.allowed ?? false
+    return allowed ? thread : redact_thread_data(thread)
+  })
+
+  return threads_with_permissions
+}
+
+/**
  * Route handlers
  */
 
@@ -133,8 +248,27 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Cache miss or authenticated request - fetch fresh data
-    log('Fetching threads (cache miss or authenticated)')
+    // For authenticated requests, try DuckDB first for better performance
+    if (requesting_user_key && embedded_index_manager.is_duckdb_ready()) {
+      try {
+        log('Using DuckDB index for authenticated thread query')
+        const result = await handle_thread_list_request_indexed({
+          thread_state,
+          limit,
+          offset,
+          requesting_user_key
+        })
+        return res.json(result)
+      } catch (error) {
+        log(
+          'DuckDB query failed, falling back to filesystem: %s',
+          error.message
+        )
+      }
+    }
+
+    // Fallback: Cache miss or filtered request - fetch fresh data from filesystem
+    log('Fetching threads from filesystem')
 
     // Get all threads from filesystem
     const all_threads = await threads.list_threads({
