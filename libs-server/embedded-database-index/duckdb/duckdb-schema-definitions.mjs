@@ -83,6 +83,14 @@ CREATE TABLE IF NOT EXISTS entity_relations (
 )
 `
 
+const INDEX_METADATA_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS index_metadata (
+  key VARCHAR PRIMARY KEY,
+  value VARCHAR NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+)
+`
+
 const THREADS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_threads_state ON threads(thread_state)',
   'CREATE INDEX IF NOT EXISTS idx_threads_created ON threads(created_at)',
@@ -100,7 +108,7 @@ const ENTITY_RELATIONS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_relations_type ON entity_relations(relation_type)'
 ]
 
-export async function create_duckdb_schema({ connection }) {
+export async function create_duckdb_schema() {
   log('Creating DuckDB schema')
 
   try {
@@ -138,6 +146,9 @@ export async function create_duckdb_schema({ connection }) {
     }
     log('Entity relations indexes created')
 
+    await execute_duckdb_run({ query: INDEX_METADATA_TABLE_SCHEMA })
+    log('Index metadata table created')
+
     log('DuckDB schema creation complete')
   } catch (error) {
     log('Error creating DuckDB schema: %s', error.message)
@@ -145,7 +156,7 @@ export async function create_duckdb_schema({ connection }) {
   }
 }
 
-export async function drop_duckdb_schema({ connection }) {
+export async function drop_duckdb_schema() {
   log('Dropping DuckDB schema')
 
   try {
@@ -153,16 +164,10 @@ export async function drop_duckdb_schema({ connection }) {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_tags' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS threads' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entities' })
+    await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS index_metadata' })
     log('DuckDB schema dropped')
   } catch (error) {
     log('Error dropping DuckDB schema: %s', error.message)
     throw error
   }
-}
-
-export const DUCKDB_SCHEMA = {
-  ENTITIES_TABLE_SCHEMA,
-  THREADS_TABLE_SCHEMA,
-  ENTITY_TAGS_TABLE_SCHEMA,
-  ENTITY_RELATIONS_TABLE_SCHEMA
 }

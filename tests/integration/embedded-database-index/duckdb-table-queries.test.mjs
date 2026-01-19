@@ -28,8 +28,8 @@ describe('DuckDB Table Queries Integration', () => {
     // Initialize DuckDB with in-memory database for tests
     await initialize_duckdb_client({ in_memory: true })
 
-    // Create schema (connection is implicit, passed as placeholder)
-    await create_duckdb_schema({ connection: null })
+    // Create schema
+    await create_duckdb_schema()
 
     // Insert test tasks via entities table
     const test_tasks = [

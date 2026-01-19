@@ -1,5 +1,6 @@
 import debug from 'debug'
 import path from 'path'
+import fs from 'fs/promises'
 
 import server from '#server/index.mjs'
 import config from '#config'
@@ -14,9 +15,61 @@ import {
   stop_index_file_watcher
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
+  start_sync_trigger_watcher,
+  stop_sync_trigger_watcher
+} from '#libs-server/embedded-database-index/sync/sync-trigger-handler.mjs'
+import {
   start_cache_warmer,
   stop_cache_warmer
 } from '#server/services/cache-warmer.mjs'
+
+const SERVER_LOCK_FILE = '.server-lock'
+
+/**
+ * Write server lock file to indicate server is running
+ */
+async function write_server_lock_file({ port }) {
+  const lock_path = path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    SERVER_LOCK_FILE
+  )
+
+  const lock_data = {
+    pid: process.pid,
+    started_at: new Date().toISOString(),
+    port
+  }
+
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(lock_path)
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(lock_path, JSON.stringify(lock_data, null, 2))
+  } catch (error) {
+    // Non-fatal, log but continue
+    debug('server')(`Failed to write lock file: ${error.message}`)
+  }
+}
+
+/**
+ * Remove server lock file on shutdown
+ */
+async function remove_server_lock_file() {
+  const lock_path = path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    SERVER_LOCK_FILE
+  )
+
+  try {
+    await fs.unlink(lock_path)
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      debug('server')(`Failed to remove lock file: ${error.message}`)
+    }
+  }
+}
 
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
@@ -25,6 +78,9 @@ try {
   const { server_port } = config
   server.listen(server_port, async () => {
     logger(`API listening on port ${server_port}`)
+
+    // Write lock file to indicate server is running
+    await write_server_lock_file({ port: server_port })
 
     // Initialize thread watcher after server starts
     try {
@@ -86,6 +142,24 @@ try {
         logger(`Failed to start index file watcher: ${watcher_error.message}`)
         logger(watcher_error)
       }
+
+      // Start sync trigger watcher for CLI-triggered syncs
+      try {
+        start_sync_trigger_watcher({
+          on_sync_request: async (request) => {
+            logger(
+              `Processing sync request: ${request.request_id} (type: ${request.type})`
+            )
+            return await embedded_index_manager.perform_sync({
+              mode: request.type
+            })
+          }
+        })
+        logger('Sync trigger watcher started')
+      } catch (trigger_error) {
+        logger(`Failed to start sync trigger watcher: ${trigger_error.message}`)
+        logger(trigger_error)
+      }
     }
   })
 } catch (err) {
@@ -114,6 +188,14 @@ const shutdown = async (signal) => {
   }
 
   try {
+    // Stop sync trigger watcher
+    await stop_sync_trigger_watcher()
+    logger('Sync trigger watcher stopped')
+  } catch (error) {
+    logger(`Error stopping sync trigger watcher: ${error.message}`)
+  }
+
+  try {
     // Stop index file watcher
     await stop_index_file_watcher()
     logger('Index file watcher stopped')
@@ -127,6 +209,14 @@ const shutdown = async (signal) => {
     logger('Embedded index shut down')
   } catch (error) {
     logger(`Error shutting down embedded index: ${error.message}`)
+  }
+
+  try {
+    // Remove server lock file
+    await remove_server_lock_file()
+    logger('Server lock file removed')
+  } catch (error) {
+    logger(`Error removing lock file: ${error.message}`)
   }
 
   try {

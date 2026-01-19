@@ -22,7 +22,7 @@ describe('Entity List CLI', function () {
   before(async () => {
     await close_duckdb_connection()
     await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema({})
+    await create_duckdb_schema()
 
     // Insert test entities
     const test_entities = [
