@@ -428,7 +428,35 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
 
     case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
       const { thread_id, entry } = payload
-      return append_timeline_entry(state, thread_id, entry)
+
+      // Update selected thread timeline
+      let new_state = append_timeline_entry(state, thread_id, entry)
+
+      // Also update the thread in the basic threads list with the new latest_timeline_event
+      // Skip if entry is a system event (should not be shown as latest)
+      if (entry.type !== 'system') {
+        new_state = update_thread_in_basic_list(new_state, thread_id, {
+          latest_timeline_event: entry
+        })
+      }
+
+      return new_state
+    }
+
+    case threads_action_types.GET_THREADS_LATEST_EVENTS_FULFILLED: {
+      const events_map = payload.data || {}
+
+      // Update each thread in the basic threads list with its latest event
+      let new_state = state
+      for (const [thread_id, event] of Object.entries(events_map)) {
+        if (event !== null) {
+          new_state = update_thread_in_basic_list(new_state, thread_id, {
+            latest_timeline_event: event
+          })
+        }
+      }
+
+      return new_state
     }
 
     case threads_action_types.THREAD_JOB_FAILED: {

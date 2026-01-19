@@ -72,6 +72,12 @@ export const api = {
     return { url, ...POST(params) }
   },
 
+  get_threads_latest_events({ thread_ids }) {
+    const ids = Array.isArray(thread_ids) ? thread_ids.join(',') : thread_ids
+    const url = `${API_URL}/threads/latest-events?ids=${encodeURIComponent(ids)}`
+    return { url }
+  },
+
   get_thread({ thread_id }) {
     const url = `${API_URL}/threads/${thread_id}`
     return { url }

@@ -13,6 +13,7 @@ import {
   get_thread,
   get_models,
   get_threads_table,
+  get_threads_latest_events,
   put_thread_state,
   create_thread_session,
   resume_thread_session,
@@ -72,6 +73,11 @@ export function* load_threads({ payload }) {
 export function* load_thread({ payload }) {
   yield call(get_thread, payload)
   yield call(ensure_models_data_loaded)
+}
+
+export function* load_threads_latest_events_saga({ payload }) {
+  const { thread_ids } = payload
+  yield call(get_threads_latest_events, { thread_ids })
 }
 
 //= ====================================
@@ -235,6 +241,13 @@ export function* watch_load_thread() {
   yield takeLatest(threads_action_types.LOAD_THREAD, load_thread)
 }
 
+export function* watch_load_threads_latest_events() {
+  yield takeLatest(
+    threads_action_types.LOAD_THREADS_LATEST_EVENTS,
+    load_threads_latest_events_saga
+  )
+}
+
 // Table view watchers
 export function* watch_update_thread_table_view() {
   yield debounce(
@@ -290,6 +303,7 @@ export const threads_sagas = [
   // Thread loading
   fork(watch_load_threads),
   fork(watch_load_thread),
+  fork(watch_load_threads_latest_events),
   // Table views
   fork(watch_update_thread_table_view),
   fork(watch_load_threads_table),

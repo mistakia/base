@@ -1,3 +1,6 @@
+import fs from 'fs/promises'
+import path from 'path'
+
 import { create_test_user, create_temp_test_repo } from './index.mjs'
 import { register_base_directories } from '#libs-server/base-uri/index.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
@@ -74,6 +77,12 @@ export default async function create_test_thread({
     thread_main_request,
     create_git_branches
   })
+
+  // Write initial_timeline entries to the timeline.json file if provided
+  if (initial_timeline && initial_timeline.length > 0) {
+    const timeline_path = path.join(thread.context_dir, 'timeline.json')
+    await fs.writeFile(timeline_path, JSON.stringify(initial_timeline, null, 2))
+  }
 
   const cleanup = () => {
     if (temp_repo) {
