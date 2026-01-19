@@ -11,7 +11,8 @@ import config from '#config'
 import {
   get_kuzu_connection,
   close_kuzu_connection,
-  initialize_kuzu_client
+  initialize_kuzu_client,
+  execute_kuzu_query
 } from './kuzu/kuzu-database-client.mjs'
 import {
   create_kuzu_schema,
@@ -31,7 +32,8 @@ import {
 } from './kuzu/kuzu-thread-sync.mjs'
 import {
   close_duckdb_connection,
-  initialize_duckdb_client
+  initialize_duckdb_client,
+  execute_duckdb_query
 } from './duckdb/duckdb-database-client.mjs'
 import {
   create_duckdb_schema,
@@ -218,11 +220,48 @@ class EmbeddedIndexManager {
   }
 
   /**
+   * Get entity count from Kuzu database.
+   * Used to detect empty database that needs resync.
+   * @returns {Promise<number>} Entity count or 0 on error
+   */
+  async _get_kuzu_entity_count() {
+    try {
+      const result = await execute_kuzu_query({
+        query: 'MATCH (e:Entity) RETURN count(e) AS count'
+      })
+      // Kuzu returns QueryResult, need to get all rows
+      const rows = await result.getAll()
+      return rows.length > 0 ? Number(rows[0].count) : 0
+    } catch (error) {
+      log('Error getting Kuzu entity count: %s', error.message)
+      return 0
+    }
+  }
+
+  /**
+   * Get entity count from DuckDB database.
+   * Used to detect populated database for comparison with Kuzu.
+   * @returns {Promise<number>} Entity count or 0 on error
+   */
+  async _get_duckdb_entity_count() {
+    try {
+      const result = await execute_duckdb_query({
+        query: 'SELECT COUNT(*) as count FROM entities'
+      })
+      return result.length > 0 ? Number(result[0].count) : 0
+    } catch (error) {
+      log('Error getting DuckDB entity count: %s', error.message)
+      return 0
+    }
+  }
+
+  /**
    * Perform startup sync with fallback chain:
    * 1. Check schema version - if mismatch, do reset_and_rebuild
-   * 2. Try incremental sync
-   * 3. On failure, try resync (update-in-place)
-   * 4. On failure, try reset_and_rebuild (last resort)
+   * 2. Check database sync - if Kuzu empty but DuckDB populated, do resync
+   * 3. Try incremental sync
+   * 4. On failure, try resync (update-in-place)
+   * 5. On failure, try reset_and_rebuild (last resort)
    */
   async _perform_startup_sync() {
     log('Performing startup sync')
@@ -245,6 +284,29 @@ class EmbeddedIndexManager {
         log('Schema version mismatch, performing reset and rebuild')
         await this._reset_and_rebuild_index_internal()
         return
+      }
+
+      // Check if databases are out of sync (Kuzu empty but DuckDB populated)
+      // This handles cases where Kuzu was deleted/corrupted and recreated
+      if (this.kuzu_ready && this.duckdb_ready) {
+        const kuzu_count = await this._get_kuzu_entity_count()
+        const duckdb_count = await this._get_duckdb_entity_count()
+
+        if (duckdb_count > 0 && kuzu_count === 0) {
+          log(
+            'Kuzu is empty but DuckDB has %d entities, triggering resync',
+            duckdb_count
+          )
+          const resync_result = await resync_full_index({ index_manager: this })
+          if (resync_result.success) {
+            log('Database sync resync successful: %o', resync_result.stats)
+            return
+          }
+          // Fall through to reset if resync fails
+          log('Database sync resync failed, performing reset and rebuild')
+          await this._reset_and_rebuild_index_internal()
+          return
+        }
       }
 
       // Try incremental sync first
