@@ -29,7 +29,9 @@ const log = debug('embedded-index:sync:resync')
 /** Collect all entity base_uris from DuckDB */
 async function collect_database_entity_base_uris() {
   log('Collecting database entity base_uris')
-  const results = await execute_duckdb_query({ query: 'SELECT base_uri FROM entities' })
+  const results = await execute_duckdb_query({
+    query: 'SELECT base_uri FROM entities'
+  })
   const database_uris = new Set(results.map((row) => row.base_uri))
   log('Found %d entities in database', database_uris.size)
   return database_uris
@@ -38,7 +40,9 @@ async function collect_database_entity_base_uris() {
 /** Collect all thread IDs from DuckDB */
 async function collect_database_thread_ids() {
   log('Collecting database thread IDs')
-  const results = await execute_duckdb_query({ query: 'SELECT thread_id FROM threads' })
+  const results = await execute_duckdb_query({
+    query: 'SELECT thread_id FROM threads'
+  })
   const thread_ids = new Set(results.map((row) => row.thread_id))
   log('Found %d threads in database', thread_ids.size)
   return thread_ids
@@ -46,7 +50,9 @@ async function collect_database_thread_ids() {
 
 /** Identify orphans: items in database but not in filesystem */
 function identify_orphans({ filesystem_items, database_items, label }) {
-  const orphans = Array.from(database_items).filter((item) => !filesystem_items.has(item))
+  const orphans = Array.from(database_items).filter(
+    (item) => !filesystem_items.has(item)
+  )
   log('Identified %d orphan %s', orphans.length, label)
   return orphans
 }

@@ -146,7 +146,10 @@ export async function get_repo_sync_state() {
  * @returns {Promise<void>}
  */
 export async function set_repo_sync_state({ state }) {
-  log('Setting repository sync state for %d repositories', Object.keys(state).length)
+  log(
+    'Setting repository sync state for %d repositories',
+    Object.keys(state).length
+  )
 
   const state_json = JSON.stringify(state)
 
@@ -160,5 +163,4 @@ export async function set_repo_sync_state({ state }) {
     key: INDEX_METADATA_KEYS.LAST_SYNC_TIMESTAMP,
     value: new Date().toISOString()
   })
-
 }

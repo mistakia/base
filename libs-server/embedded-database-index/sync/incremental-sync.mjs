@@ -44,7 +44,10 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
 
     if (!result.success) {
       // File doesn't exist or can't be read - treat as delete
-      if (result.error?.includes('ENOENT') || result.error?.includes('no such file')) {
+      if (
+        result.error?.includes('ENOENT') ||
+        result.error?.includes('no such file')
+      ) {
         await index_manager.remove_entity({ base_uri })
         log('Deleted (file not found): %s', base_uri)
         return { action: 'deleted' }
@@ -88,7 +91,11 @@ export async function perform_incremental_sync({
   const stats = { synced: 0, deleted: 0, failed: 0 }
 
   for (const file_path of file_paths) {
-    const result = await sync_entity_file({ file_path, repo_path, index_manager })
+    const result = await sync_entity_file({
+      file_path,
+      repo_path,
+      index_manager
+    })
     stats[result.action]++
   }
 
@@ -140,7 +147,11 @@ async function sync_changed_threads({ repo_path, file_paths, index_manager }) {
   const stats = { synced: 0, deleted: 0, failed: 0 }
 
   for (const file_path of file_paths) {
-    const result = await sync_thread_file({ file_path, repo_path, index_manager })
+    const result = await sync_thread_file({
+      file_path,
+      repo_path,
+      index_manager
+    })
     stats[result.action]++
   }
 
@@ -167,7 +178,10 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       sync_state
     })
 
-    log('Found %d total changed files across all repositories', changed_files.length)
+    log(
+      'Found %d total changed files across all repositories',
+      changed_files.length
+    )
 
     // Filter to entity files
     const entity_file_paths = filter_entity_files({
