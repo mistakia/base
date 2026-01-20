@@ -85,6 +85,9 @@ class EmbeddedIndexManager {
     this.index_config = null
     this.sync_in_progress = false
     this._sync_lock_queue = []
+    // Map of thread_id -> { metadata, callbacks: [{ resolve, reject }] }
+    // Used to coalesce repeated sync requests for the same thread
+    this._pending_thread_syncs = new Map()
   }
 
   /**
@@ -663,10 +666,73 @@ class EmbeddedIndexManager {
   }
 
   /**
-   * Sync a thread to the embedded databases
+   * Sync a thread to the embedded databases.
+   * Deduplicates concurrent requests for the same thread_id - if a sync is
+   * already in progress for a thread, subsequent requests will wait for the
+   * existing sync to complete and receive the same result.
    * @returns {{ success: boolean, kuzu_synced: boolean, duckdb_synced: boolean }}
    */
   async sync_thread({ thread_id, metadata }) {
+    // Check if there's already a pending sync for this thread
+    const pending = this._pending_thread_syncs.get(thread_id)
+
+    if (pending) {
+      // Update metadata to latest version (caller may have newer data)
+      pending.metadata = metadata
+      log('Thread sync deduplicated for %s', thread_id)
+
+      // Return a promise that resolves/rejects when the existing sync completes
+      return new Promise((resolve, reject) => {
+        pending.callbacks.push({ resolve, reject })
+      })
+    }
+
+    // No pending sync - create entry and execute
+    const pending_entry = {
+      metadata,
+      callbacks: [] // Array of { resolve, reject } pairs
+    }
+    this._pending_thread_syncs.set(thread_id, pending_entry)
+
+    try {
+      // Execute the actual sync with the latest metadata
+      const result = await this._execute_thread_sync({
+        thread_id,
+        metadata: pending_entry.metadata
+      })
+
+      // Resolve all waiting callbacks with the same result
+      for (const { resolve } of pending_entry.callbacks) {
+        try {
+          resolve(result)
+        } catch (callback_error) {
+          log('Error resolving sync callback: %s', callback_error.message)
+        }
+      }
+
+      return result
+    } catch (error) {
+      // Reject all waiting callbacks with the same error
+      for (const { reject } of pending_entry.callbacks) {
+        try {
+          reject(error)
+        } catch (callback_error) {
+          log('Error rejecting sync callback: %s', callback_error.message)
+        }
+      }
+      throw error
+    } finally {
+      // Always remove from pending map when done
+      this._pending_thread_syncs.delete(thread_id)
+    }
+  }
+
+  /**
+   * Internal method that performs the actual thread sync.
+   * Called by sync_thread after deduplication.
+   * @private
+   */
+  async _execute_thread_sync({ thread_id, metadata }) {
     const result = { success: true, kuzu_synced: false, duckdb_synced: false }
 
     if (!this.initialized) {
