@@ -1,4 +1,5 @@
 import express from 'express'
+import debug from 'debug'
 
 import {
   register_active_session,
@@ -15,15 +16,17 @@ import {
   read_thread_data,
   get_latest_timeline_event
 } from '#libs-server/threads/thread-utils.mjs'
-import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
+import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
+
+const log = debug('api:active-sessions')
 
 /**
  * Apply permission-based redaction to a session
  *
  * @param {Object} session - Session to potentially redact
  * @param {string|null} user_public_key - Requesting user's public key
- * @returns {Promise<Object>} Session (possibly redacted)
+ * @returns {Promise<Object>} Session (possibly redacted) with can_write property
  */
 async function apply_session_redaction(session, user_public_key) {
   if (!session) return session
@@ -31,24 +34,28 @@ async function apply_session_redaction(session, user_public_key) {
   // Sessions with thread_id - check thread permission
   if (session.thread_id) {
     try {
-      const permission_result = await check_thread_permission_for_user({
+      const permission_result = await check_thread_permission({
         user_public_key,
         thread_id: session.thread_id
       })
 
-      if (!permission_result.allowed) {
-        return redact_session_data(session)
+      if (!permission_result.read?.allowed) {
+        return { ...redact_session_data(session), can_write: false }
       }
 
-      return session
-    } catch {
+      const can_write = permission_result.write?.allowed ?? false
+      return { ...session, can_write }
+    } catch (error) {
       // On permission check failure, redact to be safe
-      return redact_session_data(session)
+      log(
+        `Error checking permission for session thread ${session.thread_id}: ${error.message}`
+      )
+      return { ...redact_session_data(session), can_write: false }
     }
   }
 
-  // Sessions without thread - redact paths (can't verify ownership)
-  return redact_session_data(session)
+  // Sessions without thread - redact paths and no write permission
+  return { ...redact_session_data(session), can_write: false }
 }
 
 /**
