@@ -1,11 +1,12 @@
-// import fs from 'fs/promises'
 import { createReadStream, existsSync } from 'fs'
 import { readdir } from 'fs/promises'
 import { createInterface } from 'readline'
 import path from 'path'
-import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import debug from 'debug'
+
+import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
+import { is_warm_agent, is_agent_file_path } from './claude-session-helpers.mjs'
 
 const log = debug('integrations:claude:parse-jsonl')
 const log_debug = debug('integrations:claude:parse-jsonl:debug')
@@ -297,6 +298,188 @@ export const parse_session_with_subagents = async (session_file) => {
     log(`Error parsing session with subagents: ${error.message}`)
     throw error
   }
+}
+
+/**
+ * Stream Claude sessions one at a time with agent merging.
+ * Uses pre-built agent relationship index for efficient streaming.
+ *
+ * @param {Object} params - Parameters object
+ * @param {Object} params.agent_index - Agent relationship index from scan_claude_agent_relationships()
+ *   - parent_to_agent_files: Map<parent_session_id, Array<{file_path, agent_id}>>
+ *   - agent_session_ids: Set<session_id>
+ *   - parent_session_files: Map<session_id, file_path>
+ * @param {Function} params.filter_session - Optional filter function (session) => boolean
+ * @param {boolean} params.include_warm_agents - Include warm agents (default: false)
+ * @yields {Object} Session object with merged agent sessions
+ */
+export async function* stream_claude_sessions({
+  agent_index,
+  filter_session = null,
+  include_warm_agents = false
+}) {
+  if (
+    !agent_index?.parent_session_files ||
+    !agent_index?.parent_to_agent_files
+  ) {
+    throw new Error(
+      'agent_index with parent_session_files and parent_to_agent_files is required for streaming'
+    )
+  }
+
+  const { parent_to_agent_files, parent_session_files } = agent_index
+
+  log(`Streaming ${parent_session_files.size} parent sessions`)
+
+  let yielded_count = 0
+  let skipped_count = 0
+
+  for (const [session_id, file_path] of parent_session_files) {
+    try {
+      // Parse the parent session
+      const sessions = await parse_claude_jsonl_file(file_path)
+      if (sessions.length === 0) {
+        skipped_count++
+        continue
+      }
+
+      const parent_session = sessions[0]
+
+      // Apply filter if provided
+      if (filter_session && !filter_session(parent_session)) {
+        skipped_count++
+        continue
+      }
+
+      // Check for and merge agent sessions
+      const agent_files = parent_to_agent_files.get(session_id) || []
+      const agent_sessions = []
+
+      for (const { file_path: agent_file_path } of agent_files) {
+        try {
+          const agent_session_list =
+            await parse_claude_jsonl_file(agent_file_path)
+          if (agent_session_list.length > 0) {
+            const agent_session = agent_session_list[0]
+
+            // Skip warm agents unless explicitly included
+            if (
+              !include_warm_agents &&
+              is_warm_agent({ session: agent_session })
+            ) {
+              log_debug(`Skipping warm agent: ${agent_session.session_id}`)
+              continue
+            }
+
+            agent_sessions.push(agent_session)
+          }
+        } catch (error) {
+          log(`Failed to parse agent file ${agent_file_path}: ${error.message}`)
+        }
+      }
+
+      // Attach agent sessions to parent
+      if (agent_sessions.length > 0) {
+        parent_session.agent_sessions = agent_sessions
+        log_debug(
+          `Merged ${agent_sessions.length} agents with session ${session_id}`
+        )
+      }
+
+      yielded_count++
+      yield parent_session
+    } catch (error) {
+      log(`Failed to parse session file ${file_path}: ${error.message}`)
+      skipped_count++
+    }
+  }
+
+  log(
+    `Streaming complete: ${yielded_count} sessions yielded, ${skipped_count} skipped`
+  )
+}
+
+/**
+ * Extract minimal metadata from a Claude session file without parsing full content.
+ * Reads only the first few lines to extract agent relationship information.
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.file_path - Path to JSONL session file
+ * @param {number} params.max_lines - Maximum lines to read (default: 5)
+ * @returns {Promise<Object>} Metadata object with session_id, is_agent, parent_session_id, agent_id
+ */
+export const extract_claude_session_metadata = async ({
+  file_path,
+  max_lines = 5
+}) => {
+  const session_id = path.basename(file_path, '.jsonl')
+
+  const metadata = {
+    session_id,
+    file_path,
+    is_agent: is_agent_file_path(file_path),
+    parent_session_id: null,
+    agent_id: null
+  }
+
+  // If agent by path, extract agent_id from filename
+  if (session_id.startsWith('agent-')) {
+    metadata.agent_id = session_id.replace('agent-', '')
+  }
+
+  // Read first few lines to extract additional metadata
+  const file_stream = createReadStream(file_path)
+  const line_reader = createInterface({
+    input: file_stream,
+    crlfDelay: Infinity
+  })
+
+  let lines_read = 0
+
+  try {
+    for await (const line of line_reader) {
+      if (line.trim() === '') continue
+
+      lines_read++
+      if (lines_read > max_lines) break
+
+      try {
+        const entry = JSON.parse(line)
+
+        // Check for agentId field (indicates this is an agent session)
+        if (entry.agentId && !metadata.agent_id) {
+          metadata.agent_id = entry.agentId
+          metadata.is_agent = true
+        }
+
+        // Check for sessionId field (points to parent session)
+        // Only counts as agent if sessionId is DIFFERENT from this session's own ID
+        if (entry.sessionId && !metadata.parent_session_id) {
+          if (entry.sessionId !== session_id) {
+            metadata.parent_session_id = entry.sessionId
+            metadata.is_agent = true
+          }
+        }
+
+        // Early exit if we have all agent info
+        if (
+          metadata.is_agent &&
+          metadata.parent_session_id &&
+          metadata.agent_id
+        ) {
+          break
+        }
+      } catch {
+        // Skip unparseable lines
+      }
+    }
+  } finally {
+    // Clean up: destroy stream to stop reading
+    file_stream.destroy()
+    line_reader.close()
+  }
+
+  return metadata
 }
 
 export const get_session_summary = (session) => {

@@ -13,9 +13,11 @@ import {
   validate_claude_session_structure,
   extract_claude_models_from_session,
   get_claude_inference_provider,
-  get_claude_session_id
+  get_claude_session_id,
+  scan_claude_agent_relationships
 } from './claude-session-helpers.mjs'
 import { get_claude_config } from './claude-config.mjs'
+import { stream_claude_sessions } from './parse-jsonl.mjs'
 
 export class ClaudeSessionProvider extends SessionProviderBase {
   constructor() {
@@ -55,9 +57,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     const config = get_claude_config({ claude_projects_directory })
     return await find_claude_sessions_from_filesystem({
       claude_projects_directory: config.claude_projects_directory,
-      filter_sessions,
-      session_id: null,
-      session_file: null
+      filter_sessions
     })
   }
 
@@ -94,5 +94,56 @@ export class ClaudeSessionProvider extends SessionProviderBase {
    */
   get_session_id(raw_session) {
     return get_claude_session_id({ raw_session })
+  }
+
+  /**
+   * Stream Claude sessions one at a time with agent merging.
+   * For single session lookups (session_id, session_file), uses direct load.
+   * For bulk imports, builds agent index first then streams efficiently.
+   *
+   * @param {Object} options - Options for streaming sessions
+   * @param {string} options.claude_projects_directory - Claude projects directory
+   * @param {Function} options.filter_sessions - Optional filter function
+   * @param {string} options.session_id - Specific session ID to load
+   * @param {string} options.session_file - Specific session file to load
+   * @param {boolean} options.include_warm_agents - Include warm agents (default: false)
+   * @yields {Object} Session objects one at a time
+   */
+  async* stream_sessions({
+    claude_projects_directory,
+    filter_sessions,
+    session_id,
+    session_file,
+    include_warm_agents = false
+  } = {}) {
+    const config = get_claude_config({ claude_projects_directory })
+
+    // For single session lookups, use existing find_sessions (already optimized)
+    if (session_file || session_id) {
+      this.log(`Loading single session: ${session_id || session_file}`)
+      const sessions = await this.find_sessions({
+        claude_projects_directory: config.claude_projects_directory,
+        filter_sessions,
+        session_id,
+        session_file
+      })
+      for (const session of sessions) {
+        yield session
+      }
+      return
+    }
+
+    // For bulk imports: use streaming with agent index
+    this.log('Building agent relationship index for streaming...')
+    const agent_index = await scan_claude_agent_relationships({
+      claude_projects_directory: config.claude_projects_directory
+    })
+
+    this.log('Streaming sessions with agent merging...')
+    yield* stream_claude_sessions({
+      agent_index,
+      filter_session: filter_sessions,
+      include_warm_agents
+    })
   }
 }

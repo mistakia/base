@@ -7,6 +7,7 @@
  */
 
 import debug from 'debug'
+
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 import { calculate_session_counts } from './session-count-utilities.mjs'
 import { create_thread_from_session } from './create-from-session.mjs'
@@ -47,6 +48,26 @@ export class SessionProviderBase {
     throw new Error(
       `find_sessions must be implemented by ${this.constructor.name}`
     )
+  }
+
+  /**
+   * Stream sessions one at a time from provider-specific source.
+   * Default implementation calls find_sessions() and yields each session.
+   * Override in subclasses to implement true streaming for memory efficiency.
+   *
+   * @param {Object} options - Provider-specific options for finding sessions
+   * @yields {Object} Raw session objects one at a time
+   */
+  async* stream_sessions(options = {}) {
+    this.log(
+      'Using default stream_sessions (find_sessions fallback). Override for true streaming.'
+    )
+
+    const sessions = await this.find_sessions(options)
+
+    for (const session of sessions) {
+      yield session
+    }
   }
 
   /**
