@@ -1,5 +1,4 @@
 import { expect } from 'chai'
-import fs from 'fs/promises'
 import path from 'path'
 
 import add_timeline_entry from '#libs-server/threads/add-timeline-entry.mjs'
@@ -9,6 +8,7 @@ import {
   create_test_thread
 } from '#tests/utils/index.mjs'
 import timeline_fixtures from '#tests/fixtures/threads/timeline-entries.json' with { type: 'json' }
+import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 describe('add_timeline_entry', () => {
   let test_user
@@ -45,8 +45,8 @@ describe('add_timeline_entry', () => {
     })
 
     // Verify entry was added to timeline
-    const timeline_path = path.join(test_thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
@@ -69,8 +69,8 @@ describe('add_timeline_entry', () => {
     })
 
     // Verify entry was added to timeline
-    const timeline_path = path.join(test_thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
@@ -93,8 +93,8 @@ describe('add_timeline_entry', () => {
     })
 
     // Verify entry was added to timeline
-    const timeline_path = path.join(test_thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
@@ -119,8 +119,8 @@ describe('add_timeline_entry', () => {
     })
 
     // Verify entry was added to timeline
-    const timeline_path = path.join(test_thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
@@ -148,8 +148,8 @@ describe('add_timeline_entry', () => {
     }
 
     // Verify all entries were added in order
-    const timeline_path = path.join(test_thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(entries.length)

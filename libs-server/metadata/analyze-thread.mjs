@@ -1,4 +1,3 @@
-import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
@@ -12,6 +11,7 @@ import {
 } from './parse-analysis-output.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('metadata:analyze')
 
@@ -84,11 +84,13 @@ export const extract_first_user_message = (timeline) => {
  * @returns {Promise<Array>} Timeline array
  */
 const read_thread_timeline = async (thread_dir) => {
-  const timeline_path = path.join(thread_dir, 'timeline.json')
+  const timeline_path = path.join(thread_dir, 'timeline.jsonl')
 
   try {
-    const content = await fs.readFile(timeline_path, 'utf-8')
-    return JSON.parse(content)
+    return await read_timeline_jsonl_or_default({
+      timeline_path,
+      default_value: []
+    })
   } catch (error) {
     log(`Failed to read timeline from ${timeline_path}: ${error.message}`)
     return []

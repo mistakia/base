@@ -1,11 +1,12 @@
 import { describe, it } from 'mocha'
 import { expect } from 'chai'
-import fs from 'fs/promises'
 import path from 'path'
+import fs from 'fs/promises'
 
 import { normalize_claude_session } from '#libs-server/integrations/claude/normalize-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { create_temp_test_directory } from '#tests/utils/create-temp-test-directory.mjs'
+import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 describe('Claude Interrupt Message Timeline Integration', () => {
   it('should create timeline entries with system type for interrupt messages', async () => {
@@ -88,12 +89,10 @@ describe('Claude Interrupt Message Timeline Integration', () => {
     expect(timeline_result.entry_count).to.equal(3)
     expect(timeline_result.timeline_entries).to.have.length(3)
 
-    // Read the created timeline file
-    const timeline_content = await fs.readFile(
-      timeline_result.timeline_path,
-      'utf-8'
-    )
-    const timeline_entries = JSON.parse(timeline_content)
+    // Read the created timeline file (JSONL format)
+    const timeline_entries = await read_timeline_jsonl({
+      timeline_path: timeline_result.timeline_path
+    })
 
     // Find the interrupt message in the timeline
     const interrupt_timeline_entry = timeline_entries.find(
@@ -192,11 +191,10 @@ describe('Claude Interrupt Message Timeline Integration', () => {
       thread_info
     )
 
-    const timeline_content = await fs.readFile(
-      timeline_result.timeline_path,
-      'utf-8'
-    )
-    const timeline_entries = JSON.parse(timeline_content)
+    // Read the created timeline file (JSONL format)
+    const timeline_entries = await read_timeline_jsonl({
+      timeline_path: timeline_result.timeline_path
+    })
 
     // Verify ordering is maintained
     expect(timeline_entries).to.have.length(5)

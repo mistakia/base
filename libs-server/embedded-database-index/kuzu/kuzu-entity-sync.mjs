@@ -8,6 +8,7 @@ import debug from 'debug'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { read_file_from_filesystem } from '#libs-server/filesystem/read-file-from-filesystem.mjs'
 import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
+import { execute_parameterized_query } from './kuzu-utils.mjs'
 
 const log = debug('embedded-index:kuzu:sync')
 
@@ -46,14 +47,6 @@ async function fetch_entity_metadata_from_filesystem(base_uri) {
   return { base_uri }
 }
 
-/**
- * Helper to execute parameterized Kuzu queries
- * Uses prepare + execute pattern required by Kuzu node library
- */
-async function execute_parameterized_query(connection, query, params) {
-  const prepared_statement = await connection.prepare(query)
-  return await connection.execute(prepared_statement, params)
-}
 
 export async function upsert_entity_to_kuzu({ connection, entity_data }) {
   const {
@@ -84,14 +77,18 @@ export async function upsert_entity_to_kuzu({ connection, entity_data }) {
   `
 
   try {
-    await execute_parameterized_query(connection, query, {
-      base_uri: base_uri || '',
-      entity_id: entity_id || '',
-      type: type || '',
-      title: title || '',
-      user_public_key: user_public_key || '',
-      created_at: created_at || '',
-      updated_at: updated_at || ''
+    await execute_parameterized_query({
+      connection,
+      query,
+      params: {
+        base_uri: base_uri || '',
+        entity_id: entity_id || '',
+        type: type || '',
+        title: title || '',
+        user_public_key: user_public_key || '',
+        created_at: created_at || '',
+        updated_at: updated_at || ''
+      }
     })
     log('Entity upserted: %s', base_uri)
   } catch (error) {
@@ -116,9 +113,10 @@ export async function upsert_tag_to_kuzu({ connection, tag_data }) {
   `
 
   try {
-    await execute_parameterized_query(connection, query, {
-      base_uri: base_uri || '',
-      title: title || ''
+    await execute_parameterized_query({
+      connection,
+      query,
+      params: { base_uri: base_uri || '', title: title || '' }
     })
     log('Tag upserted: %s', base_uri)
   } catch (error) {
@@ -144,8 +142,10 @@ export async function sync_entity_tags_to_kuzu({
       MATCH (e:Entity {base_uri: $entity_base_uri})-[r:HAS_TAG]->()
       DELETE r
     `
-    await execute_parameterized_query(connection, delete_query, {
-      entity_base_uri
+    await execute_parameterized_query({
+      connection,
+      query: delete_query,
+      params: { entity_base_uri }
     })
   } catch (error) {
     log('Error deleting existing tags: %s', error.message)
@@ -166,9 +166,10 @@ export async function sync_entity_tags_to_kuzu({
         MATCH (t:Tag {base_uri: $tag_base_uri})
         CREATE (e)-[:HAS_TAG]->(t)
       `
-      await execute_parameterized_query(connection, create_query, {
-        entity_base_uri,
-        tag_base_uri
+      await execute_parameterized_query({
+        connection,
+        query: create_query,
+        params: { entity_base_uri, tag_base_uri }
       })
     } catch (error) {
       log('Error creating HAS_TAG relationship: %s', error.message)
@@ -193,8 +194,10 @@ export async function sync_entity_relations_to_kuzu({
       MATCH (e:Entity {base_uri: $entity_base_uri})-[r:RELATES_TO]->()
       DELETE r
     `
-    await execute_parameterized_query(connection, delete_query, {
-      entity_base_uri
+    await execute_parameterized_query({
+      connection,
+      query: delete_query,
+      params: { entity_base_uri }
     })
   } catch (error) {
     log('Error deleting existing relations: %s', error.message)
@@ -223,11 +226,15 @@ export async function sync_entity_relations_to_kuzu({
         MATCH (target:Entity {base_uri: $target_base_uri})
         CREATE (source)-[:RELATES_TO {relation_type: $relation_type, context: $context}]->(target)
       `
-      await execute_parameterized_query(connection, create_query, {
-        entity_base_uri,
-        target_base_uri,
-        relation_type: relation_type || '',
-        context: context || ''
+      await execute_parameterized_query({
+        connection,
+        query: create_query,
+        params: {
+          entity_base_uri,
+          target_base_uri,
+          relation_type: relation_type || '',
+          context: context || ''
+        }
       })
     } catch (error) {
       log('Error creating RELATES_TO relationship: %s', error.message)
@@ -248,8 +255,10 @@ export async function delete_entity_from_kuzu({ connection, base_uri }) {
       MATCH (e:Entity {base_uri: $base_uri})-[r]-()
       DELETE r
     `
-    await execute_parameterized_query(connection, delete_rels_query, {
-      base_uri
+    await execute_parameterized_query({
+      connection,
+      query: delete_rels_query,
+      params: { base_uri }
     })
 
     // Delete the entity node
@@ -257,8 +266,10 @@ export async function delete_entity_from_kuzu({ connection, base_uri }) {
       MATCH (e:Entity {base_uri: $base_uri})
       DELETE e
     `
-    await execute_parameterized_query(connection, delete_entity_query, {
-      base_uri
+    await execute_parameterized_query({
+      connection,
+      query: delete_entity_query,
+      params: { base_uri }
     })
 
     log('Entity deleted: %s', base_uri)

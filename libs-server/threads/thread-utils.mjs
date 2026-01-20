@@ -5,6 +5,7 @@ import debug from 'debug'
 import { get_thread_base_directory } from './threads-constants.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('threads:utils')
 
@@ -94,11 +95,11 @@ export async function read_thread_data({ thread_id, user_base_directory }) {
     await fs.access(thread_dir)
 
     const metadata_path = path.join(thread_dir, 'metadata.json')
-    const timeline_path = path.join(thread_dir, 'timeline.json')
+    const timeline_path = path.join(thread_dir, 'timeline.jsonl')
 
     const [metadata, timeline] = await Promise.all([
       read_json_file({ file_path: metadata_path }),
-      read_json_file_or_default({ file_path: timeline_path, default_value: [] })
+      read_timeline_jsonl_or_default({ timeline_path, default_value: [] })
     ])
 
     return { metadata, timeline, thread_dir }

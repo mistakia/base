@@ -8,6 +8,10 @@ import {
   THREAD_MESSAGE_ROLE,
   validate_thread_message_role
 } from './threads-constants.mjs'
+import {
+  append_timeline_entry_jsonl,
+  read_timeline_jsonl_or_default
+} from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('threads:timeline')
 
@@ -114,7 +118,7 @@ export default async function add_timeline_entry({ thread_id, entry }) {
     )
   }
 
-  // Get the thread
+  // Get the thread (validates existence and gets context_dir)
   const thread = await get_thread({
     thread_id
   })
@@ -142,15 +146,10 @@ export default async function add_timeline_entry({ thread_id, entry }) {
 
   log(`Adding ${new_entry.type} entry to thread ${thread_id}`)
 
-  // Add entry to timeline
-  const timeline = [...thread.timeline, new_entry]
+  const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
 
-  // Write updated timeline
-  await fs.writeFile(
-    path.join(thread.context_dir, 'timeline.json'),
-    JSON.stringify(timeline, null, 2),
-    'utf-8'
-  )
+  // Append entry to timeline (streaming write - avoids read-modify-write)
+  await append_timeline_entry_jsonl({ timeline_path, entry: new_entry })
 
   // Update metadata.updated_at
   const metadata = { ...thread }
@@ -165,6 +164,12 @@ export default async function add_timeline_entry({ thread_id, entry }) {
     JSON.stringify(metadata, null, 2),
     'utf-8'
   )
+
+  // Read updated timeline for return value
+  const timeline = await read_timeline_jsonl_or_default({
+    timeline_path,
+    default_value: []
+  })
 
   // Return updated thread data
   return {

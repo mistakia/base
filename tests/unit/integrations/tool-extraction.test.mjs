@@ -17,6 +17,7 @@ import { normalize_claude_session } from '#libs-server/integrations/claude/norma
 import { normalize_openai_conversation } from '#libs-server/integrations/openai/normalize-session.mjs'
 import { normalize_cursor_conversation } from '#libs-server/integrations/cursor/normalize-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
+import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 describe('Tool Extraction Integration Tests', () => {
   describe('Shared Tool Extraction Utilities', () => {
@@ -614,11 +615,8 @@ describe('Tool Extraction Integration Tests', () => {
       expect(result.tool_validation.linking_success_rate).to.equal(1)
 
       // Verify timeline file was created
-      const timeline_content = await fs.readFile(
-        path.join(temp_dir, 'timeline.json'),
-        'utf-8'
-      )
-      const timeline = JSON.parse(timeline_content)
+      const timeline_path = path.join(temp_dir, 'timeline.jsonl')
+      const timeline = await read_timeline_jsonl({ timeline_path })
 
       const tool_call_entry = timeline.find(
         (entry) => entry.type === 'tool_call'

@@ -100,10 +100,25 @@ This unified structure enables:
 ```
 user:thread/{thread_id}/
   metadata.json     # Thread configuration and state
-  timeline.json     # Chronological event log
+  timeline.jsonl    # Chronological event log (JSON Lines format)
   memory/          # Working memory directory (git repository)
   raw-data/        # Original provider data (external sessions only)
 ```
+
+### Timeline Format (JSONL)
+
+The timeline uses JSON Lines format where each line is a complete JSON object representing one timeline entry:
+
+```jsonl
+{"id": "entry-1", "timestamp": "2025-01-01T00:00:00Z", "type": "message", ...}
+{"id": "entry-2", "timestamp": "2025-01-01T00:00:01Z", "type": "tool_call", ...}
+```
+
+Benefits of JSONL format:
+
+- **Streaming reads**: Parse line-by-line without loading entire file into memory
+- **Append-only writes**: New entries can be appended without reading existing data
+- **Reduced memory pressure**: Critical for large threads with thousands of entries
 
 ## JSON Schemas
 
