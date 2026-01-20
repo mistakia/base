@@ -6,15 +6,125 @@
  */
 
 import debug from 'debug'
+import path from 'path'
+
 import {
   parse_all_claude_files,
   parse_session_with_subagents,
-  find_session_file_by_id
+  find_session_file_by_id,
+  find_claude_project_files,
+  extract_claude_session_metadata
 } from './parse-jsonl.mjs'
 import { normalize_claude_session } from './normalize-session.mjs'
+import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 
 const log = debug('integrations:claude:session-helpers')
 const log_debug = debug('integrations:claude:session-helpers:debug')
+
+/**
+ * Check if a file path represents an agent session based on path structure.
+ * Agent sessions are in 'subagents' directories or have 'agent-' filename prefix.
+ *
+ * @param {string} file_path - Path to session file
+ * @returns {boolean} True if file path indicates agent session
+ */
+export const is_agent_file_path = (file_path) => {
+  const parent_dir = path.basename(path.dirname(file_path))
+  const filename = path.basename(file_path, '.jsonl')
+  return parent_dir === 'subagents' || filename.startsWith('agent-')
+}
+
+/**
+ * Iterate over Claude session files from filesystem
+ * Async generator that yields file information one at a time for streaming processing.
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.claude_projects_directory - Claude projects directory path
+ * @yields {{ file_path: string, session_id: string, is_agent: boolean }} Session file info
+ */
+export async function* iterate_claude_session_files({
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+} = {}) {
+  log(`Iterating Claude session files from: ${claude_projects_directory}`)
+
+  const files = await find_claude_project_files({ claude_projects_directory })
+
+  for (const { file_path, base_name } of files) {
+    yield {
+      file_path,
+      session_id: base_name,
+      is_agent: is_agent_file_path(file_path)
+    }
+  }
+
+  log(`Finished iterating ${files.length} session files`)
+}
+
+/**
+ * Scan all session files to build a lightweight agent relationship index.
+ * This enables streaming processing by knowing which sessions are agents
+ * and which parent sessions they belong to before full parsing.
+ *
+ * Memory footprint: ~100 bytes per session (just IDs and file paths)
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.claude_projects_directory - Claude projects directory path
+ * @returns {Promise<Object>} Agent relationship index
+ *   - parent_to_agent_files: Map<parent_session_id, Array<{file_path, agent_id}>>
+ *   - agent_session_ids: Set<session_id> - All agent session IDs (to skip during streaming)
+ *   - parent_session_files: Map<session_id, file_path> - Parent session file paths
+ */
+export const scan_claude_agent_relationships = async ({
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+} = {}) => {
+  log(`Scanning agent relationships in: ${claude_projects_directory}`)
+
+  const parent_to_agent_files = new Map()
+  const agent_session_ids = new Set()
+  const parent_session_files = new Map()
+
+  let total_files = 0
+  let agent_count = 0
+
+  for await (const { file_path, session_id } of iterate_claude_session_files({
+    claude_projects_directory
+  })) {
+    total_files++
+
+    // Extract minimal metadata to determine agent relationships
+    const metadata = await extract_claude_session_metadata({ file_path })
+
+    if (metadata.is_agent) {
+      agent_count++
+      agent_session_ids.add(session_id)
+
+      // If we have a parent session ID, record the relationship
+      if (metadata.parent_session_id) {
+        if (!parent_to_agent_files.has(metadata.parent_session_id)) {
+          parent_to_agent_files.set(metadata.parent_session_id, [])
+        }
+        parent_to_agent_files.get(metadata.parent_session_id).push({
+          file_path,
+          agent_id: metadata.agent_id,
+          session_id
+        })
+      }
+    } else {
+      // Regular (parent) session
+      parent_session_files.set(session_id, file_path)
+    }
+  }
+
+  log(
+    `Agent scan complete: ${total_files} files, ${agent_count} agents, ${parent_session_files.size} parent sessions`
+  )
+
+  return {
+    parent_to_agent_files,
+    agent_session_ids,
+    parent_session_files
+  }
+}
 
 /**
  * Find Claude sessions from provided data
@@ -270,21 +380,10 @@ export const filter_valid_claude_sessions = ({ sessions }) => {
  * @returns {boolean} True if session is an agent session
  */
 export const is_agent_session = ({ session }) => {
-  // Check filename pattern (agent-{8-char-hex})
   const session_id = session.session_id || ''
-  if (session_id.startsWith('agent-')) {
-    return true
-  }
+  if (session_id.startsWith('agent-')) return true
 
-  // Check if first entry has agentId
-  if (session.entries && session.entries.length > 0) {
-    const first_entry = session.entries[0]
-    if (first_entry.agentId) {
-      return true
-    }
-  }
-
-  return false
+  return Boolean(session.entries?.[0]?.agentId)
 }
 
 /**

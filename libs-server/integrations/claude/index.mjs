@@ -6,6 +6,7 @@
  */
 
 import debug from 'debug'
+
 import { ClaudeSessionProvider } from './claude-session-provider.mjs'
 import { get_claude_config } from './claude-config.mjs'
 import { parse_all_claude_files, get_session_summary } from './parse-jsonl.mjs'
@@ -24,71 +25,49 @@ export { parse_all_claude_files, get_session_summary }
 
 /**
  * Import Claude sessions to Base threads
+ *
+ * Uses streaming to process sessions one at a time, avoiding memory issues
+ * with large session sets.
  */
 export const import_claude_sessions_to_threads = async (options = {}) => {
   const config = get_claude_config(options)
-  const provider = new ClaudeSessionProvider()
 
   try {
-    log('Starting Claude session import')
+    log('Starting Claude session import (streaming)')
 
-    // Find sessions using provider
-    const claude_sessions = await provider.find_sessions({
-      claude_projects_directory: config.claude_projects_directory,
-      filter_sessions: config.filter_sessions,
-      session_id: options.session_id,
-      session_file: options.session_file
-    })
+    // For dry_run, we need to count sessions without processing them
+    if (config.dry_run) {
+      const provider = new ClaudeSessionProvider()
+      let session_count = 0
+      let valid_count = 0
+      let invalid_count = 0
 
-    log(`Found ${claude_sessions.length} Claude sessions`)
-
-    // Validate sessions
-    const { valid: valid_sessions, invalid: invalid_sessions } =
-      provider.filter_valid_sessions(claude_sessions)
-    log(
-      `Validation: ${valid_sessions.length} valid, ${invalid_sessions.length} invalid`
-    )
-
-    // If session_file or session_id was specified and no valid sessions found, return early
-    // to prevent fallback to scanning all files
-    if (
-      (options.session_file || options.session_id) &&
-      valid_sessions.length === 0
-    ) {
-      const identifier = options.session_file || options.session_id
-      log(
-        `No valid sessions found for specified ${options.session_file ? 'file' : 'session ID'}: ${identifier}`
-      )
-      return {
-        sessions_found: claude_sessions.length,
-        valid_sessions: 0,
-        invalid_sessions: invalid_sessions.length,
-        threads_created: 0,
-        threads_updated: 0,
-        threads_failed: 0,
-        threads_skipped: 0,
-        success_rate: '0.0',
-        results: {
-          created: [],
-          updated: [],
-          failed: [],
-          skipped: []
+      for await (const session of provider.stream_sessions({
+        claude_projects_directory: config.claude_projects_directory,
+        filter_sessions: config.filter_sessions,
+        session_id: options.session_id,
+        session_file: options.session_file
+      })) {
+        session_count++
+        const validation = provider.validate_session(session)
+        if (validation.valid) {
+          valid_count++
+        } else {
+          invalid_count++
         }
       }
-    }
 
-    if (config.dry_run) {
       return {
         dry_run: true,
-        sessions_found: claude_sessions.length,
-        valid_sessions: valid_sessions.length,
-        invalid_sessions: invalid_sessions.length
+        sessions_found: session_count,
+        valid_sessions: valid_count,
+        invalid_sessions: invalid_count
       }
     }
 
-    // Create threads using unified provider system
-    // Agent sessions are always merged into parent timelines
-    // Warm/initialization agents are always excluded
+    // Create threads using unified provider system with streaming
+    // Agent sessions are attached during streaming, merged during processing
+    // Warm/initialization agents are excluded during streaming
     const results = await create_threads_from_session_provider({
       provider_name: 'claude',
       user_base_directory: config.user_base_directory,
@@ -97,25 +76,29 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       merge_agents: true,
       include_warm_agents: false,
       provider_options: {
-        claude_sessions: valid_sessions,
-        // Pass through session_id and session_file to ensure they're respected
-        // even when valid_sessions is empty (e.g., when the session is invalid)
+        claude_projects_directory: config.claude_projects_directory,
+        filter_sessions: config.filter_sessions,
         session_id: options.session_id,
-        session_file: options.session_file,
-        claude_projects_directory: options.claude_projects_directory
+        session_file: options.session_file
       }
     })
 
+    const sessions_processed =
+      results.summary?.total ??
+      results.created.length +
+        results.updated.length +
+        results.skipped.length +
+        results.failed.length
+
     return {
-      sessions_found: claude_sessions.length,
-      valid_sessions: valid_sessions.length,
-      invalid_sessions: invalid_sessions.length,
+      sessions_found:
+        sessions_processed + (results.invalid_sessions_count || 0),
+      valid_sessions: sessions_processed,
+      invalid_sessions: results.invalid_sessions_count || 0,
       threads_created: results.created.length,
       threads_updated: results.updated.length,
       threads_failed: results.failed.length,
       threads_skipped: results.skipped.length,
-      agents_merged: results.agents_merged || 0,
-      warm_agents_excluded: results.warm_agents_excluded || 0,
       success_rate: results.summary?.success_rate,
       results
     }
