@@ -146,4 +146,3 @@ export async function read_timeline_jsonl_or_default({
   const result = await read_timeline_jsonl({ timeline_path })
   return result ?? default_value
 }
-

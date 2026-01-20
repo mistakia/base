@@ -36,7 +36,6 @@ async function fetch_entity_metadata(base_uri) {
   }
 }
 
-
 /**
  * Upsert a thread as an entity node in Kuzu
  * Thread base_uri format: user:thread/<thread-id>

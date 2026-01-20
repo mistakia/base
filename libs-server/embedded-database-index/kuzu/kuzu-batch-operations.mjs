@@ -152,7 +152,12 @@ async function process_reference_batch({
       await execute_parameterized_query({
         connection,
         query: merge_rel_query,
-        params: { thread_base_uri, ref_base_uri, relation_type: 'references', context: '' }
+        params: {
+          thread_base_uri,
+          ref_base_uri,
+          relation_type: 'references',
+          context: ''
+        }
       })
 
       result.synced++
@@ -169,4 +174,3 @@ async function process_reference_batch({
 
   return result
 }
-

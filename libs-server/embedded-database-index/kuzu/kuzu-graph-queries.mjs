@@ -200,7 +200,11 @@ export async function find_related_entities({
   `
 
   try {
-    const result = await execute_parameterized_query({ connection, query, params })
+    const result = await execute_parameterized_query({
+      connection,
+      query,
+      params
+    })
     const entities = await result.getAll()
 
     log('Found %d related entities', entities.length)
@@ -271,7 +275,11 @@ export async function find_entities_relating_to({
   `
 
   try {
-    const result = await execute_parameterized_query({ connection, query, params })
+    const result = await execute_parameterized_query({
+      connection,
+      query,
+      params
+    })
     const entities = await result.getAll()
 
     log('Found %d entities relating to target', entities.length)

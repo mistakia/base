@@ -47,7 +47,6 @@ async function fetch_entity_metadata_from_filesystem(base_uri) {
   return { base_uri }
 }
 
-
 export async function upsert_entity_to_kuzu({ connection, entity_data }) {
   const {
     base_uri,
