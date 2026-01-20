@@ -5,7 +5,8 @@ import * as threads from '#libs-server/threads/index.mjs'
 import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
 import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
 import {
-  check_thread_permission_middleware as check_thread_permission,
+  check_thread_permission_middleware,
+  check_thread_permission,
   check_thread_permission_for_user,
   check_create_threads_permission,
   check_permissions_batch
@@ -37,19 +38,20 @@ const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
  */
 
 async function apply_permission_based_redaction(thread, user_public_key) {
-  const permission_result = await check_thread_permission_for_user({
+  const permission_result = await check_thread_permission({
     user_public_key,
     thread_id: thread.thread_id
   })
 
-  if (!permission_result.allowed) {
+  if (!permission_result.read?.allowed) {
     log(
-      `Access denied to thread ${thread.thread_id}: ${permission_result.reason}`
+      `Access denied to thread ${thread.thread_id}: ${permission_result.read?.reason}`
     )
-    return redact_thread_data(thread)
+    return { ...redact_thread_data(thread), can_write: false }
   }
 
-  return thread
+  const can_write = permission_result.write?.allowed ?? false
+  return { ...thread, can_write }
 }
 
 function handle_errors(res, error, operation) {
@@ -191,11 +193,15 @@ async function handle_thread_list_request_indexed({
     }
   }
 
-  // Apply redaction based on batch permission results
+  // Apply redaction based on batch permission results and add can_write
   const threads_with_permissions = normalized_threads.map((thread) => {
     const base_uri = `user:thread/${thread.thread_id}`
-    const allowed = permissions[base_uri]?.read?.allowed ?? false
-    return allowed ? thread : redact_thread_data(thread)
+    const read_allowed = permissions[base_uri]?.read?.allowed ?? false
+    const can_write = permissions[base_uri]?.write?.allowed ?? false
+    if (!read_allowed) {
+      return { ...redact_thread_data(thread), can_write: false }
+    }
+    return { ...thread, can_write }
   })
 
   return threads_with_permissions
@@ -445,42 +451,64 @@ router.get('/:thread_id/active-session', async (req, res) => {
 })
 
 // Update thread state
-router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
-  try {
-    const { thread_id } = req.params
-    const { thread_state, reason, archive_reason } = req.body
+router.put(
+  '/:thread_id/state',
+  check_thread_permission_middleware(),
+  async (req, res) => {
+    try {
+      const { thread_id } = req.params
+      const { thread_state, reason, archive_reason } = req.body
 
-    if (!thread_state) {
-      return res.status(400).json({ error: 'thread_state is required' })
-    }
+      if (!thread_state) {
+        return res.status(400).json({ error: 'thread_state is required' })
+      }
 
-    // Check if user has permission to modify this thread
-    if (!req.access?.write_allowed) {
-      log(`Access denied: User cannot modify thread ${thread_id}`)
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'You can only modify threads that you own'
-      })
-    }
-
-    // Validate archive_reason requirement when archiving
-    if (thread_state === thread_constants.THREAD_STATE.ARCHIVED) {
-      // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
-      const state_reason = archive_reason || reason
-      if (!state_reason) {
-        const valid_reasons = Object.values(
-          thread_constants.ARCHIVE_REASON
-        ).join(', ')
-        return res.status(400).json({
-          error: 'archive_reason is required',
-          message: `archive_reason is required when archiving a thread. Must be one of: ${valid_reasons}`
+      // Check if user has permission to modify this thread
+      if (!req.access?.write_allowed) {
+        log(`Access denied: User cannot modify thread ${thread_id}`)
+        return res.status(403).json({
+          error: 'Access denied',
+          message: 'You can only modify threads that you own'
         })
       }
+
+      // Validate archive_reason requirement when archiving
+      if (thread_state === thread_constants.THREAD_STATE.ARCHIVED) {
+        // Use archive_reason if provided, otherwise fall back to reason for backward compatibility
+        const state_reason = archive_reason || reason
+        if (!state_reason) {
+          const valid_reasons = Object.values(
+            thread_constants.ARCHIVE_REASON
+          ).join(', ')
+          return res.status(400).json({
+            error: 'archive_reason is required',
+            message: `archive_reason is required when archiving a thread. Must be one of: ${valid_reasons}`
+          })
+        }
+        try {
+          const updated_thread = await threads.update_thread_state({
+            thread_id,
+            thread_state,
+            reason: state_reason
+          })
+          return res.json(updated_thread)
+        } catch (error) {
+          const validation_error = handle_validation_error(error)
+          if (validation_error.handled) {
+            return res
+              .status(validation_error.status)
+              .json(validation_error.response)
+          }
+          throw error
+        }
+      }
+
+      // For non-archived states, reason is optional
       try {
         const updated_thread = await threads.update_thread_state({
           thread_id,
           thread_state,
-          reason: state_reason
+          reason: reason || undefined
         })
         return res.json(updated_thread)
       } catch (error) {
@@ -492,29 +520,11 @@ router.put('/:thread_id/state', check_thread_permission(), async (req, res) => {
         }
         throw error
       }
-    }
-
-    // For non-archived states, reason is optional
-    try {
-      const updated_thread = await threads.update_thread_state({
-        thread_id,
-        thread_state,
-        reason: reason || undefined
-      })
-      return res.json(updated_thread)
     } catch (error) {
-      const validation_error = handle_validation_error(error)
-      if (validation_error.handled) {
-        return res
-          .status(validation_error.status)
-          .json(validation_error.response)
-      }
-      throw error
+      handle_errors(res, error, 'updating thread state')
     }
-  } catch (error) {
-    handle_errors(res, error, 'updating thread state')
   }
-})
+)
 
 // Process table request for server-side filtering, sorting, and pagination
 router.post('/table', async (req, res) => {

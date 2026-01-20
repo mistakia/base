@@ -26,14 +26,15 @@ const normalize_session = (session, get_thread) => {
   const is_idle = session.status === 'idle'
   const has_thread = Boolean(session.thread_id)
   const is_redacted = Boolean(session.is_redacted)
+  const can_write = session.can_write !== false
 
   // Check if associated thread is archived
   const thread = has_thread ? get_thread(session.thread_id) : null
   const is_thread_archived = thread?.thread_state === 'archived'
 
-  // Show actions only for idle sessions with non-archived threads
+  // Show actions only for idle sessions with non-archived threads and write permission
   const show_actions =
-    is_idle && has_thread && !is_redacted && !is_thread_archived
+    is_idle && has_thread && !is_redacted && !is_thread_archived && can_write
 
   return {
     id: session.thread_id,
@@ -68,8 +69,10 @@ const normalize_thread = (thread) => {
     thread.duration_minutes ||
     thread.external_session?.provider_metadata?.duration_minutes
 
-  // Show actions for active threads (ready for review)
-  const show_actions = thread.thread_state === 'active'
+  const can_write = thread.can_write !== false
+
+  // Show actions for active threads (ready for review) with write permission
+  const show_actions = thread.thread_state === 'active' && can_write
 
   return {
     id: thread.thread_id,
