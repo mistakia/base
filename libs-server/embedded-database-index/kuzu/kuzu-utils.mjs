@@ -4,10 +4,6 @@
  * Shared utility functions for Kuzu database operations.
  */
 
-import debug from 'debug'
-
-const log = debug('embedded-index:kuzu:utils')
-
 /**
  * Execute a parameterized Kuzu query
  * Uses prepare + execute pattern required by Kuzu node library
