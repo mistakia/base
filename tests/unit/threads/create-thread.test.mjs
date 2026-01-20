@@ -10,6 +10,7 @@ import {
   reset_all_tables
 } from '#tests/utils/index.mjs'
 import { thread_constants } from '#libs-shared'
+import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 const { THREAD_STATE } = thread_constants
 
@@ -81,9 +82,9 @@ describe('create_thread', () => {
     expect(metadata.created_at).to.be.a('string')
     expect(metadata.git_branch).to.equal(`thread/${thread.thread_id}`)
 
-    // Check timeline file
-    const timeline_path = path.join(thread_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    // Check timeline file (JSONL format)
+    const timeline_path = path.join(thread_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.be.empty
@@ -117,9 +118,9 @@ describe('create_thread', () => {
 
     const thread = await create_thread(thread_data)
 
-    // Check timeline file
-    const timeline_path = path.join(thread.context_dir, 'timeline.json')
-    const timeline = JSON.parse(await fs.readFile(timeline_path, 'utf-8'))
+    // Check timeline file (JSONL format)
+    const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)

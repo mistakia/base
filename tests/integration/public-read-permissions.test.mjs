@@ -6,6 +6,7 @@ import { setup_test_directories } from '#tests/utils/index.mjs'
 import { check_user_permission } from '#server/middleware/permission/index.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { process_thread_with_permissions } from '#libs-server/threads/thread-utils.mjs'
+import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 const expect = chai.expect
 
@@ -173,8 +174,8 @@ describe('Public Read Permissions Integration', function () {
       await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2))
 
       // Create empty timeline
-      const timeline_path = path.join(test_thread_dir, 'timeline.json')
-      await fs.writeFile(timeline_path, JSON.stringify([], null, 2))
+      const timeline_path = path.join(test_thread_dir, 'timeline.jsonl')
+      await write_timeline_jsonl({ timeline_path, entries: [] })
 
       // Test thread processing with no user (public access)
       const result = await process_thread_with_permissions({
@@ -207,8 +208,8 @@ describe('Public Read Permissions Integration', function () {
       await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2))
 
       // Create empty timeline
-      const timeline_path = path.join(test_thread_dir, 'timeline.json')
-      await fs.writeFile(timeline_path, JSON.stringify([], null, 2))
+      const timeline_path = path.join(test_thread_dir, 'timeline.jsonl')
+      await write_timeline_jsonl({ timeline_path, entries: [] })
 
       // Test thread processing with no user (public access)
       const result = await process_thread_with_permissions({
@@ -239,8 +240,8 @@ describe('Public Read Permissions Integration', function () {
       await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2))
 
       // Create empty timeline
-      const timeline_path = path.join(test_thread_dir, 'timeline.json')
-      await fs.writeFile(timeline_path, JSON.stringify([], null, 2))
+      const timeline_path = path.join(test_thread_dir, 'timeline.jsonl')
+      await write_timeline_jsonl({ timeline_path, entries: [] })
 
       // Test thread processing with no user (public access)
       const result = await process_thread_with_permissions({

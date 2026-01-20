@@ -17,6 +17,7 @@ import {
   get_registered_directories,
   get_user_base_directory
 } from '#libs-server/base-uri/index.mjs'
+import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
   thread_constants
@@ -392,11 +393,10 @@ export default async function create_thread({
 
   // Write timeline to file (only if we have timeline content or it's not an external session)
   if (timeline.length > 0 || !external_session) {
-    await fs.writeFile(
-      path.join(thread_dir, 'timeline.json'),
-      JSON.stringify(timeline, null, 2),
-      'utf-8'
-    )
+    await write_timeline_jsonl({
+      timeline_path: path.join(thread_dir, 'timeline.jsonl'),
+      entries: timeline
+    })
   }
 
   // Create git branches and worktrees if requested

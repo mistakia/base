@@ -11,6 +11,7 @@ import {
   register_user_base_directory,
   clear_registered_directories
 } from '#libs-server/base-uri/base-directory-registry.mjs'
+import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 describe('analyze-thread-relations integration', () => {
   let test_dir
@@ -63,7 +64,7 @@ describe('analyze-thread-relations integration', () => {
       JSON.stringify(metadata, null, 2)
     )
 
-    // Create timeline.json with tool calls
+    // Create timeline.jsonl with tool calls
     const timeline = [
       {
         id: 'entry-1',
@@ -80,10 +81,10 @@ describe('analyze-thread-relations integration', () => {
         content: 'Please check [[user:task/referenced-task.md]]'
       }
     ]
-    await fs.writeFile(
-      path.join(thread_dir, 'timeline.json'),
-      JSON.stringify(timeline, null, 2)
-    )
+    await write_timeline_jsonl({
+      timeline_path: path.join(thread_dir, 'timeline.jsonl'),
+      entries: timeline
+    })
 
     // Run analysis in dry-run mode
     const result = await analyze_thread_relations({

@@ -5,17 +5,9 @@
  */
 
 import debug from 'debug'
+import { execute_parameterized_query } from './kuzu-utils.mjs'
 
 const log = debug('embedded-index:kuzu:queries')
-
-/**
- * Helper to execute parameterized Kuzu queries
- * Uses prepare + execute pattern required by Kuzu node library
- */
-async function execute_parameterized_query(connection, query, params) {
-  const prepared_statement = await connection.prepare(query)
-  return await connection.execute(prepared_statement, params)
-}
 
 export async function find_entities_by_tag({ connection, tag_base_uri }) {
   if (!tag_base_uri) {
@@ -34,8 +26,10 @@ export async function find_entities_by_tag({ connection, tag_base_uri }) {
   `
 
   try {
-    const result = await execute_parameterized_query(connection, query, {
-      tag_base_uri
+    const result = await execute_parameterized_query({
+      connection,
+      query,
+      params: { tag_base_uri }
     })
     const entities = await result.getAll()
 
@@ -90,11 +84,11 @@ export async function find_entities_by_tags({
     })
 
     try {
-      const result = await execute_parameterized_query(
+      const result = await execute_parameterized_query({
         connection,
         query,
         params
-      )
+      })
       const entities = await result.getAll()
 
       return entities.map((row) => ({
@@ -131,11 +125,11 @@ export async function find_entities_by_tags({
     })
 
     try {
-      const result = await execute_parameterized_query(
+      const result = await execute_parameterized_query({
         connection,
         query,
         params
-      )
+      })
       const entities = await result.getAll()
 
       return entities.map((row) => ({
@@ -206,7 +200,7 @@ export async function find_related_entities({
   `
 
   try {
-    const result = await execute_parameterized_query(connection, query, params)
+    const result = await execute_parameterized_query({ connection, query, params })
     const entities = await result.getAll()
 
     log('Found %d related entities', entities.length)
@@ -277,7 +271,7 @@ export async function find_entities_relating_to({
   `
 
   try {
-    const result = await execute_parameterized_query(connection, query, params)
+    const result = await execute_parameterized_query({ connection, query, params })
     const entities = await result.getAll()
 
     log('Found %d entities relating to target', entities.length)
@@ -309,8 +303,10 @@ export async function get_entity_graph({ connection, base_uri, depth = 1 }) {
   `
 
   try {
-    const result = await execute_parameterized_query(connection, query, {
-      base_uri
+    const result = await execute_parameterized_query({
+      connection,
+      query,
+      params: { base_uri }
     })
     const rows = await result.getAll()
     const nodes = new Map()

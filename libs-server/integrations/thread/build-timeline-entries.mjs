@@ -1,5 +1,4 @@
 import debug from 'debug'
-import fs from 'fs/promises'
 import path from 'path'
 
 import {
@@ -7,6 +6,10 @@ import {
   find_orphaned_tool_results,
   link_tool_call_to_result
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+import {
+  read_timeline_jsonl_or_default,
+  write_timeline_jsonl
+} from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
 const log_debug = debug('integrations:thread:build-timeline-entries:debug')
@@ -53,7 +56,7 @@ export const build_timeline_from_session = async (
     }
 
     // Handle existing timeline updates for re-imports
-    const timeline_path = path.join(thread_info.thread_dir, 'timeline.json')
+    const timeline_path = path.join(thread_info.thread_dir, 'timeline.jsonl')
     let final_timeline = timeline_entries
 
     if (update_existing) {
@@ -80,8 +83,11 @@ export const build_timeline_from_session = async (
         JSON.stringify(final_timeline)
 
     if (timeline_changed) {
-      // Write timeline to file only if it changed
-      await fs.writeFile(timeline_path, JSON.stringify(final_timeline, null, 2))
+      // Write timeline to file only if it changed (using JSONL format)
+      await write_timeline_jsonl({
+        timeline_path,
+        entries: final_timeline
+      })
       log(
         `Created/updated timeline with ${final_timeline.length} entries at ${timeline_path}`
       )
@@ -489,12 +495,12 @@ const merge_with_existing_timeline = async ({ timeline_path, new_entries }) => {
 
 const read_existing_timeline = async (timeline_path) => {
   try {
-    const timeline_content = await fs.readFile(timeline_path, 'utf-8')
-    return JSON.parse(timeline_content)
+    const entries = await read_timeline_jsonl_or_default({
+      timeline_path,
+      default_value: null
+    })
+    return entries
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      return null // File doesn't exist
-    }
     log(`Error reading existing timeline: ${error.message}`)
     return null
   }

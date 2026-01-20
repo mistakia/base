@@ -13,6 +13,10 @@ import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
+import {
+  append_timeline_entry_jsonl,
+  read_timeline_jsonl_or_default
+} from '#libs-server/threads/timeline/index.mjs'
 
 const {
   THREAD_STATE,
@@ -106,12 +110,14 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     timeline_entry.reason = reason
   }
 
-  const timeline = [...thread.timeline, timeline_entry]
+  // Append timeline entry (streaming write - avoids read-modify-write)
+  const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
+  await append_timeline_entry_jsonl({ timeline_path, entry: timeline_entry })
 
-  // Write updated timeline
-  await write_file_to_filesystem({
-    absolute_path: path.join(thread.context_dir, 'timeline.json'),
-    file_content: JSON.stringify(timeline, null, 2)
+  // Read timeline back from disk to ensure consistency with actual file state
+  const timeline = await read_timeline_jsonl_or_default({
+    timeline_path,
+    default_value: []
   })
 
   // Queue relation analysis when archiving (if not already analyzed)

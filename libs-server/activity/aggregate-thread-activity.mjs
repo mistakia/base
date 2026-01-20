@@ -7,6 +7,7 @@ import {
   execute_duckdb_query,
   is_duckdb_initialized
 } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('activity:thread')
 
@@ -92,7 +93,7 @@ async function get_thread_directories() {
 
 /**
  * Parse timeline file for file edit activity
- * @param {string} timeline_path Path to timeline.json
+ * @param {string} timeline_path Path to timeline.jsonl
  * @param {string} since_date ISO date string (YYYY-MM-DD)
  * @param {string} until_date ISO date string (YYYY-MM-DD)
  * @returns {Promise<Map<string, Object>>} Map of date -> edit metrics
@@ -105,8 +106,10 @@ async function parse_timeline_for_edits({
   const edit_by_date = new Map()
 
   try {
-    const content = await fs.readFile(timeline_path, 'utf-8')
-    const timeline = JSON.parse(content)
+    const timeline = await read_timeline_jsonl_or_default({
+      timeline_path,
+      default_value: []
+    })
 
     if (!Array.isArray(timeline)) {
       return edit_by_date
@@ -195,7 +198,7 @@ export async function aggregate_thread_activity({ days = 365 } = {}) {
 
   // Aggregate edit activity from timelines
   for (const thread_dir of thread_dirs) {
-    const timeline_path = path.join(thread_dir, 'timeline.json')
+    const timeline_path = path.join(thread_dir, 'timeline.jsonl')
     const edit_activity = await parse_timeline_for_edits({
       timeline_path,
       since_date: since_str,

@@ -7,6 +7,7 @@ import {
   emit_thread_updated,
   emit_thread_timeline_entry_added
 } from '#libs-server/threads/event-emitter.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('threads:watcher')
 
@@ -27,7 +28,7 @@ const WATCHER_CONFIG = {
 
 const FILE_NAMES = {
   METADATA: 'metadata.json',
-  TIMELINE: 'timeline.json'
+  TIMELINE: 'timeline.jsonl'
 }
 
 // ============================================================================
@@ -103,13 +104,15 @@ const read_thread_metadata = async (file_path) => {
 /**
  * Read and parse timeline from file
  *
- * @param {string} timeline_path - Path to timeline.json
+ * @param {string} timeline_path - Path to timeline.jsonl
  * @returns {Promise<Array>} Timeline entries array (empty on error)
  */
 const read_timeline = async (timeline_path) => {
   try {
-    const content = await fs.readFile(timeline_path, 'utf-8')
-    const timeline = JSON.parse(content)
+    const timeline = await read_timeline_jsonl_or_default({
+      timeline_path,
+      default_value: []
+    })
     return Array.isArray(timeline) ? timeline : []
   } catch (error) {
     log(`Failed to read timeline from ${timeline_path}:`, error)
