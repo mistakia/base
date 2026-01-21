@@ -3,11 +3,11 @@
  */
 
 import debug from 'debug'
-import fs from 'fs/promises'
 import path from 'path'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { title_to_safe_filename } from '#libs-server/utils/sanitize-filename.mjs'
+import { search_file_contents } from '#libs-server/search/ripgrep-file-search.mjs'
 import { lookup_entity, cache_entity } from '../cache/notion-entity-cache.mjs'
 import config from '#config'
 
@@ -89,83 +89,39 @@ async function check_file_for_external_id(file_path, target_external_id) {
 }
 
 /**
- * Search all files in a directory for matching external_id
- * @param {string} directory_path - Directory to search
+ * Search for entity with matching external_id using ripgrep
  * @param {string} target_external_id - External ID to match
  * @returns {Promise<Object|null>} Entity data if found, null otherwise
  */
-async function search_directory_for_external_id(
-  directory_path,
-  target_external_id
-) {
+async function search_for_external_id_with_ripgrep(target_external_id) {
   try {
-    // Check if directory exists
-    try {
-      await fs.access(directory_path)
-    } catch (error) {
-      return null
-    }
+    log(`Searching for external_id with ripgrep: ${target_external_id}`)
 
-    const files = await fs.readdir(directory_path)
-    const markdown_files = files.filter((file) => file.endsWith('.md'))
+    const results = await search_file_contents({
+      pattern: target_external_id,
+      paths_only: true,
+      case_sensitive: true,
+      max_results: 10,
+      file_types: ['md']
+    })
 
-    for (const file of markdown_files) {
-      const file_path = path.join(directory_path, file)
+    // Verify each result - ripgrep searches full content, we need frontmatter match
+    for (const result of results) {
       const entity = await check_file_for_external_id(
-        file_path,
+        result.absolute_path,
         target_external_id
       )
-
       if (entity) {
-        log(`Found entity with external_id in ${file_path}`)
+        log(`Found entity via ripgrep at: ${result.absolute_path}`)
         return entity
       }
     }
 
     return null
   } catch (error) {
+    log(`Ripgrep search failed: ${error.message}`)
     return null
   }
-}
-
-/**
- * Full scan across all entity directories for matching external_id (last resort)
- * @param {string} target_external_id - External ID to match
- * @returns {Promise<Object|null>} Entity data if found, null otherwise
- */
-async function full_scan_for_external_id(target_external_id) {
-  const user_base_directory = config.user_base_directory
-
-  if (!user_base_directory) {
-    return null
-  }
-
-  // Common entity type directories to search
-  const entity_directories = [
-    'text',
-    'task',
-    'workflow',
-    'physical-item',
-    'physical-location',
-    'guideline'
-  ]
-
-  log(`Starting full scan for external_id: ${target_external_id}`)
-
-  for (const dir_name of entity_directories) {
-    const directory_path = path.join(user_base_directory, dir_name)
-    const entity = await search_directory_for_external_id(
-      directory_path,
-      target_external_id
-    )
-
-    if (entity) {
-      log(`Found entity via full scan in ${dir_name}/ directory`)
-      return entity
-    }
-  }
-
-  return null
 }
 
 /**
@@ -216,7 +172,7 @@ async function find_entity_by_exact_name(name, entity_type) {
 }
 
 /**
- * Find entity for Notion page using a four-tier exact matching strategy
+ * Find entity for Notion page using a three-tier exact matching strategy
  *
  * This function implements a graduated search approach that prioritizes performance
  * while ensuring comprehensive coverage. The search strategies are:
@@ -225,21 +181,16 @@ async function find_entity_by_exact_name(name, entity_type) {
  *    If found, verifies the cached path still exists and matches the external_id.
  *
  * 1. **Expected Location Search**: Fast - checks the exact path where we expect
- *    the entity to be based on its title and type. This works when entities follow
- *    standard naming conventions and haven't been moved.
+ *    the entity to be based on its title and type.
  *
- * 2. **Entity Type Directory Search**: Medium speed - scans all files within the
- *    appropriate entity type directory (e.g., all files in physical-item/). This
- *    handles cases where the entity exists but with a different filename than expected.
- *
- * 3. **Full Filesystem Scan**: Slowest - searches across all entity directories.
- *    This is the fallback when entities have been moved to unexpected locations or
- *    when the entity type mapping is incorrect.
+ * 2. **Ripgrep Search**: Comprehensive - uses ripgrep to search all markdown files
+ *    in the user base directory for the external_id. Handles subdirectories and
+ *    moved files efficiently.
  *
  * Each strategy only searches for exact external_id matches - no fuzzy matching is
  * performed to prevent data corruption from incorrect entity associations.
  *
- * When an entity is found via strategies 1-3, it is automatically cached for future lookups.
+ * When an entity is found via strategies 1-2, it is automatically cached for future lookups.
  *
  * @param {string} external_id - Notion external ID (e.g., "notion:page:abc123")
  * @param {Object} normalized_entity - Normalized entity data from Notion
@@ -295,65 +246,24 @@ export async function find_entity_for_notion_page(
       return expected_entity
     }
 
-    // Strategy 2: Search within the expected entity type directory
-    // This handles cases where the entity exists but with a different filename
-    const entity_type_directory = path.dirname(expected_paths.absolute_path)
-    log(
-      `Strategy 2 - Searching entity type directory: ${entity_type_directory}`
-    )
+    // Strategy 2: Ripgrep search across user base directory (recursive)
+    // This handles entities that have been moved to subdirectories
+    log(`Strategy 2 - Ripgrep search for external_id: ${external_id}`)
 
-    const directory_entity = await search_directory_for_external_id(
-      entity_type_directory,
-      external_id
-    )
-    if (directory_entity) {
-      log(
-        `Found entity in type directory (Strategy 2 success): ${entity_type_directory}`
+    const ripgrep_entity = await search_for_external_id_with_ripgrep(external_id)
+    if (ripgrep_entity) {
+      log('Found entity via ripgrep search (Strategy 2 success)')
+      // Cache the successful lookup for future reference
+      const relative_path = path.relative(
+        config.user_base_directory,
+        ripgrep_entity.absolute_path
       )
-      // Generate base_uri from absolute_path for caching
-      const user_base_directory = config.user_base_directory
-      if (
-        user_base_directory &&
-        directory_entity.absolute_path.startsWith(user_base_directory)
-      ) {
-        const relative_path = path.relative(
-          user_base_directory,
-          directory_entity.absolute_path
-        )
-        const base_uri = `user:${relative_path}`
-        await cache_entity(external_id, base_uri)
-      }
-      return directory_entity
+      const base_uri = `user:${relative_path}`
+      await cache_entity(external_id, base_uri)
+      return ripgrep_entity
     }
 
-    // Strategy 3: Full scan across all entity directories (last resort)
-    // This is the most comprehensive but slowest approach
-    log(
-      `Strategy 3 - Performing full filesystem scan for external_id: ${external_id}`
-    )
-
-    const scanned_entity = await full_scan_for_external_id(external_id)
-    if (scanned_entity) {
-      log('Found entity via full scan (Strategy 3 success)')
-      // Generate base_uri from absolute_path for caching
-      const user_base_directory = config.user_base_directory
-      if (
-        user_base_directory &&
-        scanned_entity.absolute_path.startsWith(user_base_directory)
-      ) {
-        const relative_path = path.relative(
-          user_base_directory,
-          scanned_entity.absolute_path
-        )
-        const base_uri = `user:${relative_path}`
-        await cache_entity(external_id, base_uri)
-      }
-      return scanned_entity
-    }
-
-    log(
-      `No entity found for external_id: ${external_id} (all strategies exhausted)`
-    )
+    log(`No entity found for external_id: ${external_id} (all strategies exhausted)`)
     return null
   } catch (error) {
     log(`Error finding entity for Notion page: ${error.message}`)
