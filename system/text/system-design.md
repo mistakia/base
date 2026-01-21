@@ -11,7 +11,6 @@ observations:
 relations:
   - relates_to [[sys:system/text/directory-structure.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
-  - relates_to [[sys:system/text/change-request.md]]
   - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/workflow.md]]
   - relates_to [[sys:system/schema/database.md]]
@@ -98,7 +97,6 @@ Each external data connection has bidirectional sync:
 
 - **Workflow**: Defines agent behavior as a composable, modular function that specifies inputs, outputs, and tool integrations. It is effectively a prompt that defines agent behavior that can be run repeatedly, have loops, branching, wait for human input, embed other workflows, and so on.
 - **Thread**: The system's standardized session representation for conversations and agentic workflows. See [[sys:system/text/execution-threads.md]].
-- **Change Request**: A proposal for modifications to the knowledge base that requires review and approval.
 - **Guideline**: A set of rules or recommendations accessed by workflows that MUST, SHOULD, or MAY be followed.
 - **Inference Request**: The process of submitting a prompt to models and receiving the generated outputs.
 - **Model**: A system capable of processing inference requests and generating outputs.
@@ -112,7 +110,6 @@ Each external data connection has bidirectional sync:
 
 - [[sys:system/text/directory-structure.md]] - File organization and structure
 - [[sys:system/text/knowledge-base-schema.md]] - Entity schemas and data models
-- [[sys:system/text/change-request.md]] - Change management workflow
 - [[sys:system/text/tool-information.md]] - Tool capabilities and usage
 - [[sys:system/text/workflow.md]] - Workflow definitions and execution
 - [[sys:system/text/execution-threads.md]] - Thread lifecycle and management

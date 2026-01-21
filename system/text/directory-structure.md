@@ -135,7 +135,6 @@ The system implements a dual knowledge base architecture:
 │   └── workflow/       # System workflows
 │
 └── <user-repository>/  # User Knowledge Base (separate git repository)
-    ├── change-request/ # Change management records
     ├── config/         # User-specific configuration
     ├── guideline/      # Personal guidelines and processes
     ├── import-history/ # Historical data from external systems [submodule]

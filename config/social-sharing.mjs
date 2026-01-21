@@ -63,11 +63,6 @@ export const social_sharing = {
       default_title: 'Location - Base',
       default_description: 'Physical location record from Base system'
     },
-    'change-request': {
-      og_type: 'article',
-      default_title: 'Change Request - Base',
-      default_description: 'Change request from Base system'
-    },
     activity: {
       og_type: 'article',
       default_title: 'Activity - Base',

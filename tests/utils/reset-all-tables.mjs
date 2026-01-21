@@ -11,13 +11,7 @@ const { dirname, join, resolve } = path
 const TEST_ENV = 'test'
 const TEST_DIRECTORY_PATTERN = 'base_data_'
 const USER_REGISTRY_FILE = '.system/users.json'
-const ENTITY_DIRECTORIES = [
-  'task',
-  'workflow',
-  'text',
-  'thread',
-  'change-request'
-]
+const ENTITY_DIRECTORIES = ['task', 'workflow', 'text', 'thread']
 const ENTITY_FILE_EXTENSIONS = ['.md', '.json']
 
 /**

@@ -10,7 +10,6 @@ observations:
   - '[architecture] Defines three distinct tool categories with different purposes.'
 relations:
   - relates_to [[sys:system/text/system-design.md]]
-  - relates_to [[sys:system/text/change-request.md]]
 updated_at: '2026-01-05T19:25:18.075Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
