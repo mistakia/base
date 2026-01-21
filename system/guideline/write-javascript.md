@@ -16,6 +16,7 @@ observations:
   - '[maintainability] Smaller files are easier to understand and maintain'
 relations:
   - implements [[sys:system/text/system-design.md]]
+public_read: true
 updated_at: '2026-01-05T19:25:18.911Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
