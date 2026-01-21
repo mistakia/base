@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useSelector, useDispatch } from 'react-redux'
@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom'
 import { List } from 'immutable'
 
 import { active_sessions_actions } from '@core/active-sessions/actions'
-import { threads_actions } from '@core/threads/actions'
 import {
   get_all_active_sessions,
   get_active_sessions_count
@@ -176,29 +175,6 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
 
   // Sort by created_at descending
   const displayed_threads = sort_threads_by_created_at(threads_to_display)
-
-  // Memoize thread IDs needing events for stable dependency
-  // Use == null to catch both null and undefined values
-  const thread_ids_needing_events = useMemo(
-    () =>
-      displayed_threads
-        .filter((thread) => thread.latest_timeline_event == null)
-        .map((thread) => thread.thread_id),
-    [displayed_threads]
-  )
-
-  // Lazy load latest timeline events for displayed threads when section is expanded
-  useEffect(() => {
-    if (threads_collapsed || thread_ids_needing_events.length === 0) {
-      return
-    }
-
-    dispatch(
-      threads_actions.load_threads_latest_events({
-        thread_ids: thread_ids_needing_events
-      })
-    )
-  }, [threads_collapsed, thread_ids_needing_events, dispatch])
 
   const has_active_sessions = active_session_count > 0
   const has_active_threads =

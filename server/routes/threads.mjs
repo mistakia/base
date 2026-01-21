@@ -3,7 +3,10 @@ import debug from 'debug'
 
 import * as threads from '#libs-server/threads/index.mjs'
 import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
-import { process_thread_table_request } from '#libs-server/threads/process-thread-table-request.mjs'
+import {
+  process_thread_table_request,
+  normalize_duckdb_thread
+} from '#libs-server/threads/process-thread-table-request.mjs'
 import {
   check_thread_permission_middleware,
   check_thread_permission,
@@ -16,15 +19,10 @@ import validate_working_directory from '#libs-server/threads/validate-working-di
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { thread_constants } from '#libs-shared'
-import {
-  enrich_thread_with_timeline,
-  get_latest_timeline_events_batch
-} from '#libs-server/threads/thread-utils.mjs'
-import { get_cached_threads } from '#server/services/cache-warmer.mjs'
+import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
-import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -94,47 +92,6 @@ function validate_table_state(table_state) {
 }
 
 /**
- * Normalize DuckDB thread to API response format
- */
-function normalize_duckdb_thread_for_response(thread, models_data) {
-  const { total_cost, input_cost, output_cost, currency } =
-    calculate_thread_cost(thread, models_data)
-
-  return {
-    thread_id: thread.thread_id,
-    title: thread.title,
-    short_description: thread.short_description,
-    thread_state: thread.thread_state || 'unknown',
-    created_at: thread.created_at,
-    updated_at: thread.updated_at,
-    duration_minutes: thread.duration_minutes || 0,
-    user_public_key: thread.user_public_key,
-    session_provider: thread.session_provider || 'base',
-    inference_provider: thread.inference_provider,
-    primary_model: thread.primary_model,
-    working_directory: thread.working_directory,
-    working_directory_path: thread.working_directory_path,
-    message_count: thread.message_count || 0,
-    user_message_count: thread.user_message_count || 0,
-    assistant_message_count: thread.assistant_message_count || 0,
-    tool_call_count: thread.tool_call_count || 0,
-    total_tokens: thread.total_tokens || 0,
-    total_input_tokens: thread.total_input_tokens || 0,
-    total_output_tokens: thread.total_output_tokens || 0,
-    cache_creation_input_tokens: thread.cache_creation_input_tokens || 0,
-    cache_read_input_tokens: thread.cache_read_input_tokens || 0,
-    total_cost,
-    input_cost,
-    output_cost,
-    currency,
-    description: thread.description || '',
-    tags: thread.tags || [],
-    // Note: latest_timeline_event not available from DuckDB (would require separate query)
-    latest_timeline_event: null
-  }
-}
-
-/**
  * Handle thread list request using DuckDB index
  */
 async function handle_thread_list_request_indexed({
@@ -172,7 +129,7 @@ async function handle_thread_list_request_indexed({
 
   // Normalize to API format
   const normalized_threads = duckdb_threads.map((thread) =>
-    normalize_duckdb_thread_for_response(thread, models_data)
+    normalize_duckdb_thread(thread, models_data)
   )
 
   // Batch permission check for all threads using base URIs
@@ -220,10 +177,7 @@ router.get('/', async (req, res) => {
     const requesting_user_key = req.user?.user_public_key || null
     const include_timeline = req.query.include_timeline !== 'false'
 
-    // For public (unauthenticated) requests with default pagination, use caching
     const is_public_request = !requesting_user_key
-    const is_cacheable =
-      is_public_request && limit === 1000 && offset === 0 && include_timeline
 
     // Set HTTP cache headers based on authentication status
     // Use Vary: Authorization to ensure browsers cache authenticated and
@@ -242,25 +196,10 @@ router.get('/', async (req, res) => {
       res.set('Cache-Control', 'private, no-cache')
     }
 
-    // Check centralized cache (maintained by cache-warmer service)
-    if (is_cacheable) {
-      const cached_data = get_cached_threads({ thread_state })
-      if (cached_data) {
-        log(`Returning cached threads list for state=${thread_state || 'all'}`)
-        // Apply permission-based redaction (public users see redacted data)
-        const threads_with_permissions = await Promise.all(
-          cached_data.map((thread) =>
-            apply_permission_based_redaction(thread, requesting_user_key)
-          )
-        )
-        return res.json(threads_with_permissions)
-      }
-    }
-
-    // For authenticated requests, try DuckDB first for better performance
-    if (requesting_user_key && embedded_index_manager.is_duckdb_ready()) {
+    // Use DuckDB for all requests (includes latest_timeline_event from indexed data)
+    if (embedded_index_manager.is_duckdb_ready()) {
       try {
-        log('Using DuckDB index for authenticated thread query')
+        log('Using DuckDB index for thread query')
         const result = await handle_thread_list_request_indexed({
           thread_state,
           limit,
@@ -276,7 +215,7 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Fallback: Cache miss or filtered request - fetch fresh data from filesystem
+    // Fallback: DuckDB not available - fetch from filesystem
     log('Fetching threads from filesystem')
 
     // Get all threads from filesystem
@@ -304,89 +243,6 @@ router.get('/', async (req, res) => {
     res.json(threads_with_permissions)
   } catch (error) {
     handle_errors(res, error, 'listing threads')
-  }
-})
-
-// Get latest timeline events for multiple threads (batch endpoint)
-router.get('/latest-events', async (req, res) => {
-  try {
-    const { ids } = req.query
-    const requesting_user_key = req.user?.user_public_key || null
-
-    // Validate ids parameter
-    if (!ids || typeof ids !== 'string') {
-      return res.status(400).json({
-        error: 'Missing ids parameter',
-        message: 'ids query parameter is required (comma-separated thread IDs)'
-      })
-    }
-
-    // Parse and validate thread IDs
-    const thread_ids = ids
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id) => id.length > 0)
-
-    if (thread_ids.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid ids parameter',
-        message: 'At least one valid thread ID is required'
-      })
-    }
-
-    // Enforce max limit to prevent abuse
-    const MAX_THREAD_IDS = 100
-    if (thread_ids.length > MAX_THREAD_IDS) {
-      return res.status(400).json({
-        error: 'Too many thread IDs',
-        message: `Maximum ${MAX_THREAD_IDS} thread IDs allowed per request`
-      })
-    }
-
-    log(`Fetching latest events for ${thread_ids.length} threads`)
-
-    // Check permissions first to avoid expensive file reads for unauthorized threads
-    const resource_paths = thread_ids.map((id) => `user:thread/${id}`)
-    let permissions = {}
-    try {
-      permissions = await check_permissions_batch({
-        user_public_key: requesting_user_key,
-        resource_paths
-      })
-    } catch (error) {
-      log(
-        `Error batch checking thread permissions (applying default deny): ${error.message}`
-      )
-    }
-
-    // Filter to only authorized thread IDs
-    const authorized_thread_ids = thread_ids.filter((id) => {
-      const base_uri = `user:thread/${id}`
-      return permissions[base_uri]?.read?.allowed ?? false
-    })
-
-    // Fetch latest events only for authorized threads
-    const events_map =
-      authorized_thread_ids.length > 0
-        ? await get_latest_timeline_events_batch({
-            thread_ids: authorized_thread_ids
-          })
-        : {}
-
-    // Build result: authorized threads get their events, others get null
-    const result = {}
-    for (const thread_id of thread_ids) {
-      if (authorized_thread_ids.includes(thread_id)) {
-        result[thread_id] = events_map[thread_id] || null
-      } else {
-        // Return null for threads user cannot access
-        result[thread_id] = null
-      }
-    }
-
-    res.json(result)
-  } catch (error) {
-    handle_errors(res, error, 'fetching latest timeline events')
   }
 })
 

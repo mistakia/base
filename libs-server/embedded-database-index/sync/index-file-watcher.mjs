@@ -19,6 +19,7 @@ export { ENTITY_DIRECTORIES }
 // Store watchers in a Map for cleanup
 const entity_watchers = new Map()
 let thread_watcher = null
+let timeline_watcher = null
 let is_watching = false
 
 // Debounce map to prevent rapid re-indexing
@@ -47,7 +48,8 @@ export function start_index_file_watcher({
   on_entity_change,
   on_entity_delete,
   on_thread_change,
-  on_thread_delete
+  on_thread_delete,
+  on_timeline_change
 }) {
   if (is_watching) {
     log('File watcher already running')
@@ -130,6 +132,29 @@ export function start_index_file_watcher({
       }
     })
 
+  // Watch thread directory for timeline.jsonl files
+  timeline_watcher = chokidar.watch(`${thread_dir}/*/timeline.jsonl`, {
+    persistent: true,
+    ignoreInitial: true,
+    awaitWriteFinish: {
+      stabilityThreshold: 300,
+      pollInterval: 100
+    }
+  })
+
+  // Handler for all timeline events (add/change/unlink all trigger the same sync)
+  const handle_timeline_event = (event_type) => (file_path) => {
+    log('Thread timeline %s: %s', event_type, file_path)
+    if (on_timeline_change) {
+      debounced_callback(file_path, on_timeline_change)
+    }
+  }
+
+  timeline_watcher
+    .on('add', handle_timeline_event('added'))
+    .on('change', handle_timeline_event('changed'))
+    .on('unlink', handle_timeline_event('deleted'))
+
   is_watching = true
   log('Index file watcher started')
 }
@@ -154,6 +179,12 @@ export async function stop_index_file_watcher() {
   if (thread_watcher) {
     await thread_watcher.close()
     thread_watcher = null
+  }
+
+  // Close timeline watcher
+  if (timeline_watcher) {
+    await timeline_watcher.close()
+    timeline_watcher = null
   }
 
   is_watching = false

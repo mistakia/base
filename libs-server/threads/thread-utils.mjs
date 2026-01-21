@@ -6,8 +6,36 @@ import { get_thread_base_directory } from './threads-constants.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+import { extract_latest_event_from_timeline } from '#libs-server/embedded-database-index/sync/thread-data-extractor.mjs'
 
 const log = debug('threads:utils')
+
+/**
+ * Parse latest timeline event from DuckDB JSON column
+ * @param {Object} params Parameters
+ * @param {string|null} params.latest_event_data JSON string of the latest event
+ * @param {string} [params.thread_id] Thread ID for logging context
+ * @returns {Object|null} Parsed latest timeline event or null
+ */
+export function parse_latest_timeline_event_data({
+  latest_event_data,
+  thread_id
+}) {
+  if (!latest_event_data) {
+    return null
+  }
+
+  try {
+    return JSON.parse(latest_event_data)
+  } catch (error) {
+    log(
+      'Failed to parse latest_event_data%s: %s',
+      thread_id ? ` for thread ${thread_id}` : '',
+      error.message
+    )
+    return null
+  }
+}
 
 /**
  * Read a JSON file and parse its contents
@@ -134,16 +162,9 @@ export async function get_latest_timeline_event({
       return null
     }
 
-    // If excluding system events, find the last non-system event
+    // If excluding system events, use shared extraction logic
     if (exclude_system) {
-      for (let i = timeline.length - 1; i >= 0; i--) {
-        const event = timeline[i]
-        if (event.type !== 'system') {
-          return event
-        }
-      }
-      // If all events are system events, return null
-      return null
+      return extract_latest_event_from_timeline({ timeline })
     }
 
     // Otherwise, return the last event

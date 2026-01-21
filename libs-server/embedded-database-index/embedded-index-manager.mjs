@@ -56,7 +56,8 @@ import {
 import {
   extract_thread_index_data,
   extract_thread_entity_data,
-  extract_thread_relations_for_kuzu
+  extract_thread_relations_for_kuzu,
+  read_and_extract_latest_event
 } from './sync/thread-data-extractor.mjs'
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
 import { resync_full_index } from './sync/resync-full-index.mjs'
@@ -747,7 +748,18 @@ class EmbeddedIndexManager {
           thread_id,
           metadata
         })
-        await upsert_thread_to_duckdb({ thread_data: thread_index_data })
+
+        // Read and extract latest timeline event
+        const latest_event_data = await read_and_extract_latest_event({
+          thread_id
+        })
+
+        await upsert_thread_to_duckdb({
+          thread_data: {
+            ...thread_index_data,
+            ...latest_event_data
+          }
+        })
         result.duckdb_synced = true
       } catch (error) {
         log('Error syncing thread to DuckDB: %s', error.message)

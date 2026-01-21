@@ -10,6 +10,7 @@ import { process_generic_table_request } from '#libs-server/table-processing/pro
 import { DATA_TYPES } from '#libs-server/table-processing/sorting-utilities.mjs'
 import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
+import { parse_latest_timeline_event_data } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   query_threads_from_duckdb,
@@ -29,9 +30,15 @@ const log = debug('threads:table')
  * @param {Object} models_data - Cached models pricing data
  * @returns {Object} Normalized thread object
  */
-function normalize_duckdb_thread(thread, models_data) {
+export function normalize_duckdb_thread(thread, models_data) {
   // Calculate cost using thread data and models pricing
   const cost_data = calculate_thread_cost(thread, models_data)
+
+  // Parse latest timeline event from DuckDB columns
+  const latest_timeline_event = parse_latest_timeline_event_data({
+    latest_event_data: thread.latest_event_data,
+    thread_id: thread.thread_id
+  })
 
   return {
     // Core thread identifiers
@@ -79,6 +86,9 @@ function normalize_duckdb_thread(thread, models_data) {
     input_cost: cost_data.input_cost,
     output_cost: cost_data.output_cost,
     currency: cost_data.currency,
+
+    // Latest timeline event (from DuckDB index)
+    latest_timeline_event,
 
     // Additional metadata
     description: thread.description || '',

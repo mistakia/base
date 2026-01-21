@@ -32,7 +32,10 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     working_directory_path,
     session_provider,
     inference_provider,
-    user_public_key
+    user_public_key,
+    latest_event_timestamp,
+    latest_event_type,
+    latest_event_data
   } = thread_data
 
   // Derive primary_model from nested path if not directly set
@@ -56,8 +59,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
       working_directory, working_directory_path, session_provider,
-      inference_provider, primary_model, user_public_key
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      inference_provider, primary_model, user_public_key,
+      latest_event_timestamp, latest_event_type, latest_event_data
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -80,7 +84,10 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       session_provider = excluded.session_provider,
       inference_provider = excluded.inference_provider,
       primary_model = excluded.primary_model,
-      user_public_key = excluded.user_public_key
+      user_public_key = excluded.user_public_key,
+      latest_event_timestamp = excluded.latest_event_timestamp,
+      latest_event_type = excluded.latest_event_type,
+      latest_event_data = excluded.latest_event_data
   `
 
   try {
@@ -109,7 +116,10 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
         session_provider || null,
         inference_provider || null,
         primary_model || null,
-        user_public_key || null
+        user_public_key || null,
+        latest_event_timestamp || null,
+        latest_event_type || null,
+        latest_event_data || null
       ]
     })
     log('Thread upserted: %s', thread_id)

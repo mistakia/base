@@ -4,7 +4,6 @@ const GET_THREADS = 'GET_THREADS'
 const GET_THREAD = 'GET_THREAD'
 const GET_MODELS = 'GET_MODELS'
 const GET_THREADS_TABLE = 'GET_THREADS_TABLE'
-const GET_THREADS_LATEST_EVENTS = 'GET_THREADS_LATEST_EVENTS'
 const CREATE_THREAD_SESSION = 'CREATE_THREAD_SESSION'
 const RESUME_THREAD_SESSION = 'RESUME_THREAD_SESSION'
 
@@ -13,7 +12,6 @@ export const threads_action_types = {
   ...create_api_action_types(GET_THREAD),
   ...create_api_action_types(GET_MODELS),
   ...create_api_action_types(GET_THREADS_TABLE),
-  ...create_api_action_types(GET_THREADS_LATEST_EVENTS),
   ...create_api_action_types(CREATE_THREAD_SESSION),
   ...create_api_action_types(RESUME_THREAD_SESSION),
 
@@ -23,7 +21,6 @@ export const threads_action_types = {
   LOAD_THREADS: 'LOAD_THREADS',
   LOAD_THREAD: 'LOAD_THREAD',
   LOAD_THREADS_TABLE: 'LOAD_THREADS_TABLE',
-  LOAD_THREADS_LATEST_EVENTS: 'LOAD_THREADS_LATEST_EVENTS',
   SELECT_THREAD: 'SELECT_THREAD',
   CLEAR_SELECTED_THREAD: 'CLEAR_SELECTED_THREAD',
   SET_THREAD_ARCHIVE_STATE: 'SET_THREAD_ARCHIVE_STATE',
@@ -45,9 +42,6 @@ export const get_threads_actions = create_api_actions(GET_THREADS)
 export const get_thread_actions = create_api_actions(GET_THREAD)
 export const get_models_actions = create_api_actions(GET_MODELS)
 export const get_threads_table_actions = create_api_actions(GET_THREADS_TABLE)
-export const get_threads_latest_events_actions = create_api_actions(
-  GET_THREADS_LATEST_EVENTS
-)
 export const create_thread_session_actions = create_api_actions(
   CREATE_THREAD_SESSION
 )
@@ -100,11 +94,6 @@ export const threads_actions = {
   load_threads_table: ({ view_id = 'default', is_append = false } = {}) => ({
     type: threads_action_types.LOAD_THREADS_TABLE,
     payload: { view_id, is_append }
-  }),
-
-  load_threads_latest_events: ({ thread_ids }) => ({
-    type: threads_action_types.LOAD_THREADS_LATEST_EVENTS,
-    payload: { thread_ids }
   }),
 
   set_thread_archive_state: ({ thread_id, archive_reason, archived_at }) => ({

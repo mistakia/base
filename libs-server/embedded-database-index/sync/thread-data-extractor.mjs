@@ -4,9 +4,87 @@
  * Extract indexable data from thread metadata for database sync.
  */
 
+import path from 'path'
 import debug from 'debug'
 
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+
 const log = debug('embedded-index:sync:thread')
+
+/**
+ * Default return value when no latest event data is available
+ */
+const NULL_LATEST_EVENT = {
+  latest_event_timestamp: null,
+  latest_event_type: null,
+  latest_event_data: null
+}
+
+/**
+ * Extract the latest non-system event from a timeline array
+ * @param {Object} params Parameters
+ * @param {Array} params.timeline Timeline array of events
+ * @returns {Object|null} Latest non-system event or null if none found
+ */
+export function extract_latest_event_from_timeline({ timeline }) {
+  if (!timeline || timeline.length === 0) {
+    return null
+  }
+
+  // Find the last non-system event
+  for (let i = timeline.length - 1; i >= 0; i--) {
+    const event = timeline[i]
+    if (event.type !== 'system') {
+      return event
+    }
+  }
+
+  return null
+}
+
+/**
+ * Read timeline and extract latest event for a given thread
+ * @param {Object} params Parameters
+ * @param {string} params.thread_id Thread ID
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<Object>} Object with latest_event_timestamp, latest_event_type, latest_event_data
+ */
+export async function read_and_extract_latest_event({
+  thread_id,
+  user_base_directory
+}) {
+  try {
+    const thread_base_directory = get_thread_base_directory({
+      user_base_directory
+    })
+    const timeline_path = path.join(
+      thread_base_directory,
+      thread_id,
+      'timeline.jsonl'
+    )
+
+    const timeline = await read_timeline_jsonl_or_default({
+      timeline_path,
+      default_value: []
+    })
+
+    const latest_event = extract_latest_event_from_timeline({ timeline })
+
+    if (!latest_event) {
+      return NULL_LATEST_EVENT
+    }
+
+    return {
+      latest_event_timestamp: latest_event.timestamp || null,
+      latest_event_type: latest_event.type || null,
+      latest_event_data: JSON.stringify(latest_event)
+    }
+  } catch (error) {
+    log('Error reading timeline for thread %s: %s', thread_id, error.message)
+    return NULL_LATEST_EVENT
+  }
+}
 
 export function extract_thread_index_data({ thread_id, metadata }) {
   if (!thread_id || !metadata) {

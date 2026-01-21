@@ -443,22 +443,6 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return new_state
     }
 
-    case threads_action_types.GET_THREADS_LATEST_EVENTS_FULFILLED: {
-      const events_map = payload.data || {}
-
-      // Update each thread in the basic threads list with its latest event
-      let new_state = state
-      for (const [thread_id, event] of Object.entries(events_map)) {
-        if (event !== null) {
-          new_state = update_thread_in_basic_list(new_state, thread_id, {
-            latest_timeline_event: event
-          })
-        }
-      }
-
-      return new_state
-    }
-
     case threads_action_types.THREAD_JOB_FAILED: {
       const { thread_id, error } = payload
       const job_info = Map({ status: 'failed', error })

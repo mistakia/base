@@ -244,7 +244,8 @@ export async function query_threads_from_duckdb({
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
       working_directory, working_directory_path, session_provider,
-      inference_provider, primary_model, user_public_key
+      inference_provider, primary_model, user_public_key,
+      latest_event_timestamp, latest_event_type, latest_event_data
     FROM threads
     ${where_sql}
     ${order_sql}
