@@ -213,6 +213,13 @@ node cli/rebuild-embedded-index.mjs
 # Analyze thread for metadata updates (title, relations)
 node cli/analyze-thread-metadata.mjs <thread-id> --dry-run
 
+# Queue threads for batch metadata analysis (processed by metadata-queue-processor)
+echo "<thread-id>" >> /tmp/claude-pending-metadata-analysis.queue
+
+# Monitor metadata queue processing
+cat /tmp/claude-pending-metadata-analysis.queue   # View pending
+cat /tmp/claude-metadata-processed.log            # View processed
+
 # Analyze thread relations (entity references from timeline)
 node cli/analyze-thread-relations.mjs --thread-id <uuid>
 
