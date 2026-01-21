@@ -12,6 +12,11 @@ import {
   iterate_claude_session_files,
   scan_claude_agent_relationships
 } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
+import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
+import {
+  register_user_base_directory,
+  clear_registered_directories
+} from '#libs-server/base-uri/base-directory-registry.mjs'
 
 describe('Claude Session Streaming', function () {
   this.timeout(10000)
@@ -423,6 +428,227 @@ describe('Claude Session Streaming', function () {
 
       expect(sessions.length).to.equal(1)
       expect(sessions[0].session_id).to.equal('keep-session')
+    })
+  })
+
+  describe('ClaudeSessionProvider.stream_sessions with session_file', () => {
+    before(() => {
+      // Register the test directory as user base for config resolution
+      register_user_base_directory(test_dir)
+    })
+
+    after(() => {
+      clear_registered_directories()
+    })
+
+    it('should yield single merged session when session_file has subagents', async () => {
+      // Create isolated test directory
+      const provider_test_dir = path.join(test_dir, 'provider-session-file')
+      const provider_project_dir = path.join(
+        provider_test_dir,
+        'projects',
+        '-Users-provider'
+      )
+      await fs.mkdir(provider_project_dir, { recursive: true })
+
+      // Create parent session
+      const parent_id = 'provider-parent-uuid'
+      const parent_file = path.join(provider_project_dir, `${parent_id}.jsonl`)
+      await fs.writeFile(
+        parent_file,
+        [
+          JSON.stringify({
+            uuid: 'p1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'user',
+            message: { content: 'hello' }
+          }),
+          JSON.stringify({
+            uuid: 'p2',
+            timestamp: '2025-01-01T00:00:01.000Z',
+            type: 'assistant',
+            message: { content: 'hi there' }
+          })
+        ].join('\n')
+      )
+
+      // Create agent session in subagents directory
+      const subagents_dir = path.join(
+        provider_project_dir,
+        parent_id,
+        'subagents'
+      )
+      await fs.mkdir(subagents_dir, { recursive: true })
+
+      const agent_file = path.join(subagents_dir, 'agent-55556666.jsonl')
+      await fs.writeFile(
+        agent_file,
+        [
+          JSON.stringify({
+            uuid: 'a1',
+            timestamp: '2025-01-01T00:00:00.500Z',
+            type: 'user',
+            sessionId: parent_id,
+            agentId: '55556666',
+            message: { content: 'agent working' }
+          }),
+          JSON.stringify({
+            uuid: 'a2',
+            timestamp: '2025-01-01T00:00:00.600Z',
+            type: 'assistant',
+            message: { content: 'agent done' }
+          })
+        ].join('\n')
+      )
+
+      // Use ClaudeSessionProvider with session_file
+      const provider = new ClaudeSessionProvider()
+      const sessions = []
+      for await (const session of provider.stream_sessions({
+        claude_projects_directory: provider_test_dir,
+        session_file: parent_file,
+        include_warm_agents: true
+      })) {
+        sessions.push(session)
+      }
+
+      // Should yield only the parent session with agents merged
+      expect(sessions.length).to.equal(1)
+      expect(sessions[0].session_id).to.equal(parent_id)
+      expect(sessions[0].agent_sessions).to.be.an('array')
+      expect(sessions[0].agent_sessions.length).to.equal(1)
+      expect(sessions[0].agent_sessions[0].session_id).to.equal(
+        'agent-55556666'
+      )
+    })
+
+    it('should skip orphan agent when session_file points to agent directly', async () => {
+      // Create isolated test directory
+      const orphan_test_dir = path.join(test_dir, 'provider-orphan-agent')
+      const orphan_project_dir = path.join(
+        orphan_test_dir,
+        'projects',
+        '-Users-orphan'
+      )
+      await fs.mkdir(orphan_project_dir, { recursive: true })
+
+      // Create only an agent file (no parent exists)
+      const agent_file = path.join(orphan_project_dir, 'agent-orphan999.jsonl')
+      await fs.writeFile(
+        agent_file,
+        JSON.stringify({
+          uuid: 'o1',
+          timestamp: '2025-01-01T00:00:00.000Z',
+          type: 'user',
+          sessionId: 'nonexistent-parent',
+          agentId: 'orphan999',
+          message: { content: 'orphan agent' }
+        })
+      )
+
+      // Use ClaudeSessionProvider with session_file pointing to agent
+      const provider = new ClaudeSessionProvider()
+      const sessions = []
+      for await (const session of provider.stream_sessions({
+        claude_projects_directory: orphan_test_dir,
+        session_file: agent_file
+      })) {
+        sessions.push(session)
+      }
+
+      // Should not yield orphan agent as standalone session
+      expect(sessions.length).to.equal(0)
+    })
+
+    it('should exclude warm agents from merged results by default', async () => {
+      // Create isolated test directory
+      const warm_test_dir = path.join(test_dir, 'provider-warm-agent')
+      const warm_project_dir = path.join(
+        warm_test_dir,
+        'projects',
+        '-Users-warm'
+      )
+      await fs.mkdir(warm_project_dir, { recursive: true })
+
+      // Create parent session
+      const parent_id = 'warm-parent-uuid'
+      const parent_file = path.join(warm_project_dir, `${parent_id}.jsonl`)
+      await fs.writeFile(
+        parent_file,
+        [
+          JSON.stringify({
+            uuid: 'p1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'user',
+            message: { content: 'hello' }
+          }),
+          JSON.stringify({
+            uuid: 'p2',
+            timestamp: '2025-01-01T00:00:01.000Z',
+            type: 'assistant',
+            message: { content: 'hi there' }
+          })
+        ].join('\n')
+      )
+
+      // Create warm agent (initialization agent with "Warmup" message)
+      const subagents_dir = path.join(warm_project_dir, parent_id, 'subagents')
+      await fs.mkdir(subagents_dir, { recursive: true })
+
+      const warm_agent_file = path.join(subagents_dir, 'agent-warmwarm.jsonl')
+      await fs.writeFile(
+        warm_agent_file,
+        JSON.stringify({
+          uuid: 'w1',
+          timestamp: '2025-01-01T00:00:00.100Z',
+          type: 'user',
+          sessionId: parent_id,
+          agentId: 'warmwarm',
+          message: { content: 'Warmup' }
+        })
+      )
+
+      // Create real agent with actual work
+      const real_agent_file = path.join(subagents_dir, 'agent-realreal.jsonl')
+      await fs.writeFile(
+        real_agent_file,
+        [
+          JSON.stringify({
+            uuid: 'r1',
+            timestamp: '2025-01-01T00:00:00.500Z',
+            type: 'user',
+            sessionId: parent_id,
+            agentId: 'realreal',
+            message: { content: 'Do actual work' }
+          }),
+          JSON.stringify({
+            uuid: 'r2',
+            timestamp: '2025-01-01T00:00:00.600Z',
+            type: 'assistant',
+            message: { content: 'Work completed' }
+          })
+        ].join('\n')
+      )
+
+      // Use ClaudeSessionProvider with default include_warm_agents=false
+      const provider = new ClaudeSessionProvider()
+      const sessions = []
+      for await (const session of provider.stream_sessions({
+        claude_projects_directory: warm_test_dir,
+        session_file: parent_file
+        // include_warm_agents defaults to false
+      })) {
+        sessions.push(session)
+      }
+
+      // Should yield parent with only the real agent, warm agent excluded
+      expect(sessions.length).to.equal(1)
+      expect(sessions[0].session_id).to.equal(parent_id)
+      expect(sessions[0].agent_sessions).to.be.an('array')
+      expect(sessions[0].agent_sessions.length).to.equal(1)
+      expect(sessions[0].agent_sessions[0].session_id).to.equal(
+        'agent-realreal'
+      )
     })
   })
 })

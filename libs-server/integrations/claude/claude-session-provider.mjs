@@ -14,7 +14,8 @@ import {
   extract_claude_models_from_session,
   get_claude_inference_provider,
   get_claude_session_id,
-  scan_claude_agent_relationships
+  scan_claude_agent_relationships,
+  group_sessions_with_agents
 } from './claude-session-helpers.mjs'
 import { get_claude_config } from './claude-config.mjs'
 import { stream_claude_sessions } from './parse-jsonl.mjs'
@@ -109,7 +110,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
    * @param {boolean} options.include_warm_agents - Include warm agents (default: false)
    * @yields {Object} Session objects one at a time
    */
-  async* stream_sessions({
+  async *stream_sessions({
     claude_projects_directory,
     filter_sessions,
     session_id,
@@ -119,6 +120,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     const config = get_claude_config({ claude_projects_directory })
 
     // For single session lookups, use existing find_sessions (already optimized)
+    // Then group agents with their parents to avoid yielding agents as standalone sessions
     if (session_file || session_id) {
       this.log(`Loading single session: ${session_id || session_file}`)
       const sessions = await this.find_sessions({
@@ -127,9 +129,32 @@ export class ClaudeSessionProvider extends SessionProviderBase {
         session_id,
         session_file
       })
-      for (const session of sessions) {
+
+      // Group agents with their parent sessions
+      const { grouped, standalone_sessions, orphan_agents } =
+        group_sessions_with_agents({
+          sessions,
+          include_warm_agents
+        })
+
+      // Yield standalone sessions (parents with no agents)
+      for (const session of standalone_sessions) {
         yield session
       }
+
+      // Yield grouped sessions (parents with agent_sessions attached)
+      for (const [, { parent_session, agent_sessions }] of grouped) {
+        parent_session.agent_sessions = agent_sessions
+        yield parent_session
+      }
+
+      // Log orphan agents but don't yield them
+      if (orphan_agents.length > 0) {
+        this.log(
+          `Skipping ${orphan_agents.length} orphan agent sessions without parent in batch`
+        )
+      }
+
       return
     }
 

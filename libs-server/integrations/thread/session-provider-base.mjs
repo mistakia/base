@@ -58,7 +58,7 @@ export class SessionProviderBase {
    * @param {Object} options - Provider-specific options for finding sessions
    * @yields {Object} Raw session objects one at a time
    */
-  async* stream_sessions(options = {}) {
+  async *stream_sessions(options = {}) {
     this.log(
       'Using default stream_sessions (find_sessions fallback). Override for true streaming.'
     )
