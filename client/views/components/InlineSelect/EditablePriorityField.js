@@ -16,7 +16,7 @@ const PRIORITY_OPTIONS = [
   TASK_PRIORITY.NONE
 ]
 
-const EditablePriorityField = ({ value, base_uri, context }) => {
+const EditablePriorityField = ({ value, base_uri, context, editable = true }) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
   const [local_priority, set_local_priority] = useState(
@@ -32,6 +32,7 @@ const EditablePriorityField = ({ value, base_uri, context }) => {
   const priority_slug = to_snake_slug(local_priority) || 'none'
 
   const handle_click = (event) => {
+    if (!editable) return
     event.stopPropagation()
     set_dropdown_open(true)
   }
@@ -73,24 +74,26 @@ const EditablePriorityField = ({ value, base_uri, context }) => {
         ref={anchor_ref}
         data-priority={priority_slug}
         className='task-priority'
-        onClick={handle_click}
+        onClick={editable ? handle_click : undefined}
         style={{
           fontWeight: 500,
           fontSize: context === 'table' ? '0.875rem' : '14px',
           lineHeight: '1.2',
-          cursor: 'pointer'
+          cursor: editable ? 'pointer' : 'default'
         }}>
         {local_priority}
       </span>
-      <InlineSelectDropdown
-        options={PRIORITY_OPTIONS}
-        value={local_priority}
-        on_change={handle_change}
-        on_close={handle_close}
-        anchor_el={anchor_ref.current}
-        open={dropdown_open}
-        color_attribute='priority'
-      />
+      {editable && (
+        <InlineSelectDropdown
+          options={PRIORITY_OPTIONS}
+          value={local_priority}
+          on_change={handle_change}
+          on_close={handle_close}
+          anchor_el={anchor_ref.current}
+          open={dropdown_open}
+          color_attribute='priority'
+        />
+      )}
     </div>
   )
 }
@@ -98,7 +101,8 @@ const EditablePriorityField = ({ value, base_uri, context }) => {
 EditablePriorityField.propTypes = {
   value: PropTypes.string,
   base_uri: PropTypes.string.isRequired,
-  context: PropTypes.oneOf(['table', 'entity-page'])
+  context: PropTypes.oneOf(['table', 'entity-page']),
+  editable: PropTypes.bool
 }
 
 export default EditablePriorityField

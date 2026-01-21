@@ -6,10 +6,7 @@ import debug from 'debug'
 import { list_tasks_from_filesystem } from '#libs-server/task/filesystem/list-tasks-from-filesystem.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
-import {
-  check_user_permission_for_file,
-  check_user_permission
-} from '#server/middleware/permission/index.mjs'
+import { check_permissions_batch } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
@@ -172,7 +169,7 @@ function extract_file_info(task_entity) {
  * Process task entity for table display
  */
 function process_task_for_table(task_entity) {
-  const { entity_properties, is_redacted } = task_entity
+  const { entity_properties, is_redacted, can_write } = task_entity
 
   const properties = extract_task_properties(entity_properties)
   const file_info = extract_file_info(task_entity)
@@ -180,56 +177,47 @@ function process_task_for_table(task_entity) {
   return {
     ...properties,
     ...file_info,
-    is_redacted: is_redacted || false
+    is_redacted: is_redacted || false,
+    can_write: can_write !== false
   }
 }
 
 /**
- * Check user permission for task
- *
- * Priority order:
- * 1. users.json rules (all users except public user)
- * 2. file public_read setting
- * 3. public user from users.json
- */
-async function check_task_permission(user_public_key, task_entity) {
-  try {
-    // Use the main permission checker which implements the correct priority order
-    return await check_user_permission_for_file({
-      user_public_key,
-      absolute_path: task_entity.file_info?.absolute_path
-    })
-  } catch (error) {
-    log(
-      `Error checking permission for task ${task_entity.entity_properties?.entity_id}: ${error.message}`
-    )
-    return false
-  }
-}
-
-/**
- * Apply redaction if user lacks permission
- */
-function apply_redaction_if_needed(task, has_permission) {
-  if (has_permission) return task
-
-  return redact_entity_object(task, {
-    preserve_keys: CONFIG.redaction.preserved_keys,
-    redact_keys: CONFIG.redaction.redacted_keys
-  })
-}
-
-/**
- * Process all tasks with permission checking
+ * Process all tasks with batch permission checking
+ * Uses check_permissions_batch for efficiency and returns both read/write permissions
  */
 async function process_tasks_with_permissions(tasks, user_public_key) {
-  return await Promise.all(
-    tasks.map(async (task) => {
-      const has_permission = await check_task_permission(user_public_key, task)
+  // Collect base_uris for batch permission checking
+  const resource_paths = tasks.map(
+    (task) => task.entity_properties?.base_uri
+  ).filter(Boolean)
 
-      return apply_redaction_if_needed(task, has_permission)
+  // Batch check permissions for all tasks at once
+  const permissions_by_path = await check_permissions_batch({
+    user_public_key,
+    resource_paths
+  })
+
+  // Apply permissions, redaction, and can_write flag to each task
+  return tasks.map((task) => {
+    const base_uri = task.entity_properties?.base_uri
+    const permission = base_uri ? permissions_by_path[base_uri] : null
+
+    if (permission?.read?.allowed) {
+      return {
+        ...task,
+        is_redacted: false,
+        can_write: permission?.write?.allowed || false
+      }
+    }
+
+    // User lacks read permission - redact the task
+    const redacted = redact_entity_object(task, {
+      preserve_keys: CONFIG.redaction.preserved_keys,
+      redact_keys: CONFIG.redaction.redacted_keys
     })
-  )
+    return { ...redacted, can_write: false }
+  })
 }
 
 /**
@@ -348,31 +336,36 @@ async function process_task_table_request_indexed({
     normalize_task_for_table_response(task, CONFIG.defaults)
   )
 
-  // Apply task-level permissions and redaction using proper permission service
-  const redacted_tasks = await Promise.all(
-    normalized_tasks.map(async (task) => {
-      try {
-        // Use the proper permission check with base_uri
-        const result = await check_user_permission({
-          user_public_key: requesting_user_public_key,
-          resource_path: task.base_uri
-        })
+  // Collect all base_uri values for batch permission checking
+  const resource_paths = normalized_tasks
+    .map((task) => task.base_uri)
+    .filter(Boolean)
 
-        if (result.allowed) {
-          return { ...task, is_redacted: false }
-        }
-      } catch (error) {
-        log(
-          `Error checking permission for task ${task.entity_id}: ${error.message}`
-        )
+  // Batch check permissions for all tasks at once (more efficient)
+  const permissions_by_path = await check_permissions_batch({
+    user_public_key: requesting_user_public_key,
+    resource_paths
+  })
+
+  // Apply task-level permissions, redaction, and can_write flag
+  const redacted_tasks = normalized_tasks.map((task) => {
+    const permission = permissions_by_path[task.base_uri]
+
+    if (permission?.read?.allowed) {
+      return {
+        ...task,
+        is_redacted: false,
+        can_write: permission?.write?.allowed || false
       }
+    }
 
-      return redact_entity_object(task, {
-        preserve_keys: CONFIG.redaction.preserved_keys,
-        redact_keys: CONFIG.redaction.redacted_keys
-      })
+    // User lacks read permission - redact the task
+    const redacted = redact_entity_object(task, {
+      preserve_keys: CONFIG.redaction.preserved_keys,
+      redact_keys: CONFIG.redaction.redacted_keys
     })
-  )
+    return { ...redacted, can_write: false }
+  })
 
   // Apply tag-level redaction (redact non-visible tag URIs)
   const { tasks: final_tasks, tag_visibility } =

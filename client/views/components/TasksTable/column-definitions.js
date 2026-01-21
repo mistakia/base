@@ -70,6 +70,7 @@ const StatusCell = ({ row }) => {
       value={task.status}
       base_uri={task.base_uri}
       context='table'
+      editable={task.can_write !== false}
     />
   )
 }
@@ -81,6 +82,7 @@ const PriorityCell = ({ row }) => {
       value={task.priority}
       base_uri={task.base_uri}
       context='table'
+      editable={task.can_write !== false}
     />
   )
 }

@@ -9,7 +9,7 @@ import InlineSelectDropdown from './InlineSelectDropdown'
 
 const STATUS_OPTIONS = Object.values(TASK_STATUS)
 
-const EditableStatusField = ({ value, base_uri, context }) => {
+const EditableStatusField = ({ value, base_uri, context, editable = true }) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
   const [local_status, set_local_status] = useState(
@@ -25,6 +25,7 @@ const EditableStatusField = ({ value, base_uri, context }) => {
   const status_slug = to_snake_slug(local_status) || 'no_status'
 
   const handle_click = (event) => {
+    if (!editable) return
     event.stopPropagation()
     set_dropdown_open(true)
   }
@@ -66,24 +67,26 @@ const EditableStatusField = ({ value, base_uri, context }) => {
         ref={anchor_ref}
         data-status={status_slug}
         className='task-status'
-        onClick={handle_click}
+        onClick={editable ? handle_click : undefined}
         style={{
           fontWeight: 500,
           fontSize: context === 'table' ? '0.875rem' : '14px',
           lineHeight: '1.2',
-          cursor: 'pointer'
+          cursor: editable ? 'pointer' : 'default'
         }}>
         {local_status}
       </span>
-      <InlineSelectDropdown
-        options={STATUS_OPTIONS}
-        value={local_status}
-        on_change={handle_change}
-        on_close={handle_close}
-        anchor_el={anchor_ref.current}
-        open={dropdown_open}
-        color_attribute='status'
-      />
+      {editable && (
+        <InlineSelectDropdown
+          options={STATUS_OPTIONS}
+          value={local_status}
+          on_change={handle_change}
+          on_close={handle_close}
+          anchor_el={anchor_ref.current}
+          open={dropdown_open}
+          color_attribute='status'
+        />
+      )}
     </div>
   )
 }
@@ -91,7 +94,8 @@ const EditableStatusField = ({ value, base_uri, context }) => {
 EditableStatusField.propTypes = {
   value: PropTypes.string,
   base_uri: PropTypes.string.isRequired,
-  context: PropTypes.oneOf(['table', 'entity-page'])
+  context: PropTypes.oneOf(['table', 'entity-page']),
+  editable: PropTypes.bool
 }
 
 export default EditableStatusField
