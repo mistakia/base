@@ -4,7 +4,7 @@ type: guideline
 description: Guidelines for using the entity-list CLI to query and filter entities
 base_uri: sys:system/guideline/entity-list-cli.md
 created_at: '2026-01-16T00:00:00.000Z'
-entity_id: 7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+entity_id: 905ece35-bb38-411c-b44d-ea8e0c842911
 globs:
   - cli/entity-list.mjs
 observations:
