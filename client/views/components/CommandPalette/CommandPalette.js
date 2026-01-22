@@ -97,7 +97,11 @@ const CommandPalette = () => {
 
   const navigate_to_item = useCallback(
     (item, new_tab = false) => {
-      handle_close()
+      // Only close palette when navigating in current tab
+      // Keep palette open when opening in new tab
+      if (!new_tab) {
+        handle_close()
+      }
 
       let url
       if (item.category === 'thread') {
