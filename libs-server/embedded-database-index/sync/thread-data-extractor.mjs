@@ -22,6 +22,61 @@ const NULL_LATEST_EVENT = {
 }
 
 /**
+ * Default return value when no edit metrics are available
+ */
+const NULL_EDIT_METRICS = {
+  edit_count: 0,
+  lines_changed: 0
+}
+
+/**
+ * Extract edit metrics from a timeline
+ * Counts Edit and Write tool results and estimates lines changed.
+ * Only counts tool_result events (not tool_use requests) to avoid double-counting.
+ * @param {Object} params Parameters
+ * @param {Array} params.timeline Timeline array of events
+ * @returns {Object} Object with edit_count and lines_changed
+ */
+export function extract_edit_metrics_from_timeline({ timeline }) {
+  if (!timeline || timeline.length === 0) {
+    return NULL_EDIT_METRICS
+  }
+
+  let edit_count = 0
+  let total_chars_changed = 0
+
+  for (const event of timeline) {
+    // Count only tool_result events (successful tool executions)
+    // Do not count assistant tool_use blocks to avoid double-counting
+    if (event.type === 'tool_result') {
+      const tool_name = event.tool_name || event.name
+      if (tool_name === 'Edit' || tool_name === 'Write') {
+        edit_count++
+
+        // Estimate chars changed from tool input
+        // Edit tool has old_string/new_string, Write tool has content
+        const tool_input = event.tool_input || event.input || {}
+        if (tool_name === 'Edit') {
+          const old_len = (tool_input.old_string || '').length
+          const new_len = (tool_input.new_string || '').length
+          total_chars_changed += Math.max(old_len, new_len)
+        } else if (tool_name === 'Write') {
+          total_chars_changed += (tool_input.content || '').length
+        }
+      }
+    }
+  }
+
+  // Convert chars to approximate lines (80 chars per line)
+  const lines_changed = Math.ceil(total_chars_changed / 80)
+
+  return {
+    edit_count,
+    lines_changed
+  }
+}
+
+/**
  * Extract the latest non-system event from a timeline array
  * @param {Object} params Parameters
  * @param {Array} params.timeline Timeline array of events
@@ -48,7 +103,7 @@ export function extract_latest_event_from_timeline({ timeline }) {
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} [params.user_base_directory] Custom user base directory
- * @returns {Promise<Object>} Object with latest_event_timestamp, latest_event_type, latest_event_data
+ * @returns {Promise<Object>} Object with latest_event_timestamp, latest_event_type, latest_event_data, edit_count, lines_changed
  */
 export async function read_and_extract_latest_event({
   thread_id,
@@ -70,19 +125,27 @@ export async function read_and_extract_latest_event({
     })
 
     const latest_event = extract_latest_event_from_timeline({ timeline })
+    const edit_metrics = extract_edit_metrics_from_timeline({ timeline })
 
     if (!latest_event) {
-      return NULL_LATEST_EVENT
+      return {
+        ...NULL_LATEST_EVENT,
+        ...edit_metrics
+      }
     }
 
     return {
       latest_event_timestamp: latest_event.timestamp || null,
       latest_event_type: latest_event.type || null,
-      latest_event_data: JSON.stringify(latest_event)
+      latest_event_data: JSON.stringify(latest_event),
+      ...edit_metrics
     }
   } catch (error) {
     log('Error reading timeline for thread %s: %s', thread_id, error.message)
-    return NULL_LATEST_EVENT
+    return {
+      ...NULL_LATEST_EVENT,
+      ...NULL_EDIT_METRICS
+    }
   }
 }
 
@@ -185,7 +248,9 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     session_provider,
     inference_provider,
     primary_model,
-    user_public_key: metadata.user_public_key || null
+    user_public_key: metadata.user_public_key || null,
+    edit_count: metadata.edit_count || 0,
+    lines_changed: metadata.lines_changed || 0
   }
 }
 

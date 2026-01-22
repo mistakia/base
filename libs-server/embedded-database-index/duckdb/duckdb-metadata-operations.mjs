@@ -5,6 +5,7 @@
  */
 
 import debug from 'debug'
+
 import {
   execute_duckdb_query,
   execute_duckdb_run
@@ -88,13 +89,15 @@ export const INDEX_METADATA_KEYS = {
   // Public: check/set schema version
   SCHEMA_VERSION: 'schema_version',
   // Public: per-repository sync state as JSON { ".": { sha }, "submodule": { sha } }
-  REPO_SYNC_STATE: 'repo_sync_state'
+  REPO_SYNC_STATE: 'repo_sync_state',
+  // Public: per-repository git activity sync state as JSON { "repo_path": { sha } }
+  ACTIVITY_GIT_SYNC_STATE: 'activity_git_sync_state'
 }
 
 /**
  * Current schema version - increment when schema changes require rebuild
  */
-export const CURRENT_SCHEMA_VERSION = '1'
+export const CURRENT_SCHEMA_VERSION = '2'
 
 /**
  * Get repository sync state (handles backwards compatibility)

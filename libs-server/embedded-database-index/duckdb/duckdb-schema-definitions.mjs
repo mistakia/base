@@ -5,6 +5,7 @@
  */
 
 import debug from 'debug'
+
 import { execute_duckdb_run } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:schema')
@@ -64,9 +65,25 @@ CREATE TABLE IF NOT EXISTS threads (
   user_public_key VARCHAR,
   latest_event_timestamp TIMESTAMP,
   latest_event_type VARCHAR,
-  latest_event_data TEXT
+  latest_event_data TEXT,
+  edit_count INTEGER DEFAULT 0,
+  lines_changed INTEGER DEFAULT 0
 )
 `
+
+const ACTIVITY_GIT_DAILY_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS activity_git_daily (
+  date DATE PRIMARY KEY,
+  commits INTEGER DEFAULT 0,
+  lines_changed INTEGER DEFAULT 0,
+  files_changed INTEGER DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL
+)
+`
+
+const ACTIVITY_GIT_DAILY_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_activity_git_date ON activity_git_daily(date)'
+]
 
 const ENTITY_TAGS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS entity_tags (
@@ -153,6 +170,14 @@ export async function create_duckdb_schema() {
     await execute_duckdb_run({ query: INDEX_METADATA_TABLE_SCHEMA })
     log('Index metadata table created')
 
+    await execute_duckdb_run({ query: ACTIVITY_GIT_DAILY_TABLE_SCHEMA })
+    log('Activity git daily table created')
+
+    for (const index_sql of ACTIVITY_GIT_DAILY_INDEXES) {
+      await execute_duckdb_run({ query: index_sql })
+    }
+    log('Activity git daily indexes created')
+
     log('DuckDB schema creation complete')
   } catch (error) {
     log('Error creating DuckDB schema: %s', error.message)
@@ -169,6 +194,9 @@ export async function drop_duckdb_schema() {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS threads' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entities' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS index_metadata' })
+    await execute_duckdb_run({
+      query: 'DROP TABLE IF EXISTS activity_git_daily'
+    })
     log('DuckDB schema dropped')
   } catch (error) {
     log('Error dropping DuckDB schema: %s', error.message)
