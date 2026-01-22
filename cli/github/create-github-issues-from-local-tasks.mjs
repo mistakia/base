@@ -104,7 +104,7 @@ export default async function create_github_issues_from_local_tasks({
     await process_repositories_from_filesystem({
       entity_processor,
       include_entity_types: ['task'],
-      path_pattern
+      include_path_patterns: [path_pattern]
     })
 
     return results
