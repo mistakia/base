@@ -371,15 +371,17 @@ export function apply_type_conversion(
     return value
   }
 
-  // Handle boolean conversions
+  // Handle boolean conversions (supports custom true_result/false_result for number output)
   if (
     conversion_type === 'select_to_boolean' ||
     rule.true_values ||
     rule.false_values
   ) {
-    if (rule.true_values?.includes(value)) return true
-    if (rule.false_values?.includes(value)) return false
-    return rule.default ?? false
+    const true_result = rule.true_result ?? true
+    const false_result = rule.false_result ?? false
+    if (rule.true_values?.includes(value)) return true_result
+    if (rule.false_values?.includes(value)) return false_result
+    return rule.default ?? false_result
   }
 
   // Handle enum conversions (any conversion with enum_mappings)
