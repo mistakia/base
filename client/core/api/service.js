@@ -295,6 +295,14 @@ export const api = {
   get_search_capabilities() {
     const url = `${API_URL}/search/capabilities`
     return { url }
+  },
+
+  get_recent_files({ hours, limit } = {}) {
+    const query_string = qs.stringify({ hours, limit })
+    const url = query_string
+      ? `${API_URL}/search/recent?${query_string}`
+      : `${API_URL}/search/recent`
+    return { url }
   }
 }
 

@@ -14,7 +14,11 @@ const SearchState = new Record({
   is_loading: false,
   error: null,
   selected_index: 0,
-  total: 0
+  total: 0,
+  recent_files: new List(),
+  recent_files_loading: false,
+  recent_files_loaded: false,
+  recent_files_error: null
 })
 
 export function search_reducer(state = new SearchState(), { payload, type }) {
@@ -73,6 +77,25 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
 
     case search_action_types.SET_SELECTED_INDEX:
       return state.set('selected_index', payload.index)
+
+    case search_action_types.FETCH_RECENT_FILES_REQUEST:
+      return state.merge({
+        recent_files_loading: true,
+        recent_files_error: null
+      })
+
+    case search_action_types.FETCH_RECENT_FILES_SUCCESS:
+      return state.merge({
+        recent_files: new List(payload.files || []),
+        recent_files_loading: false,
+        recent_files_loaded: true
+      })
+
+    case search_action_types.FETCH_RECENT_FILES_FAILURE:
+      return state.merge({
+        recent_files_loading: false,
+        recent_files_error: payload.error
+      })
 
     default:
       return state

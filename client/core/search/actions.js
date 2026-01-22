@@ -6,7 +6,10 @@ export const search_action_types = {
   SEARCH_SUCCESS: 'SEARCH_SUCCESS',
   SEARCH_FAILURE: 'SEARCH_FAILURE',
   CLEAR_SEARCH: 'CLEAR_SEARCH',
-  SET_SELECTED_INDEX: 'SET_SELECTED_INDEX'
+  SET_SELECTED_INDEX: 'SET_SELECTED_INDEX',
+  FETCH_RECENT_FILES_REQUEST: 'FETCH_RECENT_FILES_REQUEST',
+  FETCH_RECENT_FILES_SUCCESS: 'FETCH_RECENT_FILES_SUCCESS',
+  FETCH_RECENT_FILES_FAILURE: 'FETCH_RECENT_FILES_FAILURE'
 }
 
 export const search_actions = {
@@ -45,5 +48,19 @@ export const search_actions = {
   set_selected_index: (index) => ({
     type: search_action_types.SET_SELECTED_INDEX,
     payload: { index }
+  }),
+
+  fetch_recent_files: () => ({
+    type: search_action_types.FETCH_RECENT_FILES_REQUEST
+  }),
+
+  fetch_recent_files_success: (files) => ({
+    type: search_action_types.FETCH_RECENT_FILES_SUCCESS,
+    payload: { files }
+  }),
+
+  fetch_recent_files_failure: (error) => ({
+    type: search_action_types.FETCH_RECENT_FILES_FAILURE,
+    payload: { error }
   })
 }
