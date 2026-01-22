@@ -169,9 +169,31 @@ This directory focuses on passive house design and certification. Content belong
 **Decision guide**: Is passive house certification the primary goal? Would this task exist without the PH requirement?
 ```
 
+## Task Directories for Codebases
+
+When a task directory corresponds to a codebase (e.g., `task/league/` for `repository/active/league/`), avoid duplicating technical content that belongs in the codebase's `CLAUDE.md`.
+
+| Content Type                         | Belongs in             | Not in                 |
+| ------------------------------------ | ---------------------- | ---------------------- |
+| Architecture, APIs, patterns         | `CLAUDE.md` (codebase) | `ABOUT.md` (task dir)  |
+| Development commands, testing        | `CLAUDE.md` (codebase) | `ABOUT.md` (task dir)  |
+| Directory structure, subsystems      | `CLAUDE.md` (codebase) | `ABOUT.md` (task dir)  |
+| Task organization, what belongs here | `ABOUT.md` (task dir)  | `CLAUDE.md` (codebase) |
+| Related task directories, tags       | `ABOUT.md` (task dir)  | `CLAUDE.md` (codebase) |
+
+**Pattern**: Reference the `CLAUDE.md` rather than duplicating its content.
+
+```markdown
+## Context
+
+Tasks here drive development of the league codebase at `repository/active/league/`.
+For architecture, commands, and development patterns, see [[git://repository/active/league/CLAUDE.md]].
+```
+
 ## Anti-Patterns
 
 - **File inventories** - Listing directory contents (use `ls` or glob patterns instead)
 - **Changelog entries** - Recording what changed over time
 - **Process documentation** - Step-by-step procedures (use workflows)
 - **Implementation details** - Code-level specifics that belong in source files
+- **Duplicating CLAUDE.md** - Repeating architecture, commands, or patterns already documented in a codebase's CLAUDE.md
