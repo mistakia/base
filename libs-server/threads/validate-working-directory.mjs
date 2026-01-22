@@ -2,6 +2,11 @@ import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
+import {
+  is_valid_base_uri,
+  resolve_base_uri
+} from '#libs-server/base-uri/index.mjs'
+
 const log = debug('threads:validate-working-directory')
 
 /**
@@ -22,8 +27,14 @@ export default async function validate_working_directory({
 }) {
   validate_required_parameters({ working_directory, user_base_directory })
 
-  const resolved_paths = resolve_to_absolute_paths({
+  // Resolve base URIs (e.g., 'user:', 'user:task/') to filesystem paths
+  const resolved_working_directory = resolve_base_uri_if_needed({
     working_directory,
+    user_base_directory
+  })
+
+  const resolved_paths = resolve_to_absolute_paths({
+    working_directory: resolved_working_directory,
     user_base_directory
   })
 
@@ -51,6 +62,36 @@ function validate_required_parameters({
 
   if (!user_base_directory) {
     throw new Error('user_base_directory is required for validation')
+  }
+}
+
+/**
+ * Resolve base URI to filesystem path if the input is a base URI
+ * Supports user: and sys: schemes (e.g., 'user:', 'user:task/', 'sys:system/')
+ */
+function resolve_base_uri_if_needed({
+  working_directory,
+  user_base_directory
+}) {
+  // Check if the working_directory is a base URI
+  if (!is_valid_base_uri(working_directory)) {
+    // Not a base URI, return as-is (assumed to be a filesystem path)
+    return working_directory
+  }
+
+  log(`Resolving base URI: ${working_directory}`)
+
+  try {
+    const resolved_path = resolve_base_uri(working_directory, {
+      user_base_directory
+    })
+    log(`Resolved to filesystem path: ${resolved_path}`)
+    return resolved_path
+  } catch (error) {
+    log(`Failed to resolve base URI: ${error.message}`)
+    throw new Error(
+      `Cannot resolve working directory URI to local path: ${working_directory}`
+    )
   }
 }
 
