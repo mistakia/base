@@ -9,6 +9,7 @@ import {
 } from './link-processor.js'
 import { html_tag_whitelist } from './html-tag-whitelist.mjs'
 import { process_plaintext_blocks } from './plaintext-number-highlighter.js'
+import { transform_outside_inline_code } from './inline-code-parser.js'
 import 'highlight.js/styles/github.css'
 
 // Import plaintext language support
@@ -17,12 +18,25 @@ import 'highlight.js/lib/languages/plaintext'
 // Escape unknown XML-like tags so markdown inside them is still parsed.
 // Later, the XML styling plugin will re-wrap these escaped tags for display.
 
+// Escape XML tags in a string segment (not inside code)
+const escape_xml_tags_in_segment = (segment) => {
+  return segment.replace(
+    /<\/?([a-zA-Z][a-zA-Z0-9_-]*)([^<>]*?)>/g,
+    (match, tag_name) => {
+      const lower = tag_name.toLowerCase()
+      if (html_tag_whitelist.has(lower)) return match
+      return match.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+  )
+}
+
 const escape_unknown_xml_tags_outside_code = (content) => {
   if (!content) return content
 
   const lines = content.split('\n')
   let in_code_fence = false
-  const fence_regex = /^```/ // start or end of a fenced code block
+  // Match fenced code blocks with 0-3 spaces indentation (CommonMark spec)
+  const fence_regex = /^ {0,3}```/
 
   const processed_lines = lines.map((line) => {
     if (fence_regex.test(line)) {
@@ -32,15 +46,8 @@ const escape_unknown_xml_tags_outside_code = (content) => {
 
     if (in_code_fence) return line
 
-    // Replace unknown tags like <instructions> or </instructions>
-    return line.replace(
-      /<\/?([a-zA-Z][a-zA-Z0-9_-]*)([^<>]*?)>/g,
-      (match, tag_name) => {
-        const lower = tag_name.toLowerCase()
-        if (html_tag_whitelist.has(lower)) return match
-        return match.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      }
-    )
+    // Process line while protecting inline code
+    return transform_outside_inline_code(line, escape_xml_tags_in_segment)
   })
 
   return processed_lines.join('\n')
@@ -64,7 +71,7 @@ const md = new MarkdownIt({
     hljs,
     auto: true,
     code: true,
-    inline: true,
+    inline: false,
     ignoreIllegals: true
   })
   .use(markdownItXmlStyling)

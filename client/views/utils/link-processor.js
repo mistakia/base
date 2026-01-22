@@ -5,6 +5,7 @@ import {
   resolve_relative_path,
   resolve_at_path
 } from './base-uri-constants.js'
+import { transform_outside_inline_code } from './inline-code-parser.js'
 
 // Process markdown content to transform links before rendering
 export const process_links_in_markdown = (
@@ -36,44 +37,48 @@ export const process_links_in_markdown = (
     }
   )
 
-  // Transform @<relative-path> patterns to markdown links
+  // Transform @<relative-path> patterns to markdown links (skip inline code)
   if (working_directory) {
-    processed_content = processed_content.replace(
-      BASE_URI_PATTERNS.AT_PATH_PATTERN,
-      (match, at_path) => {
-        const base_uri = resolve_at_path(at_path, working_directory)
-        if (base_uri) {
-          const client_path = convert_base_uri_to_path(base_uri)
-          const filename = at_path.split('/').pop() // Keep full filename with extension
-          return `[${filename}](${client_path})`
-        }
-        return match // Return as-is if cannot resolve
-      }
+    processed_content = transform_outside_inline_code(
+      processed_content,
+      (text) =>
+        text.replace(BASE_URI_PATTERNS.AT_PATH_PATTERN, (match, at_path) => {
+          const base_uri = resolve_at_path(at_path, working_directory)
+          if (base_uri) {
+            const client_path = convert_base_uri_to_path(base_uri)
+            const filename = at_path.split('/').pop() // Keep full filename with extension
+            return `[${filename}](${client_path})`
+          }
+          return match // Return as-is if cannot resolve
+        })
     )
 
-    // Transform @<directory> patterns to markdown links
-    processed_content = processed_content.replace(
-      BASE_URI_PATTERNS.AT_DIRECTORY_PATTERN,
-      (match, at_directory) => {
-        const base_uri = resolve_at_path(at_directory, working_directory)
-        if (base_uri) {
-          const client_path = convert_base_uri_to_path(base_uri)
-          const directory_name = at_directory.slice(1, -1) // Remove @ and trailing /
-          return `[${directory_name}/](${client_path})`
-        }
-        return match // Return as-is if cannot resolve
-      }
+    // Transform @<directory> patterns to markdown links (skip inline code)
+    processed_content = transform_outside_inline_code(
+      processed_content,
+      (text) =>
+        text.replace(
+          BASE_URI_PATTERNS.AT_DIRECTORY_PATTERN,
+          (match, at_directory) => {
+            const base_uri = resolve_at_path(at_directory, working_directory)
+            if (base_uri) {
+              const client_path = convert_base_uri_to_path(base_uri)
+              const directory_name = at_directory.slice(1, -1) // Remove @ and trailing /
+              return `[${directory_name}/](${client_path})`
+            }
+            return match // Return as-is if cannot resolve
+          }
+        )
     )
   }
 
-  // Transform bare base URI patterns to markdown links
-  processed_content = processed_content.replace(
-    BASE_URI_PATTERNS.BARE_BASE_URI_PATTERN,
-    (match, scheme) => {
+  // Transform bare base URI patterns to markdown links (skip inline code)
+  processed_content = transform_outside_inline_code(processed_content, (text) =>
+    text.replace(BASE_URI_PATTERNS.BARE_BASE_URI_PATTERN, (match, scheme) => {
       const client_path = convert_base_uri_to_path(match)
       const filename = match.split('/').pop() // Keep full filename with extension
       return `[${filename}](${client_path})`
-    }
+    })
   )
 
   return processed_content
