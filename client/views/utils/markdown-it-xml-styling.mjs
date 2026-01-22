@@ -78,8 +78,19 @@ export default function (md, options) {
   md.render = function (src, env) {
     const result = original_render.call(this, src, env)
 
+    // Protect code blocks from XML processing by replacing with placeholders
+    const code_blocks = []
+    const protected_result = result.replace(
+      /<(pre|code)(\s[^>]*)?>[\s\S]*?<\/\1>/gi,
+      (match) => {
+        const placeholder = `__CODE_BLOCK_${code_blocks.length}__`
+        code_blocks.push(match)
+        return placeholder
+      }
+    )
+
     // Post-process to handle both escaped and unescaped XML tags
-    let processed = result
+    let processed = protected_result
       // Handle both escaped (&lt;tag&gt;) and unescaped (<tag>) XML tags
       .replace(
         /(?:&lt;|<)\/?([a-zA-Z][a-zA-Z0-9_-]*)(?:[^&>]*?)?(?:&gt;|>)/g,
@@ -166,6 +177,11 @@ export default function (md, options) {
         /(<\/div><div class="xml-tag-closing"[^>]*>[^<]+<\/div>)<\/p>/g,
         '$1'
       )
+
+    // Restore protected code blocks
+    code_blocks.forEach((block, index) => {
+      processed = processed.replace(`__CODE_BLOCK_${index}__`, block)
+    })
 
     return processed
   }

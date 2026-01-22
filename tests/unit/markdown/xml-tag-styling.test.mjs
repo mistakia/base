@@ -363,6 +363,73 @@ Another regular paragraph.
     })
   })
 
+  describe('Code block protection', () => {
+    it('should not style XML tags inside fenced code blocks', () => {
+      const markdown = `
+Key commands:
+\`\`\`bash
+# Tag statistics - show entity counts per tag
+node cli/entity-list.mjs --tag-stats
+
+# Batch add/remove tags
+node cli/manage-tags.mjs add -t <tag> -i "task/**/*.md" --dry_run
+\`\`\`
+`
+      const result = md.render(markdown)
+
+      // Code block should be preserved with raw angle brackets
+      expect(result).to.include('<pre>')
+      expect(result).to.include('<code')
+      // Should NOT have XML styling inside code blocks
+      expect(result).to.not.include('xml-tag-opening')
+      expect(result).to.not.include('xml-tag-closing')
+      // The <tag> should remain as escaped text inside the code block
+      expect(result).to.include('&lt;tag&gt;')
+    })
+
+    it('should not style XML tags inside inline code', () => {
+      const markdown = 'Use the `<task>` tag for tasks.'
+      const result = md.render(markdown)
+
+      // Inline code should be preserved
+      expect(result).to.include('<code>')
+      // Should NOT have XML styling for inline code
+      expect(result).to.not.include('xml-tag-opening')
+      expect(result).to.not.include('xml-tag-closing')
+    })
+
+    it('should style escaped XML tags outside code blocks while preserving code blocks', () => {
+      // This test simulates what happens after escape_unknown_xml_tags_outside_code
+      // processes the raw markdown - XML tags are escaped to &lt;/&gt; entities
+      // but code fence content is left untouched
+      const markdown = `
+&lt;instructions&gt;
+Use the following command:
+\`\`\`bash
+node cli/manage-tags.mjs add -t <tag> -i "**/*.md"
+\`\`\`
+&lt;/instructions&gt;
+`
+      const result = md.render(markdown)
+
+      // Escaped XML tag outside code block should be styled
+      expect(result).to.match(
+        /<div class="xml-tag-opening".*>&lt;instructions&gt;<\/div>/
+      )
+      expect(result).to.match(
+        /<div class="xml-tag-closing".*>&lt;\/instructions&gt;<\/div>/
+      )
+      // Code block content should NOT be styled
+      expect(result).to.include('<pre>')
+      // The <tag> inside code block should remain as escaped text, not styled
+      const codeBlockMatch = result.match(
+        /<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/
+      )
+      expect(codeBlockMatch).to.not.be.null
+      expect(codeBlockMatch[1]).to.not.include('xml-tag-opening')
+    })
+  })
+
   describe('Border styling', () => {
     it('should add left border to root level XML tag content', () => {
       const markdown = `
