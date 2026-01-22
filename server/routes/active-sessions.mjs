@@ -66,6 +66,7 @@ async function apply_session_redaction(session, user_public_key) {
 async function get_thread_info_for_session(thread_id) {
   const empty_result = {
     thread_title: null,
+    thread_state: null,
     latest_timeline_event: null,
     message_count: null,
     duration_minutes: null,
@@ -86,6 +87,7 @@ async function get_thread_info_for_session(thread_id) {
 
     return {
       thread_title: metadata.title || null,
+      thread_state: metadata.thread_state || null,
       latest_timeline_event,
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
@@ -118,6 +120,7 @@ async function enrich_session_with_thread_info(session) {
     ...session,
     // Use fresh data, falling back to cached if read fails
     thread_title: thread_info.thread_title || session.thread_title,
+    thread_state: thread_info.thread_state,
     latest_timeline_event:
       thread_info.latest_timeline_event || session.latest_timeline_event,
     message_count: thread_info.message_count,
@@ -146,14 +149,20 @@ router.get('/', async (req, res) => {
       sessions.map(enrich_session_with_thread_info)
     )
 
+    // Filter out sessions where the associated thread is archived
+    // These sessions should not appear in the active sessions panel
+    const active_thread_sessions = enriched_sessions.filter(
+      (session) => session.thread_state !== 'archived'
+    )
+
     // Apply permission-based redaction to each session
     const redacted_sessions = await Promise.all(
-      enriched_sessions.map((session) =>
+      active_thread_sessions.map((session) =>
         apply_session_redaction(session, user_public_key)
       )
     )
 
-    log(`Retrieved ${redacted_sessions.length} active sessions`)
+    log(`Retrieved ${redacted_sessions.length} active sessions (filtered ${enriched_sessions.length - active_thread_sessions.length} archived)`)
     res.status(200).json(redacted_sessions)
   } catch (error) {
     log('Error listing active sessions:', error)
