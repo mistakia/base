@@ -11,22 +11,20 @@ export { aggregate_thread_activity } from './aggregate-thread-activity.mjs'
 export { calculate_activity_score } from './calculate-activity-score.mjs'
 
 /**
- * Get combined activity heatmap data
- * Merges git activity and thread activity, calculates scores
+ * Merge git and thread activity arrays and calculate scores
+ * Shared logic used by both full computation and DuckDB-backed queries.
  *
  * @param {Object} params Parameters
- * @param {number} [params.days=365] Number of trailing days to include
- * @returns {Promise<Object>} Heatmap data with data array, max_score, and date_range
+ * @param {Array} params.git_activity Array of git activity entries
+ * @param {Array} params.thread_activity Array of thread activity entries
+ * @param {number} params.days Number of trailing days (for date range calculation)
+ * @returns {Object} Heatmap data with data array, max_score, and date_range
  */
-export async function get_activity_heatmap_data({ days = 365 } = {}) {
-  log(`Getting activity heatmap data for ${days} days`)
-
-  // Fetch both activity sources in parallel
-  const [git_activity, thread_activity] = await Promise.all([
-    aggregate_git_activity({ days }),
-    aggregate_thread_activity({ days })
-  ])
-
+export function merge_activity_and_calculate_scores({
+  git_activity,
+  thread_activity,
+  days
+}) {
   // Merge activities by date
   const combined_by_date = new Map()
 
@@ -91,11 +89,39 @@ export async function get_activity_heatmap_data({ days = 365 } = {}) {
     end: until_date.toISOString().split('T')[0]
   }
 
-  log(`Returning ${data.length} days of activity data, max_score: ${max_score}`)
-
   return {
     data,
     max_score,
     date_range
   }
+}
+
+/**
+ * Get combined activity heatmap data
+ * Merges git activity and thread activity, calculates scores
+ *
+ * @param {Object} params Parameters
+ * @param {number} [params.days=365] Number of trailing days to include
+ * @returns {Promise<Object>} Heatmap data with data array, max_score, and date_range
+ */
+export async function get_activity_heatmap_data({ days = 365 } = {}) {
+  log(`Getting activity heatmap data for ${days} days`)
+
+  // Fetch both activity sources in parallel
+  const [git_activity, thread_activity] = await Promise.all([
+    aggregate_git_activity({ days }),
+    aggregate_thread_activity({ days })
+  ])
+
+  const result = merge_activity_and_calculate_scores({
+    git_activity,
+    thread_activity,
+    days
+  })
+
+  log(
+    `Returning ${result.data.length} days of activity data, max_score: ${result.max_score}`
+  )
+
+  return result
 }

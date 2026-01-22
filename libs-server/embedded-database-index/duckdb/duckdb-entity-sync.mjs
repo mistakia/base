@@ -5,6 +5,7 @@
  */
 
 import debug from 'debug'
+
 import { execute_duckdb_run } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:sync')
@@ -35,7 +36,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     user_public_key,
     latest_event_timestamp,
     latest_event_type,
-    latest_event_data
+    latest_event_data,
+    edit_count,
+    lines_changed
   } = thread_data
 
   // Derive primary_model from nested path if not directly set
@@ -60,8 +63,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
       working_directory, working_directory_path, session_provider,
       inference_provider, primary_model, user_public_key,
-      latest_event_timestamp, latest_event_type, latest_event_data
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      latest_event_timestamp, latest_event_type, latest_event_data,
+      edit_count, lines_changed
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -87,7 +91,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       user_public_key = excluded.user_public_key,
       latest_event_timestamp = excluded.latest_event_timestamp,
       latest_event_type = excluded.latest_event_type,
-      latest_event_data = excluded.latest_event_data
+      latest_event_data = excluded.latest_event_data,
+      edit_count = excluded.edit_count,
+      lines_changed = excluded.lines_changed
   `
 
   try {
@@ -95,31 +101,33 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       query,
       parameters: [
         thread_id,
-        title || null,
-        short_description || null,
-        thread_state || null,
-        created_at || null,
-        updated_at || null,
-        message_count || null,
-        user_message_count || null,
-        assistant_message_count || null,
-        tool_call_count || null,
-        total_input_tokens || null,
-        total_output_tokens || null,
-        cache_creation_input_tokens || null,
-        cache_read_input_tokens || null,
-        total_tokens || null,
-        duration_ms || null,
-        duration_minutes || null,
-        working_directory || null,
-        working_directory_path || null,
-        session_provider || null,
-        inference_provider || null,
-        primary_model || null,
-        user_public_key || null,
-        latest_event_timestamp || null,
-        latest_event_type || null,
-        latest_event_data || null
+        title,
+        short_description,
+        thread_state,
+        created_at,
+        updated_at,
+        message_count ?? 0,
+        user_message_count ?? 0,
+        assistant_message_count ?? 0,
+        tool_call_count ?? 0,
+        total_input_tokens ?? 0,
+        total_output_tokens ?? 0,
+        cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens ?? 0,
+        total_tokens ?? 0,
+        duration_ms ?? 0,
+        duration_minutes ?? 0,
+        working_directory,
+        working_directory_path,
+        session_provider,
+        inference_provider,
+        primary_model,
+        user_public_key,
+        latest_event_timestamp,
+        latest_event_type,
+        latest_event_data,
+        edit_count ?? 0,
+        lines_changed ?? 0
       ]
     })
     log('Thread upserted: %s', thread_id)

@@ -60,6 +60,7 @@ import {
   read_and_extract_latest_event
 } from './sync/thread-data-extractor.mjs'
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
+import { backfill_git_activity_from_scratch } from './sync/sync-git-activity.mjs'
 import { resync_full_index } from './sync/resync-full-index.mjs'
 import {
   get_index_metadata,
@@ -450,6 +451,17 @@ class EmbeddedIndexManager {
 
     // Populate all entity types
     await this._populate_entities_from_filesystem()
+
+    // Backfill git activity data
+    if (this.duckdb_ready) {
+      try {
+        log('Backfilling git activity data')
+        await backfill_git_activity_from_scratch({ days: 365 })
+        log('Git activity backfill complete')
+      } catch (error) {
+        log('Error backfilling git activity: %s', error.message)
+      }
+    }
 
     // Set schema version and sync state for all repositories
     if (this.duckdb_ready) {

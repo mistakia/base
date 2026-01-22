@@ -28,8 +28,20 @@ import {
   extract_thread_id_from_path
 } from './sync-constants.mjs'
 import { get_all_changed_files } from './repository-discovery.mjs'
+import { sync_git_activity_incremental } from './sync-git-activity.mjs'
 
 const log = debug('embedded-index:sync:incremental')
+
+/**
+ * Check if an error indicates file not found (ENOENT)
+ */
+function is_file_not_found_error(error) {
+  if (error?.code === 'ENOENT') return true
+  if (typeof error === 'string') {
+    return error.includes('ENOENT') || error.includes('no such file')
+  }
+  return false
+}
 
 /**
  * Sync a single entity file (add/modify/delete).
@@ -43,11 +55,7 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
     const result = await read_entity_from_filesystem({ absolute_path })
 
     if (!result.success) {
-      // File doesn't exist or can't be read - treat as delete
-      if (
-        result.error?.includes('ENOENT') ||
-        result.error?.includes('no such file')
-      ) {
+      if (is_file_not_found_error(result.error)) {
         await index_manager.remove_entity({ base_uri })
         log('Deleted (file not found): %s', base_uri)
         return { action: 'deleted' }
@@ -63,16 +71,10 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
     log('Synced: %s', base_uri)
     return { action: 'synced' }
   } catch (error) {
-    // Handle ENOENT at sync time - file was deleted between detection and sync
-    if (error.code === 'ENOENT') {
-      try {
-        await index_manager.remove_entity({ base_uri })
-        log('Deleted (ENOENT): %s', base_uri)
-        return { action: 'deleted' }
-      } catch (delete_error) {
-        log('Error deleting %s: %s', file_path, delete_error.message)
-        return { action: 'failed', error: delete_error.message }
-      }
+    if (is_file_not_found_error(error)) {
+      await index_manager.remove_entity({ base_uri })
+      log('Deleted (ENOENT): %s', base_uri)
+      return { action: 'deleted' }
     }
     log('Error syncing %s: %s', file_path, error.message)
     return { action: 'failed', error: error.message }
@@ -123,16 +125,10 @@ async function sync_thread_file({ file_path, repo_path, index_manager }) {
     log('Synced thread: %s', thread_id)
     return { action: 'synced' }
   } catch (error) {
-    // Handle ENOENT at sync time - file was deleted between detection and sync
-    if (error.code === 'ENOENT') {
-      try {
-        await index_manager.remove_thread({ thread_id })
-        log('Deleted thread (ENOENT): %s', thread_id)
-        return { action: 'deleted' }
-      } catch (delete_error) {
-        log('Error deleting thread %s: %s', thread_id, delete_error.message)
-        return { action: 'failed', error: delete_error.message }
-      }
+    if (is_file_not_found_error(error)) {
+      await index_manager.remove_thread({ thread_id })
+      log('Deleted thread (ENOENT): %s', thread_id)
+      return { action: 'deleted' }
     }
     log('Error syncing thread %s: %s', file_path, error.message)
     return { action: 'failed', error: error.message }
@@ -201,7 +197,22 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
     )
 
     if (entity_file_paths.length === 0 && thread_file_paths.length === 0) {
-      log('No changes detected')
+      log('No entity/thread changes detected, checking git activity')
+
+      // Still sync git activity even if no entity/thread changes
+      let git_activity_stats = { repos_synced: 0, dates_updated: 0 }
+      try {
+        const git_result = await sync_git_activity_incremental()
+        if (git_result.success) {
+          git_activity_stats = {
+            repos_synced: git_result.repos_synced,
+            dates_updated: git_result.dates_updated
+          }
+        }
+      } catch (error) {
+        log('Git activity sync error: %s', error.message)
+      }
+
       // Update sync state even if no changes
       await set_repo_sync_state({ state: new_sync_state })
       await set_index_metadata({
@@ -216,6 +227,8 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
           entities_deleted: 0,
           threads_synced: 0,
           threads_deleted: 0,
+          git_repos_synced: git_activity_stats.repos_synced,
+          git_dates_updated: git_activity_stats.dates_updated,
           failed: 0
         }
       }
@@ -241,12 +254,28 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       index_manager
     })
 
+    // Sync git activity incrementally
+    let git_activity_stats = { repos_synced: 0, dates_updated: 0 }
+    try {
+      const git_result = await sync_git_activity_incremental()
+      if (git_result.success) {
+        git_activity_stats = {
+          repos_synced: git_result.repos_synced,
+          dates_updated: git_result.dates_updated
+        }
+      }
+    } catch (error) {
+      log('Git activity sync error: %s', error.message)
+    }
+
     // Combine stats
     const stats = {
       entities_synced: entity_stats.synced,
       entities_deleted: entity_stats.deleted,
       threads_synced: thread_stats.synced,
       threads_deleted: thread_stats.deleted,
+      git_repos_synced: git_activity_stats.repos_synced,
+      git_dates_updated: git_activity_stats.dates_updated,
       failed: entity_stats.failed + thread_stats.failed
     }
 

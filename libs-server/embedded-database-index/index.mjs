@@ -69,6 +69,12 @@ export {
   build_duckdb_order_clause
 } from './duckdb/duckdb-table-queries.mjs'
 
+export {
+  query_git_activity_daily,
+  upsert_git_activity_daily,
+  query_thread_activity_aggregated
+} from './duckdb/duckdb-activity-queries.mjs'
+
 // Sync utilities
 export {
   extract_entity_index_data,
@@ -76,7 +82,15 @@ export {
   extract_relations_from_entity
 } from './sync/entity-data-extractor.mjs'
 
-export { extract_thread_index_data } from './sync/thread-data-extractor.mjs'
+export {
+  extract_thread_index_data,
+  extract_edit_metrics_from_timeline
+} from './sync/thread-data-extractor.mjs'
+
+export {
+  sync_git_activity_incremental,
+  backfill_git_activity_from_scratch
+} from './sync/sync-git-activity.mjs'
 
 export {
   start_index_file_watcher,
