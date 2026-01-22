@@ -4,3 +4,5 @@ export {
   append_timeline_entry_jsonl,
   read_timeline_jsonl_or_default
 } from './timeline-jsonl.mjs'
+
+export { sort_timeline_entries } from './sort-timeline-entries.mjs'

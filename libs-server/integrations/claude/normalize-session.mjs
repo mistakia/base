@@ -5,6 +5,7 @@ import {
   create_tool_call_entry,
   create_tool_result_entry
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+import { sort_timeline_entries } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('integrations:claude:normalize-session')
 const log_debug = debug('integrations:claude:normalize-session:debug')
@@ -182,13 +183,8 @@ export const normalize_claude_session = (claude_session) => {
       }
     })
 
-    // Sort by ordering sequence to ensure correct timeline order
-    normalized_messages.sort((a, b) => {
-      const seq_a = a.ordering?.sequence ?? 0
-      const seq_b = b.ordering?.sequence ?? 0
-
-      return seq_a - seq_b
-    })
+    // Sort by timestamp (primary) with ordering.sequence as tie-breaker
+    sort_timeline_entries(normalized_messages)
 
     // Extract session metadata
     const session_metadata = extract_session_metadata(entries, metadata)

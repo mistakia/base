@@ -21,6 +21,7 @@ const VALID_ENTRY_TYPES = [
   'tool_call',
   'tool_result',
   'state_change',
+  'thread_state_change',
   'error',
   'thread_main_request',
   'notification',
@@ -61,12 +62,19 @@ const entry_validators = {
   },
 
   state_change: (entry) => {
-    if (!entry.content.from_state && !entry.previous_state)
+    if (!entry.content?.from_state)
+      throw new Error('state_change entry must have content.from_state')
+    if (!entry.content?.to_state)
+      throw new Error('state_change entry must have content.to_state')
+  },
+
+  thread_state_change: (entry) => {
+    if (!entry.previous_thread_state)
       throw new Error(
-        'state_change entry must have a from_state or previous_state'
+        'thread_state_change entry must have previous_thread_state'
       )
-    if (!entry.content.to_state && !entry.new_state)
-      throw new Error('state_change entry must have a to_state or new_state')
+    if (!entry.new_thread_state)
+      throw new Error('thread_state_change entry must have new_thread_state')
   },
 
   error: (entry) => {

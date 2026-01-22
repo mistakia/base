@@ -4,6 +4,8 @@ import { createInterface } from 'readline'
 import path from 'path'
 import debug from 'debug'
 
+import { sort_timeline_entries } from './sort-timeline-entries.mjs'
+
 const log = debug('threads:timeline:jsonl')
 const log_warn = debug('threads:timeline:jsonl:warn')
 // Enable warn level by default so parse errors are always visible
@@ -58,6 +60,9 @@ export async function read_timeline_jsonl({ timeline_path }) {
       `Timeline ${timeline_path}: ${parse_error_count} malformed lines skipped out of ${line_number} total lines`
     )
   }
+
+  // Sort entries by timestamp (primary) with ordering.sequence as tie-breaker
+  sort_timeline_entries(entries)
 
   log(`Read ${entries.length} entries from ${timeline_path}`)
   return entries

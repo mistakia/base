@@ -24,6 +24,7 @@
           "tool_result",
           "error",
           "state_change",
+          "thread_state_change",
           "thread_main_request",
           "notification",
           "human_request",
@@ -279,21 +280,56 @@
           "properties": { "type": { "const": "state_change" } }
         },
         "then": {
-          "required": ["previous_state", "new_state"],
+          "required": ["content"],
           "properties": {
-            "previous_state": {
-              "type": "string",
-              "enum": ["active", "archived"],
-              "description": "Previous thread state"
+            "content": {
+              "type": "object",
+              "description": "Execution state change details",
+              "required": ["from_state", "to_state"],
+              "properties": {
+                "from_state": {
+                  "type": "string",
+                  "description": "Previous execution state"
+                },
+                "to_state": {
+                  "type": "string",
+                  "description": "New execution state"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Reason for the state change"
+                }
+              },
+              "additionalProperties": false
             },
-            "new_state": {
+            "metadata": {
+              "type": "object",
+              "description": "Additional context for the state change",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "thread_state_change" } }
+        },
+        "then": {
+          "required": ["previous_thread_state", "new_thread_state"],
+          "properties": {
+            "previous_thread_state": {
               "type": "string",
               "enum": ["active", "archived"],
-              "description": "New thread state"
+              "description": "Previous thread lifecycle state"
+            },
+            "new_thread_state": {
+              "type": "string",
+              "enum": ["active", "archived"],
+              "description": "New thread lifecycle state"
             },
             "reason": {
               "type": "string",
-              "description": "Reason for the state change"
+              "description": "Reason for the state change (e.g., completed, user_abandoned)"
             },
             "metadata": {
               "type": "object",

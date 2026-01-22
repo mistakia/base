@@ -124,8 +124,29 @@ export const group_tool_entries = (timeline_events) => {
     })
   })
 
-  // Sort by original index to maintain chronological order
-  return grouped_entries.sort((a, b) => a.index - b.index)
+  // Sort by timestamp (primary) with original index as fallback
+  return grouped_entries.sort((a, b) => {
+    const event_a = a.timeline_event || a.tool_call_event
+    const event_b = b.timeline_event || b.tool_call_event
+
+    const time_a = event_a?.timestamp
+      ? new Date(event_a.timestamp).getTime()
+      : 0
+    const time_b = event_b?.timestamp
+      ? new Date(event_b.timestamp).getTime()
+      : 0
+
+    // Handle invalid dates (NaN) by treating them as timestamp 0
+    const safe_time_a = isNaN(time_a) ? 0 : time_a
+    const safe_time_b = isNaN(time_b) ? 0 : time_b
+
+    if (safe_time_a !== safe_time_b) {
+      return safe_time_a - safe_time_b
+    }
+
+    // Fallback to original index for same-timestamp entries
+    return a.index - b.index
+  })
 }
 
 export default group_tool_entries

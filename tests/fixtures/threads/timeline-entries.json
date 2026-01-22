@@ -60,8 +60,21 @@
       "id": "state_001",
       "timestamp": "2023-05-10T14:31:00Z",
       "type": "state_change",
-      "previous_state": "active",
-      "new_state": "archived",
+      "content": {
+        "from_state": "active",
+        "to_state": "paused",
+        "reason": "Maximum iterations reached"
+      }
+    }
+  },
+  {
+    "name": "thread_state_change",
+    "entry": {
+      "id": "thread_state_001",
+      "timestamp": "2023-05-10T14:31:30Z",
+      "type": "thread_state_change",
+      "previous_thread_state": "active",
+      "new_thread_state": "archived",
       "reason": "completed"
     }
   },

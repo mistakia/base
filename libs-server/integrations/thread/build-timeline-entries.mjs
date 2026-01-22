@@ -8,7 +8,8 @@ import {
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 import {
   read_timeline_jsonl_or_default,
-  write_timeline_jsonl
+  write_timeline_jsonl,
+  sort_timeline_entries
 } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
@@ -66,10 +67,8 @@ export const build_timeline_from_session = async (
       })
     }
 
-    // Sort timeline entries by sequence with null-safe access
-    final_timeline = final_timeline.sort(
-      (a, b) => (a.ordering?.sequence ?? 0) - (b.ordering?.sequence ?? 0)
-    )
+    // Sort timeline entries by timestamp (primary) with ordering.sequence as tie-breaker
+    sort_timeline_entries(final_timeline)
 
     // Validate and report tool interaction quality
     const tool_validation = validate_tool_interactions(final_timeline)
