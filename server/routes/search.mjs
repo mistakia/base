@@ -11,10 +11,30 @@ import {
   unified_search,
   get_search_capabilities
 } from '#libs-server/search/unified-search-engine.mjs'
+import {
+  get_recent_entity_files,
+  get_recent_files_config
+} from '#libs-server/search/recent-files.mjs'
 import { load_search_config } from '#libs-server/search/search-config.mjs'
 
 const router = express.Router()
 const log = debug('api:search')
+
+/**
+ * Parse and validate a positive integer query parameter
+ *
+ * @param {string} value - Query parameter value
+ * @param {string} param_name - Parameter name for error messages
+ * @returns {{ value: number|undefined, error: string|null }}
+ */
+function parse_positive_int_param(value, param_name) {
+  if (!value) return { value: undefined, error: null }
+  const parsed = parseInt(value, 10)
+  if (isNaN(parsed) || parsed < 1) {
+    return { value: undefined, error: `${param_name} must be a positive integer` }
+  }
+  return { value: parsed, error: null }
+}
 
 // Apply permission middleware to all search routes
 router.use(attach_permission_context())
@@ -188,6 +208,77 @@ router.get('/', async (req, res) => {
 
     res.status(500).json({
       error: 'Search failed',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/search/recent
+ *
+ * Get recently modified entity files
+ *
+ * Query parameters:
+ *   - hours: Time window in hours (default from config)
+ *   - limit: Maximum results (default from config)
+ */
+router.get('/recent', async (req, res) => {
+  try {
+    const hours_result = parse_positive_int_param(req.query.hours, 'Hours')
+    if (hours_result.error) {
+      return res.status(400).json({ error: hours_result.error, param: 'hours' })
+    }
+
+    const limit_result = parse_positive_int_param(req.query.limit, 'Limit')
+    if (limit_result.error) {
+      return res.status(400).json({ error: limit_result.error, param: 'limit' })
+    }
+
+    const hours = hours_result.value
+    const limit = limit_result.value
+
+    log(`Recent files request: hours=${hours || 'default'}, limit=${limit || 'default'}`)
+
+    // Get user public key for permission checking
+    const user_public_key = req.user?.user_public_key || null
+
+    // Get recent files from filesystem
+    const recent_files = await get_recent_entity_files({ hours, limit })
+
+    // Convert to results with base URIs for permission checking
+    const results_with_uris = recent_files.map((file) => ({
+      ...file,
+      base_uri: create_base_uri_from_path(file.absolute_path),
+      modified: file.mtime.toISOString()
+    }))
+
+    // Filter by permissions
+    const filtered_results = await filter_results_by_permission(
+      results_with_uris,
+      user_public_key
+    )
+
+    // Get config for response
+    const recent_config = await get_recent_files_config()
+
+    res.json({
+      results: filtered_results.map((file) => ({
+        file_path: file.relative_path,
+        base_uri: file.base_uri,
+        modified: file.modified,
+        entity_type: file.entity_type
+      })),
+      total: filtered_results.length,
+      config: {
+        hours: hours || recent_config.hours,
+        limit: limit || recent_config.limit
+      }
+    })
+  } catch (error) {
+    log('Recent files error:', error.message)
+
+    res.status(500).json({
+      error: 'Failed to get recent files',
       message: error.message
     })
   }

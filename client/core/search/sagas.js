@@ -9,7 +9,12 @@ import {
 import { push } from 'redux-first-history'
 
 import { search_action_types, search_actions } from './actions.js'
-import { get_all_results_flat, get_selected_index } from './selectors.js'
+import {
+  get_all_results_flat,
+  get_selected_index,
+  get_recent_files_loaded,
+  get_recent_files_loading
+} from './selectors.js'
 import { api, api_request } from '@core/api/service.js'
 import { get_app } from '@core/app/selectors.js'
 
@@ -63,6 +68,30 @@ function* handle_query_change({ payload }) {
   }
 }
 
+// Fetch recent files when palette opens
+function* handle_fetch_recent_files() {
+  try {
+    const app = yield select(get_app)
+    const token = app.get('user_token')
+    const { request } = api_request(api.get_recent_files, {}, token)
+    const data = yield call(request)
+
+    yield put(search_actions.fetch_recent_files_success(data.results || []))
+  } catch (error) {
+    yield put(search_actions.fetch_recent_files_failure(error.message))
+  }
+}
+
+// Handle palette open - fetch recent files if not loaded or loading
+function* handle_palette_open() {
+  const recent_files_loaded = yield select(get_recent_files_loaded)
+  const recent_files_loading = yield select(get_recent_files_loading)
+
+  if (!recent_files_loaded && !recent_files_loading) {
+    yield put(search_actions.fetch_recent_files())
+  }
+}
+
 // Navigate to selected result
 export function* navigate_to_result() {
   const results = yield select(get_all_results_flat)
@@ -95,11 +124,24 @@ export function* watch_search_request() {
   yield takeLatest(search_action_types.SEARCH_REQUEST, handle_search_query)
 }
 
+export function* watch_palette_open() {
+  yield takeLatest(search_action_types.OPEN_COMMAND_PALETTE, handle_palette_open)
+}
+
+export function* watch_fetch_recent_files() {
+  yield takeLatest(
+    search_action_types.FETCH_RECENT_FILES_REQUEST,
+    handle_fetch_recent_files
+  )
+}
+
 // ============================================================================
 // Root Saga Export
 // ============================================================================
 
 export const search_sagas = [
   fork(watch_search_query_change),
-  fork(watch_search_request)
+  fork(watch_search_request),
+  fork(watch_palette_open),
+  fork(watch_fetch_recent_files)
 ]

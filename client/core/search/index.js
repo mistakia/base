@@ -9,6 +9,9 @@ export {
   get_search_error,
   get_selected_index,
   get_search_total,
-  get_all_results_flat
+  get_all_results_flat,
+  get_recent_files,
+  get_recent_files_loading,
+  get_recent_files_loaded
 } from './selectors.js'
 export { search_sagas, navigate_to_result } from './sagas.js'

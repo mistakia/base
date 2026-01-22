@@ -260,6 +260,109 @@ describe('Search API', function () {
     })
   })
 
+  describe('GET /api/search/recent', () => {
+    it('should return recent files', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent'),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body).to.have.property('results')
+      expect(res.body).to.have.property('total')
+      expect(res.body).to.have.property('config')
+      expect(res.body.results).to.be.an('array')
+    })
+
+    it('should include config in response', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent'),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.config).to.have.property('hours')
+      expect(res.body.config).to.have.property('limit')
+    })
+
+    it('should respect hours parameter', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent').query({ hours: 24 }),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.config.hours).to.equal(24)
+    })
+
+    it('should respect limit parameter', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent').query({ limit: 5 }),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.config.limit).to.equal(5)
+      expect(res.body.results).to.have.lengthOf.at.most(5)
+    })
+
+    it('should return 400 for invalid hours parameter', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent').query({ hours: 'invalid' }),
+        test_user
+      )
+
+      expect(res).to.have.status(400)
+      expect(res.body.error).to.include('Hours must be a positive integer')
+    })
+
+    it('should return 400 for invalid limit parameter', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent').query({ limit: -1 }),
+        test_user
+      )
+
+      expect(res).to.have.status(400)
+      expect(res.body.error).to.include('Limit must be a positive integer')
+    })
+
+    it('should include file metadata in results', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent'),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+
+      // If there are results, check their structure
+      if (res.body.results.length > 0) {
+        const first_result = res.body.results[0]
+        expect(first_result).to.have.property('file_path')
+        expect(first_result).to.have.property('base_uri')
+        expect(first_result).to.have.property('modified')
+        expect(first_result).to.have.property('entity_type')
+      }
+    })
+
+    it('should return results sorted by modification time', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/search/recent'),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+
+      // If there are multiple results, verify they are sorted
+      if (res.body.results.length > 1) {
+        for (let i = 0; i < res.body.results.length - 1; i++) {
+          const current_time = new Date(res.body.results[i].modified).getTime()
+          const next_time = new Date(res.body.results[i + 1].modified).getTime()
+          expect(current_time).to.be.at.least(next_time)
+        }
+      }
+    })
+  })
+
   describe('GET /api/search/capabilities', () => {
     it('should return search capabilities', async () => {
       const res = await authenticate_request(

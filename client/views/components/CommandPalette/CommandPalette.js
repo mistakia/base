@@ -12,7 +12,9 @@ import {
   get_is_search_loading,
   get_all_results_flat,
   get_selected_index,
-  get_search_total
+  get_search_total,
+  get_recent_files,
+  get_recent_files_loading
 } from '@core/search'
 
 import './CommandPalette.styl'
@@ -27,10 +29,14 @@ const get_type_label = (item) => {
   if (item.category === 'directory') {
     return 'dir'
   }
-  if (item.category === 'entity' && item.file_path) {
+  if (item.category === 'recent' || item.category === 'entity') {
     // Extract entity type from path (e.g., "task/foo.md" -> "task")
-    const first_segment = item.file_path.split('/')[0]
-    return first_segment || 'entity'
+    const file_path = item.file_path || item.relative_path
+    if (file_path) {
+      const first_segment = file_path.split('/')[0]
+      return first_segment || item.entity_type || 'entity'
+    }
+    return item.entity_type || 'entity'
   }
   if (item.category === 'file') {
     // Get file extension
@@ -45,7 +51,7 @@ const ResultItem = ({ item, is_selected, onClick }) => {
     if (item.category === 'thread') {
       return item.title || item.working_directory || item.thread_id?.slice(0, 8)
     }
-    return item.file_path
+return item.file_path || item.relative_path
   }
 
   return (
@@ -64,9 +70,11 @@ ResultItem.propTypes = {
   item: PropTypes.shape({
     category: PropTypes.string,
     file_path: PropTypes.string,
+    relative_path: PropTypes.string,
     thread_id: PropTypes.string,
     title: PropTypes.string,
-    working_directory: PropTypes.string
+    working_directory: PropTypes.string,
+    entity_type: PropTypes.string
   }).isRequired,
   is_selected: PropTypes.bool,
   onClick: PropTypes.func
@@ -83,6 +91,15 @@ const CommandPalette = () => {
   const results = useSelector(get_all_results_flat)
   const selected_index = useSelector(get_selected_index)
   const total = useSelector(get_search_total)
+  const recent_files = useSelector(get_recent_files)
+  const recent_files_loading = useSelector(get_recent_files_loading)
+
+  // Determine what to display: recent files (when no query) or search results
+  const show_recent_files = !query || query.length < 2
+  const display_items = show_recent_files
+    ? recent_files.map((item) => ({ ...item, category: 'recent' }))
+    : results
+  const display_loading = show_recent_files ? recent_files_loading : is_loading
 
   const handle_close = useCallback(() => {
     dispatch(search_actions.close())
@@ -106,13 +123,16 @@ const CommandPalette = () => {
       let url
       if (item.category === 'thread') {
         url = `/thread/${item.thread_id}`
-      } else if (item.file_path) {
-        // Encode each path segment separately to preserve slashes
-        const encoded_path = item.file_path
-          .split('/')
-          .map((segment) => encodeURIComponent(segment))
-          .join('/')
-        url = `/${encoded_path}`
+      } else {
+        const file_path = item.file_path || item.relative_path
+        if (file_path) {
+          // Encode each path segment separately to preserve slashes
+          const encoded_path = file_path
+            .split('/')
+            .map((segment) => encodeURIComponent(segment))
+            .join('/')
+          url = `/${encoded_path}`
+        }
       }
 
       if (url) {
@@ -128,29 +148,29 @@ const CommandPalette = () => {
 
   const handle_key_down = useCallback(
     (event) => {
-      const results_count = results.size
+      const items_count = display_items.size
 
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
-          if (results_count > 0) {
-            const next_index = (selected_index + 1) % results_count
+          if (items_count > 0) {
+            const next_index = (selected_index + 1) % items_count
             dispatch(search_actions.set_selected_index(next_index))
           }
           break
 
         case 'ArrowUp':
           event.preventDefault()
-          if (results_count > 0) {
+          if (items_count > 0) {
             const prev_index =
-              selected_index === 0 ? results_count - 1 : selected_index - 1
+              selected_index === 0 ? items_count - 1 : selected_index - 1
             dispatch(search_actions.set_selected_index(prev_index))
           }
           break
 
         case 'Enter': {
           event.preventDefault()
-          const selected_item = results.get(selected_index)
+          const selected_item = display_items.get(selected_index)
           if (selected_item) {
             // Command/Ctrl+Enter opens in new tab
             const new_tab = event.metaKey || event.ctrlKey
@@ -165,15 +185,15 @@ const CommandPalette = () => {
           break
       }
     },
-    [dispatch, results, selected_index, navigate_to_item, handle_close]
+    [dispatch, display_items, selected_index, navigate_to_item, handle_close]
   )
 
-  // Reset selected index to 0 when results change
+  // Reset selected index to 0 when display items change
   useEffect(() => {
-    if (results.size > 0 && selected_index >= results.size) {
+    if (display_items.size > 0 && selected_index >= display_items.size) {
       dispatch(search_actions.set_selected_index(0))
     }
-  }, [results, selected_index, dispatch])
+  }, [display_items, selected_index, dispatch])
 
   // Focus input when dialog opens
   useEffect(() => {
@@ -217,18 +237,34 @@ const CommandPalette = () => {
           spellCheck='false'
           autoFocus
         />
-        {is_loading && (
+        {display_loading && (
           <CircularProgress size={14} className='command-palette__loading' />
         )}
-        {total > 0 && (
+        {!show_recent_files && total > 0 && (
           <span className='command-palette__result-count'>{total}</span>
         )}
       </Box>
 
-      {results.size > 0 && (
+      {show_recent_files && display_items.size > 0 && (
+        <Box className='command-palette__results'>
+          <div className='command-palette__section-header'>Recent Files</div>
+          <List disablePadding>
+            {display_items.map((item, index) => (
+              <ResultItem
+                key={`recent-${item.relative_path || item.file_path}-${index}`}
+                item={item}
+                is_selected={index === selected_index}
+                onClick={() => navigate_to_item(item)}
+              />
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {!show_recent_files && display_items.size > 0 && (
         <Box className='command-palette__results'>
           <List disablePadding>
-            {results.map((item, index) => (
+            {display_items.map((item, index) => (
               <ResultItem
                 key={`${item.category}-${item.file_path || item.thread_id}-${index}`}
                 item={item}

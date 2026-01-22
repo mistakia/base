@@ -38,6 +38,21 @@ export const get_search_total = createSelector(
   (search_state) => search_state?.get('total') || 0
 )
 
+export const get_recent_files = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('recent_files') || new List()
+)
+
+export const get_recent_files_loading = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('recent_files_loading') || false
+)
+
+export const get_recent_files_loaded = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('recent_files_loaded') || false
+)
+
 // Get all results flattened into a single list for keyboard navigation
 // Order: entities, threads, directories, files
 export const get_all_results_flat = createSelector(

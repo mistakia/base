@@ -47,6 +47,12 @@ const DEFAULT_CONFIG = {
   },
   paths: {
     exclude_directories: ['node_modules', '.git', '.system', 'import-history']
+  },
+  recent_files: {
+    enabled: true,
+    hours: 48,
+    limit: 50,
+    directories: ['task', 'workflow', 'guideline', 'text', 'tag']
   }
 }
 
@@ -134,6 +140,8 @@ function deep_merge(target, source) {
 
   return result
 }
+
+export { DEFAULT_CONFIG }
 
 export default {
   load_search_config,
