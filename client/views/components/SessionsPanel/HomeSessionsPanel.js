@@ -50,6 +50,7 @@ const normalize_session = (session, get_thread) => {
     duration_minutes: session.duration_minutes,
     total_tokens: session.total_tokens,
     latest_timeline_event: session.latest_timeline_event,
+    user_public_key: thread?.user_public_key || null,
     show_actions
   }
 }
@@ -86,6 +87,7 @@ const normalize_thread = (thread) => {
       thread.total_tokens ||
       thread.external_session?.provider_metadata?.total_tokens,
     latest_timeline_event: thread.latest_timeline_event || null,
+    user_public_key: thread.user_public_key || null,
     show_actions
   }
 }

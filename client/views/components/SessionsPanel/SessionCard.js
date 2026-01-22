@@ -60,7 +60,8 @@ const SessionCard = ({ item }) => {
     if (item.id) {
       dispatch(
         thread_prompt_actions.open({
-          thread_id: item.id
+          thread_id: item.id,
+          thread_user_public_key: item.user_public_key
         })
       )
     }
@@ -200,6 +201,7 @@ SessionCard.propTypes = {
     duration_minutes: PropTypes.number,
     total_tokens: PropTypes.number,
     latest_timeline_event: PropTypes.object,
+    user_public_key: PropTypes.string,
     show_actions: PropTypes.bool
   }).isRequired
 }

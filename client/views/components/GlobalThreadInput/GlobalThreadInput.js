@@ -12,10 +12,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import Button from '@components/primitives/Button'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
-import {
-  get_can_create_threads,
-  get_can_resume_thread
-} from '@core/app/selectors'
+import { get_can_create_threads } from '@core/app/selectors'
 import { get_thread_by_id } from '@core/threads/selectors.js'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
@@ -51,8 +48,16 @@ export default function GlobalThreadInput() {
   const thread_id = useSelector((state) =>
     state.getIn(['thread_prompt', 'thread_id'], null)
   )
+  const thread_user_public_key = useSelector((state) =>
+    state.getIn(['thread_prompt', 'thread_user_public_key'], null)
+  )
   const captured_path = useSelector((state) =>
     state.getIn(['thread_prompt', 'captured_path'], null)
+  )
+
+  // Current user's public key for ownership check
+  const current_user_public_key = useSelector((state) =>
+    state.getIn(['app', 'user_public_key'], null)
   )
 
   // Draft state from Redux - persists during navigation
@@ -162,9 +167,19 @@ export default function GlobalThreadInput() {
     return get_thread_by_id(state, thread_id)
   })
 
-  const can_resume_thread = useSelector((state) =>
-    get_can_resume_thread(state, selected_thread)
-  )
+  // Check resume permission: prefer captured ownership, fallback to loaded thread data
+  const can_resume_thread = (() => {
+    if (!thread_id || !current_user_public_key) return false
+    // Use captured ownership if available (stable during navigation)
+    if (thread_user_public_key) {
+      return thread_user_public_key === current_user_public_key
+    }
+    // Fallback to loaded thread data (for cases where data wasn't available at open time)
+    if (selected_thread) {
+      return selected_thread.user_public_key === current_user_public_key
+    }
+    return false
+  })()
 
   // Event handlers
   const handle_close = () => {
@@ -248,22 +263,17 @@ export default function GlobalThreadInput() {
   // Show directory picker when creating new thread or not in thread context
   const show_directory_picker = !is_thread_context || !should_resume
 
-  const is_submit_disabled = is_loading || !message.trim()
+  // Disable submit if loading, no message, or user lacks permission
+  const is_submit_disabled =
+    is_loading ||
+    !message.trim() ||
+    (is_resume_mode ? !can_resume_thread : !can_create_threads)
 
   // Show thread context indicator when resuming a thread
   const show_thread_context = is_resume_mode && selected_thread
   const thread_title = selected_thread?.title
 
-  // Determine if the input should be shown based on permissions
-  const should_show_input =
-    (is_resume_mode && can_resume_thread) ||
-    (!is_resume_mode && can_create_threads)
-
-  // Don't render if user lacks permission
-  if (!should_show_input) {
-    return null
-  }
-
+  // If not open, don't render
   if (!is_open) {
     return null
   }
@@ -284,6 +294,13 @@ export default function GlobalThreadInput() {
                 className='thread-context-title'
                 title={thread_title}>
                 {thread_title || 'Untitled thread'}
+              </Typography>
+            </Box>
+          )}
+          {is_resume_mode && !can_resume_thread && (
+            <Box className='thread-context-indicator permission-warning'>
+              <Typography variant='caption' className='thread-context-label'>
+                Cannot resume this thread. Switch to New to create a new thread.
               </Typography>
             </Box>
           )}

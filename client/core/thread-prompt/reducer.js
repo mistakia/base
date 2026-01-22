@@ -8,6 +8,7 @@ const ThreadPromptState = new Record({
   is_open: false,
   // Thread context captured at open time - persists during navigation
   thread_id: null,
+  thread_user_public_key: null,
   captured_path: null,
   // Draft state - persists during navigation while overlay is open
   draft_message: '',
@@ -33,6 +34,7 @@ export function thread_prompt_reducer(
       return state.merge({
         is_open: true,
         thread_id: payload.thread_id,
+        thread_user_public_key: payload.thread_user_public_key || null,
         captured_path: payload.current_path,
         // Initialize draft state
         draft_message: initial_message,

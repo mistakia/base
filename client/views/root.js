@@ -126,11 +126,15 @@ const ThreadPromptContainer = () => {
   )
   const directory_state = useSelector((state) => state.get('directory'))
   const router = useSelector((state) => state.get('router'))
+  const selected_thread_data = useSelector((state) =>
+    state.getIn(['threads', 'selected_thread_data'])
+  )
 
   // Use refs for values accessed in keydown handler to avoid stale closures
   const is_open_ref = useRef(is_open)
   const current_path_ref = useRef(router?.location?.pathname || '/')
   const path_info_ref = useRef(directory_state?.get('path_info'))
+  const selected_thread_data_ref = useRef(selected_thread_data)
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -146,6 +150,10 @@ const ThreadPromptContainer = () => {
   }, [directory_state])
 
   useEffect(() => {
+    selected_thread_data_ref.current = selected_thread_data
+  }, [selected_thread_data])
+
+  useEffect(() => {
     const handle_keydown = (event) => {
       // Cmd/Ctrl+K to toggle thread prompt overlay
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
@@ -159,9 +167,17 @@ const ThreadPromptContainer = () => {
           const thread_id = parse_thread_from_path(current_path)
           const is_file_page = !thread_id && path_info?.type === 'file'
 
+          // Capture thread ownership for resume permission check
+          const thread_data = selected_thread_data_ref.current
+          const thread_user_public_key =
+            thread_id && thread_data?.get('thread_id') === thread_id
+              ? thread_data.get('user_public_key')
+              : null
+
           dispatch(
             thread_prompt_actions.open({
               thread_id,
+              thread_user_public_key,
               file_path: is_file_page
                 ? current_path.startsWith('/')
                   ? current_path.slice(1)
