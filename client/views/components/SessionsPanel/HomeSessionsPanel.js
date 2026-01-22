@@ -27,9 +27,9 @@ const normalize_session = (session, get_thread) => {
   const is_redacted = Boolean(session.is_redacted)
   const can_write = session.can_write !== false
 
-  // Check if associated thread is archived
+  // Check if associated thread is archived (or not found in store)
   const thread = has_thread ? get_thread(session.thread_id) : null
-  const is_thread_archived = thread?.thread_state === 'archived'
+  const is_thread_archived = !thread || thread.thread_state === 'archived'
 
   // Show actions only for idle sessions with non-archived threads and write permission
   const show_actions =
