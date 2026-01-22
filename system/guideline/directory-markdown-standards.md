@@ -32,12 +32,12 @@ Standards for directory-level markdown that communicates purpose, boundaries, an
 
 ## File Types
 
-| File | Audience | Purpose |
-|------|----------|---------|
+| File        | Audience      | Purpose                                          |
+| ----------- | ------------- | ------------------------------------------------ |
 | `CLAUDE.md` | AI assistants | Tool permissions, commands, AI-specific guidance |
-| `README.md` | General | Project overview, setup, usage |
-| `INDEX.md` | Navigation | Directory organization and structure |
-| `ABOUT.md` | Understanding | Domain concepts, background, rationale |
+| `README.md` | General       | Project overview, setup, usage                   |
+| `INDEX.md`  | Navigation    | Directory organization and structure             |
+| `ABOUT.md`  | Understanding | Domain concepts, background, rationale           |
 
 Create documentation when a directory contains a cohesive set of content that benefits from shared context.
 
@@ -129,6 +129,7 @@ Include context when it meets ANY of these criteria:
 **Guidelines**: Follows [[user:guideline/building-standards.md]] for documentation format
 
 **Related directories**:
+
 - `task/land-search/` - Property acquisition (before site selection)
 - `task/parcels-system/` - GIS and parcel data management
 ```
@@ -161,6 +162,7 @@ This directory focuses on passive house design and certification. Content belong
 **Belongs here**: Certification planning, envelope design, mechanical system selection for PH compliance
 
 **Belongs elsewhere**:
+
 - General property research → `task/land-search/`
 - Parcel data and GIS → `task/parcels-system/`
 

@@ -188,9 +188,9 @@ function process_task_for_table(task_entity) {
  */
 async function process_tasks_with_permissions(tasks, user_public_key) {
   // Collect base_uris for batch permission checking
-  const resource_paths = tasks.map(
-    (task) => task.entity_properties?.base_uri
-  ).filter(Boolean)
+  const resource_paths = tasks
+    .map((task) => task.entity_properties?.base_uri)
+    .filter(Boolean)
 
   // Batch check permissions for all tasks at once
   const permissions_by_path = await check_permissions_batch({

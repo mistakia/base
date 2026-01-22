@@ -3,7 +3,6 @@
  */
 
 import debug from 'debug'
-import fs from 'fs/promises'
 import { get_notion_page_with_blocks } from './notion-api/index.mjs'
 import { normalize_notion_page } from './normalize-notion-page.mjs'
 import { normalize_notion_database_item } from './normalize-notion-database-item.mjs'
@@ -17,6 +16,7 @@ import { update_entity_from_external_item } from '#libs-server/sync/index.mjs'
 import { create_entity_from_external_item } from '#libs-server/entity/index.mjs'
 import { generate_entity_paths_with_database_disambiguation } from './generate-entity-paths-with-disambiguation.mjs'
 import { find_entity_for_notion_page } from './entity/find-entity-for-notion-page.mjs'
+import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('integrations:notion:sync-page-to-entity')
 
@@ -100,34 +100,10 @@ export async function sync_notion_page_to_entity(
       // Update existing entity using shared function
       log(`Updating existing entity: ${existing_entity.entity_id}`)
 
-      // Generate new paths for the updated entity
-      const { base_uri, absolute_path } =
-        await generate_entity_paths_with_database_disambiguation({
-          entity_properties: {
-            ...entity_properties,
-            entity_id: existing_entity.entity_id
-          },
-          external_id,
-          database_id
-        })
-
-      // Check if the file path has changed (e.g., due to title change)
-      const old_path = existing_entity.absolute_path
-      const path_changed = old_path && old_path !== absolute_path
-
-      if (path_changed) {
-        log(`Entity path changed from ${old_path} to ${absolute_path}`)
-
-        // If path changed, delete the old file first
-        try {
-          await fs.unlink(old_path)
-          log(`Deleted old entity file: ${old_path}`)
-        } catch (error) {
-          log(
-            `Warning: Could not delete old entity file ${old_path}: ${error.message}`
-          )
-        }
-      }
+      // Preserve existing entity location - derive base_uri from existing path
+      const existing_entity_base_uri = create_base_uri_from_path(
+        existing_entity.absolute_path
+      )
 
       // Use the shared update function with clean normalized entity data
       const update_result = await update_entity_from_external_item({
@@ -137,7 +113,7 @@ export async function sync_notion_page_to_entity(
         entity_type: entity_properties.type,
         external_system: 'notion',
         external_id,
-        absolute_path,
+        absolute_path: existing_entity.absolute_path,
         external_update_time: notion_page.last_edited_time,
         import_history_base_directory: options.import_history_base_directory,
         force: options.force || false
@@ -146,10 +122,8 @@ export async function sync_notion_page_to_entity(
       sync_result = {
         ...update_result,
         entity_type: entity_properties.type,
-        file_path: absolute_path,
-        base_uri,
-        old_path: path_changed ? old_path : null,
-        path_changed
+        file_path: existing_entity.absolute_path,
+        base_uri: existing_entity_base_uri
       }
     } else {
       // Create new entity using shared function

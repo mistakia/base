@@ -250,7 +250,8 @@ export async function find_entity_for_notion_page(
     // This handles entities that have been moved to subdirectories
     log(`Strategy 2 - Ripgrep search for external_id: ${external_id}`)
 
-    const ripgrep_entity = await search_for_external_id_with_ripgrep(external_id)
+    const ripgrep_entity =
+      await search_for_external_id_with_ripgrep(external_id)
     if (ripgrep_entity) {
       log('Found entity via ripgrep search (Strategy 2 success)')
       // Cache the successful lookup for future reference
@@ -263,7 +264,9 @@ export async function find_entity_for_notion_page(
       return ripgrep_entity
     }
 
-    log(`No entity found for external_id: ${external_id} (all strategies exhausted)`)
+    log(
+      `No entity found for external_id: ${external_id} (all strategies exhausted)`
+    )
     return null
   } catch (error) {
     log(`Error finding entity for Notion page: ${error.message}`)

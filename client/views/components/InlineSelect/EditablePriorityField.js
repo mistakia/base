@@ -16,7 +16,12 @@ const PRIORITY_OPTIONS = [
   TASK_PRIORITY.NONE
 ]
 
-const EditablePriorityField = ({ value, base_uri, context, editable = true }) => {
+const EditablePriorityField = ({
+  value,
+  base_uri,
+  context,
+  editable = true
+}) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
   const [local_priority, set_local_priority] = useState(
