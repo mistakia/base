@@ -7,7 +7,10 @@ import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { sanitize_for_filename } from '#libs-server/utils/sanitize-filename.mjs'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/index.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
-import { get_database_name } from './notion-entity-mapper.mjs'
+import {
+  get_database_name,
+  get_target_directory_for_database
+} from './notion-entity-mapper.mjs'
 
 const log = debug('integrations:notion:generate-paths')
 
@@ -42,8 +45,14 @@ export async function generate_entity_paths_with_database_disambiguation({
       }
     )
 
-    // Use entity type for directory - convert underscores to hyphens for consistency
-    const directory = entity_properties.type.replace(/_/g, '-')
+    // Get target directory from config, or derive from entity type
+    const target_directory = database_id
+      ? get_target_directory_for_database(database_id)
+      : null
+    const directory =
+      target_directory ||
+      entity_properties.type?.replace(/_/g, '-') ||
+      'unknown'
 
     let safe_name = base_safe_name
 

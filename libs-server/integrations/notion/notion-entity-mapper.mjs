@@ -290,3 +290,13 @@ export function get_database_name(database_id) {
   const mapping = get_database_mapping_config(database_id)
   return mapping?.name || null
 }
+
+/**
+ * Get target directory for a database ID
+ * @param {string} database_id - The Notion database ID
+ * @returns {string|null} Target directory path relative to user base root, or null if not configured
+ */
+export function get_target_directory_for_database(database_id) {
+  const mapping = get_database_mapping_config(database_id)
+  return mapping?.target_directory || null
+}
