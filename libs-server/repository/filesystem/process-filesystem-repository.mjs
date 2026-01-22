@@ -118,48 +118,22 @@ export async function process_repositories_from_filesystem({
     `Processing repositories from filesystem with root directory: ${system_base_directory}, user directory: ${user_base_directory}`
   )
 
-  // Setup repositories
-  const repositories = [
-    {
-      base_path: system_base_directory
-    }
-  ]
-
-  // Add user repository if it exists and is different from root
-  if (user_base_directory && user_base_directory !== system_base_directory) {
-    repositories.push({
-      base_path: user_base_directory
-    })
-  }
-
-  log(
-    'Processing repositories:',
-    repositories.map((r) => r.base_path)
-  )
-
   // Load schemas from filesystem
   log('Loading schema definitions from filesystem...')
 
   // Load schemas using registry system
   const schemas = await load_schema_definitions_from_filesystem()
 
-  // Scan for entity files across all repositories
+  // Scan for entity files (list_entity_files_from_filesystem handles both directories internally)
   log('Scanning filesystem repositories...')
-  let all_files = []
+  const entity_files = await list_entity_files_from_filesystem({
+    include_entity_types,
+    exclude_entity_types,
+    include_path_patterns,
+    exclude_path_patterns
+  })
 
-  for (const repository of repositories) {
-    const repo_files = await list_entity_files_from_filesystem({
-      base_directory: repository.base_path,
-      include_entity_types,
-      exclude_entity_types,
-      include_path_patterns,
-      exclude_path_patterns
-    })
-
-    log(`Found ${repo_files.length} entity files in ${repository.base_path}`)
-    all_files = all_files.concat(repo_files.map((file) => file.file_info))
-  }
-
+  const all_files = entity_files.map((file) => file.file_info)
   log(`Found ${all_files.length} total entity files in filesystem repositories`)
 
   // Process each file
@@ -186,6 +160,9 @@ export async function process_repositories_from_filesystem({
     total: all_files.length,
     schemas,
     files: all_files,
-    repositories
+    directories: {
+      system_base_directory,
+      user_base_directory
+    }
   }
 }
