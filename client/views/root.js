@@ -157,7 +157,7 @@ const ThreadPromptContainer = () => {
           const current_path = current_path_ref.current
           const path_info = path_info_ref.current
           const thread_id = parse_thread_from_path(current_path)
-          const is_file_page = !thread_id && path_info?.get('type') === 'file'
+          const is_file_page = !thread_id && path_info?.type === 'file'
 
           dispatch(
             thread_prompt_actions.open({
