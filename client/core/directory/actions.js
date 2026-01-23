@@ -14,7 +14,11 @@ export const directory_action_types = {
   LOAD_DIRECTORY: 'LOAD_DIRECTORY',
   LOAD_FILE: 'LOAD_FILE',
   LOAD_PATH_INFO: 'LOAD_PATH_INFO',
-  LOAD_DIRECTORY_MARKDOWN: 'LOAD_DIRECTORY_MARKDOWN'
+  LOAD_DIRECTORY_MARKDOWN: 'LOAD_DIRECTORY_MARKDOWN',
+
+  // File subscription events (from WebSocket)
+  FILE_CHANGED: 'FILE_CHANGED',
+  FILE_DELETED: 'FILE_DELETED'
 }
 
 export const get_directories_request_actions =
@@ -44,6 +48,17 @@ export const directory_actions = {
 
   load_directory_markdown: (path) => ({
     type: directory_action_types.LOAD_DIRECTORY_MARKDOWN,
+    payload: { path }
+  }),
+
+  // File subscription event actions (dispatched by WebSocket)
+  file_changed: (path) => ({
+    type: directory_action_types.FILE_CHANGED,
+    payload: { path }
+  }),
+
+  file_deleted: (path) => ({
+    type: directory_action_types.FILE_DELETED,
     payload: { path }
   })
 }

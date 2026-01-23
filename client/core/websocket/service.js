@@ -4,6 +4,7 @@ import qs from 'qs'
 
 import { WEBSOCKET_URL } from '@core/constants'
 import StoreRegistry from '@core/store-registry'
+import { normalize_file_path } from '#libs-shared/path-utils.mjs'
 
 import { websocket_actions } from './actions'
 
@@ -11,9 +12,22 @@ export let ws = null
 let messages = []
 let interval = null
 
+// Track active file subscriptions for reconnection
+const active_file_subscriptions = new Set()
+
 const keepalive_message = JSON.stringify({ type: 'KEEPALIVE' })
 const keepalive = () => {
   if (ws && ws.readyState === 1) ws.send(keepalive_message)
+}
+
+/**
+ * Re-subscribe to all active file subscriptions after reconnection
+ */
+const resubscribe_to_files = () => {
+  for (const path of active_file_subscriptions) {
+    const message = { type: 'SUBSCRIBE_FILE', payload: { path } }
+    send(message)
+  }
 }
 
 export const open_websocket = (params) => {
@@ -28,6 +42,9 @@ export const open_websocket = (params) => {
     messages.forEach((msg) => ws.send(JSON.stringify(msg)))
     messages = []
 
+    // Re-subscribe to all active file subscriptions
+    resubscribe_to_files()
+
     interval = setInterval(keepalive, 30000)
 
     ws.onclose = () => {
@@ -39,10 +56,14 @@ export const open_websocket = (params) => {
   }
 
   ws.onmessage = (event) => {
-    const store = StoreRegistry.getStore()
-    const message = JSON.parse(event.data)
-    console.log(`websocket message: ${message.type}`)
-    store.dispatch(message)
+    try {
+      const store = StoreRegistry.getStore()
+      const message = JSON.parse(event.data)
+      console.log(`websocket message: ${message.type}`)
+      store.dispatch(message)
+    } catch (error) {
+      console.error('WebSocket message error:', error.message)
+    }
   }
 }
 
@@ -57,3 +78,39 @@ export const send = (message) => {
 }
 
 export const websocket_is_open = () => ws && ws.readyState === 1
+
+/**
+ * Subscribe to file change notifications for a specific path
+ * Only sends subscription message if WebSocket is connected (resubscribe_to_files handles reconnection)
+ * @param {string} path - The file path to subscribe to (relative to user base)
+ */
+export const subscribe_to_file = (path) => {
+  if (!path) return
+
+  const normalized_path = normalize_file_path(path)
+  const already_subscribed = active_file_subscriptions.has(normalized_path)
+  active_file_subscriptions.add(normalized_path)
+
+  // Only send if connected and not already subscribed (avoids duplicates)
+  if (websocket_is_open() && !already_subscribed) {
+    ws.send(JSON.stringify({ type: 'SUBSCRIBE_FILE', payload: { path: normalized_path } }))
+  }
+}
+
+/**
+ * Unsubscribe from file change notifications for a specific path
+ * Only sends unsubscribe message if WebSocket is connected
+ * @param {string} path - The file path to unsubscribe from
+ */
+export const unsubscribe_from_file = (path) => {
+  if (!path) return
+
+  const normalized_path = normalize_file_path(path)
+  const was_subscribed = active_file_subscriptions.has(normalized_path)
+  active_file_subscriptions.delete(normalized_path)
+
+  // Only send if connected and was actually subscribed
+  if (websocket_is_open() && was_subscribed) {
+    ws.send(JSON.stringify({ type: 'UNSUBSCRIBE_FILE', payload: { path: normalized_path } }))
+  }
+}

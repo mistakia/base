@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
@@ -9,6 +9,7 @@ import {
   get_is_loading_file_at_ref,
   get_git_error
 } from '@core/git/selectors'
+import { subscribe_to_file, unsubscribe_from_file } from '@core/websocket'
 import {
   get_file_type_from_path,
   detect_shell_script_from_content
@@ -50,6 +51,18 @@ const FileView = ({ path }) => {
     dispatch(directory_actions.load_file(path))
     // Reset diff view when path changes
     set_is_diff_view_active(false)
+  }, [path, dispatch])
+
+  // Subscribe to file change notifications
+  useEffect(() => {
+    if (!path) return
+
+    subscribe_to_file(path)
+
+    // Cleanup: unsubscribe when component unmounts or path changes
+    return () => {
+      unsubscribe_from_file(path)
+    }
   }, [path])
 
   const handle_diff_toggle = useCallback(() => {
@@ -66,31 +79,37 @@ const FileView = ({ path }) => {
     set_is_diff_view_active(!is_diff_view_active)
   }, [is_diff_view_active, git_context, dispatch])
 
-  const get_file_type = () => {
-    if (!path) return 'unknown'
+  // Memoize file type and language detection to avoid duplicate calls
+  const { file_type, detected_language } = useMemo(() => {
+    if (!path) return { file_type: 'unknown', detected_language: null }
 
     if (file_data?.frontmatter && file_data?.frontmatter?.type) {
-      return 'entity'
+      return { file_type: 'entity', detected_language: null }
     }
 
-    const file_type = get_file_type_from_path(path)
+    const type_from_path = get_file_type_from_path(path)
 
     // If file type is unknown (no extension), check content for shell scripts
-    if (file_type === 'unknown' && file_data?.content) {
-      const detected_language = detect_shell_script_from_content(
-        file_data.content
-      )
-      if (detected_language) {
-        return 'code'
+    if (type_from_path === 'unknown' && file_data?.content) {
+      const language = detect_shell_script_from_content(file_data.content)
+      if (language) {
+        return { file_type: 'code', detected_language: language }
       }
     }
 
-    return file_type
-  }
+    // For known code files, extract language from extension
+    if (type_from_path === 'code') {
+      const last_segment = path.split('/').pop()
+      const parts = last_segment.split('.')
+      const extension_language =
+        parts.length > 1 ? parts.pop().toLowerCase() : 'text'
+      return { file_type: 'code', detected_language: extension_language }
+    }
+
+    return { file_type: type_from_path, detected_language: null }
+  }, [path, file_data])
 
   const render_content = () => {
-    const file_type = get_file_type()
-
     switch (file_type) {
       case 'entity':
         return (
@@ -112,25 +131,14 @@ const FileView = ({ path }) => {
           />
         )
 
-      case 'code': {
-        // Try to detect language from content first (for files without extensions)
-        let language = detect_shell_script_from_content(file_data?.content)
-
-        // If not detected from content, get from file extension
-        if (!language) {
-          const last_segment = path.split('/').pop()
-          const parts = last_segment.split('.')
-          language = parts.length > 1 ? parts.pop().toLowerCase() : 'text'
-        }
-
+      case 'code':
         return (
           <CodeViewer
             code={file_data?.content || ''}
-            language={language}
+            language={detected_language || 'text'}
             is_redacted={file_data?.is_redacted}
           />
         )
-      }
 
       default:
         // For other file types, use RedactedContent component if redacted
@@ -177,7 +185,6 @@ const FileView = ({ path }) => {
     )
   }
 
-  const file_type = get_file_type()
   const show_top_actions = file_type !== 'entity'
 
   const render_diff_or_content = () => {

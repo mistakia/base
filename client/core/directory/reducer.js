@@ -51,12 +51,14 @@ export function directory_reducer(
     case directory_action_types.GET_FILE_CONTENT_FULFILLED:
       return state.merge({
         file_data: payload.data || null,
+        current_path: payload.data?.path || '',
         is_loading_file: false,
         file_error: null
       })
 
     case directory_action_types.GET_FILE_CONTENT_FAILED:
       return state.merge({
+        file_data: null,
         is_loading_file: false,
         file_error: payload.error
       })

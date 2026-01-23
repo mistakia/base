@@ -22,6 +22,12 @@ import {
   start_cache_warmer,
   stop_cache_warmer
 } from '#server/services/cache-warmer.mjs'
+import {
+  start_file_subscription_watcher,
+  stop_file_subscription_watcher,
+  emit_file_changed,
+  emit_file_deleted
+} from '#libs-server/file-subscriptions/index.mjs'
 
 const SERVER_LOCK_FILE = '.server-lock'
 
@@ -89,6 +95,18 @@ try {
       logger('Thread watcher initialized')
     } catch (watcher_error) {
       logger(`Failed to start thread watcher: ${watcher_error.message}`)
+      logger(watcher_error)
+    }
+
+    // Initialize file subscription watcher for WebSocket notifications
+    try {
+      start_file_subscription_watcher({
+        on_file_change: emit_file_changed,
+        on_file_delete: emit_file_deleted
+      })
+      logger('File subscription watcher initialized')
+    } catch (watcher_error) {
+      logger(`Failed to start file subscription watcher: ${watcher_error.message}`)
       logger(watcher_error)
     }
 
@@ -201,6 +219,14 @@ const shutdown = async (signal) => {
     logger('Index file watcher stopped')
   } catch (error) {
     logger(`Error stopping index file watcher: ${error.message}`)
+  }
+
+  try {
+    // Stop file subscription watcher
+    await stop_file_subscription_watcher()
+    logger('File subscription watcher stopped')
+  } catch (error) {
+    logger(`Error stopping file subscription watcher: ${error.message}`)
   }
 
   try {
