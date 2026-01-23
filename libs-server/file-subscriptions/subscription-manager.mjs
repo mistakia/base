@@ -44,7 +44,11 @@ export function subscribe_to_file({ ws, path }) {
   }
   subscribers.add(ws)
 
-  log('Subscribed to file: %s (total subscribers: %d)', normalized_path, subscribers.size)
+  log(
+    'Subscribed to file: %s (total subscribers: %d)',
+    normalized_path,
+    subscribers.size
+  )
 }
 
 /**
@@ -72,7 +76,11 @@ export function unsubscribe_from_file({ ws, path }) {
     if (subscribers.size === 0) {
       path_to_subscribers.delete(normalized_path)
     }
-    log('Unsubscribed from file: %s (remaining subscribers: %d)', normalized_path, subscribers.size)
+    log(
+      'Unsubscribed from file: %s (remaining subscribers: %d)',
+      normalized_path,
+      subscribers.size
+    )
   }
 }
 

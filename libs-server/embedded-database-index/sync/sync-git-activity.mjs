@@ -181,7 +181,10 @@ async function get_git_activity_since_sha({
     let git_command = 'git log --format="%H|%ad" --date=short --numstat'
 
     if (since_sha) {
-      const sha_exists = await verify_commit_exists({ repo_path, sha: since_sha })
+      const sha_exists = await verify_commit_exists({
+        repo_path,
+        sha: since_sha
+      })
       if (sha_exists) {
         // Include commits since (but not including) since_sha
         git_command += ` '${since_sha}'..HEAD`

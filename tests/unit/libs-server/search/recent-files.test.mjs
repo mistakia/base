@@ -8,8 +8,7 @@ import {
   is_recent_files_enabled,
   get_recent_files_config
 } from '#libs-server/search/recent-files.mjs'
-import { DEFAULT_CONFIG } from '#libs-server/search/search-config.mjs'
-import { clear_config_cache } from '#libs-server/search/search-config.mjs'
+import { DEFAULT_CONFIG, clear_config_cache } from '#libs-server/search/search-config.mjs'
 
 describe('Recent Files Scanner', function () {
   this.timeout(10000)
@@ -56,7 +55,9 @@ describe('Recent Files Scanner', function () {
 
   describe('get_recent_entity_files', () => {
     it('should return empty array when no files exist', async () => {
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
       expect(result).to.be.an('array')
       expect(result).to.have.lengthOf(0)
     })
@@ -66,7 +67,9 @@ describe('Recent Files Scanner', function () {
       const file_path = path.join(temp_dir, 'task', 'test-task.md')
       await fs.writeFile(file_path, '# Test Task\n\nContent here.')
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       expect(result).to.have.lengthOf(1)
       expect(result[0].relative_path).to.equal('task/test-task.md')
@@ -84,7 +87,9 @@ describe('Recent Files Scanner', function () {
       const old_time = new Date(Date.now() - 72 * 60 * 60 * 1000)
       await fs.utimes(file_path, old_time, old_time)
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       expect(result).to.have.lengthOf(0)
     })
@@ -105,7 +110,9 @@ describe('Recent Files Scanner', function () {
       await fs.utimes(file2, new Date(now - 3000), new Date(now - 3000))
       await fs.utimes(file3, new Date(now - 2000), new Date(now - 2000))
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       expect(result).to.have.lengthOf(3)
       expect(result[0].relative_path).to.equal('task/task-1.md')
@@ -122,7 +129,10 @@ describe('Recent Files Scanner', function () {
         )
       }
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir, limit: 3 })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir,
+        limit: 3
+      })
 
       expect(result).to.have.lengthOf(3)
     })
@@ -140,7 +150,10 @@ describe('Recent Files Scanner', function () {
       await fs.utimes(old_file, old_time, old_time)
 
       // Search with 6 hour window
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir, hours: 6 })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir,
+        hours: 6
+      })
 
       expect(result).to.have.lengthOf(1)
       expect(result[0].relative_path).to.equal('task/recent.md')
@@ -148,17 +161,11 @@ describe('Recent Files Scanner', function () {
 
     it('should only scan specified directories', async () => {
       // Create file in task directory
-      await fs.writeFile(
-        path.join(temp_dir, 'task', 'task.md'),
-        '# Task'
-      )
+      await fs.writeFile(path.join(temp_dir, 'task', 'task.md'), '# Task')
 
       // Create file in other directory (should be ignored)
       await fs.mkdir(path.join(temp_dir, 'other'))
-      await fs.writeFile(
-        path.join(temp_dir, 'other', 'other.md'),
-        '# Other'
-      )
+      await fs.writeFile(path.join(temp_dir, 'other', 'other.md'), '# Other')
 
       const result = await get_recent_entity_files({
         user_base_directory: temp_dir,
@@ -171,13 +178,17 @@ describe('Recent Files Scanner', function () {
 
     it('should scan subdirectories recursively', async () => {
       // Create nested directory structure
-      await fs.mkdir(path.join(temp_dir, 'task', 'project'), { recursive: true })
+      await fs.mkdir(path.join(temp_dir, 'task', 'project'), {
+        recursive: true
+      })
       await fs.writeFile(
         path.join(temp_dir, 'task', 'project', 'nested-task.md'),
         '# Nested Task'
       )
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       expect(result).to.have.lengthOf(1)
       expect(result[0].relative_path).to.equal('task/project/nested-task.md')
@@ -188,7 +199,9 @@ describe('Recent Files Scanner', function () {
       await fs.writeFile(path.join(temp_dir, 'task', 'task.txt'), 'Text file')
       await fs.writeFile(path.join(temp_dir, 'task', 'task.json'), '{}')
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       expect(result).to.have.lengthOf(1)
       expect(result[0].relative_path).to.equal('task/task.md')
@@ -199,7 +212,9 @@ describe('Recent Files Scanner', function () {
       await fs.rmdir(path.join(temp_dir, 'tag'))
 
       // Should not throw, just skip the missing directory
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
       expect(result).to.be.an('array')
     })
 
@@ -214,7 +229,9 @@ describe('Recent Files Scanner', function () {
         '# Guideline'
       )
 
-      const result = await get_recent_entity_files({ user_base_directory: temp_dir })
+      const result = await get_recent_entity_files({
+        user_base_directory: temp_dir
+      })
 
       const entity_types = result.map((f) => f.entity_type)
       expect(entity_types).to.include('task')

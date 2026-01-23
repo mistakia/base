@@ -125,7 +125,10 @@ export function* watch_search_request() {
 }
 
 export function* watch_palette_open() {
-  yield takeLatest(search_action_types.OPEN_COMMAND_PALETTE, handle_palette_open)
+  yield takeLatest(
+    search_action_types.OPEN_COMMAND_PALETTE,
+    handle_palette_open
+  )
 }
 
 export function* watch_fetch_recent_files() {

@@ -51,7 +51,10 @@ wss.on('connection', (ws) => {
 
 export const send = ({ user_public_key, event }) => {
   wss.clients.forEach((c) => {
-    if (c.user_public_key === user_public_key && c.readyState === WebSocket.OPEN) {
+    if (
+      c.user_public_key === user_public_key &&
+      c.readyState === WebSocket.OPEN
+    ) {
       c.send(JSON.stringify(event))
     }
   })

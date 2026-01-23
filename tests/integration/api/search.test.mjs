@@ -308,7 +308,10 @@ describe('Search API', function () {
 
     it('should return 400 for invalid hours parameter', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/search/recent').query({ hours: 'invalid' }),
+        chai
+          .request(server)
+          .get('/api/search/recent')
+          .query({ hours: 'invalid' }),
         test_user
       )
 

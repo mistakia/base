@@ -106,7 +106,9 @@ try {
       })
       logger('File subscription watcher initialized')
     } catch (watcher_error) {
-      logger(`Failed to start file subscription watcher: ${watcher_error.message}`)
+      logger(
+        `Failed to start file subscription watcher: ${watcher_error.message}`
+      )
       logger(watcher_error)
     }
 

@@ -31,7 +31,10 @@ function parse_positive_int_param(value, param_name) {
   if (!value) return { value: undefined, error: null }
   const parsed = parseInt(value, 10)
   if (isNaN(parsed) || parsed < 1) {
-    return { value: undefined, error: `${param_name} must be a positive integer` }
+    return {
+      value: undefined,
+      error: `${param_name} must be a positive integer`
+    }
   }
   return { value: parsed, error: null }
 }
@@ -237,7 +240,9 @@ router.get('/recent', async (req, res) => {
     const hours = hours_result.value
     const limit = limit_result.value
 
-    log(`Recent files request: hours=${hours || 'default'}, limit=${limit || 'default'}`)
+    log(
+      `Recent files request: hours=${hours || 'default'}, limit=${limit || 'default'}`
+    )
 
     // Get user public key for permission checking
     const user_public_key = req.user?.user_public_key || null

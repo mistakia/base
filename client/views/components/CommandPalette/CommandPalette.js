@@ -51,7 +51,7 @@ const ResultItem = ({ item, is_selected, onClick }) => {
     if (item.category === 'thread') {
       return item.title || item.working_directory || item.thread_id?.slice(0, 8)
     }
-return item.file_path || item.relative_path
+    return item.file_path || item.relative_path
   }
 
   return (

@@ -3,10 +3,7 @@ import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
-import {
-  get_search_config_section,
-  DEFAULT_CONFIG
-} from './search-config.mjs'
+import { get_search_config_section, DEFAULT_CONFIG } from './search-config.mjs'
 
 const log = debug('search:recent-files')
 
@@ -144,7 +141,10 @@ export async function get_recent_entity_files({
 
   return limited_files.map((file) => {
     // Normalize to forward slashes for cross-platform consistency
-    const relative_path = path.relative(user_base_dir, file.path).split(path.sep).join('/')
+    const relative_path = path
+      .relative(user_base_dir, file.path)
+      .split(path.sep)
+      .join('/')
     return {
       relative_path,
       absolute_path: file.path,

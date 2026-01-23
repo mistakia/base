@@ -40,7 +40,10 @@ function emit_to_subscribers(file_path, event_type) {
   if (!file_path) return 0
 
   const subscribers = get_file_subscribers(file_path)
-  const message = JSON.stringify({ type: event_type, payload: { path: file_path } })
+  const message = JSON.stringify({
+    type: event_type,
+    payload: { path: file_path }
+  })
   let sent_count = 0
 
   for (const ws of subscribers) {
@@ -54,7 +57,13 @@ function emit_to_subscribers(file_path, event_type) {
     }
   }
 
-  log('Emitted %s for %s to %d/%d subscribers', event_type, file_path, sent_count, subscribers.length)
+  log(
+    'Emitted %s for %s to %d/%d subscribers',
+    event_type,
+    file_path,
+    sent_count,
+    subscribers.length
+  )
   return sent_count
 }
 
@@ -83,7 +92,10 @@ export function emit_file_deleted(file_path) {
  * @param {Function} params.on_file_delete - Callback for file delete events (receives relative path)
  * @returns {Object|null} The chokidar watcher instance, or null if failed to start
  */
-export function start_file_subscription_watcher({ on_file_change, on_file_delete }) {
+export function start_file_subscription_watcher({
+  on_file_change,
+  on_file_delete
+}) {
   if (is_watching) {
     log('File subscription watcher already running')
     return file_watcher
@@ -91,7 +103,9 @@ export function start_file_subscription_watcher({ on_file_change, on_file_delete
 
   const user_base_dir = config.user_base_directory
   if (!user_base_dir) {
-    log('User base directory not configured, cannot start file subscription watcher')
+    log(
+      'User base directory not configured, cannot start file subscription watcher'
+    )
     return null
   }
 

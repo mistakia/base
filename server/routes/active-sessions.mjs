@@ -162,7 +162,9 @@ router.get('/', async (req, res) => {
       )
     )
 
-    log(`Retrieved ${redacted_sessions.length} active sessions (filtered ${enriched_sessions.length - active_thread_sessions.length} archived)`)
+    log(
+      `Retrieved ${redacted_sessions.length} active sessions (filtered ${enriched_sessions.length - active_thread_sessions.length} archived)`
+    )
     res.status(200).json(redacted_sessions)
   } catch (error) {
     log('Error listing active sessions:', error)

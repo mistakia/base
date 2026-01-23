@@ -74,7 +74,8 @@ describe('cache-warmer', () => {
   describe('get_cached_activity_heatmap', () => {
     it('should return null when cache is empty', () => {
       // Reset cache timestamp to simulate empty cache
-      const original_timestamp = cache_warmer_module.cache.activity_heatmap.timestamp
+      const original_timestamp =
+        cache_warmer_module.cache.activity_heatmap.timestamp
       cache_warmer_module.cache.activity_heatmap.timestamp = 0
 
       const result = cache_warmer_module.get_cached_activity_heatmap({

@@ -1,4 +1,11 @@
-import { takeLatest, takeEvery, fork, call, put, select } from 'redux-saga/effects'
+import {
+  takeLatest,
+  takeEvery,
+  fork,
+  call,
+  put,
+  select
+} from 'redux-saga/effects'
 
 import {
   get_directories,
@@ -104,7 +111,9 @@ function* get_matching_current_path(event_path) {
   const current_path = yield select(get_current_file_path)
   const normalized_current = normalize_file_path(current_path)
 
-  return normalized_event_path === normalized_current ? normalized_current : null
+  return normalized_event_path === normalized_current
+    ? normalized_current
+    : null
 }
 
 /**

@@ -93,7 +93,12 @@ export const subscribe_to_file = (path) => {
 
   // Only send if connected and not already subscribed (avoids duplicates)
   if (websocket_is_open() && !already_subscribed) {
-    ws.send(JSON.stringify({ type: 'SUBSCRIBE_FILE', payload: { path: normalized_path } }))
+    ws.send(
+      JSON.stringify({
+        type: 'SUBSCRIBE_FILE',
+        payload: { path: normalized_path }
+      })
+    )
   }
 }
 
@@ -111,6 +116,11 @@ export const unsubscribe_from_file = (path) => {
 
   // Only send if connected and was actually subscribed
   if (websocket_is_open() && was_subscribed) {
-    ws.send(JSON.stringify({ type: 'UNSUBSCRIBE_FILE', payload: { path: normalized_path } }))
+    ws.send(
+      JSON.stringify({
+        type: 'UNSUBSCRIBE_FILE',
+        payload: { path: normalized_path }
+      })
+    )
   }
 }
