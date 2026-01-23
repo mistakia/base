@@ -1,5 +1,6 @@
 export const TASK_STATUS = {
   NO_STATUS: 'No status',
+  DRAFT: 'Draft',
   WAITING: 'Waiting',
   PAUSED: 'Paused',
   PLANNED: 'Planned',

@@ -19,14 +19,15 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 ## Guidelines
 
-- The status of a task MUST be one of the following: 'No status', 'Waiting', 'Paused', 'Planned', 'Started', 'In Progress', 'Completed', 'Abandoned', 'Blocked'.
+- The status of a task MUST be one of the following: 'No status', 'Draft', 'Waiting', 'Paused', 'Planned', 'Started', 'In Progress', 'Completed', 'Abandoned', 'Blocked'.
 
 ### Status Descriptions
 
 - **No status**: New task that hasn't been reviewed yet, or planned for beyond the next few months
+- **Draft**: Task is still being defined or refined, requirements are incomplete
 - **Waiting**: Blocked by external factors not under our control
 - **Paused**: Temporarily put on hold by decision
-- **Planned**: Scheduled for the coming weeks or months
+- **Planned**: Fully defined and ready to execute, scheduled for the coming weeks or months
 - **Started**: Begun but hasn't been worked on in recent days
 - **In Progress**: Actively worked on each day
 - **Completed**: Finished successfully

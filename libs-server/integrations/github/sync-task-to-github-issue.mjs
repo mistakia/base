@@ -400,6 +400,8 @@ function map_task_status_to_github_project_status(task_status) {
       return 'Paused'
     case TASK_STATUS.ABANDONED:
       return 'Abandoned'
+    case TASK_STATUS.DRAFT:
+      return 'Draft'
     case TASK_STATUS.NO_STATUS:
     default:
       return 'Planned'

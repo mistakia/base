@@ -113,7 +113,8 @@ export function sort_tasks_by_importance(tasks = []) {
     [TASK_STATUS.PLANNED]: 3,
     [TASK_STATUS.WAITING]: 4,
     [TASK_STATUS.PAUSED]: 5,
-    [TASK_STATUS.NO_STATUS]: 6
+    [TASK_STATUS.DRAFT]: 6,
+    [TASK_STATUS.NO_STATUS]: 7
   }
 
   return [...tasks].sort((a, b) => {
