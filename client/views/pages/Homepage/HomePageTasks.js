@@ -95,8 +95,8 @@ const HomePageTasks = ({
   const ongoing_tasks = tasks
     .filter(
       (task) =>
-        task.entity_properties.status === TASK_STATUS.IN_PROGRESS ||
-        task.entity_properties.status === TASK_STATUS.STARTED
+        task.entity_properties?.status === TASK_STATUS.IN_PROGRESS ||
+        task.entity_properties?.status === TASK_STATUS.STARTED
     )
     .sort((a, b) => {
       const priority_a = TASK_PRIORITY_ORDER[a.entity_properties.priority] || 0
