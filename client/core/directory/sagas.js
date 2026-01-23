@@ -1,4 +1,4 @@
-import { takeLatest, fork, call, put, select } from 'redux-saga/effects'
+import { takeLatest, takeEvery, fork, call, put, select } from 'redux-saga/effects'
 
 import {
   get_directories,
@@ -6,11 +6,14 @@ import {
   get_path_info
 } from '@core/api/sagas'
 import { api, api_request } from '@core/api/service'
+import { normalize_file_path } from '#libs-shared/path-utils.mjs'
 import {
   directory_action_types,
+  directory_actions,
   get_directory_markdown_request_actions
 } from './actions'
 import { get_app } from '@core/app/selectors'
+import { get_current_file_path } from './selectors'
 
 export function* load_directory({ payload }) {
   yield call(get_directories, { path: payload?.path })
@@ -89,9 +92,59 @@ export function* watch_load_directory_markdown() {
   )
 }
 
+/**
+ * Check if an event path matches the currently viewed file
+ * @param {string} event_path - Path from the WebSocket event
+ * @returns {string|null} The normalized current path if it matches, null otherwise
+ */
+function* get_matching_current_path(event_path) {
+  const normalized_event_path = normalize_file_path(event_path)
+  if (!normalized_event_path) return null
+
+  const current_path = yield select(get_current_file_path)
+  const normalized_current = normalize_file_path(current_path)
+
+  return normalized_event_path === normalized_current ? normalized_current : null
+}
+
+/**
+ * Handle FILE_CHANGED events from WebSocket
+ * If the changed file matches the currently viewed file, trigger a refetch
+ */
+export function* handle_file_changed({ payload }) {
+  const matching_path = yield* get_matching_current_path(payload?.path)
+  if (matching_path) {
+    yield put(directory_actions.load_file(matching_path))
+  }
+}
+
+/**
+ * Handle FILE_DELETED events from WebSocket
+ * If the deleted file matches the currently viewed file, clear the file data
+ */
+export function* handle_file_deleted({ payload }) {
+  const matching_path = yield* get_matching_current_path(payload?.path)
+  if (matching_path) {
+    yield put({
+      type: directory_action_types.GET_FILE_CONTENT_FAILED,
+      payload: { error: 'File has been deleted' }
+    })
+  }
+}
+
+export function* watch_file_changed() {
+  yield takeEvery(directory_action_types.FILE_CHANGED, handle_file_changed)
+}
+
+export function* watch_file_deleted() {
+  yield takeEvery(directory_action_types.FILE_DELETED, handle_file_deleted)
+}
+
 export const directory_sagas = [
   fork(watch_load_directory),
   fork(watch_load_file),
   fork(watch_load_path_info),
-  fork(watch_load_directory_markdown)
+  fork(watch_load_directory_markdown),
+  fork(watch_file_changed),
+  fork(watch_file_deleted)
 ]
