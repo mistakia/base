@@ -21,7 +21,8 @@ export function get_selected_task_table_view(state) {
   const view_id = get_selected_task_table_view_id(state)
   const view_data = tasks_state.getIn(['task_table_views', view_id])
 
-  if (!view_data) return null
+  // Return empty object if view not found (defensive - prevents null.property errors)
+  if (!view_data) return {}
   // Return view in the format expected by react-table
   return {
     view_id,
