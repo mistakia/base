@@ -8,7 +8,10 @@ import {
   is_recent_files_enabled,
   get_recent_files_config
 } from '#libs-server/search/recent-files.mjs'
-import { DEFAULT_CONFIG, clear_config_cache } from '#libs-server/search/search-config.mjs'
+import {
+  DEFAULT_CONFIG,
+  clear_config_cache
+} from '#libs-server/search/search-config.mjs'
 
 describe('Recent Files Scanner', function () {
   this.timeout(10000)
