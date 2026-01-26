@@ -66,9 +66,14 @@ export async function execute_duckdb_query({ query, parameters = [] }) {
 
   log('Executing DuckDB query: %s', query.substring(0, 100))
 
+  // Sanitize parameters: convert undefined to null for DuckDB compatibility
+  const sanitized_parameters = parameters.map((p) =>
+    p === undefined ? null : p
+  )
+
   return new Promise((resolve, reject) => {
-    if (parameters.length > 0) {
-      duckdb_connection.all(query, ...parameters, (err, result) => {
+    if (sanitized_parameters.length > 0) {
+      duckdb_connection.all(query, ...sanitized_parameters, (err, result) => {
         if (err) {
           log('DuckDB query error: %s', err.message)
           reject(err)
@@ -96,9 +101,14 @@ export async function execute_duckdb_run({ query, parameters = [] }) {
 
   log('Executing DuckDB run: %s', query.substring(0, 100))
 
+  // Sanitize parameters: convert undefined to null for DuckDB compatibility
+  const sanitized_parameters = parameters.map((p) =>
+    p === undefined ? null : p
+  )
+
   return new Promise((resolve, reject) => {
-    if (parameters.length > 0) {
-      duckdb_connection.run(query, ...parameters, (err) => {
+    if (sanitized_parameters.length > 0) {
+      duckdb_connection.run(query, ...sanitized_parameters, (err) => {
         if (err) {
           log('DuckDB run error: %s', err.message)
           reject(err)
