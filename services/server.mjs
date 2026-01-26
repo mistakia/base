@@ -122,33 +122,39 @@ try {
       logger(worker_error)
     }
 
-    // Start cache warmer and embedded index initialization in parallel
+    // Initialize embedded index first (DuckDB must be ready before cache warmer)
+    // Cache warmer uses DuckDB for fast queries; without it, falls back to
+    // expensive filesystem reads (reads all timeline.jsonl files)
     let embedded_index_ready = false
 
-    const cache_warmer_promise = start_cache_warmer()
-      .then(() => logger('Cache warmer service started'))
-      .catch((error) => {
-        logger(`Failed to start cache warmer: ${error.message}`)
-        logger(error)
-      })
+    try {
+      await embedded_index_manager.initialize()
+      const status = embedded_index_manager.get_index_status()
+      logger(
+        `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
+      )
+      // Only mark ready if at least one database is actually initialized
+      embedded_index_ready = status.kuzu_ready || status.duckdb_ready
 
-    const embedded_index_promise = embedded_index_manager
-      .initialize()
-      .then(() => {
-        const status = embedded_index_manager.get_index_status()
+      // Warn if DuckDB specifically failed (cache warmer depends on it for fast queries)
+      if (!status.duckdb_ready) {
         logger(
-          `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
+          'WARNING: DuckDB not ready - cache warmer will use slower filesystem fallback'
         )
-        // Only mark ready if at least one database is actually initialized
-        embedded_index_ready = status.kuzu_ready || status.duckdb_ready
-      })
-      .catch((error) => {
-        logger(`Failed to initialize embedded index: ${error.message}`)
-        logger(error)
-      })
+      }
+    } catch (error) {
+      logger(`Failed to initialize embedded index: ${error.message}`)
+      logger(error)
+    }
 
-    // Wait for both to complete
-    await Promise.all([cache_warmer_promise, embedded_index_promise])
+    // Start cache warmer after embedded index (can now use DuckDB)
+    try {
+      await start_cache_warmer()
+      logger('Cache warmer service started')
+    } catch (error) {
+      logger(`Failed to start cache warmer: ${error.message}`)
+      logger(error)
+    }
 
     // Start index file watcher for database sync (only if index initialized successfully)
     if (embedded_index_ready) {

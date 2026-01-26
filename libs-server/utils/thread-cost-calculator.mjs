@@ -7,6 +7,7 @@
 
 import debug from 'debug'
 import { get_models_from_cache } from './models-cache.mjs'
+import { to_number } from './to-number.mjs'
 
 const log = debug('utils:thread-cost')
 
@@ -59,28 +60,30 @@ function calculate_token_costs(thread_data, pricing) {
   let total_cost = 0
 
   // Get token counts - check both direct fields and nested paths
-  const input_tokens =
-    thread_data.total_input_tokens ||
-    thread_data.input_tokens ||
-    thread_data.external_session?.provider_metadata?.input_tokens ||
-    0
+  // Use nullish coalescing (??) to preserve explicit zeros
+  // Convert BigInts from DuckDB to Numbers for arithmetic operations
+  const input_tokens = to_number(
+    thread_data.total_input_tokens ??
+      thread_data.input_tokens ??
+      thread_data.external_session?.provider_metadata?.input_tokens
+  )
 
-  const output_tokens =
-    thread_data.total_output_tokens ||
-    thread_data.output_tokens ||
-    thread_data.external_session?.provider_metadata?.output_tokens ||
-    0
+  const output_tokens = to_number(
+    thread_data.total_output_tokens ??
+      thread_data.output_tokens ??
+      thread_data.external_session?.provider_metadata?.output_tokens
+  )
 
-  const cache_read_tokens =
-    thread_data.cache_read_input_tokens ||
-    thread_data.external_session?.provider_metadata?.cache_read_input_tokens ||
-    0
+  const cache_read_tokens = to_number(
+    thread_data.cache_read_input_tokens ??
+      thread_data.external_session?.provider_metadata?.cache_read_input_tokens
+  )
 
-  const cache_creation_tokens =
-    thread_data.cache_creation_input_tokens ||
-    thread_data.external_session?.provider_metadata
-      ?.cache_creation_input_tokens ||
-    0
+  const cache_creation_tokens = to_number(
+    thread_data.cache_creation_input_tokens ??
+      thread_data.external_session?.provider_metadata
+        ?.cache_creation_input_tokens
+  )
 
   // Input tokens cost
   if (input_tokens && pricing.input_cost_per_token) {

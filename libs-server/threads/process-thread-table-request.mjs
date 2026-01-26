@@ -19,6 +19,7 @@ import {
 import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
+import { to_number } from '#libs-server/utils/to-number.mjs'
 
 const log = debug('threads:table')
 
@@ -54,7 +55,7 @@ export function normalize_duckdb_thread(thread, models_data) {
     // Timestamps
     created_at: thread.created_at,
     updated_at: thread.updated_at,
-    duration_minutes: thread.duration_minutes || 0,
+    duration_minutes: to_number(thread.duration_minutes),
 
     // User information
     user_public_key: thread.user_public_key,
@@ -68,18 +69,18 @@ export function normalize_duckdb_thread(thread, models_data) {
     working_directory: thread.working_directory,
     working_directory_path: thread.working_directory_path,
 
-    // Message and interaction counts
-    message_count: thread.message_count || 0,
-    user_message_count: thread.user_message_count || 0,
-    assistant_message_count: thread.assistant_message_count || 0,
-    tool_call_count: thread.tool_call_count || 0,
+    // Message and interaction counts (convert BigInt from DuckDB)
+    message_count: to_number(thread.message_count),
+    user_message_count: to_number(thread.user_message_count),
+    assistant_message_count: to_number(thread.assistant_message_count),
+    tool_call_count: to_number(thread.tool_call_count),
 
-    // Token information
-    total_tokens: thread.total_tokens || 0,
-    total_input_tokens: thread.total_input_tokens || 0,
-    total_output_tokens: thread.total_output_tokens || 0,
-    cache_creation_input_tokens: thread.cache_creation_input_tokens || 0,
-    cache_read_input_tokens: thread.cache_read_input_tokens || 0,
+    // Token information (convert BigInt from DuckDB)
+    total_tokens: to_number(thread.total_tokens),
+    total_input_tokens: to_number(thread.total_input_tokens),
+    total_output_tokens: to_number(thread.total_output_tokens),
+    cache_creation_input_tokens: to_number(thread.cache_creation_input_tokens),
+    cache_read_input_tokens: to_number(thread.cache_read_input_tokens),
 
     // Cost information (calculated from models pricing)
     total_cost: cost_data.total_cost,
