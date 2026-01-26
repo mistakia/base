@@ -21,7 +21,10 @@ import {
   discover_repositories,
   get_repository_head_sha
 } from './repository-discovery.mjs'
-import { ENTITY_DIRECTORIES } from './sync-constants.mjs'
+import {
+  ENTITY_DIRECTORIES,
+  DEFAULT_EXCLUDE_PATTERNS
+} from './sync-constants.mjs'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 
 const log = debug('embedded-index:sync:resync')
@@ -97,7 +100,8 @@ export async function resync_full_index({ index_manager }) {
     log('Phase 1: Syncing entities from filesystem')
 
     const entities = await list_entity_files_from_filesystem({
-      include_entity_types: ENTITY_DIRECTORIES
+      include_entity_types: ENTITY_DIRECTORIES,
+      exclude_path_patterns: DEFAULT_EXCLUDE_PATTERNS
     })
 
     log('Found %d entities to sync', entities.length)

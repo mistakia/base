@@ -96,8 +96,9 @@ export const INDEX_METADATA_KEYS = {
 
 /**
  * Current schema version - increment when schema changes require rebuild
+ * v3: Changed token fields from INTEGER to BIGINT to handle large token counts
  */
-export const CURRENT_SCHEMA_VERSION = '2'
+export const CURRENT_SCHEMA_VERSION = '3'
 
 /**
  * Get repository sync state (handles backwards compatibility)

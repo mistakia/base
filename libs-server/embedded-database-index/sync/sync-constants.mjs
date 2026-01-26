@@ -5,6 +5,12 @@
  */
 
 /**
+ * Default path patterns to exclude from entity scanning.
+ * Excludes git worktrees which contain duplicate entity files.
+ */
+export const DEFAULT_EXCLUDE_PATTERNS = ['**/*-worktrees/**']
+
+/**
  * Entity directories to watch and sync.
  * These directories contain markdown entity files that are indexed.
  */

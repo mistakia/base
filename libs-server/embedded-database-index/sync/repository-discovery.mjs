@@ -179,11 +179,30 @@ export async function get_changed_files_in_repo({
         // X = index status, Y = worktree status
         const file_part = line.slice(3) // Skip status codes and space
         const arrow_index = file_part.indexOf(' -> ')
-        const file_path =
+        let file_path =
           arrow_index >= 0 ? file_part.slice(arrow_index + 4) : file_part
 
         if (file_path.trim()) {
-          changed_files.add(file_path.trim())
+          file_path = file_path.trim()
+
+          // Untracked directories appear with trailing slash (e.g., "uuid/")
+          // For thread submodule (relative_prefix === 'thread'), expand to include metadata.json
+          // so the incremental sync can detect new/modified thread metadata
+          if (
+            file_path.endsWith('/') &&
+            relative_prefix === 'thread' &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/$/i.test(
+              file_path
+            )
+          ) {
+            changed_files.add(`${file_path}metadata.json`)
+            log(
+              'Expanded untracked thread directory %s to include metadata.json',
+              file_path
+            )
+          } else {
+            changed_files.add(file_path)
+          }
         }
       }
     }

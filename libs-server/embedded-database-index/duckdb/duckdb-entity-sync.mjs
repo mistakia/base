@@ -158,9 +158,10 @@ export async function sync_entity_tags_to_duckdb({
       parameters: [entity_base_uri]
     })
 
-    // Insert new tags
+    // Insert new tags (dedupe to handle entities with duplicate tags in frontmatter)
     if (tag_base_uris && tag_base_uris.length > 0) {
-      for (const tag_base_uri of tag_base_uris) {
+      const unique_tags = [...new Set(tag_base_uris)]
+      for (const tag_base_uri of unique_tags) {
         await execute_duckdb_run({
           query:
             'INSERT INTO entity_tags (entity_base_uri, tag_base_uri) VALUES (?, ?)',
