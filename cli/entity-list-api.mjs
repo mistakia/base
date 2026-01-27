@@ -21,7 +21,7 @@ import { hideBin } from 'yargs/helpers'
 const SERVER_URL = 'http://localhost:8080'
 
 function format_entity(entity, { verbose = false, fields } = {}) {
-  const default_fields = ['base_uri', 'title', 'type', 'status']
+  const default_fields = ['base_uri', 'title', 'type', 'status', 'priority']
   const output_fields = fields?.length > 0 ? fields : default_fields
 
   if (verbose) {
@@ -134,15 +134,16 @@ const main = async () => {
     } else if (argv.json) {
       console.log(JSON.stringify(data.entities, null, 2))
     } else {
-      for (const entity of data.entities) {
+      for (let i = 0; i < data.entities.length; i++) {
         console.log(
-          format_entity(entity, { verbose: argv.verbose, fields: argv.fields })
+          format_entity(data.entities[i], {
+            verbose: argv.verbose,
+            fields: argv.fields
+          })
         )
-        if (
-          argv.verbose &&
-          data.entities.indexOf(entity) < data.entities.length - 1
-        )
+        if (argv.verbose && i < data.entities.length - 1) {
           console.log('')
+        }
       }
     }
   } catch (error) {

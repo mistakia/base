@@ -166,7 +166,9 @@ router.get('/', async (req, res) => {
     const tags = parse_array_param(req.query.tags)
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 1000)
     const offset = parseInt(req.query.offset, 10) || 0
-    const sort_descending = sort_desc === 'true' || sort_desc === true
+    const sort_descending = sort_desc === 'true'
+    const include_archived = archived === 'true'
+    const without_tags_filter = without_tags === 'true'
 
     // Check if DuckDB is available
     if (!embedded_index_manager.is_duckdb_ready()) {
@@ -216,7 +218,7 @@ router.get('/', async (req, res) => {
       filters.push({ column_id: 'priority', operator: '=', value: priority })
     }
 
-    if (archived !== 'true' && archived !== true) {
+    if (!include_archived) {
       filters.push({ column_id: 'archived', operator: '=', value: false })
     }
 
@@ -224,11 +226,11 @@ router.get('/', async (req, res) => {
       filters.push({ column_id: 'title', operator: 'LIKE', value: search })
     }
 
-    if (tags.length > 0 && without_tags !== 'true' && without_tags !== true) {
+    if (tags.length > 0 && !without_tags_filter) {
       filters.push({ column_id: 'tags', operator: 'IN', value: tags })
     }
 
-    if (without_tags === 'true' || without_tags === true) {
+    if (without_tags_filter) {
       filters.push({ column_id: 'tags', operator: 'IS_EMPTY' })
     }
 
