@@ -106,19 +106,21 @@ Workflows SHOULD be small, focused units that do one thing well. Complex process
 
 **Choosing execution method:**
 
-| Use Case | Method | Reason |
-|----------|--------|--------|
-| Workflow requires human review between phases | Claude CLI | User can review output and decide whether to continue |
-| Workflow can run to completion autonomously | Task/subagent tool | No intervention needed |
-| Workflow produces output requiring user decision | Claude CLI | Natural breakpoint for human input |
-| Workflow is a leaf operation (research, single action) | Task/subagent tool | Self-contained execution |
+| Use Case                                               | Method             | Reason                                                |
+| ------------------------------------------------------ | ------------------ | ----------------------------------------------------- |
+| Workflow requires human review between phases          | Claude CLI         | User can review output and decide whether to continue |
+| Workflow can run to completion autonomously            | Task/subagent tool | No intervention needed                                |
+| Workflow produces output requiring user decision       | Claude CLI         | Natural breakpoint for human input                    |
+| Workflow is a leaf operation (research, single action) | Task/subagent tool | Self-contained execution                              |
 
 **Claude CLI invocation** (for workflows requiring human review):
+
 ```bash
 claude-session "Run workflow [[user:workflow/example.md]] with input: [context]"
 ```
 
 **Workflow handoff pattern** (in `<instructions>` section):
+
 ```markdown
 ## Handoff
 
