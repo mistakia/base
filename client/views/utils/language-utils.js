@@ -1,3 +1,15 @@
+/**
+ * Get normalized language from a file path
+ * @param {string} file_path - Full file path or filename
+ * @returns {string} Normalized language identifier for syntax highlighting
+ */
+export const get_language_from_path = (file_path) => {
+  if (!file_path) return 'text'
+  const file_name = file_path.split('/').pop() || 'file'
+  const extension = file_name.includes('.') ? file_name.split('.').pop() : ''
+  return normalize_language(extension) || 'text'
+}
+
 export const normalize_language = (language) => {
   if (!language) return 'text'
   const lang = language.toLowerCase()

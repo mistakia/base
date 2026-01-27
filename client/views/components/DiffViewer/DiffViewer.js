@@ -4,7 +4,7 @@ import { Box, CircularProgress, Alert } from '@mui/material'
 import { FileDiff } from '@pierre/diffs/react'
 import { parseDiffFromFile } from '@pierre/diffs'
 
-import { normalize_language } from '@views/utils/language-utils.js'
+import { get_language_from_path } from '@views/utils/language-utils.js'
 import RedactedDiffPlaceholder from './RedactedDiffPlaceholder.js'
 
 import './DiffViewer.styl'
@@ -18,8 +18,7 @@ const DiffViewer = ({
   error
 }) => {
   const file_name = file_path?.split('/').pop() || 'file'
-  const extension = file_name.includes('.') ? file_name.split('.').pop() : ''
-  const language = normalize_language(extension)
+  const language = get_language_from_path(file_path)
 
   const { file_diff, diff_error, no_changes } = useMemo(() => {
     if (
@@ -126,7 +125,17 @@ const DiffViewer = ({
     },
     themeType: 'light',
     lineNumbers: true,
-    wordWrap: true
+    wordWrap: true,
+    // Inject CSS into Shadow DOM to match ConflictResolver font size and hide header
+    unsafeCSS: `
+      pre {
+        font-size: 11px !important;
+        line-height: 1.4 !important;
+      }
+      [data-diffs-header] {
+        display: none !important;
+      }
+    `
   }
 
   return (

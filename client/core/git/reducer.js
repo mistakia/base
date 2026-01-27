@@ -17,13 +17,20 @@ const GitState = new Record({
   diffs: new Map(),
   // Map of "${repo_path}:${file_path}:${ref}" -> { content, is_redacted }
   file_at_ref: new Map(),
+  // Map of "${repo_path}:${file_path}" -> { content, is_redacted } for working copy
+  file_content: new Map(),
+  // Map of "${repo_path}:${file_path}" -> conflict version data
+  conflict_versions: new Map(),
   // Loading states
   is_loading_status: false,
   is_loading_diff: false,
   is_loading_file_at_ref: false,
+  is_loading_file_content: false,
+  is_loading_conflict_versions: false,
   is_committing: false,
   is_pulling: false,
   is_pushing: false,
+  is_resolving_conflict: false,
   // Error state
   error: null
 })
@@ -177,6 +184,72 @@ export function git_reducer(state = new GitState(), { payload, type }) {
       })
 
     // ========================================================================
+    // File Content Loading (Working Copy)
+    // ========================================================================
+
+    case git_action_types.GET_FILE_CONTENT_PENDING:
+      return state.merge({
+        is_loading_file_content: true,
+        error: null
+      })
+
+    case git_action_types.GET_FILE_CONTENT_FULFILLED: {
+      const { repo_path, file_path } = payload.opts || {}
+      if (!repo_path || !file_path) return state
+
+      const cache_key = `${repo_path}:${file_path}`
+
+      return state
+        .setIn(
+          ['file_content', cache_key],
+          fromJS({
+            content: payload.data?.content,
+            is_redacted: payload.data?.is_redacted || false
+          })
+        )
+        .merge({
+          is_loading_file_content: false,
+          error: null
+        })
+    }
+
+    case git_action_types.GET_FILE_CONTENT_FAILED:
+      return state.merge({
+        is_loading_file_content: false,
+        error: payload.error
+      })
+
+    // ========================================================================
+    // Conflict Versions Loading
+    // ========================================================================
+
+    case git_action_types.GET_CONFLICT_VERSIONS_PENDING:
+      return state.merge({
+        is_loading_conflict_versions: true,
+        error: null
+      })
+
+    case git_action_types.GET_CONFLICT_VERSIONS_FULFILLED: {
+      const { repo_path, file_path } = payload.opts || {}
+      if (!repo_path || !file_path) return state
+
+      const cache_key = `${repo_path}:${file_path}`
+
+      return state
+        .setIn(['conflict_versions', cache_key], fromJS(payload.data))
+        .merge({
+          is_loading_conflict_versions: false,
+          error: null
+        })
+    }
+
+    case git_action_types.GET_CONFLICT_VERSIONS_FAILED:
+      return state.merge({
+        is_loading_conflict_versions: false,
+        error: payload.error
+      })
+
+    // ========================================================================
     // Stage/Unstage Files
     // ========================================================================
 
@@ -252,6 +325,40 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     case git_action_types.PUSH_CHANGES_FAILED:
       return state.merge({
         is_pushing: false,
+        error: payload.error
+      })
+
+    // ========================================================================
+    // Resolve Conflict
+    // ========================================================================
+
+    case git_action_types.RESOLVE_CONFLICT_PENDING:
+      return state.merge({
+        is_resolving_conflict: true,
+        error: null
+      })
+
+    case git_action_types.RESOLVE_CONFLICT_FULFILLED: {
+      const { repo_path, file_path } = payload.opts || {}
+      if (!repo_path || !file_path) {
+        return state.merge({ is_resolving_conflict: false, error: null })
+      }
+      const cache_key = `${repo_path}:${file_path}`
+      const head_cache_key = `${repo_path}:${file_path}:HEAD`
+      // Clear all cached data for the resolved file to ensure fresh data on next load
+      return state
+        .deleteIn(['conflict_versions', cache_key])
+        .deleteIn(['file_content', cache_key])
+        .deleteIn(['file_at_ref', head_cache_key])
+        .merge({
+          is_resolving_conflict: false,
+          error: null
+        })
+    }
+
+    case git_action_types.RESOLVE_CONFLICT_FAILED:
+      return state.merge({
+        is_resolving_conflict: false,
         error: payload.error
       })
 

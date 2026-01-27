@@ -6,6 +6,7 @@
   flex-direction: column
   gap: $space_sm
   width: 100%
+  overflow: hidden  // Constrain children to prevent text from pushing layout wider
 
 // Add yellow dot for changes
 .home-section-header__dot--changes
@@ -70,6 +71,17 @@
   background: $color_surface
   padding: 2px 6px
   border-radius: $radius_sm
+
+.repo-section__conflict-indicator
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  font-weight: $font_weight_semibold
+  color: $color_error
+  background: rgba($color_error, 0.1)
+  padding: 2px 6px
+  border-radius: $radius_sm
+  text-transform: uppercase
+  letter-spacing: 0.5px
 
 .repo-section__count
   font-family: $font_family_mono
@@ -151,20 +163,24 @@
   flex-shrink: 0
 
   &--modified
-    background: rgba(0, 123, 255, 0.15)
-    color: #007bff
+    background: rgba($color_primary, 0.15)
+    color: $color_primary
 
   &--added
-    background: rgba(40, 167, 69, 0.15)
+    background: rgba($color_success, 0.15)
     color: $color_success
 
   &--deleted
-    background: rgba(220, 53, 69, 0.15)
-    color: $color_danger
+    background: rgba($color_error, 0.15)
+    color: $color_error
 
   &--untracked
     background: rgba(108, 117, 125, 0.15)
     color: $color_text_tertiary
+
+  &--conflict
+    background: rgba($color_warning, 0.25)
+    color: darken($color_warning, 30%)
 
 .file-change-card__path
   flex: 1
@@ -233,6 +249,13 @@
 // Diff Display
 // =============================================================================
 
+// Diff display - matches DiffViewer/CodeViewer styling
+.file-change-card__diff
+  font-family: $font_family_mono
+  font-size: 13px  // Match DiffViewer
+  line-height: 1.5  // Match DiffViewer/CodeViewer
+  overflow-x: auto
+
 .diff-hunk
   &:not(:first-child)
     border-top: 1px solid $color_border_light
@@ -240,50 +263,56 @@
 .diff-hunk__header
   padding: $space_xs $space_sm
   background: $color_surface_secondary
-  color: $color_text_secondary
-  font-size: 10px
+  color: #6e7781  // Match CodeViewer line number color
+  font-size: $font_size_xs
+  font-family: $font_family_mono
   overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
   position: sticky
   left: 0
+  top: 0
+
+.diff-hunk__lines
+  background: #fdf6e3  // Match solarized-light background
 
 .diff-line
-  padding: 0 $space_sm
+  display: flex
+  padding: 0
   white-space: pre
-  min-height: 18px
+  min-height: 20px  // Match line-height
 
   &--add
-    background: rgba(40, 167, 69, 0.12)
-
-    .diff-line__content::before
-      content: '+'
-      color: $color_success
-      margin-right: $space_xs
+    background: rgba($color_success, 0.15)
 
   &--delete
-    background: rgba(220, 53, 69, 0.12)
-
-    .diff-line__content::before
-      content: '-'
-      color: $color_danger
-      margin-right: $space_xs
+    background: rgba($color_error, 0.15)
 
   &--context
-    .diff-line__content::before
-      content: ' '
-      margin-right: $space_xs
+    background: transparent
 
   &--meta
     color: $color_text_tertiary
     font-style: italic
+    background: $color_surface_secondary
 
-    .diff-line__content::before
-      content: '\\'
-      margin-right: $space_xs
+.diff-line__indicator
+  width: 20px
+  flex-shrink: 0
+  text-align: center
+  color: #6e7781
+  user-select: none
+
+  .diff-line--add &
+    color: $color_success
+
+  .diff-line--delete &
+    color: $color_error
 
 .diff-line__content
-  display: inline
+  flex: 1
+  padding-left: $space_xs
+  overflow: hidden
 
 // =============================================================================
 // Commit Section

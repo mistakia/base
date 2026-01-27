@@ -244,6 +244,11 @@ export const api = {
     return { url }
   },
 
+  get_git_file_content({ repo_path, file_path }) {
+    const url = `${API_URL}/git/file-content?repo_path=${encodeURIComponent(repo_path)}&file_path=${encodeURIComponent(file_path)}`
+    return { url }
+  },
+
   stage_files({ repo_path, files }) {
     const url = `${API_URL}/git/stage`
     return { url, ...POST({ repo_path, files }) }
@@ -280,6 +285,11 @@ export const api = {
       url,
       ...POST({ repo_path, file_path, resolution, merged_content })
     }
+  },
+
+  get_conflict_versions({ repo_path, file_path }) {
+    const url = `${API_URL}/git/conflict-versions?repo_path=${encodeURIComponent(repo_path)}&file_path=${encodeURIComponent(file_path)}`
+    return { url }
   },
 
   // Search operations

@@ -1,0 +1,186 @@
+@import '../../../styles/variables'
+
+// Color scheme inspired by diffs.com
+// Using teal for "ours" (current) and soft red for "theirs" (incoming)
+$conflict_ours_color = #00897b  // Teal - current branch (darker for light bg)
+$conflict_theirs_color = #d32f2f  // Red - incoming branch (darker for light bg)
+$conflict_base_color = $color_text_secondary  // Neutral for base
+
+// Light theme matching solarized-light (used by CodeViewer)
+$conflict_panel_bg = #fdf6e3  // Solarized light background
+$conflict_panel_border = $color_border
+$conflict_header_bg = $color_surface_secondary
+
+.conflict-resolver
+  width 100%
+
+  &--loading
+    min-height 200px
+
+  &--compact
+    .three-way-diff__content
+      max-height 250px
+
+.three-way-diff
+  display grid
+  grid-template-columns 1fr 1fr 1fr
+  gap 1px
+  width 100%
+  margin 0
+  background-color $conflict_panel_border
+  border 1px solid $conflict_panel_border
+  border-radius 0
+
+  &__panel
+    overflow hidden
+    background-color $color_white
+    display flex
+    flex-direction column
+
+    &--ours
+      .three-way-diff__header
+        color $conflict_ours_color
+        border-bottom-color rgba($conflict_ours_color, 0.3)
+        background-color rgba($conflict_ours_color, 0.05)
+
+      .three-way-diff__indicator
+        background-color $conflict_ours_color
+
+      &.three-way-diff__panel--highlighted
+        .three-way-diff__header
+          background-color rgba($conflict_ours_color, 0.15)
+
+    &--base
+      .three-way-diff__header
+        color $conflict_base_color
+        border-bottom-color rgba($conflict_base_color, 0.3)
+        background-color $conflict_header_bg
+
+      .three-way-diff__indicator
+        background-color $conflict_base_color
+
+    &--theirs
+      .three-way-diff__header
+        color $conflict_theirs_color
+        border-bottom-color rgba($conflict_theirs_color, 0.3)
+        background-color rgba($conflict_theirs_color, 0.05)
+
+      .three-way-diff__indicator
+        background-color $conflict_theirs_color
+
+      &.three-way-diff__panel--highlighted
+        .three-way-diff__header
+          background-color rgba($conflict_theirs_color, 0.15)
+
+  &__header
+    position relative
+    border-bottom 1px solid $conflict_panel_border
+    font-family $font_family_mono
+    font-size $font_size_xs
+    font-weight $font_weight_semibold
+    text-transform uppercase
+    letter-spacing 0.5px
+    padding $space_sm $space_base $space_sm ($space_base + 4px)
+    display flex
+    align-items center
+    white-space nowrap
+    overflow hidden
+    text-overflow ellipsis
+
+  &__indicator
+    position absolute
+    left 0
+    top 0
+    bottom 0
+    width 4px
+    border-radius 0
+
+  &__content
+    overflow auto
+    max-height 400px
+
+    // Override CodeViewer styles for tighter layout in conflict panels
+    > div
+      overflow auto
+
+      > div
+        margin 0 !important
+
+    // Match DiffViewer font size (CodeViewer uses --font-size-base = 15px)
+    pre
+      padding $space_sm !important
+      font-size $font_size_xs !important
+      line-height 1.4 !important
+
+    // Reduce line number width and spacing (CodeViewer uses 6ch width, --space-lg padding)
+    .line-number
+      width 3ch !important
+      padding-right $space_xs !important
+
+  &__empty
+  &__loading
+    padding $space_lg
+    text-align center
+    color $color_text_secondary
+    font-style italic
+    font-family $font_family_mono
+
+.conflict-resolution-actions
+  display flex
+  gap $space_sm
+  justify-content center
+  padding $space_base 0
+  background-color $color_surface
+
+  &__button
+    min-width 140px
+    font-family $font_family_mono
+    font-size $font_size_xs
+    font-weight $font_weight_semibold
+    text-transform uppercase
+    letter-spacing 0.5px
+    padding $space_sm $space_base
+    border-radius 0
+    border-width 1px
+    border-style solid
+    cursor pointer
+    transition background-color $transition_fast, border-color $transition_fast
+    display inline-flex
+    align-items center
+    justify-content center
+    gap $space_xs
+
+    &--ours
+      color $conflict_ours_color
+      border-color $conflict_ours_color
+      background-color transparent
+
+      &:hover:not(:disabled)
+        background-color rgba($conflict_ours_color, 0.05)
+
+    &--theirs
+      color $conflict_theirs_color
+      border-color $conflict_theirs_color
+      background-color transparent
+
+      &:hover:not(:disabled)
+        background-color rgba($conflict_theirs_color, 0.05)
+
+    &:disabled
+      opacity 0.5
+      cursor not-allowed
+
+// Mobile responsive - stack panels vertically
+@media (max-width: 768px)
+  .three-way-diff
+    grid-template-columns 1fr
+    gap 0
+
+    &__panel
+      border-bottom 1px solid $conflict_panel_border
+
+      &:last-child
+        border-bottom none
+
+    &__content
+      max-height 200px

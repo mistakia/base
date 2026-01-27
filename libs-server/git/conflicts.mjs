@@ -7,6 +7,65 @@ import { execute_shell_command } from '#libs-server/utils/execute-shell-command.
 const log = debug('git:conflicts')
 
 /**
+ * Get the current branch name
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @returns {Promise<string|null>} Current branch name or null
+ */
+async function get_current_branch_name({ repo_path }) {
+  try {
+    const { stdout } = await execute_shell_command(
+      'git branch --show-current',
+      {
+        cwd: repo_path
+      }
+    )
+    return stdout.trim() || null
+  } catch (error) {
+    log(`Failed to get current branch name: ${error.message}`)
+    return null
+  }
+}
+
+/**
+ * Get the branch name from MERGE_HEAD
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @returns {Promise<string|null>} Merge head branch name or null
+ */
+async function get_merge_head_branch_name({ repo_path }) {
+  try {
+    const merge_head_path = path.join(repo_path, '.git', 'MERGE_HEAD')
+    const merge_head_commit = await fs.readFile(merge_head_path, 'utf8')
+    const commit_hash = merge_head_commit.trim()
+
+    // Use git name-rev to get the branch name
+    const { stdout } = await execute_shell_command(
+      `git name-rev --name-only ${commit_hash}`,
+      { cwd: repo_path }
+    )
+
+    // name-rev returns things like "feature/branch-name" or "remotes/origin/branch-name~1"
+    // Clean up the result
+    let branch_name = stdout.trim()
+
+    // Remove ~N suffix if present (e.g., "main~2" -> "main")
+    branch_name = branch_name.replace(/~\d+$/, '')
+
+    // Remove ^N suffix if present (e.g., "main^2" -> "main")
+    branch_name = branch_name.replace(/\^\d+$/, '')
+
+    // Remove "remotes/origin/" prefix if present
+    branch_name = branch_name.replace(/^remotes\/origin\//, '')
+
+    return branch_name || null
+  } catch (error) {
+    log(`Failed to get merge head branch name: ${error.message}`)
+    return null
+  }
+}
+
+/**
  * Get list of files in conflict state
  * @param {Object} params Parameters
  * @param {string} params.repo_path Path to the repository
@@ -95,12 +154,18 @@ export async function get_conflict_versions({ repo_path, file_path }) {
       log(`Could not read current file ${file_path}`)
     }
 
+    // Get branch names for display
+    const ours_branch = await get_current_branch_name({ repo_path })
+    const theirs_branch = await get_merge_head_branch_name({ repo_path })
+
     return {
       file_path,
       ours,
       theirs,
       base,
-      current
+      current,
+      ours_branch,
+      theirs_branch
     }
   } catch (error) {
     log(`Failed to get conflict versions for ${file_path}:`, error)

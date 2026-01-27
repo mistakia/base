@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadPage from '@pages/ThreadPage/index.js'
+import DirectoryPage from '@pages/DirectoryPage/index.js'
 import ThreadsTable from '@views/components/ThreadsTable/index.js'
 import { threads_actions } from '@core/threads/actions.js'
 import PageHead from '@views/components/PageHead/index.js'
@@ -18,6 +19,15 @@ import {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// Pattern to detect file paths - require a file extension to distinguish from view slugs
+// This allows view slugs with slashes (e.g., "archived/2024") while still catching file paths
+const FILE_EXTENSION_PATTERN = /\.(md|json|txt|mjs|js|ts|yaml|yml)$/i
+
+const is_file_path = (param) => {
+  if (!param) return false
+  return FILE_EXTENSION_PATTERN.test(param)
+}
+
 const ThreadsPage = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -25,6 +35,9 @@ const ThreadsPage = () => {
 
   // Check if the URL param is a thread UUID (not a view slug)
   const is_thread_uuid = url_view_slug && UUID_PATTERN.test(url_view_slug)
+
+  // Check if the URL param is a file path (not a view slug)
+  const is_file = is_file_path(url_view_slug)
 
   // Convert URL slug to internal view_id
   const url_view_id = url_view_slug ? slug_to_view_id(url_view_slug) : null
@@ -38,8 +51,8 @@ const ThreadsPage = () => {
   })
 
   useEffect(() => {
-    // Only load thread table data if not viewing a specific thread
-    if (!is_thread_uuid) {
+    // Only load thread table data if not viewing a specific thread or file
+    if (!is_thread_uuid && !is_file) {
       dispatch(
         threads_actions.select_thread_table_view({ view_id: resolved_view_id })
       )
@@ -47,7 +60,7 @@ const ThreadsPage = () => {
         threads_actions.load_threads_table({ view_id: resolved_view_id })
       )
     }
-  }, [dispatch, resolved_view_id, is_thread_uuid])
+  }, [dispatch, resolved_view_id, is_thread_uuid, is_file])
 
   // Handle view selection - navigate to new URL
   const handle_view_select = useCallback(
@@ -61,6 +74,11 @@ const ThreadsPage = () => {
   // If the param is a thread UUID, render ThreadPage
   if (is_thread_uuid) {
     return <ThreadPage />
+  }
+
+  // If the param is a file path, render DirectoryPage
+  if (is_file) {
+    return <DirectoryPage />
   }
 
   return (

@@ -48,13 +48,15 @@ import {
   get_git_status_actions,
   get_git_diff_actions,
   get_file_at_ref_actions,
+  get_file_content_actions,
   stage_files_actions,
   unstage_files_actions,
   commit_changes_actions,
   pull_changes_actions,
   push_changes_actions,
   get_conflicts_actions,
-  resolve_conflict_actions
+  resolve_conflict_actions,
+  get_conflict_versions_actions
 } from '@core/git/actions'
 import { get_app } from '@core/app/selectors'
 
@@ -270,6 +272,12 @@ export const get_file_at_ref = fetch.bind(
   get_file_at_ref_actions
 )
 
+export const get_git_file_content = fetch.bind(
+  null,
+  api.get_git_file_content,
+  get_file_content_actions
+)
+
 export const stage_files = fetch.bind(
   null,
   api.stage_files,
@@ -310,4 +318,10 @@ export const resolve_conflict = fetch.bind(
   null,
   api.resolve_conflict,
   resolve_conflict_actions
+)
+
+export const get_conflict_versions = fetch.bind(
+  null,
+  api.get_conflict_versions,
+  get_conflict_versions_actions
 )

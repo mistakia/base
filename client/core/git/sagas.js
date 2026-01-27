@@ -5,12 +5,14 @@ import {
   get_git_status,
   get_git_diff,
   get_file_at_ref,
+  get_git_file_content,
   stage_files,
   unstage_files,
   commit_changes,
   pull_changes,
   push_changes,
-  resolve_conflict
+  resolve_conflict,
+  get_conflict_versions
 } from '@core/api/sagas'
 import { git_action_types } from './actions'
 import { notification_actions } from '@core/notification/actions'
@@ -66,6 +68,15 @@ export function* load_git_diff({ payload }) {
 export function* load_file_at_ref({ payload }) {
   const { repo_path, file_path, ref } = payload
   yield call(get_file_at_ref, { repo_path, file_path, ref })
+}
+
+// ============================================================================
+// Load File Content Saga (Working Copy)
+// ============================================================================
+
+export function* load_file_content({ payload }) {
+  const { repo_path, file_path } = payload
+  yield call(get_git_file_content, { repo_path, file_path })
 }
 
 // ============================================================================
@@ -204,6 +215,15 @@ export function* request_resolve_conflict({ payload }) {
 }
 
 // ============================================================================
+// Load Conflict Versions Saga
+// ============================================================================
+
+export function* load_conflict_versions({ payload }) {
+  const { repo_path, file_path } = payload
+  yield call(get_conflict_versions, { repo_path, file_path })
+}
+
+// ============================================================================
 // Watchers
 // ============================================================================
 
@@ -221,6 +241,10 @@ export function* watch_load_git_diff() {
 
 export function* watch_load_file_at_ref() {
   yield takeLatest(git_action_types.LOAD_FILE_AT_REF, load_file_at_ref)
+}
+
+export function* watch_load_file_content() {
+  yield takeLatest(git_action_types.LOAD_FILE_CONTENT, load_file_content)
 }
 
 export function* watch_stage_files() {
@@ -253,6 +277,13 @@ export function* watch_resolve_conflict() {
   )
 }
 
+export function* watch_load_conflict_versions() {
+  yield takeLatest(
+    git_action_types.LOAD_CONFLICT_VERSIONS,
+    load_conflict_versions
+  )
+}
+
 // ============================================================================
 // Root Saga Export
 // ============================================================================
@@ -262,10 +293,12 @@ export const git_sagas = [
   fork(watch_load_git_status),
   fork(watch_load_git_diff),
   fork(watch_load_file_at_ref),
+  fork(watch_load_file_content),
   fork(watch_stage_files),
   fork(watch_unstage_files),
   fork(watch_commit),
   fork(watch_pull),
   fork(watch_push),
-  fork(watch_resolve_conflict)
+  fork(watch_resolve_conflict),
+  fork(watch_load_conflict_versions)
 ]

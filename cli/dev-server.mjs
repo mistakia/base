@@ -38,6 +38,16 @@ async function start_dev_server() {
     // Start server
     await server.start()
     console.log('Dev server is running on port 8081')
+
+    // Handle graceful shutdown
+    const shutdown = async () => {
+      console.log('\nShutting down dev server...')
+      await server.stop()
+      process.exit(0)
+    }
+
+    process.on('SIGINT', shutdown)
+    process.on('SIGTERM', shutdown)
   } catch (error) {
     console.error('Failed to start dev server:', error)
     process.exit(1)
