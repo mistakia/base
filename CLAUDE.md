@@ -229,6 +229,29 @@ node cli/rsync-threads.mjs sync-all
 node cli/rsync-threads.mjs status
 ```
 
+### CLI Command Queue
+
+Queue CLI commands for background execution with tag-based concurrency control.
+Tags allow limiting how many commands of a certain type run simultaneously
+(e.g., max 5 concurrent claude-session commands).
+
+```bash
+# Queue a command for background execution
+node cli/queue-command.mjs "yarn test" --tags test,ci --priority 5
+
+# Queue with specific working directory
+node cli/queue-command.mjs "node script.mjs" --tags claude-session --cwd ~/project
+
+# Check job status
+node cli/queue-command.mjs status <job-id>
+
+# View queue statistics
+node cli/queue-command.mjs stats
+```
+
+Tag concurrency limits are configured in `config.json` under `cli_queue.tag_limits`.
+The worker service runs via PM2 (`cli-queue-worker`).
+
 ### External Session Import
 
 ```bash
