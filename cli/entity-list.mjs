@@ -459,14 +459,14 @@ if (is_main(import.meta.url)) {
       } else if (argv.json) {
         console.log(JSON.stringify(entities, null, 2))
       } else {
-        for (const entity of entities) {
+        for (let i = 0; i < entities.length; i++) {
           console.log(
-            format_entity(entity, {
+            format_entity(entities[i], {
               verbose: argv.verbose,
               fields: argv.fields
             })
           )
-          if (argv.verbose && entities.indexOf(entity) < entities.length - 1) {
+          if (argv.verbose && i < entities.length - 1) {
             console.log('')
           }
         }
