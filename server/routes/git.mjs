@@ -17,7 +17,11 @@ import {
   get_conflicts,
   get_conflict_versions,
   resolve_conflict,
-  read_file_from_ref
+  read_file_from_ref,
+  is_merging,
+  get_current_branch_name,
+  get_merge_head_branch_name,
+  abort_merge
 } from '#libs-server/git/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { attach_permission_context } from '#server/middleware/permission/middleware.mjs'
@@ -31,6 +35,37 @@ import { execute_shell_command } from '#libs-server/utils/execute-shell-command.
 
 const router = express.Router()
 const log = debug('api:git')
+
+/**
+ * Default merge state for repos not in a merge
+ */
+const DEFAULT_MERGE_STATE = {
+  is_merging: false,
+  ours_branch: null,
+  theirs_branch: null
+}
+
+/**
+ * Get merge states for multiple repositories in parallel
+ * @param {string[]} repo_paths - Array of repository paths
+ * @returns {Promise<Map<string, Object>>} Map of repo_path to merge state
+ */
+const get_merge_states_for_repos = async (repo_paths) => {
+  const merge_states = await Promise.all(
+    repo_paths.map(async (repo_path) => {
+      const merging = await is_merging({ repo_path })
+      if (merging) {
+        const [ours_branch, theirs_branch] = await Promise.all([
+          get_current_branch_name({ repo_path }),
+          get_merge_head_branch_name({ repo_path })
+        ])
+        return { repo_path, is_merging: true, ours_branch, theirs_branch }
+      }
+      return { repo_path, ...DEFAULT_MERGE_STATE }
+    })
+  )
+  return new Map(merge_states.map((ms) => [ms.repo_path, ms]))
+}
 
 /**
  * Get user base directory dynamically
@@ -529,14 +564,25 @@ router.get('/status/all', async (req, res) => {
     if (has_global_write) {
       const statuses = await get_multi_repo_status({ repo_paths })
 
-      const repos = Object.entries(statuses).map(([repo_path, status]) => ({
-        repo_path,
-        repo_name: path.basename(repo_path),
-        relative_repo_path: path.relative(user_base_dir, repo_path),
-        is_user_base: repo_path === user_base_dir,
-        ...status,
-        write_allowed: true
-      }))
+      const merge_state_map = await get_merge_states_for_repos(
+        Object.keys(statuses)
+      )
+
+      const repos = Object.entries(statuses).map(([repo_path, status]) => {
+        const merge_state =
+          merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+        return {
+          repo_path,
+          repo_name: path.basename(repo_path),
+          relative_repo_path: path.relative(user_base_dir, repo_path),
+          is_user_base: repo_path === user_base_dir,
+          ...status,
+          write_allowed: true,
+          is_merging: merge_state.is_merging,
+          ours_branch: merge_state.ours_branch,
+          theirs_branch: merge_state.theirs_branch
+        }
+      })
 
       return res.json({ repos })
     }
@@ -625,9 +671,14 @@ router.get('/status/all', async (req, res) => {
       )
     }
 
+    const merge_state_map = await get_merge_states_for_repos(accessible_repos)
+
     // Build response with filtered files
     const repos = Object.entries(statuses).map(([repo_path, status]) => {
       const write_allowed = repo_write_permissions.get(repo_path) ?? false
+
+      const merge_state =
+        merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
 
       // If user has write access to repo, include all files (no filtering needed)
       if (write_allowed) {
@@ -637,7 +688,10 @@ router.get('/status/all', async (req, res) => {
           relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
           ...status,
-          write_allowed
+          write_allowed,
+          is_merging: merge_state.is_merging,
+          ours_branch: merge_state.ours_branch,
+          theirs_branch: merge_state.theirs_branch
         }
       }
 
@@ -676,7 +730,10 @@ router.get('/status/all', async (req, res) => {
           filtered_unstaged.length > 0 ||
           filtered_untracked.length > 0,
         has_conflicts: filtered_conflicts.length > 0,
-        write_allowed
+        write_allowed,
+        is_merging: merge_state.is_merging,
+        ours_branch: merge_state.ours_branch,
+        theirs_branch: merge_state.theirs_branch
       }
     })
 
@@ -1228,5 +1285,35 @@ router.post(
     }
   }
 )
+
+/**
+ * POST /api/git/abort-merge
+ * Abort an in-progress merge
+ * Body: { repo_path }
+ */
+router.post('/abort-merge', require_repo_write_permission, async (req, res) => {
+  try {
+    const repo_path = req.validated_repo_path
+
+    // Check if actually in a merge state
+    const merging = await is_merging({ repo_path })
+    if (!merging) {
+      return res.status(400).json({
+        error: 'Not in merge state',
+        message: 'Repository is not currently in a merge state'
+      })
+    }
+
+    await abort_merge({ repo_path })
+
+    res.json({ success: true, message: 'Merge aborted successfully' })
+  } catch (error) {
+    log('Error aborting merge:', error.message)
+    res.status(500).json({
+      error: 'Failed to abort merge',
+      message: error.message
+    })
+  }
+})
 
 export default router

@@ -10,7 +10,8 @@ import {
   get_conflicts,
   get_conflict_versions,
   resolve_conflict,
-  is_merging
+  is_merging,
+  abort_merge
 } from '#libs-server/git/conflicts.mjs'
 
 const execute = promisify(exec)
@@ -212,6 +213,47 @@ describe('Git Conflict Operations', function () {
       // Check conflict is resolved
       const conflicts = await get_conflicts({ repo_path: test_repo_path })
       expect(conflicts).to.have.lengthOf(0)
+    })
+  })
+
+  describe('abort_merge', () => {
+    it('should abort merge and clear merge state', async function () {
+      // Verify we are in merge state
+      const merging_before = await is_merging({ repo_path: test_repo_path })
+      expect(merging_before).to.be.true
+
+      // Abort the merge
+      const result = await abort_merge({ repo_path: test_repo_path })
+      expect(result).to.be.true
+
+      // Verify merge state is cleared
+      const merging_after = await is_merging({ repo_path: test_repo_path })
+      expect(merging_after).to.be.false
+
+      // Verify conflicts are cleared
+      const conflicts = await get_conflicts({ repo_path: test_repo_path })
+      expect(conflicts).to.have.lengthOf(0)
+
+      // Verify file is restored to pre-merge state (main branch content)
+      const content = await fs.readFile(
+        path.join(test_repo_path, 'conflict-file.txt'),
+        'utf8'
+      )
+      expect(content).to.include('Main Change')
+      expect(content).not.to.include('<<<<<<<')
+    })
+
+    it('should throw error when not in merge state', async function () {
+      // First abort to clear merge state
+      await abort_merge({ repo_path: test_repo_path })
+
+      // Attempting to abort again should throw
+      try {
+        await abort_merge({ repo_path: test_repo_path })
+        expect.fail('Should have thrown an error')
+      } catch (error) {
+        expect(error.message).to.include('abort')
+      }
     })
   })
 })

@@ -18,6 +18,10 @@ const RepoSection = ({ repo }) => {
   const dispatch = useDispatch()
   const [is_collapsed, set_is_collapsed] = useState(true)
 
+  const is_merging = repo.is_merging === true
+  const ours_branch = repo.ours_branch
+  const theirs_branch = repo.theirs_branch
+
   const all_files = CHANGE_TYPES.flatMap(({ key, type }) =>
     (repo[key] || []).map((f) => ({
       ...f,
@@ -74,6 +78,11 @@ const RepoSection = ({ repo }) => {
     }
   }
 
+  const handle_abort_merge = () => {
+    if (!write_allowed) return
+    dispatch(git_actions.abort_merge({ repo_path: repo.repo_path }))
+  }
+
   return (
     <div className='repo-section'>
       <div
@@ -93,6 +102,23 @@ const RepoSection = ({ repo }) => {
         {conflict_count > 0 && (
           <span className='repo-section__conflict-indicator'>
             {conflict_count} conflict{conflict_count > 1 ? 's' : ''}
+          </span>
+        )}
+        {is_merging && (
+          <span className='repo-section__merge-indicator'>
+            <span className='repo-section__merge-text'>
+              Merging {theirs_branch || 'branch'} into {ours_branch || 'current'}
+            </span>
+            {write_allowed && (
+              <button
+                className='repo-section__abort-button'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handle_abort_merge()
+                }}>
+                Abort
+              </button>
+            )}
           </span>
         )}
         <span className='repo-section__count'>{total_count}</span>
@@ -129,6 +155,9 @@ const RepoSection = ({ repo }) => {
             repo_path={repo.repo_path}
             staged_count={staged_count}
             write_allowed={write_allowed}
+            is_merging={is_merging}
+            ours_branch={ours_branch}
+            theirs_branch={theirs_branch}
           />
         </div>
       )}
@@ -143,6 +172,9 @@ RepoSection.propTypes = {
     relative_repo_path: PropTypes.string,
     branch: PropTypes.string.isRequired,
     write_allowed: PropTypes.bool,
+    is_merging: PropTypes.bool,
+    ours_branch: PropTypes.string,
+    theirs_branch: PropTypes.string,
     conflicts: PropTypes.arrayOf(
       PropTypes.shape({
         path: PropTypes.string.isRequired,
