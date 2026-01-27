@@ -5,7 +5,8 @@ export const build_table_props = ({
   view_id,
   prefix,
   all_columns_key,
-  data_transform
+  data_transform,
+  all_columns_memoized // Optional: pre-memoized all_columns to avoid reference instability
 }) => {
   const views_key = `${prefix}_table_views`
   const table_state_key = `${prefix}_table_state`
@@ -39,7 +40,6 @@ export const build_table_props = ({
   const table_results = selected_view.get(results_key)
   const table_state = selected_view.get(table_state_key)
   const saved_state = selected_view.get(saved_table_state_key)
-  const all_columns = slice_state.get(all_columns_key)
   const total_row_count = selected_view.get(total_row_count_key) || 0
   const total_rows_fetched = selected_view.get(total_rows_fetched_key) || 0
   const is_fetching = selected_view.get(is_fetching_key) || false
@@ -52,9 +52,16 @@ export const build_table_props = ({
   const saved_table_state_js = saved_state?.toJS
     ? saved_state.toJS()
     : saved_state || {}
-  const all_columns_js = all_columns?.toJS
-    ? all_columns.toJS()
-    : all_columns || {}
+
+  // Use pre-memoized all_columns if provided to avoid reference instability
+  // Otherwise fall back to converting from Immutable (creates new reference each time)
+  let all_columns_js
+  if (all_columns_memoized !== undefined) {
+    all_columns_js = all_columns_memoized
+  } else {
+    const all_columns = slice_state.get(all_columns_key)
+    all_columns_js = all_columns?.toJS ? all_columns.toJS() : all_columns || {}
+  }
   const rows_js = table_results?.toJS
     ? table_results.toJS()
     : table_results || []

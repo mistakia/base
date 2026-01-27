@@ -59,15 +59,31 @@ export function get_task_table_views(state) {
     .toArray()
 }
 
+// Memoized selector for task_all_columns to avoid reference instability
+// This ensures the JS object reference only changes when the underlying Immutable data changes
+export function get_task_all_columns_immutable(state) {
+  return get_tasks_state(state).get('task_all_columns')
+}
+
+export const get_task_all_columns = createSelector(
+  [get_task_all_columns_immutable],
+  (all_columns_immutable) => {
+    return all_columns_immutable?.toJS
+      ? all_columns_immutable.toJS()
+      : all_columns_immutable || {}
+  }
+)
+
 // Main table props selector that provides all data needed for react-table
 export const get_tasks_table_props = createSelector(
-  [get_tasks_state, get_selected_task_table_view_id],
-  (tasks_state, view_id) => {
+  [get_tasks_state, get_selected_task_table_view_id, get_task_all_columns],
+  (tasks_state, view_id, all_columns_memoized) => {
     return build_table_props({
       slice_state: tasks_state,
       view_id,
       prefix: 'task',
       all_columns_key: 'task_all_columns',
+      all_columns_memoized,
       data_transform: (rows) =>
         rows.map((task) => ({ ...task, id: task.entity_id }))
     })

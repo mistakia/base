@@ -173,16 +173,32 @@ export const get_thread_cost_by_id = createSelector(
   }
 )
 
+// Memoized selector for thread_all_columns to avoid reference instability
+// This ensures the JS object reference only changes when the underlying Immutable data changes
+export function get_thread_all_columns_immutable(state) {
+  return get_threads_state(state).get('thread_all_columns')
+}
+
+export const get_thread_all_columns = createSelector(
+  [get_thread_all_columns_immutable],
+  (all_columns_immutable) => {
+    return all_columns_immutable?.toJS
+      ? all_columns_immutable.toJS()
+      : all_columns_immutable || {}
+  }
+)
+
 // Main table props selector that provides all data needed for react-table
 export const get_threads_table_props = createSelector(
-  [get_threads_state, get_selected_thread_table_view_id],
-  (threads_state, view_id) => {
+  [get_threads_state, get_selected_thread_table_view_id, get_thread_all_columns],
+  (threads_state, view_id, all_columns_memoized) => {
     // Rows are already enhanced and assigned id in the reducer; avoid extra work
     return build_table_props({
       slice_state: threads_state,
       view_id,
       prefix: 'thread',
-      all_columns_key: 'thread_all_columns'
+      all_columns_key: 'thread_all_columns',
+      all_columns_memoized
     })
   }
 )
