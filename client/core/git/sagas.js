@@ -32,7 +32,7 @@ function* show_permission_error(error, action) {
     }
   }
   yield put(
-    notification_actions.show({
+    notification_actions.show_notification({
       severity: 'warning',
       message
     })
@@ -124,7 +124,7 @@ export function* request_commit({ payload }) {
     yield call(get_git_status, { repo_path })
     // Show success notification
     yield put(
-      notification_actions.show({
+      notification_actions.show_notification({
         severity: 'success',
         message: 'Changes committed successfully'
       })
@@ -148,7 +148,7 @@ export function* request_pull({ payload }) {
     // Refresh status after pull
     yield call(get_git_status, { repo_path })
     yield put(
-      notification_actions.show({
+      notification_actions.show_notification({
         severity: 'success',
         message: 'Pull completed successfully'
       })
@@ -172,7 +172,7 @@ export function* request_push({ payload }) {
     // Refresh status after push
     yield call(get_git_status, { repo_path })
     yield put(
-      notification_actions.show({
+      notification_actions.show_notification({
         severity: 'success',
         message: 'Push completed successfully'
       })
@@ -201,7 +201,7 @@ export function* request_resolve_conflict({ payload }) {
     // Refresh status after resolving conflict
     yield call(get_git_status, { repo_path })
     yield put(
-      notification_actions.show({
+      notification_actions.show_notification({
         severity: 'success',
         message: `Conflict resolved for ${file_path}`
       })

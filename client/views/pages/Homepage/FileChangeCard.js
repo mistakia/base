@@ -99,7 +99,7 @@ const FileChangeCard = ({
 
   const handle_conflict_resolved = useCallback(() => {
     // Refresh git status to update the file list after conflict resolution
-    dispatch(git_actions.get_git_status({ repo_path }))
+    dispatch(git_actions.load_git_status(repo_path))
     set_is_expanded(false)
   }, [dispatch, repo_path])
 
