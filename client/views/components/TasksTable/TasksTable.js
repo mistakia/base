@@ -75,6 +75,15 @@ const TasksTable = ({ on_view_select }) => {
     dispatch(tasks_actions.select_task_table_view({ view_id }))
     dispatch(tasks_actions.load_tasks_table({ view_id }))
   }
+
+  const handle_reset_cache = () => {
+    dispatch(
+      tasks_actions.load_tasks_table({
+        view_id: selected_view?.view_id
+      })
+    )
+  }
+
   if (table_error) {
     return <div className='tasks-table-error'>{table_error}</div>
   }
@@ -96,6 +105,7 @@ const TasksTable = ({ on_view_select }) => {
         is_fetching={is_fetching}
         is_fetching_more={is_fetching_more}
         saved_table_state={saved_table_state}
+        reset_cache={handle_reset_cache}
         disable_rank_aggregation={true}
         disable_splits={true}
         disable_create_view={true}

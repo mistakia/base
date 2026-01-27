@@ -52,6 +52,15 @@ const ThreadsTable = ({ on_view_select }) => {
       })
     )
   }
+
+  const handle_reset_cache = () => {
+    dispatch(
+      threads_actions.load_threads_table({
+        view_id: selected_view?.view_id
+      })
+    )
+  }
+
   if (table_error) {
     return (
       <div className='threads-table-error'>
@@ -79,6 +88,7 @@ const ThreadsTable = ({ on_view_select }) => {
         is_loading={is_loading}
         is_fetching={table_props.is_fetching}
         is_fetching_more={table_props.is_fetching_more}
+        reset_cache={handle_reset_cache}
         disable_rank_aggregation={true}
         disable_splits={true}
         disable_create_view={true}
