@@ -62,18 +62,19 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Verify clean state on main/master branch
    - Create worktree using pattern: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
    - Navigate to worktree directory
+   - **Path reference**: From within the worktree, the main repo is at `../../{repo-name}` (e.g., `../../base`)
    - **Copy config files from main repository** (required for scripts and testing):
      - Config files are typically gitignored and must be copied manually to the worktree
      - Common patterns to copy (check .gitignore for project-specific patterns):
-       - Root config files: `cp ../repo/config.*.js .` (e.g., config.production.js, config.development.js)
-       - Config directory: `cp ../repo/config/config*.json ./config/` (e.g., config.json)
+       - Root config files: `cp ../../{repo-name}/config.*.js .` (e.g., config.production.js, config.development.js)
+       - Config directory: `cp ../../{repo-name}/config/config*.json ./config/` (e.g., config.json)
      - Do NOT read config file contents to avoid exposing sensitive information
    - **Initialize submodules (if modifying submodule code)**:
      - Initialize needed submodule: `git submodule update --init [submodule-path]`
      - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
    - **Install dependencies** (choose based on native module complexity):
      - **Fast path** (for projects with native dependencies like duckdb, kuzu, sqlite3):
-       - Copy node_modules from main repo: `cp -r ../repo/node_modules .`
+       - Copy node_modules from main repo: `cp -r ../../{repo-name}/node_modules .`
        - Run `yarn install` to verify and link (typically < 1 second)
      - **Standard path**: `yarn install`
        - With `enableGlobalCache: true` and `nmMode: hardlinks-global`, JS packages are fetched instantly via hardlinks
