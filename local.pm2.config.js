@@ -42,6 +42,25 @@ module.exports = {
         // Fix chokidar FSEvents issue on macOS where /tmp is a symlink to /private/tmp
         CHOKIDAR_USEPOLLING: '1'
       }
+    },
+    {
+      name: 'cli-queue-worker',
+      script: 'server/services/cli-queue-worker.mjs',
+      cwd: __dirname,
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_memory_restart: '512M',
+      combine_logs: true,
+      time: true,
+      error_file: path.join(logs_dir, 'cli-queue-worker-error.log'),
+      out_file: path.join(logs_dir, 'cli-queue-worker-out.log'),
+      log_file: path.join(logs_dir, 'cli-queue-worker-combined.log'),
+      env: {
+        DEBUG: 'cli-queue:*',
+        DEBUG_COLORS: 'false',
+        CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY
+      }
     }
   ]
 }
