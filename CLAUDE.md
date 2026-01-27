@@ -276,6 +276,18 @@ node cli/convert-external-sessions.mjs validate --provider claude --verbose
 ./cli/entity-visibility.sh get <base-uri>
 ```
 
+### Entity Query
+
+```bash
+# Query entities via HTTP API (use when server is running)
+node cli/entity-list-api.mjs -t task --status "In Progress"
+node cli/entity-list-api.mjs --base-uri "user:task/my-task.md"
+node cli/entity-list-api.mjs -s "feature" -t task --json
+
+# Query entities directly (use when server is NOT running)
+node cli/entity-list.mjs -t task --status "In Progress"
+```
+
 ### GitHub Integration
 
 ```bash

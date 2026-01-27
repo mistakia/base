@@ -1,23 +1,25 @@
 ---
 title: Entity List CLI Usage
 type: guideline
-description: Guidelines for using the entity-list CLI to query and filter entities
+description: Guidelines for using the entity-list CLI tools to query and filter entities
 base_uri: sys:system/guideline/entity-list-cli.md
 created_at: '2026-01-16T00:00:00.000Z'
 entity_id: 905ece35-bb38-411c-b44d-ea8e0c842911
 globs:
   - cli/entity-list.mjs
+  - cli/entity-list-api.mjs
 observations:
   - '[efficiency] Tab-separated output minimizes token usage for agent parsing'
   - '[design] Unified CLI replaces type-specific MCP tools for entity queries'
   - '[usability] Verbose mode provides human-readable multi-line output'
+  - '[architecture] Two CLI variants exist for different server states'
 relations:
   - implements [[sys:system/text/system-design.md]]
   - replaces list_tasks MCP tool
   - replaces task_get MCP tool
   - replaces list_threads MCP tool
   - replaces thread_read MCP tool
-updated_at: '2026-01-16T00:00:00.000Z'
+updated_at: '2026-01-27T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -25,7 +27,18 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 ## Purpose and Distinction
 
-The `entity-list` CLI provides a unified interface for querying entities from the embedded database index. It replaces the type-specific MCP tools (`list_tasks`, `task_get`, `list_threads`, `thread_read`) with a single, flexible command-line tool.
+The entity-list CLIs provide unified interfaces for querying entities from the embedded database. They replace type-specific MCP tools (`list_tasks`, `task_get`, `list_threads`, `thread_read`) with flexible command-line tools.
+
+### Two CLI Variants
+
+| CLI                   | When to Use                     | How It Works           |
+| --------------------- | ------------------------------- | ---------------------- |
+| `entity-list-api.mjs` | Server IS running (recommended) | Queries via HTTP API   |
+| `entity-list.mjs`     | Server is NOT running           | Direct database access |
+
+**Why two CLIs?** DuckDB requires exclusive write access. When the Base server is running, it holds the database lock, preventing direct CLI access. The API-based CLI queries through the running server instead.
+
+**Recommendation**: Use `entity-list-api.mjs` when the server is running. It provides the same interface with permission-based access control.
 
 **When to use entity-list CLI:**
 
@@ -45,7 +58,9 @@ The `entity-list` CLI provides a unified interface for querying entities from th
 
 ### Command Invocation
 
-- The CLI MUST be invoked via `node cli/entity-list.mjs` from the base repository
+- When server is running: `node cli/entity-list-api.mjs` (recommended)
+- When server is stopped: `node cli/entity-list.mjs`
+- Both CLIs MUST be invoked from the base repository directory
 - Agents SHOULD use the Bash tool to execute CLI commands
 - Commands MUST include appropriate filters to limit result sets
 
@@ -165,3 +180,20 @@ node cli/entity-list.mjs -t task --without-tags -l 50
 ```bash
 node cli/entity-list.mjs -t task --status "Completed" --json
 ```
+
+## API-Based CLI Examples
+
+When the server is running, use `entity-list-api.mjs` with the same arguments:
+
+```bash
+# List in-progress tasks
+node cli/entity-list-api.mjs -t task --status "In Progress"
+
+# Get single entity
+node cli/entity-list-api.mjs --base-uri "user:task/my-task.md"
+
+# Search with verbose output
+node cli/entity-list-api.mjs -s "authentication" -v
+```
+
+If the server is not running, you will see: `Error: Server not running. Start with: yarn start`
