@@ -260,3 +260,25 @@ export function get_conflict_versions(state, repo_path, file_path) {
   const versions = conflict_versions_map.get(cache_key)
   return versions ? to_plain(versions) : null
 }
+
+/**
+ * Check if a repo is in a merge state
+ */
+export function get_is_repo_merging(state, repo_path) {
+  const repo = get_repo_status(state, repo_path)
+  return repo?.is_merging ?? false
+}
+
+/**
+ * Get merge branch names for a repo
+ * Returns { ours_branch, theirs_branch } or null if not merging
+ */
+export function get_repo_merge_branches(state, repo_path) {
+  const repo = get_repo_status(state, repo_path)
+  if (!repo?.is_merging) return null
+
+  return {
+    ours_branch: repo.ours_branch,
+    theirs_branch: repo.theirs_branch
+  }
+}

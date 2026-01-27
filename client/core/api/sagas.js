@@ -56,7 +56,8 @@ import {
   push_changes_actions,
   get_conflicts_actions,
   resolve_conflict_actions,
-  get_conflict_versions_actions
+  get_conflict_versions_actions,
+  abort_merge_actions
 } from '@core/git/actions'
 import { get_app } from '@core/app/selectors'
 
@@ -324,4 +325,10 @@ export const get_conflict_versions = fetch.bind(
   null,
   api.get_conflict_versions,
   get_conflict_versions_actions
+)
+
+export const abort_merge = fetch.bind(
+  null,
+  api.abort_merge,
+  abort_merge_actions
 )

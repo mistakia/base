@@ -292,6 +292,11 @@ export const api = {
     return { url }
   },
 
+  abort_merge({ repo_path }) {
+    const url = `${API_URL}/git/abort-merge`
+    return { url, ...POST({ repo_path }) }
+  },
+
   // Search operations
   search({ q, mode = 'full', types, directory, limit }) {
     const params = { q, mode }

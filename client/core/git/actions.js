@@ -14,6 +14,7 @@ const PUSH_CHANGES = 'PUSH_CHANGES'
 const GET_CONFLICTS = 'GET_CONFLICTS'
 const RESOLVE_CONFLICT = 'RESOLVE_CONFLICT'
 const GET_CONFLICT_VERSIONS = 'GET_CONFLICT_VERSIONS'
+const ABORT_MERGE = 'ABORT_MERGE'
 
 export const git_action_types = {
   // API action types with PENDING/FULFILLED/FAILED variants
@@ -30,6 +31,7 @@ export const git_action_types = {
   ...create_api_action_types(GET_CONFLICTS),
   ...create_api_action_types(RESOLVE_CONFLICT),
   ...create_api_action_types(GET_CONFLICT_VERSIONS),
+  ...create_api_action_types(ABORT_MERGE),
 
   // Trigger actions
   LOAD_GIT_STATUS_ALL: 'LOAD_GIT_STATUS_ALL',
@@ -44,6 +46,7 @@ export const git_action_types = {
   REQUEST_PUSH: 'REQUEST_PUSH',
   REQUEST_RESOLVE_CONFLICT: 'REQUEST_RESOLVE_CONFLICT',
   LOAD_CONFLICT_VERSIONS: 'LOAD_CONFLICT_VERSIONS',
+  REQUEST_ABORT_MERGE: 'REQUEST_ABORT_MERGE',
 
   // UI state actions
   SET_SELECTED_FILE: 'GIT_SET_SELECTED_FILE',
@@ -67,6 +70,7 @@ export const resolve_conflict_actions = create_api_actions(RESOLVE_CONFLICT)
 export const get_conflict_versions_actions = create_api_actions(
   GET_CONFLICT_VERSIONS
 )
+export const abort_merge_actions = create_api_actions(ABORT_MERGE)
 
 // Action creators for component use
 export const git_actions = {
@@ -133,6 +137,12 @@ export const git_actions = {
   resolve_conflict: ({ repo_path, file_path, resolution, merged_content }) => ({
     type: git_action_types.REQUEST_RESOLVE_CONFLICT,
     payload: { repo_path, file_path, resolution, merged_content }
+  }),
+
+  // Abort merge
+  abort_merge: ({ repo_path }) => ({
+    type: git_action_types.REQUEST_ABORT_MERGE,
+    payload: { repo_path }
   }),
 
   // Load conflict versions for a specific file

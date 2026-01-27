@@ -12,7 +12,8 @@ import {
   pull_changes,
   push_changes,
   resolve_conflict,
-  get_conflict_versions
+  get_conflict_versions,
+  abort_merge
 } from '@core/api/sagas'
 import { git_action_types } from './actions'
 import { notification_actions } from '@core/notification/actions'
@@ -224,6 +225,30 @@ export function* load_conflict_versions({ payload }) {
 }
 
 // ============================================================================
+// Abort Merge Saga
+// ============================================================================
+
+export function* request_abort_merge({ payload }) {
+  const { repo_path } = payload
+  try {
+    yield call(abort_merge, { repo_path })
+    // Refresh status after aborting merge
+    yield call(get_git_status_all)
+    yield put(
+      notification_actions.show_notification({
+        severity: 'success',
+        message: 'Merge aborted successfully'
+      })
+    )
+  } catch (error) {
+    if (error.permission_denied) {
+      yield* show_permission_error(error, 'aborting merge')
+    }
+    throw error
+  }
+}
+
+// ============================================================================
 // Watchers
 // ============================================================================
 
@@ -284,6 +309,10 @@ export function* watch_load_conflict_versions() {
   )
 }
 
+export function* watch_abort_merge() {
+  yield takeLatest(git_action_types.REQUEST_ABORT_MERGE, request_abort_merge)
+}
+
 // ============================================================================
 // Root Saga Export
 // ============================================================================
@@ -300,5 +329,6 @@ export const git_sagas = [
   fork(watch_pull),
   fork(watch_push),
   fork(watch_resolve_conflict),
-  fork(watch_load_conflict_versions)
+  fork(watch_load_conflict_versions),
+  fork(watch_abort_merge)
 ]

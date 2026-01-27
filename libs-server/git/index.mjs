@@ -59,7 +59,9 @@ export const {
   get_conflict_versions,
   resolve_conflict,
   abort_merge,
-  is_merging
+  is_merging,
+  get_current_branch_name,
+  get_merge_head_branch_name
 } = conflict_operations
 
 export const { get_working_tree_diff, get_file_content_for_diff } =
@@ -128,6 +130,8 @@ export default {
   resolve_conflict,
   abort_merge,
   is_merging,
+  get_current_branch_name,
+  get_merge_head_branch_name,
 
   // Find git root
   find_git_root,
