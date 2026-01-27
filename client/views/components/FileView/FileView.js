@@ -23,6 +23,7 @@ import { RedactedContent } from '@components/primitives/styled'
 import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
 import DiffViewer from '@components/DiffViewer/index.js'
+import ConflictResolver from '@components/ConflictResolver/index.js'
 
 const FileView = ({ path }) => {
   const dispatch = useDispatch()
@@ -78,6 +79,11 @@ const FileView = ({ path }) => {
     }
     set_is_diff_view_active(!is_diff_view_active)
   }, [is_diff_view_active, git_context, dispatch])
+
+  const handle_conflict_resolved = useCallback(() => {
+    // Reload file data to get updated git_context after conflict resolution
+    dispatch(directory_actions.load_file(path))
+  }, [dispatch, path])
 
   // Memoize file type and language detection to avoid duplicate calls
   const { file_type, detected_language } = useMemo(() => {
@@ -188,6 +194,18 @@ const FileView = ({ path }) => {
   const show_top_actions = file_type !== 'entity'
 
   const render_diff_or_content = () => {
+    // Check if file is in conflict state
+    if (git_context?.status === 'conflict') {
+      return (
+        <ConflictResolver
+          repo_path={git_context.repo_path}
+          file_path={git_context.relative_path}
+          compact={false}
+          on_resolved={handle_conflict_resolved}
+        />
+      )
+    }
+
     if (is_diff_view_active && git_context) {
       return (
         <DiffViewer

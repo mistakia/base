@@ -1,6 +1,16 @@
 import { createSelector } from 'reselect'
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Convert Immutable.js object to plain JS object if needed
+ */
+const to_plain = (immutable_obj) =>
+  immutable_obj?.toJS ? immutable_obj.toJS() : immutable_obj
+
+// ============================================================================
 // Base Selectors
 // ============================================================================
 
@@ -29,6 +39,14 @@ export function get_file_at_ref_map(state) {
   return get_git_state(state).get('file_at_ref')
 }
 
+export function get_file_content_map(state) {
+  return get_git_state(state).get('file_content')
+}
+
+export function get_conflict_versions_map(state) {
+  return get_git_state(state).get('conflict_versions')
+}
+
 // ============================================================================
 // Loading State Selectors
 // ============================================================================
@@ -45,6 +63,14 @@ export function get_is_loading_file_at_ref(state) {
   return get_git_state(state).get('is_loading_file_at_ref')
 }
 
+export function get_is_loading_file_content(state) {
+  return get_git_state(state).get('is_loading_file_content')
+}
+
+export function get_is_loading_conflict_versions(state) {
+  return get_git_state(state).get('is_loading_conflict_versions')
+}
+
 export function get_is_committing(state) {
   return get_git_state(state).get('is_committing')
 }
@@ -55,6 +81,10 @@ export function get_is_pulling(state) {
 
 export function get_is_pushing(state) {
   return get_git_state(state).get('is_pushing')
+}
+
+export function get_is_resolving_conflict(state) {
+  return get_git_state(state).get('is_resolving_conflict')
 }
 
 export function get_git_error(state) {
@@ -73,10 +103,7 @@ export const get_all_repos = createSelector([get_repos_map], (repos_map) => {
     return []
   }
 
-  return repos_map
-    .valueSeq()
-    .map((repo) => (repo.toJS ? repo.toJS() : repo))
-    .toArray()
+  return repos_map.valueSeq().map(to_plain).toArray()
 })
 
 /**
@@ -87,7 +114,7 @@ export const get_repos_with_changes = createSelector([get_all_repos], (repos) =>
 )
 
 /**
- * Get total count of changed files across all repos
+ * Get total count of changed files across all repos (including conflicts)
  */
 export const get_total_changed_files_count = createSelector(
   [get_repos_with_changes],
@@ -96,7 +123,8 @@ export const get_total_changed_files_count = createSelector(
       const staged = repo.staged?.length || 0
       const unstaged = repo.unstaged?.length || 0
       const untracked = repo.untracked?.length || 0
-      return total + staged + unstaged + untracked
+      const conflicts = repo.conflicts?.length || 0
+      return total + staged + unstaged + untracked + conflicts
     }, 0)
   }
 )
@@ -110,7 +138,7 @@ export const get_active_repo_status = createSelector(
     if (!active_repo_path || !repos_map) return null
 
     const repo = repos_map.get(active_repo_path)
-    return repo ? (repo.toJS ? repo.toJS() : repo) : null
+    return repo ? to_plain(repo) : null
   }
 )
 
@@ -122,7 +150,7 @@ export function get_repo_status(state, repo_path) {
   if (!repos_map) return null
 
   const repo = repos_map.get(repo_path)
-  return repo ? (repo.toJS ? repo.toJS() : repo) : null
+  return repo ? to_plain(repo) : null
 }
 
 /**
@@ -137,7 +165,7 @@ export function get_file_diff(state, repo_path, file_path) {
   if (!repo_diffs) return null
 
   const diff = repo_diffs.get(diff_key)
-  return diff ? (diff.toJS ? diff.toJS() : diff) : null
+  return diff ? to_plain(diff) : null
 }
 
 /**
@@ -149,7 +177,19 @@ export function get_file_at_ref(state, repo_path, file_path, ref = 'HEAD') {
 
   const cache_key = `${repo_path}:${file_path}:${ref}`
   const file_data = file_at_ref_map.get(cache_key)
-  return file_data ? (file_data.toJS ? file_data.toJS() : file_data) : null
+  return file_data ? to_plain(file_data) : null
+}
+
+/**
+ * Get file content from working copy
+ */
+export function get_file_content(state, repo_path, file_path) {
+  const file_content_map = get_file_content_map(state)
+  if (!file_content_map) return null
+
+  const cache_key = `${repo_path}:${file_path}`
+  const file_data = file_content_map.get(cache_key)
+  return file_data ? to_plain(file_data) : null
 }
 
 /**
@@ -181,8 +221,11 @@ export const get_has_any_pushable = createSelector([get_all_repos], (repos) =>
   repos.some((repo) => repo.ahead > 0)
 )
 
+// Change types in priority order (conflicts first)
+const CHANGE_TYPES = ['conflicts', 'staged', 'unstaged', 'untracked']
+
 /**
- * Get all changed files grouped by repo
+ * Get all changed files grouped by repo (including conflicts)
  */
 export const get_all_changed_files = createSelector(
   [get_repos_with_changes],
@@ -190,37 +233,30 @@ export const get_all_changed_files = createSelector(
     const result = []
 
     for (const repo of repos) {
-      // Add staged files
-      for (const file of repo.staged || []) {
-        result.push({
-          ...file,
-          repo_path: repo.repo_path,
-          repo_name: repo.repo_name,
-          change_type: 'staged'
-        })
-      }
-
-      // Add unstaged files
-      for (const file of repo.unstaged || []) {
-        result.push({
-          ...file,
-          repo_path: repo.repo_path,
-          repo_name: repo.repo_name,
-          change_type: 'unstaged'
-        })
-      }
-
-      // Add untracked files
-      for (const file of repo.untracked || []) {
-        result.push({
-          ...file,
-          repo_path: repo.repo_path,
-          repo_name: repo.repo_name,
-          change_type: 'untracked'
-        })
+      for (const change_type of CHANGE_TYPES) {
+        for (const file of repo[change_type] || []) {
+          result.push({
+            ...file,
+            repo_path: repo.repo_path,
+            repo_name: repo.repo_name,
+            change_type: change_type === 'conflicts' ? 'conflict' : change_type
+          })
+        }
       }
     }
 
     return result
   }
 )
+
+/**
+ * Get conflict versions for a specific file
+ */
+export function get_conflict_versions(state, repo_path, file_path) {
+  const conflict_versions_map = get_conflict_versions_map(state)
+  if (!conflict_versions_map) return null
+
+  const cache_key = `${repo_path}:${file_path}`
+  const versions = conflict_versions_map.get(cache_key)
+  return versions ? to_plain(versions) : null
+}

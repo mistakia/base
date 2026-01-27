@@ -532,6 +532,7 @@ router.get('/status/all', async (req, res) => {
       const repos = Object.entries(statuses).map(([repo_path, status]) => ({
         repo_path,
         repo_name: path.basename(repo_path),
+        relative_repo_path: path.relative(user_base_dir, repo_path),
         is_user_base: repo_path === user_base_dir,
         ...status,
         write_allowed: true
@@ -633,6 +634,7 @@ router.get('/status/all', async (req, res) => {
         return {
           repo_path,
           repo_name: path.basename(repo_path),
+          relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
           ...status,
           write_allowed
@@ -662,6 +664,7 @@ router.get('/status/all', async (req, res) => {
       return {
         repo_path,
         repo_name: path.basename(repo_path),
+        relative_repo_path: path.relative(user_base_dir, repo_path),
         is_user_base: repo_path === user_base_dir,
         ...status,
         staged: filtered_staged,
@@ -768,7 +771,7 @@ router.get('/file-content', require_repo_read_permission, async (req, res) => {
       return res.json({
         content: redact_text_content(content || ''),
         file_path,
-        redacted: true
+        is_redacted: true
       })
     }
 

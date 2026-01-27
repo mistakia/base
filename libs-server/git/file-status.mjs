@@ -87,6 +87,16 @@ export async function get_file_status({ repo_path, file_path }) {
       return { status: 'untracked', is_staged: false }
     }
 
+    // Conflict states: U in either position, or AA/DD/AU/UA/DU/UD combinations
+    const is_conflict =
+      index_status === 'U' ||
+      worktree_status === 'U' ||
+      (index_status === 'A' && worktree_status === 'A') ||
+      (index_status === 'D' && worktree_status === 'D')
+    if (is_conflict) {
+      return { status: 'conflict', is_staged: false }
+    }
+
     // Check for staged changes (index has modifications)
     if (index_status !== ' ' && index_status !== '?') {
       status = parse_status_code(index_status)
