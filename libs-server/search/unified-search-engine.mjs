@@ -9,8 +9,62 @@ import {
 import { score_and_rank_results } from './fuzzy-scorer.mjs'
 import { search_directories } from './directory-search.mjs'
 import { search_threads } from './thread-metadata-search.mjs'
+import {
+  is_valid_base_uri,
+  parse_base_uri
+} from '#libs-server/base-uri/index.mjs'
 
 const log = debug('search:unified')
+
+/**
+ * Resolve a directory parameter that may be a base URI to a relative filesystem path
+ *
+ * Handles both base URI format (e.g., 'user:', 'user:task/') and plain filesystem
+ * paths (e.g., 'task/', 'repository/'). Returns a path suitable for ripgrep search.
+ *
+ * @param {string|null} directory - Directory to resolve (base URI or filesystem path)
+ * @returns {string|null} Relative filesystem path or null
+ */
+function resolve_directory_parameter(directory) {
+  if (!directory) {
+    return null
+  }
+
+  // Check if the directory is a base URI (e.g., 'user:', 'user:task/')
+  if (!is_valid_base_uri(directory)) {
+    // Not a base URI, return as-is (assumed to be a relative filesystem path)
+    return directory
+  }
+
+  log(`Resolving base URI directory parameter: ${directory}`)
+
+  try {
+    const parsed = parse_base_uri(directory)
+
+    // Only user: URIs are supported for search (searching within user base directory)
+    if (parsed.scheme === 'user') {
+      // Return the path portion (empty string for 'user:', 'task/' for 'user:task/')
+      // An empty string or null will cause ripgrep to search the entire user base
+      const resolved_path = parsed.path || null
+      log(`Resolved user: URI to path: ${resolved_path || '(root)'}`)
+      return resolved_path
+    }
+
+    // sys: URIs would require different base directory - not currently supported for search
+    if (parsed.scheme === 'sys') {
+      log(`sys: URIs not supported for search, falling back to null`)
+      return null
+    }
+
+    // Remote URIs (ssh://, git://, etc.) cannot be searched locally
+    log(`Remote URI scheme '${parsed.scheme}' not supported for local search`)
+    return null
+  } catch (error) {
+    log(`Failed to parse base URI '${directory}': ${error.message}`)
+    // If parsing fails, return as-is and let downstream validation handle it
+    return directory
+  }
+}
 
 /**
  * Normalize file path by removing leading ./
@@ -81,12 +135,15 @@ export async function search_paths({ query, directory = null, limit = 20 }) {
     return []
   }
 
-  log(`Path search for: ${query}`)
+  // Resolve base URI directory parameter to filesystem path
+  const resolved_directory = resolve_directory_parameter(directory)
+
+  log(`Path search for: ${query}, directory: ${resolved_directory || '(all)'}`)
 
   // Following VS Code's approach: collect all results first, then score and limit
   // VS Code uses DEFAULT_MAX_SEARCH_RESULTS = 20000 internally
   const file_results = await search_all_file_paths({
-    directory,
+    directory: resolved_directory,
     max_results: 20000
   })
 

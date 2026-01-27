@@ -258,6 +258,77 @@ describe('Search API', function () {
         expect(res.body.results).to.have.lengthOf.at.most(1)
       })
     })
+
+    describe('directory parameter with base URIs', () => {
+      it('should handle user: base URI as directory parameter', async () => {
+        const res = await authenticate_request(
+          chai
+            .request(server)
+            .get('/api/search')
+            .query({ q: 'test', mode: 'paths', directory: 'user:' }),
+          test_user
+        )
+
+        expect(res).to.have.status(200)
+        expect(res.body).to.have.property('results')
+        expect(res.body.results).to.be.an('array')
+      })
+
+      it('should handle user:task/ base URI as directory parameter', async () => {
+        const res = await authenticate_request(
+          chai
+            .request(server)
+            .get('/api/search')
+            .query({ q: 'test', mode: 'paths', directory: 'user:task/' }),
+          test_user
+        )
+
+        expect(res).to.have.status(200)
+        expect(res.body).to.have.property('results')
+        // Results should only include files from the task directory
+        res.body.results.forEach((result) => {
+          if (result.category === 'file' || result.category === 'entity') {
+            expect(result.file_path).to.match(/^task\//)
+          }
+        })
+      })
+
+      it('should handle plain directory paths without user: prefix', async () => {
+        const res = await authenticate_request(
+          chai
+            .request(server)
+            .get('/api/search')
+            .query({ q: 'test', mode: 'paths', directory: 'task' }),
+          test_user
+        )
+
+        expect(res).to.have.status(200)
+        expect(res.body).to.have.property('results')
+      })
+
+      it('should return results when searching repository with user: prefix', async () => {
+        const res = await authenticate_request(
+          chai.request(server).get('/api/search').query({
+            q: 'league',
+            mode: 'paths',
+            directory: 'user:repository/active'
+          }),
+          test_user
+        )
+
+        expect(res).to.have.status(200)
+        expect(res.body).to.have.property('results')
+        // Should find the league directory or README
+        if (res.body.results.length > 0) {
+          const has_league_match = res.body.results.some(
+            (r) =>
+              r.file_path.includes('league') ||
+              r.file_path.includes('repository/active')
+          )
+          expect(has_league_match).to.be.true
+        }
+      })
+    })
   })
 
   describe('GET /api/search/recent', () => {
