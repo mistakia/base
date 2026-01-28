@@ -515,11 +515,15 @@ class EmbeddedIndexManager {
 
     try {
       const thread_ids = await list_thread_ids()
-      log('Populating %d threads to index using batched processing', thread_ids.length)
+      log(
+        'Populating %d threads to index using batched processing',
+        thread_ids.length
+      )
 
       const { synced, failed } = await process_threads_in_batches({
         thread_ids,
-        sync_fn: ({ thread_id, metadata }) => this.sync_thread({ thread_id, metadata }),
+        sync_fn: ({ thread_id, metadata }) =>
+          this.sync_thread({ thread_id, metadata }),
         options: {
           log_fn: log,
           progress_label: 'Thread population'

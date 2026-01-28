@@ -677,8 +677,7 @@ router.get('/status/all', async (req, res) => {
     const repos = Object.entries(statuses).map(([repo_path, status]) => {
       const write_allowed = repo_write_permissions.get(repo_path) ?? false
 
-      const merge_state =
-        merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+      const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
 
       // If user has write access to repo, include all files (no filtering needed)
       if (write_allowed) {

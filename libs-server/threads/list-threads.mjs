@@ -105,7 +105,10 @@ export async function process_threads_in_batches({
     const batch_ids = thread_ids.slice(i, i + batch_size)
 
     for (const thread_id of batch_ids) {
-      const metadata = await get_thread_metadata({ thread_id, user_base_directory })
+      const metadata = await get_thread_metadata({
+        thread_id,
+        user_base_directory
+      })
       if (!metadata) {
         failed++
         processed++
@@ -129,7 +132,13 @@ export async function process_threads_in_batches({
     // Log progress every 5 batches (guard against division by zero)
     if (processed % (batch_size * 5) === 0 || processed === total) {
       const percentage = total > 0 ? Math.round((processed / total) * 100) : 0
-      log_fn('%s progress: %d/%d (%d%%)', progress_label, processed, total, percentage)
+      log_fn(
+        '%s progress: %d/%d (%d%%)',
+        progress_label,
+        processed,
+        total,
+        percentage
+      )
     }
   }
 

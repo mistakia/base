@@ -116,7 +116,6 @@ describe('API /entities GET', () => {
       entity_base_uri: 'user:task/task-1.md',
       tag_base_uris: ['user:tag/test-tag.md']
     })
-
   })
 
   after(async () => {

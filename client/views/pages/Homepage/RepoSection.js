@@ -107,7 +107,8 @@ const RepoSection = ({ repo }) => {
         {is_merging && (
           <span className='repo-section__merge-indicator'>
             <span className='repo-section__merge-text'>
-              Merging {theirs_branch || 'branch'} into {ours_branch || 'current'}
+              Merging {theirs_branch || 'branch'} into{' '}
+              {ours_branch || 'current'}
             </span>
             {write_allowed && (
               <button

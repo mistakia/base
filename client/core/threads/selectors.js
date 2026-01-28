@@ -190,7 +190,11 @@ export const get_thread_all_columns = createSelector(
 
 // Main table props selector that provides all data needed for react-table
 export const get_threads_table_props = createSelector(
-  [get_threads_state, get_selected_thread_table_view_id, get_thread_all_columns],
+  [
+    get_threads_state,
+    get_selected_thread_table_view_id,
+    get_thread_all_columns
+  ],
   (threads_state, view_id, all_columns_memoized) => {
     // Rows are already enhanced and assigned id in the reducer; avoid extra work
     return build_table_props({
