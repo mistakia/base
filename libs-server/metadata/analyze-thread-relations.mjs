@@ -13,6 +13,7 @@ import {
   RELATION_CREATES,
   RELATION_RELATES_TO
 } from '#libs-shared/entity-relations.mjs'
+import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import { extract_timeline_references_separated } from './extract-timeline-references.mjs'
@@ -38,20 +39,6 @@ const ACCESS_TYPE_TO_RELATION = {
   delete: RELATION_MODIFIES // Treat delete as modify for relation purposes
 }
 
-// ============================================================================
-// Relation Formatting
-// ============================================================================
-
-/**
- * Format a relation string
- * @param {string} relation_type - Relation type constant
- * @param {string} base_uri - Target entity base URI
- * @returns {string} Formatted relation string
- */
-function format_relation(relation_type, base_uri) {
-  return `${relation_type} [[${base_uri}]]`
-}
-
 /**
  * Build relations array from extracted references
  * @param {Object} params
@@ -62,13 +49,19 @@ function build_entity_relations({ references }) {
   const relations = []
 
   for (const ref of references) {
+    // Skip invalid base_uris
+    if (!is_valid_base_uri({ base_uri: ref.base_uri })) {
+      log(`Skipping invalid base_uri: ${ref.base_uri}`)
+      continue
+    }
+
     const relation_type = ACCESS_TYPE_TO_RELATION[ref.access_type]
     if (!relation_type) {
       log(`Unknown access type: ${ref.access_type}`)
       continue
     }
 
-    relations.push(format_relation(relation_type, ref.base_uri))
+    relations.push(`${relation_type} [[${ref.base_uri}]]`)
   }
 
   return relations

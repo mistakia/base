@@ -1,3 +1,5 @@
+import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
+
 /**
  * Shared relation string parser for parsing entity relation strings
  * into structured objects for display in components.
@@ -134,11 +136,15 @@ export function parse_relations_for_display({ relations }) {
       continue
     }
 
+    // Mark as invalid if base_uri doesn't pass validation
+    const is_invalid = !is_valid_base_uri({ base_uri: parsed.base_uri })
+
     results.push({
       relation_type: parsed.relation_type,
       base_uri: parsed.base_uri,
       title: null, // Relations don't have titles, will show filename
-      context: parsed.context
+      context: parsed.context,
+      ...(is_invalid && { invalid: true, unique_key: `invalid-${index}` })
     })
   }
 
