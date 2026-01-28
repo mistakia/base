@@ -100,7 +100,10 @@ Create a structured plan by understanding requirements, analyzing context, and p
 
 10. **Save the implementation plan**:
 
-- If a task entity is known, update the task entity file with the implementation plan
+- If a task entity is known:
+  - During phases 1-3, propose content for each section but do NOT update the entity file
+  - Present proposed sections to the user for review at each phase checkpoint
+  - Only update the task entity file at the very end, after the user confirms the final plan
 - If no task entity is known:
   - Create a new task entity using `entity_create` tool
   - Use entity type "task" (see [[sys:system/schema/task.md]])
