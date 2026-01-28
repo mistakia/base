@@ -144,14 +144,14 @@ describe('extract-timeline-references', () => {
         {
           type: 'message',
           role: 'user',
-          content: 'Please update [[user:task/my-task.md]]'
+          content: 'Please update [[user:task/base/improve-relations.md]]'
         }
       ]
 
       const result = extract_from_messages({ timeline })
 
       expect(result).to.have.length(1)
-      expect(result[0].base_uri).to.equal('user:task/my-task.md')
+      expect(result[0].base_uri).to.equal('user:task/base/improve-relations.md')
       expect(result[0].access_type).to.equal('reference')
     })
 

@@ -193,6 +193,7 @@ export async function find_related_entities({
            target.entity_id AS entity_id,
            target.type AS type,
            target.title AS title,
+           target.updated_at AS updated_at,
            r.relation_type AS relation_type,
            r.context AS context
     SKIP ${offset_int}
@@ -213,6 +214,7 @@ export async function find_related_entities({
       entity_id: row.entity_id,
       type: row.type,
       title: row.title,
+      updated_at: row.updated_at,
       relation_type: row.relation_type,
       context: row.context
     }))
@@ -268,6 +270,7 @@ export async function find_entities_relating_to({
            source.entity_id AS entity_id,
            source.type AS type,
            source.title AS title,
+           source.updated_at AS updated_at,
            r.relation_type AS relation_type,
            r.context AS context
     SKIP ${offset_int}
@@ -288,6 +291,7 @@ export async function find_entities_relating_to({
       entity_id: row.entity_id,
       type: row.type,
       title: row.title,
+      updated_at: row.updated_at,
       relation_type: row.relation_type,
       context: row.context
     }))

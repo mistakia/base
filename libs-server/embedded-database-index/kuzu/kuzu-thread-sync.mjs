@@ -7,6 +7,8 @@
  */
 
 import debug from 'debug'
+
+import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { read_file_from_filesystem } from '#libs-server/filesystem/read-file-from-filesystem.mjs'
 import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
@@ -126,6 +128,12 @@ export async function sync_thread_relations_to_kuzu({
     const { target_base_uri, relation_type, context } = relation
 
     if (!target_base_uri) {
+      continue
+    }
+
+    // Skip invalid base_uris
+    if (!is_valid_base_uri({ base_uri: target_base_uri })) {
+      log('Skipping invalid target_base_uri: %s', target_base_uri)
       continue
     }
 

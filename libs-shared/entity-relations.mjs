@@ -190,3 +190,68 @@ export function get_relation_priority({ relation_type }) {
   if (!relation_type) return 100
   return RELATION_TYPE_PRIORITY[relation_type] || 50
 }
+
+/**
+ * Calculate weighted score for sorting relations.
+ * Combines relation type priority with recency (updated_at).
+ *
+ * Formula: priority_score + recency_score
+ * - priority_score: from RELATION_TYPE_PRIORITY (lower = more important)
+ * - recency_score: hours since update, capped at 168 (1 week) to prevent
+ *   very old items from dominating. Recent items get bonus of 0-10 points.
+ *
+ * Lower total score = higher in sort order.
+ *
+ * @param {Object} params
+ * @param {string} params.relation_type - The relation type
+ * @param {string} params.updated_at - ISO timestamp of last update
+ * @returns {number} Combined weighted score (lower = higher priority)
+ */
+export function calculate_relation_sort_score({ relation_type, updated_at }) {
+  const priority_score = get_relation_priority({ relation_type })
+
+  // Calculate recency score (0-10 scale based on hours since update)
+  let recency_score = 10 // Default for missing or invalid updated_at
+  if (updated_at) {
+    const updated_date = new Date(updated_at)
+    // Validate that the date is valid (not NaN)
+    if (!isNaN(updated_date.getTime())) {
+      const now = new Date()
+      const hours_since_update = (now - updated_date) / (1000 * 60 * 60)
+
+      // Cap at 168 hours (1 week) - anything older gets same score
+      const capped_hours = Math.min(hours_since_update, 168)
+
+      // Scale to 0-10 range (0 hours = 0, 168 hours = 10)
+      recency_score = (capped_hours / 168) * 10
+    }
+  }
+
+  return priority_score + recency_score
+}
+
+/**
+ * Sort relations by weighted score (priority + recency).
+ * Returns a new array, does not mutate the original.
+ *
+ * @param {Object} params
+ * @param {Array} params.relations - Array of relation objects with relation_type and updated_at
+ * @returns {Array} Sorted array of relations
+ */
+export function sort_relations_by_weighted_score({ relations }) {
+  if (!Array.isArray(relations) || relations.length === 0) {
+    return []
+  }
+
+  return [...relations].sort((a, b) => {
+    const score_a = calculate_relation_sort_score({
+      relation_type: a.relation_type,
+      updated_at: a.updated_at
+    })
+    const score_b = calculate_relation_sort_score({
+      relation_type: b.relation_type,
+      updated_at: b.updated_at
+    })
+    return score_a - score_b
+  })
+}

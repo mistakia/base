@@ -1,9 +1,11 @@
+import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
+
 /**
  * Extract references (wikilinks) from entity content
  * @param {Object} options - Function options
  * @param {string} options.entity_content - The entity content
  * @param {Array} options.tokens - Optional markdown tokens if already parsed
- * @returns {Array} Extracted entity references
+ * @returns {Array} Extracted entity references with valid base_uri values
  */
 export function extract_entity_references({ entity_content, tokens = [] }) {
   const references = []
@@ -19,9 +21,10 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
     let match
 
     while ((match = wikilink_regex.exec(entity_content)) !== null) {
-      references.push({
-        base_uri: match[1]
-      })
+      const base_uri = match[1]
+      if (is_valid_base_uri({ base_uri })) {
+        references.push({ base_uri })
+      }
     }
 
     return references
@@ -75,9 +78,10 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
         let match
 
         while ((match = wikilink_regex.exec(part)) !== null) {
-          references.push({
-            base_uri: match[1]
-          })
+          const base_uri = match[1]
+          if (is_valid_base_uri({ base_uri })) {
+            references.push({ base_uri })
+          }
         }
       }
     }
