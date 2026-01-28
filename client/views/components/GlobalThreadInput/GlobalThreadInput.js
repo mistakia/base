@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Box,
@@ -17,6 +18,7 @@ import { get_thread_by_id } from '@core/threads/selectors.js'
 import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
 import useFileAutocomplete from './use-file-autocomplete.js'
+import use_draft_persistence from './use-draft-persistence.js'
 import './GlobalThreadInput.styl'
 
 // Constants
@@ -37,8 +39,13 @@ const PLACEHOLDER_CONTINUE = 'Continue thread...'
  */
 export default function GlobalThreadInput() {
   const dispatch = useDispatch()
+  const location = useLocation()
   const input_ref = useRef(null)
   const prev_is_open_ref = useRef(false)
+  const draft_restored_ref = useRef(false)
+
+  // Draft persistence hook
+  const draft_persistence = use_draft_persistence(location.pathname)
 
   // Redux state for overlay
   const is_open = useSelector((state) =>
@@ -151,6 +158,57 @@ export default function GlobalThreadInput() {
     prev_is_open_ref.current = is_open
   }, [is_open])
 
+  // Restore draft from localStorage when overlay opens (only if no existing message)
+  useEffect(() => {
+    if (
+      is_open &&
+      !draft_restored_ref.current &&
+      !draft_persistence.is_loading
+    ) {
+      draft_restored_ref.current = true
+
+      // Only restore if there's no message already (e.g., from file_path pre-fill)
+      if (!message && draft_persistence.draft) {
+        const { message: saved_message, cursor_position: saved_cursor } =
+          draft_persistence.draft
+
+        if (saved_message) {
+          dispatch(
+            thread_prompt_actions.update_draft({
+              draft_message: saved_message,
+              draft_cursor_position: saved_cursor || saved_message.length
+            })
+          )
+
+          // Set cursor position after React re-renders
+          requestAnimationFrame(() => {
+            const input = input_ref.current
+            if (input) {
+              const pos = saved_cursor || saved_message.length
+              input.setSelectionRange(pos, pos)
+            }
+          })
+        }
+      }
+    }
+
+    // Reset draft_restored_ref when overlay closes
+    if (!is_open) {
+      draft_restored_ref.current = false
+    }
+  }, [is_open, draft_persistence.is_loading, draft_persistence.draft, message, dispatch])
+
+  // Save draft to localStorage on changes (debounced via hook)
+  useEffect(() => {
+    if (is_open && message) {
+      draft_persistence.save_draft({
+        message,
+        cursor_position,
+        working_directory
+      })
+    }
+  }, [is_open, message, cursor_position, working_directory, draft_persistence])
+
   // Redux selectors
   const is_loading = useSelector((state) => {
     const action_type = is_resume_mode
@@ -211,6 +269,9 @@ export default function GlobalThreadInput() {
         })
       )
     }
+
+    // Clear draft from localStorage on successful submit
+    draft_persistence.clear_draft()
 
     // Clear input and close overlay - async errors handled via notifications
     set_message('')
