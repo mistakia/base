@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'base-api',
       script: 'services/server.mjs',
-      args: '--config /home/user/base/config/config.json',
+      args: '--config /home/user/base/source/config/config.json',
       watch: [
         // Watch for new client deploys (bundle manifest updated after build)
         'build/bundle-manifest.json',
