@@ -12,19 +12,30 @@ const get_tag_key = (tag) => `${TAG_SET_PREFIX}${tag}`
 /**
  * Lua script for atomic tag acquisition
  * Checks all tag limits and registers job atomically if all under limits
+ * IDEMPOTENT: If job is already registered for a tag, it doesn't count against the limit
+ * This handles job restarts where the worker crashed before cleanup
  * Returns: 1 if acquired, 0 if blocked (with blocking tag names as additional return values)
  */
 const ACQUIRE_TAGS_SCRIPT = `
 local job_id = ARGV[1]
 local num_tags = tonumber(ARGV[2])
 
--- First pass: check all limits
+-- First pass: check all limits, accounting for jobs already registered
 local blocking_tags = {}
 for i = 1, num_tags do
   local tag_key = KEYS[i]
   local max_concurrent = tonumber(ARGV[2 + i])
   local current = redis.call('SCARD', tag_key)
-  if current >= max_concurrent then
+  local already_member = redis.call('SISMEMBER', tag_key, job_id)
+
+  -- If job is already a member, it doesn't count against its own limit
+  -- Only block if current count (excluding self) >= max
+  local effective_count = current
+  if already_member == 1 then
+    effective_count = current - 1
+  end
+
+  if effective_count >= max_concurrent then
     table.insert(blocking_tags, ARGV[2 + num_tags + i])
   end
 end

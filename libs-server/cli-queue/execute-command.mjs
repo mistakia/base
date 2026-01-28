@@ -35,6 +35,10 @@ export const execute_command = async ({
     const child = spawn(command, {
       shell: true,
       cwd: working_directory,
+      // Ignore stdin to prevent blocking, pipe stdout/stderr for capture
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // Create new process group so we can kill shell + all children together
+      detached: true,
       env: {
         ...process.env,
         FORCE_COLOR: '0' // Disable color output for cleaner logs
@@ -51,15 +55,26 @@ export const execute_command = async ({
     const kill_process = () => {
       if (killed) return
 
-      log(`Timeout reached, sending SIGTERM to process ${child.pid}`)
+      log(`Timeout reached, sending SIGTERM to process group ${child.pid}`)
       killed = true
-      child.kill('SIGTERM')
+
+      // Kill entire process group (negative PID) to ensure shell + children die
+      try {
+        process.kill(-child.pid, 'SIGTERM')
+      } catch {
+        // Process may have already exited
+        child.kill('SIGTERM')
+      }
 
       // Force kill after grace period
       kill_timeout_handle = setTimeout(() => {
         if (!child.killed) {
-          log(`Process ${child.pid} did not terminate, sending SIGKILL`)
-          child.kill('SIGKILL')
+          log(`Process group ${child.pid} did not terminate, sending SIGKILL`)
+          try {
+            process.kill(-child.pid, 'SIGKILL')
+          } catch {
+            child.kill('SIGKILL')
+          }
         }
       }, KILL_TIMEOUT_MS)
     }

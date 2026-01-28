@@ -33,6 +33,7 @@ const process_cli_job = async (job) => {
   log(`Job ${job.id}: attempting to acquire tags [${tags.join(', ')}]`)
 
   // Atomically check limits and register - prevents race conditions
+  // Idempotent: jobs can re-acquire their own tags after worker restart
   const { acquired, blocking_tags } = await try_acquire_tags({
     job_id: job.id,
     tags,
@@ -99,6 +100,15 @@ const handle_worker_error = (error) => {
 }
 
 /**
+ * Handle stalled jobs - just log for monitoring
+ * With idempotent tag acquisition, stalled jobs can re-acquire their own tags
+ * when reactivated by BullMQ, so no cleanup needed here.
+ */
+const handle_job_stalled = (job_id) => {
+  log(`Job ${job_id}: stalled - BullMQ will reactivate`)
+}
+
+/**
  * Start the CLI queue worker
  */
 export const start_cli_queue_worker = () => {
@@ -113,13 +123,19 @@ export const start_cli_queue_worker = () => {
 
   cli_queue_worker = new Worker(QUEUE_CONFIG.name, process_cli_job, {
     connection,
-    concurrency: WORKER_CONCURRENCY
+    concurrency: WORKER_CONCURRENCY,
+    // Stalled job detection - recover jobs from crashed workers
+    stalledInterval: 30000, // Check for stalled jobs every 30 seconds
+    lockDuration: 60000, // Jobs locked for 60 seconds (longer for CLI commands)
+    maxStalledCount: 2 // Allow 2 stalls before failing (handles transient issues)
   })
 
+  // Job lifecycle events
   cli_queue_worker.on('completed', handle_job_completed)
   cli_queue_worker.on('failed', handle_job_failed)
   cli_queue_worker.on('active', handle_job_active)
   cli_queue_worker.on('error', handle_worker_error)
+  cli_queue_worker.on('stalled', handle_job_stalled)
 
   log('CLI queue worker ready')
 
