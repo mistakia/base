@@ -33,7 +33,8 @@ import {
 import {
   close_duckdb_connection,
   initialize_duckdb_client,
-  execute_duckdb_query
+  execute_duckdb_query,
+  checkpoint_duckdb
 } from './duckdb/duckdb-database-client.mjs'
 import {
   create_duckdb_schema,
@@ -74,7 +75,10 @@ import {
   discover_repositories,
   get_repository_head_sha
 } from './sync/repository-discovery.mjs'
-import list_threads from '#libs-server/threads/list-threads.mjs'
+import {
+  list_thread_ids,
+  process_threads_in_batches
+} from '#libs-server/threads/list-threads.mjs'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
 const log = debug('embedded-index')
@@ -491,6 +495,10 @@ class EmbeddedIndexManager {
           key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
           value: CURRENT_SCHEMA_VERSION
         })
+
+        // Force checkpoint to persist all changes to disk.
+        // This ensures schema version survives ungraceful shutdowns (e.g., PM2 SIGKILL).
+        await checkpoint_duckdb()
       } catch (error) {
         log('Error updating sync metadata after rebuild: %s', error.message)
       }
@@ -506,37 +514,17 @@ class EmbeddedIndexManager {
     }
 
     try {
-      // KNOWN LIMITATION: Loads all threads into memory at once.
-      // See resync-full-index.mjs for details on expected usage and alternatives.
-      const THREAD_COUNT_WARNING_THRESHOLD = 10000
-      const threads = await list_threads({
-        limit: Infinity,
-        offset: 0
-      })
+      const thread_ids = await list_thread_ids()
+      log('Populating %d threads to index using batched processing', thread_ids.length)
 
-      if (threads.length > THREAD_COUNT_WARNING_THRESHOLD) {
-        log(
-          'WARNING: Large thread count (%d) may cause memory pressure.',
-          threads.length
-        )
-      }
-
-      log('Populating %d threads to index', threads.length)
-
-      let synced = 0
-      let failed = 0
-
-      for (const thread of threads) {
-        const result = await this.sync_thread({
-          thread_id: thread.thread_id,
-          metadata: thread
-        })
-        if (result.success) {
-          synced++
-        } else {
-          failed++
+      const { synced, failed } = await process_threads_in_batches({
+        thread_ids,
+        sync_fn: ({ thread_id, metadata }) => this.sync_thread({ thread_id, metadata }),
+        options: {
+          log_fn: log,
+          progress_label: 'Thread population'
         }
-      }
+      })
 
       log('Thread population complete: %d synced, %d failed', synced, failed)
     } catch (error) {

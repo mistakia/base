@@ -15,6 +15,128 @@ import { read_json_file, get_effective_updated_at } from './thread-utils.mjs'
 const log = debug('threads:list')
 
 /**
+ * List thread IDs only (lightweight, no metadata loading).
+ * Used for batched processing to avoid loading all metadata at once.
+ *
+ * @param {Object} params Parameters
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<string[]>} Array of thread UUIDs
+ */
+export async function list_thread_ids({ user_base_directory } = {}) {
+  const threads_dir = get_thread_base_directory({ user_base_directory })
+
+  try {
+    await fs.mkdir(threads_dir, { recursive: true })
+
+    const all_items = await fs.readdir(threads_dir, { withFileTypes: true })
+
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    return all_items
+      .filter((item) => item.isDirectory() && UUID_PATTERN.test(item.name))
+      .map((item) => item.name)
+  } catch (error) {
+    log(`Error listing thread IDs: ${error.message}`)
+    throw error
+  }
+}
+
+/**
+ * Read metadata for a single thread
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.thread_id Thread UUID
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<Object|null>} Thread metadata or null if not found
+ */
+export async function get_thread_metadata({ thread_id, user_base_directory }) {
+  const threads_dir = get_thread_base_directory({ user_base_directory })
+
+  try {
+    const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
+    const metadata = await read_json_file({ file_path: metadata_path })
+
+    const thread_summary = { ...metadata, thread_id }
+
+    if (metadata.models && metadata.models.length > 0 && !metadata.model) {
+      thread_summary.model = metadata.models[0]
+    }
+
+    return thread_summary
+  } catch (error) {
+    log(`Error reading thread ${thread_id}: ${error.message}`)
+    return null
+  }
+}
+
+/**
+ * Process threads in batches to reduce memory pressure.
+ * Loads metadata only for current batch rather than all threads at once.
+ *
+ * @param {Object} params Parameters
+ * @param {string[]} params.thread_ids Array of thread IDs to process
+ * @param {Function} params.sync_fn Async function that takes {thread_id, metadata} and returns {success: boolean}
+ * @param {Object} [params.options] Options
+ * @param {number} [params.options.batch_size=100] Number of threads per batch
+ * @param {Function} [params.options.log_fn] Logging function (receives format string and args)
+ * @param {string} [params.options.progress_label='Thread processing'] Label for progress logs
+ * @param {string} [params.user_base_directory] Custom user base directory
+ * @returns {Promise<{synced: number, failed: number}>} Counts of synced and failed threads
+ */
+export async function process_threads_in_batches({
+  thread_ids,
+  sync_fn,
+  options = {},
+  user_base_directory
+}) {
+  const {
+    batch_size = 100,
+    log_fn = log,
+    progress_label = 'Thread processing'
+  } = options
+
+  const total = thread_ids.length
+  let synced = 0
+  let failed = 0
+  let processed = 0
+
+  for (let i = 0; i < thread_ids.length; i += batch_size) {
+    const batch_ids = thread_ids.slice(i, i + batch_size)
+
+    for (const thread_id of batch_ids) {
+      const metadata = await get_thread_metadata({ thread_id, user_base_directory })
+      if (!metadata) {
+        failed++
+        processed++
+        continue
+      }
+
+      try {
+        const result = await sync_fn({ thread_id, metadata })
+        if (result.success) {
+          synced++
+        } else {
+          failed++
+        }
+      } catch (error) {
+        log_fn('Error processing thread %s: %s', thread_id, error.message)
+        failed++
+      }
+      processed++
+    }
+
+    // Log progress every 5 batches (guard against division by zero)
+    if (processed % (batch_size * 5) === 0 || processed === total) {
+      const percentage = total > 0 ? Math.round((processed / total) * 100) : 0
+      log_fn('%s progress: %d/%d (%d%%)', progress_label, processed, total, percentage)
+    }
+  }
+
+  return { synced, failed }
+}
+
+/**
  * Parse date parameter to timestamp
  * @param {string|Date|null} date_param Date parameter
  * @returns {number|null} Timestamp or null

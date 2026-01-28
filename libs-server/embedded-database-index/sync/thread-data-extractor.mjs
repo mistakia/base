@@ -8,7 +8,10 @@ import path from 'path'
 import debug from 'debug'
 
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
-import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+import {
+  extract_timeline_metrics_streaming,
+  accumulate_edit_metrics_from_event
+} from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('embedded-index:sync:thread')
 
@@ -42,36 +45,17 @@ export function extract_edit_metrics_from_timeline({ timeline }) {
     return NULL_EDIT_METRICS
   }
 
-  let edit_count = 0
-  let total_chars_changed = 0
+  const state = { edit_count: 0, total_chars_changed: 0 }
 
   for (const event of timeline) {
-    // Count only tool_result events (successful tool executions)
-    // Do not count assistant tool_use blocks to avoid double-counting
-    if (event.type === 'tool_result') {
-      const tool_name = event.tool_name || event.name
-      if (tool_name === 'Edit' || tool_name === 'Write') {
-        edit_count++
-
-        // Estimate chars changed from tool input
-        // Edit tool has old_string/new_string, Write tool has content
-        const tool_input = event.tool_input || event.input || {}
-        if (tool_name === 'Edit') {
-          const old_len = (tool_input.old_string || '').length
-          const new_len = (tool_input.new_string || '').length
-          total_chars_changed += Math.max(old_len, new_len)
-        } else if (tool_name === 'Write') {
-          total_chars_changed += (tool_input.content || '').length
-        }
-      }
-    }
+    accumulate_edit_metrics_from_event(event, state)
   }
 
   // Convert chars to approximate lines (80 chars per line)
-  const lines_changed = Math.ceil(total_chars_changed / 80)
+  const lines_changed = Math.ceil(state.total_chars_changed / 80)
 
   return {
-    edit_count,
+    edit_count: state.edit_count,
     lines_changed
   }
 }
@@ -99,7 +83,8 @@ export function extract_latest_event_from_timeline({ timeline }) {
 }
 
 /**
- * Read timeline and extract latest event for a given thread
+ * Read timeline and extract latest event for a given thread.
+ * Uses streaming extraction to avoid loading full timeline into memory.
  * @param {Object} params Parameters
  * @param {string} params.thread_id Thread ID
  * @param {string} [params.user_base_directory] Custom user base directory
@@ -119,26 +104,23 @@ export async function read_and_extract_latest_event({
       'timeline.jsonl'
     )
 
-    const timeline = await read_timeline_jsonl_or_default({
-      timeline_path,
-      default_value: []
-    })
+    // Use streaming extraction to avoid memory pressure during rebuild
+    const metrics = await extract_timeline_metrics_streaming({ timeline_path })
 
-    const latest_event = extract_latest_event_from_timeline({ timeline })
-    const edit_metrics = extract_edit_metrics_from_timeline({ timeline })
-
-    if (!latest_event) {
+    if (!metrics.latest_event) {
       return {
         ...NULL_LATEST_EVENT,
-        ...edit_metrics
+        edit_count: metrics.edit_count,
+        lines_changed: metrics.lines_changed
       }
     }
 
     return {
-      latest_event_timestamp: latest_event.timestamp || null,
-      latest_event_type: latest_event.type || null,
-      latest_event_data: JSON.stringify(latest_event),
-      ...edit_metrics
+      latest_event_timestamp: metrics.latest_event.timestamp || null,
+      latest_event_type: metrics.latest_event.type || null,
+      latest_event_data: JSON.stringify(metrics.latest_event),
+      edit_count: metrics.edit_count,
+      lines_changed: metrics.lines_changed
     }
   } catch (error) {
     log('Error reading timeline for thread %s: %s', thread_id, error.message)

@@ -153,11 +153,36 @@ export function is_duckdb_initialized() {
   return duckdb_connection !== null
 }
 
+/**
+ * Force a WAL checkpoint to persist all changes to the main database file.
+ * This ensures data survives ungraceful shutdowns (e.g., SIGKILL from PM2).
+ */
+export async function checkpoint_duckdb() {
+  if (!duckdb_connection) {
+    throw new Error('DuckDB client not initialized')
+  }
+
+  log('Forcing DuckDB checkpoint')
+
+  return new Promise((resolve, reject) => {
+    duckdb_connection.run('CHECKPOINT', (err) => {
+      if (err) {
+        log('DuckDB checkpoint error: %s', err.message)
+        reject(err)
+        return
+      }
+      log('DuckDB checkpoint complete')
+      resolve()
+    })
+  })
+}
+
 export const duckdb_database_client = {
   initialize: initialize_duckdb_client,
   get_connection: get_duckdb_connection,
   execute_query: execute_duckdb_query,
   execute_run: execute_duckdb_run,
   close: close_duckdb_connection,
-  get_database_path: get_duckdb_database_path
+  get_database_path: get_duckdb_database_path,
+  checkpoint: checkpoint_duckdb
 }

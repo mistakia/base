@@ -14,6 +14,7 @@ import debug from 'debug'
 
 import config from '#config'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { checkpoint_duckdb } from '../duckdb/duckdb-database-client.mjs'
 import {
   set_index_metadata,
   INDEX_METADATA_KEYS,
@@ -219,6 +220,8 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
         key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
         value: CURRENT_SCHEMA_VERSION
       })
+      // Force checkpoint to persist schema version
+      await checkpoint_duckdb()
       return {
         success: true,
         method: 'no_changes',
@@ -286,6 +289,8 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
       value: CURRENT_SCHEMA_VERSION
     })
+    // Force checkpoint to persist schema version
+    await checkpoint_duckdb()
 
     if (stats.failed > 0) {
       log(

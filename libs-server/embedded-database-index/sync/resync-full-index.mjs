@@ -10,7 +10,10 @@ import debug from 'debug'
 
 import config from '#config'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
-import { execute_duckdb_query } from '../duckdb/duckdb-database-client.mjs'
+import {
+  execute_duckdb_query,
+  checkpoint_duckdb
+} from '../duckdb/duckdb-database-client.mjs'
 import {
   set_index_metadata,
   set_repo_sync_state,
@@ -25,7 +28,10 @@ import {
   ENTITY_DIRECTORIES,
   DEFAULT_EXCLUDE_PATTERNS
 } from './sync-constants.mjs'
-import list_threads from '#libs-server/threads/list-threads.mjs'
+import {
+  list_thread_ids,
+  process_threads_in_batches
+} from '#libs-server/threads/list-threads.mjs'
 
 const log = debug('embedded-index:sync:resync')
 
@@ -144,59 +150,27 @@ export async function resync_full_index({ index_manager }) {
       }
     }
 
-    // Phase 2: Sync all threads from filesystem
-    // KNOWN LIMITATION: Loads all threads into memory at once.
-    // Current expected usage: <5000 threads typical, ~1KB per thread = ~5MB.
-    // If memory becomes an issue with very large datasets:
-    //   - Prefer incremental sync (handles typical operations efficiently)
-    //   - For full resync, implement batched processing with list_threads pagination
+    // Phase 2: Sync all threads from filesystem using batched processing
     log('Phase 2: Syncing threads from filesystem')
 
-    const THREAD_COUNT_WARNING_THRESHOLD = 10000
-    const threads = await list_threads({
-      limit: Infinity,
-      offset: 0
+    const thread_ids = await list_thread_ids()
+    log('Found %d threads to sync', thread_ids.length)
+
+    // Thread IDs are the filesystem set for orphan detection
+    const filesystem_thread_ids = new Set(thread_ids)
+
+    const { synced, failed } = await process_threads_in_batches({
+      thread_ids,
+      sync_fn: ({ thread_id, metadata }) =>
+        index_manager.sync_thread({ thread_id, metadata }),
+      options: {
+        log_fn: log,
+        progress_label: 'Thread sync'
+      }
     })
 
-    if (threads.length > THREAD_COUNT_WARNING_THRESHOLD) {
-      log(
-        'WARNING: Large thread count (%d) may cause memory pressure. Consider using incremental sync instead.',
-        threads.length
-      )
-    }
-
-    log('Found %d threads to sync', threads.length)
-
-    // Collect all filesystem thread IDs BEFORE syncing (same rationale as entities)
-    const filesystem_thread_ids = new Set()
-    for (const thread of threads) {
-      if (thread.thread_id) {
-        filesystem_thread_ids.add(thread.thread_id)
-      }
-    }
-
-    // Now sync each thread
-    for (const thread of threads) {
-      if (!thread.thread_id) {
-        continue
-      }
-
-      try {
-        const result = await index_manager.sync_thread({
-          thread_id: thread.thread_id,
-          metadata: thread
-        })
-
-        if (result.success) {
-          stats.threads_synced++
-        } else {
-          stats.threads_failed++
-        }
-      } catch (error) {
-        log('Error syncing thread %s: %s', thread.thread_id, error.message)
-        stats.threads_failed++
-      }
-    }
+    stats.threads_synced = synced
+    stats.threads_failed = failed
 
     // Phase 3: Remove orphan entities
     log('Phase 3: Removing orphan entities')
@@ -260,6 +234,8 @@ export async function resync_full_index({ index_manager }) {
         key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
         value: CURRENT_SCHEMA_VERSION
       })
+      // Force checkpoint to persist schema version
+      await checkpoint_duckdb()
       metadata_updated = true
     } catch (metadata_error) {
       log('Error updating sync metadata: %s', metadata_error.message)

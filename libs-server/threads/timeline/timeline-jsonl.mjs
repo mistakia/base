@@ -12,6 +12,35 @@ const log_warn = debug('threads:timeline:jsonl:warn')
 log_warn.enabled = true
 
 /**
+ * Process a single timeline event to accumulate edit metrics.
+ * Shared logic used by both in-memory and streaming metric extraction.
+ *
+ * @param {Object} event Timeline event to process
+ * @param {Object} state Mutable state object with edit_count and total_chars_changed
+ */
+export function accumulate_edit_metrics_from_event(event, state) {
+  if (event.type !== 'tool_result') {
+    return
+  }
+
+  const tool_name = event.tool_name || event.name
+  if (tool_name !== 'Edit' && tool_name !== 'Write') {
+    return
+  }
+
+  state.edit_count++
+
+  const tool_input = event.tool_input || event.input || {}
+  if (tool_name === 'Edit') {
+    const old_len = (tool_input.old_string || '').length
+    const new_len = (tool_input.new_string || '').length
+    state.total_chars_changed += Math.max(old_len, new_len)
+  } else if (tool_name === 'Write') {
+    state.total_chars_changed += (tool_input.content || '').length
+  }
+}
+
+/**
  * Read timeline entries from a JSONL file using streaming
  * Parses line-by-line to reduce memory pressure compared to JSON.parse of entire file
  *
@@ -150,4 +179,74 @@ export async function read_timeline_jsonl_or_default({
 }) {
   const result = await read_timeline_jsonl({ timeline_path })
   return result ?? default_value
+}
+
+/**
+ * Stream timeline JSONL and extract metrics without loading full timeline into memory.
+ * Used for index rebuild to avoid memory pressure with thousands of threads.
+ *
+ * Returns:
+ * - latest_event: The last non-system event (for latest_event_timestamp, type, data)
+ * - edit_count: Number of Edit/Write tool_result events
+ * - lines_changed: Estimated lines changed (chars / 80)
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.timeline_path Path to the timeline.jsonl file
+ * @returns {Promise<Object>} Metrics object with latest_event, edit_count, lines_changed
+ */
+export async function extract_timeline_metrics_streaming({ timeline_path }) {
+  if (!existsSync(timeline_path)) {
+    log(`Timeline file not found: ${timeline_path}`)
+    return {
+      latest_event: null,
+      edit_count: 0,
+      lines_changed: 0
+    }
+  }
+
+  let latest_event = null
+  const metrics_state = { edit_count: 0, total_chars_changed: 0 }
+
+  const file_stream = createReadStream(timeline_path)
+  const line_reader = createInterface({
+    input: file_stream,
+    crlfDelay: Infinity
+  })
+
+  try {
+    for await (const line of line_reader) {
+      if (line.trim() === '') {
+        continue
+      }
+
+      try {
+        const event = JSON.parse(line)
+
+        // Track latest non-system event (replace as we find newer ones)
+        if (event.type !== 'system') {
+          latest_event = event
+        }
+
+        // Accumulate edit metrics using shared helper
+        accumulate_edit_metrics_from_event(event, metrics_state)
+      } catch {
+        // Skip malformed lines silently in streaming mode
+      }
+    }
+  } finally {
+    file_stream.destroy()
+    line_reader.close()
+  }
+
+  const lines_changed = Math.ceil(metrics_state.total_chars_changed / 80)
+
+  log(
+    `Extracted metrics from ${timeline_path}: edit_count=${metrics_state.edit_count}, lines_changed=${lines_changed}`
+  )
+
+  return {
+    latest_event,
+    edit_count: metrics_state.edit_count,
+    lines_changed
+  }
 }

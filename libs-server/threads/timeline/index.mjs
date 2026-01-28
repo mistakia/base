@@ -2,7 +2,9 @@ export {
   read_timeline_jsonl,
   write_timeline_jsonl,
   append_timeline_entry_jsonl,
-  read_timeline_jsonl_or_default
+  read_timeline_jsonl_or_default,
+  extract_timeline_metrics_streaming,
+  accumulate_edit_metrics_from_event
 } from './timeline-jsonl.mjs'
 
 export { sort_timeline_entries } from './sort-timeline-entries.mjs'
