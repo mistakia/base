@@ -21,7 +21,8 @@ import {
   is_merging,
   get_current_branch_name,
   get_merge_head_branch_name,
-  abort_merge
+  abort_merge,
+  discard_changes
 } from '#libs-server/git/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { attach_permission_context } from '#server/middleware/permission/middleware.mjs'
@@ -908,6 +909,40 @@ router.get('/file-at-ref', require_repo_read_permission, async (req, res) => {
 })
 
 /**
+ * Filter files by write permission for the current user
+ * @param {Object} params - Parameters
+ * @param {string[]} params.files - Array of relative file paths
+ * @param {string} params.repo_path - Absolute repository path
+ * @param {string|null} params.user_public_key - User's public key
+ * @returns {Promise<{allowed_files: string[], denied_files: string[]}>}
+ */
+const filter_files_by_write_permission = async ({
+  files,
+  repo_path,
+  user_public_key
+}) => {
+  const file_base_uris = files.map((f) =>
+    create_base_uri_from_path(path.join(repo_path, f))
+  )
+  const permissions = await check_permissions_batch({
+    user_public_key,
+    resource_paths: file_base_uris
+  })
+
+  const allowed_files = files.filter((_f, index) => {
+    const base_uri = file_base_uris[index]
+    return permissions[base_uri]?.write?.allowed ?? false
+  })
+
+  const denied_files = files.filter((_f, index) => {
+    const base_uri = file_base_uris[index]
+    return !(permissions[base_uri]?.write?.allowed ?? false)
+  })
+
+  return { allowed_files, denied_files }
+}
+
+/**
  * POST /api/git/stage
  * Stage files
  * Body: { repo_path, files: [...] }
@@ -921,25 +956,12 @@ router.post('/stage', require_repo_write_permission, async (req, res) => {
       return res.status(400).json({ error: 'files array is required' })
     }
 
-    // Filter files to only those user has write permission for
-    const user_public_key = req.user?.user_public_key
-    const file_base_uris = files.map((f) =>
-      create_base_uri_from_path(path.join(repo_path, f))
-    )
-    const permissions = await check_permissions_batch({
-      user_public_key,
-      resource_paths: file_base_uris
-    })
-
-    const allowed_files = files.filter((f, index) => {
-      const base_uri = file_base_uris[index]
-      return permissions[base_uri]?.write?.allowed ?? false
-    })
-
-    const denied_files = files.filter((f, index) => {
-      const base_uri = file_base_uris[index]
-      return !(permissions[base_uri]?.write?.allowed ?? false)
-    })
+    const { allowed_files, denied_files } =
+      await filter_files_by_write_permission({
+        files,
+        repo_path,
+        user_public_key: req.user?.user_public_key
+      })
 
     if (allowed_files.length === 0) {
       return res.status(403).json({
@@ -983,25 +1005,12 @@ router.post('/unstage', require_repo_write_permission, async (req, res) => {
       return res.status(400).json({ error: 'files array is required' })
     }
 
-    // Filter files to only those user has write permission for
-    const user_public_key = req.user?.user_public_key
-    const file_base_uris = files.map((f) =>
-      create_base_uri_from_path(path.join(repo_path, f))
-    )
-    const permissions = await check_permissions_batch({
-      user_public_key,
-      resource_paths: file_base_uris
-    })
-
-    const allowed_files = files.filter((f, index) => {
-      const base_uri = file_base_uris[index]
-      return permissions[base_uri]?.write?.allowed ?? false
-    })
-
-    const denied_files = files.filter((f, index) => {
-      const base_uri = file_base_uris[index]
-      return !(permissions[base_uri]?.write?.allowed ?? false)
-    })
+    const { allowed_files, denied_files } =
+      await filter_files_by_write_permission({
+        files,
+        repo_path,
+        user_public_key: req.user?.user_public_key
+      })
 
     if (allowed_files.length === 0) {
       return res.status(403).json({
@@ -1026,6 +1035,55 @@ router.post('/unstage', require_repo_write_permission, async (req, res) => {
     log('Error unstaging files:', error.message)
     res.status(500).json({
       error: 'Failed to unstage files',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/git/discard
+ * Discard changes to files in the working tree
+ * Body: { repo_path, files: [...] }
+ */
+router.post('/discard', require_repo_write_permission, async (req, res) => {
+  try {
+    const repo_path = req.validated_repo_path
+    const { files } = req.body
+
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ error: 'files array is required' })
+    }
+
+    const { allowed_files, denied_files } =
+      await filter_files_by_write_permission({
+        files,
+        repo_path,
+        user_public_key: req.user?.user_public_key
+      })
+
+    if (allowed_files.length === 0) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'No write permission for any of the specified files',
+        permission_denied: true,
+        denied_files
+      })
+    }
+
+    await discard_changes({
+      worktree_path: repo_path,
+      files_to_discard: allowed_files
+    })
+
+    res.json({
+      success: true,
+      discarded: allowed_files,
+      denied_files: denied_files.length > 0 ? denied_files : undefined
+    })
+  } catch (error) {
+    log('Error discarding changes:', error.message)
+    res.status(500).json({
+      error: 'Failed to discard changes',
       message: error.message
     })
   }

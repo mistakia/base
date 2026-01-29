@@ -259,6 +259,11 @@ export const api = {
     return { url, ...POST({ repo_path, files }) }
   },
 
+  discard_files({ repo_path, files }) {
+    const url = `${API_URL}/git/discard`
+    return { url, ...POST({ repo_path, files }) }
+  },
+
   commit_changes({ repo_path, message }) {
     const url = `${API_URL}/git/commit`
     return { url, ...POST({ repo_path, message }) }

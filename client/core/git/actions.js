@@ -14,6 +14,7 @@ const PUSH_CHANGES = 'PUSH_CHANGES'
 const GET_CONFLICTS = 'GET_CONFLICTS'
 const RESOLVE_CONFLICT = 'RESOLVE_CONFLICT'
 const GET_CONFLICT_VERSIONS = 'GET_CONFLICT_VERSIONS'
+const DISCARD_FILES = 'DISCARD_FILES'
 const ABORT_MERGE = 'ABORT_MERGE'
 
 export const git_action_types = {
@@ -31,6 +32,7 @@ export const git_action_types = {
   ...create_api_action_types(GET_CONFLICTS),
   ...create_api_action_types(RESOLVE_CONFLICT),
   ...create_api_action_types(GET_CONFLICT_VERSIONS),
+  ...create_api_action_types(DISCARD_FILES),
   ...create_api_action_types(ABORT_MERGE),
 
   // Trigger actions
@@ -41,6 +43,7 @@ export const git_action_types = {
   LOAD_FILE_CONTENT: 'LOAD_FILE_CONTENT',
   REQUEST_STAGE_FILES: 'REQUEST_STAGE_FILES',
   REQUEST_UNSTAGE_FILES: 'REQUEST_UNSTAGE_FILES',
+  REQUEST_DISCARD_FILES: 'REQUEST_DISCARD_FILES',
   REQUEST_COMMIT: 'REQUEST_COMMIT',
   REQUEST_PULL: 'REQUEST_PULL',
   REQUEST_PUSH: 'REQUEST_PUSH',
@@ -70,6 +73,7 @@ export const resolve_conflict_actions = create_api_actions(RESOLVE_CONFLICT)
 export const get_conflict_versions_actions = create_api_actions(
   GET_CONFLICT_VERSIONS
 )
+export const discard_files_actions = create_api_actions(DISCARD_FILES)
 export const abort_merge_actions = create_api_actions(ABORT_MERGE)
 
 // Action creators for component use
@@ -112,6 +116,12 @@ export const git_actions = {
   // Unstage files
   unstage_files: ({ repo_path, files }) => ({
     type: git_action_types.REQUEST_UNSTAGE_FILES,
+    payload: { repo_path, files }
+  }),
+
+  // Discard file changes
+  discard_files: ({ repo_path, files }) => ({
+    type: git_action_types.REQUEST_DISCARD_FILES,
     payload: { repo_path, files }
   }),
 

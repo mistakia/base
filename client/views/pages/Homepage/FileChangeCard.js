@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -29,6 +29,7 @@ const FileChangeCard = ({
   relative_repo_path,
   on_stage,
   on_unstage,
+  on_discard,
   write_allowed = false
 }) => {
   const dispatch = useDispatch()
@@ -46,9 +47,21 @@ const FileChangeCard = ({
   const is_loading_original = useSelector(get_is_loading_file_at_ref)
   const is_loading_current = useSelector(get_is_loading_file_content)
 
-  const file_url = relative_repo_path
-    ? `/${relative_repo_path}/${file.path}`
-    : null
+  const file_url =
+    relative_repo_path != null
+      ? `/${[relative_repo_path, file.path].filter(Boolean).join('/')}`
+      : null
+
+  const [is_discard_confirming, set_is_discard_confirming] = useState(false)
+  const discard_timer_ref = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (discard_timer_ref.current) {
+        clearTimeout(discard_timer_ref.current)
+      }
+    }
+  }, [])
 
   const handle_toggle = () => {
     if (!is_expanded) {
@@ -97,6 +110,24 @@ const FileChangeCard = ({
     on_unstage(file.path)
   }
 
+  const handle_discard = (e) => {
+    e.stopPropagation()
+    if (!write_allowed) return
+
+    if (is_discard_confirming) {
+      // Second click - confirm discard
+      clearTimeout(discard_timer_ref.current)
+      set_is_discard_confirming(false)
+      on_discard(file.path)
+    } else {
+      // First click - enter confirm mode
+      set_is_discard_confirming(true)
+      discard_timer_ref.current = setTimeout(() => {
+        set_is_discard_confirming(false)
+      }, 6000)
+    }
+  }
+
   const handle_conflict_resolved = useCallback(() => {
     // Refresh git status to update the file list after conflict resolution
     dispatch(git_actions.load_git_status(repo_path))
@@ -140,6 +171,18 @@ const FileChangeCard = ({
           )}
           {write_allowed && (
             <>
+              {file.status !== 'untracked' && file.status !== 'added' && (
+                <button
+                  className={`file-change-card__action-button file-change-card__action-button--danger${is_discard_confirming ? ' file-change-card__action-button--confirming' : ''}`}
+                  onClick={handle_discard}
+                  title={
+                    is_discard_confirming
+                      ? 'Click again to confirm discard'
+                      : 'Discard changes'
+                  }>
+                  {is_discard_confirming ? 'confirm' : 'discard'}
+                </button>
+              )}
               {file.change_type === 'staged' ? (
                 <button
                   className='file-change-card__action-button'
@@ -203,6 +246,7 @@ FileChangeCard.propTypes = {
   relative_repo_path: PropTypes.string,
   on_stage: PropTypes.func.isRequired,
   on_unstage: PropTypes.func.isRequired,
+  on_discard: PropTypes.func.isRequired,
   write_allowed: PropTypes.bool
 }
 

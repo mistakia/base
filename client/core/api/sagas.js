@@ -51,6 +51,7 @@ import {
   get_file_content_actions,
   stage_files_actions,
   unstage_files_actions,
+  discard_files_actions,
   commit_changes_actions,
   pull_changes_actions,
   push_changes_actions,
@@ -289,6 +290,12 @@ export const unstage_files = fetch.bind(
   null,
   api.unstage_files,
   unstage_files_actions
+)
+
+export const discard_files = fetch.bind(
+  null,
+  api.discard_files,
+  discard_files_actions
 )
 
 export const commit_changes = fetch.bind(

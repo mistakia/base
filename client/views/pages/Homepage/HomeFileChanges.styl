@@ -253,6 +253,23 @@
       background: $color_primary
       color: white
 
+  &--danger
+    border-color: $color_error
+    color: $color_error
+
+    &:hover
+      background: $color_error
+      color: white
+
+  &--confirming
+    background: $color_error
+    color: white
+    border-color: $color_error
+
+    &:hover
+      background: darken($color_error, 10%)
+      border-color: darken($color_error, 10%)
+
 .file-change-card__body
   border-top: 1px solid $color_border_light
   background: white

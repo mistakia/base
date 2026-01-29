@@ -8,6 +8,7 @@ import {
   get_git_file_content,
   stage_files,
   unstage_files,
+  discard_files,
   commit_changes,
   pull_changes,
   push_changes,
@@ -108,6 +109,24 @@ export function* request_unstage_files({ payload }) {
   } catch (error) {
     if (error.permission_denied) {
       yield* show_permission_error(error, 'unstaging files')
+    }
+    throw error
+  }
+}
+
+// ============================================================================
+// Discard Changes Saga
+// ============================================================================
+
+export function* request_discard_files({ payload }) {
+  const { repo_path, files } = payload
+  try {
+    yield call(discard_files, { repo_path, files })
+    // Refresh status after discarding
+    yield call(get_git_status, { repo_path })
+  } catch (error) {
+    if (error.permission_denied) {
+      yield* show_permission_error(error, 'discarding changes')
     }
     throw error
   }
@@ -283,6 +302,13 @@ export function* watch_unstage_files() {
   )
 }
 
+export function* watch_discard_files() {
+  yield takeLatest(
+    git_action_types.REQUEST_DISCARD_FILES,
+    request_discard_files
+  )
+}
+
 export function* watch_commit() {
   yield takeLatest(git_action_types.REQUEST_COMMIT, request_commit)
 }
@@ -325,6 +351,7 @@ export const git_sagas = [
   fork(watch_load_file_content),
   fork(watch_stage_files),
   fork(watch_unstage_files),
+  fork(watch_discard_files),
   fork(watch_commit),
   fork(watch_pull),
   fork(watch_push),

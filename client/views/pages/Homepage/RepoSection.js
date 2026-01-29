@@ -78,6 +78,16 @@ const RepoSection = ({ repo }) => {
     }
   }
 
+  const handle_discard = (file_path) => {
+    if (!write_allowed) return
+    dispatch(
+      git_actions.discard_files({
+        repo_path: repo.repo_path,
+        files: [file_path]
+      })
+    )
+  }
+
   const handle_abort_merge = () => {
     if (!write_allowed) return
     dispatch(git_actions.abort_merge({ repo_path: repo.repo_path }))
@@ -148,6 +158,7 @@ const RepoSection = ({ repo }) => {
                 relative_repo_path={repo.relative_repo_path}
                 on_stage={handle_stage}
                 on_unstage={handle_unstage}
+                on_discard={handle_discard}
                 write_allowed={write_allowed}
               />
             ))}
