@@ -95,6 +95,7 @@ export async function get_all_notion_search_results(options = {}) {
   const all_results = []
   let has_more = true
   let start_cursor = null
+  const pagination_delay = options.pagination_delay || 350
 
   while (has_more) {
     const response = await get_notion_search_results({
@@ -110,6 +111,7 @@ export async function get_all_notion_search_results(options = {}) {
       log(
         `Fetched ${response.results.length} results, continuing with cursor: ${start_cursor}`
       )
+      await new Promise((resolve) => setTimeout(resolve, pagination_delay))
     }
   }
 

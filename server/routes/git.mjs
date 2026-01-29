@@ -298,20 +298,18 @@ const get_known_repositories = async () => {
   )
 
   const worktree_results = await Promise.all(
-    repos_with_git_dirs
-      .filter(Boolean)
-      .map(async (repo_path) => {
-        try {
-          const { stdout } = await execute_shell_command(
-            'git worktree list --porcelain',
-            { cwd: repo_path }
-          )
-          const worktree_paths = parse_worktree_list(stdout)
-          return { parent_repo_path: repo_path, worktree_paths }
-        } catch {
-          return { parent_repo_path: repo_path, worktree_paths: [] }
-        }
-      })
+    repos_with_git_dirs.filter(Boolean).map(async (repo_path) => {
+      try {
+        const { stdout } = await execute_shell_command(
+          'git worktree list --porcelain',
+          { cwd: repo_path }
+        )
+        const worktree_paths = parse_worktree_list(stdout)
+        return { parent_repo_path: repo_path, worktree_paths }
+      } catch {
+        return { parent_repo_path: repo_path, worktree_paths: [] }
+      }
+    })
   )
 
   for (const { parent_repo_path, worktree_paths } of worktree_results) {

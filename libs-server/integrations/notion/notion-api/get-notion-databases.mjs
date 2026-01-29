@@ -79,6 +79,7 @@ export async function get_all_notion_databases(options = {}) {
   const all_databases = []
   let has_more = true
   let start_cursor = null
+  const pagination_delay = options.pagination_delay || 350
 
   while (has_more) {
     const response = await get_notion_databases({
@@ -94,6 +95,7 @@ export async function get_all_notion_databases(options = {}) {
       log(
         `Fetched ${response.results.length} databases, continuing with cursor: ${start_cursor}`
       )
+      await new Promise((resolve) => setTimeout(resolve, pagination_delay))
     }
   }
 
@@ -172,6 +174,7 @@ export async function get_all_notion_database_items(options = {}) {
   const all_items = []
   let has_more = true
   let start_cursor = null
+  const pagination_delay = options.pagination_delay || 350
 
   while (has_more) {
     const response = await get_notion_database_items({
@@ -187,6 +190,7 @@ export async function get_all_notion_database_items(options = {}) {
       log(
         `Fetched ${response.results.length} items, continuing with cursor: ${start_cursor}`
       )
+      await new Promise((resolve) => setTimeout(resolve, pagination_delay))
     }
   }
 

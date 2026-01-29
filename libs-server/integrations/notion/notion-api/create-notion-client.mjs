@@ -24,8 +24,9 @@ export function clean_notion_id(id) {
 const DEFAULT_RETRY_CONFIG = {
   max_retries: 3,
   initial_delay: 1000,
-  max_delay: 30000,
+  max_delay: 60000,
   backoff_factor: 2,
+  rate_limit_initial_delay: 10000,
   retryable_errors: [
     'RequestTimeoutError',
     'APITimeoutError',
@@ -35,8 +36,23 @@ const DEFAULT_RETRY_CONFIG = {
     'ECONNREFUSED',
     'ETIMEDOUT',
     'notionhq_client_request_timeout',
-    'Request to Notion API has timed out'
+    'Request to Notion API has timed out',
+    'rate_limited'
   ]
+}
+
+/**
+ * Check if an error is a rate limit error
+ */
+function is_rate_limit_error(error) {
+  if (!error) return false
+  const error_code = error.code || error.name || ''
+  const error_message = error.message || ''
+  return (
+    error_code === 'rate_limited' ||
+    error.status === 429 ||
+    error_message.includes('rate limited')
+  )
 }
 
 /**
@@ -50,6 +66,11 @@ function is_retryable_error(
 
   const error_message = error.message || ''
   const error_code = error.code || error.name || ''
+
+  // Check for rate limit errors
+  if (is_rate_limit_error(error)) {
+    return true
+  }
 
   // Check for Notion-specific timeout patterns
   if (
@@ -113,14 +134,22 @@ async function execute_with_retry({ api_call, operation_name, retry_config }) {
         break
       }
 
+      // Use longer delay for rate limit errors
+      const base_delay = is_rate_limit_error(error)
+        ? config.rate_limit_initial_delay ||
+          DEFAULT_RETRY_CONFIG.rate_limit_initial_delay
+        : config.initial_delay
+
       const delay = calculate_retry_delay({
         attempt,
-        initial_delay: config.initial_delay,
+        initial_delay: base_delay,
         backoff_factor: config.backoff_factor,
         max_delay: config.max_delay
       })
 
-      log_retry(`${operation_name}: Retrying in ${delay}ms...`)
+      log_retry(
+        `${operation_name}: Retrying in ${delay}ms${is_rate_limit_error(error) ? ' (rate limited)' : ''}...`
+      )
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }

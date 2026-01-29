@@ -118,7 +118,7 @@ export async function sync_notion_database_to_entities(
     // Get all pages from the database
     const pages = await get_all_database_pages(database_id, {
       page_size: options.page_size || 50,
-      delay: options.rate_limit_delay || 200,
+      delay: options.rate_limit_delay || 350,
       filter: options.filter,
       sorts: options.sorts
     })

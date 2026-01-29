@@ -79,7 +79,7 @@ const cli_parser = yargs(hideBin(process.argv))
     alias: 'r',
     describe: 'Delay between API requests in milliseconds',
     type: 'number',
-    default: 200
+    default: 350
   })
   .option('timeout', {
     describe: 'Request timeout in milliseconds',
@@ -210,7 +210,7 @@ export default async function sync_notion_entities({
   notion_token,
   user_public_key,
   page_size = 50,
-  rate_limit_delay = 200,
+  rate_limit_delay = 350,
   timeout_ms = 30000,
   max_retries = 3,
   verbose = false,
