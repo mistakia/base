@@ -15,6 +15,14 @@ import {
   EditablePriorityField
 } from '@views/components/InlineSelect'
 import { entity_field_config } from './field-config.js'
+import { resolve_field_type, dual_field_keys } from './field-type-config.js'
+import {
+  CopyableValue,
+  LinkValue,
+  PrimitiveArrayValue,
+  ObjectValue,
+  ObjectArrayValue
+} from './value-components/index.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
 const categorize_fields = (frontmatter) => {
@@ -48,12 +56,36 @@ const categorize_fields = (frontmatter) => {
   return { always_visible, expandable, uncategorized }
 }
 
-const format_field_value = (value) => {
+const render_field_value = (key, value, frontmatter) => {
   if (value === null || value === undefined) return 'N/A'
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-  if (Array.isArray(value) || typeof value === 'object')
-    return JSON.stringify(value, null, 2)
-  return String(value)
+
+  const field_type = resolve_field_type(key, value)
+
+  switch (field_type) {
+    case 'id':
+      if (dual_field_keys.has(key)) {
+        return <LinkValue value={value} show_copy />
+      }
+      return <CopyableValue value={value} />
+
+    case 'link':
+      return <LinkValue value={value} />
+
+    case 'boolean':
+      return value ? 'Yes' : 'No'
+
+    case 'primitive_array':
+      return <PrimitiveArrayValue value={value} />
+
+    case 'object_array':
+      return <ObjectArrayValue value={value} frontmatter={frontmatter} />
+
+    case 'object':
+      return <ObjectValue value={value} />
+
+    default:
+      return String(value)
+  }
 }
 
 const format_field_label = (key) => {
@@ -348,9 +380,13 @@ const EntityFrontmatter = ({
             <MetadataRow
               key={key}
               label={format_field_label(key)}
-              value={format_field_value(value)}
+              value={render_field_value(key, value, frontmatter)}
               border_style='compact'
-              scrollable={typeof value === 'string' && value.length > 50}
+              scrollable={
+                resolve_field_type(key, value) === 'default' &&
+                typeof value === 'string' &&
+                value.length > 50
+              }
               is_first={index === 0 && !has_content_above}
             />
           )
@@ -375,18 +411,26 @@ const EntityFrontmatter = ({
               <MetadataRow
                 key={key}
                 label={format_field_label(key)}
-                value={format_field_value(value)}
+                value={render_field_value(key, value, frontmatter)}
                 border_style='compact'
-                scrollable={typeof value === 'string' && value.length > 50}
+                scrollable={
+                  resolve_field_type(key, value) === 'default' &&
+                  typeof value === 'string' &&
+                  value.length > 50
+                }
               />
             ))}
             {Object.entries(uncategorized).map(([key, value]) => (
               <MetadataRow
                 key={key}
                 label={format_field_label(key)}
-                value={format_field_value(value)}
+                value={render_field_value(key, value, frontmatter)}
                 border_style='compact'
-                scrollable={typeof value === 'string' && value.length > 50}
+                scrollable={
+                  resolve_field_type(key, value) === 'default' &&
+                  typeof value === 'string' &&
+                  value.length > 50
+                }
               />
             ))}
           </Box>

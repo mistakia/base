@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useSelector, useDispatch } from 'react-redux'
@@ -7,6 +7,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
 import { COLORS } from '@theme/colors.js'
+import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
 import { get_app } from '@core/app/selectors'
@@ -36,8 +37,6 @@ import {
 } from '@views/utils/thread-metadata-extractor.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
-// Constants
-const COPY_SUCCESS_TIMEOUT_MS = 2000
 const SPACING = {
   TITLE_MARGIN: '8px',
   DESCRIPTION_MARGIN: '16px'
@@ -243,23 +242,16 @@ const SESSION_ID_STYLES = {
 }
 
 const ExternalSessionIdDisplay = ({ session_id }) => {
-  const [copy_success, set_copy_success] = useState(false)
-
-  const copy_to_clipboard = () => {
-    navigator.clipboard
-      .writeText(session_id)
-      .then(() => {
-        set_copy_success(true)
-        setTimeout(() => set_copy_success(false), COPY_SUCCESS_TIMEOUT_MS)
-      })
-      .catch((err) => console.error('Failed to copy session ID: ', err))
-  }
+  const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
+  const is_copied = copied_value === session_id
 
   return (
-    <Box onClick={copy_to_clipboard} sx={SESSION_ID_STYLES.container}>
+    <Box
+      onClick={() => copy_to_clipboard(session_id)}
+      sx={SESSION_ID_STYLES.container}>
       <span>{session_id}</span>
       <Box sx={SESSION_ID_STYLES.icon_wrapper}>
-        {copy_success ? (
+        {is_copied ? (
           <CheckIcon sx={{ fontSize: '12px' }} />
         ) : (
           <ContentCopyOutlinedIcon sx={{ fontSize: '10px' }} />
