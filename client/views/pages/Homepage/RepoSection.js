@@ -107,7 +107,20 @@ const RepoSection = ({ repo }) => {
           }
         }}>
         <span className='repo-section__toggle'>{is_collapsed ? '+' : '-'}</span>
-        <span className='repo-section__name'>{repo.repo_name}</span>
+        <span className='repo-section__name'>
+          {repo.is_worktree && repo.parent_repo_name && (
+            <>
+              <span className='repo-section__parent-repo-name'>
+                {repo.parent_repo_name}
+              </span>
+              {' / '}
+            </>
+          )}
+          {repo.repo_name}
+          {repo.is_worktree && (
+            <span className='repo-section__worktree-indicator'>worktree</span>
+          )}
+        </span>
         <span className='repo-section__branch'>{repo.branch}</span>
         {conflict_count > 0 && (
           <span className='repo-section__conflict-indicator'>
@@ -184,6 +197,8 @@ RepoSection.propTypes = {
     relative_repo_path: PropTypes.string,
     branch: PropTypes.string.isRequired,
     write_allowed: PropTypes.bool,
+    is_worktree: PropTypes.bool,
+    parent_repo_name: PropTypes.string,
     is_merging: PropTypes.bool,
     ours_branch: PropTypes.string,
     theirs_branch: PropTypes.string,

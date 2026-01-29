@@ -185,13 +185,52 @@ const parse_submodule_status = (output) => {
 }
 
 /**
+ * Parse git worktree list --porcelain output into worktree paths
+ * Skips the first entry (main working tree) since it is already discovered
+ * @param {string} output - Output from git worktree list --porcelain
+ * @returns {string[]} Array of worktree absolute paths (excludes bare and main)
+ */
+const parse_worktree_list = (output) => {
+  if (!output.trim()) {
+    return []
+  }
+
+  const worktree_paths = []
+  const blocks = output.trim().split('\n\n')
+
+  // Skip the first block (main working tree)
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i]
+    const lines = block.split('\n')
+
+    let worktree_path = null
+    let is_bare = false
+
+    for (const line of lines) {
+      if (line.startsWith('worktree ')) {
+        worktree_path = line.slice('worktree '.length)
+      } else if (line === 'bare') {
+        is_bare = true
+      }
+    }
+
+    if (worktree_path && !is_bare) {
+      worktree_paths.push(worktree_path)
+    }
+  }
+
+  return worktree_paths
+}
+
+/**
  * Get list of known repositories (user_base, repository/active/*, and git submodules)
- * @returns {Promise<string[]>} Array of repository paths
+ * @returns {Promise<{repo_paths: string[], worktree_metadata: Map<string, {parent_repo_path: string, parent_repo_name: string}>}>}
  */
 const get_known_repositories = async () => {
   const user_base_dir = get_user_base_dir()
   const repos = [user_base_dir]
   const seen = new Set([user_base_dir])
+  const worktree_metadata = new Map()
 
   // Collect potential repos for parallel checking
   const potential_repos = []
@@ -244,7 +283,57 @@ const get_known_repositories = async () => {
     }
   }
 
-  return repos
+  // Discover worktrees for repos with .git directories (not worktrees themselves)
+  // Worktrees have a .git file, not a directory, and return the same worktree list as their parent
+  const repos_with_git_dirs = await Promise.all(
+    repos.map(async (repo_path) => {
+      try {
+        const git_path = path.join(repo_path, '.git')
+        const stats = await fs.stat(git_path)
+        return stats.isDirectory() ? repo_path : null
+      } catch {
+        return null
+      }
+    })
+  )
+
+  const worktree_results = await Promise.all(
+    repos_with_git_dirs
+      .filter(Boolean)
+      .map(async (repo_path) => {
+        try {
+          const { stdout } = await execute_shell_command(
+            'git worktree list --porcelain',
+            { cwd: repo_path }
+          )
+          const worktree_paths = parse_worktree_list(stdout)
+          return { parent_repo_path: repo_path, worktree_paths }
+        } catch {
+          return { parent_repo_path: repo_path, worktree_paths: [] }
+        }
+      })
+  )
+
+  for (const { parent_repo_path, worktree_paths } of worktree_results) {
+    const parent_repo_name = path.basename(parent_repo_path)
+    for (const worktree_path of worktree_paths) {
+      // Only include worktrees within the user base directory
+      if (!worktree_path.startsWith(user_base_dir + path.sep)) {
+        log(`Skipping worktree outside user base: ${worktree_path}`)
+        continue
+      }
+      if (!seen.has(worktree_path)) {
+        repos.push(worktree_path)
+        seen.add(worktree_path)
+        worktree_metadata.set(worktree_path, {
+          parent_repo_path,
+          parent_repo_name
+        })
+      }
+    }
+  }
+
+  return { repo_paths: repos, worktree_metadata }
 }
 
 /**
@@ -559,7 +648,15 @@ router.get('/status/all', async (req, res) => {
       req.permission_context &&
       (await req.permission_context.get_global_write_permission())
 
-    const repo_paths = await get_known_repositories()
+    const { repo_paths, worktree_metadata } = await get_known_repositories()
+
+    const get_worktree_fields = (repo_path) => {
+      const wt_meta = worktree_metadata.get(repo_path)
+      return {
+        is_worktree: Boolean(wt_meta),
+        parent_repo_name: wt_meta?.parent_repo_name || null
+      }
+    }
 
     // For users with global_write, skip permission filtering entirely
     if (has_global_write) {
@@ -577,6 +674,7 @@ router.get('/status/all', async (req, res) => {
           repo_name: path.basename(repo_path),
           relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
+          ...get_worktree_fields(repo_path),
           ...status,
           write_allowed: true,
           is_merging: merge_state.is_merging,
@@ -687,6 +785,7 @@ router.get('/status/all', async (req, res) => {
           repo_name: path.basename(repo_path),
           relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
+          ...get_worktree_fields(repo_path),
           ...status,
           write_allowed,
           is_merging: merge_state.is_merging,
@@ -720,6 +819,7 @@ router.get('/status/all', async (req, res) => {
         repo_name: path.basename(repo_path),
         relative_repo_path: path.relative(user_base_dir, repo_path),
         is_user_base: repo_path === user_base_dir,
+        ...get_worktree_fields(repo_path),
         ...status,
         staged: filtered_staged,
         unstaged: filtered_unstaged,
