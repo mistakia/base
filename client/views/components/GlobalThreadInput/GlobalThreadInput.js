@@ -173,10 +173,12 @@ export default function GlobalThreadInput() {
           draft_persistence.draft
 
         if (saved_message) {
+          const cursor_pos = saved_cursor ?? saved_message.length
+
           dispatch(
             thread_prompt_actions.update_draft({
               draft_message: saved_message,
-              draft_cursor_position: saved_cursor || saved_message.length
+              draft_cursor_position: cursor_pos
             })
           )
 
@@ -184,8 +186,7 @@ export default function GlobalThreadInput() {
           requestAnimationFrame(() => {
             const input = input_ref.current
             if (input) {
-              const pos = saved_cursor || saved_message.length
-              input.setSelectionRange(pos, pos)
+              input.setSelectionRange(cursor_pos, cursor_pos)
             }
           })
         }
@@ -207,7 +208,7 @@ export default function GlobalThreadInput() {
         working_directory
       })
     }
-  }, [is_open, message, cursor_position, working_directory, draft_persistence])
+  }, [is_open, message, cursor_position, working_directory, draft_persistence.save_draft])
 
   // Redux selectors
   const is_loading = useSelector((state) => {

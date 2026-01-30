@@ -8,7 +8,7 @@ const DEBOUNCE_DELAY_MS = 500
 /**
  * Generate localStorage key for draft storage
  * @param {Object} params
- * @param {string} params.namespace_type - Type of namespace: 'thread', 'path', or 'global'
+ * @param {string} params.namespace_type - Type of namespace: 'thread' or 'global'
  * @param {string|null} params.namespace_value - Value for the namespace (thread ID, path, or null for global)
  * @returns {string} localStorage key
  */
@@ -31,13 +31,8 @@ export function resolve_namespace_from_pathname(pathname) {
     return { namespace_type: 'thread', namespace_value: thread_match[1] }
   }
 
-  // Homepage/root
-  if (pathname === '/' || pathname === '') {
-    return { namespace_type: 'global', namespace_value: null }
-  }
-
-  // All other paths
-  return { namespace_type: 'path', namespace_value: pathname }
+  // All non-thread pages share a single global draft
+  return { namespace_type: 'global', namespace_value: null }
 }
 
 /**
@@ -58,10 +53,9 @@ export function load_draft({ namespace_type, namespace_value }) {
 
     const draft = JSON.parse(stored)
     const now = Date.now()
-    const ttl = draft.ttl || DEFAULT_TTL_MS
 
     // Check if draft has expired
-    if (draft.updated_at && now - draft.updated_at > ttl) {
+    if (draft.updated_at && now - draft.updated_at > DEFAULT_TTL_MS) {
       localStorage.removeItem(key)
       return null
     }
@@ -101,8 +95,7 @@ export function save_draft({
       message,
       cursor_position,
       working_directory,
-      updated_at: Date.now(),
-      ttl: DEFAULT_TTL_MS
+      updated_at: Date.now()
     }
 
     localStorage.setItem(key, JSON.stringify(draft))
@@ -141,8 +134,7 @@ export function prune_expired_drafts() {
           const stored = localStorage.getItem(key)
           if (stored) {
             const draft = JSON.parse(stored)
-            const ttl = draft.ttl || DEFAULT_TTL_MS
-            if (draft.updated_at && now - draft.updated_at > ttl) {
+            if (draft.updated_at && now - draft.updated_at > DEFAULT_TTL_MS) {
               keys_to_remove.push(key)
             }
           }
