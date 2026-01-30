@@ -33,6 +33,7 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { generate_commit_message } from '#libs-server/git/generate-commit-message.mjs'
 
 const router = express.Router()
 const log = debug('api:git')
@@ -1215,6 +1216,39 @@ router.post('/commit', require_repo_write_permission, async (req, res) => {
     })
   }
 })
+
+/**
+ * POST /api/git/generate-commit-message
+ * Generate a commit message from staged changes using a local Ollama model
+ * Body: { repo_path }
+ */
+router.post(
+  '/generate-commit-message',
+  require_repo_read_permission,
+  async (req, res) => {
+    try {
+      const repo_path = req.validated_repo_path
+
+      const message = await generate_commit_message({ repo_path })
+
+      res.json({ message })
+    } catch (error) {
+      log('Error generating commit message:', error.message)
+
+      if (error.message === 'No staged changes found') {
+        return res.status(400).json({
+          error: 'No staged changes found',
+          message: error.message
+        })
+      }
+
+      res.status(500).json({
+        error: 'Failed to generate commit message',
+        message: error.message
+      })
+    }
+  }
+)
 
 /**
  * POST /api/git/pull

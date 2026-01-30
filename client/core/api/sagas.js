@@ -58,7 +58,8 @@ import {
   get_conflicts_actions,
   resolve_conflict_actions,
   get_conflict_versions_actions,
-  abort_merge_actions
+  abort_merge_actions,
+  generate_commit_message_actions
 } from '@core/git/actions'
 import { get_app } from '@core/app/selectors'
 
@@ -338,4 +339,10 @@ export const abort_merge = fetch.bind(
   null,
   api.abort_merge,
   abort_merge_actions
+)
+
+export const generate_commit_message = fetch.bind(
+  null,
+  api.generate_commit_message,
+  generate_commit_message_actions
 )
