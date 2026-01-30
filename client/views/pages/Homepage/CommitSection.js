@@ -3,7 +3,11 @@ import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 
 import { git_actions } from '@core/git/actions'
-import { get_is_committing } from '@core/git/selectors'
+import {
+  get_is_committing,
+  get_is_generating_commit_message,
+  get_generated_commit_message
+} from '@core/git/selectors'
 
 const CommitSection = ({
   repo_path,
@@ -15,6 +19,8 @@ const CommitSection = ({
 }) => {
   const dispatch = useDispatch()
   const is_committing = useSelector(get_is_committing)
+  const is_generating = useSelector(get_is_generating_commit_message)
+  const generated_message = useSelector(get_generated_commit_message)
   const prev_is_merging = useRef(is_merging)
 
   // Generate default merge message
@@ -33,6 +39,13 @@ const CommitSection = ({
     prev_is_merging.current = is_merging
   }, [is_merging, theirs_branch, default_merge_message])
 
+  // Populate textarea when a generated message arrives
+  useEffect(() => {
+    if (generated_message) {
+      set_commit_message(generated_message)
+    }
+  }, [generated_message])
+
   const handle_commit = () => {
     if (!commit_message.trim() || !write_allowed) return
 
@@ -43,6 +56,10 @@ const CommitSection = ({
       })
     )
     set_commit_message('')
+  }
+
+  const handle_generate = () => {
+    dispatch(git_actions.generate_commit_message({ repo_path }))
   }
 
   const handle_key_down = (e) => {
@@ -65,6 +82,8 @@ const CommitSection = ({
     ? 'Merge commit message...'
     : 'Commit message...'
 
+  const generate_label = is_generating ? 'Generating...' : 'Generate'
+
   return (
     <div className='commit-section'>
       <textarea
@@ -81,12 +100,22 @@ const CommitSection = ({
             ? 'Complete merge with Cmd/Ctrl+Enter'
             : 'Cmd/Ctrl+Enter to commit'}
         </span>
-        <button
-          className='commit-section__button'
-          onClick={handle_commit}
-          disabled={!commit_message.trim() || is_committing}>
-          {button_label}
-        </button>
+        <div className='commit-section__actions'>
+          {!is_merging && (
+            <button
+              className='commit-section__generate-button'
+              onClick={handle_generate}
+              disabled={staged_count === 0 || is_generating || is_committing}>
+              {generate_label}
+            </button>
+          )}
+          <button
+            className='commit-section__button'
+            onClick={handle_commit}
+            disabled={!commit_message.trim() || is_committing}>
+            {button_label}
+          </button>
+        </div>
       </div>
     </div>
   )

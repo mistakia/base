@@ -87,6 +87,14 @@ export function get_is_resolving_conflict(state) {
   return get_git_state(state).get('is_resolving_conflict')
 }
 
+export function get_is_generating_commit_message(state) {
+  return get_git_state(state).get('is_generating_commit_message')
+}
+
+export function get_generated_commit_message(state) {
+  return get_git_state(state).get('generated_commit_message')
+}
+
 export function get_git_error(state) {
   return get_git_state(state).get('error')
 }

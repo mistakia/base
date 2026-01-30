@@ -14,7 +14,8 @@ import {
   push_changes,
   resolve_conflict,
   get_conflict_versions,
-  abort_merge
+  abort_merge,
+  generate_commit_message
 } from '@core/api/sagas'
 import { git_action_types } from './actions'
 import { notification_actions } from '@core/notification/actions'
@@ -268,6 +269,24 @@ export function* request_abort_merge({ payload }) {
 }
 
 // ============================================================================
+// Generate Commit Message Saga
+// ============================================================================
+
+export function* request_generate_commit_message({ payload }) {
+  const { repo_path } = payload
+  try {
+    yield call(generate_commit_message, { repo_path })
+  } catch (error) {
+    yield put(
+      notification_actions.show_notification({
+        severity: 'error',
+        message: `Failed to generate commit message: ${error.message_details || error.message}`
+      })
+    )
+  }
+}
+
+// ============================================================================
 // Watchers
 // ============================================================================
 
@@ -339,6 +358,13 @@ export function* watch_abort_merge() {
   yield takeLatest(git_action_types.REQUEST_ABORT_MERGE, request_abort_merge)
 }
 
+export function* watch_generate_commit_message() {
+  yield takeLatest(
+    git_action_types.REQUEST_GENERATE_COMMIT_MESSAGE,
+    request_generate_commit_message
+  )
+}
+
 // ============================================================================
 // Root Saga Export
 // ============================================================================
@@ -357,5 +383,6 @@ export const git_sagas = [
   fork(watch_push),
   fork(watch_resolve_conflict),
   fork(watch_load_conflict_versions),
-  fork(watch_abort_merge)
+  fork(watch_abort_merge),
+  fork(watch_generate_commit_message)
 ]

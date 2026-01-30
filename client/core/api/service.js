@@ -302,6 +302,11 @@ export const api = {
     return { url, ...POST({ repo_path }) }
   },
 
+  generate_commit_message({ repo_path }) {
+    const url = `${API_URL}/git/generate-commit-message`
+    return { url, ...POST({ repo_path }) }
+  },
+
   // Search operations
   search({ q, mode = 'full', types, directory, limit }) {
     const params = { q, mode }

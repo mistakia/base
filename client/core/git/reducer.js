@@ -31,6 +31,8 @@ const GitState = new Record({
   is_pulling: false,
   is_pushing: false,
   is_resolving_conflict: false,
+  is_generating_commit_message: false,
+  generated_commit_message: null,
   // Error state
   error: null
 })
@@ -275,6 +277,7 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     case git_action_types.COMMIT_CHANGES_FULFILLED:
       return state.merge({
         is_committing: false,
+        generated_commit_message: null,
         error: null
       })
 
@@ -359,6 +362,30 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     case git_action_types.RESOLVE_CONFLICT_FAILED:
       return state.merge({
         is_resolving_conflict: false,
+        error: payload.error
+      })
+
+    // ========================================================================
+    // Generate Commit Message
+    // ========================================================================
+
+    case git_action_types.GENERATE_COMMIT_MESSAGE_PENDING:
+      return state.merge({
+        is_generating_commit_message: true,
+        generated_commit_message: null,
+        error: null
+      })
+
+    case git_action_types.GENERATE_COMMIT_MESSAGE_FULFILLED:
+      return state.merge({
+        is_generating_commit_message: false,
+        generated_commit_message: payload.data?.message || null,
+        error: null
+      })
+
+    case git_action_types.GENERATE_COMMIT_MESSAGE_FAILED:
+      return state.merge({
+        is_generating_commit_message: false,
         error: payload.error
       })
 
