@@ -173,7 +173,45 @@ Threads execute workflows in isolated git worktrees:
 
 ## CLI Tools
 
-The `cli/` directory contains utilities for managing entities and validating the knowledge base.
+The `cli/` directory contains utilities for managing entities and validating the knowledge base. The unified `base` CLI is the preferred entry point for most operations.
+
+### Unified Base CLI (Preferred)
+
+```bash
+# Entity operations
+base entity list -t task --status "In Progress"
+base entity list -t task --json
+base entity get "user:task/my-task.md"
+base entity move task/old.md task/new.md --dry-run
+base entity validate
+
+# Relation lookups
+base relation list "user:task/my-task.md"
+base relation forward "user:task/my-task.md"
+base relation reverse "user:task/my-task.md" --json
+
+# Tag management
+base tag list
+base tag stats --below-threshold 15
+base tag add -t javascript -i "task/*.md"
+base tag remove -t legacy -i "**/*.md" --dry-run
+
+# Thread operations
+base thread list --state active
+base thread archive <thread-id> --completed
+base thread archive <thread-id> --reactivate
+base thread analyze <thread-id> --dry-run
+
+# Search
+base search "feature request" --limit 10
+
+# Command queue
+base queue add "yarn test" --tags test,ci --priority 5
+base queue status <job-id>
+base queue stats
+
+# Global options: --json, --verbose / -v
+```
 
 ### Validation and Maintenance
 
@@ -279,12 +317,12 @@ node cli/convert-external-sessions.mjs validate --provider claude --verbose
 ### Entity Query
 
 ```bash
-# Query entities via HTTP API (use when server is running)
-node cli/entity-list-api.mjs -t task --status "In Progress"
-node cli/entity-list-api.mjs --base-uri "user:task/my-task.md"
-node cli/entity-list-api.mjs -s "feature" -t task --json
+# Preferred: Use unified CLI
+base entity list -t task --status "In Progress"
+base entity get "user:task/my-task.md"
+base entity list -s "feature" -t task --json
 
-# Query entities directly (use when server is NOT running)
+# Direct alternatives (when unified CLI is not available)
 node cli/entity-list.mjs -t task --status "In Progress"
 ```
 
