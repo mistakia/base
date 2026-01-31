@@ -430,6 +430,18 @@ export function* watch_auto_commit_file() {
 }
 
 // ============================================================================
+// WebSocket Push Handlers
+// ============================================================================
+
+export function* handle_git_status_changed() {
+  yield call(get_git_status_all)
+}
+
+export function* watch_git_status_changed() {
+  yield takeLatest(git_action_types.GIT_STATUS_CHANGED, handle_git_status_changed)
+}
+
+// ============================================================================
 // Root Saga Export
 // ============================================================================
 
@@ -449,5 +461,6 @@ export const git_sagas = [
   fork(watch_load_conflict_versions),
   fork(watch_abort_merge),
   fork(watch_generate_commit_message),
-  fork(watch_auto_commit_file)
+  fork(watch_auto_commit_file),
+  fork(watch_git_status_changed)
 ]

@@ -1505,4 +1505,5 @@ router.post('/abort-merge', require_repo_write_permission, async (req, res) => {
   }
 })
 
+export { get_known_repositories }
 export default router

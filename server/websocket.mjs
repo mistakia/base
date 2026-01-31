@@ -49,6 +49,19 @@ wss.on('connection', (ws) => {
   })
 })
 
+export const broadcast_all = (message) => {
+  const data = JSON.stringify(message)
+  wss.clients.forEach((c) => {
+    if (c.readyState === WebSocket.OPEN) {
+      try {
+        c.send(data)
+      } catch (error) {
+        log('Error broadcasting to client: %s', error.message)
+      }
+    }
+  })
+}
+
 export const send = ({ user_public_key, event }) => {
   wss.clients.forEach((c) => {
     if (
