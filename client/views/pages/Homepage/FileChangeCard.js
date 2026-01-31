@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -10,6 +10,7 @@ import {
   get_is_loading_file_at_ref,
   get_is_loading_file_content
 } from '@core/git/selectors'
+import { use_discard_confirm } from '@views/hooks/use-discard-confirm'
 import ConflictResolver from '@views/components/ConflictResolver/index.js'
 import DiffViewer from '@views/components/DiffViewer/index.js'
 
@@ -52,16 +53,12 @@ const FileChangeCard = ({
       ? `/${[relative_repo_path, file.path].filter(Boolean).join('/')}`
       : null
 
-  const [is_discard_confirming, set_is_discard_confirming] = useState(false)
-  const discard_timer_ref = useRef(null)
+  const discard_callback = useCallback(() => {
+    on_discard(file.path)
+  }, [on_discard, file.path])
 
-  useEffect(() => {
-    return () => {
-      if (discard_timer_ref.current) {
-        clearTimeout(discard_timer_ref.current)
-      }
-    }
-  }, [])
+  const { is_confirming: is_discard_confirming, handle_discard_click } =
+    use_discard_confirm({ on_discard: discard_callback })
 
   const handle_toggle = () => {
     if (!is_expanded) {
@@ -113,19 +110,7 @@ const FileChangeCard = ({
   const handle_discard = (e) => {
     e.stopPropagation()
     if (!write_allowed) return
-
-    if (is_discard_confirming) {
-      // Second click - confirm discard
-      clearTimeout(discard_timer_ref.current)
-      set_is_discard_confirming(false)
-      on_discard(file.path)
-    } else {
-      // First click - enter confirm mode
-      set_is_discard_confirming(true)
-      discard_timer_ref.current = setTimeout(() => {
-        set_is_discard_confirming(false)
-      }, 6000)
-    }
+    handle_discard_click()
   }
 
   const handle_conflict_resolved = useCallback(() => {
@@ -250,4 +235,4 @@ FileChangeCard.propTypes = {
   write_allowed: PropTypes.bool
 }
 
-export default FileChangeCard
+export default React.memo(FileChangeCard)
