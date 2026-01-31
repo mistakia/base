@@ -28,6 +28,11 @@ import {
   emit_file_changed,
   emit_file_deleted
 } from '#libs-server/file-subscriptions/index.mjs'
+import {
+  start_git_status_watcher,
+  stop_git_status_watcher
+} from '#libs-server/file-subscriptions/git-status-watcher.mjs'
+import { broadcast_all } from '#server/websocket.mjs'
 
 const SERVER_LOCK_FILE = '.server-lock'
 
@@ -108,6 +113,24 @@ try {
     } catch (watcher_error) {
       logger(
         `Failed to start file subscription watcher: ${watcher_error.message}`
+      )
+      logger(watcher_error)
+    }
+
+    // Initialize git status watcher for broadcasting changes via WebSocket
+    try {
+      await start_git_status_watcher({
+        on_git_status_change: ({ repo_path }) => {
+          broadcast_all({
+            type: 'GIT_STATUS_CHANGED',
+            payload: { repo_path }
+          })
+        }
+      })
+      logger('Git status watcher initialized')
+    } catch (watcher_error) {
+      logger(
+        `Failed to start git status watcher: ${watcher_error.message}`
       )
       logger(watcher_error)
     }
@@ -235,6 +258,14 @@ const shutdown = async (signal) => {
     logger('File subscription watcher stopped')
   } catch (error) {
     logger(`Error stopping file subscription watcher: ${error.message}`)
+  }
+
+  try {
+    // Stop git status watcher
+    await stop_git_status_watcher()
+    logger('Git status watcher stopped')
+  } catch (error) {
+    logger(`Error stopping git status watcher: ${error.message}`)
   }
 
   try {
