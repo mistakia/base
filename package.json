@@ -1,5 +1,8 @@
 {
   "license": "MIT",
+  "bin": {
+    "base": "./cli/base.mjs"
+  },
   "imports": {
     "#root/*": "./*",
     "#server": "./server/index.mjs",

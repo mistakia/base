@@ -6,6 +6,8 @@ base_uri: sys:system/guideline/entity-list-cli.md
 created_at: '2026-01-16T00:00:00.000Z'
 entity_id: 905ece35-bb38-411c-b44d-ea8e0c842911
 globs:
+  - cli/base.mjs
+  - cli/base/entity.mjs
   - cli/entity-list.mjs
   - cli/entity-list-api.mjs
 observations:
@@ -29,16 +31,26 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 The entity-list CLIs provide unified interfaces for querying entities from the embedded database. They replace type-specific MCP tools (`list_tasks`, `task_get`, `list_threads`, `thread_read`) with flexible command-line tools.
 
-### Two CLI Variants
+### Preferred: Unified Base CLI
 
-| CLI                   | When to Use                     | How It Works           |
-| --------------------- | ------------------------------- | ---------------------- |
-| `entity-list-api.mjs` | Server IS running (recommended) | Queries via HTTP API   |
-| `entity-list.mjs`     | Server is NOT running           | Direct database access |
+The `base entity list` command is the preferred way to query entities:
 
-**Why two CLIs?** DuckDB requires exclusive write access. When the Base server is running, it holds the database lock, preventing direct CLI access. The API-based CLI queries through the running server instead.
+```bash
+base entity list -t task --status "In Progress"
+base entity get "user:task/my-task.md"
+```
 
-**Recommendation**: Use `entity-list-api.mjs` when the server is running. It provides the same interface with permission-based access control.
+### Direct CLI Variants
+
+| CLI                   | When to Use                          | How It Works           |
+| --------------------- | ------------------------------------ | ---------------------- |
+| `base entity list`    | Preferred entry point                | Direct database access |
+| `entity-list-api.mjs` | Deprecated, use `base entity list`   | Queries via HTTP API   |
+| `entity-list.mjs`     | Direct alternative when needed       | Direct database access |
+
+**Why two standalone CLIs?** DuckDB requires exclusive write access. When the Base server is running, it holds the database lock, preventing direct CLI access. The API-based CLI queries through the running server instead.
+
+**Recommendation**: Use `base entity list` as the primary invocation.
 
 **When to use entity-list CLI:**
 
@@ -58,9 +70,10 @@ The entity-list CLIs provide unified interfaces for querying entities from the e
 
 ### Command Invocation
 
-- When server is running: `node cli/entity-list-api.mjs` (recommended)
-- When server is stopped: `node cli/entity-list.mjs`
-- Both CLIs MUST be invoked from the base repository directory
+- Preferred: `base entity list` (works in all cases)
+- Alternative: `node cli/entity-list.mjs` (direct database access)
+- Deprecated: `node cli/entity-list-api.mjs` (HTTP API, use `base entity list` instead)
+- All CLIs MUST be invoked from the base repository directory
 - Agents SHOULD use the Bash tool to execute CLI commands
 - Commands MUST include appropriate filters to limit result sets
 

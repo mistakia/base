@@ -3,6 +3,9 @@
 /**
  * @fileoverview HTTP-based entity list CLI for use when server is running
  *
+ * @deprecated Use `base entity list` instead. This standalone tool is kept for
+ * backwards compatibility but will be removed in a future version.
+ *
  * Agent-optimized CLI that queries entities via the Base server HTTP API.
  * Designed for token-efficient output with tab-separated defaults.
  *
@@ -18,29 +21,7 @@
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-const SERVER_URL = 'http://localhost:8080'
-
-function format_entity(entity, { verbose = false, fields } = {}) {
-  const default_fields = ['base_uri', 'title', 'type', 'status', 'priority']
-  const output_fields = fields?.length > 0 ? fields : default_fields
-
-  if (verbose) {
-    const lines = [entity.base_uri]
-    for (const field of output_fields) {
-      if (field !== 'base_uri' && entity[field] !== undefined) {
-        const value = Array.isArray(entity[field])
-          ? entity[field].join(', ')
-          : entity[field]
-        lines.push(`  ${field}: ${value}`)
-      }
-    }
-    return lines.join('\n')
-  }
-
-  return output_fields
-    .map((f) => (entity[f] === undefined ? '' : String(entity[f])))
-    .join('\t')
-}
+import { format_entity, SERVER_URL } from './base/lib/format.mjs'
 
 const argv = yargs(hideBin(process.argv))
   .scriptName('entity-list-api')

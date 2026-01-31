@@ -38,45 +38,9 @@ import {
   query_tag_statistics_from_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import config from '#config'
+import { format_entity } from './base/lib/format.mjs'
 
 const log = debug('cli:entity-list')
-
-/**
- * Format entity for output
- *
- * @param {Object} entity - Entity object
- * @param {Object} options - Formatting options
- * @param {boolean} options.verbose - Multi-line output
- * @param {string[]} options.fields - Fields to include
- * @returns {string} Formatted output
- */
-function format_entity(entity, { verbose = false, fields } = {}) {
-  const default_fields = ['base_uri', 'title', 'type', 'status', 'priority']
-  const output_fields = fields && fields.length > 0 ? fields : default_fields
-
-  if (verbose) {
-    const lines = [entity.base_uri]
-    for (const field of output_fields) {
-      if (field !== 'base_uri' && entity[field] !== undefined) {
-        const value = Array.isArray(entity[field])
-          ? entity[field].join(', ')
-          : entity[field]
-        lines.push(`  ${field}: ${value}`)
-      }
-    }
-    return lines.join('\n')
-  }
-
-  // Tab-separated format
-  return output_fields
-    .map((field) => {
-      const value = entity[field]
-      if (value === undefined || value === null) return ''
-      if (Array.isArray(value)) return value.join(',')
-      return String(value)
-    })
-    .join('\t')
-}
 
 /**
  * Read entity content from filesystem
