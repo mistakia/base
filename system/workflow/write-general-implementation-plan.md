@@ -113,6 +113,16 @@ Create a structured plan by understanding requirements, analyzing context, and p
   - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`
   - Check the `tag/` directory for applicable tags and add them to the `tags:` frontmatter field (e.g., `tags: [user:tag/base-project.md]`). Select ONE primary tag for grouping. See [[user:guideline/tag-standards.md]]
 
+11. **Record completion observation**:
+
+- Add an observation to the task entity frontmatter:
+  ```yaml
+  observations:
+    - '[plan-completed] <date>'
+  ```
+  Where `<date>` is the current date in YYYY-MM-DD format.
+- Update the `updated_at` timestamp.
+
 </instructions>
 
 <output_format>
