@@ -1,4 +1,4 @@
-import { Record, Map, fromJS } from 'immutable'
+import { Record, Map, Set, fromJS } from 'immutable'
 
 import { git_action_types } from './actions'
 
@@ -24,8 +24,9 @@ const GitState = new Record({
   // Loading states
   is_loading_status: false,
   is_loading_diff: false,
-  is_loading_file_at_ref: false,
-  is_loading_file_content: false,
+  // Per-file loading tracking (Set of cache keys)
+  loading_file_at_ref_keys: new Set(),
+  loading_file_content_keys: new Set(),
   is_loading_conflict_versions: false,
   is_committing: false,
   is_pulling: false,
@@ -153,11 +154,13 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     // File at Ref Loading
     // ========================================================================
 
-    case git_action_types.GET_FILE_AT_REF_PENDING:
-      return state.merge({
-        is_loading_file_at_ref: true,
-        error: null
-      })
+    case git_action_types.GET_FILE_AT_REF_PENDING: {
+      const { repo_path, file_path, ref } = payload.opts || {}
+      const pending_key = `${repo_path}:${file_path}:${ref || 'HEAD'}`
+      return state
+        .update('loading_file_at_ref_keys', (keys) => keys.add(pending_key))
+        .set('error', null)
+    }
 
     case git_action_types.GET_FILE_AT_REF_FULFILLED: {
       const { repo_path, file_path, ref } = payload.opts || {}
@@ -174,27 +177,31 @@ export function git_reducer(state = new GitState(), { payload, type }) {
             is_new_file: payload.data?.is_new_file || false
           })
         )
-        .merge({
-          is_loading_file_at_ref: false,
-          error: null
-        })
+        .update('loading_file_at_ref_keys', (keys) => keys.delete(cache_key))
+        .set('error', null)
     }
 
-    case git_action_types.GET_FILE_AT_REF_FAILED:
-      return state.merge({
-        is_loading_file_at_ref: false,
-        error: payload.error
-      })
+    case git_action_types.GET_FILE_AT_REF_FAILED: {
+      const { repo_path: rp, file_path: fp, ref: r } = payload.opts || {}
+      const failed_key = `${rp}:${fp}:${r || 'HEAD'}`
+      return state
+        .update('loading_file_at_ref_keys', (keys) => keys.delete(failed_key))
+        .set('error', payload.error)
+    }
 
     // ========================================================================
     // File Content Loading (Working Copy)
     // ========================================================================
 
-    case git_action_types.GET_FILE_CONTENT_PENDING:
-      return state.merge({
-        is_loading_file_content: true,
-        error: null
-      })
+    case git_action_types.GET_FILE_CONTENT_PENDING: {
+      const { repo_path, file_path } = payload.opts || {}
+      const pending_content_key = `${repo_path}:${file_path}`
+      return state
+        .update('loading_file_content_keys', (keys) =>
+          keys.add(pending_content_key)
+        )
+        .set('error', null)
+    }
 
     case git_action_types.GET_FILE_CONTENT_FULFILLED: {
       const { repo_path, file_path } = payload.opts || {}
@@ -210,17 +217,21 @@ export function git_reducer(state = new GitState(), { payload, type }) {
             is_redacted: payload.data?.is_redacted || false
           })
         )
-        .merge({
-          is_loading_file_content: false,
-          error: null
-        })
+        .update('loading_file_content_keys', (keys) =>
+          keys.delete(cache_key)
+        )
+        .set('error', null)
     }
 
-    case git_action_types.GET_FILE_CONTENT_FAILED:
-      return state.merge({
-        is_loading_file_content: false,
-        error: payload.error
-      })
+    case git_action_types.GET_FILE_CONTENT_FAILED: {
+      const { repo_path: rp, file_path: fp } = payload.opts || {}
+      const failed_content_key = `${rp}:${fp}`
+      return state
+        .update('loading_file_content_keys', (keys) =>
+          keys.delete(failed_content_key)
+        )
+        .set('error', payload.error)
+    }
 
     // ========================================================================
     // Conflict Versions Loading

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { Box, CircularProgress, Alert } from '@mui/material'
 import { FileDiff } from '@pierre/diffs/react'
@@ -19,6 +19,26 @@ const DiffViewer = ({
 }) => {
   const file_name = file_path?.split('/').pop() || 'file'
   const language = get_language_from_path(file_path)
+
+  const diff_options = useRef({
+    layout: 'split',
+    themes: {
+      light: 'github-light',
+      dark: 'github-dark'
+    },
+    themeType: 'light',
+    lineNumbers: true,
+    wordWrap: true,
+    unsafeCSS: `
+      pre {
+        font-size: 11px !important;
+        line-height: 1.4 !important;
+      }
+      [data-diffs-header] {
+        display: none !important;
+      }
+    `
+  }).current
 
   const { file_diff, diff_error, no_changes } = useMemo(() => {
     if (
@@ -115,27 +135,6 @@ const DiffViewer = ({
         <CircularProgress size={24} />
       </Box>
     )
-  }
-
-  const diff_options = {
-    layout: 'split',
-    themes: {
-      light: 'github-light',
-      dark: 'github-dark'
-    },
-    themeType: 'light',
-    lineNumbers: true,
-    wordWrap: true,
-    // Inject CSS into Shadow DOM to match ConflictResolver font size and hide header
-    unsafeCSS: `
-      pre {
-        font-size: 11px !important;
-        line-height: 1.4 !important;
-      }
-      [data-diffs-header] {
-        display: none !important;
-      }
-    `
   }
 
   return (

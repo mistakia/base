@@ -6,7 +6,7 @@ import { directory_actions, get_directory_state } from '@core/directory'
 import { git_actions } from '@core/git/actions'
 import {
   get_file_at_ref,
-  get_is_loading_file_at_ref,
+  get_is_loading_file_at_ref_for_key,
   get_git_error
 } from '@core/git/selectors'
 import { subscribe_to_file, unsubscribe_from_file } from '@core/websocket'
@@ -36,7 +36,16 @@ const FileView = ({ path }) => {
   const error = directory_state.get('file_error')
 
   const git_context = file_data?.git_context
-  const is_loading_file_at_ref = useSelector(get_is_loading_file_at_ref)
+  const is_loading_file_at_ref = useSelector((state) =>
+    git_context
+      ? get_is_loading_file_at_ref_for_key(
+          state,
+          git_context.repo_path,
+          git_context.relative_path,
+          'HEAD'
+        )
+      : false
+  )
   const git_error = useSelector(get_git_error)
   const file_at_ref_data = useSelector((state) =>
     git_context
@@ -176,7 +185,11 @@ const FileView = ({ path }) => {
     }
   }
 
-  if (loading) {
+  // Only show full-page loading when there is no existing file data.
+  // When file_data already exists (e.g. background reload from FILE_CHANGED
+  // websocket event), keep rendering the current content to avoid unmounting
+  // the DiffViewer and losing scroll position.
+  if (loading && !file_data) {
     return (
       <Box sx={{ p: 3 }}>
         <div>Loading file content...</div>
@@ -184,7 +197,7 @@ const FileView = ({ path }) => {
     )
   }
 
-  if (error) {
+  if (error && !file_data) {
     return (
       <Box sx={{ p: 3 }}>
         <div style={{ color: COLORS.error }}>{error}</div>

@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { git_actions } from '@core/git/actions'
 import {
   get_file_at_ref,
-  get_is_loading_file_at_ref,
+  get_is_loading_file_at_ref_for_key,
   get_git_error
 } from '@core/git/selectors'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
@@ -29,7 +29,16 @@ const EntityRenderer = ({
   const dispatch = useDispatch()
   const [is_diff_view_active, set_is_diff_view_active] = useState(false)
 
-  const is_loading_file_at_ref = useSelector(get_is_loading_file_at_ref)
+  const is_loading_file_at_ref = useSelector((state) =>
+    git_context
+      ? get_is_loading_file_at_ref_for_key(
+          state,
+          git_context.repo_path,
+          git_context.relative_path,
+          'HEAD'
+        )
+      : false
+  )
   const git_error = useSelector(get_git_error)
   const file_at_ref_data = useSelector((state) =>
     git_context
@@ -186,4 +195,4 @@ EntityRenderer.propTypes = {
   })
 }
 
-export default EntityRenderer
+export default React.memo(EntityRenderer)

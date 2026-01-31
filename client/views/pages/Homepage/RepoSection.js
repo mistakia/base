@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch } from 'react-redux'
 
@@ -22,12 +22,16 @@ const RepoSection = ({ repo }) => {
   const ours_branch = repo.ours_branch
   const theirs_branch = repo.theirs_branch
 
-  const all_files = CHANGE_TYPES.flatMap(({ key, type }) =>
-    (repo[key] || []).map((f) => ({
-      ...f,
-      change_type: type,
-      ...(type === 'conflict' && { status: 'conflict' })
-    }))
+  const all_files = useMemo(
+    () =>
+      CHANGE_TYPES.flatMap(({ key, type }) =>
+        (repo[key] || []).map((f) => ({
+          ...f,
+          change_type: type,
+          ...(type === 'conflict' && { status: 'conflict' })
+        }))
+      ),
+    [repo]
   )
 
   const total_count = CHANGE_TYPES.reduce(
@@ -42,27 +46,33 @@ const RepoSection = ({ repo }) => {
 
   const write_allowed = repo.write_allowed === true
 
-  const handle_stage = (file_path) => {
-    if (!write_allowed) return
-    dispatch(
-      git_actions.stage_files({
-        repo_path: repo.repo_path,
-        files: [file_path]
-      })
-    )
-  }
+  const handle_stage = useCallback(
+    (file_path) => {
+      if (!write_allowed) return
+      dispatch(
+        git_actions.stage_files({
+          repo_path: repo.repo_path,
+          files: [file_path]
+        })
+      )
+    },
+    [dispatch, write_allowed, repo.repo_path]
+  )
 
-  const handle_unstage = (file_path) => {
-    if (!write_allowed) return
-    dispatch(
-      git_actions.unstage_files({
-        repo_path: repo.repo_path,
-        files: [file_path]
-      })
-    )
-  }
+  const handle_unstage = useCallback(
+    (file_path) => {
+      if (!write_allowed) return
+      dispatch(
+        git_actions.unstage_files({
+          repo_path: repo.repo_path,
+          files: [file_path]
+        })
+      )
+    },
+    [dispatch, write_allowed, repo.repo_path]
+  )
 
-  const handle_stage_all = () => {
+  const handle_stage_all = useCallback(() => {
     if (!write_allowed) return
     const files_to_stage = [
       ...(repo.unstaged || []).map((f) => f.path),
@@ -76,22 +86,25 @@ const RepoSection = ({ repo }) => {
         })
       )
     }
-  }
+  }, [dispatch, write_allowed, repo.repo_path, repo.unstaged, repo.untracked])
 
-  const handle_discard = (file_path) => {
-    if (!write_allowed) return
-    dispatch(
-      git_actions.discard_files({
-        repo_path: repo.repo_path,
-        files: [file_path]
-      })
-    )
-  }
+  const handle_discard = useCallback(
+    (file_path) => {
+      if (!write_allowed) return
+      dispatch(
+        git_actions.discard_files({
+          repo_path: repo.repo_path,
+          files: [file_path]
+        })
+      )
+    },
+    [dispatch, write_allowed, repo.repo_path]
+  )
 
-  const handle_abort_merge = () => {
+  const handle_abort_merge = useCallback(() => {
     if (!write_allowed) return
     dispatch(git_actions.abort_merge({ repo_path: repo.repo_path }))
-  }
+  }, [dispatch, write_allowed, repo.repo_path])
 
   return (
     <div className='repo-section'>
@@ -229,4 +242,4 @@ RepoSection.propTypes = {
   }).isRequired
 }
 
-export default RepoSection
+export default React.memo(RepoSection)

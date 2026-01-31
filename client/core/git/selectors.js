@@ -60,11 +60,30 @@ export function get_is_loading_diff(state) {
 }
 
 export function get_is_loading_file_at_ref(state) {
-  return get_git_state(state).get('is_loading_file_at_ref')
+  return get_git_state(state).get('loading_file_at_ref_keys').size > 0
+}
+
+export function get_is_loading_file_at_ref_for_key(
+  state,
+  repo_path,
+  file_path,
+  ref = 'HEAD'
+) {
+  const cache_key = `${repo_path}:${file_path}:${ref}`
+  return get_git_state(state).get('loading_file_at_ref_keys').has(cache_key)
 }
 
 export function get_is_loading_file_content(state) {
-  return get_git_state(state).get('is_loading_file_content')
+  return get_git_state(state).get('loading_file_content_keys').size > 0
+}
+
+export function get_is_loading_file_content_for_key(
+  state,
+  repo_path,
+  file_path
+) {
+  const cache_key = `${repo_path}:${file_path}`
+  return get_git_state(state).get('loading_file_content_keys').has(cache_key)
 }
 
 export function get_is_loading_conflict_versions(state) {

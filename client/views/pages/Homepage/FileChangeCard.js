@@ -7,8 +7,8 @@ import { git_actions } from '@core/git/actions'
 import {
   get_file_at_ref,
   get_file_content,
-  get_is_loading_file_at_ref,
-  get_is_loading_file_content
+  get_is_loading_file_at_ref_for_key,
+  get_is_loading_file_content_for_key
 } from '@core/git/selectors'
 import { use_discard_confirm } from '@views/hooks/use-discard-confirm'
 import ConflictResolver from '@views/components/ConflictResolver/index.js'
@@ -45,8 +45,12 @@ const FileChangeCard = ({
   const file_content_data = useSelector((state) =>
     get_file_content(state, repo_path, file.path)
   )
-  const is_loading_original = useSelector(get_is_loading_file_at_ref)
-  const is_loading_current = useSelector(get_is_loading_file_content)
+  const is_loading_original = useSelector((state) =>
+    get_is_loading_file_at_ref_for_key(state, repo_path, file.path, 'HEAD')
+  )
+  const is_loading_current = useSelector((state) =>
+    get_is_loading_file_content_for_key(state, repo_path, file.path)
+  )
 
   const file_url =
     relative_repo_path != null
