@@ -33,6 +33,7 @@ const GitState = new Record({
   is_resolving_conflict: false,
   is_generating_commit_message: false,
   generated_commit_message: null,
+  is_auto_committing: false,
   // Error state
   error: null
 })
@@ -386,6 +387,29 @@ export function git_reducer(state = new GitState(), { payload, type }) {
     case git_action_types.GENERATE_COMMIT_MESSAGE_FAILED:
       return state.merge({
         is_generating_commit_message: false,
+        error: payload.error
+      })
+
+    // ========================================================================
+    // Auto-Commit File
+    // ========================================================================
+
+    case git_action_types.AUTO_COMMIT_FILE_PENDING:
+      return state.merge({
+        is_auto_committing: true,
+        error: null
+      })
+
+    case git_action_types.AUTO_COMMIT_FILE_FULFILLED:
+      return state.merge({
+        is_auto_committing: false,
+        generated_commit_message: null,
+        error: null
+      })
+
+    case git_action_types.AUTO_COMMIT_FILE_FAILED:
+      return state.merge({
+        is_auto_committing: false,
         error: payload.error
       })
 

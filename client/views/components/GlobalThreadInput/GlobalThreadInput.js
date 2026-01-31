@@ -197,7 +197,13 @@ export default function GlobalThreadInput() {
     if (!is_open) {
       draft_restored_ref.current = false
     }
-  }, [is_open, draft_persistence.is_loading, draft_persistence.draft, message, dispatch])
+  }, [
+    is_open,
+    draft_persistence.is_loading,
+    draft_persistence.draft,
+    message,
+    dispatch
+  ])
 
   // Save draft to localStorage on changes (debounced via hook)
   useEffect(() => {
@@ -208,7 +214,13 @@ export default function GlobalThreadInput() {
         working_directory
       })
     }
-  }, [is_open, message, cursor_position, working_directory, draft_persistence.save_draft])
+  }, [
+    is_open,
+    message,
+    cursor_position,
+    working_directory,
+    draft_persistence.save_draft
+  ])
 
   // Redux selectors
   const is_loading = useSelector((state) => {

@@ -19,6 +19,7 @@ import {
   get_reverse_relation_type,
   sort_relations_by_weighted_score
 } from '#libs-shared/entity-relations.mjs'
+import { infer_entity_type_from_base_uri } from '#libs-shared/entity-constants.mjs'
 import RelationItem from './RelationItem.js'
 
 const DEFAULT_VISIBLE_COUNT = 5
@@ -194,6 +195,10 @@ const RelatedEntities = ({
               malformed={relation.malformed}
               raw_string={relation.raw_string}
               redacted={relation.redacted}
+              entity_type={
+                relation.type ||
+                infer_entity_type_from_base_uri(relation.base_uri)
+              }
             />
           )
         })}

@@ -11,6 +11,10 @@ import { Box } from '@mui/material'
 
 import { COLORS } from '@theme/colors.js'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
+import {
+  get_entity_type_color,
+  get_entity_type_display_label
+} from '#libs-shared/entity-constants.mjs'
 
 const item_container_sx = {
   display: 'flex',
@@ -84,13 +88,23 @@ const redacted_relation_sx = {
   maxWidth: '300px'
 }
 
+const type_label_sx = (color) => ({
+  fontSize: '9px',
+  fontWeight: 500,
+  color,
+  marginLeft: 'auto',
+  flexShrink: 0,
+  opacity: 0.8
+})
+
 const RelationItem = ({
   relation_type,
   base_uri,
   title,
   malformed,
   raw_string,
-  redacted
+  redacted,
+  entity_type
 }) => {
   // Handle redacted relations (permission-denied content)
   if (redacted) {
@@ -150,6 +164,13 @@ const RelationItem = ({
         }}>
         {display_title}
       </a>
+      {entity_type && (
+        <Box
+          component='span'
+          sx={type_label_sx(get_entity_type_color(entity_type))}>
+          {get_entity_type_display_label(entity_type)}
+        </Box>
+      )}
     </Box>
   )
 }
@@ -160,7 +181,8 @@ RelationItem.propTypes = {
   title: PropTypes.string,
   malformed: PropTypes.bool,
   raw_string: PropTypes.string,
-  redacted: PropTypes.bool
+  redacted: PropTypes.bool,
+  entity_type: PropTypes.string
 }
 
 export default RelationItem

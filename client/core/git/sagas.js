@@ -1,4 +1,4 @@
-import { takeLatest, fork, call, put } from 'redux-saga/effects'
+import { takeLatest, fork, call, put, select } from 'redux-saga/effects'
 
 import {
   get_git_status_all,
@@ -17,7 +17,7 @@ import {
   abort_merge,
   generate_commit_message
 } from '@core/api/sagas'
-import { git_action_types } from './actions'
+import { git_action_types, auto_commit_file_actions } from './actions'
 import { notification_actions } from '@core/notification/actions'
 
 /**
@@ -287,6 +287,63 @@ export function* request_generate_commit_message({ payload }) {
 }
 
 // ============================================================================
+// Auto-Commit File Saga
+// ============================================================================
+
+export function* request_auto_commit_file({ payload }) {
+  const { repo_path, file_path } = payload
+  try {
+    yield put(auto_commit_file_actions.pending({ opts: payload }))
+
+    // Stage the file
+    yield call(stage_files, { repo_path, files: [file_path] })
+
+    // Generate commit message
+    yield call(generate_commit_message, { repo_path })
+
+    // Get the generated message from the fulfilled action's payload
+    const state = yield select((s) => s.get('git'))
+    const message = state.get('generated_commit_message')
+
+    if (!message) {
+      throw new Error('Failed to generate commit message')
+    }
+
+    // Commit with the generated message
+    yield call(commit_changes, { repo_path, message })
+
+    // Refresh status after commit
+    yield call(get_git_status, { repo_path })
+
+    yield put(auto_commit_file_actions.fulfilled({ opts: payload }))
+
+    yield put(
+      notification_actions.show_notification({
+        severity: 'success',
+        message: 'File committed successfully'
+      })
+    )
+  } catch (error) {
+    yield put(
+      auto_commit_file_actions.failed({
+        opts: payload,
+        error: error.message || error.toString()
+      })
+    )
+    if (error.permission_denied) {
+      yield* show_permission_error(error, 'auto-committing file')
+    } else {
+      yield put(
+        notification_actions.show_notification({
+          severity: 'error',
+          message: `Auto-commit failed: ${error.message_details || error.message || error}`
+        })
+      )
+    }
+  }
+}
+
+// ============================================================================
 // Watchers
 // ============================================================================
 
@@ -365,6 +422,13 @@ export function* watch_generate_commit_message() {
   )
 }
 
+export function* watch_auto_commit_file() {
+  yield takeLatest(
+    git_action_types.REQUEST_AUTO_COMMIT_FILE,
+    request_auto_commit_file
+  )
+}
+
 // ============================================================================
 // Root Saga Export
 // ============================================================================
@@ -384,5 +448,6 @@ export const git_sagas = [
   fork(watch_resolve_conflict),
   fork(watch_load_conflict_versions),
   fork(watch_abort_merge),
-  fork(watch_generate_commit_message)
+  fork(watch_generate_commit_message),
+  fork(watch_auto_commit_file)
 ]

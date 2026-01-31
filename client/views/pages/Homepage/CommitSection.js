@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 
+import Button from '@components/primitives/Button'
 import { git_actions } from '@core/git/actions'
 import {
   get_is_committing,
@@ -102,19 +103,21 @@ const CommitSection = ({
         </span>
         <div className='commit-section__actions'>
           {!is_merging && (
-            <button
-              className='commit-section__generate-button'
+            <Button
+              variant='secondary'
+              size='small'
               onClick={handle_generate}
               disabled={staged_count === 0 || is_generating || is_committing}>
               {generate_label}
-            </button>
+            </Button>
           )}
-          <button
-            className='commit-section__button'
+          <Button
+            variant='primary'
+            size='small'
             onClick={handle_commit}
             disabled={!commit_message.trim() || is_committing}>
             {button_label}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

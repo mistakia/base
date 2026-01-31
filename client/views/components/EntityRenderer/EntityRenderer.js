@@ -14,6 +14,7 @@ import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import EntityFrontmatter from './EntityFrontmatter/index.js'
 import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
+import GitFileActions from '@components/FileActions/GitFileActions.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 
@@ -96,7 +97,10 @@ const EntityRenderer = ({
         markdown={markdown}
         path={path}
       />
-      <FileActions path={path}>{render_diff_toggle()}</FileActions>
+      <FileActions path={path}>
+        <GitFileActions git_context={git_context} />
+        {render_diff_toggle()}
+      </FileActions>
     </Box>
   ) : null
 
@@ -123,7 +127,10 @@ const EntityRenderer = ({
               markdown={markdown}
               path={path}
             />
-            <FileActions path={path}>{render_diff_toggle()}</FileActions>
+            <FileActions path={path}>
+              <GitFileActions git_context={git_context} />
+              {render_diff_toggle()}
+            </FileActions>
           </Box>
         </Box>
       </>

@@ -17,6 +17,7 @@ const GET_CONFLICT_VERSIONS = 'GET_CONFLICT_VERSIONS'
 const DISCARD_FILES = 'DISCARD_FILES'
 const ABORT_MERGE = 'ABORT_MERGE'
 const GENERATE_COMMIT_MESSAGE = 'GENERATE_COMMIT_MESSAGE'
+const AUTO_COMMIT_FILE = 'AUTO_COMMIT_FILE'
 
 export const git_action_types = {
   // API action types with PENDING/FULFILLED/FAILED variants
@@ -36,6 +37,7 @@ export const git_action_types = {
   ...create_api_action_types(DISCARD_FILES),
   ...create_api_action_types(ABORT_MERGE),
   ...create_api_action_types(GENERATE_COMMIT_MESSAGE),
+  ...create_api_action_types(AUTO_COMMIT_FILE),
 
   // Trigger actions
   LOAD_GIT_STATUS_ALL: 'LOAD_GIT_STATUS_ALL',
@@ -53,6 +55,7 @@ export const git_action_types = {
   LOAD_CONFLICT_VERSIONS: 'LOAD_CONFLICT_VERSIONS',
   REQUEST_ABORT_MERGE: 'REQUEST_ABORT_MERGE',
   REQUEST_GENERATE_COMMIT_MESSAGE: 'REQUEST_GENERATE_COMMIT_MESSAGE',
+  REQUEST_AUTO_COMMIT_FILE: 'REQUEST_AUTO_COMMIT_FILE',
 
   // UI state actions
   SET_SELECTED_FILE: 'GIT_SET_SELECTED_FILE',
@@ -81,6 +84,7 @@ export const abort_merge_actions = create_api_actions(ABORT_MERGE)
 export const generate_commit_message_actions = create_api_actions(
   GENERATE_COMMIT_MESSAGE
 )
+export const auto_commit_file_actions = create_api_actions(AUTO_COMMIT_FILE)
 
 // Action creators for component use
 export const git_actions = {
@@ -171,6 +175,12 @@ export const git_actions = {
   generate_commit_message: ({ repo_path }) => ({
     type: git_action_types.REQUEST_GENERATE_COMMIT_MESSAGE,
     payload: { repo_path }
+  }),
+
+  // Auto-commit a single file (stage, generate message, commit)
+  auto_commit_file: ({ repo_path, file_path }) => ({
+    type: git_action_types.REQUEST_AUTO_COMMIT_FILE,
+    payload: { repo_path, file_path }
   }),
 
   // UI actions

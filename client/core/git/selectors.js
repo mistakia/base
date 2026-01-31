@@ -91,6 +91,25 @@ export function get_is_generating_commit_message(state) {
   return get_git_state(state).get('is_generating_commit_message')
 }
 
+export function get_is_auto_committing(state) {
+  return get_git_state(state).get('is_auto_committing')
+}
+
+/**
+ * Check if a file still has changes (appears in staged, unstaged, or untracked).
+ * Returns the change status or null if file has no changes.
+ */
+export function get_file_change_status(state, repo_path, relative_path) {
+  if (!repo_path || !relative_path) return null
+  const repo = get_repo_status(state, repo_path)
+  if (!repo) return null
+
+  if (repo.staged?.some((f) => f.path === relative_path)) return 'staged'
+  if (repo.unstaged?.some((f) => f.path === relative_path)) return 'unstaged'
+  if (repo.untracked?.some((f) => f.path === relative_path)) return 'untracked'
+  return null
+}
+
 export function get_generated_commit_message(state) {
   return get_git_state(state).get('generated_commit_message')
 }

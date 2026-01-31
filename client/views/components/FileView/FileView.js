@@ -22,6 +22,7 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import { RedactedContent } from '@components/primitives/styled'
 import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
+import GitFileActions from '@components/FileActions/GitFileActions.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import ConflictResolver from '@components/ConflictResolver/index.js'
 
@@ -225,6 +226,7 @@ const FileView = ({ path }) => {
     <Box sx={{ height: '100%' }}>
       {show_top_actions && (
         <FileActions path={path}>
+          <GitFileActions git_context={git_context} />
           <FileDiffToggle
             git_context={git_context}
             is_active={is_diff_view_active}

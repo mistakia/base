@@ -414,23 +414,10 @@
   font-size: $font_size_xs
   color: $color_text_tertiary
 
-.commit-section__button
-  padding: $space_xs $space_base
-  border: none
-  border-radius: $radius_sm
-  background: $color_primary
-  color: white
-  font-size: $font_size_sm
-  font-weight: $font_weight_medium
-  cursor: pointer
-  transition: all $transition_fast
+.commit-section__actions
+  display: flex
+  gap: $space_xs
 
-  &:hover:not(:disabled)
-    background: darken($color_primary, 10%)
-
-  &:disabled
-    opacity: 0.5
-    cursor: not-allowed
 
 // =============================================================================
 // Responsive Design
