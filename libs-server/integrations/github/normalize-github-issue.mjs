@@ -46,6 +46,7 @@ export function format_status(status_string) {
       return TASK_STATUS.COMPLETED
     case 'cancelled':
     case 'canceled':
+    case 'abandoned':
       return TASK_STATUS.ABANDONED
     case 'planned':
     case 'todo':
@@ -413,11 +414,13 @@ export function normalize_github_issue({
   if (project_item) {
     const extracted_fields = extract_project_fields(project_item)
 
-    // CRITICAL: Don't override status if issue is closed
-    // When an issue is closed, the status should always be COMPLETED
-    // Project status should only override when issue is open
+    // For closed issues, only allow terminal statuses from project fields
+    // (COMPLETED and ABANDONED are both valid terminal states for closed issues)
     if (is_issue_closed(issue) && extracted_fields.status) {
-      if (extracted_fields.status !== TASK_STATUS.COMPLETED) {
+      if (
+        extracted_fields.status !== TASK_STATUS.COMPLETED &&
+        extracted_fields.status !== TASK_STATUS.ABANDONED
+      ) {
         log(
           `Issue #${issue.number} is closed, preserving COMPLETED status instead of project status "${extracted_fields.status}"`
         )
