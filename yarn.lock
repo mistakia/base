@@ -14366,6 +14366,8 @@ __metadata:
     webpack-dev-server: "npm:5.2.1"
     ws: "npm:8.18.1"
     yargs: "npm:^17.7.2"
+  bin:
+    base: ./cli/base.mjs
   languageName: unknown
   linkType: soft
 
