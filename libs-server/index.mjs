@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'url'
 
 export * as task from './task/index.mjs'
-export * as users from './users/index.mjs'
 export * as github from './integrations/github/index.mjs'
 export * as cloudflare from './integrations/cloudflare.mjs'
 export const isMain = (p) => process.argv[1] === fileURLToPath(p)
