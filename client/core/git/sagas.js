@@ -438,7 +438,10 @@ export function* handle_git_status_changed() {
 }
 
 export function* watch_git_status_changed() {
-  yield takeLatest(git_action_types.GIT_STATUS_CHANGED, handle_git_status_changed)
+  yield takeLatest(
+    git_action_types.GIT_STATUS_CHANGED,
+    handle_git_status_changed
+  )
 }
 
 // ============================================================================

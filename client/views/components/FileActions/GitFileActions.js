@@ -137,9 +137,7 @@ const GitFileActions = ({ git_context }) => {
       {show_discard && (
         <Tooltip
           title={
-            is_confirming
-              ? 'Click again to confirm discard'
-              : 'Discard changes'
+            is_confirming ? 'Click again to confirm discard' : 'Discard changes'
           }>
           <ButtonBase
             onClick={handle_discard_click}
@@ -154,7 +152,11 @@ const GitFileActions = ({ git_context }) => {
                 }
               })
             }}>
-            {is_confirming ? <CommitIcon size={16} /> : <RevertIcon size={16} />}
+            {is_confirming ? (
+              <CommitIcon size={16} />
+            ) : (
+              <RevertIcon size={16} />
+            )}
           </ButtonBase>
         </Tooltip>
       )}
@@ -194,13 +196,7 @@ GitFileActions.propTypes = {
   git_context: PropTypes.shape({
     repo_path: PropTypes.string,
     relative_path: PropTypes.string,
-    status: PropTypes.oneOf([
-      'modified',
-      'added',
-      'deleted',
-      'untracked',
-      null
-    ])
+    status: PropTypes.oneOf(['modified', 'added', 'deleted', 'untracked', null])
   })
 }
 

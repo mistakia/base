@@ -67,9 +67,15 @@ export async function start_git_status_watcher({
     })
 
     watcher
-      .on('add', (file_path) => handle_change(file_path, repo_paths, on_git_status_change))
-      .on('change', (file_path) => handle_change(file_path, repo_paths, on_git_status_change))
-      .on('unlink', (file_path) => handle_change(file_path, repo_paths, on_git_status_change))
+      .on('add', (file_path) =>
+        handle_change(file_path, repo_paths, on_git_status_change)
+      )
+      .on('change', (file_path) =>
+        handle_change(file_path, repo_paths, on_git_status_change)
+      )
+      .on('unlink', (file_path) =>
+        handle_change(file_path, repo_paths, on_git_status_change)
+      )
       .on('error', (error) => {
         log('Git status watcher error: %s', error.message)
       })

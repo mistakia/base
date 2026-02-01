@@ -42,11 +42,11 @@ base entity get "user:task/my-task.md"
 
 ### Direct CLI Variants
 
-| CLI                   | When to Use                          | How It Works           |
-| --------------------- | ------------------------------------ | ---------------------- |
-| `base entity list`    | Preferred entry point                | Direct database access |
-| `entity-list-api.mjs` | Deprecated, use `base entity list`   | Queries via HTTP API   |
-| `entity-list.mjs`     | Direct alternative when needed       | Direct database access |
+| CLI                   | When to Use                        | How It Works           |
+| --------------------- | ---------------------------------- | ---------------------- |
+| `base entity list`    | Preferred entry point              | Direct database access |
+| `entity-list-api.mjs` | Deprecated, use `base entity list` | Queries via HTTP API   |
+| `entity-list.mjs`     | Direct alternative when needed     | Direct database access |
 
 **Why two standalone CLIs?** DuckDB requires exclusive write access. When the Base server is running, it holds the database lock, preventing direct CLI access. The API-based CLI queries through the running server instead.
 

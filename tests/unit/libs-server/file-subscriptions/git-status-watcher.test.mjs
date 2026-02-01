@@ -55,10 +55,7 @@ describe('Git Status Watcher', function () {
       })
 
       // Simulate rapid git changes (like a commit touching index + HEAD + ref)
-      await fs.writeFile(
-        path.join(repo_path_a, '.git', 'index'),
-        'updated-1'
-      )
+      await fs.writeFile(path.join(repo_path_a, '.git', 'index'), 'updated-1')
       await fs.writeFile(
         path.join(repo_path_a, '.git', 'HEAD'),
         'ref: refs/heads/main\n'
@@ -89,14 +86,8 @@ describe('Git Status Watcher', function () {
       })
 
       // Change files in both repos simultaneously
-      await fs.writeFile(
-        path.join(repo_path_a, '.git', 'index'),
-        'updated-a'
-      )
-      await fs.writeFile(
-        path.join(repo_path_b, '.git', 'index'),
-        'updated-b'
-      )
+      await fs.writeFile(path.join(repo_path_a, '.git', 'index'), 'updated-a')
+      await fs.writeFile(path.join(repo_path_b, '.git', 'index'), 'updated-b')
 
       // Wait for debounce to complete
       await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -121,10 +112,7 @@ describe('Git Status Watcher', function () {
       })
 
       // Trigger a change
-      await fs.writeFile(
-        path.join(repo_path_a, '.git', 'index'),
-        'updated'
-      )
+      await fs.writeFile(path.join(repo_path_a, '.git', 'index'), 'updated')
 
       // Stop before debounce fires
       await new Promise((resolve) => setTimeout(resolve, 200))

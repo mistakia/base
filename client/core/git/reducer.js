@@ -217,9 +217,7 @@ export function git_reducer(state = new GitState(), { payload, type }) {
             is_redacted: payload.data?.is_redacted || false
           })
         )
-        .update('loading_file_content_keys', (keys) =>
-          keys.delete(cache_key)
-        )
+        .update('loading_file_content_keys', (keys) => keys.delete(cache_key))
         .set('error', null)
     }
 

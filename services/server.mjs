@@ -129,9 +129,7 @@ try {
       })
       logger('Git status watcher initialized')
     } catch (watcher_error) {
-      logger(
-        `Failed to start git status watcher: ${watcher_error.message}`
-      )
+      logger(`Failed to start git status watcher: ${watcher_error.message}`)
       logger(watcher_error)
     }
 
