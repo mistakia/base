@@ -9,7 +9,8 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { resolve_tag_shorthand } from '#libs-server/tag/filesystem/resolve-tag-shorthand.mjs'
 import { tag_exists_in_filesystem } from '#libs-server/tag/filesystem/tag-exists-in-filesystem.mjs'
 import { process_tag_batch } from '#libs-server/tag/filesystem/process-tag-batch.mjs'
-import { SERVER_URL, with_api_fallback } from './lib/format.mjs'
+import { SERVER_URL, with_api_fallback, flush_and_exit } from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 export const command = 'tag <command>'
 export const describe = 'Tag operations (list, stats, add, remove)'
@@ -20,12 +21,11 @@ export const builder = (yargs) =>
       'list',
       'List all tags',
       (yargs) =>
-        yargs
-          .option('search', {
-            alias: 's',
-            describe: 'Search tags by term',
-            type: 'string'
-          }),
+        yargs.option('search', {
+          alias: 's',
+          describe: 'Search tags by term',
+          type: 'string'
+        }),
       handle_list
     )
     .command(
@@ -95,7 +95,9 @@ async function handle_list(argv) {
       async () => {
         const params = new URLSearchParams()
         if (argv.search) params.set('search_term', argv.search)
-        const response = await fetch(`${SERVER_URL}/api/tags?${params}`)
+        const response = await authenticated_fetch(
+          `${SERVER_URL}/api/tags?${params}`
+        )
         if (!response.ok) throw new Error(`API returned ${response.status}`)
         return response.json()
       },
@@ -126,7 +128,7 @@ async function handle_list(argv) {
   } finally {
     await embedded_index_manager.shutdown()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_stats(argv) {
@@ -164,14 +166,13 @@ async function handle_stats(argv) {
         `\nTotal: ${stats.length} tags, ${total_entities} tag assignments`
       )
     }
-
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
     await embedded_index_manager.shutdown()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_tag_mutation(argv, operation) {
@@ -204,7 +205,9 @@ async function handle_tag_mutation(argv, operation) {
     if (argv.json) {
       console.log(JSON.stringify(result, null, 2))
     } else if (!result.success) {
-      console.error(`Error: ${result.error || 'Some files could not be processed'}`)
+      console.error(
+        `Error: ${result.error || 'Some files could not be processed'}`
+      )
       exit_code = 1
     } else if (result.updated_count > 0) {
       console.log(`Updated ${result.updated_count} files`)
@@ -215,5 +218,5 @@ async function handle_tag_mutation(argv, operation) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }

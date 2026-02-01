@@ -22,6 +22,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { format_entity, SERVER_URL } from './base/lib/format.mjs'
+import { authenticated_fetch } from './base/lib/auth.mjs'
 
 const argv = yargs(hideBin(process.argv))
   .scriptName('entity-list-api')
@@ -98,7 +99,9 @@ const main = async () => {
   params.set('sort_desc', String(!argv.asc))
 
   try {
-    const response = await fetch(`${SERVER_URL}/api/entities?${params}`)
+    const response = await authenticated_fetch(
+      `${SERVER_URL}/api/entities?${params}`
+    )
     if (!response.ok) {
       const error = await response
         .json()

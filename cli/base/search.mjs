@@ -10,8 +10,10 @@ import {
   SERVER_URL,
   format_entity,
   output_results,
-  with_api_fallback
+  with_api_fallback,
+  flush_and_exit
 } from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 export const command = 'search <query>'
 export const describe = 'Full-text search across entities'
@@ -55,7 +57,9 @@ export const handler = async (argv) => {
           }
         }
 
-        const response = await fetch(`${SERVER_URL}/api/search?${params}`)
+        const response = await authenticated_fetch(
+          `${SERVER_URL}/api/search?${params}`
+        )
         if (!response.ok) throw new Error(`API returned ${response.status}`)
 
         const data = await response.json()
@@ -74,8 +78,7 @@ export const handler = async (argv) => {
       output_results(results, {
         json: argv.json,
         verbose: argv.verbose,
-        formatter: (item) =>
-          format_entity(item, { verbose: argv.verbose }),
+        formatter: (item) => format_entity(item, { verbose: argv.verbose }),
         empty_message: 'No results found'
       })
     } else if (argv.json) {
@@ -89,5 +92,5 @@ export const handler = async (argv) => {
   } finally {
     await embedded_index_manager.shutdown()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }

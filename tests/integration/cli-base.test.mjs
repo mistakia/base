@@ -11,7 +11,8 @@ const cli_path = path.resolve('./cli/base.mjs')
 const run = (args) =>
   execute(`node ${cli_path} ${args}`, {
     cwd: path.resolve('.'),
-    env: { ...process.env, NODE_ENV: 'test' }
+    env: { ...process.env, NODE_ENV: 'test' },
+    maxBuffer: 10 * 1024 * 1024
   })
 
 describe('Unified Base CLI', function () {

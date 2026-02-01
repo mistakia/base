@@ -8,7 +8,14 @@ import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { format_entity, output_results } from './lib/format.mjs'
+import {
+  SERVER_URL,
+  format_entity,
+  output_results,
+  with_api_fallback,
+  flush_and_exit
+} from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 export const command = 'entity <command>'
 export const describe = 'Entity operations (list, get, move, validate)'
@@ -151,25 +158,56 @@ export const builder = (yargs) =>
 
 export const handler = () => {}
 
+async function fetch_entities_from_api(argv) {
+  const params = new URLSearchParams()
+  if (argv.type) {
+    for (const t of argv.type) params.append('type', t)
+  }
+  if (argv.status) params.set('status', argv.status)
+  if (argv.priority) params.set('priority', argv.priority)
+  if (argv.tags) {
+    for (const tag of argv.tags) params.append('tags', tag)
+  }
+  if (argv['without-tags']) params.set('no_tags', 'true')
+  if (argv.archived) params.set('include_archived', 'true')
+  if (argv.search) params.set('search', argv.search)
+  if (argv.content) params.set('content', 'true')
+  if (argv.limit) params.set('limit', String(argv.limit))
+  if (argv.offset) params.set('offset', String(argv.offset))
+  if (argv.sort) params.set('sort_by', argv.sort)
+  if (!argv.asc) params.set('sort_desc', 'true')
+
+  const response = await authenticated_fetch(
+    `${SERVER_URL}/api/entities?${params}`
+  )
+  if (!response.ok) throw new Error(`API returned ${response.status}`)
+  const data = await response.json()
+  return data.entities || data
+}
+
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const entities = await list_entities({
-      types: argv.type,
-      status: argv.status,
-      priority: argv.priority,
-      tags: argv.tags,
-      no_tags: argv['without-tags'],
-      include_archived: argv.archived,
-      search: argv.search,
-      fields: argv.fields,
-      content: argv.content,
-      limit: argv.limit,
-      offset: argv.offset,
-      sort_by: argv.sort,
-      sort_desc: !argv.asc,
-      verbose: argv.verbose
-    })
+    const entities = await with_api_fallback(
+      () => fetch_entities_from_api(argv),
+      () =>
+        list_entities({
+          types: argv.type,
+          status: argv.status,
+          priority: argv.priority,
+          tags: argv.tags,
+          no_tags: argv['without-tags'],
+          include_archived: argv.archived,
+          search: argv.search,
+          fields: argv.fields,
+          content: argv.content,
+          limit: argv.limit,
+          offset: argv.offset,
+          sort_by: argv.sort,
+          sort_desc: !argv.asc,
+          verbose: argv.verbose
+        })
+    )
 
     output_results(entities, {
       json: argv.json,
@@ -184,17 +222,32 @@ async function handle_list(argv) {
   } finally {
     await embedded_index_manager.shutdown()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_get(argv) {
   let exit_code = 0
   try {
-    const entities = await list_entities({
-      one: true,
-      base_uri: argv.base_uri,
-      content: true
-    })
+    const entities = await with_api_fallback(
+      async () => {
+        const params = new URLSearchParams({
+          base_uri: argv.base_uri,
+          content: 'true'
+        })
+        const response = await authenticated_fetch(
+          `${SERVER_URL}/api/entities?${params}`
+        )
+        if (!response.ok) throw new Error(`API returned ${response.status}`)
+        const data = await response.json()
+        return data.entities || data
+      },
+      () =>
+        list_entities({
+          one: true,
+          base_uri: argv.base_uri,
+          content: true
+        })
+    )
 
     const verbose = argv.verbose !== undefined ? argv.verbose : true
     output_results(entities, {
@@ -209,7 +262,7 @@ async function handle_get(argv) {
   } finally {
     await embedded_index_manager.shutdown()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_move(argv) {
@@ -252,7 +305,7 @@ async function handle_move(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_validate(argv) {
@@ -288,5 +341,5 @@ async function handle_validate(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }

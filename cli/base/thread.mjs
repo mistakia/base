@@ -7,7 +7,12 @@
 import { update_thread_state } from '#libs-server/threads/update-thread.mjs'
 import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { thread_constants } from '#libs-shared'
-import { SERVER_URL, is_api_unavailable } from './lib/format.mjs'
+import {
+  SERVER_URL,
+  is_api_unavailable,
+  flush_and_exit
+} from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 const { THREAD_STATE, ARCHIVE_REASON } = thread_constants
 
@@ -115,7 +120,9 @@ async function handle_list(argv) {
 
     let threads
     try {
-      const response = await fetch(`${SERVER_URL}/api/threads?${params}`)
+      const response = await authenticated_fetch(
+        `${SERVER_URL}/api/threads?${params}`
+      )
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`)
       }
@@ -151,7 +158,7 @@ async function handle_list(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_archive(argv) {
@@ -188,7 +195,7 @@ async function handle_archive(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_analyze(argv) {
@@ -215,5 +222,5 @@ async function handle_analyze(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }

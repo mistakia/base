@@ -10,6 +10,7 @@ import {
   get_queue_stats,
   close_cli_queue
 } from '#libs-server/cli-queue/index.mjs'
+import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'queue <command>'
 export const describe = 'Command queue operations'
@@ -89,7 +90,7 @@ async function handle_add(argv) {
   } finally {
     await close_cli_queue()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_status(argv) {
@@ -118,7 +119,7 @@ async function handle_status(argv) {
   } finally {
     await close_cli_queue()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
 
 async function handle_stats(argv) {
@@ -139,5 +140,5 @@ async function handle_stats(argv) {
   } finally {
     await close_cli_queue()
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }

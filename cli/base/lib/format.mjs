@@ -8,6 +8,20 @@
 export const SERVER_URL = 'http://localhost:8080'
 
 /**
+ * Exit the process after flushing stdout.
+ *
+ * process.exit() does not wait for stdout to drain when output is piped,
+ * which truncates output captured by child_process.exec or similar.
+ *
+ * @param {number} code - Exit code
+ */
+export function flush_and_exit(code = 0) {
+  process.stdout.write('', () => {
+    process.exit(code)
+  })
+}
+
+/**
  * Format entity for output
  *
  * @param {Object} entity - Entity object
@@ -125,7 +139,12 @@ export async function with_api_fallback(api_fn, fallback_fn) {
  */
 export function output_results(
   items,
-  { json = false, verbose = false, formatter, empty_message = 'No results found' } = {}
+  {
+    json = false,
+    verbose = false,
+    formatter,
+    empty_message = 'No results found'
+  } = {}
 ) {
   if (!items || items.length === 0) {
     if (json) {

@@ -9,8 +9,10 @@ import {
   SERVER_URL,
   format_relation,
   output_results,
-  with_api_fallback
+  with_api_fallback,
+  flush_and_exit
 } from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 export const command = 'relation <command>'
 export const describe = 'Relation lookups (list, forward, reverse)'
@@ -93,7 +95,7 @@ async function fetch_relations_from_api({
   if (limit) params.set('limit', String(limit))
   if (offset) params.set('offset', String(offset))
 
-  const response = await fetch(
+  const response = await authenticated_fetch(
     `${SERVER_URL}/api/entities/relations?${params}`
   )
   if (!response.ok) {
@@ -207,5 +209,5 @@ async function handle_relations(argv, direction) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   }
-  process.exit(exit_code)
+  flush_and_exit(exit_code)
 }
