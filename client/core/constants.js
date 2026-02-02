@@ -3,13 +3,14 @@
 //= ====================================
 //  GENERAL
 // -------------------------------------
+const DEV_API_HOST = 'http://localhost:8080'
 export const BASE_URL = IS_DEV
-  ? 'http://localhost:8080'
-  : 'https://base.tint.space'
+  ? DEV_API_HOST
+  : `${window.location.protocol}//${window.location.host}`
 export const API_URL = `${BASE_URL}/api`
 export const WEBSOCKET_URL = IS_DEV
   ? 'ws://localhost:8080'
-  : 'wss://base.tint.space'
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
 
 //= ====================================
 //  ROUTES
