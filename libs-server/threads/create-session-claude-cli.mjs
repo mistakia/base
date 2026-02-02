@@ -259,7 +259,10 @@ export const create_session_claude_cli = async ({
   // 2. Get Configuration & Resolve Command Path
   // -------------------------
 
-  const cli_command_config = config.threads?.cli?.command || DEFAULT_CLI_COMMAND
+  const cli_command_config =
+    process.env.CLAUDE_CLI_COMMAND ||
+    config.threads?.cli?.command ||
+    DEFAULT_CLI_COMMAND
   const timeout_minutes =
     config.threads?.cli?.session_timeout_minutes || DEFAULT_TIMEOUT_MINUTES
 
