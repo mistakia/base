@@ -34,6 +34,11 @@ import {
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 import { generate_commit_message } from '#libs-server/git/generate-commit-message.mjs'
+import {
+  get_cached_status_all,
+  is_cache_ready,
+  get_cache_initializing
+} from '#libs-server/git/git-status-cache.mjs'
 
 const router = express.Router()
 const log = debug('api:git')
@@ -156,36 +161,6 @@ const validate_repo_path = async (repo_path) => {
 }
 
 /**
- * Parse git submodule status output and return initialized submodule paths
- * @param {string} output - Output from git submodule status --recursive
- * @returns {string[]} Array of relative submodule paths that are initialized
- */
-const parse_submodule_status = (output) => {
-  if (!output.trim()) {
-    return []
-  }
-
-  const submodule_paths = []
-  const lines = output.trim().split('\n')
-
-  for (const line of lines) {
-    // Format: " <sha> path (description)" or "+<sha> path" or "-<sha> path"
-    // First char: ' ' = initialized, '+' = different commit, '-' = not initialized, 'U' = conflict
-    const match = line.match(/^([ +\-U])([0-9a-f]+)\s+(\S+)/)
-    if (!match) continue
-
-    const [, status_char, , relative_path] = match
-    const is_initialized = status_char !== '-'
-
-    if (is_initialized) {
-      submodule_paths.push(relative_path)
-    }
-  }
-
-  return submodule_paths
-}
-
-/**
  * Parse git worktree list --porcelain output into worktree paths
  * Skips the first entry (main working tree) since it is already discovered
  * @param {string} output - Output from git worktree list --porcelain
@@ -224,6 +199,35 @@ const parse_worktree_list = (output) => {
 }
 
 /**
+ * Recursively parse .gitmodules files to discover submodule paths.
+ * Much faster than `git submodule status --recursive` (~22ms vs ~1100ms).
+ *
+ * @param {string} repo_dir - Root directory to start from
+ * @returns {Promise<string[]>} Array of relative submodule paths
+ */
+const parse_gitmodules_recursive = async (repo_dir) => {
+  const paths = []
+  try {
+    const content = await fs.readFile(
+      path.join(repo_dir, '.gitmodules'),
+      'utf-8'
+    )
+    for (const match of content.matchAll(/^\s*path\s*=\s*(.+)$/gm)) {
+      const rel_path = match[1].trim()
+      paths.push(rel_path)
+      // Check for nested .gitmodules in submodule
+      const nested = await parse_gitmodules_recursive(
+        path.join(repo_dir, rel_path)
+      )
+      paths.push(...nested.map((np) => path.join(rel_path, np)))
+    }
+  } catch {
+    // No .gitmodules file or not readable - not an error
+  }
+  return paths
+}
+
+/**
  * Get list of known repositories (user_base, repository/active/*, and git submodules)
  * @returns {Promise<{repo_paths: string[], worktree_metadata: Map<string, {parent_repo_path: string, parent_repo_name: string}>}>}
  */
@@ -249,18 +253,14 @@ const get_known_repositories = async () => {
     log('repository/active directory not found')
   }
 
-  // Detect git submodules (includes nested submodules and those outside repository/active)
+  // Detect git submodules by parsing .gitmodules files (fast, no shell command)
   try {
-    const { stdout } = await execute_shell_command(
-      'git submodule status --recursive',
-      { cwd: user_base_dir }
-    )
-    const submodule_paths = parse_submodule_status(stdout)
+    const submodule_paths = await parse_gitmodules_recursive(user_base_dir)
     for (const relative_path of submodule_paths) {
       potential_repos.push(path.join(user_base_dir, relative_path))
     }
   } catch (error) {
-    log('Failed to get submodule status:', error.message)
+    log('Failed to parse .gitmodules:', error.message)
   }
 
   // Check all potential repos in parallel
@@ -647,7 +647,39 @@ router.get('/status/all', async (req, res) => {
       req.permission_context &&
       (await req.permission_context.get_global_write_permission())
 
-    const { repo_paths, worktree_metadata } = await get_known_repositories()
+    // Wait for cache if it's still initializing (cold start)
+    const initializing = get_cache_initializing()
+    if (initializing) {
+      log('Cache still initializing, waiting...')
+      await initializing
+    }
+
+    let repo_paths, worktree_metadata, statuses_map, merge_state_map
+
+    if (is_cache_ready()) {
+      // Read from cache (sub-millisecond)
+      const cached = get_cached_status_all()
+      repo_paths = cached.repo_paths
+      worktree_metadata = cached.worktree_metadata
+
+      statuses_map = {}
+      merge_state_map = new Map()
+      for (const repo_path of repo_paths) {
+        const entry = cached.statuses.get(repo_path)
+        if (entry) {
+          statuses_map[repo_path] = entry.status
+          merge_state_map.set(repo_path, entry.merge_state || DEFAULT_MERGE_STATE)
+        }
+      }
+    } else {
+      // Fallback: cache not ready, use live queries
+      log('Cache not ready, falling back to live queries')
+      const discovered = await get_known_repositories()
+      repo_paths = discovered.repo_paths
+      worktree_metadata = discovered.worktree_metadata
+      statuses_map = await get_multi_repo_status({ repo_paths })
+      merge_state_map = await get_merge_states_for_repos(Object.keys(statuses_map))
+    }
 
     const get_worktree_fields = (repo_path) => {
       const wt_meta = worktree_metadata.get(repo_path)
@@ -659,15 +691,8 @@ router.get('/status/all', async (req, res) => {
 
     // For users with global_write, skip permission filtering entirely
     if (has_global_write) {
-      const statuses = await get_multi_repo_status({ repo_paths })
-
-      const merge_state_map = await get_merge_states_for_repos(
-        Object.keys(statuses)
-      )
-
-      const repos = Object.entries(statuses).map(([repo_path, status]) => {
-        const merge_state =
-          merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+      const repos = Object.entries(statuses_map).map(([repo_path, status]) => {
+        const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
         return {
           repo_path,
           repo_name: path.basename(repo_path),
@@ -693,14 +718,18 @@ router.get('/status/all', async (req, res) => {
     })
 
     // Filter to only repos user can access
-    const accessible_repos = repo_paths.filter((rp, index) => {
+    const accessible_repos = repo_paths.filter((_rp, index) => {
       const base_uri = repo_base_uris[index]
       return permissions[base_uri]?.read?.allowed ?? false
     })
 
-    const statuses = await get_multi_repo_status({
-      repo_paths: accessible_repos
-    })
+    // Use cached statuses for accessible repos only
+    const accessible_statuses = {}
+    for (const rp of accessible_repos) {
+      if (statuses_map[rp]) {
+        accessible_statuses[rp] = statuses_map[rp]
+      }
+    }
 
     // Build a map of repo path -> base_uri for reliable lookups
     const repo_uri_map = new Map(
@@ -720,7 +749,7 @@ router.get('/status/all', async (req, res) => {
     // Collect files ONLY from repos where user has read-only access
     // AND only .md files (non-md files can't have explicit permissions)
     const all_file_info = [] // { repo_path, file, resource_path }
-    for (const [repo_path, status] of Object.entries(statuses)) {
+    for (const [repo_path, status] of Object.entries(accessible_statuses)) {
       // Skip file checks for repos user has write access to
       if (repo_write_permissions.get(repo_path)) {
         continue
@@ -769,16 +798,48 @@ router.get('/status/all', async (req, res) => {
       )
     }
 
-    const merge_state_map = await get_merge_states_for_repos(accessible_repos)
-
     // Build response with filtered files
-    const repos = Object.entries(statuses).map(([repo_path, status]) => {
-      const write_allowed = repo_write_permissions.get(repo_path) ?? false
+    const repos = Object.entries(accessible_statuses).map(
+      ([repo_path, status]) => {
+        const write_allowed = repo_write_permissions.get(repo_path) ?? false
+        const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
 
-      const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+        // If user has write access to repo, include all files (no filtering needed)
+        if (write_allowed) {
+          return {
+            repo_path,
+            repo_name: path.basename(repo_path),
+            relative_repo_path: path.relative(user_base_dir, repo_path),
+            is_user_base: repo_path === user_base_dir,
+            ...get_worktree_fields(repo_path),
+            ...status,
+            write_allowed,
+            is_merging: merge_state.is_merging,
+            ours_branch: merge_state.ours_branch,
+            theirs_branch: merge_state.theirs_branch
+          }
+        }
 
-      // If user has write access to repo, include all files (no filtering needed)
-      if (write_allowed) {
+        // For read-only repos, filter files:
+        // - Non-.md files: allowed (inherit from repo read permission)
+        // - .md files: check explicit permission lookup
+        const filter_files = (files) =>
+          (files || []).filter((file) => {
+            const file_path = typeof file === 'string' ? file : file.path
+            // Non-.md files inherit repo permission (user has read access to repo)
+            if (!file_path.endsWith('.md')) {
+              return true
+            }
+            // .md files: check explicit permission (default deny if not in map)
+            const key = `${repo_path}:${file_path}`
+            return md_file_permissions.get(key) ?? false
+          })
+
+        const filtered_staged = filter_files(status.staged)
+        const filtered_unstaged = filter_files(status.unstaged)
+        const filtered_untracked = filter_files(status.untracked)
+        const filtered_conflicts = filter_files(status.conflicts)
+
         return {
           repo_path,
           repo_name: path.basename(repo_path),
@@ -786,55 +847,22 @@ router.get('/status/all', async (req, res) => {
           is_user_base: repo_path === user_base_dir,
           ...get_worktree_fields(repo_path),
           ...status,
+          staged: filtered_staged,
+          unstaged: filtered_unstaged,
+          untracked: filtered_untracked,
+          conflicts: filtered_conflicts,
+          has_changes:
+            filtered_staged.length > 0 ||
+            filtered_unstaged.length > 0 ||
+            filtered_untracked.length > 0,
+          has_conflicts: filtered_conflicts.length > 0,
           write_allowed,
           is_merging: merge_state.is_merging,
           ours_branch: merge_state.ours_branch,
           theirs_branch: merge_state.theirs_branch
         }
       }
-
-      // For read-only repos, filter files:
-      // - Non-.md files: allowed (inherit from repo read permission)
-      // - .md files: check explicit permission lookup
-      const filter_files = (files) =>
-        (files || []).filter((file) => {
-          const file_path = typeof file === 'string' ? file : file.path
-          // Non-.md files inherit repo permission (user has read access to repo)
-          if (!file_path.endsWith('.md')) {
-            return true
-          }
-          // .md files: check explicit permission (default deny if not in map)
-          const key = `${repo_path}:${file_path}`
-          return md_file_permissions.get(key) ?? false
-        })
-
-      const filtered_staged = filter_files(status.staged)
-      const filtered_unstaged = filter_files(status.unstaged)
-      const filtered_untracked = filter_files(status.untracked)
-      const filtered_conflicts = filter_files(status.conflicts)
-
-      return {
-        repo_path,
-        repo_name: path.basename(repo_path),
-        relative_repo_path: path.relative(user_base_dir, repo_path),
-        is_user_base: repo_path === user_base_dir,
-        ...get_worktree_fields(repo_path),
-        ...status,
-        staged: filtered_staged,
-        unstaged: filtered_unstaged,
-        untracked: filtered_untracked,
-        conflicts: filtered_conflicts,
-        has_changes:
-          filtered_staged.length > 0 ||
-          filtered_unstaged.length > 0 ||
-          filtered_untracked.length > 0,
-        has_conflicts: filtered_conflicts.length > 0,
-        write_allowed,
-        is_merging: merge_state.is_merging,
-        ours_branch: merge_state.ours_branch,
-        theirs_branch: merge_state.theirs_branch
-      }
-    })
+    )
 
     res.json({ repos })
   } catch (error) {

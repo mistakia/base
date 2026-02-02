@@ -5,6 +5,8 @@ import debug from 'debug'
 
 import config from '#config'
 import { load_search_config } from './search-config.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 
 const log = debug('search:threads')
 
@@ -180,14 +182,85 @@ function format_thread_result(metadata, user_base_dir) {
 }
 
 /**
+ * Search threads using DuckDB (fast path, <5ms)
+ *
+ * Queries the indexed threads table using ILIKE for text matching across
+ * searchable fields. Returns formatted results sorted by updated_at desc.
+ *
+ * @param {Object} params - Search parameters
+ * @param {string} params.query - Search query
+ * @param {number} params.max_results - Maximum results
+ * @param {boolean} params.include_archived - Include archived threads
+ * @param {string} params.user_base_dir - User base directory
+ * @returns {Promise<Array<Object>|null>} Results or null if DuckDB unavailable
+ */
+async function search_threads_duckdb({
+  query,
+  max_results,
+  include_archived,
+  user_base_dir
+}) {
+  if (!embedded_index_manager.is_duckdb_ready()) {
+    return null
+  }
+
+  try {
+    const like_pattern = `%${query}%`
+
+    // Search indexed fields with ILIKE
+    // Note: workflow_base_uri and git_branch from SEARCHABLE_FIELDS are not
+    // in the DuckDB schema; the ripgrep fallback covers those fields.
+    let sql = `
+      SELECT thread_id, title, short_description, thread_state,
+             created_at, updated_at, working_directory, message_count
+      FROM threads
+      WHERE (
+        title ILIKE $1
+        OR short_description ILIKE $1
+        OR thread_id ILIKE $1
+        OR working_directory ILIKE $1
+      )`
+
+    const params = [like_pattern]
+
+    if (!include_archived) {
+      sql += ` AND (thread_state IS NULL OR thread_state != 'archived')`
+    }
+
+    params.push(max_results)
+    sql += ` ORDER BY updated_at DESC NULLS LAST LIMIT $${params.length}`
+
+    const result = await execute_duckdb_query({ query: sql, params })
+
+    if (!result?.rows) {
+      return null
+    }
+
+    return result.rows.map((row) => ({
+      thread_id: row.thread_id,
+      title: row.title || null,
+      thread_state: row.thread_state,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      working_directory: row.working_directory || null,
+      workflow_base_uri: null,
+      message_count: row.message_count || 0,
+      type: 'thread',
+      file_path: `thread/${row.thread_id}`,
+      absolute_path: path.join(user_base_dir, 'thread', row.thread_id)
+    }))
+  } catch (error) {
+    log(`DuckDB thread search failed: ${error.message}`)
+    return null
+  }
+}
+
+/**
  * Search threads by metadata
  *
- * Uses ripgrep with PCRE2 to search specific JSON fields across all thread
- * metadata files. No artificial limits - searches all threads with ~60-80ms
- * performance for typical queries.
- *
- * Searchable fields: title, short_description, thread_id, workflow_base_uri,
- * working_directory, git_branch
+ * Uses DuckDB as the primary search path (<5ms) with ripgrep fallback.
+ * Searches specific fields: title, short_description, thread_id,
+ * workflow_base_uri, working_directory, git_branch
  *
  * @param {Object} params - Search parameters
  * @param {string} params.query - Search query
@@ -204,13 +277,31 @@ export async function search_threads({
     return []
   }
 
-  const search_config = await load_search_config()
   const user_base_dir =
     config.user_base_directory || process.env.USER_BASE_DIRECTORY
 
   if (!user_base_dir) {
     throw new Error('USER_BASE_DIRECTORY not configured')
   }
+
+  // Try DuckDB first (fast path)
+  const duckdb_results = await search_threads_duckdb({
+    query: query.trim(),
+    max_results,
+    include_archived,
+    user_base_dir
+  })
+
+  if (duckdb_results !== null) {
+    log(
+      `DuckDB thread search found ${duckdb_results.length} results for: ${query}`
+    )
+    return duckdb_results
+  }
+
+  // Fallback to ripgrep search
+  log('DuckDB unavailable, falling back to ripgrep thread search')
+  const search_config = await load_search_config()
 
   // Use ripgrep to find matching metadata files
   const matching_files = await search_with_ripgrep({

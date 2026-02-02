@@ -30,8 +30,18 @@ import {
 } from '#libs-server/file-subscriptions/index.mjs'
 import {
   start_git_status_watcher,
-  stop_git_status_watcher
+  stop_git_status_watcher,
+  add_repo_to_watcher,
+  remove_repo_from_watcher
 } from '#libs-server/file-subscriptions/git-status-watcher.mjs'
+import {
+  initialize_cache,
+  invalidate_repo,
+  invalidate_repo_list,
+  destroy_cache
+} from '#libs-server/git/git-status-cache.mjs'
+import { get_known_repositories } from '#server/routes/git.mjs'
+import { invalidate as invalidate_file_path_cache } from '#libs-server/search/file-path-cache.mjs'
 import { broadcast_all } from '#server/websocket.mjs'
 
 const SERVER_LOCK_FILE = '.server-lock'
@@ -106,8 +116,14 @@ try {
     // Initialize file subscription watcher for WebSocket notifications
     try {
       start_file_subscription_watcher({
-        on_file_change: emit_file_changed,
-        on_file_delete: emit_file_deleted
+        on_file_change: (relative_path) => {
+          invalidate_file_path_cache()
+          emit_file_changed(relative_path)
+        },
+        on_file_delete: (relative_path) => {
+          invalidate_file_path_cache()
+          emit_file_deleted(relative_path)
+        }
       })
       logger('File subscription watcher initialized')
     } catch (watcher_error) {
@@ -117,14 +133,38 @@ try {
       logger(watcher_error)
     }
 
+    // Initialize git status cache (populates in-memory cache for fast /status/all)
+    try {
+      await initialize_cache({
+        discover_repos: get_known_repositories,
+        on_repo_list_changed: ({ added, removed }) => {
+          for (const repo_path of added) {
+            add_repo_to_watcher(repo_path)
+          }
+          for (const repo_path of removed) {
+            remove_repo_from_watcher(repo_path)
+          }
+        }
+      })
+      logger('Git status cache initialized')
+    } catch (cache_error) {
+      logger(`Failed to initialize git status cache: ${cache_error.message}`)
+      logger(cache_error)
+    }
+
     // Initialize git status watcher for broadcasting changes via WebSocket
     try {
       await start_git_status_watcher({
-        on_git_status_change: ({ repo_path }) => {
+        on_git_status_change: async ({ repo_path }) => {
+          // Update cache FIRST, then broadcast to clients
+          await invalidate_repo(repo_path)
           broadcast_all({
             type: 'GIT_STATUS_CHANGED',
             payload: { repo_path }
           })
+        },
+        on_repo_list_change: async () => {
+          await invalidate_repo_list()
         }
       })
       logger('Git status watcher initialized')
@@ -264,6 +304,14 @@ const shutdown = async (signal) => {
     logger('Git status watcher stopped')
   } catch (error) {
     logger(`Error stopping git status watcher: ${error.message}`)
+  }
+
+  try {
+    // Destroy git status cache
+    destroy_cache()
+    logger('Git status cache destroyed')
+  } catch (error) {
+    logger(`Error destroying git status cache: ${error.message}`)
   }
 
   try {

@@ -3,12 +3,12 @@ import debug from 'debug'
 import { load_search_config } from './search-config.mjs'
 import {
   search_file_contents,
-  search_all_file_paths,
   check_ripgrep_availability
 } from './ripgrep-file-search.mjs'
 import { score_and_rank_results } from './fuzzy-scorer.mjs'
 import { search_directories } from './directory-search.mjs'
 import { search_threads } from './thread-metadata-search.mjs'
+import { get_file_paths } from './file-path-cache.mjs'
 import {
   is_valid_base_uri,
   parse_base_uri
@@ -142,7 +142,7 @@ export async function search_paths({ query, directory = null, limit = 20 }) {
 
   // Following VS Code's approach: collect all results first, then score and limit
   // VS Code uses DEFAULT_MAX_SEARCH_RESULTS = 20000 internally
-  const file_results = await search_all_file_paths({
+  const file_results = await get_file_paths({
     directory: resolved_directory,
     max_results: 20000
   })
@@ -250,7 +250,7 @@ export async function search_full({
     types.includes('files') ||
     types.includes('entities') ||
     types.includes('directories')
-      ? await search_all_file_paths({ max_results: 20000 })
+      ? await get_file_paths({ max_results: 20000 })
       : []
 
   // Run all searches in parallel to avoid race conditions on shared state
@@ -291,35 +291,37 @@ export async function search_full({
           max_results: 200
         })
 
-        for (const result of content_results) {
-          result.file_path = normalize_path(result.file_path)
-          const category = categorize_result({
-            file_path: result.file_path,
-            type: result.type
+        // Filter out already-seen paths and normalize
+        const unseen_content = content_results
+          .map((result) => {
+            result.file_path = normalize_path(result.file_path)
+            return result
           })
+          .filter((result) => !seen_paths.has(result.file_path))
 
-          // Skip if already seen (O(1) check via Set)
-          if (seen_paths.has(result.file_path)) {
-            continue
-          }
-
-          // Score content match for ranking
-          const scored = score_and_rank_results({
+        // Batch score all content matches at once (instead of N individual calls)
+        if (unseen_content.length > 0) {
+          const scored_content = score_and_rank_results({
             query,
-            results: [result],
+            results: unseen_content,
             rank_field: 'file_path',
-            limit: 1
+            limit: 200
           })
-          result.score = scored[0]?.score || 0
-          result.match_source = 'content'
 
-          add_categorized_result({
-            result,
-            category,
-            results,
-            seen_paths,
-            types
-          })
+          for (const result of scored_content) {
+            result.match_source = 'content'
+            const category = categorize_result({
+              file_path: result.file_path,
+              type: result.type
+            })
+            add_categorized_result({
+              result,
+              category,
+              results,
+              seen_paths,
+              types
+            })
+          }
         }
       })()
     )
@@ -361,28 +363,10 @@ export async function search_full({
   // Wait for all searches to complete
   await Promise.all(search_promises)
 
-  // Rank results within each category using native fuzzy scorer
-  results.files = score_and_rank_results({
-    query,
-    results: results.files,
-    rank_field: 'file_path',
-    limit: per_type_limit
-  })
-
-  results.entities = score_and_rank_results({
-    query,
-    results: results.entities,
-    rank_field: 'file_path',
-    limit: per_type_limit
-  })
-
-  results.directories = score_and_rank_results({
-    query,
-    results: results.directories,
-    rank_field: 'file_path',
-    limit: per_type_limit
-  })
-
+  // Trim results to per-type limit (already scored/ranked by search functions above)
+  results.files = results.files.slice(0, per_type_limit)
+  results.entities = results.entities.slice(0, per_type_limit)
+  results.directories = results.directories.slice(0, per_type_limit)
   results.threads = results.threads.slice(0, per_type_limit)
 
   // Calculate total (guaranteed not to exceed limit due to floor calculation)
