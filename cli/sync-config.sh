@@ -91,7 +91,7 @@ echo ""
 if [ "$SYNC_PM2" = true ] || [ "$SYNC_ALL" = true ]; then
     echo "Syncing PM2 config..."
     rsync -avz $DRY_RUN \
-        "$LOCAL_BASE_DIR/server.pm2.config.js" \
+        "$LOCAL_BASE_DIR/pm2.config.js" \
         "$REMOTE_HOST:$REMOTE_BASE_DIR/"
     echo ""
 fi
@@ -106,6 +106,6 @@ else
     echo ""
     echo "Next steps:"
     echo "  1. SSH to remote: ssh $REMOTE_HOST"
-    echo "  2. Reload PM2: cd $REMOTE_BASE_DIR && pm2 reload server.pm2.config.js"
+    echo "  2. Reload PM2: cd $REMOTE_BASE_DIR && pm2 reload pm2.config.js"
 fi
 echo "=================================="
