@@ -16,4 +16,13 @@ if (process.env.NODE_ENV === 'test') {
   config.user_base_directory = random_path
 }
 
+if (process.env.BASE_PUBLIC_URL) {
+  config.production_url = process.env.BASE_PUBLIC_URL
+  config.public_url = process.env.BASE_PUBLIC_URL
+}
+
+if (process.env.BASE_PUBLIC_WSS) {
+  config.production_wss = process.env.BASE_PUBLIC_WSS
+}
+
 export default config
