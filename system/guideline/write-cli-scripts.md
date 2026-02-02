@@ -34,7 +34,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 - Node.js CLI scripts SHOULD define a modular main function with a descriptive name (e.g., `run`, `main`, etc.)
 - Node.js CLI scripts SHOULD export the main function as default export if needed elsewhere
 - Node.js CLI scripts SHOULD include error handling with try/catch blocks
-- Node.js CLI scripts SHOULD check if they are being run directly using the `isMain` utility from `#libs-server`
+- Node.js CLI scripts SHOULD check if they are being run directly using the `isMain` utility from `#libs-server`. The `isMain` function resolves symlinks so it works when scripts are invoked via symlinked or wrapper paths.
 - Node.js CLI scripts SHOULD explicitly call `process.exit()` after completion
 
 #### Command-Line Arguments

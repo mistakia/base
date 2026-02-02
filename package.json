@@ -43,7 +43,7 @@
     "sync:config:dry": "./cli/sync-config.sh --dry-run",
     "sync:config:all": "./cli/sync-config.sh --all",
     "rebuild:index": "DEBUG='cli:rebuild-index,embedded-index*' node cli/rebuild-embedded-index.mjs",
-    "setup:cli": "ln -sf \"$(pwd)/cli/base.mjs\" \"${HOME}/bin/base\" && echo 'Symlinked base CLI to ~/bin/base'"
+    "setup:cli": "mkdir -p \"${HOME}/bin\" && printf '#!/bin/sh\\nexec node %s/cli/base.mjs \"$@\"\\n' \"$(pwd)\" > \"${HOME}/bin/base\" && chmod +x \"${HOME}/bin/base\" && echo 'Installed base CLI wrapper to ~/bin/base'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
