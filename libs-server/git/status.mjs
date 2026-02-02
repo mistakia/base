@@ -115,7 +115,10 @@ export async function get_status({ repo_path }) {
         execute_shell_command('git rev-parse --abbrev-ref HEAD', {
           cwd: repo_path
         }),
-        execute_shell_command('git status --porcelain=v1', { cwd: repo_path }),
+        execute_shell_command(
+          'git status --porcelain=v1 --ignore-submodules=dirty',
+          { cwd: repo_path }
+        ),
         execute_shell_command(
           'git rev-list --left-right --count HEAD...@{upstream}',
           { cwd: repo_path }
