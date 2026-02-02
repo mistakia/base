@@ -78,6 +78,8 @@ api.use(
 )
 const allowedOrigins = [
   config.public_url || '',
+  'http://localhost:8080',
+  'https://localhost:8080',
   'http://localhost:8081',
   'https://localhost:8081',
   'http://192.168.1.21:8081',
