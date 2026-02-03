@@ -12,10 +12,10 @@ import {
   emit_active_session_updated,
   emit_active_session_ended
 } from '#libs-server/active-sessions/index.mjs'
-import {
-  read_thread_data,
-  get_latest_timeline_event
-} from '#libs-server/threads/thread-utils.mjs'
+import path from 'path'
+import { read_json_file } from '#libs-server/threads/thread-utils.mjs'
+import { extract_timeline_metrics_streaming } from '#libs-server/threads/timeline/index.mjs'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 
@@ -59,7 +59,11 @@ async function apply_session_redaction(session, user_public_key) {
 }
 
 /**
- * Get thread info for a session including metadata and latest timeline event
+ * Get thread info for a session including metadata and latest timeline event.
+ * Reads metadata.json (small file) for most fields and streams timeline.jsonl
+ * line-by-line to extract the latest non-system event without loading the full
+ * timeline into memory.
+ *
  * @param {string} thread_id - Thread ID to fetch info for
  * @returns {Promise<Object>} Object with thread metadata fields
  */
@@ -77,18 +81,21 @@ async function get_thread_info_for_session(thread_id) {
   if (!thread_id) return empty_result
 
   try {
-    const { metadata } = await read_thread_data({ thread_id })
+    const thread_base_dir = get_thread_base_directory()
+    const thread_dir = path.join(thread_base_dir, thread_id)
+    const metadata_path = path.join(thread_dir, 'metadata.json')
+    const timeline_path = path.join(thread_dir, 'timeline.jsonl')
 
-    // Get latest non-system timeline event
-    const latest_timeline_event = await get_latest_timeline_event({
-      thread_id,
-      exclude_system: true
-    })
+    // Read metadata (small JSON) and stream timeline in parallel
+    const [metadata, timeline_metrics] = await Promise.all([
+      read_json_file({ file_path: metadata_path }),
+      extract_timeline_metrics_streaming({ timeline_path })
+    ])
 
     return {
       thread_title: metadata.title || null,
       thread_state: metadata.thread_state || null,
-      latest_timeline_event,
+      latest_timeline_event: timeline_metrics.latest_event || null,
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
       total_tokens: metadata.total_tokens || null,

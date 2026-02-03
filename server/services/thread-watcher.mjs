@@ -7,7 +7,7 @@ import {
   emit_thread_updated,
   emit_thread_timeline_entry_added
 } from '#libs-server/threads/event-emitter.mjs'
-import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('threads:watcher')
 
@@ -35,9 +35,9 @@ const FILE_NAMES = {
 // State Management
 // ============================================================================
 
-// Track last-seen timeline entry timestamp per thread
-// Map<thread_id, ISO timestamp string>
-const last_seen_timestamps = new Map()
+// Track last-seen timeline state per thread
+// Map<thread_id, { timestamp: string, byte_offset: number }>
+const last_seen_state = new Map()
 
 // Watcher instance
 let watcher = null
@@ -101,119 +101,89 @@ const read_thread_metadata = async (file_path) => {
   }
 }
 
+// ============================================================================
+// Incremental Timeline Tracking
+// ============================================================================
+
 /**
- * Read and parse timeline from file
+ * Initialize tracking state for a thread using streaming extraction and stat.
+ * Avoids loading the full timeline into memory.
  *
+ * @param {string} thread_id - UUID of the thread
  * @param {string} timeline_path - Path to timeline.jsonl
- * @returns {Promise<Array>} Timeline entries array (empty on error)
+ * @returns {Promise<Array>} All entries (first-time detection returns full set)
  */
-const read_timeline = async (timeline_path) => {
-  try {
-    const timeline = await read_timeline_jsonl_or_default({
-      timeline_path,
-      default_value: []
-    })
-    return Array.isArray(timeline) ? timeline : []
-  } catch (error) {
-    log(`Failed to read timeline from ${timeline_path}:`, error)
+const initialize_thread_tracking = async (thread_id, timeline_path) => {
+  const result = await read_timeline_jsonl_from_offset({
+    timeline_path,
+    byte_offset: 0
+  })
+
+  if (!result || result.entries.length === 0) {
+    last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
     return []
   }
-}
 
-// ============================================================================
-// Timeline Timestamp Management
-// ============================================================================
-
-/**
- * Find the most recent timestamp from timeline entries
- *
- * @param {Array} entries - Timeline entries
- * @returns {number} Timestamp in milliseconds (0 if no entries)
- */
-const get_latest_timestamp_from_entries = (entries) => {
-  return entries.reduce((latest, entry) => {
-    const entry_time = new Date(entry.timestamp).getTime()
-    return entry_time > latest ? entry_time : latest
-  }, 0)
-}
-
-/**
- * Filter timeline entries newer than a given timestamp
- *
- * @param {Array} entries - Timeline entries
- * @param {string} after_timestamp - ISO timestamp string
- * @returns {Array} Filtered entries
- */
-const filter_entries_after_timestamp = (entries, after_timestamp) => {
-  const cutoff_time = new Date(after_timestamp).getTime()
-  return entries.filter((entry) => {
-    const entry_time = new Date(entry.timestamp).getTime()
-    return entry_time > cutoff_time
+  const last_entry = result.entries[result.entries.length - 1]
+  last_seen_state.set(thread_id, {
+    timestamp: last_entry.timestamp || null,
+    byte_offset: result.new_byte_offset
   })
+
+  log(`Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}`)
+  return result.entries
 }
 
 /**
- * Update last-seen timestamp for a thread
+ * Detect new timeline entries using byte-offset incremental reads.
+ * Only reads bytes appended since last check.
  *
  * @param {Object} params
  * @param {string} params.thread_id - UUID of the thread
- * @param {string} params.timestamp - ISO timestamp string
- */
-const update_last_seen_timestamp = ({ thread_id, timestamp }) => {
-  last_seen_timestamps.set(thread_id, timestamp)
-  log(`Updated last seen timestamp for ${thread_id}: ${timestamp}`)
-}
-
-/**
- * Initialize timestamp tracking for a new thread
- * Sets the last-seen timestamp to the most recent entry
- *
- * @param {string} thread_id - UUID of the thread
- * @param {Array} timeline - Timeline entries
- */
-const initialize_thread_timestamp = (thread_id, timeline) => {
-  const latest_timestamp_ms = get_latest_timestamp_from_entries(timeline)
-
-  if (latest_timestamp_ms > 0) {
-    const iso_timestamp = new Date(latest_timestamp_ms).toISOString()
-    update_last_seen_timestamp({ thread_id, timestamp: iso_timestamp })
-  }
-}
-
-/**
- * Read timeline entries and detect new ones based on timestamp tracking
- *
- * @param {string} thread_id - UUID of the thread
- * @param {string} timeline_path - Path to timeline.json
+ * @param {string} params.timeline_path - Path to timeline.jsonl
  * @returns {Promise<Array>} Array of new timeline entries
  */
 const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
-  const timeline = await read_timeline(timeline_path)
+  const tracked = last_seen_state.get(thread_id)
 
-  if (timeline.length === 0) {
-    return []
+  // First time seeing this thread
+  if (!tracked) {
+    return initialize_thread_tracking(thread_id, timeline_path)
   }
 
-  const last_timestamp = last_seen_timestamps.get(thread_id)
+  const result = await read_timeline_jsonl_from_offset({
+    timeline_path,
+    byte_offset: tracked.byte_offset
+  })
 
-  // First time seeing this thread - initialize tracking and return all entries
-  if (!last_timestamp) {
-    initialize_thread_timestamp(thread_id, timeline)
-    return timeline
+  // Truncation detected (atomic rewrite) -- reinitialize from scratch
+  if (result === null) {
+    log(
+      `Truncation detected for thread ${thread_id}, reinitializing tracking`
+    )
+    last_seen_state.delete(thread_id)
+    return initialize_thread_tracking(thread_id, timeline_path)
   }
 
-  // Filter for entries newer than last seen timestamp
-  const new_entries = filter_entries_after_timestamp(timeline, last_timestamp)
-
-  // Update timestamp tracking with latest new entry
-  if (new_entries.length > 0) {
-    const latest_new_timestamp_ms =
-      get_latest_timestamp_from_entries(new_entries)
-    const iso_timestamp = new Date(latest_new_timestamp_ms).toISOString()
-    update_last_seen_timestamp({ thread_id, timestamp: iso_timestamp })
+  // Update state with new offset
+  if (result.entries.length > 0) {
+    const latest_entry = result.entries[result.entries.length - 1]
+    last_seen_state.set(thread_id, {
+      timestamp: latest_entry.timestamp || tracked.timestamp,
+      byte_offset: result.new_byte_offset
+    })
+    log(
+      `Read ${result.entries.length} new entries from offset ${tracked.byte_offset} for thread ${thread_id}`
+    )
+  } else {
+    // Update offset even if no entries (possible blank lines appended)
+    last_seen_state.set(thread_id, {
+      ...tracked,
+      byte_offset: result.new_byte_offset
+    })
   }
 
-  return new_entries
+  return result.entries
 }
 
 // ============================================================================
@@ -221,20 +191,29 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
 // ============================================================================
 
 /**
- * Initialize timeline tracking for a new thread if timeline exists
+ * Initialize timeline tracking for a new thread if timeline exists.
+ * Uses streaming extraction to set initial byte offset without loading
+ * the full timeline into memory.
  *
  * @param {string} thread_id - UUID of the thread
  * @param {string} thread_dir - Path to thread directory
  */
-const initialize_timeline_tracking = async (thread_id, thread_dir) => {
+const initialize_timeline_tracking_for_new_thread = async (
+  thread_id,
+  thread_dir
+) => {
   const timeline_path = path.join(thread_dir, FILE_NAMES.TIMELINE)
 
   try {
-    await fs.access(timeline_path)
-    // Timeline exists, initialize last-seen timestamp
-    await detect_new_timeline_entries({ thread_id, timeline_path })
+    const stat = await fs.stat(timeline_path)
+    last_seen_state.set(thread_id, {
+      timestamp: null,
+      byte_offset: stat.size
+    })
+    log(
+      `Initialized new thread tracking for ${thread_id}: offset=${stat.size}`
+    )
   } catch {
-    // Timeline doesn't exist yet, that's ok
     log(`No timeline yet for thread ${thread_id}`)
   }
 }
@@ -259,7 +238,7 @@ const handle_metadata_added = async (file_path) => {
 
   // Initialize timeline tracking for this thread
   const thread_dir = path.dirname(file_path)
-  await initialize_timeline_tracking(thread_id, thread_dir)
+  await initialize_timeline_tracking_for_new_thread(thread_id, thread_dir)
 }
 
 /**
@@ -458,7 +437,7 @@ export const stop_thread_watcher = async () => {
   try {
     await watcher.close()
     watcher = null
-    last_seen_timestamps.clear()
+    last_seen_state.clear()
     log('Thread watcher stopped')
   } catch (error) {
     log('Error stopping thread watcher:', error)

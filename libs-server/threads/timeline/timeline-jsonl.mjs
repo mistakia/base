@@ -182,6 +182,77 @@ export async function read_timeline_jsonl_or_default({
 }
 
 /**
+ * Read timeline entries appended after a given byte offset using streaming.
+ * Returns new entries and the updated byte offset, or null if the file was
+ * truncated (atomic rewrite detected via stat.size < offset).
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.timeline_path Path to the timeline.jsonl file
+ * @param {number} params.byte_offset Byte position to start reading from
+ * @returns {Promise<{entries: Array, new_byte_offset: number}|null>}
+ *   Object with new entries and updated offset, or null on truncation
+ */
+export async function read_timeline_jsonl_from_offset({
+  timeline_path,
+  byte_offset
+}) {
+  let stat
+  try {
+    stat = await fs.stat(timeline_path)
+  } catch {
+    log(`Timeline file not found for offset read: ${timeline_path}`)
+    return { entries: [], new_byte_offset: byte_offset }
+  }
+
+  // Detect atomic rewrite (file smaller than expected offset)
+  if (stat.size < byte_offset) {
+    log(
+      `Truncation detected for ${timeline_path}: size=${stat.size} < offset=${byte_offset}`
+    )
+    return null
+  }
+
+  // Nothing new appended
+  if (stat.size === byte_offset) {
+    return { entries: [], new_byte_offset: byte_offset }
+  }
+
+  const entries = []
+  const file_stream = createReadStream(timeline_path, {
+    start: byte_offset,
+    end: stat.size - 1
+  })
+  const line_reader = createInterface({
+    input: file_stream,
+    crlfDelay: Infinity
+  })
+
+  try {
+    for await (const line of line_reader) {
+      if (line.trim() === '') {
+        continue
+      }
+
+      try {
+        const entry = JSON.parse(line)
+        entries.push(entry)
+      } catch {
+        // Skip malformed lines
+      }
+    }
+  } finally {
+    file_stream.destroy()
+    line_reader.close()
+  }
+
+  log(
+    `Read ${entries.length} new entries from offset ${byte_offset} in ${timeline_path}`
+  )
+
+  return { entries, new_byte_offset: stat.size }
+}
+
+/**
  * Stream timeline JSONL and extract metrics without loading full timeline into memory.
  * Used for index rebuild to avoid memory pressure with thousands of threads.
  *
