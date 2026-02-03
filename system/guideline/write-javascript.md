@@ -78,6 +78,7 @@ See `package.json` for the complete list of namespaces.
 - Reusable functions SHOULD be placed in their own files
 - Functions that are only used in one place SHOULD be defined in the file where they are used
 - When extracting functions to their own files, follow the naming conventions and namespace organization described above
+- Avoid barrel files (index.mjs files that only re-export from other modules). Import directly from the source module instead. Index files SHOULD only be used when they define shared utilities or contain actual logic, not as re-export aggregators.
 
 ## Functional vs Object-Oriented Programming
 
