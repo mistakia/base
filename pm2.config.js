@@ -20,7 +20,8 @@ const path = require('path')
 
 const is_macos = os.platform() === 'darwin'
 const home_dir = os.homedir()
-const logs_dir = process.env.PM2_LOGS_DIR ||
+const logs_dir =
+  process.env.PM2_LOGS_DIR ||
   (is_macos ? path.join(home_dir, 'logs') : '/home/user/logs')
 
 // Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
@@ -29,7 +30,14 @@ function get_nvmrc_interpreter() {
   const nvm_dir = process.env.NVM_DIR || path.join(home_dir, '.nvm')
   try {
     const version = fs.readFileSync(nvmrc_path, 'utf8').trim()
-    const node_path = path.join(nvm_dir, 'versions', 'node', version, 'bin', 'node')
+    const node_path = path.join(
+      nvm_dir,
+      'versions',
+      'node',
+      version,
+      'bin',
+      'node'
+    )
     if (fs.existsSync(node_path)) return node_path
   } catch {}
   return 'node'
@@ -76,14 +84,18 @@ module.exports = {
       max_memory_restart: '3584M',
       node_args: '--max-old-space-size=3584'
     }),
-    app('metadata-queue-processor', 'server/services/metadata-queue-processor.mjs', {
-      log_prefix: 'metadata-processor',
-      max_memory_restart: '512M',
-      env: {
-        DEBUG: 'metadata:*',
-        ...(is_macos ? { CHOKIDAR_USEPOLLING: '1' } : {})
+    app(
+      'metadata-queue-processor',
+      'server/services/metadata-queue-processor.mjs',
+      {
+        log_prefix: 'metadata-processor',
+        max_memory_restart: '512M',
+        env: {
+          DEBUG: 'metadata:*',
+          ...(is_macos ? { CHOKIDAR_USEPOLLING: '1' } : {})
+        }
       }
-    }),
+    ),
     app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
       max_memory_restart: '512M',
       env: { DEBUG: 'cli-queue:*' }

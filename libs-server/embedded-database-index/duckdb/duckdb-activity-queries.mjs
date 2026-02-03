@@ -197,7 +197,9 @@ export async function upsert_heatmap_daily_batch({ entries }) {
   const CHUNK_SIZE = 50
   for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
     const chunk = entries.slice(i, i + CHUNK_SIZE)
-    const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')
+    const placeholders = chunk
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .join(', ')
     const parameters = chunk.flatMap((entry) => [
       entry.date,
       entry.activity_git_commits ?? 0,
