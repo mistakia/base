@@ -39,8 +39,43 @@ const FILE_NAMES = {
 // Map<thread_id, { timestamp: string, byte_offset: number }>
 const last_seen_state = new Map()
 
+// Cache of latest non-system timeline entry per thread
+// Map<thread_id, Object>
+const latest_timeline_entry_cache = new Map()
+
 // Watcher instance
 let watcher = null
+
+// ============================================================================
+// Latest Entry Cache
+// ============================================================================
+
+/**
+ * Find the latest non-system entry from a list of timeline entries.
+ * Iterates in reverse to find the most recent non-system entry.
+ *
+ * @param {Array} entries - Timeline entries
+ * @returns {Object|null} Latest non-system entry or null
+ */
+const find_latest_non_system_entry = (entries) => {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].type !== 'system') {
+      return entries[i]
+    }
+  }
+  return null
+}
+
+/**
+ * Get the cached latest timeline entry for a thread.
+ * Returns null if the thread has not been processed by the watcher yet.
+ *
+ * @param {string} thread_id - UUID of the thread
+ * @returns {Object|null} Cached latest non-system timeline entry or null
+ */
+export const get_cached_latest_timeline_entry = (thread_id) => {
+  return latest_timeline_entry_cache.get(thread_id) || null
+}
 
 // ============================================================================
 // Path Utilities
@@ -130,6 +165,12 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
     byte_offset: result.new_byte_offset
   })
 
+  // Populate latest entry cache
+  const latest = find_latest_non_system_entry(result.entries)
+  if (latest) {
+    latest_timeline_entry_cache.set(thread_id, latest)
+  }
+
   log(`Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}`)
   return result.entries
 }
@@ -158,9 +199,7 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
 
   // Truncation detected (atomic rewrite) -- reinitialize from scratch
   if (result === null) {
-    log(
-      `Truncation detected for thread ${thread_id}, reinitializing tracking`
-    )
+    log(`Truncation detected for thread ${thread_id}, reinitializing tracking`)
     last_seen_state.delete(thread_id)
     return initialize_thread_tracking(thread_id, timeline_path)
   }
@@ -172,6 +211,13 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
       timestamp: latest_entry.timestamp || tracked.timestamp,
       byte_offset: result.new_byte_offset
     })
+
+    // Update latest entry cache
+    const latest = find_latest_non_system_entry(result.entries)
+    if (latest) {
+      latest_timeline_entry_cache.set(thread_id, latest)
+    }
+
     log(
       `Read ${result.entries.length} new entries from offset ${tracked.byte_offset} for thread ${thread_id}`
     )
@@ -192,8 +238,8 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
 
 /**
  * Initialize timeline tracking for a new thread if timeline exists.
- * Uses streaming extraction to set initial byte offset without loading
- * the full timeline into memory.
+ * Reads existing entries to populate the latest entry cache, then sets
+ * the byte offset to EOF so existing entries are not re-emitted.
  *
  * @param {string} thread_id - UUID of the thread
  * @param {string} thread_dir - Path to thread directory
@@ -205,13 +251,32 @@ const initialize_timeline_tracking_for_new_thread = async (
   const timeline_path = path.join(thread_dir, FILE_NAMES.TIMELINE)
 
   try {
-    const stat = await fs.stat(timeline_path)
-    last_seen_state.set(thread_id, {
-      timestamp: null,
-      byte_offset: stat.size
+    // Read all existing entries to populate cache
+    const result = await read_timeline_jsonl_from_offset({
+      timeline_path,
+      byte_offset: 0
     })
+
+    if (!result || result.entries.length === 0) {
+      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
+      log(`No timeline entries yet for thread ${thread_id}`)
+      return
+    }
+
+    const last_entry = result.entries[result.entries.length - 1]
+    last_seen_state.set(thread_id, {
+      timestamp: last_entry.timestamp || null,
+      byte_offset: result.new_byte_offset
+    })
+
+    // Populate latest entry cache so get_cached_latest_timeline_entry returns a value
+    const latest = find_latest_non_system_entry(result.entries)
+    if (latest) {
+      latest_timeline_entry_cache.set(thread_id, latest)
+    }
+
     log(
-      `Initialized new thread tracking for ${thread_id}: offset=${stat.size}`
+      `Initialized new thread tracking for ${thread_id}: offset=${result.new_byte_offset}, cached latest entry`
     )
   } catch {
     log(`No timeline yet for thread ${thread_id}`)
@@ -438,6 +503,7 @@ export const stop_thread_watcher = async () => {
     await watcher.close()
     watcher = null
     last_seen_state.clear()
+    latest_timeline_entry_cache.clear()
     log('Thread watcher stopped')
   } catch (error) {
     log('Error stopping thread watcher:', error)

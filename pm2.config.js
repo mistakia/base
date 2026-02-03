@@ -14,102 +14,79 @@
  *   pm2 save
  */
 
+const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
 const is_macos = os.platform() === 'darwin'
 const home_dir = os.homedir()
-const logs_dir = is_macos ? path.join(home_dir, 'logs') : '/home/user/logs'
+const logs_dir = process.env.PM2_LOGS_DIR ||
+  (is_macos ? path.join(home_dir, 'logs') : '/home/user/logs')
+
+// Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
+function get_nvmrc_interpreter() {
+  const nvmrc_path = path.join(__dirname, '.nvmrc')
+  const nvm_dir = process.env.NVM_DIR || path.join(home_dir, '.nvm')
+  try {
+    const version = fs.readFileSync(nvmrc_path, 'utf8').trim()
+    const node_path = path.join(nvm_dir, 'versions', 'node', version, 'bin', 'node')
+    if (fs.existsSync(node_path)) return node_path
+  } catch {}
+  return 'node'
+}
 
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
   DEBUG_COLORS: 'false'
 }
 
+const defaults = {
+  interpreter: get_nvmrc_interpreter(),
+  cwd: __dirname,
+  instances: 1,
+  exec_mode: 'fork',
+  autorestart: true,
+  combine_logs: true,
+  time: true
+}
+
+function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
+  const prefix = log_prefix || name
+  return {
+    ...defaults,
+    name,
+    script,
+    error_file: path.join(logs_dir, `${prefix}-error.log`),
+    out_file: path.join(logs_dir, `${prefix}-out.log`),
+    log_file: path.join(logs_dir, `${prefix}-combined.log`),
+    env: { ...common_env, ...extra_env },
+    ...rest
+  }
+}
+
 module.exports = {
   apps: [
-    {
-      name: 'base-api',
-      script: 'services/server.mjs',
-      cwd: __dirname,
+    app('base-api', 'services/server.mjs', {
       watch: [
         'build/bundle-manifest.json',
         'source/build/bundle-manifest.json'
       ],
       watch_delay: 1000,
       ignore_watch: ['node_modules', 'logs', 'tmp'],
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
-      max_memory_restart: is_macos ? '1024M' : '3584M',
-      node_args: is_macos
-        ? '--max-old-space-size=1024'
-        : '--max-old-space-size=3584',
-      combine_logs: true,
-      time: true,
-      error_file: path.join(logs_dir, 'base-api-error.log'),
-      out_file: path.join(logs_dir, 'base-api-out.log'),
-      log_file: path.join(logs_dir, 'base-api-combined.log'),
-      env: {
-        ...common_env
-      }
-    },
-    {
-      name: 'metadata-queue-processor',
-      script: 'server/services/metadata-queue-processor.mjs',
-      cwd: __dirname,
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
+      max_memory_restart: '3584M',
+      node_args: '--max-old-space-size=3584'
+    }),
+    app('metadata-queue-processor', 'server/services/metadata-queue-processor.mjs', {
+      log_prefix: 'metadata-processor',
       max_memory_restart: '512M',
-      combine_logs: true,
-      time: true,
-      error_file: path.join(logs_dir, 'metadata-processor-error.log'),
-      out_file: path.join(logs_dir, 'metadata-processor-out.log'),
-      log_file: path.join(logs_dir, 'metadata-processor-combined.log'),
       env: {
-        ...common_env,
         DEBUG: 'metadata:*',
-        // macOS: /tmp is a symlink to /private/tmp, chokidar FSEvents misses it
         ...(is_macos ? { CHOKIDAR_USEPOLLING: '1' } : {})
       }
-    },
-    {
-      name: 'cli-queue-worker',
-      script: 'server/services/cli-queue-worker.mjs',
-      cwd: __dirname,
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
+    }),
+    app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
       max_memory_restart: '512M',
-      combine_logs: true,
-      time: true,
-      error_file: path.join(logs_dir, 'cli-queue-worker-error.log'),
-      out_file: path.join(logs_dir, 'cli-queue-worker-out.log'),
-      log_file: path.join(logs_dir, 'cli-queue-worker-combined.log'),
-      env: {
-        ...common_env,
-        DEBUG: 'cli-queue:*'
-      }
-    }
-  ],
-
-  deploy: {
-    production: {
-      user: 'user',
-      host: 'storage',
-      ref: 'origin/main',
-      repo: 'https://github.com/mistakia/base.git',
-      path: '/home/user/base',
-      'pre-deploy': 'git pull',
-      'pre-deploy-local': '',
-      'post-deploy': [
-        'source ~/.nvm/nvm.sh',
-        'nvm use',
-        'yarn install',
-        'pm2 reload pm2.config.js'
-      ].join(' && '),
-      'pre-setup': ''
-    }
-  }
+      env: { DEBUG: 'cli-queue:*' }
+    })
+  ]
 }

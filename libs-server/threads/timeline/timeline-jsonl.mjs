@@ -65,23 +65,28 @@ export async function read_timeline_jsonl({ timeline_path }) {
 
   let parse_error_count = 0
 
-  for await (const line of line_reader) {
-    line_number++
+  try {
+    for await (const line of line_reader) {
+      line_number++
 
-    if (line.trim() === '') {
-      continue
-    }
+      if (line.trim() === '') {
+        continue
+      }
 
-    try {
-      const entry = JSON.parse(line)
-      entries.push(entry)
-    } catch (parse_error) {
-      parse_error_count++
-      log_warn(
-        `Malformed JSON at line ${line_number} in ${timeline_path}: ${parse_error.message}`
-      )
-      // Continue processing other lines
+      try {
+        const entry = JSON.parse(line)
+        entries.push(entry)
+      } catch (parse_error) {
+        parse_error_count++
+        log_warn(
+          `Malformed JSON at line ${line_number} in ${timeline_path}: ${parse_error.message}`
+        )
+        // Continue processing other lines
+      }
     }
+  } finally {
+    file_stream.destroy()
+    line_reader.close()
   }
 
   if (parse_error_count > 0) {

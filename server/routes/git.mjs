@@ -668,7 +668,10 @@ router.get('/status/all', async (req, res) => {
         const entry = cached.statuses.get(repo_path)
         if (entry) {
           statuses_map[repo_path] = entry.status
-          merge_state_map.set(repo_path, entry.merge_state || DEFAULT_MERGE_STATE)
+          merge_state_map.set(
+            repo_path,
+            entry.merge_state || DEFAULT_MERGE_STATE
+          )
         }
       }
     } else {
@@ -678,7 +681,9 @@ router.get('/status/all', async (req, res) => {
       repo_paths = discovered.repo_paths
       worktree_metadata = discovered.worktree_metadata
       statuses_map = await get_multi_repo_status({ repo_paths })
-      merge_state_map = await get_merge_states_for_repos(Object.keys(statuses_map))
+      merge_state_map = await get_merge_states_for_repos(
+        Object.keys(statuses_map)
+      )
     }
 
     const get_worktree_fields = (repo_path) => {
@@ -692,7 +697,8 @@ router.get('/status/all', async (req, res) => {
     // For users with global_write, skip permission filtering entirely
     if (has_global_write) {
       const repos = Object.entries(statuses_map).map(([repo_path, status]) => {
-        const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+        const merge_state =
+          merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
         return {
           repo_path,
           repo_name: path.basename(repo_path),
@@ -802,7 +808,8 @@ router.get('/status/all', async (req, res) => {
     const repos = Object.entries(accessible_statuses).map(
       ([repo_path, status]) => {
         const write_allowed = repo_write_permissions.get(repo_path) ?? false
-        const merge_state = merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+        const merge_state =
+          merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
 
         // If user has write access to repo, include all files (no filtering needed)
         if (write_allowed) {

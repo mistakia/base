@@ -85,6 +85,20 @@ const ACTIVITY_GIT_DAILY_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_activity_git_date ON activity_git_daily(date)'
 ]
 
+const ACTIVITY_HEATMAP_DAILY_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS activity_heatmap_daily (
+  date DATE PRIMARY KEY,
+  activity_git_commits INTEGER DEFAULT 0,
+  activity_git_lines_changed INTEGER DEFAULT 0,
+  activity_git_files_changed INTEGER DEFAULT 0,
+  activity_token_usage INTEGER DEFAULT 0,
+  activity_thread_edits INTEGER DEFAULT 0,
+  activity_thread_lines_changed INTEGER DEFAULT 0,
+  score DOUBLE DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL
+)
+`
+
 const ENTITY_TAGS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS entity_tags (
   entity_base_uri VARCHAR NOT NULL,
@@ -178,6 +192,9 @@ export async function create_duckdb_schema() {
     }
     log('Activity git daily indexes created')
 
+    await execute_duckdb_run({ query: ACTIVITY_HEATMAP_DAILY_TABLE_SCHEMA })
+    log('Activity heatmap daily table created')
+
     log('DuckDB schema creation complete')
   } catch (error) {
     log('Error creating DuckDB schema: %s', error.message)
@@ -196,6 +213,9 @@ export async function drop_duckdb_schema() {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS index_metadata' })
     await execute_duckdb_run({
       query: 'DROP TABLE IF EXISTS activity_git_daily'
+    })
+    await execute_duckdb_run({
+      query: 'DROP TABLE IF EXISTS activity_heatmap_daily'
     })
     log('DuckDB schema dropped')
   } catch (error) {

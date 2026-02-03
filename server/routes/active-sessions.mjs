@@ -14,8 +14,9 @@ import {
 } from '#libs-server/active-sessions/index.mjs'
 import path from 'path'
 import { read_json_file } from '#libs-server/threads/thread-utils.mjs'
-import { extract_timeline_metrics_streaming } from '#libs-server/threads/timeline/index.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
+import { get_cached_latest_timeline_entry } from '#server/services/thread-watcher.mjs'
+import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 
@@ -60,9 +61,8 @@ async function apply_session_redaction(session, user_public_key) {
 
 /**
  * Get thread info for a session including metadata and latest timeline event.
- * Reads metadata.json (small file) for most fields and streams timeline.jsonl
- * line-by-line to extract the latest non-system event without loading the full
- * timeline into memory.
+ * Reads metadata.json (small file) for most fields and uses the thread watcher's
+ * in-memory cache for the latest timeline entry, avoiding expensive full-file streams.
  *
  * @param {string} thread_id - Thread ID to fetch info for
  * @returns {Promise<Object>} Object with thread metadata fields
@@ -84,18 +84,16 @@ async function get_thread_info_for_session(thread_id) {
     const thread_base_dir = get_thread_base_directory()
     const thread_dir = path.join(thread_base_dir, thread_id)
     const metadata_path = path.join(thread_dir, 'metadata.json')
-    const timeline_path = path.join(thread_dir, 'timeline.jsonl')
 
-    // Read metadata (small JSON) and stream timeline in parallel
-    const [metadata, timeline_metrics] = await Promise.all([
-      read_json_file({ file_path: metadata_path }),
-      extract_timeline_metrics_streaming({ timeline_path })
-    ])
+    const metadata = await read_json_file({ file_path: metadata_path })
+
+    // Use thread watcher cache instead of streaming entire timeline
+    const cached_entry = get_cached_latest_timeline_entry(thread_id)
 
     return {
       thread_title: metadata.title || null,
       thread_state: metadata.thread_state || null,
-      latest_timeline_event: timeline_metrics.latest_event || null,
+      latest_timeline_event: cached_entry || null,
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
       total_tokens: metadata.total_tokens || null,
@@ -339,25 +337,20 @@ router.put('/:session_id', async (req, res) => {
         })
       }
     } else {
-      // Thread already associated, refresh thread info
-      const thread_info = await get_thread_info_for_session(session.thread_id)
+      // Thread already associated -- only update latest_timeline_event from cache
+      // Skip metadata disk reads on every hook fire; metadata is refreshed by GET endpoints
+      const cached_entry = get_cached_latest_timeline_entry(session.thread_id)
 
-      session.thread_title = thread_info.thread_title
-      session.latest_timeline_event = thread_info.latest_timeline_event
-      session.message_count = thread_info.message_count
-      session.duration_minutes = thread_info.duration_minutes
-      session.total_tokens = thread_info.total_tokens
-      session.session_provider = thread_info.session_provider
+      if (cached_entry) {
+        session.latest_timeline_event = cached_entry
 
-      await update_active_session({
-        session_id,
-        thread_title: thread_info.thread_title,
-        latest_timeline_event: thread_info.latest_timeline_event,
-        message_count: thread_info.message_count,
-        duration_minutes: thread_info.duration_minutes,
-        total_tokens: thread_info.total_tokens,
-        session_provider: thread_info.session_provider
-      })
+        await update_active_session({
+          session_id,
+          latest_timeline_event: cached_entry
+        })
+
+        invalidate_thread_cache(session.thread_id)
+      }
     }
 
     // Emit WebSocket event

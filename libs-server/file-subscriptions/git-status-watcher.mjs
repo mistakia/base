@@ -171,6 +171,13 @@ export function add_repo_to_watcher(repo_path) {
     watcher.add(path.join(repo_path, pattern))
   }
 
+  // Also update repo_list_watcher to monitor .gitmodules and worktrees for this repo
+  if (repo_list_watcher) {
+    for (const pattern of REPO_LIST_WATCH_PATTERNS) {
+      repo_list_watcher.add(path.join(repo_path, pattern))
+    }
+  }
+
   log('Added repo to watcher: %s', repo_path)
 }
 
@@ -194,6 +201,13 @@ export function remove_repo_from_watcher(repo_path) {
 
   for (const pattern of GIT_WATCH_PATTERNS) {
     watcher.unwatch(path.join(repo_path, pattern))
+  }
+
+  // Also remove from repo_list_watcher
+  if (repo_list_watcher) {
+    for (const pattern of REPO_LIST_WATCH_PATTERNS) {
+      repo_list_watcher.unwatch(path.join(repo_path, pattern))
+    }
   }
 
   // Clean up any pending debounce timer

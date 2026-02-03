@@ -861,6 +861,15 @@ class EmbeddedIndexManager {
     return this.initialized && this.kuzu_ready
   }
 
+  /**
+   * Check if Kuzu is ready AND not blocked by an ongoing sync operation.
+   * Kuzu uses a single connection, so queries will hang indefinitely
+   * if issued while a sync operation holds the connection.
+   */
+  is_kuzu_query_safe() {
+    return this.initialized && this.kuzu_ready && !this.sync_in_progress
+  }
+
   is_duckdb_ready() {
     return this.initialized && this.duckdb_ready
   }

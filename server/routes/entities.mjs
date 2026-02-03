@@ -296,9 +296,14 @@ router.get('/relations', async (req, res) => {
       return res.status(400).send({ error: 'base_uri is required' })
     }
 
-    // Check if Kuzu is available
-    if (!embedded_index_manager.is_kuzu_ready()) {
-      return res.status(503).send({ error: 'Graph database not available' })
+    // Check if Kuzu is available and not blocked by a sync operation.
+    // Kuzu uses a single connection, so queries hang indefinitely if a
+    // sync operation is using the connection.
+    if (!embedded_index_manager.is_kuzu_query_safe()) {
+      const reason = !embedded_index_manager.is_kuzu_ready()
+        ? 'Graph database not available'
+        : 'Graph database busy (sync in progress)'
+      return res.status(503).send({ error: reason })
     }
 
     // Create permission context for filtering results

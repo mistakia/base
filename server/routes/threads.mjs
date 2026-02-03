@@ -31,6 +31,45 @@ const log = debug('api:threads')
 const HTTP_MAX_AGE = 5 * 60
 const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
+// Short-lived in-memory cache for individual thread responses.
+// Prevents redundant full-timeline reads when the HTML render and API call
+// (or rapid browser refreshes) hit the same thread within a short window.
+const THREAD_CACHE_TTL_MS = 10 * 1000 // 10 seconds
+const THREAD_CACHE_MAX_SIZE = 100
+const thread_response_cache = new Map()
+
+function get_cached_thread(cache_key) {
+  const entry = thread_response_cache.get(cache_key)
+  if (!entry) return null
+  if (Date.now() - entry.timestamp > THREAD_CACHE_TTL_MS) {
+    thread_response_cache.delete(cache_key)
+    return null
+  }
+  return entry.data
+}
+
+function set_cached_thread(cache_key, data) {
+  // Hard cap: evict oldest entry when at max size
+  if (thread_response_cache.size >= THREAD_CACHE_MAX_SIZE) {
+    const oldest_key = thread_response_cache.keys().next().value
+    thread_response_cache.delete(oldest_key)
+  }
+  thread_response_cache.set(cache_key, { data, timestamp: Date.now() })
+}
+
+/**
+ * Invalidate all cached responses for a given thread.
+ * Called when thread data is mutated (e.g., timeline entry added).
+ * @param {string} thread_id - Thread ID to invalidate
+ */
+export function invalidate_thread_cache(thread_id) {
+  for (const key of thread_response_cache.keys()) {
+    if (key.startsWith(`${thread_id}:`)) {
+      thread_response_cache.delete(key)
+    }
+  }
+}
+
 /**
  * Helper functions
  */
@@ -266,11 +305,21 @@ router.get('/:thread_id', async (req, res) => {
       res.set('Cache-Control', 'private, no-cache')
     }
 
+    // Check short-lived cache to avoid redundant timeline reads on rapid reloads
+    const cache_key = `${thread_id}:${requesting_user_key || 'public'}`
+    const cached = get_cached_thread(cache_key)
+    if (cached) {
+      log(`Thread ${thread_id} served from cache`)
+      return res.json(cached)
+    }
+
     // Pass user_public_key to get_thread so it can do proper permission checking
     const response_thread = await threads.get_thread({
       thread_id,
       user_public_key: requesting_user_key
     })
+
+    set_cached_thread(cache_key, response_thread)
 
     log(`Thread retrieved successfully: ${thread_id}`)
     res.json(response_thread)

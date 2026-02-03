@@ -18,7 +18,10 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import {
   query_tasks_from_entities,
   query_git_activity_daily,
-  query_thread_activity_aggregated
+  query_thread_activity_aggregated,
+  query_heatmap_daily_all,
+  upsert_heatmap_daily_batch,
+  get_heatmap_daily_count
 } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
 
 const log = debug('server:cache-warmer')
@@ -72,37 +75,174 @@ export const CACHE_TTL = {
 }
 
 /**
+ * Compute fresh heatmap entries for the given number of trailing days
+ * using the DuckDB fast path (git + thread activity queries).
+ * @param {number} days Number of days to compute
+ * @returns {Promise<Object>} Heatmap data with data array, max_score, date_range
+ */
+async function compute_fresh_days(days) {
+  const [git_activity, thread_activity] = await Promise.all([
+    query_git_activity_daily({ days }),
+    query_thread_activity_aggregated({ days })
+  ])
+  return merge_activity_and_calculate_scores({
+    git_activity,
+    thread_activity,
+    days
+  })
+}
+
+/**
  * Warm the activity heatmap cache
- * Uses DuckDB when available for faster queries, falls back to full computation.
+ * Uses an incremental strategy when DuckDB is available:
+ *   - Cold start (empty table): full computation + bulk insert
+ *   - Incremental: read frozen past days from cache table, recompute only today + yesterday
+ * Falls back to full computation when DuckDB is unavailable.
  */
 async function warm_activity_cache() {
   try {
     const days = 365
     log('Warming activity heatmap cache for %d days', days)
 
-    const heatmap_data = await try_duckdb_or_fallback({
-      label: 'activity cache',
-      duckdb_fn: async () => {
-        const [git_activity, thread_activity] = await Promise.all([
-          query_git_activity_daily({ days }),
-          query_thread_activity_aggregated({ days })
-        ])
-        return merge_activity_and_calculate_scores({
-          git_activity,
-          thread_activity,
-          days
-        })
-      },
-      fallback_fn: () => get_activity_heatmap_data({ days })
-    })
+    // When DuckDB is not ready, fall back to full computation
+    if (!embedded_index_manager.is_duckdb_ready()) {
+      log('DuckDB not ready, using full computation fallback')
+      cache.activity_heatmap = {
+        data: await get_activity_heatmap_data({ days }),
+        timestamp: Date.now(),
+        days
+      }
+      log('Activity heatmap cache warmed (fallback)')
+      return
+    }
+
+    let row_count
+    try {
+      row_count = await get_heatmap_daily_count()
+    } catch (error) {
+      log(
+        'Failed to query heatmap daily count, using full fallback: %s',
+        error.message
+      )
+      cache.activity_heatmap = {
+        data: await get_activity_heatmap_data({ days }),
+        timestamp: Date.now(),
+        days
+      }
+      return
+    }
+
+    if (row_count === 0) {
+      // Cold start: full computation, then bulk insert into cache table
+      log('Cold start detected, performing full computation')
+      const heatmap_data = await compute_fresh_days(days)
+      await upsert_heatmap_daily_batch({ entries: heatmap_data.data })
+      cache.activity_heatmap = {
+        data: heatmap_data,
+        timestamp: Date.now(),
+        days
+      }
+      log(
+        'Activity heatmap cache warmed (cold start, %d entries persisted)',
+        heatmap_data.data.length
+      )
+      return
+    }
+
+    // Incremental: read frozen days from cache table, recompute today + yesterday
+    log('Incremental warm: %d cached rows, recomputing 2 fresh days', row_count)
+
+    let frozen_days, fresh_result
+    try {
+      ;[frozen_days, fresh_result] = await Promise.all([
+        query_heatmap_daily_all({ days }),
+        compute_fresh_days(2)
+      ])
+    } catch (error) {
+      log('Incremental queries failed, using full fallback: %s', error.message)
+      cache.activity_heatmap = {
+        data: await get_activity_heatmap_data({ days }),
+        timestamp: Date.now(),
+        days
+      }
+      return
+    }
+
+    // Ensure today and yesterday have entries even with zero activity,
+    // so stale cached data for those dates gets overwritten
+    const today_str = new Date().toISOString().split('T')[0]
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterday_str = yesterday.toISOString().split('T')[0]
+
+    const ZERO_ENTRY_FIELDS = {
+      activity_git_commits: 0,
+      activity_git_lines_changed: 0,
+      activity_git_files_changed: 0,
+      activity_token_usage: 0,
+      activity_thread_edits: 0,
+      activity_thread_lines_changed: 0,
+      score: 0
+    }
+
+    const fresh_dates = new Set(fresh_result.data.map((e) => e.date))
+    const zero_entries = []
+    if (!fresh_dates.has(today_str))
+      zero_entries.push({ date: today_str, ...ZERO_ENTRY_FIELDS })
+    if (!fresh_dates.has(yesterday_str))
+      zero_entries.push({ date: yesterday_str, ...ZERO_ENTRY_FIELDS })
+
+    const all_fresh = [...fresh_result.data, ...zero_entries]
+
+    // Persist fresh days
+    await upsert_heatmap_daily_batch({ entries: all_fresh })
+
+    // Merge: frozen days as base, fresh days overwrite matching dates
+    const merged_by_date = new Map()
+    for (const entry of frozen_days) {
+      merged_by_date.set(entry.date, entry)
+    }
+    for (const entry of all_fresh) {
+      merged_by_date.set(entry.date, entry)
+    }
+
+    const merged_data = Array.from(merged_by_date.values()).sort((a, b) =>
+      a.date.localeCompare(b.date)
+    )
+
+    if (merged_data.length < days * 0.5) {
+      log(
+        'Warning: merged heatmap has only %d entries for %d day range (possible gaps)',
+        merged_data.length,
+        days
+      )
+    }
+
+    const max_score = merged_data.reduce(
+      (max, entry) => Math.max(max, entry.score ?? 0),
+      0
+    )
+
+    const since_date = new Date()
+    since_date.setDate(since_date.getDate() - days)
 
     cache.activity_heatmap = {
-      data: heatmap_data,
+      data: {
+        data: merged_data,
+        max_score,
+        date_range: {
+          start: since_date.toISOString().split('T')[0],
+          end: today_str
+        }
+      },
       timestamp: Date.now(),
       days
     }
 
-    log('Activity heatmap cache warmed')
+    log(
+      'Activity heatmap cache warmed (incremental, %d total entries)',
+      merged_data.length
+    )
   } catch (error) {
     log('Failed to warm activity cache: %s', error.message)
   }
