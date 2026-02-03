@@ -282,22 +282,23 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       failed: entity_stats.failed + thread_stats.failed
     }
 
-    // Always update sync metadata to advance progress.
-    // Individual file failures are logged but don't block overall progress.
-    await set_repo_sync_state({ state: new_sync_state })
+    // Always update schema version to reflect current code version
     await set_index_metadata({
       key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
       value: CURRENT_SCHEMA_VERSION
     })
-    // Force checkpoint to persist schema version
-    await checkpoint_duckdb()
 
-    if (stats.failed > 0) {
+    if (stats.failed === 0) {
+      // On failure, preserve old state so the next startup re-processes the same diff range
+      await set_repo_sync_state({ state: new_sync_state })
+    } else {
       log(
-        'Warning: %d files failed to sync, will retry on next modification',
+        'Warning: %d files failed to sync, sync state not advanced — full resync will be attempted',
         stats.failed
       )
     }
+
+    await checkpoint_duckdb()
 
     log(
       'Incremental sync complete: %d entities synced, %d deleted; %d threads synced, %d deleted; %d failed',
@@ -308,9 +309,8 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       stats.failed
     )
 
-    // Sync is considered successful if it completed without fatal errors.
     return {
-      success: true,
+      success: stats.failed === 0,
       method: 'incremental',
       stats
     }
