@@ -10,46 +10,27 @@ import chokidar from 'chokidar'
 
 import config from '#config'
 import { ENTITY_DIRECTORIES, ENTITY_FILE_PATTERN } from './sync-constants.mjs'
+import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 
 const log = debug('embedded-index:sync:watcher')
 
 // Re-export for external use
 export { ENTITY_DIRECTORIES }
 
-// Store watchers in a Map for cleanup
-const entity_watchers = new Map()
-let thread_watcher = null
-let timeline_watcher = null
+// Single consolidated watcher for all entity directories
+let entity_watcher = null
 let is_watching = false
 
-// Debounce map to prevent rapid re-indexing
-const debounce_timers = new Map()
-const DEBOUNCE_MS = 500
+// Debounce to prevent rapid re-indexing
+const entity_debouncer = create_keyed_debouncer(500)
 
 function get_user_base_directory() {
   return config.user_base_directory
 }
 
-function debounced_callback(file_path, callback) {
-  const existing_timer = debounce_timers.get(file_path)
-  if (existing_timer) {
-    clearTimeout(existing_timer)
-  }
-
-  const timer = setTimeout(() => {
-    debounce_timers.delete(file_path)
-    callback(file_path)
-  }, DEBOUNCE_MS)
-
-  debounce_timers.set(file_path, timer)
-}
-
 export function start_index_file_watcher({
   on_entity_change,
-  on_entity_delete,
-  on_thread_change,
-  on_thread_delete,
-  on_timeline_change
+  on_entity_delete
 }) {
   if (is_watching) {
     log('File watcher already running')
@@ -64,46 +45,13 @@ export function start_index_file_watcher({
 
   log('Starting index file watcher for %s', user_base_dir)
 
-  // Create watchers for all entity directories
-  for (const entity_dir of ENTITY_DIRECTORIES) {
-    const dir_path = path.join(user_base_dir, entity_dir)
+  // Build watch paths for all entity directories
+  const watch_paths = ENTITY_DIRECTORIES.map(
+    (dir) => `${path.join(user_base_dir, dir)}/${ENTITY_FILE_PATTERN}`
+  )
 
-    const watcher = chokidar.watch(`${dir_path}/${ENTITY_FILE_PATTERN}`, {
-      persistent: true,
-      ignoreInitial: true,
-      awaitWriteFinish: {
-        stabilityThreshold: 300,
-        pollInterval: 100
-      }
-    })
-
-    watcher
-      .on('add', (file_path) => {
-        log('Entity file added (%s): %s', entity_dir, file_path)
-        if (on_entity_change) {
-          debounced_callback(file_path, on_entity_change)
-        }
-      })
-      .on('change', (file_path) => {
-        log('Entity file changed (%s): %s', entity_dir, file_path)
-        if (on_entity_change) {
-          debounced_callback(file_path, on_entity_change)
-        }
-      })
-      .on('unlink', (file_path) => {
-        log('Entity file deleted (%s): %s', entity_dir, file_path)
-        if (on_entity_delete) {
-          on_entity_delete(file_path)
-        }
-      })
-
-    entity_watchers.set(entity_dir, watcher)
-    log('Started watcher for %s directory', entity_dir)
-  }
-
-  // Watch thread directory for metadata.json files
-  const thread_dir = path.join(user_base_dir, 'thread')
-  thread_watcher = chokidar.watch(`${thread_dir}/*/metadata.json`, {
+  // Single consolidated watcher for all entity directories
+  entity_watcher = chokidar.watch(watch_paths, {
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: {
@@ -112,48 +60,31 @@ export function start_index_file_watcher({
     }
   })
 
-  thread_watcher
+  entity_watcher
     .on('add', (file_path) => {
-      log('Thread metadata added: %s', file_path)
-      if (on_thread_change) {
-        debounced_callback(file_path, on_thread_change)
+      log('Entity file added: %s', file_path)
+      if (on_entity_change) {
+        entity_debouncer.call(file_path, on_entity_change)
       }
     })
     .on('change', (file_path) => {
-      log('Thread metadata changed: %s', file_path)
-      if (on_thread_change) {
-        debounced_callback(file_path, on_thread_change)
+      log('Entity file changed: %s', file_path)
+      if (on_entity_change) {
+        entity_debouncer.call(file_path, on_entity_change)
       }
     })
     .on('unlink', (file_path) => {
-      log('Thread metadata deleted: %s', file_path)
-      if (on_thread_delete) {
-        on_thread_delete(file_path)
+      log('Entity file deleted: %s', file_path)
+      if (on_entity_delete) {
+        on_entity_delete(file_path)
       }
     })
 
-  // Watch thread directory for timeline.jsonl files
-  timeline_watcher = chokidar.watch(`${thread_dir}/*/timeline.jsonl`, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 300,
-      pollInterval: 100
-    }
-  })
+  log('Started watcher for %d entity directories', ENTITY_DIRECTORIES.length)
 
-  // Handler for all timeline events (add/change/unlink all trigger the same sync)
-  const handle_timeline_event = (event_type) => (file_path) => {
-    log('Thread timeline %s: %s', event_type, file_path)
-    if (on_timeline_change) {
-      debounced_callback(file_path, on_timeline_change)
-    }
-  }
-
-  timeline_watcher
-    .on('add', handle_timeline_event('added'))
-    .on('change', handle_timeline_event('changed'))
-    .on('unlink', handle_timeline_event('deleted'))
+  // Thread and timeline watchers are handled by the thread watcher
+  // (server/services/thread-watcher.mjs) via hooks to avoid duplicate
+  // chokidar instances on the thread/ directory.
 
   is_watching = true
   log('Index file watcher started')
@@ -163,28 +94,13 @@ export async function stop_index_file_watcher() {
   log('Stopping index file watcher')
 
   // Clear all debounce timers
-  for (const timer of debounce_timers.values()) {
-    clearTimeout(timer)
-  }
-  debounce_timers.clear()
+  entity_debouncer.clear_all()
 
-  // Close all entity watchers
-  for (const [entity_dir, watcher] of entity_watchers) {
-    await watcher.close()
-    log('Closed watcher for %s directory', entity_dir)
-  }
-  entity_watchers.clear()
-
-  // Close thread watcher
-  if (thread_watcher) {
-    await thread_watcher.close()
-    thread_watcher = null
-  }
-
-  // Close timeline watcher
-  if (timeline_watcher) {
-    await timeline_watcher.close()
-    timeline_watcher = null
+  // Close entity watcher
+  if (entity_watcher) {
+    await entity_watcher.close()
+    entity_watcher = null
+    log('Closed entity watcher')
   }
 
   is_watching = false

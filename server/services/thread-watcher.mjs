@@ -8,6 +8,7 @@ import {
   emit_thread_timeline_entry_added
 } from '#libs-server/threads/event-emitter.mjs'
 import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
+import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 
 const log = debug('threads:watcher')
 
@@ -43,8 +44,16 @@ const last_seen_state = new Map()
 // Map<thread_id, Object>
 const latest_timeline_entry_cache = new Map()
 
+// Cache of parsed thread metadata per thread
+// Populated on metadata add/change, used by timeline change handler to avoid re-reading
+// Map<thread_id, Object>
+const metadata_cache = new Map()
+
 // Watcher instance
 let watcher = null
+
+// External hooks for index sync (set via start_thread_watcher options)
+let index_sync_hooks = null
 
 // ============================================================================
 // Latest Entry Cache
@@ -76,6 +85,12 @@ const find_latest_non_system_entry = (entries) => {
 export const get_cached_latest_timeline_entry = (thread_id) => {
   return latest_timeline_entry_cache.get(thread_id) || null
 }
+
+// ============================================================================
+// Index Sync Hook Debouncing
+// ============================================================================
+
+const index_sync_debouncer = create_keyed_debouncer(500)
 
 // ============================================================================
 // Path Utilities
@@ -187,9 +202,24 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
 const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
   const tracked = last_seen_state.get(thread_id)
 
-  // First time seeing this thread
+  // First time seeing this thread via timeline change (not metadata add).
+  // Skip to EOF using stat -- avoids reading the full file just to set the
+  // byte offset. Pre-existing entries are not emitted.
   if (!tracked) {
-    return initialize_thread_tracking(thread_id, timeline_path)
+    try {
+      const stat = await fs.stat(timeline_path)
+      last_seen_state.set(thread_id, {
+        timestamp: null,
+        byte_offset: stat.size
+      })
+      log(
+        `Fast-initialized tracking for ${thread_id}: offset=${stat.size} (stat-only)`
+      )
+    } catch {
+      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
+      log(`Initialized tracking for ${thread_id}: offset=0 (file not found)`)
+    }
+    return []
   }
 
   const result = await read_timeline_jsonl_from_offset({
@@ -298,12 +328,20 @@ const handle_metadata_added = async (file_path) => {
 
   const { thread_id } = metadata
 
+  // Cache metadata for use by timeline change handler
+  metadata_cache.set(thread_id, metadata)
+
   log(`Emitting THREAD_CREATED for thread: ${thread_id}`)
   emit_thread_created(metadata)
 
   // Initialize timeline tracking for this thread
   const thread_dir = path.dirname(file_path)
   await initialize_timeline_tracking_for_new_thread(thread_id, thread_dir)
+
+  // Notify index sync hooks (debounced)
+  if (index_sync_hooks?.on_thread_change) {
+    index_sync_debouncer.call(file_path, index_sync_hooks.on_thread_change)
+  }
 }
 
 /**
@@ -319,7 +357,17 @@ const handle_metadata_changed = async (file_path) => {
     return
   }
 
+  // Update metadata cache
+  if (metadata.thread_id) {
+    metadata_cache.set(metadata.thread_id, metadata)
+  }
+
   emit_thread_updated(metadata)
+
+  // Notify index sync hooks (debounced)
+  if (index_sync_hooks?.on_thread_change) {
+    index_sync_debouncer.call(file_path, index_sync_hooks.on_thread_change)
+  }
 }
 
 /**
@@ -367,9 +415,18 @@ const handle_timeline_changed = async (file_path) => {
     return
   }
 
-  // Read metadata to get user context
-  const metadata_path = path.join(path.dirname(file_path), FILE_NAMES.METADATA)
-  const metadata = await read_thread_metadata(metadata_path)
+  // Use cached metadata if available, otherwise read from disk
+  let metadata = metadata_cache.get(thread_id)
+  if (!metadata) {
+    const metadata_path = path.join(
+      path.dirname(file_path),
+      FILE_NAMES.METADATA
+    )
+    metadata = await read_thread_metadata(metadata_path)
+    if (metadata) {
+      metadata_cache.set(thread_id, metadata)
+    }
+  }
 
   if (!metadata) {
     log(`Could not read metadata for thread ${thread_id}`)
@@ -377,6 +434,11 @@ const handle_timeline_changed = async (file_path) => {
   }
 
   emit_timeline_entry_events(thread_id, new_entries, metadata)
+
+  // Notify index sync hooks (debounced)
+  if (index_sync_hooks?.on_timeline_change) {
+    index_sync_debouncer.call(file_path, index_sync_hooks.on_timeline_change)
+  }
 }
 
 // ============================================================================
@@ -441,6 +503,25 @@ const handle_file_change = async (file_path) => {
 }
 
 /**
+ * Handle file unlink events
+ * Notifies index sync hooks when metadata is deleted (thread removed)
+ *
+ * @param {string} file_path - Path to the deleted file
+ */
+const handle_file_unlink = async (file_path) => {
+  if (is_thread_metadata_file(file_path)) {
+    log(`Detected metadata deleted: ${file_path}`)
+    if (index_sync_hooks?.on_thread_delete) {
+      try {
+        index_sync_hooks.on_thread_delete(file_path)
+      } catch (error) {
+        log(`Error in index sync on_thread_delete for ${file_path}:`, error)
+      }
+    }
+  }
+}
+
+/**
  * Register event handlers on the watcher instance
  *
  * @param {Object} watcher_instance - Chokidar watcher instance
@@ -448,6 +529,7 @@ const handle_file_change = async (file_path) => {
 const register_watcher_handlers = (watcher_instance) => {
   watcher_instance.on('add', handle_file_add)
   watcher_instance.on('change', handle_file_change)
+  watcher_instance.on('unlink', handle_file_unlink)
   watcher_instance.on('error', (error) => {
     log('Thread watcher error:', error)
   })
@@ -461,13 +543,20 @@ const register_watcher_handlers = (watcher_instance) => {
  *
  * @param {Object} params
  * @param {string} params.thread_directory - Absolute path to thread directory
+ * @param {Object} [params.hooks] - Optional hooks for external consumers (e.g. index sync)
+ * @param {Function} [params.hooks.on_thread_change] - Called with metadata file path on add/change (debounced)
+ * @param {Function} [params.hooks.on_thread_delete] - Called with metadata file path on unlink
+ * @param {Function} [params.hooks.on_timeline_change] - Called with timeline file path on change (debounced)
  * @returns {Object} Watcher instance
  */
-export const start_thread_watcher = ({ thread_directory }) => {
+export const start_thread_watcher = ({ thread_directory, hooks }) => {
   if (watcher) {
     log('Thread watcher already running')
     return watcher
   }
+
+  // Store hooks for use by event handlers
+  index_sync_hooks = hooks || null
 
   log(`Starting thread watcher for directory: ${thread_directory}`)
 
@@ -484,6 +573,17 @@ export const start_thread_watcher = ({ thread_directory }) => {
     log('Failed to start thread watcher:', error)
     throw error
   }
+}
+
+/**
+ * Set index sync hooks after watcher has started.
+ * Used when the embedded index initializes after the thread watcher.
+ *
+ * @param {Object} hooks - Hook callbacks (same shape as start_thread_watcher hooks param)
+ */
+export const set_thread_watcher_hooks = (hooks) => {
+  index_sync_hooks = hooks || null
+  log('Index sync hooks %s', hooks ? 'set' : 'cleared')
 }
 
 /**
@@ -504,6 +604,12 @@ export const stop_thread_watcher = async () => {
     watcher = null
     last_seen_state.clear()
     latest_timeline_entry_cache.clear()
+    metadata_cache.clear()
+    index_sync_hooks = null
+
+    // Clear index sync debounce timers
+    index_sync_debouncer.clear_all()
+
     log('Thread watcher stopped')
   } catch (error) {
     log('Error stopping thread watcher:', error)

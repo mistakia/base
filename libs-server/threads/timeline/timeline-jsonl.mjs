@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream, existsSync } from 'fs'
+import { createReadStream, createWriteStream } from 'fs'
 import fs from 'fs/promises'
 import { createInterface } from 'readline'
 import path from 'path'
@@ -49,7 +49,9 @@ export function accumulate_edit_metrics_from_event(event, state) {
  * @returns {Promise<Array|null>} Array of timeline entries, or null if file doesn't exist
  */
 export async function read_timeline_jsonl({ timeline_path }) {
-  if (!existsSync(timeline_path)) {
+  try {
+    await fs.access(timeline_path)
+  } catch {
     log(`Timeline file not found: ${timeline_path}`)
     return null
   }
@@ -271,7 +273,9 @@ export async function read_timeline_jsonl_from_offset({
  * @returns {Promise<Object>} Metrics object with latest_event, edit_count, lines_changed
  */
 export async function extract_timeline_metrics_streaming({ timeline_path }) {
-  if (!existsSync(timeline_path)) {
+  try {
+    await fs.access(timeline_path)
+  } catch {
     log(`Timeline file not found: ${timeline_path}`)
     return {
       latest_event: null,

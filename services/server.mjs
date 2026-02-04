@@ -6,13 +6,15 @@ import server from '#server/index.mjs'
 import config from '#config'
 import {
   start_thread_watcher,
-  stop_thread_watcher
+  stop_thread_watcher,
+  set_thread_watcher_hooks
 } from '#server/services/thread-watcher.mjs'
 import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   start_index_sync_watcher,
-  stop_index_file_watcher
+  stop_index_file_watcher,
+  thread_index_sync_hooks
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_sync_trigger_watcher,
@@ -43,6 +45,17 @@ import {
 import { get_known_repositories } from '#server/routes/git.mjs'
 import { invalidate as invalidate_file_path_cache } from '#libs-server/search/file-path-cache.mjs'
 import { broadcast_all } from '#server/websocket.mjs'
+
+// Debounce file path cache invalidation so rapid file changes
+// (git operations, builds) consolidate into a single invalidation
+let file_path_cache_invalidation_timer = null
+const debounced_invalidate_file_path_cache = () => {
+  if (file_path_cache_invalidation_timer) return
+  file_path_cache_invalidation_timer = setTimeout(() => {
+    file_path_cache_invalidation_timer = null
+    invalidate_file_path_cache()
+  }, 1000)
+}
 
 const SERVER_LOCK_FILE = '.server-lock'
 
@@ -117,11 +130,11 @@ try {
     try {
       start_file_subscription_watcher({
         on_file_change: (relative_path) => {
-          invalidate_file_path_cache()
+          debounced_invalidate_file_path_cache()
           emit_file_changed(relative_path)
         },
         on_file_delete: (relative_path) => {
-          invalidate_file_path_cache()
+          debounced_invalidate_file_path_cache()
           emit_file_deleted(relative_path)
         }
       })
@@ -223,7 +236,11 @@ try {
         const index_config = embedded_index_manager._get_index_config()
         if (index_config.enabled && index_config.file_watcher_enabled) {
           start_index_sync_watcher()
-          logger('Index file watcher started')
+          // Attach thread index sync hooks to the already-running thread watcher
+          // so thread/ events trigger both WebSocket emission and database sync
+          // from a single chokidar instance
+          set_thread_watcher_hooks(thread_index_sync_hooks)
+          logger('Index file watcher started (thread hooks attached)')
         }
       } catch (watcher_error) {
         logger(`Failed to start index file watcher: ${watcher_error.message}`)
@@ -293,6 +310,8 @@ const shutdown = async (signal) => {
   try {
     // Stop file subscription watcher
     await stop_file_subscription_watcher()
+    clearTimeout(file_path_cache_invalidation_timer)
+    file_path_cache_invalidation_timer = null
     logger('File subscription watcher stopped')
   } catch (error) {
     logger(`Error stopping file subscription watcher: ${error.message}`)

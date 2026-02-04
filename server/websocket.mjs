@@ -9,10 +9,36 @@ import {
 
 const log = debug('websocket')
 
+const HEARTBEAT_INTERVAL_MS = 30000
+
 const wss = new WebSocketServer({ noServer: true })
+
+// Heartbeat: detect and clean up dead connections
+const heartbeat_interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.is_alive === false) {
+      log('Terminating unresponsive WebSocket connection')
+      remove_connection(ws)
+      return ws.terminate()
+    }
+
+    ws.is_alive = false
+    ws.ping()
+  })
+}, HEARTBEAT_INTERVAL_MS)
+
+wss.on('close', () => {
+  clearInterval(heartbeat_interval)
+})
 
 // Handle new WebSocket connections
 wss.on('connection', (ws) => {
+  ws.is_alive = true
+
+  ws.on('pong', () => {
+    ws.is_alive = true
+  })
+
   // Handle incoming messages
   ws.on('message', (data) => {
     try {
@@ -63,12 +89,17 @@ export const broadcast_all = (message) => {
 }
 
 export const send = ({ user_public_key, event }) => {
+  const data = JSON.stringify(event)
   wss.clients.forEach((c) => {
     if (
       c.user_public_key === user_public_key &&
       c.readyState === WebSocket.OPEN
     ) {
-      c.send(JSON.stringify(event))
+      try {
+        c.send(data)
+      } catch (error) {
+        log('Error sending to client: %s', error.message)
+      }
     }
   })
 }

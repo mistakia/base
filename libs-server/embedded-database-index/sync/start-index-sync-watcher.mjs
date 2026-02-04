@@ -32,6 +32,75 @@ async function read_thread_metadata(file_path) {
   }
 }
 
+/**
+ * Thread sync hooks for the thread watcher.
+ * These are passed to start_thread_watcher as hooks so that the thread
+ * watcher's single chokidar instance handles both WebSocket events and
+ * index sync, avoiding duplicate watchers on the thread/ directory.
+ */
+export const thread_index_sync_hooks = {
+  on_thread_change: async (file_path) => {
+    try {
+      const thread_id = extract_thread_id_from_path(file_path)
+      if (!thread_id) {
+        log('Could not extract thread_id from path: %s', file_path)
+        return
+      }
+
+      const metadata = await read_thread_metadata(file_path)
+      if (!metadata) {
+        return
+      }
+
+      await embedded_index_manager.sync_thread({ thread_id, metadata })
+      log('Synced thread: %s', thread_id)
+    } catch (error) {
+      log('Error handling thread change %s: %s', file_path, error.message)
+    }
+  },
+
+  on_thread_delete: async (file_path) => {
+    try {
+      const thread_id = extract_thread_id_from_path(file_path)
+      if (!thread_id) {
+        log('Could not extract thread_id from path: %s', file_path)
+        return
+      }
+
+      await embedded_index_manager.remove_thread({ thread_id })
+      log('Removed thread: %s', thread_id)
+    } catch (error) {
+      log('Error handling thread delete %s: %s', file_path, error.message)
+    }
+  },
+
+  on_timeline_change: async (file_path) => {
+    try {
+      const thread_id = extract_thread_id_from_path(file_path)
+      if (!thread_id) {
+        log('Could not extract thread_id from path: %s', file_path)
+        return
+      }
+
+      // Read metadata from the same thread directory
+      const metadata_path = path.join(
+        path.dirname(file_path),
+        'metadata.json'
+      )
+      const metadata = await read_thread_metadata(metadata_path)
+      if (!metadata) {
+        log('Could not read metadata for thread: %s', thread_id)
+        return
+      }
+
+      await embedded_index_manager.sync_thread({ thread_id, metadata })
+      log('Synced thread (timeline change): %s', thread_id)
+    } catch (error) {
+      log('Error handling timeline change %s: %s', file_path, error.message)
+    }
+  }
+}
+
 export function start_index_sync_watcher() {
   log('Starting index sync watcher')
 
@@ -91,67 +160,6 @@ export function start_index_sync_watcher() {
         log('Removed entity (%s): %s', entity_type, base_uri)
       } catch (error) {
         log('Error handling entity delete %s: %s', file_path, error.message)
-      }
-    },
-
-    on_thread_change: async (file_path) => {
-      try {
-        const thread_id = extract_thread_id_from_path(file_path)
-        if (!thread_id) {
-          log('Could not extract thread_id from path: %s', file_path)
-          return
-        }
-
-        const metadata = await read_thread_metadata(file_path)
-        if (!metadata) {
-          return
-        }
-
-        await embedded_index_manager.sync_thread({ thread_id, metadata })
-        log('Synced thread: %s', thread_id)
-      } catch (error) {
-        log('Error handling thread change %s: %s', file_path, error.message)
-      }
-    },
-
-    on_thread_delete: async (file_path) => {
-      try {
-        const thread_id = extract_thread_id_from_path(file_path)
-        if (!thread_id) {
-          log('Could not extract thread_id from path: %s', file_path)
-          return
-        }
-
-        await embedded_index_manager.remove_thread({ thread_id })
-        log('Removed thread: %s', thread_id)
-      } catch (error) {
-        log('Error handling thread delete %s: %s', file_path, error.message)
-      }
-    },
-
-    on_timeline_change: async (file_path) => {
-      try {
-        const thread_id = extract_thread_id_from_path(file_path)
-        if (!thread_id) {
-          log('Could not extract thread_id from path: %s', file_path)
-          return
-        }
-
-        // Read metadata from the same thread directory
-        const metadata_path = path.join(
-          path.dirname(file_path),
-          'metadata.json'
-        )
-        const metadata = await read_thread_metadata(metadata_path)
-        if (!metadata) {
-          log('Could not read metadata for thread: %s', thread_id)
-          return
-        }
-
-        await embedded_index_manager.sync_thread({ thread_id, metadata })
-        log('Synced thread (timeline change): %s', thread_id)
-      } catch (error) {
-        log('Error handling timeline change %s: %s', file_path, error.message)
       }
     }
   })
