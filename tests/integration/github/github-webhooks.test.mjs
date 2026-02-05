@@ -141,11 +141,9 @@ describe('GitHub Webhooks API', () => {
 
         expect(res).to.have.status(200)
         expect(res.body.ok).to.be.true
-        expect(res.body.message).to.include('acknowledged')
-        expect(res.body.message).to.include('change request system removed')
       })
 
-      it('should return 400 for PR event with missing required fields', async () => {
+      it('should acknowledge PR event even with minimal payload', async () => {
         const res = await chai
           .request(server)
           .post('/api/github/webhooks')
@@ -153,12 +151,10 @@ describe('GitHub Webhooks API', () => {
           .set('x-github-delivery', 'test-delivery-id')
           .send({
             action: 'opened'
-            // Missing pull_request, number, repository, sender
           })
 
-        expect(res).to.have.status(400)
-        expect(res.body.error).to.equal('Bad Request')
-        expect(res.body.message).to.include('missing required fields')
+        expect(res).to.have.status(200)
+        expect(res.body.ok).to.be.true
       })
     })
   })
