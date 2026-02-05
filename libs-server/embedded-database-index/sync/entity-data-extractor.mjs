@@ -8,27 +8,6 @@ import debug from 'debug'
 
 const log = debug('embedded-index:sync:entity')
 
-export function extract_entity_index_data({
-  entity_properties,
-  file_info = {}
-}) {
-  if (!entity_properties) {
-    return null
-  }
-
-  const base_uri = entity_properties.base_uri || file_info.base_uri
-
-  return {
-    entity_id: entity_properties.entity_id,
-    base_uri,
-    type: entity_properties.type,
-    title: entity_properties.title,
-    user_public_key: entity_properties.user_public_key,
-    created_at: entity_properties.created_at,
-    updated_at: entity_properties.updated_at
-  }
-}
-
 export function extract_tags_from_entity({ entity_properties }) {
   if (!entity_properties || !entity_properties.tags) {
     return []

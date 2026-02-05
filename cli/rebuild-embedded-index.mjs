@@ -3,7 +3,7 @@
 /**
  * @fileoverview CLI script to rebuild the embedded database index
  *
- * This script drops and recreates the DuckDB and Kuzu schemas,
+ * This script drops and recreates the DuckDB schema,
  * then repopulates them with all threads and entities from the filesystem.
  *
  * Usage:

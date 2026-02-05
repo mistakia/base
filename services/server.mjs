@@ -208,10 +208,9 @@ try {
       await embedded_index_manager.initialize()
       const status = embedded_index_manager.get_index_status()
       logger(
-        `Embedded index initialized (kuzu: ${status.kuzu_ready}, duckdb: ${status.duckdb_ready})`
+        `Embedded index initialized (duckdb: ${status.duckdb_ready})`
       )
-      // Only mark ready if at least one database is actually initialized
-      embedded_index_ready = status.kuzu_ready || status.duckdb_ready
+      embedded_index_ready = status.duckdb_ready
 
       // Warn if DuckDB specifically failed (cache warmer depends on it for fast queries)
       if (!status.duckdb_ready) {
