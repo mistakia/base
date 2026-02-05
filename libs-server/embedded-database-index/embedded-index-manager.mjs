@@ -12,7 +12,8 @@ import {
   get_kuzu_connection,
   close_kuzu_connection,
   initialize_kuzu_client,
-  execute_kuzu_query
+  execute_kuzu_query,
+  destroy_kuzu_database
 } from './kuzu/kuzu-database-client.mjs'
 import {
   create_kuzu_schema,
@@ -219,8 +220,32 @@ class EmbeddedIndexManager {
 
   async _initialize_kuzu(index_config) {
     await initialize_kuzu_client({ database_path: index_config.kuzu_directory })
-    const kuzu_connection = await get_kuzu_connection()
-    await create_kuzu_schema({ connection: kuzu_connection })
+    try {
+      const kuzu_connection = await get_kuzu_connection()
+      await create_kuzu_schema({ connection: kuzu_connection })
+    } catch (error) {
+      const is_wal_corruption =
+        error.message && error.message.includes('Failed to replay wal record')
+
+      if (is_wal_corruption) {
+        log(
+          'Kuzu WAL corruption detected, destroying database and retrying: %s',
+          error.message
+        )
+        await destroy_kuzu_database()
+
+        // Retry with a fresh database
+        await initialize_kuzu_client({
+          database_path: index_config.kuzu_directory
+        })
+        const kuzu_connection = await get_kuzu_connection()
+        await create_kuzu_schema({ connection: kuzu_connection })
+        log('Kuzu database recovered from WAL corruption')
+        return
+      }
+
+      throw error
+    }
   }
 
   async _initialize_duckdb(index_config) {

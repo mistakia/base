@@ -98,6 +98,25 @@ export function get_kuzu_database_path() {
   return database_path
 }
 
+/**
+ * Close Kuzu and remove the database directory.
+ * Used for recovery from WAL corruption where the native library
+ * leaks memory during failed recovery attempts.
+ */
+export async function destroy_kuzu_database() {
+  const path_to_remove = database_path
+
+  // Close connection and database first
+  await close_kuzu_connection()
+
+  // Remove the corrupted database directory
+  if (path_to_remove) {
+    log('Removing corrupted Kuzu database at %s', path_to_remove)
+    await fs.rm(path_to_remove, { recursive: true, force: true })
+    log('Corrupted Kuzu database removed')
+  }
+}
+
 export function is_kuzu_initialized() {
   return kuzu_connection !== null
 }
@@ -107,5 +126,6 @@ export const kuzu_database_client = {
   get_connection: get_kuzu_connection,
   execute_query: execute_kuzu_query,
   close: close_kuzu_connection,
+  destroy: destroy_kuzu_database,
   get_database_path: get_kuzu_database_path
 }
