@@ -17,6 +17,10 @@ import {
 } from './index-file-watcher.mjs'
 import { extract_thread_id_from_path } from './sync-constants.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import {
+  write_thread_sync_request,
+  write_thread_delete_request
+} from './thread-sync-ipc.mjs'
 
 const log = debug('embedded-index:sync:watcher')
 
@@ -62,6 +66,41 @@ export const thread_index_sync_hooks = {
       log('Removed thread: %s', thread_id)
     } catch (error) {
       log('Error handling thread delete %s: %s', file_path, error.message)
+    }
+  }
+}
+
+/**
+ * Thread sync forwarding hooks for the API process.
+ * Instead of syncing directly, these write to the IPC queue file
+ * so the index sync service can process them.
+ * Used when the API runs with read-only DuckDB access.
+ */
+export const thread_sync_forwarding_hooks = {
+  on_thread_sync: async ({ thread_id }) => {
+    try {
+      if (!thread_id) {
+        log('Missing thread_id in forwarding hook')
+        return
+      }
+
+      await write_thread_sync_request({ thread_id })
+    } catch (error) {
+      log('Error forwarding thread sync %s: %s', thread_id, error.message)
+    }
+  },
+
+  on_thread_delete: async (file_path) => {
+    try {
+      const thread_id = extract_thread_id_from_path(file_path)
+      if (!thread_id) {
+        log('Could not extract thread_id from path: %s', file_path)
+        return
+      }
+
+      await write_thread_delete_request({ thread_id })
+    } catch (error) {
+      log('Error forwarding thread delete %s: %s', file_path, error.message)
     }
   }
 }

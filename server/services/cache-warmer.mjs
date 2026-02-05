@@ -136,15 +136,18 @@ async function warm_activity_cache() {
       // Cold start: full computation, then bulk insert into cache table
       log('Cold start detected, performing full computation')
       const heatmap_data = await compute_fresh_days(days)
-      await upsert_heatmap_daily_batch({ entries: heatmap_data.data })
+      if (!embedded_index_manager.read_only) {
+        await upsert_heatmap_daily_batch({ entries: heatmap_data.data })
+      }
       cache.activity_heatmap = {
         data: heatmap_data,
         timestamp: Date.now(),
         days
       }
       log(
-        'Activity heatmap cache warmed (cold start, %d entries persisted)',
-        heatmap_data.data.length
+        'Activity heatmap cache warmed (cold start, %d entries%s)',
+        heatmap_data.data.length,
+        embedded_index_manager.read_only ? '' : ' persisted'
       )
       return
     }
@@ -194,8 +197,10 @@ async function warm_activity_cache() {
 
     const all_fresh = [...fresh_result.data, ...zero_entries]
 
-    // Persist fresh days
-    await upsert_heatmap_daily_batch({ entries: all_fresh })
+    // Persist fresh days (skip in read-only mode)
+    if (!embedded_index_manager.read_only) {
+      await upsert_heatmap_daily_batch({ entries: all_fresh })
+    }
 
     // Merge: frozen days as base, fresh days overwrite matching dates
     const merged_by_date = new Map()

@@ -64,6 +64,7 @@ const log = debug('embedded-index')
 class EmbeddedIndexManager {
   constructor() {
     this.initialized = false
+    this.read_only = false
     this.duckdb_ready = false
     this.index_config = null
     this.sync_in_progress = false
@@ -76,6 +77,17 @@ class EmbeddedIndexManager {
     // re-extraction when only metadata changes.
     // Cleared on rebuild and shutdown; bounded by total thread count.
     this._timeline_sync_cache = new Map()
+  }
+
+  /**
+   * Check if a write operation should be blocked in read-only mode.
+   * @param {string} operation_name - Name of the write operation for logging
+   * @returns {boolean} True if the operation is blocked
+   */
+  _is_write_blocked(operation_name) {
+    if (!this.read_only) return false
+    log('Write operation %s ignored in read-only mode', operation_name)
+    return true
   }
 
   /**
@@ -149,12 +161,13 @@ class EmbeddedIndexManager {
     return this.index_config
   }
 
-  async initialize() {
+  async initialize({ read_only = false } = {}) {
     if (this.initialized) {
       log('Index manager already initialized')
       return
     }
 
+    this.read_only = read_only
     const index_config = this._get_index_config()
 
     if (!index_config.enabled) {
@@ -162,7 +175,7 @@ class EmbeddedIndexManager {
       return
     }
 
-    log('Initializing embedded index manager')
+    log('Initializing embedded index manager (read_only: %s)', read_only)
 
     try {
       await this._initialize_duckdb(index_config)
@@ -175,17 +188,28 @@ class EmbeddedIndexManager {
 
     this.initialized = true
 
-    // Perform startup sync with fallback chain
-    if (this.duckdb_ready) {
+    // Perform startup sync with fallback chain (write mode only)
+    if (this.duckdb_ready && !this.read_only) {
       await this._perform_startup_sync()
     }
 
-    log('Embedded index manager initialized (duckdb: %s)', this.duckdb_ready)
+    log(
+      'Embedded index manager initialized (duckdb: %s, read_only: %s)',
+      this.duckdb_ready,
+      this.read_only
+    )
   }
 
   async _initialize_duckdb(index_config) {
-    await initialize_duckdb_client({ database_path: index_config.duckdb_path })
-    await create_duckdb_schema()
+    await initialize_duckdb_client({
+      database_path: index_config.duckdb_path,
+      read_only: this.read_only
+    })
+
+    // Schema creation requires write access
+    if (!this.read_only) {
+      await create_duckdb_schema()
+    }
   }
 
   /**
@@ -279,6 +303,10 @@ class EmbeddedIndexManager {
    * @returns {Promise<Object>} Resync result
    */
   async perform_resync() {
+    if (this._is_write_blocked('perform_resync')) {
+      return { success: false, error: 'Read-only mode' }
+    }
+
     if (!this.initialized) {
       log('Index manager not initialized, cannot resync')
       return { success: false, error: 'Not initialized' }
@@ -300,6 +328,10 @@ class EmbeddedIndexManager {
    * @returns {Promise<Object>} Sync result
    */
   async perform_sync({ mode }) {
+    if (this._is_write_blocked('perform_sync')) {
+      return { success: false, error: 'Read-only mode' }
+    }
+
     if (!this.initialized) {
       log('Index manager not initialized, cannot sync')
       return { success: false, error: 'Not initialized' }
@@ -330,6 +362,10 @@ class EmbeddedIndexManager {
    * Index is NOT available during this operation.
    */
   async reset_and_rebuild_index() {
+    if (this._is_write_blocked('reset_and_rebuild_index')) {
+      return
+    }
+
     const release_lock = await this._acquire_sync_lock()
     try {
       await this._reset_and_rebuild_index_internal()
@@ -488,6 +524,10 @@ class EmbeddedIndexManager {
   async sync_entity({ base_uri, entity_data }) {
     const result = { success: true, duckdb_synced: false }
 
+    if (this._is_write_blocked('sync_entity')) {
+      return { success: false, duckdb_synced: false }
+    }
+
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity sync')
       return { success: false, duckdb_synced: false }
@@ -529,6 +569,10 @@ class EmbeddedIndexManager {
   }
 
   async remove_entity({ base_uri }) {
+    if (this._is_write_blocked('remove_entity')) {
+      return
+    }
+
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity removal')
       return
@@ -551,6 +595,10 @@ class EmbeddedIndexManager {
    * @returns {{ success: boolean, duckdb_synced: boolean }}
    */
   async sync_thread({ thread_id, metadata }) {
+    if (this._is_write_blocked('sync_thread')) {
+      return { success: false, duckdb_synced: false }
+    }
+
     // Check if there's already a pending sync for this thread
     const pending = this._pending_thread_syncs.get(thread_id)
 
@@ -684,6 +732,10 @@ class EmbeddedIndexManager {
   }
 
   async remove_thread({ thread_id }) {
+    if (this._is_write_blocked('remove_thread')) {
+      return
+    }
+
     if (!this.initialized) {
       log('Index manager not initialized, skipping thread removal')
       return
@@ -728,6 +780,7 @@ class EmbeddedIndexManager {
     }
 
     this.initialized = false
+    this.read_only = false
     this.duckdb_ready = false
     this._timeline_sync_cache.clear()
     log('Embedded index manager shut down')
