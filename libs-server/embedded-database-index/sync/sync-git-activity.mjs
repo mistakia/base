@@ -16,7 +16,7 @@ import {
   set_index_metadata,
   INDEX_METADATA_KEYS
 } from '../duckdb/duckdb-metadata-operations.mjs'
-import { upsert_git_activity_daily } from '../duckdb/duckdb-activity-queries.mjs'
+import { upsert_git_activity_daily_batch } from '../duckdb/duckdb-activity-queries.mjs'
 
 const log = debug('embedded-index:sync:git-activity')
 
@@ -303,17 +303,15 @@ export async function sync_git_activity_incremental() {
     repos_synced++
   }
 
-  // Update DuckDB with combined activity
-  let dates_updated = 0
-  for (const [date, metrics] of combined_activity) {
-    await upsert_git_activity_daily({
-      date,
-      commits: metrics.commits,
-      lines_changed: metrics.lines_changed,
-      files_changed: metrics.files_changed
-    })
-    dates_updated++
-  }
+  // Update DuckDB with combined activity using batch insert
+  const entries = Array.from(combined_activity, ([date, metrics]) => ({
+    date,
+    commits: metrics.commits,
+    lines_changed: metrics.lines_changed,
+    files_changed: metrics.files_changed
+  }))
+
+  await upsert_git_activity_daily_batch({ entries })
 
   // Save new sync state
   await set_git_activity_sync_state({ state: new_sync_state })
@@ -321,13 +319,13 @@ export async function sync_git_activity_incremental() {
   log(
     'Incremental git activity sync complete: %d repos, %d dates updated',
     repos_synced,
-    dates_updated
+    entries.length
   )
 
   return {
     success: true,
     repos_synced,
-    dates_updated
+    dates_updated: entries.length
   }
 }
 
@@ -378,17 +376,15 @@ export async function backfill_git_activity_from_scratch({ days = 365 } = {}) {
     }
   }
 
-  // Store all activity in DuckDB
-  let dates_stored = 0
-  for (const [date, metrics] of combined_activity) {
-    await upsert_git_activity_daily({
-      date,
-      commits: metrics.commits,
-      lines_changed: metrics.lines_changed,
-      files_changed: metrics.files_changed
-    })
-    dates_stored++
-  }
+  // Store all activity in DuckDB using batch insert
+  const entries = Array.from(combined_activity, ([date, metrics]) => ({
+    date,
+    commits: metrics.commits,
+    lines_changed: metrics.lines_changed,
+    files_changed: metrics.files_changed
+  }))
+
+  await upsert_git_activity_daily_batch({ entries })
 
   // Save sync state
   await set_git_activity_sync_state({ state: new_sync_state })
@@ -396,12 +392,12 @@ export async function backfill_git_activity_from_scratch({ days = 365 } = {}) {
   log(
     'Git activity backfill complete: %d repos, %d dates stored',
     repos_processed,
-    dates_stored
+    entries.length
   )
 
   return {
     success: true,
     repos_processed,
-    dates_stored
+    dates_stored: entries.length
   }
 }

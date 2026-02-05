@@ -26,7 +26,11 @@ import {
   delete_thread_from_duckdb,
   delete_entity_from_duckdb,
   sync_entity_tags_to_duckdb,
-  sync_entity_relations_to_duckdb
+  sync_entity_relations_to_duckdb,
+  upsert_entities_batch,
+  sync_entities_tags_batch,
+  sync_entities_relations_batch,
+  BATCH_CHUNK_SIZE
 } from './duckdb/duckdb-entity-sync.mjs'
 import {
   extract_unified_entity_data,
@@ -492,22 +496,67 @@ class EmbeddedIndexManager {
         include_entity_types: ENTITY_DIRECTORIES
       })
 
-      log('Populating %d entities to index', entities.length)
+      log('Populating %d entities to index using batch operations', entities.length)
 
       let synced = 0
       let failed = 0
 
-      for (const entity of entities) {
-        const base_uri =
-          entity.entity_properties?.base_uri || entity.file_info?.base_uri
-        const result = await this.sync_entity({
-          base_uri,
-          entity_data: entity.entity_properties
-        })
-        if (result.success) {
-          synced++
-        } else {
-          failed++
+      for (let i = 0; i < entities.length; i += BATCH_CHUNK_SIZE) {
+        const chunk = entities.slice(i, i + BATCH_CHUNK_SIZE)
+
+        // Prepare batch data for this chunk
+        const entity_batch = []
+        const tags_batch = []
+        const relations_batch = []
+
+        for (const entity of chunk) {
+          try {
+            const entity_data = entity.entity_properties
+            const base_uri = entity_data?.base_uri || entity.file_info?.base_uri
+
+            if (!base_uri) {
+              failed++
+              continue
+            }
+
+            const unified_entity_data = extract_unified_entity_data({
+              entity_properties: entity_data
+            })
+            const tag_base_uris = extract_tags_from_entity({
+              entity_properties: entity_data
+            })
+            const relations = extract_relations_from_entity({
+              entity_properties: entity_data
+            })
+
+            if (unified_entity_data) {
+              entity_batch.push(unified_entity_data)
+            }
+
+            tags_batch.push({
+              entity_base_uri: base_uri,
+              tag_base_uris
+            })
+
+            relations_batch.push({
+              source_base_uri: base_uri,
+              relations
+            })
+          } catch (error) {
+            log('Error preparing entity for batch: %s', error.message)
+            failed++
+          }
+        }
+
+        // Execute batch operations for this chunk
+        try {
+          await upsert_entities_batch({ entities: entity_batch })
+          await sync_entities_tags_batch({ entity_tags: tags_batch })
+          await sync_entities_relations_batch({ entity_relations: relations_batch })
+          synced += entity_batch.length
+        } catch (error) {
+          log('Error executing batch operations: %s', error.message)
+          failed += entity_batch.length
         }
       }
 

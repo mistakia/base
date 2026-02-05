@@ -161,13 +161,18 @@ export async function sync_entity_tags_to_duckdb({
     // Insert new tags (dedupe to handle entities with duplicate tags in frontmatter)
     if (tag_base_uris && tag_base_uris.length > 0) {
       const unique_tags = [...new Set(tag_base_uris)]
-      for (const tag_base_uri of unique_tags) {
-        await execute_duckdb_run({
-          query:
-            'INSERT INTO entity_tags (entity_base_uri, tag_base_uri) VALUES (?, ?)',
-          parameters: [entity_base_uri, tag_base_uri]
-        })
-      }
+
+      // Use batch insert for multiple tags
+      const placeholders = unique_tags.map(() => '(?, ?)').join(', ')
+      const parameters = unique_tags.flatMap((tag_base_uri) => [
+        entity_base_uri,
+        tag_base_uri
+      ])
+
+      await execute_duckdb_run({
+        query: `INSERT INTO entity_tags (entity_base_uri, tag_base_uri) VALUES ${placeholders}`,
+        parameters
+      })
     }
 
     log('Entity tags synced: %s', entity_base_uri)
@@ -200,21 +205,25 @@ export async function sync_entity_relations_to_duckdb({
 
     // Insert new relations
     if (relations && relations.length > 0) {
-      for (const relation of relations) {
-        const { target_base_uri, relation_type, context } = relation
-        if (target_base_uri) {
-          await execute_duckdb_run({
-            query: `INSERT INTO entity_relations (source_base_uri, target_base_uri, relation_type, context)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT DO UPDATE SET context = excluded.context`,
-            parameters: [
-              source_base_uri,
-              target_base_uri,
-              relation_type || 'unknown',
-              context || null
-            ]
-          })
-        }
+      // Filter relations with valid target_base_uri
+      const valid_relations = relations.filter((r) => r.target_base_uri)
+
+      if (valid_relations.length > 0) {
+        // Use batch insert for multiple relations
+        const placeholders = valid_relations.map(() => '(?, ?, ?, ?)').join(', ')
+        const parameters = valid_relations.flatMap((relation) => [
+          source_base_uri,
+          relation.target_base_uri,
+          relation.relation_type || 'unknown',
+          relation.context || null
+        ])
+
+        await execute_duckdb_run({
+          query: `INSERT INTO entity_relations (source_base_uri, target_base_uri, relation_type, context)
+                  VALUES ${placeholders}
+                  ON CONFLICT DO UPDATE SET context = excluded.context`,
+          parameters
+        })
       }
     }
 
@@ -379,4 +388,188 @@ export async function delete_entity_from_duckdb({ entity_id, base_uri }) {
     log('Error deleting entity: %s', error.message)
     throw error
   }
+}
+
+// ---------------------------------------------------------------------------
+// Batch operations for full rebuild
+// ---------------------------------------------------------------------------
+
+export const BATCH_CHUNK_SIZE = 50
+
+/**
+ * Batch upsert multiple entities to unified entities table
+ *
+ * @param {Object} params - Parameters
+ * @param {Array} params.entities - Array of entity data objects with frontmatter
+ */
+export async function upsert_entities_batch({ entities }) {
+  if (!entities || entities.length === 0) return
+
+  log('Batch upserting %d entities', entities.length)
+
+  for (let i = 0; i < entities.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = entities.slice(i, i + BATCH_CHUNK_SIZE)
+
+    const placeholders = chunk
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .join(', ')
+
+    const parameters = chunk.flatMap((entity_data) => {
+      const { frontmatter, base_uri, entity_id, type } = entity_data
+      const now = new Date().toISOString()
+
+      return [
+        base_uri,
+        entity_id,
+        type,
+        frontmatter?.title || null,
+        frontmatter?.description || null,
+        frontmatter?.status || null,
+        frontmatter?.priority || null,
+        frontmatter?.archived || false,
+        frontmatter?.user_public_key || entity_data.user_public_key,
+        frontmatter?.created_at || now,
+        frontmatter?.updated_at || now,
+        frontmatter?.archived_at || null,
+        JSON.stringify(frontmatter || {})
+      ]
+    })
+
+    await execute_duckdb_run({
+      query: `
+        INSERT INTO entities (
+          base_uri, entity_id, type, title, description, status, priority,
+          archived, user_public_key, created_at, updated_at, archived_at, frontmatter
+        ) VALUES ${placeholders}
+        ON CONFLICT (base_uri) DO UPDATE SET
+          entity_id = excluded.entity_id,
+          type = excluded.type,
+          title = excluded.title,
+          description = excluded.description,
+          status = excluded.status,
+          priority = excluded.priority,
+          archived = excluded.archived,
+          user_public_key = excluded.user_public_key,
+          created_at = excluded.created_at,
+          updated_at = excluded.updated_at,
+          archived_at = excluded.archived_at,
+          frontmatter = excluded.frontmatter
+      `,
+      parameters
+    })
+  }
+
+  log('Batch upserted %d entities', entities.length)
+}
+
+/**
+ * Batch sync tags for multiple entities
+ * Deletes all existing tags for the given entities, then inserts all new tags
+ *
+ * @param {Object} params - Parameters
+ * @param {Array} params.entity_tags - Array of { entity_base_uri, tag_base_uris }
+ */
+export async function sync_entities_tags_batch({ entity_tags }) {
+  if (!entity_tags || entity_tags.length === 0) return
+
+  // Collect all base_uris for batch delete
+  const entity_base_uris = entity_tags.map((et) => et.entity_base_uri)
+
+  log('Batch syncing tags for %d entities', entity_base_uris.length)
+
+  // Batch delete existing tags for all entities
+  for (let i = 0; i < entity_base_uris.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = entity_base_uris.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '?').join(', ')
+
+    await execute_duckdb_run({
+      query: `DELETE FROM entity_tags WHERE entity_base_uri IN (${placeholders})`,
+      parameters: chunk
+    })
+  }
+
+  // Flatten all tag pairs for batch insert
+  const all_tag_pairs = []
+  for (const { entity_base_uri, tag_base_uris } of entity_tags) {
+    if (tag_base_uris && tag_base_uris.length > 0) {
+      const unique_tags = [...new Set(tag_base_uris)]
+      for (const tag_base_uri of unique_tags) {
+        all_tag_pairs.push([entity_base_uri, tag_base_uri])
+      }
+    }
+  }
+
+  // Batch insert all tags
+  for (let i = 0; i < all_tag_pairs.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = all_tag_pairs.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '(?, ?)').join(', ')
+    const parameters = chunk.flat()
+
+    await execute_duckdb_run({
+      query: `INSERT INTO entity_tags (entity_base_uri, tag_base_uri) VALUES ${placeholders}`,
+      parameters
+    })
+  }
+
+  log('Batch synced %d tag pairs for %d entities', all_tag_pairs.length, entity_base_uris.length)
+}
+
+/**
+ * Batch sync relations for multiple entities
+ * Deletes all existing relations for the given entities, then inserts all new relations
+ *
+ * @param {Object} params - Parameters
+ * @param {Array} params.entity_relations - Array of { source_base_uri, relations }
+ */
+export async function sync_entities_relations_batch({ entity_relations }) {
+  if (!entity_relations || entity_relations.length === 0) return
+
+  // Collect all source_base_uris for batch delete
+  const source_base_uris = entity_relations.map((er) => er.source_base_uri)
+
+  log('Batch syncing relations for %d entities', source_base_uris.length)
+
+  // Batch delete existing relations for all entities
+  for (let i = 0; i < source_base_uris.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = source_base_uris.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '?').join(', ')
+
+    await execute_duckdb_run({
+      query: `DELETE FROM entity_relations WHERE source_base_uri IN (${placeholders})`,
+      parameters: chunk
+    })
+  }
+
+  // Flatten all relation tuples for batch insert
+  const all_relation_tuples = []
+  for (const { source_base_uri, relations } of entity_relations) {
+    if (relations && relations.length > 0) {
+      for (const relation of relations) {
+        if (relation.target_base_uri) {
+          all_relation_tuples.push([
+            source_base_uri,
+            relation.target_base_uri,
+            relation.relation_type || 'unknown',
+            relation.context || null
+          ])
+        }
+      }
+    }
+  }
+
+  // Batch insert all relations
+  for (let i = 0; i < all_relation_tuples.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = all_relation_tuples.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
+    const parameters = chunk.flat()
+
+    await execute_duckdb_run({
+      query: `INSERT INTO entity_relations (source_base_uri, target_base_uri, relation_type, context)
+              VALUES ${placeholders}
+              ON CONFLICT DO UPDATE SET context = excluded.context`,
+      parameters
+    })
+  }
+
+  log('Batch synced %d relations for %d entities', all_relation_tuples.length, source_base_uris.length)
 }
