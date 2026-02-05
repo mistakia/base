@@ -123,7 +123,10 @@ const SessionCard = ({ item }) => {
       </div>
 
       {item.latest_timeline_event && (
-        <CompactTimelineEvent timeline_event={item.latest_timeline_event} />
+        <CompactTimelineEvent
+          timeline_event={item.latest_timeline_event}
+          thread_id={item.id}
+        />
       )}
 
       {show_footer && (

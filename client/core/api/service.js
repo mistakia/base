@@ -59,6 +59,11 @@ export const api = {
     return { url }
   },
 
+  get_timeline_entry({ thread_id, entry_id }) {
+    const url = `${API_URL}/threads/${thread_id}/timeline/${entry_id}`
+    return { url }
+  },
+
   post_thread({
     inference_provider,
     model,

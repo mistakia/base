@@ -3,6 +3,10 @@ import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useParams } from 'react-router-dom'
 
+import {
+  subscribe_to_thread,
+  unsubscribe_from_thread
+} from '@core/websocket/service'
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
 import PageHead from '@views/components/PageHead/index.js'
@@ -28,14 +32,18 @@ const ThreadPage = ({
     if (id) {
       load_thread(id)
       select_thread(id)
+      subscribe_to_thread(id)
     }
   }, [id, load_thread, select_thread])
 
   useEffect(() => {
     return () => {
       clear_selected_thread()
+      if (id) {
+        unsubscribe_from_thread(id)
+      }
     }
-  }, [clear_selected_thread])
+  }, [id, clear_selected_thread])
 
   if (is_loading) {
     return (

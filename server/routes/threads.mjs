@@ -18,6 +18,8 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
+import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { thread_constants } from '#libs-shared'
 import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
@@ -331,6 +333,56 @@ router.get('/:thread_id', async (req, res) => {
     }
 
     handle_errors(res, error, 'getting thread')
+  }
+})
+
+// Get a single timeline entry by ID (for on-demand full content fetch)
+router.get('/:thread_id/timeline/:entry_id', async (req, res) => {
+  try {
+    const { thread_id, entry_id } = req.params
+    const requesting_user_key = req.user?.user_public_key || null
+
+    log(`Getting timeline entry ${entry_id} for thread ${thread_id}`)
+
+    // Check permission
+    const permission_result = await check_thread_permission({
+      user_public_key: requesting_user_key,
+      thread_id
+    })
+
+    if (!permission_result.read?.allowed) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to access this thread'
+      })
+    }
+
+    // Read the timeline and find the entry
+    const thread_base_directory = get_thread_base_directory()
+    const timeline_path = `${thread_base_directory}/${thread_id}/timeline.jsonl`
+    const timeline = await read_timeline_jsonl({ timeline_path })
+
+    if (!timeline) {
+      return res.status(404).json({
+        error: 'Timeline not found',
+        message: `No timeline found for thread ${thread_id}`
+      })
+    }
+
+    const entry = timeline.find((e) => e.id === entry_id)
+
+    if (!entry) {
+      return res.status(404).json({
+        error: 'Entry not found',
+        message: `Timeline entry ${entry_id} not found in thread ${thread_id}`
+      })
+    }
+
+    // Set cache headers - timeline entries are immutable once written
+    res.set('Cache-Control', 'private, max-age=3600')
+    res.json(entry)
+  } catch (error) {
+    handle_errors(res, error, 'getting timeline entry')
   }
 })
 

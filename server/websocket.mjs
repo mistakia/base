@@ -4,21 +4,40 @@ import debug from 'debug'
 import {
   subscribe_to_file,
   unsubscribe_from_file,
-  remove_connection
+  remove_connection as remove_file_connection
 } from '#libs-server/file-subscriptions/index.mjs'
+import {
+  subscribe_to_thread,
+  unsubscribe_from_thread,
+  remove_connection as remove_thread_connection
+} from '#libs-server/thread-subscriptions/index.mjs'
 
 const log = debug('websocket')
 
 const HEARTBEAT_INTERVAL_MS = 30000
 
-const wss = new WebSocketServer({ noServer: true })
+const wss = new WebSocketServer({
+  noServer: true,
+  perMessageDeflate: {
+    zlibDeflateOptions: {
+      chunkSize: 1024,
+      level: 6
+    },
+    threshold: 1024
+  }
+})
+
+const remove_all_subscriptions = (ws) => {
+  remove_file_connection(ws)
+  remove_thread_connection(ws)
+}
 
 // Heartbeat: detect and clean up dead connections
 const heartbeat_interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.is_alive === false) {
       log('Terminating unresponsive WebSocket connection')
-      remove_connection(ws)
+      remove_all_subscriptions(ws)
       return ws.terminate()
     }
 
@@ -59,6 +78,26 @@ wss.on('connection', (ws) => {
           }
           break
 
+        case 'SUBSCRIBE_THREAD':
+          if (message.payload?.thread_id) {
+            subscribe_to_thread({ ws, thread_id: message.payload.thread_id })
+            log('Client subscribed to thread: %s', message.payload.thread_id)
+          }
+          break
+
+        case 'UNSUBSCRIBE_THREAD':
+          if (message.payload?.thread_id) {
+            unsubscribe_from_thread({
+              ws,
+              thread_id: message.payload.thread_id
+            })
+            log(
+              'Client unsubscribed from thread: %s',
+              message.payload.thread_id
+            )
+          }
+          break
+
         default:
           // Unknown message type - ignore
           break
@@ -70,7 +109,7 @@ wss.on('connection', (ws) => {
 
   // Clean up subscriptions when connection closes
   ws.on('close', () => {
-    remove_connection(ws)
+    remove_all_subscriptions(ws)
     log('WebSocket connection closed, subscriptions cleaned up')
   })
 })

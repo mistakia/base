@@ -15,6 +15,9 @@ let interval = null
 // Track active file subscriptions for reconnection
 const active_file_subscriptions = new Set()
 
+// Track active thread subscriptions for reconnection
+const active_thread_subscriptions = new Set()
+
 const keepalive_message = JSON.stringify({ type: 'KEEPALIVE' })
 const keepalive = () => {
   if (ws && ws.readyState === 1) ws.send(keepalive_message)
@@ -26,6 +29,16 @@ const keepalive = () => {
 const resubscribe_to_files = () => {
   for (const path of active_file_subscriptions) {
     const message = { type: 'SUBSCRIBE_FILE', payload: { path } }
+    send(message)
+  }
+}
+
+/**
+ * Re-subscribe to all active thread subscriptions after reconnection
+ */
+const resubscribe_to_threads = () => {
+  for (const thread_id of active_thread_subscriptions) {
+    const message = { type: 'SUBSCRIBE_THREAD', payload: { thread_id } }
     send(message)
   }
 }
@@ -42,8 +55,9 @@ export const open_websocket = (params) => {
     messages.forEach((msg) => ws.send(JSON.stringify(msg)))
     messages = []
 
-    // Re-subscribe to all active file subscriptions
+    // Re-subscribe to all active subscriptions
     resubscribe_to_files()
+    resubscribe_to_threads()
 
     interval = setInterval(keepalive, 30000)
 
@@ -120,6 +134,48 @@ export const unsubscribe_from_file = (path) => {
       JSON.stringify({
         type: 'UNSUBSCRIBE_FILE',
         payload: { path: normalized_path }
+      })
+    )
+  }
+}
+
+/**
+ * Subscribe to thread timeline updates for a specific thread
+ * Subscribed threads receive full timeline entry payloads via WebSocket.
+ * Non-subscribed threads only receive truncated summaries.
+ * @param {string} thread_id - The thread ID to subscribe to
+ */
+export const subscribe_to_thread = (thread_id) => {
+  if (!thread_id) return
+
+  const already_subscribed = active_thread_subscriptions.has(thread_id)
+  active_thread_subscriptions.add(thread_id)
+
+  if (websocket_is_open() && !already_subscribed) {
+    ws.send(
+      JSON.stringify({
+        type: 'SUBSCRIBE_THREAD',
+        payload: { thread_id }
+      })
+    )
+  }
+}
+
+/**
+ * Unsubscribe from thread timeline updates
+ * @param {string} thread_id - The thread ID to unsubscribe from
+ */
+export const unsubscribe_from_thread = (thread_id) => {
+  if (!thread_id) return
+
+  const was_subscribed = active_thread_subscriptions.has(thread_id)
+  active_thread_subscriptions.delete(thread_id)
+
+  if (websocket_is_open() && was_subscribed) {
+    ws.send(
+      JSON.stringify({
+        type: 'UNSUBSCRIBE_THREAD',
+        payload: { thread_id }
       })
     )
   }

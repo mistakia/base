@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 
+import { API_URL } from '@core/constants'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import ExpandToggle from '@components/primitives/ExpandToggle'
 import { process_message_content } from '@components/ThreadTimelineView/utils/message-processing.js'
@@ -198,26 +199,78 @@ const get_assistant_content = (timeline_event) => {
 }
 
 /**
+ * Fetch full timeline entry content from REST endpoint
+ */
+const fetch_full_timeline_entry = async ({ thread_id, entry_id }) => {
+  const url = `${API_URL}/threads/${thread_id}/timeline/${entry_id}`
+  const response = await fetch(url, { credentials: 'include' })
+  if (!response.ok) {
+    throw new Error(`Failed to fetch entry: ${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
  * CompactTimelineEvent
  *
  * A compact display of a timeline event for use in session cards.
  * Shows a brief summary of the event.
  * For assistant messages, shows markdown content with expand/collapse.
+ * Supports truncated entries from tiered WebSocket delivery with on-demand
+ * full content fetch for assistant message expansion.
  */
-const CompactTimelineEvent = ({ timeline_event }) => {
+const CompactTimelineEvent = ({ timeline_event, thread_id }) => {
   // State for collapsing/expanding the message (default: collapsed)
   const [is_expanded, set_is_expanded] = useState(false)
+  const [full_entry, set_full_entry] = useState(null)
+  const [is_loading_entry, set_is_loading_entry] = useState(false)
+  const [fetch_error, set_fetch_error] = useState(null)
 
-  const toggle_expanded = useCallback((e) => {
-    e.stopPropagation()
-    set_is_expanded((v) => !v)
-  }, [])
+  const toggle_expanded = useCallback(
+    async (e) => {
+      e.stopPropagation()
+
+      if (is_expanded) {
+        set_is_expanded(false)
+        return
+      }
+
+      // If truncated and no full entry cached, fetch it
+      if (
+        timeline_event.truncated &&
+        !full_entry &&
+        thread_id &&
+        timeline_event.id
+      ) {
+        set_is_loading_entry(true)
+        set_fetch_error(null)
+        try {
+          const entry = await fetch_full_timeline_entry({
+            thread_id,
+            entry_id: timeline_event.id
+          })
+          set_full_entry(entry)
+          set_is_expanded(true)
+        } catch (error) {
+          set_fetch_error(error.message)
+        } finally {
+          set_is_loading_entry(false)
+        }
+        return
+      }
+
+      set_is_expanded(true)
+    },
+    [is_expanded, timeline_event, full_entry, thread_id]
+  )
 
   if (!timeline_event) return null
 
   // Special handling for assistant messages - show markdown content
   if (is_assistant_message(timeline_event)) {
-    const full_content = get_assistant_content(timeline_event)
+    // Use full_entry if fetched (for truncated entries), otherwise use timeline_event
+    const content_source = full_entry || timeline_event
+    const full_content = get_assistant_content(content_source)
 
     return (
       <div className='compact-timeline-event compact-timeline-event--message'>
@@ -227,9 +280,12 @@ const CompactTimelineEvent = ({ timeline_event }) => {
             is_expanded={is_expanded}
             on_toggle={toggle_expanded}
             expanded_label='Collapse'
-            collapsed_label='Expand'
+            collapsed_label={is_loading_entry ? 'Loading...' : 'Expand'}
           />
         </div>
+        {fetch_error && (
+          <div className='compact-timeline-event__error'>{fetch_error}</div>
+        )}
         {is_expanded && (
           <div className='compact-timeline-event__content'>
             <MarkdownViewer content={full_content} />
@@ -251,14 +307,17 @@ const CompactTimelineEvent = ({ timeline_event }) => {
 
 CompactTimelineEvent.propTypes = {
   timeline_event: PropTypes.shape({
+    id: PropTypes.string,
     type: PropTypes.string.isRequired,
     content: PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.object,
       PropTypes.array
     ]),
-    role: PropTypes.string
-  })
+    role: PropTypes.string,
+    truncated: PropTypes.bool
+  }),
+  thread_id: PropTypes.string
 }
 
 export default CompactTimelineEvent

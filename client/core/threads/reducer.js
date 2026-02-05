@@ -429,10 +429,17 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
     case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
       const { thread_id, entry } = payload
 
-      // Update selected thread timeline
-      let new_state = append_timeline_entry(state, thread_id, entry)
+      // Only append full (non-truncated) entries to the selected thread timeline.
+      // Truncated entries are received when the client is not subscribed to the
+      // thread and contain only summary fields for session card display.
+      let new_state = state
+      if (!entry.truncated) {
+        new_state = append_timeline_entry(state, thread_id, entry)
+      }
 
-      // Also update the thread in the basic threads list with the new latest_timeline_event
+      // Update the basic threads list with the latest_timeline_event
+      // (works for both full and truncated entries since session cards
+      // only need summary-level fields)
       // Skip if entry is a system event (should not be shown as latest)
       if (entry.type !== 'system') {
         new_state = update_thread_in_basic_list(new_state, thread_id, {
