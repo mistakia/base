@@ -253,4 +253,3 @@ export function extract_thread_metadata_from_file({
 
   return extract_thread_index_data({ thread_id, metadata })
 }
-

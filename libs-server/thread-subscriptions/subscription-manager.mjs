@@ -128,7 +128,10 @@ export function remove_connection(ws) {
   // Remove the connection's subscription set
   thread_subscriptions.delete(ws)
 
-  log('Removed connection with %d thread subscriptions', connection_threads.size)
+  log(
+    'Removed connection with %d thread subscriptions',
+    connection_threads.size
+  )
 }
 
 /**

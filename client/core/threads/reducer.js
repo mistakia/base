@@ -180,9 +180,7 @@ const LAST_7_DAYS_VIEW = create_view({
       {
         column_id: 'created_at',
         operator: TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
-        value: new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        ).toISOString()
+        value: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
       }
     ])
   })

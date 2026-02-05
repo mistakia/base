@@ -32,6 +32,11 @@ export const is_displayable_system_event = (event) => {
     return true
   }
 
+  // Display task notifications (queue operations)
+  if (metadata.unsupported_message_type === 'queue-operation') {
+    return true
+  }
+
   // Hide all other system events (info, suggestion, null, unsupported)
   return false
 }
@@ -67,6 +72,14 @@ export const get_system_event_display = (event) => {
     return {
       label: content || 'Warning',
       severity: 'warning'
+    }
+  }
+
+  // Task notification (queue operation)
+  if (metadata.unsupported_message_type === 'queue-operation') {
+    return {
+      label: content,
+      severity: 'tasknotification'
     }
   }
 

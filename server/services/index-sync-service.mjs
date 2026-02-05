@@ -125,7 +125,10 @@ export const start_index_sync_service = async () => {
           metadata = await read_thread_metadata_from_disk(thread_id)
         }
         if (!metadata) {
-          log('Skipping thread sync %s: no metadata found after retry', thread_id)
+          log(
+            'Skipping thread sync %s: no metadata found after retry',
+            thread_id
+          )
           return
         }
         await embedded_index_manager.sync_thread({ thread_id, metadata })
@@ -193,12 +196,9 @@ export const stop_index_sync_service = async () => {
 // Standalone Execution
 // ============================================================================
 
-const is_direct_execution = process.argv[1]?.endsWith(
-  'index-sync-service.mjs'
-)
+const is_direct_execution = process.argv[1]?.endsWith('index-sync-service.mjs')
 const is_pm2_execution =
-  process.env.pm_id !== undefined &&
-  process.env.name === 'index-sync-service'
+  process.env.pm_id !== undefined && process.env.name === 'index-sync-service'
 const is_main_module = is_direct_execution || is_pm2_execution
 
 if (is_main_module) {

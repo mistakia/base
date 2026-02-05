@@ -196,7 +196,10 @@ const flush_batch_for_thread = async (thread_id) => {
             JSON.stringify({ type: event_type, payload: redacted_payload })
           )
         } catch (send_error) {
-          log('Failed to send batched event to unauthenticated client:', send_error)
+          log(
+            'Failed to send batched event to unauthenticated client:',
+            send_error
+          )
         }
         continue
       }
@@ -373,7 +376,10 @@ const emit_timeline_entry_tiered = async ({ thread_id, payload }) => {
             JSON.stringify({ type: event_type, payload: redacted_payload })
           )
         } catch (send_error) {
-          log('Failed to send to unauthenticated subscribed client:', send_error)
+          log(
+            'Failed to send to unauthenticated subscribed client:',
+            send_error
+          )
         }
         continue
       }

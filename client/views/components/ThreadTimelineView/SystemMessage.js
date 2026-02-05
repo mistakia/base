@@ -7,6 +7,7 @@ import PanToolIcon from '@mui/icons-material/PanTool'
 import './SystemMessage.styl'
 import { ansi_to_html } from '@views/utils/ansi-to-html.js'
 import { get_system_event_display } from './utils/system-event-utils.js'
+import TaskNotificationMessage from './TaskNotificationMessage'
 
 const SystemMessage = ({ message, working_directory = null }) => {
   const [is_expanded, set_is_expanded] = useState(false)
@@ -16,6 +17,25 @@ const SystemMessage = ({ message, working_directory = null }) => {
   }, [])
 
   const { label, severity } = get_system_event_display(message)
+
+  // Route task notifications to the dedicated component
+  if (severity === 'tasknotification') {
+    // System event content may be JSON-wrapped; extract the raw text
+    let raw_content = label || ''
+    if (typeof raw_content === 'string') {
+      try {
+        const parsed = JSON.parse(raw_content)
+        if (typeof parsed === 'string') {
+          raw_content = parsed
+        } else if (parsed && typeof parsed.content === 'string') {
+          raw_content = parsed.content
+        }
+      } catch {
+        // not JSON, use as-is
+      }
+    }
+    return <TaskNotificationMessage message={{ content: raw_content }} />
+  }
 
   let content = label || ''
   if (typeof content !== 'string') {

@@ -1,0 +1,63 @@
+.task-notification
+  display: flex
+  align-items: center
+  flex-wrap: wrap
+  gap: $space_sm
+  padding: $space_xs $space_sm
+  border: 1px solid $color_border_light
+  border-radius: $radius_sm
+  font-family: $font_family_mono
+  font-size: $font_size_sm
+  line-height: 1.4
+
+  &--clickable
+    cursor: pointer
+    transition: background-color $transition_fast
+
+    &:hover
+      background-color: $color_surface_hover
+
+  &--failed
+    border-color: rgba($color_error, 0.3)
+
+.task-notification__dot
+  flex-shrink: 0
+  width: 8px
+  height: 8px
+  border-radius: 50%
+
+  &--completed
+    background-color: $color_success
+
+  &--failed
+    background-color: $color_error
+
+.task-notification__summary
+  flex: 1
+  min-width: 0
+  color: $color_text
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.task-notification__id
+  flex-shrink: 0
+  color: $color_text_tertiary
+  font-size: $font_size_xs
+
+.task-notification__details
+  flex-basis: 100%
+  padding-top: $space_xs
+  border-top: 1px solid $color_border_light
+  display: flex
+  flex-direction: column
+  gap: $space_xxs
+
+.task-notification__path
+  color: $color_text_secondary
+  font-size: $font_size_xs
+  word-break: break-all
+
+.task-notification__trailing
+  color: $color_text_tertiary
+  font-size: $font_size_xs

@@ -233,7 +233,9 @@ try {
         set_thread_watcher_hooks(thread_sync_forwarding_hooks)
         logger('Thread sync forwarding hooks attached')
       } catch (hook_error) {
-        logger(`Failed to set thread sync forwarding hooks: ${hook_error.message}`)
+        logger(
+          `Failed to set thread sync forwarding hooks: ${hook_error.message}`
+        )
         logger(hook_error)
       }
     }

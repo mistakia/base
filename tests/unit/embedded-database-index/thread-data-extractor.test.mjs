@@ -2,9 +2,7 @@
 
 import { expect } from 'chai'
 
-import {
-  extract_edit_metrics_from_timeline
-} from '#libs-server/embedded-database-index/sync/thread-data-extractor.mjs'
+import { extract_edit_metrics_from_timeline } from '#libs-server/embedded-database-index/sync/thread-data-extractor.mjs'
 
 describe('thread-data-extractor', () => {
   describe('extract_edit_metrics_from_timeline', () => {

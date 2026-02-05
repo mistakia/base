@@ -41,7 +41,11 @@ let is_processing = false
  */
 function get_queue_file_path() {
   const user_base_directory = config.user_base_directory
-  return path.join(user_base_directory, 'embedded-database-index', QUEUE_FILE_NAME)
+  return path.join(
+    user_base_directory,
+    'embedded-database-index',
+    QUEUE_FILE_NAME
+  )
 }
 
 // ============================================================================
@@ -271,10 +275,7 @@ async function process_queue({ on_thread_sync, on_thread_delete }) {
 
     for (const thread_id of syncs) {
       try {
-        await with_timeout(
-          on_thread_sync({ thread_id }),
-          OPERATION_TIMEOUT_MS
-        )
+        await with_timeout(on_thread_sync({ thread_id }), OPERATION_TIMEOUT_MS)
       } catch (error) {
         log('Error processing thread sync %s: %s', thread_id, error.message)
       }

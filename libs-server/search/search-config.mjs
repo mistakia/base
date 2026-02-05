@@ -39,7 +39,16 @@ const DEFAULT_CONFIG = {
     },
     entities: {
       enabled: true,
-      types: ['task', 'workflow', 'guideline', 'text', 'person', 'tag', 'physical-item', 'physical-location']
+      types: [
+        'task',
+        'workflow',
+        'guideline',
+        'text',
+        'person',
+        'tag',
+        'physical-item',
+        'physical-location'
+      ]
     },
     directories: {
       enabled: true

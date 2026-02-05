@@ -9,6 +9,7 @@ import SystemMessage from './SystemMessage'
 import ThreadStateChangeMessage from './ThreadStateChangeMessage'
 import ToolEvent from './ToolEvent'
 import HookMessage from './HookMessage'
+import TaskNotificationMessage from './TaskNotificationMessage'
 import { process_message_content } from './utils/message-processing.js'
 
 const TimelineEvent = ({
@@ -26,9 +27,16 @@ const TimelineEvent = ({
     typeof timeline_event.content === 'string' &&
     /<.+-hook>/.test(timeline_event.content)
 
+  // Check if this is a task notification message
+  const is_task_notification =
+    timeline_event?.type === 'message' &&
+    timeline_event.role === 'user' &&
+    typeof timeline_event.content === 'string' &&
+    /<task-notification>/.test(timeline_event.content)
+
   // Determine if this event has no meaningful content and should be hidden entirely
   let should_hide_event = false
-  if (timeline_event?.type === 'message' && !is_hook) {
+  if (timeline_event?.type === 'message' && !is_hook && !is_task_notification) {
     const processed = process_message_content({
       content: timeline_event.content,
       working_directory
@@ -42,9 +50,11 @@ const TimelineEvent = ({
     switch (timeline_event.type) {
       case 'message':
         if (timeline_event.role === 'user') {
-          // Check if this is a hook message
           if (is_hook) {
             return <HookMessage message={timeline_event} />
+          }
+          if (is_task_notification) {
+            return <TaskNotificationMessage message={timeline_event} />
           }
           return (
             <UserMessage

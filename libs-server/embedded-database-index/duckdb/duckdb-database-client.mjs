@@ -27,7 +27,11 @@ export async function initialize_duckdb_client({
 
   database_path = in_memory ? ':memory:' : db_path
   connection_read_only = read_only
-  log('Initializing DuckDB client at %s (read_only: %s)', database_path, read_only)
+  log(
+    'Initializing DuckDB client at %s (read_only: %s)',
+    database_path,
+    read_only
+  )
 
   if (!in_memory && db_path) {
     // Ensure directory exists
