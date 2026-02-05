@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import databases from './databases.mjs'
 
 const router = express.Router()
 
@@ -217,7 +216,5 @@ router.get('/:username', async (req, res) => {
     res.status(500).send({ error: error.message })
   }
 })
-
-router.use('/:user_public_key/databases', databases)
 
 export default router

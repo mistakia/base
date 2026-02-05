@@ -115,70 +115,8 @@ router.post('/webhooks', async (req, res) => {
       }
 
       case 'pull_request': {
-        // Handle pull request events (merged, closed, reopened)
-        const action = req.body.action
-        const pull_request = req.body.pull_request
-        const repository = req.body.repository
-        const number = req.body.number
-        const sender = req.body.sender
-
-        // Validate required fields according to schema
-        if (!action || !pull_request || !repository || !number || !sender) {
-          const missing_fields = []
-          if (!action) missing_fields.push('action')
-          if (!pull_request) missing_fields.push('pull_request')
-          if (!repository) missing_fields.push('repository')
-          if (!number) missing_fields.push('number')
-          if (!sender) missing_fields.push('sender')
-
-          log(
-            `Invalid pull_request event payload - missing required fields: ${missing_fields.join(', ')}`
-          )
-          return res.status(400).json({
-            error: 'Bad Request',
-            message: `Invalid pull_request event payload - missing required fields: ${missing_fields.join(', ')}`
-          })
-        }
-
-        // Validate repository object has required fields
-        const required_repo_fields = ['id', 'full_name', 'owner']
-        const missing_repo_fields = required_repo_fields.filter(
-          (field) => !repository[field]
-        )
-        if (missing_repo_fields.length > 0) {
-          log(
-            `Invalid repository object - missing required fields: ${missing_repo_fields.join(', ')}`
-          )
-          return res.status(400).json({
-            error: 'Bad Request',
-            message: `Invalid repository object - missing required fields: ${missing_repo_fields.join(', ')}`
-          })
-        }
-
-        // Validate repository owner has required fields
-        if (!repository.owner.id || !repository.owner.login) {
-          log(
-            'Invalid repository owner object - missing required fields: id and/or login'
-          )
-          return res.status(400).json({
-            error: 'Bad Request',
-            message:
-              'Invalid repository owner object - missing required fields: id and/or login'
-          })
-        }
-
-        log(
-          `Processing pull request event: ${action} for ${repository.full_name}#${number}`
-        )
-
-        // Change request system removed - PR events acknowledged but no action taken
-        log(
-          `PR webhook: ${repository.full_name}#${number} - Event '${action}' acknowledged (change request system removed)`
-        )
-        return res.json({
-          ok: true,
-          message: `Pull request event '${action}' acknowledged but no action taken (change request system removed)`
-        })
+        log(`PR webhook: ${req.body.action} event acknowledged (no handler)`)
+        return res.json({ ok: true })
       }
 
       case 'project_card': {
