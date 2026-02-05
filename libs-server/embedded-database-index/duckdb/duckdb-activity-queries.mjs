@@ -93,6 +93,49 @@ export async function upsert_git_activity_daily({
 }
 
 /**
+ * Batch upsert git activity for multiple dates
+ * @param {Object} params Parameters
+ * @param {Array} params.entries Array of { date, commits, lines_changed, files_changed }
+ * @returns {Promise<void>}
+ */
+export async function upsert_git_activity_daily_batch({ entries }) {
+  if (!entries || entries.length === 0) return
+
+  log('Upserting %d git activity daily entries', entries.length)
+
+  const updated_at = new Date().toISOString()
+
+  // Batch into chunks to avoid overly large SQL statements
+  const CHUNK_SIZE = 50
+  for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
+    const chunk = entries.slice(i, i + CHUNK_SIZE)
+    const placeholders = chunk.map(() => '(?, ?, ?, ?, ?)').join(', ')
+    const parameters = chunk.flatMap((entry) => [
+      entry.date,
+      entry.commits ?? 0,
+      entry.lines_changed ?? 0,
+      entry.files_changed ?? 0,
+      updated_at
+    ])
+
+    await execute_duckdb_run({
+      query: `
+        INSERT INTO activity_git_daily (date, commits, lines_changed, files_changed, updated_at)
+        VALUES ${placeholders}
+        ON CONFLICT (date) DO UPDATE SET
+          commits = excluded.commits,
+          lines_changed = excluded.lines_changed,
+          files_changed = excluded.files_changed,
+          updated_at = excluded.updated_at
+      `,
+      parameters
+    })
+  }
+
+  log('Upserted %d git activity daily entries', entries.length)
+}
+
+/**
  * Query thread activity aggregated by date
  * Sums token usage and edit metrics grouped by thread creation date.
  * @param {Object} [params] Parameters
