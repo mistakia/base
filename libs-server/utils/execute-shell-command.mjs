@@ -3,6 +3,8 @@ import { exec } from 'child_process'
 import path from 'path'
 import { directory_exists_in_filesystem_sync } from '#libs-server/filesystem/directory-exists-in-filesystem-sync.mjs'
 
+const DEFAULT_TIMEOUT_MS = 30_000
+
 // Explicitly provide the shell path in the options and verify the working directory exists
 export const execute_shell_command = (cmd, options = {}) => {
   // Check if cwd exists
@@ -20,6 +22,7 @@ export const execute_shell_command = (cmd, options = {}) => {
   }
 
   return promisify(exec)(cmd, {
+    timeout: DEFAULT_TIMEOUT_MS,
     ...options
   })
 }

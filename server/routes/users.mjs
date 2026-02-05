@@ -171,7 +171,7 @@ router.get('/public_keys/:user_public_key', async (req, res) => {
       return res.status(404).send({ error: 'user not found' })
     }
 
-    res.status(200).send(user)
+    res.status(200).send(filter_public_user_data(user))
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

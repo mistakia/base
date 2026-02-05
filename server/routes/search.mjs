@@ -90,8 +90,8 @@ async function filter_results_by_permission(results, user_public_key) {
     const resource_path = create_base_uri_from_path(result.absolute_path)
     const permission = permission_results[resource_path]
 
-    // Include result if permission check passes or is not found (default allow)
-    if (!permission || permission.read?.allowed !== false) {
+    // Include result only if permission explicitly allows read access
+    if (permission?.read?.allowed === true) {
       filtered_results.push(result)
     }
   }

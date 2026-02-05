@@ -206,14 +206,32 @@ export function resolve_base_uri(base_uri, options = {}) {
   }
 
   switch (parsed.scheme) {
-    case 'sys':
-      return path.join(system_base_directory, parsed.path)
+    case 'sys': {
+      const sys_resolved = path.resolve(system_base_directory, parsed.path)
+      if (
+        !sys_resolved.startsWith(path.resolve(system_base_directory) + path.sep) &&
+        sys_resolved !== path.resolve(system_base_directory)
+      ) {
+        throw new Error(`Path traversal detected in base URI: ${base_uri}`)
+      }
+      return sys_resolved
+    }
 
-    case 'user':
+    case 'user': {
       if (!user_base_directory) {
         throw new Error('User base directory not configured')
       }
-      return path.join(user_base_directory, parsed.path)
+      const user_resolved = path.resolve(user_base_directory, parsed.path)
+      if (
+        !user_resolved.startsWith(
+          path.resolve(user_base_directory) + path.sep
+        ) &&
+        user_resolved !== path.resolve(user_base_directory)
+      ) {
+        throw new Error(`Path traversal detected in base URI: ${base_uri}`)
+      }
+      return user_resolved
+    }
 
     case 'ssh':
     case 'git':

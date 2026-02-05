@@ -421,7 +421,7 @@ const execute_single_iteration = async ({
       })
     }
 
-    console.log(prompt_data.prompt_text)
+    log('Prompt text prepared for inference (length: %d)', prompt_data.prompt_text?.length || 0)
 
     // Make inference request
     const response = await make_inference_request({
