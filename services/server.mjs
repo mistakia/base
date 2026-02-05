@@ -129,8 +129,11 @@ try {
     // Initialize file subscription watcher for WebSocket notifications
     try {
       start_file_subscription_watcher({
-        on_file_change: (relative_path) => {
+        on_file_add: (relative_path) => {
           debounced_invalidate_file_path_cache()
+          emit_file_changed(relative_path)
+        },
+        on_file_change: (relative_path) => {
           emit_file_changed(relative_path)
         },
         on_file_delete: (relative_path) => {
