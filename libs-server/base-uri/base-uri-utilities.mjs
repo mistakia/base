@@ -205,33 +205,27 @@ export function resolve_base_uri(base_uri, options = {}) {
       options.user_base_directory || config.user_base_directory
   }
 
-  switch (parsed.scheme) {
-    case 'sys': {
-      const sys_resolved = path.resolve(system_base_directory, parsed.path)
-      if (
-        !sys_resolved.startsWith(path.resolve(system_base_directory) + path.sep) &&
-        sys_resolved !== path.resolve(system_base_directory)
-      ) {
-        throw new Error(`Path traversal detected in base URI: ${base_uri}`)
-      }
-      return sys_resolved
+  const resolve_and_validate = (base_directory) => {
+    const resolved = path.resolve(base_directory, parsed.path)
+    const base_resolved = path.resolve(base_directory)
+    if (
+      !resolved.startsWith(base_resolved + path.sep) &&
+      resolved !== base_resolved
+    ) {
+      throw new Error(`Path traversal detected in base URI: ${base_uri}`)
     }
+    return resolved
+  }
 
-    case 'user': {
+  switch (parsed.scheme) {
+    case 'sys':
+      return resolve_and_validate(system_base_directory)
+
+    case 'user':
       if (!user_base_directory) {
         throw new Error('User base directory not configured')
       }
-      const user_resolved = path.resolve(user_base_directory, parsed.path)
-      if (
-        !user_resolved.startsWith(
-          path.resolve(user_base_directory) + path.sep
-        ) &&
-        user_resolved !== path.resolve(user_base_directory)
-      ) {
-        throw new Error(`Path traversal detected in base URI: ${base_uri}`)
-      }
-      return user_resolved
-    }
+      return resolve_and_validate(user_base_directory)
 
     case 'ssh':
     case 'git':
