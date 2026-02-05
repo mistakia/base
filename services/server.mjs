@@ -11,15 +11,7 @@ import {
 } from '#server/services/thread-watcher.mjs'
 import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  start_index_sync_watcher,
-  stop_index_file_watcher,
-  thread_index_sync_hooks
-} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
-import {
-  start_sync_trigger_watcher,
-  stop_sync_trigger_watcher
-} from '#libs-server/embedded-database-index/sync/sync-trigger-handler.mjs'
+import { thread_sync_forwarding_hooks } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_cache_warmer,
   stop_cache_warmer
@@ -199,16 +191,17 @@ try {
       logger(worker_error)
     }
 
-    // Initialize embedded index first (DuckDB must be ready before cache warmer)
+    // Initialize embedded index in read-only mode (DuckDB reads for queries)
+    // The index-sync-service owns DuckDB writes in a separate process.
     // Cache warmer uses DuckDB for fast queries; without it, falls back to
     // expensive filesystem reads (reads all timeline.jsonl files)
     let embedded_index_ready = false
 
     try {
-      await embedded_index_manager.initialize()
+      await embedded_index_manager.initialize({ read_only: true })
       const status = embedded_index_manager.get_index_status()
       logger(
-        `Embedded index initialized (duckdb: ${status.duckdb_ready})`
+        `Embedded index initialized read-only (duckdb: ${status.duckdb_ready})`
       )
       embedded_index_ready = status.duckdb_ready
 
@@ -223,7 +216,7 @@ try {
       logger(error)
     }
 
-    // Start cache warmer after embedded index (can now use DuckDB)
+    // Start cache warmer after embedded index (can now use DuckDB for reads)
     try {
       await start_cache_warmer()
       logger('Cache warmer service started')
@@ -232,39 +225,16 @@ try {
       logger(error)
     }
 
-    // Start index file watcher for database sync (only if index initialized successfully)
+    // Attach thread sync forwarding hooks to the already-running thread watcher.
+    // Thread changes are forwarded to the index-sync-service via IPC queue
+    // instead of syncing directly (API has read-only DuckDB access).
     if (embedded_index_ready) {
       try {
-        const index_config = embedded_index_manager._get_index_config()
-        if (index_config.enabled && index_config.file_watcher_enabled) {
-          start_index_sync_watcher()
-          // Attach thread index sync hooks to the already-running thread watcher
-          // so thread/ events trigger both WebSocket emission and database sync
-          // from a single chokidar instance
-          set_thread_watcher_hooks(thread_index_sync_hooks)
-          logger('Index file watcher started (thread hooks attached)')
-        }
-      } catch (watcher_error) {
-        logger(`Failed to start index file watcher: ${watcher_error.message}`)
-        logger(watcher_error)
-      }
-
-      // Start sync trigger watcher for CLI-triggered syncs
-      try {
-        start_sync_trigger_watcher({
-          on_sync_request: async (request) => {
-            logger(
-              `Processing sync request: ${request.request_id} (type: ${request.type})`
-            )
-            return await embedded_index_manager.perform_sync({
-              mode: request.type
-            })
-          }
-        })
-        logger('Sync trigger watcher started')
-      } catch (trigger_error) {
-        logger(`Failed to start sync trigger watcher: ${trigger_error.message}`)
-        logger(trigger_error)
+        set_thread_watcher_hooks(thread_sync_forwarding_hooks)
+        logger('Thread sync forwarding hooks attached')
+      } catch (hook_error) {
+        logger(`Failed to set thread sync forwarding hooks: ${hook_error.message}`)
+        logger(hook_error)
       }
     }
   })
@@ -291,22 +261,6 @@ const shutdown = async (signal) => {
     logger('Thread watcher stopped')
   } catch (error) {
     logger(`Error stopping thread watcher: ${error.message}`)
-  }
-
-  try {
-    // Stop sync trigger watcher
-    await stop_sync_trigger_watcher()
-    logger('Sync trigger watcher stopped')
-  } catch (error) {
-    logger(`Error stopping sync trigger watcher: ${error.message}`)
-  }
-
-  try {
-    // Stop index file watcher
-    await stop_index_file_watcher()
-    logger('Index file watcher stopped')
-  } catch (error) {
-    logger(`Error stopping index file watcher: ${error.message}`)
   }
 
   try {

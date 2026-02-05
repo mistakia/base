@@ -13,10 +13,12 @@ const log = debug('embedded-index:duckdb')
 let duckdb_instance = null
 let duckdb_connection = null
 let database_path = null
+let connection_read_only = false
 
 export async function initialize_duckdb_client({
   database_path: db_path,
-  in_memory = false
+  in_memory = false,
+  read_only = false
 }) {
   if (duckdb_connection) {
     log('DuckDB client already initialized')
@@ -24,7 +26,8 @@ export async function initialize_duckdb_client({
   }
 
   database_path = in_memory ? ':memory:' : db_path
-  log('Initializing DuckDB client at %s', database_path)
+  connection_read_only = read_only
+  log('Initializing DuckDB client at %s (read_only: %s)', database_path, read_only)
 
   if (!in_memory && db_path) {
     // Ensure directory exists
@@ -36,7 +39,7 @@ export async function initialize_duckdb_client({
   const duckdb = await import('duckdb')
 
   return new Promise((resolve, reject) => {
-    duckdb_instance = new duckdb.default.Database(database_path, (err) => {
+    const on_open = (err) => {
       if (err) {
         log('Error opening DuckDB database: %s', err.message)
         reject(err)
@@ -44,9 +47,19 @@ export async function initialize_duckdb_client({
       }
 
       duckdb_connection = duckdb_instance.connect()
-      log('DuckDB client initialized')
+      log('DuckDB client initialized (read_only: %s)', read_only)
       resolve()
-    })
+    }
+
+    if (read_only) {
+      duckdb_instance = new duckdb.default.Database(
+        database_path,
+        { access_mode: 'READ_ONLY' },
+        on_open
+      )
+    } else {
+      duckdb_instance = new duckdb.default.Database(database_path, on_open)
+    }
   })
 }
 
@@ -136,6 +149,7 @@ export async function close_duckdb_connection() {
         duckdb_connection = null
         duckdb_instance = null
         database_path = null
+        connection_read_only = false
         log('DuckDB connection closed')
         resolve()
       })
@@ -151,6 +165,10 @@ export function get_duckdb_database_path() {
 
 export function is_duckdb_initialized() {
   return duckdb_connection !== null
+}
+
+export function is_duckdb_read_only() {
+  return connection_read_only
 }
 
 /**
@@ -184,5 +202,6 @@ export const duckdb_database_client = {
   execute_run: execute_duckdb_run,
   close: close_duckdb_connection,
   get_database_path: get_duckdb_database_path,
+  is_read_only: is_duckdb_read_only,
   checkpoint: checkpoint_duckdb
 }
