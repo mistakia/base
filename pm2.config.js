@@ -97,12 +97,6 @@ module.exports = {
         }
       }
     ),
-    app('index-sync-service', 'server/services/index-sync-service.mjs', {
-      log_prefix: 'index-sync',
-      max_memory_restart: '512M',
-      node_args: '--max-old-space-size=512',
-      env: { DEBUG: 'index-sync*,embedded-index*' }
-    }),
     app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
       max_memory_restart: '512M',
       env: { DEBUG: 'cli-queue:*' }

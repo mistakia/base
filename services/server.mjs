@@ -11,7 +11,11 @@ import {
 } from '#server/services/thread-watcher.mjs'
 import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { thread_sync_forwarding_hooks } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
+import {
+  thread_index_sync_hooks,
+  start_index_sync_watcher,
+  stop_index_file_watcher
+} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_cache_warmer,
   stop_cache_warmer
@@ -191,18 +195,15 @@ try {
       logger(worker_error)
     }
 
-    // Initialize embedded index in read-only mode (DuckDB reads for queries)
-    // The index-sync-service owns DuckDB writes in a separate process.
+    // Initialize embedded index (DuckDB for entity/thread queries)
     // Cache warmer uses DuckDB for fast queries; without it, falls back to
     // expensive filesystem reads (reads all timeline.jsonl files)
     let embedded_index_ready = false
 
     try {
-      await embedded_index_manager.initialize({ read_only: true })
+      await embedded_index_manager.initialize()
       const status = embedded_index_manager.get_index_status()
-      logger(
-        `Embedded index initialized read-only (duckdb: ${status.duckdb_ready})`
-      )
+      logger(`Embedded index initialized (duckdb: ${status.duckdb_ready})`)
       embedded_index_ready = status.duckdb_ready
 
       // Warn if DuckDB specifically failed (cache warmer depends on it for fast queries)
@@ -216,6 +217,19 @@ try {
       logger(error)
     }
 
+    // Start entity file watcher for database sync
+    if (embedded_index_ready) {
+      const index_config = embedded_index_manager._get_index_config()
+      if (index_config.file_watcher_enabled) {
+        try {
+          start_index_sync_watcher()
+          logger('Entity file watcher started')
+        } catch (error) {
+          logger(`Failed to start entity file watcher: ${error.message}`)
+        }
+      }
+    }
+
     // Start cache warmer after embedded index (can now use DuckDB for reads)
     try {
       await start_cache_warmer()
@@ -225,17 +239,14 @@ try {
       logger(error)
     }
 
-    // Attach thread sync forwarding hooks to the already-running thread watcher.
-    // Thread changes are forwarded to the index-sync-service via IPC queue
-    // instead of syncing directly (API has read-only DuckDB access).
+    // Attach thread sync hooks to the already-running thread watcher.
+    // Thread changes are synced directly to DuckDB.
     if (embedded_index_ready) {
       try {
-        set_thread_watcher_hooks(thread_sync_forwarding_hooks)
-        logger('Thread sync forwarding hooks attached')
+        set_thread_watcher_hooks(thread_index_sync_hooks)
+        logger('Thread index sync hooks attached')
       } catch (hook_error) {
-        logger(
-          `Failed to set thread sync forwarding hooks: ${hook_error.message}`
-        )
+        logger(`Failed to set thread index sync hooks: ${hook_error.message}`)
         logger(hook_error)
       }
     }
@@ -289,6 +300,14 @@ const shutdown = async (signal) => {
     logger('Git status cache destroyed')
   } catch (error) {
     logger(`Error destroying git status cache: ${error.message}`)
+  }
+
+  try {
+    // Stop entity file watcher
+    await stop_index_file_watcher()
+    logger('Entity file watcher stopped')
+  } catch (error) {
+    logger(`Error stopping entity file watcher: ${error.message}`)
   }
 
   try {
