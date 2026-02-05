@@ -8,19 +8,7 @@ import {
   patch_task_actions,
   get_available_tags_actions
 } from '@core/tasks/actions'
-import {
-  get_user_request_actions,
-  get_users_request_actions
-} from '@core/users/actions'
 import { post_user_session_request_actions } from '@core/app/actions'
-import {
-  post_database_view_request_actions,
-  delete_database_view_request_actions
-} from '@core/path-views/actions'
-import {
-  get_database_request_actions,
-  get_database_items_request_actions
-} from '@core/database-tables/actions'
 import {
   post_thread_request_actions,
   get_threads_request_actions,
@@ -92,36 +80,10 @@ function* fetch(...args) {
   // yield race([call(fetchAPI.bind(null, ...args)), take(LOCATION_CHANGE)])
 }
 
-export const get_user = fetch.bind(null, api.get_user, get_user_request_actions)
-export const get_users = fetch.bind(
-  null,
-  api.get_users,
-  get_users_request_actions
-)
 export const post_user_session = fetch.bind(
   null,
   api.post_user_session,
   post_user_session_request_actions
-)
-export const get_database = fetch.bind(
-  null,
-  api.get_database,
-  get_database_request_actions
-)
-export const get_database_items = fetch.bind(
-  null,
-  api.get_database_items,
-  get_database_items_request_actions
-)
-export const post_database_view = fetch.bind(
-  null,
-  api.post_database_view,
-  post_database_view_request_actions
-)
-export const delete_database_view = fetch.bind(
-  null,
-  api.delete_database_view,
-  delete_database_view_request_actions
 )
 export const get_tasks = fetch.bind(null, api.get_tasks, get_tasks_actions)
 export const patch_task = fetch.bind(null, api.patch_task, patch_task_actions)
