@@ -2,7 +2,7 @@
  * Relation subcommand group
  *
  * Forward and reverse relation lookups -- first CLI access to this functionality.
- * Tries HTTP API first, falls back to direct Kuzu graph database access.
+ * Tries HTTP API first, falls back to direct DuckDB database access.
  */
 
 import {
@@ -104,7 +104,7 @@ async function fetch_relations_from_api({
   return response.json()
 }
 
-async function fetch_relations_from_kuzu({
+async function fetch_relations_from_duckdb({
   base_uri,
   direction,
   relation_type,
@@ -118,7 +118,7 @@ async function fetch_relations_from_kuzu({
     )
   ).default
   const { find_related_entities, find_entities_relating_to } = await import(
-    '#libs-server/embedded-database-index/kuzu/kuzu-graph-queries.mjs'
+    '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
   )
 
   await embedded_index_manager.initialize()
@@ -127,13 +127,7 @@ async function fetch_relations_from_kuzu({
     throw new Error('Embedded index manager failed to initialize')
   }
 
-  const connection = embedded_index_manager.get_kuzu_connection()
-  if (!connection) {
-    throw new Error('Kuzu graph database not available')
-  }
-
   const query_params = {
-    connection,
     base_uri,
     relation_type: relation_type || null,
     entity_type: entity_type || null,
@@ -174,7 +168,7 @@ async function handle_relations(argv, direction) {
 
     const result = await with_api_fallback(
       () => fetch_relations_from_api(params),
-      () => fetch_relations_from_kuzu(params)
+      () => fetch_relations_from_duckdb(params)
     )
 
     if (argv.json) {

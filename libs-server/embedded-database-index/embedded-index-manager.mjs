@@ -1,7 +1,7 @@
 /**
  * Embedded Index Manager
  *
- * Singleton that coordinates Kuzu and DuckDB databases for index operations.
+ * Singleton that coordinates DuckDB database for index operations.
  * Handles initialization, sync, rebuild, and shutdown.
  */
 
@@ -10,29 +10,6 @@ import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
-import {
-  get_kuzu_connection,
-  close_kuzu_connection,
-  initialize_kuzu_client,
-  execute_kuzu_query,
-  destroy_kuzu_database
-} from './kuzu/kuzu-database-client.mjs'
-import {
-  create_kuzu_schema,
-  drop_kuzu_schema
-} from './kuzu/kuzu-schema-definitions.mjs'
-import {
-  upsert_entity_to_kuzu,
-  delete_entity_from_kuzu,
-  sync_entity_tags_to_kuzu,
-  sync_entity_relations_to_kuzu
-} from './kuzu/kuzu-entity-sync.mjs'
-import {
-  upsert_thread_to_kuzu,
-  delete_thread_from_kuzu,
-  sync_thread_relations_to_kuzu,
-  sync_thread_file_references_to_kuzu
-} from './kuzu/kuzu-thread-sync.mjs'
 import {
   close_duckdb_connection,
   initialize_duckdb_client,
@@ -52,15 +29,12 @@ import {
   sync_entity_relations_to_duckdb
 } from './duckdb/duckdb-entity-sync.mjs'
 import {
-  extract_entity_index_data,
   extract_unified_entity_data,
   extract_tags_from_entity,
   extract_relations_from_entity
 } from './sync/entity-data-extractor.mjs'
 import {
   extract_thread_index_data,
-  extract_thread_entity_data,
-  extract_thread_relations_for_kuzu,
   read_and_extract_latest_event
 } from './sync/thread-data-extractor.mjs'
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
@@ -90,7 +64,6 @@ const log = debug('embedded-index')
 class EmbeddedIndexManager {
   constructor() {
     this.initialized = false
-    this.kuzu_ready = false
     this.duckdb_ready = false
     this.index_config = null
     this.sync_in_progress = false
@@ -167,9 +140,6 @@ class EmbeddedIndexManager {
 
     this.index_config = {
       enabled: embedded_config.enabled !== false,
-      kuzu_directory:
-        embedded_config.kuzu_directory ||
-        `${user_base_directory}/embedded-database-index/kuzu`,
       duckdb_path:
         embedded_config.duckdb_path ||
         `${user_base_directory}/embedded-database-index/duckdb.db`,
@@ -195,15 +165,6 @@ class EmbeddedIndexManager {
     log('Initializing embedded index manager')
 
     try {
-      await this._initialize_kuzu(index_config)
-      this.kuzu_ready = true
-      log('Kuzu database initialized')
-    } catch (error) {
-      log('Failed to initialize Kuzu: %s', error.message)
-      this.kuzu_ready = false
-    }
-
-    try {
       await this._initialize_duckdb(index_config)
       this.duckdb_ready = true
       log('DuckDB database initialized')
@@ -219,41 +180,7 @@ class EmbeddedIndexManager {
       await this._perform_startup_sync()
     }
 
-    log(
-      'Embedded index manager initialized (kuzu: %s, duckdb: %s)',
-      this.kuzu_ready,
-      this.duckdb_ready
-    )
-  }
-
-  async _initialize_kuzu(index_config) {
-    await initialize_kuzu_client({ database_path: index_config.kuzu_directory })
-    try {
-      const kuzu_connection = await get_kuzu_connection()
-      await create_kuzu_schema({ connection: kuzu_connection })
-    } catch (error) {
-      const is_wal_corruption =
-        error.message && error.message.includes('Failed to replay wal record')
-
-      if (is_wal_corruption) {
-        log(
-          'Kuzu WAL corruption detected, destroying database and retrying: %s',
-          error.message
-        )
-        await destroy_kuzu_database()
-
-        // Retry with a fresh database
-        await initialize_kuzu_client({
-          database_path: index_config.kuzu_directory
-        })
-        const kuzu_connection = await get_kuzu_connection()
-        await create_kuzu_schema({ connection: kuzu_connection })
-        log('Kuzu database recovered from WAL corruption')
-        return
-      }
-
-      throw error
-    }
+    log('Embedded index manager initialized (duckdb: %s)', this.duckdb_ready)
   }
 
   async _initialize_duckdb(index_config) {
@@ -262,27 +189,8 @@ class EmbeddedIndexManager {
   }
 
   /**
-   * Get entity count from Kuzu database.
-   * Used to detect empty database that needs resync.
-   * @returns {Promise<number>} Entity count or 0 on error
-   */
-  async _get_kuzu_entity_count() {
-    try {
-      const result = await execute_kuzu_query({
-        query: 'MATCH (e:Entity) RETURN count(e) AS count'
-      })
-      // Kuzu returns QueryResult, need to get all rows
-      const rows = await result.getAll()
-      return rows.length > 0 ? Number(rows[0].count) : 0
-    } catch (error) {
-      log('Error getting Kuzu entity count: %s', error.message)
-      return 0
-    }
-  }
-
-  /**
    * Get entity count from DuckDB database.
-   * Used to detect populated database for comparison with Kuzu.
+   * Used to detect populated database for comparison.
    * @returns {Promise<number>} Entity count or 0 on error
    */
   async _get_duckdb_entity_count() {
@@ -300,10 +208,9 @@ class EmbeddedIndexManager {
   /**
    * Perform startup sync with fallback chain:
    * 1. Check schema version - if mismatch, do reset_and_rebuild
-   * 2. Check database sync - if Kuzu empty but DuckDB populated, do resync
-   * 3. Try incremental sync
-   * 4. On failure, try resync (update-in-place)
-   * 5. On failure, try reset_and_rebuild (last resort)
+   * 2. Try incremental sync
+   * 3. On failure, try resync (update-in-place)
+   * 4. On failure, try reset_and_rebuild (last resort)
    */
   async _perform_startup_sync() {
     log('Performing startup sync')
@@ -326,29 +233,6 @@ class EmbeddedIndexManager {
         log('Schema version mismatch, performing reset and rebuild')
         await this._reset_and_rebuild_index_internal()
         return
-      }
-
-      // Check if databases are out of sync (Kuzu empty but DuckDB populated)
-      // This handles cases where Kuzu was deleted/corrupted and recreated
-      if (this.kuzu_ready && this.duckdb_ready) {
-        const kuzu_count = await this._get_kuzu_entity_count()
-        const duckdb_count = await this._get_duckdb_entity_count()
-
-        if (duckdb_count > 0 && kuzu_count === 0) {
-          log(
-            'Kuzu is empty but DuckDB has %d entities, triggering resync',
-            duckdb_count
-          )
-          const resync_result = await resync_full_index({ index_manager: this })
-          if (resync_result.success) {
-            log('Database sync resync successful: %o', resync_result.stats)
-            return
-          }
-          // Fall through to reset if resync fails
-          log('Database sync resync failed, performing reset and rebuild')
-          await this._reset_and_rebuild_index_internal()
-          return
-        }
       }
 
       // Try incremental sync first
@@ -463,17 +347,6 @@ class EmbeddedIndexManager {
     // Clear timeline cache since all data will be repopulated
     this._timeline_sync_cache.clear()
 
-    if (this.kuzu_ready) {
-      try {
-        const kuzu_connection = await get_kuzu_connection()
-        await drop_kuzu_schema({ connection: kuzu_connection })
-        await create_kuzu_schema({ connection: kuzu_connection })
-        log('Kuzu schema rebuilt')
-      } catch (error) {
-        log('Error rebuilding Kuzu schema: %s', error.message)
-      }
-    }
-
     if (this.duckdb_ready) {
       try {
         await drop_duckdb_schema()
@@ -544,8 +417,8 @@ class EmbeddedIndexManager {
   }
 
   async _populate_threads_from_filesystem() {
-    if (!this.duckdb_ready && !this.kuzu_ready) {
-      log('Neither DuckDB nor Kuzu ready, skipping thread population')
+    if (!this.duckdb_ready) {
+      log('DuckDB not ready, skipping thread population')
       return
     }
 
@@ -573,8 +446,8 @@ class EmbeddedIndexManager {
   }
 
   async _populate_entities_from_filesystem() {
-    if (!this.duckdb_ready && !this.kuzu_ready) {
-      log('Neither DuckDB nor Kuzu ready, skipping entity population')
+    if (!this.duckdb_ready) {
+      log('DuckDB not ready, skipping entity population')
       return
     }
 
@@ -609,20 +482,17 @@ class EmbeddedIndexManager {
   }
 
   /**
-   * Sync an entity to the embedded databases
-   * @returns {{ success: boolean, kuzu_synced: boolean, duckdb_synced: boolean }}
+   * Sync an entity to the embedded database
+   * @returns {{ success: boolean, duckdb_synced: boolean }}
    */
   async sync_entity({ base_uri, entity_data }) {
-    const result = { success: true, kuzu_synced: false, duckdb_synced: false }
+    const result = { success: true, duckdb_synced: false }
 
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity sync')
-      return { success: false, kuzu_synced: false, duckdb_synced: false }
+      return { success: false, duckdb_synced: false }
     }
 
-    const entity_index_data = extract_entity_index_data({
-      entity_properties: entity_data
-    })
     const unified_entity_data = extract_unified_entity_data({
       entity_properties: entity_data
     })
@@ -632,30 +502,6 @@ class EmbeddedIndexManager {
     const relations = extract_relations_from_entity({
       entity_properties: entity_data
     })
-
-    if (this.kuzu_ready) {
-      try {
-        const kuzu_connection = await get_kuzu_connection()
-        await upsert_entity_to_kuzu({
-          connection: kuzu_connection,
-          entity_data: entity_index_data
-        })
-        await sync_entity_tags_to_kuzu({
-          connection: kuzu_connection,
-          entity_base_uri: base_uri,
-          tag_base_uris
-        })
-        await sync_entity_relations_to_kuzu({
-          connection: kuzu_connection,
-          entity_base_uri: base_uri,
-          relations
-        })
-        result.kuzu_synced = true
-      } catch (error) {
-        log('Error syncing entity to Kuzu: %s', error.message)
-        result.success = false
-      }
-    }
 
     if (this.duckdb_ready) {
       try {
@@ -688,15 +534,6 @@ class EmbeddedIndexManager {
       return
     }
 
-    if (this.kuzu_ready) {
-      try {
-        const kuzu_connection = await get_kuzu_connection()
-        await delete_entity_from_kuzu({ connection: kuzu_connection, base_uri })
-      } catch (error) {
-        log('Error removing entity from Kuzu: %s', error.message)
-      }
-    }
-
     if (this.duckdb_ready) {
       try {
         await delete_entity_from_duckdb({ base_uri })
@@ -707,11 +544,11 @@ class EmbeddedIndexManager {
   }
 
   /**
-   * Sync a thread to the embedded databases.
+   * Sync a thread to the embedded database.
    * Deduplicates concurrent requests for the same thread_id - if a sync is
    * already in progress for a thread, subsequent requests will wait for the
    * existing sync to complete and receive the same result.
-   * @returns {{ success: boolean, kuzu_synced: boolean, duckdb_synced: boolean }}
+   * @returns {{ success: boolean, duckdb_synced: boolean }}
    */
   async sync_thread({ thread_id, metadata }) {
     // Check if there's already a pending sync for this thread
@@ -774,11 +611,11 @@ class EmbeddedIndexManager {
    * @private
    */
   async _execute_thread_sync({ thread_id, metadata }) {
-    const result = { success: true, kuzu_synced: false, duckdb_synced: false }
+    const result = { success: true, duckdb_synced: false }
 
     if (!this.initialized) {
       log('Index manager not initialized, skipping thread sync')
-      return { success: false, kuzu_synced: false, duckdb_synced: false }
+      return { success: false, duckdb_synced: false }
     }
 
     // Sync to DuckDB
@@ -843,47 +680,6 @@ class EmbeddedIndexManager {
       }
     }
 
-    // Sync to Kuzu
-    if (this.kuzu_ready) {
-      try {
-        const kuzu_connection = await get_kuzu_connection()
-
-        // Upsert thread as entity
-        const thread_entity_data = extract_thread_entity_data({
-          thread_id,
-          metadata
-        })
-        await upsert_thread_to_kuzu({
-          connection: kuzu_connection,
-          thread_data: thread_entity_data
-        })
-
-        // Sync thread relations
-        const thread_relations = extract_thread_relations_for_kuzu({ metadata })
-        await sync_thread_relations_to_kuzu({
-          connection: kuzu_connection,
-          thread_id,
-          relations: thread_relations
-        })
-
-        // Sync file references if present
-        const file_references = metadata.file_references || []
-        const directory_references = metadata.directory_references || []
-        if (file_references.length > 0 || directory_references.length > 0) {
-          await sync_thread_file_references_to_kuzu({
-            connection: kuzu_connection,
-            thread_id,
-            file_references,
-            directory_references
-          })
-        }
-        result.kuzu_synced = true
-      } catch (error) {
-        log('Error syncing thread to Kuzu: %s', error.message)
-        result.success = false
-      }
-    }
-
     return result
   }
 
@@ -901,45 +697,18 @@ class EmbeddedIndexManager {
         log('Error removing thread from DuckDB: %s', error.message)
       }
     }
-
-    // Remove from Kuzu
-    if (this.kuzu_ready) {
-      try {
-        const kuzu_connection = await get_kuzu_connection()
-        await delete_thread_from_kuzu({
-          connection: kuzu_connection,
-          thread_id
-        })
-      } catch (error) {
-        log('Error removing thread from Kuzu: %s', error.message)
-      }
-    }
   }
 
   get_index_status() {
     return {
       initialized: this.initialized,
-      kuzu_ready: this.kuzu_ready,
       duckdb_ready: this.duckdb_ready,
       config: this.index_config
     }
   }
 
   is_ready() {
-    return this.initialized && (this.kuzu_ready || this.duckdb_ready)
-  }
-
-  is_kuzu_ready() {
-    return this.initialized && this.kuzu_ready
-  }
-
-  /**
-   * Check if Kuzu is ready AND not blocked by an ongoing sync operation.
-   * Kuzu uses a single connection, so queries will hang indefinitely
-   * if issued while a sync operation holds the connection.
-   */
-  is_kuzu_query_safe() {
-    return this.initialized && this.kuzu_ready && !this.sync_in_progress
+    return this.initialized && this.duckdb_ready
   }
 
   is_duckdb_ready() {
@@ -948,15 +717,6 @@ class EmbeddedIndexManager {
 
   async shutdown() {
     log('Shutting down embedded index manager')
-
-    if (this.kuzu_ready) {
-      try {
-        await close_kuzu_connection()
-        log('Kuzu connection closed')
-      } catch (error) {
-        log('Error closing Kuzu connection: %s', error.message)
-      }
-    }
 
     if (this.duckdb_ready) {
       try {
@@ -968,7 +728,6 @@ class EmbeddedIndexManager {
     }
 
     this.initialized = false
-    this.kuzu_ready = false
     this.duckdb_ready = false
     this._timeline_sync_cache.clear()
     log('Embedded index manager shut down')

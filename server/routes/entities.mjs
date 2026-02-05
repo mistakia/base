@@ -8,11 +8,10 @@ import express from 'express'
 import debug from 'debug'
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { get_kuzu_connection } from '#libs-server/embedded-database-index/kuzu/kuzu-database-client.mjs'
 import {
   find_related_entities,
   find_entities_relating_to
-} from '#libs-server/embedded-database-index/kuzu/kuzu-graph-queries.mjs'
+} from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
 import {
   query_entities_from_duckdb,
   get_entity_by_base_uri,
@@ -296,20 +295,9 @@ router.get('/relations', async (req, res) => {
       return res.status(400).send({ error: 'base_uri is required' })
     }
 
-    // Check if Kuzu is available and not blocked by a sync operation.
-    // Kuzu uses a single connection, so queries hang indefinitely if a
-    // sync operation is using the connection.
-    if (!embedded_index_manager.is_kuzu_query_safe()) {
-      const reason = !embedded_index_manager.is_kuzu_ready()
-        ? 'Graph database not available'
-        : 'Graph database busy (sync in progress)'
-      return res.status(503).send({ error: reason })
-    }
-
     // Create permission context for filtering results
     const permission_context = new PermissionContext({ user_public_key })
 
-    const kuzu_connection = await get_kuzu_connection()
     const limit_num = parseInt(limit, 10) || 50
     const offset_num = parseInt(offset, 10) || 0
 
@@ -319,7 +307,6 @@ router.get('/relations', async (req, res) => {
     // Fetch forward relations (this entity -> targets)
     if (direction === 'forward' || direction === 'both') {
       const raw_forward = await find_related_entities({
-        connection: kuzu_connection,
         base_uri,
         relation_type: relation_type || null,
         entity_type: entity_type || null,
@@ -337,7 +324,6 @@ router.get('/relations', async (req, res) => {
     // Fetch reverse relations (sources -> this entity)
     if (direction === 'reverse' || direction === 'both') {
       const raw_reverse = await find_entities_relating_to({
-        connection: kuzu_connection,
         base_uri,
         relation_type: relation_type || null,
         entity_type: entity_type || null,
