@@ -57,8 +57,10 @@ async function execute_ripgrep({ args, cwd, timeout_ms = 30000 }) {
     const rg_process = spawn('rg', args, { cwd })
     let stdout = ''
     let stderr = ''
+    let settled = false
 
     const timer = setTimeout(() => {
+      settled = true
       rg_process.kill('SIGTERM')
       reject(new Error('Ripgrep search timed out'))
     }, timeout_ms)
@@ -73,6 +75,8 @@ async function execute_ripgrep({ args, cwd, timeout_ms = 30000 }) {
 
     rg_process.on('close', (code) => {
       clearTimeout(timer)
+      if (settled) return
+      settled = true
       // Ripgrep exits with code 1 when no matches found, which is not an error
       if (code === 0 || code === 1) {
         resolve({ stdout, stderr, code })
@@ -83,6 +87,8 @@ async function execute_ripgrep({ args, cwd, timeout_ms = 30000 }) {
 
     rg_process.on('error', (error) => {
       clearTimeout(timer)
+      if (settled) return
+      settled = true
       reject(new Error(`Failed to execute ripgrep: ${error.message}`))
     })
   })
@@ -364,61 +370,6 @@ function parse_file_list_output({ stdout, user_base_dir, cwd, max_results }) {
 }
 
 /**
- * Search for files by path pattern using ripgrep
- *
- * @param {Object} params - Search parameters
- * @param {string} params.pattern - Filename/path pattern to match
- * @param {string} [params.directory] - Optional directory to scope search
- * @param {number} [params.max_results=100] - Maximum results to return
- * @returns {Promise<Array<Object>>} Matching file paths
- */
-export async function search_file_paths({
-  pattern,
-  directory = null,
-  max_results = 100
-}) {
-  if (!pattern || !pattern.trim()) {
-    return []
-  }
-
-  const search_config = await load_search_config()
-  const rg_config = search_config.ripgrep || {}
-
-  const user_base_dir =
-    config.user_base_directory || process.env.USER_BASE_DIRECTORY
-
-  if (!user_base_dir) {
-    throw new Error('USER_BASE_DIRECTORY not configured')
-  }
-
-  const cwd = resolve_search_directory(user_base_dir, directory)
-  const args = build_file_list_args(rg_config)
-
-  // Add glob pattern for the search
-  // Convert spaces to wildcards for multi-word queries (e.g., "transition secure" -> "*transition*secure*")
-  const glob_pattern = pattern.trim().split(/\s+/).join('*')
-  args.push('--glob', `*${glob_pattern}*`)
-
-  try {
-    const result = await execute_ripgrep({
-      args,
-      cwd,
-      timeout_ms: search_config.search?.timeout_ms || 30000
-    })
-
-    return parse_file_list_output({
-      stdout: result.stdout,
-      user_base_dir,
-      cwd,
-      max_results
-    })
-  } catch (error) {
-    log(`Path search failed: ${error.message}`)
-    return []
-  }
-}
-
-/**
  * Get all file paths without filtering (for fuzzy scoring)
  *
  * Following VS Code's approach: collect all files first, then score and limit.
@@ -488,7 +439,6 @@ export async function check_ripgrep_availability() {
 
 export default {
   search_file_contents,
-  search_file_paths,
   search_all_file_paths,
   check_ripgrep_availability
 }

@@ -16,8 +16,8 @@ const DEFAULT_CONFIG = {
   ripgrep: {
     max_filesize: '10M',
     exclude_patterns: [
-      '.git/**',
-      'node_modules/**',
+      '**/.git/**',
+      '**/node_modules/**',
       '.system/**',
       '*.lock',
       '*.log',
@@ -39,7 +39,7 @@ const DEFAULT_CONFIG = {
     },
     entities: {
       enabled: true,
-      types: ['task', 'workflow', 'guideline', 'text', 'person', 'tag']
+      types: ['task', 'workflow', 'guideline', 'text', 'person', 'tag', 'physical-item', 'physical-location']
     },
     directories: {
       enabled: true

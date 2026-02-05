@@ -80,14 +80,26 @@ function normalize_path(file_path) {
 }
 
 /**
+ * Build entity directory prefixes from search config entity types
+ *
+ * @param {Object} search_config - Search configuration
+ * @returns {string[]} Entity directory prefixes (e.g., ['task/', 'workflow/'])
+ */
+function get_entity_dirs(search_config) {
+  const entity_types = search_config.result_types?.entities?.types || []
+  return entity_types.map((entity_type) => `${entity_type}/`)
+}
+
+/**
  * Categorize a file path result
  *
  * @param {Object} params - Parameters
  * @param {string} params.file_path - File path
+ * @param {string[]} params.entity_dirs - Entity directory prefixes
  * @param {string} [params.type] - Optional type hint from result
  * @returns {string} Category: 'entity', 'thread', 'directory', or 'file'
  */
-function categorize_result({ file_path, type = null }) {
+function categorize_result({ file_path, entity_dirs = [], type = null }) {
   const normalized = normalize_path(file_path)
 
   // Check for directory type
@@ -98,18 +110,6 @@ function categorize_result({ file_path, type = null }) {
   if (normalized.startsWith('thread/')) {
     return 'thread'
   }
-
-  // Entity files are markdown files in specific directories
-  const entity_dirs = [
-    'task/',
-    'workflow/',
-    'guideline/',
-    'text/',
-    'tag/',
-    'person/',
-    'physical-item/',
-    'physical-location/'
-  ]
 
   if (
     normalized.endsWith('.md') &&
@@ -139,6 +139,9 @@ export async function search_paths({ query, directory = null, limit = 20 }) {
   const resolved_directory = resolve_directory_parameter(directory)
 
   log(`Path search for: ${query}, directory: ${resolved_directory || '(all)'}`)
+
+  const search_config = await load_search_config()
+  const entity_dirs = get_entity_dirs(search_config)
 
   // Following VS Code's approach: collect all results first, then score and limit
   // VS Code uses DEFAULT_MAX_SEARCH_RESULTS = 20000 internally
@@ -170,6 +173,7 @@ export async function search_paths({ query, directory = null, limit = 20 }) {
     file_path: normalize_path(result.file_path),
     category: categorize_result({
       file_path: result.file_path,
+      entity_dirs,
       type: result.type
     })
   }))
@@ -197,14 +201,10 @@ function add_categorized_result({
   }
 
   if (category === 'entity' && types.includes('entities')) {
-    result.category = 'entity'
-    result.type = 'entity'
-    results.entities.push(result)
+    results.entities.push({ ...result, category: 'entity', type: 'entity' })
     seen_paths.add(result.file_path)
   } else if (category === 'file' && types.includes('files')) {
-    result.category = 'file'
-    result.type = 'file'
-    results.files.push(result)
+    results.files.push({ ...result, category: 'file', type: 'file' })
     seen_paths.add(result.file_path)
   }
 }
@@ -230,6 +230,7 @@ export async function search_full({
   log(`Full search for: ${query}, types: ${types.join(',')}`)
 
   const search_config = await load_search_config()
+  const entity_dirs = get_entity_dirs(search_config)
   const results = {
     files: [],
     threads: [],
@@ -241,9 +242,9 @@ export async function search_full({
   // Use Set for O(1) deduplication instead of O(n) .some() checks
   const seen_paths = new Set()
 
-  // Calculate limits per category (use floor to ensure total doesn't exceed limit)
+  // Calculate limits per category (use ceil to maximize slot utilization)
   const type_count = types.length
-  const per_type_limit = Math.max(1, Math.floor(limit / type_count))
+  const per_type_limit = Math.max(1, Math.ceil(limit / type_count))
 
   // Get all file paths first (needed for both file search and directory extraction)
   const all_files =
@@ -270,13 +271,14 @@ export async function search_full({
 
         // Categorize results from path search
         for (const result of scored_files) {
-          result.file_path = normalize_path(result.file_path)
+          const normalized_path = normalize_path(result.file_path)
           const category = categorize_result({
-            file_path: result.file_path,
+            file_path: normalized_path,
+            entity_dirs,
             type: result.type
           })
           add_categorized_result({
-            result,
+            result: { ...result, file_path: normalized_path },
             category,
             results,
             seen_paths,
@@ -291,13 +293,10 @@ export async function search_full({
           max_results: 200
         })
 
-        // Filter out already-seen paths and normalize
+        // Normalize paths and filter out already-seen
         const unseen_content = content_results
-          .map((result) => {
-            result.file_path = normalize_path(result.file_path)
-            return result
-          })
-          .filter((result) => !seen_paths.has(result.file_path))
+          .map((r) => ({ ...r, file_path: normalize_path(r.file_path) }))
+          .filter((r) => !seen_paths.has(r.file_path))
 
         // Batch score all content matches at once (instead of N individual calls)
         if (unseen_content.length > 0) {
@@ -309,13 +308,13 @@ export async function search_full({
           })
 
           for (const result of scored_content) {
-            result.match_source = 'content'
             const category = categorize_result({
               file_path: result.file_path,
+              entity_dirs,
               type: result.type
             })
             add_categorized_result({
-              result,
+              result: { ...result, match_source: 'content' },
               category,
               results,
               seen_paths,
@@ -369,7 +368,7 @@ export async function search_full({
   results.directories = results.directories.slice(0, per_type_limit)
   results.threads = results.threads.slice(0, per_type_limit)
 
-  // Calculate total (guaranteed not to exceed limit due to floor calculation)
+  // Calculate total (may slightly exceed limit due to ceil-based per-type allocation)
   results.total =
     results.files.length +
     results.threads.length +

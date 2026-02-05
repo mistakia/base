@@ -88,11 +88,13 @@ export function emit_file_deleted(file_path) {
 /**
  * Start the file subscription watcher
  * @param {Object} params
- * @param {Function} params.on_file_change - Callback for file add/change events (receives relative path)
+ * @param {Function} params.on_file_add - Callback for new file events (receives relative path)
+ * @param {Function} params.on_file_change - Callback for file content change events (receives relative path)
  * @param {Function} params.on_file_delete - Callback for file delete events (receives relative path)
  * @returns {Object|null} The chokidar watcher instance, or null if failed to start
  */
 export function start_file_subscription_watcher({
+  on_file_add,
   on_file_change,
   on_file_delete
 }) {
@@ -126,7 +128,7 @@ export function start_file_subscription_watcher({
       .on('add', (absolute_path) => {
         const relative_path = path.relative(user_base_dir, absolute_path)
         log('File added: %s', relative_path)
-        if (typeof on_file_change === 'function') on_file_change(relative_path)
+        if (typeof on_file_add === 'function') on_file_add(relative_path)
       })
       .on('change', (absolute_path) => {
         const relative_path = path.relative(user_base_dir, absolute_path)
