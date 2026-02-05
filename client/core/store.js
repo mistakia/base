@@ -45,7 +45,7 @@ store.close = () => store.dispatch(END)
 if (module.hot) {
   // Enable webpack hot module replacement for reducers
   module.hot.accept('./reducers', () => {
-    const next_reducers = root_reducer(history)
+    const next_reducers = root_reducer(routerReducer)
     store.replaceReducer(next_reducers)
   })
 }
