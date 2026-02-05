@@ -5,6 +5,8 @@
  * Handles initialization, sync, rebuild, and shutdown.
  */
 
+import fs from 'fs/promises'
+import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
@@ -80,6 +82,7 @@ import {
   list_thread_ids,
   process_threads_in_batches
 } from '#libs-server/threads/list-threads.mjs'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
 const log = debug('embedded-index')
@@ -95,6 +98,11 @@ class EmbeddedIndexManager {
     // Map of thread_id -> { metadata, callbacks: [{ resolve, reject }] }
     // Used to coalesce repeated sync requests for the same thread
     this._pending_thread_syncs = new Map()
+    // Map of thread_id -> { size: number, mtime: number, event_data: Object }
+    // Caches timeline extraction results keyed by file size + mtime to skip
+    // re-extraction when only metadata changes.
+    // Cleared on rebuild and shutdown; bounded by total thread count.
+    this._timeline_sync_cache = new Map()
   }
 
   /**
@@ -452,6 +460,9 @@ class EmbeddedIndexManager {
   async _reset_and_rebuild_index_internal() {
     log('Rebuilding full index from filesystem')
 
+    // Clear timeline cache since all data will be repopulated
+    this._timeline_sync_cache.clear()
+
     if (this.kuzu_ready) {
       try {
         const kuzu_connection = await get_kuzu_connection()
@@ -778,10 +789,46 @@ class EmbeddedIndexManager {
           metadata
         })
 
-        // Read and extract latest timeline event
-        const latest_event_data = await read_and_extract_latest_event({
-          thread_id
-        })
+        // Check timeline file size to skip redundant extraction
+        const thread_base_dir = get_thread_base_directory({})
+        const timeline_path = path.join(
+          thread_base_dir,
+          thread_id,
+          'timeline.jsonl'
+        )
+        let timeline_size = 0
+        let timeline_mtime = 0
+        try {
+          const stat = await fs.stat(timeline_path)
+          timeline_size = stat.size
+          timeline_mtime = stat.mtimeMs
+        } catch {
+          // File doesn't exist yet
+        }
+
+        const cached_timeline = this._timeline_sync_cache.get(thread_id)
+        let latest_event_data
+        if (
+          cached_timeline &&
+          cached_timeline.size === timeline_size &&
+          cached_timeline.mtime === timeline_mtime
+        ) {
+          latest_event_data = cached_timeline.event_data
+          log(
+            'Skipping timeline re-extraction for %s (size unchanged at %d)',
+            thread_id,
+            timeline_size
+          )
+        } else {
+          latest_event_data = await read_and_extract_latest_event({
+            thread_id
+          })
+          this._timeline_sync_cache.set(thread_id, {
+            size: timeline_size,
+            mtime: timeline_mtime,
+            event_data: latest_event_data
+          })
+        }
 
         await upsert_thread_to_duckdb({
           thread_data: {
@@ -923,6 +970,7 @@ class EmbeddedIndexManager {
     this.initialized = false
     this.kuzu_ready = false
     this.duckdb_ready = false
+    this._timeline_sync_cache.clear()
     log('Embedded index manager shut down')
   }
 }

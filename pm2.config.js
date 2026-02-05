@@ -55,7 +55,8 @@ const defaults = {
   exec_mode: 'fork',
   autorestart: true,
   combine_logs: true,
-  time: true
+  time: true,
+  max_size: '50M' // requires: pm2 install pm2-logrotate
 }
 
 function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {

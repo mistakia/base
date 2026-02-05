@@ -90,7 +90,27 @@ export const get_cached_latest_timeline_entry = (thread_id) => {
 // Index Sync Hook Debouncing
 // ============================================================================
 
-const index_sync_debouncer = create_keyed_debouncer(500)
+const index_sync_debouncer = create_keyed_debouncer(2000)
+
+/**
+ * Schedule a debounced index sync for a thread.
+ * Keys by thread_id so that metadata.json and timeline.jsonl changes
+ * for the same thread coalesce into a single sync operation.
+ *
+ * @param {string} thread_id - UUID of the thread
+ */
+const schedule_thread_index_sync = (thread_id) => {
+  if (!index_sync_hooks?.on_thread_sync) return
+
+  index_sync_debouncer.call(thread_id, () => {
+    const cached_metadata = metadata_cache.get(thread_id)
+    if (!cached_metadata) {
+      log('No cached metadata for thread %s, skipping index sync', thread_id)
+      return
+    }
+    index_sync_hooks.on_thread_sync({ thread_id, metadata: cached_metadata })
+  })
+}
 
 // ============================================================================
 // Path Utilities
@@ -338,9 +358,9 @@ const handle_metadata_added = async (file_path) => {
   const thread_dir = path.dirname(file_path)
   await initialize_timeline_tracking_for_new_thread(thread_id, thread_dir)
 
-  // Notify index sync hooks (debounced)
-  if (index_sync_hooks?.on_thread_change) {
-    index_sync_debouncer.call(file_path, index_sync_hooks.on_thread_change)
+  // Notify index sync hooks (debounced by thread_id)
+  if (metadata.thread_id) {
+    schedule_thread_index_sync(metadata.thread_id)
   }
 }
 
@@ -364,9 +384,9 @@ const handle_metadata_changed = async (file_path) => {
 
   emit_thread_updated(metadata)
 
-  // Notify index sync hooks (debounced)
-  if (index_sync_hooks?.on_thread_change) {
-    index_sync_debouncer.call(file_path, index_sync_hooks.on_thread_change)
+  // Notify index sync hooks (debounced by thread_id)
+  if (metadata.thread_id) {
+    schedule_thread_index_sync(metadata.thread_id)
   }
 }
 
@@ -435,10 +455,8 @@ const handle_timeline_changed = async (file_path) => {
 
   emit_timeline_entry_events(thread_id, new_entries, metadata)
 
-  // Notify index sync hooks (debounced)
-  if (index_sync_hooks?.on_timeline_change) {
-    index_sync_debouncer.call(file_path, index_sync_hooks.on_timeline_change)
-  }
+  // Notify index sync hooks (debounced by thread_id)
+  schedule_thread_index_sync(thread_id)
 }
 
 // ============================================================================
@@ -544,9 +562,8 @@ const register_watcher_handlers = (watcher_instance) => {
  * @param {Object} params
  * @param {string} params.thread_directory - Absolute path to thread directory
  * @param {Object} [params.hooks] - Optional hooks for external consumers (e.g. index sync)
- * @param {Function} [params.hooks.on_thread_change] - Called with metadata file path on add/change (debounced)
+ * @param {Function} [params.hooks.on_thread_sync] - Called with { thread_id, metadata } on any thread file change (debounced by thread_id, coalesces metadata + timeline changes)
  * @param {Function} [params.hooks.on_thread_delete] - Called with metadata file path on unlink
- * @param {Function} [params.hooks.on_timeline_change] - Called with timeline file path on change (debounced)
  * @returns {Object} Watcher instance
  */
 export const start_thread_watcher = ({ thread_directory, hooks }) => {
