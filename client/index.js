@@ -1,6 +1,3 @@
-// Needed for redux-saga es6 generator support
-import '@babel/polyfill'
-
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 

@@ -10,13 +10,7 @@ export {
   get_directories,
   get_file_content,
   get_path_info,
-  get_database,
-  get_database_items,
-  post_database_view,
-  delete_database_view,
   get_tasks,
   get_tasks_table,
-  post_user_session,
-  get_user,
-  get_users
+  post_user_session
 } from './sagas'

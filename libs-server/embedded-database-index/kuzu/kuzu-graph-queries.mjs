@@ -306,11 +306,14 @@ export async function get_entity_graph({ connection, base_uri, depth = 1 }) {
     return { nodes: [], edges: [] }
   }
 
-  log('Getting entity graph for: %s (depth: %d)', base_uri, depth)
+  const safe_depth =
+    Number.isInteger(depth) && depth > 0 && depth <= 10 ? depth : 1
+
+  log('Getting entity graph for: %s (depth: %d)', base_uri, safe_depth)
 
   // Get the central entity and its neighbors up to specified depth
   const query = `
-    MATCH path = (start:Entity {base_uri: $base_uri})-[r:RELATES_TO|HAS_TAG*1..${depth}]-(connected)
+    MATCH path = (start:Entity {base_uri: $base_uri})-[r:RELATES_TO|HAS_TAG*1..${safe_depth}]-(connected)
     RETURN start, r, connected
   `
 

@@ -205,6 +205,8 @@ export const extract_thread_title = (thread) => {
   if (working_directory.formatted && working_directory.formatted !== '—') {
     return working_directory.formatted
   }
+
+  return 'Untitled Thread'
 }
 
 /**

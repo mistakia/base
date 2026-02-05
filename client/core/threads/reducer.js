@@ -149,11 +149,9 @@ const ACTIVE_THREADS_VIEW = create_view({
   })
 })
 
-// Calculate dates for time-based views
-const now = new Date()
-const last_48_hours = new Date(now.getTime() - 48 * 60 * 60 * 1000)
-const last_7_days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
+// Note: time-based filter dates are computed at module load time.
+// For long-running sessions, these become stale. A proper fix requires
+// recalculating in a selector or action when the view is selected.
 const LAST_48_HOURS_VIEW = create_view({
   entity_prefix: 'thread',
   view_id: 'last_48_hours',
@@ -165,7 +163,7 @@ const LAST_48_HOURS_VIEW = create_view({
       {
         column_id: 'created_at',
         operator: TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
-        value: last_48_hours.toISOString()
+        value: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
       }
     ])
   })
@@ -182,7 +180,9 @@ const LAST_7_DAYS_VIEW = create_view({
       {
         column_id: 'created_at',
         operator: TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
-        value: last_7_days.toISOString()
+        value: new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString()
       }
     ])
   })

@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import databases from './databases.mjs'
 
 const router = express.Router()
 
@@ -171,7 +170,7 @@ router.get('/public_keys/:user_public_key', async (req, res) => {
       return res.status(404).send({ error: 'user not found' })
     }
 
-    res.status(200).send(user)
+    res.status(200).send(filter_public_user_data(user))
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })
@@ -217,7 +216,5 @@ router.get('/:username', async (req, res) => {
     res.status(500).send({ error: error.message })
   }
 })
-
-router.use('/:user_public_key/databases', databases)
 
 export default router

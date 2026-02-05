@@ -30,24 +30,6 @@ export const api = {
     const url = `${API_URL}/tags/${tag_name}?user_public_key=${user_public_key}`
     return { url }
   },
-  get_database({ user_public_key, database_table_name }) {
-    const url = `${API_URL}/users/${user_public_key}/databases/${database_table_name}`
-    return { url }
-  },
-  get_database_items({ user_public_key, database_table_name, ...params }) {
-    const url = `${API_URL}/users/${user_public_key}/databases/${database_table_name}/items?${qs.stringify(
-      params
-    )}`
-    return { url }
-  },
-  post_database_view({ user_public_key, table_name, ...params }) {
-    const url = `${API_URL}/users/${user_public_key}/databases/${table_name}/views`
-    return { url, ...POST(params) }
-  },
-  delete_database_view({ user_public_key, table_name, view_id }) {
-    const url = `${API_URL}/users/${user_public_key}/databases/${table_name}/views/${view_id}`
-    return { url, method: 'DELETE' }
-  },
   get_tasks(params = {}) {
     const url = `${API_URL}/tasks`
     return { url }

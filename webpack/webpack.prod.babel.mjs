@@ -95,12 +95,6 @@ export default base({
         SYSTEM_BASE_DIRECTORY: JSON.stringify(system_base_dir)
       }),
 
-      new webpack.ids.HashedModuleIdsPlugin({
-        hashFunction: 'sha256',
-        hashDigest: 'hex',
-        hashDigestLength: 20
-      }),
-
       // Generate bundle manifest for server-side rendering
       new BundleManifestPlugin({
         filename: 'bundle-manifest.json'

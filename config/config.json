@@ -1,11 +1,9 @@
 {
   "server_port": 8080,
-  "ssl": false,
   "production_url": "https://base.tint.space",
   "production_wss": "wss://base.tint.space",
   "public_url": "https://base.tint.space",
   "base_hostname": "ENCRYPTED|cbd599979035c5eb301fd738cd72f05d|27b7e9022e7fbf920d91922f3dd78775",
-  "additional_subdomains": ["homelab.tint.space"],
   "github_access_token": "ENCRYPTED|a23b824cb96fd5eeb1631c6886cad0a8|2eb626805e02146ba82a40dec946a5bf897d586386e4da3fdf9a879a0f95b339a901392fe6c17212ae44e1a0ab4b61b0",
   "github": {
     "webhook_secret": "ENCRYPTED|d0862190a6217d6ad1e06b74014c4d34|cf0320e6cea1f021baa07b763198524876182bd407b042adc5faeeebe0c8e1218bffcb6a3acd32e564dec40b023b49bf9620e8e5d1b23b1f9455f62fbea8e4daac068e9eea675c61afe86fa051231ca3"

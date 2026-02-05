@@ -107,9 +107,9 @@ const process_stream = async ({
   const tool_calls = []
   const processed_tool_call_ids = new Set()
 
-  try {
-    const reader = structured_stream.getReader()
+  const reader = structured_stream.getReader()
 
+  try {
     while (true) {
       const { value, done } = await reader.read()
 
@@ -163,6 +163,8 @@ const process_stream = async ({
   } catch (error) {
     log('Stream processing error:', error)
     throw error
+  } finally {
+    reader.releaseLock()
   }
 
   return { text: full_response, tool_calls }
@@ -421,7 +423,7 @@ const execute_single_iteration = async ({
       })
     }
 
-    console.log(prompt_data.prompt_text)
+    log('Prompt text prepared for inference (length: %d)', prompt_data.prompt_text?.length || 0)
 
     // Make inference request
     const response = await make_inference_request({
