@@ -176,6 +176,15 @@
       },
       "description": "Array of categorization tags following base-uri format (e.g., 'user:tag/project-alpha')"
     },
+    "tags_user_set": {
+      "type": "boolean",
+      "description": "Whether tags were manually set by the user. When true, automatic tag analysis will skip this thread."
+    },
+    "tags_analyzed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when automatic tag analysis was last performed (ISO 8601). Prevents duplicate analysis runs."
+    },
     "public_read": {
       "type": "boolean",
       "description": "Whether this thread can be read by anyone without authentication. Only affects read access - write operations are always limited to owner."
