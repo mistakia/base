@@ -20,6 +20,49 @@ import {
 const router = express.Router()
 const log = debug('api:filesystem')
 
+// Concurrency limiter for parallel file operations
+const FILE_READ_CONCURRENCY = 10
+const CONCURRENCY_TIMEOUT_MS = 30000 // 30 second timeout for waiting in queue
+
+const create_concurrency_limiter = (max_concurrency) => {
+  const limiter_state = { active_count: 0 }
+  const pending_queue = []
+
+  return async (async_fn) => {
+    // Wait for a slot to open up, with timeout protection
+    while (limiter_state.active_count >= max_concurrency) {
+      await new Promise((resolve, reject) => {
+        const timeout_id = setTimeout(() => {
+          // Remove this resolver from queue if it's still there
+          const index = pending_queue.findIndex((item) => item.resolve === resolve)
+          if (index !== -1) {
+            pending_queue.splice(index, 1)
+          }
+          reject(new Error('Concurrency limiter timeout'))
+        }, CONCURRENCY_TIMEOUT_MS)
+
+        pending_queue.push({
+          resolve: () => {
+            clearTimeout(timeout_id)
+            resolve()
+          }
+        })
+      })
+    }
+
+    limiter_state.active_count++
+    try {
+      return await async_fn()
+    } finally {
+      limiter_state.active_count--
+      if (pending_queue.length > 0) {
+        const next = pending_queue.shift()
+        next.resolve()
+      }
+    }
+  }
+}
+
 // Apply permission checking middleware to all filesystem routes
 router.use(check_filesystem_permission())
 router.use(apply_redaction_interceptor())
@@ -39,43 +82,6 @@ const resolve_user_path = (request_path = '') => {
   }
 
   return { full_path, relative_path: normalized_path }
-}
-
-// Helper function to get file stats and type information
-const get_file_info = async (file_path, file_name) => {
-  try {
-    const stats = await fs.stat(file_path)
-    const is_directory = stats.isDirectory()
-
-    let entity_type = null
-    let has_frontmatter = false
-
-    if (!is_directory && file_name.endsWith('.md')) {
-      try {
-        // Check if file has YAML frontmatter
-        const content = await fs.readFile(file_path, 'utf8')
-        const parsed = fm(content)
-        if (parsed.attributes && Object.keys(parsed.attributes).length > 0) {
-          has_frontmatter = true
-          entity_type = parsed.attributes.type || null
-        }
-      } catch (error) {
-        log(`Error parsing frontmatter for ${file_path}:`, error.message)
-      }
-    }
-
-    return {
-      name: file_name,
-      type: is_directory ? 'directory' : 'file',
-      size: is_directory ? null : stats.size,
-      modified: stats.mtime.toISOString(),
-      entity_type,
-      has_frontmatter
-    }
-  } catch (error) {
-    log(`Error getting file info for ${file_path}:`, error.message)
-    return null
-  }
 }
 
 // GET /api/filesystem/directory - List directory contents
@@ -135,31 +141,86 @@ router.get('/directory', async (req, res) => {
       })
     }
 
-    for (const file_name of files) {
-      // Skip hidden files and git directories
-      if (file_name.startsWith('.')) {
-        continue
-      }
+    // Filter to non-hidden files
+    const visible_files = files.filter((file_name) => !file_name.startsWith('.'))
 
-      const file_path = path.join(full_path, file_name)
-      const file_info = await get_file_info(file_path, file_name)
+    // Parallel stat all files
+    const file_stats_results = await Promise.all(
+      visible_files.map(async (file_name) => {
+        const file_path = path.join(full_path, file_name)
+        try {
+          const stats = await fs.stat(file_path)
+          return { file_name, file_path, stats, error: null }
+        } catch (error) {
+          log(`Error getting stats for ${file_path}:`, error.message)
+          return { file_name, file_path, stats: null, error }
+        }
+      })
+    )
 
-      if (file_info) {
-        // Check if this specific file requires redaction
-        const file_relative_path = path
-          .join(relative_path, file_name)
-          .replace(/\\/g, '/')
-        const permission_result = file_permission_results[file_relative_path]
+    // Filter successful stats and identify markdown files needing frontmatter
+    const successful_stats = file_stats_results.filter((r) => r.stats !== null)
+    const markdown_files = successful_stats.filter(
+      (r) => !r.stats.isDirectory() && r.file_name.endsWith('.md')
+    )
 
-        // Set access information for each item
-        const item_read_allowed =
-          !permission_result || !!permission_result.allowed
+    // Read frontmatter for markdown files with concurrency limit
+    const limit_concurrent = create_concurrency_limiter(FILE_READ_CONCURRENCY)
+    const frontmatter_results = new Map()
 
-        items.push({
-          ...file_info,
-          access: { read_allowed: item_read_allowed }
+    await Promise.all(
+      markdown_files.map(async ({ file_path }) => {
+        const result = await limit_concurrent(async () => {
+          try {
+            const content = await fs.readFile(file_path, 'utf8')
+            const parsed = fm(content)
+            if (parsed.attributes && Object.keys(parsed.attributes).length > 0) {
+              return {
+                has_frontmatter: true,
+                entity_type: parsed.attributes.type || null
+              }
+            }
+            return { has_frontmatter: false, entity_type: null }
+          } catch (error) {
+            log(`Error parsing frontmatter for ${file_path}:`, error.message)
+            return { has_frontmatter: false, entity_type: null }
+          }
         })
+        frontmatter_results.set(file_path, result)
+      })
+    )
+
+    // Build items from results
+    for (const { file_name, file_path, stats } of successful_stats) {
+      const is_directory = stats.isDirectory()
+      const frontmatter_info = frontmatter_results.get(file_path) || {
+        has_frontmatter: false,
+        entity_type: null
       }
+
+      const file_info = {
+        name: file_name,
+        type: is_directory ? 'directory' : 'file',
+        size: is_directory ? null : stats.size,
+        modified: stats.mtime.toISOString(),
+        entity_type: frontmatter_info.entity_type,
+        has_frontmatter: frontmatter_info.has_frontmatter
+      }
+
+      // Check if this specific file requires redaction
+      const file_relative_path = path
+        .join(relative_path, file_name)
+        .replace(/\\/g, '/')
+      const permission_result = file_permission_results[file_relative_path]
+
+      // Set access information for each item
+      const item_read_allowed =
+        !permission_result || !!permission_result.allowed
+
+      items.push({
+        ...file_info,
+        access: { read_allowed: item_read_allowed }
+      })
     }
 
     // Sort: directories first, then files alphabetically

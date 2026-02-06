@@ -21,6 +21,7 @@ const DEFAULT_MERGE_STATE = {
 let repo_list_cache = null // { repo_paths: string[], worktree_metadata: Map }
 const status_cache = new Map() // Map<repo_path, { status, merge_state }>
 let cache_initializing = null // Promise (for requests arriving during cold start)
+let is_initialized = false // Flag set when initialization starts (prevents race condition)
 let _discover_repos_fn = null // injected repo discovery function
 let _on_repo_list_changed = null // callback when repo list changes
 
@@ -39,6 +40,19 @@ export async function initialize_cache({
     log('Cache already initializing, returning existing promise')
     return cache_initializing
   }
+
+  // If cache is already initialized or initialization has started, just update the callbacks
+  // The is_initialized flag prevents race condition where repo_list_cache is null
+  // between when cache_initializing is cleared and repo_list_cache is set
+  if (is_initialized || repo_list_cache !== null) {
+    log('Cache already initialized, updating callbacks only')
+    if (discover_repos) _discover_repos_fn = discover_repos
+    if (on_repo_list_changed) _on_repo_list_changed = on_repo_list_changed
+    return
+  }
+
+  // Mark as initialized before starting to prevent race conditions
+  is_initialized = true
 
   _discover_repos_fn = discover_repos
   _on_repo_list_changed = on_repo_list_changed
@@ -221,6 +235,7 @@ export function destroy_cache() {
   repo_list_cache = null
   status_cache.clear()
   cache_initializing = null
+  is_initialized = false
   _discover_repos_fn = null
   _on_repo_list_changed = null
   log('Cache destroyed')

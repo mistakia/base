@@ -3,8 +3,12 @@ import debug from 'debug'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import { evaluate_permission_rules } from '#server/middleware/rule-engine.mjs'
 import { load_resource_metadata } from './resource-metadata.mjs'
+import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
 
 const log = debug('permission:context')
+
+// Maximum size for resource metadata cache to prevent unbounded memory growth
+const RESOURCE_CACHE_MAX_SIZE = 500
 
 /**
  * Request-scoped permission context for caching and unified permission checking
@@ -29,20 +33,33 @@ export class PermissionContext {
   }
 
   /**
-   * Get resource metadata with caching
+   * Get resource metadata with caching and LRU eviction
    *
    * @param {string} resource_path - Base-URI path of the resource
    * @returns {Promise<Object|null>} Resource metadata or null
    */
   async get_resource_metadata(resource_path) {
-    if (this._resource_cache.has(resource_path)) {
+    const cached_entry = this._resource_cache.get(resource_path)
+    if (cached_entry) {
       log(`Cache hit for resource metadata: ${resource_path}`)
-      return this._resource_cache.get(resource_path)
+      // Update accessed_at for LRU tracking
+      cached_entry.accessed_at = Date.now()
+      return cached_entry.metadata
     }
 
     log(`Cache miss for resource metadata: ${resource_path}`)
     const metadata = await load_resource_metadata({ resource_path })
-    this._resource_cache.set(resource_path, metadata)
+
+    // LRU eviction: remove least recently accessed entry BEFORE adding new one
+    // This ensures cache never exceeds max size
+    if (this._resource_cache.size >= RESOURCE_CACHE_MAX_SIZE) {
+      evict_lru_entry(this._resource_cache, log)
+    }
+
+    this._resource_cache.set(resource_path, {
+      metadata,
+      accessed_at: Date.now()
+    })
     return metadata
   }
 

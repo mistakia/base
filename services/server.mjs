@@ -126,6 +126,19 @@ try {
   logger(error)
 }
 
+// Pre-warm git status cache BEFORE server starts accepting connections.
+// This eliminates 600ms+ cold start delay on first git status request.
+try {
+  logger('Pre-warming git status cache before server start...')
+  await initialize_cache({
+    discover_repos: get_known_repositories
+  })
+  logger('Git status cache pre-warmed')
+} catch (error) {
+  logger(`Failed to pre-warm git status cache: ${error.message}`)
+  logger(error)
+}
+
 try {
   const { server_port } = config
   server.listen(server_port, async () => {
@@ -167,7 +180,7 @@ try {
       logger(watcher_error)
     }
 
-    // Initialize git status cache (populates in-memory cache for fast /status/all)
+    // Set up git status cache callbacks (cache was pre-warmed before server start)
     try {
       await initialize_cache({
         discover_repos: get_known_repositories,
@@ -180,9 +193,9 @@ try {
           }
         }
       })
-      logger('Git status cache initialized')
+      logger('Git status cache callbacks configured')
     } catch (cache_error) {
-      logger(`Failed to initialize git status cache: ${cache_error.message}`)
+      logger(`Failed to configure git status cache: ${cache_error.message}`)
       logger(cache_error)
     }
 
