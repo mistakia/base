@@ -42,9 +42,9 @@ function parse_git_log_numstat({ stdout, activity_by_date = new Map() }) {
   let current_commit_counted = false
 
   for (const line of lines) {
-    if (line.includes('|')) {
-      // This is a commit header line: hash|date
-      const parts = line.split('|')
+    if (line.includes('\t') && line.match(/^[a-f0-9]{40}\t/)) {
+      // This is a commit header line: hash<TAB>date
+      const parts = line.split('\t')
       current_date = parts[1]
       current_commit_counted = false
 
@@ -177,8 +177,8 @@ async function get_git_activity_since_sha({
   until_sha = null
 }) {
   try {
-    // Build git log command
-    let git_command = 'git log --format="%H|%ad" --date=short --numstat'
+    // Build git log command (use tab delimiter to avoid shell metacharacter validation)
+    let git_command = 'git log --format="%H%x09%ad" --date=short --numstat'
 
     if (since_sha) {
       const sha_exists = await verify_commit_exists({
@@ -362,9 +362,9 @@ export async function backfill_git_activity_from_scratch({ days = 365 } = {}) {
     new_sync_state[repo.name] = { sha: current_sha }
 
     try {
-      // Get all commits in date range
+      // Get all commits in date range (use tab delimiter via %x09 to avoid shell metacharacter validation)
       const { stdout } = await execute_shell_command(
-        `git log --since="${since_str}" --format="%H|%ad" --date=short --numstat`,
+        `git log --since="${since_str}" --format="%H%x09%ad" --date=short --numstat`,
         { cwd: repo.path }
       )
 
