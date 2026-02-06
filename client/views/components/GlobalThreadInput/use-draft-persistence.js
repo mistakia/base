@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 
 // Constants
 const STORAGE_KEY_PREFIX = 'thread_input_draft'
-const DEFAULT_TTL_MS = 604800000 // 7 days
-const DEBOUNCE_DELAY_MS = 500
+const DEFAULT_TTL_MS = 2592000000 // 30 days
+const DEBOUNCE_DELAY_MS = 250
 
 /**
  * Generate localStorage key for draft storage
@@ -154,9 +154,10 @@ export function prune_expired_drafts() {
 /**
  * Hook for managing draft persistence with localStorage
  * @param {string} pathname - Current URL pathname for namespace resolution
+ * @param {boolean} is_active - Whether the input is currently active/open
  * @returns {Object} Draft persistence interface
  */
-export default function use_draft_persistence(pathname) {
+export default function use_draft_persistence(pathname, is_active = true) {
   const [draft, set_draft] = useState(null)
   const [is_loading, set_is_loading] = useState(true)
   const namespace_ref = useRef(null)
@@ -166,8 +167,12 @@ export default function use_draft_persistence(pathname) {
   const namespace = resolve_namespace_from_pathname(pathname)
   namespace_ref.current = namespace
 
-  // Load draft on mount and when pathname changes
+  // Load draft on mount, when pathname changes, or when becoming active
   useEffect(() => {
+    if (!is_active) {
+      return
+    }
+
     set_is_loading(true)
 
     // Prune expired drafts on load
@@ -177,7 +182,7 @@ export default function use_draft_persistence(pathname) {
     const loaded_draft = load_draft(namespace)
     set_draft(loaded_draft)
     set_is_loading(false)
-  }, [namespace.namespace_type, namespace.namespace_value])
+  }, [namespace.namespace_type, namespace.namespace_value, is_active])
 
   // Debounced save function
   const save_draft_debounced = useCallback(

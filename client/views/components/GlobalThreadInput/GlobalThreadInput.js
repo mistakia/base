@@ -44,13 +44,13 @@ export default function GlobalThreadInput() {
   const prev_is_open_ref = useRef(false)
   const draft_restored_ref = useRef(false)
 
-  // Draft persistence hook
-  const draft_persistence = use_draft_persistence(location.pathname)
-
   // Redux state for overlay
   const is_open = useSelector((state) =>
     state.getIn(['thread_prompt', 'is_open'], false)
   )
+
+  // Draft persistence hook - pass is_open to reload draft when overlay opens
+  const draft_persistence = use_draft_persistence(location.pathname, is_open)
   // Thread context captured at open time - persists during navigation
   const thread_id = useSelector((state) =>
     state.getIn(['thread_prompt', 'thread_id'], null)
