@@ -8,6 +8,15 @@ import { normalize_file_path } from '#libs-shared/path-utils.mjs'
 
 import { websocket_actions } from './actions'
 
+// Allowlist of valid WebSocket action types that can be dispatched to Redux
+const ALLOWED_WEBSOCKET_ACTIONS = new Set([
+  'FILE_CHANGED',
+  'FILE_DELETED',
+  'THREAD_CREATED',
+  'THREAD_UPDATED',
+  'THREAD_TIMELINE_ENTRY_ADDED'
+])
+
 export let ws = null
 let messages = []
 let interval = null
@@ -74,6 +83,15 @@ export const open_websocket = (params) => {
       const store = StoreRegistry.getStore()
       const message = JSON.parse(event.data)
       console.log(`websocket message: ${message.type}`)
+
+      // Validate action type before dispatching to Redux
+      if (!ALLOWED_WEBSOCKET_ACTIONS.has(message.type)) {
+        console.warn(
+          `Rejected WebSocket action with invalid type: ${message.type}`
+        )
+        return
+      }
+
       store.dispatch(message)
     } catch (error) {
       console.error('WebSocket message error:', error.message)

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { code_to_html } from '@core/shiki-highlighter.js'
 import { normalize_language } from '@views/utils/language-utils.js'
+import { sanitize_html } from '@views/utils/sanitize-html.mjs'
 import { StatusText, MonospaceText } from './styled/index.js'
 
 const CodeViewer = ({ code, language, is_redacted }) => {
@@ -32,7 +33,7 @@ const CodeViewer = ({ code, language, is_redacted }) => {
 
           const wrapped_html = `<pre style="margin: 0; padding: var(--space-base); font-size: var(--font-size-base); line-height: 1.5; overflow: auto; color: var(--color-text-disabled); overflow-x: auto; background-color: color-mix(in srgb, var(--color-text-disabled) 10%, transparent); user-select: none; cursor: not-allowed; opacity: 0.8; border: 1px dashed var(--color-border-subtle); border-radius: 4px;">${redacted_html}</pre>`
 
-          if (is_active) set_highlighted_html(wrapped_html)
+          if (is_active) set_highlighted_html(sanitize_html(wrapped_html))
           return
         }
 
@@ -60,7 +61,7 @@ const CodeViewer = ({ code, language, is_redacted }) => {
             }
           ]
         })
-        if (is_active) set_highlighted_html(html)
+        if (is_active) set_highlighted_html(sanitize_html(html))
       } catch (err) {
         if (is_active) {
           set_error(`Failed to highlight code: ${err.message}`)

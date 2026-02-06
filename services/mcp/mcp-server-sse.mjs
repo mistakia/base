@@ -6,6 +6,7 @@ import cors from 'cors'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { z } from 'zod'
+import config from '#config'
 
 // import { mcp_server } from '#libs-server/mcp/server.mjs'
 
@@ -105,8 +106,35 @@ const mcp_port = 3100
 // Create a standalone Express app for MCP
 const app = express()
 
-// Enable CORS for all routes
-app.use(cors())
+// Restricted CORS configuration matching main server
+const allowed_origins = new Set(
+  [
+    config.public_url || '',
+    'http://localhost:8080',
+    'https://localhost:8080',
+    'http://localhost:8081',
+    'https://localhost:8081'
+  ].filter(Boolean)
+)
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like curl or server-side requests)
+      if (!origin) return callback(null, true)
+
+      if (!allowed_origins.has(origin)) {
+        const msg =
+          'The CORS policy for this site does not allow access from the specified Origin.'
+        return callback(new Error(msg), false)
+      }
+      return callback(null, true)
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+)
 
 // Parse JSON request bodies
 app.use(express.json())

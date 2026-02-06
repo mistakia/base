@@ -5,6 +5,7 @@ import { parseDiffFromFile } from '@pierre/diffs'
 
 import { code_to_html } from '@core/shiki-highlighter.js'
 import { normalize_language } from '@views/utils/language-utils.js'
+import { sanitize_html } from '@views/utils/sanitize-html.mjs'
 import { MonospaceText } from '@components/primitives/styled/index.js'
 
 /**
@@ -117,7 +118,7 @@ const DiffCodeViewer = ({
             }
           ]
         })
-        if (is_active) set_highlighted_html(html)
+        if (is_active) set_highlighted_html(sanitize_html(html))
       } catch (err) {
         if (is_active) {
           set_error(`Failed to highlight code: ${err.message}`)

@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 
 import { COLORS } from '@theme/colors.js'
 import { code_to_html } from '@core/shiki-highlighter.js'
+import { sanitize_html } from '@views/utils/sanitize-html.mjs'
 import { MonospaceText } from '@views/components/primitives/styled'
 
 const BashTool = ({ tool_call_event, tool_result_event }) => {
@@ -27,7 +28,7 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
           theme: 'github-dark',
           transformers: []
         })
-        set_highlighted_command(html)
+        set_highlighted_command(sanitize_html(html))
       } catch (err) {
         console.error('Failed to highlight bash command:', err)
         set_highlighted_command('')

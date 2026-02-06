@@ -1,7 +1,7 @@
 import debug from 'debug'
 import fs from 'fs/promises'
 import path from 'path'
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
@@ -19,16 +19,6 @@ function escape_regex_string(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/**
- * Escape a string for safe use in shell commands by wrapping in single quotes
- * and escaping any single quotes within the string
- * @param {string} string - The string to escape for shell use
- * @returns {string} - Shell-escaped string safe for command execution
- */
-function escape_shell_string(string) {
-  // Replace any single quotes with '\'' (end quote, escaped quote, start quote)
-  return "'" + string.replace(/'/g, "'\\''") + "'"
-}
 
 /**
  * Update references in entity relations array
@@ -271,11 +261,11 @@ export async function update_thread_metadata_references({
   try {
     // Pre-filter using grep to find only metadata files containing the old_base_uri
     // This avoids parsing JSON for threads that don't have any matching references
-    const shell_escaped_uri = escape_shell_string(old_base_uri)
-
+    // Using spawnSync to avoid shell injection via old_base_uri
     try {
-      const grep_result = execSync(
-        `grep -l ${shell_escaped_uri} */metadata.json 2>/dev/null || true`,
+      const grep_result = spawnSync(
+        'grep',
+        ['-l', old_base_uri, '--include=metadata.json', '-r', '.'],
         {
           cwd: thread_directory,
           encoding: 'utf-8',
@@ -283,13 +273,15 @@ export async function update_thread_metadata_references({
         }
       )
 
-      metadata_files = grep_result
-        .trim()
-        .split('\n')
-        .filter(Boolean)
-        .map((file) => path.join(thread_directory, file))
-    } catch (grep_error) {
       // grep returns exit code 1 when no matches found, which is fine
+      if (grep_result.stdout) {
+        metadata_files = grep_result.stdout
+          .trim()
+          .split('\n')
+          .filter(Boolean)
+          .map((file) => path.join(thread_directory, file))
+      }
+    } catch (grep_error) {
       log(`Grep completed with no matches or error: ${grep_error.message}`)
     }
 

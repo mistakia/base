@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
+import { sanitize_html } from '@views/utils/sanitize-html.mjs'
 
 import { COLORS } from '@theme/colors.js'
 import '@styles/checkbox.styl'
@@ -166,7 +167,7 @@ const MarkdownViewer = ({ content, is_redacted }) => {
       ''
     )
 
-    return render_markdown(content_without_frontmatter)
+    return sanitize_html(render_markdown(content_without_frontmatter))
   }, [content, is_redacted])
 
   return (
