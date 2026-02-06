@@ -59,4 +59,19 @@ if (process.env.BASE_PUBLIC_WSS) {
   config.production_wss = process.env.BASE_PUBLIC_WSS
 }
 
+// SSL configuration via environment variables (for production servers)
+// Allows config.json to remain machine-agnostic
+if (process.env.SSL_ENABLED === 'true') {
+  config.ssl = true
+}
+if (process.env.SSL_KEY_PATH) {
+  config.key = process.env.SSL_KEY_PATH
+}
+if (process.env.SSL_CERT_PATH) {
+  config.cert = process.env.SSL_CERT_PATH
+}
+if (process.env.SERVER_PORT) {
+  config.server_port = parseInt(process.env.SERVER_PORT, 10)
+}
+
 export default config

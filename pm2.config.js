@@ -48,10 +48,22 @@ function get_nvmrc_interpreter() {
   return 'node'
 }
 
+// SSL configuration for storage server (Linux only)
+// macOS runs without SSL (development) or behind a local proxy
+const ssl_env = is_macos
+  ? {}
+  : {
+      SSL_ENABLED: 'true',
+      SSL_KEY_PATH: '/etc/letsencrypt/live/base.tint.space/privkey.pem',
+      SSL_CERT_PATH: '/etc/letsencrypt/live/base.tint.space/fullchain.pem',
+      SERVER_PORT: '8081'
+    }
+
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
   USER_BASE_DIRECTORY: user_base_directory,
-  DEBUG_COLORS: 'false'
+  DEBUG_COLORS: 'false',
+  ...ssl_env
 }
 
 const defaults = {
