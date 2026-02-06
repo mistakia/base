@@ -1,7 +1,7 @@
 import secure_config from '@tsmx/secure-config'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { tmpdir } from 'os'
+import { tmpdir, platform, homedir } from 'os'
 import { randomUUID } from 'crypto'
 
 const current_file_path = fileURLToPath(import.meta.url)
@@ -10,6 +10,14 @@ const config_dir = join(current_dir)
 
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
+
+// Derive user_base_directory based on platform
+// - macOS: ~/user-base (development machine)
+// - Linux: /mnt/md0/user-base (storage server)
+const derived_user_base_directory =
+  platform() === 'darwin'
+    ? join(homedir(), 'user-base')
+    : '/mnt/md0/user-base'
 
 const config = secure_config({ directory: config_dir })
 
@@ -21,10 +29,8 @@ config.system_base_directory =
   process.env.SYSTEM_BASE_DIRECTORY || derived_system_base_directory
 
 // user_base_directory: where user data lives
-if (process.env.USER_BASE_DIRECTORY) {
-  config.user_base_directory = process.env.USER_BASE_DIRECTORY
-}
-// Note: if not set via env, falls back to config.json value
+config.user_base_directory =
+  process.env.USER_BASE_DIRECTORY || derived_user_base_directory
 
 // Derive notification script path from user_base_directory
 if (
