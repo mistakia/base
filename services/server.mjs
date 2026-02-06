@@ -232,7 +232,7 @@ try {
 
     // Start entity file watcher for database sync
     if (embedded_index_ready) {
-      const index_config = embedded_index_manager._get_index_config()
+      const index_config = embedded_index_manager.get_index_config()
       if (index_config.file_watcher_enabled) {
         try {
           start_index_sync_watcher()
@@ -265,99 +265,105 @@ try {
     }
   })
 } catch (err) {
-  // TODO move to stderr
-  logger(err)
+  // Output to stderr for visibility to operators and container orchestration
+  console.error('Fatal error starting server:', err)
+  process.exit(1)
 }
 
 // Graceful shutdown handlers
 const shutdown = async (signal) => {
   logger(`Received ${signal}, shutting down gracefully...`)
 
-  try {
-    // Stop job worker
-    await stop_worker()
-    logger('Job worker stopped')
-  } catch (error) {
-    logger(`Error stopping job worker: ${error.message}`)
-  }
-
-  try {
-    // Stop thread watcher
-    await stop_thread_watcher()
-    logger('Thread watcher stopped')
-  } catch (error) {
-    logger(`Error stopping thread watcher: ${error.message}`)
-  }
-
-  try {
-    // Stop file subscription watcher
-    await stop_file_subscription_watcher()
-    clearTimeout(file_path_cache_invalidation_timer)
-    file_path_cache_invalidation_timer = null
-    logger('File subscription watcher stopped')
-  } catch (error) {
-    logger(`Error stopping file subscription watcher: ${error.message}`)
-  }
-
-  try {
-    // Stop git status watcher
-    await stop_git_status_watcher()
-    logger('Git status watcher stopped')
-  } catch (error) {
-    logger(`Error stopping git status watcher: ${error.message}`)
-  }
-
-  try {
-    // Destroy git status cache
-    destroy_cache()
-    logger('Git status cache destroyed')
-  } catch (error) {
-    logger(`Error destroying git status cache: ${error.message}`)
-  }
-
-  try {
-    // Stop entity file watcher
-    await stop_index_file_watcher()
-    logger('Entity file watcher stopped')
-  } catch (error) {
-    logger(`Error stopping entity file watcher: ${error.message}`)
-  }
-
-  try {
-    // Shutdown embedded index
-    await embedded_index_manager.shutdown()
-    logger('Embedded index shut down')
-  } catch (error) {
-    logger(`Error shutting down embedded index: ${error.message}`)
-  }
-
-  try {
-    // Remove server lock file
-    await remove_server_lock_file()
-    logger('Server lock file removed')
-  } catch (error) {
-    logger(`Error removing lock file: ${error.message}`)
-  }
-
-  try {
-    // Stop cache warmer service
-    stop_cache_warmer()
-    logger('Cache warmer service stopped')
-  } catch (error) {
-    logger(`Error stopping cache warmer: ${error.message}`)
-  }
-
-  // Close server
-  server.close(() => {
-    logger('Server closed')
-    process.exit(0)
-  })
-
-  // Force exit after 10 seconds if server hasn't closed
-  setTimeout(() => {
-    logger('Forcing shutdown after timeout')
+  // Force exit timeout - ensures process terminates even if shutdown hangs
+  const force_exit_timer = setTimeout(() => {
+    console.error('Forcing shutdown after timeout')
     process.exit(1)
   }, 10000)
+
+  try {
+    // Stop services in order, with independent services running in parallel where safe
+    // Phase 1: Stop workers and watchers (can run in parallel)
+    await Promise.allSettled([
+      (async () => {
+        try {
+          await stop_worker()
+          logger('Job worker stopped')
+        } catch (error) {
+          logger(`Error stopping job worker: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          await stop_thread_watcher()
+          logger('Thread watcher stopped')
+        } catch (error) {
+          logger(`Error stopping thread watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          await stop_file_subscription_watcher()
+          clearTimeout(file_path_cache_invalidation_timer)
+          file_path_cache_invalidation_timer = null
+          logger('File subscription watcher stopped')
+        } catch (error) {
+          logger(`Error stopping file subscription watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          await stop_git_status_watcher()
+          logger('Git status watcher stopped')
+        } catch (error) {
+          logger(`Error stopping git status watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          await stop_index_file_watcher()
+          logger('Entity file watcher stopped')
+        } catch (error) {
+          logger(`Error stopping entity file watcher: ${error.message}`)
+        }
+      })()
+    ])
+
+    // Phase 2: Cleanup caches and embedded index (sequential - may depend on watchers being stopped)
+    try {
+      destroy_cache()
+      logger('Git status cache destroyed')
+    } catch (error) {
+      logger(`Error destroying git status cache: ${error.message}`)
+    }
+
+    try {
+      await embedded_index_manager.shutdown()
+      logger('Embedded index shut down')
+    } catch (error) {
+      logger(`Error shutting down embedded index: ${error.message}`)
+    }
+
+    try {
+      await remove_server_lock_file()
+      logger('Server lock file removed')
+    } catch (error) {
+      logger(`Error removing lock file: ${error.message}`)
+    }
+
+    try {
+      stop_cache_warmer()
+      logger('Cache warmer service stopped')
+    } catch (error) {
+      logger(`Error stopping cache warmer: ${error.message}`)
+    }
+  } finally {
+    // Always close server and clear timeout
+    clearTimeout(force_exit_timer)
+    server.close(() => {
+      logger('Server closed')
+      process.exit(0)
+    })
+  }
 }
 
 // Register shutdown handlers

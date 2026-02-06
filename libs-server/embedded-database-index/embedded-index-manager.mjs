@@ -147,7 +147,7 @@ class EmbeddedIndexManager {
     }
   }
 
-  _get_index_config() {
+  get_index_config() {
     if (this.index_config) {
       return this.index_config
     }
@@ -173,7 +173,7 @@ class EmbeddedIndexManager {
     }
 
     this.read_only = read_only
-    const index_config = this._get_index_config()
+    const index_config = this.get_index_config()
 
     if (!index_config.enabled) {
       log('Embedded database index is disabled')

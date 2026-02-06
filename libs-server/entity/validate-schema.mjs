@@ -40,6 +40,23 @@ const validator = new Validator({
   }
 })
 
+// Shared datetime validation configuration
+const DATETIME_PATTERN =
+  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+
+const datetime_custom_validator = (value, errors, _schema, name) => {
+  if (value === undefined || value === null) return value
+  const parsed = new Date(value)
+  if (isNaN(parsed.getTime())) {
+    errors.push({
+      type: 'dateInvalid',
+      field: name,
+      message: `'${value}' is not a valid datetime`
+    })
+  }
+  return value
+}
+
 /**
  * Transform property type for validation
  * @param {Object} property Property schema
@@ -62,8 +79,8 @@ function transform_property_type(property) {
     if (property.format === 'datetime') {
       return {
         ...property,
-        pattern:
-          /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+        pattern: DATETIME_PATTERN,
+        custom: datetime_custom_validator
       }
     }
 
@@ -81,8 +98,8 @@ function transform_property_type(property) {
     return {
       ...property,
       type: 'string',
-      pattern:
-        /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?)?$/
+      pattern: DATETIME_PATTERN,
+      custom: datetime_custom_validator
     }
   }
 

@@ -76,10 +76,7 @@ function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
 module.exports = {
   apps: [
     app('base-api', 'services/server.mjs', {
-      watch: [
-        'build/bundle-manifest.json',
-        'source/build/bundle-manifest.json'
-      ],
+      watch: ['build/bundle-manifest.json'],
       watch_delay: 1000,
       ignore_watch: ['node_modules', 'logs', 'tmp'],
       max_memory_restart: '3584M',

@@ -1,3 +1,7 @@
+import debug from 'debug'
+
+const log = debug('entity:format:extractors:relation-extractor')
+
 /**
  * Extract relations from entity properties
  * @param {Object} options - Function options
@@ -24,6 +28,12 @@ export function extract_entity_relations({ entity_properties }) {
           base_uri: relation_match[2],
           context: relation_match[4] || null
         })
+      } else {
+        log(
+          'Failed to extract relation from "%s" in entity %s - expected format: "relation_type [[base_uri]]"',
+          relation_str,
+          entity_properties.base_uri || entity_properties.title || 'unknown'
+        )
       }
     })
   }
