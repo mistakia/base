@@ -1,10 +1,15 @@
 import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
+import IconButton from '@mui/material/IconButton'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import CheckIcon from '@mui/icons-material/Check'
 
 import './AssistantMessage.styl'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import ExpandToggle from '@components/primitives/ExpandToggle'
 import { process_message_content } from './utils/message-processing.js'
+import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
+import { COLORS } from '@theme/colors.js'
 
 const AssistantMessage = ({
   message,
@@ -13,6 +18,7 @@ const AssistantMessage = ({
 }) => {
   const [is_assistant_message_expanded, set_is_assistant_message_expanded] =
     useState(false)
+  const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const on_toggle = useCallback((e) => {
     e.stopPropagation()
     set_is_assistant_message_expanded((v) => !v)
@@ -31,18 +37,37 @@ const AssistantMessage = ({
   // Check for "stop_reasoning" in content
   const is_stop_reasoning = content.includes('stop_reasoning')
 
+  const is_copied = copied_value === message.content
+  const handle_copy = (e) => {
+    e.stopPropagation()
+    copy_to_clipboard(message.content)
+  }
+
   return (
     <div className='assistant-message'>
-      {should_truncate && (
-        <div className='assistant-message__header'>
+      <div className='assistant-message__header'>
+        <IconButton
+          size='small'
+          onClick={handle_copy}
+          title='Copy to clipboard'
+          sx={{ padding: '2px' }}>
+          {is_copied ? (
+            <CheckIcon sx={{ fontSize: '14px', color: COLORS.success }} />
+          ) : (
+            <ContentCopyOutlinedIcon
+              sx={{ fontSize: '14px', opacity: 0.6, '&:hover': { opacity: 1 } }}
+            />
+          )}
+        </IconButton>
+        {should_truncate && (
           <ExpandToggle
             is_expanded={is_assistant_message_expanded}
             on_toggle={on_toggle}
             expanded_label='Collapse'
             collapsed_label='Expand'
           />
-        </div>
-      )}
+        )}
+      </div>
       <div
         className={`assistant-message__content${is_stop_reasoning ? ' assistant-message__content--reasoning' : ''}`}>
         <div style={{ whiteSpace: 'normal', wordBreak: 'normal' }}>
