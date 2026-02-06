@@ -21,7 +21,8 @@ import {
   LinkValue,
   PrimitiveArrayValue,
   ObjectValue,
-  ObjectArrayValue
+  ObjectArrayValue,
+  TagArrayValue
 } from './value-components/index.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
@@ -58,6 +59,11 @@ const categorize_fields = (frontmatter) => {
 
 const render_field_value = (key, value, frontmatter) => {
   if (value === null || value === undefined) return 'N/A'
+
+  // Special handling for tags field - render as clickable links
+  if (key === 'tags' && Array.isArray(value)) {
+    return <TagArrayValue value={value} />
+  }
 
   const field_type = resolve_field_type(key, value)
 

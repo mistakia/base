@@ -80,13 +80,29 @@ export function* load_thread({ payload }) {
 
 export function* load_threads_table_data({ payload }) {
   try {
-    const { view_id = 'default', is_append = false } = payload
+    const { view_id = 'default', is_append = false, url_filters = [] } = payload
 
     const threads_state = yield select(get_threads_state)
     const selected_view = threads_state.getIn(['thread_table_views', view_id])
     let table_state = serialize_table_state(
       selected_view.get('thread_table_state')
     )
+
+    // Merge url_filters with existing table state filters
+    // Note: Thread tag filtering will work once thread_tags table is populated
+    // by the automatic thread tag evaluation task
+    if (url_filters.length > 0) {
+      const existing_where = table_state.where || []
+      // Filter out any existing filters for the same columns (url takes priority)
+      const url_filter_columns = new Set(url_filters.map((f) => f.column_id))
+      const filtered_existing = existing_where.filter(
+        (f) => !url_filter_columns.has(f.column_id)
+      )
+      table_state = {
+        ...table_state,
+        where: [...filtered_existing, ...url_filters]
+      }
+    }
 
     // Adjust offset for append requests based on current rows fetched
     if (is_append) {

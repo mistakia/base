@@ -19,3 +19,13 @@
   &:hover
     background darken($color_surface_secondary, 2%)
     border-color darken($color_border_light, 5%)
+
+  // Clickable chip variant (for links)
+  &--link
+    cursor pointer
+    color $color_primary
+
+    &:hover
+      background rgba($color_primary, 0.08)
+      border-color $color_primary
+      text-decoration none

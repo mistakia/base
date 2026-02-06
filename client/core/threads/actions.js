@@ -91,9 +91,13 @@ export const threads_actions = {
     payload: { view_id }
   }),
 
-  load_threads_table: ({ view_id = 'default', is_append = false } = {}) => ({
+  load_threads_table: ({
+    view_id = 'default',
+    is_append = false,
+    url_filters = []
+  } = {}) => ({
     type: threads_action_types.LOAD_THREADS_TABLE,
-    payload: { view_id, is_append }
+    payload: { view_id, is_append, url_filters }
   }),
 
   set_thread_archive_state: ({ thread_id, archive_reason, archived_at }) => ({
