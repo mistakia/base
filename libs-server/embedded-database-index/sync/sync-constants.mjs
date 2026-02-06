@@ -4,6 +4,10 @@
  * Shared constants for the embedded database index sync system.
  */
 
+import debug from 'debug'
+
+const log = debug('embedded-index:sync:filter')
+
 /**
  * Default path patterns to exclude from entity scanning.
  * Excludes git worktrees which contain duplicate entity files.
@@ -37,27 +41,88 @@ export const ENTITY_FILE_PATTERN = '**/*.md'
 export const THREAD_METADATA_PATTERN = /^thread\/[0-9a-f-]+\/metadata\.json$/i
 
 /**
+ * Known submodule prefixes that contain non-entity markdown files.
+ * Files in these paths are excluded from entity sync even if they match
+ * entity directory patterns (e.g., text/epstein/transparency-act/ matches text/).
+ */
+export const SUBMODULE_EXCLUSION_PREFIXES = [
+  'text/epstein/transparency-act/',
+  'import-history/',
+  'repository/active/',
+  'repository/archive/'
+]
+
+/**
  * Filter file paths to only include entity files
  * @param {Object} params
  * @param {string[]} params.file_paths - All file paths
  * @param {string[]} params.entity_directories - Entity directories to include
+ * @param {string[]} params.submodule_exclusions - Submodule prefixes to exclude
+ * @returns {{filtered: string[], excluded_submodule: string[], excluded_non_entity: string[]}}
+ */
+export function filter_entity_files_detailed({
+  file_paths,
+  entity_directories = ENTITY_DIRECTORIES,
+  submodule_exclusions = SUBMODULE_EXCLUSION_PREFIXES
+}) {
+  const filtered = []
+  const excluded_submodule = []
+  const excluded_non_entity = []
+
+  for (const file_path of file_paths) {
+    const is_in_entity_dir = entity_directories.some((dir) =>
+      file_path.startsWith(`${dir}/`)
+    )
+    const is_markdown = file_path.endsWith('.md')
+    const is_in_excluded_submodule = submodule_exclusions.some((prefix) =>
+      file_path.startsWith(prefix)
+    )
+
+    if (is_in_entity_dir && is_markdown) {
+      if (is_in_excluded_submodule) {
+        excluded_submodule.push(file_path)
+      } else {
+        filtered.push(file_path)
+      }
+    } else if (is_markdown) {
+      excluded_non_entity.push(file_path)
+    }
+  }
+
+  return { filtered, excluded_submodule, excluded_non_entity }
+}
+
+/**
+ * Filter file paths to only include entity files
+ * @param {Object} params
+ * @param {string[]} params.file_paths - All file paths
+ * @param {string[]} params.entity_directories - Entity directories to include
+ * @param {string[]} params.submodule_exclusions - Submodule prefixes to exclude
  * @returns {string[]} Filtered entity file paths
  */
 export function filter_entity_files({
   file_paths,
-  entity_directories = ENTITY_DIRECTORIES
+  entity_directories = ENTITY_DIRECTORIES,
+  submodule_exclusions = SUBMODULE_EXCLUSION_PREFIXES
 }) {
-  return file_paths.filter((file_path) => {
-    // Check if file is in an entity directory
-    const is_in_entity_dir = entity_directories.some((dir) =>
-      file_path.startsWith(`${dir}/`)
-    )
-
-    // Check if it's a markdown file
-    const is_markdown = file_path.endsWith('.md')
-
-    return is_in_entity_dir && is_markdown
+  const { filtered, excluded_submodule } = filter_entity_files_detailed({
+    file_paths,
+    entity_directories,
+    submodule_exclusions
   })
+
+  // Log excluded files for visibility
+  if (excluded_submodule.length > 0) {
+    log(
+      'Filtered out %d files from excluded submodules: %o',
+      excluded_submodule.length,
+      excluded_submodule.length <= 10
+        ? excluded_submodule
+        : [...excluded_submodule.slice(0, 5), `... and ${excluded_submodule.length - 5} more`]
+    )
+  }
+
+  return filtered
 }
 
 /**

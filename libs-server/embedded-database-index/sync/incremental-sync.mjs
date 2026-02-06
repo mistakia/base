@@ -45,8 +45,26 @@ function is_file_not_found_error(error) {
 }
 
 /**
+ * Error patterns that indicate expected failures (non-entity files that passed filtering).
+ * These should be skipped rather than counted as failures.
+ */
+const EXPECTED_FAILURE_PATTERNS = ['No entity type found']
+
+/**
+ * Check if an error is an expected failure (non-entity file that passed filtering).
+ * @param {string} error_message - The error message
+ * @returns {boolean}
+ */
+function is_expected_failure(error_message) {
+  if (!error_message) return false
+  return EXPECTED_FAILURE_PATTERNS.some((pattern) =>
+    error_message.includes(pattern)
+  )
+}
+
+/**
  * Sync a single entity file (add/modify/delete).
- * @returns {Promise<{action: 'synced'|'deleted'|'failed', error?: string}>}
+ * @returns {Promise<{action: 'synced'|'deleted'|'skipped'|'failed', error?: string, reason?: string}>}
  */
 async function sync_entity_file({ file_path, repo_path, index_manager }) {
   const absolute_path = path.join(repo_path, file_path)
@@ -61,6 +79,13 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
         log('Deleted (file not found): %s', base_uri)
         return { action: 'deleted' }
       }
+
+      // Check if this is an expected failure (non-entity file)
+      if (is_expected_failure(result.error)) {
+        log('Skipped non-entity file %s: %s', file_path, result.error)
+        return { action: 'skipped', reason: result.error }
+      }
+
       log('Failed to read entity %s: %s', file_path, result.error)
       return { action: 'failed', error: result.error }
     }
@@ -84,14 +109,15 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
 
 /**
  * Perform incremental sync for changed entity files.
- * @returns {Promise<{synced: number, deleted: number, failed: number}>}
+ * @returns {Promise<{synced: number, deleted: number, skipped: number, failed: number, skipped_details: Array}>}
  */
 export async function perform_incremental_sync({
   repo_path,
   file_paths,
   index_manager
 }) {
-  const stats = { synced: 0, deleted: 0, failed: 0 }
+  const stats = { synced: 0, deleted: 0, skipped: 0, failed: 0 }
+  const skipped_details = []
 
   for (const file_path of file_paths) {
     const result = await sync_entity_file({
@@ -100,20 +126,26 @@ export async function perform_incremental_sync({
       index_manager
     })
     stats[result.action]++
+
+    if (result.action === 'skipped') {
+      skipped_details.push({ file_path, reason: result.reason })
+    }
   }
 
-  return stats
+  return { ...stats, skipped_details }
 }
 
 /**
  * Sync a single thread metadata file (add/modify/delete).
- * @returns {Promise<{action: 'synced'|'deleted'|'failed', error?: string}>}
+ * @returns {Promise<{action: 'synced'|'deleted'|'skipped'|'failed', error?: string, reason?: string}>}
  */
 async function sync_thread_file({ file_path, repo_path, index_manager }) {
   const thread_id = extract_thread_id_from_path(file_path)
   if (!thread_id) {
-    log('Could not extract thread_id from path: %s', file_path)
-    return { action: 'failed', error: 'Invalid thread path' }
+    // Invalid thread path is a skipped condition, not a failure
+    // This can happen with malformed directory names
+    log('Skipped invalid thread path (malformed UUID): %s', file_path)
+    return { action: 'skipped', reason: 'Invalid thread path - malformed UUID' }
   }
 
   const absolute_path = path.join(repo_path, file_path)
@@ -138,10 +170,11 @@ async function sync_thread_file({ file_path, repo_path, index_manager }) {
 
 /**
  * Sync changed thread metadata files.
- * @returns {Promise<{synced: number, deleted: number, failed: number}>}
+ * @returns {Promise<{synced: number, deleted: number, skipped: number, failed: number, skipped_details: Array}>}
  */
 async function sync_changed_threads({ repo_path, file_paths, index_manager }) {
-  const stats = { synced: 0, deleted: 0, failed: 0 }
+  const stats = { synced: 0, deleted: 0, skipped: 0, failed: 0 }
+  const skipped_details = []
 
   for (const file_path of file_paths) {
     const result = await sync_thread_file({
@@ -150,9 +183,13 @@ async function sync_changed_threads({ repo_path, file_paths, index_manager }) {
       index_manager
     })
     stats[result.action]++
+
+    if (result.action === 'skipped') {
+      skipped_details.push({ file_path, reason: result.reason })
+    }
   }
 
-  return stats
+  return { ...stats, skipped_details }
 }
 
 /**
@@ -228,11 +265,14 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
         stats: {
           entities_synced: 0,
           entities_deleted: 0,
+          entities_skipped: 0,
           threads_synced: 0,
           threads_deleted: 0,
+          threads_skipped: 0,
           git_repos_synced: git_activity_stats.repos_synced,
           git_dates_updated: git_activity_stats.dates_updated,
-          failed: 0
+          failed: 0,
+          skipped: 0
         }
       }
     }
@@ -275,11 +315,14 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
     const stats = {
       entities_synced: entity_stats.synced,
       entities_deleted: entity_stats.deleted,
+      entities_skipped: entity_stats.skipped,
       threads_synced: thread_stats.synced,
       threads_deleted: thread_stats.deleted,
+      threads_skipped: thread_stats.skipped,
       git_repos_synced: git_activity_stats.repos_synced,
       git_dates_updated: git_activity_stats.dates_updated,
-      failed: entity_stats.failed + thread_stats.failed
+      failed: entity_stats.failed + thread_stats.failed,
+      skipped: entity_stats.skipped + thread_stats.skipped
     }
 
     // Always update schema version to reflect current code version
@@ -288,24 +331,46 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       value: CURRENT_SCHEMA_VERSION
     })
 
+    // Collect all skipped details for logging
+    const all_skipped_details = [
+      ...entity_stats.skipped_details,
+      ...thread_stats.skipped_details
+    ]
+
+    // Only block sync state advancement for actual failures, not skipped files
+    // Skipped files are expected (non-entity markdown files, malformed thread paths)
     if (stats.failed === 0) {
-      // On failure, preserve old state so the next startup re-processes the same diff range
       await set_repo_sync_state({ state: new_sync_state })
+      if (stats.skipped > 0) {
+        log('Skipped %d files during sync:', stats.skipped)
+        for (const { file_path, reason } of all_skipped_details) {
+          log('  - %s: %s', file_path, reason)
+        }
+      }
     } else {
       log(
-        'Warning: %d files failed to sync, sync state not advanced — full resync will be attempted',
-        stats.failed
+        'Warning: %d files failed to sync (plus %d skipped), sync state not advanced',
+        stats.failed,
+        stats.skipped
       )
+      if (all_skipped_details.length > 0) {
+        log('Skipped files:')
+        for (const { file_path, reason } of all_skipped_details) {
+          log('  - %s: %s', file_path, reason)
+        }
+      }
     }
 
     await checkpoint_duckdb()
 
     log(
-      'Incremental sync complete: %d entities synced, %d deleted; %d threads synced, %d deleted; %d failed',
+      'Incremental sync complete: entities(%d synced, %d deleted, %d skipped); threads(%d synced, %d deleted, %d skipped); %d failed',
       stats.entities_synced,
       stats.entities_deleted,
+      stats.entities_skipped,
       stats.threads_synced,
       stats.threads_deleted,
+      stats.threads_skipped,
       stats.failed
     )
 

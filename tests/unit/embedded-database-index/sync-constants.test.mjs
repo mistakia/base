@@ -6,7 +6,8 @@ import { expect } from 'chai'
 
 import {
   filter_entity_files,
-  ENTITY_DIRECTORIES
+  ENTITY_DIRECTORIES,
+  SUBMODULE_EXCLUSION_PREFIXES
 } from '#libs-server/embedded-database-index/sync/sync-constants.mjs'
 
 describe('Sync Constants', () => {
@@ -137,6 +138,115 @@ describe('Sync Constants', () => {
       })
 
       expect(result).to.have.lengthOf(7)
+    })
+
+    describe('submodule exclusion', () => {
+      it('should exclude files from transparency-act submodule', () => {
+        const file_paths = [
+          'text/my-text.md',
+          'text/epstein/transparency-act/scripts/SETUP.md',
+          'text/epstein/transparency-act/tracking/torrent-sources.md',
+          'text/normal-text/doc.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ENTITY_DIRECTORIES
+        })
+
+        expect(result).to.deep.equal([
+          'text/my-text.md',
+          'text/normal-text/doc.md'
+        ])
+      })
+
+      it('should exclude files from import-history submodule', () => {
+        const file_paths = [
+          'task/my-task.md',
+          'import-history/claude/session-1.md',
+          'import-history/data.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ['task', 'import-history']
+        })
+
+        expect(result).to.deep.equal(['task/my-task.md'])
+      })
+
+      it('should exclude files from repository/active submodules', () => {
+        const file_paths = [
+          'task/my-task.md',
+          'repository/active/base/CLAUDE.md',
+          'repository/active/league/task/something.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ['task', 'repository/active']
+        })
+
+        expect(result).to.deep.equal(['task/my-task.md'])
+      })
+
+      it('should exclude files from repository/archive submodules', () => {
+        const file_paths = [
+          'text/my-doc.md',
+          'repository/archive/vscode/docs/readme.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ['text', 'repository/archive']
+        })
+
+        expect(result).to.deep.equal(['text/my-doc.md'])
+      })
+
+      it('should allow custom submodule exclusions', () => {
+        const file_paths = [
+          'text/my-doc.md',
+          'text/custom-submodule/doc.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ENTITY_DIRECTORIES,
+          submodule_exclusions: ['text/custom-submodule/']
+        })
+
+        expect(result).to.deep.equal(['text/my-doc.md'])
+      })
+
+      it('should include entity files that do not match exclusion patterns', () => {
+        const file_paths = [
+          'text/epstein/local-notes.md',
+          'text/notes/transparency.md'
+        ]
+
+        const result = filter_entity_files({
+          file_paths,
+          entity_directories: ENTITY_DIRECTORIES
+        })
+
+        expect(result).to.deep.equal([
+          'text/epstein/local-notes.md',
+          'text/notes/transparency.md'
+        ])
+      })
+    })
+  })
+
+  describe('SUBMODULE_EXCLUSION_PREFIXES', () => {
+    it('should include known submodule paths', () => {
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.be.an('array')
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include(
+        'text/epstein/transparency-act/'
+      )
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('import-history/')
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/active/')
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/archive/')
     })
   })
 })
