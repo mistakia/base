@@ -95,32 +95,61 @@ export async function find_entities_relating_to({
   const limit_int = Math.max(0, Math.floor(Number(limit) || 100))
   const offset_int = Math.max(0, Math.floor(Number(offset) || 0))
 
-  const where_clauses = ['er.target_base_uri = ?']
+  // Build WHERE clauses for entity_relations
+  const er_where_clauses = ['er.target_base_uri = ?']
   const parameters = [base_uri]
 
   if (relation_type) {
-    where_clauses.push('er.relation_type = ?')
+    er_where_clauses.push('er.relation_type = ?')
     parameters.push(relation_type)
   }
 
-  if (entity_type) {
-    where_clauses.push('e.type = ?')
+  // For entity_type filter, we need separate handling for entities vs threads
+  // Threads have type 'thread' which maps to thread_state in threads table
+  const entity_type_filter = entity_type ? 'AND e.type = ?' : ''
+  const thread_type_filter = entity_type === 'thread' ? '' : (entity_type ? 'AND 1=0' : '')
+
+  if (entity_type && entity_type !== 'thread') {
     parameters.push(entity_type)
   }
 
-  parameters.push(limit_int, offset_int)
+  // Duplicate parameters for the UNION (thread query needs same base params)
+  const thread_params = [base_uri]
+  if (relation_type) {
+    thread_params.push(relation_type)
+  }
 
+  const all_params = [...parameters, ...thread_params, limit_int, offset_int]
+
+  // Use UNION to query both entities and threads tables
   const query = `
-    SELECT e.base_uri, e.entity_id, e.type, e.title, e.updated_at,
-           er.relation_type, er.context
-    FROM entity_relations er
-    JOIN entities e ON er.source_base_uri = e.base_uri
-    WHERE ${where_clauses.join(' AND ')}
+    SELECT base_uri, entity_id, type, title, updated_at, relation_type, context
+    FROM (
+      SELECT e.base_uri, e.entity_id, e.type, e.title, e.updated_at,
+             er.relation_type, er.context
+      FROM entity_relations er
+      JOIN entities e ON er.source_base_uri = e.base_uri
+      WHERE ${er_where_clauses.join(' AND ')} ${entity_type_filter}
+
+      UNION ALL
+
+      SELECT 'user:thread/' || t.thread_id as base_uri,
+             t.thread_id as entity_id,
+             'thread' as type,
+             t.title,
+             t.updated_at,
+             er.relation_type,
+             er.context
+      FROM entity_relations er
+      JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
+      WHERE ${er_where_clauses.join(' AND ')} ${thread_type_filter}
+    ) combined
+    ORDER BY updated_at DESC
     LIMIT ? OFFSET ?
   `
 
   try {
-    const rows = await execute_duckdb_query({ query, parameters })
+    const rows = await execute_duckdb_query({ query, parameters: all_params })
 
     log('Found %d entities relating to target', rows.length)
     return rows.map((row) => ({
