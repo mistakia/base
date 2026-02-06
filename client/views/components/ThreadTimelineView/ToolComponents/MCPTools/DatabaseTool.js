@@ -17,6 +17,7 @@ import Button from '@components/primitives/Button'
 import BaseToolComponent from '@views/components/ThreadTimelineView/ToolComponents/BaseToolComponent.js'
 import { MonospaceText } from '@views/components/primitives/styled'
 import { code_to_html } from '@core/shiki-highlighter.js'
+import { sanitize_html } from '@views/utils/sanitize-html.mjs'
 
 const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
   const [visible_rows_count, set_visible_rows_count] = useState(3)
@@ -75,8 +76,8 @@ const DatabaseTool = ({ tool_call_event, tool_result_event }) => {
           })
         ])
 
-        set_highlighted_sql_full(full_html)
-        set_highlighted_sql_truncated(truncated_html)
+        set_highlighted_sql_full(sanitize_html(full_html))
+        set_highlighted_sql_truncated(sanitize_html(truncated_html))
       } catch (err) {
         // fallback: clear highlighted htmls
         set_highlighted_sql_full('')

@@ -1,6 +1,8 @@
 import { spawn } from 'child_process'
 import debug from 'debug'
 
+import { validate_shell_command } from '#libs-server/utils/validate-shell-command.mjs'
+
 const log = debug('cli-queue:executor')
 
 const DEFAULT_TIMEOUT_MS = 300000 // 5 minutes
@@ -20,6 +22,9 @@ export const execute_command = async ({
   timeout_ms = DEFAULT_TIMEOUT_MS
 }) => {
   const start_time = Date.now()
+
+  // Validate command before execution
+  validate_shell_command(command)
 
   log(`Executing: ${command}`)
   log(`Working directory: ${working_directory}`)

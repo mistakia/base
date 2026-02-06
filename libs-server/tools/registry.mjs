@@ -193,7 +193,8 @@ export async function execute_tool({
     return {
       status: 'error',
       error: error.message,
-      details: error.stack
+      // Only include stack trace in non-production to prevent information disclosure
+      details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     }
   }
 }

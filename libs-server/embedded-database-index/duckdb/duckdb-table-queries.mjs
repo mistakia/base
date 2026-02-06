@@ -9,6 +9,57 @@ import { execute_duckdb_query } from './duckdb-database-client.mjs'
 
 const log = debug('embedded-index:duckdb:queries')
 
+// Whitelist of valid column names for filter/sort operations
+// Prevents SQL injection via column_id parameter
+const VALID_COLUMNS = new Set([
+  // Entity table columns
+  'type',
+  'status',
+  'priority',
+  'archived',
+  'created_at',
+  'updated_at',
+  'user_public_key',
+  'title',
+  'description',
+  'entity_id',
+  'base_uri',
+  'tags',
+  'public_read',
+  'archived_at',
+  // Task frontmatter columns
+  'start_by',
+  'finish_by',
+  'planned_start',
+  'planned_finish',
+  'started_at',
+  'finished_at',
+  'snooze_until',
+  'estimated_total_duration',
+  // Thread table columns
+  'thread_id',
+  'short_description',
+  'thread_state',
+  'message_count',
+  'user_message_count',
+  'assistant_message_count',
+  'tool_call_count',
+  'total_input_tokens',
+  'total_output_tokens',
+  'cache_creation_input_tokens',
+  'cache_read_input_tokens',
+  'total_tokens',
+  'duration_ms',
+  'duration_minutes',
+  'working_directory',
+  'working_directory_path',
+  'session_provider',
+  'inference_provider',
+  'primary_model',
+  'latest_event_timestamp',
+  'latest_event_type'
+])
+
 /**
  * Task-specific columns stored in frontmatter JSON
  * Maps column names to DuckDB JSON extraction expressions
@@ -64,6 +115,12 @@ export function build_duckdb_where_clause({
     const { column_id, operator, value } = filter
 
     if (!column_id || !operator) {
+      continue
+    }
+
+    // Validate column_id against whitelist to prevent SQL injection
+    if (!VALID_COLUMNS.has(column_id)) {
+      log('Rejected invalid column_id in filter: %s', column_id)
       continue
     }
 
@@ -209,19 +266,28 @@ export function build_duckdb_order_clause({ sort, frontmatter_columns = {} }) {
     return ''
   }
 
-  const order_parts = sort.map(({ column_id, desc }) => {
-    const direction = desc ? 'DESC' : 'ASC'
+  const order_parts = sort
+    .filter(({ column_id }) => {
+      // Validate column_id against whitelist to prevent SQL injection
+      if (!VALID_COLUMNS.has(column_id)) {
+        log('Rejected invalid column_id in sort: %s', column_id)
+        return false
+      }
+      return true
+    })
+    .map(({ column_id, desc }) => {
+      const direction = desc ? 'DESC' : 'ASC'
 
-    // Use CASE expression for priority to ensure semantic ordering
-    if (column_id === 'priority') {
-      return `${PRIORITY_CASE_EXPRESSION} ${direction} NULLS LAST`
-    }
+      // Use CASE expression for priority to ensure semantic ordering
+      if (column_id === 'priority') {
+        return `${PRIORITY_CASE_EXPRESSION} ${direction} NULLS LAST`
+      }
 
-    // Resolve column reference - use JSON extraction if in frontmatter mapping
-    const column_ref = frontmatter_columns[column_id] || column_id
+      // Resolve column reference - use JSON extraction if in frontmatter mapping
+      const column_ref = frontmatter_columns[column_id] || column_id
 
-    return `${column_ref} ${direction} NULLS LAST`
-  })
+      return `${column_ref} ${direction} NULLS LAST`
+    })
 
   return `ORDER BY ${order_parts.join(', ')}`
 }

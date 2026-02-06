@@ -20,13 +20,15 @@ describe('CLI Queue', function () {
     })
 
     it('should capture stderr output', async () => {
+      // Use a command that writes to stderr without shell redirection operators
+      // The 'ls' command with a non-existent file writes an error to stderr
       const result = await execute_command({
-        command: 'echo "error message" >&2',
+        command: 'ls /nonexistent_path_for_test_12345',
         timeout_ms: 5000
       })
 
-      expect(result.exit_code).to.equal(0)
-      expect(result.stderr.trim()).to.equal('error message')
+      expect(result.exit_code).to.not.equal(0)
+      expect(result.stderr).to.include('No such file')
     })
 
     it('should return correct exit code for failing command', async () => {
@@ -74,8 +76,9 @@ describe('CLI Queue', function () {
     })
 
     it('should capture multi-line output', async () => {
+      // Use printf which can output multiple lines without shell metacharacters
       const result = await execute_command({
-        command: 'echo "line1"; echo "line2"; echo "line3"',
+        command: 'printf "line1\\nline2\\nline3\\n"',
         timeout_ms: 5000
       })
 

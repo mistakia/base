@@ -10,11 +10,13 @@
 
 import path from 'path'
 import debug from 'debug'
+
 import config from '#config'
 import {
   get_system_base_directory,
   get_user_base_directory
 } from './base-directory-registry.mjs'
+import { is_path_within_directory } from '#libs-server/utils/is-path-within-directory.mjs'
 
 const log = debug('base-uri:utilities')
 
@@ -273,14 +275,17 @@ export function create_base_uri_from_path(absolute_path, options = {}) {
   // Check system directory FIRST (it may be nested inside user directory)
   if (
     system_base_directory &&
-    absolute_path.startsWith(system_base_directory)
+    is_path_within_directory(absolute_path, system_base_directory)
   ) {
     const relative_path = path.relative(system_base_directory, absolute_path)
     return create_system_uri(relative_path)
   }
 
   // Check if path is within user directory
-  if (user_base_directory && absolute_path.startsWith(user_base_directory)) {
+  if (
+    user_base_directory &&
+    is_path_within_directory(absolute_path, user_base_directory)
+  ) {
     const relative_path = path.relative(user_base_directory, absolute_path)
     return create_user_uri(relative_path)
   }

@@ -6,6 +6,7 @@ import {
   is_valid_base_uri,
   resolve_base_uri
 } from '#libs-server/base-uri/index.mjs'
+import { is_path_within_directory } from '#libs-server/utils/is-path-within-directory.mjs'
 
 const log = debug('threads:validate-working-directory')
 
@@ -110,7 +111,7 @@ function resolve_to_absolute_paths({ working_directory, user_base_directory }) {
  * Prevents path traversal attacks (e.g., ../../../etc/passwd)
  */
 function enforce_security_boundary({ working_dir, base_dir }) {
-  if (!working_dir.startsWith(base_dir)) {
+  if (!is_path_within_directory(working_dir, base_dir)) {
     log('✗ Security violation: directory outside base boundary')
     log(`  Working: ${working_dir}`)
     log(`  Base: ${base_dir}`)
