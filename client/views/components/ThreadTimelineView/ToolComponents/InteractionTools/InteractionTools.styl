@@ -1,0 +1,183 @@
+// Interaction Tools Styling
+// AskUserQuestion, EnterPlanMode, ExitPlanMode components
+@import '@styles/variables'
+
+// =====================================================
+// SHARED STATUS DOT
+// =====================================================
+
+.status-dot
+  width 8px
+  height 8px
+  border-radius 50%
+  flex-shrink 0
+
+  &--info
+    background-color $color_info
+
+  &--success, &--confirmed, &--answered
+    background-color $color_success
+
+  &--error, &--rejected
+    background-color $color_error
+
+  &--warning, &--pending
+    background-color $color_warning
+
+  &--muted
+    background-color $color_text_tertiary
+
+// =====================================================
+// PLAN MODE INDICATOR (Enter/Exit)
+// =====================================================
+
+.plan-mode-indicator
+  display flex
+  align-items center
+  gap $space_sm
+  padding $space_xs 0
+
+  &__text
+    font-size $font_size_xs
+    color $color_text_secondary
+
+// =====================================================
+// ASK USER QUESTION
+// =====================================================
+
+.ask-user-question
+  &__status
+    display flex
+    align-items center
+    gap $space_sm
+    padding $space_xs 0
+
+  &__content
+    margin-top $space_sm
+    border 1px solid $color_border
+    border-radius $radius_base
+    padding $space_sm
+    background-color $color_surface_secondary
+
+  &__question-block
+    &:not(:last-child)
+      margin-bottom $space_base
+      padding-bottom $space_base
+      border-bottom 1px solid $color_border_light
+
+  &__question-header
+    display block
+    font-weight $font_weight_semibold
+    color $color_text_secondary
+    text-transform uppercase
+    letter-spacing 0.05em
+    margin-bottom $space_xs
+
+  &__question-text
+    display block
+    color $color_text
+    margin-bottom $space_sm
+
+  &__options
+    padding 0
+    margin 0
+    list-style none
+
+  &__option
+    display flex
+    align-items flex-start
+    gap $space_sm
+    padding $space_xs 0
+    border-radius $radius_sm
+
+    &--selected
+      background-color rgba($color_success, 0.1)
+      padding-left $space_xs
+      padding-right $space_xs
+      margin-left (-$space_xs)
+      margin-right (-$space_xs)
+
+  &__option-indicator
+    width 14px
+    height 14px
+    min-width 14px
+    flex-shrink 0
+    margin-top 2px
+    border 1px solid $color_border
+    background transparent
+
+    &--radio
+      border-radius 50%
+
+      &[data-selected="true"]
+        border-color $color_success
+        background $color_success
+
+        &::after
+          content ''
+          display block
+          width 6px
+          height 6px
+          margin 3px
+          border-radius 50%
+          background $color_white
+
+    &--checkbox
+      border-radius $radius_sm
+
+      &[data-selected="true"]
+        border-color $color_success
+        background $color_success
+
+        &::after
+          content ''
+          display block
+          width 6px
+          height 6px
+          margin 3px
+          border-radius 1px
+          background $color_white
+
+  &__option-content
+    flex 1
+    min-width 0
+
+  &__option-label
+    display block
+    font-weight $font_weight_medium
+    color $color_text
+
+    .ask-user-question__option--selected &
+      color $color_success
+
+  &__option-description
+    display block
+    color $color_text_secondary
+    margin-top 2px
+    font-size $font_size_xs
+
+  &__custom-answer
+    margin-top $space_sm
+    padding-top $space_sm
+    border-top 1px dashed $color_border_light
+
+// =====================================================
+// PLAN CONTENT (ExitPlanMode expanded view)
+// =====================================================
+
+.plan-content
+  margin-top $space_sm
+  border 1px solid $color_border
+  border-radius $radius_base
+  padding $space_base
+  background-color $color_surface_secondary
+  max-height 400px
+  overflow-y auto
+
+  // Reduce markdown viewer spacing for compact display
+  h1, h2, h3, h4, h5, h6
+    &:first-child
+      margin-top 0
+
+  p:last-child
+    margin-bottom 0

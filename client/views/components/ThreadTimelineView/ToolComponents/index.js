@@ -24,6 +24,13 @@ import DatabaseTool from './MCPTools/DatabaseTool'
 import BrowserTool from './MCPTools/BrowserTool'
 import GenericMCPTool from './MCPTools/GenericMCPTool'
 
+// Interaction Tools
+import {
+  AskUserQuestionTool,
+  EnterPlanModeTool,
+  ExitPlanModeTool
+} from './InteractionTools'
+
 import './ToolComponents.styl'
 
 const getToolComponent = (toolName) => {
@@ -48,6 +55,11 @@ const getToolComponent = (toolName) => {
     LS: LSTool,
     WebFetch: WebFetchTool,
     WebSearch: WebFetchTool, // Reuse WebFetch component
+
+    // Interaction tools
+    AskUserQuestion: AskUserQuestionTool,
+    EnterPlanMode: EnterPlanModeTool,
+    ExitPlanMode: ExitPlanModeTool,
 
     // Default fallback
     default: GenericToolComponent
