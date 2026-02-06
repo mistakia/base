@@ -14,6 +14,7 @@ import {
   close_duckdb_connection,
   initialize_duckdb_client,
   execute_duckdb_query,
+  execute_duckdb_run,
   checkpoint_duckdb
 } from './duckdb/duckdb-database-client.mjs'
 import {
@@ -775,6 +776,23 @@ class EmbeddedIndexManager {
         log('Error syncing thread to DuckDB: %s', error.message)
         result.success = false
       }
+
+      // Sync thread relations if present (outside main try-catch to not affect thread sync result)
+      if (result.duckdb_synced && Array.isArray(metadata?.relations) && metadata.relations.length > 0) {
+        try {
+          const relations = extract_relations_from_entity({
+            entity_properties: { relations: metadata.relations }
+          })
+          const thread_base_uri = `user:thread/${thread_id}`
+          await sync_entity_relations_to_duckdb({
+            source_base_uri: thread_base_uri,
+            relations
+          })
+          log('Thread relations synced: %s (%d relations)', thread_id, relations.length)
+        } catch (error) {
+          log('Error syncing thread relations: %s', error.message)
+        }
+      }
     }
 
     return result
@@ -796,6 +814,18 @@ class EmbeddedIndexManager {
         await delete_thread_from_duckdb({ thread_id })
       } catch (error) {
         log('Error removing thread from DuckDB: %s', error.message)
+      }
+
+      // Clean up thread relations
+      try {
+        const thread_base_uri = `user:thread/${thread_id}`
+        await execute_duckdb_run({
+          query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
+          parameters: [thread_base_uri]
+        })
+        log('Thread relations deleted: %s', thread_id)
+      } catch (error) {
+        log('Error deleting thread relations: %s', error.message)
       }
     }
   }
