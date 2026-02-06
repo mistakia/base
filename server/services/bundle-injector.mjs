@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { watch } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import debug from 'debug'
@@ -7,6 +8,40 @@ const log = debug('server:bundle-injector')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let script_cache = null
+let manifest_watcher = null
+
+const build_path = path.join(__dirname, '..', '..', 'build')
+const manifest_path = path.join(build_path, 'bundle-manifest.json')
+
+/**
+ * Initialize file watcher for bundle-manifest.json to auto-clear cache on rebuild
+ */
+function init_manifest_watcher() {
+  if (manifest_watcher) {
+    return
+  }
+
+  try {
+    manifest_watcher = watch(manifest_path, (event_type) => {
+      if (event_type === 'change') {
+        log('bundle-manifest.json changed, clearing script cache')
+        script_cache = null
+      }
+    })
+
+    manifest_watcher.on('error', (error) => {
+      log(`Manifest watcher error: ${error.message}`)
+      manifest_watcher = null
+    })
+
+    log('Manifest watcher initialized')
+  } catch (error) {
+    log(`Failed to initialize manifest watcher: ${error.message}`)
+  }
+}
+
+// Initialize watcher on module load
+init_manifest_watcher()
 
 /**
  * Load bundle manifest and generate script tags from the manifest
@@ -19,9 +54,6 @@ async function generate_script_tags() {
   }
 
   try {
-    const build_path = path.join(__dirname, '..', '..', 'build')
-    const manifest_path = path.join(build_path, 'bundle-manifest.json')
-
     try {
       // Try to load from manifest first
       const manifest_content = await fs.readFile(manifest_path, 'utf-8')
