@@ -104,6 +104,28 @@ async function remove_server_lock_file() {
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
 
+// Initialize embedded index (DuckDB) BEFORE accepting connections.
+// This ensures thread list queries use DuckDB instead of expensive filesystem
+// reads (which would read all timeline.jsonl files on first request).
+let embedded_index_ready = false
+
+try {
+  logger('Initializing embedded index before server start...')
+  await embedded_index_manager.initialize()
+  const status = embedded_index_manager.get_index_status()
+  logger(`Embedded index initialized (duckdb: ${status.duckdb_ready})`)
+  embedded_index_ready = status.duckdb_ready
+
+  if (!status.duckdb_ready) {
+    logger(
+      'WARNING: DuckDB not ready - queries will use slower filesystem fallback'
+    )
+  }
+} catch (error) {
+  logger(`Failed to initialize embedded index: ${error.message}`)
+  logger(error)
+}
+
 try {
   const { server_port } = config
   server.listen(server_port, async () => {
@@ -193,28 +215,6 @@ try {
     } catch (worker_error) {
       logger(`Failed to start job worker: ${worker_error.message}`)
       logger(worker_error)
-    }
-
-    // Initialize embedded index (DuckDB for entity/thread queries)
-    // Cache warmer uses DuckDB for fast queries; without it, falls back to
-    // expensive filesystem reads (reads all timeline.jsonl files)
-    let embedded_index_ready = false
-
-    try {
-      await embedded_index_manager.initialize()
-      const status = embedded_index_manager.get_index_status()
-      logger(`Embedded index initialized (duckdb: ${status.duckdb_ready})`)
-      embedded_index_ready = status.duckdb_ready
-
-      // Warn if DuckDB specifically failed (cache warmer depends on it for fast queries)
-      if (!status.duckdb_ready) {
-        logger(
-          'WARNING: DuckDB not ready - cache warmer will use slower filesystem fallback'
-        )
-      }
-    } catch (error) {
-      logger(`Failed to initialize embedded index: ${error.message}`)
-      logger(error)
     }
 
     // Start entity file watcher for database sync
