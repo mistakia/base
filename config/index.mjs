@@ -8,7 +8,35 @@ const current_file_path = fileURLToPath(import.meta.url)
 const current_dir = dirname(current_file_path)
 const config_dir = join(current_dir)
 
+// Derive system_base_directory from code location (parent of config/)
+const derived_system_base_directory = dirname(config_dir)
+
 const config = secure_config({ directory: config_dir })
+
+// Apply machine-agnostic path resolution
+// Priority: environment variable > derived/computed > config.json fallback
+
+// system_base_directory: where the base system code lives
+config.system_base_directory =
+  process.env.SYSTEM_BASE_DIRECTORY || derived_system_base_directory
+
+// user_base_directory: where user data lives
+if (process.env.USER_BASE_DIRECTORY) {
+  config.user_base_directory = process.env.USER_BASE_DIRECTORY
+}
+// Note: if not set via env, falls back to config.json value
+
+// Derive notification script path from user_base_directory
+if (
+  config.claude_session_import_service?.notifications &&
+  config.user_base_directory
+) {
+  config.claude_session_import_service.notifications.discord_script = join(
+    config.user_base_directory,
+    'cli',
+    'notify-discord.mjs'
+  )
+}
 
 // Generate random temp path for test environments
 if (process.env.NODE_ENV === 'test') {

@@ -9,8 +9,6 @@
     "webhook_secret": "ENCRYPTED|d0862190a6217d6ad1e06b74014c4d34|cf0320e6cea1f021baa07b763198524876182bd407b042adc5faeeebe0c8e1218bffcb6a3acd32e564dec40b023b49bf9620e8e5d1b23b1f9455f62fbea8e4daac068e9eea675c61afe86fa051231ca3"
   },
   "system_main_branch": "main",
-  "system_base_directory": "/Users/trashman/user-base/repository/active/base",
-  "user_base_directory": "/Users/trashman/user-base",
   "user_main_branch": "main",
   "user_id": "40503950-32bc-11f0-80a5-7c10c941e0a3",
   "user_public_key": "10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b",
@@ -34,7 +32,6 @@
       "remote_path": "/mnt/md0/user-base"
     },
     "notifications": {
-      "discord_script": "/Users/trashman/user-base/cli/notify-discord.mjs",
       "alert_on_errors": false
     },
     "processing": {

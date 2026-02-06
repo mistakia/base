@@ -24,6 +24,11 @@ const logs_dir =
   process.env.PM2_LOGS_DIR ||
   (is_macos ? path.join(home_dir, 'logs') : '/home/user/logs')
 
+// Machine-specific user base directory
+const user_base_directory =
+  process.env.USER_BASE_DIRECTORY ||
+  (is_macos ? path.join(home_dir, 'user-base') : '/mnt/md0/user-base')
+
 // Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
 function get_nvmrc_interpreter() {
   const nvmrc_path = path.join(__dirname, '.nvmrc')
@@ -45,6 +50,7 @@ function get_nvmrc_interpreter() {
 
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
+  USER_BASE_DIRECTORY: user_base_directory,
   DEBUG_COLORS: 'false'
 }
 
