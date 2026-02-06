@@ -38,6 +38,22 @@ export const api = {
     const url = `${API_URL}/tags`
     return { url }
   },
+
+  get_tag_detail({
+    base_uri,
+    include_threads = true,
+    sort = 'updated_at',
+    limit = 50
+  }) {
+    const params = {
+      base_uri,
+      include_threads: include_threads ? 'true' : 'false',
+      sort,
+      limit
+    }
+    const url = `${API_URL}/tags?${qs.stringify(params)}`
+    return { url }
+  },
   get_tasks_table(params) {
     const url = `${API_URL}/tasks/table`
     return { url, ...POST(params) }
