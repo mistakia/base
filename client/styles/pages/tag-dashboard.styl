@@ -1,0 +1,434 @@
+// =====================================================
+// TAG DASHBOARD STYLES
+// =====================================================
+// Styles for the tag detail page dashboard showing
+// related tasks, threads, and distribution graphs.
+
+// =====================================================
+// MAIN CONTAINER
+// =====================================================
+
+.tag-dashboard
+  margin-top: 24px
+  padding: 24px
+  background: $color_background
+  border: 1px solid $color_border
+  border-radius: $radius_lg
+
+  &--loading,
+  &--error
+    display: flex
+    align-items: center
+    justify-content: center
+    min-height: 200px
+
+  &__loading-text,
+  &__error-text
+    color: $color_text_secondary
+    font-size: $font_size_sm
+
+  &__error-text
+    color: $color_error
+
+// =====================================================
+// HEADER
+// =====================================================
+
+.tag-dashboard__header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 20px
+  padding-bottom: 16px
+  border-bottom: 1px solid $color_border
+
+.tag-dashboard__title
+  margin: 0
+  font-size: $font_size_lg
+  font-weight: 600
+  color: $color_text_primary
+
+.tag-dashboard__counts
+  display: flex
+  align-items: center
+  gap: 12px
+  font-size: $font_size_sm
+  color: $color_text_secondary
+
+.tag-dashboard__count-separator
+  color: $color_border
+
+// =====================================================
+// PANELS GRID
+// =====================================================
+
+.tag-dashboard__panels
+  display: grid
+  grid-template-columns: repeat(2, 1fr)
+  gap: 20px
+  margin-bottom: 20px
+
+  @media (max-width: 768px)
+    grid-template-columns: 1fr
+
+// =====================================================
+// TASKS PANEL
+// =====================================================
+
+.tag-tasks-panel
+  padding: 16px
+  background: rgba(0, 0, 0, 0.02)
+  border-radius: $radius_md
+
+.tag-tasks-panel__header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 12px
+
+.tag-tasks-panel__title
+  margin: 0
+  font-size: $font_size_sm
+  font-weight: 600
+  color: $color_text_primary
+
+.tag-tasks-panel__count
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  background: $color_background
+  padding: 2px 8px
+  border-radius: $radius_sm
+
+.tag-tasks-panel__empty
+  color: $color_text_secondary
+  font-size: $font_size_sm
+  text-align: center
+  padding: 20px
+
+.tag-tasks-panel__list
+  margin: 0
+  padding: 0
+  list-style: none
+
+.tag-tasks-panel__item
+  margin-bottom: 8px
+
+  &:last-child
+    margin-bottom: 0
+
+.tag-tasks-panel__link
+  display: flex
+  align-items: center
+  gap: 8px
+  padding: 8px 12px
+  background: $color_background
+  border-radius: $radius_sm
+  text-decoration: none
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.03)
+
+.tag-tasks-panel__task-title
+  flex: 1
+  font-size: $font_size_sm
+  color: $color_text_primary
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.tag-tasks-panel__status
+  font-size: $font_size_xs
+  padding: 2px 6px
+  border-radius: $radius_sm
+  white-space: nowrap
+
+  &--planned
+    background: rgba($color_info, 0.15)
+    color: $color_info
+
+  &--in-progress
+    background: rgba($color_primary, 0.15)
+    color: $color_primary
+
+  &--completed
+    background: rgba($color_success, 0.15)
+    color: $color_success
+
+  &--blocked
+    background: rgba($color_error, 0.15)
+    color: $color_error
+
+  &--no-status
+    background: rgba(0, 0, 0, 0.05)
+    color: $color_text_secondary
+
+.tag-tasks-panel__priority
+  font-size: $font_size_xs
+  padding: 2px 6px
+  border-radius: $radius_sm
+  white-space: nowrap
+
+  &--critical
+    background: rgba($color_error, 0.15)
+    color: $color_error
+
+  &--high
+    background: rgba($color_warning, 0.15)
+    color: $color_warning
+
+  &--medium
+    background: rgba($color_info, 0.15)
+    color: $color_info
+
+  &--low
+    background: rgba(0, 0, 0, 0.05)
+    color: $color_text_secondary
+
+.tag-tasks-panel__footer
+  margin-top: 12px
+  padding-top: 12px
+  border-top: 1px solid $color_border
+  text-align: center
+
+.tag-tasks-panel__view-all
+  display: inline-flex
+  align-items: center
+  gap: 4px
+  font-size: $font_size_xs
+  color: $color_primary
+  text-decoration: none
+
+  &:hover
+    text-decoration: underline
+
+// =====================================================
+// THREADS PANEL
+// =====================================================
+
+.tag-threads-panel
+  padding: 16px
+  background: rgba(0, 0, 0, 0.02)
+  border-radius: $radius_md
+
+.tag-threads-panel__header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 12px
+
+.tag-threads-panel__title
+  margin: 0
+  font-size: $font_size_sm
+  font-weight: 600
+  color: $color_text_primary
+
+.tag-threads-panel__count
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  background: $color_background
+  padding: 2px 8px
+  border-radius: $radius_sm
+
+.tag-threads-panel__empty
+  color: $color_text_secondary
+  font-size: $font_size_sm
+  text-align: center
+  padding: 20px
+
+.tag-threads-panel__list
+  margin: 0
+  padding: 0
+  list-style: none
+
+.tag-threads-panel__item
+  margin-bottom: 8px
+
+  &:last-child
+    margin-bottom: 0
+
+.tag-threads-panel__link
+  display: flex
+  align-items: center
+  gap: 8px
+  padding: 8px 12px
+  background: $color_background
+  border-radius: $radius_sm
+  text-decoration: none
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.03)
+
+.tag-threads-panel__thread-title
+  flex: 1
+  font-size: $font_size_sm
+  color: $color_text_primary
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.tag-threads-panel__state
+  font-size: $font_size_xs
+  padding: 2px 6px
+  border-radius: $radius_sm
+  white-space: nowrap
+
+  &--active
+    background: rgba($color_success, 0.15)
+    color: $color_success
+
+  &--archived
+    background: rgba(0, 0, 0, 0.05)
+    color: $color_text_secondary
+
+  &--unknown
+    background: rgba(0, 0, 0, 0.05)
+    color: $color_text_secondary
+
+.tag-threads-panel__time
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.tag-threads-panel__footer
+  margin-top: 12px
+  padding-top: 12px
+  border-top: 1px solid $color_border
+  text-align: center
+
+.tag-threads-panel__view-all
+  display: inline-flex
+  align-items: center
+  gap: 4px
+  font-size: $font_size_xs
+  color: $color_primary
+  text-decoration: none
+
+  &:hover
+    text-decoration: underline
+
+// =====================================================
+// EXPANDED VIEWS
+// =====================================================
+
+.tag-expanded
+  min-height: 400px
+
+.tag-expanded__header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 20px
+  padding-bottom: 16px
+  border-bottom: 1px solid $color_border
+
+.tag-expanded__title
+  margin: 0
+  font-size: $font_size_lg
+  font-weight: 600
+  color: $color_text_primary
+
+.tag-expanded__close
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 32px
+  height: 32px
+  border: none
+  background: transparent
+  color: $color_text_secondary
+  cursor: pointer
+  border-radius: $radius_sm
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.05)
+
+.tag-expanded__list
+  margin: 0
+  padding: 0
+  list-style: none
+
+.tag-expanded__item
+  margin-bottom: 8px
+
+.tag-expanded__link
+  display: flex
+  flex-direction: column
+  padding: 12px 16px
+  background: rgba(0, 0, 0, 0.02)
+  border-radius: $radius_md
+  text-decoration: none
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.04)
+
+.tag-expanded__item-main
+  display: flex
+  flex-direction: column
+  gap: 4px
+  margin-bottom: 8px
+
+.tag-expanded__item-title
+  font-size: $font_size_sm
+  font-weight: 500
+  color: $color_text_primary
+
+.tag-expanded__item-description
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.tag-expanded__item-meta
+  display: flex
+  align-items: center
+  gap: 8px
+
+.tag-expanded__status,
+.tag-expanded__state
+  font-size: $font_size_xs
+  padding: 2px 6px
+  border-radius: $radius_sm
+
+.tag-expanded__priority
+  font-size: $font_size_xs
+  padding: 2px 6px
+  border-radius: $radius_sm
+
+.tag-expanded__count,
+.tag-expanded__time
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+// =====================================================
+// GRAPH
+// =====================================================
+
+.tag-graph
+  margin-top: 20px
+  padding: 16px
+  background: rgba(0, 0, 0, 0.02)
+  border-radius: $radius_md
+
+.tag-graph__header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 12px
+
+.tag-graph__title
+  margin: 0
+  font-size: $font_size_sm
+  font-weight: 600
+  color: $color_text_primary
+
+.tag-graph__labels
+  display: flex
+  gap: 16px
+
+.tag-graph__label
+  font-size: $font_size_xs
+  color: $color_text_secondary

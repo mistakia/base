@@ -23,7 +23,7 @@ export function* load_tasks({ payload }) {
 export function* load_tasks_table_data({ payload }) {
   try {
     const tasks_state = yield select(get_tasks_state)
-    const { view_id, is_append = false } = payload || {}
+    const { view_id, is_append = false, url_filters = [] } = payload || {}
 
     // Use provided view_id or get selected view from state, defaulting to 'open'
     const resolved_view_id =
@@ -36,6 +36,20 @@ export function* load_tasks_table_data({ payload }) {
     ])
     let table_state = selected_view.get('task_table_state')
     table_state = table_state?.toJS ? table_state.toJS() : table_state
+
+    // Merge url_filters with existing table state filters
+    if (url_filters.length > 0) {
+      const existing_where = table_state.where || []
+      // Filter out any existing filters for the same columns (url takes priority)
+      const url_filter_columns = new Set(url_filters.map((f) => f.column_id))
+      const filtered_existing = existing_where.filter(
+        (f) => !url_filter_columns.has(f.column_id)
+      )
+      table_state = {
+        ...table_state,
+        where: [...filtered_existing, ...url_filters]
+      }
+    }
 
     // For append requests, adjust offset based on current rows fetched
     if (is_append) {

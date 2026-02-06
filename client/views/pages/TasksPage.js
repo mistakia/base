@@ -1,6 +1,6 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useMemo } from 'react'
 import { useDispatch } from 'react-redux'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import PageLayout from '@views/layout/PageLayout.js'
 import TasksTable from '@views/components/TasksTable/index.js'
@@ -24,6 +24,7 @@ const TasksPage = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { view_id: url_view_slug } = useParams()
+  const [search_params] = useSearchParams()
 
   // Check if the URL param is an entity path (not a view slug)
   const is_entity = is_entity_path(url_view_slug)
@@ -34,8 +35,24 @@ const TasksPage = () => {
   // Determine the resolved view_id to use
   const resolved_view_id = url_view_id || DEFAULT_TASK_VIEW_ID
 
+  // Read tag filter from URL query params
+  const url_tag_filter = search_params.get('tag')
+
+  // Build additional filters from URL params
+  const url_filters = useMemo(() => {
+    const filters = []
+    if (url_tag_filter) {
+      filters.push({
+        column_id: 'tags',
+        operator: 'IN',
+        value: [url_tag_filter]
+      })
+    }
+    return filters
+  }, [url_tag_filter])
+
   const page_meta = use_page_meta({
-    custom_title: 'Tasks',
+    custom_title: url_tag_filter ? `Tasks - ${url_tag_filter}` : 'Tasks',
     custom_description: 'Browse and manage tasks in the Base system'
   })
 
@@ -45,9 +62,14 @@ const TasksPage = () => {
       dispatch(
         tasks_actions.select_task_table_view({ view_id: resolved_view_id })
       )
-      dispatch(tasks_actions.load_tasks_table({ view_id: resolved_view_id }))
+      dispatch(
+        tasks_actions.load_tasks_table({
+          view_id: resolved_view_id,
+          url_filters
+        })
+      )
     }
-  }, [dispatch, resolved_view_id, is_entity])
+  }, [dispatch, resolved_view_id, is_entity, url_filters])
 
   // Handle view selection - navigate to new URL
   const handle_view_select = useCallback(

@@ -1,0 +1,67 @@
+// =====================================================
+// EXPANDABLE SECTION COMPONENT STYLES
+// =====================================================
+// Collapsible section with header and animated content.
+// Use with the ExpandableSection primitive component.
+
+// =====================================================
+// BASE CONTAINER
+// =====================================================
+
+.expandable-section
+  border: 1px solid $color_border
+  border-radius: $radius_md
+  background: $color_background
+  overflow: hidden
+
+  &--disabled
+    opacity: 0.6
+
+// =====================================================
+// HEADER
+// =====================================================
+
+.expandable-section__header
+  display: flex
+  align-items: center
+  width: 100%
+  padding: 12px 16px
+  border: none
+  background: transparent
+  cursor: pointer
+  text-align: left
+  transition: background $transition_fast
+
+  &:hover
+    background: rgba(0, 0, 0, 0.03)
+
+  &:disabled
+    cursor: not-allowed
+
+.expandable-section__title
+  flex: 1
+  font-size: $font_size_sm
+  font-weight: 500
+  color: $color_text_primary
+
+.expandable-section__header-content
+  margin-right: 8px
+  font-size: $font_size_xs
+  color: $color_text_secondary
+
+.expandable-section__icon
+  display: flex
+  align-items: center
+  color: $color_text_secondary
+  transition: transform $transition_fast
+
+  .expandable-section--expanded &
+    transform: rotate(180deg)
+
+// =====================================================
+// CONTENT
+// =====================================================
+
+.expandable-section__content
+  padding: 0 16px 16px
+  border-top: 1px solid $color_border

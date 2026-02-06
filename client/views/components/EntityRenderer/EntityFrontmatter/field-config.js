@@ -70,6 +70,19 @@ export const entity_field_config = {
       'archived_at'
     ]
   },
+  tag: {
+    always_visible: ['created_at', 'updated_at'],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'color',
+      'icon',
+      'public_read',
+      'archived_at'
+    ]
+  },
   physical_item: {
     always_visible: [
       'manufacturer',

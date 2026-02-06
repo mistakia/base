@@ -17,6 +17,7 @@ import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
 import GitFileActions from '@components/FileActions/GitFileActions.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import PageHead from '@views/components/PageHead/index.js'
+import { TagDashboard } from './TagDetailSection/index.js'
 
 const EntityRenderer = ({
   frontmatter,
@@ -113,7 +114,11 @@ const EntityRenderer = ({
     </Box>
   ) : null
 
+  // Check if this is a tag entity
+  const is_tag_entity = frontmatter?.type === 'tag'
+
   // If there's no markdown content, center the frontmatter
+  // For tag entities, also render the TagDashboard
   if (!markdown && frontmatter) {
     return (
       <>
@@ -129,7 +134,7 @@ const EntityRenderer = ({
           modified_time={entity_metadata.modified_time}
         />
         <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
-          <Box sx={{ maxWidth: '600px', width: '100%' }}>
+          <Box sx={{ maxWidth: is_tag_entity ? '900px' : '600px', width: '100%' }}>
             <EntityFrontmatter
               frontmatter={frontmatter}
               is_sticky={false}
@@ -140,6 +145,7 @@ const EntityRenderer = ({
               <GitFileActions git_context={git_context} />
               {render_diff_toggle()}
             </FileActions>
+            {is_tag_entity && <TagDashboard frontmatter={frontmatter} />}
           </Box>
         </Box>
       </>
