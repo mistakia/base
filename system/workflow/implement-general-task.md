@@ -7,6 +7,12 @@ description: >-
 base_uri: sys:system/workflow/implement-general-task.md
 created_at: '2025-08-23T00:00:00.000Z'
 entity_id: c3d4e5f6-7890-4234-abcd-ef0123456789
+prompt_properties:
+  - name: auto_mode
+    type: boolean
+    required: false
+    description: When true, continue through all tasks without stopping for review. Only stops on errors or plan drift.
+    default: false
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
@@ -63,10 +69,12 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
      - Wait for explicit approval before updating the plan
      - Only continue after plan changes are approved
 
-6. **Stop for Review**
-   - Do NOT proceed to the next task automatically
+6. **Report and Continue/Pause**
    - Present what was completed and current plan status
-   - Wait for explicit instruction to proceed with next task or all remaining tasks
+   - Identify the next uncompleted task
+   - **If auto_mode is false** (default): STOP and wait for explicit instruction to proceed
+   - **If auto_mode is true**: Continue to next task automatically (loop back to step 4)
+     - Still STOP on: errors, plan drift, or ambiguous situations
 
 ## Quality Assurance
 
@@ -81,8 +89,9 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
 
 - Work on ONE task at a time from the implementation plan
 - ALWAYS update the implementation plan with progress after each task
-- If plan changes are needed (drift), STOP and get approval before updating
-- STOP after each task for review unless explicitly told to continue with all remaining tasks
+- If plan changes are needed (drift), STOP and get approval before updating (even in auto_mode)
+- STOP after each task for review unless auto_mode is true or explicitly told to continue with all remaining tasks
+- Auto Mode Stops: Even in auto_mode, ALWAYS stop on errors, plan drift, or ambiguous situations
 - Document working directory and verify before each operation
 
 </instructions>
@@ -103,5 +112,11 @@ After completing each task:
 
 **Working Directory**: [Current working path]
 
-**Next Step**: Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
+**Next Task**: [Description of the next uncompleted task, or "All tasks completed" if finished]
+
+**If auto_mode is false:**
+Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
+
+**If auto_mode is true:**
+Continuing to next task... (or "Stopping: [reason]" if error/drift/ambiguity detected)
 </output_format>

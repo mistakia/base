@@ -11,6 +11,11 @@ guidelines:
   - sys:system/guideline/write-javascript.md
   - user:guideline/write-software.md
 prompt_properties:
+  - name: auto_mode
+    type: boolean
+    required: false
+    description: When true, continue through all tasks without stopping for review. Only stops on errors or plan drift.
+    default: false
   - name: workflow_example
     type: object
     required: false
@@ -99,11 +104,13 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
      - Wait for explicit approval before updating the plan
      - Only continue after plan changes are approved
 
-6. **Report and Pause**
+6. **Report and Continue/Pause**
    - Update the implementation plan with task completion progress and git worktree absolute path
    - Present what was completed and current plan status
    - Identify the next uncompleted task
-   - STOP and wait for explicit instruction to proceed
+   - **If auto_mode is false** (default): STOP and wait for explicit instruction to proceed
+   - **If auto_mode is true**: Continue to next task automatically (loop back to step 4)
+     - Still STOP on: errors, plan drift, test failures, or ambiguous situations
 
 ## Phase 3: Quality Assurance (Final Phase Only)
 
@@ -119,8 +126,9 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 
 - **Single Task Focus**: Work on ONE task at a time from the implementation plan
 - **Progress Tracking**: ALWAYS update the implementation plan with progress and git worktree absolute path after each task completion
-- **Plan Drift Control**: If plan changes are needed, STOP and get approval before updating
-- **Review Gates**: STOP after each task for review unless explicitly told to continue with all remaining tasks
+- **Plan Drift Control**: If plan changes are needed, STOP and get approval before updating (even in auto_mode)
+- **Review Gates**: STOP after each task for review unless auto_mode is true or explicitly told to continue with all remaining tasks
+- **Auto Mode Stops**: Even in auto_mode, ALWAYS stop on errors, plan drift, test failures, or ambiguous situations
 - **Environment Management**: Use the worktree setup pattern and document working directory
 - **Quality Gates**: Run tests and quality checks only when ALL tasks are complete
 - **No Commits**: DO NOT commit any code during implementation - all commits are handled by [[sys:system/workflow/merge-worktree.md]]
@@ -147,5 +155,9 @@ After completing each task:
 
 **Next Task**: [Description of the next uncompleted task from the implementation plan, or "All tasks completed" if finished]
 
+**If auto_mode is false:**
 Ready for review. Please confirm to proceed with next task or specify "continue with all remaining tasks"
+
+**If auto_mode is true:**
+Continuing to next task... (or "Stopping: [reason]" if error/drift/ambiguity detected)
 </output_format>
