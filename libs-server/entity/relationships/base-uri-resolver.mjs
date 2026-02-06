@@ -128,6 +128,12 @@ export async function find_entities_with_relations_to({
                 })
               }
             }
+          } else {
+            log(
+              'Malformed relation in %s: "%s" - expected format: "relation_type [[base_uri]]"',
+              entity_properties.base_uri,
+              relation_str
+            )
           }
         }
       } catch (error) {

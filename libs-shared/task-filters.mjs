@@ -117,17 +117,28 @@ export function sort_tasks_by_importance(tasks = []) {
     [TASK_STATUS.NO_STATUS]: 7
   }
 
+  // Default to lowest priority for undefined values
+  const DEFAULT_PRIORITY_ORDER = 999
+  const DEFAULT_STATUS_ORDER = 999
+
   return [...tasks].sort((a, b) => {
-    // First sort by priority
-    const priority_diff =
-      priority_order[a.priority] - priority_order[b.priority]
+    // First sort by priority (undefined values sort last)
+    const priority_a = priority_order[a.priority] ?? DEFAULT_PRIORITY_ORDER
+    const priority_b = priority_order[b.priority] ?? DEFAULT_PRIORITY_ORDER
+    const priority_diff = priority_a - priority_b
     if (priority_diff !== 0) return priority_diff
 
-    // Then by status
-    const status_diff = status_order[a.status] - status_order[b.status]
+    // Then by status (undefined values sort last)
+    const status_a = status_order[a.status] ?? DEFAULT_STATUS_ORDER
+    const status_b = status_order[b.status] ?? DEFAULT_STATUS_ORDER
+    const status_diff = status_a - status_b
     if (status_diff !== 0) return status_diff
 
-    // Finally by creation date (newer first)
-    return new Date(b.created_at) - new Date(a.created_at)
+    // Finally by creation date (newer first, handle invalid dates)
+    const date_a = new Date(a.created_at)
+    const date_b = new Date(b.created_at)
+    const time_a = isNaN(date_a.getTime()) ? 0 : date_a.getTime()
+    const time_b = isNaN(date_b.getTime()) ? 0 : date_b.getTime()
+    return time_b - time_a
   })
 }

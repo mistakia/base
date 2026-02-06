@@ -59,6 +59,10 @@ class BundleManifestPlugin {
       console.log(`Bundle manifest generated with ${scripts.length} scripts`)
     } catch (error) {
       console.error('BundleManifestPlugin error:', error)
+      // Propagate error to webpack compilation to fail the build visibly
+      compilation.errors.push(
+        new Error(`BundleManifestPlugin: ${error.message}`)
+      )
     }
   }
 }

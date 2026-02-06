@@ -144,6 +144,7 @@ const process_stream = async ({
       if (value.tool_calls && value.tool_calls.length > 0) {
         for (const tool_call of value.tool_calls) {
           // Create a unique ID for the tool call based on name and params
+          // Create a unique ID for the tool call based on name and params
           const tool_call_id = `${tool_call.tool_name}:${JSON.stringify(tool_call.tool_parameters)}`
 
           // Only process this tool call if we haven't seen it before
