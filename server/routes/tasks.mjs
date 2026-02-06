@@ -233,7 +233,7 @@ function convert_duckdb_task_to_response_format(task) {
 
 // Build DuckDB filters from query params
 function build_duckdb_filters_from_query(params) {
-  const { status, archived, include_completed } = params
+  const { status, priority, archived, include_completed } = params
   const filters = []
 
   // Exclude archived by default (unless archived=true)
@@ -252,6 +252,11 @@ function build_duckdb_filters_from_query(params) {
 
   if (status) {
     filters.push({ column_id: 'status', operator: '=', value: status })
+  }
+
+  // Priority filter
+  if (priority) {
+    filters.push({ column_id: 'priority', operator: '=', value: priority })
   }
 
   // Range filters: column_id -> { min_param, max_param, transform }
@@ -369,6 +374,7 @@ async function handle_task_list_request(
 ) {
   const {
     status,
+    priority,
     tag_entity_ids,
     organization_ids,
     person_ids,
@@ -385,6 +391,7 @@ async function handle_task_list_request(
   // Check if we have filter params (don't use cached data for filtered requests)
   const has_filters =
     status ||
+    priority ||
     tag_entity_ids ||
     organization_ids ||
     person_ids ||
@@ -469,6 +476,8 @@ async function handle_task_list_request(
 
   const all_tasks = await list_tasks_from_filesystem({
     status,
+    // Convert single priority to include_priority array for filesystem filter
+    include_priority: priority ? [priority] : [],
     tag_entity_ids: parse_array_params(tag_entity_ids),
     organization_ids: parse_array_params(organization_ids),
     person_ids: parse_array_params(person_ids),

@@ -1,6 +1,7 @@
 import express from 'express'
 import debug from 'debug'
 
+import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
 import * as threads from '#libs-server/threads/index.mjs'
 import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
 import {
@@ -47,16 +48,23 @@ function get_cached_thread(cache_key) {
     thread_response_cache.delete(cache_key)
     return null
   }
+  // Update accessed_at for LRU tracking
+  entry.accessed_at = Date.now()
   return entry.data
 }
 
 function set_cached_thread(cache_key, data) {
-  // Hard cap: evict oldest entry when at max size
+  // LRU eviction: remove least recently accessed entry BEFORE adding new one
+  // This ensures cache never exceeds max size
   if (thread_response_cache.size >= THREAD_CACHE_MAX_SIZE) {
-    const oldest_key = thread_response_cache.keys().next().value
-    thread_response_cache.delete(oldest_key)
+    evict_lru_entry(thread_response_cache, log)
   }
-  thread_response_cache.set(cache_key, { data, timestamp: Date.now() })
+  const now = Date.now()
+  thread_response_cache.set(cache_key, {
+    data,
+    timestamp: now,
+    accessed_at: now
+  })
 }
 
 /**
