@@ -100,6 +100,8 @@ fi
 # Step 2: Pull code
 if [ "$PULL_CODE" = true ]; then
     echo "Step 2: Pulling latest code on remote..."
+    # Reset any local changes to synced config files before pulling
+    $DRY_RUN ssh "$REMOTE_HOST" "cd $REMOTE_BASE_DIR && git checkout -- config/ pm2.config.js 2>/dev/null || true"
     $DRY_RUN ssh "$REMOTE_HOST" "cd $REMOTE_BASE_DIR && git pull origin main"
     echo ""
 fi
