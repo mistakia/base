@@ -82,7 +82,14 @@
       "default": { "max_concurrent": 10 },
       "claude-session": { "max_concurrent": 2 },
       "draft-readiness": { "max_concurrent": 2 },
-      "task-planning": { "max_concurrent": 2 }
+      "task-planning": { "max_concurrent": 2 },
+      "orchestrator": { "max_concurrent": 1 },
+      "project-base": { "max_concurrent": 1 },
+      "project-league": { "max_concurrent": 1 },
+      "project-finance": { "max_concurrent": 1 },
+      "project-parcels": { "max_concurrent": 1 },
+      "project-homelab": { "max_concurrent": 1 },
+      "project-properties": { "max_concurrent": 1 }
     }
   }
 }
