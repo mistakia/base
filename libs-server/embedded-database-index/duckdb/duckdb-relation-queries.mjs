@@ -107,7 +107,8 @@ export async function find_entities_relating_to({
   // For entity_type filter, we need separate handling for entities vs threads
   // Threads have type 'thread' which maps to thread_state in threads table
   const entity_type_filter = entity_type ? 'AND e.type = ?' : ''
-  const thread_type_filter = entity_type === 'thread' ? '' : (entity_type ? 'AND 1=0' : '')
+  const thread_type_filter =
+    entity_type === 'thread' ? '' : entity_type ? 'AND 1=0' : ''
 
   if (entity_type && entity_type !== 'thread') {
     parameters.push(entity_type)

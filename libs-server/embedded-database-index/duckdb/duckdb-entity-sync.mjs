@@ -210,7 +210,9 @@ export async function sync_entity_relations_to_duckdb({
 
       if (valid_relations.length > 0) {
         // Use batch insert for multiple relations
-        const placeholders = valid_relations.map(() => '(?, ?, ?, ?)').join(', ')
+        const placeholders = valid_relations
+          .map(() => '(?, ?, ?, ?)')
+          .join(', ')
         const parameters = valid_relations.flatMap((relation) => [
           source_base_uri,
           relation.target_base_uri,
@@ -511,7 +513,11 @@ export async function sync_entities_tags_batch({ entity_tags }) {
     })
   }
 
-  log('Batch synced %d tag pairs for %d entities', all_tag_pairs.length, entity_base_uris.length)
+  log(
+    'Batch synced %d tag pairs for %d entities',
+    all_tag_pairs.length,
+    entity_base_uris.length
+  )
 }
 
 /**
@@ -571,5 +577,9 @@ export async function sync_entities_relations_batch({ entity_relations }) {
     })
   }
 
-  log('Batch synced %d relations for %d entities', all_relation_tuples.length, source_base_uris.length)
+  log(
+    'Batch synced %d relations for %d entities',
+    all_relation_tuples.length,
+    source_base_uris.length
+  )
 }

@@ -86,7 +86,8 @@ const BashTool = ({ tool_call_event, tool_result_event }) => {
               alignItems: 'flex-start',
               mb: execution_result?.has_output ? 1 : 0,
               px: 2,
-              pt: 2
+              pt: 2,
+              pb: execution_result?.has_output ? 0 : 2
             }}>
             <MonospaceText
               variant='xs'

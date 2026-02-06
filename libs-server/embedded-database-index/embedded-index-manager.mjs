@@ -497,7 +497,10 @@ class EmbeddedIndexManager {
         include_entity_types: ENTITY_DIRECTORIES
       })
 
-      log('Populating %d entities to index using batch operations', entities.length)
+      log(
+        'Populating %d entities to index using batch operations',
+        entities.length
+      )
 
       let synced = 0
       let failed = 0
@@ -553,7 +556,9 @@ class EmbeddedIndexManager {
         try {
           await upsert_entities_batch({ entities: entity_batch })
           await sync_entities_tags_batch({ entity_tags: tags_batch })
-          await sync_entities_relations_batch({ entity_relations: relations_batch })
+          await sync_entities_relations_batch({
+            entity_relations: relations_batch
+          })
           synced += entity_batch.length
         } catch (error) {
           log('Error executing batch operations: %s', error.message)
@@ -778,7 +783,11 @@ class EmbeddedIndexManager {
       }
 
       // Sync thread relations if present (outside main try-catch to not affect thread sync result)
-      if (result.duckdb_synced && Array.isArray(metadata?.relations) && metadata.relations.length > 0) {
+      if (
+        result.duckdb_synced &&
+        Array.isArray(metadata?.relations) &&
+        metadata.relations.length > 0
+      ) {
         try {
           const relations = extract_relations_from_entity({
             entity_properties: { relations: metadata.relations }
@@ -788,7 +797,11 @@ class EmbeddedIndexManager {
             source_base_uri: thread_base_uri,
             relations
           })
-          log('Thread relations synced: %s (%d relations)', thread_id, relations.length)
+          log(
+            'Thread relations synced: %s (%d relations)',
+            thread_id,
+            relations.length
+          )
         } catch (error) {
           log('Error syncing thread relations: %s', error.message)
         }

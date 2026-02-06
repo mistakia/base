@@ -19,7 +19,6 @@ function escape_regex_string(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-
 /**
  * Update references in entity relations array
  * @param {Object} options - Function options

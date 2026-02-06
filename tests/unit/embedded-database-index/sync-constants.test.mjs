@@ -205,10 +205,7 @@ describe('Sync Constants', () => {
       })
 
       it('should allow custom submodule exclusions', () => {
-        const file_paths = [
-          'text/my-doc.md',
-          'text/custom-submodule/doc.md'
-        ]
+        const file_paths = ['text/my-doc.md', 'text/custom-submodule/doc.md']
 
         const result = filter_entity_files({
           file_paths,

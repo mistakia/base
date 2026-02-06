@@ -118,7 +118,10 @@ export function filter_entity_files({
       excluded_submodule.length,
       excluded_submodule.length <= 10
         ? excluded_submodule
-        : [...excluded_submodule.slice(0, 5), `... and ${excluded_submodule.length - 5} more`]
+        : [
+            ...excluded_submodule.slice(0, 5),
+            `... and ${excluded_submodule.length - 5} more`
+          ]
     )
   }
 

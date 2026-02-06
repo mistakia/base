@@ -10,7 +10,6 @@ import path from 'path'
  */
 export function is_path_within_directory(child_path, parent_path) {
   return (
-    child_path === parent_path ||
-    child_path.startsWith(parent_path + path.sep)
+    child_path === parent_path || child_path.startsWith(parent_path + path.sep)
   )
 }

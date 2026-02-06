@@ -37,7 +37,8 @@ const ExitPlanModeTool = ({ tool_call_event, tool_result_event }) => {
   }
 
   const get_status = () => {
-    if (!tool_result_event) return { status: 'pending', text: 'Awaiting review' }
+    if (!tool_result_event)
+      return { status: 'pending', text: 'Awaiting review' }
 
     const result = tool_result_event?.content?.result || ''
     const error = tool_result_event?.content?.error
@@ -78,14 +79,9 @@ const ExitPlanModeTool = ({ tool_call_event, tool_result_event }) => {
   })
 
   return (
-    <BaseToolComponent
-      tool_call_event={tool_call_event}
-      header={header_node}>
+    <BaseToolComponent tool_call_event={tool_call_event} header={header_node}>
       <Box className='plan-mode-indicator'>
-        <Box
-          component='span'
-          className={`status-dot status-dot--${status}`}
-        />
+        <Box component='span' className={`status-dot status-dot--${status}`} />
         <MonospaceText variant='xs' className='plan-mode-indicator__text'>
           {status_text}
         </MonospaceText>

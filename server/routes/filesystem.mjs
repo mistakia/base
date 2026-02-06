@@ -34,7 +34,9 @@ const create_concurrency_limiter = (max_concurrency) => {
       await new Promise((resolve, reject) => {
         const timeout_id = setTimeout(() => {
           // Remove this resolver from queue if it's still there
-          const index = pending_queue.findIndex((item) => item.resolve === resolve)
+          const index = pending_queue.findIndex(
+            (item) => item.resolve === resolve
+          )
           if (index !== -1) {
             pending_queue.splice(index, 1)
           }
@@ -142,7 +144,9 @@ router.get('/directory', async (req, res) => {
     }
 
     // Filter to non-hidden files
-    const visible_files = files.filter((file_name) => !file_name.startsWith('.'))
+    const visible_files = files.filter(
+      (file_name) => !file_name.startsWith('.')
+    )
 
     // Parallel stat all files
     const file_stats_results = await Promise.all(
@@ -174,7 +178,10 @@ router.get('/directory', async (req, res) => {
           try {
             const content = await fs.readFile(file_path, 'utf8')
             const parsed = fm(content)
-            if (parsed.attributes && Object.keys(parsed.attributes).length > 0) {
+            if (
+              parsed.attributes &&
+              Object.keys(parsed.attributes).length > 0
+            ) {
               return {
                 has_frontmatter: true,
                 entity_type: parsed.attributes.type || null

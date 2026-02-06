@@ -8,7 +8,11 @@ describe('SQL Injection Protection', () => {
   describe('build_duckdb_where_clause', () => {
     it('should reject invalid column names in filters', () => {
       const filters = [
-        { column_id: 'status; DROP TABLE entities--', operator: '=', value: 'active' }
+        {
+          column_id: 'status; DROP TABLE entities--',
+          operator: '=',
+          value: 'active'
+        }
       ]
 
       const { where_sql, parameters } = build_duckdb_where_clause({ filters })
@@ -30,9 +34,7 @@ describe('SQL Injection Protection', () => {
     })
 
     it('should allow valid column names', () => {
-      const filters = [
-        { column_id: 'status', operator: '=', value: 'active' }
-      ]
+      const filters = [{ column_id: 'status', operator: '=', value: 'active' }]
 
       const { where_sql, parameters } = build_duckdb_where_clause({ filters })
 
@@ -51,7 +53,14 @@ describe('SQL Injection Protection', () => {
     })
 
     it('should allow all valid entity columns', () => {
-      const valid_columns = ['type', 'status', 'priority', 'archived', 'created_at', 'updated_at']
+      const valid_columns = [
+        'type',
+        'status',
+        'priority',
+        'archived',
+        'created_at',
+        'updated_at'
+      ]
 
       for (const column of valid_columns) {
         const filters = [{ column_id: column, operator: '=', value: 'test' }]
@@ -63,9 +72,7 @@ describe('SQL Injection Protection', () => {
 
   describe('build_duckdb_order_clause', () => {
     it('should reject invalid column names in sort', () => {
-      const sort = [
-        { column_id: 'title; DROP TABLE entities--', desc: false }
-      ]
+      const sort = [{ column_id: 'title; DROP TABLE entities--', desc: false }]
 
       const order_sql = build_duckdb_order_clause({ sort })
 
@@ -76,9 +83,7 @@ describe('SQL Injection Protection', () => {
     })
 
     it('should reject SQL injection via sort column_id', () => {
-      const sort = [
-        { column_id: "created_at' OR '1'='1", desc: true }
-      ]
+      const sort = [{ column_id: "created_at' OR '1'='1", desc: true }]
 
       const order_sql = build_duckdb_order_clause({ sort })
 
