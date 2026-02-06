@@ -172,7 +172,7 @@ export async function get_changed_files_in_repo({
     })
 
     if (stdout.trim()) {
-      for (const line of stdout.trim().split('\n')) {
+      for (const line of stdout.split('\n')) {
         if (!line.trim()) continue
 
         // Parse porcelain format: XY filename or XY orig -> renamed
