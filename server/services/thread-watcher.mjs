@@ -223,23 +223,10 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
   const tracked = last_seen_state.get(thread_id)
 
   // First time seeing this thread via timeline change (not metadata add).
-  // Skip to EOF using stat -- avoids reading the full file just to set the
-  // byte offset. Pre-existing entries are not emitted.
+  // Full initialization reads the entire timeline to ensure newly appended
+  // entries are emitted. Client-side deduplication handles any redundant events.
   if (!tracked) {
-    try {
-      const stat = await fs.stat(timeline_path)
-      last_seen_state.set(thread_id, {
-        timestamp: null,
-        byte_offset: stat.size
-      })
-      log(
-        `Fast-initialized tracking for ${thread_id}: offset=${stat.size} (stat-only)`
-      )
-    } catch {
-      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
-      log(`Initialized tracking for ${thread_id}: offset=0 (file not found)`)
-    }
-    return []
+    return initialize_thread_tracking(thread_id, timeline_path)
   }
 
   const result = await read_timeline_jsonl_from_offset({
