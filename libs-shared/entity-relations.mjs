@@ -8,7 +8,10 @@
  */
 // Association relations
 export const RELATION_RELATES_TO = 'relates_to'
+export const RELATION_RELATES = 'relates'
 export const RELATION_IMPLEMENTS = 'implements'
+export const RELATION_FOLLOWS = 'follows'
+export const RELATION_CALLS = 'calls'
 
 // Dependency relations
 export const RELATION_BLOCKED_BY = 'blocked_by'
@@ -54,7 +57,10 @@ export const RELATION_CREATED_BY = 'created_by'
  */
 export const common_relation_types = [
   RELATION_RELATES_TO,
+  RELATION_RELATES,
   RELATION_IMPLEMENTS,
+  RELATION_FOLLOWS,
+  RELATION_CALLS,
   RELATION_BLOCKED_BY,
   RELATION_BLOCKS,
   RELATION_ASSIGNED_TO,
@@ -90,7 +96,7 @@ export const relation_type_categories = {
     RELATION_HAS_SUBTASK,
     RELATION_SUBTASK_OF
   ],
-  association: [RELATION_RELATES_TO, RELATION_IMPLEMENTS],
+  association: [RELATION_RELATES_TO, RELATION_RELATES, RELATION_IMPLEMENTS, RELATION_FOLLOWS, RELATION_CALLS],
   assignment: [RELATION_ASSIGNED_TO],
   membership: [RELATION_MEMBER_OF, RELATION_HAS_MEMBER],
   resource: [RELATION_NEEDS_ITEM, RELATION_USES_ITEM],
@@ -151,11 +157,11 @@ export const RELATION_PAIRS = {
  */
 export const RELATION_TYPE_PRIORITY = {
   [RELATION_CREATES]: 1,
-  created_by: 1,
+  [RELATION_CREATED_BY]: 1,
   [RELATION_MODIFIES]: 2,
-  modified_by: 2,
-  implements: 3,
-  follows: 4,
+  [RELATION_MODIFIED_BY]: 2,
+  [RELATION_IMPLEMENTS]: 3,
+  [RELATION_FOLLOWS]: 4,
   [RELATION_SUBTASK_OF]: 5,
   [RELATION_HAS_SUBTASK]: 6,
   [RELATION_BLOCKED_BY]: 7,
@@ -163,11 +169,11 @@ export const RELATION_TYPE_PRIORITY = {
   [RELATION_PRECEDES]: 9,
   [RELATION_SUCCEEDS]: 10,
   [RELATION_ASSIGNED_TO]: 11,
-  calls: 12,
-  relates: 20,
+  [RELATION_CALLS]: 12,
+  [RELATION_RELATES]: 20,
   [RELATION_RELATES_TO]: 20,
   [RELATION_ACCESSES]: 30,
-  accessed_by: 30
+  [RELATION_ACCESSED_BY]: 30
 }
 
 /**

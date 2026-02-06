@@ -21,6 +21,29 @@ import '#libs-server/tools/index.mjs'
 const log = debug('threads:execute')
 
 /**
+ * Stable JSON stringify that produces consistent output regardless of key order.
+ * Recursively sorts object keys before serialization.
+ * @param {*} value - Value to serialize
+ * @returns {string} Stable JSON string
+ */
+function stable_stringify(value) {
+  if (value === null || value === undefined) {
+    return JSON.stringify(value)
+  }
+  if (typeof value !== 'object') {
+    return JSON.stringify(value)
+  }
+  if (Array.isArray(value)) {
+    return '[' + value.map(stable_stringify).join(',') + ']'
+  }
+  const sorted_keys = Object.keys(value).sort()
+  const pairs = sorted_keys.map(
+    (key) => JSON.stringify(key) + ':' + stable_stringify(value[key])
+  )
+  return '{' + pairs.join(',') + '}'
+}
+
+/**
  * Process a single tool call
  *
  * @param {Object} params Parameters for processing a tool call
@@ -144,7 +167,8 @@ const process_stream = async ({
       if (value.tool_calls && value.tool_calls.length > 0) {
         for (const tool_call of value.tool_calls) {
           // Create a unique ID for the tool call based on name and params
-          const tool_call_id = `${tool_call.tool_name}:${JSON.stringify(tool_call.tool_parameters)}`
+          // Use stable_stringify to ensure consistent keys regardless of property order
+          const tool_call_id = `${tool_call.tool_name}:${stable_stringify(tool_call.tool_parameters)}`
 
           // Only process this tool call if we haven't seen it before
           if (!processed_tool_call_ids.has(tool_call_id)) {

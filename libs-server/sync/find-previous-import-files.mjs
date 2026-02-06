@@ -47,7 +47,13 @@ export async function find_previous_import_files({
       dir_paths.raw_data_directory,
       latest_raw_file
     )
-    const raw_data = JSON.parse(fs.readFileSync(raw_filepath, 'utf8'))
+    let raw_data
+    try {
+      raw_data = JSON.parse(fs.readFileSync(raw_filepath, 'utf8'))
+    } catch (parse_error) {
+      log(`Failed to parse JSON from ${raw_filepath}: ${parse_error.message}`)
+      return null
+    }
 
     // Find most recent processed file (regardless of timestamp)
     let processed_filepath = null
@@ -64,7 +70,16 @@ export async function find_previous_import_files({
           dir_paths.processed_data_directory,
           processed_files[0]
         )
-        processed_data = JSON.parse(fs.readFileSync(processed_filepath, 'utf8'))
+        try {
+          processed_data = JSON.parse(
+            fs.readFileSync(processed_filepath, 'utf8')
+          )
+        } catch (parse_error) {
+          log(
+            `Failed to parse JSON from ${processed_filepath}: ${parse_error.message}`
+          )
+          // Continue without processed data - raw data is still valid
+        }
       }
     }
 

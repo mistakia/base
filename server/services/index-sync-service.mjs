@@ -85,7 +85,7 @@ export const start_index_sync_service = async () => {
   }
 
   // Start entity file watcher for database sync
-  const index_config = embedded_index_manager._get_index_config()
+  const index_config = embedded_index_manager.get_index_config()
   if (index_config.file_watcher_enabled) {
     try {
       start_index_sync_watcher()
