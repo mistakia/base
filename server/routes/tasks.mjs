@@ -27,9 +27,8 @@ const HTTP_MAX_AGE = 5 * 60
 const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 // Helper function to check user permissions for a file
+// Delegates to permission service which respects public_read entity setting
 const check_file_permission = async (user_public_key, absolute_path) => {
-  if (!user_public_key) return false
-
   return await check_user_permission_for_file({
     user_public_key,
     absolute_path
@@ -69,22 +68,27 @@ const check_task_permission_and_build_response = async ({
       file_info: task.file_info,
       is_redacted: true
     }
+
+    // Add redacted content if requested
+    if (include_content) {
+      response_data.content = redacted_task.entity_content
+    }
   } else {
     // Return nested structure with entity_properties
     response_data = {
       entity_properties: task.entity_properties,
       file_info: task.file_info
     }
+
+    // Add original content if requested
+    if (include_content) {
+      response_data.content = task.entity_content
+    }
   }
 
   // Add base_uri if provided
   if (base_uri) {
     response_data.base_uri = base_uri
-  }
-
-  // Add content if requested
-  if (include_content) {
-    response_data.content = task.entity_content
   }
 
   return response_data

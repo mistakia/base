@@ -9,6 +9,8 @@ import { search_entities } from '#libs-server/entity/index.mjs'
 import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { check_permission } from '#server/middleware/permission/index.mjs'
+import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 
 const router = express.Router({ mergeParams: true })
 
@@ -87,12 +89,10 @@ router.get('/', async (req, res) => {
       sort = 'updated_at',
       limit = '50'
     } = req.query
-    const user_public_key = req.user?.user_public_key
-    if (!user_public_key) {
-      return res.status(401).send({ error: 'authentication required' })
-    }
+    const user_public_key = req.user?.user_public_key || null
 
     // If base_uri is provided, get a specific tag with entities and threads
+    // This path allows public access with permission checking
     if (base_uri) {
       try {
         // Read the tag directly from filesystem using registry-based resolution
@@ -100,15 +100,34 @@ router.get('/', async (req, res) => {
           base_uri
         })
 
+        // Check permission for this tag
+        const permission_result = await check_permission({
+          user_public_key,
+          resource_path: base_uri
+        })
+
+        // If user doesn't have read permission, return redacted tag
+        let response_tag = tag
+        let is_redacted = false
+        if (!permission_result.read.allowed) {
+          response_tag = redact_entity_object({ entity_properties: tag })
+            .entity_properties
+          is_redacted = true
+        }
+
         const parsed_limit = parseInt(limit, 10) || 50
 
         // Get all entities associated with this tag using base_uri
         // Note: search_entities sorts by updated_at descending by default
-        const tagged_entities = await search_entities({
-          user_public_key,
-          tag_base_uris: [tag.base_uri],
-          limit: parsed_limit
-        })
+        // For redacted tags, return empty entities list
+        let tagged_entities = []
+        if (!is_redacted) {
+          tagged_entities = await search_entities({
+            user_public_key,
+            tag_base_uris: [tag.base_uri],
+            limit: parsed_limit
+          })
+        }
 
         // Count tasks (entities with type === 'task')
         const task_count = tagged_entities.filter(
@@ -116,10 +135,11 @@ router.get('/', async (req, res) => {
         ).length
 
         // Get threads tagged with this tag (if include_threads is true)
+        // For redacted tags, return empty threads list
         let threads = []
         let thread_count = 0
 
-        if (include_threads === 'true') {
+        if (include_threads === 'true' && !is_redacted) {
           threads = await query_threads_by_tag({
             tag_base_uri: tag.base_uri,
             sort,
@@ -130,12 +150,13 @@ router.get('/', async (req, res) => {
 
         // Return tag with entities, threads, and counts
         res.send({
-          tag,
+          tag: response_tag,
           entities: tagged_entities,
           threads,
           task_count,
           thread_count,
-          total_entity_count: tagged_entities.length
+          total_entity_count: tagged_entities.length,
+          is_redacted
         })
       } catch (error) {
         return res.status(404).send({
@@ -143,7 +164,12 @@ router.get('/', async (req, res) => {
         })
       }
     } else {
-      // If no base_uri, list all tags
+      // If no base_uri, list all tags (requires authentication)
+      // The underlying list function filters by user_public_key
+      if (!user_public_key) {
+        return res.status(401).send({ error: 'authentication required' })
+      }
+
       const tags = await list_tags_from_filesystem({
         user_public_key,
         include_archived: include_archived === 'true',
