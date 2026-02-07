@@ -32,41 +32,30 @@ export async function load_tags_with_content({ user_public_key }) {
     include_archived: false
   })
 
-  const tags_with_content = []
-
-  for (const tag of tags) {
-    try {
-      const tag_result = await read_tag_from_filesystem({
-        base_uri: tag.base_uri
-      })
-
-      if (tag_result.success) {
-        tags_with_content.push({
-          base_uri: tag.base_uri,
-          title: tag.title,
-          description: tag.description,
-          content: tag_result.entity_content || ''
-        })
-      } else {
-        // Still include the tag with just title/description
-        tags_with_content.push({
-          base_uri: tag.base_uri,
-          title: tag.title,
-          description: tag.description,
-          content: ''
-        })
-      }
-    } catch (error) {
-      log(`Failed to read tag content for ${tag.base_uri}: ${error.message}`)
-      // Still include the tag with just title/description
-      tags_with_content.push({
+  const tags_with_content = await Promise.all(
+    tags.map(async (tag) => {
+      const fallback = {
         base_uri: tag.base_uri,
         title: tag.title,
         description: tag.description,
         content: ''
-      })
-    }
-  }
+      }
+
+      try {
+        const tag_result = await read_tag_from_filesystem({
+          base_uri: tag.base_uri
+        })
+
+        if (tag_result.success) {
+          return { ...fallback, content: tag_result.entity_content || '' }
+        }
+        return fallback
+      } catch (error) {
+        log(`Failed to read tag content for ${tag.base_uri}: ${error.message}`)
+        return fallback
+      }
+    })
+  )
 
   log(`Loaded ${tags_with_content.length} tags with content`)
   return tags_with_content
@@ -245,11 +234,3 @@ export function parse_tag_analysis_response(response_text, available_tags) {
 }
 
 export { TAG_CONSTRAINTS }
-
-export default {
-  load_tags_with_content,
-  format_tags_for_prompt,
-  generate_tag_analysis_prompt,
-  parse_tag_analysis_response,
-  TAG_CONSTRAINTS
-}

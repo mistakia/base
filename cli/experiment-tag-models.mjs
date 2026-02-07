@@ -32,7 +32,7 @@ import {
 } from '#libs-server/metadata/generate-tag-prompt.mjs'
 import { extract_first_user_message } from '#libs-server/metadata/analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
-import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
 import config from '#config'
 
 // Enable debug logging

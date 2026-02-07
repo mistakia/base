@@ -13,7 +13,6 @@
  *   --limit          Maximum number of threads to process (default: 50)
  *   --state          Filter by thread state (active, archived)
  *   --force          Re-analyze even if already analyzed
- *   --concurrency    Number of concurrent analyses (default: 1)
  *   --created-since  Only process threads created since date (ISO format)
  *
  * Examples:
@@ -47,11 +46,6 @@ const limit = limit_index !== -1 ? parseInt(args[limit_index + 1], 10) : 50
 const state_index = args.indexOf('--state')
 const thread_state = state_index !== -1 ? args[state_index + 1] : undefined
 
-// Parse --concurrency option
-const concurrency_index = args.indexOf('--concurrency')
-const concurrency =
-  concurrency_index !== -1 ? parseInt(args[concurrency_index + 1], 10) : 1
-
 // Parse --created-since option
 const created_since_index = args.indexOf('--created-since')
 const created_since =
@@ -67,7 +61,6 @@ if (args.includes('--help') || args.includes('-h')) {
   console.log('  --limit          Maximum number of threads to process (default: 50)')
   console.log('  --state          Filter by thread state (active, archived)')
   console.log('  --force          Re-analyze even if already analyzed')
-  console.log('  --concurrency    Number of concurrent analyses (default: 1)')
   console.log(
     '  --created-since  Only process threads created since date (ISO format)'
   )
@@ -85,7 +78,6 @@ async function run_backfill() {
   console.log(`Dry run: ${dry_run}`)
   console.log(`Force: ${force}`)
   console.log(`Limit: ${limit}`)
-  console.log(`Concurrency: ${concurrency}`)
   if (thread_state) {
     console.log(`State filter: ${thread_state}`)
   }
@@ -97,11 +89,11 @@ async function run_backfill() {
   // List threads that need tag analysis
   log('Fetching threads...')
 
-  // Get a larger set initially to filter
+  // Get a larger set initially to filter (2x to account for skipped threads)
   const all_threads = await list_threads({
     thread_state,
     created_since,
-    limit: limit * 10 // Fetch more to account for filtering
+    limit: limit * 2
   })
 
   log(`Found ${all_threads.length} total threads`)
@@ -181,31 +173,9 @@ async function run_backfill() {
     }
   }
 
-  // Process with concurrency
-  if (concurrency === 1) {
-    // Sequential processing
-    for (const thread of threads) {
-      await process_thread(thread)
-    }
-  } else {
-    // Concurrent processing
-    const queue = [...threads]
-    const workers = []
-
-    for (let i = 0; i < concurrency; i++) {
-      workers.push(
-        (async () => {
-          while (queue.length > 0) {
-            const thread = queue.shift()
-            if (thread) {
-              await process_thread(thread)
-            }
-          }
-        })()
-      )
-    }
-
-    await Promise.all(workers)
+  // Process threads sequentially
+  for (const thread of threads) {
+    await process_thread(thread)
   }
 
   // Summary

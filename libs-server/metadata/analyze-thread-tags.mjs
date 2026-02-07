@@ -13,7 +13,7 @@ import {
 import { extract_first_user_message } from './analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
-import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
+import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
 import config from '#config'
 
 const log = debug('metadata:analyze-tags')
@@ -22,7 +22,7 @@ const log = debug('metadata:analyze-tags')
 // Constants
 // ============================================================================
 
-const DEFAULT_USER_PUBLIC_KEY = config.user?.public_key
+const DEFAULT_USER_PUBLIC_KEY = config.user_public_key
 
 // ============================================================================
 // Timeline Reading
