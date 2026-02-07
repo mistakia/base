@@ -39,17 +39,30 @@ const relation_options = (yargs) =>
       default: 0
     })
 
+/**
+ * Additional options for commands that return reverse relations (sources)
+ */
+const reverse_source_options = (yargs) =>
+  yargs.option('source-type', {
+    describe: 'Filter by source type: entity, thread, or all',
+    type: 'string',
+    choices: ['entity', 'thread', 'all'],
+    default: 'all'
+  })
+
 export const builder = (yargs) =>
   yargs
     .command(
       'list <base_uri>',
       'List both forward and reverse relations',
       (yargs) =>
-        relation_options(
-          yargs.positional('base_uri', {
-            describe: 'Entity base_uri',
-            type: 'string'
-          })
+        reverse_source_options(
+          relation_options(
+            yargs.positional('base_uri', {
+              describe: 'Entity base_uri',
+              type: 'string'
+            })
+          )
         ),
       (argv) => handle_relations(argv, 'both')
     )
@@ -69,17 +82,46 @@ export const builder = (yargs) =>
       'reverse <base_uri>',
       'List reverse relations only',
       (yargs) =>
-        relation_options(
-          yargs.positional('base_uri', {
-            describe: 'Entity base_uri',
-            type: 'string'
-          })
+        reverse_source_options(
+          relation_options(
+            yargs.positional('base_uri', {
+              describe: 'Entity base_uri',
+              type: 'string'
+            })
+          )
         ),
       (argv) => handle_relations(argv, 'reverse')
     )
     .demandCommand(1, 'Specify a subcommand: list, forward, or reverse')
 
 export const handler = () => {}
+
+/**
+ * Check if a base_uri represents a thread
+ */
+function is_thread_source(base_uri) {
+  return base_uri && base_uri.startsWith('user:thread/')
+}
+
+/**
+ * Filter relations by source type
+ */
+function filter_by_source_type(relations, source_type) {
+  if (!source_type || source_type === 'all') {
+    return relations
+  }
+  return relations.filter((rel) => {
+    const is_thread = is_thread_source(rel.base_uri)
+    return source_type === 'thread' ? is_thread : !is_thread
+  })
+}
+
+/**
+ * Get source type label for a relation
+ */
+function get_source_type_label(base_uri) {
+  return is_thread_source(base_uri) ? 'thread' : 'entity'
+}
 
 async function fetch_relations_from_api({
   base_uri,
@@ -166,12 +208,51 @@ async function handle_relations(argv, direction) {
       offset: argv.offset
     }
 
+    const source_type = argv['source-type']
+
     const result = await with_api_fallback(
       () => fetch_relations_from_api(params),
       () => fetch_relations_from_duckdb(params)
     )
 
+    // Apply source-type filtering to reverse relations (only reverse has sources)
+    if (result.reverse) {
+      result.reverse = filter_by_source_type(result.reverse, source_type)
+    }
+
+    // Custom formatter that includes source type indicator
+    const format_with_source_type = (relation, options) => {
+      if (options.verbose) {
+        const source_label = get_source_type_label(relation.base_uri)
+        const lines = [relation.base_uri]
+        lines.push(`  source_type: ${source_label}`)
+        if (relation.relation_type) {
+          lines.push(`  relation_type: ${relation.relation_type}`)
+        }
+        if (relation.title) lines.push(`  title: ${relation.title}`)
+        if (relation.type) lines.push(`  type: ${relation.type}`)
+        if (relation.context) lines.push(`  context: ${relation.context}`)
+        return lines.join('\n')
+      }
+
+      const source_label = get_source_type_label(relation.base_uri)
+      return [
+        source_label,
+        relation.relation_type || '',
+        relation.base_uri || '',
+        relation.title || '',
+        relation.type || ''
+      ].join('\t')
+    }
+
     if (argv.json) {
+      // Add source_type to each relation in JSON output
+      if (result.reverse) {
+        result.reverse = result.reverse.map((rel) => ({
+          ...rel,
+          source_type: get_source_type_label(rel.base_uri)
+        }))
+      }
       console.log(JSON.stringify(result, null, 2))
     } else {
       const has_forward = result.forward && result.forward.length > 0
@@ -194,7 +275,7 @@ async function handle_relations(argv, direction) {
           if (direction === 'both') console.log('Reverse:')
           output_results(result.reverse, {
             verbose: argv.verbose,
-            formatter: format_relation
+            formatter: format_with_source_type
           })
         }
       }
