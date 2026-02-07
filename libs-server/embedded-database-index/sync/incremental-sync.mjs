@@ -39,7 +39,11 @@ const log = debug('embedded-index:sync:incremental')
 function is_file_not_found_error(error) {
   if (error?.code === 'ENOENT') return true
   if (typeof error === 'string') {
-    return error.includes('ENOENT') || error.includes('no such file')
+    return (
+      error.includes('ENOENT') ||
+      error.includes('no such file') ||
+      error.includes('File not found')
+    )
   }
   return false
 }
