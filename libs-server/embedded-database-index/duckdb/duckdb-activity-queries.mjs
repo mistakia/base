@@ -295,6 +295,93 @@ export async function get_heatmap_daily_count() {
 }
 
 /**
+ * Query entities by thread activity within a time period.
+ * Finds entities that have had threads relating to them within the specified period.
+ * @param {Object} params Parameters
+ * @param {Date} params.since_date Date to filter activity from
+ * @param {string|string[]|null} [params.entity_types] Filter by entity type(s) (e.g., 'task' or ['task', 'workflow'])
+ * @param {number} [params.limit=50] Max results
+ * @param {number} [params.offset=0] Offset for pagination
+ * @returns {Promise<Array>} Array of entities with activity metrics
+ */
+export async function query_entities_by_thread_activity({
+  since_date,
+  entity_types = null,
+  limit = 50,
+  offset = 0
+}) {
+  // Normalize entity_types to array or null
+  const types_array = entity_types
+    ? Array.isArray(entity_types)
+      ? entity_types
+      : [entity_types]
+    : null
+
+  log(
+    'Querying entities by thread activity since %s (types: %s)',
+    since_date?.toISOString(),
+    types_array?.join(', ') || 'all'
+  )
+
+  const limit_int = Math.max(0, Math.floor(Number(limit) || 50))
+  const offset_int = Math.max(0, Math.floor(Number(offset) || 0))
+
+  const where_clauses = ["er.source_base_uri LIKE 'user:thread/%'"]
+  const parameters = []
+
+  if (since_date) {
+    where_clauses.push('t.updated_at >= ?')
+    parameters.push(since_date.toISOString())
+  }
+
+  if (types_array && types_array.length > 0) {
+    const placeholders = types_array.map(() => '?').join(', ')
+    where_clauses.push(`e.type IN (${placeholders})`)
+    parameters.push(...types_array)
+  }
+
+  parameters.push(limit_int, offset_int)
+
+  const query = `
+    SELECT
+      e.base_uri,
+      e.entity_id,
+      e.type,
+      e.title,
+      e.status,
+      e.priority,
+      COUNT(DISTINCT t.thread_id) as thread_count,
+      MAX(t.updated_at) as last_activity
+    FROM entities e
+    JOIN entity_relations er ON er.target_base_uri = e.base_uri
+    JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
+    WHERE ${where_clauses.join(' AND ')}
+    GROUP BY e.base_uri, e.entity_id, e.type, e.title, e.status, e.priority
+    ORDER BY last_activity DESC
+    LIMIT ? OFFSET ?
+  `
+
+  try {
+    const rows = await execute_duckdb_query({ query, parameters })
+
+    log('Found %d entities with thread activity', rows.length)
+    return rows.map((row) => ({
+      base_uri: row.base_uri,
+      entity_id: row.entity_id,
+      type: row.type,
+      title: row.title,
+      status: row.status,
+      priority: row.priority,
+      thread_count: Number(row.thread_count) || 0,
+      last_activity: row.last_activity
+    }))
+  } catch (error) {
+    log('Error querying entities by thread activity: %s', error.message)
+    throw error
+  }
+}
+
+/**
  * Query tasks from entities table
  * @param {Object} [params] Parameters
  * @param {boolean} [params.archived=false] Include archived tasks
