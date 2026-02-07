@@ -185,6 +185,7 @@ async function handle_thread_list_request_indexed({
   search,
   file_ref,
   dir_ref,
+  tags,
   limit,
   offset,
   requesting_user_key
@@ -208,7 +209,7 @@ async function handle_thread_list_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  // Query from DuckDB with search and reference filters
+  // Query from DuckDB with search, reference, and tag filters
   const duckdb_threads = await query_threads_from_duckdb({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
@@ -216,7 +217,8 @@ async function handle_thread_list_request_indexed({
     offset,
     search,
     file_ref,
-    dir_ref
+    dir_ref,
+    tags
   })
 
   // Normalize to API format
@@ -281,8 +283,15 @@ router.get('/', async (req, res) => {
       file_ref,
       dir_ref,
       relates_to,
-      relation_type
+      relation_type,
+      tags: tags_param
     } = req.query
+    // Parse tags parameter: comma-separated string to array, filter empty strings
+    const parsed_tags = tags_param
+      ?.split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+    const tags = parsed_tags?.length > 0 ? parsed_tags : undefined
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
@@ -337,6 +346,7 @@ router.get('/', async (req, res) => {
           search,
           file_ref,
           dir_ref,
+          tags,
           limit,
           offset,
           requesting_user_key

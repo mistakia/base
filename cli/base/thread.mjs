@@ -43,6 +43,11 @@ export const builder = (yargs) =>
             describe: 'Filter by directory reference pattern',
             type: 'string'
           })
+          .option('tags', {
+            describe:
+              'Filter by tag base_uri(s), comma-separated (e.g., user:tag/project.md)',
+            type: 'string'
+          })
           .option('relates-to', {
             describe: 'Find threads relating to a target entity (base_uri)',
             type: 'string'
@@ -139,6 +144,7 @@ async function handle_list(argv) {
     if (argv.search) params.set('search', argv.search)
     if (argv['file-ref']) params.set('file_ref', argv['file-ref'])
     if (argv['dir-ref']) params.set('dir_ref', argv['dir-ref'])
+    if (argv.tags) params.set('tags', argv.tags)
     if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
     if (argv['relation-type'])
       params.set('relation_type', argv['relation-type'])

@@ -304,6 +304,26 @@ function escape_like_metacharacters(str) {
 }
 
 /**
+ * Build thread tag filter conditions
+ * Returns tag conditions SQL/parameters for filtering threads by tag
+ *
+ * @param {Object} params - Parameters
+ * @param {Array} params.tags - Array of tag_base_uri values to filter by
+ * @returns {Object} Object with sql and parameters
+ */
+function build_thread_tag_conditions({ tags }) {
+  if (!tags || tags.length === 0) {
+    return { sql: '', parameters: [] }
+  }
+
+  // Filter threads that have at least one of the specified tags
+  const placeholders = tags.map(() => '?').join(', ')
+  const sql = `EXISTS (SELECT 1 FROM thread_tags tt_filter WHERE tt_filter.thread_id = threads.thread_id AND tt_filter.tag_base_uri IN (${placeholders}))`
+
+  return { sql, parameters: [...tags] }
+}
+
+/**
  * Build additional thread-specific WHERE conditions for search and reference filters
  * @param {Object} params - Parameters
  * @param {string} [params.search] - Text search for title and short_description
@@ -351,7 +371,8 @@ export async function query_threads_from_duckdb({
   offset = 0,
   search,
   file_ref,
-  dir_ref
+  dir_ref,
+  tags
 }) {
   log('Querying threads from DuckDB')
 
@@ -365,13 +386,22 @@ export async function query_threads_from_duckdb({
     dir_ref
   })
 
+  // Build tag filter conditions
+  const tag_conditions = build_thread_tag_conditions({ tags })
+
   // Combine WHERE clauses
   let final_where = where_sql
   if (search_conditions.conditions.length > 0) {
     const additional = search_conditions.conditions.join(' AND ')
     final_where = combine_where_clauses({
-      base_where: where_sql,
+      base_where: final_where,
       additional_condition: additional
+    })
+  }
+  if (tag_conditions.sql) {
+    final_where = combine_where_clauses({
+      base_where: final_where,
+      additional_condition: tag_conditions.sql
     })
   }
 
@@ -394,7 +424,13 @@ export async function query_threads_from_duckdb({
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, ...search_conditions.parameters, limit, offset]
+      parameters: [
+        ...parameters,
+        ...search_conditions.parameters,
+        ...tag_conditions.parameters,
+        limit,
+        offset
+      ]
     })
 
     log('Found %d threads', results.length)
@@ -409,7 +445,8 @@ export async function count_threads_in_duckdb({
   filters = [],
   search,
   file_ref,
-  dir_ref
+  dir_ref,
+  tags
 }) {
   log('Counting threads in DuckDB')
 
@@ -422,13 +459,22 @@ export async function count_threads_in_duckdb({
     dir_ref
   })
 
+  // Build tag filter conditions
+  const tag_conditions = build_thread_tag_conditions({ tags })
+
   // Combine WHERE clauses
   let final_where = where_sql
   if (search_conditions.conditions.length > 0) {
     const additional = search_conditions.conditions.join(' AND ')
     final_where = combine_where_clauses({
-      base_where: where_sql,
+      base_where: final_where,
       additional_condition: additional
+    })
+  }
+  if (tag_conditions.sql) {
+    final_where = combine_where_clauses({
+      base_where: final_where,
+      additional_condition: tag_conditions.sql
     })
   }
 
@@ -437,7 +483,11 @@ export async function count_threads_in_duckdb({
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, ...search_conditions.parameters]
+      parameters: [
+        ...parameters,
+        ...search_conditions.parameters,
+        ...tag_conditions.parameters
+      ]
     })
     const count_value = results[0]?.count
     // Convert BigInt to Number if necessary

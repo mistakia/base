@@ -109,6 +109,14 @@ CREATE TABLE IF NOT EXISTS entity_tags (
 )
 `
 
+const THREAD_TAGS_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS thread_tags (
+  thread_id VARCHAR NOT NULL,
+  tag_base_uri VARCHAR NOT NULL,
+  PRIMARY KEY (thread_id, tag_base_uri)
+)
+`
+
 const ENTITY_RELATIONS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS entity_relations (
   source_base_uri VARCHAR NOT NULL,
@@ -138,6 +146,11 @@ const THREADS_INDEXES = [
 const ENTITY_TAGS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_entity_tags_entity ON entity_tags(entity_base_uri)',
   'CREATE INDEX IF NOT EXISTS idx_entity_tags_tag ON entity_tags(tag_base_uri)'
+]
+
+const THREAD_TAGS_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_thread_tags_thread ON thread_tags(thread_id)',
+  'CREATE INDEX IF NOT EXISTS idx_thread_tags_tag ON thread_tags(tag_base_uri)'
 ]
 
 const ENTITY_RELATIONS_INDEXES = [
@@ -179,6 +192,14 @@ export async function create_duckdb_schema() {
     }
     log('Entity tags indexes created')
 
+    await execute_duckdb_run({ query: THREAD_TAGS_TABLE_SCHEMA })
+    log('Thread tags table created')
+
+    for (const index_sql of THREAD_TAGS_INDEXES) {
+      await execute_duckdb_run({ query: index_sql })
+    }
+    log('Thread tags indexes created')
+
     for (const index_sql of ENTITY_RELATIONS_INDEXES) {
       await execute_duckdb_run({ query: index_sql })
     }
@@ -211,6 +232,7 @@ export async function drop_duckdb_schema() {
   try {
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_relations' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entity_tags' })
+    await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS thread_tags' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS threads' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS entities' })
     await execute_duckdb_run({ query: 'DROP TABLE IF EXISTS index_metadata' })
