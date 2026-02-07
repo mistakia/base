@@ -242,6 +242,44 @@ export async function sync_entity_relations_to_duckdb({
   }
 }
 
+export async function sync_thread_tags_to_duckdb({ thread_id, tag_base_uris }) {
+  if (!thread_id) {
+    return
+  }
+
+  log('Syncing %d tags for thread: %s', tag_base_uris?.length || 0, thread_id)
+
+  try {
+    // Delete existing tags for this thread
+    await execute_duckdb_run({
+      query: 'DELETE FROM thread_tags WHERE thread_id = ?',
+      parameters: [thread_id]
+    })
+
+    // Insert new tags (dedupe to handle threads with duplicate tags)
+    if (tag_base_uris && tag_base_uris.length > 0) {
+      const unique_tags = [...new Set(tag_base_uris)]
+
+      // Use batch insert for multiple tags
+      const placeholders = unique_tags.map(() => '(?, ?)').join(', ')
+      const parameters = unique_tags.flatMap((tag_base_uri) => [
+        thread_id,
+        tag_base_uri
+      ])
+
+      await execute_duckdb_run({
+        query: `INSERT INTO thread_tags (thread_id, tag_base_uri) VALUES ${placeholders}`,
+        parameters
+      })
+    }
+
+    log('Thread tags synced: %s', thread_id)
+  } catch (error) {
+    log('Error syncing thread tags: %s', error.message)
+    throw error
+  }
+}
+
 export async function delete_thread_from_duckdb({ thread_id }) {
   if (!thread_id) {
     return
@@ -250,6 +288,12 @@ export async function delete_thread_from_duckdb({ thread_id }) {
   log('Deleting thread from DuckDB: %s', thread_id)
 
   try {
+    // Delete thread tags first
+    await execute_duckdb_run({
+      query: 'DELETE FROM thread_tags WHERE thread_id = ?',
+      parameters: [thread_id]
+    })
+
     await execute_duckdb_run({
       query: 'DELETE FROM threads WHERE thread_id = ?',
       parameters: [thread_id]
@@ -587,5 +631,61 @@ export async function sync_entities_relations_batch({ entity_relations }) {
     'Batch synced %d relations for %d entities',
     all_relation_tuples.length,
     source_base_uris.length
+  )
+}
+
+/**
+ * Batch sync tags for multiple threads
+ * Deletes all existing tags for the given threads, then inserts all new tags
+ *
+ * @param {Object} params - Parameters
+ * @param {Array} params.thread_tags - Array of { thread_id, tag_base_uris }
+ */
+export async function sync_threads_tags_batch({ thread_tags }) {
+  if (!thread_tags || thread_tags.length === 0) return
+
+  // Collect all thread_ids for batch delete
+  const thread_ids = thread_tags.map((tt) => tt.thread_id)
+
+  log('Batch syncing tags for %d threads', thread_ids.length)
+
+  // Batch delete existing tags for all threads
+  for (let i = 0; i < thread_ids.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = thread_ids.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '?').join(', ')
+
+    await execute_duckdb_run({
+      query: `DELETE FROM thread_tags WHERE thread_id IN (${placeholders})`,
+      parameters: chunk
+    })
+  }
+
+  // Flatten all tag pairs for batch insert
+  const all_tag_pairs = []
+  for (const { thread_id, tag_base_uris } of thread_tags) {
+    if (tag_base_uris && tag_base_uris.length > 0) {
+      const unique_tags = [...new Set(tag_base_uris)]
+      for (const tag_base_uri of unique_tags) {
+        all_tag_pairs.push([thread_id, tag_base_uri])
+      }
+    }
+  }
+
+  // Batch insert all tags
+  for (let i = 0; i < all_tag_pairs.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = all_tag_pairs.slice(i, i + BATCH_CHUNK_SIZE)
+    const placeholders = chunk.map(() => '(?, ?)').join(', ')
+    const parameters = chunk.flat()
+
+    await execute_duckdb_run({
+      query: `INSERT INTO thread_tags (thread_id, tag_base_uri) VALUES ${placeholders}`,
+      parameters
+    })
+  }
+
+  log(
+    'Batch synced %d tag pairs for %d threads',
+    all_tag_pairs.length,
+    thread_ids.length
   )
 }

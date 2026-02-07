@@ -12,7 +12,8 @@ import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckd
 import {
   upsert_entity_to_duckdb,
   upsert_thread_to_duckdb,
-  sync_entity_tags_to_duckdb
+  sync_entity_tags_to_duckdb,
+  sync_thread_tags_to_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
 import {
   query_tasks_from_entities,
@@ -147,6 +148,17 @@ describe('DuckDB Table Queries Integration', () => {
     for (const thread of test_threads) {
       await upsert_thread_to_duckdb({ thread_data: thread })
     }
+
+    // Add test tags to threads for tag filtering tests
+    await sync_thread_tags_to_duckdb({
+      thread_id: 'thread-1',
+      tag_base_uris: ['user:tag/project-a.md', 'user:tag/priority-high.md']
+    })
+    await sync_thread_tags_to_duckdb({
+      thread_id: 'thread-2',
+      tag_base_uris: ['user:tag/project-b.md']
+    })
+    // thread-3 has no tags
   })
 
   after(async () => {
@@ -498,6 +510,66 @@ describe('DuckDB Table Queries Integration', () => {
       const file_refs = JSON.parse(threads[0].file_references)
       expect(file_refs).to.include('user:config/settings.json')
     })
+
+    it('should filter threads by single tag', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        tags: ['user:tag/project-a.md']
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(1)
+      expect(threads[0].thread_id).to.equal('thread-1')
+    })
+
+    it('should filter threads by multiple tags (OR logic)', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        tags: ['user:tag/project-a.md', 'user:tag/project-b.md']
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(2)
+      const thread_ids = threads.map((t) => t.thread_id)
+      expect(thread_ids).to.include('thread-1')
+      expect(thread_ids).to.include('thread-2')
+    })
+
+    it('should combine tag filter with state filter', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [
+          { column_id: 'thread_state', operator: '=', value: 'active' }
+        ],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        tags: ['user:tag/project-a.md', 'user:tag/project-b.md']
+      })
+
+      expect(threads).to.be.an('array')
+      // Only thread-1 is active with project-a tag (thread-2 is archived)
+      expect(threads.length).to.equal(1)
+      expect(threads[0].thread_id).to.equal('thread-1')
+    })
+
+    it('should return empty array for non-existent tag', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        tags: ['user:tag/non-existent.md']
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(0)
+    })
   })
 
   describe('count_threads_in_duckdb', () => {
@@ -535,6 +607,24 @@ describe('DuckDB Table Queries Integration', () => {
       })
 
       expect(count).to.equal(1)
+    })
+
+    it('should count threads with tags parameter', async () => {
+      const count = await count_threads_in_duckdb({
+        filters: [],
+        tags: ['user:tag/project-a.md']
+      })
+
+      expect(count).to.equal(1)
+    })
+
+    it('should count threads with multiple tags parameter', async () => {
+      const count = await count_threads_in_duckdb({
+        filters: [],
+        tags: ['user:tag/project-a.md', 'user:tag/project-b.md']
+      })
+
+      expect(count).to.equal(2)
     })
   })
 })
