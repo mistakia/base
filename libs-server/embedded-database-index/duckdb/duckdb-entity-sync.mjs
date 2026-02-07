@@ -38,7 +38,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     latest_event_type,
     latest_event_data,
     edit_count,
-    lines_changed
+    lines_changed,
+    file_references,
+    directory_references
   } = thread_data
 
   // Derive primary_model from nested path if not directly set
@@ -64,8 +66,8 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       working_directory, working_directory_path, session_provider,
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
-      edit_count, lines_changed
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      edit_count, lines_changed, file_references, directory_references
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -93,7 +95,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       latest_event_type = excluded.latest_event_type,
       latest_event_data = excluded.latest_event_data,
       edit_count = excluded.edit_count,
-      lines_changed = excluded.lines_changed
+      lines_changed = excluded.lines_changed,
+      file_references = excluded.file_references,
+      directory_references = excluded.directory_references
   `
 
   try {
@@ -127,7 +131,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
         latest_event_type,
         latest_event_data,
         edit_count ?? 0,
-        lines_changed ?? 0
+        lines_changed ?? 0,
+        file_references ?? null,
+        directory_references ?? null
       ]
     })
     log('Thread upserted: %s', thread_id)

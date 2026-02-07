@@ -57,7 +57,9 @@ const VALID_COLUMNS = new Set([
   'inference_provider',
   'primary_model',
   'latest_event_timestamp',
-  'latest_event_type'
+  'latest_event_type',
+  'file_references',
+  'directory_references'
 ])
 
 /**
@@ -292,16 +294,86 @@ export function build_duckdb_order_clause({ sort, frontmatter_columns = {} }) {
   return `ORDER BY ${order_parts.join(', ')}`
 }
 
+/**
+ * Escape SQL LIKE metacharacters (% and _) in a string
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for LIKE patterns
+ */
+function escape_like_metacharacters(str) {
+  return str.replace(/[%_\\]/g, '\\$&')
+}
+
+/**
+ * Build additional thread-specific WHERE conditions for search and reference filters
+ * @param {Object} params - Parameters
+ * @param {string} [params.search] - Text search for title and short_description
+ * @param {string} [params.file_ref] - Pattern to match in file_references JSON array (supports glob: * and ?)
+ * @param {string} [params.dir_ref] - Pattern to match in directory_references JSON array (supports glob: * and ?)
+ * @returns {Object} Object with conditions array and parameters array
+ */
+function build_thread_search_conditions({ search, file_ref, dir_ref }) {
+  const conditions = []
+  const parameters = []
+
+  // Text search on title and short_description (case-insensitive)
+  // Escape LIKE metacharacters so user input is treated as literal text
+  if (search) {
+    conditions.push('(title ILIKE ? OR short_description ILIKE ?)')
+    const escaped_search = escape_like_metacharacters(search)
+    const search_pattern = `%${escaped_search}%`
+    parameters.push(search_pattern, search_pattern)
+  }
+
+  // File reference pattern matching
+  // Escape existing LIKE metacharacters, then convert glob wildcards to SQL LIKE
+  if (file_ref) {
+    const escaped = escape_like_metacharacters(file_ref)
+    const like_pattern = escaped.replace(/\*/g, '%').replace(/\?/g, '_')
+    conditions.push('file_references LIKE ?')
+    parameters.push(`%${like_pattern}%`)
+  }
+
+  // Directory reference pattern matching
+  if (dir_ref) {
+    const escaped = escape_like_metacharacters(dir_ref)
+    const like_pattern = escaped.replace(/\*/g, '%').replace(/\?/g, '_')
+    conditions.push('directory_references LIKE ?')
+    parameters.push(`%${like_pattern}%`)
+  }
+
+  return { conditions, parameters }
+}
+
 export async function query_threads_from_duckdb({
   filters = [],
   sort = [],
   limit = 1000,
-  offset = 0
+  offset = 0,
+  search,
+  file_ref,
+  dir_ref
 }) {
   log('Querying threads from DuckDB')
 
   const { where_sql, parameters } = build_duckdb_where_clause({ filters })
   const order_sql = build_duckdb_order_clause({ sort })
+
+  // Build additional search conditions
+  const search_conditions = build_thread_search_conditions({
+    search,
+    file_ref,
+    dir_ref
+  })
+
+  // Combine WHERE clauses
+  let final_where = where_sql
+  if (search_conditions.conditions.length > 0) {
+    const additional = search_conditions.conditions.join(' AND ')
+    final_where = combine_where_clauses({
+      base_where: where_sql,
+      additional_condition: additional
+    })
+  }
 
   const query = `
     SELECT
@@ -311,9 +383,10 @@ export async function query_threads_from_duckdb({
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
       working_directory, working_directory_path, session_provider,
       inference_provider, primary_model, user_public_key,
-      latest_event_timestamp, latest_event_type, latest_event_data
+      latest_event_timestamp, latest_event_type, latest_event_data,
+      file_references, directory_references
     FROM threads
-    ${where_sql}
+    ${final_where}
     ${order_sql}
     LIMIT ? OFFSET ?
   `
@@ -321,7 +394,7 @@ export async function query_threads_from_duckdb({
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, limit, offset]
+      parameters: [...parameters, ...search_conditions.parameters, limit, offset]
     })
 
     log('Found %d threads', results.length)
@@ -332,15 +405,40 @@ export async function query_threads_from_duckdb({
   }
 }
 
-export async function count_threads_in_duckdb({ filters = [] }) {
+export async function count_threads_in_duckdb({
+  filters = [],
+  search,
+  file_ref,
+  dir_ref
+}) {
   log('Counting threads in DuckDB')
 
   const { where_sql, parameters } = build_duckdb_where_clause({ filters })
 
-  const query = `SELECT COUNT(*) as count FROM threads ${where_sql}`
+  // Build additional search conditions
+  const search_conditions = build_thread_search_conditions({
+    search,
+    file_ref,
+    dir_ref
+  })
+
+  // Combine WHERE clauses
+  let final_where = where_sql
+  if (search_conditions.conditions.length > 0) {
+    const additional = search_conditions.conditions.join(' AND ')
+    final_where = combine_where_clauses({
+      base_where: where_sql,
+      additional_condition: additional
+    })
+  }
+
+  const query = `SELECT COUNT(*) as count FROM threads ${final_where}`
 
   try {
-    const results = await execute_duckdb_query({ query, parameters })
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...search_conditions.parameters]
+    })
     const count_value = results[0]?.count
     // Convert BigInt to Number if necessary
     const count =

@@ -30,6 +30,19 @@ export const builder = (yargs) =>
             describe: 'Filter by thread state (active, archived)',
             type: 'string'
           })
+          .option('search', {
+            alias: 's',
+            describe: 'Search title and short_description',
+            type: 'string'
+          })
+          .option('file-ref', {
+            describe: 'Filter by file reference pattern (e.g., user:config/*)',
+            type: 'string'
+          })
+          .option('dir-ref', {
+            describe: 'Filter by directory reference pattern',
+            type: 'string'
+          })
           .option('relates-to', {
             describe: 'Find threads relating to a target entity (base_uri)',
             type: 'string'
@@ -123,6 +136,9 @@ async function handle_list(argv) {
   try {
     const params = new URLSearchParams()
     if (argv.state) params.set('thread_state', argv.state)
+    if (argv.search) params.set('search', argv.search)
+    if (argv['file-ref']) params.set('file_ref', argv['file-ref'])
+    if (argv['dir-ref']) params.set('dir_ref', argv['dir-ref'])
     if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
     if (argv['relation-type'])
       params.set('relation_type', argv['relation-type'])
