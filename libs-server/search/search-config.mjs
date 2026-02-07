@@ -61,7 +61,8 @@ const DEFAULT_CONFIG = {
     enabled: true,
     hours: 48,
     limit: 50,
-    directories: ['task', 'workflow', 'guideline', 'text', 'tag']
+    directories: ['task', 'workflow', 'guideline', 'text', 'tag'],
+    exclude_directories: []
   }
 }
 

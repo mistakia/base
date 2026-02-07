@@ -11,9 +11,13 @@ const log = debug('search:recent-files')
  * Recursively scan a directory for markdown files
  *
  * @param {string} directory_path - Directory to scan
+ * @param {string[]} [exclude_directories=[]] - Directory names to exclude from scan
  * @returns {Promise<string[]>} Array of absolute file paths
  */
-async function scan_directory_for_markdown(directory_path) {
+async function scan_directory_for_markdown(
+  directory_path,
+  exclude_directories = []
+) {
   const file_paths = []
 
   try {
@@ -23,8 +27,17 @@ async function scan_directory_for_markdown(directory_path) {
       const full_path = path.join(directory_path, entry.name)
 
       if (entry.isDirectory()) {
+        // Skip excluded directories by name
+        if (exclude_directories.includes(entry.name)) {
+          log(`Skipping excluded directory: ${full_path}`)
+          continue
+        }
+
         // Recursively scan subdirectories
-        const nested_files = await scan_directory_for_markdown(full_path)
+        const nested_files = await scan_directory_for_markdown(
+          full_path,
+          exclude_directories
+        )
         file_paths.push(...nested_files)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         file_paths.push(full_path)
@@ -96,6 +109,7 @@ export async function get_recent_entity_files({
   const effective_hours = hours ?? merged_config.hours
   const effective_limit = limit ?? merged_config.limit
   const effective_directories = directories ?? merged_config.directories
+  const exclude_directories = merged_config.exclude_directories || []
 
   const user_base_dir =
     user_base_directory ||
@@ -112,12 +126,18 @@ export async function get_recent_entity_files({
   log(
     `Scanning for files modified after ${cutoff_time.toISOString()} in directories: ${effective_directories.join(', ')}`
   )
+  if (exclude_directories.length > 0) {
+    log(`Excluding directories: ${exclude_directories.join(', ')}`)
+  }
 
   // Collect all markdown files from specified directories
   const all_file_paths = []
   for (const directory of effective_directories) {
     const directory_path = path.join(user_base_dir, directory)
-    const files = await scan_directory_for_markdown(directory_path)
+    const files = await scan_directory_for_markdown(
+      directory_path,
+      exclude_directories
+    )
     all_file_paths.push(...files)
   }
 
