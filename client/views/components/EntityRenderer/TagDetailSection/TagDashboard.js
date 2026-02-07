@@ -103,7 +103,12 @@ const TagDashboard = ({ frontmatter }) => {
     return null
   }
 
-  const { entities = [], threads = [], task_count = 0, thread_count = 0 } = tag_data
+  const {
+    entities = [],
+    threads = [],
+    task_count = 0,
+    thread_count = 0
+  } = tag_data
 
   // Filter entities to get only tasks
   const tasks = entities.filter((entity) => entity.type === 'task')

@@ -183,7 +183,10 @@ export const builder = (yargs) =>
           }),
       handle_threads
     )
-    .demandCommand(1, 'Specify a subcommand: list, get, move, validate, or threads')
+    .demandCommand(
+      1,
+      'Specify a subcommand: list, get, move, validate, or threads'
+    )
 
 export const handler = () => {}
 

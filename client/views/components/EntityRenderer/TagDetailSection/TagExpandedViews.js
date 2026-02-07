@@ -51,8 +51,7 @@ const TagExpandedViews = ({
           className='tag-expanded__close'
           onClick={on_close}
           type='button'
-          aria-label='Close expanded view'
-        >
+          aria-label='Close expanded view'>
           <CloseIcon fontSize='small' />
         </button>
       </div>
@@ -77,14 +76,12 @@ const TagExpandedViews = ({
                     </div>
                     <div className='tag-expanded__item-meta'>
                       <span
-                        className={`tag-expanded__status ${get_status_class(task.status)}`}
-                      >
+                        className={`tag-expanded__status ${get_status_class(task.status)}`}>
                         {task.status || 'No status'}
                       </span>
                       {task.priority && task.priority !== 'None' && (
                         <span
-                          className={`tag-expanded__priority ${get_priority_class(task.priority)}`}
-                        >
+                          className={`tag-expanded__priority ${get_priority_class(task.priority)}`}>
                           {task.priority}
                         </span>
                       )}
@@ -105,8 +102,7 @@ const TagExpandedViews = ({
               <li key={thread.thread_id} className='tag-expanded__item'>
                 <Link
                   to={`/thread/${thread.thread_id}`}
-                  className='tag-expanded__link'
-                >
+                  className='tag-expanded__link'>
                   <div className='tag-expanded__item-main'>
                     <span className='tag-expanded__item-title'>
                       {thread.title ||
@@ -121,8 +117,7 @@ const TagExpandedViews = ({
                   </div>
                   <div className='tag-expanded__item-meta'>
                     <span
-                      className={`tag-expanded__state ${get_state_class(thread.thread_state)}`}
-                    >
+                      className={`tag-expanded__state ${get_state_class(thread.thread_state)}`}>
                       {thread.thread_state || 'unknown'}
                     </span>
                     {thread.message_count > 0 && (

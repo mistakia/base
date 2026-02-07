@@ -15,9 +15,7 @@ const derived_system_base_directory = dirname(config_dir)
 // - macOS: ~/user-base (development machine)
 // - Linux: /mnt/md0/user-base (storage server)
 const derived_user_base_directory =
-  platform() === 'darwin'
-    ? join(homedir(), 'user-base')
-    : '/mnt/md0/user-base'
+  platform() === 'darwin' ? join(homedir(), 'user-base') : '/mnt/md0/user-base'
 
 const config = secure_config({ directory: config_dir })
 

@@ -43,14 +43,14 @@ const TagThreadsPanel = ({ threads, thread_count, base_uri, on_expand }) => {
             <li key={thread.thread_id} className='tag-threads-panel__item'>
               <Link
                 to={`/thread/${thread.thread_id}`}
-                className='tag-threads-panel__link'
-              >
+                className='tag-threads-panel__link'>
                 <span className='tag-threads-panel__thread-title'>
-                  {thread.title || thread.short_description || 'Untitled Thread'}
+                  {thread.title ||
+                    thread.short_description ||
+                    'Untitled Thread'}
                 </span>
                 <span
-                  className={`tag-threads-panel__state ${get_state_class(thread.thread_state)}`}
-                >
+                  className={`tag-threads-panel__state ${get_state_class(thread.thread_state)}`}>
                   {thread.thread_state || 'unknown'}
                 </span>
                 {thread.updated_at && (

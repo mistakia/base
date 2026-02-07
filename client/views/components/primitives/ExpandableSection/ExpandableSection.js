@@ -57,8 +57,7 @@ const ExpandableSection = ({
         onClick={handle_toggle}
         type='button'
         disabled={disabled}
-        aria-expanded={is_expanded}
-      >
+        aria-expanded={is_expanded}>
         <span className='expandable-section__title'>{title}</span>
         {header_content && (
           <span className='expandable-section__header-content'>

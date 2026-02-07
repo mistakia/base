@@ -32,9 +32,7 @@ const model_index = args.indexOf('--model')
 const model = model_index !== -1 ? args[model_index + 1] : undefined
 
 if (!thread_id) {
-  console.error(
-    'Usage: node cli/analyze-thread-tags.mjs <thread_id> [options]'
-  )
+  console.error('Usage: node cli/analyze-thread-tags.mjs <thread_id> [options]')
   console.error('')
   console.error('Options:')
   console.error(

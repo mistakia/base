@@ -159,7 +159,10 @@ export const analyze_thread_for_tags = async ({
 
   // Extract and parse response
   const response_text = extract_model_response(opencode_result.output)
-  const parse_result = parse_tag_analysis_response(response_text, available_tags)
+  const parse_result = parse_tag_analysis_response(
+    response_text,
+    available_tags
+  )
 
   if (!parse_result.success) {
     log(`Failed to parse tags for thread ${thread_id}: ${parse_result.error}`)

@@ -134,7 +134,8 @@ const EntityRenderer = ({
           modified_time={entity_metadata.modified_time}
         />
         <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
-          <Box sx={{ maxWidth: is_tag_entity ? '900px' : '600px', width: '100%' }}>
+          <Box
+            sx={{ maxWidth: is_tag_entity ? '900px' : '600px', width: '100%' }}>
             <EntityFrontmatter
               frontmatter={frontmatter}
               is_sticky={false}
@@ -152,6 +153,7 @@ const EntityRenderer = ({
     )
   }
 
+  // For tag entities with markdown, render TagDashboard below the two-column layout
   return (
     <>
       <PageHead
@@ -174,6 +176,11 @@ const EntityRenderer = ({
           container_padding={3}
           sticky_right={true}
         />
+        {is_tag_entity && (
+          <Box sx={{ px: 3, pb: 3 }}>
+            <TagDashboard frontmatter={frontmatter} />
+          </Box>
+        )}
       </Box>
     </>
   )

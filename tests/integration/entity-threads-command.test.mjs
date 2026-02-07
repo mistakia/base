@@ -258,7 +258,9 @@ describe('Entity Threads Command Integration', () => {
       }
 
       const output = format_entity_thread(thread)
-      expect(output).to.equal('thread-123\tarchived\tmodifies\tTest Thread Title')
+      expect(output).to.equal(
+        'thread-123\tarchived\tmodifies\tTest Thread Title'
+      )
     })
 
     it('should handle missing fields gracefully', () => {

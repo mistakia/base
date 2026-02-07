@@ -58,7 +58,9 @@ if (args.includes('--help') || args.includes('-h')) {
   console.log(
     '  --dry-run        Show what would be updated without making changes'
   )
-  console.log('  --limit          Maximum number of threads to process (default: 50)')
+  console.log(
+    '  --limit          Maximum number of threads to process (default: 50)'
+  )
   console.log('  --state          Filter by thread state (active, archived)')
   console.log('  --force          Re-analyze even if already analyzed')
   console.log(
@@ -169,7 +171,9 @@ async function run_backfill() {
       }
     } catch (error) {
       results.failed++
-      console.log(`[ERROR] ${thread_id.substring(0, 8)} - ${title} - ${error.message}`)
+      console.log(
+        `[ERROR] ${thread_id.substring(0, 8)} - ${title} - ${error.message}`
+      )
     }
   }
 

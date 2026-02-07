@@ -145,7 +145,10 @@ function validate_table_state(table_state) {
  * Apply batch permission checking and redaction to a list of threads.
  * Returns threads with can_write flag and redacted data for unauthorized access.
  */
-async function apply_batch_permissions_to_threads(threads, requesting_user_key) {
+async function apply_batch_permissions_to_threads(
+  threads,
+  requesting_user_key
+) {
   const resource_paths = threads.map(
     (thread) => `user:thread/${thread.thread_id}`
   )
@@ -216,7 +219,10 @@ async function handle_thread_list_request_indexed({
   )
 
   // Apply batch permission checking and redaction
-  return apply_batch_permissions_to_threads(normalized_threads, requesting_user_key)
+  return apply_batch_permissions_to_threads(
+    normalized_threads,
+    requesting_user_key
+  )
 }
 
 /**
@@ -249,7 +255,10 @@ async function handle_thread_list_by_relation({
   }))
 
   // Apply batch permission checking and redaction
-  return apply_batch_permissions_to_threads(normalized_threads, requesting_user_key)
+  return apply_batch_permissions_to_threads(
+    normalized_threads,
+    requesting_user_key
+  )
 }
 
 /**

@@ -112,7 +112,11 @@ const GitFileActions = ({ git_context, path }) => {
 
   const handle_auto_commit = () => {
     dispatch(
-      git_actions.auto_commit_file({ repo_path, file_path: relative_path, path })
+      git_actions.auto_commit_file({
+        repo_path,
+        file_path: relative_path,
+        path
+      })
     )
   }
 

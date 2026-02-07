@@ -53,14 +53,12 @@ const TagTasksPanel = ({ tasks, task_count, base_uri, on_expand }) => {
                     {task.title || 'Untitled'}
                   </span>
                   <span
-                    className={`tag-tasks-panel__status ${get_status_class(task.status)}`}
-                  >
+                    className={`tag-tasks-panel__status ${get_status_class(task.status)}`}>
                     {task.status || 'No status'}
                   </span>
                   {task.priority && task.priority !== 'None' && (
                     <span
-                      className={`tag-tasks-panel__priority ${get_priority_class(task.priority)}`}
-                    >
+                      className={`tag-tasks-panel__priority ${get_priority_class(task.priority)}`}>
                       {task.priority}
                     </span>
                   )}

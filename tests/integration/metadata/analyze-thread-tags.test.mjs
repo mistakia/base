@@ -18,9 +18,7 @@ describe('analyze-thread-tags integration', () => {
 
   before(async () => {
     // Create temporary test directory
-    test_dir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'thread-tags-test-')
-    )
+    test_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'thread-tags-test-'))
 
     // Create thread directory structure
     const thread_dir = path.join(test_dir, 'thread', uuid())
@@ -46,10 +44,7 @@ user_public_key: ${test_user_public_key}
 
 Tag for work involving programming, development, and technical implementation.
 `
-    await fs.writeFile(
-      path.join(tag_dir, 'software-task.md'),
-      test_tag_content
-    )
+    await fs.writeFile(path.join(tag_dir, 'software-task.md'), test_tag_content)
 
     // Register test directory
     register_user_base_directory(test_dir)

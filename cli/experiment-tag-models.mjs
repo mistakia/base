@@ -112,7 +112,9 @@ async function run_experiment() {
   console.log('First user message:')
   console.log('---')
   console.log(
-    user_message.length > 500 ? user_message.substring(0, 500) + '...' : user_message
+    user_message.length > 500
+      ? user_message.substring(0, 500) + '...'
+      : user_message
   )
   console.log('---')
   console.log('')
@@ -200,7 +202,9 @@ async function run_experiment() {
       if (result.error) {
         console.log(`Error: ${result.error}`)
       } else {
-        console.log(`Tags: ${result.tags.length > 0 ? result.tags.join(', ') : '(none)'}`)
+        console.log(
+          `Tags: ${result.tags.length > 0 ? result.tags.join(', ') : '(none)'}`
+        )
         if (result.reasoning) {
           console.log(`Reasoning: ${result.reasoning}`)
         }

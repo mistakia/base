@@ -124,7 +124,8 @@ async function handle_list(argv) {
     const params = new URLSearchParams()
     if (argv.state) params.set('thread_state', argv.state)
     if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
-    if (argv['relation-type']) params.set('relation_type', argv['relation-type'])
+    if (argv['relation-type'])
+      params.set('relation_type', argv['relation-type'])
     params.set('limit', String(argv.limit))
     params.set('offset', String(argv.offset))
     params.set('include_timeline', 'false')
@@ -159,10 +160,7 @@ async function handle_list(argv) {
       console.log(JSON.stringify(threads, null, 2))
     } else {
       for (const thread of threads) {
-        const parts = [
-          thread.thread_id,
-          thread.thread_state || ''
-        ]
+        const parts = [thread.thread_id, thread.thread_state || '']
         // Include relation type when filtering by relation
         if (is_relation_query && thread.relation_type) {
           parts.push(thread.relation_type)

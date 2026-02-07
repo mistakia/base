@@ -42,8 +42,7 @@ const TagArrayValue = ({ value }) => {
             key={index}
             to={tag_path}
             className='chip chip--link'
-            style={{ textDecoration: 'none' }}
-          >
+            style={{ textDecoration: 'none' }}>
             {tag_display}
           </Link>
         )
