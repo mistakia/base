@@ -73,7 +73,8 @@ export function create_entity_accessors({ entity_type, debug_namespace }) {
         return {
           success: false,
           error:
-            entity_result.error || `Failed to read ${entity_type} '${base_uri}'`,
+            entity_result.error ||
+            `Failed to read ${entity_type} '${base_uri}'`,
           base_uri,
           absolute_path
         }
@@ -167,7 +168,8 @@ export function create_entity_accessors({ entity_type, debug_namespace }) {
         return {
           success: false,
           error:
-            entity_result.error || `Failed to read ${entity_type} '${base_uri}'`,
+            entity_result.error ||
+            `Failed to read ${entity_type} '${base_uri}'`,
           base_uri,
           branch
         }

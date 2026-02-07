@@ -48,7 +48,9 @@ describe('Entity Activity Views Integration', () => {
 
       it('should handle case insensitivity', () => {
         expect(parse_time_period_ms('7D')).to.equal(parse_time_period_ms('7d'))
-        expect(parse_time_period_ms('24H')).to.equal(parse_time_period_ms('24h'))
+        expect(parse_time_period_ms('24H')).to.equal(
+          parse_time_period_ms('24h')
+        )
       })
 
       it('should return null for invalid input', () => {

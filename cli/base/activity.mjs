@@ -108,7 +108,9 @@ async function handle_entities(argv) {
         const entity = entities[i]
         console.log(format_entity(entity, { verbose: true }))
         console.log(`  threads: ${entity.thread_count}`)
-        console.log(`  last_activity: ${format_relative_time(entity.last_activity)}`)
+        console.log(
+          `  last_activity: ${format_relative_time(entity.last_activity)}`
+        )
         if (i < entities.length - 1) {
           console.log('')
         }

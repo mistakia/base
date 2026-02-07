@@ -58,8 +58,48 @@ export const COLOR_ICON_FILE = '#959da5'
 export const COLOR_ICON_LINK = '#0366d6'
 export const COLOR_ICON_ERROR = '#d73a49' // Aligned with COLOR_ERROR
 
+// Color Palettes (Tailwind-style)
+export const GRAY = {
+  400: '#9ca3af',
+  500: '#6b7280',
+  600: '#4b5563'
+}
+
+export const AMBER = {
+  500: '#f59e0b'
+}
+
+export const BLUE = {
+  500: '#3b82f6'
+}
+
+export const CYAN = {
+  500: '#06b6d4'
+}
+
+export const INDIGO = {
+  500: '#6366f1'
+}
+
+export const GREEN = {
+  500: '#22c55e'
+}
+
+export const RED = {
+  400: '#f87171',
+  600: '#dc2626'
+}
+
 // Consolidated COLORS object for convenience
 export const COLORS = {
+  // Palettes
+  gray: GRAY,
+  amber: AMBER,
+  blue: BLUE,
+  cyan: CYAN,
+  indigo: INDIGO,
+  green: GREEN,
+  red: RED,
   // Neutral
   white: COLOR_WHITE,
   text: COLOR_TEXT,

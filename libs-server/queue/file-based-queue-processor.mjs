@@ -146,7 +146,9 @@ export class FileBasedQueueProcessor {
 
         // Brief delay between processing items
         if (i < queue.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, this.item_delay_ms))
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.item_delay_ms)
+          )
         }
       }
 
@@ -219,7 +221,9 @@ export class FileBasedQueueProcessor {
       const config = this.create_watcher_config()
       this.watcher = chokidar.watch(this.queue_file_path, config)
 
-      this.watcher.on('add', (path) => this.handle_queue_file_change('add', path))
+      this.watcher.on('add', (path) =>
+        this.handle_queue_file_change('add', path)
+      )
       this.watcher.on('change', (path) =>
         this.handle_queue_file_change('change', path)
       )

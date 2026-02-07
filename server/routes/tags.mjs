@@ -3,9 +3,7 @@ import {
   list_tags_from_filesystem,
   read_tag_from_filesystem
 } from '#libs-server/tag/index.mjs'
-import { search_entities } from '#libs-server/entity/index.mjs'
-// Note: query_threads_from_duckdb and count_threads_in_duckdb available if needed
-// but we use custom query via thread_tags join table
+import { query_entities_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
@@ -28,7 +26,13 @@ async function query_threads_by_tag({
   sort = 'updated_at',
   limit = 50
 }) {
-  const duckdb_connection = get_duckdb_connection()
+  let duckdb_connection
+  try {
+    duckdb_connection = await get_duckdb_connection()
+  } catch {
+    // DuckDB not initialized - return empty array
+    return []
+  }
 
   // If DuckDB isn't available or thread_tags table doesn't exist yet,
   // return empty array (thread tagging is a separate implementation task)
@@ -94,75 +98,93 @@ router.get('/', async (req, res) => {
     // If base_uri is provided, get a specific tag with entities and threads
     // This path allows public access with permission checking
     if (base_uri) {
-      try {
-        // Read the tag directly from filesystem using registry-based resolution
-        const tag = await read_tag_from_filesystem({
-          base_uri
-        })
+      // Read the tag directly from filesystem using registry-based resolution
+      const tag_result = await read_tag_from_filesystem({
+        base_uri
+      })
 
-        // Check permission for this tag
-        const permission_result = await check_permission({
-          user_public_key,
-          resource_path: base_uri
-        })
-
-        // If user doesn't have read permission, return redacted tag
-        let response_tag = tag
-        let is_redacted = false
-        if (!permission_result.read.allowed) {
-          response_tag = redact_entity_object({ entity_properties: tag })
-            .entity_properties
-          is_redacted = true
-        }
-
-        const parsed_limit = parseInt(limit, 10) || 50
-
-        // Get all entities associated with this tag using base_uri
-        // Note: search_entities sorts by updated_at descending by default
-        // For redacted tags, return empty entities list
-        let tagged_entities = []
-        if (!is_redacted) {
-          tagged_entities = await search_entities({
-            user_public_key,
-            tag_base_uris: [tag.base_uri],
-            limit: parsed_limit
-          })
-        }
-
-        // Count tasks (entities with type === 'task')
-        const task_count = tagged_entities.filter(
-          (entity) => entity.type === 'task'
-        ).length
-
-        // Get threads tagged with this tag (if include_threads is true)
-        // For redacted tags, return empty threads list
-        let threads = []
-        let thread_count = 0
-
-        if (include_threads === 'true' && !is_redacted) {
-          threads = await query_threads_by_tag({
-            tag_base_uri: tag.base_uri,
-            sort,
-            limit: parsed_limit
-          })
-          thread_count = threads.length
-        }
-
-        // Return tag with entities, threads, and counts
-        res.send({
-          tag: response_tag,
-          entities: tagged_entities,
-          threads,
-          task_count,
-          thread_count,
-          total_entity_count: tagged_entities.length,
-          is_redacted
-        })
-      } catch (error) {
+      if (!tag_result.success) {
         return res.status(404).send({
-          error: `Tag ${base_uri} not found: ${error.message}`
+          error: `Tag ${base_uri} not found: ${tag_result.error}`
         })
       }
+
+      // Preserve the entity_properties structure in response
+      const tag = {
+        entity_properties: tag_result.entity_properties,
+        base_uri: tag_result.base_uri
+      }
+
+      // Check permission for this tag
+      const permission_result = await check_permission({
+        user_public_key,
+        resource_path: base_uri
+      })
+
+      // If user doesn't have read permission, return redacted tag
+      let response_tag = tag
+      let is_redacted = false
+      if (!permission_result.read.allowed) {
+        const redacted = redact_entity_object({
+          entity_properties: tag.entity_properties
+        })
+        response_tag = {
+          entity_properties: redacted.entity_properties,
+          base_uri: tag.base_uri
+        }
+        is_redacted = true
+      }
+
+      const parsed_limit = parseInt(limit, 10) || 50
+
+      // Get all entities associated with this tag using DuckDB index
+      // For redacted tags, return empty entities list
+      let tagged_entities = []
+      if (!is_redacted) {
+        try {
+          tagged_entities = await query_entities_from_duckdb({
+            filters: [
+              { column_id: 'tags', operator: 'IN', value: [tag.base_uri] }
+            ],
+            sort: [{ column_id: 'updated_at', desc: true }],
+            limit: parsed_limit
+          })
+        } catch (err) {
+          // DuckDB may not be available, return empty array
+          log('Failed to query entities from DuckDB: %s', err.message)
+          tagged_entities = []
+        }
+      }
+
+      // Count tasks (entities with type === 'task')
+      const task_count = tagged_entities.filter(
+        (entity) => entity.type === 'task'
+      ).length
+
+      // Get threads tagged with this tag (if include_threads is true)
+      // For redacted tags, return empty threads list
+      let threads = []
+      let thread_count = 0
+
+      if (include_threads === 'true' && !is_redacted) {
+        threads = await query_threads_by_tag({
+          tag_base_uri: tag.base_uri,
+          sort,
+          limit: parsed_limit
+        })
+        thread_count = threads.length
+      }
+
+      // Return tag with entities, threads, and counts
+      res.send({
+        tag: response_tag,
+        entities: tagged_entities,
+        threads,
+        task_count,
+        thread_count,
+        total_entity_count: tagged_entities.length,
+        is_redacted
+      })
     } else {
       // If no base_uri, list all tags (requires authentication)
       // The underlying list function filters by user_public_key

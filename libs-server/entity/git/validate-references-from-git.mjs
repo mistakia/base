@@ -16,7 +16,10 @@ const { validate_references } = create_validator({
  * @param {string} params.branch - Git branch for validation
  * @returns {Promise<Object>} - Validation result {valid, errors?}
  */
-export async function validate_references_from_git({ references = [], branch }) {
+export async function validate_references_from_git({
+  references = [],
+  branch
+}) {
   if (!branch) {
     return {
       valid: false,
