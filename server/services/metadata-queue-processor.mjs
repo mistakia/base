@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import debug from 'debug'
 
 import { analyze_thread_for_metadata } from '#libs-server/metadata/analyze-thread.mjs'
+import { analyze_thread_for_tags } from '#libs-server/metadata/analyze-thread-tags.mjs'
 
 const log = debug('metadata:queue')
 
@@ -105,30 +106,72 @@ const log_processed = async (thread_id, status) => {
 // ============================================================================
 
 /**
- * Process a single thread for metadata analysis
+ * Process a single thread for metadata and tag analysis
+ *
+ * Runs metadata analysis (title/description) first, then tag analysis.
+ * Both analyses are independent - tag analysis runs even if metadata
+ * analysis is skipped (e.g., metadata already exists).
  *
  * @param {string} thread_id - Thread ID to process
- * @returns {Promise<Object>} Processing result
+ * @returns {Promise<Object>} Processing result with metadata and tags status
  */
 const process_thread = async (thread_id) => {
   log(`Processing thread ${thread_id}`)
 
+  const result = {
+    thread_id,
+    metadata: null,
+    tags: null,
+    status: 'processed'
+  }
+
+  // Run metadata analysis (title/description)
   try {
-    const result = await analyze_thread_for_metadata({
+    result.metadata = await analyze_thread_for_metadata({
       thread_id,
       dry_run: false
     })
-
-    log(`Thread ${thread_id} result: ${result.status}`)
-    return result
+    log(`Thread ${thread_id} metadata: ${result.metadata.status}`)
   } catch (error) {
-    log(`Error processing thread ${thread_id}: ${error.message}`)
-    return {
+    log(`Error in metadata analysis for ${thread_id}: ${error.message}`)
+    result.metadata = {
       thread_id,
       status: 'error',
       error: error.message
     }
   }
+
+  // Run tag analysis (independent of metadata result)
+  try {
+    result.tags = await analyze_thread_for_tags({
+      thread_id,
+      dry_run: false
+    })
+    log(`Thread ${thread_id} tags: ${result.tags.status}`)
+  } catch (error) {
+    log(`Error in tag analysis for ${thread_id}: ${error.message}`)
+    result.tags = {
+      thread_id,
+      status: 'error',
+      error: error.message
+    }
+  }
+
+  // Determine overall status
+  const metadata_success = ['updated', 'skipped'].includes(
+    result.metadata?.status
+  )
+  const tags_success = ['updated', 'skipped'].includes(result.tags?.status)
+
+  if (!metadata_success && !tags_success) {
+    result.status = 'error'
+  } else if (metadata_success && tags_success) {
+    result.status = 'processed'
+  } else {
+    result.status = 'partial'
+  }
+
+  return result
 }
 
 /**
