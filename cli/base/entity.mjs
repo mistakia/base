@@ -9,6 +9,11 @@ import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-enti
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+import {
+  parse_time_period_date,
+  is_valid_time_period
+} from '#libs-server/utils/parse-time-period.mjs'
 import {
   SERVER_URL,
   format_entity,
@@ -91,6 +96,10 @@ export const builder = (yargs) =>
             describe: 'Sort ascending',
             type: 'boolean',
             default: false
+          })
+          .option('recently-active', {
+            describe: 'Filter by recent thread activity (e.g., 24h, 7d, 2w)',
+            type: 'string'
           }),
       handle_list
     )
@@ -220,26 +229,48 @@ async function fetch_entities_from_api(argv) {
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const entities = await with_api_fallback(
-      () => fetch_entities_from_api(argv),
-      () =>
-        list_entities({
-          types: argv.type,
-          status: argv.status,
-          priority: argv.priority,
-          tags: argv.tags,
-          no_tags: argv['without-tags'],
-          include_archived: argv.archived,
-          search: argv.search,
-          fields: argv.fields,
-          content: argv.content,
-          limit: argv.limit,
-          offset: argv.offset,
-          sort_by: argv.sort,
-          sort_desc: !argv.asc,
-          verbose: argv.verbose
-        })
-    )
+    let entities
+
+    // Handle recently-active filter (uses separate query)
+    if (argv['recently-active']) {
+      const period = argv['recently-active']
+      if (!is_valid_time_period(period)) {
+        throw new Error(
+          `Invalid period format: ${period}. Use format like 24h, 7d, 2w, 1m`
+        )
+      }
+
+      const since_date = parse_time_period_date(period)
+      await embedded_index_manager.initialize()
+
+      entities = await query_entities_by_thread_activity({
+        since_date,
+        entity_types: argv.type || null,
+        limit: argv.limit,
+        offset: argv.offset
+      })
+    } else {
+      entities = await with_api_fallback(
+        () => fetch_entities_from_api(argv),
+        () =>
+          list_entities({
+            types: argv.type,
+            status: argv.status,
+            priority: argv.priority,
+            tags: argv.tags,
+            no_tags: argv['without-tags'],
+            include_archived: argv.archived,
+            search: argv.search,
+            fields: argv.fields,
+            content: argv.content,
+            limit: argv.limit,
+            offset: argv.offset,
+            sort_by: argv.sort,
+            sort_desc: !argv.asc,
+            verbose: argv.verbose
+          })
+      )
+    }
 
     output_results(entities, {
       json: argv.json,

@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS index_metadata (
 const THREADS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_threads_state ON threads(thread_state)',
   'CREATE INDEX IF NOT EXISTS idx_threads_created ON threads(created_at)',
+  'CREATE INDEX IF NOT EXISTS idx_threads_updated ON threads(updated_at)',
   'CREATE INDEX IF NOT EXISTS idx_threads_user ON threads(user_public_key)',
   'CREATE INDEX IF NOT EXISTS idx_threads_latest_event ON threads(latest_event_timestamp)'
 ]

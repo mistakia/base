@@ -7,6 +7,11 @@ import {
   HTTP_MAX_AGE,
   HTTP_STALE_WHILE_REVALIDATE
 } from '#server/constants/http-cache.mjs'
+import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+import {
+  parse_time_period_date,
+  is_valid_time_period
+} from '#libs-server/utils/parse-time-period.mjs'
 
 const log = debug('api:activity')
 const router = express.Router({ mergeParams: true })
@@ -44,6 +49,52 @@ router.get('/heatmap', async (req, res) => {
     log(`Error fetching activity heatmap: ${error.message}`)
     res.status(500).json({
       error: 'Failed to fetch activity heatmap data',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/activity/entities
+ *
+ * Returns entities ranked by recent thread activity.
+ * Query params:
+ *   - period: Time period string (e.g., "24h", "7d", "2w", "1m"). Default: "7d"
+ *   - type: Entity type filter (e.g., "task")
+ *   - limit: Max results (default: 50)
+ *   - offset: Pagination offset (default: 0)
+ */
+router.get('/entities', async (req, res) => {
+  try {
+    const period = req.query.period || '7d'
+    const entity_type = req.query.type || null
+    const limit = parseInt(req.query.limit, 10) || 50
+    const offset = parseInt(req.query.offset, 10) || 0
+
+    if (!is_valid_time_period(period)) {
+      return res.status(400).json({
+        error: 'Invalid period format',
+        message: `Period "${period}" is invalid. Use format like 24h, 7d, 2w, 1m`
+      })
+    }
+
+    const since_date = parse_time_period_date(period)
+    log(
+      `Fetching entities by thread activity since ${since_date.toISOString()} (type: ${entity_type})`
+    )
+
+    const entities = await query_entities_by_thread_activity({
+      since_date,
+      entity_types: entity_type,
+      limit,
+      offset
+    })
+
+    res.json(entities)
+  } catch (error) {
+    log(`Error fetching entity activity: ${error.message}`)
+    res.status(500).json({
+      error: 'Failed to fetch entity activity data',
       message: error.message
     })
   }

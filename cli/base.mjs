@@ -31,6 +31,7 @@ import * as tag_command from './base/tag.mjs'
 import * as thread_command from './base/thread.mjs'
 import * as search_command from './base/search.mjs'
 import * as queue_command from './base/queue.mjs'
+import * as activity_command from './base/activity.mjs'
 
 const main = async () => {
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
@@ -45,6 +46,7 @@ const main = async () => {
     .command(thread_command)
     .command(search_command)
     .command(queue_command)
+    .command(activity_command)
     .option('json', {
       describe: 'Output as JSON',
       type: 'boolean',
