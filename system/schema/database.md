@@ -48,13 +48,31 @@ properties:
     type: object
     required: false
     properties:
+      backend:
+        type: string
+        enum:
+          - duckdb
+          - tsv
+          - postgres
+          - markdown
+        default: duckdb
+        description: Storage backend type
+      table:
+        type: string
+        description: Table name for duckdb backend (defaults to table_name)
+      path:
+        type: string
+        description: File path for tsv backend (relative to user-base)
+      directory:
+        type: string
+        description: Directory for markdown backend (relative to user-base)
       connection_string:
         type: string
-        description: Connection string for external database storage
+        description: Connection string for postgres backend
       schema_name:
         type: string
         default: public
-        description: Database schema name
+        description: Database schema name for postgres backend
       indexes:
         type: array
         items:
@@ -67,7 +85,15 @@ properties:
             unique:
               type: boolean
         description: Database indexes to create for performance
-    description: Configuration for external database storage
+    description: Configuration for storage backend and location
+  - name: import_cli
+    type: string
+    required: false
+    description: Path to CLI script for importing data into this database
+  - name: import_schedule
+    type: string
+    required: false
+    description: Cron expression for scheduled imports (e.g., '0 0 * * *' for daily)
   - name: views
     type: array
     items:
@@ -92,21 +118,34 @@ In this system, a database is:
 - A storage configuration that determines where data lives
 - A set of views for displaying and filtering data
 
-## Storage Approach
+## Storage Backends
 
-**Local Storage** (default):
+**DuckDB** (default):
+
+- Embedded SQL database for structured queries
+- Tables created dynamically from schema fields
+- Ideal for medium datasets (thousands to millions of records)
+- No external dependencies
+
+**TSV** (file-based):
+
+- Tab-separated values stored in plain text files
+- Easy to inspect and edit manually
+- Good for smaller datasets or data exchange
+- Uses `path` in storage_config
+
+**PostgreSQL** (external):
+
+- External PostgreSQL database connection
+- For large datasets or shared access
+- Uses `connection_string` in storage_config
+- Supports schema isolation
+
+**Markdown** (entity system):
 
 - Items stored as markdown files with YAML frontmatter
-- Indexed via embedded databases (DuckDB for SQL queries, Kuzu for graph queries)
-- No external database configuration required
 - Full integration with entity system features
-
-**External Storage**:
-
-- Items stored in external database tables
-- Activated by providing `storage_config` with connection details
-- Supports large datasets
-- Maintains same API and functionality
+- Uses `directory` in storage_config
 
 ## Schema Definition
 
@@ -114,8 +153,9 @@ Each database defines:
 
 - **Fields**: Data structure with types, validation, and constraints
 - **Table Name**: Identifier for the data collection
-- **Storage Configuration**: Connection details for external databases
+- **Storage Configuration**: Backend type and connection details
 - **Performance Settings**: Indexes and optimization hints
+- **Import Configuration**: CLI script path and cron schedule for data imports
 
 ## Database Items
 
