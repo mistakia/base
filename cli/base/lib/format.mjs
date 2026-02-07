@@ -86,6 +86,40 @@ export function format_relation(relation, { verbose = false } = {}) {
 }
 
 /**
+ * Format thread with relation context for entity threads output
+ *
+ * @param {Object} thread - Thread object with relation context
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.verbose - Multi-line output
+ * @returns {string} Formatted output
+ */
+export function format_entity_thread(thread, { verbose = false } = {}) {
+  if (verbose) {
+    const lines = [thread.thread_id]
+    if (thread.title) lines.push(`  Title: ${thread.title}`)
+    if (thread.thread_state) lines.push(`  State: ${thread.thread_state}`)
+    if (thread.relation_type) lines.push(`  Relation: ${thread.relation_type}`)
+    if (thread.created_at) {
+      const created = new Date(thread.created_at).toISOString().split('T')[0]
+      lines.push(`  Created: ${created}`)
+    }
+    if (thread.updated_at) {
+      const updated = new Date(thread.updated_at).toISOString().split('T')[0]
+      lines.push(`  Updated: ${updated}`)
+    }
+    return lines.join('\n')
+  }
+
+  // Default tab-separated output: thread_id, state, relation_type, title
+  return [
+    thread.thread_id || '',
+    thread.thread_state || '',
+    thread.relation_type || '',
+    thread.title || ''
+  ].join('\t')
+}
+
+/**
  * Check if an error indicates the API server is unavailable
  *
  * @param {Error} error - Error from fetch attempt
