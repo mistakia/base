@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
@@ -10,6 +10,7 @@ import {
 import CompactTimelineEvent from './CompactTimelineEvent.js'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { threads_actions } from '@core/threads/actions.js'
+import { use_discard_confirm } from '@views/hooks/use-discard-confirm.js'
 
 /**
  * Unified card component for displaying both active sessions and threads.
@@ -31,6 +32,20 @@ import { threads_actions } from '@core/threads/actions.js'
 const SessionCard = ({ item }) => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
+
+  const abandoned_callback = useCallback(() => {
+    if (item.id) {
+      dispatch(
+        threads_actions.set_thread_archive_state({
+          thread_id: item.id,
+          archive_reason: 'user_abandoned'
+        })
+      )
+    }
+  }, [dispatch, item.id])
+
+  const { is_confirming: is_abandoned_confirming, handle_discard_click } =
+    use_discard_confirm({ on_discard: abandoned_callback })
 
   const handle_click = (event) => {
     if (!item.id) return
@@ -65,6 +80,11 @@ const SessionCard = ({ item }) => {
         })
       )
     }
+  }
+
+  const handle_abandoned_click = (event) => {
+    event.stopPropagation()
+    handle_discard_click()
   }
 
   const created_time = item.created_at
@@ -176,6 +196,21 @@ const SessionCard = ({ item }) => {
                 title='Send message'
                 aria-label='Send message to thread'>
                 msg
+              </button>
+              <button
+                className={`session-card__action-button session-card__action-button--danger${is_abandoned_confirming ? ' session-card__action-button--confirming' : ''}`}
+                onClick={handle_abandoned_click}
+                title={
+                  is_abandoned_confirming
+                    ? 'Click again to confirm abandon'
+                    : 'Abandon thread'
+                }
+                aria-label={
+                  is_abandoned_confirming
+                    ? 'Click again to confirm abandon'
+                    : 'Abandon thread'
+                }>
+                {is_abandoned_confirming ? 'confirm' : 'abandon'}
               </button>
               <button
                 className='session-card__action-button'

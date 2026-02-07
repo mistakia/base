@@ -242,6 +242,23 @@
   &:active
     background: $color_surface_secondary
 
+  &--danger
+    border-color: $color_error
+    color: $color_error
+
+    &:hover
+      background: $color_error
+      color: white
+
+  &--confirming
+    background: $color_error
+    color: white
+    border-color: $color_error
+
+    &:hover
+      background: darken($color_error, 10%)
+      border-color: darken($color_error, 10%)
+
 // =============================================================================
 // Responsive Design
 // =============================================================================
