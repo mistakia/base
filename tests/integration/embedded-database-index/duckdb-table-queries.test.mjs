@@ -103,22 +103,44 @@ describe('DuckDB Table Queries Integration', () => {
       {
         thread_id: 'thread-1',
         title: 'First Thread',
+        short_description: 'Working on database schema updates',
         thread_state: 'active',
         created_at: '2025-01-01T10:00:00Z',
         updated_at: '2025-01-01T10:00:00Z',
         message_count: 10,
         total_input_tokens: 3000,
-        total_output_tokens: 2000
+        total_output_tokens: 2000,
+        file_references: JSON.stringify([
+          'user:config/settings.json',
+          'user:task/my-task.md'
+        ]),
+        directory_references: JSON.stringify(['user:config/', 'user:task/'])
       },
       {
         thread_id: 'thread-2',
         title: 'Second Thread',
+        short_description: 'API endpoint implementation',
         thread_state: 'archived',
         created_at: '2025-01-02T10:00:00Z',
         updated_at: '2025-01-02T10:00:00Z',
         message_count: 5,
         total_input_tokens: 1500,
-        total_output_tokens: 1000
+        total_output_tokens: 1000,
+        file_references: JSON.stringify(['user:workflow/deploy.md']),
+        directory_references: JSON.stringify(['user:workflow/'])
+      },
+      {
+        thread_id: 'thread-3',
+        title: 'Third Thread',
+        short_description: 'Database migration work',
+        thread_state: 'active',
+        created_at: '2025-01-03T10:00:00Z',
+        updated_at: '2025-01-03T10:00:00Z',
+        message_count: 3,
+        total_input_tokens: 800,
+        total_output_tokens: 500,
+        file_references: null,
+        directory_references: null
       }
     ]
 
@@ -347,7 +369,7 @@ describe('DuckDB Table Queries Integration', () => {
       })
 
       expect(threads).to.be.an('array')
-      expect(threads.length).to.equal(2)
+      expect(threads.length).to.equal(3)
     })
 
     it('should filter threads by state', async () => {
@@ -361,8 +383,120 @@ describe('DuckDB Table Queries Integration', () => {
       })
 
       expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(2)
+      threads.forEach((thread) => {
+        expect(thread.thread_state).to.equal('active')
+      })
+    })
+
+    it('should search in title using search parameter', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        search: 'First'
+      })
+
+      expect(threads).to.be.an('array')
       expect(threads.length).to.equal(1)
-      expect(threads[0].thread_state).to.equal('active')
+      expect(threads[0].title).to.equal('First Thread')
+    })
+
+    it('should search in short_description using search parameter', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        search: 'database'
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(2)
+      // Should match 'database schema' and 'Database migration'
+      const descriptions = threads.map((t) => t.short_description)
+      expect(descriptions).to.include('Working on database schema updates')
+      expect(descriptions).to.include('Database migration work')
+    })
+
+    it('should filter by file_ref pattern', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        file_ref: 'user:config/*'
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(1)
+      expect(threads[0].thread_id).to.equal('thread-1')
+    })
+
+    it('should filter by dir_ref pattern', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        dir_ref: 'user:workflow/'
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(1)
+      expect(threads[0].thread_id).to.equal('thread-2')
+    })
+
+    it('should combine search with state filter', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [
+          { column_id: 'thread_state', operator: '=', value: 'active' }
+        ],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        search: 'database'
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(2)
+      threads.forEach((thread) => {
+        expect(thread.thread_state).to.equal('active')
+      })
+    })
+
+    it('should combine file_ref with state filter', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [
+          { column_id: 'thread_state', operator: '=', value: 'active' }
+        ],
+        sort: [],
+        limit: 100,
+        offset: 0,
+        file_ref: 'user:task/*'
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(1)
+      expect(threads[0].thread_id).to.equal('thread-1')
+    })
+
+    it('should return file_references and directory_references in results', async () => {
+      const threads = await query_threads_from_duckdb({
+        filters: [{ column_id: 'thread_id', operator: '=', value: 'thread-1' }],
+        sort: [],
+        limit: 100,
+        offset: 0
+      })
+
+      expect(threads).to.be.an('array')
+      expect(threads.length).to.equal(1)
+      expect(threads[0].file_references).to.be.a('string')
+      expect(threads[0].directory_references).to.be.a('string')
+
+      const file_refs = JSON.parse(threads[0].file_references)
+      expect(file_refs).to.include('user:config/settings.json')
     })
   })
 
@@ -372,7 +506,7 @@ describe('DuckDB Table Queries Integration', () => {
         filters: []
       })
 
-      expect(count).to.equal(2)
+      expect(count).to.equal(3)
     })
 
     it('should count threads with filters', async () => {
@@ -380,6 +514,24 @@ describe('DuckDB Table Queries Integration', () => {
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'archived' }
         ]
+      })
+
+      expect(count).to.equal(1)
+    })
+
+    it('should count threads with search parameter', async () => {
+      const count = await count_threads_in_duckdb({
+        filters: [],
+        search: 'database'
+      })
+
+      expect(count).to.equal(2)
+    })
+
+    it('should count threads with file_ref parameter', async () => {
+      const count = await count_threads_in_duckdb({
+        filters: [],
+        file_ref: 'user:config/*'
       })
 
       expect(count).to.equal(1)

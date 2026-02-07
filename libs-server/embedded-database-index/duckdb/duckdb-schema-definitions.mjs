@@ -67,7 +67,9 @@ CREATE TABLE IF NOT EXISTS threads (
   latest_event_type VARCHAR,
   latest_event_data TEXT,
   edit_count INTEGER DEFAULT 0,
-  lines_changed INTEGER DEFAULT 0
+  lines_changed INTEGER DEFAULT 0,
+  file_references TEXT,
+  directory_references TEXT
 )
 `
 

@@ -207,6 +207,14 @@ export function extract_thread_index_data({ thread_id, metadata }) {
   // Extract short description
   const short_description = metadata.short_description || null
 
+  // Extract file and directory references as JSON text
+  const file_references = Array.isArray(metadata.file_references)
+    ? JSON.stringify(metadata.file_references)
+    : null
+  const directory_references = Array.isArray(metadata.directory_references)
+    ? JSON.stringify(metadata.directory_references)
+    : null
+
   return {
     thread_id,
     title: metadata.title || null,
@@ -232,7 +240,9 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     primary_model,
     user_public_key: metadata.user_public_key || null,
     edit_count: metadata.edit_count || 0,
-    lines_changed: metadata.lines_changed || 0
+    lines_changed: metadata.lines_changed || 0,
+    file_references,
+    directory_references
   }
 }
 

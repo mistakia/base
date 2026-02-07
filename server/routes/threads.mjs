@@ -182,6 +182,9 @@ async function apply_batch_permissions_to_threads(
  */
 async function handle_thread_list_request_indexed({
   thread_state,
+  search,
+  file_ref,
+  dir_ref,
   limit,
   offset,
   requesting_user_key
@@ -205,12 +208,15 @@ async function handle_thread_list_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  // Query from DuckDB
+  // Query from DuckDB with search and reference filters
   const duckdb_threads = await query_threads_from_duckdb({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
     limit,
-    offset
+    offset,
+    search,
+    file_ref,
+    dir_ref
   })
 
   // Normalize to API format
@@ -268,8 +274,15 @@ async function handle_thread_list_by_relation({
 // Get all threads with optional filtering
 router.get('/', async (req, res) => {
   try {
-    const { user_public_key, thread_state, relates_to, relation_type } =
-      req.query
+    const {
+      user_public_key,
+      thread_state,
+      search,
+      file_ref,
+      dir_ref,
+      relates_to,
+      relation_type
+    } = req.query
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
@@ -321,6 +334,9 @@ router.get('/', async (req, res) => {
         log('Using DuckDB index for thread query')
         const result = await handle_thread_list_request_indexed({
           thread_state,
+          search,
+          file_ref,
+          dir_ref,
           limit,
           offset,
           requesting_user_key
