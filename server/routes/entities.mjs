@@ -7,6 +7,7 @@
 import express from 'express'
 import debug from 'debug'
 
+import { parse_array_param } from '#server/utils/query-params.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   find_related_entities,
@@ -76,21 +77,6 @@ async function redact_relations_by_permission({
   )
 
   return results
-}
-
-/**
- * Parse array query parameter from request
- * Handles both comma-separated strings and repeated params
- * @param {string|string[]|undefined} param - Query parameter value
- * @returns {string[]} Array of values
- */
-function parse_array_param(param) {
-  if (!param) return []
-  if (Array.isArray(param)) return param.filter(Boolean)
-  return param
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
 }
 
 /**

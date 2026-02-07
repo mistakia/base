@@ -1,43 +1,7 @@
 import debug from 'debug'
+import { slugify } from './slugify.mjs'
 
 const log = debug('github:extract-relationships')
-
-/**
- * Creates a slug from a string by converting to lowercase, replacing spaces with hyphens,
- * and removing special characters
- *
- * @param {string} text - The text to slugify
- * @param {Object} options - Slugify options
- * @param {boolean} [options.lower=true] - Convert to lowercase
- * @param {RegExp} [options.remove=/[*+~.()'"!:@]/g] - Characters to remove
- * @returns {string} - Slugified string
- */
-function slugify(text, options = {}) {
-  const { lower = true, remove = /[*+~.()'"!:@]/g } = options
-
-  let result = text.toString()
-
-  // Remove specified characters
-  if (remove) {
-    result = result.replace(remove, '')
-  }
-
-  // Convert to lowercase if option is enabled
-  if (lower) {
-    result = result.toLowerCase()
-  }
-
-  // Replace spaces and other characters with hyphens
-  result = result
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/&/g, '-and-') // Replace & with 'and'
-    .replace(/[^\w-]+/g, '') // Remove all non-word characters except hyphens
-    .replace(/--+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+/, '') // Trim hyphens from start
-    .replace(/-+$/, '') // Trim hyphens from end
-
-  return result
-}
 
 /**
  * Generate base_uri for a GitHub issue task
@@ -58,10 +22,7 @@ export function generate_github_issue_task_base_uri(issue) {
   const owner = issue.repository.owner.login
   const repo = issue.repository.name
   const number = issue.number
-  const title_slug = slugify(issue.title, {
-    lower: true,
-    remove: /[*+~.()'"!:@]/g
-  })
+  const title_slug = slugify(issue.title)
 
   return `user:task/github/${owner}/${repo}/${number}-${title_slug}.md`
 }

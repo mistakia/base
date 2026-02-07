@@ -3,13 +3,13 @@ import debug from 'debug'
 
 import { get_activity_heatmap_data } from '#libs-server/activity/index.mjs'
 import { get_cached_activity_heatmap } from '#server/services/cache-warmer.mjs'
+import {
+  HTTP_MAX_AGE,
+  HTTP_STALE_WHILE_REVALIDATE
+} from '#server/constants/http-cache.mjs'
 
 const log = debug('api:activity')
 const router = express.Router({ mergeParams: true })
-
-// HTTP cache: serve cached for 5 min, stale-while-revalidate for 4 hours
-const HTTP_MAX_AGE = 5 * 60
-const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 /**
  * GET /api/activity/heatmap

@@ -1,6 +1,10 @@
 import express from 'express'
 import debug from 'debug'
 
+import {
+  HTTP_MAX_AGE,
+  HTTP_STALE_WHILE_REVALIDATE
+} from '#server/constants/http-cache.mjs'
 import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
 import * as threads from '#libs-server/threads/index.mjs'
 import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
@@ -30,10 +34,6 @@ import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
-
-// HTTP cache headers for public requests
-const HTTP_MAX_AGE = 5 * 60
-const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
 
 // Short-lived in-memory cache for individual thread responses.
 // Prevents redundant full-timeline reads when the HTML render and API call

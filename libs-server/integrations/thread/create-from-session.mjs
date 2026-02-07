@@ -239,13 +239,13 @@ export const check_thread_exists = async (
   session_provider,
   user_base_directory
 ) => {
-  try {
-    const thread_id = generate_thread_id_from_session({
-      session_id,
-      session_provider
-    })
-    const thread_dir = path.join(user_base_directory, 'thread', thread_id)
+  const thread_id = generate_thread_id_from_session({
+    session_id,
+    session_provider
+  })
+  const thread_dir = path.join(user_base_directory, 'thread', thread_id)
 
+  try {
     const stats = await fs.stat(thread_dir)
     return {
       exists: stats.isDirectory(),
@@ -254,14 +254,10 @@ export const check_thread_exists = async (
     }
   } catch (error) {
     if (error.code === 'ENOENT') {
-      const thread_id = generate_thread_id_from_session({
-        session_id,
-        session_provider
-      })
       return {
         exists: false,
         thread_id,
-        thread_dir: path.join(user_base_directory, 'thread', thread_id)
+        thread_dir
       }
     }
     throw error

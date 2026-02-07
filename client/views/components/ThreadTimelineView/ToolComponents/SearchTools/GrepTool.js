@@ -5,6 +5,7 @@ import { Search as SearchIcon } from '@mui/icons-material'
 import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 import { build_dual_tone_header } from '@components/ThreadTimelineView/ToolComponents/shared/title-utils.js'
+import { get_shared_prefix } from '../../../../../utils/path-utils.js'
 
 const GrepTool = ({ tool_call_event, tool_result_event }) => {
   const [show_results, set_show_results] = useState(false)
@@ -150,23 +151,6 @@ const GrepTool = ({ tool_call_event, tool_result_event }) => {
     // compute shared prefix so we only show unique suffixes
     const all_paths =
       Object.keys(file_matches).length > 0 ? Object.keys(file_matches) : files
-    const get_shared_prefix = (paths) => {
-      if (!paths || paths.length === 0) return ''
-      const split_paths = paths.map((p) => p.split('/'))
-      const shortest_len = Math.min(...split_paths.map((parts) => parts.length))
-      const shared_parts = []
-      for (let i = 0; i < shortest_len; i++) {
-        const part = split_paths[0][i]
-        if (split_paths.every((arr) => arr[i] === part)) {
-          shared_parts.push(part)
-        } else {
-          break
-        }
-      }
-      const prefix = shared_parts.join('/')
-      return prefix.length > 0 ? `${prefix}/` : ''
-    }
-
     const shared_prefix = get_shared_prefix(all_paths)
 
     return (

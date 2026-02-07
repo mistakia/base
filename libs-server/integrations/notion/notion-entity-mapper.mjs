@@ -128,12 +128,6 @@ export function convert_entity_property_to_notion(
   // Apply type conversion based on configuration
   switch (conversion_type) {
     case 'select_to_priority':
-      return {
-        [notion_property_name]: {
-          select: value ? { name: value } : null
-        }
-      }
-
     case 'select_to_usage_frequency':
       return {
         [notion_property_name]: {

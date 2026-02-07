@@ -1,8 +1,11 @@
 import { Queue } from 'bullmq'
-import IORedis from 'ioredis'
 import { randomUUID } from 'crypto'
 import config from '#config'
 import debug from 'debug'
+import {
+  get_redis_connection,
+  close_redis_connection
+} from '#libs-server/redis/get-connection.mjs'
 
 const log = debug('threads:queue')
 
@@ -14,10 +17,6 @@ const log = debug('threads:queue')
 // Configuration constants with defaults
 const QUEUE_CONFIG = {
   name: 'thread-creation',
-  redis_url:
-    config.threads?.queue?.redis_url ||
-    process.env.REDIS_URL ||
-    'redis://localhost:6379',
   retry_attempts: config.threads?.queue?.retry_attempts || 3,
   retry_delay_ms: (config.threads?.queue?.retry_delay_seconds || 30) * 1000,
   completed_job_age_seconds: 3600, // 1 hour
@@ -26,7 +25,6 @@ const QUEUE_CONFIG = {
 }
 
 // Module-level singleton instances
-let redis_connection = null
 let thread_creation_queue = null
 
 /**
@@ -38,42 +36,6 @@ let thread_creation_queue = null
 const is_redis_connection_error = (error) => {
   const message = error.message || ''
   return message.includes('ECONNREFUSED') || message.includes('Redis')
-}
-
-/**
- * Initialize Redis connection with event handlers
- *
- * @returns {IORedis} Redis connection instance
- */
-const initialize_redis_connection = () => {
-  log(`Connecting to Redis: ${QUEUE_CONFIG.redis_url}`)
-
-  const connection = new IORedis(QUEUE_CONFIG.redis_url, {
-    maxRetriesPerRequest: null, // Required for BullMQ
-    enableReadyCheck: false // Improve performance
-  })
-
-  connection.on('error', (error) => {
-    log('Redis connection error:', error)
-  })
-
-  connection.on('connect', () => {
-    log('Redis connected')
-  })
-
-  return connection
-}
-
-/**
- * Get or create Redis connection singleton
- *
- * @returns {IORedis} Redis connection instance
- */
-const get_redis_connection = () => {
-  if (!redis_connection) {
-    redis_connection = initialize_redis_connection()
-  }
-  return redis_connection
 }
 
 /**
@@ -258,15 +220,10 @@ export const close_queue = async () => {
       log('Thread creation queue closed')
     }
 
-    if (redis_connection) {
-      await redis_connection.quit()
-      redis_connection = null
-      log('Redis connection closed')
-    }
+    await close_redis_connection()
   } catch (error) {
     log('Error closing queue/connection:', error)
     // Reset instances even if close fails
     thread_creation_queue = null
-    redis_connection = null
   }
 }
