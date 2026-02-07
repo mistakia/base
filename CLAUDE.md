@@ -290,6 +290,41 @@ node cli/queue-command.mjs stats
 Tag concurrency limits are configured in `config.json` under `cli_queue.tag_limits`.
 The worker service runs via PM2 (`cli-queue-worker`).
 
+### Scheduled Commands
+
+Schedule CLI commands for automated execution at specified times. Schedules are stored as entities in the user-base `scheduled-command/` directory and processed by the `schedule-processor` PM2 service.
+
+```bash
+# List all scheduled commands
+base schedule list
+
+# Create a new scheduled command
+base schedule add "yarn test:all" --type expr --schedule "0 2 * * *" --title "Nightly tests"
+
+# Schedule types:
+#   expr  - Cron expression (e.g., "0 2 * * *")
+#   at    - One-shot ISO timestamp (e.g., "2026-03-01T14:00:00Z")
+#   every - Recurring interval (e.g., "6h", "30m", "1d")
+
+# Enable/disable schedules
+base schedule enable base/run-tests.md
+base schedule disable base/run-tests.md
+
+# Force immediate execution
+base schedule trigger base/run-tests.md
+
+# Delete a schedule
+base schedule delete base/run-tests.md
+```
+
+The schedule-processor service polls every 60 seconds and enqueues due commands to the CLI queue. Manage the service via PM2:
+
+```bash
+pm2 start schedule-processor   # Start the processor
+pm2 stop schedule-processor    # Stop the processor
+pm2 logs schedule-processor    # View logs
+```
+
 ### External Session Import
 
 ```bash

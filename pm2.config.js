@@ -115,6 +115,10 @@ module.exports = {
     app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
       max_memory_restart: '512M',
       env: { DEBUG: 'cli-queue:*' }
+    }),
+    app('schedule-processor', 'server/services/schedule-processor.mjs', {
+      max_memory_restart: '256M',
+      env: { DEBUG: 'schedule:*' }
     })
   ]
 }
