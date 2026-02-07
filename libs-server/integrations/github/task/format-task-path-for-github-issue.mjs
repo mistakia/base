@@ -1,41 +1,5 @@
 import path from 'path'
-
-/**
- * Creates a slug from a string by converting to lowercase, replacing spaces with hyphens,
- * and removing special characters
- *
- * @param {string} text - The text to slugify
- * @param {Object} options - Slugify options
- * @param {boolean} [options.lower=true] - Convert to lowercase
- * @param {RegExp} [options.remove=/[*+~.()'"!:@]/g] - Characters to remove
- * @returns {string} - Slugified string
- */
-function slugify(text, options = {}) {
-  const { lower = true, remove = /[*+~.()'"!:@]/g } = options
-
-  let result = text.toString()
-
-  // Remove specified characters
-  if (remove) {
-    result = result.replace(remove, '')
-  }
-
-  // Convert to lowercase if option is enabled
-  if (lower) {
-    result = result.toLowerCase()
-  }
-
-  // Replace spaces and other characters with hyphens
-  result = result
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/&/g, '-and-') // Replace & with 'and'
-    .replace(/[^\w-]+/g, '') // Remove all non-word characters except hyphens
-    .replace(/--+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+/, '') // Trim hyphens from start
-    .replace(/-+$/, '') // Trim hyphens from end
-
-  return result
-}
+import { slugify } from '../slugify.mjs'
 
 export const format_entity_directory_for_github_tasks = ({
   user_base_directory
@@ -75,11 +39,7 @@ export function format_entity_absolute_path_for_github_issue({
   user_base_directory,
   github_issue_title
 }) {
-  // Generate slug from title
-  const github_issue_title_slug = slugify(github_issue_title, {
-    lower: true,
-    remove: /[*+~.()'"!:@]/g
-  })
+  const github_issue_title_slug = slugify(github_issue_title)
 
   const github_entity_directory_for_github_issue =
     format_entity_directory_for_github_issue({

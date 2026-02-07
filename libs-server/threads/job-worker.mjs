@@ -1,48 +1,20 @@
 import { Worker } from 'bullmq'
-import IORedis from 'ioredis'
 import debug from 'debug'
 import config from '#config'
+import {
+  get_redis_connection,
+  close_redis_connection
+} from '#libs-server/redis/get-connection.mjs'
 import { create_session_claude_cli } from './create-session-claude-cli.mjs'
 
 const log = debug('threads:worker')
 
 // Constants
 const QUEUE_NAME = 'thread-creation'
-const DEFAULT_REDIS_URL = 'redis://localhost:6379'
 const DEFAULT_CONCURRENCY = 3
 
 // Module state
-let redis_connection = null
 let thread_worker = null
-
-/**
- * Get or create Redis connection for the worker
- */
-const get_redis_connection = () => {
-  if (redis_connection) {
-    return redis_connection
-  }
-
-  const redis_url =
-    config.threads?.queue?.redis_url ||
-    process.env.REDIS_URL ||
-    DEFAULT_REDIS_URL
-
-  redis_connection = new IORedis(redis_url, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false
-  })
-
-  redis_connection.on('error', (error) => {
-    log('Redis error:', error)
-  })
-
-  redis_connection.on('connect', () => {
-    log('Redis connected')
-  })
-
-  return redis_connection
-}
 
 /**
  * Process a thread creation job
@@ -146,10 +118,7 @@ export const stop_worker = async () => {
   await thread_worker.close()
   thread_worker = null
 
-  if (redis_connection) {
-    await redis_connection.quit()
-    redis_connection = null
-  }
+  await close_redis_connection()
 
   log('Worker stopped')
 }

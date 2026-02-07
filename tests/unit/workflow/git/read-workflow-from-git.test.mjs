@@ -261,7 +261,7 @@ This is a complex workflow with many properties.
 
     // Assert
     expect(result.success).to.be.false
-    expect(result.error).to.equal('Workflow ID is required')
+    expect(result.error).to.equal('Workflow base_uri is required')
   })
 
   it('should return error when branch is not provided', async () => {

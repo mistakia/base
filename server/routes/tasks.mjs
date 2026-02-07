@@ -2,6 +2,11 @@ import express from 'express'
 import debug from 'debug'
 
 import {
+  HTTP_MAX_AGE,
+  HTTP_STALE_WHILE_REVALIDATE
+} from '#server/constants/http-cache.mjs'
+import { parse_array_param } from '#server/utils/query-params.mjs'
+import {
   list_tasks_from_filesystem,
   read_task_from_filesystem,
   write_task_to_filesystem
@@ -22,10 +27,6 @@ import { query_tasks_from_entities } from '#libs-server/embedded-database-index/
 const log = debug('api:tasks')
 const router = express.Router({ mergeParams: true })
 
-// HTTP cache headers for public requests
-const HTTP_MAX_AGE = 5 * 60
-const HTTP_STALE_WHILE_REVALIDATE = 4 * 60 * 60
-
 // Helper function to check user permissions for a file
 // Delegates to permission service which respects public_read entity setting
 const check_file_permission = async (user_public_key, absolute_path) => {
@@ -33,12 +34,6 @@ const check_file_permission = async (user_public_key, absolute_path) => {
     user_public_key,
     absolute_path
   })
-}
-
-// Helper function to parse array query parameters
-const parse_array_params = (param) => {
-  if (!param) return []
-  return Array.isArray(param) ? param : [param]
 }
 
 // Centralized function to check task permissions and build response
@@ -482,9 +477,9 @@ async function handle_task_list_request(
     status,
     // Convert single priority to include_priority array for filesystem filter
     include_priority: priority ? [priority] : [],
-    tag_entity_ids: parse_array_params(tag_entity_ids),
-    organization_ids: parse_array_params(organization_ids),
-    person_ids: parse_array_params(person_ids),
+    tag_entity_ids: parse_array_param(tag_entity_ids),
+    organization_ids: parse_array_param(organization_ids),
+    person_ids: parse_array_param(person_ids),
     min_finish_by,
     max_finish_by,
     min_estimated_total_duration,
