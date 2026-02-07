@@ -75,7 +75,7 @@ const CommitIcon = ({ size = 16 }) => (
 
 CommitIcon.propTypes = icon_prop_types
 
-const GitFileActions = ({ git_context }) => {
+const GitFileActions = ({ git_context, path }) => {
   const dispatch = useDispatch()
   const is_auto_committing = useSelector(get_is_auto_committing)
 
@@ -112,7 +112,7 @@ const GitFileActions = ({ git_context }) => {
 
   const handle_auto_commit = () => {
     dispatch(
-      git_actions.auto_commit_file({ repo_path, file_path: relative_path })
+      git_actions.auto_commit_file({ repo_path, file_path: relative_path, path })
     )
   }
 
@@ -197,7 +197,8 @@ GitFileActions.propTypes = {
     repo_path: PropTypes.string,
     relative_path: PropTypes.string,
     status: PropTypes.oneOf(['modified', 'added', 'deleted', 'untracked', null])
-  })
+  }),
+  path: PropTypes.string
 }
 
 export default GitFileActions

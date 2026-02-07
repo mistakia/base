@@ -19,6 +19,7 @@ import {
 } from '@core/api/sagas'
 import { git_action_types, auto_commit_file_actions } from './actions'
 import { notification_actions } from '@core/notification/actions'
+import { directory_actions } from '@core/directory/actions'
 
 /**
  * Helper to show permission denied notification
@@ -291,7 +292,7 @@ export function* request_generate_commit_message({ payload }) {
 // ============================================================================
 
 export function* request_auto_commit_file({ payload }) {
-  const { repo_path, file_path } = payload
+  const { repo_path, file_path, path } = payload
   try {
     yield put(auto_commit_file_actions.pending({ opts: payload }))
 
@@ -314,6 +315,11 @@ export function* request_auto_commit_file({ payload }) {
 
     // Refresh status after commit
     yield call(get_git_status, { repo_path })
+
+    // Reload file data to update git_context in UI
+    if (path) {
+      yield put(directory_actions.load_file(path))
+    }
 
     yield put(auto_commit_file_actions.fulfilled({ opts: payload }))
 

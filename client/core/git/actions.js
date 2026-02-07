@@ -181,9 +181,9 @@ export const git_actions = {
   }),
 
   // Auto-commit a single file (stage, generate message, commit)
-  auto_commit_file: ({ repo_path, file_path }) => ({
+  auto_commit_file: ({ repo_path, file_path, path }) => ({
     type: git_action_types.REQUEST_AUTO_COMMIT_FILE,
-    payload: { repo_path, file_path }
+    payload: { repo_path, file_path, path }
   }),
 
   // UI actions

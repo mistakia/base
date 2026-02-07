@@ -108,7 +108,7 @@ const EntityRenderer = ({
         path={path}
       />
       <FileActions path={path}>
-        <GitFileActions git_context={git_context} />
+        <GitFileActions git_context={git_context} path={path} />
         {render_diff_toggle()}
       </FileActions>
     </Box>
@@ -142,7 +142,7 @@ const EntityRenderer = ({
               path={path}
             />
             <FileActions path={path}>
-              <GitFileActions git_context={git_context} />
+              <GitFileActions git_context={git_context} path={path} />
               {render_diff_toggle()}
             </FileActions>
             {is_tag_entity && <TagDashboard frontmatter={frontmatter} />}
