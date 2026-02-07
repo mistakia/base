@@ -8,9 +8,11 @@ import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
 import {
   SERVER_URL,
   format_entity,
+  format_entity_thread,
   output_results,
   with_api_fallback,
   flush_and_exit
@@ -154,7 +156,34 @@ export const builder = (yargs) =>
           }),
       handle_validate
     )
-    .demandCommand(1, 'Specify a subcommand: list, get, move, or validate')
+    .command(
+      'threads <base_uri>',
+      'Show threads that have worked on or referenced an entity',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe: 'Entity base_uri to find related threads for',
+            type: 'string'
+          })
+          .option('relation-type', {
+            describe:
+              'Filter by relation type (modifies, accesses, creates, relates_to)',
+            type: 'string'
+          })
+          .option('limit', {
+            alias: 'l',
+            describe: 'Max results',
+            type: 'number',
+            default: 50
+          })
+          .option('offset', {
+            describe: 'Offset for pagination',
+            type: 'number',
+            default: 0
+          }),
+      handle_threads
+    )
+    .demandCommand(1, 'Specify a subcommand: list, get, move, validate, or threads')
 
 export const handler = () => {}
 
@@ -340,6 +369,54 @@ async function handle_validate(argv) {
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function fetch_entity_threads_from_api(argv) {
+  const params = new URLSearchParams()
+  params.set('base_uri', argv.base_uri)
+  if (argv['relation-type']) params.set('relation_type', argv['relation-type'])
+  params.set('limit', String(argv.limit))
+  params.set('offset', String(argv.offset))
+
+  const response = await authenticated_fetch(
+    `${SERVER_URL}/api/entities/threads?${params}`
+  )
+  if (!response.ok) throw new Error(`API returned ${response.status}`)
+  const data = await response.json()
+  return data.threads || data
+}
+
+async function handle_threads(argv) {
+  let exit_code = 0
+  try {
+    const threads = await with_api_fallback(
+      () => fetch_entity_threads_from_api(argv),
+      async () => {
+        // Initialize embedded index for direct DuckDB access
+        await embedded_index_manager.ensure_ready()
+        return find_threads_relating_to({
+          base_uri: argv.base_uri,
+          relation_type: argv['relation-type'] || null,
+          limit: argv.limit,
+          offset: argv.offset
+        })
+      }
+    )
+
+    output_results(threads, {
+      json: argv.json,
+      verbose: argv.verbose,
+      formatter: (thread) =>
+        format_entity_thread(thread, { verbose: argv.verbose }),
+      empty_message: `No threads found for entity: ${argv.base_uri}`
+    })
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  } finally {
+    await embedded_index_manager.shutdown()
   }
   flush_and_exit(exit_code)
 }

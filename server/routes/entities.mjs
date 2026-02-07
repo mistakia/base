@@ -10,7 +10,8 @@ import debug from 'debug'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   find_related_entities,
-  find_entities_relating_to
+  find_entities_relating_to,
+  find_threads_relating_to
 } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
 import {
   query_entities_from_duckdb,
@@ -260,6 +261,59 @@ router.get('/', async (req, res) => {
     })
   } catch (error) {
     log('Error querying entities: %s', error.message)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+/**
+ * GET /api/entities/threads
+ *
+ * Get threads that have worked on or referenced an entity.
+ * Results are sorted by updated_at descending.
+ *
+ * Query params:
+ * - base_uri (required): Entity base URI to find threads for
+ * - relation_type: Filter by relation type (modifies, accesses, creates, relates_to)
+ * - limit: Max results (default: 50)
+ * - offset: Pagination offset
+ */
+router.get('/threads', async (req, res) => {
+  try {
+    const { base_uri, relation_type, limit = 50, offset = 0 } = req.query
+
+    if (!base_uri) {
+      return res.status(400).send({ error: 'base_uri is required' })
+    }
+
+    // Check if DuckDB is available
+    if (!embedded_index_manager.is_duckdb_ready()) {
+      return res.status(503).send({ error: 'Database not available' })
+    }
+
+    const limit_num = Math.min(parseInt(limit, 10) || 50, 1000)
+    const offset_num = parseInt(offset, 10) || 0
+
+    const threads = await find_threads_relating_to({
+      base_uri,
+      relation_type: relation_type || null,
+      limit: limit_num,
+      offset: offset_num
+    })
+
+    log(
+      'Entity threads query for %s: %d threads found',
+      base_uri,
+      threads.length
+    )
+
+    res.send({
+      threads,
+      total: threads.length,
+      limit: limit_num,
+      offset: offset_num
+    })
+  } catch (error) {
+    log('Error querying entity threads: %s', error.message)
     res.status(500).send({ error: error.message })
   }
 })
