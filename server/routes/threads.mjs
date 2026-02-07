@@ -25,6 +25,7 @@ import { thread_constants } from '#libs-shared'
 import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 
 const router = express.Router()
@@ -141,6 +142,39 @@ function validate_table_state(table_state) {
 }
 
 /**
+ * Apply batch permission checking and redaction to a list of threads.
+ * Returns threads with can_write flag and redacted data for unauthorized access.
+ */
+async function apply_batch_permissions_to_threads(threads, requesting_user_key) {
+  const resource_paths = threads.map(
+    (thread) => `user:thread/${thread.thread_id}`
+  )
+  let permissions = {}
+  if (resource_paths.length > 0) {
+    try {
+      permissions = await check_permissions_batch({
+        user_public_key: requesting_user_key,
+        resource_paths
+      })
+    } catch (error) {
+      log(
+        `Error batch checking thread permissions (applying default deny): ${error.message}`
+      )
+    }
+  }
+
+  return threads.map((thread) => {
+    const base_uri = `user:thread/${thread.thread_id}`
+    const read_allowed = permissions[base_uri]?.read?.allowed ?? false
+    const can_write = permissions[base_uri]?.write?.allowed ?? false
+    if (!read_allowed) {
+      return { ...redact_thread_data(thread), can_write: false }
+    }
+    return { ...thread, can_write }
+  })
+}
+
+/**
  * Handle thread list request using DuckDB index
  */
 async function handle_thread_list_request_indexed({
@@ -181,36 +215,41 @@ async function handle_thread_list_request_indexed({
     normalize_duckdb_thread(thread, models_data)
   )
 
-  // Batch permission check for all threads using base URIs
-  const resource_paths = normalized_threads.map(
-    (thread) => `user:thread/${thread.thread_id}`
-  )
-  let permissions = {}
-  if (resource_paths.length > 0) {
-    try {
-      permissions = await check_permissions_batch({
-        user_public_key: requesting_user_key,
-        resource_paths
-      })
-    } catch (error) {
-      log(
-        `Error batch checking thread permissions (applying default deny): ${error.message}`
-      )
-    }
-  }
+  // Apply batch permission checking and redaction
+  return apply_batch_permissions_to_threads(normalized_threads, requesting_user_key)
+}
 
-  // Apply redaction based on batch permission results and add can_write
-  const threads_with_permissions = normalized_threads.map((thread) => {
-    const base_uri = `user:thread/${thread.thread_id}`
-    const read_allowed = permissions[base_uri]?.read?.allowed ?? false
-    const can_write = permissions[base_uri]?.write?.allowed ?? false
-    if (!read_allowed) {
-      return { ...redact_thread_data(thread), can_write: false }
-    }
-    return { ...thread, can_write }
+/**
+ * Handle thread list request filtered by relation target using DuckDB
+ */
+async function handle_thread_list_by_relation({
+  relates_to,
+  relation_type,
+  limit,
+  offset,
+  requesting_user_key
+}) {
+  // Query threads relating to the target entity
+  const thread_results = await find_threads_relating_to({
+    base_uri: relates_to,
+    relation_type,
+    limit,
+    offset
   })
 
-  return threads_with_permissions
+  // Normalize thread results to match API format
+  const normalized_threads = thread_results.map((thread) => ({
+    thread_id: thread.thread_id,
+    title: thread.title,
+    thread_state: thread.thread_state,
+    created_at: thread.created_at,
+    updated_at: thread.updated_at,
+    relation_type: thread.relation_type,
+    relation_context: thread.context
+  }))
+
+  // Apply batch permission checking and redaction
+  return apply_batch_permissions_to_threads(normalized_threads, requesting_user_key)
 }
 
 /**
@@ -220,7 +259,8 @@ async function handle_thread_list_request_indexed({
 // Get all threads with optional filtering
 router.get('/', async (req, res) => {
   try {
-    const { user_public_key, thread_state } = req.query
+    const { user_public_key, thread_state, relates_to, relation_type } =
+      req.query
     const limit = parseInt(req.query.limit) || 1000
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
@@ -243,6 +283,27 @@ router.get('/', async (req, res) => {
       // Authenticated requests should not be cached by shared caches
       // and browsers should revalidate on each request
       res.set('Cache-Control', 'private, no-cache')
+    }
+
+    // Handle relation-based queries (find threads relating to a target entity)
+    if (relates_to && embedded_index_manager.is_duckdb_ready()) {
+      try {
+        log('Using DuckDB for thread relation query: relates_to=%s', relates_to)
+        const result = await handle_thread_list_by_relation({
+          relates_to,
+          relation_type,
+          limit,
+          offset,
+          requesting_user_key
+        })
+        return res.json(result)
+      } catch (error) {
+        log('DuckDB relation query failed: %s', error.message)
+        return res.status(500).json({
+          error: 'Failed to query thread relations',
+          message: error.message
+        })
+      }
     }
 
     // Use DuckDB for all requests (includes latest_timeline_event from indexed data)

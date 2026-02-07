@@ -167,3 +167,73 @@ export async function find_entities_relating_to({
     throw error
   }
 }
+
+/**
+ * Find threads that have relations to a given target entity.
+ * Useful for queries like "find all threads that modified task X"
+ */
+export async function find_threads_relating_to({
+  base_uri,
+  relation_type = null,
+  limit = 100,
+  offset = 0
+}) {
+  if (!base_uri) {
+    return []
+  }
+
+  log(
+    'Finding threads relating to: %s (relation_type: %s)',
+    base_uri,
+    relation_type
+  )
+
+  const limit_int = Math.max(0, Math.floor(Number(limit) || 100))
+  const offset_int = Math.max(0, Math.floor(Number(offset) || 0))
+
+  const where_clauses = [
+    'er.target_base_uri = ?',
+    "er.source_base_uri LIKE 'user:thread/%'"
+  ]
+  const parameters = [base_uri]
+
+  if (relation_type) {
+    where_clauses.push('er.relation_type = ?')
+    parameters.push(relation_type)
+  }
+
+  parameters.push(limit_int, offset_int)
+
+  const query = `
+    SELECT t.thread_id,
+           t.title,
+           t.thread_state,
+           t.created_at,
+           t.updated_at,
+           er.relation_type,
+           er.context
+    FROM entity_relations er
+    JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
+    WHERE ${where_clauses.join(' AND ')}
+    ORDER BY t.updated_at DESC
+    LIMIT ? OFFSET ?
+  `
+
+  try {
+    const rows = await execute_duckdb_query({ query, parameters })
+
+    log('Found %d threads relating to target', rows.length)
+    return rows.map((row) => ({
+      thread_id: row.thread_id,
+      title: row.title,
+      thread_state: row.thread_state,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      relation_type: row.relation_type,
+      context: row.context
+    }))
+  } catch (error) {
+    log('Error finding threads relating to: %s', error.message)
+    throw error
+  }
+}

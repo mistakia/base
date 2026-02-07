@@ -30,6 +30,15 @@ export const builder = (yargs) =>
             describe: 'Filter by thread state (active, archived)',
             type: 'string'
           })
+          .option('relates-to', {
+            describe: 'Find threads relating to a target entity (base_uri)',
+            type: 'string'
+          })
+          .option('relation-type', {
+            describe:
+              'Filter by relation type (modifies, accesses, creates, relates_to)',
+            type: 'string'
+          })
           .option('limit', {
             alias: 'l',
             describe: 'Max results',
@@ -114,9 +123,13 @@ async function handle_list(argv) {
   try {
     const params = new URLSearchParams()
     if (argv.state) params.set('thread_state', argv.state)
+    if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
+    if (argv['relation-type']) params.set('relation_type', argv['relation-type'])
     params.set('limit', String(argv.limit))
     params.set('offset', String(argv.offset))
     params.set('include_timeline', 'false')
+
+    const is_relation_query = Boolean(argv['relates-to'])
 
     let threads
     try {
@@ -148,9 +161,13 @@ async function handle_list(argv) {
       for (const thread of threads) {
         const parts = [
           thread.thread_id,
-          thread.thread_state || '',
-          thread.title || ''
+          thread.thread_state || ''
         ]
+        // Include relation type when filtering by relation
+        if (is_relation_query && thread.relation_type) {
+          parts.push(thread.relation_type)
+        }
+        parts.push(thread.title || '')
         console.log(parts.join('\t'))
       }
     }
