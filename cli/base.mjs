@@ -34,6 +34,9 @@ import * as queue_command from './base/queue.mjs'
 import * as activity_command from './base/activity.mjs'
 import * as schedule_command from './base/schedule.mjs'
 import * as database_command from './base/database.mjs'
+import * as identity_command from './base/identity.mjs'
+import * as role_command from './base/role.mjs'
+import * as permission_command from './base/permission.mjs'
 
 const main = async () => {
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
@@ -51,6 +54,9 @@ const main = async () => {
     .command(activity_command)
     .command(schedule_command)
     .command(database_command)
+    .command(identity_command)
+    .command(role_command)
+    .command(permission_command)
     .option('json', {
       describe: 'Output as JSON',
       type: 'boolean',

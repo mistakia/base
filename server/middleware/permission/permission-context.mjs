@@ -82,16 +82,12 @@ export class PermissionContext {
     }
 
     try {
-      const user = await user_registry.find_by_public_key(this.user_public_key)
-      if (user?.permissions?.rules && Array.isArray(user.permissions.rules)) {
-        log(
-          `Loaded ${user.permissions.rules.length} rules for user ${this.user_public_key}`
-        )
-        return user.permissions.rules
-      } else {
-        log(`No permission rules found for user: ${this.user_public_key}`)
-        return []
-      }
+      // Use registry's get_user_rules which resolves rules from identity and roles
+      const rules = await user_registry.get_user_rules({
+        public_key: this.user_public_key
+      })
+      log(`Loaded ${rules.length} rules for user ${this.user_public_key}`)
+      return rules
     } catch (error) {
       log(`Error loading user rules: ${error.message}`)
       return []
@@ -113,17 +109,10 @@ export class PermissionContext {
 
   async _load_public_rules() {
     try {
-      const public_user = await user_registry.find_by_public_key('public')
-      if (
-        public_user?.permissions?.rules &&
-        Array.isArray(public_user.permissions.rules)
-      ) {
-        log(`Loaded ${public_user.permissions.rules.length} public rules`)
-        return public_user.permissions.rules
-      } else {
-        log('No public permission rules found')
-        return []
-      }
+      // Use registry's get_user_rules which resolves rules from identity and roles
+      const rules = await user_registry.get_user_rules({ public_key: 'public' })
+      log(`Loaded ${rules.length} public rules`)
+      return rules
     } catch (error) {
       log(`Error loading public rules: ${error.message}`)
       return []

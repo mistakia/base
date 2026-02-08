@@ -541,7 +541,26 @@ router.post('/threads', async (req, res) => {
 
 ### 6.1 User Permissions
 
-User permissions are stored in `users.json` in the user base directory.
+User permissions can be stored using either entity-based storage (preferred) or the legacy `users.json` file. The system loads from entities first and falls back to `users.json` if no matching entity is found.
+
+#### Entity-Based Storage (Preferred)
+
+User accounts are stored as **identity entities** in the `identity/` directory, with reusable permission sets defined as **role entities** in the `role/` directory. See Section 10 for full details on the entity-based system.
+
+```
+user-base/
+  identity/                    # User account entities
+    trashman.md
+    arrin.md
+    _public.md                 # Special: fallback for unauthenticated
+  role/                        # Role definition entities
+    admin.md
+    public-reader.md
+```
+
+#### Legacy JSON Storage (Fallback)
+
+For backward compatibility, the system also supports `users.json` in the user base directory.
 
 **File Structure:**
 
@@ -567,9 +586,9 @@ User permissions are stored in `users.json` in the user base directory.
 }
 ```
 
-**Special "public" User:**
+**Special "public" User / `_public` Identity:**
 
-The `public` entry defines default rules for unauthenticated access. Its rules are evaluated as the final fallback when:
+The `public` entry in `users.json` (or `_public.md` identity entity) defines default rules for unauthenticated access. Its rules are evaluated as the final fallback when:
 
 - User is not authenticated, OR
 - Authenticated user's rules don't match, AND
@@ -940,3 +959,408 @@ Available debug namespaces:
 - `permission:resource-metadata` - Metadata loading
 - `permission:rule-engine` - Rule evaluation
 - `redaction:rule-engine` - Redaction rule evaluation
+
+## 10. Entity-Based User and Role System
+
+The entity-based system replaces the monolithic `users.json` with individual markdown entities for users (identities) and reusable permission sets (roles). This approach provides version control, eliminates rule duplication, and enables CLI-based management.
+
+### 10.1 Identity Entities
+
+Identity entities represent user accounts and are stored in the `identity/` directory.
+
+**Directory:** `user-base/identity/`
+
+**Entity Structure:**
+
+```yaml
+---
+title: username
+type: identity
+auth_public_key: 'hex-encoded-public-key'
+username: username
+permissions:
+  create_threads: true
+  global_write: false
+rules: [] # User-specific rules (optional)
+relations:
+  - has_role [[user:role/admin.md]]
+---
+```
+
+**Required Fields:**
+
+| Field             | Type   | Description                                 |
+| ----------------- | ------ | ------------------------------------------- |
+| `auth_public_key` | string | Hex-encoded public key for authentication   |
+| `username`        | string | Unique username identifier                  |
+
+**Optional Fields:**
+
+| Field         | Type   | Description                                          |
+| ------------- | ------ | ---------------------------------------------------- |
+| `permissions` | object | Permission flags (`create_threads`, `global_write`)  |
+| `rules`       | array  | User-specific permission rules (evaluated first)     |
+| `relations`   | array  | Role assignments via `has_role` relation             |
+
+**Special `_public` Identity:**
+
+The `identity/_public.md` file defines the fallback identity for unauthenticated requests. It typically has a `has_role` relation to the `public-reader` role.
+
+```yaml
+---
+title: _public
+type: identity
+username: _public
+relations:
+  - has_role [[user:role/public-reader.md]]
+---
+```
+
+### 10.2 Role Entities
+
+Role entities define reusable permission rule sets that can be assigned to multiple identities.
+
+**Directory:** `user-base/role/`
+
+**Entity Structure:**
+
+```yaml
+---
+title: Role Name
+type: role
+rules:
+  - action: allow
+    pattern: 'user:task/**'
+  - action: deny
+    pattern: 'user:private/**'
+    reason: private content
+---
+```
+
+**Required Fields:**
+
+| Field   | Type  | Description                     |
+| ------- | ----- | ------------------------------- |
+| `rules` | array | Array of permission rule objects |
+
+**Rule Object Structure:**
+
+| Field     | Type   | Required | Description                          |
+| --------- | ------ | -------- | ------------------------------------ |
+| `action`  | string | Yes      | `allow` or `deny`                    |
+| `pattern` | string | Yes      | Glob pattern or `is_owner`           |
+| `reason`  | string | No       | Human-readable reason for deny rules |
+
+**Common Roles:**
+
+| Role             | Purpose                                           |
+| ---------------- | ------------------------------------------------- |
+| `admin.md`       | Full access: `{ action: allow, pattern: **/* }`   |
+| `public-reader.md` | Read access to public resources                 |
+
+### 10.3 Permission Resolution Order
+
+When checking permissions, rules are evaluated in this order:
+
+1. **User-specific rules** from the identity entity's `rules` array
+2. **Role rules** from `has_role` relations, in the order relations appear
+3. **Default deny** if no matching rule is found
+
+```
+┌─────────────────────────────────────┐
+│ Load identity by public_key         │
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│ Evaluate identity.rules (if any)    │
+└─────────────────┬───────────────────┘
+                  │
+         MATCH ───┴─── NO MATCH
+           │            │
+           ▼            ▼
+      Use rule   ┌─────────────────────────────────────┐
+      action     │ Load roles from has_role relations  │
+                 │ (in order)                          │
+                 └─────────────────┬───────────────────┘
+                                   │
+                                   ▼
+                 ┌─────────────────────────────────────┐
+                 │ Evaluate role rules sequentially    │
+                 └─────────────────┬───────────────────┘
+                                   │
+                          MATCH ───┴─── NO MATCH
+                            │            │
+                            ▼            ▼
+                       Use rule        DENY
+                       action        (default)
+```
+
+### 10.4 Identity and Role Loaders
+
+The entity-based system uses dedicated loaders with caching:
+
+**Identity Loader** (`libs-server/users/identity-loader.mjs`)
+
+```javascript
+import {
+  load_identity_by_public_key,
+  load_identity_by_username,
+  load_all_identities,
+  clear_identity_cache
+} from '#libs-server/users/identity-loader.mjs'
+
+// Load by public key
+const identity = await load_identity_by_public_key({ public_key: 'abc123...' })
+
+// Load by username
+const identity = await load_identity_by_username({ username: 'trashman' })
+
+// List all identities
+const identities = await load_all_identities()
+```
+
+**Role Loader** (`libs-server/users/role-loader.mjs`)
+
+```javascript
+import {
+  load_role,
+  load_all_roles,
+  clear_role_cache
+} from '#libs-server/users/role-loader.mjs'
+
+// Load role by base_uri
+const role = await load_role({ base_uri: 'user:role/admin.md' })
+
+// List all roles
+const roles = await load_all_roles()
+```
+
+**Permission Resolver** (`libs-server/users/permission-resolver.mjs`)
+
+```javascript
+import {
+  resolve_user_rules,
+  get_identity_permissions,
+  convert_identity_to_user
+} from '#libs-server/users/permission-resolver.mjs'
+
+// Resolve all rules for an identity (user + role rules)
+const rules = await resolve_user_rules({ identity })
+// Returns: [{ action, pattern, source, source_uri }, ...]
+
+// Get permission flags
+const permissions = get_identity_permissions({ identity })
+// Returns: { create_threads: boolean, global_write: boolean }
+
+// Convert identity to legacy user object format
+const user = await convert_identity_to_user({ identity })
+```
+
+### 10.5 CLI Commands
+
+The following CLI commands are available for managing identities, roles, and permissions:
+
+**Identity Commands:**
+
+```bash
+# List all identity entities
+base identity list
+base identity list --json
+
+# Get identity details
+base identity get <username>
+base identity get trashman --json
+```
+
+**Role Commands:**
+
+```bash
+# List all role entities
+base role list
+base role list --json
+
+# Get role details
+base role get <name>
+base role get admin --json
+```
+
+**Permission Commands:**
+
+```bash
+# Check permission for user on resource
+base permission check <username> <resource>
+base permission check trashman user:task/my-task.md
+```
+
+## 11. Migration from users.json
+
+### 11.1 Overview
+
+The migration script converts the legacy `users.json` file to entity-based storage, creating identity and role entities while preserving all permissions.
+
+### 11.2 Running the Migration
+
+```bash
+# Preview migration (dry run)
+node cli/migrate-users-to-entities.mjs --dry-run
+
+# Execute migration
+node cli/migrate-users-to-entities.mjs
+```
+
+### 11.3 What the Migration Does
+
+1. **Backs up `users.json`** to `users.json.backup`
+2. **Creates role entities:**
+   - `role/admin.md` - For users with global_write or `**/*` pattern
+   - `role/public-reader.md` - Extracted from the `public` user's rules
+3. **Creates identity entities:**
+   - One per user in `identity/<username>.md`
+   - Maps public key, username, permissions
+   - Adds `has_role` relations based on rule analysis
+   - Preserves user-specific rules that don't match common roles
+
+### 11.4 Migration Examples
+
+**Before (`users.json`):**
+
+```json
+{
+  "users": {
+    "abc123...": {
+      "username": "admin",
+      "permissions": {
+        "create_threads": true,
+        "global_write": true,
+        "rules": [{ "action": "allow", "pattern": "**/*" }]
+      }
+    },
+    "public": {
+      "username": "public",
+      "permissions": {
+        "rules": [
+          { "action": "allow", "pattern": "sys:system/**" },
+          { "action": "allow", "pattern": "user:workflow/**" }
+        ]
+      }
+    }
+  }
+}
+```
+
+**After (entities):**
+
+`role/admin.md`:
+```yaml
+---
+title: Admin
+type: role
+rules:
+  - action: allow
+    pattern: '**/*'
+---
+```
+
+`role/public-reader.md`:
+```yaml
+---
+title: Public Reader
+type: role
+rules:
+  - action: allow
+    pattern: 'sys:system/**'
+  - action: allow
+    pattern: 'user:workflow/**'
+---
+```
+
+`identity/admin.md`:
+```yaml
+---
+title: admin
+type: identity
+auth_public_key: 'abc123...'
+username: admin
+permissions:
+  create_threads: true
+  global_write: true
+relations:
+  - has_role [[user:role/admin.md]]
+---
+```
+
+`identity/_public.md`:
+```yaml
+---
+title: _public
+type: identity
+username: _public
+relations:
+  - has_role [[user:role/public-reader.md]]
+---
+```
+
+### 11.5 Post-Migration Verification
+
+After migration, verify the system works correctly:
+
+```bash
+# List migrated identities
+base identity list
+
+# Verify admin user
+base identity get admin
+
+# Test permission resolution
+base permission check admin user:task/test.md
+base permission check _public user:workflow/test.md
+
+# Run permission tests
+yarn test:file tests/integration/migrate-users-to-entities.test.mjs
+```
+
+### 11.6 Rollback
+
+If migration fails or causes issues:
+
+1. Restore backup: `cp users.json.backup users.json`
+2. Remove created entities: `rm -rf identity/ role/`
+3. Clear caches by restarting the API server
+
+The system will automatically fall back to `users.json` when entity files don't exist.
+
+## 12. Entity-Based System Files
+
+### Identity and Role Files
+
+| File                                         | Lines | Description                          |
+| -------------------------------------------- | ----- | ------------------------------------ |
+| `libs-server/users/identity-loader.mjs`      | ~120  | Identity entity loading with caching |
+| `libs-server/users/role-loader.mjs`          | ~100  | Role entity loading with caching     |
+| `libs-server/users/permission-resolver.mjs`  | ~150  | Permission resolution from roles     |
+
+### Schema Files
+
+| File                          | Description                           |
+| ----------------------------- | ------------------------------------- |
+| `system/schema/identity.md`   | JSON Schema for identity entities     |
+| `system/schema/role.md`       | JSON Schema for role entities         |
+
+### CLI Files
+
+| File                                    | Description                        |
+| --------------------------------------- | ---------------------------------- |
+| `cli/base/identity.mjs`                 | Identity list/get commands         |
+| `cli/base/role.mjs`                     | Role list/get commands             |
+| `cli/base/permission.mjs`               | Permission check command           |
+| `cli/migrate-users-to-entities.mjs`     | Migration script                   |
+
+### Test Files
+
+| File                                                              | Description                     |
+| ----------------------------------------------------------------- | ------------------------------- |
+| `tests/unit/libs-server/users/identity-loader.test.mjs`           | Identity loader unit tests      |
+| `tests/unit/libs-server/users/role-loader.test.mjs`               | Role loader unit tests          |
+| `tests/unit/libs-server/users/permission-resolver.test.mjs`       | Permission resolver unit tests  |
+| `tests/integration/migrate-users-to-entities.test.mjs`            | Migration integration tests     |

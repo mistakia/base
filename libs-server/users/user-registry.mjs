@@ -3,6 +3,16 @@ import fs from 'fs/promises'
 import debug from 'debug'
 
 import config from '#config'
+import {
+  load_identity_by_public_key,
+  load_identity_by_username,
+  clear_identity_cache
+} from '#libs-server/users/identity-loader.mjs'
+import {
+  resolve_user_rules,
+  convert_identity_to_user
+} from '#libs-server/users/permission-resolver.mjs'
+import { clear_role_cache } from '#libs-server/users/role-loader.mjs'
 
 const log = debug('user-registry')
 
@@ -123,20 +133,88 @@ class UserRegistry {
     this.cache_timestamp = Date.now()
   }
 
+  /**
+   * Find user by public key
+   * First tries to load from identity entities, falls back to users.json
+   *
+   * @param {string} user_public_key - Public key to look up
+   * @returns {Promise<Object|null>} User object or null
+   */
   async find_by_public_key(user_public_key) {
     if (!user_public_key) {
       return null
     }
 
+    // Special case: 'public' user - use fallback
+    if (user_public_key === 'public') {
+      // Try to load _public.md identity first
+      try {
+        const public_identity = await load_identity_by_username({
+          username: '_public'
+        })
+        if (public_identity) {
+          log('Found _public identity entity')
+          return await convert_identity_to_user({ identity: public_identity })
+        }
+      } catch (error) {
+        log(`Error loading _public identity: ${error.message}`)
+      }
+
+      // Fall back to users.json
+      const users = await this.load_users()
+      return users.public || null
+    }
+
+    // Try entity-based loading first
+    try {
+      const identity = await load_identity_by_public_key({
+        public_key: user_public_key
+      })
+      if (identity) {
+        log(`Found identity entity for public key: ${user_public_key.slice(0, 8)}...`)
+        return await convert_identity_to_user({ identity })
+      }
+    } catch (error) {
+      log(`Error loading identity by public key: ${error.message}`)
+    }
+
+    // Fall back to users.json
+    log(`Falling back to users.json for public key: ${user_public_key.slice(0, 8)}...`)
     const users = await this.load_users()
     return users[user_public_key] || null
   }
 
+  /**
+   * Find user by username
+   * First tries to load from identity entities, falls back to users.json
+   *
+   * @param {string} username - Username to look up
+   * @returns {Promise<Object|null>} User object with user_public_key or null
+   */
   async find_by_username(username) {
     if (!username) {
       return null
     }
 
+    // Try entity-based loading first
+    try {
+      const identity = await load_identity_by_username({ username })
+      if (identity) {
+        log(`Found identity entity for username: ${username}`)
+        const user = await convert_identity_to_user({ identity })
+        if (user) {
+          return {
+            user_public_key: identity.auth_public_key,
+            ...user
+          }
+        }
+      }
+    } catch (error) {
+      log(`Error loading identity by username: ${error.message}`)
+    }
+
+    // Fall back to users.json
+    log(`Falling back to users.json for username: ${username}`)
     const users = await this.load_users()
     for (const [user_public_key, user] of Object.entries(users)) {
       if (user.username === username) {
@@ -146,11 +224,78 @@ class UserRegistry {
     return null
   }
 
+  /**
+   * Get resolved permission rules for a user
+   * Loads identity entity and resolves rules from identity and roles
+   *
+   * @param {Object} params - Parameters
+   * @param {string} params.public_key - User's public key
+   * @returns {Promise<Array>} Array of permission rules
+   */
+  async get_user_rules({ public_key }) {
+    if (!public_key) {
+      return []
+    }
+
+    // Special case: 'public' user
+    if (public_key === 'public') {
+      try {
+        const public_identity = await load_identity_by_username({
+          username: '_public'
+        })
+        if (public_identity) {
+          return await resolve_user_rules({ identity: public_identity })
+        }
+      } catch (error) {
+        log(`Error loading _public identity rules: ${error.message}`)
+      }
+
+      // Fall back to users.json
+      const users = await this.load_users()
+      const public_user = users.public
+      if (public_user?.permissions?.rules) {
+        return public_user.permissions.rules
+      }
+      return []
+    }
+
+    // Try entity-based loading first
+    try {
+      const identity = await load_identity_by_public_key({ public_key })
+      if (identity) {
+        return await resolve_user_rules({ identity })
+      }
+    } catch (error) {
+      log(`Error loading identity rules: ${error.message}`)
+    }
+
+    // Fall back to users.json
+    const users = await this.load_users()
+    const user = users[public_key]
+    if (user?.permissions?.rules) {
+      return user.permissions.rules
+    }
+    return []
+  }
+
   async user_has_access(user_public_key) {
     if (!user_public_key) {
       return false
     }
 
+    // Try entity-based loading first
+    try {
+      const identity = await load_identity_by_public_key({
+        public_key: user_public_key
+      })
+      if (identity) {
+        return true
+      }
+    } catch (error) {
+      log(`Error checking identity access: ${error.message}`)
+    }
+
+    // Fall back to users.json
     const users = await this.load_users()
     return user_public_key in users
   }
@@ -159,6 +304,8 @@ class UserRegistry {
   _clear_cache() {
     this.cache = null
     this.cache_timestamp = null
+    clear_identity_cache()
+    clear_role_cache()
   }
 }
 
