@@ -201,3 +201,232 @@ export function output_results(
     }
   }
 }
+
+/**
+ * Truncate text to a max length with ellipsis
+ *
+ * @param {string} text - Text to truncate
+ * @param {number} max_length - Maximum length
+ * @returns {string} Truncated text
+ */
+function truncate(text, max_length) {
+  if (!text || text.length <= max_length) return text || ''
+  return text.slice(0, max_length - 3) + '...'
+}
+
+/**
+ * Extract text content from message content array or string
+ *
+ * @param {string|Array} content - Message content
+ * @returns {string} Extracted text
+ */
+function extract_text_content(content) {
+  if (!content) return ''
+  if (typeof content === 'string') return content
+
+  if (Array.isArray(content)) {
+    const text_parts = content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+    return text_parts.join('\n')
+  }
+
+  return ''
+}
+
+/**
+ * Format ISO timestamp to readable date/time
+ *
+ * @param {string} timestamp - ISO timestamp
+ * @returns {string} Formatted date/time
+ */
+function format_timestamp(timestamp) {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
+}
+
+/**
+ * Format thread metadata for display
+ *
+ * @param {Object} thread - Thread object
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.verbose - Multi-line output
+ * @returns {string} Formatted output
+ */
+export function format_thread(thread, { verbose = false } = {}) {
+  if (verbose) {
+    const lines = [thread.thread_id]
+    if (thread.title) lines.push(`  Title: ${thread.title}`)
+    if (thread.thread_state) lines.push(`  State: ${thread.thread_state}`)
+    if (thread.created_at) {
+      lines.push(`  Created: ${format_timestamp(thread.created_at)}`)
+    }
+    if (thread.updated_at) {
+      lines.push(`  Updated: ${format_timestamp(thread.updated_at)}`)
+    }
+    if (thread.message_count !== undefined) {
+      lines.push(`  Messages: ${thread.message_count}`)
+    }
+    if (thread.timeline && thread.timeline.length > 0) {
+      lines.push(`  Timeline entries: ${thread.timeline.length}`)
+    }
+    if (thread.relations && thread.relations.length > 0) {
+      lines.push(`  Relations: ${thread.relations.length}`)
+    }
+    return lines.join('\n')
+  }
+
+  // Default tab-separated: thread_id, state, title
+  return [
+    thread.thread_id || '',
+    thread.thread_state || '',
+    thread.title || ''
+  ].join('\t')
+}
+
+/**
+ * Format thread work context (status) for display
+ *
+ * @param {Object} status - Status data with messages
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.verbose - Multi-line output
+ * @param {number} options.max_length - Max content length for truncation
+ * @returns {string} Formatted output
+ */
+export function format_thread_status(
+  status,
+  { verbose = false, max_length = 500 } = {}
+) {
+  const lines = []
+
+  // Header
+  lines.push(`Thread: ${status.thread_id}`)
+  if (status.title) lines.push(`Title: ${status.title}`)
+  if (status.thread_state) lines.push(`State: ${status.thread_state}`)
+  lines.push('')
+
+  // Initial Request
+  if (status.first_user_message) {
+    const content = extract_text_content(status.first_user_message.content)
+    const timestamp = format_timestamp(status.first_user_message.timestamp)
+    lines.push(`Initial Request${timestamp ? ` (${timestamp})` : ''}:`)
+    lines.push(`  ${truncate(content, max_length).replace(/\n/g, '\n  ')}`)
+    lines.push('')
+  }
+
+  // Last User Message (if different from first)
+  if (status.last_user_message) {
+    const content = extract_text_content(status.last_user_message.content)
+    const timestamp = format_timestamp(status.last_user_message.timestamp)
+    lines.push(`Last User Message${timestamp ? ` (${timestamp})` : ''}:`)
+    lines.push(`  ${truncate(content, max_length).replace(/\n/g, '\n  ')}`)
+    lines.push('')
+  }
+
+  // Last Assistant Message
+  if (status.last_assistant_message) {
+    const content = extract_text_content(status.last_assistant_message.content)
+    const timestamp = format_timestamp(status.last_assistant_message.timestamp)
+    lines.push(`Last Assistant Message${timestamp ? ` (${timestamp})` : ''}:`)
+    lines.push(`  ${truncate(content, max_length).replace(/\n/g, '\n  ')}`)
+    lines.push('')
+  }
+
+  // Relations (if included)
+  if (status.relations && status.relations.length > 0) {
+    lines.push(`Relations (${status.relations.length}):`)
+    for (const rel of status.relations.slice(0, verbose ? 20 : 5)) {
+      lines.push(`  ${rel.relation_type || ''} ${rel.target_uri || ''}`)
+    }
+    if (!verbose && status.relations.length > 5) {
+      lines.push(`  ... and ${status.relations.length - 5} more`)
+    }
+    lines.push('')
+  }
+
+  // Tool counts (if included)
+  if (status.tool_counts && Object.keys(status.tool_counts).length > 0) {
+    lines.push('Tool Usage:')
+    const sorted = Object.entries(status.tool_counts).sort((a, b) => b[1] - a[1])
+    for (const [tool, count] of sorted.slice(0, verbose ? 20 : 10)) {
+      lines.push(`  ${tool}: ${count}`)
+    }
+    if (!verbose && sorted.length > 10) {
+      lines.push(`  ... and ${sorted.length - 10} more`)
+    }
+  }
+
+  return lines.join('\n').trimEnd()
+}
+
+/**
+ * Format timeline entry for display
+ *
+ * @param {Object} entry - Timeline entry
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.verbose - Multi-line output
+ * @returns {string} Formatted output
+ */
+export function format_timeline_entry(entry, { verbose = false } = {}) {
+  const timestamp = format_timestamp(entry.timestamp)
+  const type = entry.type || 'unknown'
+
+  if (verbose) {
+    const lines = [timestamp]
+
+    if (type === 'message') {
+      lines.push(`  Type: message`)
+      lines.push(`  Role: ${entry.role || 'unknown'}`)
+      const content = extract_text_content(entry.content)
+      if (content) {
+        lines.push(`  Content:`)
+        const content_lines = content.split('\n')
+        const display_lines = content_lines.slice(0, 10)
+        for (const line of display_lines) {
+          lines.push(`    ${line}`)
+        }
+        if (content_lines.length > 10) {
+          lines.push(`    ... (truncated)`)
+        }
+      }
+    } else if (type === 'tool_call') {
+      lines.push(`  Type: tool_call`)
+      lines.push(`  Tool: ${entry.tool_name || 'unknown'}`)
+      if (entry.tool_call_id) {
+        lines.push(`  Call ID: ${entry.tool_call_id}`)
+      }
+    } else if (type === 'tool_result') {
+      lines.push(`  Type: tool_result`)
+      if (entry.tool_call_id) {
+        lines.push(`  Call ID: ${entry.tool_call_id}`)
+      }
+      if (entry.is_error) {
+        lines.push(`  Error: true`)
+      }
+    } else if (type === 'thinking') {
+      lines.push(`  Type: thinking`)
+      const content = entry.thinking || entry.content || ''
+      if (content) {
+        lines.push(`  Content: ${truncate(content, 200)}`)
+      }
+    } else {
+      lines.push(`  Type: ${type}`)
+    }
+
+    return lines.join('\n')
+  }
+
+  // Default: timestamp, type/role, truncated content
+  let type_role = type
+  if (type === 'message' && entry.role) {
+    type_role = `message:${entry.role}`
+  } else if (type === 'tool_call' && entry.tool_name) {
+    type_role = `tool:${entry.tool_name}`
+  }
+
+  const content = extract_text_content(entry.content)
+  const truncated = truncate(content, 80).replace(/\n/g, ' ')
+
+  return [timestamp, type_role, truncated].join('\t')
+}
