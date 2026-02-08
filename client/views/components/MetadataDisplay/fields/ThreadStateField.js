@@ -1,10 +1,13 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useDispatch } from 'react-redux'
 
 import { COLORS } from '@theme/colors.js'
-import { dialog_actions } from '@core/dialog/actions'
+import { threads_actions } from '@core/threads/actions.js'
+import { use_discard_confirm } from '@views/hooks/use-discard-confirm.js'
+
+import '@views/components/SessionsPanel/HomeSessionsPanel.styl'
 
 const ThreadStateField = ({
   thread_state,
@@ -14,16 +17,78 @@ const ThreadStateField = ({
 }) => {
   const dispatch = useDispatch()
 
-  const handle_thread_state_click = () => {
-    if (!user_owns_thread) return
-
+  // Abandon callback (two-click confirm)
+  const abandoned_callback = useCallback(() => {
     dispatch(
-      dialog_actions.show({
-        id: 'THREAD_STATE_CHANGE',
-        title:
-          thread_state === 'archived' ? 'Reactivate Thread' : 'Archive Thread',
-        data: { thread_id, current_state: thread_state }
+      threads_actions.set_thread_archive_state({
+        thread_id,
+        archive_reason: 'user_abandoned'
       })
+    )
+  }, [dispatch, thread_id])
+
+  const { is_confirming: is_abandoned_confirming, handle_discard_click } =
+    use_discard_confirm({ on_discard: abandoned_callback })
+
+  const handle_abandoned_click = (event) => {
+    event.stopPropagation()
+    handle_discard_click()
+  }
+
+  // Archive (direct action)
+  const handle_archive_click = (event) => {
+    event.stopPropagation()
+    dispatch(
+      threads_actions.set_thread_archive_state({
+        thread_id,
+        archive_reason: 'completed'
+      })
+    )
+  }
+
+  // Unarchive (reactivate)
+  const handle_unarchive_click = (event) => {
+    event.stopPropagation()
+    dispatch(
+      threads_actions.set_thread_archive_state({
+        thread_id,
+        archive_reason: null
+      })
+    )
+  }
+
+  const render_actions = () => {
+    if (!user_owns_thread) return null
+
+    if (thread_state === 'archived') {
+      return (
+        <div className="session-card__actions">
+          <button
+            className="session-card__action-button"
+            onClick={handle_unarchive_click}>
+            unarchive
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="session-card__actions">
+        <button
+          className={`session-card__action-button session-card__action-button--danger ${
+            is_abandoned_confirming
+              ? 'session-card__action-button--confirming'
+              : ''
+          }`}
+          onClick={handle_abandoned_click}>
+          {is_abandoned_confirming ? 'confirm' : 'abandon'}
+        </button>
+        <button
+          className="session-card__action-button"
+          onClick={handle_archive_click}>
+          archive
+        </button>
+      </div>
     )
   }
 
@@ -34,19 +99,10 @@ const ThreadStateField = ({
         borderBottom: 'none',
         position: 'relative',
         minHeight: '60px',
-        cursor: user_owns_thread ? 'pointer' : 'default',
-        '&:hover': user_owns_thread
-          ? {
-              backgroundColor: COLORS.surface_hover
-            }
-          : {},
         opacity: user_owns_thread ? 1 : 0.6
       }}
-      onClick={handle_thread_state_click}
       title={
-        user_owns_thread
-          ? 'Click to change thread state'
-          : 'You can only modify threads that you own'
+        !user_owns_thread ? 'You can only modify threads that you own' : ''
       }>
       <Box
         sx={{
@@ -69,9 +125,13 @@ const ThreadStateField = ({
           fontSize: '14px',
           color: COLORS.text,
           fontWeight: 400,
-          wordBreak: 'break-all'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
         }}>
-        {thread_state}
+        <span>{thread_state}</span>
+        {render_actions()}
       </Box>
     </Box>
   )
