@@ -260,11 +260,6 @@ cat /tmp/claude-metadata-processed.log            # View processed
 
 # Analyze thread relations (entity references from timeline)
 node cli/analyze-thread-relations.mjs --thread-id <uuid>
-
-# Sync threads to remote storage
-node cli/rsync-threads.mjs sync <thread-id>
-node cli/rsync-threads.mjs sync-all
-node cli/rsync-threads.mjs status
 ```
 
 ### CLI Command Queue
