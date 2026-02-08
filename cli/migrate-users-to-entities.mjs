@@ -250,7 +250,7 @@ async function create_identity_entity({
     created_at: user.created_at || now,
     updated_at: now,
     user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
-    auth_public_key: public_key === 'public' ? null : public_key,
+    auth_public_key: public_key,
     username,
     permissions: Object.keys(permissions).length > 0 ? permissions : undefined,
     rules: rules.length > 0 ? rules : undefined,
