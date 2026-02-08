@@ -18,6 +18,33 @@ import { build_timeline_from_session } from './build-timeline-entries.mjs'
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
 
+/**
+ * Create a stable string representation for comparison by sorting keys recursively
+ * and excluding timestamp fields that shouldn't trigger updates
+ */
+const stable_stringify_for_comparison = (
+  obj,
+  exclude_keys = ['updated_at', 'created_at']
+) => {
+  const sort_object = (o) => {
+    if (o === null || typeof o !== 'object') {
+      return o
+    }
+    if (Array.isArray(o)) {
+      return o.map(sort_object)
+    }
+    const sorted = {}
+    Object.keys(o)
+      .filter((key) => !exclude_keys.includes(key))
+      .sort()
+      .forEach((key) => {
+        sorted[key] = sort_object(o[key])
+      })
+    return sorted
+  }
+  return JSON.stringify(sort_object(obj))
+}
+
 export const create_thread_from_session = async ({
   normalized_session,
   user_public_key = config.user_public_key,
@@ -345,20 +372,9 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       normalized_session.metadata || {}
     )
 
-    // Update relevant fields
-    const now = new Date().toISOString()
-
-    // Use timeline end_time for updated_at if available, otherwise use current time
-    const session_metadata = normalized_session.metadata || {}
-    const timeline_updated_at = session_metadata.end_time
-      ? session_metadata.end_time instanceof Date
-        ? session_metadata.end_time.toISOString()
-        : session_metadata.end_time
-      : now
-
+    // Build updated metadata WITHOUT timestamps (added later if needed)
     const updated_metadata = {
       ...existing_metadata,
-      updated_at: timeline_updated_at,
       message_count: counts.message_count,
       tool_call_count: counts.tool_call_count,
       external_session: {
@@ -376,12 +392,22 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       })
     }
 
-    // Check if metadata actually changed before writing
-    const metadata_changed =
-      JSON.stringify(existing_metadata) !== JSON.stringify(updated_metadata)
+    // Compare using stable stringify that excludes timestamps and handles key ordering
+    const existing_stable = stable_stringify_for_comparison(existing_metadata)
+    const updated_stable = stable_stringify_for_comparison(updated_metadata)
+    const metadata_changed = existing_stable !== updated_stable
 
     if (metadata_changed) {
-      // Write updated metadata only if it changed
+      // Only update updated_at when meaningful changes exist
+      const session_metadata = normalized_session.metadata || {}
+      const timeline_updated_at = session_metadata.end_time
+        ? session_metadata.end_time instanceof Date
+          ? session_metadata.end_time.toISOString()
+          : session_metadata.end_time
+        : new Date().toISOString()
+
+      updated_metadata.updated_at = timeline_updated_at
+
       await fs.writeFile(
         metadata_path,
         JSON.stringify(updated_metadata, null, 2)
