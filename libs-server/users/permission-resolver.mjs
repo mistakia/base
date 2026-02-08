@@ -1,0 +1,180 @@
+import debug from 'debug'
+
+import { load_role } from '#libs-server/users/role-loader.mjs'
+
+const log = debug('permission-resolver')
+
+/**
+ * Parse relation string to extract relation type and target base_uri
+ * Expected format: "relation_type [[base_uri]] (optional context)"
+ *
+ * @param {string} relation_str - Relation string from frontmatter
+ * @returns {Object|null} Parsed relation or null if invalid
+ */
+function parse_relation(relation_str) {
+  if (!relation_str || typeof relation_str !== 'string') {
+    return null
+  }
+
+  const match = relation_str.match(/^(\S+)\s+\[\[(.*?)\]\](?:\s+\((.*?)\))?$/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    relation_type: match[1],
+    base_uri: match[2],
+    context: match[3] || null
+  }
+}
+
+/**
+ * Extract has_role relations from identity in order
+ * @param {Object} identity - Identity entity
+ * @returns {Array<string>} Array of role base_uris in relation order
+ */
+function get_role_base_uris_from_identity(identity) {
+  if (!identity?.relations || !Array.isArray(identity.relations)) {
+    return []
+  }
+
+  const role_base_uris = []
+
+  for (const relation_str of identity.relations) {
+    const parsed = parse_relation(relation_str)
+    if (parsed && parsed.relation_type === 'has_role') {
+      role_base_uris.push(parsed.base_uri)
+    }
+  }
+
+  return role_base_uris
+}
+
+/**
+ * Validate that a rule object has the required structure
+ * @param {*} rule - Rule to validate
+ * @returns {boolean} True if rule is valid
+ */
+function is_valid_rule(rule) {
+  return rule && typeof rule === 'object' && typeof rule.action === 'string'
+}
+
+/**
+ * Resolve all permission rules for an identity
+ * Rules are merged in priority order:
+ * 1. User-specific rules from identity entity
+ * 2. Role rules from has_role relations in order
+ *
+ * @param {Object} params - Parameters
+ * @param {Object} params.identity - Identity entity with rules and relations
+ * @returns {Promise<Array>} Flat array of permission rules compatible with rule-engine
+ */
+export async function resolve_user_rules({ identity }) {
+  if (!identity) {
+    log('No identity provided, returning empty rules')
+    return []
+  }
+
+  const all_rules = []
+
+  // Step 1: Add user-specific rules first (highest priority)
+  if (identity.rules && Array.isArray(identity.rules)) {
+    log(`Adding ${identity.rules.length} user-specific rules for ${identity.username}`)
+    for (const rule of identity.rules) {
+      if (is_valid_rule(rule)) {
+        all_rules.push({
+          ...rule,
+          source: 'identity',
+          source_uri: identity.base_uri
+        })
+      }
+    }
+  }
+
+  // Step 2: Load all roles in parallel, then add rules in order
+  const role_base_uris = get_role_base_uris_from_identity(identity)
+  log(`Found ${role_base_uris.length} role relations for ${identity.username}`)
+
+  if (role_base_uris.length > 0) {
+    // Load all roles in parallel
+    const role_results = await Promise.all(
+      role_base_uris.map(async (base_uri) => {
+        try {
+          return await load_role({ base_uri })
+        } catch (error) {
+          log(`Error loading role ${base_uri}: ${error.message}`)
+          return null
+        }
+      })
+    )
+
+    // Add rules from each role in order (preserving relation order)
+    for (let i = 0; i < role_base_uris.length; i++) {
+      const role = role_results[i]
+      const role_base_uri = role_base_uris[i]
+
+      if (role && role.rules && Array.isArray(role.rules)) {
+        log(`Adding ${role.rules.length} rules from role ${role_base_uri}`)
+        for (const rule of role.rules) {
+          if (is_valid_rule(rule)) {
+            all_rules.push({
+              ...rule,
+              source: 'role',
+              source_uri: role_base_uri
+            })
+          }
+        }
+      } else if (!role) {
+        log(`Role ${role_base_uri} not found`)
+      }
+    }
+  }
+
+  log(`Resolved ${all_rules.length} total rules for ${identity.username}`)
+  return all_rules
+}
+
+/**
+ * Get permission flags from identity
+ * @param {Object} params - Parameters
+ * @param {Object} params.identity - Identity entity
+ * @returns {Object} Permission flags
+ */
+export function get_identity_permissions({ identity }) {
+  const permissions = identity?.permissions || {}
+
+  return {
+    create_threads: permissions.create_threads === true,
+    global_write: permissions.global_write === true
+  }
+}
+
+/**
+ * Convert identity entity to user object compatible with existing system
+ * @param {Object} params - Parameters
+ * @param {Object} params.identity - Identity entity
+ * @returns {Promise<Object>} User object with permissions and rules
+ */
+export async function convert_identity_to_user({ identity }) {
+  if (!identity) {
+    return null
+  }
+
+  const rules = await resolve_user_rules({ identity })
+  const permission_flags = get_identity_permissions({ identity })
+
+  return {
+    username: identity.username,
+    created_at: identity.created_at,
+    permissions: {
+      ...permission_flags,
+      rules
+    }
+  }
+}
+
+export default {
+  resolve_user_rules,
+  get_identity_permissions,
+  convert_identity_to_user
+}
