@@ -212,8 +212,8 @@ async function create_identity_entity({
   is_admin,
   dry_run
 }) {
-  // Skip the 'public' pseudo-user - it becomes _public identity
-  const username = public_key === 'public' ? '_public' : user.username
+  // The 'public' pseudo-user keeps its name as the public identity
+  const username = public_key === 'public' ? 'public' : user.username
   const filename = `${username}.md`
   const identity_path = path.join(identity_dir, filename)
   const now = new Date().toISOString()

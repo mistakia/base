@@ -147,17 +147,17 @@ class UserRegistry {
 
     // Special case: 'public' user - use fallback
     if (user_public_key === 'public') {
-      // Try to load _public.md identity first
+      // Try to load public.md identity first
       try {
         const public_identity = await load_identity_by_username({
-          username: '_public'
+          username: 'public'
         })
         if (public_identity) {
-          log('Found _public identity entity')
+          log('Found public identity entity')
           return await convert_identity_to_user({ identity: public_identity })
         }
       } catch (error) {
-        log(`Error loading _public identity: ${error.message}`)
+        log(`Error loading public identity: ${error.message}`)
       }
 
       // Fall back to users.json
@@ -241,13 +241,13 @@ class UserRegistry {
     if (public_key === 'public') {
       try {
         const public_identity = await load_identity_by_username({
-          username: '_public'
+          username: 'public'
         })
         if (public_identity) {
           return await resolve_user_rules({ identity: public_identity })
         }
       } catch (error) {
-        log(`Error loading _public identity rules: ${error.message}`)
+        log(`Error loading public identity rules: ${error.message}`)
       }
 
       // Fall back to users.json

@@ -132,12 +132,12 @@ describe('migrate-users-to-entities', function () {
       expect(reader_role.entity_properties.rules).to.have.lengthOf(2)
 
       // Verify _public identity was created
-      const public_identity_path = path.join(temp_dir, 'identity', '_public.md')
+      const public_identity_path = path.join(temp_dir, 'identity', 'public.md')
       const public_identity = await read_entity_from_filesystem({
         absolute_path: public_identity_path
       })
       expect(public_identity.success).to.be.true
-      expect(public_identity.entity_properties.username).to.equal('_public')
+      expect(public_identity.entity_properties.username).to.equal('public')
       expect(public_identity.entity_properties.relations).to.include(
         'has_role [[user:role/public-reader.md]]'
       )
