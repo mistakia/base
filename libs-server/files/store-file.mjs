@@ -82,18 +82,23 @@ export async function store_file({
     }
   }
 
-  // Resolve target path with collision handling
-  const resolved_path = await resolve_target_path({
+  // Resolve target path with collision handling and CID-based deduplication
+  const { path: resolved_path, existing_match } = await resolve_target_path({
     user_base_directory,
-    target_path: normalized_path
+    target_path: normalized_path,
+    cid
   })
 
   const absolute_path = join(user_base_directory, resolved_path)
 
-  // Ensure directory exists and write file
-  await ensure_directory(dirname(absolute_path))
-  await fs.writeFile(absolute_path, buffer)
-  log('File written to: %s', absolute_path)
+  // Only write file if it doesn't already exist with matching CID
+  if (!existing_match) {
+    await ensure_directory(dirname(absolute_path))
+    await fs.writeFile(absolute_path, buffer)
+    log('File written to: %s', absolute_path)
+  } else {
+    log('File already exists with matching CID: %s', absolute_path)
+  }
 
   // Index in database
   if (!skip_index) {
@@ -121,23 +126,27 @@ export async function store_file({
     base_uri,
     size: buffer.length,
     custom_hash: custom_hash || null,
-    already_existed: false
+    already_existed: existing_match
   }
 }
 
 /**
- * Resolve target path with collision handling
+ * Resolve target path with collision handling and CID-based deduplication
  *
- * If a file already exists at the target path, appends -1, -2, etc. before extension.
+ * If a file already exists at the target path:
+ * - If it has the same CID, return it (idempotent - no duplicate created)
+ * - If it has a different CID, append -1, -2, etc. before extension
  *
  * @param {Object} params - Parameters
  * @param {string} params.user_base_directory - User base directory path
  * @param {string} params.target_path - Requested target path
- * @returns {Promise<string>} Resolved path (relative to user-base)
+ * @param {string} params.cid - CID of the content being stored
+ * @returns {Promise<{path: string, existing_match: boolean}>} Resolved path and whether it matched existing
  */
 async function resolve_target_path({
   user_base_directory,
-  target_path
+  target_path,
+  cid
 }) {
   const absolute_path = join(user_base_directory, target_path)
 
@@ -145,22 +154,48 @@ async function resolve_target_path({
   const exists = await file_exists_in_filesystem({ absolute_path })
 
   if (!exists) {
-    return target_path
+    return { path: target_path, existing_match: false }
   }
 
-  // File exists, need to add suffix
+  // File exists - check if it has the same CID (idempotent case)
+  try {
+    const existing_content = await fs.readFile(absolute_path)
+    const existing_cid = await create_file_cid(existing_content)
+
+    if (existing_cid === cid) {
+      log('Existing file at %s has matching CID, reusing', target_path)
+      return { path: target_path, existing_match: true }
+    }
+  } catch (err) {
+    log('Could not read existing file for CID check: %s', err.message)
+  }
+
+  // File exists with different CID, need to add suffix
   const dir = dirname(target_path)
   const ext = extname(target_path)
   const base = basename(target_path, ext)
 
   let counter = 1
-  let new_path = target_path
+  let new_path = join(dir, `${base}-${counter}${ext}`)
 
   while (await file_exists_in_filesystem({
     absolute_path: join(user_base_directory, new_path)
   })) {
-    new_path = join(dir, `${base}-${counter}${ext}`)
+    // Also check if this suffixed file has matching CID
+    try {
+      const suffixed_content = await fs.readFile(join(user_base_directory, new_path))
+      const suffixed_cid = await create_file_cid(suffixed_content)
+
+      if (suffixed_cid === cid) {
+        log('Existing file at %s has matching CID, reusing', new_path)
+        return { path: new_path, existing_match: true }
+      }
+    } catch (err) {
+      // Ignore read errors, continue checking
+    }
+
     counter++
+    new_path = join(dir, `${base}-${counter}${ext}`)
 
     // Safety limit to prevent infinite loops
     if (counter > 1000) {
@@ -169,5 +204,5 @@ async function resolve_target_path({
   }
 
   log('Resolved collision: %s -> %s', target_path, new_path)
-  return new_path
+  return { path: new_path, existing_match: false }
 }
