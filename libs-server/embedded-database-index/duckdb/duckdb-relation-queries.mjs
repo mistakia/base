@@ -124,10 +124,10 @@ export async function find_entities_relating_to({
 
   // Use UNION to query both entities and threads tables
   const query = `
-    SELECT base_uri, entity_id, type, title, updated_at, relation_type, context
+    SELECT base_uri, entity_id, type, title, updated_at, relation_type, context, thread_state
     FROM (
       SELECT e.base_uri, e.entity_id, e.type, e.title, e.updated_at,
-             er.relation_type, er.context
+             er.relation_type, er.context, NULL as thread_state
       FROM entity_relations er
       JOIN entities e ON er.source_base_uri = e.base_uri
       WHERE ${er_where_clauses.join(' AND ')} ${entity_type_filter}
@@ -140,7 +140,8 @@ export async function find_entities_relating_to({
              t.title,
              t.updated_at,
              er.relation_type,
-             er.context
+             er.context,
+             t.thread_state
       FROM entity_relations er
       JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
       WHERE ${er_where_clauses.join(' AND ')} ${thread_type_filter}
@@ -160,7 +161,8 @@ export async function find_entities_relating_to({
       title: row.title,
       updated_at: row.updated_at,
       relation_type: row.relation_type,
-      context: row.context
+      context: row.context,
+      thread_state: row.thread_state
     }))
   } catch (error) {
     log('Error finding entities relating to: %s', error.message)
