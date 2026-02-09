@@ -60,7 +60,8 @@ export const load_schedules = async ({ directory }) => {
           schedule_type: entity_properties.schedule_type,
           schedule: entity_properties.schedule,
           timezone: entity_properties.timezone,
-          last_triggered_at: entity_properties.last_triggered_at
+          last_triggered_at: entity_properties.last_triggered_at,
+          created_at: entity_properties.created_at
         })
       }
 
