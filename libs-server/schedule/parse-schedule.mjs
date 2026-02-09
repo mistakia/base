@@ -112,7 +112,9 @@ const parse_every_interval = ({ schedule, last_triggered_at, created_at }) => {
   }
 
   if (isNaN(base_time.getTime())) {
-    log(`Invalid base time: last_triggered_at=${last_triggered_at}, created_at=${created_at}`)
+    log(
+      `Invalid base time: last_triggered_at=${last_triggered_at}, created_at=${created_at}`
+    )
     return null
   }
 
