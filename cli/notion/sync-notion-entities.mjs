@@ -17,8 +17,8 @@ import { sync_all_notion_content_to_entities } from '#libs-server/integrations/n
 
 const log = debug('sync-notion-entities')
 
-// Enable debug logging for Notion integration
-debug.enable('sync-notion-entities,integrations:notion*')
+// Enable debug logging for Notion integration and DuckDB
+debug.enable('sync-notion-entities,integrations:notion*,embedded-index*,database:*,files:*')
 
 //
 // CLI configuration (placed at top to double as documentation)
@@ -489,6 +489,6 @@ const main = async () => {
 }
 
 if (isMain(import.meta.url)) {
-  debug.enable('sync-notion-entities,integrations:notion*,sync:*')
+  debug.enable('sync-notion-entities,integrations:notion*,sync:*,embedded-index*,database:*,files:*')
   main()
 }

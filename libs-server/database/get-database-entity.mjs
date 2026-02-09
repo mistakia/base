@@ -33,14 +33,16 @@ export async function get_database_entity({ name, base_uri }) {
   // If base_uri provided, read directly from filesystem
   if (base_uri) {
     try {
-      const resolved = await resolve_base_uri({ base_uri })
-      if (!resolved.absolute_path) {
+      const absolute_path = resolve_base_uri(base_uri)
+      if (!absolute_path) {
         log('Could not resolve base_uri: %s', base_uri)
         return null
       }
-      const entity = await read_entity_from_filesystem({
-        absolute_path: resolved.absolute_path
+      const result = await read_entity_from_filesystem({
+        absolute_path
       })
+      // read_entity_from_filesystem returns { success, entity_properties, entity_content }
+      const entity = result?.entity_properties
       if (entity && entity.type === 'database') {
         return entity
       }
@@ -75,16 +77,17 @@ export async function get_database_entity({ name, base_uri }) {
     }
 
     const { base_uri: found_uri } = results[0]
-    const resolved = await resolve_base_uri({ base_uri: found_uri })
-    if (!resolved.absolute_path) {
+    const absolute_path = resolve_base_uri(found_uri)
+    if (!absolute_path) {
       log('Could not resolve found base_uri: %s', found_uri)
       return null
     }
 
-    const entity = await read_entity_from_filesystem({
-      absolute_path: resolved.absolute_path
+    const result = await read_entity_from_filesystem({
+      absolute_path
     })
-    return entity
+    // read_entity_from_filesystem returns { success, entity_properties, entity_content }
+    return result?.entity_properties
   } catch (error) {
     log('Error searching for database entity: %s', error.message)
     throw error
