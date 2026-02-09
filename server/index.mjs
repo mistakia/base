@@ -18,6 +18,12 @@ import config from '#config'
 import routes from '#server/routes/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { create_render_html_middleware } from '#server/middleware/render-html.mjs'
+import {
+  create_auth_limiter,
+  create_search_limiter,
+  create_write_limiter,
+  create_read_limiter
+} from '#server/middleware/rate-limiter.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
@@ -55,10 +61,24 @@ api.use(
 
 // Add security headers for SPA
 api.use((req, res, next) => {
-  // Security headers
+  // Security headers - defense in depth
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('X-XSS-Protection', '1; mode=block')
+
+  // Content Security Policy - restrict resource loading
+  // Note: 'unsafe-inline' and 'unsafe-eval' may be needed for some SPAs
+  // Adjust based on actual application requirements
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:"
+  )
+
+  // HSTS - enforce HTTPS (1 year)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+
+  // Referrer Policy - limit referrer information
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
 
   // SPA-specific headers
   res.setHeader('Cache-Control', 'public, max-age=0')
@@ -108,19 +128,32 @@ api.use(
 // JWT parsing middleware for all routes - parses tokens but doesn't block
 api.use(parse_jwt_token())
 
-// Register other API routes
-api.use('/api/threads', routes.threads)
-api.use('/api/users', routes.users)
-api.use('/api/tasks', routes.tasks)
-api.use('/api/tags', routes.tags)
-api.use('/api/github', routes.github)
-api.use('/api/models', routes.models)
-api.use('/api/filesystem', routes.filesystem)
-api.use('/api/active-sessions', routes.active_sessions)
-api.use('/api/activity', routes.activity)
-api.use('/api/entities', routes.entities)
-api.use('/api/git', routes.git)
-api.use('/api/search', routes.search)
+// Create rate limiters
+const auth_limiter = create_auth_limiter()
+const search_limiter = create_search_limiter()
+const write_limiter = create_write_limiter()
+const read_limiter = create_read_limiter()
+
+// Register API routes with appropriate rate limiters
+// Auth endpoints - strictest limits (10 req/min)
+api.use('/api/users', auth_limiter, routes.users)
+
+// Search endpoints - moderate limits (30 req/min)
+api.use('/api/search', search_limiter, routes.search)
+
+// Write-heavy endpoints - write limits (60 req/min)
+api.use('/api/threads', write_limiter, routes.threads)
+api.use('/api/tasks', write_limiter, routes.tasks)
+api.use('/api/entities', write_limiter, routes.entities)
+
+// Read-heavy endpoints - generous limits (300 req/min)
+api.use('/api/tags', read_limiter, routes.tags)
+api.use('/api/github', read_limiter, routes.github)
+api.use('/api/models', read_limiter, routes.models)
+api.use('/api/filesystem', read_limiter, routes.filesystem)
+api.use('/api/active-sessions', read_limiter, routes.active_sessions)
+api.use('/api/activity', read_limiter, routes.activity)
+api.use('/api/git', read_limiter, routes.git)
 
 // General error handler
 api.use((err, req, res, next) => {
@@ -264,7 +297,7 @@ server.on('upgrade', async (request, socket, head) => {
       return
     }
 
-    // Parse authentication tokens
+    // Parse authentication tokens - JWT only, no spoofable query params
     try {
       const token = parsed.searchParams.get('token')
       if (token) {
@@ -273,20 +306,22 @@ server.on('upgrade', async (request, socket, head) => {
           user_public_key: decoded.user_public_key,
           ...decoded
         }
+        request.is_authenticated = true
       } else {
-        const user_public_key = parsed.searchParams.get('user_public_key')
-        if (user_public_key) {
-          request.user = { user_public_key }
-        }
+        // Anonymous connection - no authentication
+        request.user = null
+        request.is_authenticated = false
       }
     } catch (authError) {
       log(`WebSocket auth error: ${authError.message}`)
       // Don't destroy the socket for invalid tokens, allow connection without auth
       request.user = null
+      request.is_authenticated = false
     }
 
     // Handle the WebSocket upgrade
     wss.handleUpgrade(request, socket, head, function (ws) {
+      ws.is_authenticated = request.is_authenticated || false
       if (request.user && request.user.user_public_key) {
         ws.user_public_key = request.user.user_public_key
         log(`websocket connected with user_public_key: ${ws.user_public_key}`)

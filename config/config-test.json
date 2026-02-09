@@ -1,4 +1,7 @@
 {
+  "github": {
+    "webhook_secret": "test_webhook_secret_for_testing"
+  },
   "server_port": 8080,
   "production_url": "https://example.com",
   "production_wss": "wss://example.com",

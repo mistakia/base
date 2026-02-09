@@ -4,6 +4,10 @@ import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
+import { is_nonce_used, mark_nonce_used } from '#libs-server/auth/nonce-cache.mjs'
+
+// Timestamp validation window: 5 minutes (in milliseconds)
+const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 
 const router = express.Router()
 
@@ -73,6 +77,24 @@ router.post('/?', async (req, res) => {
       return res.status(400).send({ error: 'invalid signature' })
     }
 
+    // Timestamp validation - must be within the last 5 minutes
+    if (!data.timestamp || data.timestamp < Date.now() - TIMESTAMP_WINDOW_MS) {
+      return res.status(400).send({ error: 'invalid or expired timestamp' })
+    }
+
+    // Nonce validation - prevent replay attacks
+    // Mark nonce as used IMMEDIATELY after check to prevent TOCTOU race condition
+    if (!data.nonce) {
+      return res.status(400).send({ error: 'missing nonce' })
+    }
+
+    if (is_nonce_used({ nonce: data.nonce })) {
+      return res.status(400).send({ error: 'nonce already used' })
+    }
+
+    // Mark nonce as used immediately to prevent concurrent replay attempts
+    mark_nonce_used({ nonce: data.nonce })
+
     // Check if user has access
     const has_access = await user_registry.user_has_access(data.user_public_key)
     if (!has_access) {
@@ -124,10 +146,23 @@ router.post('/session', async (req, res) => {
       return res.status(400).send({ error: 'invalid signature' })
     }
 
-    // timestamp is required and must be within the last hour
-    if (!data.timestamp || data.timestamp < Date.now() - 3600000) {
-      return res.status(400).send({ error: 'invalid timestamp' })
+    // Timestamp validation - must be within the last 5 minutes (reduced from 1 hour)
+    if (!data.timestamp || data.timestamp < Date.now() - TIMESTAMP_WINDOW_MS) {
+      return res.status(400).send({ error: 'invalid or expired timestamp' })
     }
+
+    // Nonce validation - prevent replay attacks
+    // Mark nonce as used IMMEDIATELY after check to prevent TOCTOU race condition
+    if (!data.nonce) {
+      return res.status(400).send({ error: 'missing nonce' })
+    }
+
+    if (is_nonce_used({ nonce: data.nonce })) {
+      return res.status(400).send({ error: 'nonce already used' })
+    }
+
+    // Mark nonce as used immediately to prevent concurrent replay attempts
+    mark_nonce_used({ nonce: data.nonce })
 
     // Check if user has access
     const has_access = await user_registry.user_has_access(data.user_public_key)

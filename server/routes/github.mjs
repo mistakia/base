@@ -49,18 +49,25 @@ router.post('/webhooks', async (req, res) => {
       `Received webhook: ${req.headers['x-github-event']} - ${req.headers['x-github-delivery']}`
     )
 
-    // Verify GitHub webhook signature
+    // Verify GitHub webhook signature - MANDATORY
     const webhook_secret = config.github?.webhook_secret
-    if (webhook_secret) {
-      const is_valid = verify_github_signature(req, webhook_secret)
+    if (!webhook_secret) {
+      log(
+        'ERROR: GitHub webhook secret not configured. Set github.webhook_secret in config.'
+      )
+      return res.status(500).json({
+        error: 'Server Configuration Error',
+        message: 'Webhook signature verification is not configured'
+      })
+    }
 
-      if (!is_valid) {
-        log('Invalid webhook signature')
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid webhook signature'
-        })
-      }
+    const is_valid = verify_github_signature(req, webhook_secret)
+    if (!is_valid) {
+      log('Invalid webhook signature')
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid webhook signature'
+      })
     }
 
     // Get the event name and process accordingly
