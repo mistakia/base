@@ -51,7 +51,8 @@ export const builder = (yargs) =>
           })
           .option('type', {
             alias: 't',
-            describe: 'Schedule type: expr (cron), at (one-shot), every (interval)',
+            describe:
+              'Schedule type: expr (cron), at (one-shot), every (interval)',
             type: 'string',
             default: 'expr'
           })
@@ -134,7 +135,10 @@ export const builder = (yargs) =>
         }),
       handle_delete
     )
-    .demandCommand(1, 'Specify a subcommand: list, add, enable, disable, trigger, delete')
+    .demandCommand(
+      1,
+      'Specify a subcommand: list, add, enable, disable, trigger, delete'
+    )
 
 export const handler = () => {}
 
@@ -242,7 +246,9 @@ async function handle_add(argv) {
       entity_id: uuid(),
       created_at: now,
       updated_at: now,
-      user_public_key: config.user_public_key || '0000000000000000000000000000000000000000000000000000000000000000',
+      user_public_key:
+        config.user_public_key ||
+        '0000000000000000000000000000000000000000000000000000000000000000',
       command: argv.cmd,
       schedule_type: argv.type,
       schedule: argv.schedule,
@@ -252,7 +258,8 @@ async function handle_add(argv) {
 
     if (argv.timezone) entity_properties.timezone = argv.timezone
     if (argv.cwd) entity_properties.working_directory = argv.cwd
-    if (argv.tags) entity_properties.queue_tags = argv.tags.split(',').map((t) => t.trim())
+    if (argv.tags)
+      entity_properties.queue_tags = argv.tags.split(',').map((t) => t.trim())
     if (argv.priority) entity_properties.queue_priority = argv.priority
     if (argv.timeout) entity_properties.timeout_ms = argv.timeout
 
@@ -264,9 +271,16 @@ async function handle_add(argv) {
     })
 
     if (argv.json) {
-      console.log(JSON.stringify({ file: path.relative(directory, file_path), next_trigger_at }))
+      console.log(
+        JSON.stringify({
+          file: path.relative(directory, file_path),
+          next_trigger_at
+        })
+      )
     } else {
-      console.log(`${path.relative(directory, file_path)}\tcreated\t${next_trigger_at}`)
+      console.log(
+        `${path.relative(directory, file_path)}\tcreated\t${next_trigger_at}`
+      )
     }
   } catch (error) {
     console.error(`Error: ${error.message}`)
@@ -354,7 +368,9 @@ async function handle_trigger(argv) {
   let exit_code = 0
   try {
     const file_path = resolve_schedule_path(argv.file)
-    const result = await read_entity_from_filesystem({ absolute_path: file_path })
+    const result = await read_entity_from_filesystem({
+      absolute_path: file_path
+    })
 
     if (!result.success) {
       throw new Error(`Failed to read schedule: ${result.error}`)
@@ -366,11 +382,13 @@ async function handle_trigger(argv) {
     })
 
     if (argv.json) {
-      console.log(JSON.stringify({
-        file: argv.file,
-        job_id: trigger_result.job_id,
-        next_trigger_at: trigger_result.next_trigger_at
-      }))
+      console.log(
+        JSON.stringify({
+          file: argv.file,
+          job_id: trigger_result.job_id,
+          next_trigger_at: trigger_result.next_trigger_at
+        })
+      )
     } else {
       console.log(`${argv.file}\ttriggered\t${trigger_result.job_id}`)
     }
@@ -387,7 +405,9 @@ async function handle_delete(argv) {
   let exit_code = 0
   try {
     const file_path = resolve_schedule_path(argv.file)
-    const result = await read_entity_from_filesystem({ absolute_path: file_path })
+    const result = await read_entity_from_filesystem({
+      absolute_path: file_path
+    })
 
     if (!result.success) {
       throw new Error(`Schedule not found: ${argv.file}`)

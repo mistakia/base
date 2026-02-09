@@ -78,7 +78,9 @@ async function handle_list(argv) {
           console.log(`    Public Key: ${identity.auth_public_key || 'N/A'}`)
           console.log(`    Base URI: ${identity.base_uri}`)
           if (identity.permissions) {
-            console.log(`    Permissions: ${JSON.stringify(identity.permissions)}`)
+            console.log(
+              `    Permissions: ${JSON.stringify(identity.permissions)}`
+            )
           }
           console.log('')
         }
@@ -94,7 +96,9 @@ async function handle_list(argv) {
 async function handle_get(argv) {
   let exit_code = 0
   try {
-    const identity = await load_identity_by_username({ username: argv.username })
+    const identity = await load_identity_by_username({
+      username: argv.username
+    })
 
     if (!identity) {
       console.error(`Identity not found: ${argv.username}`)
@@ -119,10 +123,14 @@ async function handle_get(argv) {
       if (identity.permissions) {
         console.log(`  Permissions:`)
         if (identity.permissions.create_threads !== undefined) {
-          console.log(`    - create_threads: ${identity.permissions.create_threads}`)
+          console.log(
+            `    - create_threads: ${identity.permissions.create_threads}`
+          )
         }
         if (identity.permissions.global_write !== undefined) {
-          console.log(`    - global_write: ${identity.permissions.global_write}`)
+          console.log(
+            `    - global_write: ${identity.permissions.global_write}`
+          )
         }
       }
 

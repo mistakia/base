@@ -72,11 +72,11 @@ Scheduled commands define CLI commands to execute at specified times. They integ
 
 ## Schedule Types
 
-| Type | Format | Behavior |
-|------|--------|----------|
-| `expr` | Cron expression (e.g., `0 2 * * *`) | Recurring, computes next from expression |
-| `at` | ISO 8601 timestamp | One-shot execution at specific time |
-| `every` | Duration (e.g., `30m`, `6h`, `1d`) | Recurring, adds interval to last trigger |
+| Type    | Format                              | Behavior                                 |
+| ------- | ----------------------------------- | ---------------------------------------- |
+| `expr`  | Cron expression (e.g., `0 2 * * *`) | Recurring, computes next from expression |
+| `at`    | ISO 8601 timestamp                  | One-shot execution at specific time      |
+| `every` | Duration (e.g., `30m`, `6h`, `1d`)  | Recurring, adds interval to last trigger |
 
 ## Examples
 

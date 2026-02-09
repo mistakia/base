@@ -36,7 +36,9 @@ export const handler = () => {}
 async function handle_check(argv) {
   let exit_code = 0
   try {
-    const identity = await load_identity_by_username({ username: argv.username })
+    const identity = await load_identity_by_username({
+      username: argv.username
+    })
 
     if (!identity) {
       console.error(`Identity not found: ${argv.username}`)

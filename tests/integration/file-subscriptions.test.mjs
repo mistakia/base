@@ -35,7 +35,9 @@ describe('File Subscriptions Integration', function () {
 
     // Create task directory and test files owned by test user
     await fs.mkdir(path.join(test_repo.user_path, 'task'), { recursive: true })
-    await fs.mkdir(path.join(test_repo.user_path, 'guideline'), { recursive: true })
+    await fs.mkdir(path.join(test_repo.user_path, 'guideline'), {
+      recursive: true
+    })
 
     // Create test files with proper ownership (public_read: true for testing)
     const test_file_content = `---
@@ -92,7 +94,8 @@ Test content
     const messages = []
     return {
       readyState: WebSocket.OPEN,
-      user_public_key: options.user_public_key || test_user?.user_public_key || null,
+      user_public_key:
+        options.user_public_key || test_user?.user_public_key || null,
       is_authenticated: options.is_authenticated !== false,
       send: (data) => {
         messages.push(JSON.parse(data))

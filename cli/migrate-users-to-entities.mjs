@@ -110,7 +110,8 @@ async function create_admin_role({ role_dir, dry_run }) {
     entity_id: uuid(),
     created_at: now,
     updated_at: now,
-    user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+    user_public_key:
+      '0000000000000000000000000000000000000000000000000000000000000000',
     rules: [
       {
         action: 'allow',
@@ -172,7 +173,8 @@ async function create_public_reader_role({ users, role_dir, dry_run }) {
     entity_id: uuid(),
     created_at: now,
     updated_at: now,
-    user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+    user_public_key:
+      '0000000000000000000000000000000000000000000000000000000000000000',
     rules
   }
 
@@ -239,7 +241,7 @@ async function create_identity_entity({
 
   // For non-admin users, keep user-specific rules (not covered by roles)
   // For admin users, rules are handled by the admin role
-  const rules = is_admin ? [] : (user?.permissions?.rules || [])
+  const rules = is_admin ? [] : user?.permissions?.rules || []
 
   const entity_properties = {
     title: username,
@@ -249,7 +251,8 @@ async function create_identity_entity({
     entity_id: uuid(),
     created_at: user.created_at || now,
     updated_at: now,
-    user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+    user_public_key:
+      '0000000000000000000000000000000000000000000000000000000000000000',
     auth_public_key: public_key,
     username,
     permissions: Object.keys(permissions).length > 0 ? permissions : undefined,
@@ -347,8 +350,12 @@ async function run_migration({ dry_run = false }) {
     console.log('Original users.json has been backed up to users.json.backup')
     console.log('')
     console.log('Next steps:')
-    console.log('1. Review the created entities in identity/ and role/ directories')
-    console.log('2. Test the permission system with the new entity-based loading')
+    console.log(
+      '1. Review the created entities in identity/ and role/ directories'
+    )
+    console.log(
+      '2. Test the permission system with the new entity-based loading'
+    )
     console.log('3. Once verified, you can remove users.json (keep backup)')
   }
 

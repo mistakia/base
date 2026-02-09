@@ -54,7 +54,8 @@ describe('identity-loader', function () {
           title: 'testuser',
           auth_public_key: public_key,
           username: 'testuser',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           permissions: { create_threads: true }
         },
         entity_type: 'identity',
@@ -91,7 +92,8 @@ describe('identity-loader', function () {
           title: 'cacheduser',
           auth_public_key: public_key,
           username: 'cacheduser',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000'
         },
         entity_type: 'identity',
         entity_content: '# Cached User'
@@ -118,7 +120,8 @@ describe('identity-loader', function () {
           title: 'findme',
           auth_public_key: 'key123',
           username: 'findme',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           permissions: { global_write: true }
         },
         entity_type: 'identity',
@@ -163,7 +166,8 @@ describe('identity-loader', function () {
             title: identity.username,
             auth_public_key: identity.auth_public_key,
             username: identity.username,
-            user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+            user_public_key:
+              '0000000000000000000000000000000000000000000000000000000000000000'
           },
           entity_type: 'identity',
           entity_content: `# ${identity.username}`
@@ -195,7 +199,8 @@ describe('identity-loader', function () {
           title: 'valid',
           auth_public_key: 'validkey',
           username: 'valid',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000'
         },
         entity_type: 'identity',
         entity_content: '# Valid'
@@ -206,7 +211,8 @@ describe('identity-loader', function () {
         absolute_path: path.join(identity_dir, 'invalid.md'),
         entity_properties: {
           title: 'invalid',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000'
           // Missing auth_public_key and username
         },
         entity_type: 'identity',
@@ -232,7 +238,8 @@ describe('identity-loader', function () {
           title: 'cachetest',
           auth_public_key: 'cachekey',
           username: 'cachetest',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000'
         },
         entity_type: 'identity',
         entity_content: '# Cache Test'

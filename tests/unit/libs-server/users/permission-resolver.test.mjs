@@ -80,7 +80,8 @@ describe('permission-resolver', function () {
         entity_properties: {
           title: 'Reader',
           base_uri: 'user:role/reader.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [
             { action: 'allow', pattern: 'sys:system/**' },
             { action: 'allow', pattern: 'user:workflow/**' }
@@ -111,7 +112,8 @@ describe('permission-resolver', function () {
         entity_properties: {
           title: 'Basic',
           base_uri: 'user:role/basic.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: 'sys:system/**' }]
         },
         entity_type: 'role',
@@ -146,7 +148,8 @@ describe('permission-resolver', function () {
         entity_properties: {
           title: 'Role1',
           base_uri: 'user:role/role1.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: 'pattern1' }]
         },
         entity_type: 'role',
@@ -158,7 +161,8 @@ describe('permission-resolver', function () {
         entity_properties: {
           title: 'Role2',
           base_uri: 'user:role/role2.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: 'pattern2' }]
         },
         entity_type: 'role',
@@ -285,7 +289,8 @@ describe('permission-resolver', function () {
         entity_properties: {
           title: 'TestRole',
           base_uri: 'user:role/testrole.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: 'sys:system/**' }]
         },
         entity_type: 'role',

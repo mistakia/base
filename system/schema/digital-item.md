@@ -44,18 +44,20 @@ Digital items represent files, software, or other digital artifacts that are sto
 
 The system provides two mechanisms for working with files:
 
-| Mechanism | Use Case | Storage |
-|-----------|----------|---------|
-| **Files Database** (`database/files.md`) | Inventory/tracking of files | DuckDB table |
-| **digital_item entity** | Notes and content about a file | Markdown file |
+| Mechanism                                | Use Case                       | Storage       |
+| ---------------------------------------- | ------------------------------ | ------------- |
+| **Files Database** (`database/files.md`) | Inventory/tracking of files    | DuckDB table  |
+| **digital_item entity**                  | Notes and content about a file | Markdown file |
 
 **Use the files database when:**
+
 - Scanning infrastructure to track what files exist
 - Querying file metadata (size, type, location)
 - Finding duplicates or organizing files
 - You only need structured metadata, not prose content
 
 **Create a digital_item entity when:**
+
 - You want to write notes, analysis, or documentation about a file
 - The file warrants its own knowledge base entry with markdown content
 - You need to relate the file to other entities with context

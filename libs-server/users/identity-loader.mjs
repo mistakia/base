@@ -191,10 +191,14 @@ export async function load_identity_by_public_key({ public_key }) {
   if (cached) {
     const is_valid = await is_cache_entry_valid(cached.absolute_path)
     if (is_valid) {
-      log(`Cache hit for identity with public key: ${public_key.slice(0, 8)}...`)
+      log(
+        `Cache hit for identity with public key: ${public_key.slice(0, 8)}...`
+      )
       return cached
     }
-    log(`Cache invalidated for identity with public key: ${public_key.slice(0, 8)}...`)
+    log(
+      `Cache invalidated for identity with public key: ${public_key.slice(0, 8)}...`
+    )
   }
 
   // Scan all identities if cache miss or invalid

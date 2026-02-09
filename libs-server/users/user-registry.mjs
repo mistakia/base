@@ -171,7 +171,9 @@ class UserRegistry {
         public_key: user_public_key
       })
       if (identity) {
-        log(`Found identity entity for public key: ${user_public_key.slice(0, 8)}...`)
+        log(
+          `Found identity entity for public key: ${user_public_key.slice(0, 8)}...`
+        )
         return await convert_identity_to_user({ identity })
       }
     } catch (error) {
@@ -179,7 +181,9 @@ class UserRegistry {
     }
 
     // Fall back to users.json
-    log(`Falling back to users.json for public key: ${user_public_key.slice(0, 8)}...`)
+    log(
+      `Falling back to users.json for public key: ${user_public_key.slice(0, 8)}...`
+    )
     const users = await this.load_users()
     return users[user_public_key] || null
   }

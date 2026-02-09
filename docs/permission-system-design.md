@@ -989,18 +989,18 @@ relations:
 
 **Required Fields:**
 
-| Field             | Type   | Description                                 |
-| ----------------- | ------ | ------------------------------------------- |
-| `auth_public_key` | string | Hex-encoded public key for authentication   |
-| `username`        | string | Unique username identifier                  |
+| Field             | Type   | Description                               |
+| ----------------- | ------ | ----------------------------------------- |
+| `auth_public_key` | string | Hex-encoded public key for authentication |
+| `username`        | string | Unique username identifier                |
 
 **Optional Fields:**
 
-| Field         | Type   | Description                                          |
-| ------------- | ------ | ---------------------------------------------------- |
-| `permissions` | object | Permission flags (`create_threads`, `global_write`)  |
-| `rules`       | array  | User-specific permission rules (evaluated first)     |
-| `relations`   | array  | Role assignments via `has_role` relation             |
+| Field         | Type   | Description                                         |
+| ------------- | ------ | --------------------------------------------------- |
+| `permissions` | object | Permission flags (`create_threads`, `global_write`) |
+| `rules`       | array  | User-specific permission rules (evaluated first)    |
+| `relations`   | array  | Role assignments via `has_role` relation            |
 
 **Special `_public` Identity:**
 
@@ -1039,8 +1039,8 @@ rules:
 
 **Required Fields:**
 
-| Field   | Type  | Description                     |
-| ------- | ----- | ------------------------------- |
+| Field   | Type  | Description                      |
+| ------- | ----- | -------------------------------- |
 | `rules` | array | Array of permission rule objects |
 
 **Rule Object Structure:**
@@ -1053,9 +1053,9 @@ rules:
 
 **Common Roles:**
 
-| Role             | Purpose                                           |
-| ---------------- | ------------------------------------------------- |
-| `admin.md`       | Full access: `{ action: allow, pattern: **/* }`   |
+| Role               | Purpose                                         |
+| ------------------ | ----------------------------------------------- |
+| `admin.md`         | Full access: `{ action: allow, pattern: **/* }` |
 | `public-reader.md` | Read access to public resources                 |
 
 ### 10.3 Permission Resolution Order
@@ -1252,6 +1252,7 @@ node cli/migrate-users-to-entities.mjs
 **After (entities):**
 
 `role/admin.md`:
+
 ```yaml
 ---
 title: Admin
@@ -1263,6 +1264,7 @@ rules:
 ```
 
 `role/public-reader.md`:
+
 ```yaml
 ---
 title: Public Reader
@@ -1276,6 +1278,7 @@ rules:
 ```
 
 `identity/admin.md`:
+
 ```yaml
 ---
 title: admin
@@ -1291,6 +1294,7 @@ relations:
 ```
 
 `identity/_public.md`:
+
 ```yaml
 ---
 title: _public
@@ -1334,33 +1338,33 @@ The system will automatically fall back to `users.json` when entity files don't 
 
 ### Identity and Role Files
 
-| File                                         | Lines | Description                          |
-| -------------------------------------------- | ----- | ------------------------------------ |
-| `libs-server/users/identity-loader.mjs`      | ~120  | Identity entity loading with caching |
-| `libs-server/users/role-loader.mjs`          | ~100  | Role entity loading with caching     |
-| `libs-server/users/permission-resolver.mjs`  | ~150  | Permission resolution from roles     |
+| File                                        | Lines | Description                          |
+| ------------------------------------------- | ----- | ------------------------------------ |
+| `libs-server/users/identity-loader.mjs`     | ~120  | Identity entity loading with caching |
+| `libs-server/users/role-loader.mjs`         | ~100  | Role entity loading with caching     |
+| `libs-server/users/permission-resolver.mjs` | ~150  | Permission resolution from roles     |
 
 ### Schema Files
 
-| File                          | Description                           |
-| ----------------------------- | ------------------------------------- |
-| `system/schema/identity.md`   | JSON Schema for identity entities     |
-| `system/schema/role.md`       | JSON Schema for role entities         |
+| File                        | Description                       |
+| --------------------------- | --------------------------------- |
+| `system/schema/identity.md` | JSON Schema for identity entities |
+| `system/schema/role.md`     | JSON Schema for role entities     |
 
 ### CLI Files
 
-| File                                    | Description                        |
-| --------------------------------------- | ---------------------------------- |
-| `cli/base/identity.mjs`                 | Identity list/get commands         |
-| `cli/base/role.mjs`                     | Role list/get commands             |
-| `cli/base/permission.mjs`               | Permission check command           |
-| `cli/migrate-users-to-entities.mjs`     | Migration script                   |
+| File                                | Description                |
+| ----------------------------------- | -------------------------- |
+| `cli/base/identity.mjs`             | Identity list/get commands |
+| `cli/base/role.mjs`                 | Role list/get commands     |
+| `cli/base/permission.mjs`           | Permission check command   |
+| `cli/migrate-users-to-entities.mjs` | Migration script           |
 
 ### Test Files
 
-| File                                                              | Description                     |
-| ----------------------------------------------------------------- | ------------------------------- |
-| `tests/unit/libs-server/users/identity-loader.test.mjs`           | Identity loader unit tests      |
-| `tests/unit/libs-server/users/role-loader.test.mjs`               | Role loader unit tests          |
-| `tests/unit/libs-server/users/permission-resolver.test.mjs`       | Permission resolver unit tests  |
-| `tests/integration/migrate-users-to-entities.test.mjs`            | Migration integration tests     |
+| File                                                        | Description                    |
+| ----------------------------------------------------------- | ------------------------------ |
+| `tests/unit/libs-server/users/identity-loader.test.mjs`     | Identity loader unit tests     |
+| `tests/unit/libs-server/users/role-loader.test.mjs`         | Role loader unit tests         |
+| `tests/unit/libs-server/users/permission-resolver.test.mjs` | Permission resolver unit tests |
+| `tests/integration/migrate-users-to-entities.test.mjs`      | Migration integration tests    |

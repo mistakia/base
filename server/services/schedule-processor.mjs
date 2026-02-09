@@ -85,7 +85,9 @@ const poll = async () => {
     const results = await process_due_schedules()
 
     if (results.processed > 0 || results.errors > 0) {
-      log(`Poll complete: ${results.processed} processed, ${results.errors} errors`)
+      log(
+        `Poll complete: ${results.processed} processed, ${results.errors} errors`
+      )
     }
   } catch (error) {
     log(`Poll error: ${error.message}`)

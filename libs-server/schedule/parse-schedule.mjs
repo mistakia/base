@@ -1,7 +1,8 @@
 import cron_parser from 'cron-parser'
-const { parseExpression } = cron_parser
 import ms from 'ms'
 import debug from 'debug'
+
+const { parseExpression } = cron_parser
 
 const log = debug('schedule:parse')
 
@@ -95,9 +96,7 @@ const parse_every_interval = ({ schedule, last_triggered_at }) => {
     return null
   }
 
-  const base_time = last_triggered_at
-    ? new Date(last_triggered_at)
-    : new Date()
+  const base_time = last_triggered_at ? new Date(last_triggered_at) : new Date()
 
   if (isNaN(base_time.getTime())) {
     log(`Invalid last_triggered_at: ${last_triggered_at}`)
@@ -106,7 +105,9 @@ const parse_every_interval = ({ schedule, last_triggered_at }) => {
 
   const next_trigger = new Date(base_time.getTime() + interval_ms)
 
-  log(`Every ${schedule} from ${base_time.toISOString()}: ${next_trigger.toISOString()}`)
+  log(
+    `Every ${schedule} from ${base_time.toISOString()}: ${next_trigger.toISOString()}`
+  )
   return next_trigger.toISOString()
 }
 

@@ -50,6 +50,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
   - Key properties: manufacturer, model_number, storage_location
 
 - `digital_item`: SHOULD be used when you want **notes or content** about a file, not just tracking
+
   - Example: Analysis of a PDF report, documentation about a software tool, notes on a video
   - Key properties: file_uri, file_cid, file_mime_type
   - Note: For file **inventory/tracking** without prose content, use the `database/files.md` database instead

@@ -6,7 +6,10 @@
  */
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { get_database_entity, list_database_entities } from '#libs-server/database/index.mjs'
+import {
+  get_database_entity,
+  list_database_entities
+} from '#libs-server/database/index.mjs'
 import { get_storage_adapter } from '#libs-server/database/storage-adapters/index.mjs'
 import { output_results, flush_and_exit } from './lib/format.mjs'
 
@@ -172,7 +175,9 @@ async function handle_info(argv) {
     if (argv.json) {
       output_results(database_entity, { json: true })
     } else {
-      console.log(`Database: ${database_entity.title || database_entity.table_name}`)
+      console.log(
+        `Database: ${database_entity.title || database_entity.table_name}`
+      )
       console.log(`Table: ${database_entity.table_name}`)
       console.log(`URI: ${database_entity.base_uri}`)
       console.log()
@@ -181,8 +186,10 @@ async function handle_info(argv) {
       console.log('Storage Config:')
       console.log(`  Backend: ${storage_config.backend || 'duckdb'}`)
       if (storage_config.path) console.log(`  Path: ${storage_config.path}`)
-      if (storage_config.directory) console.log(`  Directory: ${storage_config.directory}`)
-      if (storage_config.schema_name) console.log(`  Schema: ${storage_config.schema_name}`)
+      if (storage_config.directory)
+        console.log(`  Directory: ${storage_config.directory}`)
+      if (storage_config.schema_name)
+        console.log(`  Schema: ${storage_config.schema_name}`)
       console.log()
 
       const fields = database_entity.fields || []
@@ -325,7 +332,10 @@ async function handle_sync(argv) {
     await adapter.create_table()
 
     if (argv.json) {
-      output_results({ synced: true, table: database_entity.table_name }, { json: true })
+      output_results(
+        { synced: true, table: database_entity.table_name },
+        { json: true }
+      )
     } else {
       console.log(`Table synced: ${database_entity.table_name}`)
     }

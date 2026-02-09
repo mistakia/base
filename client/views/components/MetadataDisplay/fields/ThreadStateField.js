@@ -62,9 +62,9 @@ const ThreadStateField = ({
 
     if (thread_state === 'archived') {
       return (
-        <div className="session-card__actions">
+        <div className='session-card__actions'>
           <button
-            className="session-card__action-button"
+            className='session-card__action-button'
             onClick={handle_unarchive_click}>
             unarchive
           </button>
@@ -73,7 +73,7 @@ const ThreadStateField = ({
     }
 
     return (
-      <div className="session-card__actions">
+      <div className='session-card__actions'>
         <button
           className={`session-card__action-button session-card__action-button--danger ${
             is_abandoned_confirming
@@ -84,7 +84,7 @@ const ThreadStateField = ({
           {is_abandoned_confirming ? 'confirm' : 'abandon'}
         </button>
         <button
-          className="session-card__action-button"
+          className='session-card__action-button'
           onClick={handle_archive_click}>
           archive
         </button>

@@ -1,8 +1,7 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
 import jwt from 'jsonwebtoken'
-import crypto from 'crypto'
-import { randomUUID } from 'crypto'
+import crypto, { randomUUID } from 'crypto'
 
 import server from '#server'
 import config from '#config'

@@ -27,7 +27,9 @@ export const load_schedules = async ({ directory }) => {
     // Read all files in parallel
     const read_results = await Promise.all(
       files.map(async (file_path) => {
-        const result = await read_entity_from_filesystem({ absolute_path: file_path })
+        const result = await read_entity_from_filesystem({
+          absolute_path: file_path
+        })
         return { file_path, result }
       })
     )
@@ -101,7 +103,9 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
     return schedule.next_trigger_at <= current_time
   })
 
-  log(`Found ${due_schedules.length} due schedules out of ${schedules.length} total`)
+  log(
+    `Found ${due_schedules.length} due schedules out of ${schedules.length} total`
+  )
   return due_schedules
 }
 

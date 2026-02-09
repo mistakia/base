@@ -40,8 +40,11 @@ const PERMISSION_CHECK_TIMEOUT_MS = 5000
  * @param {Object} params - Permission check parameters
  * @returns {Promise<Object>} Permission result or timeout error
  */
-async function check_permission_with_timeout({ user_public_key, resource_path }) {
-  const timeout_promise = new Promise((_, reject) => {
+async function check_permission_with_timeout({
+  user_public_key,
+  resource_path
+}) {
+  const timeout_promise = new Promise((_resolve, reject) => {
     setTimeout(
       () => reject(new Error('Permission check timed out')),
       PERMISSION_CHECK_TIMEOUT_MS
@@ -98,8 +101,15 @@ async function emit_to_subscribers(file_path, event_type) {
       })
       permission_cache.set(user_public_key, permission)
     } catch (error) {
-      log('Permission check error for user %s: %s', user_public_key, error.message)
-      permission_cache.set(user_public_key, { allowed: false, reason: error.message })
+      log(
+        'Permission check error for user %s: %s',
+        user_public_key,
+        error.message
+      )
+      permission_cache.set(user_public_key, {
+        allowed: false,
+        reason: error.message
+      })
     }
   }
 

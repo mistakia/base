@@ -21,7 +21,8 @@ chai.use(chaiHttp)
 
 // Helper to generate GitHub webhook signature
 const generate_webhook_signature = (payload) => {
-  const secret = config.github?.webhook_secret || 'test_webhook_secret_for_testing'
+  const secret =
+    config.github?.webhook_secret || 'test_webhook_secret_for_testing'
   const body = typeof payload === 'string' ? payload : JSON.stringify(payload)
   const hmac = crypto.createHmac('sha256', secret)
   return 'sha256=' + hmac.update(body).digest('hex')

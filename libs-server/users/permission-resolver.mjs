@@ -79,7 +79,9 @@ export async function resolve_user_rules({ identity }) {
 
   // Step 1: Add user-specific rules first (highest priority)
   if (identity.rules && Array.isArray(identity.rules)) {
-    log(`Adding ${identity.rules.length} user-specific rules for ${identity.username}`)
+    log(
+      `Adding ${identity.rules.length} user-specific rules for ${identity.username}`
+    )
     for (const rule of identity.rules) {
       if (is_valid_rule(rule)) {
         all_rules.push({

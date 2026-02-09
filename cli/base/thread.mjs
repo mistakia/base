@@ -22,7 +22,8 @@ import { authenticated_fetch } from './lib/auth.mjs'
 const { THREAD_STATE, ARCHIVE_REASON } = thread_constants
 
 export const command = 'thread <command>'
-export const describe = 'Thread operations (list, get, status, timeline, archive, analyze)'
+export const describe =
+  'Thread operations (list, get, status, timeline, archive, analyze)'
 
 export const builder = (yargs) =>
   yargs
@@ -243,7 +244,10 @@ export const builder = (yargs) =>
           }),
       handle_timeline
     )
-    .demandCommand(1, 'Specify a subcommand: list, get, status, timeline, archive, or analyze')
+    .demandCommand(
+      1,
+      'Specify a subcommand: list, get, status, timeline, archive, or analyze'
+    )
 
 export const handler = () => {}
 

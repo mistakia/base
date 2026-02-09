@@ -4,7 +4,10 @@ import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import { is_nonce_used, mark_nonce_used } from '#libs-server/auth/nonce-cache.mjs'
+import {
+  is_nonce_used,
+  mark_nonce_used
+} from '#libs-server/auth/nonce-cache.mjs'
 
 // Timestamp validation window: 5 minutes (in milliseconds)
 const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000

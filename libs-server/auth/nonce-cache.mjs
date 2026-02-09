@@ -83,7 +83,9 @@ export function mark_nonce_used({ nonce, ttl_ms = DEFAULT_TTL_MS }) {
 
   const expires_at = Date.now() + ttl_ms
   nonce_cache.set(nonce, { expires_at })
-  log(`Nonce marked as used: ${nonce.substring(0, 8)}... (expires in ${ttl_ms}ms)`)
+  log(
+    `Nonce marked as used: ${nonce.substring(0, 8)}... (expires in ${ttl_ms}ms)`
+  )
 
   // Evict oldest entries if cache is too large
   evict_if_needed()
@@ -151,4 +153,3 @@ export function clear_nonce_cache() {
 export function get_nonce_cache_size() {
   return nonce_cache.size
 }
-

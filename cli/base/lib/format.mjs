@@ -243,7 +243,10 @@ function extract_text_content(content) {
 function format_timestamp(timestamp) {
   if (!timestamp) return ''
   const date = new Date(timestamp)
-  return date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
+  return date
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '')
 }
 
 /**
@@ -348,7 +351,9 @@ export function format_thread_status(
   // Tool counts (if included)
   if (status.tool_counts && Object.keys(status.tool_counts).length > 0) {
     lines.push('Tool Usage:')
-    const sorted = Object.entries(status.tool_counts).sort((a, b) => b[1] - a[1])
+    const sorted = Object.entries(status.tool_counts).sort(
+      (a, b) => b[1] - a[1]
+    )
     for (const [tool, count] of sorted.slice(0, verbose ? 20 : 10)) {
       lines.push(`  ${tool}: ${count}`)
     }

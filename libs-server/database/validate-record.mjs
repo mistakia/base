@@ -68,7 +68,10 @@ function validate_field_value(value, field) {
       } else if (typeof value === 'string') {
         const date = new Date(value)
         if (isNaN(date.getTime())) {
-          return { valid: false, error: `Field "${name}" must be a valid datetime` }
+          return {
+            valid: false,
+            error: `Field "${name}" must be a valid datetime`
+          }
         }
         coerced_value = date.toISOString()
       } else if (typeof value === 'number') {
@@ -86,7 +89,10 @@ function validate_field_value(value, field) {
             return { valid: false, error: `Field "${name}" must be an array` }
           }
         } catch {
-          return { valid: false, error: `Field "${name}" must be a valid JSON array` }
+          return {
+            valid: false,
+            error: `Field "${name}" must be a valid JSON array`
+          }
         }
       } else if (!Array.isArray(value)) {
         return { valid: false, error: `Field "${name}" must be an array` }
@@ -97,13 +103,24 @@ function validate_field_value(value, field) {
       if (typeof value === 'string') {
         try {
           coerced_value = JSON.parse(value)
-          if (coerced_value === null || typeof coerced_value !== 'object' || Array.isArray(coerced_value)) {
+          if (
+            coerced_value === null ||
+            typeof coerced_value !== 'object' ||
+            Array.isArray(coerced_value)
+          ) {
             return { valid: false, error: `Field "${name}" must be an object` }
           }
         } catch {
-          return { valid: false, error: `Field "${name}" must be a valid JSON object` }
+          return {
+            valid: false,
+            error: `Field "${name}" must be a valid JSON object`
+          }
         }
-      } else if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      } else if (
+        value === null ||
+        typeof value !== 'object' ||
+        Array.isArray(value)
+      ) {
         return { valid: false, error: `Field "${name}" must be an object` }
       }
       break

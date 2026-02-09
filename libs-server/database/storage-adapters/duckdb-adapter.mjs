@@ -222,7 +222,9 @@ export function create_duckdb_adapter(database_entity) {
       let param_index = 1
 
       for (const record of records) {
-        const placeholders = field_names.map(() => `$${param_index++}`).join(', ')
+        const placeholders = field_names
+          .map(() => `$${param_index++}`)
+          .join(', ')
         value_sets.push(`(${placeholders})`)
         for (const name of field_names) {
           all_values.push(record[name] ?? null)

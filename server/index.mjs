@@ -75,7 +75,10 @@ api.use((req, res, next) => {
   )
 
   // HSTS - enforce HTTPS (1 year)
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  res.setHeader(
+    'Strict-Transport-Security',
+    'max-age=31536000; includeSubDomains'
+  )
 
   // Referrer Policy - limit referrer information
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')

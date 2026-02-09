@@ -55,7 +55,10 @@ export const trigger_schedule = async ({ schedule, file_path }) => {
     }
 
     // Compute next trigger time for recurring schedules
-    if (schedule.schedule_type === 'expr' || schedule.schedule_type === 'every') {
+    if (
+      schedule.schedule_type === 'expr' ||
+      schedule.schedule_type === 'every'
+    ) {
       updated_properties.next_trigger_at = parse_schedule({
         schedule_type: schedule.schedule_type,
         schedule: schedule.schedule,
@@ -76,7 +79,9 @@ export const trigger_schedule = async ({ schedule, file_path }) => {
       entity_content
     })
 
-    log(`Updated schedule ${schedule.title}: next_trigger_at = ${updated_properties.next_trigger_at}`)
+    log(
+      `Updated schedule ${schedule.title}: next_trigger_at = ${updated_properties.next_trigger_at}`
+    )
 
     return {
       success: true,

@@ -200,7 +200,9 @@ export async function create_postgres_adapter(database_entity) {
   const connection_string = storage_config.connection_string
 
   if (!connection_string) {
-    throw new Error('PostgreSQL adapter requires storage_config.connection_string')
+    throw new Error(
+      'PostgreSQL adapter requires storage_config.connection_string'
+    )
   }
 
   const pg = await get_pg()
@@ -228,11 +230,17 @@ export async function create_postgres_adapter(database_entity) {
         await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema_name}"`)
 
         // Create table
-        const create_sql = generate_create_table_sql(database_entity, schema_name)
+        const create_sql = generate_create_table_sql(
+          database_entity,
+          schema_name
+        )
         await client.query(create_sql)
 
         // Create indexes
-        const index_statements = generate_index_sql(database_entity, schema_name)
+        const index_statements = generate_index_sql(
+          database_entity,
+          schema_name
+        )
         for (const index_sql of index_statements) {
           await client.query(index_sql)
         }
@@ -255,7 +263,12 @@ export async function create_postgres_adapter(database_entity) {
         return { inserted: 0 }
       }
 
-      log('Inserting %d records into %s.%s', records.length, schema_name, table_name)
+      log(
+        'Inserting %d records into %s.%s',
+        records.length,
+        schema_name,
+        table_name
+      )
 
       const field_names = fields.map((f) => f.name)
       const columns = field_names.map((n) => `"${n}"`).join(', ')
@@ -266,7 +279,9 @@ export async function create_postgres_adapter(database_entity) {
       let param_index = 1
 
       for (const record of records) {
-        const placeholders = field_names.map(() => `$${param_index++}`).join(', ')
+        const placeholders = field_names
+          .map(() => `$${param_index++}`)
+          .join(', ')
         value_sets.push(`(${placeholders})`)
         for (const name of field_names) {
           all_values.push(record[name] ?? null)

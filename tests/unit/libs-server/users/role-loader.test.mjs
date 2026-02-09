@@ -51,7 +51,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'Admin',
           base_uri: 'user:role/admin.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: '**/*' }]
         },
         entity_type: 'role',
@@ -86,7 +87,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'Reader',
           base_uri: 'user:role/reader.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [
             { action: 'allow', pattern: 'user:task/**' },
             { action: 'deny', pattern: 'user:private/**', reason: 'private' },
@@ -112,7 +114,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'Cached',
           base_uri: 'user:role/cached.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: '*' }]
         },
         entity_type: 'role',
@@ -134,7 +137,10 @@ describe('role-loader', function () {
     it('should load all role entities', async () => {
       const roles = [
         { name: 'admin', rules: [{ action: 'allow', pattern: '**/*' }] },
-        { name: 'reader', rules: [{ action: 'allow', pattern: 'user:task/**' }] },
+        {
+          name: 'reader',
+          rules: [{ action: 'allow', pattern: 'user:task/**' }]
+        },
         { name: 'writer', rules: [{ action: 'allow', pattern: 'user:**' }] }
       ]
 
@@ -145,7 +151,8 @@ describe('role-loader', function () {
           entity_properties: {
             title: role.name,
             base_uri: `user:role/${role.name}.md`,
-            user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+            user_public_key:
+              '0000000000000000000000000000000000000000000000000000000000000000',
             rules: role.rules
           },
           entity_type: 'role',
@@ -177,7 +184,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'valid',
           base_uri: 'user:role/valid.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: '*' }]
         },
         entity_type: 'role',
@@ -190,7 +198,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'invalid',
           base_uri: 'user:role/invalid.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000'
           // Missing rules
         },
         entity_type: 'role',
@@ -214,7 +223,8 @@ describe('role-loader', function () {
         entity_properties: {
           title: 'cachetest',
           base_uri: 'user:role/cachetest.md',
-          user_public_key: '0000000000000000000000000000000000000000000000000000000000000000',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
           rules: [{ action: 'allow', pattern: '*' }]
         },
         entity_type: 'role',
