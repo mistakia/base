@@ -1,11 +1,12 @@
-import { spawn } from 'child_process'
-import { exec as execAsync } from 'child_process/promises'
+import { spawn, exec } from 'child_process'
 import { join, isAbsolute, basename } from 'path'
 import { access, mkdir, copyFile, readFile } from 'fs/promises'
 import { constants } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
 import glob_pkg from 'glob'
+
+const execAsync = promisify(exec)
 import debug from 'debug'
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
@@ -455,7 +456,12 @@ const restore_plan = async ({ thread_dir, user_base_directory }) => {
     }
 
     // Check for plan in shared location
-    const shared_plan = join(user_base_directory, 'thread', 'plans', `${plan_slug}.md`)
+    const shared_plan = join(
+      user_base_directory,
+      'thread',
+      'plans',
+      `${plan_slug}.md`
+    )
 
     try {
       await access(shared_plan)
