@@ -1,8 +1,6 @@
-import cron_parser from 'cron-parser'
+import { CronExpressionParser } from 'cron-parser'
 import ms from 'ms'
 import debug from 'debug'
-
-const { parseExpression } = cron_parser
 
 const log = debug('schedule:parse')
 
@@ -57,7 +55,7 @@ const parse_cron_expression = ({ schedule, timezone }) => {
     options.tz = timezone
   }
 
-  const interval = parseExpression(schedule, options)
+  const interval = CronExpressionParser.parse(schedule, options)
   const next = interval.next()
 
   log(`Cron expression "${schedule}" next trigger: ${next.toISOString()}`)
