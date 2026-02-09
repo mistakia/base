@@ -1,21 +1,20 @@
 /**
  * DuckDB Storage Adapter
  *
- * Provides storage backend using embedded DuckDB database.
- * Tables are created dynamically from database entity schema.
+ * Provides storage backend using standalone DuckDB database files.
+ * Each database entity gets its own .db file.
  *
- * Supports two modes:
- * - Shared mode: Uses the global embedded DuckDB connection (default)
- * - Custom path mode: Opens a dedicated connection to a specific .duckdb file
+ * Database path resolution:
+ * 1. If storage_config.database is set, use that path
+ * 2. Otherwise, derive from base_uri (e.g., user:database/files.md -> database/files.db)
+ *
+ * Note: This is separate from the embedded-index DuckDB (embedded-database-index/duckdb.db)
+ * which is used for entity search indexing.
  */
 
 import debug from 'debug'
 
-import {
-  execute_duckdb_query,
-  execute_duckdb_run,
-  is_duckdb_initialized
-} from '../../embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { resolve_base_uri } from '../../base-uri/base-uri-utilities.mjs'
 import { map_field_type_to_sql, parse_filter_expression } from './index.mjs'
 
 const log = debug('database:adapter:duckdb')
@@ -238,79 +237,76 @@ function build_where_clause(filter, database_entity) {
 }
 
 /**
- * Get database path from storage_config
+ * Get database path from storage_config or auto-derive from base_uri
  */
 function get_database_path(database_entity) {
   const storage_config = database_entity.storage_config || {}
-  return storage_config.database || null
+
+  // If explicit path provided, use it
+  if (storage_config.database) {
+    return storage_config.database
+  }
+
+  // Auto-derive from base_uri: user:database/files.md -> /path/to/database/files.db
+  const base_uri = database_entity.base_uri
+  if (!base_uri) {
+    throw new Error(
+      'Database entity must have base_uri to derive database path'
+    )
+  }
+
+  const absolute_path = resolve_base_uri(base_uri)
+  return absolute_path.replace(/\.md$/, '.db')
 }
 
 /**
  * Create DuckDB adapter for a database entity
  *
- * If storage_config.database is specified, opens a dedicated connection.
- * Otherwise uses the shared embedded database connection.
+ * Opens a dedicated connection to a standalone .db file.
+ * Path is either from storage_config.database or auto-derived from base_uri.
  */
 export function create_duckdb_adapter(database_entity) {
   const table_name = get_table_name(database_entity)
   const pk_field = get_primary_key_field(database_entity)
   const database_path = get_database_path(database_entity)
 
-  // Track dedicated connection if using custom path
+  // Track dedicated connection
   let dedicated_connection = null
   let connection_promise = null // Mutex for connection creation
-  const uses_dedicated = Boolean(database_path)
 
   log(
     'Creating DuckDB adapter for table: %s (path: %s)',
     table_name,
-    database_path || 'shared'
+    database_path
   )
 
   // Helper functions to abstract connection access
   async function ensure_connection() {
-    if (uses_dedicated) {
-      // Return existing connection if available
-      if (dedicated_connection) {
-        return dedicated_connection
-      }
-      // Use promise as mutex to prevent race condition
-      if (!connection_promise) {
-        connection_promise = create_dedicated_connection(database_path)
-          .then((conn) => {
-            dedicated_connection = conn
-            return conn
-          })
-          .catch((err) => {
-            connection_promise = null // Allow retry on failure
-            throw err
-          })
-      }
-      return connection_promise
-    } else {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-      return null // Use shared connection
+    if (dedicated_connection) {
+      return dedicated_connection
     }
+    if (!connection_promise) {
+      connection_promise = create_dedicated_connection(database_path)
+        .then((conn) => {
+          dedicated_connection = conn
+          return conn
+        })
+        .catch((err) => {
+          connection_promise = null
+          throw err
+        })
+    }
+    return connection_promise
   }
 
   async function run_query({ query, parameters = [] }) {
     const conn = await ensure_connection()
-    if (conn) {
-      return conn.query({ query, parameters })
-    } else {
-      return execute_duckdb_query({ query, parameters })
-    }
+    return conn.query({ query, parameters })
   }
 
   async function run_execute({ query, parameters = [] }) {
     const conn = await ensure_connection()
-    if (conn) {
-      return conn.run({ query, parameters })
-    } else {
-      return execute_duckdb_run({ query, parameters })
-    }
+    return conn.run({ query, parameters })
   }
 
   return {
@@ -501,9 +497,8 @@ export function create_duckdb_adapter(database_entity) {
       if (dedicated_connection) {
         await dedicated_connection.close()
         dedicated_connection = null
-        log('DuckDB adapter closed (dedicated connection)')
-      } else {
-        log('DuckDB adapter closed (shared connection)')
+        connection_promise = null
+        log('DuckDB adapter closed')
       }
     }
   }
