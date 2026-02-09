@@ -639,6 +639,15 @@ const extract_session_metadata = (entries, file_metadata) => {
   const end_time =
     timestamps.length > 0 ? new Date(Math.max(...timestamps)) : null
 
+  // Extract plan slug from the first entry that has one (appears on all record types except summary)
+  let plan_slug = null
+  for (const entry of entries) {
+    if (entry.slug) {
+      plan_slug = entry.slug
+      break
+    }
+  }
+
   // Extract model information from assistant messages and calculate token breakdowns
   const models = new Set()
   let total_tokens = 0
@@ -707,7 +716,8 @@ const extract_session_metadata = (entries, file_metadata) => {
     assistant_message_count,
     entry_count: entries.length,
     summaries,
-    file_source: file_metadata.file_path
+    file_source: file_metadata.file_path,
+    plan_slug
   }
 }
 

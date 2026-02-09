@@ -119,13 +119,15 @@ const calculate_queue_position = async (queue, job_id) => {
  * @param {string} params.working_directory - Working directory for CLI execution
  * @param {string} params.user_public_key - User public key for permissions
  * @param {string} [params.session_id] - Optional Claude session ID for resume
+ * @param {string} [params.thread_id] - Optional thread ID for session state restoration
  * @returns {Promise<Object>} Job object with id and queue_position
  */
 export const add_thread_creation_job = async ({
   prompt,
   working_directory,
   user_public_key,
-  session_id = null
+  session_id = null,
+  thread_id = null
 }) => {
   try {
     const queue = get_thread_creation_queue()
@@ -136,7 +138,8 @@ export const add_thread_creation_job = async ({
         prompt,
         working_directory,
         user_public_key,
-        session_id
+        session_id,
+        thread_id
       },
       {
         priority: 1 // Lower number = higher priority
