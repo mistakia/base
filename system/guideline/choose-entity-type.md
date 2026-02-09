@@ -49,10 +49,11 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
   - Example: "Dell XPS Laptop", "Conference room table", "Whiteboard markers"
   - Key properties: manufacturer, model_number, storage_location
 
-- `digital_item`: SHOULD be used for files, software, digital resources, or online services
-
-  - Example: "Monthly Report.pdf", "PostgreSQL Database", "Figma Design Tool"
-  - Key properties: version, license_type, access_url
+- `digital_item`: SHOULD be used when you want **notes or content** about a file, not just tracking
+  - Example: Analysis of a PDF report, documentation about a software tool, notes on a video
+  - Key properties: file_uri, file_cid, file_mime_type
+  - Note: For file **inventory/tracking** without prose content, use the `database/files.md` database instead
+  - The `file_uri` property links to a record in the files database for metadata lookup
 
 - `person`: SHOULD be used for information about individuals
 

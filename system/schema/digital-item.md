@@ -40,6 +40,29 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 Digital items represent files, software, or other digital artifacts that are stored electronically. They can be referenced in tasks and other knowledge base items.
 
+## When to Use digital_item vs Files Database
+
+The system provides two mechanisms for working with files:
+
+| Mechanism | Use Case | Storage |
+|-----------|----------|---------|
+| **Files Database** (`database/files.md`) | Inventory/tracking of files | DuckDB table |
+| **digital_item entity** | Notes and content about a file | Markdown file |
+
+**Use the files database when:**
+- Scanning infrastructure to track what files exist
+- Querying file metadata (size, type, location)
+- Finding duplicates or organizing files
+- You only need structured metadata, not prose content
+
+**Create a digital_item entity when:**
+- You want to write notes, analysis, or documentation about a file
+- The file warrants its own knowledge base entry with markdown content
+- You need to relate the file to other entities with context
+- Example: A PDF report you've analyzed and want to summarize
+
+The `file_uri` property links to a record in the files database, allowing the entity to reference file metadata while the markdown body contains your notes.
+
 ## Digital Asset Management
 
 The digital item schema supports:
