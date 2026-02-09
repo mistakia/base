@@ -38,7 +38,6 @@ yarn test:integration   # Integration tests only
 yarn test:api          # API tests
 yarn test:threads      # Thread system tests
 yarn test:git          # Git operations tests
-yarn test:blocks       # Block system tests
 yarn test:markdown     # Markdown processing tests
 yarn test:sync         # Synchronization tests
 

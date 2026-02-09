@@ -43,7 +43,6 @@ tests/
     activity/             # Activity score calculations
     active-sessions/      # Session management
     base-uri/             # URI resolution and registry
-    blocks/               # Block system (markdown conversion)
     components/           # React component unit tests
     embedded-database-index/  # DuckDB index tests
     entity/               # Entity CRUD operations
