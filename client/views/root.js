@@ -27,6 +27,7 @@ import '@styles/typography.styl'
 import '@styles/pages.styl'
 import '@styles/utilities.styl'
 import '@styles/components/buttons.styl'
+import '@styles/print.styl'
 
 StoreRegistry.register(store)
 

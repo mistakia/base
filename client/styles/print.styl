@@ -1,0 +1,105 @@
+// Print styles for entity pages
+// Fixes blank page issue and optimizes layout for PDF export via Cmd+P
+
+@media print
+  // Remove the background pattern overlay that covers everything
+  body::after
+    display: none !important
+
+  // Remove iOS status bar background
+  html::before
+    display: none !important
+
+  // Allow content to flow naturally
+  html, body, #app
+    height: auto !important
+    overflow: visible !important
+    background: white !important
+
+  body
+    overflow: visible !important
+
+  // Page layout - remove viewport constraints
+  .page-layout
+    height: auto !important
+    overflow: visible !important
+    padding: 0 !important
+
+  // Hide navigation and UI chrome
+  .bottom-bar,
+  .page-header-area,
+  .page-sessions-panel,
+  .MuiBreadcrumbs-root,
+  .command-palette,
+  .global-thread-input,
+  .auth-status-bar
+    display: none !important
+
+  // Content container - full width, no bottom padding
+  .page-content-container
+    padding: 0 !important
+    max-width: 100% !important
+
+  // Entity renderer - single column layout for print
+  .MuiGrid-container
+    display: block !important
+
+  .MuiGrid-item
+    max-width: 100% !important
+    flex-basis: 100% !important
+    padding: 0 !important
+
+  // Hide the right column (frontmatter sidebar) in two-column layout
+  // Keep only the main content
+  .MuiGrid-container > .MuiGrid-item:last-child
+    display: none !important
+
+  // Markdown content styling for print
+  .markdown-viewer
+    max-width: 100% !important
+    padding: 0 !important
+
+    // Ensure code blocks don't overflow
+    pre, code
+      white-space: pre-wrap !important
+      word-wrap: break-word !important
+      max-width: 100% !important
+      overflow: visible !important
+
+    // Tables - fit to page
+    table
+      max-width: 100% !important
+      font-size: 10pt !important
+
+  // File actions - hide git controls
+  .file-actions
+    display: none !important
+
+  // Remove sticky positioning
+  [style*="position: sticky"],
+  [style*="position:sticky"]
+    position: static !important
+
+  // Print-friendly colors
+  a
+    color: #000 !important
+    text-decoration: underline !important
+
+  // Ensure text is black on white
+  *
+    color-adjust: exact !important
+    -webkit-print-color-adjust: exact !important
+    print-color-adjust: exact !important
+
+  // Page breaks - avoid breaking inside elements
+  h1, h2, h3, h4, h5, h6
+    page-break-after: avoid !important
+
+  pre, blockquote, table, figure
+    page-break-inside: avoid !important
+
+  // Expand any collapsed sections
+  .expandable-section__content
+    display: block !important
+    max-height: none !important
+    overflow: visible !important
