@@ -2,7 +2,7 @@ import { call, takeLatest, select, fork, delay, put } from 'redux-saga/effects'
 
 import { websocket_actions } from './actions'
 import { app_actions } from '@core/app/actions'
-import { get_app } from '@core/app/selectors'
+import { get_user_token } from '@core/app/selectors'
 import { open_websocket, close_websocket, websocket_is_open } from './service'
 
 export function* disconnect() {
@@ -10,10 +10,10 @@ export function* disconnect() {
 }
 
 export function* connect() {
-  const { user_public_key } = yield select(get_app)
-  // Connect with user_public_key if available, otherwise connect without authentication
+  const user_token = yield select(get_user_token)
+  // Connect with JWT token if available, otherwise connect without authentication
   // Server will send redacted events to unauthenticated clients
-  yield call(open_websocket, user_public_key ? { user_public_key } : {})
+  yield call(open_websocket, user_token ? { token: user_token } : {})
 }
 
 export function* reconnect() {
