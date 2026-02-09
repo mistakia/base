@@ -275,20 +275,41 @@ const save_claude_todos = async ({ raw_data_dir, session_id }) => {
     return
   }
 
+  // Filter out empty todo files (files containing just [] or empty)
+  const non_empty_todo_files = []
+  for (const todo_file of todo_files) {
+    try {
+      const content = await fs.readFile(todo_file, 'utf-8')
+      const parsed = JSON.parse(content)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        non_empty_todo_files.push(todo_file)
+      }
+    } catch {
+      // Skip files that can't be read or parsed
+    }
+  }
+
+  if (non_empty_todo_files.length === 0) {
+    log_debug(`No non-empty todo files found for session ${session_id}`)
+    return
+  }
+
   // Create todos directory in raw-data
   const todos_dir = path.join(raw_data_dir, 'todos')
   await fs.mkdir(todos_dir, { recursive: true })
 
-  // Copy all todo files in parallel
+  // Copy all non-empty todo files in parallel
   await Promise.all(
-    todo_files.map((todo_file) => {
+    non_empty_todo_files.map((todo_file) => {
       const filename = path.basename(todo_file)
       const dest_file = path.join(todos_dir, filename)
       return fs.copyFile(todo_file, dest_file)
     })
   )
 
-  log_debug(`Saved ${todo_files.length} todo file(s) for session ${session_id}`)
+  log_debug(
+    `Saved ${non_empty_todo_files.length} todo file(s) for session ${session_id}`
+  )
 }
 
 /**
