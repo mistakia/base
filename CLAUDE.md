@@ -390,9 +390,10 @@ node cli/notion/cleanup-notion-entities.mjs
 
 ## Git Workflow Rules
 
-**CRITICAL: Never commit directly to `main` or `master` branches**
+**Use feature branches for non-trivial changes:**
 
-- ALL development work MUST be done in feature branches or worktrees
-- Use the pattern: `git worktree add -b feature/description ../base-worktrees/feature-description`
-- Changes MUST go through the pull request process
-- Direct commits to main/master branches can break the CI/CD pipeline and disrupt other developers
+- For feature development, refactoring, or multi-file changes, use worktrees:
+  `git worktree add -b feature/description ../base-worktrees/feature-description`
+- Merge feature branches to main when ready, then clean up the worktree
+- Small changes (documentation, single-file fixes) can be committed directly to main
+- Avoid force pushes to main that would disrupt other developers
