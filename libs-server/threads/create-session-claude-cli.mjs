@@ -5,13 +5,12 @@ import { constants } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
 import glob_pkg from 'glob'
-
-const execAsync = promisify(exec)
 import debug from 'debug'
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
+const execAsync = promisify(exec)
 const glob = promisify(glob_pkg)
 const log = debug('threads:claude-cli')
 
