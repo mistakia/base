@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs/promises'
 import { homedir } from 'os'
+import { promisify } from 'util'
 import glob_pkg from 'glob'
 import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
@@ -17,7 +18,7 @@ import {
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
-const { glob } = glob_pkg
+const glob = promisify(glob_pkg)
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
 

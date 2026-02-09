@@ -4,13 +4,14 @@ import { join, isAbsolute, basename } from 'path'
 import { access, mkdir, copyFile, readFile } from 'fs/promises'
 import { constants } from 'fs'
 import { homedir } from 'os'
+import { promisify } from 'util'
 import glob_pkg from 'glob'
 import debug from 'debug'
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
-const { glob } = glob_pkg
+const glob = promisify(glob_pkg)
 const log = debug('threads:claude-cli')
 
 // =============================================================================
