@@ -79,6 +79,25 @@ All external sessions are normalized to the standard thread format:
 3. **Tool Call Mapping**: External tool usage → standard tool call/result entries
 4. **Context Preservation**: Provider-specific data retained in entry metadata
 
+## Execution Environments
+
+Sessions can execute in different environments depending on the use case:
+
+**Container Sessions (Non-Interactive or Interactive)**
+
+- Run in user-specific Docker containers
+- Isolated environment with controlled tool access and user-base access
+- Triggered by API, scheduled commands, or other sessions
+
+**Host Sessions (Interactive)**
+
+- Run directly on the user host machine
+- Full terminal and filesystem access
+- User-driven with real-time interaction
+- Direct filesystem writes to user-base
+
+All execution environments share the same user-base via file system mounting and git synchronization. See [[sys:system/text/system-design.md]] for deployment architecture details.
+
 ## Timeline Structure
 
 Threads maintain a chronological timeline with standardized entry types:

@@ -72,7 +72,7 @@ Thread tools manage thread execution state and user communication. These tools c
 
 **Execution Control**:
 
-- `terminate_thread` - Terminate thread execution permanently
+- `archive_thread` - Archive thread execution and mark it as complete or abandoned
 - `pause_execution` - Pause thread until manual resumption
 
 **User Communication**:
@@ -84,7 +84,7 @@ Thread tools manage thread execution state and user communication. These tools c
 
 - Thread tools update thread state through `update_thread_state()`
 - Timeline entries track tool usage and state changes
-- Worktree cleanup occurs on thread termination
+- Worktree cleanup occurs on thread archival
 
 ## Integration Points
 

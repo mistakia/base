@@ -61,7 +61,6 @@ The `libs-server/` directory contains server-specific code organized by function
     ├── filesystem/             # Filesystem operations
     ├── git/                    # Git integration functionality
     ├── guideline/              # Guideline management
-    ├── inference-providers/    # Inference service providers
     ├── integrations/           # External service integrations
     │   ├── claude/             # Claude AI integration
     │   ├── cursor/             # Cursor IDE integration
@@ -72,7 +71,6 @@ The `libs-server/` directory contains server-specific code organized by function
     │   └── thread/             # Thread integration utilities
     ├── markdown/               # Markdown processing
     ├── mcp/                    # Model Context Protocol service
-    ├── prompts/                # Prompt generation and management
     ├── repository/             # Repository processing (filesystem & git)
     ├── services/               # Service layer components
     ├── sync/                   # Data synchronization utilities
@@ -153,6 +151,8 @@ Additional user repositories can be configured and will be automatically recogni
 **Submodule Architecture**: High-churn directories like `thread/` and `import-history/` may be configured as git submodules with separate bare repositories. This isolates frequently-updated data from the main user-base history and enables dual-machine workflows where multiple machines can commit independently using normal git flow.
 
 The `system/` directory in the `base` project repository contains core definitions that provide the foundation for all knowledge items, while user repositories contain user-specific implementations and extensions of these core types. This separation allows for system stability while enabling flexible customization for multiple users' specific needs.
+
+**Container Access**: When sessions run in Docker containers, the user knowledge base is mounted.
 
 ## Additional Directories
 

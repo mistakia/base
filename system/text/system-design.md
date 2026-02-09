@@ -93,10 +93,27 @@ Each external data connection has bidirectional sync:
 - Github Projects
 - Other git repos
 
-### 3. Glossary
+### 3. Deployment Architecture
+
+The system supports multi-machine deployment where the Base API and services run on one or more machines while agent sessions execute in various contexts.
+
+#### 3.1 Execution Contexts
+
+- **Container Sessions**: Mainly non-interactive agent sessions run in user-specific Docker containers on the server. Containers provide isolation and consistent environments. Triggered by API, scheduled commands, or other sessions.
+- **Host Sessions**: Interactive sessions run directly on the user host machine with full terminal access. User-driven with real-time interaction.
+
+#### 3.2 Data Sharing
+
+All execution contexts share the same user-base directory via file system mounting and git synchronization:
+
+- User-base exists as a git repository
+- Containers and host machines push/pull to synchronize data via git synchronization
+- Thread data (`thread/`) is a submodule with its own git repository for high-churn isolation
+
+### 4. Glossary
 
 - **Workflow**: Defines agent behavior as a composable, modular function that specifies inputs, outputs, and tool integrations. It is effectively a prompt that defines agent behavior that can be run repeatedly, have loops, branching, wait for human input, embed other workflows, and so on.
-- **Thread**: The system's standardized session representation for conversations and agentic workflows. See [[sys:system/text/execution-threads.md]].
+- **Thread**: The system's standardized session representation for conversations and agentic workflows. Threads can execute in container (non-interactive) or host (interactive) environments. See [[sys:system/text/execution-threads.md]].
 - **Guideline**: A set of rules or recommendations accessed by workflows that MUST, SHOULD, or MAY be followed.
 - **Inference Request**: The process of submitting a prompt to models and receiving the generated outputs.
 - **Model**: A system capable of processing inference requests and generating outputs.
