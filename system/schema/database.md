@@ -60,6 +60,9 @@ properties:
       table:
         type: string
         description: Table name for duckdb backend (defaults to table_name)
+      database:
+        type: string
+        description: File path for duckdb backend (absolute path to .duckdb file)
       path:
         type: string
         description: File path for tsv backend (relative to user-base)
@@ -69,6 +72,9 @@ properties:
       connection_string:
         type: string
         description: Connection string for postgres backend
+      host:
+        type: string
+        description: SSH config host alias where database file resides (for remote access)
       schema_name:
         type: string
         default: public
