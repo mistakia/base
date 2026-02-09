@@ -127,6 +127,23 @@ export const broadcast_all = (message) => {
   })
 }
 
+/**
+ * Broadcast a message only to authenticated WebSocket clients
+ * @param {Object} message - The message to broadcast
+ */
+export const broadcast_authenticated = (message) => {
+  const data = JSON.stringify(message)
+  wss.clients.forEach((c) => {
+    if (c.readyState === WebSocket.OPEN && c.is_authenticated) {
+      try {
+        c.send(data)
+      } catch (error) {
+        log('Error broadcasting to authenticated client: %s', error.message)
+      }
+    }
+  })
+}
+
 export const send = ({ user_public_key, event }) => {
   const data = JSON.stringify(event)
   wss.clients.forEach((c) => {

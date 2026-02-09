@@ -40,7 +40,7 @@ import {
 } from '#libs-server/git/git-status-cache.mjs'
 import { get_known_repositories } from '#server/routes/git.mjs'
 import { invalidate as invalidate_file_path_cache } from '#libs-server/search/file-path-cache.mjs'
-import { broadcast_all } from '#server/websocket.mjs'
+import { broadcast_authenticated } from '#server/websocket.mjs'
 
 // Debounce file path cache invalidation so rapid file changes
 // (git operations, builds) consolidate into a single invalidation
@@ -203,9 +203,10 @@ try {
     try {
       await start_git_status_watcher({
         on_git_status_change: async ({ repo_path }) => {
-          // Update cache FIRST, then broadcast to clients
+          // Update cache FIRST, then broadcast to authenticated clients only
+          // GIT_STATUS_CHANGED reveals repository structure - restrict to authenticated users
           await invalidate_repo(repo_path)
-          broadcast_all({
+          broadcast_authenticated({
             type: 'GIT_STATUS_CHANGED',
             payload: { repo_path }
           })

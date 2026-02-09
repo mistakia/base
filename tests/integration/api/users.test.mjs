@@ -2,6 +2,7 @@ import chai from 'chai'
 import chaiHttp from 'chai-http'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import { randomUUID } from 'crypto'
 
 import server from '#server'
 import config from '#config'
@@ -16,7 +17,6 @@ describe('API /users', () => {
   let user_data
   let user_private_key
   let user_public_key
-  let signature
   let auth_token
 
   before(async () => {
@@ -40,17 +40,24 @@ describe('API /users', () => {
       permissions: {}
     }
     await user_registry.save_users(users)
-
-    const data_hash = ed25519.hash(JSON.stringify(user_data))
-    signature = ed25519
-      .sign(data_hash, user_private_key, user_public_key)
-      .toString('hex')
   })
 
   it('should authenticate an authorized user', async () => {
+    // Include timestamp and nonce for replay protection
+    const auth_data = {
+      ...user_data,
+      timestamp: Date.now(),
+      nonce: randomUUID()
+    }
+
+    const data_hash = ed25519.hash(JSON.stringify(auth_data))
+    const auth_signature = ed25519
+      .sign(data_hash, user_private_key, user_public_key)
+      .toString('hex')
+
     const res = await chai.request(server).post('/api/users').send({
-      data: user_data,
-      signature
+      data: auth_data,
+      signature: auth_signature
     })
 
     res.should.have.status(200)
@@ -103,7 +110,8 @@ describe('API /users', () => {
   it('should create a session and return JWT token', async () => {
     const session_data = {
       user_public_key: user_data.user_public_key,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      nonce: randomUUID()
     }
 
     const data_hash = ed25519.hash(JSON.stringify(session_data))
