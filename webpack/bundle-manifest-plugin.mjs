@@ -1,3 +1,7 @@
+import webpack from 'webpack'
+
+const { sources } = webpack
+
 /**
  * Webpack plugin to generate a manifest of JavaScript bundles for server-side rendering
  *
@@ -14,8 +18,21 @@ class BundleManifestPlugin {
   }
 
   apply(compiler) {
-    compiler.hooks.emit.tap('BundleManifestPlugin', (compilation) => {
-      this.generateManifest(compilation)
+    compiler.hooks.compilation.tap('BundleManifestPlugin', (compilation) => {
+      // Skip child compilations (e.g., from mini-css-extract-plugin)
+      if (compilation.compiler.parentCompilation) {
+        return
+      }
+
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'BundleManifestPlugin',
+          stage: webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE
+        },
+        () => {
+          this.generateManifest(compilation)
+        }
+      )
     })
   }
 
@@ -51,10 +68,10 @@ class BundleManifestPlugin {
 
       // Emit the manifest file
       const manifestContent = JSON.stringify(manifest, null, 2)
-      compilation.emitAsset(this.options.filename, {
-        source: () => manifestContent,
-        size: () => manifestContent.length
-      })
+      compilation.emitAsset(
+        this.options.filename,
+        new sources.RawSource(manifestContent)
+      )
 
       console.log(`Bundle manifest generated with ${scripts.length} scripts`)
     } catch (error) {
