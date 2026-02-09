@@ -33,7 +33,7 @@ A human-in-the-loop LLM system that works alongside a user to manage and build a
 - **Granular Action Control**: Tool calls have configurable permission levels to control autonomy
 - **Async Collaboration**: Support for asynchronous human-system interaction
 - **Knowledge Graph**: Builds and traverses relationships between knowledge items
-- **Block-Based Content**: All content is broken down into uniquely identifiable blocks with granular access control
+- **Markdown Content**: Content is stored as markdown files with YAML frontmatter
 - **Self-Improvement**: The system can evaluate and improve itself through feedback loops
 
 ### 2. Content Storage System
@@ -62,7 +62,7 @@ The system uses the `<dataset_name>.md` definition to connect to the underlying 
 
 #### 2.3 Indexing
 
-There is flexibility to use any indexing or vector database, but the preference is to use embedded databases like [Kuzudb](https://github.com/kuzudb/kuzu), sqlite, and [duckdb](https://duckdb.org/).
+There is flexibility to use any indexing or vector database, but the preference is to use embedded databases like sqlite and [DuckDB](https://duckdb.org/).
 
 #### 2.4 Filesystem Architecture
 

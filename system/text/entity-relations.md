@@ -135,7 +135,7 @@ Threads are automatically analyzed to extract entity relations from their timeli
 
 ### Thread-as-Entity Model
 
-Threads are treated as entities in KuzuDB with:
+Threads are treated as entities with:
 
 - `base_uri`: `user:thread/<thread-id>`
 - `type`: `thread`
@@ -206,15 +206,15 @@ This is useful for finding all threads that accessed or modified a particular en
 - `limit`: Max results per direction (default: 50)
 - `offset`: Pagination offset
 
-## KuzuDB Integration
+## Relation Storage Implementation
 
-Relations are stored in KuzuDB as graph edges:
+Relations are stored in DuckDB and can be queried via the API. The data model supports:
 
-- `Entity` nodes represent entities (tasks, threads, files, etc.)
-- `RELATES_TO` edges connect entities with relation type and context
-- `Tag` nodes and `HAS_TAG` edges represent entity tags
+- Entity records with type, base_uri, and metadata
+- Relation records linking source and target entities with relation type and optional context
+- Tag associations for entity categorization
 
-This enables graph traversal queries like finding all threads that modified a specific task, or all entities accessed by threads in a particular working directory.
+This enables queries like finding all threads that modified a specific task, or all entities accessed by threads in a particular working directory.
 
 ## Functions
 

@@ -16,7 +16,6 @@ export const isMain = (p) => {
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as git from './git/index.mjs'
 export * as markdown from './markdown/index.mjs'
-export * as blocks from './blocks/index.mjs'
 export * as threads from './threads/index.mjs'
 export * as prompts from './prompts/index.mjs'
 export * as workflow from './workflow/index.mjs'

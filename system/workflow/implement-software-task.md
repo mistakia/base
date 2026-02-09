@@ -78,7 +78,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
      - Initialize needed submodule: `git submodule update --init [submodule-path]`
      - Checkout proper branch (submodules start in detached HEAD): `cd [submodule-path] && git checkout main && cd ..`
    - **Install dependencies** (choose based on native module complexity):
-     - **Fast path** (for projects with native dependencies like duckdb, kuzu, sqlite3):
+     - **Fast path** (for projects with native dependencies like duckdb, sqlite3):
        - Copy node_modules from main repo: `cp -r ../../{repo-name}/node_modules .`
        - Run `yarn install` to verify and link (typically < 1 second)
      - **Standard path**: `yarn install`
