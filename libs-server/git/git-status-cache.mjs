@@ -19,11 +19,12 @@ const DEFAULT_MERGE_STATE = {
  * In-memory cache state
  */
 let repo_list_cache = null // { repo_paths: string[], worktree_metadata: Map }
-const status_cache = new Map() // Map<repo_path, { status, merge_state }>
+const status_cache = new Map() // Map<repo_path, { status, merge_state, updated_at }>
 let cache_initializing = null // Promise (for requests arriving during cold start)
 let is_initialized = false // Flag set when initialization starts (prevents race condition)
 let _discover_repos_fn = null // injected repo discovery function
 let _on_repo_list_changed = null // callback when repo list changes
+let _oldest_updated_at = null // tracked to avoid recomputation on every request
 
 /**
  * Initialize the cache with a full repo discovery + status fetch
@@ -76,6 +77,8 @@ async function _do_full_cache_init() {
   repo_list_cache = { repo_paths, worktree_metadata }
 
   // Fetch status + merge state for all repos in parallel
+  const now = Date.now()
+  _oldest_updated_at = now // All repos initialized at the same time
   await Promise.all(
     repo_paths.map(async (repo_path) => {
       try {
@@ -83,12 +86,13 @@ async function _do_full_cache_init() {
           get_status({ repo_path }),
           _get_merge_state(repo_path)
         ])
-        status_cache.set(repo_path, { status, merge_state })
+        status_cache.set(repo_path, { status, merge_state, updated_at: now })
       } catch (error) {
         log('Failed to get initial status for %s: %s', repo_path, error.message)
         status_cache.set(repo_path, {
           status: _error_status(error),
-          merge_state: DEFAULT_MERGE_STATE
+          merge_state: DEFAULT_MERGE_STATE,
+          updated_at: now
         })
       }
     })
@@ -134,14 +138,15 @@ export async function invalidate_repo(repo_path) {
       _get_merge_state(repo_path)
     ])
 
-    status_cache.set(repo_path, { status, merge_state })
+    status_cache.set(repo_path, { status, merge_state, updated_at: Date.now() })
 
     log('Cache updated for %s in %dms', repo_path, Date.now() - start)
   } catch (error) {
     log('Failed to refresh status for %s: %s', repo_path, error.message)
     status_cache.set(repo_path, {
       status: _error_status(error),
-      merge_state: DEFAULT_MERGE_STATE
+      merge_state: DEFAULT_MERGE_STATE,
+      updated_at: Date.now()
     })
   }
 }
@@ -178,6 +183,7 @@ export async function invalidate_repo_list() {
 
   // Fetch status for new entries
   if (added.length > 0) {
+    const now = Date.now()
     await Promise.all(
       added.map(async (repo_path) => {
         try {
@@ -185,7 +191,7 @@ export async function invalidate_repo_list() {
             get_status({ repo_path }),
             _get_merge_state(repo_path)
           ])
-          status_cache.set(repo_path, { status, merge_state })
+          status_cache.set(repo_path, { status, merge_state, updated_at: now })
           log('Added repo to cache: %s', repo_path)
         } catch (error) {
           log(
@@ -195,7 +201,8 @@ export async function invalidate_repo_list() {
           )
           status_cache.set(repo_path, {
             status: _error_status(error),
-            merge_state: DEFAULT_MERGE_STATE
+            merge_state: DEFAULT_MERGE_STATE,
+            updated_at: now
           })
         }
       })
@@ -220,6 +227,22 @@ export function is_cache_ready() {
 }
 
 /**
+ * Get cache metadata including oldest updated_at timestamp
+ *
+ * @returns {{ oldest_updated_at: number|null, repo_count: number }}
+ */
+export function get_cache_metadata() {
+  if (!repo_list_cache) {
+    return { oldest_updated_at: null, repo_count: 0 }
+  }
+
+  return {
+    oldest_updated_at: _oldest_updated_at,
+    repo_count: status_cache.size
+  }
+}
+
+/**
  * Get the initialization promise (for callers that arrive during cold start)
  *
  * @returns {Promise|null}
@@ -238,6 +261,7 @@ export function destroy_cache() {
   is_initialized = false
   _discover_repos_fn = null
   _on_repo_list_changed = null
+  _oldest_updated_at = null
   log('Cache destroyed')
 }
 

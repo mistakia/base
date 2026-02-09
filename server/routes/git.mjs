@@ -37,7 +37,8 @@ import { generate_commit_message } from '#libs-server/git/generate-commit-messag
 import {
   get_cached_status_all,
   is_cache_ready,
-  get_cache_initializing
+  get_cache_initializing,
+  get_cache_metadata
 } from '#libs-server/git/git-status-cache.mjs'
 
 const router = express.Router()
@@ -636,47 +637,25 @@ router.get('/status', require_repo_read_permission, async (req, res) => {
 /**
  * GET /api/git/status/all
  * Get status for all known repositories
+ * Query params:
+ *   - force_refresh: if 'true', bypass cache and fetch live data
  */
 router.get('/status/all', async (req, res) => {
   try {
     const user_base_dir = get_user_base_dir()
     const user_public_key = req.user?.user_public_key
+    const force_refresh = req.query.force_refresh === 'true'
 
     // Check if user has global_write permission - if so, skip all file-level permission checks
     const has_global_write =
       req.permission_context &&
       (await req.permission_context.get_global_write_permission())
 
-    // Wait for cache if it's still initializing (cold start)
-    const initializing = get_cache_initializing()
-    if (initializing) {
-      log('Cache still initializing, waiting...')
-      await initializing
-    }
-
     let repo_paths, worktree_metadata, statuses_map, merge_state_map
 
-    if (is_cache_ready()) {
-      // Read from cache (sub-millisecond)
-      const cached = get_cached_status_all()
-      repo_paths = cached.repo_paths
-      worktree_metadata = cached.worktree_metadata
-
-      statuses_map = {}
-      merge_state_map = new Map()
-      for (const repo_path of repo_paths) {
-        const entry = cached.statuses.get(repo_path)
-        if (entry) {
-          statuses_map[repo_path] = entry.status
-          merge_state_map.set(
-            repo_path,
-            entry.merge_state || DEFAULT_MERGE_STATE
-          )
-        }
-      }
-    } else {
-      // Fallback: cache not ready, use live queries
-      log('Cache not ready, falling back to live queries')
+    if (force_refresh) {
+      // Force refresh: bypass cache, fetch live data
+      log('Force refresh requested, using live queries')
       const discovered = await get_known_repositories()
       repo_paths = discovered.repo_paths
       worktree_metadata = discovered.worktree_metadata
@@ -684,27 +663,91 @@ router.get('/status/all', async (req, res) => {
       merge_state_map = await get_merge_states_for_repos(
         Object.keys(statuses_map)
       )
+    } else {
+      // Wait for cache if it's still initializing (cold start)
+      const initializing = get_cache_initializing()
+      if (initializing) {
+        log('Cache still initializing, waiting...')
+        await initializing
+      }
+
+      if (is_cache_ready()) {
+        // Read from cache (sub-millisecond)
+        const cached = get_cached_status_all()
+        repo_paths = cached.repo_paths
+        worktree_metadata = cached.worktree_metadata
+
+        statuses_map = {}
+        merge_state_map = new Map()
+        for (const repo_path of repo_paths) {
+          const entry = cached.statuses.get(repo_path)
+          if (entry) {
+            statuses_map[repo_path] = entry.status
+            merge_state_map.set(
+              repo_path,
+              entry.merge_state || DEFAULT_MERGE_STATE
+            )
+          }
+        }
+      } else {
+        // Fallback: cache not ready, use live queries
+        log('Cache not ready, falling back to live queries')
+        const discovered = await get_known_repositories()
+        repo_paths = discovered.repo_paths
+        worktree_metadata = discovered.worktree_metadata
+        statuses_map = await get_multi_repo_status({ repo_paths })
+        merge_state_map = await get_merge_states_for_repos(
+          Object.keys(statuses_map)
+        )
+      }
     }
 
     const get_worktree_fields = (repo_path) => {
       const wt_meta = worktree_metadata.get(repo_path)
       return {
         is_worktree: Boolean(wt_meta),
-        parent_repo_name: wt_meta?.parent_repo_name || null
+        parent_repo_name: wt_meta?.parent_repo_name || null,
+        parent_repo_path: wt_meta?.parent_repo_path || null
       }
     }
+
+    // Build reverse mapping: parent repo path -> array of worktree summaries
+    const parent_to_worktrees = new Map()
+    for (const [wt_path, meta] of worktree_metadata.entries()) {
+      const parent = meta.parent_repo_path
+      if (!parent_to_worktrees.has(parent)) {
+        parent_to_worktrees.set(parent, [])
+      }
+      const wt_status = statuses_map[wt_path]
+      parent_to_worktrees.get(parent).push({
+        path: wt_path,
+        relative_path: path.relative(parent, wt_path),
+        branch: wt_status?.branch || null,
+        has_changes: wt_status?.has_changes ?? false
+      })
+    }
+
+    // Get cache timestamp for response
+    // When force_refresh, return current time to indicate fresh data
+    const cache_updated_at = force_refresh
+      ? Date.now()
+      : get_cache_metadata().oldest_updated_at
 
     // For users with global_write, skip permission filtering entirely
     if (has_global_write) {
       const repos = Object.entries(statuses_map).map(([repo_path, status]) => {
         const merge_state =
           merge_state_map.get(repo_path) || DEFAULT_MERGE_STATE
+        const worktree_fields = get_worktree_fields(repo_path)
         return {
           repo_path,
           repo_name: path.basename(repo_path),
           relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
-          ...get_worktree_fields(repo_path),
+          ...worktree_fields,
+          worktrees: worktree_fields.is_worktree
+            ? undefined
+            : parent_to_worktrees.get(repo_path) || [],
           ...status,
           write_allowed: true,
           is_merging: merge_state.is_merging,
@@ -713,7 +756,7 @@ router.get('/status/all', async (req, res) => {
         }
       })
 
-      return res.json({ repos })
+      return res.json({ repos, cache_updated_at })
     }
 
     // Check permissions for all repositories
@@ -813,12 +856,16 @@ router.get('/status/all', async (req, res) => {
 
         // If user has write access to repo, include all files (no filtering needed)
         if (write_allowed) {
+          const worktree_fields = get_worktree_fields(repo_path)
           return {
             repo_path,
             repo_name: path.basename(repo_path),
             relative_repo_path: path.relative(user_base_dir, repo_path),
             is_user_base: repo_path === user_base_dir,
-            ...get_worktree_fields(repo_path),
+            ...worktree_fields,
+            worktrees: worktree_fields.is_worktree
+              ? undefined
+              : parent_to_worktrees.get(repo_path) || [],
             ...status,
             write_allowed,
             is_merging: merge_state.is_merging,
@@ -847,12 +894,16 @@ router.get('/status/all', async (req, res) => {
         const filtered_untracked = filter_files(status.untracked)
         const filtered_conflicts = filter_files(status.conflicts)
 
+        const worktree_fields = get_worktree_fields(repo_path)
         return {
           repo_path,
           repo_name: path.basename(repo_path),
           relative_repo_path: path.relative(user_base_dir, repo_path),
           is_user_base: repo_path === user_base_dir,
-          ...get_worktree_fields(repo_path),
+          ...worktree_fields,
+          worktrees: worktree_fields.is_worktree
+            ? undefined
+            : parent_to_worktrees.get(repo_path) || [],
           ...status,
           staged: filtered_staged,
           unstaged: filtered_unstaged,
@@ -871,7 +922,7 @@ router.get('/status/all', async (req, res) => {
       }
     )
 
-    res.json({ repos })
+    res.json({ repos, cache_updated_at })
   } catch (error) {
     log('Error getting all repo statuses:', error.message)
     res.status(500).json({
