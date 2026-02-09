@@ -3,6 +3,10 @@
  *
  * Provides storage backend using embedded DuckDB database.
  * Tables are created dynamically from database entity schema.
+ *
+ * Supports two modes:
+ * - Shared mode: Uses the global embedded DuckDB connection (default)
+ * - Custom path mode: Opens a dedicated connection to a specific .duckdb file
  */
 
 import debug from 'debug'
@@ -15,6 +19,72 @@ import {
 import { map_field_type_to_sql, parse_filter_expression } from './index.mjs'
 
 const log = debug('database:adapter:duckdb')
+
+/**
+ * Create a dedicated DuckDB connection to a specific database file
+ *
+ * @param {string} database_path - Path to .duckdb file
+ * @returns {Object} Connection wrapper with query/run methods
+ */
+async function create_dedicated_connection(database_path) {
+  const duckdb = await import('duckdb')
+
+  return new Promise((resolve, reject) => {
+    const db = new duckdb.default.Database(database_path, (err) => {
+      if (err) {
+        log('Error opening DuckDB database at %s: %s', database_path, err.message)
+        reject(err)
+        return
+      }
+
+      const connection = db.connect()
+      log('Opened dedicated DuckDB connection to %s', database_path)
+
+      resolve({
+        async query({ query, parameters = [] }) {
+          const sanitized = parameters.map((p) => (p === undefined ? null : p))
+          return new Promise((resolve, reject) => {
+            if (sanitized.length > 0) {
+              connection.all(query, ...sanitized, (e, result) => {
+                if (e) reject(e)
+                else resolve(result)
+              })
+            } else {
+              connection.all(query, (e, result) => {
+                if (e) reject(e)
+                else resolve(result)
+              })
+            }
+          })
+        },
+        async run({ query, parameters = [] }) {
+          const sanitized = parameters.map((p) => (p === undefined ? null : p))
+          return new Promise((resolve, reject) => {
+            if (sanitized.length > 0) {
+              connection.run(query, ...sanitized, (e) => {
+                if (e) reject(e)
+                else resolve()
+              })
+            } else {
+              connection.run(query, (e) => {
+                if (e) reject(e)
+                else resolve()
+              })
+            }
+          })
+        },
+        async close() {
+          return new Promise((resolve) => {
+            db.close(() => {
+              log('Closed dedicated DuckDB connection to %s', database_path)
+              resolve()
+            })
+          })
+        }
+      })
+    })
+  })
+}
 
 /**
  * Map schema field type to DuckDB type
@@ -164,31 +234,94 @@ function build_where_clause(filter, database_entity) {
 }
 
 /**
+ * Get database path from storage_config
+ */
+function get_database_path(database_entity) {
+  const storage_config = database_entity.storage_config || {}
+  return storage_config.database || null
+}
+
+/**
  * Create DuckDB adapter for a database entity
+ *
+ * If storage_config.database is specified, opens a dedicated connection.
+ * Otherwise uses the shared embedded database connection.
  */
 export function create_duckdb_adapter(database_entity) {
   const table_name = get_table_name(database_entity)
   const pk_field = get_primary_key_field(database_entity)
+  const database_path = get_database_path(database_entity)
 
-  log('Creating DuckDB adapter for table: %s', table_name)
+  // Track dedicated connection if using custom path
+  let dedicated_connection = null
+  let connection_promise = null // Mutex for connection creation
+  const uses_dedicated = Boolean(database_path)
+
+  log(
+    'Creating DuckDB adapter for table: %s (path: %s)',
+    table_name,
+    database_path || 'shared'
+  )
+
+  // Helper functions to abstract connection access
+  async function ensure_connection() {
+    if (uses_dedicated) {
+      // Return existing connection if available
+      if (dedicated_connection) {
+        return dedicated_connection
+      }
+      // Use promise as mutex to prevent race condition
+      if (!connection_promise) {
+        connection_promise = create_dedicated_connection(database_path)
+          .then((conn) => {
+            dedicated_connection = conn
+            return conn
+          })
+          .catch((err) => {
+            connection_promise = null // Allow retry on failure
+            throw err
+          })
+      }
+      return connection_promise
+    } else {
+      if (!is_duckdb_initialized()) {
+        throw new Error('DuckDB not initialized')
+      }
+      return null // Use shared connection
+    }
+  }
+
+  async function run_query({ query, parameters = [] }) {
+    const conn = await ensure_connection()
+    if (conn) {
+      return conn.query({ query, parameters })
+    } else {
+      return execute_duckdb_query({ query, parameters })
+    }
+  }
+
+  async function run_execute({ query, parameters = [] }) {
+    const conn = await ensure_connection()
+    if (conn) {
+      return conn.run({ query, parameters })
+    } else {
+      return execute_duckdb_run({ query, parameters })
+    }
+  }
 
   return {
     /**
      * Create or sync table from database schema
      */
     async create_table() {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       log('Creating table: %s', table_name)
 
       const create_sql = generate_create_table_sql(database_entity)
-      await execute_duckdb_run({ query: create_sql })
+      await run_execute({ query: create_sql })
 
       const index_statements = generate_index_sql(database_entity)
       for (const index_sql of index_statements) {
-        await execute_duckdb_run({ query: index_sql })
+        await run_execute({ query: index_sql })
       }
 
       log('Table created: %s', table_name)
@@ -198,10 +331,6 @@ export function create_duckdb_adapter(database_entity) {
      * Insert records into the table
      */
     async insert(records) {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       if (!Array.isArray(records)) {
         records = [records]
       }
@@ -231,7 +360,7 @@ export function create_duckdb_adapter(database_entity) {
         }
       }
 
-      await execute_duckdb_run({
+      await run_execute({
         query: `INSERT INTO "${table_name}" (${columns}) VALUES ${value_sets.join(', ')}`,
         parameters: all_values
       })
@@ -244,10 +373,6 @@ export function create_duckdb_adapter(database_entity) {
      * Query records with filtering, sorting, pagination
      */
     async query({ filter, sort, limit = 1000, offset = 0 } = {}) {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       log('Querying table: %s', table_name)
 
       const { clause: where_clause, params } = build_where_clause(
@@ -271,15 +396,15 @@ export function create_duckdb_adapter(database_entity) {
         }
       }
 
-      const query = `
+      const sql = `
         SELECT * FROM "${table_name}"
         ${where_clause}
         ${order_clause}
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `
 
-      const results = await execute_duckdb_query({
-        query,
+      const results = await run_query({
+        query: sql,
         parameters: [...params, limit, offset]
       })
 
@@ -291,10 +416,6 @@ export function create_duckdb_adapter(database_entity) {
      * Update a record by primary key
      */
     async update(id, fields) {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       if (!pk_field) {
         throw new Error('No primary key field defined for this database')
       }
@@ -317,7 +438,7 @@ export function create_duckdb_adapter(database_entity) {
 
       params.push(id)
 
-      await execute_duckdb_run({
+      await run_execute({
         query: `UPDATE "${table_name}" SET ${set_parts.join(', ')} WHERE "${pk_field}" = $${param_index}`,
         parameters: params
       })
@@ -330,17 +451,13 @@ export function create_duckdb_adapter(database_entity) {
      * Delete a record by primary key
      */
     async delete(id) {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       if (!pk_field) {
         throw new Error('No primary key field defined for this database')
       }
 
       log('Deleting record %s from %s', id, table_name)
 
-      await execute_duckdb_run({
+      await run_execute({
         query: `DELETE FROM "${table_name}" WHERE "${pk_field}" = $1`,
         parameters: [id]
       })
@@ -353,10 +470,6 @@ export function create_duckdb_adapter(database_entity) {
      * Count records matching filter
      */
     async count(filter) {
-      if (!is_duckdb_initialized()) {
-        throw new Error('DuckDB not initialized')
-      }
-
       log('Counting records in %s', table_name)
 
       const { clause: where_clause, params } = build_where_clause(
@@ -364,7 +477,7 @@ export function create_duckdb_adapter(database_entity) {
         database_entity
       )
 
-      const results = await execute_duckdb_query({
+      const results = await run_query({
         query: `SELECT COUNT(*) as count FROM "${table_name}" ${where_clause}`,
         parameters: params
       })
@@ -378,10 +491,16 @@ export function create_duckdb_adapter(database_entity) {
     },
 
     /**
-     * Close adapter (no-op for DuckDB as connection is shared)
+     * Close adapter and release resources
      */
     async close() {
-      log('DuckDB adapter closed (connection shared)')
+      if (dedicated_connection) {
+        await dedicated_connection.close()
+        dedicated_connection = null
+        log('DuckDB adapter closed (dedicated connection)')
+      } else {
+        log('DuckDB adapter closed (shared connection)')
+      }
     }
   }
 }

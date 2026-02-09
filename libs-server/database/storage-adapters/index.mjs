@@ -3,9 +3,15 @@
  *
  * Provides factory function to get the appropriate storage adapter
  * based on database entity storage_config.
+ *
+ * Supports cross-machine access via storage_config.host:
+ * - If host is omitted or matches current machine: uses local adapter
+ * - If host is remote: uses SSH-based remote adapter
  */
 
 import debug from 'debug'
+
+import { is_local_host } from '../is-local-host.mjs'
 
 const log = debug('database:storage-adapters')
 
@@ -33,23 +39,43 @@ const log = debug('database:storage-adapters')
 export async function get_storage_adapter(database_entity) {
   const storage_config = database_entity.storage_config || {}
   const backend = storage_config.backend || 'duckdb'
+  const host = storage_config.host
+  const is_local = is_local_host({ host })
 
-  log('Getting storage adapter for backend: %s', backend)
+  log('Getting storage adapter for backend: %s (host: %s, local: %s)', backend, host || 'none', is_local)
 
   switch (backend) {
     case 'duckdb': {
+      if (!is_local) {
+        const { create_duckdb_remote_adapter } = await import('./duckdb-remote.mjs')
+        return create_duckdb_remote_adapter({
+          host,
+          database_path: storage_config.database,
+          database_entity
+        })
+      }
       const { create_duckdb_adapter } = await import('./duckdb-adapter.mjs')
       return create_duckdb_adapter(database_entity)
     }
     case 'tsv': {
+      if (!is_local) {
+        const { create_tsv_remote_adapter } = await import('./tsv-remote.mjs')
+        return create_tsv_remote_adapter({
+          host,
+          file_path: storage_config.path,
+          database_entity
+        })
+      }
       const { create_tsv_adapter } = await import('./tsv-adapter.mjs')
       return create_tsv_adapter(database_entity)
     }
     case 'postgres': {
+      // PostgreSQL uses connection_string which already handles remote access
       const { create_postgres_adapter } = await import('./postgres-adapter.mjs')
       return create_postgres_adapter(database_entity)
     }
     case 'markdown': {
+      // Markdown uses git sync for cross-machine access
       const { create_markdown_adapter } = await import('./markdown-adapter.mjs')
       return create_markdown_adapter(database_entity)
     }
