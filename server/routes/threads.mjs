@@ -804,11 +804,13 @@ router.post('/:thread_id/resume', async (req, res) => {
 
     // Add job to queue - thread will be updated by hook after session completes
     // Pass the Claude session ID so the CLI can resume the correct session
+    // Pass thread_id so session state can be restored before spawning the CLI
     const job = await add_thread_creation_job({
       prompt,
       working_directory: validated_working_directory,
       user_public_key,
-      session_id: claude_session_id // Pass Claude session ID for resume
+      session_id: claude_session_id,
+      thread_id
     })
 
     log(

@@ -1,5 +1,7 @@
 import path from 'path'
 import fs from 'fs/promises'
+import { homedir } from 'os'
+import glob_pkg from 'glob'
 import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import config from '#config'
@@ -15,6 +17,7 @@ import {
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
+const { glob } = glob_pkg
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
 
@@ -72,7 +75,8 @@ export const create_thread_from_session = async ({
       session_id: normalized_session.session_id,
       imported_at: new Date().toISOString(),
       provider_metadata: normalized_session.metadata,
-      raw_data_saved: !!raw_session_data
+      raw_data_saved: !!raw_session_data,
+      plan_slug: normalized_session.metadata?.plan_slug || null
     }
 
     // Extract timeline timestamps for thread creation
@@ -139,6 +143,15 @@ export const create_thread_from_session = async ({
       })
     }
 
+    // Save plan to shared location if session has a plan_slug
+    const plan_slug = normalized_session.metadata?.plan_slug
+    if (plan_slug) {
+      await save_plan_to_shared_location({
+        plan_slug,
+        user_base_directory
+      })
+    }
+
     log_debug(
       `Created thread ${thread_result.thread_id} from ${normalized_session.session_provider} session ${normalized_session.session_id}`
     )
@@ -172,12 +185,16 @@ const save_raw_session_data = async ({
     return
   }
 
+  // Extract session_id for provider-specific handling
+  const session_id = normalized_session.session_id
+
   // Save provider-specific raw data format
   switch (session_provider) {
     case 'claude':
       await save_claude_raw_data({
         raw_data_dir,
-        raw_data: raw_session_data
+        raw_data: raw_session_data,
+        session_id
       })
       break
     case 'cursor':
@@ -208,7 +225,7 @@ const save_raw_session_data = async ({
   log_debug(`Saved normalized session data to ${normalized_file}`)
 }
 
-const save_claude_raw_data = async ({ raw_data_dir, raw_data }) => {
+const save_claude_raw_data = async ({ raw_data_dir, raw_data, session_id }) => {
   // Save original JSONL entries if available
   if (raw_data.entries && Array.isArray(raw_data.entries)) {
     const jsonl_content = raw_data.entries
@@ -228,6 +245,92 @@ const save_claude_raw_data = async ({ raw_data_dir, raw_data }) => {
     )
     log_debug(`Saved Claude metadata to ${metadata_file}`)
   }
+
+  // Save todo files if they exist for this session
+  if (session_id) {
+    await save_claude_todos({ raw_data_dir, session_id })
+  }
+}
+
+const save_claude_todos = async ({ raw_data_dir, session_id }) => {
+  const host_todos_dir = path.join(homedir(), '.claude', 'todos')
+
+  try {
+    // Check if host todos directory exists
+    await fs.access(host_todos_dir)
+  } catch {
+    // Directory doesn't exist (e.g., container environment) - skip silently
+    return
+  }
+
+  // Glob for session-specific todo files
+  // Matches: <session_id>.json and <session_id>-agent-*.json
+  // Using single pattern that matches both naming conventions
+  const todo_pattern = path.join(host_todos_dir, `${session_id}*.json`)
+  const todo_files = await glob(todo_pattern)
+
+  if (todo_files.length === 0) {
+    log_debug(`No todo files found for session ${session_id}`)
+    return
+  }
+
+  // Create todos directory in raw-data
+  const todos_dir = path.join(raw_data_dir, 'todos')
+  await fs.mkdir(todos_dir, { recursive: true })
+
+  // Copy all todo files in parallel
+  await Promise.all(
+    todo_files.map((todo_file) => {
+      const filename = path.basename(todo_file)
+      const dest_file = path.join(todos_dir, filename)
+      return fs.copyFile(todo_file, dest_file)
+    })
+  )
+
+  log_debug(`Saved ${todo_files.length} todo file(s) for session ${session_id}`)
+}
+
+/**
+ * Save the plan file to the global shared location in the thread submodule
+ * Plans are stored at thread/plans/<slug>.md (not under individual thread UUIDs)
+ */
+const save_plan_to_shared_location = async ({
+  plan_slug,
+  user_base_directory
+}) => {
+  if (!plan_slug) {
+    return
+  }
+
+  const host_plans_dir = path.join(homedir(), '.claude', 'plans')
+  const host_plan_file = path.join(host_plans_dir, `${plan_slug}.md`)
+
+  try {
+    // Check if host plan file exists
+    await fs.access(host_plan_file)
+  } catch {
+    // Plan file doesn't exist on host - skip silently
+    log_debug(`Plan file not found on host: ${host_plan_file}`)
+    return
+  }
+
+  // Create thread/plans/ directory if it doesn't exist
+  const shared_plans_dir = path.join(user_base_directory, 'thread', 'plans')
+  await fs.mkdir(shared_plans_dir, { recursive: true })
+
+  const dest_plan_file = path.join(shared_plans_dir, `${plan_slug}.md`)
+
+  try {
+    // Check if plan already exists in shared location (avoid race conditions)
+    await fs.access(dest_plan_file)
+    log_debug(`Plan ${plan_slug} already exists in shared location, skipping`)
+    return
+  } catch {
+    // Plan doesn't exist yet, copy it
+  }
+
+  await fs.copyFile(host_plan_file, dest_plan_file)
+  log_debug(`Saved plan ${plan_slug} to shared location: ${dest_plan_file}`)
 }
 
 const save_cursor_raw_data = async ({ raw_data_dir, raw_data }) => {
@@ -296,7 +399,12 @@ export const update_existing_thread = async (
   options = {}
 ) => {
   try {
-    const { thread_id, thread_dir, raw_session_data } = options
+    const {
+      thread_id,
+      thread_dir,
+      raw_session_data,
+      user_base_directory = get_user_base_directory()
+    } = options
 
     log_debug(
       `Updating existing thread ${thread_id} for session ${normalized_session.session_id}`
@@ -311,6 +419,15 @@ export const update_existing_thread = async (
         session_provider: normalized_session.session_provider,
         raw_session_data,
         normalized_session
+      })
+    }
+
+    // Save plan to shared location if session has a plan_slug
+    const plan_slug = normalized_session.metadata?.plan_slug
+    if (plan_slug) {
+      await save_plan_to_shared_location({
+        plan_slug,
+        user_base_directory
       })
     }
 
@@ -379,7 +496,8 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       tool_call_count: counts.tool_call_count,
       external_session: {
         ...existing_metadata.external_session,
-        provider_metadata: normalized_session.metadata
+        provider_metadata: normalized_session.metadata,
+        plan_slug: normalized_session.metadata?.plan_slug || null
       },
       // Add detailed counts for Claude sessions
       ...(normalized_session.session_provider === 'claude' && {

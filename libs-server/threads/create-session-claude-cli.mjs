@@ -1,13 +1,16 @@
 import { spawn } from 'child_process'
-import { join, isAbsolute } from 'path'
-import { access } from 'fs/promises'
+import { exec as execAsync } from 'child_process/promises'
+import { join, isAbsolute, basename } from 'path'
+import { access, mkdir, copyFile, readFile } from 'fs/promises'
 import { constants } from 'fs'
 import { homedir } from 'os'
+import glob_pkg from 'glob'
 import debug from 'debug'
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
+const { glob } = glob_pkg
 const log = debug('threads:claude-cli')
 
 // =============================================================================
@@ -24,6 +27,27 @@ const SESSION_DIRECTORY_NAME = '.claude'
  * These paths are checked when the config uses just "claude" instead of a full path
  */
 const CLAUDE_CLI_PATHS = [join(homedir(), '.claude', 'local', 'claude')]
+
+/**
+ * Container Claude home directory on host side
+ * This is the volume mount point that maps to /home/node/.claude in the container
+ */
+const CONTAINER_CLAUDE_HOME = join(
+  homedir(),
+  '.base-container-data',
+  'claude-home'
+)
+
+/**
+ * Derive the projects directory name from a working directory path
+ * Converts /Users/trashman/user-base to -Users-trashman-user-base
+ *
+ * @param {string} working_directory - Absolute path to working directory
+ * @returns {string} Derived projects directory name
+ */
+const derive_projects_dir_name = (working_directory) => {
+  return working_directory.replace(/\//g, '-')
+}
 
 // =============================================================================
 // Command Path Resolution
@@ -210,6 +234,246 @@ const build_success_result = ({ working_directory, session_id, exit_code }) => {
 }
 
 // =============================================================================
+// Session State Restoration
+// =============================================================================
+
+/**
+ * Check if the container is running
+ *
+ * @returns {Promise<boolean>} True if container is running
+ */
+const is_container_running = async () => {
+  try {
+    const { stdout } = await execAsync(
+      "docker ps --filter name=base-container --format '{{.Status}}'"
+    )
+    return stdout.includes('Up')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Start the container if not running
+ *
+ * @param {string} user_base_directory - User base directory path
+ */
+const ensure_container_running = async (user_base_directory) => {
+  if (await is_container_running()) {
+    log('Container already running')
+    return
+  }
+
+  log('Container not running, starting...')
+  const compose_file = join(
+    user_base_directory,
+    'config',
+    'base-container',
+    'docker-compose.yml'
+  )
+
+  try {
+    await execAsync(`docker compose -f "${compose_file}" up -d`)
+    log('Container started')
+
+    // Wait briefly for container to be ready
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+  } catch (error) {
+    log(`Warning: Failed to start container: ${error.message}`)
+  }
+}
+
+/**
+ * Restore session state files to container Claude home directory
+ *
+ * This function restores the session JSONL, todos, and plan files from the
+ * thread submodule to the container's Claude home directory before resuming
+ * a session. All operations are best-effort with logging.
+ *
+ * @param {Object} params
+ * @param {string} params.session_id - Claude session ID to restore
+ * @param {string} params.thread_id - Thread ID for locating archived files
+ * @param {string} params.working_directory - Working directory for the session
+ * @param {string} params.user_base_directory - User base directory path
+ */
+const restore_session_state = async ({
+  session_id,
+  thread_id,
+  working_directory,
+  user_base_directory
+}) => {
+  if (!session_id || !thread_id) {
+    log('Skipping session state restoration - missing session_id or thread_id')
+    return
+  }
+
+  log(
+    `Restoring session state for session ${session_id} from thread ${thread_id}`
+  )
+
+  // Ensure container is running before restoring files
+  await ensure_container_running(user_base_directory)
+
+  // Pre-create container home if it doesn't exist
+  try {
+    await mkdir(CONTAINER_CLAUDE_HOME, { recursive: true })
+  } catch {
+    // Directory already exists
+  }
+
+  const thread_dir = join(user_base_directory, 'thread', thread_id)
+  const raw_data_dir = join(thread_dir, 'raw-data')
+  const projects_dir_name = derive_projects_dir_name(working_directory)
+
+  // 1. Restore session JSONL
+  await restore_session_jsonl({
+    session_id,
+    raw_data_dir,
+    projects_dir_name
+  })
+
+  // 2. Restore todos
+  await restore_todos({
+    raw_data_dir
+  })
+
+  // 3. Restore plan
+  await restore_plan({
+    thread_dir,
+    user_base_directory
+  })
+
+  log('Session state restoration complete')
+}
+
+/**
+ * Restore session JSONL file to container projects directory
+ */
+const restore_session_jsonl = async ({
+  session_id,
+  raw_data_dir,
+  projects_dir_name
+}) => {
+  const source_jsonl = join(raw_data_dir, 'claude-session.jsonl')
+  const target_dir = join(CONTAINER_CLAUDE_HOME, 'projects', projects_dir_name)
+  const target_jsonl = join(target_dir, `${session_id}.jsonl`)
+
+  try {
+    // Check if target already exists
+    await access(target_jsonl)
+    log(`Session JSONL already exists at ${target_jsonl}`)
+    return
+  } catch {
+    // Target doesn't exist, proceed with restore
+  }
+
+  try {
+    // Check if source exists
+    await access(source_jsonl)
+
+    // Create target directory
+    await mkdir(target_dir, { recursive: true })
+
+    // Copy the file
+    await copyFile(source_jsonl, target_jsonl)
+    log(`Restored session JSONL to ${target_jsonl}`)
+  } catch (error) {
+    log(`Warning: Failed to restore session JSONL: ${error.message}`)
+  }
+}
+
+/**
+ * Restore todo files to container todos directory
+ */
+const restore_todos = async ({ raw_data_dir }) => {
+  const source_todos_dir = join(raw_data_dir, 'todos')
+  const target_todos_dir = join(CONTAINER_CLAUDE_HOME, 'todos')
+
+  try {
+    // Check if source todos directory exists
+    await access(source_todos_dir)
+  } catch {
+    log('No todos directory found in thread raw-data')
+    return
+  }
+
+  try {
+    // Create target directory
+    await mkdir(target_todos_dir, { recursive: true })
+
+    // Get all todo files
+    const todo_files = await glob(join(source_todos_dir, '*.json'))
+
+    if (todo_files.length === 0) {
+      log('No todo files to restore')
+      return
+    }
+
+    // Copy all todo files in parallel
+    await Promise.all(
+      todo_files.map((todo_file) => {
+        const filename = basename(todo_file)
+        const target_file = join(target_todos_dir, filename)
+        return copyFile(todo_file, target_file)
+      })
+    )
+
+    log(`Restored ${todo_files.length} todo file(s)`)
+  } catch (error) {
+    log(`Warning: Failed to restore todos: ${error.message}`)
+  }
+}
+
+/**
+ * Restore plan file to container plans directory
+ */
+const restore_plan = async ({ thread_dir, user_base_directory }) => {
+  const target_plans_dir = join(CONTAINER_CLAUDE_HOME, 'plans')
+
+  try {
+    // Read thread metadata to get plan_slug
+    const metadata_path = join(thread_dir, 'metadata.json')
+    const metadata_content = await readFile(metadata_path, 'utf-8')
+    const metadata = JSON.parse(metadata_content)
+    const plan_slug = metadata.external_session?.plan_slug
+
+    if (!plan_slug) {
+      log('No plan_slug in thread metadata')
+      return
+    }
+
+    const target_plan = join(target_plans_dir, `${plan_slug}.md`)
+
+    // Check if target already exists
+    try {
+      await access(target_plan)
+      log(`Plan ${plan_slug} already exists in container`)
+      return
+    } catch {
+      // Target doesn't exist, proceed with restore
+    }
+
+    // Check for plan in shared location
+    const shared_plan = join(user_base_directory, 'thread', 'plans', `${plan_slug}.md`)
+
+    try {
+      await access(shared_plan)
+
+      // Create target directory
+      await mkdir(target_plans_dir, { recursive: true })
+
+      // Copy the plan
+      await copyFile(shared_plan, target_plan)
+      log(`Restored plan ${plan_slug} to container`)
+    } catch {
+      log(`Warning: Plan file ${plan_slug}.md not found in shared location`)
+    }
+  } catch (error) {
+    log(`Warning: Failed to restore plan: ${error.message}`)
+  }
+}
+
+// =============================================================================
 // Main Export: Claude CLI Session Creator
 // =============================================================================
 
@@ -226,6 +490,7 @@ const build_success_result = ({ working_directory, session_id, exit_code }) => {
  * @param {string} params.working_directory - Directory to execute CLI in
  * @param {string} params.user_public_key - User public key for permissions
  * @param {string} [params.session_id] - Session ID to resume (creates new if omitted)
+ * @param {string} [params.thread_id] - Thread ID for session state restoration on resume
  * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true)
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
@@ -235,6 +500,7 @@ export const create_session_claude_cli = async ({
   working_directory,
   user_public_key,
   session_id = null,
+  thread_id = null,
   skip_permissions = true
 }) => {
   // -------------------------
@@ -256,7 +522,20 @@ export const create_session_claude_cli = async ({
   })
 
   // -------------------------
-  // 2. Get Configuration & Resolve Command Path
+  // 2. Restore Session State (for resume)
+  // -------------------------
+
+  if (session_id && thread_id) {
+    await restore_session_state({
+      session_id,
+      thread_id,
+      working_directory,
+      user_base_directory
+    })
+  }
+
+  // -------------------------
+  // 4. Get Configuration & Resolve Command Path
   // -------------------------
 
   const cli_command_config =
@@ -279,7 +558,7 @@ export const create_session_claude_cli = async ({
   log(`Skip permissions: ${skip_permissions}`)
 
   // -------------------------
-  // 3. Spawn Process
+  // 5. Spawn Process
   // -------------------------
 
   return new Promise((resolve, reject) => {
@@ -300,7 +579,7 @@ export const create_session_claude_cli = async ({
     })
 
     // -------------------------
-    // 4. Handle Process Events
+    // 6. Handle Process Events
     // -------------------------
 
     child.on('close', (code, signal) => {
