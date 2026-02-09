@@ -97,6 +97,13 @@ const type_label_sx = (color) => ({
   opacity: 0.8
 })
 
+const active_indicator_sx = {
+  fontSize: '9px',
+  color: COLORS.success,
+  marginLeft: '2px',
+  flexShrink: 0
+}
+
 const RelationItem = ({
   relation_type,
   base_uri,
@@ -104,7 +111,8 @@ const RelationItem = ({
   malformed,
   raw_string,
   redacted,
-  entity_type
+  entity_type,
+  thread_state
 }) => {
   // Handle redacted relations (permission-denied content)
   if (redacted) {
@@ -171,6 +179,11 @@ const RelationItem = ({
           {get_entity_type_display_label(entity_type)}
         </Box>
       )}
+      {entity_type === 'thread' && thread_state === 'active' && (
+        <Box component='span' sx={active_indicator_sx} title='Active thread'>
+          {'●'}
+        </Box>
+      )}
     </Box>
   )
 }
@@ -182,7 +195,8 @@ RelationItem.propTypes = {
   malformed: PropTypes.bool,
   raw_string: PropTypes.string,
   redacted: PropTypes.bool,
-  entity_type: PropTypes.string
+  entity_type: PropTypes.string,
+  thread_state: PropTypes.string
 }
 
 export default RelationItem

@@ -55,8 +55,8 @@ describe('Entity Relations Sorting', () => {
         updated_at: one_week_ago.toISOString()
       })
 
-      // Priority 1 + recency 10 (capped at 1 week) = ~11
-      expect(score).to.be.closeTo(11, 0.5)
+      // Priority 1 + recency 50 (capped at 1 week) = ~51
+      expect(score).to.be.closeTo(51, 0.5)
     })
 
     it('should cap recency score at 1 week', () => {
@@ -68,8 +68,8 @@ describe('Entity Relations Sorting', () => {
         updated_at: one_month_ago.toISOString()
       })
 
-      // Priority 1 + recency 10 (capped) = 11
-      expect(score).to.be.closeTo(11, 0.1)
+      // Priority 1 + recency 50 (capped) = 51
+      expect(score).to.be.closeTo(51, 0.1)
     })
 
     it('should use default recency for missing updated_at', () => {
@@ -78,8 +78,8 @@ describe('Entity Relations Sorting', () => {
         updated_at: null
       })
 
-      // Priority 1 + default recency 10 = 11
-      expect(score).to.equal(11)
+      // Priority 1 + default recency 50 = 51
+      expect(score).to.equal(51)
     })
 
     it('should factor in relation type priority', () => {
@@ -190,7 +190,7 @@ describe('Entity Relations Sorting', () => {
 
       const sorted = sort_relations_by_weighted_score({ relations })
 
-      // CREATES (1 + ~0 = ~1) should beat RELATES_TO (20 + 10 = 30)
+      // CREATES (1 + ~0 = ~1) should beat RELATES_TO (20 + 50 = 70)
       expect(sorted[0].relation_type).to.equal(RELATION_CREATES)
     })
   })
