@@ -12,7 +12,11 @@
 import debug from 'debug'
 
 import { apply_filter, apply_sort } from './file-adapter-utils.mjs'
-import { execute_ssh, write_remote_file, escape_shell_arg } from './ssh-utils.mjs'
+import {
+  execute_ssh,
+  write_remote_file,
+  escape_shell_arg
+} from './ssh-utils.mjs'
 
 const log = debug('database:adapter:tsv-remote')
 
@@ -121,7 +125,11 @@ function get_primary_key_field(database_entity) {
  * @param {Object} options.database_entity - Database entity with schema
  * @returns {Object} Storage adapter instance
  */
-export function create_tsv_remote_adapter({ host, file_path, database_entity }) {
+export function create_tsv_remote_adapter({
+  host,
+  file_path,
+  database_entity
+}) {
   const fields = database_entity.fields || []
   const pk_field = get_primary_key_field(database_entity)
 

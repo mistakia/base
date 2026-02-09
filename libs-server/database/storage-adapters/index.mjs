@@ -42,12 +42,19 @@ export async function get_storage_adapter(database_entity) {
   const host = storage_config.host
   const is_local = is_local_host({ host })
 
-  log('Getting storage adapter for backend: %s (host: %s, local: %s)', backend, host || 'none', is_local)
+  log(
+    'Getting storage adapter for backend: %s (host: %s, local: %s)',
+    backend,
+    host || 'none',
+    is_local
+  )
 
   switch (backend) {
     case 'duckdb': {
       if (!is_local) {
-        const { create_duckdb_remote_adapter } = await import('./duckdb-remote.mjs')
+        const { create_duckdb_remote_adapter } = await import(
+          './duckdb-remote.mjs'
+        )
         return create_duckdb_remote_adapter({
           host,
           database_path: storage_config.database,

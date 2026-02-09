@@ -64,7 +64,11 @@ export function validate_ssh_host(host) {
  * @param {number} options.timeout - Timeout in milliseconds (default: 30000)
  * @returns {Promise<string>} stdout from command
  */
-export function execute_ssh(host, command, { timeout = DEFAULT_SSH_TIMEOUT_MS } = {}) {
+export function execute_ssh(
+  host,
+  command,
+  { timeout = DEFAULT_SSH_TIMEOUT_MS } = {}
+) {
   return new Promise((resolve, reject) => {
     validate_ssh_host(host)
 
@@ -106,7 +110,9 @@ export function execute_ssh(host, command, { timeout = DEFAULT_SSH_TIMEOUT_MS } 
       }
       if (code !== 0) {
         log('SSH command failed with code %d: %s', code, stderr)
-        reject(new Error(`SSH command failed: ${stderr || `exit code ${code}`}`))
+        reject(
+          new Error(`SSH command failed: ${stderr || `exit code ${code}`}`)
+        )
         return
       }
       resolve(stdout)
@@ -131,7 +137,12 @@ export function execute_ssh(host, command, { timeout = DEFAULT_SSH_TIMEOUT_MS } 
  * @param {number} options.timeout - Timeout in milliseconds
  * @returns {Promise<void>}
  */
-export function write_remote_file(host, file_path, content, { timeout = DEFAULT_SSH_TIMEOUT_MS } = {}) {
+export function write_remote_file(
+  host,
+  file_path,
+  content,
+  { timeout = DEFAULT_SSH_TIMEOUT_MS } = {}
+) {
   return new Promise((resolve, reject) => {
     validate_ssh_host(host)
 

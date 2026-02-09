@@ -166,7 +166,12 @@ export function create_duckdb_remote_adapter({
   const pk_field = get_primary_key_field(database_entity)
   const fields = database_entity.fields || []
 
-  log('Creating remote DuckDB adapter: %s:%s table=%s', host, database_path, table_name)
+  log(
+    'Creating remote DuckDB adapter: %s:%s table=%s',
+    host,
+    database_path,
+    table_name
+  )
 
   /**
    * Execute a DuckDB query via SSH and parse JSON output
@@ -257,7 +262,9 @@ export function create_duckdb_remote_adapter({
 
       // Build batch insert with values
       const value_sets = records.map((record) => {
-        const values = field_names.map((name) => escape_sql_string(record[name]))
+        const values = field_names.map((name) =>
+          escape_sql_string(record[name])
+        )
         return `(${values.join(', ')})`
       })
 

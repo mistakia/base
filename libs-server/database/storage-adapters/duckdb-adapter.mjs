@@ -32,7 +32,11 @@ async function create_dedicated_connection(database_path) {
   return new Promise((resolve, reject) => {
     const db = new duckdb.default.Database(database_path, (err) => {
       if (err) {
-        log('Error opening DuckDB database at %s: %s', database_path, err.message)
+        log(
+          'Error opening DuckDB database at %s: %s',
+          database_path,
+          err.message
+        )
         reject(err)
         return
       }
