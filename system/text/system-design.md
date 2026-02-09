@@ -133,5 +133,6 @@ All execution contexts share the same user-base directory via file system mounti
 - [[sys:system/text/external-data-sync.md]] - External system integrations
 - [[sys:system/text/entity-relations.md]] - Entity relationship system
 - [[sys:system/text/mcp-server.md]] - Model Context Protocol server
+- [[sys:system/text/background-services.md]] - Scheduled commands, CLI queue, databases
 - [[sys:system/text/roadmap.md]] - Development roadmap and priorities
 - [[sys:system/text/base-uri.md]] - URI system for entity references
