@@ -201,6 +201,25 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp when relation analysis was last performed (ISO 8601). Prevents duplicate analysis runs."
+    },
+    "file_references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of file base_uris accessed during the thread session, extracted from timeline analysis"
+    },
+    "directory_references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of directory base_uris accessed during the thread session, extracted from timeline analysis"
+    },
+    "relations_cleanup_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when relation cleanup was last performed (ISO 8601)"
     }
   },
   "additionalProperties": false,

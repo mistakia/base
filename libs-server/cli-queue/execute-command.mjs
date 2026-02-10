@@ -61,7 +61,15 @@ export const execute_command = async ({
       // detached: true ensures the process survives if the parent is killed
       child = spawn(
         'docker',
-        ['exec', '-w', working_directory, DOCKER_CONTAINER_NAME, 'bash', '-c', command],
+        [
+          'exec',
+          '-w',
+          working_directory,
+          DOCKER_CONTAINER_NAME,
+          'bash',
+          '-c',
+          command
+        ],
         {
           stdio: ['ignore', 'pipe', 'pipe'],
           detached: true,

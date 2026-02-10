@@ -77,7 +77,8 @@ export async function normalize_notion_database_item(
             created_by: notion_page.created_by,
             last_edited_by: notion_page.last_edited_by,
             archived: notion_page.archived || false,
-            raw_properties: normalize_notion_properties_text(extracted_properties)
+            raw_properties:
+              normalize_notion_properties_text(extracted_properties)
           }
         }
       }

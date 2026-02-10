@@ -155,8 +155,12 @@ describe('write_entity_to_filesystem', () => {
     expect(file_content).to.include('status: In Progress')
     expect(file_content).to.include('priority: High')
     // Check for date values - quote style may vary based on formatting
-    expect(file_content).to.match(/start_by: ['"]?2023-03-01T00:00:00\.000Z['"]?/)
-    expect(file_content).to.match(/finish_by: ['"]?2023-03-15T00:00:00\.000Z['"]?/)
+    expect(file_content).to.match(
+      /start_by: ['"]?2023-03-01T00:00:00\.000Z['"]?/
+    )
+    expect(file_content).to.match(
+      /finish_by: ['"]?2023-03-15T00:00:00\.000Z['"]?/
+    )
   })
 
   it('should create a file with properly formatted frontmatter and content', async () => {

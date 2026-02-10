@@ -86,7 +86,7 @@ async function get_prettier_config_cached(file_path) {
 function with_timeout(promise, timeout_ms, timeout_message) {
   return Promise.race([
     promise,
-    new Promise((_, reject) =>
+    new Promise((_resolve, reject) =>
       setTimeout(() => reject(new Error(timeout_message)), timeout_ms)
     )
   ])

@@ -9,9 +9,7 @@ describe('format_markdown_file_with_prettier', () => {
   let temp_dir
 
   beforeEach(async () => {
-    temp_dir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'format-prettier-test-')
-    )
+    temp_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'format-prettier-test-'))
   })
 
   afterEach(async () => {
