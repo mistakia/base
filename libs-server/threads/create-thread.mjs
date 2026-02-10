@@ -123,12 +123,11 @@ async function initialize_memory_repository({ memory_dir }) {
  * @param {string} params.user_public_key
  * @param {string} params.workflow_base_uri
  * @param {string} params.inference_provider
- * @param {string|Array<string>} params.model - Single model or array of models (legacy)
- * @param {Array<string>} [params.models] - Array of models used in thread (preferred)
+ * @param {Array<string>} [params.models] - Array of models used in thread
  * @param {string} params.thread_state
  * @param {Object} params.prompt_properties
  * @param {Array<string>} params.tools
- * @param {Object} [params.external_session] - Optional external session info
+ * @param {Object} [params.source] - Optional source info (provider, session_id, etc.)
  * @param {Object} [params.additional_fields] - Any additional fields to merge
  * @param {string} [params.created_at] - Optional override for created_at timestamp (ISO string)
  * @param {string} [params.updated_at] - Optional override for updated_at timestamp (ISO string)
@@ -141,12 +140,11 @@ export function build_thread_metadata({
   user_public_key,
   workflow_base_uri,
   inference_provider,
-  model,
   models,
   thread_state,
   prompt_properties = {},
   tools = [],
-  external_session = null,
+  source = null,
   additional_fields = {},
   created_at = null,
   updated_at = null,
@@ -155,16 +153,8 @@ export function build_thread_metadata({
 }) {
   const now = new Date().toISOString()
 
-  // Handle both single model and models array
-  let models_array
-  if (models && Array.isArray(models)) {
-    models_array = models
-  } else if (model) {
-    // Convert single model to array
-    models_array = Array.isArray(model) ? model : [model]
-  } else {
-    models_array = []
-  }
+  const models_array =
+    models && Array.isArray(models) ? models : []
 
   const metadata = {
     thread_id,
@@ -177,8 +167,13 @@ export function build_thread_metadata({
     updated_at: updated_at || now,
     prompt_properties,
     tools,
+    tools_used: [],
+    bash_commands_used: [],
     ...additional_fields
   }
+
+  // Set source -- always required by schema, default to base provider
+  metadata.source = source || { provider: 'base' }
 
   // Add title and description if provided
   if (title) {
@@ -186,9 +181,6 @@ export function build_thread_metadata({
   }
   if (short_description) {
     metadata.short_description = short_description
-  }
-  if (external_session) {
-    metadata.external_session = external_session
   }
   return metadata
 }
@@ -200,15 +192,14 @@ export function build_thread_metadata({
  * @param {string} params.user_public_key Public key of the user who owns the thread
  * @param {string} params.workflow_base_uri Workflow base relative path in format (required for non-external sessions)
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
- * @param {string} [params.model] Model to use from the provider (legacy, single model)
- * @param {Array<string>} [params.models] Models used in the thread (preferred)
+ * @param {Array<string>} [params.models] Models used in the thread
  * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
  * @param {string} [params.thread_main_request] Initial user request to add to timeline
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {boolean} [params.create_git_branches=false] Whether to create git branches and worktrees
  * @param {boolean} [params.create_memory_repository=false] Whether to initialize git repository in memory directory
- * @param {Object} [params.external_session] External session information for imported sessions
+ * @param {Object} [params.source] Source information (provider, session_id, etc.)
  * @param {Object} [params.additional_metadata={}] Additional metadata fields to include in thread metadata
  * @param {string} [params.created_at] Optional override for created_at timestamp (ISO string)
  * @param {string} [params.updated_at] Optional override for updated_at timestamp (ISO string)
@@ -220,7 +211,6 @@ export default async function create_thread({
   user_public_key,
   workflow_base_uri,
   inference_provider,
-  model,
   models,
   thread_state = THREAD_STATE.ACTIVE,
   thread_main_request,
@@ -228,7 +218,7 @@ export default async function create_thread({
   tools = DEFAULT_THREAD_TOOLS,
   create_git_branches = false,
   create_memory_repository = false,
-  external_session = null,
+  source = null,
   additional_metadata = {},
   created_at = null,
   updated_at = null,
@@ -245,8 +235,8 @@ export default async function create_thread({
   }
 
   // Validate that we have at least one model
-  if (!model && (!models || models.length === 0)) {
-    throw new Error('At least one model is required')
+  if (!models || models.length === 0) {
+    throw new Error('At least one model is required (pass models array)')
   }
 
   // Validate thread_state using shared function
@@ -272,8 +262,8 @@ export default async function create_thread({
     }
   }
 
-  // For external sessions, workflow_base_uri can be undefined
-  const is_external_session = !!external_session
+  // For external/imported sessions, workflow_base_uri can be undefined
+  const is_external_session = !!source
   if (!is_external_session && !workflow_base_uri) {
     throw new Error(
       'workflow_base_uri is required for non-external session threads'
@@ -315,11 +305,11 @@ export default async function create_thread({
   let thread_id
   if (is_external_session) {
     thread_id = generate_thread_id_from_session({
-      session_id: external_session.session_id,
-      session_provider: external_session.session_provider
+      session_id: source.session_id,
+      session_provider: source.provider
     })
     log(
-      `Creating thread ${thread_id} from ${external_session.session_provider} session ${external_session.session_id}`
+      `Creating thread ${thread_id} from ${source.provider} session ${source.session_id}`
     )
   } else {
     thread_id = uuid()
@@ -341,7 +331,7 @@ export default async function create_thread({
   await fs.mkdir(memory_dir, { recursive: true })
 
   // Create raw-data directory for external sessions
-  if (external_session) {
+  if (source) {
     await fs.mkdir(raw_data_dir, { recursive: true })
   }
 
@@ -364,12 +354,11 @@ export default async function create_thread({
     user_public_key,
     workflow_base_uri,
     inference_provider,
-    model,
     models,
     thread_state,
     prompt_properties,
     tools: final_tools,
-    external_session,
+    source,
     additional_fields: additional_metadata,
     created_at,
     updated_at,
@@ -392,7 +381,7 @@ export default async function create_thread({
   }
 
   // Write timeline to file (only if we have timeline content or it's not an external session)
-  if (timeline.length > 0 || !external_session) {
+  if (timeline.length > 0 || !source) {
     await write_timeline_jsonl({
       timeline_path: path.join(thread_dir, 'timeline.jsonl'),
       entries: timeline
@@ -445,13 +434,8 @@ export default async function create_thread({
     context_dir: thread_dir
   }
 
-  // Provide backward compatibility for model field
-  if (metadata.models && metadata.models.length > 0 && !metadata.model) {
-    result.model = metadata.models[0]
-  }
-
   // Add raw_data_dir for external sessions
-  if (external_session) {
+  if (source) {
     result.raw_data_dir = raw_data_dir
   }
 
