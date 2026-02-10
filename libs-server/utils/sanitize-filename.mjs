@@ -26,7 +26,7 @@ export function sanitize_for_filename(input, options = {}) {
     .trim()
     .replace(/\//g, '-') // Replace forward slashes with hyphens
     .replace(/[<>:"|\\?*]/g, '') // Remove other invalid filename characters
-    .replace(/[^\w\s-]/g, '') // Keep only word characters, spaces, and hyphens
+    .replace(/[^\w\s.-]/g, '') // Keep only word characters, spaces, hyphens, and dots
     .replace(/_/g, '-') // Convert underscores to hyphens
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Remove multiple consecutive hyphens
