@@ -26,7 +26,13 @@ const get_tag_limits = () => {
  * Process a CLI command job
  */
 const process_cli_job = async (job) => {
-  const { command, tags = [], working_directory, timeout_ms } = job.data
+  const {
+    command,
+    tags = [],
+    working_directory,
+    timeout_ms,
+    execution_mode
+  } = job.data
   const redis = get_redis_connection()
   const tag_limits = get_tag_limits()
 
@@ -56,7 +62,8 @@ const process_cli_job = async (job) => {
     const result = await execute_command({
       command,
       working_directory,
-      timeout_ms
+      timeout_ms,
+      execution_mode
     })
 
     log(

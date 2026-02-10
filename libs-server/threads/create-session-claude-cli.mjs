@@ -6,9 +6,14 @@ import { homedir } from 'os'
 import { promisify } from 'util'
 import glob_pkg from 'glob'
 import debug from 'debug'
+
 import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import {
+  DOCKER_CONTAINER_NAME,
+  validate_execution_mode
+} from '#libs-server/docker/execution-mode.mjs'
 
 const execAsync = promisify(exec)
 const glob = promisify(glob_pkg)
@@ -498,6 +503,7 @@ const restore_plan = async ({ thread_dir, user_base_directory }) => {
  * @param {string} [params.session_id] - Session ID to resume (creates new if omitted)
  * @param {string} [params.thread_id] - Thread ID for session state restoration on resume
  * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true)
+ * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
  */
@@ -507,11 +513,15 @@ export const create_session_claude_cli = async ({
   user_public_key,
   session_id = null,
   thread_id = null,
-  skip_permissions = true
+  skip_permissions = true,
+  execution_mode = 'host'
 }) => {
   // -------------------------
   // 1. Validate & Log
   // -------------------------
+
+  // Validate execution_mode
+  validate_execution_mode(execution_mode)
 
   const operation = session_id ? 'Resuming' : 'Creating'
   const session_info = session_id ? ` (session: ${session_id})` : ''
@@ -519,6 +529,7 @@ export const create_session_claude_cli = async ({
   log(`${operation} Claude CLI session${session_info}`)
   log(`Working directory: ${working_directory}`)
   log(`User: ${user_public_key}`)
+  log(`Execution mode: ${execution_mode}`)
 
   // Validate working directory is within user's base directory
   const user_base_directory = get_user_base_directory()
@@ -551,15 +562,52 @@ export const create_session_claude_cli = async ({
   const timeout_minutes =
     config.threads?.cli?.session_timeout_minutes || DEFAULT_TIMEOUT_MINUTES
 
-  // Resolve command to absolute path (handles shell aliases and common locations)
-  const cli_command = await resolve_cli_command(cli_command_config)
   const cli_args = build_claude_cli_args({
     prompt,
     session_id,
     skip_permissions
   })
 
-  log(`Command: ${cli_command} ${cli_args.join(' ')}`)
+  // Common spawn options
+  // - stdio: 'ignore' because CLI writes output to .claude/ directory
+  // - detached: true ensures the process survives if the parent (base-api) is killed
+  const base_spawn_options = {
+    shell: false,
+    stdio: 'ignore',
+    detached: true
+  }
+
+  // Build spawn arguments based on execution mode
+  let spawn_command
+  let spawn_args
+  let spawn_options
+
+  if (execution_mode === 'container') {
+    // Container mode: spawn via docker exec
+    // The -w flag sets the working directory inside the container
+    // Use 'claude' directly since it's in the container's PATH
+    spawn_command = 'docker'
+    spawn_args = [
+      'exec',
+      '-w',
+      working_directory,
+      DOCKER_CONTAINER_NAME,
+      'claude',
+      ...cli_args
+    ]
+    spawn_options = base_spawn_options
+  } else {
+    // Host mode: resolve command path and spawn directly
+    const cli_command = await resolve_cli_command(cli_command_config)
+    spawn_command = cli_command
+    spawn_args = cli_args
+    spawn_options = {
+      ...base_spawn_options,
+      cwd: working_directory
+    }
+  }
+
+  log(`Command: ${spawn_command} ${spawn_args.join(' ')}`)
   log(`Timeout: ${timeout_minutes} minutes`)
   log(`Skip permissions: ${skip_permissions}`)
 
@@ -570,12 +618,7 @@ export const create_session_claude_cli = async ({
   return new Promise((resolve, reject) => {
     // Spawn Claude CLI process
     // stdio: 'ignore' because CLI writes output to .claude/ directory
-    const child = spawn(cli_command, cli_args, {
-      cwd: working_directory,
-      shell: false,
-      stdio: 'ignore',
-      detached: false
-    })
+    const child = spawn(spawn_command, spawn_args, spawn_options)
 
     // Setup timeout protection
     const timeout_handle = setup_process_timeout({

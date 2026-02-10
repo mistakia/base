@@ -2,6 +2,10 @@ import { spawn } from 'child_process'
 import debug from 'debug'
 
 import { validate_shell_command } from '#libs-server/utils/validate-shell-command.mjs'
+import {
+  DOCKER_CONTAINER_NAME,
+  validate_execution_mode
+} from '#libs-server/docker/execution-mode.mjs'
 
 const log = debug('cli-queue:executor')
 
@@ -14,14 +18,19 @@ const KILL_TIMEOUT_MS = 5000 // Time between SIGTERM and SIGKILL
  * @param {string} params.command - Command to execute
  * @param {string} [params.working_directory] - Working directory
  * @param {number} [params.timeout_ms] - Timeout in milliseconds
+ * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
  * @returns {Promise<Object>} Execution result
  */
 export const execute_command = async ({
   command,
   working_directory = process.cwd(),
-  timeout_ms = DEFAULT_TIMEOUT_MS
+  timeout_ms = DEFAULT_TIMEOUT_MS,
+  execution_mode = 'host'
 }) => {
   const start_time = Date.now()
+
+  // Validate execution_mode
+  validate_execution_mode(execution_mode)
 
   // Validate command before execution
   validate_shell_command(command)
@@ -29,6 +38,13 @@ export const execute_command = async ({
   log(`Executing: ${command}`)
   log(`Working directory: ${working_directory}`)
   log(`Timeout: ${timeout_ms}ms`)
+  log(`Execution mode: ${execution_mode}`)
+
+  // Common environment configuration
+  const spawn_env = {
+    ...process.env,
+    FORCE_COLOR: '0'
+  }
 
   return new Promise((resolve) => {
     let stdout = ''
@@ -37,18 +53,31 @@ export const execute_command = async ({
     let timeout_handle = null
     let kill_timeout_handle = null
 
-    const child = spawn(command, {
-      shell: true,
-      cwd: working_directory,
-      // Ignore stdin to prevent blocking, pipe stdout/stderr for capture
-      stdio: ['ignore', 'pipe', 'pipe'],
-      // Create new process group so we can kill shell + all children together
-      detached: true,
-      env: {
-        ...process.env,
-        FORCE_COLOR: '0' // Disable color output for cleaner logs
-      }
-    })
+    // Build spawn arguments based on execution mode
+    let child
+    if (execution_mode === 'container') {
+      // Container mode: spawn via docker exec
+      // Use bash -c to run the command string inside the container
+      // detached: true ensures the process survives if the parent is killed
+      child = spawn(
+        'docker',
+        ['exec', '-w', working_directory, DOCKER_CONTAINER_NAME, 'bash', '-c', command],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: true,
+          env: spawn_env
+        }
+      )
+    } else {
+      // Host mode: spawn with shell and detached process group
+      child = spawn(command, {
+        shell: true,
+        cwd: working_directory,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+        env: spawn_env
+      })
+    }
 
     const cleanup = () => {
       clearTimeout(timeout_handle)
@@ -60,14 +89,14 @@ export const execute_command = async ({
     const kill_process = () => {
       if (killed) return
 
-      log(`Timeout reached, sending SIGTERM to process group ${child.pid}`)
       killed = true
 
-      // Kill entire process group (negative PID) to ensure shell + children die
+      // Kill entire process group (negative PID) to ensure all children die
+      // Both modes use detached: true, so process group killing works for both
+      log(`Timeout reached, sending SIGTERM to process group ${child.pid}`)
       try {
         process.kill(-child.pid, 'SIGTERM')
       } catch {
-        // Process may have already exited
         child.kill('SIGTERM')
       }
 
