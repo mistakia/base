@@ -165,14 +165,17 @@ export async function start_git_status_watcher({
         log('Git status watcher error: %s', error.message)
       })
 
+    // Wait for chokidar to finish establishing all filesystem watchers
+    await new Promise((resolve) => watcher.on('ready', resolve))
+
     // Start repo list watcher (watches .gitmodules and worktree changes)
     if (on_repo_list_change) {
-      _start_repo_list_watcher(repo_paths, on_repo_list_change)
+      await _start_repo_list_watcher(repo_paths, on_repo_list_change)
     }
 
     // Start working tree watcher for unstaged/untracked file changes
     // The git internals watcher only catches staged/committed changes
-    _start_working_tree_watcher(repo_paths, on_git_status_change)
+    await _start_working_tree_watcher(repo_paths, on_git_status_change)
 
     log('Git status watcher started')
     return watcher
@@ -185,7 +188,7 @@ export async function start_git_status_watcher({
 /**
  * Start watching for repo list changes (.gitmodules, worktree additions/removals)
  */
-function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
+async function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
   const repo_list_watch_paths = []
   for (const repo_path of repo_paths) {
     for (const pattern of REPO_LIST_WATCH_PATTERNS) {
@@ -224,6 +227,7 @@ function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
         log('Repo list watcher error: %s', error.message)
       })
 
+    await new Promise((resolve) => repo_list_watcher.on('ready', resolve))
     log('Repo list watcher started')
   } catch (error) {
     log('Failed to start repo list watcher: %s', error.message)
@@ -234,7 +238,7 @@ function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
  * Start watching working tree files across all repositories.
  * This catches unstaged and untracked file changes that the .git watcher misses.
  */
-function _start_working_tree_watcher(repo_paths, on_git_status_change) {
+async function _start_working_tree_watcher(repo_paths, on_git_status_change) {
   try {
     // Watch each repo's working tree with ignore patterns
     working_tree_watcher = chokidar.watch(
@@ -265,6 +269,9 @@ function _start_working_tree_watcher(repo_paths, on_git_status_change) {
         log('Working tree watcher error: %s', error.message)
       })
 
+    await new Promise((resolve) =>
+      working_tree_watcher.on('ready', resolve)
+    )
     log('Working tree watcher started for %d repositories', repo_paths.length)
   } catch (error) {
     log('Failed to start working tree watcher: %s', error.message)
