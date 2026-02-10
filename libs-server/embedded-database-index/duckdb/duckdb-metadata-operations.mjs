@@ -98,8 +98,9 @@ export const INDEX_METADATA_KEYS = {
  * Current schema version - increment when schema changes require rebuild
  * v3: Changed token fields from INTEGER to BIGINT to handle large token counts
  * v4: Added file_references and directory_references columns to threads table
+ * v5: Renamed session_provider to source_provider
  */
-export const CURRENT_SCHEMA_VERSION = '4'
+export const CURRENT_SCHEMA_VERSION = '5'
 
 /**
  * Get repository sync state (handles backwards compatibility)
