@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Typography, Collapse } from '@mui/material'
+import { Box, Typography, Collapse, IconButton } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 
 import { COLORS } from '@theme/colors.js'
 import {
@@ -210,8 +212,42 @@ const observation_content_sx = { color: COLORS.text_secondary }
 // bracket label followed by content
 const bracket_and_content_regex = /(\[[^\]]+\])\s*(.*)/
 
-const ObservationsSection = ({ observations }) => {
+const observations_expand_toggle_sx = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  py: '4px',
+  px: '12px',
+  cursor: 'pointer',
+  '&:hover': {
+    backgroundColor: COLORS.background_hover
+  }
+}
+
+const observations_expand_button_sx = {
+  fontSize: '12px',
+  color: COLORS.text_secondary,
+  padding: '2px 8px',
+  borderRadius: '4px',
+  '&:hover': {
+    backgroundColor: 'transparent'
+  }
+}
+
+const DEFAULT_VISIBLE_OBSERVATIONS = 3
+
+const ObservationsSection = ({ observations, visible_count }) => {
   if (!Array.isArray(observations) || observations.length === 0) return null
+  const [is_expanded, set_is_expanded] = useState(false)
+  const effective_visible_count =
+    typeof visible_count === 'number'
+      ? Math.max(1, visible_count)
+      : DEFAULT_VISIBLE_OBSERVATIONS
+  const should_collapse = observations.length > effective_visible_count
+  const displayed_observations = is_expanded
+    ? observations
+    : observations.slice(0, effective_visible_count)
+  const hidden_count = observations.length - displayed_observations.length
 
   const parse_observation_text = (text) => {
     // Match text in brackets followed by content
@@ -230,23 +266,49 @@ const ObservationsSection = ({ observations }) => {
     <MetadataRow
       label='Observations'
       value={
-        <Box sx={observations_container_sx}>
-          {observations.map((text, idx) => {
-            const { bracket_text, content } = parse_observation_text(text)
+        <Box>
+          <Box sx={observations_container_sx}>
+            {displayed_observations.map((text, idx) => {
+              const { bracket_text, content } = parse_observation_text(text)
 
-            return (
-              <Box key={idx} sx={observation_line_sx}>
-                {bracket_text ? (
-                  <Box component='span' sx={observation_label_sx}>
-                    {bracket_text}
+              return (
+                <Box key={idx} sx={observation_line_sx}>
+                  {bracket_text ? (
+                    <Box component='span' sx={observation_label_sx}>
+                      {bracket_text}
+                    </Box>
+                  ) : null}
+                  <Box component='span' sx={observation_content_sx}>
+                    {content}
                   </Box>
-                ) : null}
-                <Box component='span' sx={observation_content_sx}>
-                  {content}
                 </Box>
-              </Box>
-            )
-          })}
+              )
+            })}
+          </Box>
+          {should_collapse && (
+            <Box
+              sx={observations_expand_toggle_sx}
+              onClick={() => set_is_expanded((prev) => !prev)}>
+              <IconButton
+                sx={observations_expand_button_sx}
+                size='small'
+                disableRipple>
+                {is_expanded ? (
+                  <>
+                    <ExpandLessIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    <Typography variant='caption'>Show less</Typography>
+                  </>
+                ) : (
+                  <>
+                    <ExpandMoreIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    <Typography variant='caption'>
+                      Show {hidden_count} more
+                    </Typography>
+                  </>
+                )}
+              </IconButton>
+            </Box>
+          )}
         </Box>
       }
     />
@@ -254,7 +316,8 @@ const ObservationsSection = ({ observations }) => {
 }
 
 ObservationsSection.propTypes = {
-  observations: PropTypes.array
+  observations: PropTypes.array,
+  visible_count: PropTypes.number
 }
 
 /**
