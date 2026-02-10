@@ -617,7 +617,7 @@ router.post('/table', async (req, res) => {
 // Create new thread with Claude CLI session
 router.post('/create-session', async (req, res) => {
   try {
-    const { prompt, working_directory } = req.body
+    const { prompt, working_directory, execution_mode } = req.body
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
@@ -681,7 +681,8 @@ router.post('/create-session', async (req, res) => {
     const job = await add_thread_creation_job({
       prompt,
       working_directory: validated_working_directory,
-      user_public_key
+      user_public_key,
+      execution_mode
     })
 
     log(`Job queued: ${job.id} (position ${job.queue_position || 'unknown'})`)
@@ -717,7 +718,7 @@ router.post('/create-session', async (req, res) => {
 router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
-    const { prompt, working_directory } = req.body
+    const { prompt, working_directory, execution_mode } = req.body
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
@@ -810,7 +811,8 @@ router.post('/:thread_id/resume', async (req, res) => {
       working_directory: validated_working_directory,
       user_public_key,
       session_id: claude_session_id,
-      thread_id
+      thread_id,
+      execution_mode
     })
 
     log(

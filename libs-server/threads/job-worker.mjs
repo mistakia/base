@@ -26,7 +26,8 @@ const process_thread_creation_job = async (job) => {
     working_directory,
     user_public_key,
     session_id = null,
-    thread_id = null
+    thread_id = null,
+    execution_mode
   } = job.data
 
   const action = session_id ? 'resuming' : 'starting new'
@@ -40,7 +41,8 @@ const process_thread_creation_job = async (job) => {
       working_directory,
       user_public_key,
       session_id,
-      thread_id
+      thread_id,
+      execution_mode
     })
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
