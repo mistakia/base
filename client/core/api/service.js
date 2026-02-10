@@ -310,6 +310,11 @@ export const api = {
     return { url, ...POST({ repo_path }) }
   },
 
+  get_repo_info({ path }) {
+    const url = `${API_URL}/git/repo-info?path=${encodeURIComponent(path || '')}`
+    return { url }
+  },
+
   // Search operations
   search({ q, mode = 'full', types, directory, limit }) {
     const params = { q, mode }

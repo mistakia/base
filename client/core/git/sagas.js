@@ -15,7 +15,8 @@ import {
   resolve_conflict,
   get_conflict_versions,
   abort_merge,
-  generate_commit_message
+  generate_commit_message,
+  get_repo_info
 } from '@core/api/sagas'
 import { git_action_types, auto_commit_file_actions } from './actions'
 import { notification_actions } from '@core/notification/actions'
@@ -288,6 +289,15 @@ export function* request_generate_commit_message({ payload }) {
 }
 
 // ============================================================================
+// Load Repo Info Saga
+// ============================================================================
+
+export function* load_repo_info({ payload }) {
+  const { path } = payload
+  yield call(get_repo_info, { path })
+}
+
+// ============================================================================
 // Auto-Commit File Saga
 // ============================================================================
 
@@ -428,6 +438,10 @@ export function* watch_generate_commit_message() {
   )
 }
 
+export function* watch_load_repo_info() {
+  yield takeLatest(git_action_types.LOAD_REPO_INFO, load_repo_info)
+}
+
 export function* watch_auto_commit_file() {
   yield takeLatest(
     git_action_types.REQUEST_AUTO_COMMIT_FILE,
@@ -470,6 +484,7 @@ export const git_sagas = [
   fork(watch_load_conflict_versions),
   fork(watch_abort_merge),
   fork(watch_generate_commit_message),
+  fork(watch_load_repo_info),
   fork(watch_auto_commit_file),
   fork(watch_git_status_changed)
 ]

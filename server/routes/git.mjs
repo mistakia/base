@@ -22,7 +22,8 @@ import {
   get_current_branch_name,
   get_merge_head_branch_name,
   abort_merge,
-  discard_changes
+  discard_changes,
+  get_repo_statistics
 } from '#libs-server/git/index.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { attach_permission_context } from '#server/middleware/permission/middleware.mjs'
@@ -1586,6 +1587,89 @@ router.post('/abort-merge', require_repo_write_permission, async (req, res) => {
     log('Error aborting merge:', error.message)
     res.status(500).json({
       error: 'Failed to abort merge',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/git/repo-info
+ * Get repository statistics if the path is a git repository root
+ * Query params: path (required) - relative path within user_base_directory
+ */
+router.get('/repo-info', async (req, res) => {
+  try {
+    const { path: dir_path } = req.query
+    const user_base_dir = get_user_base_dir()
+
+    // Build full path - empty path means root
+    let full_path = user_base_dir
+    if (dir_path && dir_path !== '' && dir_path !== '/') {
+      full_path = path.join(user_base_dir, dir_path)
+    }
+
+    // Normalize and ensure it doesn't escape base directory
+    full_path = path.normalize(full_path)
+
+    // Security check: ensure path is within user_base_directory
+    if (
+      full_path !== user_base_dir &&
+      !full_path.startsWith(user_base_dir + path.sep)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid path',
+        message: 'Path must be within user base directory'
+      })
+    }
+
+    // Check if this exact path has a .git directory (is a git root)
+    const git_path = path.join(full_path, '.git')
+    try {
+      await fs.access(git_path)
+    } catch {
+      // Not a git root
+      return res.json({ is_git_root: false })
+    }
+
+    // This is a git root - get statistics
+    const statistics = await get_repo_statistics({ repo_path: full_path })
+
+    // Check if user has read permission for this repository
+    const resource_path = create_base_uri_from_path(full_path)
+    const permission_result = await req.permission_context.check_permission({
+      resource_path
+    })
+    const has_read_permission = permission_result.read?.allowed ?? false
+
+    // Only redact commit details if user lacks read permission
+    // Statistics (counts, dates) remain visible regardless
+    let response_statistics = statistics
+    if (!has_read_permission && statistics.last_commit) {
+      response_statistics = {
+        ...statistics,
+        last_commit: {
+          ...statistics.last_commit,
+          subject: statistics.last_commit.subject
+            ? redact_text_content(statistics.last_commit.subject)
+            : null,
+          body: statistics.last_commit.body
+            ? redact_text_content(statistics.last_commit.body)
+            : null,
+          author: statistics.last_commit.author
+            ? redact_text_content(statistics.last_commit.author)
+            : null
+        }
+      }
+    }
+
+    res.json({
+      is_git_root: true,
+      statistics: response_statistics
+    })
+  } catch (error) {
+    log('Error getting repo info:', error.message)
+    res.status(500).json({
+      error: 'Failed to get repository info',
       message: error.message
     })
   }

@@ -35,6 +35,11 @@ const GitState = new Record({
   is_generating_commit_message: false,
   generated_commit_message: null,
   is_auto_committing: false,
+  // Repository info state (for directory pages) - keyed by path
+  repo_info_by_path: new Map(),
+  is_loading_repo_info: false,
+  loading_repo_info_path: null,
+  repo_info_error: null,
   // Error state
   error: null
 })
@@ -420,6 +425,37 @@ export function git_reducer(state = new GitState(), { payload, type }) {
       return state.merge({
         is_auto_committing: false,
         error: payload.error
+      })
+
+    // ========================================================================
+    // Repository Info
+    // ========================================================================
+
+    case git_action_types.GET_REPO_INFO_PENDING: {
+      const loading_path = payload.opts?.path || ''
+      return state.merge({
+        is_loading_repo_info: true,
+        loading_repo_info_path: loading_path,
+        repo_info_error: null
+      })
+    }
+
+    case git_action_types.GET_REPO_INFO_FULFILLED: {
+      const info_path = payload.opts?.path || ''
+      return state
+        .setIn(['repo_info_by_path', info_path], fromJS(payload.data))
+        .merge({
+          is_loading_repo_info: false,
+          loading_repo_info_path: null,
+          repo_info_error: null
+        })
+    }
+
+    case git_action_types.GET_REPO_INFO_FAILED:
+      return state.merge({
+        is_loading_repo_info: false,
+        loading_repo_info_path: null,
+        repo_info_error: payload.error
       })
 
     // ========================================================================

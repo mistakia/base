@@ -328,3 +328,61 @@ export function get_repo_merge_branches(state, repo_path) {
     theirs_branch: repo.theirs_branch
   }
 }
+
+// ============================================================================
+// Repository Info Selectors
+// ============================================================================
+
+/**
+ * Get repository info for a specific path (statistics)
+ * @param {Object} state - Redux state
+ * @param {string} path - Directory path
+ */
+export function get_repo_info(state, path = '') {
+  const repo_info = get_git_state(state).getIn(['repo_info_by_path', path])
+  return repo_info ? to_plain(repo_info) : null
+}
+
+/**
+ * Check if loading repo info for a specific path
+ * @param {Object} state - Redux state
+ * @param {string} path - Directory path to check
+ */
+export function get_is_loading_repo_info(state, path = '') {
+  const git_state = get_git_state(state)
+  const is_loading = git_state.get('is_loading_repo_info')
+  const loading_path = git_state.get('loading_repo_info_path')
+  return is_loading && loading_path === path
+}
+
+/**
+ * Check if path is a git root (has cached repo info showing it's a git root)
+ * @param {Object} state - Redux state
+ * @param {string} path - Directory path
+ */
+export function get_is_git_root(state, path = '') {
+  const repo_info = get_git_state(state).getIn(['repo_info_by_path', path])
+  return repo_info?.get('is_git_root') ?? false
+}
+
+/**
+ * Get repository statistics for a path
+ * @param {Object} state - Redux state
+ * @param {string} path - Directory path
+ */
+export function get_repo_statistics(state, path = '') {
+  const repo_info = get_git_state(state).getIn(['repo_info_by_path', path])
+  if (!repo_info || !repo_info.get('is_git_root')) return null
+
+  const statistics = repo_info.get('statistics')
+  return statistics ? to_plain(statistics) : null
+}
+
+/**
+ * Check if repo info is already cached for a path
+ * @param {Object} state - Redux state
+ * @param {string} path - Directory path
+ */
+export function has_cached_repo_info(state, path = '') {
+  return get_git_state(state).hasIn(['repo_info_by_path', path])
+}

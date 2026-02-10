@@ -18,6 +18,7 @@ const DISCARD_FILES = 'DISCARD_FILES'
 const ABORT_MERGE = 'ABORT_MERGE'
 const GENERATE_COMMIT_MESSAGE = 'GENERATE_COMMIT_MESSAGE'
 const AUTO_COMMIT_FILE = 'AUTO_COMMIT_FILE'
+const GET_REPO_INFO = 'GET_REPO_INFO'
 
 export const git_action_types = {
   // API action types with PENDING/FULFILLED/FAILED variants
@@ -38,6 +39,7 @@ export const git_action_types = {
   ...create_api_action_types(ABORT_MERGE),
   ...create_api_action_types(GENERATE_COMMIT_MESSAGE),
   ...create_api_action_types(AUTO_COMMIT_FILE),
+  ...create_api_action_types(GET_REPO_INFO),
 
   // Trigger actions
   LOAD_GIT_STATUS_ALL: 'LOAD_GIT_STATUS_ALL',
@@ -56,6 +58,7 @@ export const git_action_types = {
   REQUEST_ABORT_MERGE: 'REQUEST_ABORT_MERGE',
   REQUEST_GENERATE_COMMIT_MESSAGE: 'REQUEST_GENERATE_COMMIT_MESSAGE',
   REQUEST_AUTO_COMMIT_FILE: 'REQUEST_AUTO_COMMIT_FILE',
+  LOAD_REPO_INFO: 'LOAD_REPO_INFO',
 
   // WebSocket push actions
   GIT_STATUS_CHANGED: 'GIT_STATUS_CHANGED',
@@ -88,6 +91,7 @@ export const generate_commit_message_actions = create_api_actions(
   GENERATE_COMMIT_MESSAGE
 )
 export const auto_commit_file_actions = create_api_actions(AUTO_COMMIT_FILE)
+export const get_repo_info_actions = create_api_actions(GET_REPO_INFO)
 
 // Action creators for component use
 export const git_actions = {
@@ -184,6 +188,12 @@ export const git_actions = {
   auto_commit_file: ({ repo_path, file_path, path }) => ({
     type: git_action_types.REQUEST_AUTO_COMMIT_FILE,
     payload: { repo_path, file_path, path }
+  }),
+
+  // Load repository info (statistics) for a directory
+  load_repo_info: (path) => ({
+    type: git_action_types.LOAD_REPO_INFO,
+    payload: { path }
   }),
 
   // UI actions

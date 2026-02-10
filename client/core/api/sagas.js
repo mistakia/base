@@ -47,7 +47,8 @@ import {
   resolve_conflict_actions,
   get_conflict_versions_actions,
   abort_merge_actions,
-  generate_commit_message_actions
+  generate_commit_message_actions,
+  get_repo_info_actions
 } from '@core/git/actions'
 import { get_app } from '@core/app/selectors'
 
@@ -307,4 +308,10 @@ export const generate_commit_message = fetch.bind(
   null,
   api.generate_commit_message,
   generate_commit_message_actions
+)
+
+export const get_repo_info = fetch.bind(
+  null,
+  api.get_repo_info,
+  get_repo_info_actions
 )

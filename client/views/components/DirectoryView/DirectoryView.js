@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -23,7 +23,15 @@ import {
   get_directory_items,
   get_directory_state
 } from '@core/directory'
+import {
+  git_actions,
+  get_is_git_root,
+  get_repo_statistics,
+  get_is_loading_repo_info,
+  has_cached_repo_info
+} from '@core/git'
 import { RedactedContent } from '@components/primitives/styled'
+import GitRepoInfo from '@components/GitRepoInfo'
 
 const DirectoryView = ({ path = '', on_navigate }) => {
   const dispatch = useDispatch()
@@ -32,9 +40,26 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   const loading = directory_state.get('is_loading_directory')
   const error = directory_state.get('directory_error')
 
+  // Git repository info state - selectors now take path parameter
+  const is_git_root = useSelector((state) => get_is_git_root(state, path))
+  const repo_statistics = useSelector((state) =>
+    get_repo_statistics(state, path)
+  )
+  const is_loading_repo_info = useSelector((state) =>
+    get_is_loading_repo_info(state, path)
+  )
+  const is_cached = useSelector((state) => has_cached_repo_info(state, path))
+
   useEffect(() => {
     dispatch(directory_actions.load_directory(path))
-  }, [path])
+  }, [dispatch, path])
+
+  // Load git repo info when path changes (only if not cached)
+  useEffect(() => {
+    if (!is_cached) {
+      dispatch(git_actions.load_repo_info(path))
+    }
+  }, [dispatch, path, is_cached])
 
   const sorted_items = React.useMemo(() => {
     const sorted = [...items].sort((a, b) => {
@@ -49,6 +74,23 @@ const DirectoryView = ({ path = '', on_navigate }) => {
     })
     return sorted
   }, [items])
+
+  // Memoize TableContainer styles to prevent unnecessary re-renders
+  // Must be before early returns to maintain consistent hook order
+  const table_container_sx = useMemo(
+    () => ({
+      overflow: 'auto',
+      border: `1px solid ${COLORS.border_light}`,
+      borderTopLeftRadius: is_git_root ? '0' : '6px',
+      borderTopRightRadius: is_git_root ? '0' : '6px',
+      borderBottomLeftRadius: '6px',
+      borderBottomRightRadius: '6px',
+      backgroundColor: 'white',
+      width: '100%',
+      maxWidth: '100%'
+    }),
+    [is_git_root]
+  )
 
   const get_file_icon = (item) => {
     if (item.type === 'directory') {
@@ -146,157 +188,167 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   })
 
   return (
-    <TableContainer
-      sx={{
-        overflow: 'auto',
-        border: `1px solid ${COLORS.border_light}`,
-        borderBottomLeftRadius: '6px',
-        borderBottomRightRadius: '6px',
-        backgroundColor: 'white',
-        width: '100%',
-        maxWidth: '100%'
-      }}>
-      <Table size='small' sx={{ width: '100%', tableLayout: 'fixed' }}>
-        <TableBody>
-          {sorted_items.map((item, index) => (
-            <TableRow
-              key={item.name}
-              hover={!item.is_redacted}
-              sx={{
-                cursor: item.is_redacted ? 'default' : 'pointer',
-                height: 41,
-                '&:hover': {
-                  backgroundColor: item.is_redacted
-                    ? 'transparent'
-                    : 'rgba(0, 0, 0, 0.04)'
-                }
-              }}
-              onClick={(e) => handle_item_click(e, item)}
-              onMouseDown={(e) => handle_item_mouse_down(e, item)}>
-              <TableCell
+    <>
+      {/* Git repository info - shown when directory is a git root */}
+      {(is_git_root || is_loading_repo_info) && (
+        <GitRepoInfo
+          statistics={repo_statistics}
+          is_loading={is_loading_repo_info}
+          compact={true}
+        />
+      )}
+
+      <TableContainer sx={table_container_sx}>
+        <Table size='small' sx={{ width: '100%', tableLayout: 'fixed' }}>
+          <TableBody>
+            {sorted_items.map((item, index) => (
+              <TableRow
+                key={item.name}
+                hover={!item.is_redacted}
                 sx={{
-                  py: 0,
-                  px: 2,
-                  width: '65%',
-                  borderBottom:
-                    index === sorted_items.length - 1
-                      ? 'none'
-                      : `1px solid ${COLORS.border_light}`,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                <Box
+                  cursor: item.is_redacted ? 'default' : 'pointer',
+                  height: 41,
+                  '&:hover': {
+                    backgroundColor: item.is_redacted
+                      ? 'transparent'
+                      : 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+                onClick={(e) => handle_item_click(e, item)}
+                onMouseDown={(e) => handle_item_mouse_down(e, item)}>
+                <TableCell
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    minWidth: 0,
-                    width: '100%'
+                    py: 0,
+                    px: 2,
+                    width: '65%',
+                    borderBottom:
+                      index === sorted_items.length - 1
+                        ? 'none'
+                        : `1px solid ${COLORS.border_light}`,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
                   }}>
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      width: 20,
-                      height: 20
+                      gap: 0.75,
+                      minWidth: 0,
+                      width: '100%'
                     }}>
-                    {get_file_icon(item)}
-                  </Box>
-                  {item.is_redacted ? (
-                    <RedactedContent
-                      content_type='filename'
-                      show_tooltip={true}
-                      title={item.name}
+                    <Box
                       sx={{
-                        ...get_name_style(item),
-                        color: COLORS.text_secondary
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: 20,
+                        height: 20
                       }}>
-                      {item.name}
-                    </RedactedContent>
+                      {get_file_icon(item)}
+                    </Box>
+                    {item.is_redacted ? (
+                      <RedactedContent
+                        content_type='filename'
+                        show_tooltip={true}
+                        title={item.name}
+                        sx={{
+                          ...get_name_style(item),
+                          color: COLORS.text_secondary
+                        }}>
+                        {item.name}
+                      </RedactedContent>
+                    ) : (
+                      <span
+                        title={item.name}
+                        style={{
+                          ...get_name_style(item),
+                          minWidth: 0,
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.textDecoration = 'underline'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.textDecoration = 'none'
+                        }}>
+                        {item.name}
+                      </span>
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell
+                  align='right'
+                  sx={{
+                    py: 0,
+                    px: 2,
+                    width: '80px',
+                    borderBottom:
+                      index === sorted_items.length - 1
+                        ? 'none'
+                        : `1px solid ${COLORS.border_light}`,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                  {item.is_redacted && item.type === 'file' ? (
+                    <RedactedContent
+                      content_type='file_size'
+                      show_tooltip={true}
+                      sx={{ fontSize: '12px', color: COLORS.text_secondary }}
+                    />
                   ) : (
                     <span
-                      title={item.name}
                       style={{
-                        ...get_name_style(item),
-                        minWidth: 0,
-                        flex: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.textDecoration = 'underline'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.textDecoration = 'none'
+                        fontSize: '12px',
+                        color: COLORS.text_secondary
                       }}>
-                      {item.name}
+                      {item.type === 'directory'
+                        ? '-'
+                        : format_file_size(item.size)}
                     </span>
                   )}
-                </Box>
-              </TableCell>
-              <TableCell
-                align='right'
-                sx={{
-                  py: 0,
-                  px: 2,
-                  width: '80px',
-                  borderBottom:
-                    index === sorted_items.length - 1
-                      ? 'none'
-                      : `1px solid ${COLORS.border_light}`,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                {item.is_redacted && item.type === 'file' ? (
-                  <RedactedContent
-                    content_type='file_size'
-                    show_tooltip={true}
-                    sx={{ fontSize: '12px', color: COLORS.text_secondary }}
-                  />
-                ) : (
-                  <span
-                    style={{ fontSize: '12px', color: COLORS.text_secondary }}>
-                    {item.type === 'directory'
-                      ? '-'
-                      : format_file_size(item.size)}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell
-                align='right'
-                sx={{
-                  py: 0,
-                  px: 2,
-                  width: '100px',
-                  borderBottom:
-                    index === sorted_items.length - 1
-                      ? 'none'
-                      : `1px solid ${COLORS.border_light}`,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                {item.is_redacted ? (
-                  <RedactedContent
-                    content_type='date'
-                    show_tooltip={true}
-                    sx={{ fontSize: '12px', color: COLORS.text_secondary }}
-                  />
-                ) : (
-                  <span
-                    style={{ fontSize: '12px', color: COLORS.text_secondary }}>
-                    {item.modified ? format_relative_time(item.modified) : '-'}
-                  </span>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+                </TableCell>
+                <TableCell
+                  align='right'
+                  sx={{
+                    py: 0,
+                    px: 2,
+                    width: '100px',
+                    borderBottom:
+                      index === sorted_items.length - 1
+                        ? 'none'
+                        : `1px solid ${COLORS.border_light}`,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                  {item.is_redacted ? (
+                    <RedactedContent
+                      content_type='date'
+                      show_tooltip={true}
+                      sx={{ fontSize: '12px', color: COLORS.text_secondary }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: COLORS.text_secondary
+                      }}>
+                      {item.modified
+                        ? format_relative_time(item.modified)
+                        : '-'}
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
   )
 }
 
