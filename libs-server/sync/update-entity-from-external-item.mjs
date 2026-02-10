@@ -399,11 +399,11 @@ export async function update_entity_from_external_item({
           entity_content &&
           entity_content !== existing_entity_result.entity_content
 
-        if (
+        const has_changes =
           (final_changes && Object.keys(final_changes).length > 0) ||
-          body_content_changed ||
-          force
-        ) {
+          body_content_changed
+
+        if (has_changes) {
           merged_properties.updated_at = new Date().toISOString()
 
           const change_reasons = []
@@ -414,9 +414,6 @@ export async function update_entity_from_external_item({
           }
           if (body_content_changed) {
             change_reasons.push('body content changed')
-          }
-          if (force && change_reasons.length === 0) {
-            change_reasons.push('force update')
           }
           log(
             `Updating ${entity_type} ${external_id} - ${change_reasons.join(', ')}`

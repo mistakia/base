@@ -9,7 +9,8 @@ import {
   create_base_entity_structure,
   extract_page_title,
   validate_and_clean_entity,
-  apply_property_conversions
+  apply_property_conversions,
+  normalize_notion_properties_text
 } from './notion-utils.mjs'
 
 const log = debug('integrations:notion:normalize-database-item')
@@ -76,7 +77,7 @@ export async function normalize_notion_database_item(
             created_by: notion_page.created_by,
             last_edited_by: notion_page.last_edited_by,
             archived: notion_page.archived || false,
-            raw_properties: extracted_properties
+            raw_properties: normalize_notion_properties_text(extracted_properties)
           }
         }
       }

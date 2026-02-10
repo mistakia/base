@@ -77,6 +77,41 @@ export async function convert_blocks_to_markdown(blocks, options = {}) {
 }
 
 /**
+ * Normalize text content in Notion properties to prevent spurious whitespace differences
+ * Recursively trims text.content and plain_text fields in rich_text arrays
+ * @param {Object} properties - Notion properties object
+ * @returns {Object} Normalized copy of properties
+ */
+export function normalize_notion_properties_text(properties) {
+  if (!properties || typeof properties !== 'object') {
+    return properties
+  }
+
+  if (Array.isArray(properties)) {
+    return properties.map((item) => normalize_notion_properties_text(item))
+  }
+
+  const normalized = {}
+  for (const [key, value] of Object.entries(properties)) {
+    if (value === null || value === undefined) {
+      normalized[key] = value
+    } else if (typeof value === 'string') {
+      // Trim string values in specific text fields
+      if (key === 'content' || key === 'plain_text') {
+        normalized[key] = value.trim()
+      } else {
+        normalized[key] = value
+      }
+    } else if (typeof value === 'object') {
+      normalized[key] = normalize_notion_properties_text(value)
+    } else {
+      normalized[key] = value
+    }
+  }
+  return normalized
+}
+
+/**
  * Create base entity structure common to all Notion entities
  * @param {Object} notion_page - Notion page object
  * @param {Object} params - Entity parameters
@@ -114,7 +149,7 @@ export function create_base_entity_structure(notion_page, params) {
       created_by: notion_page.created_by,
       last_edited_by: notion_page.last_edited_by,
       archived: notion_page.archived || false,
-      properties: notion_page.properties || {}
+      properties: normalize_notion_properties_text(notion_page.properties || {})
     }
   }
 
