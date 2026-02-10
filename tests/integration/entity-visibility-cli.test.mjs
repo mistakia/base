@@ -63,7 +63,7 @@ This is a test entity for CLI testing.`
     const thread_metadata = {
       thread_id: 'test-thread',
       user_public_key: 'test-key',
-      session_provider: 'base',
+      source: { provider: 'claude' },
       thread_state: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

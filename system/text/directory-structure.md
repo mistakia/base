@@ -67,6 +67,7 @@ The `libs-server/` directory contains server-specific code organized by function
     │   ├── github/             # GitHub API and sync
     │   ├── notion/             # Notion API and sync
     │   ├── openai/             # OpenAI integration
+    │   ├── pi/                 # Pi AI integration
     │   ├── shared/             # Shared integration utilities
     │   └── thread/             # Thread integration utilities
     ├── markdown/               # Markdown processing

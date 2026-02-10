@@ -59,14 +59,11 @@ export const extract_total_tokens = (thread) => {
   if (!thread) return 0
 
   if (thread.get) {
-    // Immutable object
     return (
-      thread.getIn(['external_session', 'provider_metadata', 'total_tokens']) ||
-      0
+      thread.getIn(['source', 'provider_metadata', 'total_tokens']) || 0
     )
   } else {
-    // Plain JS object
-    return thread.external_session?.provider_metadata?.total_tokens || 0
+    return thread.source?.provider_metadata?.total_tokens || 0
   }
 }
 
@@ -81,16 +78,10 @@ export const extract_duration = (thread) => {
   let duration_minutes
 
   if (thread.get) {
-    // Immutable object
-    duration_minutes = thread.getIn([
-      'external_session',
-      'provider_metadata',
-      'duration_minutes'
-    ])
-  } else {
-    // Plain JS object
     duration_minutes =
-      thread.external_session?.provider_metadata?.duration_minutes
+      thread.getIn(['source', 'provider_metadata', 'duration_minutes'])
+  } else {
+    duration_minutes = thread.source?.provider_metadata?.duration_minutes
   }
 
   if (!duration_minutes) return null
@@ -117,16 +108,11 @@ export const extract_working_directory = (thread) => {
   let working_directory_path
 
   if (thread.get) {
-    // Immutable object
-    working_directory_path = thread.getIn([
-      'external_session',
-      'provider_metadata',
-      'working_directory'
-    ])
-  } else {
-    // Plain JS object
     working_directory_path =
-      thread.external_session?.provider_metadata?.working_directory
+      thread.getIn(['source', 'provider_metadata', 'working_directory'])
+  } else {
+    working_directory_path =
+      thread.source?.provider_metadata?.working_directory
   }
 
   if (!working_directory_path) {
@@ -150,14 +136,9 @@ export const extract_session_provider = (thread) => {
   if (!thread) return null
 
   if (thread.get) {
-    // Immutable object
-    return (
-      thread.get('session_provider') ||
-      thread.getIn(['external_session', 'session_provider'])
-    )
+    return thread.getIn(['source', 'provider']) || null
   } else {
-    // Plain JS object
-    return thread.session_provider || thread.external_session?.session_provider
+    return thread.source?.provider || null
   }
 }
 

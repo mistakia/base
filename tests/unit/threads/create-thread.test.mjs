@@ -49,7 +49,7 @@ describe('create_thread', () => {
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       create_git_branches: true
     }
 
@@ -111,7 +111,7 @@ describe('create_thread', () => {
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       thread_main_request: 'Hello, this is my first message',
       create_git_branches: true
     }
@@ -133,7 +133,7 @@ describe('create_thread', () => {
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       tools: ['web_search', 'calculator'],
       create_git_branches: true
     }
@@ -154,7 +154,7 @@ describe('create_thread', () => {
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       thread_state: THREAD_STATE.ARCHIVED,
       additional_metadata: {
         archive_reason: 'completed',
@@ -195,7 +195,7 @@ describe('create_thread', () => {
     const invalid_state_data = {
       user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       thread_state: 'invalid_state' // Invalid state value
     }
 
@@ -213,7 +213,7 @@ describe('create_thread', () => {
     const deprecated_state_data = {
       user_public_key: test_user.user_public_key,
       inference_provider: 'ollama',
-      model: 'llama2',
+      models: ['llama2'],
       thread_state: 'terminated' // Deprecated state
     }
 

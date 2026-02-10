@@ -54,7 +54,6 @@ export const create_thread_from_session = async ({
   user_public_key = config.user_public_key,
   user_base_directory = get_user_base_directory(),
   inference_provider,
-  model,
   models,
   raw_session_data = null // Original raw data from provider
 }) => {
@@ -70,14 +69,16 @@ export const create_thread_from_session = async ({
       normalized_session.metadata || {}
     )
 
-    // Create external session metadata
-    const external_session = {
-      session_provider: normalized_session.session_provider,
+    // Create source metadata (session origin tracking)
+    const source = {
+      provider: normalized_session.session_provider,
       session_id: normalized_session.session_id,
       imported_at: new Date().toISOString(),
-      provider_metadata: normalized_session.metadata,
-      raw_data_saved: !!raw_session_data,
-      plan_slug: normalized_session.metadata?.plan_slug || null
+      provider_metadata: {
+        ...normalized_session.metadata,
+        plan_slug: normalized_session.metadata?.plan_slug || null
+      },
+      raw_data_saved: !!raw_session_data
     }
 
     // Extract timeline timestamps for thread creation
@@ -106,14 +107,13 @@ export const create_thread_from_session = async ({
       user_public_key,
       workflow_base_uri: null, // External sessions should not have a default workflow
       inference_provider,
-      model,
       models,
       thread_state: THREAD_STATE.ACTIVE,
       prompt_properties: {},
       tools: [],
       create_git_branches: false,
       create_memory_repository: false,
-      external_session,
+      source,
       title: default_title,
       additional_metadata: {
         system_worktree_path: null,
@@ -493,6 +493,32 @@ export const update_existing_thread = async (
   }
 }
 
+/**
+ * Build source object from existing metadata.
+ * When migrating from old metadata format (pre-source field), extracts
+ * session tracking fields from old external_session and normalized session
+ * to preserve session_id, imported_at, and raw_data_saved.
+ */
+function build_source_from_existing(existing_metadata, normalized_session) {
+  if (existing_metadata.source) {
+    return existing_metadata.source
+  }
+
+  // Migrate from old format - extract tracking fields from
+  // old external_session and normalized session data
+  const external_session = existing_metadata.external_session
+  return {
+    provider:
+      external_session?.provider ||
+      external_session?.session_provider ||
+      normalized_session.session_provider,
+    session_id:
+      external_session?.session_id || normalized_session.session_id || null,
+    imported_at: external_session?.imported_at || new Date().toISOString(),
+    raw_data_saved: external_session?.raw_data_saved ?? false
+  }
+}
+
 const update_thread_metadata = async (thread_dir, normalized_session) => {
   try {
     const metadata_path = path.join(thread_dir, 'metadata.json')
@@ -511,15 +537,16 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       normalized_session.metadata || {}
     )
 
-    // Build updated metadata WITHOUT timestamps (added later if needed)
     const updated_metadata = {
       ...existing_metadata,
       message_count: counts.message_count,
       tool_call_count: counts.tool_call_count,
-      external_session: {
-        ...existing_metadata.external_session,
-        provider_metadata: normalized_session.metadata,
-        plan_slug: normalized_session.metadata?.plan_slug || null
+      source: {
+        ...build_source_from_existing(existing_metadata, normalized_session),
+        provider_metadata: {
+          ...normalized_session.metadata,
+          plan_slug: normalized_session.metadata?.plan_slug || null
+        }
       },
       // Add detailed counts for Claude sessions
       ...(normalized_session.session_provider === 'claude' && {
@@ -636,11 +663,7 @@ export const create_threads_from_sessions = async (
         ? options.get_raw_session_data(session)
         : options.raw_session_data
 
-      // Get model/models for this specific session
-      const model = options.get_model
-        ? options.get_model(session)
-        : options.model
-
+      // Get models for this specific session
       const models = options.get_models
         ? options.get_models(session)
         : options.models
@@ -651,7 +674,6 @@ export const create_threads_from_sessions = async (
         user_base_directory:
           options.user_base_directory || get_user_base_directory(),
         inference_provider: options.inference_provider,
-        model,
         models,
         raw_session_data
       })

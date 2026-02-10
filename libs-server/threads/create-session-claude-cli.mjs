@@ -441,7 +441,8 @@ const restore_plan = async ({ thread_dir, user_base_directory }) => {
     const metadata_path = join(thread_dir, 'metadata.json')
     const metadata_content = await readFile(metadata_path, 'utf-8')
     const metadata = JSON.parse(metadata_content)
-    const plan_slug = metadata.external_session?.plan_slug
+    const source = metadata.source
+    const plan_slug = source?.provider_metadata?.plan_slug || source?.plan_slug
 
     if (!plan_slug) {
       log('No plan_slug in thread metadata')

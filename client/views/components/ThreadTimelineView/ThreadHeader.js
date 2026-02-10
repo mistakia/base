@@ -54,26 +54,26 @@ const extract_models = (metadata) => {
     return []
   }
   return (
-    metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
+    metadata.get('models') ||
+    metadata.getIn(['source', 'provider_metadata', 'models']) ||
+    []
   )
 }
 
-const extract_external_session_info = (metadata) => {
+const extract_source_info = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return null
   }
 
-  const external_session = metadata.get('external_session')
-  if (!external_session) return null
+  const source = metadata.get('source')
+  if (!source) return null
 
-  const session_provider =
-    external_session.session_provider ||
-    external_session.get?.('session_provider')
+  const session_provider = source.get?.('provider') || source.provider
   const session_id =
-    external_session.session_id || external_session.get?.('session_id')
+    source.session_id || source.get?.('session_id')
   const provider_metadata =
-    external_session.provider_metadata ||
-    external_session.get?.('provider_metadata')
+    source.provider_metadata ||
+    source.get?.('provider_metadata')
   const working_directory =
     provider_metadata?.working_directory ||
     provider_metadata?.get?.('working_directory')
@@ -128,7 +128,7 @@ const use_thread_metadata = (metadata) => {
     total_tokens,
     duration,
     models: extract_models(metadata),
-    external_session_info: extract_external_session_info(metadata),
+    source_info: extract_source_info(metadata),
     thread_state,
     created_at: dates.created_at,
     updated_at: dates.updated_at,
@@ -359,7 +359,7 @@ const ThreadStats = ({
   session_id,
   duration,
   models,
-  external_session_info,
+  source_info,
   thread_state,
   created_at,
   updated_at,
@@ -374,8 +374,8 @@ const ThreadStats = ({
   active_session,
   relations
 }) => {
-  const working_directory = external_session_info?.working_directory
-  const session_provider = external_session_info?.provider
+  const working_directory = source_info?.working_directory
+  const session_provider = source_info?.provider
   const has_dates = created_at || updated_at
   const has_message_breakdown =
     user_message_count > 0 || assistant_message_count > 0
@@ -520,7 +520,7 @@ ThreadStats.propTypes = {
   session_id: PropTypes.string,
   duration: PropTypes.string,
   models: PropTypes.arrayOf(PropTypes.string).isRequired,
-  external_session_info: PropTypes.shape({
+  source_info: PropTypes.shape({
     provider: PropTypes.string,
     session_id: PropTypes.string,
     working_directory: PropTypes.string
@@ -540,18 +540,18 @@ ThreadStats.propTypes = {
   relations: PropTypes.array
 }
 
-const ExternalSessionChips = ({ external_session_info, thread_state }) => {
-  if (!external_session_info && !thread_state) return null
+const SourceChips = ({ source_info, thread_state }) => {
+  if (!source_info && !thread_state) return null
 
   return (
     <Box
       sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-      {external_session_info && (
+      {source_info && (
         <>
-          <span className='chip'>{external_session_info.provider}</span>
-          {external_session_info.working_directory && (
+          <span className='chip'>{source_info.provider}</span>
+          {source_info.working_directory && (
             <span className='chip'>
-              {external_session_info.working_directory}
+              {source_info.working_directory}
             </span>
           )}
         </>
@@ -561,8 +561,8 @@ const ExternalSessionChips = ({ external_session_info, thread_state }) => {
   )
 }
 
-ExternalSessionChips.propTypes = {
-  external_session_info: PropTypes.shape({
+SourceChips.propTypes = {
+  source_info: PropTypes.shape({
     provider: PropTypes.string,
     session_id: PropTypes.string,
     working_directory: PropTypes.string
@@ -578,7 +578,7 @@ const ThreadHeader = ({ metadata, thread_id }) => {
     total_tokens,
     duration,
     models,
-    external_session_info,
+    source_info,
     thread_state,
     created_at,
     updated_at,
@@ -621,10 +621,10 @@ const ThreadHeader = ({ metadata, thread_id }) => {
       </Box>
       <ThreadStats
         total_tokens={total_tokens}
-        session_id={external_session_info?.session_id}
+        session_id={source_info?.session_id}
         duration={duration}
         models={models}
-        external_session_info={external_session_info}
+        source_info={source_info}
         thread_state={thread_state}
         created_at={created_at}
         updated_at={updated_at}

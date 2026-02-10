@@ -75,7 +75,7 @@ async function get_thread_info_for_session(thread_id) {
     message_count: null,
     duration_minutes: null,
     total_tokens: null,
-    session_provider: null
+    source_provider: null
   }
 
   if (!thread_id) return empty_result
@@ -97,7 +97,7 @@ async function get_thread_info_for_session(thread_id) {
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
       total_tokens: metadata.total_tokens || null,
-      session_provider: metadata.session_provider || null
+      source_provider: metadata.source?.provider || null
     }
   } catch {
     // Thread may not exist yet or be inaccessible
@@ -131,7 +131,7 @@ async function enrich_session_with_thread_info(session) {
     message_count: thread_info.message_count,
     duration_minutes: thread_info.duration_minutes,
     total_tokens: thread_info.total_tokens,
-    session_provider: thread_info.session_provider
+    source_provider: thread_info.source_provider
   }
 }
 
@@ -258,7 +258,7 @@ router.post('/', async (req, res) => {
       session.message_count = thread_info.message_count
       session.duration_minutes = thread_info.duration_minutes
       session.total_tokens = thread_info.total_tokens
-      session.session_provider = thread_info.session_provider
+      session.source_provider = thread_info.source_provider
 
       await update_active_session({
         session_id,
@@ -268,7 +268,7 @@ router.post('/', async (req, res) => {
         message_count: thread_info.message_count,
         duration_minutes: thread_info.duration_minutes,
         total_tokens: thread_info.total_tokens,
-        session_provider: thread_info.session_provider
+        source_provider: thread_info.source_provider
       })
     }
 
@@ -323,7 +323,7 @@ router.put('/:session_id', async (req, res) => {
         session.message_count = thread_info.message_count
         session.duration_minutes = thread_info.duration_minutes
         session.total_tokens = thread_info.total_tokens
-        session.session_provider = thread_info.session_provider
+        session.source_provider = thread_info.source_provider
 
         await update_active_session({
           session_id,
@@ -333,7 +333,7 @@ router.put('/:session_id', async (req, res) => {
           message_count: thread_info.message_count,
           duration_minutes: thread_info.duration_minutes,
           total_tokens: thread_info.total_tokens,
-          session_provider: thread_info.session_provider
+          source_provider: thread_info.source_provider
         })
       }
     } else {

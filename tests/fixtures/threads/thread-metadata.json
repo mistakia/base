@@ -3,7 +3,7 @@
     "name": "minimal_thread",
     "metadata": {
       "inference_provider": "ollama",
-      "model": "llama2",
+      "models": ["llama2"],
       "thread_state": "active",
       "message_count": 0,
       "tool_call_count": 0
@@ -13,7 +13,7 @@
     "name": "active_thread",
     "metadata": {
       "inference_provider": "ollama",
-      "model": "mistral",
+      "models": ["mistral"],
       "thread_state": "active",
       "tools": ["web_search", "calculator"],
       "message_count": 5,
@@ -24,7 +24,7 @@
     "name": "archived_thread",
     "metadata": {
       "inference_provider": "ollama",
-      "model": "mistral",
+      "models": ["mistral"],
       "thread_state": "archived",
       "archive_reason": "completed",
       "archived_at": "2024-01-15T10:30:00.000Z",
@@ -37,7 +37,7 @@
     "name": "custom_provider_thread",
     "metadata": {
       "inference_provider": "custom_provider",
-      "model": "custom_model",
+      "models": ["custom_model"],
       "thread_state": "active",
       "provider_settings": {
         "api_key": "test_key",

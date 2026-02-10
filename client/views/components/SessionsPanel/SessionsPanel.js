@@ -184,7 +184,7 @@ const SessionsPanel = ({
               const display_text =
                 thread.title ||
                 format_directory(
-                  thread.external_session?.provider_metadata?.working_directory
+                  thread.source?.provider_metadata?.working_directory
                 )
               return (
                 <div

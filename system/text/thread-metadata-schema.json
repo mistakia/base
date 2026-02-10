@@ -6,7 +6,7 @@
   "required": [
     "thread_id",
     "user_public_key",
-    "session_provider",
+    "source",
     "thread_state",
     "created_at",
     "updated_at"
@@ -31,12 +31,42 @@
     },
     "workflow_base_uri": {
       "type": "string",
-      "description": "Reference to the specific workflow for Base system sessions (e.g., 'sys:system/workflow/write-workflow.md')"
+      "description": "Reference to the workflow that initiated this thread (e.g., 'sys:system/workflow/write-workflow.md')"
     },
-    "session_provider": {
-      "type": "string",
-      "enum": ["base", "claude", "cursor", "openai"],
-      "description": "Origin provider for the session - the 'engine' choice for the interaction"
+    "source": {
+      "type": "object",
+      "description": "Session origin and provider information",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["base", "claude", "cursor", "openai", "pi"],
+          "description": "Origin provider for the session"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Original session ID from the provider"
+        },
+        "session_path": {
+          "type": "string",
+          "description": "Path to the original session file (optional)"
+        },
+        "imported_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this session was imported into the Base system"
+        },
+        "provider_metadata": {
+          "type": "object",
+          "description": "Provider-specific metadata preserved from the original session",
+          "additionalProperties": true
+        },
+        "raw_data_saved": {
+          "type": "boolean",
+          "description": "Whether the raw imported data has been saved"
+        }
+      },
+      "required": ["provider"],
+      "additionalProperties": false
     },
     "inference_provider": {
       "type": "string",
@@ -47,11 +77,21 @@
       "items": {
         "type": "string"
       },
-      "description": "Array of model names used in the thread (preferred over single model)"
+      "description": "Array of model names used in the thread"
     },
-    "model": {
-      "type": "string",
-      "description": "Single model name (deprecated - use models array instead)"
+    "tools_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of tool names used during the session"
+    },
+    "bash_commands_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of bash commands executed during the session"
     },
     "thread_state": {
       "type": "string",
@@ -133,37 +173,6 @@
       "type": "integer",
       "description": "Total number of input tokens read from cache in this thread"
     },
-    "external_session": {
-      "type": "object",
-      "description": "External session metadata for imported sessions",
-      "properties": {
-        "session_id": {
-          "type": "string",
-          "description": "Original session ID from the external provider"
-        },
-        "session_provider": {
-          "type": "string",
-          "enum": ["claude", "cursor", "openai"],
-          "description": "External provider that originated this session"
-        },
-        "imported_at": {
-          "type": "string",
-          "format": "date-time",
-          "description": "When this external session was imported into the Base system"
-        },
-        "provider_metadata": {
-          "type": "object",
-          "description": "Provider-specific metadata preserved from the original session",
-          "additionalProperties": true
-        },
-        "raw_data_saved": {
-          "type": "boolean",
-          "description": "Whether the raw imported data has been saved"
-        }
-      },
-      "required": ["session_provider"],
-      "additionalProperties": false
-    },
     "prompt_properties": {
       "type": "object",
       "description": "Workflow-specific properties and configuration",
@@ -222,16 +231,5 @@
       "description": "Timestamp when relation cleanup was last performed (ISO 8601)"
     }
   },
-  "additionalProperties": false,
-  "if": {
-    "properties": {
-      "session_provider": { "const": "base" }
-    }
-  },
-  "then": {
-    "required": ["workflow_base_uri"]
-  },
-  "else": {
-    "required": ["external_session"]
-  }
+  "additionalProperties": false
 }

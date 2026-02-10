@@ -22,8 +22,8 @@ function get_model_key(thread_data) {
   const model =
     thread_data.primary_model ||
     (thread_data.models && thread_data.models[0]) ||
-    (thread_data.external_session?.provider_metadata?.models &&
-      thread_data.external_session.provider_metadata.models[0])
+    (thread_data.source?.provider_metadata?.models &&
+      thread_data.source.provider_metadata.models[0])
 
   if (!provider || !model) {
     return null
@@ -62,27 +62,27 @@ function calculate_token_costs(thread_data, pricing) {
   // Get token counts - check both direct fields and nested paths
   // Use nullish coalescing (??) to preserve explicit zeros
   // Convert BigInts from DuckDB to Numbers for arithmetic operations
+  const provider_metadata = thread_data.source?.provider_metadata
   const input_tokens = to_number(
     thread_data.total_input_tokens ??
       thread_data.input_tokens ??
-      thread_data.external_session?.provider_metadata?.input_tokens
+      provider_metadata?.input_tokens
   )
 
   const output_tokens = to_number(
     thread_data.total_output_tokens ??
       thread_data.output_tokens ??
-      thread_data.external_session?.provider_metadata?.output_tokens
+      provider_metadata?.output_tokens
   )
 
   const cache_read_tokens = to_number(
     thread_data.cache_read_input_tokens ??
-      thread_data.external_session?.provider_metadata?.cache_read_input_tokens
+      provider_metadata?.cache_read_input_tokens
   )
 
   const cache_creation_tokens = to_number(
     thread_data.cache_creation_input_tokens ??
-      thread_data.external_session?.provider_metadata
-        ?.cache_creation_input_tokens
+      provider_metadata?.cache_creation_input_tokens
   )
 
   // Input tokens cost

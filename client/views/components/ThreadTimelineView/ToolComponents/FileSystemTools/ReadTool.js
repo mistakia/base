@@ -173,8 +173,7 @@ const ReadTool = ({ tool_call_event, tool_result_event }) => {
   const threads_state = useSelector(get_threads_state)
   const selected_thread_data = threads_state.get('selected_thread_data')
   const working_directory =
-    selected_thread_data?.get('external_session')?.provider_metadata
-      ?.working_directory
+    selected_thread_data?.getIn(['source', 'provider_metadata', 'working_directory'])
 
   const header_node = build_dual_tone_header({
     left_label: 'Read',

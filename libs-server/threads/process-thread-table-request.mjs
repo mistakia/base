@@ -61,7 +61,7 @@ export function normalize_duckdb_thread(thread, models_data) {
     user_public_key: thread.user_public_key,
 
     // Provider and session info
-    session_provider: thread.session_provider || 'base',
+    source_provider: thread.source_provider || null,
     inference_provider: thread.inference_provider,
     primary_model: thread.primary_model,
 

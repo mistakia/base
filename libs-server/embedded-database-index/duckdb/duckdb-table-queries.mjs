@@ -53,7 +53,7 @@ const VALID_COLUMNS = new Set([
   'duration_minutes',
   'working_directory',
   'working_directory_path',
-  'session_provider',
+  'source_provider',
   'inference_provider',
   'primary_model',
   'latest_event_timestamp',
@@ -411,7 +411,7 @@ export async function query_threads_from_duckdb({
       message_count, user_message_count, assistant_message_count, tool_call_count,
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
-      working_directory, working_directory_path, session_provider,
+      working_directory, working_directory_path, source_provider,
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
       file_references, directory_references

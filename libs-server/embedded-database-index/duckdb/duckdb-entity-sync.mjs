@@ -31,7 +31,7 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     duration_minutes,
     working_directory,
     working_directory_path,
-    session_provider,
+    source_provider,
     inference_provider,
     user_public_key,
     latest_event_timestamp,
@@ -47,7 +47,7 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
   const primary_model =
     thread_data.primary_model ||
     (thread_data.models && thread_data.models[0]) ||
-    thread_data.external_session?.provider_metadata?.models?.[0] ||
+    thread_data.source?.provider_metadata?.models?.[0] ||
     null
 
   if (!thread_id) {
@@ -63,7 +63,7 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       message_count, user_message_count, assistant_message_count, tool_call_count,
       total_input_tokens, total_output_tokens, cache_creation_input_tokens,
       cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
-      working_directory, working_directory_path, session_provider,
+      working_directory, working_directory_path, source_provider,
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
       edit_count, lines_changed, file_references, directory_references
@@ -87,7 +87,7 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       duration_minutes = excluded.duration_minutes,
       working_directory = excluded.working_directory,
       working_directory_path = excluded.working_directory_path,
-      session_provider = excluded.session_provider,
+      source_provider = excluded.source_provider,
       inference_provider = excluded.inference_provider,
       primary_model = excluded.primary_model,
       user_public_key = excluded.user_public_key,
@@ -123,7 +123,7 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
         duration_minutes ?? 0,
         working_directory,
         working_directory_path,
-        session_provider,
+        source_provider,
         inference_provider,
         primary_model,
         user_public_key,

@@ -60,9 +60,10 @@ export const find_thread_for_session = async ({
         const metadata = await read_json_file({ file_path: metadata_path })
 
         // Primary match: session_id
+        const source = metadata.source
         if (
           session_id &&
-          metadata.external_session?.session_id === session_id
+          source?.session_id === session_id
         ) {
           log(`Found thread ${thread_id} matching session_id ${session_id}`)
           return thread_id
@@ -71,7 +72,7 @@ export const find_thread_for_session = async ({
         // Secondary match: transcript_path (file_source)
         if (
           transcript_path &&
-          metadata.external_session?.provider_metadata?.file_source ===
+          source?.provider_metadata?.file_source ===
             transcript_path
         ) {
           log(
@@ -133,7 +134,8 @@ export const find_all_threads_for_session = async ({ session_id }) => {
         const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
         const metadata = await read_json_file({ file_path: metadata_path })
 
-        if (metadata.external_session?.session_id === session_id) {
+        const source = metadata.source
+        if (source?.session_id === session_id) {
           matching_threads.push(thread_id)
         }
       } catch {

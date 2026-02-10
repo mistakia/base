@@ -460,7 +460,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai'],
+              choices: ['claude', 'cursor', 'openai', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {
@@ -544,7 +544,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai'],
+              choices: ['claude', 'cursor', 'openai', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {
@@ -722,7 +722,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai'],
+              choices: ['claude', 'cursor', 'openai', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {

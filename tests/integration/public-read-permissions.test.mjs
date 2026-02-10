@@ -163,7 +163,7 @@ describe('Public Read Permissions Integration', function () {
       const metadata = {
         thread_id: 'test-thread-id',
         user_public_key: 'test-owner-key',
-        session_provider: 'base',
+        source: { provider: 'claude' },
         thread_state: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -197,7 +197,7 @@ describe('Public Read Permissions Integration', function () {
       const metadata = {
         thread_id: 'test-private-thread',
         user_public_key: 'test-owner-key',
-        session_provider: 'base',
+        source: { provider: 'claude' },
         thread_state: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -230,7 +230,7 @@ describe('Public Read Permissions Integration', function () {
       const metadata = {
         thread_id: 'test-default-thread',
         user_public_key: 'test-owner-key',
-        session_provider: 'base',
+        source: { provider: 'claude' },
         thread_state: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
