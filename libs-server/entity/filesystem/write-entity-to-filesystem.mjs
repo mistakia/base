@@ -2,6 +2,7 @@ import debug from 'debug'
 import { v4 as uuid } from 'uuid'
 import { write_document_to_filesystem } from '#libs-server/markdown/write-document-to-filesystem.mjs'
 import { format_entity_properties_to_frontmatter } from '#libs-server/entity/format/index.mjs'
+import { format_markdown_file_with_prettier } from '#libs-server/formatting/format-markdown-file-with-prettier.mjs'
 
 const log = debug('write-entity-to-filesystem')
 
@@ -54,6 +55,9 @@ export async function write_entity_to_filesystem({
       document_properties: frontmatter,
       document_content: entity_content
     })
+
+    // Format the written file with Prettier for consistent formatting
+    await format_markdown_file_with_prettier({ absolute_path })
 
     log(`Successfully wrote ${entity_type} entity to ${absolute_path}`)
     return {
