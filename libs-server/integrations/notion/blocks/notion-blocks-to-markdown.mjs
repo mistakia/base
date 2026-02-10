@@ -10,7 +10,7 @@ import {
   get_spacing_context,
   normalize_spacing
 } from './block-transition-rules.mjs'
-import { store_file_with_content_identifier } from '#libs-server/utils/store-file-with-content-identifier.mjs'
+import { store_file } from '#libs-server/files/index.mjs'
 import { sanitize_for_filename } from '#libs-server/utils/sanitize-filename.mjs'
 import { find_entity_for_notion_page } from '../entity/find-entity-for-notion-page.mjs'
 import config from '#config'
@@ -90,38 +90,75 @@ function convert_list_item_block(block, options, indent) {
 /**
  * Download file from URL and return as buffer
  * @param {string} url - URL to download from
+ * @param {Object} options - Download options
+ * @param {number} [options.timeout_ms=30000] - Timeout in milliseconds
  * @returns {Promise<Buffer>} File content as buffer
  */
-async function download_file(url) {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(
-      `Failed to download file: ${response.status} ${response.statusText}`
-    )
+async function download_file(url, { timeout_ms = 30000 } = {}) {
+  const controller = new AbortController()
+  const timeout_id = setTimeout(() => controller.abort(), timeout_ms)
+
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download file: ${response.status} ${response.statusText}`
+      )
+    }
+    return Buffer.from(await response.arrayBuffer())
+  } finally {
+    clearTimeout(timeout_id)
   }
-  return Buffer.from(await response.arrayBuffer())
 }
 
 /**
  * Store downloaded file and return storage result
+ *
+ * Files are stored adjacent to the entity in entity_files_directory.
+ * CID-based deduplication ensures identical files aren't stored twice.
+ *
  * @param {Buffer} file_content - File content as buffer
  * @param {string} filename - Original filename
+ * @param {Object} options - Storage options
+ * @param {string} [options.source_url] - Original URL of the file
+ * @param {string} options.entity_files_directory - Directory for entity-adjacent storage (required)
  * @returns {Promise<Object>} Storage result with base_uri
  */
-async function store_downloaded_file(file_content, filename) {
-  return await store_file_with_content_identifier({
-    file_content,
-    original_filename: filename
+async function store_downloaded_file(file_content, filename, options = {}) {
+  const { source_url, entity_files_directory } = options
+
+  if (!entity_files_directory) {
+    throw new Error('entity_files_directory is required for file storage')
+  }
+
+  // Sanitize filename for filesystem
+  const safe_filename = sanitize_for_filename(filename, {
+    maxLength: 100,
+    fallback: 'file'
   })
+
+  const target_path = path.join(entity_files_directory, safe_filename)
+
+  const result = await store_file({
+    file_content,
+    target_path,
+    original_name: filename,
+    source_uri: source_url,
+    context: 'notion'
+  })
+
+  return result
 }
 
 /**
  * Handle image block conversion
  * @param {Object} block - Image block object
  * @param {string} indent - Current indentation
+ * @param {Object} options - Conversion options
+ * @param {string} [options.entity_files_directory] - Directory for entity-adjacent storage
  * @returns {Promise<string>} Markdown content
  */
-async function convert_image_block(block, indent) {
+async function convert_image_block(block, indent, options = {}) {
   if (!block.image) return ''
 
   const url = block.image.file?.url || block.image.external?.url
@@ -135,10 +172,15 @@ async function convert_image_block(block, indent) {
   if (block.image.file?.url) {
     try {
       const file_content = await download_file(url)
-      const storage_result = await store_downloaded_file(
-        file_content,
-        `image-${block.id}`
-      )
+      // Extract extension from URL or use default
+      const url_path = new URL(url).pathname
+      const ext = path.extname(url_path) || '.png'
+      const filename = `image-${block.id.slice(0, 8)}${ext}`
+
+      const storage_result = await store_downloaded_file(file_content, filename, {
+        source_url: url,
+        entity_files_directory: options.entity_files_directory
+      })
       return `${indent}![${caption}](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store image: ${error.message}`)
@@ -154,9 +196,11 @@ async function convert_image_block(block, indent) {
  * Handle video block conversion
  * @param {Object} block - Video block object
  * @param {string} indent - Current indentation
+ * @param {Object} options - Conversion options
+ * @param {string} [options.entity_files_directory] - Directory for entity-adjacent storage
  * @returns {Promise<string>} Markdown content
  */
-async function convert_video_block(block, indent) {
+async function convert_video_block(block, indent, options = {}) {
   if (!block.video) return ''
 
   const url = block.video.file?.url || block.video.external?.url
@@ -166,10 +210,15 @@ async function convert_video_block(block, indent) {
   if (block.video.file?.url) {
     try {
       const file_content = await download_file(url)
-      const storage_result = await store_downloaded_file(
-        file_content,
-        `video-${block.id}`
-      )
+      // Extract extension from URL or use default
+      const url_path = new URL(url).pathname
+      const ext = path.extname(url_path) || '.mp4'
+      const filename = `video-${block.id.slice(0, 8)}${ext}`
+
+      const storage_result = await store_downloaded_file(file_content, filename, {
+        source_url: url,
+        entity_files_directory: options.entity_files_directory
+      })
       return `${indent}[Video](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store video: ${error.message}`)
@@ -184,9 +233,11 @@ async function convert_video_block(block, indent) {
  * Handle file block conversion
  * @param {Object} block - File block object
  * @param {string} indent - Current indentation
+ * @param {Object} options - Conversion options
+ * @param {string} [options.entity_files_directory] - Directory for entity-adjacent storage
  * @returns {Promise<string>} Markdown content
  */
-async function convert_file_block(block, indent) {
+async function convert_file_block(block, indent, options = {}) {
   if (!block.file) return ''
 
   const url = block.file.file?.url || block.file.external?.url
@@ -198,10 +249,15 @@ async function convert_file_block(block, indent) {
   if (block.file.file?.url) {
     try {
       const file_content = await download_file(url)
-      const storage_result = await store_downloaded_file(
-        file_content,
-        name || `file-${block.id}`
-      )
+      // Use original filename or generate one with extension from URL
+      const url_path = new URL(url).pathname
+      const ext = path.extname(url_path) || ''
+      const filename = name || `file-${block.id.slice(0, 8)}${ext}`
+
+      const storage_result = await store_downloaded_file(file_content, filename, {
+        source_url: url,
+        entity_files_directory: options.entity_files_directory
+      })
       return `${indent}[${name}](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store file: ${error.message}`)
@@ -216,18 +272,20 @@ async function convert_file_block(block, indent) {
  * Handle media blocks (image, video, file, bookmark, embed)
  * @param {Object} block - Notion block object
  * @param {string} indent - Current indentation
+ * @param {Object} options - Conversion options
+ * @param {string} [options.entity_files_directory] - Directory for entity-adjacent storage
  * @returns {Promise<string>} Markdown content
  */
-async function convert_media_block(block, indent) {
+async function convert_media_block(block, indent, options = {}) {
   switch (block.type) {
     case 'image':
-      return await convert_image_block(block, indent)
+      return await convert_image_block(block, indent, options)
 
     case 'video':
-      return await convert_video_block(block, indent)
+      return await convert_video_block(block, indent, options)
 
     case 'file':
-      return await convert_file_block(block, indent)
+      return await convert_file_block(block, indent, options)
 
     case 'bookmark':
       if (block.bookmark?.url) {
@@ -436,7 +494,7 @@ async function convert_block_to_markdown(
     case 'file':
     case 'bookmark':
     case 'embed':
-      markdown += await convert_media_block(block, indent)
+      markdown += await convert_media_block(block, indent, options)
       break
 
     case 'equation':

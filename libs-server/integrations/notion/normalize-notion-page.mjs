@@ -26,7 +26,10 @@ export async function normalize_notion_page(notion_page, options = {}) {
     const title = extract_page_title(notion_page)
 
     // Convert blocks to markdown content
-    const content = await convert_blocks_to_markdown(notion_page.blocks || [])
+    // Pass entity_files_directory for entity-adjacent file storage
+    const content = await convert_blocks_to_markdown(notion_page.blocks || [], {
+      entity_files_directory: options.entity_files_directory
+    })
 
     // Create base entity structure using shared function
     const { entity_properties, entity_content } = create_base_entity_structure(

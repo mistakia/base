@@ -394,10 +394,32 @@ export async function update_entity_from_external_item({
           ignore_fields: ['updated_at']
         })
 
-        if (final_changes && Object.keys(final_changes).length > 0) {
+        // Check if body content has changed
+        const body_content_changed =
+          entity_content &&
+          entity_content !== existing_entity_result.entity_content
+
+        if (
+          (final_changes && Object.keys(final_changes).length > 0) ||
+          body_content_changed ||
+          force
+        ) {
           merged_properties.updated_at = new Date().toISOString()
+
+          const change_reasons = []
+          if (final_changes && Object.keys(final_changes).length > 0) {
+            change_reasons.push(
+              `${Object.keys(final_changes).length} field change(s): ${Object.keys(final_changes).join(', ')}`
+            )
+          }
+          if (body_content_changed) {
+            change_reasons.push('body content changed')
+          }
+          if (force && change_reasons.length === 0) {
+            change_reasons.push('force update')
+          }
           log(
-            `Updating ${entity_type} ${external_id} - ${Object.keys(final_changes).length} field change(s): ${Object.keys(final_changes).join(', ')}`
+            `Updating ${entity_type} ${external_id} - ${change_reasons.join(', ')}`
           )
 
           const cleaned_properties = remove_stale_external_properties(

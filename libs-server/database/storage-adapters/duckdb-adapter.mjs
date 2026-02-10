@@ -13,6 +13,8 @@
  */
 
 import debug from 'debug'
+import fs from 'fs'
+import path from 'path'
 
 import { resolve_base_uri } from '../../base-uri/base-uri-utilities.mjs'
 import { map_field_type_to_sql, parse_filter_expression } from './index.mjs'
@@ -154,7 +156,7 @@ function get_primary_key_field(database_entity) {
 /**
  * Build WHERE clause from filter object
  */
-function build_where_clause(filter, database_entity) {
+function build_where_clause(filter) {
   if (!filter) {
     return { clause: '', params: [] }
   }
@@ -242,21 +244,37 @@ function build_where_clause(filter, database_entity) {
 function get_database_path(database_entity) {
   const storage_config = database_entity.storage_config || {}
 
-  // If explicit path provided, use it
+  let absolute_path
+
+  // If explicit path provided, resolve it relative to entity location
   if (storage_config.database) {
-    return storage_config.database
+    const base_uri = database_entity.base_uri
+    if (base_uri) {
+      const entity_path = resolve_base_uri(base_uri)
+      const entity_dir = path.dirname(entity_path)
+      absolute_path = path.resolve(entity_dir, storage_config.database)
+    } else {
+      absolute_path = storage_config.database
+    }
+  } else {
+    // Auto-derive from base_uri: user:database/files.md -> /path/to/database/files.db
+    const base_uri = database_entity.base_uri
+    if (!base_uri) {
+      throw new Error(
+        'Database entity must have base_uri to derive database path'
+      )
+    }
+    absolute_path = resolve_base_uri(base_uri).replace(/\.md$/, '.db')
   }
 
-  // Auto-derive from base_uri: user:database/files.md -> /path/to/database/files.db
-  const base_uri = database_entity.base_uri
-  if (!base_uri) {
-    throw new Error(
-      'Database entity must have base_uri to derive database path'
-    )
+  // Ensure parent directory exists
+  const parent_dir = path.dirname(absolute_path)
+  if (!fs.existsSync(parent_dir)) {
+    fs.mkdirSync(parent_dir, { recursive: true })
+    log('Created directory: %s', parent_dir)
   }
 
-  const absolute_path = resolve_base_uri(base_uri)
-  return absolute_path.replace(/\.md$/, '.db')
+  return absolute_path
 }
 
 /**
@@ -375,10 +393,7 @@ export function create_duckdb_adapter(database_entity) {
     async query({ filter, sort, limit = 1000, offset = 0 } = {}) {
       log('Querying table: %s', table_name)
 
-      const { clause: where_clause, params } = build_where_clause(
-        filter,
-        database_entity
-      )
+      const { clause: where_clause, params } = build_where_clause(filter)
 
       let order_clause = ''
       if (sort) {
@@ -472,10 +487,7 @@ export function create_duckdb_adapter(database_entity) {
     async count(filter) {
       log('Counting records in %s', table_name)
 
-      const { clause: where_clause, params } = build_where_clause(
-        filter,
-        database_entity
-      )
+      const { clause: where_clause, params } = build_where_clause(filter)
 
       const results = await run_query({
         query: `SELECT COUNT(*) as count FROM "${table_name}" ${where_clause}`,
