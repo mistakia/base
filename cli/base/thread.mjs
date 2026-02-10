@@ -231,6 +231,16 @@ export const builder = (yargs) =>
             describe: 'Filter by tool name (comma-separated)',
             type: 'string'
           })
+          .option('limit', {
+            describe:
+              'Limit number of timeline entries (default 50 when no other slicing options are used)',
+            type: 'number'
+          })
+          .option('include-sidechain', {
+            describe: 'Include sidechain timeline entries',
+            type: 'boolean',
+            default: false
+          })
           .option('json', {
             describe: 'Output as JSON',
             type: 'boolean',
@@ -500,6 +510,24 @@ async function handle_timeline(argv) {
     if (argv.type) params.include_types = parse_csv(argv.type)
     if (argv.role) params.include_roles = parse_csv(argv.role)
     if (argv.tool) params.include_tool_names = parse_csv(argv.tool)
+    if (argv.limit !== undefined) params.limit = argv.limit
+
+    // Apply task-intent defaults when no explicit type filter is provided
+    if (!argv.type && !params.include_types) {
+      params.include_types = ['message', 'tool_call']
+    }
+
+    // Default to excluding sidechain entries unless explicitly requested
+    params.include_sidechain = argv['include-sidechain']
+
+    // Apply a sensible default limit when no other slicing options are used
+    if (
+      params.limit === undefined &&
+      params.take_last === undefined &&
+      params.take_first === undefined
+    ) {
+      params.limit = 50
+    }
 
     const thread_data = await get_thread(params)
     const timeline = thread_data.timeline || []
