@@ -5,7 +5,8 @@
  * Each database entity gets its own .db file.
  *
  * Database path resolution:
- * 1. If storage_config.database is set, use that path
+ * 1. If storage_config.database is set, resolve relative to user-base root
+ *    (e.g., database: database/files.duckdb -> <user-base>/database/files.duckdb)
  * 2. Otherwise, derive from base_uri (e.g., user:database/files.md -> database/files.db)
  *
  * Note: This is separate from the embedded-index DuckDB (embedded-database-index/duckdb.db)
@@ -16,7 +17,10 @@ import debug from 'debug'
 import fs from 'fs'
 import path from 'path'
 
-import { resolve_base_uri } from '../../base-uri/base-uri-utilities.mjs'
+import {
+  resolve_base_uri,
+  get_user_base_directory
+} from '../../base-uri/index.mjs'
 import { map_field_type_to_sql, parse_filter_expression } from './index.mjs'
 
 const log = debug('database:adapter:duckdb')
@@ -246,16 +250,10 @@ function get_database_path(database_entity) {
 
   let absolute_path
 
-  // If explicit path provided, resolve it relative to entity location
+  // If explicit path provided, resolve it relative to user-base root
   if (storage_config.database) {
-    const base_uri = database_entity.base_uri
-    if (base_uri) {
-      const entity_path = resolve_base_uri(base_uri)
-      const entity_dir = path.dirname(entity_path)
-      absolute_path = path.resolve(entity_dir, storage_config.database)
-    } else {
-      absolute_path = storage_config.database
-    }
+    const user_base_directory = get_user_base_directory()
+    absolute_path = path.resolve(user_base_directory, storage_config.database)
   } else {
     // Auto-derive from base_uri: user:database/files.md -> /path/to/database/files.db
     const base_uri = database_entity.base_uri
