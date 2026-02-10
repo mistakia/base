@@ -53,8 +53,12 @@ const extract_models = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return []
   }
+  // Top-level models is canonical, then provider_metadata fallbacks
   return (
-    metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
+    metadata.get('models') ||
+    metadata.getIn(['source', 'provider_metadata', 'models']) ||
+    metadata.getIn(['external_session', 'provider_metadata', 'models']) ||
+    []
   )
 }
 
@@ -63,17 +67,18 @@ const extract_external_session_info = (metadata) => {
     return null
   }
 
-  const external_session = metadata.get('external_session')
-  if (!external_session) return null
+  // Try source first, fallback to external_session
+  const source = metadata.get('source') || metadata.get('external_session')
+  if (!source) return null
 
   const session_provider =
-    external_session.session_provider ||
-    external_session.get?.('session_provider')
+    source.provider || source.get?.('provider') ||
+    source.session_provider || source.get?.('session_provider')
   const session_id =
-    external_session.session_id || external_session.get?.('session_id')
+    source.session_id || source.get?.('session_id')
   const provider_metadata =
-    external_session.provider_metadata ||
-    external_session.get?.('provider_metadata')
+    source.provider_metadata ||
+    source.get?.('provider_metadata')
   const working_directory =
     provider_metadata?.working_directory ||
     provider_metadata?.get?.('working_directory')
