@@ -134,7 +134,12 @@ export async function get_file_by_cid(cid) {
  * @param {number} [options.offset=0] - Offset for pagination
  * @returns {Promise<Array>} Array of file records
  */
-export async function query_files({ filter, sort, limit = 100, offset = 0 } = {}) {
+export async function query_files({
+  filter,
+  sort,
+  limit = 100,
+  offset = 0
+} = {}) {
   const adapter = await get_files_adapter()
 
   log('Querying files with filter: %o', filter)

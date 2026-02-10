@@ -177,10 +177,14 @@ async function convert_image_block(block, indent, options = {}) {
       const ext = path.extname(url_path) || '.png'
       const filename = `image-${block.id.slice(0, 8)}${ext}`
 
-      const storage_result = await store_downloaded_file(file_content, filename, {
-        source_url: url,
-        entity_files_directory: options.entity_files_directory
-      })
+      const storage_result = await store_downloaded_file(
+        file_content,
+        filename,
+        {
+          source_url: url,
+          entity_files_directory: options.entity_files_directory
+        }
+      )
       return `${indent}![${caption}](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store image: ${error.message}`)
@@ -215,10 +219,14 @@ async function convert_video_block(block, indent, options = {}) {
       const ext = path.extname(url_path) || '.mp4'
       const filename = `video-${block.id.slice(0, 8)}${ext}`
 
-      const storage_result = await store_downloaded_file(file_content, filename, {
-        source_url: url,
-        entity_files_directory: options.entity_files_directory
-      })
+      const storage_result = await store_downloaded_file(
+        file_content,
+        filename,
+        {
+          source_url: url,
+          entity_files_directory: options.entity_files_directory
+        }
+      )
       return `${indent}[Video](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store video: ${error.message}`)
@@ -254,10 +262,14 @@ async function convert_file_block(block, indent, options = {}) {
       const ext = path.extname(url_path) || ''
       const filename = name || `file-${block.id.slice(0, 8)}${ext}`
 
-      const storage_result = await store_downloaded_file(file_content, filename, {
-        source_url: url,
-        entity_files_directory: options.entity_files_directory
-      })
+      const storage_result = await store_downloaded_file(
+        file_content,
+        filename,
+        {
+          source_url: url,
+          entity_files_directory: options.entity_files_directory
+        }
+      )
       return `${indent}[${name}](${storage_result.base_uri})\n\n`
     } catch (error) {
       log(`Failed to download and store file: ${error.message}`)

@@ -75,7 +75,10 @@ export async function store_file({
         base_uri: `user:${existing_record.path}`,
         size: buffer.length,
         custom_hash: existing_record.custom_hash
-          ? { type: existing_record.hash_type, value: existing_record.custom_hash }
+          ? {
+              type: existing_record.hash_type,
+              value: existing_record.custom_hash
+            }
           : null,
         already_existed: true
       }
@@ -143,11 +146,7 @@ export async function store_file({
  * @param {string} params.cid - CID of the content being stored
  * @returns {Promise<{path: string, existing_match: boolean}>} Resolved path and whether it matched existing
  */
-async function resolve_target_path({
-  user_base_directory,
-  target_path,
-  cid
-}) {
+async function resolve_target_path({ user_base_directory, target_path, cid }) {
   const absolute_path = join(user_base_directory, target_path)
 
   // Check if file exists at target path
@@ -178,12 +177,16 @@ async function resolve_target_path({
   let counter = 1
   let new_path = join(dir, `${base}-${counter}${ext}`)
 
-  while (await file_exists_in_filesystem({
-    absolute_path: join(user_base_directory, new_path)
-  })) {
+  while (
+    await file_exists_in_filesystem({
+      absolute_path: join(user_base_directory, new_path)
+    })
+  ) {
     // Also check if this suffixed file has matching CID
     try {
-      const suffixed_content = await fs.readFile(join(user_base_directory, new_path))
+      const suffixed_content = await fs.readFile(
+        join(user_base_directory, new_path)
+      )
       const suffixed_cid = await create_file_cid(suffixed_content)
 
       if (suffixed_cid === cid) {
