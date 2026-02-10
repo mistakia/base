@@ -162,9 +162,33 @@ async function migrate_thread({ thread_path, dry_run = false }) {
       }
     }
 
-    // Skip files that already have a source object (already migrated)
+    // If source already exists but old fields linger (e.g. service wrote
+    // external_session after migration), strip the old fields
     if (metadata.source) {
-      return { thread_id, status: 'already_migrated' }
+      const has_stale_external_session = Boolean(metadata.external_session)
+      const has_stale_session_provider = Boolean(metadata.session_provider)
+
+      if (!has_stale_external_session && !has_stale_session_provider) {
+        return { thread_id, status: 'already_migrated' }
+      }
+
+      if (!dry_run) {
+        const cleaned = { ...metadata }
+        delete cleaned.external_session
+        delete cleaned.session_provider
+        await fs.writeFile(
+          metadata_path,
+          JSON.stringify(cleaned, null, 2) + '\n',
+          'utf-8'
+        )
+        log(`Cleaned stale fields from ${thread_id}`)
+      }
+
+      return {
+        thread_id,
+        status: dry_run ? 'would_migrate' : 'migrated',
+        changes: ['remove stale external_session/session_provider fields']
+      }
     }
 
     // Determine if there is anything to migrate
