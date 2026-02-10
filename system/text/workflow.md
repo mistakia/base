@@ -6,8 +6,8 @@ base_uri: sys:system/text/workflow.md
 created_at: '2025-05-27T18:10:20.241Z'
 entity_id: 7ab1422d-533d-4967-972a-7fb8167604ff
 observations:
-  - '[architecture] Workflows define agent behaviors that run inside threads'
-  - '[execution] Each thread executes exactly one workflow with defined inputs/outputs'
+  - '[architecture] Workflows define agent behaviors invoked via prompts and commands'
+  - '[design] Threads represent sessions; workflows provide behavior templates'
   - '[principle] Tool integration enables complex agent capabilities'
 relations:
   - relates_to [[sys:system/text/system-design.md]]
@@ -20,15 +20,15 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Workflow
 
-Workflows define agent behaviors that run inside threads. Each thread should execute one workflow, providing the execution environment and context. Workflows define behavior and interaction patterns through structured inputs, outputs, and tool integrations.
+Workflows define agent behaviors that can be invoked via prompts and commands. Threads represent sessions and may optionally reference a workflow via `workflow_base_uri`, but threads are not limited to single-workflow execution. Workflows define behavior and interaction patterns through structured inputs, outputs, and tool integrations.
 
 ## Key Concepts
 
-- **Thread as Execution Environment**: Threads provide the runtime context for workflows
-- **One-to-One Relationship**: Each thread executes one workflow (specified by `workflow_base_uri`)
-- **Workflow as Behavior Definition**: Workflows define agent behaviors with inputs, outputs, and tools
+- **Thread**: Each thread represents a session, storing its timeline, metadata, and analysis; threads are not tied to a single workflow
+- **Workflow as Behavior Template**: Workflows define agent behaviors with inputs, outputs, and tools
 - **Functional Structure**: Workflows accept inputs (`prompt_properties`) and produce outputs through completion tools
 - **Composition**: Workflows can invoke other workflows through tool calls enabling various complex patterns
+- **Session Orchestration**: Base does not run sessions internally; it manages and standardizes sessions from any session runner (Claude Code, Cursor, Pi, etc.) in any execution environment
 
 ## Advanced Workflow Capabilities
 

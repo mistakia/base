@@ -494,26 +494,29 @@ export const update_existing_thread = async (
 }
 
 /**
- * Build source object from existing metadata, handling pre-migration external_session format.
- * Maps external_session.session_provider to source.provider when falling back.
+ * Build source object from existing metadata.
+ * When migrating from old metadata format (pre-source field), extracts
+ * session tracking fields from old external_session and normalized session
+ * to preserve session_id, imported_at, and raw_data_saved.
  */
 function build_source_from_existing(existing_metadata, normalized_session) {
   if (existing_metadata.source) {
     return existing_metadata.source
   }
 
-  // Pre-migration fallback: external_session uses session_provider, not provider
-  const ext = existing_metadata.external_session
-  if (ext) {
-    const { session_provider, ...rest } = ext
-    return {
-      ...rest,
-      provider: session_provider || normalized_session.session_provider
-    }
+  // Migrate from old format - extract tracking fields from
+  // old external_session and normalized session data
+  const external_session = existing_metadata.external_session
+  return {
+    provider:
+      external_session?.provider ||
+      external_session?.session_provider ||
+      normalized_session.session_provider,
+    session_id:
+      external_session?.session_id || normalized_session.session_id || null,
+    imported_at: external_session?.imported_at || new Date().toISOString(),
+    raw_data_saved: external_session?.raw_data_saved ?? false
   }
-
-  // No existing source data -- use the normalized session's provider
-  return { provider: normalized_session.session_provider }
 }
 
 const update_thread_metadata = async (thread_dir, normalized_session) => {
@@ -534,17 +537,8 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
       normalized_session.metadata || {}
     )
 
-    // Build updated metadata WITHOUT timestamps (added later if needed)
-    // Destructure to drop pre-migration fields that are now in source
-    const {
-      external_session: _ext,
-      session_provider: _sp,
-      model: _m,
-      ...clean_metadata
-    } = existing_metadata
-
     const updated_metadata = {
-      ...clean_metadata,
+      ...existing_metadata,
       message_count: counts.message_count,
       tool_call_count: counts.tool_call_count,
       source: {

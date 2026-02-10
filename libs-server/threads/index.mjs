@@ -18,10 +18,6 @@ import add_timeline_entry, {
   add_tool_result,
   add_error
 } from './add-timeline-entry.mjs'
-import generate_prompt from './generate-prompt.mjs'
-import execute_thread from './execute-thread.mjs'
-import * as thread_tools from './thread-tools.mjs'
-
 const log = debug('threads')
 
 log('Initializing threads module')
@@ -43,16 +39,7 @@ export {
   add_assistant_message,
   add_tool_call,
   add_tool_result,
-  add_error,
-
-  // Prompt generation
-  generate_prompt,
-
-  // Thread execution
-  execute_thread,
-
-  // Thread tools
-  thread_tools
+  add_error
 }
 
 /**
@@ -69,8 +56,5 @@ export default {
   add_assistant_message,
   add_tool_call,
   add_tool_result,
-  add_error,
-  generate_prompt,
-  execute_thread,
-  thread_tools
+  add_error
 }

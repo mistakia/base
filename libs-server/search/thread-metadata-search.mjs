@@ -172,7 +172,7 @@ function format_thread_result(metadata, user_base_dir) {
     created_at: metadata.created_at,
     updated_at: metadata.updated_at,
     working_directory:
-      metadata.external_session?.provider_metadata?.working_directory || null,
+      metadata.source?.provider_metadata?.working_directory || null,
     workflow_base_uri: metadata.workflow_base_uri || null,
     message_count: metadata.message_count || 0,
     type: 'thread',
@@ -371,7 +371,7 @@ export async function get_thread_summary(thread_id) {
     created_at: metadata.created_at,
     updated_at: metadata.updated_at,
     working_directory:
-      metadata.external_session?.provider_metadata?.working_directory || null,
+      metadata.source?.provider_metadata?.working_directory || null,
     message_count: metadata.message_count || 0
   }
 }

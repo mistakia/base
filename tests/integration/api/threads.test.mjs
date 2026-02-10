@@ -80,7 +80,7 @@ describe('Threads API', () => {
           test_user.user_public_key
         )
         expect(thread).to.have.property('inference_provider')
-        expect(thread).to.have.property('model')
+        expect(thread).to.have.property('models')
         expect(thread).to.have.property('thread_state')
       })
     })
@@ -131,7 +131,7 @@ describe('Threads API', () => {
       expect(response.body.thread_id).to.equal(test_thread.thread_id)
       expect(response.body.user_public_key).to.equal(test_user.user_public_key)
       expect(response.body.inference_provider).to.equal('ollama')
-      expect(response.body.model).to.equal('llama2')
+      expect(response.body.models).to.deep.equal(['llama2'])
 
       // Verify timeline is returned
       expect(response.body.timeline).to.be.an('array')

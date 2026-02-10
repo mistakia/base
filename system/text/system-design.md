@@ -6,8 +6,8 @@ base_uri: sys:system/text/system-design.md
 created_at: '2025-05-27T18:10:20.246Z'
 entity_id: b75fe9b3-4a83-427c-9e62-3105019df96c
 observations:
-  - '[design] Uses a human-in-the-loop approach'
-  - '[principle] File-first approach with git version control'
+  - '[design] Human-in-the-loop system built on file primitives with git version control'
+  - '[principle] Agnostic to model, session runner, and execution environment'
 relations:
   - relates_to [[sys:system/text/directory-structure.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
@@ -24,31 +24,25 @@ A human-in-the-loop LLM system that works alongside a user to manage and build a
 
 ### 1. System Overview
 
-- **File-First Architecture**: Local files are the source of truth, stored as markdown files with YAML frontmatter
-- **Version Controlled**: Everything is tracked with git
-- **Change Tracking and Management**: Allows for review and approval of changes, a record of changes, progress tracking, comparison of changes, etc.
-- **Composable Workflows**: Workflows can embed other workflows, enabling complex operations
-- **Multi-Model Support**: Use the right model for a given prompt, task, or workflow
-- **Guidelines-Driven**: Evolving guidelines shape the system's behavior based on user preferences
-- **Granular Action Control**: Tool calls have configurable permission levels to control autonomy
-- **Async Collaboration**: Support for asynchronous human-system interaction
-- **Knowledge Graph**: Builds and traverses relationships between knowledge items
-- **Markdown Content**: Content is stored as markdown files with YAML frontmatter
-- **Self-Improvement**: The system can evaluate and improve itself through feedback loops
+The system is built on a small set of primitives. Most capabilities (composability, change tracking, knowledge graphs, self-improvement) emerge from these primitives rather than being implemented as separate features.
+
+#### Primitives
+
+- **Files + Git**: All data is markdown files with YAML frontmatter in a git repository. This is the source of truth. Git provides version history, change review, branching, and multi-machine sync.
+- **Entities**: Files follow a typed entity model (task, workflow, guideline, etc.) with frontmatter properties and relations between entities.
+- **Workflows**: Text documents that define agent behavior through structured prompts. Because they are files, they can reference other workflows, be versioned, and be edited by both users and agents.
+- **Tools**: Capabilities exposed to agents during sessions (file access, shell, APIs). Tools have configurable permission levels.
+- **Guidelines**: Text documents that shape agent behavior based on user preferences. Agents access guidelines during sessions.
+
+#### Design Principles
+
+- **Agnostic**: Model agnostic, session runner agnostic, and execution environment agnostic. Base manages and standardizes sessions from any runner (Claude Code, Cursor, etc.) in any environment (host, container, cloud sandbox) using any model.
+- **Human-in-the-loop**: The user reviews, approves, and directs agent work. Agents operate within the user's repository.
+- **Sovereignty**: All data is local, user-owned, and portable. No external dependencies required for core operation.
 
 ### 2. Content Storage System
 
-#### 2.1 Main File Storage
-
-Data is mainly stored as files, particularly markdown files with YAML frontmatter.
-
-- **User-specific git repository**
-
-  - Everything is version controlled and can be worked on offline
-  - This is our source of truth
-  - All context, configuration, and data is easily accessible and editable by the user and agentic workflows
-
-#### 2.2 Structured data
+#### 2.1 Structured Data
 
 In addition to file-based content, structured datasets can live in any storage system (PostgreSQL, SQLite, CSV/Parquet, embedded databases, HTTP APIs, etc.). Each structured dataset is registered with a companion `<dataset_name>.md` entity file that defines its schema and how to connect/access it.
 
@@ -60,11 +54,11 @@ In addition to file-based content, structured datasets can live in any storage s
 
 The system uses the `<dataset_name>.md` definition to connect to the underlying store through a unified API. Records are represented as `database_item` entities that reference their parent database and are validated against its schema.
 
-#### 2.3 Indexing
+#### 2.2 Indexing
 
 There is flexibility to use any indexing or vector database, but the preference is to use embedded databases like sqlite and [DuckDB](https://duckdb.org/).
 
-#### 2.4 Filesystem Architecture
+#### 2.3 Filesystem Architecture
 
 The system separates knowledge into two types:
 
@@ -82,7 +76,7 @@ The system separates knowledge into two types:
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 
-#### 2.5 External Connections
+#### 2.4 External Connections
 
 Each external data connection has bidirectional sync:
 
@@ -112,16 +106,13 @@ All execution contexts share the same user-base directory via file system mounti
 
 ### 4. Glossary
 
-- **Workflow**: Defines agent behavior as a composable, modular function that specifies inputs, outputs, and tool integrations. It is effectively a prompt that defines agent behavior that can be run repeatedly, have loops, branching, wait for human input, embed other workflows, and so on.
-- **Thread**: The system's standardized session representation for conversations and agentic workflows. Threads can execute in container (non-interactive) or host (interactive) environments. See [[sys:system/text/execution-threads.md]].
-- **Guideline**: A set of rules or recommendations accessed by workflows that MUST, SHOULD, or MAY be followed.
-- **Inference Request**: The process of submitting a prompt to models and receiving the generated outputs.
-- **Model**: A system capable of processing inference requests and generating outputs.
-- **Prompt**: A structured input provided to a model to guide its response generation.
-- **Task**: A discrete unit of work that can be assigned, tracked, and completed within the system.
-- **Tool**: A capability provided to workflows (agents) executing in a thread that allows them to perform specific actions or access resources. The main tool used is `Bash` and file system access (`Read`)
+- **Workflow**: A text document (markdown file) that defines agent behavior through a structured prompt with inputs, outputs, and tool specifications. Composability, looping, branching, and nesting are patterns that emerge from workflows referencing each other.
+- **Thread**: The standardized session representation for conversations and agentic loops. See [[sys:system/text/execution-threads.md]].
+- **Guideline**: A text document containing rules or recommendations that agents access during sessions.
+- **Task**: A discrete unit of work that can be assigned, tracked, and completed.
+- **Tool**: A capability exposed to agents during sessions (e.g., file access, shell, APIs).
+- **Tags**: Labels assigned to entities for classification and organization.
 - **Trigger**: An event or condition that activates a workflow.
-- **Tags**: Labels assigned to entities to define the domain they belong to, supporting classification, organization, and efficient retrieval.
 
 ## Related System Documentation
 

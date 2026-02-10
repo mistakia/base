@@ -2,14 +2,14 @@
 title: Session Orchestrator
 type: text
 description: >-
-  Describes Base's role as a session orchestrator that spawns, imports, and records agent sessions
-  from external providers.
+  Describes Base's role as a session orchestrator that manages, standardizes, and records sessions
+  across any session runner, model, or execution environment.
 base_uri: sys:system/text/session-orchestrator.md
 created_at: '2026-02-10T23:30:00.000Z'
 entity_id: 055d2a28-9338-4f90-a228-e702dd23cd58
 observations:
-  - '[architecture] Base orchestrates sessions rather than executing agent logic internally'
-  - '[design] Session providers are the engine choice; Base normalizes all sessions to a common thread format'
+  - '[architecture] Base does not run sessions internally; it manages and standardizes external session runners'
+  - '[design] Session runner agnostic and execution environment agnostic by design'
   - '[integration] Supports spawned sessions (CLI) and imported sessions (after-the-fact)'
 relations:
   - relates_to [[sys:system/text/execution-threads.md]]
@@ -21,34 +21,44 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Session Orchestrator
 
-Base functions as a session orchestrator and record keeper. Rather than executing agent logic internally, Base delegates execution to external session providers and focuses on session lifecycle management, recording, and analysis.
+Base is a session orchestrator and record keeper. It does not run sessions internally. Instead, Base manages and standardizes sessions from external session runners and execution environments.
+
+## Design Principles
+
+Base is designed to be agnostic across three axes:
+
+- **Session runner agnostic**: Interface with any agentic session runner (Claude Code, Cursor, OpenAI, Pi, or future runners). Adding a new runner requires only a session provider adapter.
+- **Model agnostic**: Sessions can use any inference model. Base tracks model usage in thread metadata without coupling to any specific model or API.
+- **Execution environment agnostic**: Sessions can run on the host machine, in Docker containers, or in cloud sandbox providers. Base manages the session lifecycle regardless of where it runs.
 
 ## Architecture
 
-Base manages agent sessions through two mechanisms:
+Base manages sessions through two mechanisms:
 
-1. **Spawned Sessions**: Base launches external CLI processes (e.g., Claude Code) via the command queue, with hooks that report session events back to Base for thread creation and tracking.
+1. **Spawned Sessions**: Base launches session runner processes (e.g., Claude Code CLI) via the command queue, with hooks that report session events back to Base for thread creation and tracking.
 
 2. **Imported Sessions**: Sessions from external tools (Claude, Cursor, OpenAI, Pi) are imported after the fact through the session provider pipeline, normalized to the standard thread format.
 
-In both cases, the session provider is the "engine" choice. Base handles orchestration: scheduling, context handoff, metadata tracking, cost calculation, and analysis.
+In both cases, Base handles orchestration -- scheduling, context handoff, metadata tracking, cost calculation, and analysis -- while the session runner handles the actual interaction loop.
 
 ## Session Providers
 
-Each provider implements `SessionProviderBase` and handles:
+A session provider is an adapter that bridges a specific session runner to Base's standardized thread format. Each provider implements `SessionProviderBase` and handles:
 
-- **Session discovery**: Finding sessions to import from provider-specific storage
-- **Normalization**: Converting provider-specific formats to the standard timeline format
+- **Session discovery**: Finding sessions to import from runner-specific storage
+- **Normalization**: Converting runner-specific formats to the standard timeline format
 - **Metadata extraction**: Pulling token counts, models, duration, and other metrics
 
-### Supported Providers
+### Current Providers
 
-| Provider | Source | Format |
-|----------|--------|--------|
-| `claude` | Claude Code CLI sessions | JSONL transcript files |
-| `cursor` | Cursor IDE conversations | SQLite database |
-| `openai` | ChatGPT conversations | JSON data export |
-| `pi` | Pi AI sessions | JSONL with tree structure |
+| Provider | Session Runner | Format |
+|----------|---------------|--------|
+| `claude` | Claude Code CLI | JSONL transcript files |
+| `cursor` | Cursor IDE | SQLite database |
+| `openai` | ChatGPT | JSON data export |
+| `pi` | Pi AI | JSONL with tree structure |
+
+New providers can be added by implementing `SessionProviderBase` and registering in the provider map. See the development guidelines in [[sys:system/text/execution-threads.md]].
 
 ## Thread Metadata
 

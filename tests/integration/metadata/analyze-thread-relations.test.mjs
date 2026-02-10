@@ -53,11 +53,10 @@ describe('analyze-thread-relations integration', () => {
       title: 'Test Thread',
       short_description: 'A test thread for relation analysis',
       user_public_key: 'test-user',
-      session_provider: 'claude',
+      source: { provider: 'claude' },
       thread_state: 'archived',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      external_session: { session_provider: 'claude' }
+      updated_at: new Date().toISOString()
     }
     await fs.writeFile(
       path.join(thread_dir, 'metadata.json'),

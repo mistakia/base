@@ -15,7 +15,7 @@ const { THREAD_STATE } = thread_constants
  * @param {string} [options.user_public_key] User public key (creates test user if not provided)
  * @param {string} [options.workflow_base_uri='sys:system/workflow/test-workflow.md'] Workflow to use
  * @param {string} [options.inference_provider='ollama'] Inference provider name
- * @param {string} [options.model='llama2'] Model name
+ * @param {Array<string>} [options.models=['llama2']] Model names
  * @param {string} [options.thread_state=THREAD_STATE.ACTIVE] Thread state (active, archived)
  * @param {string} [options.archive_reason] Archive reason if thread_state is archived
  * @param {Object} [options.test_directories] Test directories object with system and user paths
@@ -28,7 +28,7 @@ export default async function create_test_thread({
   user_public_key,
   workflow_base_uri = 'sys:system/workflow/test-workflow.md',
   inference_provider = 'ollama',
-  model = 'llama2',
+  models = ['llama2'],
   thread_state = THREAD_STATE.ACTIVE,
   archive_reason,
   test_directories,
@@ -71,7 +71,7 @@ export default async function create_test_thread({
     user_public_key: user.user_public_key,
     workflow_base_uri,
     inference_provider,
-    model,
+    models,
     thread_state,
     archive_reason,
     thread_main_request,

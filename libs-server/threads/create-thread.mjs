@@ -172,10 +172,8 @@ export function build_thread_metadata({
     ...additional_fields
   }
 
-  // Set source if provided (required by schema for production threads)
-  if (source) {
-    metadata.source = source
-  }
+  // Set source (required by schema) - default to base provider
+  metadata.source = source || { provider: 'base' }
 
   // Add title and description if provided
   if (title) {

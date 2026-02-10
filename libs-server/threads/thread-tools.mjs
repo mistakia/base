@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid'
 
 import add_timeline_entry from './add-timeline-entry.mjs'
 import { update_thread_state } from './update-thread.mjs'
-import { register_tool, get_tool } from '#libs-server/tools/registry.mjs'
 import { remove_worktree } from '#libs-server/git/worktree-operations.mjs'
 import { get_registered_directories } from '#libs-server/base-uri/index.mjs'
 
@@ -318,131 +317,6 @@ export const message_ask = async (params, context = {}) => {
 }
 
 /**
- * Define the archive_thread tool schema
- */
-const archive_thread_schema = {
-  description: 'Archive the thread execution and mark it as archived',
-  stops_execution: true,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      summary: {
-        type: 'string',
-        description: 'Optional summary of the thread results'
-      },
-      archive_reason: {
-        type: 'string',
-        description: 'Reason for archiving (completed or user_abandoned)',
-        enum: ['completed', 'user_abandoned'],
-        default: 'completed'
-      }
-    },
-    required: []
-  }
-}
-
-/**
- * Define the pause_execution tool schema
- */
-const pause_execution_schema = {
-  description: 'Pause the thread execution until manually resumed',
-  stops_execution: true,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      reason: {
-        type: 'string',
-        description: 'Optional reason for pausing the thread'
-      }
-    },
-    required: []
-  }
-}
-
-/**
- * Define the message_notify tool schema
- */
-const message_notify_schema = {
-  description: 'Send a notification message to the user (non-blocking)',
-  stops_execution: false,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      message: {
-        type: 'string',
-        description: 'Message to send to the user'
-      },
-      level: {
-        type: 'string',
-        description: 'Notification level (info, warning, error)',
-        enum: ['info', 'warning', 'error']
-      }
-    },
-    required: ['message']
-  }
-}
-
-/**
- * Define the message_ask tool schema
- */
-const message_ask_schema = {
-  description: 'Ask the user a question and wait for response (blocking)',
-  stops_execution: true,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      question: {
-        type: 'string',
-        description: 'Question to ask the user'
-      },
-      options: {
-        type: 'array',
-        description: 'Optional array of predefined answer options',
-        items: {
-          type: 'string'
-        }
-      }
-    },
-    required: ['question']
-  }
-}
-
-/**
- * Register all thread tools with the central tool registry
- */
-export function register_thread_tools() {
-  // Register the archive_thread tool
-  register_tool({
-    tool_name: THREAD_ARCHIVE_TOOL,
-    tool_definition: archive_thread_schema,
-    implementation: archive_thread
-  })
-
-  // Register the pause_execution tool
-  register_tool({
-    tool_name: THREAD_PAUSE_TOOL,
-    tool_definition: pause_execution_schema,
-    implementation: pause_execution
-  })
-
-  // Register the message_notify tool
-  register_tool({
-    tool_name: THREAD_MESSAGE_NOTIFY_TOOL,
-    tool_definition: message_notify_schema,
-    implementation: message_notify
-  })
-
-  // Register the message_ask tool
-  register_tool({
-    tool_name: THREAD_MESSAGE_ASK_TOOL,
-    tool_definition: message_ask_schema,
-    implementation: message_ask
-  })
-
-  log('Registered all thread tools with central registry')
-}
-
-/**
  * Get the list of thread tool names
  *
  * @returns {Array<string>} Array of thread tool names
@@ -456,34 +330,10 @@ export const get_thread_tool_names = () => {
   ]
 }
 
-/**
- * Check if a tool call is a blocking tool call
- *
- * @param {Object} tool_call The tool call to check
- * @returns {boolean} True if the tool call is blocking
- */
-export const is_blocking_tool_call = (tool_call) => {
-  // Get the tool definition from the registry
-  const tool = get_tool({ tool_name: tool_call.tool_name })
-
-  if (!tool) {
-    // If tool is not found, assume it's not blocking
-    return false
-  }
-
-  // Check if the tool stops execution
-  return tool.stops_execution === true
-}
-
-// Register the thread tools when this module is imported
-register_thread_tools()
-
 export default {
   archive_thread,
   pause_execution,
   message_notify,
   message_ask,
-  get_thread_tool_names,
-  is_blocking_tool_call,
-  register_thread_tools
+  get_thread_tool_names
 }

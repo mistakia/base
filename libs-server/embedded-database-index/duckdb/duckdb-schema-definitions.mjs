@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS threads (
   duration_minutes DOUBLE,
   working_directory VARCHAR,
   working_directory_path VARCHAR,
-  session_provider VARCHAR,
+  source_provider VARCHAR,
   inference_provider VARCHAR,
   primary_model VARCHAR,
   user_public_key VARCHAR,

@@ -41,14 +41,8 @@ function calculate_cost_data(thread, models_data) {
  * Get provider information from thread (matching client-side logic)
  */
 function get_provider_info(thread) {
-  // Match client-side extraction logic: source.provider with backwards-compatible fallbacks
-  const source_provider =
-    thread.source?.provider ||
-    thread.session_provider ||
-    thread.external_session?.session_provider
-
-  if (source_provider) {
-    return { source_provider }
+  if (thread.source?.provider) {
+    return { source_provider: thread.source.provider }
   }
 
   // Fallback to model-based detection if no provider
@@ -56,7 +50,7 @@ function get_provider_info(thread) {
     const model = thread.models[0]
     let derived_provider = 'unknown'
 
-    if (model.includes('claude')) derived_provider = 'anthropic'
+    if (model.includes('claude')) derived_provider = 'claude'
     else if (model.includes('gpt')) derived_provider = 'openai'
     else if (model.includes('cursor')) derived_provider = 'cursor'
 
@@ -70,21 +64,15 @@ function get_provider_info(thread) {
  * Extract total tokens (matching DuckDB field name and client-side expectations)
  */
 function extract_total_tokens(thread) {
-  return (
-    thread.source?.provider_metadata?.total_tokens ||
-    thread.external_session?.provider_metadata?.total_tokens ||
-    0
-  )
+  return thread.source?.provider_metadata?.total_tokens || 0
 }
 
 /**
  * Extract duration from metadata or calculate fallback
  */
 function extract_duration_minutes(thread) {
-  // First try to get from provider metadata (new schema then fallback)
   const duration_from_metadata =
-    thread.source?.provider_metadata?.duration_minutes ||
-    thread.external_session?.provider_metadata?.duration_minutes
+    thread.source?.provider_metadata?.duration_minutes
   if (duration_from_metadata) {
     return duration_from_metadata
   }
@@ -103,8 +91,7 @@ function extract_duration_minutes(thread) {
  */
 function extract_working_directory(thread) {
   const working_directory_path =
-    thread.source?.provider_metadata?.working_directory ||
-    thread.external_session?.provider_metadata?.working_directory
+    thread.source?.provider_metadata?.working_directory
 
   if (!working_directory_path) {
     return { path: null, formatted: null }

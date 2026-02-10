@@ -106,7 +106,7 @@ function append_timeline_entry(state, thread_id, entry) {
 
 const DEFAULT_TABLE_COLUMNS = [
   'thread_state',
-  'session_provider',
+  'source_provider',
   'title',
   'working_directory',
   'created_at',

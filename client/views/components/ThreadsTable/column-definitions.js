@@ -47,9 +47,9 @@ const get_state_icon = (state) => {
 
 const ProviderCell = ({ row }) => {
   const thread = row.original
-  const session_provider = thread.session_provider
+  const source_provider = thread.source_provider
 
-  if (!session_provider) {
+  if (!source_provider) {
     return (
       <div className='cell-content' style={{ height: 'fit-content' }}>
         <span style={{ color: COLORS.text_tertiary }}>—</span>
@@ -60,9 +60,9 @@ const ProviderCell = ({ row }) => {
   return (
     <div className='cell-content' style={{ height: 'fit-content' }}>
       <ProviderLogo
-        provider={session_provider}
+        provider={source_provider}
         size={16}
-        title={`Provider: ${session_provider}`}
+        title={`Provider: ${source_provider}`}
         decorative={false}
       />
     </div>
@@ -237,10 +237,10 @@ export const thread_columns = {
     minSize: 250,
     maxSize: 800
   },
-  session_provider: {
-    column_id: 'session_provider',
+  source_provider: {
+    column_id: 'source_provider',
     header_label: '',
-    accessorKey: 'session_provider',
+    accessorKey: 'source_provider',
     component: ProviderCell,
     data_type: TABLE_DATA_TYPES.SELECT,
     operators: [
@@ -251,7 +251,7 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
-    column_values: ['claude', 'cursor', 'openai'],
+    column_values: ['base', 'claude', 'cursor', 'openai', 'pi'],
     size: 40,
     minSize: 40,
     maxSize: 80

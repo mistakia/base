@@ -125,7 +125,7 @@ export const register_active_session = async ({
  * @param {number} [params.message_count] - Number of messages in thread
  * @param {number} [params.duration_minutes] - Duration in minutes
  * @param {number} [params.total_tokens] - Total token count
- * @param {string} [params.session_provider] - Session provider name
+ * @param {string} [params.source_provider] - Source provider name
  * @returns {Promise<Object|null>} Updated session record or null if not found
  */
 export const update_active_session = async ({
@@ -139,7 +139,7 @@ export const update_active_session = async ({
   message_count,
   duration_minutes,
   total_tokens,
-  session_provider
+  source_provider
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
@@ -160,8 +160,8 @@ export const update_active_session = async ({
     if (duration_minutes !== undefined)
       session.duration_minutes = duration_minutes
     if (total_tokens !== undefined) session.total_tokens = total_tokens
-    if (session_provider !== undefined)
-      session.session_provider = session_provider
+    if (source_provider !== undefined)
+      session.source_provider = source_provider
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)
@@ -176,7 +176,7 @@ export const update_active_session = async ({
       message_count: message_count || null,
       duration_minutes: duration_minutes || null,
       total_tokens: total_tokens || null,
-      session_provider: session_provider || null,
+      source_provider: source_provider || null,
       started_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString()
     }

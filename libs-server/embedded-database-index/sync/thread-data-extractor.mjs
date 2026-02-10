@@ -111,7 +111,10 @@ export async function read_and_extract_latest_event({
       return {
         ...NULL_LATEST_EVENT,
         edit_count: metrics.edit_count,
-        lines_changed: metrics.lines_changed
+        lines_changed: metrics.lines_changed,
+        tools_used: metrics.tools_used,
+        bash_commands_used: metrics.bash_commands_used,
+        models: metrics.models
       }
     }
 
@@ -120,7 +123,10 @@ export async function read_and_extract_latest_event({
       latest_event_type: metrics.latest_event.type || null,
       latest_event_data: JSON.stringify(metrics.latest_event),
       edit_count: metrics.edit_count,
-      lines_changed: metrics.lines_changed
+      lines_changed: metrics.lines_changed,
+      tools_used: metrics.tools_used,
+      bash_commands_used: metrics.bash_commands_used,
+      models: metrics.models
     }
   } catch (error) {
     log('Error reading timeline for thread %s: %s', thread_id, error.message)
@@ -136,8 +142,7 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     return null
   }
 
-  // Get provider metadata from external_session if available
-  const provider_metadata = metadata.external_session?.provider_metadata || {}
+  const provider_metadata = metadata.source?.provider_metadata || {}
 
   // Extract token counts - check multiple locations
   const total_input_tokens =
@@ -184,13 +189,7 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     ? working_directory_path.split('/').pop() || 'root'
     : null
 
-  // Extract session provider
-  const session_provider =
-    metadata.session_provider ||
-    metadata.external_session?.session_provider ||
-    provider_metadata.session_provider ||
-    metadata.inference_provider ||
-    null
+  const source_provider = metadata.source?.provider || null
 
   // Extract inference provider (for cost calculation)
   const inference_provider = metadata.inference_provider || null
@@ -235,7 +234,7 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     duration_minutes,
     working_directory,
     working_directory_path,
-    session_provider,
+    source_provider,
     inference_provider,
     primary_model,
     user_public_key: metadata.user_public_key || null,

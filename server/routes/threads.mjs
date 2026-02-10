@@ -757,7 +757,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     }
 
     // Extract Claude session ID from thread metadata
-    const claude_session_id = thread.external_session?.session_id
+    const claude_session_id = thread.source?.session_id
     if (!claude_session_id) {
       log(`Thread ${thread_id} does not have an external Claude session ID`)
       return res.status(400).json({

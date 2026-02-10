@@ -270,7 +270,7 @@ export async function read_timeline_jsonl_from_offset({
  *
  * @param {Object} params Parameters
  * @param {string} params.timeline_path Path to the timeline.jsonl file
- * @returns {Promise<Object>} Metrics object with latest_event, edit_count, lines_changed
+ * @returns {Promise<Object>} Metrics object with latest_event, edit_count, lines_changed, tools_used, bash_commands_used, models
  */
 export async function extract_timeline_metrics_streaming({ timeline_path }) {
   try {
@@ -280,12 +280,18 @@ export async function extract_timeline_metrics_streaming({ timeline_path }) {
     return {
       latest_event: null,
       edit_count: 0,
-      lines_changed: 0
+      lines_changed: 0,
+      tools_used: [],
+      bash_commands_used: [],
+      models: []
     }
   }
 
   let latest_event = null
   const metrics_state = { edit_count: 0, total_chars_changed: 0 }
+  const tools_set = new Set()
+  const bash_commands_set = new Set()
+  const models_set = new Set()
 
   const file_stream = createReadStream(timeline_path)
   const line_reader = createInterface({
@@ -309,6 +315,34 @@ export async function extract_timeline_metrics_streaming({ timeline_path }) {
 
         // Accumulate edit metrics using shared helper
         accumulate_edit_metrics_from_event(event, metrics_state)
+
+        // Collect tool names from tool_call events
+        if (event.type === 'tool_call') {
+          const tool_name = event.content?.tool_name || event.tool_name
+          if (tool_name) {
+            tools_set.add(tool_name)
+
+            // Collect bash commands from Bash tool calls
+            if (tool_name === 'Bash') {
+              const command = event.content?.tool_parameters?.command
+              if (command) {
+                // Extract base command (first word)
+                const base_command = command.trim().split(/\s+/)[0]
+                if (base_command) {
+                  bash_commands_set.add(base_command)
+                }
+              }
+            }
+          }
+        }
+
+        // Collect models from message events
+        if (event.type === 'message') {
+          const model = event.metadata?.model || event.model
+          if (model) {
+            models_set.add(model)
+          }
+        }
       } catch {
         // Skip malformed lines silently in streaming mode
       }
@@ -321,12 +355,15 @@ export async function extract_timeline_metrics_streaming({ timeline_path }) {
   const lines_changed = Math.ceil(metrics_state.total_chars_changed / 80)
 
   log(
-    `Extracted metrics from ${timeline_path}: edit_count=${metrics_state.edit_count}, lines_changed=${lines_changed}`
+    `Extracted metrics from ${timeline_path}: edit_count=${metrics_state.edit_count}, lines_changed=${lines_changed}, tools=${tools_set.size}, models=${models_set.size}`
   )
 
   return {
     latest_event,
     edit_count: metrics_state.edit_count,
-    lines_changed
+    lines_changed,
+    tools_used: [...tools_set],
+    bash_commands_used: [...bash_commands_set],
+    models: [...models_set]
   }
 }
