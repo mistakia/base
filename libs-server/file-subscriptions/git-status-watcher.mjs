@@ -21,8 +21,26 @@ const GIT_WATCH_PATTERNS = [
 
 const REPO_LIST_WATCH_PATTERNS = ['.gitmodules', '.git/worktrees/**']
 
+// Patterns to ignore when watching the working tree for unstaged/untracked changes
+const WORKING_TREE_IGNORE_PATTERNS = [
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/.next/**',
+  '**/.cache/**',
+  '**/coverage/**',
+  '**/*.swp',
+  '**/*~',
+  '**/.DS_Store',
+  '**/tmp/**',
+  '**/.turbo/**',
+  '**/yarn-error.log'
+]
+
 let watcher = null
 let repo_list_watcher = null
+let working_tree_watcher = null // watches working tree for unstaged/untracked changes
 const debounce_timers = new Map()
 let current_repo_paths = [] // source of truth for repo-path lookups in handle_change
 const git_dir_to_repo_path = new Map() // maps actual git dir -> repo path (for worktree reverse lookup)
@@ -152,6 +170,10 @@ export async function start_git_status_watcher({
       _start_repo_list_watcher(repo_paths, on_repo_list_change)
     }
 
+    // Start working tree watcher for unstaged/untracked file changes
+    // The git internals watcher only catches staged/committed changes
+    _start_working_tree_watcher(repo_paths, on_git_status_change)
+
     log('Git status watcher started')
     return watcher
   } catch (error) {
@@ -209,6 +231,91 @@ function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
 }
 
 /**
+ * Start watching working tree files across all repositories.
+ * This catches unstaged and untracked file changes that the .git watcher misses.
+ */
+function _start_working_tree_watcher(repo_paths, on_git_status_change) {
+  try {
+    // Watch each repo's working tree with ignore patterns
+    working_tree_watcher = chokidar.watch(
+      repo_paths.map((repo_path) => path.join(repo_path, '**', '*')),
+      {
+        persistent: true,
+        ignoreInitial: true,
+        ignored: WORKING_TREE_IGNORE_PATTERNS,
+        // Use awaitWriteFinish to debounce rapid writes (IDE saves, builds, etc.)
+        awaitWriteFinish: {
+          stabilityThreshold: 300,
+          pollInterval: 100
+        }
+      }
+    )
+
+    working_tree_watcher
+      .on('add', (file_path) =>
+        _handle_working_tree_change(file_path, on_git_status_change)
+      )
+      .on('change', (file_path) =>
+        _handle_working_tree_change(file_path, on_git_status_change)
+      )
+      .on('unlink', (file_path) =>
+        _handle_working_tree_change(file_path, on_git_status_change)
+      )
+      .on('error', (error) => {
+        log('Working tree watcher error: %s', error.message)
+      })
+
+    log('Working tree watcher started for %d repositories', repo_paths.length)
+  } catch (error) {
+    log('Failed to start working tree watcher: %s', error.message)
+  }
+}
+
+/**
+ * Handle a working tree file change by finding its repository and debouncing.
+ */
+function _handle_working_tree_change(file_path, on_git_status_change) {
+  const repo_path = _find_repo_for_working_tree_path(file_path)
+  if (!repo_path) return
+
+  log(
+    'Working tree change in %s: %s',
+    repo_path,
+    path.relative(repo_path, file_path)
+  )
+
+  // Use same debounce mechanism as git internals watcher
+  if (debounce_timers.has(repo_path)) {
+    clearTimeout(debounce_timers.get(repo_path))
+  }
+
+  debounce_timers.set(
+    repo_path,
+    setTimeout(() => {
+      debounce_timers.delete(repo_path)
+      log('Emitting git status change for %s (working tree)', repo_path)
+      try {
+        on_git_status_change({ repo_path })
+      } catch (error) {
+        log('Error in working tree change callback: %s', error.message)
+      }
+    }, DEBOUNCE_MS)
+  )
+}
+
+/**
+ * Find the repository that contains a working tree file path.
+ */
+function _find_repo_for_working_tree_path(file_path) {
+  for (const repo_path of current_repo_paths) {
+    if (file_path.startsWith(repo_path + path.sep)) {
+      return repo_path
+    }
+  }
+  return null
+}
+
+/**
  * Add a repository to the watcher dynamically
  * @param {string} repo_path - Repository path to start watching
  */
@@ -238,6 +345,11 @@ export async function add_repo_to_watcher(repo_path) {
     for (const pattern of REPO_LIST_WATCH_PATTERNS) {
       repo_list_watcher.add(path.join(repo_path, pattern))
     }
+  }
+
+  // Add to working tree watcher
+  if (working_tree_watcher) {
+    working_tree_watcher.add(path.join(repo_path, '**', '*'))
   }
 
   log(
@@ -278,6 +390,11 @@ export async function remove_repo_from_watcher(repo_path) {
     for (const pattern of REPO_LIST_WATCH_PATTERNS) {
       repo_list_watcher.unwatch(path.join(repo_path, pattern))
     }
+  }
+
+  // Remove from working tree watcher
+  if (working_tree_watcher) {
+    working_tree_watcher.unwatch(path.join(repo_path, '**', '*'))
   }
 
   // Clean up any pending debounce timer
@@ -337,6 +454,15 @@ export async function stop_git_status_watcher() {
     clearTimeout(timer)
   }
   debounce_timers.clear()
+
+  if (working_tree_watcher) {
+    try {
+      await working_tree_watcher.close()
+    } catch (error) {
+      log('Error closing working tree watcher: %s', error.message)
+    }
+    working_tree_watcher = null
+  }
 
   if (repo_list_watcher) {
     try {
