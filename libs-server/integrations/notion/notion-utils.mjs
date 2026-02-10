@@ -13,18 +13,22 @@ const log = debug('integrations:notion:utils')
  * @param {Array} rich_text - Notion rich text array
  * @param {Object} options - Formatting options
  * @param {boolean} options.preserve_formatting - Whether to preserve rich text formatting
+ * @param {boolean} options.trim - Whether to trim leading/trailing whitespace (default: true)
  * @returns {string} Plain text content or formatted text
  */
 export function extract_plain_text(rich_text, options = {}) {
   if (!Array.isArray(rich_text)) return ''
 
+  const { trim = true } = options
+
   // Plain text only mode
   if (!options.preserve_formatting) {
-    return rich_text.map((item) => item.plain_text || '').join('')
+    const result = rich_text.map((item) => item.plain_text || '').join('')
+    return trim ? result.trim() : result
   }
 
   // Full formatting preservation with enhanced features
-  return rich_text
+  const result = rich_text
     .map((item) => {
       let text = item.plain_text || ''
 
@@ -50,6 +54,8 @@ export function extract_plain_text(rich_text, options = {}) {
       return text
     })
     .join('')
+
+  return trim ? result.trim() : result
 }
 
 /**
