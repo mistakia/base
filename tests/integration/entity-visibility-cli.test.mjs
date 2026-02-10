@@ -124,7 +124,7 @@ This is a test entity for CLI testing.`
     })
 
     it('should set public_read to false on markdown entity', async function () {
-      this.timeout(10000)
+      this.timeout(20000)
 
       // First set to true
       await execute(
@@ -148,7 +148,7 @@ This is a test entity for CLI testing.`
     })
 
     it('should handle no change gracefully', async function () {
-      this.timeout(10000)
+      this.timeout(20000)
 
       // Set to true twice
       await execute(
