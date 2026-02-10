@@ -286,13 +286,13 @@ const ObservationsSection = ({ observations, visible_count }) => {
             })}
           </Box>
           {should_collapse && (
-            <Box
-              sx={observations_expand_toggle_sx}
-              onClick={() => set_is_expanded((prev) => !prev)}>
+            <Box sx={observations_expand_toggle_sx}>
               <IconButton
                 sx={observations_expand_button_sx}
                 size='small'
-                disableRipple>
+                disableRipple
+                onClick={() => set_is_expanded((prev) => !prev)}
+                aria-label={is_expanded ? 'Show fewer observations' : 'Show more observations'}>
                 {is_expanded ? (
                   <>
                     <ExpandLessIcon sx={{ fontSize: 16, mr: 0.5 }} />
