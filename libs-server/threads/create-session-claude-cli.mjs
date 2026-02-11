@@ -1,7 +1,7 @@
 import { spawn, exec } from 'child_process'
-import { join, isAbsolute, basename } from 'path'
+import { join, dirname, isAbsolute, basename } from 'path'
 import { access, mkdir, copyFile, readFile } from 'fs/promises'
-import { constants } from 'fs'
+import { constants, existsSync } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
 import glob_pkg from 'glob'
@@ -12,7 +12,8 @@ import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
   DOCKER_CONTAINER_NAME,
-  validate_execution_mode
+  validate_execution_mode,
+  translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
 
 const execAsync = promisify(exec)
@@ -35,14 +36,38 @@ const SESSION_DIRECTORY_NAME = '.claude'
 const CLAUDE_CLI_PATHS = [join(homedir(), '.claude', 'local', 'claude')]
 
 /**
- * Container Claude home directory on host side
- * This is the volume mount point that maps to /home/node/.claude in the container
+ * Resolve the container Claude home directory on the host side.
+ * This is the host directory that maps to /home/node/.claude in the container.
+ *
+ * Per-machine mount paths (from docker-compose configs):
+ *   MacBook: /Users/trashman/.base-container-data/claude-home
+ *   Storage: /mnt/md0/base-container-data/claude-home
+ *
+ * Derivation: check sibling directories of user-base with both naming
+ * conventions, falling back to homedir.
  */
-const CONTAINER_CLAUDE_HOME = join(
-  homedir(),
-  '.base-container-data',
-  'claude-home'
-)
+const resolve_container_claude_home = () => {
+  const user_base_dir = get_user_base_directory()
+  const parent_dir = dirname(user_base_dir)
+
+  // Check both naming conventions used across machines
+  const candidates = [
+    join(parent_dir, 'base-container-data', 'claude-home'),
+    join(parent_dir, '.base-container-data', 'claude-home'),
+    join(homedir(), '.base-container-data', 'claude-home')
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  // Default fallback (will be created on first use)
+  return candidates[candidates.length - 1]
+}
+
+const CONTAINER_CLAUDE_HOME = resolve_container_claude_home()
 
 /**
  * Derive the projects directory name from a working directory path
@@ -540,14 +565,27 @@ export const create_session_claude_cli = async ({
   })
 
   // -------------------------
-  // 2. Restore Session State (for resume)
+  // 2. Translate Working Directory for Container Mode
+  // -------------------------
+
+  // When executing in a container, translate host paths to container paths.
+  // e.g. /mnt/md0/user-base -> /Users/trashman/user-base (container mount point)
+  const container_working_directory =
+    execution_mode === 'container'
+      ? translate_to_container_path(working_directory)
+      : working_directory
+
+  // -------------------------
+  // 3. Restore Session State (for resume)
   // -------------------------
 
   if (session_id && thread_id) {
     await restore_session_state({
       session_id,
       thread_id,
-      working_directory,
+      // Use container path for JSONL project directory derivation so the
+      // restored files land where the container's Claude CLI expects them
+      working_directory: container_working_directory,
       user_base_directory
     })
   }
@@ -585,13 +623,13 @@ export const create_session_claude_cli = async ({
 
   if (execution_mode === 'container') {
     // Container mode: spawn via docker exec
-    // The -w flag sets the working directory inside the container
+    // The -w flag uses the translated container path, not the host path
     // Use 'claude' directly since it's in the container's PATH
     spawn_command = 'docker'
     spawn_args = [
       'exec',
       '-w',
-      working_directory,
+      container_working_directory,
       DOCKER_CONTAINER_NAME,
       'claude',
       ...cli_args

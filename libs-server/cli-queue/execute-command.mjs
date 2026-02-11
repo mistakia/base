@@ -1,10 +1,10 @@
 import { spawn } from 'child_process'
 import debug from 'debug'
 
-import { validate_shell_command } from '#libs-server/utils/validate-shell-command.mjs'
 import {
   DOCKER_CONTAINER_NAME,
-  validate_execution_mode
+  validate_execution_mode,
+  translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
 
 const log = debug('cli-queue:executor')
@@ -32,9 +32,6 @@ export const execute_command = async ({
   // Validate execution_mode
   validate_execution_mode(execution_mode)
 
-  // Validate command before execution
-  validate_shell_command(command)
-
   log(`Executing: ${command}`)
   log(`Working directory: ${working_directory}`)
   log(`Timeout: ${timeout_ms}ms`)
@@ -57,14 +54,16 @@ export const execute_command = async ({
     let child
     if (execution_mode === 'container') {
       // Container mode: spawn via docker exec
+      // Translate host path to container path (e.g. /mnt/md0/user-base -> /Users/trashman/user-base)
       // Use bash -c to run the command string inside the container
       // detached: true ensures the process survives if the parent is killed
+      const container_cwd = translate_to_container_path(working_directory)
       child = spawn(
         'docker',
         [
           'exec',
           '-w',
-          working_directory,
+          container_cwd,
           DOCKER_CONTAINER_NAME,
           'bash',
           '-c',
