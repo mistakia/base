@@ -27,6 +27,7 @@ export const trigger_schedule = async ({ schedule, file_path }) => {
       priority: schedule.queue_priority || 10,
       working_directory: schedule.working_directory,
       timeout_ms: schedule.timeout_ms,
+      execution_mode: schedule.execution_mode,
       metadata: {
         schedule_title: schedule.title,
         schedule_entity_id: schedule.entity_id,

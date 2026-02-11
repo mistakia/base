@@ -102,6 +102,7 @@ export const get_cli_queue = () => {
  * @param {number} [params.priority=10] - Job priority (lower = higher priority)
  * @param {string} [params.working_directory] - Working directory for command
  * @param {number} [params.timeout_ms] - Command timeout in milliseconds
+ * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
  * @param {Object} [params.metadata={}] - Additional metadata
  * @returns {Promise<Object>} Job object with id and tags
  */
@@ -111,6 +112,7 @@ export const add_cli_job = async ({
   priority = 10,
   working_directory = process.cwd(),
   timeout_ms = QUEUE_CONFIG.default_timeout_ms,
+  execution_mode,
   metadata = {}
 }) => {
   try {
@@ -121,6 +123,7 @@ export const add_cli_job = async ({
       tags,
       working_directory,
       timeout_ms,
+      execution_mode,
       metadata,
       queued_at: new Date().toISOString()
     }

@@ -8,7 +8,7 @@ base_uri: sys:system/schema/scheduled-command.md
 created_at: '2026-02-07T18:30:00.000Z'
 entity_id: 8f7e6d5c-4b3a-2918-0fed-cbba9a876543
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
-updated_at: '2026-02-07T18:30:00.000Z'
+updated_at: '2026-02-11T01:38:09.000Z'
 properties:
   - name: command
     type: string
@@ -48,6 +48,13 @@ properties:
     type: number
     required: false
     description: Command timeout in milliseconds
+  - name: execution_mode
+    type: string
+    enum:
+      - host
+      - container
+    required: false
+    description: Where to execute command (host default, or container via docker exec)
   - name: enabled
     type: boolean
     required: false
@@ -130,6 +137,7 @@ Scheduled commands use the CLI queue for execution:
 - `queue_tags`: Control concurrency with tag-based limits
 - `queue_priority`: Lower numbers execute first (default: 10)
 - `timeout_ms`: Override default 5-minute timeout
+- `execution_mode`: `host` (default) or `container`
 
 ## File Organization
 
