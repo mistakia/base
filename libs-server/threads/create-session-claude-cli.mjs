@@ -569,7 +569,7 @@ export const create_session_claude_cli = async ({
   // -------------------------
 
   // When executing in a container, translate host paths to container paths.
-  // e.g. /mnt/md0/user-base -> /Users/trashman/user-base (container mount point)
+  // e.g. host user-base path -> CONTAINER_USER_BASE_PATH mount point
   const container_working_directory =
     execution_mode === 'container'
       ? translate_to_container_path(working_directory)

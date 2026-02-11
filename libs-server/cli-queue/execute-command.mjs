@@ -54,7 +54,7 @@ export const execute_command = async ({
     let child
     if (execution_mode === 'container') {
       // Container mode: spawn via docker exec
-      // Translate host path to container path (e.g. /mnt/md0/user-base -> /Users/trashman/user-base)
+      // Translate host path to container path (host user-base -> CONTAINER_USER_BASE_PATH)
       // Use bash -c to run the command string inside the container
       // detached: true ensures the process survives if the parent is killed
       const container_cwd = translate_to_container_path(working_directory)

@@ -1,7 +1,7 @@
 import secure_config from '@tsmx/secure-config'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { tmpdir, platform, homedir } from 'os'
+import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
 
 const current_file_path = fileURLToPath(import.meta.url)
@@ -11,24 +11,23 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-// Derive user_base_directory based on platform
-// - macOS: ~/user-base (development machine)
-// - Linux: /mnt/md0/user-base (storage server)
-const derived_user_base_directory =
-  platform() === 'darwin' ? join(homedir(), 'user-base') : '/mnt/md0/user-base'
-
 const config = secure_config({ directory: config_dir })
 
-// Apply machine-agnostic path resolution
-// Priority: environment variable > derived/computed > config.json fallback
-
-// system_base_directory: where the base system code lives
+// system_base_directory: derived from code location (parent of config/)
 config.system_base_directory =
   process.env.SYSTEM_BASE_DIRECTORY || derived_system_base_directory
 
-// user_base_directory: where user data lives
-config.user_base_directory =
-  process.env.USER_BASE_DIRECTORY || derived_user_base_directory
+// user_base_directory: required from environment (except in test).
+// Set by PM2, docker-compose, or the shell profile.
+if (process.env.NODE_ENV === 'test') {
+  // Tests use a random temp path to avoid touching real user data
+  config.user_base_directory = join(tmpdir(), `base_data_${randomUUID()}`)
+} else {
+  if (!process.env.USER_BASE_DIRECTORY) {
+    throw new Error('USER_BASE_DIRECTORY environment variable is not set')
+  }
+  config.user_base_directory = process.env.USER_BASE_DIRECTORY
+}
 
 // Derive notification script path from user_base_directory
 if (
@@ -40,12 +39,6 @@ if (
     'cli',
     'notify-discord.mjs'
   )
-}
-
-// Generate random temp path for test environments
-if (process.env.NODE_ENV === 'test') {
-  const random_path = join(tmpdir(), `base_data_${randomUUID()}`)
-  config.user_base_directory = random_path
 }
 
 if (process.env.BASE_PUBLIC_URL) {

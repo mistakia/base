@@ -20,8 +20,14 @@ export const DOCKER_CONTAINER_NAME = 'base-container'
  * The fixed user-base path inside the container.
  * Both machines (MacBook and storage server) mount their local user-base
  * to this path inside their respective containers.
+ *
+ * Set via CONTAINER_USER_BASE_PATH environment variable in docker-compose
+ * and pm2.config.js.
  */
-export const CONTAINER_USER_BASE_PATH = '/Users/trashman/user-base'
+if (!process.env.CONTAINER_USER_BASE_PATH) {
+  throw new Error('CONTAINER_USER_BASE_PATH environment variable is not set')
+}
+export const CONTAINER_USER_BASE_PATH = process.env.CONTAINER_USER_BASE_PATH
 
 /**
  * Valid execution modes for CLI commands
@@ -46,8 +52,9 @@ export const validate_execution_mode = (execution_mode) => {
 
 /**
  * Translate a host working directory path to the container equivalent.
- * On storage server: /mnt/md0/user-base/... -> /Users/trashman/user-base/...
- * On MacBook: /Users/trashman/user-base/... -> /Users/trashman/user-base/... (no change)
+ * When the host user-base path differs from CONTAINER_USER_BASE_PATH,
+ * the host prefix is replaced with the container prefix.
+ * When they match (e.g. on MacBook), no translation is needed.
  *
  * @param {string} host_path - Absolute path on the host
  * @returns {string} Equivalent path inside the container
