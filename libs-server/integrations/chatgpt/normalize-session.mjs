@@ -1,7 +1,7 @@
 /**
- * OpenAI Session Normalization
+ * ChatGPT Session Normalization
  *
- * Converts OpenAI/ChatGPT conversation format to normalized session structure
+ * Converts ChatGPT/ChatGPT conversation format to normalized session structure
  * for integration with Base thread system.
  */
 
@@ -12,7 +12,7 @@ import {
   create_tool_result_entry
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 
-const log = debug('integrations:openai:normalize')
+const log = debug('integrations:chatgpt:normalize')
 
 // Track unsupported features for reporting
 const unsupported_tracking = {
@@ -36,11 +36,11 @@ const log_unsupported = (category, value, context = '') => {
 }
 
 /**
- * Normalize OpenAI conversation to common session format
+ * Normalize ChatGPT conversation to common session format
  */
-export function normalize_openai_conversation(conversation) {
+export function normalize_chatgpt_conversation(conversation) {
   try {
-    log(`Normalizing OpenAI conversation: ${conversation.id}`)
+    log(`Normalizing ChatGPT conversation: ${conversation.id}`)
 
     // Track unknown conversation fields
     const known_conversation_fields = [
@@ -83,7 +83,7 @@ export function normalize_openai_conversation(conversation) {
     const session = {
       // Session identification
       session_id: conversation.conversation_id || conversation.id,
-      session_provider: 'openai',
+      session_provider: 'chatgpt',
 
       // Basic metadata
       title: conversation.title || 'Untitled Conversation',
@@ -93,7 +93,7 @@ export function normalize_openai_conversation(conversation) {
       // Extract messages from mapping structure
       messages: extractMessages(conversation.mapping || {}),
 
-      // OpenAI-specific metadata
+      // ChatGPT-specific metadata
       metadata: {
         current_node: conversation.current_node,
         gizmo_id: conversation.gizmo_id,
@@ -123,13 +123,13 @@ export function normalize_openai_conversation(conversation) {
     log(`Normalized ${session.messages.length} messages`)
     return session
   } catch (error) {
-    log(`Error normalizing OpenAI conversation: ${error.message}`)
+    log(`Error normalizing ChatGPT conversation: ${error.message}`)
     throw error
   }
 }
 
 /**
- * Extract and order messages from OpenAI mapping structure
+ * Extract and order messages from ChatGPT mapping structure
  */
 function extractMessages(mapping) {
   if (!mapping || typeof mapping !== 'object') {
@@ -239,7 +239,7 @@ function extractToolInteractionsFromMessage(message, node_id) {
           content_type: 'tool_invocation',
           node_id,
           is_extracted_tool: true,
-          openai_metadata: {
+          chatgpt_metadata: {
             recipient: message.recipient,
             channel: message.channel,
             weight: message.weight
@@ -266,7 +266,7 @@ function extractToolInteractionsFromMessage(message, node_id) {
           content_type: 'execution_output',
           node_id,
           is_extracted_tool: true,
-          openai_metadata: {
+          chatgpt_metadata: {
             exit_code: message.content.exit_code,
             recipient: message.recipient,
             channel: message.channel,
@@ -292,7 +292,7 @@ function extractToolInteractionsFromMessage(message, node_id) {
  * Find related tool call ID for execution output
  */
 function findRelatedToolCallId(message, node_id) {
-  // OpenAI doesn't always provide direct linking, so we use various strategies:
+  // ChatGPT doesn't always provide direct linking, so we use various strategies:
 
   // 1. Check message metadata for parent_id or request_id
   if (message.metadata?.parent_id) {
@@ -380,7 +380,7 @@ function extractMessageData(message, node_id) {
     const content_data = extractContentData(message.content)
     Object.assign(normalized_message, content_data)
 
-    // Add OpenAI-specific metadata
+    // Add ChatGPT-specific metadata
     if (message.metadata) {
       normalized_message.metadata = {
         status: message.status,
@@ -548,7 +548,7 @@ function extractContextContent(content) {
 }
 
 /**
- * Parse OpenAI timestamp (can be float seconds or ISO string)
+ * Parse ChatGPT timestamp (can be float seconds or ISO string)
  */
 function parseTimestamp(timestamp) {
   if (!timestamp) return null
@@ -569,7 +569,7 @@ function parseTimestamp(timestamp) {
 /**
  * Validate normalized session
  */
-export function validate_openai_session(session) {
+export function validate_chatgpt_session(session) {
   const errors = []
 
   if (!session.session_id) {

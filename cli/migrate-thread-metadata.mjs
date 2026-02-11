@@ -118,7 +118,7 @@ function infer_source_from_models(models) {
   if (models && models.length > 0) {
     const model = models[0]
     if (model.includes('claude')) return { provider: 'claude' }
-    if (model.includes('gpt')) return { provider: 'openai' }
+    if (model.includes('gpt')) return { provider: 'chatgpt' }
     if (model.includes('cursor')) return { provider: 'cursor' }
   }
   // Default to claude -- all production sessions are claude-based

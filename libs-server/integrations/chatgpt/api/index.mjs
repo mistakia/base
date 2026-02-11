@@ -1,5 +1,5 @@
 /**
- * OpenAI Internal API Client
+ * ChatGPT Internal API Client
  *
  * Provides access to ChatGPT's internal backend API for conversation data.
  * Handles authentication, session management, and API communication.
@@ -8,22 +8,22 @@
 import debug from 'debug'
 import fetch from 'node-fetch'
 import {
-  OPENAI_BASE_URL,
-  OPENAI_CLIENT_VERSION
-} from '#libs-server/integrations/openai/openai-config.mjs'
+  CHATGPT_BASE_URL,
+  CHATGPT_CLIENT_VERSION
+} from '#libs-server/integrations/chatgpt/chatgpt-config.mjs'
 
-const log = debug('integrations:openai:api')
+const log = debug('integrations:chatgpt:api')
 
 /**
- * OpenAI API client for ChatGPT conversations
+ * ChatGPT API client for ChatGPT conversations
  */
-export class OpenAIApiClient {
+export class ChatGPTApiClient {
   constructor(options = {}) {
-    this.base_url = options.base_url || OPENAI_BASE_URL
+    this.base_url = options.base_url || CHATGPT_BASE_URL
     this.bearer_token = options.bearer_token
     this.session_cookies = options.session_cookies || {}
     this.device_id = options.device_id
-    this.client_version = options.client_version || OPENAI_CLIENT_VERSION
+    this.client_version = options.client_version || CHATGPT_CLIENT_VERSION
 
     // Validate required authentication
     this.validate_authentication()
@@ -80,7 +80,7 @@ export class OpenAIApiClient {
   }
 
   /**
-   * Make authenticated request to OpenAI API
+   * Make authenticated request to ChatGPT API
    */
   async make_request(endpoint, options = {}) {
     const url = `${this.base_url}${endpoint}`
@@ -209,13 +209,13 @@ export class OpenAIApiClient {
 }
 
 /**
- * Create OpenAI API client from authentication configuration
+ * Create ChatGPT API client from authentication configuration
  */
-export function create_openai_client(auth_config) {
+export function create_chatgpt_client(auth_config) {
   try {
-    return new OpenAIApiClient(auth_config)
+    return new ChatGPTApiClient(auth_config)
   } catch (error) {
-    log(`Failed to create OpenAI client: ${error.message}`)
+    log(`Failed to create ChatGPT client: ${error.message}`)
     throw error
   }
 }
@@ -226,7 +226,7 @@ export function create_openai_client(auth_config) {
 export function extract_auth_from_browser() {
   // This would need to be implemented by user extracting from browser
   throw new Error(`
-OpenAI authentication must be manually extracted from browser:
+ChatGPT authentication must be manually extracted from browser:
 
 1. Open ChatGPT in browser and log in
 2. Open Developer Tools (F12)
@@ -236,7 +236,7 @@ OpenAI authentication must be manually extracted from browser:
    - Cookie: <all cookies>
    - oai-device-id: <device-id>
 
-5. Pass these values to create_openai_client({
+5. Pass these values to create_chatgpt_client({
      bearer_token: 'your-jwt-token',
      session_cookies: {
        'oai-did': 'device-id',
@@ -252,15 +252,15 @@ OpenAI authentication must be manually extracted from browser:
 /**
  * Test API client connection
  */
-export async function test_openai_connection(client) {
+export async function test_chatgpt_connection(client) {
   try {
-    log('Testing OpenAI API connection...')
+    log('Testing ChatGPT API connection...')
 
     // Try to fetch a small number of conversations
     const response = await client.list_conversations({ limit: 1 })
 
     if (response.items && response.items.length >= 0) {
-      log('OpenAI API connection successful')
+      log('ChatGPT API connection successful')
       return {
         success: true,
         conversation_count: response.total || response.items.length,
@@ -270,7 +270,7 @@ export async function test_openai_connection(client) {
       throw new Error('Unexpected response format')
     }
   } catch (error) {
-    log('OpenAI API connection failed:', error.message)
+    log('ChatGPT API connection failed:', error.message)
     return {
       success: false,
       error: error.message,

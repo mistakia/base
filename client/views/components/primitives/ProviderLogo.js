@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import {
   AnthropicLogo,
   CursorLogo,
-  OpenAILogo,
+  ChatGPTLogo,
   BaseLogo
 } from './logos/index.js'
 
@@ -12,7 +12,7 @@ const LOGO_MAP = {
   anthropic: AnthropicLogo,
   claude: AnthropicLogo, // Claude uses Anthropic logo
   cursor: CursorLogo,
-  openai: OpenAILogo,
+  chatgpt: ChatGPTLogo,
   base: BaseLogo
 }
 

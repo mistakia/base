@@ -39,7 +39,7 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["base", "claude", "cursor", "openai", "pi"],
+          "enum": ["base", "claude", "cursor", "chatgpt", "pi"],
           "description": "Origin provider for the session"
         },
         "session_id": {

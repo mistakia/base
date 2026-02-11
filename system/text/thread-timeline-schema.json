@@ -36,7 +36,7 @@
       },
       "provider": {
         "type": "string",
-        "description": "Session provider (claude, cursor, openai, etc.)"
+        "description": "Session provider (claude, cursor, chatgpt, etc.)"
       },
       "provider_data": {
         "type": "object",

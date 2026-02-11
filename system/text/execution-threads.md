@@ -47,7 +47,7 @@ Supported session runners include Claude Code, Cursor, ChatGPT, and Pi. New runn
 - `thread_id`: Unique identifier (UUID). Defines the path to thread data (`user:thread/{thread_id}/`)
 - `user_public_key`: Owner of the thread
 - `workflow_base_uri`: For Base system sessions, references the executing workflow
-- `source`: Session origin info object with `provider` ('base', 'claude', 'cursor', 'openai', 'pi'), `session_id`, `provider_metadata`, etc.
+- `source`: Session origin info object with `provider` ('base', 'claude', 'cursor', 'chatgpt', 'pi'), `session_id`, `provider_metadata`, etc.
 - `thread_state`: Current state - `active` or `archived`
 - `created_at`, `updated_at`, `archived_at`: Lifecycle timestamps
 - `archive_reason`: When archived, reason for archiving (`completed` or `user_abandoned`)
@@ -68,7 +68,7 @@ Base supports importing and tracking sessions from the following runners:
 - Format: SQLite database export
 - Preserves: Code edits, AI interactions, file context
 
-### OpenAI
+### ChatGPT
 
 - Source: ChatGPT conversations
 - Format: JSON export from data archive

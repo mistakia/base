@@ -1,58 +1,58 @@
 /**
- * OpenAI Session Helper Functions
+ * ChatGPT Session Helper Functions
  *
- * Focused helper functions for OpenAI session processing.
+ * Focused helper functions for ChatGPT session processing.
  * Keeps provider class small while handling specific operations.
  */
 
 import debug from 'debug'
-import { create_openai_client } from './api/index.mjs'
+import { create_chatgpt_client } from './api/index.mjs'
 import {
-  get_openai_config,
-  validate_openai_auth,
-  OPENAI_NAMESPACE
-} from './openai-config.mjs'
+  get_chatgpt_config,
+  validate_chatgpt_auth,
+  CHATGPT_NAMESPACE
+} from './chatgpt-config.mjs'
 import { v5 as uuidv5 } from 'uuid'
 import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
-const log = debug('integrations:openai:session-helpers')
+const log = debug('integrations:chatgpt:session-helpers')
 
 /**
- * Find OpenAI conversations from provided data
- * Note: OpenAI conversations come from API and must be provided directly
+ * Find ChatGPT conversations from provided data
+ * Note: ChatGPT conversations come from API and must be provided directly
  *
  * @param {Object} params - Parameters object
- * @param {Array} params.conversations - Array of OpenAI conversations
- * @returns {Promise<Array>} Array of raw OpenAI conversation objects
+ * @param {Array} params.conversations - Array of ChatGPT conversations
+ * @returns {Promise<Array>} Array of raw ChatGPT conversation objects
  */
-export const find_openai_sessions_from_data = async ({
+export const find_chatgpt_sessions_from_data = async ({
   conversations = []
 }) => {
-  log(`Processing ${conversations.length} provided OpenAI conversations`)
+  log(`Processing ${conversations.length} provided ChatGPT conversations`)
   return conversations
 }
 
 /**
- * Find OpenAI conversations from API
+ * Find ChatGPT conversations from API
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.auth_options - Authentication options for OpenAI API
+ * @param {Object} params.auth_options - Authentication options for ChatGPT API
  * @param {number} params.max_conversations - Maximum conversations to fetch
- * @returns {Promise<Array>} Array of raw OpenAI conversation objects
+ * @returns {Promise<Array>} Array of raw ChatGPT conversation objects
  */
-export const find_openai_sessions_from_api = async ({
+export const find_chatgpt_sessions_from_api = async ({
   auth_options = {},
   max_conversations
 }) => {
-  const config = get_openai_config({ max_conversations, ...auth_options })
+  const config = get_chatgpt_config({ max_conversations, ...auth_options })
   const { bearer_token, session_cookies, device_id, client_version } = config
 
-  log('Finding OpenAI conversations from API')
+  log('Finding ChatGPT conversations from API')
 
   // Validate authentication
-  validate_openai_auth({ bearer_token, session_cookies, device_id })
+  validate_chatgpt_auth({ bearer_token, session_cookies, device_id })
 
-  const client = create_openai_client({
+  const client = create_chatgpt_client({
     bearer_token,
     session_cookies,
     device_id,
@@ -63,18 +63,18 @@ export const find_openai_sessions_from_api = async ({
     max_conversations: config.max_conversations
   })
 
-  log(`Found ${conversations.length} OpenAI conversations from API`)
+  log(`Found ${conversations.length} ChatGPT conversations from API`)
   return conversations
 }
 
 /**
- * Validate OpenAI conversation structure
+ * Validate ChatGPT conversation structure
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.session - Raw OpenAI conversation data
+ * @param {Object} params.session - Raw ChatGPT conversation data
  * @returns {Object} { valid: boolean, errors: string[] }
  */
-export const validate_openai_session_structure = ({ session }) => {
+export const validate_chatgpt_session_structure = ({ session }) => {
   const errors = []
 
   // Required fields
@@ -119,33 +119,33 @@ export const validate_openai_session_structure = ({ session }) => {
 }
 
 /**
- * Generate deterministic thread ID for OpenAI conversation
+ * Generate deterministic thread ID for ChatGPT conversation
  *
  * @param {Object} params - Parameters object
- * @param {string} params.session_id - OpenAI session ID
+ * @param {string} params.session_id - ChatGPT session ID
  * @returns {string} Deterministic thread ID
  */
-export const generate_openai_thread_id = ({ session_id }) => {
-  return uuidv5(`openai:${session_id}`, OPENAI_NAMESPACE)
+export const generate_chatgpt_thread_id = ({ session_id }) => {
+  return uuidv5(`chatgpt:${session_id}`, CHATGPT_NAMESPACE)
 }
 
 /**
- * Get inference provider name for OpenAI sessions
+ * Get inference provider name for ChatGPT sessions
  *
- * @returns {string} OpenAI inference provider name
+ * @returns {string} ChatGPT inference provider name
  */
-export const get_openai_inference_provider = () => {
-  return 'openai'
+export const get_chatgpt_inference_provider = () => {
+  return 'chatgpt'
 }
 
 /**
- * Extract models from OpenAI conversation metadata
+ * Extract models from ChatGPT conversation metadata
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.raw_session - Raw OpenAI conversation data
+ * @param {Object} params.raw_session - Raw ChatGPT conversation data
  * @returns {Array} Array of model identifiers
  */
-export const extract_openai_models_from_session = ({ raw_session }) => {
+export const extract_chatgpt_models_from_session = ({ raw_session }) => {
   const models = []
 
   // Extract from metadata if available
@@ -160,24 +160,24 @@ export const extract_openai_models_from_session = ({ raw_session }) => {
 }
 
 /**
- * Get session ID from OpenAI conversation
+ * Get session ID from ChatGPT conversation
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.raw_session - Raw OpenAI conversation data
+ * @param {Object} params.raw_session - Raw ChatGPT conversation data
  * @returns {string} Session identifier
  */
-export const get_openai_session_id = ({ raw_session }) => {
+export const get_chatgpt_session_id = ({ raw_session }) => {
   return raw_session.session_id || raw_session.id
 }
 
 /**
- * Build timeline entries from OpenAI messages
+ * Build timeline entries from ChatGPT messages
  *
  * @param {Object} params - Parameters object
- * @param {Array} params.messages - Array of OpenAI messages
+ * @param {Array} params.messages - Array of ChatGPT messages
  * @returns {Array} Array of timeline entries
  */
-export const build_openai_timeline_entries = ({ messages }) => {
+export const build_chatgpt_timeline_entries = ({ messages }) => {
   const timeline_entries = []
 
   for (const message of messages) {
@@ -194,10 +194,10 @@ export const build_openai_timeline_entries = ({ messages }) => {
 }
 
 /**
- * Build timeline entry from individual OpenAI message
+ * Build timeline entry from individual ChatGPT message
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.message - OpenAI message object
+ * @param {Object} params.message - ChatGPT message object
  * @returns {Object|null} Timeline entry or null if invalid
  */
 export const build_timeline_entry_from_message = ({ message }) => {
@@ -208,7 +208,7 @@ export const build_timeline_entry_from_message = ({ message }) => {
       message_type: message.type,
       role: message.role
     }),
-    provider: 'openai'
+    provider: 'chatgpt'
   }
 
   switch (message.type) {
@@ -298,10 +298,10 @@ export const build_timeline_entry_from_message = ({ message }) => {
 }
 
 /**
- * Map OpenAI message types to Base timeline entry types
+ * Map ChatGPT message types to Base timeline entry types
  *
  * @param {Object} params - Parameters object
- * @param {string} params.message_type - Message type from OpenAI
+ * @param {string} params.message_type - Message type from ChatGPT
  * @param {string} params.role - Message role
  * @returns {string} Timeline entry type
  */
@@ -330,13 +330,13 @@ export const map_message_type_to_timeline_type = ({ message_type, role }) => {
 }
 
 /**
- * Generate thread metadata for OpenAI conversation
+ * Generate thread metadata for ChatGPT conversation
  *
  * @param {Object} params - Parameters object
- * @param {Object} params.conversation - OpenAI conversation object
+ * @param {Object} params.conversation - ChatGPT conversation object
  * @returns {Object} Thread metadata object
  */
-export const generate_openai_thread_metadata = ({ conversation }) => {
+export const generate_chatgpt_thread_metadata = ({ conversation }) => {
   const counts = calculate_session_counts(conversation.messages || [])
   const start_time = conversation.created_at
   const end_time = conversation.updated_at
@@ -365,7 +365,7 @@ export const generate_openai_thread_metadata = ({ conversation }) => {
 
   return {
     // Basic thread info
-    provider: 'openai',
+    provider: 'chatgpt',
     session_id: conversation.session_id,
     title: conversation.title,
 
@@ -381,8 +381,8 @@ export const generate_openai_thread_metadata = ({ conversation }) => {
     role_counts,
     has_tool_usage,
 
-    // OpenAI-specific metadata
-    openai_metadata: {
+    // ChatGPT-specific metadata
+    chatgpt_metadata: {
       conversation_id: conversation.session_id,
       gizmo_id: conversation.metadata?.gizmo_id,
       gizmo_type: conversation.metadata?.gizmo_type,

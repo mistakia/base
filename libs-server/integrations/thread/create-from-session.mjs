@@ -204,8 +204,8 @@ const save_raw_session_data = async ({
         raw_data: raw_session_data
       })
       break
-    case 'openai':
-      await save_openai_raw_data({
+    case 'chatgpt':
+      await save_chatgpt_raw_data({
         raw_data_dir,
         raw_data: raw_session_data
       })
@@ -372,17 +372,17 @@ const save_cursor_raw_data = async ({ raw_data_dir, raw_data }) => {
   }
 }
 
-const save_openai_raw_data = async ({ raw_data_dir, raw_data }) => {
-  // Save the complete conversation response from OpenAI API
-  const conversation_file = path.join(raw_data_dir, 'openai-conversation.json')
+const save_chatgpt_raw_data = async ({ raw_data_dir, raw_data }) => {
+  // Save the complete conversation response from ChatGPT API
+  const conversation_file = path.join(raw_data_dir, 'chatgpt-conversation.json')
   await fs.writeFile(conversation_file, JSON.stringify(raw_data, null, 2))
-  log_debug(`Saved OpenAI conversation data to ${conversation_file}`)
+  log_debug(`Saved ChatGPT conversation data to ${conversation_file}`)
 
   // Save just the mapping structure for easier analysis
   if (raw_data.mapping) {
-    const mapping_file = path.join(raw_data_dir, 'openai-mapping.json')
+    const mapping_file = path.join(raw_data_dir, 'chatgpt-mapping.json')
     await fs.writeFile(mapping_file, JSON.stringify(raw_data.mapping, null, 2))
-    log_debug(`Saved OpenAI mapping to ${mapping_file}`)
+    log_debug(`Saved ChatGPT mapping to ${mapping_file}`)
   }
 }
 

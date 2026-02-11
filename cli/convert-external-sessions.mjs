@@ -14,7 +14,7 @@ import { hideBin } from 'yargs/helpers'
 import { isMain } from '#libs-server'
 import { get_claude_config } from '#libs-server/integrations/claude/claude-config.mjs'
 import { get_cursor_config } from '#libs-server/integrations/cursor/cursor-config.mjs'
-import { build_openai_filter } from '#libs-server/integrations/openai/openai-config.mjs'
+import { build_chatgpt_filter } from '#libs-server/integrations/chatgpt/chatgpt-config.mjs'
 import { build_session_filter } from '#libs-server/integrations/thread/thread-integration-shared-config.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
@@ -38,15 +38,15 @@ import {
   clear_unsupported_tracking as clear_cursor_unsupported
 } from '#libs-server/integrations/cursor/normalize-session.mjs'
 
-// OpenAI integration
+// ChatGPT integration
 import {
-  import_openai_conversations_to_threads,
-  list_openai_conversations
-} from '#libs-server/integrations/openai/index.mjs'
+  import_chatgpt_conversations_to_threads,
+  list_chatgpt_conversations
+} from '#libs-server/integrations/chatgpt/index.mjs'
 import {
-  get_unsupported_summary as get_openai_unsupported,
-  clear_unsupported_tracking as clear_openai_unsupported
-} from '#libs-server/integrations/openai/normalize-session.mjs'
+  get_unsupported_summary as get_chatgpt_unsupported,
+  clear_unsupported_tracking as clear_chatgpt_unsupported
+} from '#libs-server/integrations/chatgpt/normalize-session.mjs'
 
 const log = debug('convert-external-sessions')
 
@@ -62,7 +62,7 @@ function setup_debug_logging({ verbose, debug_flag }) {
     // high-level provider namespaces
     'integrations:claude',
     'integrations:cursor',
-    'integrations:openai',
+    'integrations:chatgpt',
     'integrations:thread',
     'integrations:thread:create-from-session-provider',
     'integrations:thread:create-from-session'
@@ -128,7 +128,7 @@ function output_quiet(result, argv) {
  * Format error message with additional context and helpful hints
  * @param {string} error - Original error message
  * @param {string} sessionId - Session identifier
- * @param {string} provider - Provider name (claude, cursor, openai)
+ * @param {string} provider - Provider name (claude, cursor, chatgpt)
  * @returns {string} Enhanced error message
  */
 function format_error_message(error, sessionId, provider) {
@@ -140,8 +140,8 @@ function format_error_message(error, sessionId, provider) {
       return `${error}\n    Hint: Check if file ${sessionId}.jsonl exists in Claude projects directory`
     } else if (provider === 'cursor') {
       return `${error}\n    Hint: Verify session exists in Cursor database`
-    } else if (provider === 'openai') {
-      return `${error}\n    Hint: Check OpenAI authentication or conversation access`
+    } else if (provider === 'chatgpt') {
+      return `${error}\n    Hint: Check ChatGPT authentication or conversation access`
     }
   }
 
@@ -214,7 +214,7 @@ function output_session_list(sessions, argv) {
         }
         console.log(`   Code blocks: ${session.has_code_blocks ? 'Yes' : 'No'}`)
         console.log(`   Model: ${session.model_used}`)
-      } else if (argv.provider === 'openai') {
+      } else if (argv.provider === 'chatgpt') {
         console.log(`   Title: ${session.title}`)
         console.log(
           `   Created: ${session.created_at ? new Date(session.created_at).toLocaleString() : 'unknown'}`
@@ -265,7 +265,7 @@ function output_verbose(result, argv) {
     console.log(`Conversations found: ${result.conversations_found}`)
     console.log(`Valid conversations: ${result.valid_conversations}`)
     console.log(`Invalid conversations: ${result.invalid_conversations}`)
-  } else if (argv.provider === 'openai') {
+  } else if (argv.provider === 'chatgpt') {
     console.log(`Conversations found: ${result.conversations_found}`)
     console.log(`Conversations fetched: ${result.conversations_fetched}`)
     console.log(`Valid sessions: ${result.valid_sessions}`)
@@ -322,8 +322,8 @@ function output_verbose(result, argv) {
     unsupported = get_claude_unsupported()
   } else if (argv.provider === 'cursor') {
     unsupported = get_cursor_unsupported()
-  } else if (argv.provider === 'openai') {
-    unsupported = get_openai_unsupported()
+  } else if (argv.provider === 'chatgpt') {
+    unsupported = get_chatgpt_unsupported()
   }
 
   if (unsupported && Object.keys(unsupported).length > 0) {
@@ -368,8 +368,8 @@ export async function list_sessions(options = {}) {
       return await list_claude_sessions(options)
     } else if (provider === 'cursor') {
       return await list_cursor_conversations(options)
-    } else if (provider === 'openai') {
-      return await list_openai_conversations(options)
+    } else if (provider === 'chatgpt') {
+      return await list_chatgpt_conversations(options)
     } else {
       throw new Error(`Unsupported provider: ${provider}`)
     }
@@ -412,10 +412,10 @@ export async function import_sessions(options = {}) {
         ...options,
         filter_conversations
       })
-    } else if (provider === 'openai') {
-      const filter_conversations = build_openai_filter(options)
+    } else if (provider === 'chatgpt') {
+      const filter_conversations = build_chatgpt_filter(options)
 
-      return await import_openai_conversations_to_threads({
+      return await import_chatgpt_conversations_to_threads({
         ...options,
         filter_conversations
       })
@@ -460,7 +460,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai', 'pi'],
+              choices: ['claude', 'cursor', 'chatgpt', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {
@@ -473,16 +473,16 @@ const main = async () => {
               type: 'string',
               default: get_cursor_config().cursor_data_path
             })
-            .option('openai-bearer-token', {
-              describe: 'OpenAI JWT Bearer token for authentication',
+            .option('chatgpt-bearer-token', {
+              describe: 'ChatGPT JWT Bearer token for authentication',
               type: 'string'
             })
-            .option('openai-session-cookies', {
-              describe: 'OpenAI session cookies (JSON string)',
+            .option('chatgpt-session-cookies', {
+              describe: 'ChatGPT session cookies (JSON string)',
               type: 'string'
             })
-            .option('openai-device-id', {
-              describe: 'OpenAI device ID',
+            .option('chatgpt-device-id', {
+              describe: 'ChatGPT device ID',
               type: 'string'
             })
             .option('verbose', {
@@ -503,25 +503,25 @@ const main = async () => {
           // Clear unsupported tracking for fresh analysis
           clear_claude_unsupported()
           clear_cursor_unsupported()
-          clear_openai_unsupported()
+          clear_chatgpt_unsupported()
 
-          // Build OpenAI auth object if provider is OpenAI
-          let openai_auth = {}
-          if (argv.provider === 'openai') {
+          // Build ChatGPT auth object if provider is ChatGPT
+          let chatgpt_auth = {}
+          if (argv.provider === 'chatgpt') {
             if (
-              !argv.openaiBearerToken ||
-              !argv.openaiSessionCookies ||
-              !argv.openaiDeviceId
+              !argv.chatgptBearerToken ||
+              !argv.chatgptSessionCookies ||
+              !argv.chatgptDeviceId
             ) {
               throw new Error(
-                'OpenAI provider requires --openai-bearer-token, --openai-session-cookies, and --openai-device-id'
+                'ChatGPT provider requires --chatgpt-bearer-token, --chatgpt-session-cookies, and --chatgpt-device-id'
               )
             }
 
-            openai_auth = {
-              bearer_token: argv.openaiBearerToken,
-              session_cookies: JSON.parse(argv.openaiSessionCookies),
-              device_id: argv.openaiDeviceId
+            chatgpt_auth = {
+              bearer_token: argv.chatgptBearerToken,
+              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              device_id: argv.chatgptDeviceId
             }
           }
 
@@ -529,7 +529,7 @@ const main = async () => {
             provider: argv.provider,
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
-            openai_auth,
+            chatgpt_auth,
             verbose: argv.verbose
           })
 
@@ -544,7 +544,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai', 'pi'],
+              choices: ['claude', 'cursor', 'chatgpt', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {
@@ -557,16 +557,16 @@ const main = async () => {
               type: 'string',
               default: get_cursor_config().cursor_data_path
             })
-            .option('openai-bearer-token', {
-              describe: 'OpenAI JWT Bearer token for authentication',
+            .option('chatgpt-bearer-token', {
+              describe: 'ChatGPT JWT Bearer token for authentication',
               type: 'string'
             })
-            .option('openai-session-cookies', {
-              describe: 'OpenAI session cookies (JSON string)',
+            .option('chatgpt-session-cookies', {
+              describe: 'ChatGPT session cookies (JSON string)',
               type: 'string'
             })
-            .option('openai-device-id', {
-              describe: 'OpenAI device ID',
+            .option('chatgpt-device-id', {
+              describe: 'ChatGPT device ID',
               type: 'string'
             })
             .option('debug', {
@@ -602,7 +602,7 @@ const main = async () => {
             })
             .option('max-conversations', {
               describe:
-                'Maximum number of conversations to import (for OpenAI)',
+                'Maximum number of conversations to import (for ChatGPT)',
               type: 'number'
             })
             .option('dry-run', {
@@ -648,25 +648,25 @@ const main = async () => {
           // Clear unsupported tracking for fresh analysis
           clear_claude_unsupported()
           clear_cursor_unsupported()
-          clear_openai_unsupported()
+          clear_chatgpt_unsupported()
 
-          // Build OpenAI auth object if provider is OpenAI
-          let openai_auth = {}
-          if (argv.provider === 'openai') {
+          // Build ChatGPT auth object if provider is ChatGPT
+          let chatgpt_auth = {}
+          if (argv.provider === 'chatgpt') {
             if (
-              !argv.openaiBearerToken ||
-              !argv.openaiSessionCookies ||
-              !argv.openaiDeviceId
+              !argv.chatgptBearerToken ||
+              !argv.chatgptSessionCookies ||
+              !argv.chatgptDeviceId
             ) {
               throw new Error(
-                'OpenAI provider requires --openai-bearer-token, --openai-session-cookies, and --openai-device-id'
+                'ChatGPT provider requires --chatgpt-bearer-token, --chatgpt-session-cookies, and --chatgpt-device-id'
               )
             }
 
-            openai_auth = {
-              bearer_token: argv.openaiBearerToken,
-              session_cookies: JSON.parse(argv.openaiSessionCookies),
-              device_id: argv.openaiDeviceId
+            chatgpt_auth = {
+              bearer_token: argv.chatgptBearerToken,
+              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              device_id: argv.chatgptDeviceId
             }
           }
 
@@ -682,7 +682,7 @@ const main = async () => {
             provider: argv.provider,
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
-            openai_auth,
+            chatgpt_auth,
             user_base_directory: argv.userBaseDir,
             session_id: argv.sessionId,
             session_file: argv.sessionFile,
@@ -722,7 +722,7 @@ const main = async () => {
             .option('provider', {
               alias: 'p',
               describe: 'Session provider',
-              choices: ['claude', 'cursor', 'openai', 'pi'],
+              choices: ['claude', 'cursor', 'chatgpt', 'pi'],
               default: 'claude'
             })
             .option('claude-projects-dir', {
@@ -735,16 +735,16 @@ const main = async () => {
               type: 'string',
               default: get_cursor_config().cursor_data_path
             })
-            .option('openai-bearer-token', {
-              describe: 'OpenAI JWT Bearer token for authentication',
+            .option('chatgpt-bearer-token', {
+              describe: 'ChatGPT JWT Bearer token for authentication',
               type: 'string'
             })
-            .option('openai-session-cookies', {
-              describe: 'OpenAI session cookies (JSON string)',
+            .option('chatgpt-session-cookies', {
+              describe: 'ChatGPT session cookies (JSON string)',
               type: 'string'
             })
-            .option('openai-device-id', {
-              describe: 'OpenAI device ID',
+            .option('chatgpt-device-id', {
+              describe: 'ChatGPT device ID',
               type: 'string'
             })
             .option('verbose', {
@@ -762,23 +762,23 @@ const main = async () => {
         async (argv) => {
           setup_debug_logging({ verbose: argv.verbose, debug_flag: argv.debug })
 
-          // Build OpenAI auth object if provider is OpenAI
-          let openai_auth = {}
-          if (argv.provider === 'openai') {
+          // Build ChatGPT auth object if provider is ChatGPT
+          let chatgpt_auth = {}
+          if (argv.provider === 'chatgpt') {
             if (
-              !argv.openaiBearerToken ||
-              !argv.openaiSessionCookies ||
-              !argv.openaiDeviceId
+              !argv.chatgptBearerToken ||
+              !argv.chatgptSessionCookies ||
+              !argv.chatgptDeviceId
             ) {
               throw new Error(
-                'OpenAI provider requires --openai-bearer-token, --openai-session-cookies, and --openai-device-id'
+                'ChatGPT provider requires --chatgpt-bearer-token, --chatgpt-session-cookies, and --chatgpt-device-id'
               )
             }
 
-            openai_auth = {
-              bearer_token: argv.openaiBearerToken,
-              session_cookies: JSON.parse(argv.openaiSessionCookies),
-              device_id: argv.openaiDeviceId
+            chatgpt_auth = {
+              bearer_token: argv.chatgptBearerToken,
+              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              device_id: argv.chatgptDeviceId
             }
           }
 
@@ -788,7 +788,7 @@ const main = async () => {
             provider: argv.provider,
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
-            openai_auth,
+            chatgpt_auth,
             verbose: argv.verbose
           })
 
@@ -838,7 +838,7 @@ const main = async () => {
               )
               process.exit(1)
             }
-          } else if (argv.provider === 'openai') {
+          } else if (argv.provider === 'chatgpt') {
             console.log(`Valid sessions: ${result.valid_sessions}`)
             console.log(`Failed fetches: ${result.failed_fetches?.length || 0}`)
             console.log(
@@ -883,10 +883,10 @@ const main = async () => {
         'List all available Claude sessions'
       )
       .example('$0 list --provider cursor', 'List Cursor conversations')
-      .example('$0 list --provider openai --openai-bearer-token "..." \\', '')
+      .example('$0 list --provider chatgpt --chatgpt-bearer-token "..." \\', '')
       .example(
-        '  --openai-session-cookies "{...}" --openai-device-id "..."',
-        'List OpenAI conversations'
+        '  --chatgpt-session-cookies "{...}" --chatgpt-device-id "..."',
+        'List ChatGPT conversations'
       )
       .example(
         '$0 validate --provider cursor',
@@ -904,12 +904,12 @@ const main = async () => {
         '$0 import --provider claude --allow-updates',
         'Update existing Claude thread imports with latest data'
       )
-      .example('$0 import --provider openai --openai-bearer-token "..." \\', '')
+      .example('$0 import --provider chatgpt --chatgpt-bearer-token "..." \\', '')
       .example(
-        '  --openai-session-cookies "{...}" --openai-device-id "..." \\',
+        '  --chatgpt-session-cookies "{...}" --chatgpt-device-id "..." \\',
         ''
       )
-      .example('  --max-conversations 10', 'Import 10 OpenAI conversations')
+      .example('  --max-conversations 10', 'Import 10 ChatGPT conversations')
       .example('$0 import --provider claude \\', '')
       .example(
         '  --session-id "5ede99f2-c215-4e31-aa24-9cdfd5070feb"',

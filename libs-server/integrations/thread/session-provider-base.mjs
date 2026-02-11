@@ -2,7 +2,7 @@
  * Base SessionProvider Class
  *
  * Abstract base class for session providers that create threads from external sessions.
- * Each provider (Claude, Cursor, OpenAI, etc.) extends this class to implement
+ * Each provider (Claude, Cursor, ChatGPT, etc.) extends this class to implement
  * provider-specific logic while maintaining a consistent interface.
  */
 
@@ -100,7 +100,7 @@ export class SessionProviderBase {
    * Get inference provider name for this session provider
    * Must be implemented by subclasses
    *
-   * @returns {string} Inference provider name (e.g., 'anthropic', 'openai')
+   * @returns {string} Inference provider name (e.g., 'anthropic', 'chatgpt')
    */
   get_inference_provider() {
     throw new Error(

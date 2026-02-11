@@ -1,37 +1,37 @@
 /**
- * OpenAI Integration Configuration
+ * ChatGPT Integration Configuration
  *
- * Configuration specific to OpenAI integration functionality.
+ * Configuration specific to ChatGPT integration functionality.
  */
 
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
 /**
- * Namespace UUID for OpenAI conversation threads
+ * Namespace UUID for ChatGPT conversation threads
  */
-export const OPENAI_NAMESPACE = '550e8400-e29b-41d4-a716-446655440002'
+export const CHATGPT_NAMESPACE = '550e8400-e29b-41d4-a716-446655440002'
 
 /**
- * OpenAI API base URL
+ * ChatGPT API base URL
  */
-export const OPENAI_BASE_URL = 'https://chatgpt.com'
+export const CHATGPT_BASE_URL = 'https://chatgpt.com'
 
 /**
- * OpenAI API client version
+ * ChatGPT API client version
  */
-export const OPENAI_CLIENT_VERSION =
+export const CHATGPT_CLIENT_VERSION =
   'prod-e135cee8d6cdad6f2e914fb3648a8225a161cdf7'
 
 /**
- * OpenAI-specific default limits and constraints
+ * ChatGPT-specific default limits and constraints
  */
-export const OPENAI_DEFAULT_LIMITS = {
-  // OpenAI conversation limits
-  openai_max_conversations: 100,
-  openai_list_limit: 10,
+export const CHATGPT_DEFAULT_LIMITS = {
+  // ChatGPT conversation limits
+  chatgpt_max_conversations: 100,
+  chatgpt_list_limit: 10,
 
   // Rate limiting
-  openai_request_delay: 500, // ms between requests
+  chatgpt_request_delay: 500, // ms between requests
 
   // Session filtering
   max_entries_default: null,
@@ -39,9 +39,9 @@ export const OPENAI_DEFAULT_LIMITS = {
 }
 
 /**
- * OpenAI-specific default options
+ * ChatGPT-specific default options
  */
-export const OPENAI_DEFAULT_OPTIONS = {
+export const CHATGPT_DEFAULT_OPTIONS = {
   // Import options
   dry_run: false,
   verbose: false,
@@ -56,40 +56,40 @@ export const OPENAI_DEFAULT_OPTIONS = {
 }
 
 /**
- * Get default configuration for OpenAI integration
+ * Get default configuration for ChatGPT integration
  * @param {Object} overrides - Override specific options
  * @returns {Object} Configuration object
  */
-export function get_openai_config(overrides = {}) {
+export function get_chatgpt_config(overrides = {}) {
   return {
-    max_conversations: OPENAI_DEFAULT_LIMITS.openai_max_conversations,
+    max_conversations: CHATGPT_DEFAULT_LIMITS.chatgpt_max_conversations,
     user_base_directory: get_user_base_directory(),
-    ...OPENAI_DEFAULT_OPTIONS,
+    ...CHATGPT_DEFAULT_OPTIONS,
     ...overrides
   }
 }
 
 /**
- * Validate required authentication for OpenAI
+ * Validate required authentication for ChatGPT
  * @param {Object} auth - Authentication object
  * @throws {Error} If required auth fields are missing
  */
-export function validate_openai_auth(auth) {
+export function validate_chatgpt_auth(auth) {
   const required_fields = ['bearer_token', 'session_cookies', 'device_id']
 
   for (const field of required_fields) {
     if (!auth[field]) {
-      throw new Error(`Missing required OpenAI authentication field: ${field}`)
+      throw new Error(`Missing required ChatGPT authentication field: ${field}`)
     }
   }
 }
 
 /**
- * Build filter function for OpenAI conversations
+ * Build filter function for ChatGPT conversations
  * @param {Object} options - Filter options
  * @returns {Function|null} Filter function or null if no filtering needed
  */
-export function build_openai_filter(options = {}) {
+export function build_chatgpt_filter(options = {}) {
   const { session_id, from_date, to_date, max_entries } = options
 
   if (!session_id && !from_date && !to_date && !max_entries) {
@@ -106,7 +106,7 @@ export function build_openai_filter(options = {}) {
     if (from_date || to_date) {
       const conv_start = conversation.create_time
       if (conv_start) {
-        const start_date = new Date(conv_start * 1000) // OpenAI uses Unix timestamp
+        const start_date = new Date(conv_start * 1000) // ChatGPT uses Unix timestamp
         if (from_date && start_date < new Date(from_date)) {
           return false
         }
@@ -121,11 +121,11 @@ export function build_openai_filter(options = {}) {
 }
 
 export default {
-  OPENAI_BASE_URL,
-  OPENAI_CLIENT_VERSION,
-  OPENAI_DEFAULT_LIMITS,
-  OPENAI_DEFAULT_OPTIONS,
-  get_openai_config,
-  validate_openai_auth,
-  build_openai_filter
+  CHATGPT_BASE_URL,
+  CHATGPT_CLIENT_VERSION,
+  CHATGPT_DEFAULT_LIMITS,
+  CHATGPT_DEFAULT_OPTIONS,
+  get_chatgpt_config,
+  validate_chatgpt_auth,
+  build_chatgpt_filter
 }

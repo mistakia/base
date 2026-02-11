@@ -18,7 +18,7 @@ import {
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
 import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-session-provider.mjs'
-import { OpenAISessionProvider } from '#libs-server/integrations/openai/openai-session-provider.mjs'
+import { ChatGPTSessionProvider } from '#libs-server/integrations/chatgpt/chatgpt-session-provider.mjs'
 import { PiSessionProvider } from '#libs-server/integrations/pi/pi-session-provider.mjs'
 import { is_agent_session } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
 import { merge_and_sequence_agent_sessions } from '#libs-server/integrations/claude/merge-agent-sessions.mjs'
@@ -62,7 +62,7 @@ const calculate_success_rate = ({
 const SESSION_PROVIDER_MAP = {
   claude: ClaudeSessionProvider,
   cursor: CursorSessionProvider,
-  openai: OpenAISessionProvider,
+  chatgpt: ChatGPTSessionProvider,
   pi: PiSessionProvider
 }
 

@@ -251,7 +251,7 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
-    column_values: ['base', 'claude', 'cursor', 'openai', 'pi'],
+    column_values: ['base', 'claude', 'cursor', 'chatgpt', 'pi'],
     size: 40,
     minSize: 40,
     maxSize: 80

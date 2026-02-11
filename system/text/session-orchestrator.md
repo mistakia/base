@@ -27,7 +27,7 @@ Base is a session orchestrator and record keeper. It does not run sessions inter
 
 Base is designed to be agnostic across three axes:
 
-- **Session runner agnostic**: Interface with any agentic session runner (Claude Code, Cursor, OpenAI, Pi, or future runners). Adding a new runner requires only a session provider adapter.
+- **Session runner agnostic**: Interface with any agentic session runner (Claude Code, Cursor, ChatGPT, Pi, or future runners). Adding a new runner requires only a session provider adapter.
 - **Model agnostic**: Sessions can use any inference model. Base tracks model usage in thread metadata without coupling to any specific model or API.
 - **Execution environment agnostic**: Sessions can run on the host machine, in Docker containers, or in cloud sandbox providers. Base manages the session lifecycle regardless of where it runs.
 
@@ -37,7 +37,7 @@ Base manages sessions through two mechanisms:
 
 1. **Spawned Sessions**: Base launches session runner processes (e.g., Claude Code CLI) via the command queue, with hooks that report session events back to Base for thread creation and tracking.
 
-2. **Imported Sessions**: Sessions from external tools (Claude, Cursor, OpenAI, Pi) are imported after the fact through the session provider pipeline, normalized to the standard thread format.
+2. **Imported Sessions**: Sessions from external tools (Claude, Cursor, ChatGPT, Pi) are imported after the fact through the session provider pipeline, normalized to the standard thread format.
 
 In both cases, Base handles orchestration -- scheduling, context handoff, metadata tracking, cost calculation, and analysis -- while the session runner handles the actual interaction loop.
 
@@ -55,7 +55,7 @@ A session provider is an adapter that bridges a specific session runner to Base'
 |----------|---------------|--------|
 | `claude` | Claude Code CLI | JSONL transcript files |
 | `cursor` | Cursor IDE | SQLite database |
-| `openai` | ChatGPT | JSON data export |
+| `chatgpt` | ChatGPT | JSON data export |
 | `pi` | Pi AI | JSONL with tree structure |
 
 New providers can be added by implementing `SessionProviderBase` and registering in the provider map. See the development guidelines in [[sys:system/text/execution-threads.md]].
@@ -66,7 +66,7 @@ All sessions produce thread metadata with a unified `source` object:
 
 ```yaml
 source:
-  provider: claude | pi | cursor | openai
+  provider: claude | pi | cursor | chatgpt
   session_id: string
   session_path: string
   imported_at: string

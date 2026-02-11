@@ -51,7 +51,7 @@ function get_provider_info(thread) {
     let derived_provider = 'unknown'
 
     if (model.includes('claude')) derived_provider = 'claude'
-    else if (model.includes('gpt')) derived_provider = 'openai'
+    else if (model.includes('gpt')) derived_provider = 'chatgpt'
     else if (model.includes('cursor')) derived_provider = 'cursor'
 
     return { source_provider: derived_provider }

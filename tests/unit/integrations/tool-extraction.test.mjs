@@ -14,7 +14,7 @@ import {
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 
 import { normalize_claude_session } from '#libs-server/integrations/claude/normalize-session.mjs'
-import { normalize_openai_conversation } from '#libs-server/integrations/openai/normalize-session.mjs'
+import { normalize_chatgpt_conversation } from '#libs-server/integrations/chatgpt/normalize-session.mjs'
 import { normalize_cursor_conversation } from '#libs-server/integrations/cursor/normalize-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
@@ -417,9 +417,9 @@ describe('Tool Extraction Integration Tests', () => {
       })
     })
 
-    describe('OpenAI Provider', () => {
+    describe('ChatGPT Provider', () => {
       it('should extract tool_invocation content as tool_call entries', () => {
-        const openai_conversation = {
+        const chatgpt_conversation = {
           id: 'test-conversation',
           mapping: {
             root: {
@@ -442,7 +442,7 @@ describe('Tool Extraction Integration Tests', () => {
           }
         }
 
-        const result = normalize_openai_conversation(openai_conversation)
+        const result = normalize_chatgpt_conversation(chatgpt_conversation)
 
         const tool_calls = result.messages.filter(
           (msg) => msg.type === 'tool_call'
@@ -456,7 +456,7 @@ describe('Tool Extraction Integration Tests', () => {
       })
 
       it('should extract execution_output content as tool_result entries', () => {
-        const openai_conversation = {
+        const chatgpt_conversation = {
           id: 'test-conversation',
           mapping: {
             root: {
@@ -481,7 +481,7 @@ describe('Tool Extraction Integration Tests', () => {
           }
         }
 
-        const result = normalize_openai_conversation(openai_conversation)
+        const result = normalize_chatgpt_conversation(chatgpt_conversation)
 
         const tool_results = result.messages.filter(
           (msg) => msg.type === 'tool_result'

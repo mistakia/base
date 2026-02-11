@@ -1,43 +1,43 @@
 /**
- * OpenAI Integration - Clean Provider Architecture
+ * ChatGPT Integration - Clean Provider Architecture
  *
  * Streamlined exports focused on the new session provider pattern.
- * No backward compatibility - use OpenAISessionProvider directly.
+ * No backward compatibility - use ChatGPTSessionProvider directly.
  */
 
 import debug from 'debug'
-import { OpenAISessionProvider } from './openai-session-provider.mjs'
+import { ChatGPTSessionProvider } from './chatgpt-session-provider.mjs'
 import {
-  get_openai_config,
-  validate_openai_auth,
-  OPENAI_DEFAULT_LIMITS
-} from './openai-config.mjs'
-import { create_openai_client } from './api/index.mjs'
+  get_chatgpt_config,
+  validate_chatgpt_auth,
+  CHATGPT_DEFAULT_LIMITS
+} from './chatgpt-config.mjs'
+import { create_chatgpt_client } from './api/index.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
-const log = debug('integrations:openai')
+const log = debug('integrations:chatgpt')
 
 // Export the session provider class
-export { OpenAISessionProvider }
+export { ChatGPTSessionProvider }
 
 // Export configuration helpers
-export { get_openai_config, validate_openai_auth, OPENAI_DEFAULT_LIMITS }
+export { get_chatgpt_config, validate_chatgpt_auth, CHATGPT_DEFAULT_LIMITS }
 
 // Export API client
-export { create_openai_client }
+export { create_chatgpt_client }
 
 /**
- * Import OpenAI conversations to Base threads
+ * Import ChatGPT conversations to Base threads
  */
-export const import_openai_conversations_to_threads = async (options = {}) => {
-  const config = get_openai_config(options)
-  const provider = new OpenAISessionProvider()
+export const import_chatgpt_conversations_to_threads = async (options = {}) => {
+  const config = get_chatgpt_config(options)
+  const provider = new ChatGPTSessionProvider()
 
   try {
-    log('Starting OpenAI conversation import')
+    log('Starting ChatGPT conversation import')
 
     // Find conversations using provider
-    const openai_conversations = await provider.find_sessions({
+    const chatgpt_conversations = await provider.find_sessions({
       auth_options: {
         bearer_token: config.bearer_token,
         session_cookies: config.session_cookies,
@@ -47,11 +47,11 @@ export const import_openai_conversations_to_threads = async (options = {}) => {
       max_conversations: config.max_conversations
     })
 
-    log(`Found ${openai_conversations.length} OpenAI conversations`)
+    log(`Found ${chatgpt_conversations.length} ChatGPT conversations`)
 
     // Validate conversations
     const { valid: valid_conversations, invalid: invalid_conversations } =
-      provider.filter_valid_sessions(openai_conversations)
+      provider.filter_valid_sessions(chatgpt_conversations)
     log(
       `Validation: ${valid_conversations.length} valid, ${invalid_conversations.length} invalid`
     )
@@ -59,7 +59,7 @@ export const import_openai_conversations_to_threads = async (options = {}) => {
     if (config.dry_run) {
       return {
         dry_run: true,
-        conversations_found: openai_conversations.length,
+        conversations_found: chatgpt_conversations.length,
         valid_conversations: valid_conversations.length,
         invalid_conversations: invalid_conversations.length
       }
@@ -67,14 +67,14 @@ export const import_openai_conversations_to_threads = async (options = {}) => {
 
     // Create threads using unified provider system
     const results = await create_threads_from_session_provider({
-      provider_name: 'openai',
+      provider_name: 'chatgpt',
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
-      provider_options: { openai_conversations: valid_conversations }
+      provider_options: { chatgpt_conversations: valid_conversations }
     })
 
     return {
-      conversations_found: openai_conversations.length,
+      conversations_found: chatgpt_conversations.length,
       valid_conversations: valid_conversations.length,
       invalid_conversations: invalid_conversations.length,
       threads_created: results.created.length,
@@ -83,20 +83,20 @@ export const import_openai_conversations_to_threads = async (options = {}) => {
       results
     }
   } catch (error) {
-    log(`OpenAI import failed: ${error.message}`)
+    log(`ChatGPT import failed: ${error.message}`)
     throw error
   }
 }
 
 /**
- * List OpenAI conversations
+ * List ChatGPT conversations
  */
-export const list_openai_conversations = async (options = {}) => {
-  const config = get_openai_config({
-    max_conversations: OPENAI_DEFAULT_LIMITS.openai_list_limit,
+export const list_chatgpt_conversations = async (options = {}) => {
+  const config = get_chatgpt_config({
+    max_conversations: CHATGPT_DEFAULT_LIMITS.chatgpt_list_limit,
     ...options
   })
-  const provider = new OpenAISessionProvider()
+  const provider = new ChatGPTSessionProvider()
 
   try {
     const conversations = await provider.find_sessions({
@@ -120,28 +120,28 @@ export const list_openai_conversations = async (options = {}) => {
       gizmo_id: conversation.gizmo_id
     }))
   } catch (error) {
-    log(`Failed to list OpenAI conversations: ${error.message}`)
+    log(`Failed to list ChatGPT conversations: ${error.message}`)
     throw error
   }
 }
 
 /**
- * Get OpenAI conversation by ID
+ * Get ChatGPT conversation by ID
  */
-export const get_openai_conversation = async (
+export const get_chatgpt_conversation = async (
   conversation_id,
   auth_options
 ) => {
-  const config = get_openai_config(auth_options)
+  const config = get_chatgpt_config(auth_options)
 
   try {
-    validate_openai_auth({
+    validate_chatgpt_auth({
       bearer_token: config.bearer_token,
       session_cookies: config.session_cookies,
       device_id: config.device_id
     })
 
-    const client = create_openai_client({
+    const client = create_chatgpt_client({
       bearer_token: config.bearer_token,
       session_cookies: config.session_cookies,
       device_id: config.device_id,
@@ -151,26 +151,26 @@ export const get_openai_conversation = async (
     return await client.get_conversation(conversation_id)
   } catch (error) {
     log(
-      `Failed to get OpenAI conversation ${conversation_id}: ${error.message}`
+      `Failed to get ChatGPT conversation ${conversation_id}: ${error.message}`
     )
     throw error
   }
 }
 
 /**
- * Validate OpenAI authentication
+ * Validate ChatGPT authentication
  */
-export const validate_openai_auth_endpoint = async (auth_options) => {
+export const validate_chatgpt_auth_endpoint = async (auth_options) => {
   try {
-    const config = get_openai_config(auth_options)
+    const config = get_chatgpt_config(auth_options)
 
-    validate_openai_auth({
+    validate_chatgpt_auth({
       bearer_token: config.bearer_token,
       session_cookies: config.session_cookies,
       device_id: config.device_id
     })
 
-    const client = create_openai_client({
+    const client = create_chatgpt_client({
       bearer_token: config.bearer_token,
       session_cookies: config.session_cookies,
       device_id: config.device_id,
