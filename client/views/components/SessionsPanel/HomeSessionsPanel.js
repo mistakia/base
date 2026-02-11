@@ -84,8 +84,7 @@ const normalize_thread = (thread) => {
     message_count: thread.message_count,
     duration_minutes,
     total_tokens:
-      thread.total_tokens ||
-      thread.source?.provider_metadata?.total_tokens,
+      thread.total_tokens || thread.source?.provider_metadata?.total_tokens,
     latest_timeline_event: thread.latest_timeline_event || null,
     user_public_key: thread.user_public_key || null,
     show_actions

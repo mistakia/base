@@ -69,11 +69,9 @@ const extract_source_info = (metadata) => {
   if (!source) return null
 
   const session_provider = source.get?.('provider') || source.provider
-  const session_id =
-    source.session_id || source.get?.('session_id')
+  const session_id = source.session_id || source.get?.('session_id')
   const provider_metadata =
-    source.provider_metadata ||
-    source.get?.('provider_metadata')
+    source.provider_metadata || source.get?.('provider_metadata')
   const working_directory =
     provider_metadata?.working_directory ||
     provider_metadata?.get?.('working_directory')
@@ -550,9 +548,7 @@ const SourceChips = ({ source_info, thread_state }) => {
         <>
           <span className='chip'>{source_info.provider}</span>
           {source_info.working_directory && (
-            <span className='chip'>
-              {source_info.working_directory}
-            </span>
+            <span className='chip'>{source_info.working_directory}</span>
           )}
         </>
       )}

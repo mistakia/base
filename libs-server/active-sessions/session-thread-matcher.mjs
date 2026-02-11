@@ -61,10 +61,7 @@ export const find_thread_for_session = async ({
 
         // Primary match: session_id
         const source = metadata.source
-        if (
-          session_id &&
-          source?.session_id === session_id
-        ) {
+        if (session_id && source?.session_id === session_id) {
           log(`Found thread ${thread_id} matching session_id ${session_id}`)
           return thread_id
         }
@@ -72,8 +69,7 @@ export const find_thread_for_session = async ({
         // Secondary match: transcript_path (file_source)
         if (
           transcript_path &&
-          source?.provider_metadata?.file_source ===
-            transcript_path
+          source?.provider_metadata?.file_source === transcript_path
         ) {
           log(
             `Found thread ${thread_id} matching transcript_path ${transcript_path}`

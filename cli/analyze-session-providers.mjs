@@ -938,8 +938,7 @@ const analyze_session_providers_main = async () => {
         const thread_metadata = JSON.parse(
           fs.readFileSync(thread_metadata_file_path, 'utf8')
         )
-        session_provider_name =
-          thread_metadata.source?.provider || 'unknown'
+        session_provider_name = thread_metadata.source?.provider || 'unknown'
       }
 
       // Also check session_provider in the normalized data

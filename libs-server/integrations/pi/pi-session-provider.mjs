@@ -22,8 +22,8 @@ export class PiSessionProvider extends SessionProviderBase {
   /**
    * Stream Pi sessions one at a time
    */
-  async *stream_sessions() {
-    throw new Error('Pi session streaming not yet implemented')
+  async *stream_sessions(options = {}) {
+    yield* super.stream_sessions(options)
   }
 
   /**

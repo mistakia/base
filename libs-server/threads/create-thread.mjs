@@ -153,8 +153,7 @@ export function build_thread_metadata({
 }) {
   const now = new Date().toISOString()
 
-  const models_array =
-    models && Array.isArray(models) ? models : []
+  const models_array = models && Array.isArray(models) ? models : []
 
   const metadata = {
     thread_id,

@@ -269,9 +269,7 @@ async function _start_working_tree_watcher(repo_paths, on_git_status_change) {
         log('Working tree watcher error: %s', error.message)
       })
 
-    await new Promise((resolve) =>
-      working_tree_watcher.on('ready', resolve)
-    )
+    await new Promise((resolve) => working_tree_watcher.on('ready', resolve))
     log('Working tree watcher started for %d repositories', repo_paths.length)
   } catch (error) {
     log('Failed to start working tree watcher: %s', error.message)

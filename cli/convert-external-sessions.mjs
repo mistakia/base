@@ -904,7 +904,10 @@ const main = async () => {
         '$0 import --provider claude --allow-updates',
         'Update existing Claude thread imports with latest data'
       )
-      .example('$0 import --provider chatgpt --chatgpt-bearer-token "..." \\', '')
+      .example(
+        '$0 import --provider chatgpt --chatgpt-bearer-token "..." \\',
+        ''
+      )
       .example(
         '  --chatgpt-session-cookies "{...}" --chatgpt-device-id "..." \\',
         ''

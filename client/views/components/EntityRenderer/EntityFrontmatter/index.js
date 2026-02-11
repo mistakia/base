@@ -292,7 +292,11 @@ const ObservationsSection = ({ observations, visible_count }) => {
                 size='small'
                 disableRipple
                 onClick={() => set_is_expanded((prev) => !prev)}
-                aria-label={is_expanded ? 'Show fewer observations' : 'Show more observations'}>
+                aria-label={
+                  is_expanded
+                    ? 'Show fewer observations'
+                    : 'Show more observations'
+                }>
                 {is_expanded ? (
                   <>
                     <ExpandLessIcon sx={{ fontSize: 16, mr: 0.5 }} />

@@ -160,8 +160,7 @@ export const update_active_session = async ({
     if (duration_minutes !== undefined)
       session.duration_minutes = duration_minutes
     if (total_tokens !== undefined) session.total_tokens = total_tokens
-    if (source_provider !== undefined)
-      session.source_provider = source_provider
+    if (source_provider !== undefined) session.source_provider = source_provider
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)

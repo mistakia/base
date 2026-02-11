@@ -69,7 +69,9 @@ export const translate_to_container_path = (host_path) => {
 
   // Replace host user-base prefix with container user-base prefix
   if (host_path.startsWith(user_base_directory)) {
-    return CONTAINER_USER_BASE_PATH + host_path.slice(user_base_directory.length)
+    return (
+      CONTAINER_USER_BASE_PATH + host_path.slice(user_base_directory.length)
+    )
   }
 
   // Path is not within user-base; return as-is (best effort)

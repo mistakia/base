@@ -51,12 +51,12 @@ A session provider is an adapter that bridges a specific session runner to Base'
 
 ### Current Providers
 
-| Provider | Session Runner | Format |
-|----------|---------------|--------|
-| `claude` | Claude Code CLI | JSONL transcript files |
-| `cursor` | Cursor IDE | SQLite database |
-| `chatgpt` | ChatGPT | JSON data export |
-| `pi` | Pi AI | JSONL with tree structure |
+| Provider  | Session Runner  | Format                    |
+| --------- | --------------- | ------------------------- |
+| `claude`  | Claude Code CLI | JSONL transcript files    |
+| `cursor`  | Cursor IDE      | SQLite database           |
+| `chatgpt` | ChatGPT         | JSON data export          |
+| `pi`      | Pi AI           | JSONL with tree structure |
 
 New providers can be added by implementing `SessionProviderBase` and registering in the provider map. See the development guidelines in [[sys:system/text/execution-threads.md]].
 
@@ -96,11 +96,11 @@ The `source` object replaces the previous `session_provider` and `external_sessi
 
 ## Key Components
 
-| Component | Path | Purpose |
-|-----------|------|---------|
-| Session providers | `libs-server/integrations/{provider}/` | Provider-specific import logic |
-| Provider base class | `libs-server/integrations/thread/session-provider-base.mjs` | Abstract base for all providers |
-| Thread creation | `libs-server/integrations/thread/create-from-session.mjs` | Builds threads from normalized sessions |
-| Import CLI | `cli/convert-external-sessions.mjs` | User-facing session import tool |
-| Active session tracking | `libs-server/active-sessions/` | Redis-backed tracking of running sessions |
-| Thread cost calculator | `libs-server/utils/thread-cost-calculator.mjs` | Token-based cost calculation |
+| Component               | Path                                                        | Purpose                                   |
+| ----------------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| Session providers       | `libs-server/integrations/{provider}/`                      | Provider-specific import logic            |
+| Provider base class     | `libs-server/integrations/thread/session-provider-base.mjs` | Abstract base for all providers           |
+| Thread creation         | `libs-server/integrations/thread/create-from-session.mjs`   | Builds threads from normalized sessions   |
+| Import CLI              | `cli/convert-external-sessions.mjs`                         | User-facing session import tool           |
+| Active session tracking | `libs-server/active-sessions/`                              | Redis-backed tracking of running sessions |
+| Thread cost calculator  | `libs-server/utils/thread-cost-calculator.mjs`              | Token-based cost calculation              |
