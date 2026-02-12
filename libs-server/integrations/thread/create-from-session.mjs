@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs/promises'
+import { createWriteStream } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
 import glob_pkg from 'glob'
@@ -218,22 +219,67 @@ const save_raw_session_data = async ({
   }
 
   // Always save the normalized session for comparison
+  // Use streaming writes to avoid building a massive string for large sessions
   const normalized_file = path.join(raw_data_dir, 'normalized-session.json')
-  await fs.writeFile(
-    normalized_file,
-    JSON.stringify(normalized_session, null, 2)
-  )
+  await stream_write_normalized_session(normalized_file, normalized_session)
   log_debug(`Saved normalized session data to ${normalized_file}`)
 }
 
+/**
+ * Write normalized session JSON using streaming to avoid building one massive
+ * string for sessions with thousands of messages. Writes messages one at a time.
+ */
+const stream_write_normalized_session = (file_path, session) => {
+  return new Promise((resolve, reject) => {
+    const ws = createWriteStream(file_path)
+    ws.on('error', reject)
+    ws.on('finish', resolve)
+
+    const { messages, ...rest } = session
+
+    // Write non-message properties first (these are small)
+    ws.write('{\n')
+    const rest_entries = Object.entries(rest)
+    for (let i = 0; i < rest_entries.length; i++) {
+      const [key, value] = rest_entries[i]
+      const formatted = JSON.stringify(value, null, 2).replace(/\n/g, '\n  ')
+      ws.write(`  ${JSON.stringify(key)}: ${formatted},\n`)
+    }
+
+    // Write messages array incrementally - one message at a time
+    ws.write('  "messages": [')
+    if (messages && messages.length > 0) {
+      for (let i = 0; i < messages.length; i++) {
+        ws.write(i > 0 ? ',\n    ' : '\n    ')
+        ws.write(JSON.stringify(messages[i]))
+      }
+      ws.write('\n  ')
+    }
+    ws.write(']\n}\n')
+    ws.end()
+  })
+}
+
 const save_claude_raw_data = async ({ raw_data_dir, raw_data, session_id }) => {
-  // Save original JSONL entries if available
+  // Save original JSONL entries if available using streaming writes
+  // to avoid holding multiple copies in memory for large sessions
   if (raw_data.entries && Array.isArray(raw_data.entries)) {
-    const jsonl_content = raw_data.entries
-      .map((entry) => JSON.stringify(entry))
-      .join('\n')
     const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
-    await fs.writeFile(jsonl_file, jsonl_content)
+    await new Promise((resolve, reject) => {
+      const write_stream = createWriteStream(jsonl_file)
+      write_stream.on('error', reject)
+      write_stream.on('finish', resolve)
+      for (let i = 0; i < raw_data.entries.length; i++) {
+        const line = JSON.stringify(raw_data.entries[i])
+        // Release entry after serializing to progressively free memory
+        // for large sessions (entries already normalized, no longer needed)
+        raw_data.entries[i] = null
+        write_stream.write(line + '\n')
+      }
+      write_stream.end()
+    })
+    // Release the entries array itself
+    raw_data.entries = null
     log_debug(`Saved Claude JSONL data to ${jsonl_file}`)
   }
 

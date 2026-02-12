@@ -165,6 +165,9 @@ export const create_threads_from_session_provider = async ({
           `Merged ${raw_session.agent_sessions.length} agents into session ${raw_session.session_id}`
         )
       }
+
+      // Release agent session data after merge to help GC
+      raw_session.agent_sessions = null
     }
 
     try {
@@ -195,6 +198,9 @@ export const create_threads_from_session_provider = async ({
       })
       sessions_processed++
     }
+
+    // Release references to help GC reclaim memory before next iteration
+    session_to_process = null
   }
 
   if (sessions_processed === 0) {
@@ -284,23 +290,33 @@ const create_new_session_thread = async ({
   session_id
 }) => {
   // Normalize session just-in-time
-  const normalized_session = session_provider.normalize_session(raw_session)
+  let normalized_session = session_provider.normalize_session(raw_session)
 
-  // Create thread with direct access to raw data
+  // Extract models before releasing raw session reference
+  const models = await session_provider.get_models_from_session(raw_session)
+
+  // Create thread - writes raw data to disk
+  // (save_claude_raw_data progressively nulls entries during write)
   const thread_result = await create_thread_from_session({
     normalized_session,
     user_public_key,
     user_base_directory,
     inference_provider: session_provider.get_inference_provider(),
-    models: await session_provider.get_models_from_session(raw_session),
-    raw_session_data: raw_session // Direct access, no mapping needed
+    models,
+    raw_session_data: raw_session
   })
 
-  // Build timeline entries
+  // Raw entries were nulled during write, release session wrapper
+  raw_session = null
+
+  // Build timeline entries (uses normalized_session only)
   const timeline_result = await build_timeline_from_session(
     normalized_session,
     thread_result
   )
+
+  // Release large objects to help GC
+  normalized_session = null
 
   return {
     status: 'created',
@@ -325,7 +341,7 @@ const update_existing_session_thread = async ({
   session_id
 }) => {
   // Normalize session just-in-time
-  const normalized_session = session_provider.normalize_session(raw_session)
+  let normalized_session = session_provider.normalize_session(raw_session)
 
   // Update existing thread
   const update_result = await update_existing_thread(normalized_session, {
@@ -333,6 +349,9 @@ const update_existing_session_thread = async ({
     thread_dir,
     raw_session_data: raw_session
   })
+
+  // Release large objects to help GC
+  normalized_session = null
 
   return {
     status: 'updated',

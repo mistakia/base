@@ -1,5 +1,8 @@
 import debug from 'debug'
 import path from 'path'
+import crypto from 'crypto'
+import { createReadStream } from 'fs'
+import fs from 'fs/promises'
 
 import {
   find_orphaned_tool_calls,
@@ -73,13 +76,11 @@ export const build_timeline_from_session = async (
     // Validate and report tool interaction quality
     const tool_validation = validate_tool_interactions(final_timeline)
 
-    // Check if timeline actually changed before writing
-    const existing_timeline_content =
-      await read_existing_timeline(timeline_path)
-    const timeline_changed =
-      !existing_timeline_content ||
-      JSON.stringify(existing_timeline_content) !==
-        JSON.stringify(final_timeline)
+    // Check if timeline actually changed before writing using hash comparison
+    // to avoid allocating two massive JSON strings in memory
+    const existing_hash = await hash_file_streaming(timeline_path)
+    const new_hash = hash_timeline_entries(final_timeline)
+    const timeline_changed = existing_hash !== new_hash
 
     if (timeline_changed) {
       // Write timeline to file only if it changed (using JSONL format)
@@ -128,7 +129,6 @@ export const build_timeline_from_session = async (
     return {
       timeline_path,
       entry_count: final_timeline.length,
-      timeline_entries: final_timeline,
       timeline_modified: timeline_changed,
       new_entries_added: update_existing
         ? final_timeline.length -
@@ -536,6 +536,43 @@ export const create_timeline_summary = (timeline_entries) => {
     state_change_count: entry_types.state_change || 0,
     error_count: entry_types.error || 0
   }
+}
+
+/**
+ * Hash a file by streaming raw bytes through SHA-256.
+ * Returns null if the file does not exist.
+ */
+const hash_file_streaming = async (file_path) => {
+  try {
+    await fs.access(file_path)
+  } catch {
+    return null
+  }
+
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256')
+    const stream = createReadStream(file_path)
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+    stream.on('error', reject)
+  })
+}
+
+/**
+ * Hash timeline entries incrementally without building one massive string.
+ * Produces the same hash as hashing the JSONL file that write_timeline_jsonl
+ * would produce (JSON.stringify(entry) + '\n' per entry).
+ *
+ * Note: relies on JSON.stringify producing deterministic key order for
+ * same-shaped objects (guaranteed in V8). A mismatch only causes a harmless
+ * re-write.
+ */
+const hash_timeline_entries = (entries) => {
+  const hash = crypto.createHash('sha256')
+  for (const entry of entries) {
+    hash.update(JSON.stringify(entry) + '\n')
+  }
+  return hash.digest('hex')
 }
 
 /**

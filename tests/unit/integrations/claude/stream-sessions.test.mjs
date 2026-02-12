@@ -6,7 +6,8 @@ import os from 'os'
 
 import {
   extract_claude_session_metadata,
-  stream_claude_sessions
+  stream_claude_sessions,
+  get_session_file_timestamp
 } from '#libs-server/integrations/claude/parse-jsonl.mjs'
 import {
   iterate_claude_session_files,
@@ -428,6 +429,167 @@ describe('Claude Session Streaming', function () {
 
       expect(sessions.length).to.equal(1)
       expect(sessions[0].session_id).to.equal('keep-session')
+    })
+  })
+
+  describe('get_session_file_timestamp', () => {
+    it('should extract timestamp from first non-summary entry', async () => {
+      const session_file = path.join(project_dir, 'ts-extract-test.jsonl')
+      const entries = [
+        JSON.stringify({
+          type: 'summary',
+          summary: 'Session summary'
+        }),
+        JSON.stringify({
+          uuid: 'entry-1',
+          timestamp: '2025-06-15T10:30:00.000Z',
+          type: 'user',
+          message: { content: 'Hello' }
+        }),
+        JSON.stringify({
+          uuid: 'entry-2',
+          timestamp: '2025-06-15T10:31:00.000Z',
+          type: 'assistant',
+          message: { content: 'Hi' }
+        })
+      ]
+      await fs.writeFile(session_file, entries.join('\n'))
+
+      const timestamp = await get_session_file_timestamp({
+        file_path: session_file
+      })
+
+      expect(timestamp).to.equal('2025-06-15T10:30:00.000Z')
+    })
+
+    it('should return null for file with no timestamps', async () => {
+      const session_file = path.join(project_dir, 'no-ts-test.jsonl')
+      await fs.writeFile(
+        session_file,
+        JSON.stringify({ type: 'summary', summary: 'No timestamps here' })
+      )
+
+      const timestamp = await get_session_file_timestamp({
+        file_path: session_file
+      })
+
+      expect(timestamp).to.be.null
+    })
+
+    it('should skip snapshot entries', async () => {
+      const session_file = path.join(project_dir, 'snapshot-skip-test.jsonl')
+      const entries = [
+        JSON.stringify({ type: 'snapshot', data: {} }),
+        JSON.stringify({
+          uuid: 'entry-1',
+          timestamp: '2025-08-01T12:00:00.000Z',
+          type: 'user',
+          message: { content: 'Hello' }
+        })
+      ]
+      await fs.writeFile(session_file, entries.join('\n'))
+
+      const timestamp = await get_session_file_timestamp({
+        file_path: session_file
+      })
+
+      expect(timestamp).to.equal('2025-08-01T12:00:00.000Z')
+    })
+  })
+
+  describe('stream_claude_sessions with date filtering', () => {
+    it('should skip sessions outside from_date range', async () => {
+      const date_test_dir = path.join(test_dir, 'date-filter-test')
+      const date_project_dir = path.join(
+        date_test_dir,
+        'projects',
+        '-Users-date'
+      )
+      await fs.mkdir(date_project_dir, { recursive: true })
+
+      // Create old session (January 2025)
+      await fs.writeFile(
+        path.join(date_project_dir, 'old-session.jsonl'),
+        JSON.stringify({
+          uuid: 'o1',
+          timestamp: '2025-01-05T10:00:00.000Z',
+          type: 'user',
+          message: { content: 'old' }
+        })
+      )
+
+      // Create recent session (June 2025)
+      await fs.writeFile(
+        path.join(date_project_dir, 'recent-session.jsonl'),
+        JSON.stringify({
+          uuid: 'r1',
+          timestamp: '2025-06-15T10:00:00.000Z',
+          type: 'user',
+          message: { content: 'recent' }
+        })
+      )
+
+      const agent_index = await scan_claude_agent_relationships({
+        claude_projects_directory: date_test_dir
+      })
+
+      const sessions = []
+      for await (const session of stream_claude_sessions({
+        agent_index,
+        from_date: '2025-06-01'
+      })) {
+        sessions.push(session)
+      }
+
+      expect(sessions.length).to.equal(1)
+      expect(sessions[0].session_id).to.equal('recent-session')
+    })
+
+    it('should skip sessions outside to_date range', async () => {
+      const to_date_test_dir = path.join(test_dir, 'to-date-filter-test')
+      const to_date_project_dir = path.join(
+        to_date_test_dir,
+        'projects',
+        '-Users-todate'
+      )
+      await fs.mkdir(to_date_project_dir, { recursive: true })
+
+      // Create early session (January 2025)
+      await fs.writeFile(
+        path.join(to_date_project_dir, 'early-session.jsonl'),
+        JSON.stringify({
+          uuid: 'e1',
+          timestamp: '2025-01-10T10:00:00.000Z',
+          type: 'user',
+          message: { content: 'early' }
+        })
+      )
+
+      // Create late session (December 2025)
+      await fs.writeFile(
+        path.join(to_date_project_dir, 'late-session.jsonl'),
+        JSON.stringify({
+          uuid: 'l1',
+          timestamp: '2025-12-20T10:00:00.000Z',
+          type: 'user',
+          message: { content: 'late' }
+        })
+      )
+
+      const agent_index = await scan_claude_agent_relationships({
+        claude_projects_directory: to_date_test_dir
+      })
+
+      const sessions = []
+      for await (const session of stream_claude_sessions({
+        agent_index,
+        to_date: '2025-06-30'
+      })) {
+        sessions.push(session)
+      }
+
+      expect(sessions.length).to.equal(1)
+      expect(sessions[0].session_id).to.equal('early-session')
     })
   })
 

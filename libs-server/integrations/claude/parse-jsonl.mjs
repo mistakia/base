@@ -11,6 +11,12 @@ import { is_warm_agent, is_agent_file_path } from './claude-session-helpers.mjs'
 const log = debug('integrations:claude:parse-jsonl')
 const log_debug = debug('integrations:claude:parse-jsonl:debug')
 
+// Max character length for progress entry data.fullOutput field.
+// Claude Code logs cumulative command output on every progress tick, which can
+// create entries with multi-MB fullOutput strings that repeat hundreds of times.
+// Truncating to 10KB per entry prevents V8 heap exhaustion on large sessions.
+const MAX_PROGRESS_FULL_OUTPUT_CHARS = 10 * 1024
+
 export const find_claude_project_files = async ({
   claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
 } = {}) => {
@@ -117,17 +123,29 @@ export const parse_claude_jsonl_file = async (file_path) => {
       try {
         const entry = JSON.parse(line)
 
+        // Truncate progress entry fullOutput to avoid V8 heap exhaustion.
+        // Claude Code logs cumulative command output on every progress tick,
+        // creating multi-MB strings repeated hundreds of times in a session.
+        if (
+          entry.type === 'progress' &&
+          entry.data?.fullOutput?.length > MAX_PROGRESS_FULL_OUTPUT_CHARS
+        ) {
+          entry.data.fullOutput =
+            entry.data.fullOutput.slice(0, MAX_PROGRESS_FULL_OUTPUT_CHARS) +
+            '\n... [truncated]'
+        }
+
         // Collect summary entries for metadata
         if (entry.type === 'summary') {
           file_summaries.push(entry.summary)
           continue
         }
 
-        all_entries.push({
-          ...entry,
-          line_number: entry.line_number || line_count,
-          parse_line_number: line_count
-        })
+        // Mutate in place instead of spread-copy to avoid doubling memory
+        // for large session files (e.g. 1.7GB subagent sessions)
+        entry.line_number = entry.line_number || line_count
+        entry.parse_line_number = line_count
+        all_entries.push(entry)
       } catch (parse_error) {
         log(
           `Error parsing line ${line_count} in ${file_path}: ${parse_error.message}`

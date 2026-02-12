@@ -87,7 +87,6 @@ describe('Claude Interrupt Message Timeline Integration', () => {
 
     // Verify timeline creation
     expect(timeline_result.entry_count).to.equal(3)
-    expect(timeline_result.timeline_entries).to.have.length(3)
 
     // Read the created timeline file (JSONL format)
     const timeline_entries = await read_timeline_jsonl({

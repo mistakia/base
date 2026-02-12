@@ -106,7 +106,8 @@ export const merge_agent_entries_into_parent = ({
     `Merging ${agent_sessions.length} agents into session ${parent_session.session_id}`
   )
 
-  // Create a copy of parent entries to modify
+  // Create a shallow copy of parent entries array to modify
+  // (entries themselves are shared references, not cloned)
   const merged_entries = [...parent_session.entries]
 
   // Track insertion offset as we add entries
@@ -136,13 +137,14 @@ export const merge_agent_entries_into_parent = ({
       )
     }
 
-    // Prepare agent entries with sidechain marking
-    const agent_entries = agent_session.entries.map((entry) => ({
-      ...entry,
-      isSidechain: true,
-      agentSessionId: agent_session.session_id,
-      parentAgentId: agent_id
-    }))
+    // Mark agent entries in place to avoid creating copies of potentially
+    // huge entry arrays (e.g. 1.7GB subagent sessions)
+    const agent_entry_count = agent_session.entries.length
+    for (const entry of agent_session.entries) {
+      entry.isSidechain = true
+      entry.agentSessionId = agent_session.session_id
+      entry.parentAgentId = agent_id
+    }
 
     // Calculate insertion position
     // Insert after the tool_call entry, before the tool_result
@@ -150,21 +152,27 @@ export const merge_agent_entries_into_parent = ({
       ? spawn_point.tool_call_index + 1 + insertion_offset
       : merged_entries.length
 
-    // Insert agent entries
-    merged_entries.splice(insertion_index, 0, ...agent_entries)
+    // Insert agent entries without spread to avoid stack overflow on large arrays
+    const before = merged_entries.splice(insertion_index)
+    for (const entry of agent_session.entries) {
+      merged_entries.push(entry)
+    }
+    for (const entry of before) {
+      merged_entries.push(entry)
+    }
 
     // Update offset for subsequent agent insertions
-    insertion_offset += agent_entries.length
-    total_agent_entries += agent_entries.length
+    insertion_offset += agent_entry_count
+    total_agent_entries += agent_entry_count
 
     log_debug(
-      `Inserted ${agent_entries.length} entries for agent ${agent_id} at position ${insertion_index}`
+      `Inserted ${agent_entry_count} entries for agent ${agent_id} at position ${insertion_index}`
     )
   }
 
   log(`Merged ${total_agent_entries} agent entries into parent session`)
 
-  // Return merged session
+  // Return merged session (entries array is the only new allocation)
   return {
     ...parent_session,
     entries: merged_entries,
@@ -190,8 +198,8 @@ export const assign_merged_sequence_numbers = ({ session }) => {
     return session
   }
 
-  // Sort entries by timestamp
-  const sorted_entries = [...session.entries].sort((a, b) => {
+  // Sort entries in place to avoid creating a full copy of potentially huge arrays
+  session.entries.sort((a, b) => {
     const time_a = new Date(a.timestamp).getTime()
     const time_b = new Date(b.timestamp).getTime()
 
@@ -207,18 +215,14 @@ export const assign_merged_sequence_numbers = ({ session }) => {
     return time_a - time_b
   })
 
-  // Assign sequential numbers
-  const entries_with_sequence = sorted_entries.map((entry, index) => ({
-    ...entry,
-    merged_sequence: index
-  }))
-
-  log_debug(`Assigned sequence numbers 0-${entries_with_sequence.length - 1}`)
-
-  return {
-    ...session,
-    entries: entries_with_sequence
+  // Assign sequential numbers in place to avoid creating another copy
+  for (let i = 0; i < session.entries.length; i++) {
+    session.entries[i].merged_sequence = i
   }
+
+  log_debug(`Assigned sequence numbers 0-${session.entries.length - 1}`)
+
+  return session
 }
 
 /**
