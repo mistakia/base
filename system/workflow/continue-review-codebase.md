@@ -68,7 +68,7 @@ Before starting, read these guidelines:
 Additionally, when any ambiguity arises during the review about purpose or intent of code patterns, search for related `task` files:
 
 ```bash
-grep -rl "keyword\|module-name" /Users/trashman/user-base/task/
+grep -rl "keyword\|module-name" "$USER_BASE_DIRECTORY/task/"
 ```
 
 ## Phase 2: Read Section Files

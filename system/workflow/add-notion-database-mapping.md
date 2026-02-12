@@ -46,28 +46,31 @@ mcp__notion__API-post-search(query="database name", filter={"value": "database",
 
 Based on the database schema, determine these configuration values:
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `name` | Short identifier for the database | `home_items` |
-| `entity_type` | Entity type for synced files | `physical_item`, `text`, `task` |
-| `target_directory` | Directory for entity files (relative to user-base) | `text/home/area` |
-| `property_mappings` | Map from local field names to Notion property names | `{"name": "Name"}` |
-| `type_conversions` | Notion property type for each mapped field | `{"Name": "title"}` |
+| Field               | Description                                               | Example                           |
+| ------------------- | --------------------------------------------------------- | --------------------------------- |
+| `name`              | Short identifier for the database                         | `home_items`                      |
+| `entity_type`       | Entity type for synced files                              | `physical_item`, `text`, `task`   |
+| `target_directory`  | Directory for entity files (relative to user-base)        | `text/home/area`                  |
+| `property_mappings` | Map from local field names to Notion property names       | `{"name": "Name"}`                |
+| `type_conversions`  | Notion property type for each mapped field                | `{"Name": "title"}`               |
 | `relation_mappings` | Map from Notion relation property names to relation types | `{"related_items": "relates_to"}` |
 
 **Guidelines for property mappings:**
+
 - Keys are the local entity field names (snake_case)
 - Values are the exact Notion property names (case-sensitive)
 - The title property must be mapped (every database has one)
 - Skip computed/formula properties unless they contain useful read-only data
 
 **Guidelines for type conversions:**
+
 - Keys are the Notion property names (must match values in property_mappings)
 - Values are the conversion type strings
 - Standard types: `title`, `rich_text`, `number`, `url`, `date`, `select`, `multi_select`, `checkbox`, `formula`, `files`
 - Custom conversions: `select_to_boolean`, `select_to_number_boolean`, `select_to_enum_importance`, `select_to_enum_frequency`
 
 **Guidelines for relation mappings:**
+
 - Keys are the Notion relation property names
 - Values are the relation type (e.g., `relates_to`, `contains`, `part_of`, `uses_item`, `has_attribute`)
 - Only include relations that link to other configured Notion databases
@@ -112,7 +115,7 @@ Read the current `config/notion-entity-mappings.json` and add the new database e
 Ensure the target directory exists:
 
 ```bash
-mkdir -p ~/user-base/TARGET_DIRECTORY
+mkdir -p "$USER_BASE_DIRECTORY/TARGET_DIRECTORY"
 ```
 
 ## Step 5: Initial Sync
@@ -120,14 +123,14 @@ mkdir -p ~/user-base/TARGET_DIRECTORY
 Follow [[sys:system/workflow/sync-notion-entities.md]] to perform the initial import:
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/notion/sync-notion-entities.mjs --database-id DATABASE_ID --verbose
 ```
 
 ## Step 6: Review and Commit
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git status
 git diff config/notion-entity-mappings.json
 git add config/notion-entity-mappings.json

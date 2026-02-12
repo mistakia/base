@@ -48,7 +48,7 @@ The workflow is read-only - it gathers information and reports findings without 
 
 ```bash
 session_id=$(jq -r '.external_session.session_id // ""' \
-  "/Users/trashman/user-base/thread/${thread_id}/metadata.json")
+  "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json")
 ```
 
 Skip if session_id starts with "agent-" (sub-agent thread).
@@ -58,7 +58,7 @@ Skip if session_id starts with "agent-" (sub-agent thread).
 ```bash
 jq '{thread_id, title, short_description, thread_state, message_count,
     tool_call_count, created_at, updated_at, system_worktree_path,
-    user_worktree_path}' "/Users/trashman/user-base/thread/${thread_id}/metadata.json"
+    user_worktree_path}' "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json"
 ```
 
 Calculate age in days and days since last update.
@@ -72,7 +72,7 @@ If worktree paths exist in metadata, check if directories exist on disk.
 ### 2.2 Timeline Analysis
 
 ```bash
-tail -20 "/Users/trashman/user-base/thread/${thread_id}/timeline.jsonl" | jq -s '.'
+tail -20 "$USER_BASE_DIRECTORY/thread/${thread_id}/timeline.jsonl" | jq -s '.'
 ```
 
 Check final events for blockers per guideline (errors, incomplete work, unanswered questions, user interruptions).
@@ -87,14 +87,14 @@ Extract files mentioned in timeline and verify they exist:
 
 ```bash
 jq -r '.content.tool_parameters | .file_path? // .path? // empty' \
-  "/Users/trashman/user-base/thread/${thread_id}/timeline.jsonl" | sort -u
+  "$USER_BASE_DIRECTORY/thread/${thread_id}/timeline.jsonl" | sort -u
 ```
 
 ## 4. Search for Related Entities
 
 ```bash
 # References to this thread
-rg -l "${thread_id}" /Users/trashman/user-base/task/ 2>/dev/null || true
+rg -l "${thread_id}" "$USER_BASE_DIRECTORY/task/" 2>/dev/null || true
 ```
 
 ### 4.1 GitHub PR Status (if applicable)
@@ -106,7 +106,7 @@ gh pr view <PR_NUMBER> --json state,mergedAt,closedAt,headRefName 2>/dev/null ||
 ### 4.2 Stale Branches (if applicable)
 
 ```bash
-git -C /Users/trashman/user-base/repository/active/<repo> branch -a | grep "<branch>" || true
+git -C "$USER_BASE_DIRECTORY/repository/active/<repo>" branch -a | grep "<branch>" || true
 ```
 
 ## 5. Determine Recommendation
@@ -171,8 +171,8 @@ human_review_reasons: []
 jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
    '.thread_state = "archived" | .archive_reason = "completed" |
     .archived_at = $now | .updated_at = $now' \
-  "/Users/trashman/user-base/thread/${thread_id}/metadata.json" > /tmp/m.json \
-  && mv /tmp/m.json "/Users/trashman/user-base/thread/${thread_id}/metadata.json"
+  "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json" > /tmp/m.json \
+  && mv /tmp/m.json "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json"
 ```
 
 **Archive as user_abandoned**:
@@ -181,8 +181,8 @@ jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
 jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
    '.thread_state = "archived" | .archive_reason = "user_abandoned" |
     .archived_at = $now | .updated_at = $now' \
-  "/Users/trashman/user-base/thread/${thread_id}/metadata.json" > /tmp/m.json \
-  && mv /tmp/m.json "/Users/trashman/user-base/thread/${thread_id}/metadata.json"
+  "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json" > /tmp/m.json \
+  && mv /tmp/m.json "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json"
 ```
 
 </archival_commands>

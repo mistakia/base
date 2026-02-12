@@ -316,7 +316,9 @@ export const parse_session_with_subagents = async (session_file) => {
 export async function* stream_claude_sessions({
   agent_index,
   filter_session = null,
-  include_warm_agents = false
+  include_warm_agents = false,
+  from_date = null,
+  to_date = null
 }) {
   if (
     !agent_index?.parent_session_files ||
@@ -336,6 +338,22 @@ export async function* stream_claude_sessions({
 
   for (const [session_id, file_path] of parent_session_files) {
     try {
+      // Early date filtering: check file timestamp before full parse
+      if (from_date || to_date) {
+        const file_timestamp = await get_session_file_timestamp({ file_path })
+        if (file_timestamp) {
+          const ts = new Date(file_timestamp)
+          if (from_date && ts < new Date(from_date)) {
+            skipped_count++
+            continue
+          }
+          if (to_date && ts > new Date(to_date + 'T23:59:59')) {
+            skipped_count++
+            continue
+          }
+        }
+      }
+
       // Parse the parent session
       const sessions = await parse_claude_jsonl_file(file_path)
       if (sessions.length === 0) {
@@ -480,6 +498,60 @@ export const extract_claude_session_metadata = async ({
   }
 
   return metadata
+}
+
+/**
+ * Extract the earliest entry timestamp from a Claude session file
+ * without fully parsing it. Reads only the first few lines to find
+ * a non-summary/non-snapshot entry with a timestamp.
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.file_path - Path to JSONL session file
+ * @param {number} params.max_lines - Maximum lines to read (default: 10)
+ * @returns {Promise<string|null>} ISO timestamp string or null if not found
+ */
+export const get_session_file_timestamp = async ({
+  file_path,
+  max_lines = 10
+}) => {
+  const file_stream = createReadStream(file_path)
+  const line_reader = createInterface({
+    input: file_stream,
+    crlfDelay: Infinity
+  })
+
+  let lines_read = 0
+  let earliest_timestamp = null
+
+  try {
+    for await (const line of line_reader) {
+      if (line.trim() === '') continue
+
+      lines_read++
+      if (lines_read > max_lines) break
+
+      try {
+        const entry = JSON.parse(line)
+
+        // Skip summary and snapshot entries -- they don't represent session timing
+        if (entry.type === 'summary' || entry.type === 'snapshot') {
+          continue
+        }
+
+        if (entry.timestamp) {
+          earliest_timestamp = entry.timestamp
+          break
+        }
+      } catch {
+        // Skip unparseable lines
+      }
+    }
+  } finally {
+    file_stream.destroy()
+    line_reader.close()
+  }
+
+  return earliest_timestamp
 }
 
 export const get_session_summary = (session) => {

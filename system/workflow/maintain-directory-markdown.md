@@ -37,23 +37,23 @@ Run these commands to identify issues. Do not read file contents yet.
 
 ```bash
 # Directories missing ABOUT.md (task subdirectories)
-find /Users/trashman/user-base/task -mindepth 1 -maxdepth 1 -type d \
+find "$USER_BASE_DIRECTORY/task" -mindepth 1 -maxdepth 1 -type d \
   ! -exec test -f '{}/ABOUT.md' \; -print
 
 # Directories missing ABOUT.md (text subdirectories)
-find /Users/trashman/user-base/text -mindepth 1 -maxdepth 1 -type d \
+find "$USER_BASE_DIRECTORY/text" -mindepth 1 -maxdepth 1 -type d \
   ! -exec test -f '{}/ABOUT.md' \; -print
 
 # Count entities per directory (prioritize by volume)
 # Note: Uses temp file due to shell piping limitations with sort
 output=""
-for d in /Users/trashman/user-base/task/*/; do
+for d in "$USER_BASE_DIRECTORY/task"/*/; do
   name=$(basename "$d")
   count=$(cd "$d" && files=(*.md) && echo ${#files[@]})
   output="${output}${count} task/${name}
 "
 done
-for d in /Users/trashman/user-base/text/*/; do
+for d in "$USER_BASE_DIRECTORY/text"/*/; do
   name=$(basename "$d")
   count=$(cd "$d" && files=(*.md) && echo ${#files[@]})
   output="${output}${count} text/${name}
@@ -66,7 +66,7 @@ echo "$output" > /tmp/dir-counts.txt && sort -rn /tmp/dir-counts.txt
 
 ```bash
 # ABOUT.md files missing required sections
-for f in $(find /Users/trashman/user-base -name "ABOUT.md" -not -path "*/thread/*" -not -path "*/repository/*"); do
+for f in $(find "$USER_BASE_DIRECTORY" -name "ABOUT.md" -not -path "*/thread/*" -not -path "*/repository/*"); do
   missing=""
   grep -q "^## Purpose" "$f" || missing="${missing} Purpose"
   grep -q "^## Context" "$f" || missing="${missing} Context"
@@ -79,7 +79,7 @@ done
 
 ```bash
 # Task ABOUT.md files missing Goals or Scope sections
-for f in $(find /Users/trashman/user-base/task -name "ABOUT.md"); do
+for f in $(find "$USER_BASE_DIRECTORY/task" -name "ABOUT.md"); do
   missing=""
   grep -q "^## Goals" "$f" || missing="${missing} Goals"
   grep -q "^## Scope" "$f" || missing="${missing} Scope"

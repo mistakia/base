@@ -46,7 +46,9 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
         claude_projects_directory: config.claude_projects_directory,
         filter_sessions: config.filter_sessions,
         session_id: options.session_id,
-        session_file: options.session_file
+        session_file: options.session_file,
+        from_date: config.from_date,
+        to_date: config.to_date
       })) {
         session_count++
         const validation = provider.validate_session(session)
@@ -79,7 +81,9 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
         claude_projects_directory: config.claude_projects_directory,
         filter_sessions: config.filter_sessions,
         session_id: options.session_id,
-        session_file: options.session_file
+        session_file: options.session_file,
+        from_date: config.from_date,
+        to_date: config.to_date
       }
     })
 

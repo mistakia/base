@@ -124,7 +124,9 @@ async function findThreadsNeedingMetadata() {
         // Check if thread has complete metadata (both title AND short_description)
         // This aligns with analyze-thread.mjs which only skips when both exist
         const hasTitle = metadata.title && metadata.title.trim().length > 0
-        const hasDescription = metadata.short_description && metadata.short_description.trim().length > 0
+        const hasDescription =
+          metadata.short_description &&
+          metadata.short_description.trim().length > 0
 
         if (hasTitle && hasDescription) {
           stats.has_metadata++
@@ -217,7 +219,9 @@ async function main() {
   console.log(`New threads to add: ${newThreads.length}`)
 
   if (newThreads.length === 0) {
-    console.log('\nNo new threads to queue. All pending threads already queued.')
+    console.log(
+      '\nNo new threads to queue. All pending threads already queued.'
+    )
     return
   }
 

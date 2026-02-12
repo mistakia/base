@@ -54,6 +54,7 @@ This is a recursive, self-managing orchestrator that runs the task pipeline. It 
 - **auto**: Continues autonomously, only stopping on errors, ambiguity, or context pressure
 
 The orchestrator never makes assumptions. When uncertain about:
+
 - Which tasks to prioritize
 - Whether a task is ready for implementation
 - How to resolve conflicts between tasks
@@ -65,6 +66,7 @@ It ALWAYS stops and waits for user input rather than guessing.
 All workflow executions go through the command queue with tag-based limits configured in `config.json`.
 
 **Workflow Lifecycle:**
+
 - Orchestrator queues workflows and monitors only **queued** (not-yet-started) jobs
 - Once a workflow starts, it runs independently in its own session
 - Started workflows may pause and wait for user - this is handled separately via base UI
@@ -104,6 +106,7 @@ base queue stats
 ### 1.3 Record Pipeline Snapshot
 
 Document the current state:
+
 - Draft count
 - Planned count
 - In Progress count
@@ -117,6 +120,7 @@ Based on the pipeline state, determine what actions to take. Apply these rules I
 ### 2.1 Check for Blockers
 
 If any of these conditions exist, STOP and report to user:
+
 - Queue errors or worker issues
 - Multiple tasks with conflicting changes to same files
 - Any ambiguous or unclear state
@@ -169,12 +173,14 @@ base queue add "cli/run-claude.sh 'Run workflow [[sys:system/workflow/select-imp
 If `mode` is `verify` or not specified:
 
 **STOP HERE** and present to user:
+
 - Pipeline snapshot from Phase 1
 - Action taken in Phase 3
 - Current queue state
 - Recommendation for next step
 
 Wait for user to either:
+
 - Approve continuation (user says "continue" or similar)
 - Provide different instructions
 - Promote to auto mode (user says "auto" or "continue autonomously")
@@ -184,6 +190,7 @@ Wait for user to either:
 If `mode` is `auto`:
 
 Check context pressure by examining current conversation length. If approaching context limits:
+
 - Document current state
 - Prepare handoff context for successor
 - Queue successor orchestrator with iteration+1
@@ -194,6 +201,7 @@ Otherwise, loop back to Phase 1 after a brief delay to allow queued jobs to prog
 ### 4.3 Always Stop Conditions
 
 Regardless of mode, ALWAYS stop and wait for user if:
+
 - Any error occurs
 - Ambiguous state detected
 - Conflicting tasks found

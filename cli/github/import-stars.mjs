@@ -94,7 +94,12 @@ async function fetch_all_starred_repos({ github_token, username }) {
     })
 
     all_repos.push(...repos)
-    log('Fetched page %d: %d repos (total: %d)', page, repos.length, all_repos.length)
+    log(
+      'Fetched page %d: %d repos (total: %d)',
+      page,
+      repos.length,
+      all_repos.length
+    )
 
     has_next = has_next_page
     page = next_page || page + 1
@@ -172,14 +177,19 @@ async function import_github_stars({
 
   // Fetch all starred repos
   console.log('Fetching starred repositories from GitHub...')
-  const starred_repos = await fetch_all_starred_repos({ github_token, username })
+  const starred_repos = await fetch_all_starred_repos({
+    github_token,
+    username
+  })
   console.log(`Found ${starred_repos.length} starred repositories`)
 
   if (dry_run) {
     console.log('\n[DRY RUN] Would import the following repos:')
     for (const star_data of starred_repos.slice(0, 10)) {
       const normalized = normalize_repo(star_data)
-      console.log(`  - ${normalized.repo_full_name} (${normalized.language || 'unknown'})`)
+      console.log(
+        `  - ${normalized.repo_full_name} (${normalized.language || 'unknown'})`
+      )
     }
     if (starred_repos.length > 10) {
       console.log(`  ... and ${starred_repos.length - 10} more`)
@@ -220,7 +230,9 @@ async function import_github_stars({
       const batch = to_insert.slice(i, i + BATCH_SIZE)
       await adapter.insert(batch)
       if (to_insert.length > BATCH_SIZE) {
-        process.stdout.write(`\rInserted ${Math.min(i + BATCH_SIZE, to_insert.length)}/${to_insert.length} repositories...`)
+        process.stdout.write(
+          `\rInserted ${Math.min(i + BATCH_SIZE, to_insert.length)}/${to_insert.length} repositories...`
+        )
       }
     }
     console.log(`\nInserted ${to_insert.length} new repositories`)
@@ -232,7 +244,9 @@ async function import_github_stars({
       const record = to_update[i]
       await adapter.update(record.repo_full_name, record)
       if (to_update.length > 100 && i % 100 === 0) {
-        process.stdout.write(`\rUpdated ${i}/${to_update.length} repositories...`)
+        process.stdout.write(
+          `\rUpdated ${i}/${to_update.length} repositories...`
+        )
       }
     }
     console.log(`\nUpdated ${to_update.length} existing repositories`)
@@ -294,9 +308,7 @@ async function main() {
     if (!github_token) {
       // Try to load from config
       try {
-        const config = await import(
-          path.join(BASE_REPO, 'config/index.mjs')
-        )
+        const config = await import(path.join(BASE_REPO, 'config/index.mjs'))
         github_token = config.default.github_access_token
       } catch (e) {
         // Fallback to environment variable

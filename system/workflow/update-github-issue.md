@@ -40,13 +40,13 @@ gh project item-edit \
   --single-select-option-id <OPTION_ID>
 
 # 4. Sync to local task
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/github/import-github-issues.mjs --owner <OWNER> --repo <REPO> --force
 # If the issue is part of a project, also run the project import to sync project field values (status, priority)
 node cli/github/import-github-project-issues.mjs --username <USERNAME> --project <PROJECT_NUMBER> --force
 
 # 5. Review and commit changes
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff task/github/<OWNER>/<REPO>/
 git add task/github/<OWNER>/<REPO>/<ISSUE_NUMBER>-*.md
 git commit -m "Update <OWNER>/<REPO>#<NUMBER> <field>: <value>"
@@ -63,6 +63,7 @@ gh issue view <NUMBER> --repo <OWNER>/<REPO> --json state,title,projectItems
 ```
 
 This shows:
+
 - Current issue state (OPEN/CLOSED)
 - Project item status and other field values
 
@@ -79,16 +80,17 @@ echo "Item ID: $ITEM_ID"
 
 Select the correct project based on repository:
 
-| Repository | Project | Project ID |
-|------------|---------|------------|
-| `mistakia/league` | xo.football | `PVT_kwHOABvSe84AnvdN` |
-| All others | Trashman Task Manager | `PVT_kwHOABvSe84AEC2_` |
+| Repository        | Project               | Project ID             |
+| ----------------- | --------------------- | ---------------------- |
+| `mistakia/league` | xo.football           | `PVT_kwHOABvSe84AnvdN` |
+| All others        | Trashman Task Manager | `PVT_kwHOABvSe84AEC2_` |
 
 ### Step 4: Update Project Fields
 
 #### Update Status
 
 **Trashman Task Manager:**
+
 ```bash
 gh project item-edit \
   --project-id PVT_kwHOABvSe84AEC2_ \
@@ -98,6 +100,7 @@ gh project item-edit \
 ```
 
 Status options:
+
 - `c375e804` - Planned
 - `b51ad221` - Started
 - `a02071b2` - In Progress
@@ -111,6 +114,7 @@ Status options:
 #### Update Priority
 
 **Trashman Task Manager:**
+
 ```bash
 gh project item-edit \
   --project-id PVT_kwHOABvSe84AEC2_ \
@@ -120,6 +124,7 @@ gh project item-edit \
 ```
 
 Priority options:
+
 - `9d9c8fcb` - 1 none
 - `bb44ba6a` - 2 low
 - `3b8ed815` - 3 medium
@@ -139,13 +144,14 @@ gh issue view <NUMBER> --repo <OWNER>/<REPO> --json projectItems
 First, run the repo import to sync basic issue data (title, description, state, labels, comments):
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/github/import-github-issues.mjs --owner <OWNER> --repo <REPO> --force
 ```
 
 If the issue is part of a project, also run the project import to sync project field values (status, priority, dates). The project import uses GraphQL and is the only path that captures project-specific fields.
 
 Project number mapping:
+
 - Trashman Task Manager = project `1` (username: `mistakia`)
 - xo.football = project `2` (username: `mistakia`)
 
@@ -158,7 +164,7 @@ node cli/github/import-github-project-issues.mjs --username <USERNAME> --project
 Review the changes:
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff task/github/<OWNER>/<REPO>/
 ```
 

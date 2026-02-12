@@ -64,6 +64,7 @@ A task MUST NOT have `status: Planned` without a valid implementation plan. Task
 A valid implementation plan MUST contain:
 
 1. **Tasks Section**: One of these headings:
+
    - `## Tasks`
    - `## Implementation Tasks`
    - `### Tasks` (for nested structure)
@@ -77,6 +78,7 @@ A valid implementation plan MUST contain:
 A well-formed implementation plan SHOULD also contain:
 
 1. **Design or Implementation Section**: One of these headings:
+
    - `## Design`
    - `## Implementation`
    - `## Approach`
@@ -170,6 +172,7 @@ and possibly adding an index.
 ```
 
 This is invalid because:
+
 - No Tasks section
 - No checkbox items
 - No actionable items defined

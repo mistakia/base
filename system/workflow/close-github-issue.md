@@ -29,11 +29,11 @@ gh issue view <NUMBER> --repo <OWNER>/<REPO> --json state,projectItems
 gh issue close <NUMBER> --repo <OWNER>/<REPO> --comment "Completion message"
 
 # 3. Sync to local task (required)
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/github/import-github-issues.mjs --owner <OWNER> --repo <REPO> --force
 
 # 4. Review and commit changes
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff task/github/<OWNER>/<REPO>/
 git add task/github/<OWNER>/<REPO>/<ISSUE_NUMBER>-*.md
 git commit -m "Close <OWNER>/<REPO>#<NUMBER>"
@@ -76,11 +76,12 @@ Expected output shows `state: CLOSED` and project status `Completed`.
 Run the import script to sync GitHub state to local task:
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/github/import-github-issues.mjs --owner <OWNER> --repo <REPO> --force
 ```
 
 This updates the local task entity with:
+
 - `status: Completed`
 - `finished_at` timestamp
 - Closing comment in `github_comments`
@@ -90,7 +91,7 @@ This updates the local task entity with:
 Review the changes to verify the sync updated correctly:
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff task/github/<OWNER>/<REPO>/
 ```
 
@@ -112,10 +113,12 @@ For project IDs, field IDs, and option IDs, see [[user:text/github-project-refer
 ### Task Entity Fields
 
 **Linked fields** (managed via import script - do not edit directly):
+
 - `status`, `external_id`, `finished_at`
 - `github_*` fields
 
 **Non-linked fields** (safe to edit manually):
+
 - `observations`, `tags`, custom notes in content
 
 ### Manual Project Status Update (if needed)

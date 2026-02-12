@@ -11,14 +11,16 @@ prompt_properties:
   - name: auto_mode
     type: boolean
     required: false
-    description: When true, continue through all tasks without stopping for review. Only stops on errors or plan drift.
+    description: >-
+      When true, continue through all tasks without stopping for review. Only stops on errors or
+      plan drift.
     default: false
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
   - follows [[sys:system/workflow/write-general-implementation-plan.md]]
   - follows [[sys:system/guideline/review-task.md]]
-  - uses [[sys:system/guideline/write-text.md]]
+  - uses [[user:guideline/write-text.md]]
 updated_at: '2026-01-05T19:25:18.081Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

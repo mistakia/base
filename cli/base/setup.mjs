@@ -91,7 +91,10 @@ function check_file_for_export(file_path, var_name = 'USER_BASE_DIRECTORY') {
   if (match) {
     // Resolve $HOME and $USER_BASE_DIRECTORY references in the value
     let value = match[1].replace(/\$HOME/g, homedir())
-    value = value.replace(/\$USER_BASE_DIRECTORY/g, process.env.USER_BASE_DIRECTORY || '')
+    value = value.replace(
+      /\$USER_BASE_DIRECTORY/g,
+      process.env.USER_BASE_DIRECTORY || ''
+    )
     return { found: true, value }
   }
   return { found: false, value: null }
@@ -164,7 +167,8 @@ const REQUIRED_ENV_VARS = [
   {
     name: 'USER_BASE_DIRECTORY',
     shell_value: (dir) => dir,
-    comment: 'User Base directory (used by Base system hooks, scripts, and services)',
+    comment:
+      'User Base directory (used by Base system hooks, scripts, and services)',
     claude_code: true
   },
   {
@@ -248,7 +252,9 @@ async function handle_env(argv) {
     if (actions.length === 0) {
       console.log('\nAll checks passed. No changes needed.')
     } else {
-      console.log(`\n${dry_run ? 'Would apply' : 'Applying'} ${actions.length} change(s):`)
+      console.log(
+        `\n${dry_run ? 'Would apply' : 'Applying'} ${actions.length} change(s):`
+      )
 
       for (const action of actions) {
         const label =
@@ -274,9 +280,7 @@ async function handle_env(argv) {
       if (dry_run) {
         console.log('\nDry run - no files modified.')
       } else {
-        console.log(
-          '\nDone. Restart your shell or run: source ' + profile_path
-        )
+        console.log('\nDone. Restart your shell or run: source ' + profile_path)
       }
     }
 

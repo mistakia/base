@@ -50,6 +50,7 @@ mcp__notion__API-retrieve-a-page(page_id=PAGE_ID)
 ```
 
 Review the response to understand:
+
 - Which properties exist and their current values
 - Property types (title, rich_text, number, select, multi_select, date, checkbox, url, relation)
 - Available select/multi-select options
@@ -57,6 +58,7 @@ Review the response to understand:
 ### Step 3: Determine Changes
 
 Based on the user's request, identify which properties need to be updated. Cross-reference with `config/notion-entity-mappings.json` to understand:
+
 - The Notion property name (may differ from the local entity field name)
 - The property type and expected format
 
@@ -83,43 +85,55 @@ mcp__notion__API-patch-page(page_id=PAGE_ID, properties=PROPERTIES_OBJECT)
 The properties object format depends on the property type:
 
 **Title:**
+
 ```json
-{"Property Name": {"title": [{"text": {"content": "New Title"}}]}}
+{ "Property Name": { "title": [{ "text": { "content": "New Title" } }] } }
 ```
 
 **Rich Text:**
+
 ```json
-{"Property Name": {"rich_text": [{"text": {"content": "New text"}}]}}
+{ "Property Name": { "rich_text": [{ "text": { "content": "New text" } }] } }
 ```
 
 **Number:**
+
 ```json
-{"Property Name": {"number": 42}}
+{ "Property Name": { "number": 42 } }
 ```
 
 **Select:**
+
 ```json
-{"Property Name": {"select": {"name": "Option Name"}}}
+{ "Property Name": { "select": { "name": "Option Name" } } }
 ```
 
 **Multi-Select:**
+
 ```json
-{"Property Name": {"multi_select": [{"name": "Option 1"}, {"name": "Option 2"}]}}
+{
+  "Property Name": {
+    "multi_select": [{ "name": "Option 1" }, { "name": "Option 2" }]
+  }
+}
 ```
 
 **Date:**
+
 ```json
-{"Property Name": {"date": {"start": "2026-01-30"}}}
+{ "Property Name": { "date": { "start": "2026-01-30" } } }
 ```
 
 **Checkbox:**
+
 ```json
-{"Property Name": {"checkbox": true}}
+{ "Property Name": { "checkbox": true } }
 ```
 
 **URL:**
+
 ```json
-{"Property Name": {"url": "https://example.com"}}
+{ "Property Name": { "url": "https://example.com" } }
 ```
 
 ### Step 6: Sync Locally
@@ -127,14 +141,14 @@ The properties object format depends on the property type:
 Follow [[sys:system/workflow/sync-notion-entities.md]] to sync the updated page:
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/notion/sync-notion-entities.mjs --page-id PAGE_ID --force
 ```
 
 ### Step 7: Review and Commit
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff
 git add <affected-entity-file> config/notion-entity-cache.tsv
 git commit -m "Update Notion page: <brief description>"

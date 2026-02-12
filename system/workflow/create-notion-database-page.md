@@ -70,43 +70,57 @@ mcp__notion__API-post-page(
 The properties object must include the title property and any additional properties. Format each property according to its type:
 
 **Title (required):**
+
 ```json
-{"Property Name": {"title": [{"text": {"content": "Page Title"}}]}}
+{ "Property Name": { "title": [{ "text": { "content": "Page Title" } }] } }
 ```
 
 **Rich Text:**
+
 ```json
-{"Property Name": {"rich_text": [{"text": {"content": "Text content"}}]}}
+{
+  "Property Name": { "rich_text": [{ "text": { "content": "Text content" } }] }
+}
 ```
 
 **Number:**
+
 ```json
-{"Property Name": {"number": 42}}
+{ "Property Name": { "number": 42 } }
 ```
 
 **Select:**
+
 ```json
-{"Property Name": {"select": {"name": "Option Name"}}}
+{ "Property Name": { "select": { "name": "Option Name" } } }
 ```
 
 **Multi-Select:**
+
 ```json
-{"Property Name": {"multi_select": [{"name": "Option 1"}, {"name": "Option 2"}]}}
+{
+  "Property Name": {
+    "multi_select": [{ "name": "Option 1" }, { "name": "Option 2" }]
+  }
+}
 ```
 
 **Date:**
+
 ```json
-{"Property Name": {"date": {"start": "2026-01-30"}}}
+{ "Property Name": { "date": { "start": "2026-01-30" } } }
 ```
 
 **Checkbox:**
+
 ```json
-{"Property Name": {"checkbox": true}}
+{ "Property Name": { "checkbox": true } }
 ```
 
 **URL:**
+
 ```json
-{"Property Name": {"url": "https://example.com"}}
+{ "Property Name": { "url": "https://example.com" } }
 ```
 
 Note the returned page ID from the response -- it will be needed for the sync step.
@@ -116,7 +130,7 @@ Note the returned page ID from the response -- it will be needed for the sync st
 Follow [[sys:system/workflow/sync-notion-entities.md]] to sync the new page:
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/notion/sync-notion-entities.mjs --page-id PAGE_ID --force
 ```
 
@@ -129,7 +143,7 @@ node cli/notion/sync-notion-entities.mjs --database-id DATABASE_ID
 ## Step 6: Review and Commit
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git status
 git diff
 git add <new-entity-file> config/notion-entity-cache.tsv

@@ -47,6 +47,7 @@ This workflow selects from Planned tasks that have been through dependency analy
 
 **Readiness Criteria:**
 A task is ready for implementation when:
+
 - Status is "Planned"
 - Has `[dependencies-analyzed]` observation
 - No unresolved `blocked_by` relations (blocker not yet Completed)
@@ -68,6 +69,7 @@ base entity list -t task --status "Planned" --tags "${project_tag}" --json
 ### 1.2 Filter for Readiness
 
 For each Planned task, check:
+
 1. Has `[dependencies-analyzed]` observation in frontmatter
 2. Check all `blocked_by` relations - verify blocker status is "Completed"
 3. No In Progress task with overlapping files
@@ -87,33 +89,41 @@ If any In Progress tasks exist for this project, the batch size should be 0 (wai
 Score each ready task on multiple factors. Higher total score = higher priority.
 
 ### 2.1 Priority Score (0-30 points)
+
 - High priority: 30 points
 - Medium priority: 20 points
 - Low priority: 10 points
 - No priority set: 15 points
 
 ### 2.2 Complexity Score (0-25 points)
+
 Estimate from implementation plan:
+
 - Few tasks (1-3 items): 25 points (quick win)
 - Moderate tasks (4-7 items): 15 points
 - Many tasks (8+ items): 5 points
 - Cannot determine: 10 points
 
 ### 2.3 Dependency Score (0-20 points)
+
 - No dependencies: 20 points
 - Only soft dependencies (precedes): 15 points
 - Has completed blockers: 10 points
 - Has pending soft dependencies: 5 points
 
 ### 2.4 Age Score (0-15 points)
+
 Based on task creation date:
+
 - Over 30 days old: 15 points
 - 14-30 days old: 10 points
 - 7-14 days old: 5 points
 - Under 7 days: 0 points
 
 ### 2.5 Enablement Score (0-10 points)
+
 Does this task unblock other tasks?
+
 - Unblocks 3+ other tasks: 10 points
 - Unblocks 1-2 other tasks: 5 points
 - Unblocks nothing: 0 points
@@ -121,6 +131,7 @@ Does this task unblock other tasks?
 ### 2.6 Non-Software Task Factors
 
 For general (non-software) tasks, additional considerations:
+
 - **External dependencies**: Does task require user input, external approvals, or third-party actions? (Deprioritize if blocked externally)
 - **Time sensitivity**: Does task have a deadline or event date? (Prioritize approaching deadlines)
 - **Batch opportunity**: Can this task be batched with similar tasks? (Prioritize if batching possible)
@@ -146,6 +157,7 @@ If selecting multiple tasks, verify they don't conflict with each other (shared 
 ### 4.1 Determine Workflow Type
 
 For each selected task:
+
 - Check if task has associated repository (from tags or directory) -> software task
 - Check if implementation plan references code files -> software task
 - Otherwise -> general task
@@ -153,12 +165,14 @@ For each selected task:
 ### 4.2 Build Queue Commands
 
 For software tasks:
+
 ```bash
 base queue add "cli/run-claude.sh 'use [[sys:system/workflow/implement-software-task.md]] to implement [[user:${task_path}]]'" \
   --tags claude-session,project-${project_name} --priority 8
 ```
 
 For general tasks:
+
 ```bash
 base queue add "cli/run-claude.sh 'use [[sys:system/workflow/implement-general-task.md]] to implement [[user:${task_path}]]'" \
   --tags claude-session,project-${project_name} --priority 8
@@ -167,6 +181,7 @@ base queue add "cli/run-claude.sh 'use [[sys:system/workflow/implement-general-t
 ### 4.3 Record Selection
 
 Add observation to each queued task:
+
 ```yaml
 observations:
   - '[implementation-queued] 2026-02-06 score:N job:<job-id>'

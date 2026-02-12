@@ -30,11 +30,11 @@ The sync is performed by `cli/notion/sync-notion-entities.mjs` in the Base repos
 
 ```bash
 # 1. Run sync (optionally scoped to a specific database or page)
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 node cli/notion/sync-notion-entities.mjs [OPTIONS]
 
 # 2. Review changes
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git diff
 git status
 
@@ -50,7 +50,7 @@ git commit -m "Sync Notion entities: <brief description>"
 Navigate to the Base repository and run the sync with appropriate flags:
 
 ```bash
-cd ~/user-base/repository/active/base
+cd "$USER_BASE_DIRECTORY/repository/active/base"
 ```
 
 **Sync all configured databases:**
@@ -90,12 +90,13 @@ Flags can be combined, e.g. `--database-id <ID> --force --verbose`.
 Return to the user-base directory and review the git diff:
 
 ```bash
-cd ~/user-base
+cd "$USER_BASE_DIRECTORY"
 git status
 git diff
 ```
 
 Verify:
+
 - New or updated entity files have correct frontmatter (title, type, entity_id, external_id)
 - Property values match what was expected from the Notion change
 - No unexpected files were modified
@@ -115,7 +116,7 @@ Use a descriptive commit message that indicates what triggered the sync (e.g., "
 
 ## Error Handling
 
-- **Sync script not found**: Verify you are in `~/user-base/repository/active/base`
+- **Sync script not found**: Verify you are in `$USER_BASE_DIRECTORY/repository/active/base`
 - **Database ID not in config**: Check `config/notion-entity-mappings.json` for valid database IDs. Use [[sys:system/workflow/add-notion-database-mapping.md]] to add new databases
 - **Notion API errors**: Verify the Notion MCP connection is active
 - **No changes after sync**: The local entities may already be up to date. Use `--force` to overwrite

@@ -56,9 +56,7 @@ async function is_warmup_agent(thread_id) {
 
     // Check entry count - warmup agents typically have 1 entry
     const entry_count =
-      source?.provider_metadata?.entry_count ||
-      metadata.message_count ||
-      0
+      source?.provider_metadata?.entry_count || metadata.message_count || 0
 
     if (entry_count > 2) {
       return {
@@ -202,7 +200,7 @@ async function cleanup() {
     console.log('Deleting warmup agent directories...')
     let deleted_count = 0
 
-    for (const { thread_id, reason } of warmup_threads) {
+    for (const { thread_id } of warmup_threads) {
       const thread_path = join(THREAD_DIR, thread_id)
       try {
         await rm(thread_path, { recursive: true, force: true })

@@ -72,7 +72,7 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
 
 Thread structure:
 
-- Location: `/Users/trashman/user-base/thread/[thread_id]/`
+- Location: `$USER_BASE_DIRECTORY/thread/[thread_id]/`
 - Files: metadata.json (current state), timeline.jsonl (event history, JSONL format)
 - States: active, archived
 - Key metadata fields: title, description, state, archive_reason

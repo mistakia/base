@@ -44,7 +44,7 @@ Find threads missing title or description and delegate analysis to sub-agents fo
 </task>
 
 <context>
-Threads are stored in `/Users/trashman/user-base/thread/` with UUID directories containing metadata.json and timeline.jsonl files. This workflow identifies threads with missing metadata and assigns each to a sub-agent for focused analysis.
+Threads are stored in `$USER_BASE_DIRECTORY/thread/` with UUID directories containing metadata.json and timeline.jsonl files. This workflow identifies threads with missing metadata and assigns each to a sub-agent for focused analysis.
 
 For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
 </context>

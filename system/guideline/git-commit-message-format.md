@@ -43,11 +43,13 @@ Use lowercase prefix words to indicate the area of change:
 ## Examples
 
 Good:
+
 - `feat: add commit message generation endpoint`
 - `fix: correct staged file count in commit section`
 - `refactor: extract diff truncation into shared utility`
 
 Bad:
+
 - `updated stuff` (vague, no scope)
 - `Fix bug.` (trailing period, no specifics)
 - `Added the new feature for generating commit messages using AI models` (too long, past tense)

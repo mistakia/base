@@ -80,7 +80,7 @@ Also discover project-specific documentation:
 
 ```bash
 # Example: find tasks related to a project
-grep -rl "project-name\|repository-name" /Users/trashman/user-base/task/
+grep -rl "project-name\|repository-name" "$USER_BASE_DIRECTORY/task/"
 ```
 
 Record any relevant task file paths for inclusion in the review entity.
@@ -152,7 +152,7 @@ The entity body should contain:
 - [ ] **Section 2: <name>** -- <directory paths> -- ~<line count> lines -- <file count> files
   - Focus: <focus areas>
   - Docs: <relevant documentation for this section>
-...
+    ...
 ```
 
 Record the absolute file path of the created review entity for use in Phase 4.
@@ -211,13 +211,16 @@ nohup claude --print --dangerously-skip-permissions \
 **Estimated Lines**: [total line count across all sections]
 
 **Task Entities Created**:
+
 - Review: [review entity base URI] ([absolute file path])
 - Findings: [findings entity base URI] ([absolute file path])
 
 **Documentation Discovered**:
+
 - [List of CLAUDE.md files and guidelines]
 
 **Related Tasks**:
+
 - [List of related task files, or "None found"]
 
 **Next**: Triggering first section review.

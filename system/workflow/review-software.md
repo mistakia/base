@@ -124,12 +124,12 @@ Launch four agents in parallel using the Task tool. Each agent receives:
 
 ### Agent Summary
 
-| Agent       | Model  | Purpose                                          |
-| ----------- | ------ | ------------------------------------------------ |
-| Compliance  | haiku  | Check CLAUDE.md and guideline adherence          |
-| Bug Scanner | sonnet | Scan for logic errors and security issues        |
+| Agent       | Model  | Purpose                                             |
+| ----------- | ------ | --------------------------------------------------- |
+| Compliance  | haiku  | Check CLAUDE.md and guideline adherence             |
+| Bug Scanner | sonnet | Scan for logic errors and security issues           |
 | Performance | sonnet | Identify performance bottlenecks and resource leaks |
-| Simplicity  | sonnet | Identify complexity and YAGNI violations         |
+| Simplicity  | sonnet | Identify complexity and YAGNI violations            |
 
 ### 2.1 Compliance Agent
 

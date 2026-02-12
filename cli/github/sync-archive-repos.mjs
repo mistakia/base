@@ -187,9 +187,7 @@ async function main() {
     if (!user_base_directory) {
       // Try to load from config
       try {
-        const config = await import(
-          '../../config/index.mjs'
-        )
+        const config = await import('#config')
         user_base_directory = config.default.user_base_directory
       } catch (e) {
         // Fallback to environment variable
@@ -199,7 +197,9 @@ async function main() {
 
     if (!user_base_directory) {
       console.error('Error: User base directory required')
-      console.error('Provide via --user-base, USER_BASE_DIRECTORY env var, or config')
+      console.error(
+        'Provide via --user-base, USER_BASE_DIRECTORY env var, or config'
+      )
       process.exit(1)
     }
 

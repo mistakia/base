@@ -22,10 +22,11 @@ user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349
 This workflow defines the prompt template used by the server-side commit message generation module. The generated message follows the conventions in [[sys:system/guideline/git-commit-message-format.md]].
 
 Input data provided to the model:
+
 - Staged diff (truncated to ~4000 chars if large)
 - List of staged files with status (added, modified, deleted)
 - Recent commit log (last 10 commits) for style reference
-</context>
+  </context>
 
 <instructions>
 
@@ -36,6 +37,7 @@ Build the prompt from the following sections:
 1. **System instruction**: You are a commit message generator. Analyze the staged git changes and produce a single commit message.
 
 2. **Commit message rules** (from guideline):
+
    - Use imperative mood ("Add feature" not "Added feature")
    - Maximum 72 characters for the subject line
    - No trailing period on the subject line

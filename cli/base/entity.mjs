@@ -34,7 +34,8 @@ import {
 import config from '#config'
 
 export const command = 'entity <command>'
-export const describe = 'Entity operations (list, get, move, validate, visibility)'
+export const describe =
+  'Entity operations (list, get, move, validate, visibility)'
 
 export const builder = (yargs) =>
   yargs

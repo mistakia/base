@@ -27,24 +27,57 @@ const TEMPLATE_CONFIG_PATH = path.resolve(
 
 // Standard entity type directories for a user-base
 const DIRECTORIES = [
-  { name: 'task', description: 'Task entities organized by project subdirectories' },
-  { name: 'workflow', description: 'Workflow entities defining automated agent behaviors' },
-  { name: 'guideline', description: 'Guideline entities for standards and best practices' },
+  {
+    name: 'task',
+    description: 'Task entities organized by project subdirectories'
+  },
+  {
+    name: 'workflow',
+    description: 'Workflow entities defining automated agent behaviors'
+  },
+  {
+    name: 'guideline',
+    description: 'Guideline entities for standards and best practices'
+  },
   { name: 'tag', description: 'Tag entities for taxonomy and categorization' },
-  { name: 'text', description: 'Text entities for documentation and reference material' },
-  { name: 'identity', description: 'Identity entities for user accounts and auth keys' },
-  { name: 'role', description: 'Role entities for reusable permission rule sets' },
-  { name: 'scheduled-command', description: 'Scheduled command entities for automated execution' },
+  {
+    name: 'text',
+    description: 'Text entities for documentation and reference material'
+  },
+  {
+    name: 'identity',
+    description: 'Identity entities for user accounts and auth keys'
+  },
+  {
+    name: 'role',
+    description: 'Role entities for reusable permission rule sets'
+  },
+  {
+    name: 'scheduled-command',
+    description: 'Scheduled command entities for automated execution'
+  },
   { name: 'database', description: 'Database entities and storage files' },
   { name: 'files', description: 'File storage and attachments' },
-  { name: 'physical-item', description: 'Physical object and equipment entities' },
-  { name: 'physical-location', description: 'Location and real estate entities' },
+  {
+    name: 'physical-item',
+    description: 'Physical object and equipment entities'
+  },
+  {
+    name: 'physical-location',
+    description: 'Location and real estate entities'
+  },
   { name: 'repository/active', description: 'Write-access git repositories' },
-  { name: 'repository/archive', description: 'Read-only reference repositories' },
+  {
+    name: 'repository/archive',
+    description: 'Read-only reference repositories'
+  },
   { name: 'config', description: 'Configuration files' },
   { name: 'cli', description: 'User-specific CLI scripts and utilities' },
   { name: 'thread', description: 'Thread execution data' },
-  { name: 'import-history', description: 'Historical data from external systems' }
+  {
+    name: 'import-history',
+    description: 'Historical data from external systems'
+  }
 ]
 
 const GITIGNORE_CONTENT = `# OS
@@ -106,7 +139,10 @@ function ensure_directory(base_path, dir_info, summary) {
   }
 
   if (!fs.existsSync(about_path)) {
-    fs.writeFileSync(about_path, create_about_md(dir_info.name, dir_info.description))
+    fs.writeFileSync(
+      about_path,
+      create_about_md(dir_info.name, dir_info.description)
+    )
     summary.files_created.push(`${dir_info.name}/ABOUT.md`)
   }
 }
@@ -136,13 +172,14 @@ export const command = 'init'
 export const describe = 'Initialize or update a user-base directory structure'
 
 export const builder = (yargs) =>
-  yargs
-    .option('user-base-directory', {
-      alias: 'u',
-      type: 'string',
-      description: 'Path to user-base directory',
-      default: process.env.USER_BASE_DIRECTORY || path.join(process.env.HOME, 'user-base')
-    })
+  yargs.option('user-base-directory', {
+    alias: 'u',
+    type: 'string',
+    description: 'Path to user-base directory',
+    default:
+      process.env.USER_BASE_DIRECTORY ||
+      path.join(process.env.HOME, 'user-base')
+  })
 
 export const handler = async (argv) => {
   const base_path = path.resolve(argv.userBaseDirectory)
@@ -181,10 +218,15 @@ export const handler = async (argv) => {
         console.log(`  + ${f}`)
       }
     }
-    if (summary.dirs_created.length === 0 && summary.files_created.length === 0) {
+    if (
+      summary.dirs_created.length === 0 &&
+      summary.files_created.length === 0
+    ) {
       console.log('Everything up to date. No changes needed.')
     } else {
-      console.log(`\n${summary.dirs_existed.length} directories already existed.`)
+      console.log(
+        `\n${summary.dirs_existed.length} directories already existed.`
+      )
     }
   }
 }
@@ -198,7 +240,9 @@ if (process.argv[1] === current_file) {
       alias: 'u',
       type: 'string',
       description: 'Path to user-base directory',
-      default: process.env.USER_BASE_DIRECTORY || path.join(process.env.HOME, 'user-base')
+      default:
+        process.env.USER_BASE_DIRECTORY ||
+        path.join(process.env.HOME, 'user-base')
     })
     .option('json', {
       type: 'boolean',

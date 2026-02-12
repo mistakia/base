@@ -46,12 +46,12 @@ CLI tool location: `repository/active/base/libs-server/threads/update-thread.mjs
 
 Thread structure:
 
-- Location: `/Users/trashman/user-base/thread/[thread_id]/`
+- Location: `$USER_BASE_DIRECTORY/thread/[thread_id]/`
 - Files: metadata.json (current state), timeline.jsonl (event history, JSONL format)
 - Key fields to update: title, short_description
 
 For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
-  </context>
+</context>
 
 <instructions>
 1. **Analyze Thread**

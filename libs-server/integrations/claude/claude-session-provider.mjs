@@ -115,7 +115,9 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     filter_sessions,
     session_id,
     session_file,
-    include_warm_agents = false
+    include_warm_agents = false,
+    from_date = null,
+    to_date = null
   } = {}) {
     const config = get_claude_config({ claude_projects_directory })
 
@@ -168,7 +170,9 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     yield* stream_claude_sessions({
       agent_index,
       filter_session: filter_sessions,
-      include_warm_agents
+      include_warm_agents,
+      from_date,
+      to_date
     })
   }
 }

@@ -39,6 +39,7 @@ Analyze all Planned tasks for a given project to identify file overlaps, potenti
 This workflow examines implementation plans to understand which files each task will modify. When multiple tasks touch the same files, they may conflict and should be sequenced rather than run in parallel.
 
 **Dependency Types:**
+
 - `blocked_by` - Hard dependency: task cannot start until blocker completes
 - `precedes` - Soft dependency: recommended ordering to reduce conflicts
 
@@ -71,6 +72,7 @@ In Progress tasks are treated as blockers: any Planned task that overlaps with a
 ### 1.2 Read Implementation Plans
 
 For each Planned task, read the file and extract:
+
 - Task title and path
 - Files mentioned in the implementation plan (look for file paths in task items)
 - Modules or directories that will be modified
@@ -82,6 +84,7 @@ Build a map: `task_path -> [files_to_modify]`
 ### 2.1 Find Shared Files
 
 Compare the file lists across all tasks. Identify:
+
 - **Direct overlaps**: Same file modified by multiple tasks
 - **Directory overlaps**: Multiple tasks modifying files in the same directory
 - **Module overlaps**: Tasks touching related modules (e.g., both modify auth system)
@@ -89,6 +92,7 @@ Compare the file lists across all tasks. Identify:
 ### 2.2 Assess Conflict Potential
 
 For each overlap, assess:
+
 - **High conflict**: Same file, same sections likely modified
 - **Medium conflict**: Same file, different sections
 - **Low conflict**: Same directory, different files
@@ -100,6 +104,7 @@ When uncertain, classify as high conflict.
 ### 3.1 Establish Ordering
 
 For tasks with overlaps:
+
 1. Check if one task is foundational (adds infrastructure others depend on)
 2. Check task priority (High > Medium > Low)
 3. Check task creation date (older tasks first)
@@ -109,6 +114,7 @@ The task that should run first becomes a `precedes` relation for the other.
 ### 3.2 Flag Ambiguous Cases
 
 If ordering cannot be clearly determined:
+
 - Do NOT add relations automatically
 - Record the conflict for user review
 - Mark both tasks with observation noting the potential conflict
@@ -140,6 +146,7 @@ observations:
 ```
 
 Summary examples:
+
 - `no conflicts detected`
 - `precedes task/base/other-task.md (shared: src/api/auth.mjs)`
 - `potential conflict with task/base/other-task.md - needs user review`

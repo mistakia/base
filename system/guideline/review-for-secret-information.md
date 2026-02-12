@@ -10,7 +10,7 @@ entity_id: 2f2c03c3-48b6-48e9-a365-bebeb1c02717
 observations: []
 relations:
   - follows [[sys:system/guideline/write-guideline.md]]
-  - follows [[sys:system/guideline/write-text.md]]
+  - follows [[user:guideline/write-text.md]]
   - related_to [[sys:system/guideline/review-for-personal-information.md]]
 tags: []
 updated_at: '2026-01-05T19:25:17.453Z'

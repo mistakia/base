@@ -55,7 +55,7 @@ jq '{
   thread_id, title, short_description, thread_state, message_count,
   updated_at, system_worktree_path, user_worktree_path,
   session_id: .external_session.session_id
-}' "/Users/trashman/user-base/thread/${thread_id}/metadata.json"
+}' "$USER_BASE_DIRECTORY/thread/${thread_id}/metadata.json"
 ```
 
 **Skip if**:
@@ -74,7 +74,7 @@ jq '{
 Read final 5-10 events (see [[sys:system/workflow/read-thread.md]] for more extraction options):
 
 ```bash
-tail -10 "/Users/trashman/user-base/thread/${thread_id}/timeline.jsonl" | jq -s '.'
+tail -10 "$USER_BASE_DIRECTORY/thread/${thread_id}/timeline.jsonl" | jq -s '.'
 ```
 
 **Check for completion signals**:
@@ -133,8 +133,8 @@ for tid in "${thread_ids[@]}"; do
   jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
      '.thread_state = "archived" | .archive_reason = "completed" |
       .archived_at = $now | .updated_at = $now' \
-    "/Users/trashman/user-base/thread/${tid}/metadata.json" > /tmp/m.json \
-    && mv /tmp/m.json "/Users/trashman/user-base/thread/${tid}/metadata.json"
+    "$USER_BASE_DIRECTORY/thread/${tid}/metadata.json" > /tmp/m.json \
+    && mv /tmp/m.json "$USER_BASE_DIRECTORY/thread/${tid}/metadata.json"
   echo "Archived: $tid"
 done
 ```

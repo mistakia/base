@@ -72,10 +72,10 @@ cli/base-container.sh container-stop
 
 Each machine has a local data directory for persistent `~/.claude` and `~/.opencode` state (not version controlled, not synced):
 
-| Machine | Path |
-|---|---|
-| Storage server | `/mnt/md0/base-container-data/` |
-| MacBook | `/Users/trashman/.base-container-data/` |
+| Machine        | Path                                    |
+| -------------- | --------------------------------------- |
+| Storage server | `/mnt/md0/base-container-data/`         |
+| MacBook        | `/Users/trashman/.base-container-data/` |
 
 One-time setup:
 
@@ -89,10 +89,12 @@ mkdir -p /Users/trashman/.base-container-data/{claude-home/projects,opencode-dat
 ```
 
 On first container start, the entrypoint automatically:
+
 - Creates `todos/` and `plans/` subdirectories in claude-home
 - Initializes `settings.json` from the template at `config/base-container/settings.container.json`
 
 To use custom settings in the container, either:
+
 - Edit `settings.container.json` (applies to new containers)
 - Manually edit `~/.base-container-data/claude-home/settings.json` (applies immediately)
 
@@ -120,20 +122,21 @@ todos, plans, and statsig are container-owned and must not be synced.
 
 ## Per-Machine Differences
 
-| Aspect | Storage Server | MacBook |
-|---|---|---|
-| Container network | `host` (localhost reaches host) | Bridge (`host.docker.internal`) |
-| Thread rsync | Skipped (`SKIP_THREAD_RSYNC=1`) | Required (syncs via SSH) |
-| SSH config | Mounted from `/home/user/.ssh` | Mounted from host `~/.ssh` |
-| SSH agent | Not used | Proxied via socat (auto-configured by entrypoint) |
-| PM2 log directory | `/home/user/logs/` | `~/logs/` |
-| Machine identifier | `BASE_CONTAINER_MACHINE=storage` | `BASE_CONTAINER_MACHINE=macbook` |
+| Aspect             | Storage Server                   | MacBook                                           |
+| ------------------ | -------------------------------- | ------------------------------------------------- |
+| Container network  | `host` (localhost reaches host)  | Bridge (`host.docker.internal`)                   |
+| Thread rsync       | Skipped (`SKIP_THREAD_RSYNC=1`)  | Required (syncs via SSH)                          |
+| SSH config         | Mounted from `/home/user/.ssh`   | Mounted from host `~/.ssh`                        |
+| SSH agent          | Not used                         | Proxied via socat (auto-configured by entrypoint) |
+| PM2 log directory  | `/home/user/logs/`               | `~/logs/`                                         |
+| Machine identifier | `BASE_CONTAINER_MACHINE=storage` | `BASE_CONTAINER_MACHINE=macbook`                  |
 
 ## Container Context for Claude Code
 
 The entrypoint generates a context file at `/tmp/container-context.txt` that describes the container environment. When using `cli/base-container.sh claude`, this context is automatically appended to the Claude Code system prompt via `--append-system-prompt-file`.
 
 The context includes:
+
 - Which machine the container is running on (storage or macbook)
 - Network mode and service accessibility
 - SSH host configuration availability

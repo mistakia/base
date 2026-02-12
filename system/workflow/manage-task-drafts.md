@@ -48,22 +48,25 @@ This workflow runs autonomously without human review stops. It:
 **Implementation Plan Validation Criteria** (per [[sys:system/guideline/task-implementation-plan-standards.md]]):
 
 A task has a **valid implementation plan** if ALL of these are true:
+
 1. Contains a Tasks section heading
 2. Contains at least one checkbox item (`- [ ]` or `- [x]`)
 
 **Detection Patterns:**
 
-| Check | Regex Pattern |
-|-------|---------------|
-| Tasks section | `^##\s+(Implementation\s+)?Tasks` or `^###\s+Tasks` |
-| Checkbox items | `^-\s+\[([ x])\]\s+.+` |
+| Check          | Regex Pattern                                       |
+| -------------- | --------------------------------------------------- |
+| Tasks section  | `^##\s+(Implementation\s+)?Tasks` or `^###\s+Tasks` |
+| Checkbox items | `^-\s+\[([ x])\]\s+.+`                              |
 
 **Invalid Plan Indicators:**
+
 - No Tasks section heading exists
 - No checkbox items exist
 - Only prose description without actionable items
 
 **Observation Tracking:**
+
 - `[triage-queued] <date>` - Draft has been queued for triage
 - `[draft-triaged] <date> <status>` - Draft has been triaged
 - `[plan-completed] <date>` - Planning workflow finished and wrote the implementation plan
@@ -95,7 +98,7 @@ The triage-draft-task workflow may further queue planning workflows when it dete
 ### 1.1 Find All Planned Tasks
 
 ```bash
-rg -l "^status: Planned" /Users/trashman/user-base/task/ 2>/dev/null || true
+rg -l "^status: Planned" "$USER_BASE_DIRECTORY/task/" 2>/dev/null || true
 ```
 
 ### 1.2 Validate and Demote Each Invalid Task
@@ -103,11 +106,13 @@ rg -l "^status: Planned" /Users/trashman/user-base/task/ 2>/dev/null || true
 For each task file found, check for valid implementation plan:
 
 **Check for Tasks section:**
+
 ```bash
 rg "^##\s+(Implementation\s+)?Tasks" "<task_file>" 2>/dev/null || true
 ```
 
 **Check for checkbox items:**
+
 ```bash
 rg "^-\s+\[([ x])\]" "<task_file>" 2>/dev/null || true
 ```
@@ -115,6 +120,7 @@ rg "^-\s+\[([ x])\]" "<task_file>" 2>/dev/null || true
 A task is **valid** if BOTH checks pass (has Tasks section AND has checkbox items).
 
 **For invalid tasks, immediately demote:**
+
 - Update `status: Planned` to `status: Draft` in frontmatter
 - Update `updated_at` timestamp
 
@@ -127,7 +133,7 @@ Track counts: valid_count, demoted_count
 ### 2.1 Find All Draft and No Status Tasks
 
 ```bash
-rg -l "^status: (Draft|No Status)" /Users/trashman/user-base/task/ 2>/dev/null || true
+rg -l "^status: (Draft|No Status)" "$USER_BASE_DIRECTORY/task/" 2>/dev/null || true
 ```
 
 ### 2.2 Filter by Recent Observations
@@ -139,6 +145,7 @@ rg "\[(triage-queued|draft-triaged|plan-completed)\]" "<task_file>" 2>/dev/null 
 ```
 
 **Skip if:**
+
 - Has `[triage-queued]` observation within last 7 days
 - Has `[draft-triaged]` observation within last 7 days
 - Has `[plan-completed]` observation within last 7 days
@@ -148,6 +155,7 @@ rg "\[(triage-queued|draft-triaged|plan-completed)\]" "<task_file>" 2>/dev/null 
 For each eligible draft:
 
 **Add observation to task:**
+
 ```yaml
 observations:
   - '[triage-queued] 2026-01-28'
@@ -156,6 +164,7 @@ observations:
 Use Edit tool to add observation and update `updated_at`.
 
 **Queue the evaluation:**
+
 ```bash
 base queue add "claude-session \"Run [[sys:system/workflow/triage-draft-task.md]] for task_path=<relative_path>\"" \
   --tags claude-session,draft-triage --priority 5

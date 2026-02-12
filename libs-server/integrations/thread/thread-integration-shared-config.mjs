@@ -168,7 +168,10 @@ export function build_session_filter(options = {}) {
 
     // Filter by date range
     if (from_date || to_date) {
-      const session_start = session.metadata?.start_time || session.created_at
+      const session_start =
+        session.metadata?.start_time ||
+        session.created_at ||
+        session.entries?.[0]?.timestamp
       if (session_start) {
         const start_date = new Date(session_start)
         if (from_date && start_date < new Date(from_date)) {

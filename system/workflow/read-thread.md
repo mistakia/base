@@ -66,7 +66,7 @@ Message roles: `user`, `assistant`
 ## Setup
 
 ```bash
-THREAD_DIR="/Users/trashman/user-base/thread/${thread_id}"
+THREAD_DIR="$USER_BASE_DIRECTORY/thread/${thread_id}"
 ```
 
 ## Mode: context (default)
@@ -90,6 +90,7 @@ jq -r 'select(.type == "message" and (.role == "user" or .role == "assistant")) 
 ```
 
 For large threads, truncate message content:
+
 ```bash
 jq -r 'select(.type == "message" and (.role == "user" or .role == "assistant")) | "[\(.role)]: \(.content[:500])"' "${THREAD_DIR}/timeline.jsonl"
 ```
@@ -118,6 +119,7 @@ jq '{relations, file_references, directory_references}' "${THREAD_DIR}/metadata.
 ```
 
 To extract just relation URIs:
+
 ```bash
 jq -r '.relations[]?' "${THREAD_DIR}/metadata.json"
 ```
@@ -154,14 +156,15 @@ jq -r 'select(.type == "tool_call") | .content.tool_name' "${THREAD_DIR}/timelin
 
 ## Token Efficiency Guidelines
 
-| File Size | Strategy |
-|-----------|----------|
-| < 10KB | Process entire timeline |
-| 10KB - 100KB | Use `tail` to limit events before jq |
-| 100KB - 1MB | Filter by event type, truncate content |
-| > 1MB | Use summary mode or statistical queries only |
+| File Size    | Strategy                                     |
+| ------------ | -------------------------------------------- |
+| < 10KB       | Process entire timeline                      |
+| 10KB - 100KB | Use `tail` to limit events before jq         |
+| 100KB - 1MB  | Filter by event type, truncate content       |
+| > 1MB        | Use summary mode or statistical queries only |
 
 Check timeline size:
+
 ```bash
 wc -c < "${THREAD_DIR}/timeline.jsonl"
 ```
@@ -169,16 +172,19 @@ wc -c < "${THREAD_DIR}/timeline.jsonl"
 ## Common Patterns
 
 **Get recent events (last 20):**
+
 ```bash
 tail -20 "${THREAD_DIR}/timeline.jsonl" | jq -c '{type, role: .role, tool: .content.tool_name}'
 ```
 
 **Check for errors:**
+
 ```bash
 jq 'select(.type == "error" or (.type == "tool_result" and .content.result.success == false))' "${THREAD_DIR}/timeline.jsonl"
 ```
 
 **Get thinking blocks:**
+
 ```bash
 jq -r 'select(.type == "thinking") | .content' "${THREAD_DIR}/timeline.jsonl"
 ```
