@@ -38,7 +38,7 @@
     "test:file": "CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --exit",
     "build": "webpack --mode production --config webpack/webpack.prod.babel.mjs",
     "rebuild:index": "DEBUG='cli:rebuild-index,embedded-index*' node cli/rebuild-embedded-index.mjs",
-    "setup:cli": "mkdir -p \"${HOME}/bin\" && printf '#!/bin/sh\\nexec node %s/cli/base.mjs \"$@\"\\n' \"$(pwd)\" > \"${HOME}/bin/base\" && chmod +x \"${HOME}/bin/base\" && echo 'Installed base CLI wrapper to ~/bin/base'"
+    "setup:cli": "sh cli/setup-cli-wrapper.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
