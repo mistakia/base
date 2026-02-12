@@ -1,0 +1,49 @@
+FROM node:20-slim
+
+# Install system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ripgrep \
+    git \
+    jq \
+    curl \
+    ca-certificates \
+    openssh-client \
+    rsync \
+    socat \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install GitHub CLI (binary from GitHub releases, avoids apt repo SSL issues)
+RUN GH_ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') \
+    && GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/') \
+    && curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${GH_ARCH}.tar.gz" \
+    | tar -xz --strip-components=1 -C /usr/local
+
+# Enable corepack for yarn
+RUN corepack enable
+
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Install OpenCode CLI
+RUN curl -fsSL https://opencode.ai/install | bash \
+    && cp $(find / -name opencode -type f -executable 2>/dev/null | head -1) /usr/local/bin/opencode
+
+# Create directory structure to match host paths
+RUN mkdir -p /Users/trashman/user-base \
+    && chown -R node:node /Users/trashman/user-base
+
+# Environment variables
+ENV DISABLE_AUTOUPDATER=1
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+
+WORKDIR /Users/trashman/user-base
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Install gosu for dropping privileges in entrypoint
+RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-$(dpkg --print-architecture)" -o /usr/local/bin/gosu \
+    && chmod +x /usr/local/bin/gosu
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["tail", "-f", "/dev/null"]

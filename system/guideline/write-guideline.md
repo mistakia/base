@@ -16,14 +16,14 @@ relations:
   - related_to [[sys:system/guideline/write-workflow.md]]
   - implements [[sys:system/text/system-design.md]]
   - implements [[sys:system/schema/guideline.md]]
-  - follows [[user:guideline/starting-point-philosophy.md]]
+  - follows [[sys:system/guideline/starting-point-philosophy.md]]
 updated_at: '2026-01-05T19:25:02.704Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Create Guideline
 
-Follow the [[user:guideline/starting-point-philosophy.md]] when creating guidelines.
+Follow the [[sys:system/guideline/starting-point-philosophy.md]] when creating guidelines.
 
 ## Purpose and Distinction
 

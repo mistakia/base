@@ -19,9 +19,9 @@ observations:
   - '[boundaries] Clarify scope boundaries when directory overlap exists'
 relations:
   - implements [[sys:system/schema/guideline.md]]
-  - follows [[user:guideline/starting-point-philosophy.md]]
+  - follows [[sys:system/guideline/starting-point-philosophy.md]]
   - related_to [[sys:system/guideline/write-documentation.md]]
-  - related_to [[user:guideline/write-text.md]]
+  - related_to [[sys:system/guideline/write-text.md]]
 updated_at: '2025-01-21T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

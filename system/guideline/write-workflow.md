@@ -18,12 +18,12 @@ relations:
   - implements [[sys:system/text/system-design.md]]
   - implements [[sys:system/schema/workflow.md]]
   - related_to [[sys:system/guideline/write-guideline.md]]
-  - follows [[user:guideline/starting-point-philosophy.md]]
+  - follows [[sys:system/guideline/starting-point-philosophy.md]]
 updated_at: '2026-01-05T19:25:18.038Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
-Read [[sys:system/text/workflow.md]] to understand what a workflow is and how it is used. Follow the [[user:guideline/starting-point-philosophy.md]] when creating workflows.
+Read [[sys:system/text/workflow.md]] to understand what a workflow is and how it is used. Follow the [[sys:system/guideline/starting-point-philosophy.md]] when creating workflows.
 
 ### File Structure and Naming
 

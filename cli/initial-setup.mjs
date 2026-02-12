@@ -1,152 +1,212 @@
 #!/usr/bin/env node
 
+/**
+ * Idempotent user-base initialization.
+ *
+ * Creates the standard directory structure and default files for a new
+ * user-base, or safely adds any missing directories/files to an existing one.
+ * Never overwrites existing files.
+ *
+ * Usage:
+ *   base init
+ *   base init --user-base-directory /path/to/user-base
+ *   node cli/initial-setup.mjs --user-base-directory /tmp/test-user-base
+ */
+
 import fs from 'fs'
 import path from 'path'
-import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-// Data directory structure to be created in the user repository
-const data_structure = {
-  workflow: {},
-  guideline: {},
-  tag: {}
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const TEMPLATE_CONFIG_PATH = path.resolve(
+  __dirname,
+  '../config/config.template.json'
+)
+
+// Standard entity type directories for a user-base
+const DIRECTORIES = [
+  { name: 'task', description: 'Task entities organized by project subdirectories' },
+  { name: 'workflow', description: 'Workflow entities defining automated agent behaviors' },
+  { name: 'guideline', description: 'Guideline entities for standards and best practices' },
+  { name: 'tag', description: 'Tag entities for taxonomy and categorization' },
+  { name: 'text', description: 'Text entities for documentation and reference material' },
+  { name: 'identity', description: 'Identity entities for user accounts and auth keys' },
+  { name: 'role', description: 'Role entities for reusable permission rule sets' },
+  { name: 'scheduled-command', description: 'Scheduled command entities for automated execution' },
+  { name: 'database', description: 'Database entities and storage files' },
+  { name: 'files', description: 'File storage and attachments' },
+  { name: 'physical-item', description: 'Physical object and equipment entities' },
+  { name: 'physical-location', description: 'Location and real estate entities' },
+  { name: 'repository/active', description: 'Write-access git repositories' },
+  { name: 'repository/archive', description: 'Read-only reference repositories' },
+  { name: 'config', description: 'Configuration files' },
+  { name: 'cli', description: 'User-specific CLI scripts and utilities' },
+  { name: 'thread', description: 'Thread execution data' },
+  { name: 'import-history', description: 'Historical data from external systems' }
+]
+
+const GITIGNORE_CONTENT = `# OS
+.DS_Store
+
+# Git submodule content (tracked separately)
+import-history/*
+
+# Git worktree directories
+*-worktrees/
+
+# Embedded database index (rebuildable via base rebuild embedded-index)
+embedded-database-index/
+
+# Database storage files
+database/*.db
+database/*.duckdb
+database/*.duckdb.wal
+
+# Secrets and local environment
+*.secrets.json
+.env.local
+config/protected-strings.txt
+
+# Node
+node_modules/
+`
+
+function create_about_md(dir_name, description) {
+  const title = dir_name
+    .split('/')
+    .pop()
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+
+  return `---
+title: ${title}
+type: directory
+description: ${description}
+base_uri: user:${dir_name}/ABOUT.md
+---
+
+# ${title}
+
+${description}
+`
 }
 
-// Function to create directory structure recursively
-const create_directory_structure = (base_path, structure) => {
-  for (const [dir_name, sub_dirs] of Object.entries(structure)) {
-    const dir_path = path.join(base_path, dir_name)
+function ensure_directory(base_path, dir_info, summary) {
+  const dir_path = path.join(base_path, dir_info.name)
+  const about_path = path.join(dir_path, 'ABOUT.md')
 
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(dir_path)) {
-      console.log(`Creating directory: ${dir_path}`)
-      fs.mkdirSync(dir_path, { recursive: true })
+  if (!fs.existsSync(dir_path)) {
+    fs.mkdirSync(dir_path, { recursive: true })
+    summary.dirs_created.push(dir_info.name)
+  } else {
+    summary.dirs_existed.push(dir_info.name)
+  }
 
-      // Add a .gitkeep file to ensure empty directories are tracked by Git
-      fs.writeFileSync(path.join(dir_path, '.gitkeep'), '')
-    } else {
-      console.log(`Directory already exists: ${dir_path}`)
-    }
-
-    // Create subdirectories
-    if (Object.keys(sub_dirs).length > 0) {
-      create_directory_structure(dir_path, sub_dirs)
-    }
+  if (!fs.existsSync(about_path)) {
+    fs.writeFileSync(about_path, create_about_md(dir_info.name, dir_info.description))
+    summary.files_created.push(`${dir_info.name}/ABOUT.md`)
   }
 }
 
-// Function to initialize user data directory as a separate git repository
-const initialize_user_repository = (user_data_path) => {
-  // Check if user data directory exists and is a git repository
-  const is_git_repo = fs.existsSync(path.join(user_data_path, '.git'))
-
-  if (is_git_repo) {
-    console.log('User data directory is already a git repository')
-    return
-  }
-
-  // If user data directory exists but is not a git repository
-  if (fs.existsSync(user_data_path)) {
-    console.log(
-      'User data directory exists but is not a git repository. Please initialize it manually or remove it and try again.'
-    )
-    return
-  }
-
-  try {
-    // Create a new git repository for user data
-    console.log('Initializing user data directory as a git repository...')
-    fs.mkdirSync(user_data_path, { recursive: true })
-
-    // Initialize git repository in user data directory
-    execSync('git init', { cwd: user_data_path })
-    console.log('Git repository initialized in user data directory')
-
-    // Create the directory structure in the user data directory
-    create_directory_structure(user_data_path, data_structure)
-
-    // Write .gitignore file
-    const gitignore_content = [
-      '.DS_Store',
-      '',
-      'import-history/*',
-      'threads/*',
-      ''
-    ].join('\n')
-    fs.writeFileSync(path.join(user_data_path, '.gitignore'), gitignore_content)
-
-    // Add and commit the initial structure
-    execSync('git add .', { cwd: user_data_path })
-    execSync('git commit -m "Initial user data structure"', {
-      cwd: user_data_path
-    })
-    console.log('Initial user data structure committed')
-
-    console.log('User data directory initialized as a separate git repository')
-    console.log(
-      `Configure config.user_base_directory to point to: ${user_data_path}`
-    )
-  } catch (error) {
-    console.log(error)
-    console.error('Error initializing user data repository:', error.message)
-    process.exit(1)
+function ensure_gitignore(base_path, summary) {
+  const gitignore_path = path.join(base_path, '.gitignore')
+  if (!fs.existsSync(gitignore_path)) {
+    fs.writeFileSync(gitignore_path, GITIGNORE_CONTENT)
+    summary.files_created.push('.gitignore')
+  } else {
+    summary.files_existed.push('.gitignore')
   }
 }
 
-// Main function
-const main = async () => {
-  const argv = yargs(hideBin(process.argv))
-    .usage('Usage: $0 --user-base-directory <path>')
+function ensure_config(base_path, summary) {
+  const config_path = path.join(base_path, 'config', 'config.json')
+  if (!fs.existsSync(config_path) && fs.existsSync(TEMPLATE_CONFIG_PATH)) {
+    const template = fs.readFileSync(TEMPLATE_CONFIG_PATH, 'utf8')
+    fs.writeFileSync(config_path, template)
+    summary.files_created.push('config/config.json')
+  } else if (fs.existsSync(config_path)) {
+    summary.files_existed.push('config/config.json')
+  }
+}
+
+export const command = 'init'
+export const describe = 'Initialize or update a user-base directory structure'
+
+export const builder = (yargs) =>
+  yargs
     .option('user-base-directory', {
       alias: 'u',
       type: 'string',
-      description: 'Path where the user data repository should be created',
-      demandOption: true
+      description: 'Path to user-base directory',
+      default: process.env.USER_BASE_DIRECTORY || path.join(process.env.HOME, 'user-base')
     })
-    .option('force', {
-      alias: 'f',
+
+export const handler = async (argv) => {
+  const base_path = path.resolve(argv.userBaseDirectory)
+
+  const summary = {
+    base_path,
+    dirs_created: [],
+    dirs_existed: [],
+    files_created: [],
+    files_existed: []
+  }
+
+  if (!fs.existsSync(base_path)) {
+    fs.mkdirSync(base_path, { recursive: true })
+  }
+
+  for (const dir_info of DIRECTORIES) {
+    ensure_directory(base_path, dir_info, summary)
+  }
+
+  ensure_gitignore(base_path, summary)
+  ensure_config(base_path, summary)
+
+  if (argv.json) {
+    console.log(JSON.stringify(summary, null, 2))
+  } else {
+    if (summary.dirs_created.length > 0) {
+      console.log(`Created ${summary.dirs_created.length} directories:`)
+      for (const d of summary.dirs_created) {
+        console.log(`  + ${d}/`)
+      }
+    }
+    if (summary.files_created.length > 0) {
+      console.log(`Created ${summary.files_created.length} files:`)
+      for (const f of summary.files_created) {
+        console.log(`  + ${f}`)
+      }
+    }
+    if (summary.dirs_created.length === 0 && summary.files_created.length === 0) {
+      console.log('Everything up to date. No changes needed.')
+    } else {
+      console.log(`\n${summary.dirs_existed.length} directories already existed.`)
+    }
+  }
+}
+
+// Allow direct execution
+const current_file = fileURLToPath(import.meta.url)
+if (process.argv[1] === current_file) {
+  const argv = yargs(hideBin(process.argv))
+    .usage('Usage: $0 [options]')
+    .option('user-base-directory', {
+      alias: 'u',
+      type: 'string',
+      description: 'Path to user-base directory',
+      default: process.env.USER_BASE_DIRECTORY || path.join(process.env.HOME, 'user-base')
+    })
+    .option('json', {
       type: 'boolean',
-      description: 'Force initialization even if directory exists',
+      description: 'Output results as JSON',
       default: false
     })
-    .example(
-      '$0 --user-base-directory /path/to/user-data',
-      'Initialize user repository at specified path'
-    )
-    .example(
-      '$0 -u ../user-data',
-      'Initialize user repository in parent directory'
-    )
     .help()
     .alias('help', 'h').argv
 
-  const user_data_path = path.resolve(argv.userBaseDirectory)
-
-  console.log('Setting up user data repository...')
-  console.log(`Target path: ${user_data_path}`)
-
-  // Check if force flag is needed
-  if (fs.existsSync(user_data_path) && !argv.force) {
-    console.error(`Error: Directory ${user_data_path} already exists.`)
-    console.error('Use --force to proceed anyway, or choose a different path.')
-    process.exit(1)
-  }
-
-  let error
-  try {
-    initialize_user_repository(user_data_path)
-    console.log('\n✓ System setup complete!')
-    console.log(
-      `Remember to configure config.user_base_directory to: ${user_data_path}`
-    )
-  } catch (err) {
-    error = err
-    console.error('Setup failed:', error.message)
-  }
-
-  process.exit(error ? 1 : 0)
+  handler(argv)
 }
-
-// Run the setup
-main()

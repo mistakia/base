@@ -9,7 +9,7 @@ guidelines:
   - sys:system/guideline/implement-software-task.md
   - sys:system/guideline/write-software-tests.md
   - sys:system/guideline/write-javascript.md
-  - user:guideline/write-software.md
+  - sys:system/guideline/write-software.md
 prompt_properties:
   - name: auto_mode
     type: boolean
@@ -33,7 +33,7 @@ relations:
   - uses [[sys:system/guideline/write-workflow.md]]
   - follows [[sys:system/workflow/write-software-implementation-plan.md]]
   - follows [[sys:system/guideline/review-task.md]]
-  - uses [[user:guideline/write-software.md]]
+  - uses [[sys:system/guideline/write-software.md]]
   - uses [[sys:system/guideline/write-javascript.md]]
   - precedes [[sys:system/workflow/merge-worktree.md]]
 updated_at: '2026-01-19T00:00:00.000Z'
@@ -42,7 +42,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 <task>Execute a software implementation following an implementation plan</task>
 
-<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step. Read and follow [[user:guideline/write-software.md]] for general software development practices and [[sys:system/guideline/write-javascript.md]] for JavaScript-specific guidelines.</context>
+<context>This workflow assumes an implementation plan already exists that identifies what needs to be done. The workflow focuses on setting up the work environment and executing the planned changes step by step. Read and follow [[sys:system/guideline/write-software.md]] for general software development practices and [[sys:system/guideline/write-javascript.md]] for JavaScript-specific guidelines.</context>
 
 <instructions>
 
@@ -91,7 +91,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 4. **Execute Current Task**
 
    - Select the first uncompleted task from the implementation plan
-   - Read and follow [[user:guideline/write-software.md]] for variable naming and DRY principles
+   - Read and follow [[sys:system/guideline/write-software.md]] for variable naming and DRY principles
    - Read and follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
    - Make the required changes for that task only
    - Mark the task as "Completed" in the implementation plan using checkbox format: `- [x]`

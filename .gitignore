@@ -21,7 +21,6 @@ yarn-error.log
 # App specific
 #
 config/config*
-!config/config.json
 .cursor/mcp.json
 build/
 

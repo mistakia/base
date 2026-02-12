@@ -18,16 +18,20 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const is_macos = os.platform() === 'darwin'
 const home_dir = os.homedir()
-const logs_dir =
-  process.env.PM2_LOGS_DIR ||
-  (is_macos ? path.join(home_dir, 'logs') : '/home/user/logs')
+const logs_dir = process.env.PM2_LOGS_DIR || path.join(home_dir, 'logs')
 
-// Machine-specific user base directory
+// User base directory: from env var or default to ~/user-base.
+// On the storage server, USER_BASE_DIRECTORY must be set in the shell profile
+// to /mnt/md0/user-base since homedir() returns /home/user.
 const user_base_directory =
-  process.env.USER_BASE_DIRECTORY ||
-  (is_macos ? path.join(home_dir, 'user-base') : '/mnt/md0/user-base')
+  process.env.USER_BASE_DIRECTORY || path.join(home_dir, 'user-base')
+
+// Container user-base path: the fixed mount point inside the Docker container.
+// Defaults to the host user_base_directory (correct on MacBook where they match).
+// On the storage server, CONTAINER_USER_BASE_PATH must also be set in the shell profile.
+const container_user_base_path =
+  process.env.CONTAINER_USER_BASE_PATH || user_base_directory
 
 // Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
 function get_nvmrc_interpreter() {
@@ -48,6 +52,8 @@ function get_nvmrc_interpreter() {
   return 'node'
 }
 
+const is_macos = os.platform() === 'darwin'
+
 // SSL configuration for storage server (Linux only)
 // macOS runs without SSL (development) or behind a local proxy
 const ssl_env = is_macos
@@ -62,6 +68,7 @@ const ssl_env = is_macos
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
   USER_BASE_DIRECTORY: user_base_directory,
+  CONTAINER_USER_BASE_PATH: container_user_base_path,
   DEBUG_COLORS: 'false',
   ...ssl_env
 }
