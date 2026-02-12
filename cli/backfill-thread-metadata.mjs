@@ -15,10 +15,15 @@
 
 import fs from 'fs/promises'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const USER_BASE_DIR = path.resolve(__dirname, '..')
+if (!process.env.USER_BASE_DIRECTORY) {
+  console.error(
+    'Error: USER_BASE_DIRECTORY environment variable is not set. This script must be run with USER_BASE_DIRECTORY pointing to the user-base directory.'
+  )
+  process.exit(1)
+}
+
+const USER_BASE_DIR = process.env.USER_BASE_DIRECTORY
 const THREAD_DIR = path.join(USER_BASE_DIR, 'thread')
 const QUEUE_FILE = '/tmp/claude-pending-metadata-analysis.queue'
 

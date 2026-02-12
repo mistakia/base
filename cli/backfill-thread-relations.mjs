@@ -22,9 +22,17 @@ import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const USER_BASE_DIR = path.resolve(__dirname, '..')
+
+if (!process.env.USER_BASE_DIRECTORY) {
+  console.error(
+    'Error: USER_BASE_DIRECTORY environment variable is not set. This script must be run with USER_BASE_DIRECTORY pointing to the user-base directory.'
+  )
+  process.exit(1)
+}
+
+const USER_BASE_DIR = process.env.USER_BASE_DIRECTORY
 const THREAD_DIR = path.join(USER_BASE_DIR, 'thread')
-const BASE_REPO = path.join(USER_BASE_DIR, 'repository/active/base')
+const BASE_REPO = path.resolve(__dirname, '..')
 
 // Parse command line arguments
 const args = process.argv.slice(2)
