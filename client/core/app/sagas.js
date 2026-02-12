@@ -24,7 +24,8 @@ function* establish_user_session() {
   }
 
   const timestamp = Date.now()
-  const data = { timestamp, user_public_key }
+  const nonce = crypto.randomUUID()
+  const data = { timestamp, user_public_key, nonce }
   const hash = blake2b(JSON.stringify(data), null, 32)
   const signature = new Ed25519().sign(hash, Convert.hex2ab(user_private_key))
   yield call(post_user_session, { data, signature: Convert.ab2hex(signature) })

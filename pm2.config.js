@@ -127,6 +127,32 @@ module.exports = {
     app('schedule-processor', 'server/services/schedule-processor.mjs', {
       max_memory_restart: '256M',
       env: { DEBUG: 'schedule:*' }
-    })
+    }),
+    // Transcription service - only runs on storage server (Linux)
+    // Uses faster-whisper with CTranslate2 for CPU-optimized speech-to-text
+    ...(is_macos
+      ? []
+      : [
+          {
+            name: 'transcription-service',
+            script: 'server/services/transcription-service.py',
+            interpreter: 'python3',
+            cwd: defaults.cwd,
+            instances: 1,
+            exec_mode: 'fork',
+            autorestart: true,
+            combine_logs: true,
+            time: true,
+            max_memory_restart: '2G',
+            error_file: path.join(logs_dir, 'transcription-service-error.log'),
+            out_file: path.join(logs_dir, 'transcription-service-out.log'),
+            log_file: path.join(
+              logs_dir,
+              'transcription-service-combined.log'
+            ),
+            args: '--port 8089 --model base.en --compute-type int8',
+            env: common_env
+          }
+        ])
   ]
 }

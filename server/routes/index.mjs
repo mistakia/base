@@ -10,6 +10,7 @@ import activity from './activity.mjs'
 import entities from './entities.mjs'
 import git from './git.mjs'
 import search from './search.mjs'
+import transcribe from './transcribe.mjs'
 
 export default {
   users,
@@ -23,5 +24,6 @@ export default {
   activity,
   entities,
   git,
-  search
+  search,
+  transcribe
 }

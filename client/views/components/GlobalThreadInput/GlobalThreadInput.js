@@ -9,6 +9,9 @@ import {
   Fade
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import MicIcon from '@mui/icons-material/Mic'
+import StopIcon from '@mui/icons-material/Stop'
 
 import Button from '@components/primitives/Button'
 import { threads_actions, threads_action_types } from '@core/threads/actions'
@@ -19,6 +22,7 @@ import WorkingDirectoryPicker from './WorkingDirectoryPicker'
 import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
 import useFileAutocomplete from './use-file-autocomplete.js'
 import use_draft_persistence from './use-draft-persistence.js'
+import use_voice_input from './use-voice-input.js'
 import './GlobalThreadInput.styl'
 
 // Constants
@@ -142,6 +146,35 @@ export default function GlobalThreadInput() {
     on_select: handle_autocomplete_select,
     token: user_token
   })
+
+  // Voice input hook
+  const handle_voice_transcript = useCallback(
+    (text) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+      // Append transcription to existing message with space separator
+      const current = message
+      const separator = current && !current.endsWith(' ') ? ' ' : ''
+      const new_message = current + separator + trimmed
+      dispatch(
+        thread_prompt_actions.update_draft({
+          draft_message: new_message,
+          draft_cursor_position: new_message.length
+        })
+      )
+    },
+    [message, dispatch]
+  )
+
+  const voice = use_voice_input({ on_transcript: handle_voice_transcript })
+
+  const handle_voice_toggle = useCallback(() => {
+    if (voice.is_recording) {
+      voice.stop_recording()
+    } else {
+      voice.start_recording()
+    }
+  }, [voice])
 
   // Derived state
   const is_thread_context = !!thread_id
@@ -358,6 +391,13 @@ export default function GlobalThreadInput() {
         className='global-thread-input-backdrop'
         onClick={handle_backdrop_click}>
         <Box className='global-thread-input'>
+          <Box
+            className='input-collapse-button'
+            onClick={handle_close}
+            role='button'
+            aria-label='Collapse input'>
+            <KeyboardArrowDownIcon className='collapse-icon' />
+          </Box>
           {show_thread_context && (
             <Box className='thread-context-indicator'>
               <Typography variant='caption' className='thread-context-label'>
@@ -441,6 +481,23 @@ export default function GlobalThreadInput() {
               </Box>
 
               <Box className='bottom-row-right'>
+                {voice.is_supported && (
+                  <Button
+                    type='button'
+                    variant={voice.is_recording ? 'primary' : 'default'}
+                    icon
+                    disabled={is_loading || voice.is_transcribing}
+                    className={`mic-button ${voice.is_recording ? 'recording' : ''} ${voice.is_transcribing ? 'transcribing' : ''}`}
+                    onClick={handle_voice_toggle}>
+                    {voice.is_transcribing ? (
+                      <CircularProgress size={16} className='loading-spinner' />
+                    ) : voice.is_recording ? (
+                      <StopIcon className='mic-icon' />
+                    ) : (
+                      <MicIcon className='mic-icon' />
+                    )}
+                  </Button>
+                )}
                 <Button
                   type='submit'
                   variant='primary'

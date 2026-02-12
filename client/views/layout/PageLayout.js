@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import PathBreadcrumb from '@components/PathBreadcrumb/index.js'
 import AuthStatusBar from '@components/AuthStatusBar/index.js'
 import SessionsPanelContainer from '@components/SessionsPanel/SessionsPanelContainer.js'
+import MobileThreadInputTrigger from '@components/GlobalThreadInput/MobileThreadInputTrigger.js'
 
 const PageLayout = ({ children }) => {
   const location = useLocation()
@@ -30,6 +31,7 @@ const PageLayout = ({ children }) => {
       <div className='bottom-bar'>
         <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
       </div>
+      <MobileThreadInputTrigger />
     </div>
   )
 }

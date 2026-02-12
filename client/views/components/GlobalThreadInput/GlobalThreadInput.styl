@@ -49,6 +49,7 @@ $overlay-margin = 24px
 // ============================================================================
 
 .global-thread-input
+  position: relative
   width: 100%
   max-width: $overlay-max-width
   background: var(--color-bg, #ffffff)
@@ -72,6 +73,31 @@ $overlay-margin = 24px
     width: 100%
     display: flex
     flex-direction: column
+
+// ============================================================================
+// Collapse Button (dismiss overlay)
+// ============================================================================
+
+.input-collapse-button
+  position: absolute
+  top: 6px
+  right: 6px
+  width: 24px
+  height: 24px
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+  border-radius: 4px
+  color: var(--color-text-tertiary, #6c757d)
+  opacity: 0.5
+  transition: opacity 0.15s ease
+
+  &:hover
+    opacity: 1
+
+  .collapse-icon
+    font-size: 18px
 
 // ============================================================================
 // Thread Context Indicator (shown when resuming a thread from outside thread page)
@@ -168,6 +194,7 @@ $overlay-margin = 24px
     display: flex
     align-items: center
     flex-shrink: 0
+    gap: $spacing-xs
 
 // ============================================================================
 // Mode Toggle (segmented control)
@@ -231,3 +258,97 @@ $overlay-margin = 24px
 
   .send-icon
     font-size: 16px
+
+// ============================================================================
+// Microphone Button
+// ============================================================================
+
+.mic-button
+  flex-shrink: 0
+  min-width: auto
+  width: 44px
+  height: 44px
+  padding: 0
+  border-radius: 6px
+  background-color: var(--color-surface, #ffffff)
+  border: 1px solid var(--color-border, #ced4da)
+
+  // Ensure 44x44px touch target on mobile
+  @media (min-width: $breakpoint-desktop)
+    width: $control-height
+    height: $control-height
+
+  &:hover
+    background-color: var(--color-surface-hover, #fafafa)
+
+  &.Mui-disabled
+    background-color: var(--color-border-light)
+    color: var(--color-text-tertiary)
+
+  &.recording
+    background-color: #dc3545
+    border-color: #dc3545
+    animation: pulse-recording 1.5s ease-in-out infinite
+
+    .mic-icon
+      color: var(--color-white, #ffffff)
+
+  &.transcribing
+    background-color: var(--color-border-light)
+
+    .loading-spinner
+      color: var(--color-text-secondary, #586069)
+
+  .mic-icon
+    font-size: 18px
+    color: var(--color-text-secondary, #586069)
+
+@keyframes pulse-recording
+  0%, 100%
+    opacity: 1
+  50%
+    opacity: 0.7
+
+// ============================================================================
+// Mobile Thread Input Trigger
+// ============================================================================
+// Slim bottom bar visible only on mobile. Tapping opens the full overlay.
+
+.mobile-thread-input-trigger
+  display: none
+
+  @media (max-width: $breakpoint-desktop)
+    display: flex
+    align-items: center
+    position: fixed
+    left: $spacing-md
+    right: $spacing-md
+    bottom: $spacing-md
+    height: 48px
+    padding: 0 $spacing-md
+    background: var(--color-bg, #ffffff)
+    border: 1px solid var(--color-border, #e1e4e8)
+    border-radius: $border-radius
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
+    cursor: pointer
+    z-index: 140
+    // Below overlay (150), above page content
+
+    &:active
+      background: var(--color-surface-hover, #fafafa)
+
+  .trigger-placeholder
+    flex: 1
+    font-size: 15px
+    color: var(--color-text-tertiary, #6c757d)
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+    pointer-events: none
+
+  .trigger-mic-icon
+    flex-shrink: 0
+    font-size: 20px
+    color: var(--color-text-tertiary, #6c757d)
+    margin-left: $spacing-xs
+    pointer-events: none

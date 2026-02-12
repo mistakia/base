@@ -12,6 +12,9 @@ const Routes = () => {
       {/* Homepage route */}
       <Route path='/' element={<Homepage />} />
 
+      {/* Thread new route - entry point for voice/mobile thread creation */}
+      <Route path='/thread/new' element={<Homepage />} />
+
       {/* Threads routes */}
       {/* ThreadsPage handles list views - checks if param is a known view slug */}
       <Route path='/thread/:view_id?' element={<ThreadsPage />} />

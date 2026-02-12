@@ -8,7 +8,7 @@ import { CircularProgress, Box } from '@mui/material'
 import { store, history } from '@core/store.js'
 import StoreRegistry from '@core/store-registry.js'
 import { app_actions } from '@core/app/actions'
-import { get_app } from '@core/app/selectors'
+import { get_app, get_can_create_threads } from '@core/app/selectors'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import {
   search_actions,
@@ -130,12 +130,14 @@ const ThreadPromptContainer = () => {
   const selected_thread_data = useSelector((state) =>
     state.getIn(['threads', 'selected_thread_data'])
   )
+  const can_create_threads = useSelector(get_can_create_threads)
 
   // Use refs for values accessed in keydown handler to avoid stale closures
   const is_open_ref = useRef(is_open)
   const current_path_ref = useRef(router?.location?.pathname || '/')
   const path_info_ref = useRef(directory_state?.get('path_info'))
   const selected_thread_data_ref = useRef(selected_thread_data)
+  const can_create_threads_ref = useRef(can_create_threads)
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -155,13 +157,32 @@ const ThreadPromptContainer = () => {
   }, [selected_thread_data])
 
   useEffect(() => {
+    can_create_threads_ref.current = can_create_threads
+  }, [can_create_threads])
+
+  // Auto-open thread prompt when navigating to /thread/new (mobile/Action Button entry point)
+  useEffect(() => {
+    const current_path = router?.location?.pathname
+    if (current_path === '/thread/new' && !is_open && can_create_threads) {
+      dispatch(
+        thread_prompt_actions.open({
+          thread_id: null,
+          thread_user_public_key: null,
+          file_path: null,
+          current_path
+        })
+      )
+    }
+  }, [router?.location?.pathname, dispatch, can_create_threads])
+
+  useEffect(() => {
     const handle_keydown = (event) => {
       // Cmd/Ctrl+K to toggle thread prompt overlay
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
         if (is_open_ref.current) {
           dispatch(thread_prompt_actions.close())
-        } else {
+        } else if (can_create_threads_ref.current) {
           // Capture context at open time using current ref values
           const current_path = current_path_ref.current
           const path_info = path_info_ref.current

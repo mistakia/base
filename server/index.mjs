@@ -158,6 +158,9 @@ api.use('/api/active-sessions', read_limiter, routes.active_sessions)
 api.use('/api/activity', read_limiter, routes.activity)
 api.use('/api/git', read_limiter, routes.git)
 
+// Transcription endpoint - write limits (handles file upload)
+api.use('/api/transcribe', write_limiter, routes.transcribe)
+
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)
