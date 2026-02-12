@@ -17,3 +17,54 @@ export function validate_shell_command(command) {
     )
   }
 }
+
+/**
+ * Validate a queued CLI command for dangerous shell metacharacters.
+ * More permissive than validate_shell_command -- allows $VAR/${VAR}
+ * expansion and && conditional chaining, which scheduled commands depend on.
+ *
+ * Blocks: ; (chaining), | (pipes), ` (backtick substitution), $( (command
+ * substitution), > < (redirects), standalone & (background execution)
+ *
+ * Allows: $VAR, ${VAR}, &&
+ *
+ * @param {string} command - Command to validate
+ * @throws {Error} if command contains dangerous metacharacters
+ */
+export function validate_queued_command(command) {
+  if (/;/.test(command)) {
+    throw new Error(
+      `Command rejected: contains semicolon (;). Command: ${command.substring(0, 100)}`
+    )
+  }
+
+  if (/\|/.test(command)) {
+    throw new Error(
+      `Command rejected: contains pipe (|). Command: ${command.substring(0, 100)}`
+    )
+  }
+
+  if (/`/.test(command)) {
+    throw new Error(
+      `Command rejected: contains backtick substitution. Command: ${command.substring(0, 100)}`
+    )
+  }
+
+  if (/\$\(/.test(command)) {
+    throw new Error(
+      `Command rejected: contains command substitution $(...). Command: ${command.substring(0, 100)}`
+    )
+  }
+
+  if (/[><]/.test(command)) {
+    throw new Error(
+      `Command rejected: contains redirect (> or <). Command: ${command.substring(0, 100)}`
+    )
+  }
+
+  if (/(?<!&)&(?!&)/.test(command)) {
+    throw new Error(
+      `Command rejected: contains background operator (&). Command: ${command.substring(0, 100)}`
+    )
+  }
+}

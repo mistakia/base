@@ -1,3 +1,4 @@
+import '../polyfills/node25-slow-buffer.cjs'
 import debug from 'debug'
 import path from 'path'
 import fs from 'fs/promises'

@@ -16,6 +16,7 @@
  *   base search "feature request"
  */
 
+import '../polyfills/node25-slow-buffer.cjs'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 

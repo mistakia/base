@@ -16,6 +16,8 @@ import {
   close_cli_queue
 } from '#libs-server/cli-queue/index.mjs'
 
+const VALID_EXECUTION_MODES = ['host', 'container']
+
 const parse_args = (args) => {
   const result = {
     command: null,
@@ -24,7 +26,8 @@ const parse_args = (args) => {
     tags: [],
     priority: 10,
     cwd: process.cwd(),
-    timeout: null
+    timeout: null,
+    execution_mode: undefined
   }
 
   for (let i = 0; i < args.length; i++) {
@@ -43,6 +46,14 @@ const parse_args = (args) => {
       result.cwd = args[++i] || process.cwd()
     } else if (arg === '--timeout') {
       result.timeout = parseInt(args[++i], 10) || null
+    } else if (arg === '--execution-mode' || arg === '-e') {
+      const mode = args[++i]
+      if (!VALID_EXECUTION_MODES.includes(mode)) {
+        throw new Error(
+          `Invalid execution mode: ${mode}. Must be one of: ${VALID_EXECUTION_MODES.join(', ')}`
+        )
+      }
+      result.execution_mode = mode
     } else if (arg === '--help' || arg === '-h') {
       result.subcommand = 'help'
     } else if (!arg.startsWith('-') && !result.command && !result.subcommand) {
@@ -63,11 +74,12 @@ Usage:
   queue-command stats
 
 Options:
-  --tags, -t      Comma-separated tags for concurrency control
-  --priority, -p  Job priority (lower = higher priority, default: 10)
-  --cwd, -c       Working directory for command execution
-  --timeout       Command timeout in milliseconds
-  --help, -h      Show this help message
+  --tags, -t              Comma-separated tags for concurrency control
+  --priority, -p          Job priority (lower = higher priority, default: 10)
+  --cwd, -c               Working directory for command execution
+  --execution-mode, -e    Execution mode: host (default) or container
+  --timeout               Command timeout in milliseconds
+  --help, -h              Show this help message
 
 Examples:
   queue-command "yarn test" --tags test,ci --priority 5
@@ -77,12 +89,23 @@ Examples:
 `)
 }
 
-const handle_queue = async ({ command, tags, priority, cwd, timeout }) => {
+const handle_queue = async ({
+  command,
+  tags,
+  priority,
+  cwd,
+  timeout,
+  execution_mode
+}) => {
   const job_options = {
     command,
     tags,
     priority,
     working_directory: cwd
+  }
+
+  if (execution_mode) {
+    job_options.execution_mode = execution_mode
   }
 
   if (timeout) {

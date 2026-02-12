@@ -6,7 +6,7 @@ import {
   validate_execution_mode,
   translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
-import { validate_shell_command } from '#libs-server/utils/validate-shell-command.mjs'
+import { validate_queued_command } from '#libs-server/utils/validate-shell-command.mjs'
 
 const log = debug('cli-queue:executor')
 
@@ -29,7 +29,8 @@ export const execute_command = async ({
   execution_mode = 'host'
 }) => {
   // Validate command for shell metacharacter injection
-  validate_shell_command(command)
+  // Uses the queued-command variant that allows $VAR/${VAR} and && (needed by scheduled commands)
+  validate_queued_command(command)
 
   const start_time = Date.now()
 
@@ -66,6 +67,8 @@ export const execute_command = async ({
         'docker',
         [
           'exec',
+          '-u',
+          'node',
           '-w',
           container_cwd,
           DOCKER_CONTAINER_NAME,

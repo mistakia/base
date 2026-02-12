@@ -35,22 +35,17 @@ const SESSION_DIRECTORY_NAME = '.claude'
  */
 const CLAUDE_CLI_PATHS = [join(homedir(), '.claude', 'local', 'claude')]
 
-/**
- * Resolve the container Claude home directory on the host side.
- * This is the host directory that maps to /home/node/.claude in the container.
- *
- * Per-machine mount paths (from docker-compose configs):
- *   MacBook: /Users/trashman/.base-container-data/claude-home
- *   Storage: /mnt/md0/base-container-data/claude-home
- *
- * Derivation: check sibling directories of user-base with both naming
- * conventions, falling back to homedir.
- */
-const resolve_container_claude_home = () => {
+let _container_claude_home = null
+let _container_claude_home_is_fallback = false
+
+const get_container_claude_home = () => {
+  if (_container_claude_home && !_container_claude_home_is_fallback) {
+    return _container_claude_home
+  }
+
   const user_base_dir = get_user_base_directory()
   const parent_dir = dirname(user_base_dir)
 
-  // Check both naming conventions used across machines
   const candidates = [
     join(parent_dir, 'base-container-data', 'claude-home'),
     join(parent_dir, '.base-container-data', 'claude-home'),
@@ -59,15 +54,16 @@ const resolve_container_claude_home = () => {
 
   for (const candidate of candidates) {
     if (existsSync(candidate)) {
-      return candidate
+      _container_claude_home = candidate
+      _container_claude_home_is_fallback = false
+      return _container_claude_home
     }
   }
 
-  // Default fallback (will be created on first use)
-  return candidates[candidates.length - 1]
+  _container_claude_home = candidates[candidates.length - 1]
+  _container_claude_home_is_fallback = true
+  return _container_claude_home
 }
-
-const CONTAINER_CLAUDE_HOME = resolve_container_claude_home()
 
 /**
  * Derive the projects directory name from a working directory path
@@ -347,7 +343,7 @@ const restore_session_state = async ({
 
   // Pre-create container home if it doesn't exist
   try {
-    await mkdir(CONTAINER_CLAUDE_HOME, { recursive: true })
+    await mkdir(get_container_claude_home(), { recursive: true })
   } catch {
     // Directory already exists
   }
@@ -386,7 +382,7 @@ const restore_session_jsonl = async ({
   projects_dir_name
 }) => {
   const source_jsonl = join(raw_data_dir, 'claude-session.jsonl')
-  const target_dir = join(CONTAINER_CLAUDE_HOME, 'projects', projects_dir_name)
+  const target_dir = join(get_container_claude_home(), 'projects', projects_dir_name)
   const target_jsonl = join(target_dir, `${session_id}.jsonl`)
 
   try {
@@ -418,7 +414,7 @@ const restore_session_jsonl = async ({
  */
 const restore_todos = async ({ raw_data_dir }) => {
   const source_todos_dir = join(raw_data_dir, 'todos')
-  const target_todos_dir = join(CONTAINER_CLAUDE_HOME, 'todos')
+  const target_todos_dir = join(get_container_claude_home(), 'todos')
 
   try {
     // Check if source todos directory exists
@@ -459,7 +455,7 @@ const restore_todos = async ({ raw_data_dir }) => {
  * Restore plan file to container plans directory
  */
 const restore_plan = async ({ thread_dir, user_base_directory }) => {
-  const target_plans_dir = join(CONTAINER_CLAUDE_HOME, 'plans')
+  const target_plans_dir = join(get_container_claude_home(), 'plans')
 
   try {
     // Read thread metadata to get plan_slug
@@ -628,6 +624,8 @@ export const create_session_claude_cli = async ({
     spawn_command = 'docker'
     spawn_args = [
       'exec',
+      '-u',
+      'node',
       '-w',
       container_working_directory,
       DOCKER_CONTAINER_NAME,

@@ -23,6 +23,7 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { thread_constants } from '#libs-shared'
@@ -657,12 +658,18 @@ router.post('/create-session', async (req, res) => {
       })
     }
 
+    // Normalize container paths to host paths before validation
+    const normalized_working_directory =
+      execution_mode === 'container'
+        ? translate_to_host_path(working_directory)
+        : working_directory
+
     // Validate working directory
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
     try {
       validated_working_directory = await validate_working_directory({
-        working_directory,
+        working_directory: normalized_working_directory,
         user_base_directory
       })
     } catch (validation_error) {
@@ -783,12 +790,18 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
+    // Normalize container paths to host paths before validation
+    const normalized_working_directory =
+      execution_mode === 'container'
+        ? translate_to_host_path(working_directory)
+        : working_directory
+
     // Validate working directory
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
     try {
       validated_working_directory = await validate_working_directory({
-        working_directory,
+        working_directory: normalized_working_directory,
         user_base_directory
       })
     } catch (validation_error) {

@@ -77,3 +77,29 @@ export const translate_to_container_path = (host_path) => {
   // Path is not within user-base; return as-is (best effort)
   return host_path
 }
+
+/**
+ * Translate a container working directory path to the host equivalent.
+ * Inverse of translate_to_container_path -- replaces the container
+ * user-base prefix with the host prefix.
+ * When they match (e.g. on MacBook), no translation is needed.
+ *
+ * @param {string} container_path - Absolute path inside the container
+ * @returns {string} Equivalent path on the host
+ */
+export const translate_to_host_path = (container_path) => {
+  const user_base_directory = get_user_base_directory()
+
+  if (user_base_directory === CONTAINER_USER_BASE_PATH) {
+    return container_path
+  }
+
+  if (container_path.startsWith(CONTAINER_USER_BASE_PATH)) {
+    return (
+      user_base_directory +
+      container_path.slice(CONTAINER_USER_BASE_PATH.length)
+    )
+  }
+
+  return container_path
+}

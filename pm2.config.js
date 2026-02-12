@@ -69,6 +69,7 @@ const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
   USER_BASE_DIRECTORY: user_base_directory,
   CONTAINER_USER_BASE_PATH: container_user_base_path,
+  GIT_SSH_COMMAND: `ssh -F ${path.join(home_dir, '.ssh', 'config')}`,
   DEBUG_COLORS: 'false',
   ...ssl_env
 }
