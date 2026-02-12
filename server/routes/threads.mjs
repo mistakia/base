@@ -1,6 +1,7 @@
 import express from 'express'
 import debug from 'debug'
 
+import config from '#config'
 import {
   HTTP_MAX_AGE,
   HTTP_STALE_WHILE_REVALIDATE
@@ -618,7 +619,11 @@ router.post('/table', async (req, res) => {
 // Create new thread with Claude CLI session
 router.post('/create-session', async (req, res) => {
   try {
-    const { prompt, working_directory, execution_mode } = req.body
+    const { prompt, working_directory } = req.body
+    const execution_mode =
+      req.body.execution_mode ||
+      config.threads?.cli?.default_execution_mode ||
+      'host'
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
@@ -725,7 +730,11 @@ router.post('/create-session', async (req, res) => {
 router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
-    const { prompt, working_directory, execution_mode } = req.body
+    const { prompt, working_directory } = req.body
+    const execution_mode =
+      req.body.execution_mode ||
+      config.threads?.cli?.default_execution_mode ||
+      'host'
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
