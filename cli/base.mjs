@@ -37,6 +37,7 @@ import * as database_command from './base/database.mjs'
 import * as identity_command from './base/identity.mjs'
 import * as role_command from './base/role.mjs'
 import * as permission_command from './base/permission.mjs'
+import * as setup_command from './base/setup.mjs'
 
 const main = async () => {
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
@@ -57,6 +58,7 @@ const main = async () => {
     .command(identity_command)
     .command(role_command)
     .command(permission_command)
+    .command(setup_command)
     .option('json', {
       describe: 'Output as JSON',
       type: 'boolean',
