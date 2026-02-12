@@ -142,7 +142,7 @@ if [ -f "$RIPGREPRC" ]; then
     if ! grep -q "RIPGREP_CONFIG_PATH" /home/node/.bashrc 2>/dev/null; then
         run_as_node bash -c "echo 'export RIPGREP_CONFIG_PATH=\"$RIPGREPRC\"' >> /home/node/.bashrc"
         run_as_node bash -c "cat >> /home/node/.bashrc << 'GREPEOF'
-grep() {
+function grep {
     command grep --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=transparency-act --exclude-dir=embedded-database-index --exclude-dir=archive \"\$@\"
 }
 GREPEOF"
