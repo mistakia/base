@@ -381,14 +381,6 @@ node cli/notion/sync-notion-entities.mjs
 node cli/notion/cleanup-notion-entities.mjs
 ```
 
-### Configuration and Deployment
-
-```bash
-# Sync config files to remote storage server
-./cli/sync-config.sh --dry-run
-./cli/sync-config.sh --all          # Include PM2 config
-```
-
 ## Git Workflow Rules
 
 **Use feature branches for non-trivial changes:**
