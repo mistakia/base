@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
+import { existsSync } from 'fs'
 
 const current_file_path = fileURLToPath(import.meta.url)
 const current_dir = dirname(current_file_path)
@@ -11,7 +12,18 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-const config = secure_config({ directory: config_dir })
+// Look for config in user-base first, fall back to local config directory
+// Note: @tsmx/secure-config resolves filenames as {prefix}{-NODE_ENV}.json
+// (prefix defaults to "config"), so the user-base file must be named config.json
+const user_base_config_dir =
+  process.env.USER_BASE_DIRECTORY &&
+  existsSync(join(process.env.USER_BASE_DIRECTORY, 'config', 'config.json'))
+    ? join(process.env.USER_BASE_DIRECTORY, 'config')
+    : null
+
+const config = secure_config({
+  directory: user_base_config_dir || config_dir
+})
 
 // system_base_directory: derived from code location (parent of config/)
 config.system_base_directory =
