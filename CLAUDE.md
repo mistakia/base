@@ -338,9 +338,11 @@ node cli/convert-external-sessions.mjs validate --provider claude --verbose
 
 ```bash
 # Manage entity public_read visibility
-./cli/entity-visibility.sh set <base-uri> --public
-./cli/entity-visibility.sh set <base-uri> --private
-./cli/entity-visibility.sh get <base-uri>
+base entity visibility set "task/**/*.md" true
+base entity visibility set "task/**/*.md" true --dry-run
+base entity visibility set "/absolute/path/to/entity.md" false
+base entity visibility get "task/**/*.md"
+base entity visibility get "/absolute/path/to/entity.md"
 ```
 
 ### Entity Query

@@ -4,6 +4,7 @@
  * Wraps entity query, get, move, and validate operations.
  */
 
+import path from 'path'
 import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
@@ -23,9 +24,17 @@ import {
   flush_and_exit
 } from './lib/format.mjs'
 import { authenticated_fetch } from './lib/auth.mjs'
+import {
+  validate_boolean,
+  parse_boolean,
+  process_file,
+  find_matching_files,
+  get_visibility
+} from '../entity-visibility.mjs'
+import config from '#config'
 
 export const command = 'entity <command>'
-export const describe = 'Entity operations (list, get, move, validate)'
+export const describe = 'Entity operations (list, get, move, validate, visibility)'
 
 export const builder = (yargs) =>
   yargs
@@ -192,9 +201,46 @@ export const builder = (yargs) =>
           }),
       handle_threads
     )
+    .command(
+      'visibility <command>',
+      'Manage public_read visibility settings',
+      (yargs) =>
+        yargs
+          .command(
+            'set <pattern> <value>',
+            'Set public_read for files matching pattern',
+            (yargs) =>
+              yargs
+                .positional('pattern', {
+                  describe: 'File path or glob pattern to match files',
+                  type: 'string'
+                })
+                .positional('value', {
+                  describe: 'Boolean value: true or false',
+                  type: 'string'
+                })
+                .option('dry-run', {
+                  describe: 'Preview changes without applying them',
+                  type: 'boolean',
+                  default: false
+                }),
+            handle_visibility_set
+          )
+          .command(
+            'get <pattern>',
+            'Show current public_read values for matching files',
+            (yargs) =>
+              yargs.positional('pattern', {
+                describe: 'File path or glob pattern to match files',
+                type: 'string'
+              }),
+            handle_visibility_get
+          )
+          .demandCommand(1, 'Specify a subcommand: set or get')
+    )
     .demandCommand(
       1,
-      'Specify a subcommand: list, get, move, validate, or threads'
+      'Specify a subcommand: list, get, move, validate, threads, or visibility'
     )
 
 export const handler = () => {}
@@ -451,6 +497,149 @@ async function handle_threads(argv) {
     exit_code = 1
   } finally {
     await embedded_index_manager.shutdown()
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_visibility_set(argv) {
+  let exit_code = 0
+  try {
+    const { pattern, value } = argv
+    const dry_run = argv['dry-run']
+    const user_base_directory = config.user_base_directory
+
+    if (!validate_boolean(value)) {
+      console.error(
+        `Error: Invalid boolean value '${value}'. Use 'true' or 'false'.`
+      )
+      flush_and_exit(1)
+      return
+    }
+
+    const public_read = parse_boolean(value)
+
+    console.log(`Finding files matching pattern: ${pattern}`)
+    console.log(`Setting public_read to: ${public_read}`)
+    if (dry_run) {
+      console.log('Running in dry-run mode (no changes will be made)')
+    }
+    console.log()
+
+    const files = await find_matching_files(pattern, user_base_directory)
+
+    if (files.length === 0) {
+      if (argv.json) {
+        console.log(
+          JSON.stringify(
+            { files: [], summary: { successful: 0, failed: 0, changed: 0 } },
+            null,
+            2
+          )
+        )
+      } else {
+        console.log(`No supported files found matching pattern: ${pattern}`)
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    console.log(`Found ${files.length} file(s) to process:`)
+    files.forEach((file) => console.log(`   ${file}`))
+    console.log()
+
+    const results = []
+    for (const file of files) {
+      const result = await process_file(file, public_read, dry_run)
+      results.push(result)
+
+      const filename = path.basename(result.file_path)
+      if (result.success) {
+        const status = result.dry_run ? '[DRY RUN]' : 'SUCCESS'
+        const change =
+          result.old_value !== result.new_value
+            ? `${result.old_value} -> ${result.new_value}`
+            : `${result.new_value} (no change)`
+        console.log(`${status} ${filename}: ${change}`)
+      } else {
+        console.log(`ERROR ${filename}: ${result.error}`)
+      }
+    }
+
+    const successful = results.filter((r) => r.success).length
+    const failed = results.filter((r) => !r.success).length
+    const changed = results.filter(
+      (r) => r.success && r.old_value !== r.new_value
+    ).length
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          { results, summary: { successful, failed, changed } },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log()
+      console.log('Summary:')
+      console.log(`   Successful: ${successful}`)
+      console.log(`   Failed: ${failed}`)
+      console.log(`   Changed: ${changed}`)
+
+      if (dry_run && changed > 0) {
+        console.log()
+        console.log('Run without --dry-run to apply these changes')
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_visibility_get(argv) {
+  let exit_code = 0
+  try {
+    const { pattern } = argv
+    const user_base_directory = config.user_base_directory
+
+    const files = await find_matching_files(pattern, user_base_directory)
+
+    if (files.length === 0) {
+      if (argv.json) {
+        console.log('[]')
+      } else {
+        console.log(`No supported files found matching pattern: ${pattern}`)
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    const results = []
+    for (const file of files) {
+      const result = await get_visibility(file)
+      results.push(result)
+    }
+
+    if (argv.json) {
+      console.log(JSON.stringify(results, null, 2))
+    } else {
+      for (const result of results) {
+        if (result.success) {
+          const filename = path.basename(result.file_path)
+          const value =
+            result.public_read === undefined ? 'undefined' : result.public_read
+          console.log(`${filename}: public_read=${value}`)
+        } else {
+          const filename = path.basename(result.file_path)
+          console.log(`ERROR ${filename}: ${result.error}`)
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
   }
   flush_and_exit(exit_code)
 }

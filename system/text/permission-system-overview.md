@@ -134,13 +134,13 @@ A command-line tool manages `public_read` settings for entities and threads:
 
 ```bash
 # Basic usage
-./cli/entity-visibility.sh set path/to/entity.md true
+base entity visibility set path/to/entity.md true
 
 # Pattern-based batch operations
-./cli/entity-visibility.sh set "task/**/*.md" true
+base entity visibility set "task/**/*.md" true
 
 # Preview mode
-./cli/entity-visibility.sh set "**/*.md" true --dry-run
+base entity visibility set "**/*.md" true --dry-run
 ```
 
 **Features**: Pattern matching, dry-run mode, validation, batch operations, and support for both entity files and thread metadata.
@@ -175,10 +175,10 @@ Use the CLI tool to batch-update documentation visibility:
 
 ```bash
 # Preview changes with dry-run
-./cli/entity-visibility.sh set "text/**/*.md" true --dry-run
+base entity visibility set "text/**/*.md" true --dry-run
 
 # Apply changes after review
-./cli/entity-visibility.sh set "text/**/*.md" true
+base entity visibility set "text/**/*.md" true
 ```
 
 ### Creating Public Knowledge Base
