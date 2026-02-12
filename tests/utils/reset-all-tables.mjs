@@ -10,7 +10,14 @@ const { dirname, join, resolve } = path
 // Constants
 const TEST_ENV = 'test'
 const TEST_DIRECTORY_PATTERN = 'base_data_'
-const ENTITY_DIRECTORIES = ['task', 'workflow', 'text', 'thread', 'identity', 'role']
+const ENTITY_DIRECTORIES = [
+  'task',
+  'workflow',
+  'text',
+  'thread',
+  'identity',
+  'role'
+]
 const ENTITY_FILE_EXTENSIONS = ['.md', '.json']
 
 /**
