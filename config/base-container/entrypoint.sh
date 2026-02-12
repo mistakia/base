@@ -134,6 +134,22 @@ if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
     echo "$BASHRC_PATH" > /etc/profile.d/base-cli.sh
 fi
 
+# Configure ripgrep and grep exclusions for large directories
+# Uses shared config from user-base (mounted in container at same path as host)
+RIPGREPRC="$USER_BASE_DIRECTORY/config/ripgreprc"
+if [ -f "$RIPGREPRC" ]; then
+    export RIPGREP_CONFIG_PATH="$RIPGREPRC"
+    if ! grep -q "RIPGREP_CONFIG_PATH" /home/node/.bashrc 2>/dev/null; then
+        run_as_node bash -c "echo 'export RIPGREP_CONFIG_PATH=\"$RIPGREPRC\"' >> /home/node/.bashrc"
+        run_as_node bash -c "cat >> /home/node/.bashrc << 'GREPEOF'
+grep() {
+    command grep --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=transparency-act --exclude-dir=embedded-database-index --exclude-dir=archive \"\$@\"
+}
+GREPEOF"
+    fi
+    echo "export RIPGREP_CONFIG_PATH=\"$RIPGREPRC\"" >> /etc/profile.d/base-cli.sh
+fi
+
 # Generate container context file for Claude Code system prompt
 MACHINE_NAME="${BASE_CONTAINER_MACHINE:-unknown}"
 CONTEXT_FILE="/tmp/container-context.txt"

@@ -6,6 +6,7 @@ import {
   validate_execution_mode,
   translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
+import { validate_shell_command } from '#libs-server/utils/validate-shell-command.mjs'
 
 const log = debug('cli-queue:executor')
 
@@ -27,6 +28,9 @@ export const execute_command = async ({
   timeout_ms = DEFAULT_TIMEOUT_MS,
   execution_mode = 'host'
 }) => {
+  // Validate command for shell metacharacter injection
+  validate_shell_command(command)
+
   const start_time = Date.now()
 
   // Validate execution_mode
