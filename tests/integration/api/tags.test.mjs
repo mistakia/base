@@ -20,16 +20,18 @@ describe('Tags API', () => {
 
   before(async () => {
     await reset_all_tables()
-    test_user = await create_test_user()
 
     // Set up temporary repo for filesystem operations
     test_repo = await create_temp_test_repo()
 
-    // Setup registry for API calls
+    // Setup registry BEFORE create_test_user so identity file
+    // is written to the test repo's user_path
     registry_cleanup = setup_api_test_registry({
       system_base_directory: test_repo.system_path,
       user_base_directory: test_repo.user_path
     })
+
+    test_user = await create_test_user()
   })
 
   after(async () => {

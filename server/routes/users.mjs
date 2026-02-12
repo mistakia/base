@@ -18,16 +18,7 @@ const router = express.Router()
 router.get('/?', async (req, res) => {
   const { log } = req.app.locals
   try {
-    // Return all users but filtered for public consumption
-    const users_object = await user_registry.load_users()
-
-    // Convert to array and sort by created_at desc and limit to 50
-    const users_array = Object.entries(users_object).map(
-      ([user_public_key, user]) => ({
-        user_public_key,
-        ...user
-      })
-    )
+    const users_array = await user_registry.list_users()
 
     const sorted_users = users_array
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))

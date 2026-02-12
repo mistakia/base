@@ -10,8 +10,7 @@ const { dirname, join, resolve } = path
 // Constants
 const TEST_ENV = 'test'
 const TEST_DIRECTORY_PATTERN = 'base_data_'
-const USER_REGISTRY_FILE = '.system/users.json'
-const ENTITY_DIRECTORIES = ['task', 'workflow', 'text', 'thread']
+const ENTITY_DIRECTORIES = ['task', 'workflow', 'text', 'thread', 'identity', 'role']
 const ENTITY_FILE_EXTENSIONS = ['.md', '.json']
 
 /**
@@ -122,19 +121,6 @@ function validate_test_directory(directory_path) {
 }
 
 /**
- * Resets the user registry file to an empty state
- * @param {string} test_directory - The test directory path
- */
-async function reset_user_registry(test_directory) {
-  const user_registry_path = join(test_directory, USER_REGISTRY_FILE)
-  try {
-    await fs.writeFile(user_registry_path, JSON.stringify({}, null, 2))
-  } catch (err) {
-    // File might not exist, which is fine
-  }
-}
-
-/**
  * Cleans up entity files in a specific directory
  * @param {string} dir_path - The directory path to clean
  */
@@ -180,7 +166,6 @@ export default async function reset_all_tables() {
   validate_test_directory(test_directory)
 
   try {
-    await reset_user_registry(test_directory)
     await reset_entity_directories(test_directory)
   } catch (err) {
     // Ignore cleanup errors in tests

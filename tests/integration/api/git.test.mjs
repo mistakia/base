@@ -4,12 +4,13 @@ import path from 'path'
 import fs from 'fs/promises'
 import { promisify } from 'util'
 import child_process from 'child_process'
+import crypto from 'crypto'
 
 import server from '#server'
 import user_registry from '#libs-server/users/user-registry.mjs'
+import create_user from '#libs-server/users/create-user.mjs'
 import {
   reset_all_tables,
-  create_test_user,
   create_temp_test_repo,
   authenticate_request,
   setup_api_test_registry
@@ -26,22 +27,29 @@ describe('Git API', () => {
 
   before(async () => {
     await reset_all_tables()
-    test_user = await create_test_user()
-
-    // Git operations require global_write permission for staging/committing
-    const users = await user_registry.load_users()
-    if (users[test_user.user_public_key]) {
-      users[test_user.user_public_key].permissions.global_write = true
-      await user_registry.save_users(users)
-    }
 
     // Set up temporary repo for git operations
     test_repo = await create_temp_test_repo()
 
-    // Setup registry for API calls
+    // Setup registry for API calls (must happen before create_user
+    // since identity-loader reads from the runtime directory registry)
     registry_cleanup = setup_api_test_registry({
       system_base_directory: test_repo.system_path,
       user_base_directory: test_repo.user_path
+    })
+
+    // Git operations require global_write permission
+    test_user = await create_user({
+      username: `test_user_${Math.floor(Math.random() * 10000)}`,
+      user_private_key: crypto.randomBytes(32),
+      permissions: { global_write: true }
+    })
+    user_registry._clear_cache()
+
+    // Commit the identity file so git clean -fd in beforeEach doesn't remove it
+    await exec('git add identity/', { cwd: test_repo.user_path })
+    await exec('git commit -m "Add test identity"', {
+      cwd: test_repo.user_path
     })
   })
 

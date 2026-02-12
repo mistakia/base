@@ -15,7 +15,10 @@ const derived_system_base_directory = dirname(config_dir)
 // Look for config in user-base first, fall back to local config directory
 // Note: @tsmx/secure-config resolves filenames as {prefix}{-NODE_ENV}.json
 // (prefix defaults to "config"), so the user-base file must be named config.json
+// In test mode, always use local config-test.json to avoid picking up the real
+// user-base config (which may use different encryption keys or settings)
 const user_base_config_dir =
+  process.env.NODE_ENV !== 'test' &&
   process.env.USER_BASE_DIRECTORY &&
   existsSync(join(process.env.USER_BASE_DIRECTORY, 'config', 'config.json'))
     ? join(process.env.USER_BASE_DIRECTORY, 'config')

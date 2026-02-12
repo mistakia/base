@@ -4,6 +4,7 @@ import debug from 'debug'
 
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
+import config from '#config'
 
 const log = debug('identity-loader')
 
@@ -131,7 +132,12 @@ async function scan_all_identities() {
   scan_in_progress = (async () => {
     try {
       // Get user base directory and scan identity folder
-      const user_base = get_user_base_directory()
+      let user_base
+      try {
+        user_base = get_user_base_directory()
+      } catch {
+        user_base = config.user_base_directory
+      }
       const identity_dir = path.join(user_base, 'identity')
       const files = await list_markdown_files(identity_dir)
 

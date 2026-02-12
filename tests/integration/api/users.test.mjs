@@ -25,20 +25,23 @@ describe('API /users', () => {
     user_private_key = crypto.randomBytes(32)
     user_public_key = ed25519.publicKey(user_private_key)
 
+    const username = 'testuser_' + Date.now().toString(36)
+
     user_data = {
       user_public_key: user_public_key.toString('hex'),
-      username: 'testuser_' + Date.now().toString(36),
+      username,
       email: 'test@example.com'
     }
 
-    // Add user to users.json for access control
-    const users = await user_registry.load_users()
-    users[user_data.user_public_key] = {
-      username: user_data.username,
-      created_at: new Date().toISOString(),
-      permissions: {}
-    }
-    await user_registry.save_users(users)
+    // Create identity entity for access control
+    const create_user = (await import('#libs-server/users/create-user.mjs'))
+      .default
+    await create_user({
+      username,
+      email: 'test@example.com',
+      user_private_key
+    })
+    user_registry._clear_cache()
   })
 
   it('should authenticate an authorized user', async () => {
