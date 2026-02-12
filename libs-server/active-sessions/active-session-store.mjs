@@ -219,7 +219,21 @@ export const get_all_active_sessions = async () => {
   const redis = get_redis_connection()
   const pattern = `${STORE_CONFIG.key_prefix}:*`
 
-  const keys = await redis.keys(pattern)
+  // Use SCAN cursor instead of KEYS to avoid blocking Redis
+  const keys = []
+  let cursor = '0'
+  do {
+    const [next_cursor, batch] = await redis.scan(
+      cursor,
+      'MATCH',
+      pattern,
+      'COUNT',
+      100
+    )
+    cursor = next_cursor
+    keys.push(...batch)
+  } while (cursor !== '0')
+
   if (keys.length === 0) {
     return []
   }

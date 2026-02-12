@@ -51,6 +51,7 @@
       "session_timeout_minutes": 60
     },
     "queue": {
+      "redis_url": "redis://localhost:6379",
       "max_concurrent_jobs": 3,
       "retry_attempts": 3,
       "retry_delay_seconds": 30

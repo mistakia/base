@@ -115,6 +115,14 @@ export const add_cli_job = async ({
   execution_mode,
   metadata = {}
 }) => {
+  if (!command || typeof command !== 'string' || !command.trim()) {
+    throw new Error('command must be a non-empty string')
+  }
+
+  if (!Number.isFinite(timeout_ms) || timeout_ms <= 0) {
+    throw new Error('timeout_ms must be a positive finite number')
+  }
+
   try {
     const queue = get_cli_queue()
 

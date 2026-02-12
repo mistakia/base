@@ -40,7 +40,7 @@
       "models": ["custom_model"],
       "thread_state": "active",
       "provider_settings": {
-        "api_key": "test_key",
+        "auth_token": "fixture-placeholder",
         "endpoint": "http://test-endpoint"
       },
       "message_count": 7,

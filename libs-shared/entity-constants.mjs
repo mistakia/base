@@ -193,16 +193,3 @@ export function infer_entity_type_from_base_uri(base_uri) {
 
   return URI_PATH_TYPE_MAP[first_segment] || null
 }
-
-export default {
-  ENTITY_TYPES,
-  ENTITY_TYPE_TABLES,
-  ENTITY_TYPES_WITHOUT_TABLES,
-  has_dedicated_table,
-  get_table_for_entity_type,
-  ENTITY_TYPE_COLORS,
-  get_entity_type_color,
-  ENTITY_TYPE_DISPLAY_LABELS,
-  get_entity_type_display_label,
-  infer_entity_type_from_base_uri
-}

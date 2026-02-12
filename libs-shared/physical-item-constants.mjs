@@ -16,8 +16,3 @@ export const FREQUENCY_TYPES = {
   WEEKLY: 'Weekly',
   INFREQUENT: 'Infrequent'
 }
-
-export default {
-  IMPORTANCE_TYPES,
-  FREQUENCY_TYPES
-}
