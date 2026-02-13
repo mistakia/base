@@ -28,10 +28,12 @@ const user_base_directory =
   process.env.USER_BASE_DIRECTORY || path.join(home_dir, 'user-base')
 
 // Container user-base path: the fixed mount point inside the Docker container.
-// Defaults to the host user_base_directory (correct on MacBook where they match).
-// On the storage server, CONTAINER_USER_BASE_PATH must also be set in the shell profile.
+// Both machines mount their local user-base to /Users/trashman/user-base inside
+// the container (see docker-compose.macbook.yml and docker-compose.storage.yml).
+// On macOS this matches the host path; on Linux it differs from the host path.
+const CONTAINER_MOUNT_TARGET = '/Users/trashman/user-base'
 const container_user_base_path =
-  process.env.CONTAINER_USER_BASE_PATH || user_base_directory
+  process.env.CONTAINER_USER_BASE_PATH || CONTAINER_MOUNT_TARGET
 
 // Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
 function get_nvmrc_interpreter() {
