@@ -67,6 +67,14 @@ properties:
     type: datetime
     required: false
     description: Computed next trigger time
+  - name: run_on_machines
+    type: array
+    items:
+      type: string
+    required: false
+    description: >-
+      Machine identifiers from the machine_registry config that should execute this schedule.
+      Empty array or omitted means run on all machines.
   - name: job_id
     type: string
     required: false

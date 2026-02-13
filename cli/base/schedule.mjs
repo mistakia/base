@@ -92,6 +92,12 @@ export const builder = (yargs) =>
           .option('timeout', {
             describe: 'Command timeout in milliseconds',
             type: 'number'
+          })
+          .option('machines', {
+            alias: 'm',
+            describe:
+              'Comma-separated machine identifiers from machine_registry',
+            type: 'string'
           }),
       handle_add
     )
@@ -262,6 +268,11 @@ async function handle_add(argv) {
       entity_properties.queue_tags = argv.tags.split(',').map((t) => t.trim())
     if (argv.priority) entity_properties.queue_priority = argv.priority
     if (argv.timeout) entity_properties.timeout_ms = argv.timeout
+    if (argv.machines)
+      entity_properties.run_on_machines = argv.machines
+        .split(',')
+        .map((m) => m.trim())
+        .filter((m) => m.length > 0)
 
     await write_entity_to_filesystem({
       absolute_path: file_path,

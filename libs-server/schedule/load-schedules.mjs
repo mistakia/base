@@ -1,7 +1,9 @@
 import debug from 'debug'
+import config from '#config'
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { parse_schedule } from './parse-schedule.mjs'
+import { get_current_machine_id } from './machine-identity.mjs'
 
 const log = debug('schedule:load')
 
@@ -91,6 +93,7 @@ export const load_schedules = async ({ directory }) => {
 export const load_due_schedules = async ({ directory, now = new Date() }) => {
   const schedules = await load_schedules({ directory })
   const current_time = now.toISOString()
+  const current_machine = get_current_machine_id()
 
   const due_schedules = schedules.filter((schedule) => {
     if (!schedule.enabled) {
@@ -101,11 +104,50 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
       return false
     }
 
-    return schedule.next_trigger_at <= current_time
+    if (schedule.next_trigger_at > current_time) {
+      return false
+    }
+
+    // Machine filtering
+    const { run_on_machines } = schedule
+    if (Array.isArray(run_on_machines) && run_on_machines.length > 0) {
+      // Warn for undefined machines in run_on_machines
+      const registry = config.machine_registry || {}
+      for (const machine of run_on_machines) {
+        if (!registry[machine]) {
+          log(
+            'Warning: schedule %s references undefined machine "%s"',
+            schedule.title || schedule.file_path,
+            machine
+          )
+        }
+      }
+
+      if (!current_machine) {
+        log(
+          'Skipping schedule %s: requires machines %s but current machine is unknown',
+          schedule.title || schedule.file_path,
+          run_on_machines.join(', ')
+        )
+        return false
+      }
+
+      if (!run_on_machines.includes(current_machine)) {
+        log(
+          'Skipping schedule %s: targets machines %s, current is %s',
+          schedule.title || schedule.file_path,
+          run_on_machines.join(', '),
+          current_machine
+        )
+        return false
+      }
+    }
+
+    return true
   })
 
   log(
-    `Found ${due_schedules.length} due schedules out of ${schedules.length} total`
+    `Found ${due_schedules.length} due schedules out of ${schedules.length} total (machine: ${current_machine || 'unknown'})`
   )
   return due_schedules
 }
