@@ -54,18 +54,31 @@ function get_nvmrc_interpreter() {
   return 'node'
 }
 
-const is_macos = os.platform() === 'darwin'
+// Resolve machine identity from machine_registry in config.json
+let machine_id = null
+let machine_config = {}
+try {
+  const config_path = path.join(user_base_directory, 'config', 'config.json')
+  const config_json = JSON.parse(fs.readFileSync(config_path, 'utf8'))
+  const registry = config_json.machine_registry || {}
+  const hostname = os.hostname()
+  machine_id = Object.keys(registry).find(
+    (id) => registry[id].hostname === hostname
+  ) || null
+  if (machine_id) machine_config = registry[machine_id]
+} catch (e) {
+  // Graceful fallback -- no SSL, default transcription args
+}
 
-// SSL configuration for storage server (Linux only)
-// macOS runs without SSL (development) or behind a local proxy
-const ssl_env = is_macos
-  ? {}
-  : {
+// SSL configuration from machine_registry
+const ssl_env = machine_config.ssl_key_path
+  ? {
       SSL_ENABLED: 'true',
-      SSL_KEY_PATH: '/etc/letsencrypt/live/base.tint.space/privkey.pem',
-      SSL_CERT_PATH: '/etc/letsencrypt/live/base.tint.space/fullchain.pem',
-      SERVER_PORT: '8081'
+      SSL_KEY_PATH: machine_config.ssl_key_path,
+      SSL_CERT_PATH: machine_config.ssl_cert_path,
+      SERVER_PORT: String(machine_config.server_port || 8081)
     }
+  : {}
 
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
@@ -118,7 +131,7 @@ module.exports = {
         max_memory_restart: '512M',
         env: {
           DEBUG: 'metadata:*',
-          ...(is_macos ? { CHOKIDAR_USEPOLLING: '1' } : {})
+          ...(os.platform() === 'darwin' ? { CHOKIDAR_USEPOLLING: '1' } : {})
         }
       }
     ),
@@ -130,31 +143,11 @@ module.exports = {
       max_memory_restart: '256M',
       env: { DEBUG: 'schedule:*' }
     }),
-    // Transcription service - only runs on storage server (Linux)
-    // Uses faster-whisper with CTranslate2 for CPU-optimized speech-to-text
-    ...(is_macos
-      ? []
-      : [
-          {
-            name: 'transcription-service',
-            script: 'server/services/transcription-service.py',
-            interpreter: 'python3',
-            cwd: defaults.cwd,
-            instances: 1,
-            exec_mode: 'fork',
-            autorestart: true,
-            combine_logs: true,
-            time: true,
-            max_memory_restart: '2G',
-            error_file: path.join(logs_dir, 'transcription-service-error.log'),
-            out_file: path.join(logs_dir, 'transcription-service-out.log'),
-            log_file: path.join(
-              logs_dir,
-              'transcription-service-combined.log'
-            ),
-            args: '--port 8089 --model base.en --compute-type int8',
-            env: common_env
-          }
-        ])
+    app('transcription-service', 'server/services/transcription-service.py', {
+      interpreter: 'python3',
+      max_memory_restart: '2G',
+      args: machine_config.transcription_args || '--port 8089 --model base.en --compute-type int8',
+      env: common_env
+    })
   ]
 }
