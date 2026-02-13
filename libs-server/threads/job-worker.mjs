@@ -13,6 +13,10 @@ const log = debug('threads:worker')
 // Constants
 const QUEUE_NAME = 'thread-creation'
 const DEFAULT_CONCURRENCY = 3
+const LOCK_DURATION_MS = 600000 // 10 minutes - long-running Claude CLI sessions
+const STALLED_INTERVAL_MS = 30000 // Check for stalled jobs every 30 seconds
+const LOCK_EXTEND_INTERVAL_MS = 300000 // Extend lock every 5 minutes
+const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes survive crashes)
 
 // Module state
 let thread_worker = null
@@ -36,6 +40,18 @@ const process_thread_creation_job = async (job) => {
     `Job ${job.id}: ${action} Claude CLI session${session_id ? ` ${session_id}` : ''}`
   )
 
+  // Periodically extend job lock to prevent BullMQ from marking long-running
+  // Claude CLI sessions as stalled. Sessions can run for 60+ minutes but the
+  // lock expires after LOCK_DURATION_MS. This interval renews it.
+  const lock_interval = setInterval(async () => {
+    try {
+      await job.extendLock(job.token, LOCK_DURATION_MS)
+      log(`Job ${job.id}: lock extended`)
+    } catch (error) {
+      log(`Job ${job.id}: lock extension failed - ${error.message}`)
+    }
+  }, LOCK_EXTEND_INTERVAL_MS)
+
   try {
     const result = await create_session_claude_cli({
       prompt,
@@ -58,6 +74,8 @@ const process_thread_creation_job = async (job) => {
   } catch (error) {
     log(`Job ${job.id}: failed -`, error.message)
     throw error
+  } finally {
+    clearInterval(lock_interval)
   }
 }
 
@@ -93,6 +111,10 @@ const handle_worker_error = (error) => {
   log('Worker error:', error)
 }
 
+const handle_job_stalled = (job_id) => {
+  log(`Job ${job_id}: stalled detected`)
+}
+
 /**
  * Start the BullMQ worker
  */
@@ -110,13 +132,20 @@ export const start_worker = () => {
 
   thread_worker = new Worker(QUEUE_NAME, process_thread_creation_job, {
     connection,
-    concurrency
+    concurrency,
+    // Long-running job protection: Claude CLI sessions run for 60+ minutes.
+    // Without explicit config, BullMQ defaults to 30s lockDuration which causes
+    // stall detection to re-queue jobs that are still running, spawning duplicates.
+    lockDuration: LOCK_DURATION_MS,
+    stalledInterval: STALLED_INTERVAL_MS,
+    maxStalledCount: MAX_STALLED_COUNT
   })
 
   thread_worker.on('completed', handle_job_completed)
   thread_worker.on('failed', handle_job_failed)
   thread_worker.on('active', handle_job_active)
   thread_worker.on('error', handle_worker_error)
+  thread_worker.on('stalled', handle_job_stalled)
 
   log('Worker ready')
 

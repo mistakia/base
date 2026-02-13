@@ -131,9 +131,11 @@ export const start_cli_queue_worker = () => {
   cli_queue_worker = new Worker(QUEUE_CONFIG.name, process_cli_job, {
     connection,
     concurrency: WORKER_CONCURRENCY,
-    // Stalled job detection - recover jobs from crashed workers
+    // Stalled job detection - recover jobs from crashed workers.
+    // Scheduled commands can run up to 10 minutes (600s timeout).
+    // lockDuration of 300s with auto-renewal at 150s provides safety margin.
     stalledInterval: 30000, // Check for stalled jobs every 30 seconds
-    lockDuration: 60000, // Jobs locked for 60 seconds (longer for CLI commands)
+    lockDuration: 300000, // Jobs locked for 5 minutes (covers long CLI commands)
     maxStalledCount: 2 // Allow 2 stalls before failing (handles transient issues)
   })
 
