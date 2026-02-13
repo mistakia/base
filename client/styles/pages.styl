@@ -41,7 +41,7 @@ body
 // Layout wrapper - scrolls both horizontally and vertically
 .page-layout
   position: relative
-  height: 100vh
+  height: 100%
   overflow: auto
   overscroll-behavior: none
   padding: 0 var(--space-base) 30px
@@ -70,7 +70,7 @@ body
   // On mobile, adjust padding for breadcrumb at top and clear fixed input trigger at bottom
   @media (max-width: 768px)
     padding-top: 12px
-    padding-bottom: 140px
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px))
 
 // Sessions panel shown below header on non-homepage pages
 .page-sessions-panel

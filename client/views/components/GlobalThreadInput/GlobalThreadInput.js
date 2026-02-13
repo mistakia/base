@@ -1,13 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  Box,
-  TextField,
-  CircularProgress,
-  Typography,
-  Fade
-} from '@mui/material'
+import { Box, CircularProgress, Typography, Fade } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import MicIcon from '@mui/icons-material/Mic'
@@ -30,6 +24,50 @@ const KEYBOARD_HINT = 'Cmd+Enter to send'
 const PLACEHOLDER_NEW_THREAD = 'What would you like Trashman Jr to do?'
 const PLACEHOLDER_CONTINUE = 'Continue thread...'
 
+// ContentEditable cursor helpers
+const get_cursor_offset = (element) => {
+  try {
+    const selection = window.getSelection()
+    if (!selection || !selection.rangeCount) return 0
+    const range = selection.getRangeAt(0)
+    const pre_range = range.cloneRange()
+    pre_range.selectNodeContents(element)
+    pre_range.setEnd(range.startContainer, range.startOffset)
+    return pre_range.toString().length
+  } catch {
+    return 0
+  }
+}
+
+const set_cursor_offset = (element, offset) => {
+  try {
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    )
+    let remaining = offset
+    let node = walker.nextNode()
+    while (node) {
+      const len = node.textContent.length
+      if (remaining <= len) {
+        const selection = window.getSelection()
+        const range = document.createRange()
+        range.setStart(node, Math.min(remaining, len))
+        range.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        return
+      }
+      remaining -= len
+      node = walker.nextNode()
+    }
+  } catch {
+    // Ignore cursor position errors
+  }
+}
+
 /**
  * GlobalThreadInput Component
  *
@@ -47,6 +85,7 @@ export default function GlobalThreadInput() {
   const input_ref = useRef(null)
   const prev_is_open_ref = useRef(false)
   const draft_restored_ref = useRef(false)
+  const internal_update_ref = useRef(false)
 
   // Redux state for overlay
   const is_open = useSelector((state) =>
@@ -126,12 +165,13 @@ export default function GlobalThreadInput() {
         })
       )
 
-      // Update cursor position in the input after React re-renders
+      // Update contentEditable DOM and cursor position
       requestAnimationFrame(() => {
-        const input = input_ref.current
-        if (input) {
-          input.setSelectionRange(new_cursor_pos, new_cursor_pos)
-          input.focus()
+        const el = input_ref.current
+        if (el) {
+          el.textContent = new_text
+          set_cursor_offset(el, new_cursor_pos)
+          el.focus()
         }
       })
     },
@@ -183,10 +223,17 @@ export default function GlobalThreadInput() {
   // Focus input when overlay opens
   useEffect(() => {
     if (is_open && !prev_is_open_ref.current) {
-      // Focus input after a brief delay for animation
-      setTimeout(() => {
-        input_ref.current?.focus()
-      }, 100)
+      const focus_input = () => input_ref.current?.focus()
+      const timer = setTimeout(focus_input, 100)
+
+      // iOS fallback: focus on first touch if programmatic focus was blocked
+      const handle_touch = () => focus_input()
+      document.addEventListener('touchstart', handle_touch, { once: true })
+
+      return () => {
+        clearTimeout(timer)
+        document.removeEventListener('touchstart', handle_touch)
+      }
     }
     prev_is_open_ref.current = is_open
   }, [is_open])
@@ -215,11 +262,12 @@ export default function GlobalThreadInput() {
             })
           )
 
-          // Set cursor position after React re-renders
+          // Sync to contentEditable DOM after React re-renders
           requestAnimationFrame(() => {
-            const input = input_ref.current
-            if (input) {
-              input.setSelectionRange(cursor_pos, cursor_pos)
+            const el = input_ref.current
+            if (el) {
+              el.textContent = saved_message
+              set_cursor_offset(el, cursor_pos)
             }
           })
         }
@@ -324,6 +372,26 @@ export default function GlobalThreadInput() {
     dispatch(thread_prompt_actions.close())
   }
 
+  // Sync external message changes (voice, autocomplete) to contentEditable DOM
+  useEffect(() => {
+    if (internal_update_ref.current) {
+      internal_update_ref.current = false
+      return
+    }
+    const el = input_ref.current
+    if (!el) return
+    const current_text = el.textContent || ''
+    if (current_text !== message) {
+      internal_update_ref.current = true
+      el.textContent = message
+      if (message) {
+        requestAnimationFrame(() => {
+          set_cursor_offset(el, cursor_position)
+        })
+      }
+    }
+  }, [message, cursor_position])
+
   const handle_key_down = (e) => {
     // Escape always closes the overlay (and dismisses autocomplete if visible)
     if (e.key === 'Escape') {
@@ -339,17 +407,59 @@ export default function GlobalThreadInput() {
 
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       handle_submit(e)
+      return
+    }
+
+    // Consistent newline handling in contentEditable
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const selection = window.getSelection()
+      if (selection.rangeCount) {
+        selection.deleteFromDocument()
+        const text_node = document.createTextNode('\n')
+        selection.getRangeAt(0).insertNode(text_node)
+        selection.collapseToEnd()
+      }
     }
   }
 
-  // Track cursor position on input changes and selection changes
-  const handle_input_change = (e) => {
-    set_message(e.target.value)
-    set_cursor_position(e.target.selectionStart || 0)
+  // Track text and cursor from contentEditable input events
+  const handle_input_change = () => {
+    const el = input_ref.current
+    if (!el) return
+    internal_update_ref.current = true
+    let text = el.textContent || ''
+
+    // Normalize empty state for CSS :empty placeholder
+    if (!text || text === '\n') {
+      text = ''
+      el.innerHTML = ''
+    }
+
+    set_message(text)
+    if (text) {
+      set_cursor_position(get_cursor_offset(el))
+    } else {
+      set_cursor_position(0)
+    }
   }
 
-  const handle_input_select = (e) => {
-    set_cursor_position(e.target.selectionEnd || 0)
+  const handle_input_select = () => {
+    const el = input_ref.current
+    if (!el) return
+    set_cursor_position(get_cursor_offset(el))
+  }
+
+  const handle_paste = (e) => {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text/plain')
+    const selection = window.getSelection()
+    if (selection.rangeCount) {
+      selection.deleteFromDocument()
+      const text_node = document.createTextNode(text)
+      selection.getRangeAt(0).insertNode(text_node)
+      selection.collapseToEnd()
+    }
   }
 
   const handle_toggle_mode = () => {
@@ -428,24 +538,21 @@ export default function GlobalThreadInput() {
                 on_select={autocomplete.handle_click_select}
                 search_term={autocomplete.search_term}
               />
-              <TextField
-                inputRef={input_ref}
-                multiline
-                fullWidth
-                minRows={2}
-                maxRows={10}
-                value={message}
-                onChange={handle_input_change}
-                onSelect={handle_input_select}
+              <div
+                ref={input_ref}
+                contentEditable={!is_loading}
+                role='textbox'
+                aria-multiline='true'
+                aria-placeholder={placeholder_text}
+                className='thread-input-editable'
+                enterKeyHint='return'
+                onInput={handle_input_change}
                 onKeyDown={handle_key_down}
-                placeholder={placeholder_text}
-                disabled={is_loading}
-                variant='standard'
-                className='thread-input-field'
-                InputProps={{
-                  disableUnderline: true
-                }}
-                autoFocus
+                onClick={handle_input_select}
+                onPaste={handle_paste}
+                data-placeholder={placeholder_text}
+                tabIndex={0}
+                suppressContentEditableWarning
               />
             </Box>
 
