@@ -162,6 +162,35 @@ Threads execute workflows in isolated git worktrees:
 - JWT authentication for API endpoints
 - WebSocket for real-time client-server communication
 
+## Configuration Architecture
+
+The config system uses a two-tier loading strategy: base defaults + user-base overlay.
+
+### How Config Loading Works
+
+1. **Base defaults** (`config/config.json`): Always loaded first. Contains only non-secret default values with empty strings for credentials. This is the installable system config -- anyone can clone the repo and provide their own user-base config.
+
+2. **User-base overlay** (`{USER_BASE_DIRECTORY}/config/config.json`): Loaded via `@tsmx/secure-config` (supports `ENCRYPTED|...` values) and deep-merged over defaults. Contains secrets, machine_registry, deployment-specific values.
+
+3. **Test mode** (`NODE_ENV=test`): Uses `config/config-test.json` directly via `secure_config`, bypassing the merge.
+
+### Required Environment Variables
+
+- `USER_BASE_DIRECTORY` -- Path to user-base working directory (required outside test mode)
+- `CONFIG_ENCRYPTION_KEY` -- Decryption key for `ENCRYPTED|...` values in user-base config
+
+### Machine Identity
+
+Machine-specific configuration (SSL, ports, transcription args) is resolved via `machine_registry` in the user-base config. The `pm2.config.js` reads machine_registry directly from user-base config.json to set environment variables before services start.
+
+### Env Var Injection
+
+`pm2.config.js` auto-detects the current machine by matching `os.hostname()` against `machine_registry` entries and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
+
+### Debug Logging
+
+Enable config loader debug output: `DEBUG=config:loader node ...`
+
 ## Naming Conventions
 
 - **Directory Names**: Use singular nouns for directory names (e.g., `directory/`, `entity/`, `task/` not `directories/`, `entities/`, `tasks/`)

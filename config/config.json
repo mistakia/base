@@ -1,35 +1,35 @@
 {
   "server_port": 8080,
-  "production_url": "https://base.tint.space",
-  "production_wss": "wss://base.tint.space",
-  "public_url": "https://base.tint.space",
-  "base_hostname": "ENCRYPTED|cbd599979035c5eb301fd738cd72f05d|27b7e9022e7fbf920d91922f3dd78775",
-  "github_access_token": "ENCRYPTED|a23b824cb96fd5eeb1631c6886cad0a8|2eb626805e02146ba82a40dec946a5bf897d586386e4da3fdf9a879a0f95b339a901392fe6c17212ae44e1a0ab4b61b0",
+  "production_url": "",
+  "production_wss": "",
+  "public_url": "",
+  "base_hostname": "",
+  "github_access_token": "",
   "github": {
-    "webhook_secret": "ENCRYPTED|d0862190a6217d6ad1e06b74014c4d34|cf0320e6cea1f021baa07b763198524876182bd407b042adc5faeeebe0c8e1218bffcb6a3acd32e564dec40b023b49bf9620e8e5d1b23b1f9455f62fbea8e4daac068e9eea675c61afe86fa051231ca3"
+    "webhook_secret": ""
   },
   "system_main_branch": "main",
   "user_main_branch": "main",
-  "user_id": "40503950-32bc-11f0-80a5-7c10c941e0a3",
-  "user_public_key": "10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b",
-  "notion_api_key": "ENCRYPTED|d0e8b9c904dba9aa99cbda8c556e1127|3f2212eff6c4035eba17054da6a919df50e6c9daff6de28b44c3e036410a9ed8e97b5421273dd5311c5b605211500b113d6557b7bb89b7561c37ca7c18014962",
+  "user_id": "",
+  "user_public_key": "",
+  "notion_api_key": "",
   "cloudflare": {
-    "zone_id": "ENCRYPTED|9ea4b5379f4deb4b2fc705ec3c9376ec|3644791ceabdf2e152da279ad9295b2e9f2ec63da4f6fda0a17960b73841d5696980e31dd2e149f1bff4e5a61aa5253a",
-    "user_email": "ENCRYPTED|a3f8346af34798f6066181fa80e7d50e|dd2f8c13f2687784bc01ede56783e97fd107ce9740abe7186c3aba32a3e8dafa",
-    "token": "ENCRYPTED|d3247e8a3f721656c74f94d3870272cd|d05b23304e664a4d5b21122525b802b50f67ce2c8834003ce4207191b9dd8ea04d733436df0ed86ab2ca0c86fde0b69d"
+    "zone_id": "",
+    "user_email": "",
+    "token": ""
   },
   "notion": {
-    "api_key": "ENCRYPTED|b410f41af547e852a5a6251e4aeb2c8a|9644fd3f3e8fe9b7712eb7ca8ecab6c1b0085f3df4f7aaf379f55d06c920fa73f31a5d80fa68de491ffb69b5d2c99b9fff5e966a478eb470a0aae48ec17bf198"
+    "api_key": ""
   },
   "jwt": {
-    "secret": "ENCRYPTED|3888e96d91f69c2570336acae0f400b5|4be4a270a4c75aa9b88acb3d02bde6dd80acda3057f663bf26626ae2fe087468",
+    "secret": "",
     "algorithms": ["HS256"]
   },
   "claude_session_import_service": {
     "storage_server": {
-      "host": "storage.localdomain",
-      "user": "user",
-      "remote_path": "/mnt/md0/user-base"
+      "host": "",
+      "user": "",
+      "remote_path": ""
     },
     "notifications": {
       "alert_on_errors": false
@@ -48,6 +48,8 @@
   },
   "threads": {
     "cli": {
+      "command": "claude",
+      "default_execution_mode": "container",
       "session_timeout_minutes": 60
     },
     "queue": {
@@ -62,32 +64,26 @@
     "cleanup_interval_seconds": 60
   },
   "opencode": {
-    "default_model": "ollama/devstral-small-2:24b",
+    "default_model": "",
     "timeout_ms": 120000,
     "max_retries": 2,
     "models": {
-      "production": "ollama/devstral-small-2:24b",
-      "high_quality": "ollama/qwen3:32b",
-      "fast": "ollama/devstral-small-2:24b"
+      "production": "",
+      "high_quality": "",
+      "fast": ""
     }
   },
   "embedded_database_index": {
     "enabled": true,
     "file_watcher_enabled": true
   },
+  "transcription": {
+    "service_url": ""
+  },
+  "machine_registry": {},
   "cli_queue": {
     "tag_limits": {
-      "default": { "max_concurrent": 10 },
-      "claude-session": { "max_concurrent": 2 },
-      "draft-readiness": { "max_concurrent": 2 },
-      "task-planning": { "max_concurrent": 2 },
-      "orchestrator": { "max_concurrent": 1 },
-      "project-base": { "max_concurrent": 1 },
-      "project-league": { "max_concurrent": 1 },
-      "project-finance": { "max_concurrent": 1 },
-      "project-parcels": { "max_concurrent": 1 },
-      "project-homelab": { "max_concurrent": 1 },
-      "project-properties": { "max_concurrent": 1 }
+      "default": { "max_concurrent": 10 }
     }
   }
 }

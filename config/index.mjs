@@ -1,9 +1,12 @@
-import secure_config from '@tsmx/secure-config'
+import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
-import { existsSync } from 'fs'
+import secure_config from '@tsmx/secure-config'
+import debug from 'debug'
+
+const log = debug('config:loader')
 
 const current_file_path = fileURLToPath(import.meta.url)
 const current_dir = dirname(current_file_path)
@@ -12,11 +15,33 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-// Look for config in user-base first, fall back to local config directory
-// Note: @tsmx/secure-config resolves filenames as {prefix}{-NODE_ENV}.json
-// (prefix defaults to "config"), so the user-base file must be named config.json
-// In test mode, always use local config-test.json to avoid picking up the real
-// user-base config (which may use different encryption keys or settings)
+/**
+ * Deep merge two objects. Source values override target values.
+ * Arrays are replaced, not concatenated.
+ */
+function deep_merge(target, source) {
+  const result = { ...target }
+
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] &&
+      typeof source[key] === 'object' &&
+      !Array.isArray(source[key])
+    ) {
+      result[key] = deep_merge(result[key] || {}, source[key])
+    } else {
+      result[key] = source[key]
+    }
+  }
+
+  return result
+}
+
+// 1. Always load defaults from base repo (plain JSON, no encryption)
+const defaults = JSON.parse(readFileSync(join(config_dir, 'config.json'), 'utf8'))
+log('Loaded base defaults from %s', config_dir)
+
+// 2. Determine user-base config directory
 const user_base_config_dir =
   process.env.NODE_ENV !== 'test' &&
   process.env.USER_BASE_DIRECTORY &&
@@ -24,9 +49,22 @@ const user_base_config_dir =
     ? join(process.env.USER_BASE_DIRECTORY, 'config')
     : null
 
-const config = secure_config({
-  directory: user_base_config_dir || config_dir
-})
+// 3. Build config: defaults merged with user-base overlay
+let config
+if (process.env.NODE_ENV === 'test') {
+  // Test mode: use local config-test.json via secure_config (unchanged behavior)
+  config = secure_config({ directory: config_dir })
+  log('Loaded test config from %s', config_dir)
+} else if (user_base_config_dir) {
+  // Production/development: load user-base config and deep merge over defaults
+  const user_config = secure_config({ directory: user_base_config_dir })
+  config = deep_merge(defaults, user_config)
+  log('Loaded user config from %s (merged with defaults)', user_base_config_dir)
+} else {
+  // Fallback: defaults only (missing user-base config)
+  config = { ...defaults }
+  log('WARNING: No user-base config found, using defaults only')
+}
 
 // system_base_directory: derived from code location (parent of config/)
 config.system_base_directory =

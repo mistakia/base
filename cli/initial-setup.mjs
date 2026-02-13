@@ -22,7 +22,7 @@ import { hideBin } from 'yargs/helpers'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATE_CONFIG_PATH = path.resolve(
   __dirname,
-  '../config/config.template.json'
+  '../config/config.json'
 )
 
 // Standard entity type directories for a user-base
