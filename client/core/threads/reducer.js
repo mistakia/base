@@ -378,14 +378,6 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       )
     }
 
-    case threads_action_types.RESET_THREAD_TABLE_VIEW: {
-      const reset_view_id = payload.view_id || 'default'
-      return state.setIn(
-        ['thread_table_views', reset_view_id],
-        DEFAULT_THREAD_TABLE_VIEW
-      )
-    }
-
     // ========================================================================
     // WebSocket Real-Time Thread Events
     // ========================================================================

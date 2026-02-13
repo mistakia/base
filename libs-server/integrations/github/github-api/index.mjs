@@ -5,9 +5,6 @@ export { get_github_repo_issues } from './get-github-repo-issues.mjs'
 export { get_github_issue } from './get-github-issue.mjs'
 export { update_github_issue } from './update-github-issue.mjs'
 export { create_github_issue } from './create-github-issue.mjs'
-export { create_pull_request } from './create-pull-request.mjs'
-export { get_pull_request } from './get-pull-request.mjs'
-export { update_pull_request } from './update-pull-request.mjs'
 export { update_github_issue_graphql } from './update-github-issue-graphql.mjs'
 export { update_github_project_item } from './update-github-project-item.mjs'
 export { get_github_project_item_for_issue } from './get-github-project-item-for-issue.mjs'
@@ -20,8 +17,6 @@ export {
 export {
   set_github_issue_parent,
   remove_github_issue_parent,
-  add_github_issue_child,
-  remove_github_issue_child,
   create_github_issue_cross_reference,
   get_github_issue_id
 } from './update-github-issue-relationships.mjs'

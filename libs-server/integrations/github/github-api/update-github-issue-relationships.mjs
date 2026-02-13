@@ -97,45 +97,6 @@ export async function remove_github_issue_parent({ issue_id, github_token }) {
 }
 
 /**
- * Add a child issue to a parent (convert issue to subtask)
- * This is an alias for set_github_issue_parent for semantic clarity
- * @param {Object} params - Parameters
- * @param {string} params.parent_issue_id - Parent issue ID (global ID)
- * @param {string} params.child_issue_id - Child issue ID (global ID)
- * @param {string} params.github_token - GitHub API token
- * @returns {Promise<Object>} Mutation result
- */
-export async function add_github_issue_child({
-  parent_issue_id,
-  child_issue_id,
-  github_token
-}) {
-  return set_github_issue_parent({
-    issue_id: child_issue_id,
-    parent_issue_id,
-    github_token
-  })
-}
-
-/**
- * Remove a child issue from a parent (convert subtask to issue)
- * This is an alias for remove_github_issue_parent for semantic clarity
- * @param {Object} params - Parameters
- * @param {string} params.child_issue_id - Child issue ID (global ID)
- * @param {string} params.github_token - GitHub API token
- * @returns {Promise<Object>} Mutation result
- */
-export async function remove_github_issue_child({
-  child_issue_id,
-  github_token
-}) {
-  return remove_github_issue_parent({
-    issue_id: child_issue_id,
-    github_token
-  })
-}
-
-/**
  * Create a cross-reference between issues by adding a comment
  * @param {Object} params - Parameters
  * @param {string|number} params.source_issue_number - Source issue number

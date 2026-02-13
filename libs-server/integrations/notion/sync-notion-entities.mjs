@@ -589,12 +589,6 @@ export async function sync_notion_bidirectional(options = {}) {
       }
     }
 
-    // Then, export local entity changes to Notion
-    if (options.export !== false && options.entity_ids) {
-      log('Starting export phase: Local entities → Notion')
-      // results.export_results = await sync_entities_to_notion(options.entity_ids, options)
-    }
-
     log('Bi-directional sync completed')
     return results
   } catch (error) {

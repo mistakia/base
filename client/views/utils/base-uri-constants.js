@@ -71,7 +71,7 @@ export const convert_base_uri_to_path = (base_uri) => {
 }
 
 // Get current window path for relative link resolution
-export const get_current_window_path = () => {
+const get_current_window_path = () => {
   return window.location.pathname
 }
 

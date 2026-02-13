@@ -94,45 +94,6 @@ export function remove_stale_external_properties(
 }
 
 /**
- * Add a property to the protected properties set
- * Use this if you need to protect additional properties from removal
- *
- * @param {string} property_name - Property name to protect
- */
-export function add_protected_property(property_name) {
-  PROTECTED_PROPERTIES.add(property_name)
-}
-
-/**
- * Add a property to the local-only properties set
- * Use this for properties that should never be overwritten by external systems
- *
- * @param {string} property_name - Property name to mark as local-only
- */
-export function add_local_only_property(property_name) {
-  LOCAL_ONLY_PROPERTIES.add(property_name)
-}
-
-/**
- * Add a property to the preserve-if-exists properties set
- * Use this for properties that should be preserved if they exist, even if not in new external data
- *
- * @param {string} property_name - Property name to preserve if exists
- */
-export function add_preserve_if_exists_property(property_name) {
-  PRESERVE_IF_EXISTS_PROPERTIES.add(property_name)
-}
-
-/**
- * Get the current set of preserve-if-exists properties
- *
- * @returns {Set<string>} Preserve-if-exists property names
- */
-export function get_preserve_if_exists_properties() {
-  return new Set(PRESERVE_IF_EXISTS_PROPERTIES)
-}
-
-/**
  * Get the current set of protected properties
  *
  * @returns {Set<string>} Protected property names

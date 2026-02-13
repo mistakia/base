@@ -10,53 +10,53 @@
  */
 
 // Neutral Colors
-export const COLOR_WHITE = '#ffffff'
-export const COLOR_TEXT = '#212529'
-export const COLOR_TEXT_SECONDARY = '#6c757d'
-export const COLOR_TEXT_TERTIARY = '#b0b0b0'
-export const COLOR_BORDER = '#ced4da'
-export const COLOR_BORDER_LIGHT = '#e9ecef'
-export const COLOR_SURFACE = '#F7F7F4'
-export const COLOR_SURFACE_HOVER = '#fafafa'
-export const COLOR_SURFACE_SECONDARY = '#f8f9fa'
+const COLOR_WHITE = '#ffffff'
+const COLOR_TEXT = '#212529'
+const COLOR_TEXT_SECONDARY = '#6c757d'
+const COLOR_TEXT_TERTIARY = '#b0b0b0'
+const COLOR_BORDER = '#ced4da'
+const COLOR_BORDER_LIGHT = '#e9ecef'
+const COLOR_SURFACE = '#F7F7F4'
+const COLOR_SURFACE_HOVER = '#fafafa'
+const COLOR_SURFACE_SECONDARY = '#f8f9fa'
 
 // Accent Colors
-export const COLOR_BREADCRUMB_DARK = '#4a3520'
-export const COLOR_BREADCRUMB_LIGHT = '#e8d4c1'
+const COLOR_BREADCRUMB_DARK = '#4a3520'
+const COLOR_BREADCRUMB_LIGHT = '#e8d4c1'
 // Breadcrumb bar background - mix of light color (60%) and surface (40%)
 // Matches: mix(#E8D4C1, #F7F7F4, 60%)
 export const COLOR_BREADCRUMB_BAR_BG = '#eee2d5'
-export const COLOR_PRIMARY = '#007bff'
-export const COLOR_PRIMARY_HOVER = '#0069d9'
+const COLOR_PRIMARY = '#007bff'
+const COLOR_PRIMARY_HOVER = '#0069d9'
 
 // Semantic Colors
-export const COLOR_ERROR = '#d73a49'
-export const COLOR_SUCCESS = '#28a745'
-export const COLOR_WARNING = '#f66a0a'
-export const COLOR_INFO = '#0969da'
+const COLOR_ERROR = '#d73a49'
+const COLOR_SUCCESS = '#28a745'
+const COLOR_WARNING = '#f66a0a'
+const COLOR_INFO = '#0969da'
 
 // Code/Terminal Colors - using breadcrumb color scheme (lighter shade)
-export const COLOR_CODE_BG = '#f5eee6' // Lighter cream matching breadcrumb/theme color
-export const COLOR_CODE_BORDER = '#e8dcc8' // Lighter brown border
-export const COLOR_TERMINAL_BG = '#0d1117'
-export const COLOR_TERMINAL_TEXT = '#e6edf3'
-export const COLOR_TERMINAL_SUCCESS = '#7ee83f'
-export const COLOR_TERMINAL_ERROR = '#f85149'
-export const COLOR_TERMINAL_BORDER = '#30363d'
-export const COLOR_TERMINAL_MUTED = '#8b949e'
+const COLOR_CODE_BG = '#f5eee6' // Lighter cream matching breadcrumb/theme color
+const COLOR_CODE_BORDER = '#e8dcc8' // Lighter brown border
+const COLOR_TERMINAL_BG = '#0d1117'
+const COLOR_TERMINAL_TEXT = '#e6edf3'
+const COLOR_TERMINAL_SUCCESS = '#7ee83f'
+const COLOR_TERMINAL_ERROR = '#f85149'
+const COLOR_TERMINAL_BORDER = '#30363d'
+const COLOR_TERMINAL_MUTED = '#8b949e'
 
 // Tool Type Colors
-export const COLOR_TOOL_FILESYSTEM = '#1976d2'
-export const COLOR_TOOL_EXECUTION = '#9c27b0'
-export const COLOR_TOOL_SEARCH = '#0288d1'
-export const COLOR_TOOL_MANAGEMENT = '#ed6c02'
-export const COLOR_TOOL_MCP = '#9c27b0'
+const COLOR_TOOL_FILESYSTEM = '#1976d2'
+const COLOR_TOOL_EXECUTION = '#9c27b0'
+const COLOR_TOOL_SEARCH = '#0288d1'
+const COLOR_TOOL_MANAGEMENT = '#ed6c02'
+const COLOR_TOOL_MCP = '#9c27b0'
 
 // Icon Colors (for DirectoryView and similar)
-export const COLOR_ICON_FOLDER = '#79b8ff'
-export const COLOR_ICON_FILE = '#959da5'
-export const COLOR_ICON_LINK = '#0366d6'
-export const COLOR_ICON_ERROR = '#d73a49' // Aligned with COLOR_ERROR
+const COLOR_ICON_FOLDER = '#79b8ff'
+const COLOR_ICON_FILE = '#959da5'
+const COLOR_ICON_LINK = '#0366d6'
+const COLOR_ICON_ERROR = '#d73a49' // Aligned with COLOR_ERROR
 
 // Color Palettes (Tailwind-style)
 export const GRAY = {

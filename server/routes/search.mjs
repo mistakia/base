@@ -7,10 +7,7 @@ import {
 } from '#server/middleware/permission/index.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
-import {
-  unified_search,
-  get_search_capabilities
-} from '#libs-server/search/unified-search-engine.mjs'
+import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
 import {
   get_recent_entity_files,
   get_recent_files_config
@@ -289,32 +286,5 @@ router.get('/recent', async (req, res) => {
   }
 })
 
-/**
- * GET /api/search/capabilities
- *
- * Get search engine capabilities (available tools, modes)
- */
-router.get('/capabilities', async (req, res) => {
-  try {
-    const capabilities = await get_search_capabilities()
-    const search_config = await load_search_config()
-
-    res.json({
-      ...capabilities,
-      config: {
-        default_limit: search_config.search?.default_limit || 20,
-        max_limit: search_config.search?.max_limit || 100,
-        debounce_ms: search_config.search?.debounce_ms || 300
-      }
-    })
-  } catch (error) {
-    log('Capabilities error:', error.message)
-
-    res.status(500).json({
-      error: 'Failed to get search capabilities',
-      message: error.message
-    })
-  }
-})
 
 export default router

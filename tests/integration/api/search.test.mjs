@@ -439,41 +439,4 @@ describe('Search API', function () {
     })
   })
 
-  describe('GET /api/search/capabilities', () => {
-    it('should return search capabilities', async () => {
-      const res = await authenticate_request(
-        chai.request(server).get('/api/search/capabilities'),
-        test_user
-      )
-
-      expect(res).to.have.status(200)
-      expect(res.body).to.have.property('ripgrep_available')
-      expect(res.body).to.have.property('supports_content_search')
-      expect(res.body).to.have.property('supports_fuzzy_ranking')
-      expect(res.body).to.have.property('supports_path_search')
-      expect(res.body).to.have.property('supports_directory_search')
-      expect(res.body).to.have.property('supports_thread_search')
-    })
-
-    it('should indicate native fuzzy ranking is available', async () => {
-      const res = await authenticate_request(
-        chai.request(server).get('/api/search/capabilities'),
-        test_user
-      )
-
-      expect(res).to.have.status(200)
-      // Native fuzzy scorer should always be available
-      expect(res.body.supports_fuzzy_ranking).to.equal(true)
-    })
-
-    it('should indicate directory search is available', async () => {
-      const res = await authenticate_request(
-        chai.request(server).get('/api/search/capabilities'),
-        test_user
-      )
-
-      expect(res).to.have.status(200)
-      expect(res.body.supports_directory_search).to.equal(true)
-    })
-  })
 })

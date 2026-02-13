@@ -248,25 +248,6 @@ export function convert_entity_to_notion_properties_from_entity(entity) {
 }
 
 /**
- * Get all configured entity types
- * @returns {Array} Array of unique entity type names
- */
-export function get_configured_entity_types() {
-  const config = load_mapping_config()
-  const entity_types = new Set()
-
-  if (config.databases) {
-    for (const mapping of Object.values(config.databases)) {
-      if (mapping.entity_type) {
-        entity_types.add(mapping.entity_type)
-      }
-    }
-  }
-
-  return Array.from(entity_types)
-}
-
-/**
  * Get all configured database IDs
  * @returns {Array} Array of database IDs
  */
