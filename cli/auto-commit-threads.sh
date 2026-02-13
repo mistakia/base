@@ -62,7 +62,7 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 0
 fi
 
-# Try to acquire lock (non-blocking, single attempt)
+# Try to acquire lock (non-blocking, single attempt with stale lock recovery)
 # Returns 0 if acquired, 1 if held by another process
 try_acquire_lock() {
     # Try to acquire lock atomically
@@ -78,9 +78,14 @@ try_acquire_lock() {
         lock_pid=$(cat "$LOCKFILE" 2>/dev/null) || return 1
 
         if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
-            # Lock holder is dead - but don't remove here due to race condition
-            # Another process might be acquiring. Just report and exit.
-            echo "Stale lock detected (PID $lock_pid dead), skipping (scheduled job will retry)"
+            # Lock holder is dead - safe to remove and retry once
+            echo "Removing stale lock from dead PID $lock_pid"
+            rm -f "$LOCKFILE"
+            # Retry acquisition once after stale lock removal
+            if ( set -o noclobber; echo $$ > "$LOCKFILE" ) 2>/dev/null; then
+                trap 'rm -f "$LOCKFILE"' EXIT INT TERM
+                return 0
+            fi
             return 1
         fi
     fi

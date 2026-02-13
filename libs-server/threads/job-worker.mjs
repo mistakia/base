@@ -5,6 +5,7 @@ import {
   get_redis_connection,
   close_redis_connection
 } from '#libs-server/redis/get-connection.mjs'
+import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
 import { create_session_claude_cli } from './create-session-claude-cli.mjs'
 
 const log = debug('threads:worker')
@@ -63,8 +64,21 @@ const process_thread_creation_job = async (job) => {
 /**
  * Event handlers
  */
-const handle_job_completed = (job, result) => {
+const handle_job_completed = async (job, result) => {
   log(`Job ${job.id}: completed successfully`, result)
+
+  // Queue immediate push-threads to reduce sync delay after session completion
+  try {
+    await add_cli_job({
+      command: '$USER_BASE_DIRECTORY/repository/active/base/cli/push-threads.sh',
+      tags: ['thread-sync'],
+      priority: 5,
+      timeout_ms: 120000
+    })
+    log(`Job ${job.id}: queued push-threads after session completion`)
+  } catch (error) {
+    log(`Job ${job.id}: failed to queue push-threads -`, error.message)
+  }
 }
 
 const handle_job_failed = (job, error) => {

@@ -112,6 +112,9 @@ elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     if ! git rebase "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
+        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+            --title "Thread sync failed" \
+            --message "pull-threads: rebase failed on $(hostname), manual intervention required" || true
         exit 1
     fi
     echo "Pull completed successfully"
@@ -124,6 +127,9 @@ else
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
         echo "Manual intervention required to resolve divergence" >&2
+        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+            --title "Thread sync failed" \
+            --message "pull-threads: rebase failed (diverged) on $(hostname), manual intervention required" || true
         exit 1
     fi
     echo "Rebase completed successfully"
