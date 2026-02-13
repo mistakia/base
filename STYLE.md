@@ -1,8 +1,10 @@
 # Base Design System
 
-## Aesthetic: Minimalist Industrial
+## Aesthetic: Modern Warm TUI
 
-A technical, utilitarian interface prioritizing clarity and function over decoration. Inspired by terminal interfaces, technical documentation, and industrial design.
+A modern, minimal, and warm take on a TUI (text user interface). Technical and utilitarian,
+prioritizing clarity and function over decoration. Inspired by terminal interfaces, technical
+documentation, and industrial design -- with warmth from the breadcrumb brown palette.
 
 ## Core Principles
 
@@ -333,3 +335,13 @@ Use the utility classes from `utilities.styl`:
 3. **Never use border-radius > 4px** - Keep corners minimal
 4. **Never add decorative gradients or shadows** - Keep it utilitarian
 5. **Never use non-monospace fonts** - IBM Plex Mono everywhere
+
+## Cross-Platform Notes
+
+### iOS (BaseApp)
+
+- **Typography**: SF Mono (system monospaced) as the platform equivalent of IBM Plex Mono
+- **Navigation**: Floating bottom navigation bar (text-only, collapsible) instead of standard TabView
+- **Auth**: Inline AuthStatusBarView at top of every page, no auth gate, public read by default
+- **Design tokens**: Same tokens apply -- square corners on interactive elements, 8px grid, monospace throughout
+- **Colors**: Same palette; `breadcrumb_dark` as primary accent, blue for links only
