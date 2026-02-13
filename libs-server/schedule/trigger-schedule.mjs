@@ -1,20 +1,19 @@
 import debug from 'debug'
 import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
-import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { parse_schedule } from './parse-schedule.mjs'
+import { write_schedule_trigger } from './schedule-state.mjs'
 
 const log = debug('schedule:trigger')
 
 /**
  * Trigger a scheduled command by enqueuing it to the CLI queue
- * and updating the entity file with trigger timestamps
+ * and recording the trigger timestamp in the state file
  * @param {Object} params
  * @param {Object} params.schedule - Schedule entity properties
- * @param {string} params.file_path - Absolute path to the schedule entity file
- * @returns {Promise<Object>} Result with job info and updated schedule
+ * @param {string} params.directory - Root scheduled-command directory (for state file)
+ * @returns {Promise<Object>} Result with job info and trigger timestamps
  */
-export const trigger_schedule = async ({ schedule, file_path }) => {
+export const trigger_schedule = async ({ schedule, directory }) => {
   const now = new Date().toISOString()
 
   log(`Triggering schedule: ${schedule.title || schedule.command}`)
@@ -37,58 +36,36 @@ export const trigger_schedule = async ({ schedule, file_path }) => {
 
     log(`Enqueued job ${job.id} for schedule ${schedule.title}`)
 
-    // Read current entity to preserve content
-    const read_result = await read_entity_from_filesystem({
-      absolute_path: file_path
+    // Write trigger timestamp to state file
+    await write_schedule_trigger({
+      directory,
+      entity_id: schedule.entity_id,
+      last_triggered_at: now
     })
 
-    if (!read_result.success) {
-      throw new Error(`Failed to read entity: ${read_result.error}`)
-    }
-
-    const { entity_properties, entity_content } = read_result
-
-    // Update trigger timestamps
-    const updated_properties = {
-      ...entity_properties,
-      last_triggered_at: now,
-      updated_at: now
-    }
-
-    // Compute next trigger time for recurring schedules
+    // Compute next trigger time for the response
+    let next_trigger_at = null
     if (
       schedule.schedule_type === 'expr' ||
       schedule.schedule_type === 'every'
     ) {
-      updated_properties.next_trigger_at = parse_schedule({
+      next_trigger_at = parse_schedule({
         schedule_type: schedule.schedule_type,
         schedule: schedule.schedule,
         timezone: schedule.timezone,
         last_triggered_at: now
       })
-    } else if (schedule.schedule_type === 'at') {
-      // For one-shot schedules, clear next_trigger_at
-      // The schedule remains enabled but won't trigger again
-      updated_properties.next_trigger_at = null
     }
 
-    // Write updated entity back to filesystem
-    await write_entity_to_filesystem({
-      absolute_path: file_path,
-      entity_properties: updated_properties,
-      entity_type: 'scheduled-command',
-      entity_content
-    })
-
     log(
-      `Updated schedule ${schedule.title}: next_trigger_at = ${updated_properties.next_trigger_at}`
+      `Updated schedule ${schedule.title}: next_trigger_at = ${next_trigger_at}`
     )
 
     return {
       success: true,
       job_id: job.id,
       last_triggered_at: now,
-      next_trigger_at: updated_properties.next_trigger_at
+      next_trigger_at
     }
   } catch (error) {
     log(`Error triggering schedule ${schedule.title}: ${error.message}`)

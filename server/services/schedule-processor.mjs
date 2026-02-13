@@ -47,7 +47,7 @@ const process_due_schedules = async () => {
       try {
         const result = await trigger_schedule({
           schedule,
-          file_path: schedule.file_path
+          directory
         })
 
         results.processed++

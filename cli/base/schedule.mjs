@@ -207,14 +207,15 @@ async function handle_add(argv) {
   try {
     const directory = get_schedule_directory()
 
-    const next_trigger_at = parse_schedule({
+    // Validate the schedule expression
+    const validated_next = parse_schedule({
       schedule_type: argv.type,
       schedule: argv.schedule,
       timezone: argv.timezone,
       last_triggered_at: null
     })
 
-    if (!next_trigger_at) {
+    if (!validated_next) {
       throw new Error(`Invalid schedule: ${argv.schedule}`)
     }
 
@@ -258,8 +259,7 @@ async function handle_add(argv) {
       command: argv.cmd,
       schedule_type: argv.type,
       schedule: argv.schedule,
-      enabled: true,
-      next_trigger_at
+      enabled: true
     }
 
     if (argv.timezone) entity_properties.timezone = argv.timezone
@@ -285,12 +285,12 @@ async function handle_add(argv) {
       console.log(
         JSON.stringify({
           file: path.relative(directory, file_path),
-          next_trigger_at
+          next_trigger_at: validated_next
         })
       )
     } else {
       console.log(
-        `${path.relative(directory, file_path)}\tcreated\t${next_trigger_at}`
+        `${path.relative(directory, file_path)}\tcreated\t${validated_next}`
       )
     }
   } catch (error) {
@@ -318,15 +318,6 @@ async function toggle_schedule({ file_path, enabled }) {
     ...entity_properties,
     enabled,
     updated_at: now
-  }
-
-  if (enabled && !updated_properties.next_trigger_at) {
-    updated_properties.next_trigger_at = parse_schedule({
-      schedule_type: updated_properties.schedule_type,
-      schedule: updated_properties.schedule,
-      timezone: updated_properties.timezone,
-      last_triggered_at: updated_properties.last_triggered_at
-    })
   }
 
   await write_entity_to_filesystem({
@@ -378,6 +369,7 @@ async function handle_disable(argv) {
 async function handle_trigger(argv) {
   let exit_code = 0
   try {
+    const directory = get_schedule_directory()
     const file_path = resolve_schedule_path(argv.file)
     const result = await read_entity_from_filesystem({
       absolute_path: file_path
@@ -389,7 +381,7 @@ async function handle_trigger(argv) {
 
     const trigger_result = await trigger_schedule({
       schedule: result.entity_properties,
-      file_path
+      directory
     })
 
     if (argv.json) {

@@ -1,17 +1,15 @@
 #!/bin/bash
 
 # Push user-base to remote
-# This script commits scheduled-command timestamp changes and pushes to remote
 # Called by scheduled-command/base/push-user-base.md
 #
 # Behavior:
-# 1. Commits modified scheduled-command files (timestamp updates from schedule-processor)
-# 2. Fetches from remote
-# 3. Handles divergence scenarios:
+# 1. Fetches from remote
+# 2. Handles divergence scenarios:
 #    - Local ahead: push directly
 #    - Local behind: pull with rebase, then check for new local commits
 #    - Diverged: rebase local on remote, then push
-# 4. On rebase failure: abort and exit (requires manual intervention)
+# 3. On rebase failure: abort and exit (requires manual intervention)
 
 set -e
 
@@ -39,19 +37,7 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 1
 fi
 
-# Step 1: Commit modified scheduled-command files (timestamp updates)
-echo "Checking for modified scheduled-command files..."
-modified_files=$(git diff --name-only -- 'scheduled-command/**/*.md' 2>/dev/null || true)
-if [ -n "$modified_files" ]; then
-    echo "Staging modified scheduled-command files..."
-    echo "$modified_files" | xargs git add
-    if ! git diff --cached --quiet; then
-        echo "Committing scheduled-command timestamp updates..."
-        git commit -m "Update scheduled command timestamps $(date +%Y%m%d-%H%M%S)"
-    fi
-fi
-
-# Step 2: Fetch from remote
+# Step 1: Fetch from remote
 echo "Fetching from remote..."
 if ! git fetch origin; then
     echo "Failed to fetch from remote" >&2
@@ -70,7 +56,7 @@ if ! git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
     exit 0
 fi
 
-# Step 3: Determine divergence state
+# Step 2: Determine divergence state
 LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH")
 MERGE_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")

@@ -3,6 +3,7 @@ import config from '#config'
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { parse_schedule } from './parse-schedule.mjs'
+import { read_schedule_state } from './schedule-state.mjs'
 import { get_current_machine_id } from './machine-identity.mjs'
 
 const log = debug('schedule:load')
@@ -36,6 +37,9 @@ export const load_schedules = async ({ directory }) => {
       })
     )
 
+    // Read runtime state (last_triggered_at per entity)
+    const state = await read_schedule_state({ directory })
+
     const schedules = []
 
     for (const { file_path, result } of read_results) {
@@ -54,22 +58,26 @@ export const load_schedules = async ({ directory }) => {
       // Determine if schedule is enabled
       const enabled = entity_properties.enabled !== false
 
-      // Parse next trigger time if not already set
-      let next_trigger_at = entity_properties.next_trigger_at
+      // Merge last_triggered_at from state file (takes precedence over frontmatter)
+      const entity_state = state[entity_properties.entity_id]
+      const last_triggered_at =
+        entity_state?.last_triggered_at || entity_properties.last_triggered_at
 
-      if (!next_trigger_at && enabled) {
-        next_trigger_at = parse_schedule({
-          schedule_type: entity_properties.schedule_type,
-          schedule: entity_properties.schedule,
-          timezone: entity_properties.timezone,
-          last_triggered_at: entity_properties.last_triggered_at,
-          created_at: entity_properties.created_at
-        })
-      }
+      // Always compute next_trigger_at on demand
+      const next_trigger_at = enabled
+        ? parse_schedule({
+            schedule_type: entity_properties.schedule_type,
+            schedule: entity_properties.schedule,
+            timezone: entity_properties.timezone,
+            last_triggered_at,
+            created_at: entity_properties.created_at
+          })
+        : null
 
       schedules.push({
         ...entity_properties,
         file_path,
+        last_triggered_at,
         next_trigger_at,
         enabled
       })
