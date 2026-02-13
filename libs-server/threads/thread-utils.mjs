@@ -178,40 +178,6 @@ export async function get_latest_timeline_event({
 }
 
 /**
- * Get the latest timeline events for multiple threads in parallel
- * @param {Object} params Parameters
- * @param {string[]} params.thread_ids Array of thread IDs
- * @param {string} [params.user_base_directory] Custom user base directory
- * @param {boolean} [params.exclude_system] Whether to exclude system events (default: true)
- * @returns {Promise<Object>} Object mapping thread_id to latest event (or null)
- */
-export async function get_latest_timeline_events_batch({
-  thread_ids,
-  user_base_directory,
-  exclude_system = true
-}) {
-  if (!thread_ids || thread_ids.length === 0) {
-    return {}
-  }
-
-  const results = await Promise.all(
-    thread_ids.map(async (thread_id) => {
-      const event = await get_latest_timeline_event({
-        thread_id,
-        user_base_directory,
-        exclude_system
-      })
-      return { thread_id, event }
-    })
-  )
-
-  return results.reduce((acc, { thread_id, event }) => {
-    acc[thread_id] = event
-    return acc
-  }, {})
-}
-
-/**
  * Enrich a thread object with its latest timeline event
  * @param {Object} params Parameters
  * @param {Object} params.thread Thread object to enrich

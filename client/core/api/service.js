@@ -26,10 +26,6 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
-  get_tag({ tag_name, user_public_key }) {
-    const url = `${API_URL}/tags/${tag_name}?user_public_key=${user_public_key}`
-    return { url }
-  },
   get_tasks(params = {}) {
     const url = `${API_URL}/tasks`
     return { url }
@@ -322,11 +318,6 @@ export const api = {
     if (directory) params.directory = directory
     if (limit) params.limit = limit
     const url = `${API_URL}/search?${qs.stringify(params)}`
-    return { url }
-  },
-
-  get_search_capabilities() {
-    const url = `${API_URL}/search/capabilities`
     return { url }
   },
 

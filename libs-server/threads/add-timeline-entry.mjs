@@ -319,24 +319,3 @@ export async function add_error({ thread_id, error_type, message, details }) {
   })
 }
 
-/**
- * Add a thread main request to a thread
- *
- * @param {Object} params Parameters
- * @param {string} params.thread_id Thread ID
- * @param {string} params.content Main request content
- * @returns {Promise<Object>} Updated thread data with the new thread main request
- */
-export async function add_thread_main_request({ thread_id, content }) {
-  if (!content) {
-    throw new Error('content is required')
-  }
-
-  return add_timeline_entry({
-    thread_id,
-    entry: {
-      type: 'thread_main_request',
-      content
-    }
-  })
-}

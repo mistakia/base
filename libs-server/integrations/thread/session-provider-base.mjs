@@ -10,8 +10,6 @@ import debug from 'debug'
 
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 import { calculate_session_counts } from './session-count-utilities.mjs'
-import { create_thread_from_session } from './create-from-session.mjs'
-import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 export class SessionProviderBase {
   constructor({ provider_name }) {
@@ -146,46 +144,6 @@ export class SessionProviderBase {
   }
 
   /**
-   * Create a single thread from raw session
-   * Optional method - provides default implementation using common thread creation
-   *
-   * @param {Object} params - Parameters object
-   * @param {Object} params.raw_session - Raw session data
-   * @param {Object} params.options - Thread creation options
-   * @returns {Promise<Object>} Thread creation result
-   */
-  async create_single_thread({ raw_session, options = {} }) {
-    // Normalize session just-in-time
-    const normalized_session = this.normalize_session(raw_session)
-
-    // Create thread with direct access to raw data
-    const models = await this.get_models_from_session(raw_session)
-    const thread_result = await create_thread_from_session({
-      normalized_session,
-      inference_provider: this.get_inference_provider(),
-      models,
-      raw_session_data: raw_session,
-      ...options
-    })
-
-    // Build timeline entries
-    const timeline_result = await build_timeline_from_session(
-      normalized_session,
-      thread_result
-    )
-
-    return {
-      thread_id: thread_result.thread_id,
-      thread_dir: thread_result.thread_dir,
-      session_id: this.get_session_id(raw_session),
-      timeline_entries: timeline_result.entry_count,
-      metadata: thread_result.metadata,
-      timeline_path: timeline_result.timeline_path,
-      normalized_session
-    }
-  }
-
-  /**
    * Generate thread metadata for session
    * Optional method - can be overridden by subclasses for provider-specific metadata
    *
@@ -271,12 +229,4 @@ export class SessionProviderBase {
     })
   }
 
-  /**
-   * Log provider-specific message
-   *
-   * @param {string} message - Message to log
-   */
-  log_message(message) {
-    this.log(message)
-  }
 }

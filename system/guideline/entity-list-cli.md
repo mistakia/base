@@ -9,7 +9,6 @@ globs:
   - cli/base.mjs
   - cli/base/entity.mjs
   - cli/entity-list.mjs
-  - cli/entity-list-api.mjs
 observations:
   - '[efficiency] Tab-separated output minimizes token usage for agent parsing'
   - '[design] Unified CLI replaces type-specific MCP tools for entity queries'
@@ -42,13 +41,10 @@ base entity get "user:task/my-task.md"
 
 ### Direct CLI Variants
 
-| CLI                   | When to Use                        | How It Works           |
-| --------------------- | ---------------------------------- | ---------------------- |
-| `base entity list`    | Preferred entry point              | Direct database access |
-| `entity-list-api.mjs` | Deprecated, use `base entity list` | Queries via HTTP API   |
-| `entity-list.mjs`     | Direct alternative when needed     | Direct database access |
-
-**Why two standalone CLIs?** DuckDB requires exclusive write access. When the Base server is running, it holds the database lock, preventing direct CLI access. The API-based CLI queries through the running server instead.
+| CLI                | When to Use                    | How It Works           |
+| ------------------ | ------------------------------ | ---------------------- |
+| `base entity list` | Preferred entry point          | Direct database access |
+| `entity-list.mjs`  | Direct alternative when needed | Direct database access |
 
 **Recommendation**: Use `base entity list` as the primary invocation.
 
@@ -72,7 +68,6 @@ base entity get "user:task/my-task.md"
 
 - Preferred: `base entity list` (works in all cases)
 - Alternative: `node cli/entity-list.mjs` (direct database access)
-- Deprecated: `node cli/entity-list-api.mjs` (HTTP API, use `base entity list` instead)
 - All CLIs MUST be invoked from the base repository directory
 - Agents SHOULD use the Bash tool to execute CLI commands
 - Commands MUST include appropriate filters to limit result sets
@@ -194,19 +189,3 @@ node cli/entity-list.mjs -t task --without-tags -l 50
 node cli/entity-list.mjs -t task --status "Completed" --json
 ```
 
-## API-Based CLI Examples
-
-When the server is running, use `entity-list-api.mjs` with the same arguments:
-
-```bash
-# List in-progress tasks
-node cli/entity-list-api.mjs -t task --status "In Progress"
-
-# Get single entity
-node cli/entity-list-api.mjs --base-uri "user:task/my-task.md"
-
-# Search with verbose output
-node cli/entity-list-api.mjs -s "authentication" -v
-```
-
-If the server is not running, you will see: `Error: Server not running. Start with: yarn start`

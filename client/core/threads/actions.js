@@ -28,8 +28,6 @@ export const threads_action_types = {
   // Table view management actions
   UPDATE_THREAD_TABLE_VIEW: 'UPDATE_THREAD_TABLE_VIEW',
   SELECT_THREAD_TABLE_VIEW: 'SELECT_THREAD_TABLE_VIEW',
-  RESET_THREAD_TABLE_VIEW: 'RESET_THREAD_TABLE_VIEW',
-
   // WebSocket events for real-time thread updates
   THREAD_CREATED: 'THREAD_CREATED',
   THREAD_UPDATED: 'THREAD_UPDATED',
@@ -69,13 +67,6 @@ export const threads_actions = {
     type: threads_action_types.CLEAR_SELECTED_THREAD
   }),
 
-  // Table view management actions - prefer update_thread_table_view for parity with tasks
-  update_threads_table_state: ({ view }) => ({
-    type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
-    payload: { view }
-  }),
-
-  // alias with clearer name matching tasks slice
   update_thread_table_view: ({ view }) => ({
     type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
     payload: { view }
@@ -83,11 +74,6 @@ export const threads_actions = {
 
   select_thread_table_view: ({ view_id }) => ({
     type: threads_action_types.SELECT_THREAD_TABLE_VIEW,
-    payload: { view_id }
-  }),
-
-  reset_thread_table_view: ({ view_id = 'default' } = {}) => ({
-    type: threads_action_types.RESET_THREAD_TABLE_VIEW,
     payload: { view_id }
   }),
 

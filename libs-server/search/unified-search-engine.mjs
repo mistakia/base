@@ -1,10 +1,7 @@
 import debug from 'debug'
 
 import { load_search_config } from './search-config.mjs'
-import {
-  search_file_contents,
-  check_ripgrep_availability
-} from './ripgrep-file-search.mjs'
+import { search_file_contents } from './ripgrep-file-search.mjs'
 import { score_and_rank_results } from './fuzzy-scorer.mjs'
 import { search_directories } from './directory-search.mjs'
 import { search_threads } from './thread-metadata-search.mjs'
@@ -431,27 +428,8 @@ export async function unified_search({
   }
 }
 
-/**
- * Get search engine capabilities
- *
- * @returns {Promise<Object>} Capabilities object
- */
-export async function get_search_capabilities() {
-  const ripgrep_available = await check_ripgrep_availability()
-
-  return {
-    ripgrep_available,
-    supports_content_search: ripgrep_available,
-    supports_fuzzy_ranking: true, // Native fuzzy scorer always available
-    supports_path_search: ripgrep_available,
-    supports_directory_search: true,
-    supports_thread_search: true
-  }
-}
-
 export default {
   unified_search,
   search_paths,
-  search_full,
-  get_search_capabilities
+  search_full
 }
