@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import debug from 'debug'
-import { execute_shell_command } from './execute-shell-command.mjs'
+import fetch from 'node-fetch'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 
 const log = debug('models-cache')
@@ -8,6 +8,8 @@ const log = debug('models-cache')
 const MODELS_API_URL = 'https://models.dev/api.json'
 const CACHE_FILE_PATH = '/tmp/models-cache.json'
 const CACHE_DURATION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+const FETCH_TIMEOUT_MS = 30_000
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 /**
  * Transform raw models.dev API data into normalized structure for client consumption
@@ -80,15 +82,34 @@ function normalize_models_data(raw_data) {
 async function fetch_models_from_api() {
   try {
     log('Fetching models data from API...')
-    const { stdout } = await execute_shell_command(
-      `curl -s "${MODELS_API_URL}"`
-    )
 
-    if (!stdout) {
-      throw new Error('Empty response from models API')
+    const controller = new AbortController()
+    const timeout_id = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+    const response = await fetch(MODELS_API_URL, {
+      signal: controller.signal
+    })
+    clearTimeout(timeout_id)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const raw_data = JSON.parse(stdout)
+    const content_length = response.headers.get('content-length')
+    if (content_length && Number(content_length) > MAX_RESPONSE_BYTES) {
+      throw new Error(
+        `Response too large: ${content_length} bytes (limit: ${MAX_RESPONSE_BYTES})`
+      )
+    }
+
+    const body = await response.text()
+    if (body.length > MAX_RESPONSE_BYTES) {
+      throw new Error(
+        `Response body too large: ${body.length} bytes (limit: ${MAX_RESPONSE_BYTES})`
+      )
+    }
+
+    const raw_data = JSON.parse(body)
     const normalized_data = normalize_models_data(raw_data)
 
     log(`Successfully fetched ${Object.keys(normalized_data).length} models`)
