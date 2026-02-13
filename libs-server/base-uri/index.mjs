@@ -5,8 +5,6 @@
 export {
   create_system_uri,
   create_user_uri,
-  create_ssh_uri,
-  create_git_uri,
   parse_base_uri,
   is_valid_base_uri,
   resolve_base_uri,

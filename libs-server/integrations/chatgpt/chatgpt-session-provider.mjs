@@ -14,7 +14,6 @@ import {
   extract_chatgpt_models_from_session,
   get_chatgpt_inference_provider,
   get_chatgpt_session_id,
-  build_chatgpt_timeline_entries,
   generate_chatgpt_thread_id,
   generate_chatgpt_thread_metadata
 } from './chatgpt-session-helpers.mjs'
@@ -81,13 +80,6 @@ export class ChatGPTSessionProvider extends SessionProviderBase {
    */
   get_session_id(raw_session) {
     return get_chatgpt_session_id({ raw_session })
-  }
-
-  /**
-   * Build timeline entries from ChatGPT messages
-   */
-  build_timeline_entries({ messages }) {
-    return build_chatgpt_timeline_entries({ messages })
   }
 
   /**

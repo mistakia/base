@@ -41,32 +41,6 @@ export function create_user_uri(resource_path) {
 }
 
 /**
- * Create an SSH server URI
- * @param {Object} params - Parameters
- * @param {string} params.host_name - SSH host name from config (e.g., 'database', 'league')
- * @param {string} params.remote_path - Path on remote server (e.g., '/etc/config.md')
- * @returns {string} - Complete base_uri (e.g., 'ssh://database/etc/config.md')
- */
-export function create_ssh_uri({ host_name, remote_path }) {
-  const clean_path = remote_path.replace(/^\/+/, '') // Remove leading slashes
-  return `ssh://${host_name}/${clean_path}`
-}
-
-/**
- * Create a git repository URI
- * @param {Object} params - Parameters
- * @param {string} params.repo_url - Git repository URL or path
- * @param {string} params.file_path - Path within repository
- * @param {string} [params.branch] - Optional branch name
- * @returns {string} - Complete base_uri (e.g., 'git://github.com/owner/repo/path/file.md@main')
- */
-export function create_git_uri({ repo_url, file_path, branch = null }) {
-  const clean_path = file_path.replace(/^\/+/, '') // Remove leading slashes
-  const base_uri = `git://${repo_url}/${clean_path}`
-  return branch ? `${base_uri}@${branch}` : base_uri
-}
-
-/**
  * Create base URI from git file information
  * @param {Object} params - Parameters
  * @param {string} params.git_relative_path - The git relative path
@@ -300,8 +274,6 @@ export function create_base_uri_from_path(absolute_path, options = {}) {
 export default {
   create_system_uri,
   create_user_uri,
-  create_ssh_uri,
-  create_git_uri,
   parse_base_uri,
   is_valid_base_uri,
   resolve_base_uri,
