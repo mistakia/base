@@ -421,10 +421,32 @@ router.get('/:thread_id', async (req, res) => {
       return res.json(cached)
     }
 
-    // Pass user_public_key to get_thread so it can do proper permission checking
+    // Parse optional timeline filtering query params
+    const take_last = req.query.take_last
+      ? parseInt(req.query.take_last, 10)
+      : undefined
+    const take_first = req.query.take_first
+      ? parseInt(req.query.take_first, 10)
+      : undefined
+    const timeline_limit = req.query.timeline_limit
+      ? parseInt(req.query.timeline_limit, 10)
+      : undefined
+    const timeline_offset = req.query.timeline_offset
+      ? parseInt(req.query.timeline_offset, 10)
+      : undefined
+    const exclude_types = req.query.exclude_types
+      ? req.query.exclude_types.split(',').filter(Boolean)
+      : []
+
+    // Pass user_public_key and timeline filters to get_thread
     const response_thread = await threads.get_thread({
       thread_id,
-      user_public_key: requesting_user_key
+      user_public_key: requesting_user_key,
+      take_last,
+      take_first,
+      limit: timeline_limit,
+      offset: timeline_offset,
+      exclude_types
     })
 
     set_cached_thread(cache_key, response_thread)
