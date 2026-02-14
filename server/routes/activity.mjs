@@ -1,13 +1,20 @@
 import express from 'express'
 import debug from 'debug'
 
-import { get_activity_heatmap_data } from '#libs-server/activity/index.mjs'
+import {
+  get_activity_heatmap_data,
+  merge_activity_and_calculate_scores
+} from '#libs-server/activity/index.mjs'
 import { get_cached_activity_heatmap } from '#server/services/cache-warmer.mjs'
 import {
   HTTP_MAX_AGE,
   HTTP_STALE_WHILE_REVALIDATE
 } from '#server/constants/http-cache.mjs'
-import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+import {
+  query_entities_by_thread_activity,
+  query_git_activity_daily,
+  query_thread_activity_aggregated
+} from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
 import {
   parse_time_period_date,
   is_valid_time_period
@@ -40,8 +47,32 @@ router.get('/heatmap', async (req, res) => {
       return res.json(cached_data)
     }
 
-    // Cache miss - fetch fresh data
-    log(`Fetching activity heatmap data for ${days} days (cache miss)`)
+    // Try DuckDB fast path before falling back to slow file aggregation
+    log(`Fetching activity heatmap data for ${days} days (cache miss, trying DuckDB)`)
+    try {
+      const [git_activity, thread_activity] = await Promise.all([
+        query_git_activity_daily({ days }),
+        query_thread_activity_aggregated({ days })
+      ])
+
+      if (git_activity.length > 0 || thread_activity.length > 0) {
+        const heatmap_data = merge_activity_and_calculate_scores({
+          git_activity,
+          thread_activity,
+          days
+        })
+        log(
+          `Returning DuckDB heatmap data: ${heatmap_data.data.length} days, max_score: ${heatmap_data.max_score}`
+        )
+        return res.json(heatmap_data)
+      }
+    } catch (duckdb_error) {
+      log(
+        `DuckDB heatmap query failed, falling back to file aggregation: ${duckdb_error.message}`
+      )
+    }
+
+    // Final fallback: slow file-based aggregation
     const heatmap_data = await get_activity_heatmap_data({ days })
 
     res.json(heatmap_data)
