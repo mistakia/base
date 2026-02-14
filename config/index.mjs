@@ -38,7 +38,9 @@ function deep_merge(target, source) {
 }
 
 // 1. Always load defaults from base repo (plain JSON, no encryption)
-const defaults = JSON.parse(readFileSync(join(config_dir, 'config.json'), 'utf8'))
+const defaults = JSON.parse(
+  readFileSync(join(config_dir, 'config.json'), 'utf8')
+)
 log('Loaded base defaults from %s', config_dir)
 
 // 2. Determine user-base config directory

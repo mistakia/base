@@ -318,4 +318,3 @@ export async function add_error({ thread_id, error_type, message, details }) {
     }
   })
 }
-

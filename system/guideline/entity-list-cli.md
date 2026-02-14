@@ -188,4 +188,3 @@ node cli/entity-list.mjs -t task --without-tags -l 50
 ```bash
 node cli/entity-list.mjs -t task --status "Completed" --json
 ```
-

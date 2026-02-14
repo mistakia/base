@@ -228,5 +228,4 @@ export class SessionProviderBase {
       session_provider: this.provider_name
     })
   }
-
 }

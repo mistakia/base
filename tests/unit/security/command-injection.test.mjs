@@ -93,9 +93,9 @@ describe('Command Injection Protection', () => {
       expect(result.success).to.be.true
     })
 
-    it('should allow ${VAR} variable expansion', async () => {
+    it(`should allow \${VAR} variable expansion`, async () => {
       const result = await execute_command({
-        command: 'echo ${HOME}',
+        command: `echo \${HOME}`,
         timeout_ms: 5000
       })
       expect(result.success).to.be.true

@@ -88,7 +88,8 @@ const handle_job_completed = async (job, result) => {
   // Queue immediate push-threads to reduce sync delay after session completion
   try {
     await add_cli_job({
-      command: '$USER_BASE_DIRECTORY/repository/active/base/cli/push-threads.sh',
+      command:
+        '$USER_BASE_DIRECTORY/repository/active/base/cli/push-threads.sh',
       tags: ['thread-sync'],
       priority: 5,
       timeout_ms: 120000

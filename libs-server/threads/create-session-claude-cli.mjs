@@ -382,7 +382,11 @@ const restore_session_jsonl = async ({
   projects_dir_name
 }) => {
   const source_jsonl = join(raw_data_dir, 'claude-session.jsonl')
-  const target_dir = join(get_container_claude_home(), 'projects', projects_dir_name)
+  const target_dir = join(
+    get_container_claude_home(),
+    'projects',
+    projects_dir_name
+  )
   const target_jsonl = join(target_dir, `${session_id}.jsonl`)
 
   try {

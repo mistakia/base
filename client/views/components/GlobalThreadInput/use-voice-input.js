@@ -15,7 +15,9 @@ const MAX_RECORDING_BYTES = 20 * 1024 * 1024 // 20MB client-side limit (server a
 
 const get_supported_mime_type = () => {
   if (typeof MediaRecorder === 'undefined') return null
-  return SUPPORTED_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) || null
+  return (
+    SUPPORTED_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) || null
+  )
 }
 
 const get_file_extension = (mime_type) => {
@@ -92,7 +94,9 @@ export default function use_voice_input({ on_transcript } = {}) {
 
         if (!response.ok) {
           const err_data = await response.json().catch(() => ({}))
-          throw new Error(err_data.error || `Transcription failed (${response.status})`)
+          throw new Error(
+            err_data.error || `Transcription failed (${response.status})`
+          )
         }
 
         const result = await response.json()
@@ -102,9 +106,7 @@ export default function use_voice_input({ on_transcript } = {}) {
         return result.text
       } catch (err) {
         const message =
-          err.name === 'TimeoutError'
-            ? 'Transcription timed out'
-            : err.message
+          err.name === 'TimeoutError' ? 'Transcription timed out' : err.message
         set_error(message)
         return null
       } finally {

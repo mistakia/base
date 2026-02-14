@@ -48,7 +48,9 @@ router.get('/heatmap', async (req, res) => {
     }
 
     // Try DuckDB fast path before falling back to slow file aggregation
-    log(`Fetching activity heatmap data for ${days} days (cache miss, trying DuckDB)`)
+    log(
+      `Fetching activity heatmap data for ${days} days (cache miss, trying DuckDB)`
+    )
     try {
       const [git_activity, thread_activity] = await Promise.all([
         query_git_activity_daily({ days }),

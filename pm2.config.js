@@ -62,9 +62,9 @@ try {
   const config_json = JSON.parse(fs.readFileSync(config_path, 'utf8'))
   const registry = config_json.machine_registry || {}
   const hostname = os.hostname()
-  machine_id = Object.keys(registry).find(
-    (id) => registry[id].hostname === hostname
-  ) || null
+  machine_id =
+    Object.keys(registry).find((id) => registry[id].hostname === hostname) ||
+    null
   if (machine_id) machine_config = registry[machine_id]
 } catch (e) {
   // Graceful fallback -- no SSL, default transcription args
@@ -146,7 +146,9 @@ module.exports = {
     app('transcription-service', 'server/services/transcription-service.py', {
       interpreter: 'python3',
       max_memory_restart: '2G',
-      args: machine_config.transcription_args || '--port 8089 --model base.en --compute-type int8',
+      args:
+        machine_config.transcription_args ||
+        '--port 8089 --model base.en --compute-type int8',
       env: common_env
     })
   ]

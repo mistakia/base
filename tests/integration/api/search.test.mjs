@@ -438,5 +438,4 @@ describe('Search API', function () {
       }
     })
   })
-
 })
