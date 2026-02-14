@@ -126,7 +126,11 @@ CheckboxList.propTypes = {
  * Collect checkbox items from a single tool pair.
  * Returns array of { key, status, text } objects.
  */
-const get_items_for_tool_pair = (tool_call_event, tool_result_event, task_subject_map) => {
+const get_items_for_tool_pair = (
+  tool_call_event,
+  tool_result_event,
+  task_subject_map
+) => {
   const tool_name = tool_call_event?.content?.tool_name
   const params = tool_call_event?.content?.tool_parameters || {}
   const result_text = ensure_string_result(tool_result_event?.content?.result)
