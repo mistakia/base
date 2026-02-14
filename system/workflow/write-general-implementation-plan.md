@@ -10,9 +10,8 @@ entity_id: d37369cd-8791-42dd-b696-6f9fc2389fa7
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-general-implementation-plan.md]]
-  - creates [[sys:system/schema/task.md]]
-  - follows [[sys:system/text/base-uri.md]]
-updated_at: '2026-01-05T19:25:17.470Z'
+  - calls [[sys:system/workflow/write-task.md]]
+updated_at: '2026-02-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -105,13 +104,9 @@ Create a structured plan by understanding requirements, analyzing context, and p
   - Present proposed sections to the user for review at each phase checkpoint
   - Only update the task entity file at the very end, after the user confirms the final plan
 - If no task entity is known:
-  - Create a new task entity using `entity_create` tool
-  - Use entity type "task" (see [[sys:system/schema/task.md]])
-  - Set `title` to the task name and include a brief `description`
-  - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
+  - Follow **Step 2** (Task Entity Setup) from [[sys:system/workflow/write-task.md]] for schema reading, folder placement, and tag selection
+  - Create the entity using `mcp__base__entity_create`
   - Include the full implementation plan in the `entity_content` field
-  - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`
-  - Check the `tag/` directory for applicable tags and add them to the `tags:` frontmatter field (e.g., `tags: [user:tag/base-project.md]`). Select ONE primary tag for grouping. See [[user:guideline/tag-standards.md]]
 
 11. **Record completion observation**:
 

@@ -10,15 +10,14 @@ entity_id: 2928d808-7e56-42aa-a888-8626046b35e8
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-software-implementation-plan.md]]
-  - uses [[sys:system/guideline/write-entity.md]]
-updated_at: '2026-01-05T19:25:18.907Z'
+  - calls [[sys:system/workflow/write-task.md]]
+updated_at: '2026-02-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 <task>Write a software implementation plan by analyzing a task and breaking it into specific file changes</task>
 
 <context>
-Create structured implementation plans by understanding requirements, analyzing codebase, and planning changes. This is done in three phases: research, design, and task planning. Each phase requires explicit user confirmation before proceeding to the next.
 Create structured implementation plans by understanding requirements, analyzing codebase, and planning changes. This is done in three phases: research, design, and task planning. Each phase requires explicit user confirmation before proceeding to the next.
 </context>
 
@@ -105,16 +104,9 @@ Create structured implementation plans by understanding requirements, analyzing 
   - Present proposed sections to the user for review at each phase checkpoint
   - Only update the task entity file at the very end, after the user confirms the final plan
 - If no task entity is known:
-  - MUST read [[sys:system/schema/task.md]] and use entity type "task"
-  - MUST read [[sys:system/guideline/write-entity.md]] and use it to write the entity file
-  - MUST read [[sys:system/text/base-uri.md]]
-  - Create a new task entity using `entity_create` tool
-  - Set `title` to the task name and include a brief `description`
-  - Initialize relevant fields where useful (e.g., `status: Planned`, `priority: Medium`)
+  - Follow **Step 2** (Task Entity Setup) from [[sys:system/workflow/write-task.md]] for schema reading, folder placement, and tag selection
+  - Create the entity using `mcp__base__entity_create`
   - Include the full implementation plan in the `entity_content` field
-  - Organize the entity under the appropriate subfolder in `task/` (e.g., `task/base/`, `task/league/`, `task/infrastructure/`, `task/github/`). If uncertain, use `task/base/`.
-  - Check the `tag/` directory for applicable tags and add them to the `tags:` frontmatter field (e.g., `tags: [user:tag/base-project.md]`). Select ONE primary tag for grouping. See [[user:guideline/tag-standards.md]].
-  - Save the entity file to the filesystem using the `entity_create` tool
 
 11. **Record completion observation**:
 
