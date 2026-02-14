@@ -6,6 +6,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 import { COLORS } from '@theme/colors.js'
 import TimelineEvent from './TimelineEvent'
 import CollapsibleEventGroup from './CollapsibleEventGroup'
+import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
 import { group_tool_entries } from './utils/group-tool-entries'
 
 // Length threshold for considering an assistant message as "notable"
@@ -422,6 +423,16 @@ const TimelineList = ({
   const render_timeline_event = React.useCallback(
     (entry, index) => {
       const entry_key = `${entry.type}-${entry.index || index}`
+
+      if (entry.type === 'task_group') {
+        return (
+          <TaskToolGroup
+            key={entry_key}
+            tool_pairs={entry.tool_pairs}
+            timeline={timeline}
+          />
+        )
+      }
 
       if (entry.type === 'tool_pair') {
         // For tool pairs, use the tool call event as the main event

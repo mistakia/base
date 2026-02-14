@@ -124,8 +124,15 @@ export const group_tool_entries = (timeline_events) => {
     })
   })
 
-  // Sort by timestamp (primary) with original index as fallback
-  return grouped_entries.sort((a, b) => {
+  // Merge consecutive task tool pairs into task_group entries
+  const TASK_TOOL_NAMES = new Set([
+    'TaskCreate',
+    'TaskUpdate',
+    'TaskList',
+    'TaskGet'
+  ])
+
+  const sorted = grouped_entries.sort((a, b) => {
     const event_a = a.timeline_event || a.tool_call_event
     const event_b = b.timeline_event || b.tool_call_event
 
@@ -147,6 +154,39 @@ export const group_tool_entries = (timeline_events) => {
     // Fallback to original index for same-timestamp entries
     return a.index - b.index
   })
+
+  const merged = []
+  let current_task_group = null
+
+  for (const entry of sorted) {
+    const is_task_tool =
+      entry.type === 'tool_pair' &&
+      TASK_TOOL_NAMES.has(entry.tool_call_event?.content?.tool_name)
+
+    if (is_task_tool) {
+      if (!current_task_group) {
+        current_task_group = {
+          type: 'task_group',
+          tool_pairs: [entry],
+          index: entry.index
+        }
+      } else {
+        current_task_group.tool_pairs.push(entry)
+      }
+    } else {
+      if (current_task_group) {
+        merged.push(current_task_group)
+        current_task_group = null
+      }
+      merged.push(entry)
+    }
+  }
+
+  if (current_task_group) {
+    merged.push(current_task_group)
+  }
+
+  return merged
 }
 
 export default group_tool_entries
