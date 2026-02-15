@@ -495,7 +495,6 @@ async function main() {
       const result = await analyze_content({
         file_path,
         model: options.model,
-        dry_run: options.dry_run,
         regex_only: options.regex_only,
         max_content_size: options.max_content_size
       })
@@ -545,7 +544,6 @@ async function main() {
       const result = await analyze_thread({
         thread_dir,
         model: options.model,
-        dry_run: options.dry_run,
         regex_only: options.regex_only,
         max_content_size: options.max_content_size,
         include_raw_data: options.include_raw_data

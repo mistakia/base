@@ -270,7 +270,6 @@ async function analyze_single_chunk({ content, file_path, metadata, regex_findin
  * @param {object} options
  * @param {string} options.file_path - Path to file to analyze
  * @param {string} [options.model] - Ollama model to use
- * @param {boolean} [options.dry_run] - If true, skip LLM analysis
  * @param {boolean} [options.regex_only] - If true, skip LLM analysis
  * @param {number} [options.max_content_size] - Max chars per chunk for LLM analysis
  * @param {number} [options.timeout_ms] - Timeout for LLM call
@@ -279,7 +278,6 @@ async function analyze_single_chunk({ content, file_path, metadata, regex_findin
 export async function analyze_content({
   file_path,
   model,
-  dry_run = false,
   regex_only = false,
   max_content_size,
   timeout_ms
@@ -316,9 +314,7 @@ export async function analyze_content({
   }
 
   // Stage 2: Check if LLM analysis should be skipped
-  const skip_llm = dry_run || regex_only
-
-  if (skip_llm) {
+  if (regex_only) {
     const regex_classification = classify_from_regex(scan_result.findings)
     return {
       file_path,
@@ -462,7 +458,6 @@ export async function analyze_content({
  * @param {object} options
  * @param {string} options.thread_dir - Path to thread UUID directory
  * @param {string} [options.model] - Ollama model to use
- * @param {boolean} [options.dry_run] - If true, skip LLM analysis
  * @param {boolean} [options.regex_only] - Skip LLM analysis
  * @param {number} [options.max_content_size] - Max chars for LLM analysis
  * @param {boolean} [options.include_raw_data] - Include raw-data/ scanning
@@ -471,7 +466,6 @@ export async function analyze_content({
 export async function analyze_thread({
   thread_dir,
   model,
-  dry_run = false,
   regex_only = false,
   max_content_size,
   include_raw_data = false
@@ -510,7 +504,6 @@ export async function analyze_thread({
       const result = await analyze_content({
         file_path,
         model,
-        dry_run,
         regex_only,
         max_content_size
       })
