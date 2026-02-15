@@ -54,42 +54,31 @@ First, read and understand the review guidelines:
 - Read [[sys:system/guideline/review-for-secret-information.md]] to understand secret patterns
 - Note all specific patterns and keywords to search for
 
-## Phase 1: Automated Pattern Detection (Regex-Only)
+## Phase 1: Full Scan (Regex + LLM Analysis)
 
-1. Run the content review CLI with regex-only scanning for a fast first pass:
+1. Run the content review CLI with full analysis:
 
    ```bash
-   node cli/review-content.mjs --path "${directory_path}" --regex-only --progress
+   node cli/review-content.mjs --path "${directory_path}" --progress --output /tmp/review-results.jsonl
    ```
 
-   - Automatically excludes binary files, images, node_modules, .git, etc.
-   - Scans against externalized patterns in `config/sensitive-patterns.json`
+   - Stage 1 (regex): Scans against externalized patterns in `config/sensitive-patterns.json`
+   - Stage 2 (LLM): Classifies each file as `public`, `acquaintance`, or `private` via local Ollama model
    - For markdown files, strips YAML frontmatter before scanning to avoid false positives
-   - For thread directories, scans both `metadata.json` and `timeline.jsonl`
-
-2. Review the initial findings and identify files needing deeper analysis
-
-## Phase 2: Semantic Review with LLM Analysis
-
-3. Run full analysis with LLM semantic review on flagged files or the entire directory:
-
-   ```bash
-   node cli/review-content.mjs --path "${directory_path}" --progress
-   ```
-
-   - Combines regex findings with local Ollama model classification
-   - Each file is classified as `public`, `acquaintance`, or `private`
-   - Files exceeding the size limit (32K chars) use regex-only with a warning
+   - For thread directories, scans `metadata.json` and `timeline.jsonl` (timeline uses regex-only by default)
+   - Files exceeding the size limit (32K chars) are chunked for LLM analysis
    - Falls back to regex-only if Ollama is unavailable
+   - JSONL output enables resume if scan is interrupted
 
-4. Launch parallel review agents using the Task tool for large directories:
+2. Launch parallel review agents using the Task tool for large directories:
    - Split the directory into segments and review in parallel
    - Each agent runs `review-content.mjs` on its segment
-   - Agents perform semantic analysis beyond pattern matching
 
-## Phase 3: Apply Visibility and Propose Rules
+3. Review the findings and classifications before proceeding
 
-5. Apply visibility classifications to entities:
+## Phase 2: Apply Visibility and Propose Rules
+
+4. Apply visibility classifications to entities:
 
    ```bash
    # Preview changes first
@@ -103,7 +92,7 @@ First, read and understand the review guidelines:
    - Sets `visibility_analyzed_at` timestamp for incremental scanning
    - Classification mapping: `public` -> `public_read: true`, `acquaintance`/`private` -> `public_read: false`
 
-6. Propose role permission rule updates:
+5. Propose role permission rule updates:
 
    ```bash
    node cli/review-content.mjs --path "${directory_path}" --propose-rules --json
@@ -114,7 +103,7 @@ First, read and understand the review guidelines:
    - Proposes new deny rules for sensitive content within existing broad allows
    - Do NOT modify role files directly - only propose changes for human review
 
-7. Document proposed permission changes:
+6. Document proposed permission changes:
    - List all paths that should potentially be restricted
    - Specify which roles should have access
    - Provide clear reasoning for each proposed rule

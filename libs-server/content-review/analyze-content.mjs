@@ -4,7 +4,7 @@ import path from 'path'
 import debug from 'debug'
 import frontMatter from 'front-matter'
 
-import { run_opencode } from '#libs-server/metadata/run-opencode-analysis.mjs'
+import { call_ollama } from './ollama-client.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import { scan_file_content } from './pattern-scanner.mjs'
@@ -216,7 +216,7 @@ async function analyze_single_chunk({ content, file_path, metadata, regex_findin
     metadata
   })
 
-  const { output, duration_ms } = await run_opencode({
+  const { output, duration_ms } = await call_ollama({
     prompt,
     model,
     timeout_ms,
@@ -364,7 +364,7 @@ export async function analyze_content({
           metadata
         })
 
-        const { output, duration_ms: chunk_duration } = await run_opencode({
+        const { output, duration_ms: chunk_duration } = await call_ollama({
           prompt,
           model,
           timeout_ms,
@@ -461,6 +461,7 @@ export async function analyze_content({
  * @param {boolean} [options.regex_only] - Skip LLM analysis
  * @param {number} [options.max_content_size] - Max chars for LLM analysis
  * @param {boolean} [options.include_raw_data] - Include raw-data/ scanning
+ * @param {boolean} [options.timeline_llm] - Use LLM analysis for timeline.jsonl (default: false, regex-only)
  * @returns {Promise<object>} Aggregated thread analysis result
  */
 export async function analyze_thread({
@@ -468,7 +469,8 @@ export async function analyze_thread({
   model,
   regex_only = false,
   max_content_size,
-  include_raw_data = false
+  include_raw_data = false,
+  timeline_llm = false
 } = {}) {
   const review_config = await load_review_config()
   if (!model) model = review_config.default_model
@@ -501,10 +503,12 @@ export async function analyze_thread({
 
   for (const file_path of files_to_scan) {
     try {
+      const is_timeline = path.basename(file_path) === 'timeline.jsonl'
+      const file_regex_only = regex_only || (is_timeline && !timeline_llm)
       const result = await analyze_content({
         file_path,
         model,
-        regex_only,
+        regex_only: file_regex_only,
         max_content_size
       })
       results.push(result)

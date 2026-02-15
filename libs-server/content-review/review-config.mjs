@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import debug from 'debug'
 
-import config from '#config'
+import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
 const log = debug('content-review:config')
 
@@ -38,10 +38,10 @@ export async function load_review_config() {
     return cached_config
   }
 
-  const user_base_dir =
-    config.user_base_directory || process.env.USER_BASE_DIRECTORY
-
-  if (!user_base_dir) {
+  let user_base_dir
+  try {
+    user_base_dir = get_user_base_directory()
+  } catch {
     log('No user base directory configured, using defaults')
     cached_config = DEFAULT_CONFIG
     return cached_config

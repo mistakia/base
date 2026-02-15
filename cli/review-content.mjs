@@ -29,175 +29,76 @@ import {
 } from '#libs-server/content-review/analyze-content.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { list_thread_ids } from '#libs-server/threads/list-threads.mjs'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
+import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 
 const log = debug('cli:review-content')
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const EXCLUDED_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  'coverage',
-  'vendor',
-  '__pycache__',
-  'venv',
-  'env',
-  '.next'
-])
-
-const EXCLUDED_EXTENSIONS = new Set([
-  // Binary/compiled
-  '.pyc',
-  '.pyo',
-  '.so',
-  '.dylib',
-  '.dll',
-  '.exe',
-  '.bin',
-  // Images
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.svg',
-  '.ico',
-  '.pdf',
-  // Archives
-  '.zip',
-  '.tar',
-  '.gz',
-  '.rar',
-  '.7z',
-  // Media
-  '.mp3',
-  '.mp4',
-  '.avi',
-  '.mov',
-  '.wmv',
-  '.flv',
-  // Fonts
-  '.woff',
-  '.woff2',
-  '.ttf',
-  '.eot',
-  '.otf',
-  // Databases
-  '.db',
-  '.sqlite',
-  // Lock files
-  '.lock'
-])
-
-const EXCLUDED_FILENAMES = new Set([
-  'package-lock.json',
-  'yarn.lock',
-  'Gemfile.lock',
-  'composer.lock'
-])
 
 // ============================================================================
 // File Discovery
 // ============================================================================
 
-function should_exclude_file(file_path) {
-  const ext = path.extname(file_path).toLowerCase()
-  if (EXCLUDED_EXTENSIONS.has(ext)) return true
-
-  const basename = path.basename(file_path)
-  if (EXCLUDED_FILENAMES.has(basename)) return true
-
-  return false
-}
-
 /**
- * Discover files to scan from a path (file, directory, or glob)
+ * Discover entity files and thread IDs from a target path.
+ * Uses list_files_recursive for entity .md files and list_thread_ids for threads.
+ *
+ * @param {string} target_path - Absolute path to scan
+ * @returns {Promise<{entity_files: string[], thread_ids: string[]}>}
  */
-async function discover_files(target_path, { skip_raw_data = true } = {}) {
-  const files = []
-
+async function discover_items(target_path) {
   const stat = await fs.stat(target_path).catch(() => null)
   if (!stat) {
-    // Try as glob pattern
-    const user_base = get_user_base_directory()
-    const glob_target = path.isAbsolute(target_path)
-      ? target_path
-      : path.join(user_base, target_path)
-
-    const matcher = picomatch(glob_target)
-    // For glob patterns, walk the user base directory
-    await walk_directory(user_base, files, { matcher, skip_raw_data })
-    return files
+    return { entity_files: [], thread_ids: [] }
   }
 
   if (stat.isFile()) {
-    if (!should_exclude_file(target_path)) {
-      files.push(target_path)
+    return { entity_files: [target_path], thread_ids: [] }
+  }
+
+  const thread_base = get_thread_base_directory()
+  const target_resolved = path.resolve(target_path)
+  const thread_resolved = path.resolve(thread_base)
+
+  // Target is a specific thread UUID directory
+  if (target_resolved.startsWith(thread_resolved + path.sep)) {
+    const relative_to_thread = path.relative(thread_resolved, target_resolved)
+    const uuid_match = relative_to_thread.match(
+      /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+    )
+    if (uuid_match) {
+      return { entity_files: [], thread_ids: [uuid_match[1]] }
     }
-    return files
+    return { entity_files: [], thread_ids: [] }
   }
 
-  if (stat.isDirectory()) {
-    await walk_directory(target_path, files, { skip_raw_data })
+  // Target is the thread base directory - scan all threads
+  if (target_resolved === thread_resolved) {
+    const ids = await list_thread_ids()
+    return { entity_files: [], thread_ids: ids }
   }
 
-  return files
-}
-
-async function walk_directory(
-  dir,
-  files,
-  { matcher = null, skip_raw_data = true } = {}
-) {
-  let entries
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true })
-  } catch {
-    return
+  // Target contains the thread directory (e.g., scanning user base root)
+  if (thread_resolved.startsWith(target_resolved + path.sep)) {
+    const [md_files, ids] = await Promise.all([
+      list_files_recursive({
+        directory: target_path,
+        file_extension: '.md',
+        absolute_paths: true,
+        exclude_path_patterns: ['thread/**']
+      }),
+      list_thread_ids()
+    ])
+    return { entity_files: md_files, thread_ids: ids }
   }
 
-  for (const entry of entries) {
-    const full_path = path.join(dir, entry.name)
-
-    if (entry.isDirectory()) {
-      // Skip excluded directories
-      if (EXCLUDED_DIRS.has(entry.name)) continue
-      if (entry.name.startsWith('.') && entry.name !== '.') continue
-      if (skip_raw_data && entry.name === 'raw-data') continue
-
-      await walk_directory(full_path, files, { matcher, skip_raw_data })
-    } else if (entry.isFile()) {
-      if (should_exclude_file(full_path)) continue
-      if (matcher && !matcher(full_path)) continue
-      files.push(full_path)
-    }
-  }
-}
-
-/**
- * Detect thread directories from a file list.
- * Groups files by thread UUID and returns thread dirs + non-thread files.
- */
-function separate_thread_files(files) {
-  const thread_dirs = new Map()
-  const non_thread_files = []
-
-  for (const file of files) {
-    // Match thread/<uuid>/ pattern
-    const thread_match = file.match(/thread\/([0-9a-f-]{36})\//i)
-    if (thread_match) {
-      const uuid = thread_match[1]
-      const dir = file.substring(0, file.indexOf(uuid) + uuid.length)
-      thread_dirs.set(uuid, dir)
-    } else {
-      non_thread_files.push(file)
-    }
-  }
-
-  return { thread_dirs, non_thread_files }
+  // Entity directory only (e.g., task/, guideline/)
+  const md_files = await list_files_recursive({
+    directory: target_path,
+    file_extension: '.md',
+    absolute_paths: true
+  })
+  return { entity_files: md_files, thread_ids: [] }
 }
 
 // ============================================================================
@@ -279,6 +180,47 @@ async function apply_visibility(file_path, classification, dry_run = false) {
 }
 
 // ============================================================================
+// JSONL Streaming Output
+// ============================================================================
+
+/**
+ * Load already-processed paths from an existing JSONL output file for resume support.
+ * @param {string} output_path - Path to JSONL output file
+ * @returns {Promise<Set<string>>} Set of already-processed file/thread paths
+ */
+async function load_processed_paths(output_path) {
+  const processed = new Set()
+  try {
+    const content = await fs.readFile(output_path, 'utf8')
+    for (const line of content.split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const record = JSON.parse(line)
+        if (record.type === 'summary') continue
+        if (record.file_path) processed.add(record.file_path)
+        if (record.thread_dir) processed.add(record.thread_dir)
+      } catch {
+        // Skip malformed lines
+      }
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      log(`Warning reading output file: ${error.message}`)
+    }
+  }
+  return processed
+}
+
+/**
+ * Append a single JSONL record to the output file.
+ * @param {string} output_path - Path to JSONL output file
+ * @param {object} record - Record to write
+ */
+async function append_jsonl(output_path, record) {
+  await fs.appendFile(output_path, JSON.stringify(record) + '\n')
+}
+
+// ============================================================================
 // Rule Proposals
 // ============================================================================
 
@@ -350,7 +292,7 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
   })
   .option('path', {
     alias: 'p',
-    describe: 'File, directory, or glob pattern to review',
+    describe: 'File or directory to review',
     type: 'string',
     demandOption: true
   })
@@ -384,6 +326,11 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     type: 'boolean',
     default: false
   })
+  .option('output', {
+    alias: 'o',
+    describe: 'Write JSONL streaming output to file (supports resume)',
+    type: 'string'
+  })
   .option('max-file-size', {
     describe: 'Maximum file size in characters for LLM analysis',
     type: 'number',
@@ -391,6 +338,11 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
   })
   .option('include-raw-data', {
     describe: 'Include raw-data/ directories in thread scanning',
+    type: 'boolean',
+    default: false
+  })
+  .option('timeline-llm', {
+    describe: 'Use LLM analysis for timeline.jsonl files (default: regex-only)',
     type: 'boolean',
     default: false
   })
@@ -410,6 +362,10 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     '$0 --path task/ --apply-visibility --dry-run',
     'Preview visibility changes'
   )
+  .example(
+    '$0 --path guideline/ --output /tmp/results.jsonl',
+    'Stream results to JSONL file'
+  )
   .help()
   .alias('help', 'h')
   .strict()
@@ -426,11 +382,13 @@ async function main() {
     dry_run: argv.dryRun,
     max_content_size: argv.maxFileSize,
     include_raw_data: argv.includeRawData,
+    timeline_llm: argv.timelineLlm,
     force: argv.force,
     apply_visibility: argv.applyVisibility,
     propose_rules: argv.proposeRules,
     show_progress: argv.progress,
-    json_output: argv.json
+    json_output: argv.json,
+    output_path: argv.output
   }
 
   // Discover files
@@ -438,23 +396,30 @@ async function main() {
     process.stderr.write('Discovering files...\n')
   }
 
-  const all_files = await discover_files(target_path, {
-    skip_raw_data: !options.include_raw_data
-  })
+  const { entity_files, thread_ids } = await discover_items(target_path)
+  const thread_base = get_thread_base_directory()
 
-  if (all_files.length === 0) {
+  const total_items = entity_files.length + thread_ids.length
+  if (total_items === 0) {
     console.log('No files found to review.')
     return
   }
 
-  // Separate thread files from regular files
-  const { thread_dirs, non_thread_files } = separate_thread_files(all_files)
-
-  const total_items = non_thread_files.length + thread_dirs.size
   if (options.show_progress) {
     process.stderr.write(
-      `Found ${non_thread_files.length} files and ${thread_dirs.size} threads to review\n`
+      `Found ${entity_files.length} files and ${thread_ids.length} threads to review\n`
     )
+  }
+
+  // Load already-processed paths for JSONL resume support
+  let processed_paths = new Set()
+  if (options.output_path) {
+    processed_paths = await load_processed_paths(options.output_path)
+    if (processed_paths.size > 0 && options.show_progress) {
+      process.stderr.write(
+        `Resuming: ${processed_paths.size} items already processed\n`
+      )
+    }
   }
 
   const results = []
@@ -470,9 +435,21 @@ async function main() {
     visibility_changes: []
   }
 
-  // Process non-thread files
-  for (const file_path of non_thread_files) {
+  // Process entity files
+  for (const file_path of entity_files) {
     scanned++
+
+    // Skip if already in JSONL output (resume)
+    if (processed_paths.has(file_path)) {
+      skipped++
+      summary.skipped++
+      if (options.show_progress) {
+        process.stderr.write(
+          `[${scanned}/${total_items}] Skipped (resume): ${path.relative(get_user_base_directory(), file_path)}\n`
+        )
+      }
+      continue
+    }
 
     if (!options.force && (await is_already_analyzed(file_path))) {
       skipped++
@@ -501,6 +478,10 @@ async function main() {
       results.push(result)
       summary[result.classification]++
 
+      if (options.output_path) {
+        await append_jsonl(options.output_path, result)
+      }
+
       if (options.apply_visibility) {
         const vis_result = await apply_visibility(
           file_path,
@@ -519,8 +500,21 @@ async function main() {
   }
 
   // Process thread directories
-  for (const [uuid, thread_dir] of thread_dirs) {
+  for (const uuid of thread_ids) {
     scanned++
+    const thread_dir = path.join(thread_base, uuid)
+
+    // Skip if already in JSONL output (resume)
+    if (processed_paths.has(thread_dir)) {
+      skipped++
+      summary.skipped++
+      if (options.show_progress) {
+        process.stderr.write(
+          `[${scanned}/${total_items}] Skipped thread (resume): ${uuid}\n`
+        )
+      }
+      continue
+    }
 
     const metadata_path = path.join(thread_dir, 'metadata.json')
     if (!options.force && (await is_already_analyzed(metadata_path))) {
@@ -546,10 +540,15 @@ async function main() {
         model: options.model,
         regex_only: options.regex_only,
         max_content_size: options.max_content_size,
-        include_raw_data: options.include_raw_data
+        include_raw_data: options.include_raw_data,
+        timeline_llm: options.timeline_llm
       })
       results.push(result)
       summary[result.classification]++
+
+      if (options.output_path) {
+        await append_jsonl(options.output_path, result)
+      }
 
       if (options.apply_visibility) {
         const vis_result = await apply_visibility(
@@ -566,6 +565,20 @@ async function main() {
         process.stderr.write(`  Error: ${error.message}\n`)
       }
     }
+  }
+
+  // Write summary record to JSONL output
+  if (options.output_path) {
+    await append_jsonl(options.output_path, {
+      type: 'summary',
+      total: summary.total,
+      scanned: scanned - skipped,
+      skipped: summary.skipped,
+      public: summary.public,
+      acquaintance: summary.acquaintance,
+      private: summary.private,
+      errors: summary.errors
+    })
   }
 
   // Rule proposals
