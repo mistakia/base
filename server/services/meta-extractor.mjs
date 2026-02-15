@@ -15,6 +15,46 @@ import { check_thread_permission } from '#server/middleware/permission/index.mjs
 const log = debug('server:meta-extractor')
 
 /**
+ * Sanitize a string for use in HTML meta tag content attributes.
+ * Strips HTML tags and markdown syntax, escapes HTML entities,
+ * and truncates to a reasonable length for meta descriptions.
+ *
+ * @param {string} text - Raw text that may contain HTML or markdown
+ * @param {number} [max_length=200] - Maximum character length
+ * @returns {string} Sanitized plain text safe for HTML attributes
+ */
+function sanitize_meta_text(text, max_length = 200) {
+  if (!text || typeof text !== 'string') return ''
+
+  let sanitized = text
+    // Strip HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Strip markdown image syntax ![alt](url)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    // Strip markdown links [text](url) -> text
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    // Strip wiki links [[text]] -> text
+    .replace(/\[\[([^\]]*)\]\]/g, '$1')
+    // Collapse whitespace
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Truncate with ellipsis
+  if (sanitized.length > max_length) {
+    sanitized = sanitized.substring(0, max_length - 3).trimEnd() + '...'
+  }
+
+  // Escape HTML entities for safe attribute insertion
+  sanitized = sanitized
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  return sanitized
+}
+
+/**
  * Extract meta tag data from content (thread or entity) with privacy handling
  *
  * @param {Object} params - Parameters object
@@ -77,10 +117,14 @@ export async function extract_entity_meta_data({
       return get_redacted_meta_data(base_url, entity_path)
     }
 
-    // Extract entity information for meta tags
-    const title = entity_metadata.title || `${entity_metadata.type} Entity`
-    const description =
+    // Extract entity information for meta tags — sanitize for HTML attribute safety
+    const title = sanitize_meta_text(
+      entity_metadata.title || `${entity_metadata.type} Entity`,
+      120
+    )
+    const raw_description =
       entity_metadata.description || `${entity_metadata.type} from Base system`
+    const description = sanitize_meta_text(raw_description)
 
     // Format creation date if available
     let author_info = 'Base System'
@@ -220,10 +264,14 @@ export async function extract_thread_meta_data({
       }
     }
 
-    // Use title and description from metadata directly
-    const title = metadata.title || `Thread ${thread_id}`
-    const description =
+    // Use title and description from metadata directly — sanitize for HTML attribute safety
+    const title = sanitize_meta_text(
+      metadata.title || `Thread ${thread_id}`,
+      120
+    )
+    const raw_description =
       metadata.short_description || 'Conversation thread from Base system'
+    const description = sanitize_meta_text(raw_description)
 
     // Format creation date if available
     let author_info = 'Base System'
