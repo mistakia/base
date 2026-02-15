@@ -201,7 +201,7 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
   .option('models', {
     describe: 'Comma-separated list of models to test',
     type: 'string',
-    default: 'ollama/qwen3:32b,ollama/devstral-small-2:24b,ollama/qwen3-coder-next'
+    default: 'ollama/qwen3:32b,ollama/devstral-small-2:24b,ollama/qwen3-coder-next:q8_0'
   })
   .option('prompts', {
     describe: 'Prompt strategies to test (comma-separated)',
