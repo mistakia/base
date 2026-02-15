@@ -7,7 +7,7 @@ import config from '#config'
 const log = debug('content-review:config')
 
 const DEFAULT_CONFIG = {
-  default_model: 'ollama/glm-4.7-flash:latest',
+  default_model: 'ollama/qwen3:32b',
   max_content_size: 32000,
   timeout_ms: 180000,
   guidelines: [
@@ -16,11 +16,11 @@ const DEFAULT_CONFIG = {
   ],
   tier_definitions: {
     public:
-      'Safe for unauthenticated public access. Contains no personal information, secrets, or sensitive infrastructure details.',
+      'Safe for unauthenticated public access. Contains no personal information, secrets, or sensitive infrastructure details. Includes technical documentation, open-source project work, generic design preferences, and publicly shareable methodology.',
     acquaintance:
-      'Contains information appropriate for known contacts but not the general public. May reference personal context without exposing secrets.',
+      'Contains personal context appropriate for known contacts but not the general public. Includes personal project plans, lifestyle documentation, belongings inventory, hobby details, and personal workflows. Does NOT contain PII (addresses, phone numbers, financial records) or infrastructure secrets.',
     private:
-      'Contains personal information, secrets, credentials, infrastructure details, or other sensitive content that must remain restricted.'
+      'Contains personal information, secrets, credentials, infrastructure details, or other sensitive content that must remain restricted. Includes PII, financial records, property addresses, network topology, authentication credentials, and insurance/legal documents.'
   },
   guidance_notes: []
 }
