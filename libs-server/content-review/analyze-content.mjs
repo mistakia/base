@@ -90,16 +90,17 @@ export function clear_guideline_cache() {
  * Build the LLM prompt for content classification.
  * Loads tier definitions and guidance notes from config.
  */
-async function build_review_prompt({ content, file_path, regex_findings }) {
+async function build_review_prompt({ content, file_path, regex_findings, metadata }) {
   const review_config = await load_review_config()
   const guideline_text = await load_guideline_text()
 
   const tier_defs = review_config.tier_definitions || {}
   const guidance_notes = review_config.guidance_notes || []
+  const allowable_usernames = review_config.allowable_usernames || []
 
   const findings_summary =
     regex_findings.length > 0
-      ? `\nRegex pattern scan found ${regex_findings.length} potential issue(s):\n${regex_findings
+      ? `\nRegex pattern scan found ${regex_findings.length} potential issue(s). NOTE: These are heuristic matches and may contain false positives (e.g., numeric IDs matching phone patterns, technical terms matching password patterns). Use your judgment based on the actual content context:\n${regex_findings
           .map(
             (f) =>
               `- Line ${f.line_number}: ${f.pattern_name} (${f.category}) - matched: "${f.matched_text}"`
@@ -120,8 +121,9 @@ Classify this file into one of three tiers:
 - "private": ${tier_defs.private || 'Contains personal information, secrets, or other sensitive content that must remain restricted.'}
 
 ${guideline_text}
-${guidance_section}
+${allowable_usernames.length > 0 ? `\n## Allowable Usernames\nThe following usernames are NOT considered personal information: ${allowable_usernames.map((u) => `"${u}"`).join(', ')}. These may appear in file paths, system references, and repository URLs without triggering a private classification.\n` : ''}${guidance_section}
 File: ${file_path || 'unknown'}
+${metadata ? `Title: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}` : ''}
 ${findings_summary}
 
 --- FILE CONTENT ---
@@ -171,6 +173,98 @@ function classify_from_regex(findings) {
 }
 
 /**
+ * Split content into chunks that fit within the size limit.
+ * Splits on line boundaries to avoid breaking mid-line.
+ *
+ * @param {string} content - Content to split
+ * @param {number} max_size - Maximum chars per chunk
+ * @returns {string[]} Array of content chunks
+ */
+function chunk_content(content, max_size) {
+  if (content.length <= max_size) {
+    return [content]
+  }
+
+  const chunks = []
+  const lines = content.split('\n')
+  let current_chunk = ''
+
+  for (const line of lines) {
+    if (current_chunk.length + line.length + 1 > max_size && current_chunk.length > 0) {
+      chunks.push(current_chunk)
+      current_chunk = ''
+    }
+    current_chunk += (current_chunk ? '\n' : '') + line
+  }
+
+  if (current_chunk) {
+    chunks.push(current_chunk)
+  }
+
+  return chunks
+}
+
+/**
+ * Analyze a single chunk of content via LLM.
+ * Used for files that fit within the size limit (single prompt).
+ */
+async function analyze_single_chunk({ content, file_path, metadata, regex_findings, scan_result, model, timeout_ms }) {
+  const prompt = await build_review_prompt({
+    content,
+    file_path,
+    regex_findings,
+    metadata
+  })
+
+  const { output, duration_ms } = await run_opencode({
+    prompt,
+    model,
+    timeout_ms,
+    format: CONTENT_REVIEW_SCHEMA
+  })
+
+  log(`LLM analysis completed in ${duration_ms}ms`)
+
+  let llm_result = null
+  try {
+    llm_result = JSON.parse(output)
+  } catch {
+    llm_result = extract_json_from_response(output)
+  }
+
+  if (llm_result && llm_result.classification) {
+    return {
+      file_path,
+      file_type: scan_result.file_type,
+      lines_scanned: scan_result.lines_scanned,
+      regex_findings,
+      llm_analysis: llm_result,
+      classification: llm_result.classification,
+      confidence: llm_result.confidence || 0.5,
+      reasoning: llm_result.reasoning || '',
+      findings: llm_result.findings || [],
+      method: 'llm',
+      duration_ms
+    }
+  }
+
+  log('LLM output could not be parsed, falling back to regex classification')
+  const regex_classification = classify_from_regex(regex_findings)
+  return {
+    file_path,
+    file_type: scan_result.file_type,
+    lines_scanned: scan_result.lines_scanned,
+    regex_findings,
+    llm_analysis: null,
+    classification: regex_classification.classification,
+    confidence: regex_classification.confidence,
+    reasoning: `${regex_classification.reasoning} (LLM output unparseable)`,
+    method: 'regex_fallback',
+    warning: 'LLM output could not be parsed as valid JSON'
+  }
+}
+
+/**
  * Analyze a single file for sensitive content.
  *
  * @param {object} options
@@ -178,7 +272,7 @@ function classify_from_regex(findings) {
  * @param {string} [options.model] - Ollama model to use
  * @param {boolean} [options.dry_run] - If true, skip LLM analysis
  * @param {boolean} [options.regex_only] - If true, skip LLM analysis
- * @param {number} [options.max_content_size] - Max chars for LLM analysis
+ * @param {number} [options.max_content_size] - Max chars per chunk for LLM analysis
  * @param {number} [options.timeout_ms] - Timeout for LLM call
  * @returns {Promise<object>} Analysis result with classification and findings
  */
@@ -203,9 +297,19 @@ export async function analyze_content({
   // Prepare content body for LLM (strip frontmatter for markdown)
   const ext = path.extname(file_path).toLowerCase()
   let content_body = content
+  let metadata = null
   if (ext === '.md' || ext === '.markdown') {
     try {
-      content_body = frontMatter(content).body
+      const parsed = frontMatter(content)
+      content_body = parsed.body
+      if (parsed.attributes && typeof parsed.attributes === 'object') {
+        metadata = {
+          title: parsed.attributes.title,
+          type: parsed.attributes.type,
+          description: parsed.attributes.description,
+          tags: Array.isArray(parsed.attributes.tags) ? parsed.attributes.tags : null
+        }
+      }
     } catch {
       content_body = content
     }
@@ -213,9 +317,8 @@ export async function analyze_content({
 
   // Stage 2: Check if LLM analysis should be skipped
   const skip_llm = dry_run || regex_only
-  const size_exceeded = content_body.length > max_content_size
 
-  if (skip_llm || size_exceeded) {
+  if (skip_llm) {
     const regex_classification = classify_from_regex(scan_result.findings)
     return {
       file_path,
@@ -226,68 +329,111 @@ export async function analyze_content({
       classification: regex_classification.classification,
       confidence: regex_classification.confidence,
       reasoning: regex_classification.reasoning,
-      method: 'regex_only',
-      ...(size_exceeded && {
-        warning: `File exceeds size limit (${content_body.length} > ${max_content_size} chars). Regex-only analysis used.`
-      })
+      method: 'regex_only'
     }
   }
 
-  // Stage 3: LLM analysis via Ollama
+  // Stage 3: LLM analysis via Ollama (with chunking for large files)
   try {
-    const prompt = await build_review_prompt({
-      content: content_body,
-      file_path,
-      regex_findings: scan_result.findings
-    })
+    const chunks = chunk_content(content_body, max_content_size)
 
-    const { output, duration_ms } = await run_opencode({
-      prompt,
-      model,
-      timeout_ms,
-      format: CONTENT_REVIEW_SCHEMA
-    })
-
-    log(`LLM analysis completed in ${duration_ms}ms`)
-
-    // Parse LLM response - try JSON.parse first (schema-enforced), then fallback
-    let llm_result = null
-    try {
-      llm_result = JSON.parse(output)
-    } catch {
-      llm_result = extract_json_from_response(output)
+    if (chunks.length === 1) {
+      // Single chunk - standard path
+      return await analyze_single_chunk({
+        content: content_body,
+        file_path,
+        metadata,
+        regex_findings: scan_result.findings,
+        scan_result,
+        model,
+        timeout_ms
+      })
     }
 
-    if (llm_result && llm_result.classification) {
+    // Multi-chunk path: analyze each chunk, aggregate with most-restrictive
+    log(`File split into ${chunks.length} chunks (${content_body.length} chars total)`)
+    const chunk_results = []
+    let total_duration_ms = 0
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
+      const chunk_label = `[chunk ${i + 1}/${chunks.length}]`
+      log(`Analyzing ${chunk_label} (${chunk.length} chars)`)
+
+      try {
+        const prompt = await build_review_prompt({
+          content: chunk,
+          file_path: `${file_path} ${chunk_label}`,
+          regex_findings: i === 0 ? scan_result.findings : [],
+          metadata
+        })
+
+        const { output, duration_ms: chunk_duration } = await run_opencode({
+          prompt,
+          model,
+          timeout_ms,
+          format: CONTENT_REVIEW_SCHEMA
+        })
+
+        total_duration_ms += chunk_duration
+        let llm_result = null
+        try {
+          llm_result = JSON.parse(output)
+        } catch {
+          llm_result = extract_json_from_response(output)
+        }
+
+        if (llm_result && llm_result.classification) {
+          chunk_results.push(llm_result)
+        }
+      } catch (error) {
+        log(`Chunk ${i + 1} failed: ${error.message}`)
+      }
+    }
+
+    if (chunk_results.length === 0) {
+      log('All chunks failed, falling back to regex classification')
+      const regex_classification = classify_from_regex(scan_result.findings)
       return {
         file_path,
         file_type: scan_result.file_type,
         lines_scanned: scan_result.lines_scanned,
         regex_findings: scan_result.findings,
-        llm_analysis: llm_result,
-        classification: llm_result.classification,
-        confidence: llm_result.confidence || 0.5,
-        reasoning: llm_result.reasoning || '',
-        findings: llm_result.findings || [],
-        method: 'llm',
-        duration_ms
+        llm_analysis: null,
+        classification: regex_classification.classification,
+        confidence: regex_classification.confidence,
+        reasoning: `${regex_classification.reasoning} (all LLM chunks failed)`,
+        method: 'regex_fallback',
+        warning: `All ${chunks.length} chunks failed LLM analysis`
       }
     }
 
-    // LLM returned unparseable output - fall back to regex
-    log('LLM output could not be parsed, falling back to regex classification')
-    const regex_classification = classify_from_regex(scan_result.findings)
+    // Aggregate: most restrictive classification wins
+    const classification_priority = { private: 3, acquaintance: 2, public: 1 }
+    const most_restrictive = chunk_results.reduce((best, r) =>
+      (classification_priority[r.classification] || 0) > (classification_priority[best.classification] || 0) ? r : best
+    )
+
+    const all_findings = chunk_results.flatMap((r) => r.findings || [])
+    const all_reasoning = chunk_results
+      .filter((r) => r.classification === most_restrictive.classification)
+      .map((r) => r.reasoning)
+      .filter(Boolean)
+
     return {
       file_path,
       file_type: scan_result.file_type,
       lines_scanned: scan_result.lines_scanned,
       regex_findings: scan_result.findings,
-      llm_analysis: null,
-      classification: regex_classification.classification,
-      confidence: regex_classification.confidence,
-      reasoning: `${regex_classification.reasoning} (LLM output unparseable)`,
-      method: 'regex_fallback',
-      warning: 'LLM output could not be parsed as valid JSON'
+      llm_analysis: most_restrictive,
+      classification: most_restrictive.classification,
+      confidence: most_restrictive.confidence || 0.5,
+      reasoning: all_reasoning[0] || '',
+      findings: all_findings,
+      method: 'llm_chunked',
+      duration_ms: total_duration_ms,
+      chunks_analyzed: chunk_results.length,
+      chunks_total: chunks.length
     }
   } catch (error) {
     // Graceful degradation - Ollama unreachable or error

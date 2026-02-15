@@ -21,6 +21,4 @@ Personal information includes anything that can be used to discover a specific i
 
 ## Allowable Information
 
-The following are NOT considered personal information for privacy purposes:
-
-- The username "trashman" in file paths and system references
+Allowable usernames, paths, and references are configured in the content review config (`allowable_usernames`). These are NOT considered personal information for privacy purposes when they appear in file paths, system references, and repository URLs.

@@ -7,7 +7,7 @@ import config from '#config'
 const log = debug('content-review:config')
 
 const DEFAULT_CONFIG = {
-  default_model: 'ollama/qwen3:32b',
+  default_model: 'ollama/devstral-small-2:24b',
   max_content_size: 32000,
   timeout_ms: 180000,
   guidelines: [
