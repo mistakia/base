@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
@@ -135,10 +135,13 @@ const TimelineList = ({
     return timeline.filter((evt) => !evt?.provider_data?.is_sidechain)
   }, [timeline, include_sidechain])
 
-  const grouped_entries = group_tool_entries(timeline_main)
+  const grouped_entries = useMemo(
+    () => group_tool_entries(timeline_main),
+    [timeline_main]
+  )
 
   // find the last assistant message entry index (by original timeline index)
-  const last_assistant_entry_index = (() => {
+  const last_assistant_entry_index = useMemo(() => {
     let last_index = null
     timeline_main.forEach((event, index) => {
       if (event && event.type === 'message' && event.role === 'assistant') {
@@ -146,66 +149,57 @@ const TimelineList = ({
       }
     })
     return last_index
-  })()
+  }, [timeline_main])
 
   // Find last consecutive user message and last assistant message in grouped entries
-  const find_collapsible_boundaries = () => {
-    let last_consecutive_user_message_group_index = null
-    let last_assistant_message_group_index = null
+  const {
+    last_consecutive_user_message_group_index,
+    last_assistant_message_group_index
+  } = useMemo(() => {
+    let last_consecutive_user = null
+    let last_assistant = null
     let consecutive_user_messages_ended = false
 
     grouped_entries.forEach((entry, group_index) => {
       if (entry.type === 'tool_pair') {
-        // Tool pairs indicate the end of consecutive user messages
         consecutive_user_messages_ended = true
         return
       }
 
-      // Regular event - check if it's a message
       const timeline_event = entry.timeline_event
       if (timeline_event?.type === 'message') {
         if (timeline_event.role === 'user') {
           if (!consecutive_user_messages_ended) {
-            // Still in consecutive user messages at the start
-            last_consecutive_user_message_group_index = group_index
+            last_consecutive_user = group_index
           }
         } else if (timeline_event.role === 'assistant') {
-          // Any assistant message ends consecutive user messages
           consecutive_user_messages_ended = true
-
           if (entry.index === last_assistant_entry_index) {
-            last_assistant_message_group_index = group_index
+            last_assistant = group_index
           }
         }
       } else {
-        // Any non-message event ends consecutive user messages
         consecutive_user_messages_ended = true
       }
     })
 
     return {
-      last_consecutive_user_message_group_index,
-      last_assistant_message_group_index
+      last_consecutive_user_message_group_index: last_consecutive_user,
+      last_assistant_message_group_index: last_assistant
     }
-  }
-
-  const {
-    last_consecutive_user_message_group_index,
-    last_assistant_message_group_index
-  } = find_collapsible_boundaries()
+  }, [grouped_entries, last_assistant_entry_index])
 
   /**
    * Group collapsible entries into sections for notable events view.
    * Creates alternating sections of notable events and collapsible groups.
    * Returns array of: { type: 'notable', event, original_index } | { type: 'collapsible', events }
    */
-  const group_by_notable_events = (entries) => {
+  const group_by_notable_events = useCallback((entries) => {
     const sections = []
     let hidden_events_buffer = []
 
     entries.forEach((entry, index) => {
       if (is_notable_event(entry)) {
-        // Flush any hidden events as a collapsible section
         if (hidden_events_buffer.length > 0) {
           sections.push({ type: 'collapsible', events: hidden_events_buffer })
           hidden_events_buffer = []
@@ -216,13 +210,12 @@ const TimelineList = ({
       }
     })
 
-    // Flush remaining hidden events
     if (hidden_events_buffer.length > 0) {
       sections.push({ type: 'collapsible', events: hidden_events_buffer })
     }
 
     return sections
-  }
+  }, [])
 
   // Split entries into three sections: before, collapsible, after
   const entries_before_collapsible =

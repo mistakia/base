@@ -259,8 +259,9 @@ export const get_file_type_from_path = (path) => {
   const last_segment = path.split('/').pop()
   const parts = last_segment.split('.')
 
-  // If there's no extension (single part), return null to check content later
-  if (parts.length === 1) {
+  // If there's no extension (single part), return unknown to check content later
+  // Also handle hidden files like .gitignore, .bashrc where parts[0] is empty
+  if (parts.length === 1 || (parts[0] === '' && parts.length === 2)) {
     return 'unknown'
   }
 

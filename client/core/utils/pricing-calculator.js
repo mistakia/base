@@ -120,7 +120,7 @@ function calculate_estimated_cost(thread_metadata, pricing) {
   // Use total tokens as a rough estimate
   // Assume 60% input tokens, 40% output tokens as a typical distribution
   const total_tokens =
-    thread_metadata.input_tokens + thread_metadata.output_tokens || 0
+    (thread_metadata.input_tokens || 0) + (thread_metadata.output_tokens || 0)
 
   if (
     !total_tokens ||

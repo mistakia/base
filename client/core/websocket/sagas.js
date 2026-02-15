@@ -16,14 +16,38 @@ export function* connect() {
   yield call(open_websocket, user_token ? { token: user_token } : {})
 }
 
+const RECONNECT_MAX_RETRIES = 10
+const RECONNECT_BASE_DELAY = 1000
+const RECONNECT_MAX_DELAY = 60000
+
+let reconnect_exhausted = false
+
 export function* reconnect() {
+  if (reconnect_exhausted) return
+
   // Reconnect regardless of authentication status
   // Unauthenticated users should maintain connection for redacted events
+  let attempt = 0
   while (!websocket_is_open()) {
+    if (attempt >= RECONNECT_MAX_RETRIES) {
+      reconnect_exhausted = true
+      yield put(websocket_actions.connection_failed())
+      return
+    }
     yield call(connect)
-    yield delay(2000) // TODO - increase delay each run
+    if (!websocket_is_open()) {
+      const backoff_delay = Math.min(
+        RECONNECT_BASE_DELAY * Math.pow(2, attempt),
+        RECONNECT_MAX_DELAY
+      )
+      const jitter = Math.floor(Math.random() * backoff_delay * 0.1)
+      yield delay(backoff_delay + jitter)
+      attempt += 1
+    }
   }
 
+  // Successful reconnection resets the exhaustion flag
+  reconnect_exhausted = false
   yield put(websocket_actions.reconnected())
 }
 

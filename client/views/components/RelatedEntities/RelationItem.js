@@ -45,7 +45,7 @@ const link_sx = {
 
 const get_entity_link = (base_uri) => {
   try {
-    return convert_base_uri_to_path(base_uri)
+    return encodeURI(convert_base_uri_to_path(base_uri))
   } catch (error) {
     // Fallback for file references
     if (base_uri && base_uri.startsWith('file:')) {

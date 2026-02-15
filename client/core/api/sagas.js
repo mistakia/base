@@ -2,6 +2,7 @@ import { call, put, cancelled, select } from 'redux-saga/effects'
 // import { LOCATION_CHANGE } from 'redux-first-history'
 
 import { api, api_request } from '@core/api/service'
+import { notification_actions } from '@core/notification/actions'
 import {
   get_tasks_actions,
   get_tasks_table_actions,
@@ -64,10 +65,8 @@ function* fetchAPI(api_function, actions, opts = {}) {
   } catch (err) {
     console.log(err)
     if (!opts.ignoreError) {
-      /* yield put(notificationActions.show({ severity: 'error', message: err.message }))
-       * Bugsnag.notify(err, (event) => {
-       *   event.addMetadata('options', opts)
-       * }) */
+      // TODO: Add job tracker reporting - see user:task/base/job-tracker-system-implementation.md
+      yield put(notification_actions.show_notification({ severity: 'error', message: err.message }))
     }
     yield put(actions.failed({ opts, error: err.toString() }))
   } finally {

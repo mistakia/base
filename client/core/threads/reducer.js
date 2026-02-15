@@ -60,15 +60,16 @@ function update_selected_thread_if_matches(state, thread_id, update_fn) {
 }
 
 /**
- * Updates a thread in the basic threads list
+ * Updates a thread in the basic threads list.
+ * Thread list items are Immutable Maps (from GET_THREADS_FULFILLED wrapping in List),
+ * but updated_data may be plain JS objects from WebSocket events.
  */
 function update_thread_in_basic_list(state, thread_id, updated_data) {
   return state.update('threads', (threads) => {
     if (!threads) return threads
     return threads.map((thread) => {
-      const id = thread.thread_id || thread.get?.('thread_id')
+      const id = thread.get ? thread.get('thread_id') : thread.thread_id
       if (id === thread_id) {
-        // Merge updated data into the thread
         if (thread.merge) {
           return thread.merge(updated_data)
         }
