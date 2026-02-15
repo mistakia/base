@@ -69,5 +69,3 @@ export function extract_tags_from_labels(labels) {
   }
   return Array.from(tags)
 }
-
-

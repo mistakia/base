@@ -32,7 +32,7 @@ User wants to create a new task. This workflow handles simple and draft tasks di
 
 - [[sys:system/workflow/write-software-implementation-plan.md]] - for tasks involving code changes
 - [[sys:system/workflow/write-general-implementation-plan.md]] - for tasks without codebase interaction
-</context>
+  </context>
 
 <instructions>
 

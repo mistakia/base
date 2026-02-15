@@ -66,7 +66,12 @@ function* fetchAPI(api_function, actions, opts = {}) {
     console.log(err)
     if (!opts.ignoreError) {
       // TODO: Add job tracker reporting - see user:task/base/job-tracker-system-implementation.md
-      yield put(notification_actions.show_notification({ severity: 'error', message: err.message }))
+      yield put(
+        notification_actions.show_notification({
+          severity: 'error',
+          message: err.message
+        })
+      )
     }
     yield put(actions.failed({ opts, error: err.toString() }))
   } finally {

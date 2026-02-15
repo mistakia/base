@@ -112,7 +112,9 @@ async function migrate_thread({ thread_path, dry_run = false }) {
     try {
       await fs.unlink(json_path)
     } catch (unlink_error) {
-      log(`Warning: could not delete original file ${json_path}: ${unlink_error.message}`)
+      log(
+        `Warning: could not delete original file ${json_path}: ${unlink_error.message}`
+      )
     }
 
     log(`Migrated ${thread_id}: ${entries.length} entries`)

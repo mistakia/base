@@ -29,8 +29,7 @@ export async function call_ollama({
   }
 
   const model_name = model.startsWith('ollama/') ? model.slice(7) : model
-  const base_url =
-    process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL
+  const base_url = process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL
   const url = `${base_url}/api/generate`
 
   log(`Calling Ollama: ${model_name}`)

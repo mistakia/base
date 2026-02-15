@@ -529,7 +529,10 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
+              session_cookies: parse_json_arg(
+                argv.chatgptSessionCookies,
+                '--chatgpt-session-cookies'
+              ),
               device_id: argv.chatgptDeviceId
             }
           }
@@ -674,7 +677,10 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
+              session_cookies: parse_json_arg(
+                argv.chatgptSessionCookies,
+                '--chatgpt-session-cookies'
+              ),
               device_id: argv.chatgptDeviceId
             }
           }
@@ -786,7 +792,10 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
+              session_cookies: parse_json_arg(
+                argv.chatgptSessionCookies,
+                '--chatgpt-session-cookies'
+              ),
               device_id: argv.chatgptDeviceId
             }
           }

@@ -90,7 +90,12 @@ export function clear_guideline_cache() {
  * Build the LLM prompt for content classification.
  * Loads tier definitions and guidance notes from config.
  */
-async function build_review_prompt({ content, file_path, regex_findings, metadata }) {
+async function build_review_prompt({
+  content,
+  file_path,
+  regex_findings,
+  metadata
+}) {
   const review_config = await load_review_config()
   const guideline_text = await load_guideline_text()
 
@@ -190,7 +195,10 @@ function chunk_content(content, max_size) {
   let current_chunk = ''
 
   for (const line of lines) {
-    if (current_chunk.length + line.length + 1 > max_size && current_chunk.length > 0) {
+    if (
+      current_chunk.length + line.length + 1 > max_size &&
+      current_chunk.length > 0
+    ) {
       chunks.push(current_chunk)
       current_chunk = ''
     }
@@ -208,7 +216,15 @@ function chunk_content(content, max_size) {
  * Analyze a single chunk of content via LLM.
  * Used for files that fit within the size limit (single prompt).
  */
-async function analyze_single_chunk({ content, file_path, metadata, regex_findings, scan_result, model, timeout_ms }) {
+async function analyze_single_chunk({
+  content,
+  file_path,
+  metadata,
+  regex_findings,
+  scan_result,
+  model,
+  timeout_ms
+}) {
   const prompt = await build_review_prompt({
     content,
     file_path,
@@ -284,7 +300,8 @@ export async function analyze_content({
 } = {}) {
   const review_config = await load_review_config()
   if (!model) model = review_config.default_model
-  if (max_content_size == null) max_content_size = review_config.max_content_size
+  if (max_content_size == null)
+    max_content_size = review_config.max_content_size
   if (timeout_ms == null) timeout_ms = review_config.timeout_ms
 
   const content = await readFile(file_path, 'utf8')
@@ -305,7 +322,9 @@ export async function analyze_content({
           title: parsed.attributes.title,
           type: parsed.attributes.type,
           description: parsed.attributes.description,
-          tags: Array.isArray(parsed.attributes.tags) ? parsed.attributes.tags : null
+          tags: Array.isArray(parsed.attributes.tags)
+            ? parsed.attributes.tags
+            : null
         }
       }
     } catch {
@@ -347,7 +366,9 @@ export async function analyze_content({
     }
 
     // Multi-chunk path: analyze each chunk, aggregate with most-restrictive
-    log(`File split into ${chunks.length} chunks (${content_body.length} chars total)`)
+    log(
+      `File split into ${chunks.length} chunks (${content_body.length} chars total)`
+    )
     const chunk_results = []
     let total_duration_ms = 0
 
@@ -407,7 +428,10 @@ export async function analyze_content({
     // Aggregate: most restrictive classification wins
     const classification_priority = { private: 3, acquaintance: 2, public: 1 }
     const most_restrictive = chunk_results.reduce((best, r) =>
-      (classification_priority[r.classification] || 0) > (classification_priority[best.classification] || 0) ? r : best
+      (classification_priority[r.classification] || 0) >
+      (classification_priority[best.classification] || 0)
+        ? r
+        : best
     )
 
     const all_findings = chunk_results.flatMap((r) => r.findings || [])
@@ -474,7 +498,8 @@ export async function analyze_thread({
 } = {}) {
   const review_config = await load_review_config()
   if (!model) model = review_config.default_model
-  if (max_content_size == null) max_content_size = review_config.max_content_size
+  if (max_content_size == null)
+    max_content_size = review_config.max_content_size
 
   const results = []
   const files_to_scan = []
