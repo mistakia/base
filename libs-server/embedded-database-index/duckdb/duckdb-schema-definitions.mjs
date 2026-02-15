@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS entities (
   status VARCHAR,
   priority VARCHAR,
   archived BOOLEAN DEFAULT FALSE,
+  public_read BOOLEAN,
+  visibility_analyzed_at TIMESTAMP,
   user_public_key VARCHAR NOT NULL,
   created_at TIMESTAMP NOT NULL,
   updated_at TIMESTAMP NOT NULL,
@@ -69,7 +71,9 @@ CREATE TABLE IF NOT EXISTS threads (
   edit_count INTEGER DEFAULT 0,
   lines_changed INTEGER DEFAULT 0,
   file_references TEXT,
-  directory_references TEXT
+  directory_references TEXT,
+  public_read BOOLEAN,
+  visibility_analyzed_at TIMESTAMP
 )
 `
 

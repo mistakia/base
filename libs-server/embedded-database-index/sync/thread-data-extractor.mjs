@@ -241,7 +241,9 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     edit_count: metadata.edit_count || 0,
     lines_changed: metadata.lines_changed || 0,
     file_references,
-    directory_references
+    directory_references,
+    public_read: metadata.public_read != null ? metadata.public_read : null,
+    visibility_analyzed_at: metadata.visibility_analyzed_at || null
   }
 }
 

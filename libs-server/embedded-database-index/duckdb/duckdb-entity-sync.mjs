@@ -40,7 +40,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     edit_count,
     lines_changed,
     file_references,
-    directory_references
+    directory_references,
+    public_read,
+    visibility_analyzed_at
   } = thread_data
 
   // Derive primary_model from nested path if not directly set
@@ -66,8 +68,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       working_directory, working_directory_path, source_provider,
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
-      edit_count, lines_changed, file_references, directory_references
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      edit_count, lines_changed, file_references, directory_references,
+      public_read, visibility_analyzed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -97,7 +100,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       edit_count = excluded.edit_count,
       lines_changed = excluded.lines_changed,
       file_references = excluded.file_references,
-      directory_references = excluded.directory_references
+      directory_references = excluded.directory_references,
+      public_read = excluded.public_read,
+      visibility_analyzed_at = excluded.visibility_analyzed_at
   `
 
   try {
@@ -133,7 +138,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
         edit_count ?? 0,
         lines_changed ?? 0,
         file_references ?? null,
-        directory_references ?? null
+        directory_references ?? null,
+        public_read ?? null,
+        visibility_analyzed_at ?? null
       ]
     })
     log('Thread upserted: %s', thread_id)
@@ -338,12 +345,16 @@ export async function upsert_entity_to_duckdb({ entity_data }) {
   const created_at = frontmatter?.created_at || now
   const updated_at = frontmatter?.updated_at || now
   const archived_at = frontmatter?.archived_at || null
+  const public_read =
+    frontmatter?.public_read != null ? frontmatter.public_read : null
+  const visibility_analyzed_at = frontmatter?.visibility_analyzed_at || null
 
   const query = `
     INSERT INTO entities (
       base_uri, entity_id, type, title, description, status, priority,
-      archived, user_public_key, created_at, updated_at, archived_at, frontmatter
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      archived, public_read, visibility_analyzed_at,
+      user_public_key, created_at, updated_at, archived_at, frontmatter
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (base_uri) DO UPDATE SET
       entity_id = excluded.entity_id,
       type = excluded.type,
@@ -352,6 +363,8 @@ export async function upsert_entity_to_duckdb({ entity_data }) {
       status = excluded.status,
       priority = excluded.priority,
       archived = excluded.archived,
+      public_read = excluded.public_read,
+      visibility_analyzed_at = excluded.visibility_analyzed_at,
       user_public_key = excluded.user_public_key,
       created_at = excluded.created_at,
       updated_at = excluded.updated_at,
@@ -371,6 +384,8 @@ export async function upsert_entity_to_duckdb({ entity_data }) {
         status,
         priority,
         archived,
+        public_read,
+        visibility_analyzed_at,
         user_public_key,
         created_at,
         updated_at,
@@ -463,7 +478,7 @@ export async function upsert_entities_batch({ entities }) {
     const chunk = entities.slice(i, i + BATCH_CHUNK_SIZE)
 
     const placeholders = chunk
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
 
     const parameters = chunk.flatMap((entity_data) => {
@@ -479,6 +494,8 @@ export async function upsert_entities_batch({ entities }) {
         frontmatter?.status || null,
         frontmatter?.priority || null,
         frontmatter?.archived || false,
+        frontmatter?.public_read != null ? frontmatter.public_read : null,
+        frontmatter?.visibility_analyzed_at || null,
         frontmatter?.user_public_key || entity_data.user_public_key,
         frontmatter?.created_at || now,
         frontmatter?.updated_at || now,
@@ -491,7 +508,8 @@ export async function upsert_entities_batch({ entities }) {
       query: `
         INSERT INTO entities (
           base_uri, entity_id, type, title, description, status, priority,
-          archived, user_public_key, created_at, updated_at, archived_at, frontmatter
+          archived, public_read, visibility_analyzed_at,
+          user_public_key, created_at, updated_at, archived_at, frontmatter
         ) VALUES ${placeholders}
         ON CONFLICT (base_uri) DO UPDATE SET
           entity_id = excluded.entity_id,
@@ -501,6 +519,8 @@ export async function upsert_entities_batch({ entities }) {
           status = excluded.status,
           priority = excluded.priority,
           archived = excluded.archived,
+          public_read = excluded.public_read,
+          visibility_analyzed_at = excluded.visibility_analyzed_at,
           user_public_key = excluded.user_public_key,
           created_at = excluded.created_at,
           updated_at = excluded.updated_at,

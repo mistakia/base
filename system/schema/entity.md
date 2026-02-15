@@ -61,6 +61,14 @@ properties:
     required: true
     auto_generated: true
     description: Last modified timestamp
+  - name: public_read
+    type: boolean
+    required: false
+    description: Whether this entity is publicly readable by unauthenticated users
+  - name: visibility_analyzed_at
+    type: datetime
+    required: false
+    description: Timestamp of last content review scan for visibility classification
   - name: archived_at
     type: datetime
     required: false

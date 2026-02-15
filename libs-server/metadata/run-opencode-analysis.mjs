@@ -45,9 +45,15 @@ function extract_ollama_model_name(model) {
  * @param {string} params.prompt - The prompt to send
  * @param {string} params.model - Model ID (ollama/model:tag format)
  * @param {number} [params.timeout_ms] - Timeout in milliseconds
+ * @param {object} [params.format] - JSON schema for structured output (Ollama format parameter)
  * @returns {Promise<{output: string, duration_ms: number}>} Response and execution time
  */
-async function call_ollama_direct({ prompt, model, timeout_ms = TIMEOUT_MS }) {
+async function call_ollama_direct({
+  prompt,
+  model,
+  timeout_ms = TIMEOUT_MS,
+  format = null
+}) {
   const model_name = extract_ollama_model_name(model)
   const url = `${OLLAMA_BASE_URL}/api/generate`
 
@@ -64,7 +70,8 @@ async function call_ollama_direct({ prompt, model, timeout_ms = TIMEOUT_MS }) {
       body: JSON.stringify({
         model: model_name,
         prompt,
-        stream: false
+        stream: false,
+        ...(format && { format })
       }),
       signal: controller.signal
     })
@@ -105,13 +112,15 @@ async function call_ollama_direct({ prompt, model, timeout_ms = TIMEOUT_MS }) {
  * @param {string} [params.model] - Model to use
  * @param {number} [params.timeout_ms] - Timeout in milliseconds
  * @param {string} [params.mode] - OpenCode mode (e.g., 'plan' to reduce tool usage)
+ * @param {object} [params.format] - JSON schema for structured output (passed to Ollama format parameter)
  * @returns {Promise<{output: string, duration_ms: number}>} Raw output and execution time
  */
 export const run_opencode = async ({
   prompt,
   model = DEFAULT_MODEL,
   timeout_ms = TIMEOUT_MS,
-  mode = null
+  mode = null,
+  format = null
 }) => {
   if (!prompt) {
     throw new Error('prompt is required')
@@ -119,7 +128,7 @@ export const run_opencode = async ({
 
   // Use direct Ollama API for ollama models (faster, more reliable)
   if (USE_DIRECT_OLLAMA && model.startsWith('ollama/')) {
-    return call_ollama_direct({ prompt, model, timeout_ms })
+    return call_ollama_direct({ prompt, model, timeout_ms, format })
   }
 
   log(`Running OpenCode with model: ${model}${mode ? `, mode: ${mode}` : ''}`)

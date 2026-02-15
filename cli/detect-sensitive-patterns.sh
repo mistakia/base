@@ -1,5 +1,10 @@
 #!/bin/bash
 # Detect sensitive patterns in files (PII, secrets, credentials)
+#
+# NOTE: This script is a secondary/standalone pattern detection tool.
+# The primary pattern source is config/sensitive-patterns.json (in user-base).
+# The preferred tool for content review is: cli/review-content.mjs
+# This script is kept for standalone shell-based usage.
 
 # Process each file passed as argument or from stdin
 if [ "$#" -gt 0 ]; then

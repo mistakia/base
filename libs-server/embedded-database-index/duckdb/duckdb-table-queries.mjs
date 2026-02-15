@@ -26,6 +26,7 @@ const VALID_COLUMNS = new Set([
   'base_uri',
   'tags',
   'public_read',
+  'visibility_analyzed_at',
   'archived_at',
   // Task frontmatter columns
   'start_by',
