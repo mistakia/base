@@ -117,8 +117,9 @@ const parse_resource_path = (resource_path) => {
     return { type: 'unknown' }
   }
 
-  // Check for thread resource pattern: user:thread/{thread_id}
-  const thread_match = resource_path.match(/^user:thread\/([^/]+)$/)
+  // Check for thread resource pattern: user:thread/{thread_id} or user:thread/{thread_id}/subpath
+  // Sub-resources (e.g. timeline.jsonl, metadata.json) inherit parent thread permissions
+  const thread_match = resource_path.match(/^user:thread\/([^/]+)/)
   if (thread_match) {
     return { type: 'thread', thread_id: thread_match[1] }
   }
