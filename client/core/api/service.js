@@ -201,6 +201,11 @@ export const api = {
     return { url }
   },
 
+  post_entity_tags({ base_uri, tags_to_add, tags_to_remove }) {
+    const url = `${API_URL}/entities/tags`
+    return { url, ...POST({ base_uri, tags_to_add, tags_to_remove }) }
+  },
+
   patch_task({ base_uri, properties }) {
     const url = `${API_URL}/tasks`
     return {

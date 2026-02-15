@@ -1,3 +1,5 @@
 export { default as InlineSelectDropdown } from './InlineSelectDropdown'
 export { default as EditableStatusField } from './EditableStatusField'
 export { default as EditablePriorityField } from './EditablePriorityField'
+export { default as EditableTagsField } from './EditableTagsField'
+export { default as TagPickerDropdown } from './TagPickerDropdown'

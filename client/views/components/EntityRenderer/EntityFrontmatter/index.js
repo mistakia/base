@@ -14,7 +14,8 @@ import {
 import RelatedEntities from '@views/components/RelatedEntities'
 import {
   EditableStatusField,
-  EditablePriorityField
+  EditablePriorityField,
+  EditableTagsField
 } from '@views/components/InlineSelect'
 import { entity_field_config } from './field-config.js'
 import { resolve_field_type, dual_field_keys } from './field-type-config.js'
@@ -443,6 +444,18 @@ const EntityFrontmatter = ({
                     context='entity-page'
                   />
                 }
+                border_style='compact'
+                is_first={index === 0 && !has_content_above}
+              />
+            )
+          }
+
+          if (key === 'tags' && base_uri) {
+            return (
+              <MetadataRow
+                key={key}
+                label={format_field_label(key)}
+                value={<EditableTagsField value={value} base_uri={base_uri} />}
                 border_style='compact'
                 is_first={index === 0 && !has_content_above}
               />

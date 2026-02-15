@@ -3,6 +3,7 @@ export const entity_field_config = {
     always_visible: [
       'status',
       'priority',
+      'tags',
       'start_by',
       'finish_by',
       'assigned_to',
@@ -14,7 +15,6 @@ export const entity_field_config = {
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'external_id',
       'external_url',
       'github_url',
@@ -46,26 +46,24 @@ export const entity_field_config = {
     ]
   },
   workflow: {
-    always_visible: ['status', 'tools', 'created_at', 'updated_at'],
+    always_visible: ['status', 'tags', 'tools', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'prompt_properties',
       'public_read',
       'archived_at'
     ]
   },
   guideline: {
-    always_visible: ['globs', 'created_at', 'updated_at'],
+    always_visible: ['tags', 'globs', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'public_read',
       'archived_at'
     ]
@@ -85,6 +83,7 @@ export const entity_field_config = {
   },
   physical_item: {
     always_visible: [
+      'tags',
       'manufacturer',
       'model_number',
       'current_location',
@@ -100,7 +99,6 @@ export const entity_field_config = {
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'external_id',
       'import_cid',
       'serial_number',
@@ -144,6 +142,7 @@ export const entity_field_config = {
   },
   physical_location: {
     always_visible: [
+      'tags',
       'mail_address',
       'mail_city',
       'mail_state',
@@ -156,7 +155,6 @@ export const entity_field_config = {
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'mail_street_number',
       'mail_street_name',
       'mail_street_type',
@@ -168,13 +166,12 @@ export const entity_field_config = {
     ]
   },
   default: {
-    always_visible: ['status', 'priority', 'created_at', 'updated_at'],
+    always_visible: ['status', 'priority', 'tags', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
       'base_uri',
       'permalink',
-      'tags',
       'start_by',
       'finish_by',
       'globs',

@@ -11,7 +11,8 @@ import {
   get_tasks,
   get_tasks_table,
   patch_task,
-  get_available_tags
+  get_available_tags,
+  post_entity_tags
 } from '@core/api/sagas'
 import { tasks_action_types, tasks_actions } from './actions'
 import { get_tasks_state } from './selectors'
@@ -138,6 +139,22 @@ export function* load_available_tags() {
   yield call(get_available_tags, {})
 }
 
+export function* handle_add_entity_tag({ payload }) {
+  const { base_uri, tag_base_uri } = payload
+  yield call(post_entity_tags, {
+    base_uri,
+    tags_to_add: [tag_base_uri]
+  })
+}
+
+export function* handle_remove_entity_tag({ payload }) {
+  const { base_uri, tag_base_uri } = payload
+  yield call(post_entity_tags, {
+    base_uri,
+    tags_to_remove: [tag_base_uri]
+  })
+}
+
 //= ====================================
 //  WATCHERS
 // -------------------------------------
@@ -178,6 +195,17 @@ export function* watch_load_available_tags() {
   yield takeLatest(tasks_action_types.LOAD_AVAILABLE_TAGS, load_available_tags)
 }
 
+export function* watch_add_entity_tag() {
+  yield takeLatest(tasks_action_types.ADD_ENTITY_TAG, handle_add_entity_tag)
+}
+
+export function* watch_remove_entity_tag() {
+  yield takeLatest(
+    tasks_action_types.REMOVE_ENTITY_TAG,
+    handle_remove_entity_tag
+  )
+}
+
 //= ====================================
 //  ROOT
 // -------------------------------------
@@ -188,5 +216,7 @@ export const tasks_sagas = [
   fork(watch_load_tasks_table),
   fork(watch_update_task_property),
   fork(watch_patch_task_failed),
-  fork(watch_load_available_tags)
+  fork(watch_load_available_tags),
+  fork(watch_add_entity_tag),
+  fork(watch_remove_entity_tag)
 ]

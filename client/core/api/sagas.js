@@ -6,7 +6,8 @@ import {
   get_tasks_actions,
   get_tasks_table_actions,
   patch_task_actions,
-  get_available_tags_actions
+  get_available_tags_actions,
+  post_entity_tags_actions
 } from '@core/tasks/actions'
 import { post_user_session_request_actions } from '@core/app/actions'
 import {
@@ -92,6 +93,11 @@ export const get_available_tags = fetch.bind(
   null,
   api.get_available_tags,
   get_available_tags_actions
+)
+export const post_entity_tags = fetch.bind(
+  null,
+  api.post_entity_tags,
+  post_entity_tags_actions
 )
 
 export const get_threads = fetch.bind(

@@ -8,6 +8,12 @@ import express from 'express'
 import debug from 'debug'
 
 import { parse_array_param } from '#server/utils/query-params.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import {
+  add_tags_to_entity,
+  remove_tags_from_entity
+} from '#libs-server/tag/filesystem/manage-entity-tags.mjs'
+import { check_permission } from '#server/middleware/permission/index.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   find_related_entities,
@@ -396,6 +402,92 @@ router.get('/relations', async (req, res) => {
   } catch (error) {
     log('Error querying relations: %s', error.message)
     res.status(500).send({ error: error.message })
+  }
+})
+
+/**
+ * POST /api/entities/tags
+ *
+ * Add or remove tags from any entity.
+ *
+ * Body:
+ * - base_uri (required): Entity base URI
+ * - tags_to_add: Array of tag base URIs to add
+ * - tags_to_remove: Array of tag base URIs to remove
+ */
+router.post('/tags', async (req, res) => {
+  try {
+    const user_public_key = req.user?.user_public_key
+    if (!user_public_key) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
+    const { base_uri, tags_to_add, tags_to_remove } = req.body
+
+    if (!base_uri) {
+      return res.status(400).json({ error: 'base_uri is required' })
+    }
+
+    const has_adds = Array.isArray(tags_to_add) && tags_to_add.length > 0
+    const has_removes =
+      Array.isArray(tags_to_remove) && tags_to_remove.length > 0
+
+    if (!has_adds && !has_removes) {
+      return res
+        .status(400)
+        .json({ error: 'tags_to_add or tags_to_remove is required' })
+    }
+
+    // Check write permission
+    const permission_result = await check_permission({
+      user_public_key,
+      resource_path: base_uri
+    })
+
+    if (!permission_result.write.allowed) {
+      return res.status(403).json({ error: 'Permission denied' })
+    }
+
+    // Resolve base_uri to absolute path
+    const absolute_path = resolve_base_uri(base_uri)
+
+    const result = { success: true }
+
+    if (has_adds) {
+      const add_result = await add_tags_to_entity({
+        absolute_path,
+        tags_to_add
+      })
+      if (!add_result.success) {
+        return res.status(500).json({ error: add_result.error })
+      }
+      result.added_tags = add_result.added_tags
+      result.total_tags = add_result.total_tags
+    }
+
+    if (has_removes) {
+      const remove_result = await remove_tags_from_entity({
+        absolute_path,
+        tags_to_remove
+      })
+      if (!remove_result.success) {
+        return res.status(500).json({ error: remove_result.error })
+      }
+      result.removed_tags = remove_result.removed_tags
+      result.total_tags = remove_result.total_tags
+    }
+
+    log(
+      'Entity tags updated for %s: added=%o removed=%o',
+      base_uri,
+      result.added_tags,
+      result.removed_tags
+    )
+
+    res.status(200).json(result)
+  } catch (error) {
+    log('Error managing entity tags: %s', error.message)
+    res.status(500).json({ error: error.message })
   }
 })
 
