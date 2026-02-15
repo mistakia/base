@@ -122,11 +122,8 @@ function* handle_page_refresh_after_session_success() {
         break
 
       default:
-        // For file and directory paths, refresh both path info and specific content
+        // Load path info first to determine if path is a file or directory
         yield put(directory_actions.load_path_info(pathname))
-        yield put(directory_actions.load_directory(pathname))
-        yield put(directory_actions.load_file(pathname))
-        yield put(directory_actions.load_directory_markdown(pathname))
         break
     }
   } catch (error) {

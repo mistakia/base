@@ -24,7 +24,15 @@ export const use_file_system_data = ({
   const path_info = directory_state.get('path_info')
   const loading = directory_state.get('is_loading_path_info')
   const error = directory_state.get('path_info_error')
-  const is_directory = path_info?.type === 'directory' || current_path === ''
+
+  // Only trust path_info when it corresponds to the current path.
+  // Server returns path without leading slash, current_path has leading slash.
+  const normalized_current = current_path.replace(/^\/+/, '')
+  const path_info_matches = path_info && path_info.path === normalized_current
+  // Treat mismatched path_info as loading (path changed but response pending)
+  const is_path_info_stale = current_path !== '' && !path_info_matches
+  const is_directory =
+    current_path === '' || (path_info_matches && path_info.type === 'directory')
 
   const check_path_type = useCallback(
     async (path) => {
@@ -72,11 +80,13 @@ export const use_file_system_data = ({
     }
   }, [current_path, check_path_type])
 
+  const is_loading = loading || is_path_info_stale
+
   return {
     // State
     current_path,
     is_directory,
-    loading,
+    loading: is_loading,
     error,
 
     // Actions
@@ -85,7 +95,7 @@ export const use_file_system_data = ({
     refresh,
 
     // Computed properties
-    is_file: !is_directory,
+    is_file: !is_directory && !is_loading,
     has_error: !!error
   }
 }

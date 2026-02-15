@@ -39,6 +39,8 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   const directory_state = useSelector(get_directory_state)
   const loading = directory_state.get('is_loading_directory')
   const error = directory_state.get('directory_error')
+  const is_loading_path_info = directory_state.get('is_loading_path_info')
+  const path_info = directory_state.get('path_info')
 
   // Git repository info state - selectors now take path parameter
   const is_git_root = useSelector((state) => get_is_git_root(state, path))
@@ -51,8 +53,12 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   const is_cached = useSelector((state) => has_cached_repo_info(state, path))
 
   useEffect(() => {
+    // Skip loading directory if path info is still loading or path is a file
+    if (is_loading_path_info || (path_info && path_info.type !== 'directory')) {
+      return
+    }
     dispatch(directory_actions.load_directory(path))
-  }, [dispatch, path])
+  }, [dispatch, path, is_loading_path_info, path_info])
 
   // Load git repo info when path changes (only if not cached)
   useEffect(() => {
