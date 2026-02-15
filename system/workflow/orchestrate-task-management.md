@@ -111,6 +111,18 @@ base entity list -t task --status "Blocked" --json 2>/dev/null | jq length
 
 If `project_tag` is provided, add `--tags <project_tag>` to scope queries.
 
+### 1.1b In Progress Task Thread Context
+
+For each in-progress task, query reverse relations to find recent threads that worked on it:
+
+```bash
+# Get threads related to a task (filter for thread source_type, sort by updated_at)
+base relation reverse "<task_base_uri>" --json 2>/dev/null | \
+  jq '[.reverse[] | select(.source_type == "thread") | {thread_id: .entity_id, title, updated_at, thread_state, relation_type}] | sort_by(.updated_at) | reverse | .[0:3]'
+```
+
+Include the most recent 1-2 threads per task in the briefing, showing thread ID (full, not truncated), title, state, and recency. This helps the admin understand where work left off.
+
 ### 1.2 Active Threads Summary (if include_threads is true)
 
 ```bash
@@ -135,7 +147,10 @@ Format and present the collected data:
 | Blocked     | W     |
 
 ## Active Threads (N total, M stale)
-[List stale threads first, then recent active threads]
+[List stale threads first, then recent active threads. Always output full thread IDs (not truncated) so they can be opened in the web client or used for archival commands.]
+
+## In Progress Tasks
+[List each in-progress task with priority and latest related thread(s). Include full thread IDs.]
 
 ## Draft Tasks (candidates for triage)
 [List draft tasks, noting any with recent triage observations to skip]
