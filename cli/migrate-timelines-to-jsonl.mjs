@@ -101,8 +101,19 @@ async function migrate_thread({ thread_path, dry_run = false }) {
     // Write JSONL file
     await write_timeline_jsonl({ timeline_path: jsonl_path, entries })
 
+    // Verify JSONL file was written before deleting original
+    try {
+      await fs.access(jsonl_path)
+    } catch {
+      throw new Error(`JSONL file was not written successfully: ${jsonl_path}`)
+    }
+
     // Delete original JSON file
-    await fs.unlink(json_path)
+    try {
+      await fs.unlink(json_path)
+    } catch (unlink_error) {
+      log(`Warning: could not delete original file ${json_path}: ${unlink_error.message}`)
+    }
 
     log(`Migrated ${thread_id}: ${entries.length} entries`)
 

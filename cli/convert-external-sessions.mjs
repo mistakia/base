@@ -50,6 +50,15 @@ import {
 
 const log = debug('convert-external-sessions')
 
+function parse_json_arg(value, arg_name) {
+  try {
+    return JSON.parse(value)
+  } catch (e) {
+    console.error(`Invalid JSON in ${arg_name}: ${e.message}`)
+    process.exit(1)
+  }
+}
+
 /**
  * Setup debug logging based on verbose and debug flags
  * @param {Object} params
@@ -520,7 +529,7 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
               device_id: argv.chatgptDeviceId
             }
           }
@@ -665,7 +674,7 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
               device_id: argv.chatgptDeviceId
             }
           }
@@ -777,7 +786,7 @@ const main = async () => {
 
             chatgpt_auth = {
               bearer_token: argv.chatgptBearerToken,
-              session_cookies: JSON.parse(argv.chatgptSessionCookies),
+              session_cookies: parse_json_arg(argv.chatgptSessionCookies, '--chatgpt-session-cookies'),
               device_id: argv.chatgptDeviceId
             }
           }
