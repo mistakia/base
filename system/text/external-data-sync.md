@@ -1,7 +1,7 @@
 ---
 title: External Data Sync
 type: text
-description: System for synchronizing external data with conflict resolution
+description: System for importing external data to local entities with conflict resolution
 base_uri: sys:system/text/external-data-sync.md
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 11dc5b4c-365c-4e7f-b7f4-10c9851b1be1
@@ -15,7 +15,7 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 ## Overview
 
-Bidirectional synchronization system using content-addressed storage for change detection between internal entities and external sources. Designed to handle field-level conflicts while maintaining complete audit trails without requiring external system webhooks.
+One-way (external -> local) synchronization system using content-addressed storage for change detection between internal entities and external sources. External systems are updated directly via their APIs (gh CLI, MCP Notion tools), then imports are triggered to sync local state. Designed to handle field-level conflicts while maintaining complete audit trails without requiring external system webhooks.
 
 ## Unique Design Decisions
 
@@ -107,7 +107,7 @@ The system automatically discovers the structure by scanning directories. Import
 1. **API Data Retrieval**: Fetch issues, project items, and comments via GraphQL/REST
 2. **Normalization**: Transform GitHub format to internal task schema using label mappings
 3. **Entity Resolution**: Find existing tasks by external ID or fuzzy matching on title/repository
-4. **Bidirectional Sync**: Update local task from GitHub, optionally push local changes back
+4. **Import Sync**: Update local task from GitHub data
 
 ### Notion Integration Process
 
@@ -115,28 +115,8 @@ The system automatically discovers the structure by scanning directories. Import
 2. **Block Conversion**: Transform Notion's hierarchical block structure to markdown with formatting preservation
 3. **Property Mapping**: Convert database properties to entity fields using configuration-driven mappings
 4. **Entity Resolution**: Find existing entities by external_id with filesystem-based exact matching
-5. **Bidirectional Sync**: Import Notion content to local entities, optionally export entity changes back to Notion
-6. **Safety Controls**: Read-only by default with explicit write enablement and dry-run analysis
-
-## Local-First Entity Creation Patterns
-
-### Design Pattern
-
-Tasks created locally with GitHub repository metadata (`github_repository_owner`, `github_repository_name`) but without `external_id` can be promoted to GitHub issues. The absence of `external_id` indicates local-only state; its presence triggers the standard bidirectional sync process.
-
-### Creation Workflow
-
-1. **Local Task Creation**: Create task file in `user/task/github/{owner}/{repo}/` structure with repository metadata
-2. **Issue Creation**: Use creation script to generate GitHub issues from local tasks
-3. **Automatic Promotion**: Script updates task file with `external_id` and GitHub metadata
-4. **Sync Activation**: Task transitions into standard external sync system
-
-### Implementation Specification
-
-- **Detection**: Tasks lacking `external_id` but containing `github_repository_owner` and `github_repository_name`
-- **API Integration**: GitHub Issues REST API for issue creation with title, body, and labels
-- **File Updates**: Atomic addition of `external_id`, `github_number`, `github_api_id` (or `github_graphql_id`), and `github_url` fields
-- **Error Handling**: Preserves local state on GitHub API failures; validates required metadata before creation
+5. **Import Sync**: Import Notion content to local entities
+6. **Safety Controls**: Dry-run analysis available to preview changes before writing
 
 ## Notion Sync Implementation
 
@@ -162,8 +142,6 @@ Tasks created locally with GitHub repository metadata (`github_repository_owner`
 **Database Schema Mapping**: Configuration files define which entity types correspond to specific Notion databases, enabling flexible sync relationships without code changes.
 
 ### Safety and Reliability Features
-
-**Read-Only Default Mode**: All Notion write operations disabled by default, requiring explicit `--enable-notion-writes` flag to prevent accidental data modification.
 
 **Dry-Run Analysis**: Comprehensive preview mode showing exactly what changes would be made without executing them, including field-level change detection.
 

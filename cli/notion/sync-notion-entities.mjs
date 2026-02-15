@@ -26,10 +26,9 @@ debug.enable(
 // CLI configuration (placed at top to double as documentation)
 //
 const cli_description = `
-Sync Notion pages and databases to local entities.
+Sync Notion pages and databases to local entities (one-way: Notion -> local).
 
-By default this runs in safety (read-only) mode and will NOT write changes back to Notion.
-Use --enable-notion-writes to allow writes, or --dry-run to preview changes without writing.
+Use --dry-run to preview changes without writing local files.
 `
 
 const cli_parser = yargs(hideBin(process.argv))
@@ -99,12 +98,6 @@ const cli_parser = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
-  .option('enable-notion-writes', {
-    describe:
-      'DANGER: Allow writing changes back to Notion (disabled by default for safety)',
-    type: 'boolean',
-    default: false
-  })
   .option('dry-run', {
     describe: 'Analyze what would be synced without making any changes',
     type: 'boolean',
@@ -138,13 +131,6 @@ const cli_parser = yargs(hideBin(process.argv))
       )
     }
 
-    // Validate mutually exclusive sync modes
-    if (argv.dryRun && argv.enableNotionWrites) {
-      throw new Error(
-        'Cannot specify both --dry-run and --enable-notion-writes'
-      )
-    }
-
     // Validate since date format if provided
     if (argv.since) {
       const date = new Date(argv.since)
@@ -167,10 +153,6 @@ const cli_parser = yargs(hideBin(process.argv))
   .example(
     '$0 --dry-run',
     'Analyze what would be synced without making changes'
-  )
-  .example(
-    '$0 --enable-notion-writes',
-    'DANGER: Sync content AND write changes back to Notion'
   )
   .example(
     '$0 --since 2024-01-01T00:00:00Z',
@@ -216,7 +198,6 @@ export default async function sync_notion_entities({
   timeout_ms = 30000,
   max_retries = 3,
   verbose = false,
-  enable_notion_writes = false,
   dry_run = false,
   import_history_base_directory
 } = {}) {
@@ -231,15 +212,11 @@ export default async function sync_notion_entities({
       )
     }
 
-    // Safety warnings and mode logging
+    // Mode logging
     if (dry_run) {
       log(
         'DRY RUN MODE: Only analyzing what would be synced, no changes will be made'
       )
-    } else if (enable_notion_writes) {
-      log('LIVE MODE: Will write changes back to Notion')
-    } else {
-      log('SAFETY MODE: Notion writes disabled (read-only sync)')
     }
 
     log('Sync parameters:')
@@ -253,7 +230,6 @@ export default async function sync_notion_entities({
     log(`- Rate limit delay: ${rate_limit_delay}ms`)
     log(`- Request timeout: ${timeout_ms}ms`)
     log(`- Max retries: ${max_retries}`)
-    log(`- Notion writes enabled: ${enable_notion_writes}`)
     log(`- Dry run mode: ${dry_run}`)
 
     // Prepare sync options
@@ -273,7 +249,6 @@ export default async function sync_notion_entities({
       verbose,
       notion_token: notion_api_key,
       user_public_key,
-      enable_notion_writes,
       dry_run,
       import_history_base_directory
     }
@@ -360,7 +335,6 @@ const main = async () => {
       timeout_ms: argv.timeout,
       max_retries: argv.maxRetries,
       verbose: argv.verbose,
-      enable_notion_writes: argv.enableNotionWrites,
       dry_run: argv.dryRun,
       import_history_base_directory: argv.importHistoryBaseDirectory
     })
@@ -368,13 +342,8 @@ const main = async () => {
     // Print concise result summary to console
     console.log('\n=== Notion Sync Results ===')
 
-    // Show sync mode prominently
     if (argv.dryRun) {
       console.log('DRY RUN MODE: Analysis only, no changes made')
-    } else if (argv.enableNotionWrites) {
-      console.log('LIVE MODE: Changes written to Notion')
-    } else {
-      console.log('SAFETY MODE: Read-only sync, no writes to Notion')
     }
 
     console.log(`Timestamp: ${results.summary.sync_timestamp}`)

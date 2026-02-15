@@ -389,9 +389,6 @@ node cli/entity-list.mjs -t task --status "In Progress"
 ### GitHub Integration
 
 ```bash
-# Create GitHub issues from local task entities
-node cli/github/create-github-issues-from-local-tasks.mjs
-
 # Import GitHub issues into local entities
 node cli/github/import-github-issues.mjs
 node cli/github/import-github-project-issues.mjs

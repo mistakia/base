@@ -70,19 +70,4 @@ export function extract_tags_from_labels(labels) {
   return Array.from(tags)
 }
 
-/**
- * Generate GitHub labels from entity tags (many-to-many)
- *
- * @param {Array} tags - Array of entity tags (full paths)
- * @returns {Array} Array of GitHub label names
- */
-export function generate_labels_from_tags(tags) {
-  if (!tags || !Array.isArray(tags)) return []
-  const labels = new Set()
-  for (const tag of tags) {
-    for (const label of tag_to_labels(tag)) {
-      labels.add(label)
-    }
-  }
-  return Array.from(labels)
-}
+

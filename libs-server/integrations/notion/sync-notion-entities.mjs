@@ -9,7 +9,6 @@ import {
   get_all_notion_database_items
 } from './notion-api/index.mjs'
 import { sync_notion_page_to_entity } from './sync-notion-page-to-entity.mjs'
-import { batch_sync_entities_to_notion } from './sync-entity-to-notion.mjs'
 import { get_configured_database_ids } from './notion-entity-mapper.mjs'
 
 const log = debug('integrations:notion:sync-entities')
@@ -524,76 +523,6 @@ export async function sync_all_notion_databases_to_entities(options = {}) {
   } catch (error) {
     log(`Failed to sync all Notion databases: ${error.message}`)
     throw new Error(`Failed to sync all Notion databases: ${error.message}`)
-  }
-}
-
-/**
- * Sync specific entities to Notion (export from local to Notion)
- * @param {Array} entity_ids - Array of entity IDs to sync
- * @param {Object} options - Sync options
- * @returns {Object} Sync results summary
- */
-export async function sync_entities_to_notion(entity_ids, options = {}) {
-  try {
-    log(`Starting sync of ${entity_ids.length} entities to Notion`)
-
-    // This would need to be implemented to read entities from the filesystem/database
-    // For now, this is a placeholder
-    const entities = [] // TODO: Load entities by IDs
-
-    const results = await batch_sync_entities_to_notion(entities, options)
-
-    const summary = {
-      total_entities: entity_ids.length,
-      successful: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
-      results
-    }
-
-    log(
-      `Entity sync to Notion completed: ${summary.successful}/${summary.total_entities} successful`
-    )
-    return summary
-  } catch (error) {
-    log(`Failed to sync entities to Notion: ${error.message}`)
-    throw new Error(`Failed to sync entities to Notion: ${error.message}`)
-  }
-}
-
-/**
- * Perform bi-directional sync between Notion and local entities
- * @param {Object} options - Sync options
- * @param {string} [options.page_id] - Sync specific page only
- * @returns {Object} Complete sync results
- */
-export async function sync_notion_bidirectional(options = {}) {
-  try {
-    log('Starting bi-directional Notion sync')
-
-    const results = {
-      import_results: null,
-      export_results: null,
-      timestamp: new Date().toISOString()
-    }
-
-    // First, import from Notion to local entities
-    if (options.import !== false) {
-      if (options.page_id) {
-        log('Starting import phase for single page: Notion → Local entities')
-        results.import_results =
-          await sync_all_notion_content_to_entities(options)
-      } else {
-        log('Starting import phase: Notion → Local entities')
-        results.import_results =
-          await sync_all_notion_databases_to_entities(options)
-      }
-    }
-
-    log('Bi-directional sync completed')
-    return results
-  } catch (error) {
-    log(`Failed bi-directional sync: ${error.message}`)
-    throw new Error(`Failed bi-directional sync: ${error.message}`)
   }
 }
 
