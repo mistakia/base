@@ -11,7 +11,7 @@ observations:
   - '[security] Protecting non-public information is critical for security and privacy'
   - '[pattern] CLI scripts provide reliable pattern detection for known sensitive data'
   - '[principle] Combining automated detection with semantic review ensures comprehensive coverage'
-  - '[updated] 2026-02-14 - Migrated from file-review.sh + detect-sensitive-patterns.sh to review-content.mjs CLI'
+  - '[updated] 2026-02-15 - Simplified to single-pass scan+apply workflow'
 prompt_properties:
   - name: directory_path
     type: string
@@ -54,43 +54,44 @@ First, read and understand the review guidelines:
 - Read [[sys:system/guideline/review-for-secret-information.md]] to understand secret patterns
 - Note all specific patterns and keywords to search for
 
-## Phase 1: Full Scan (Regex + LLM Analysis)
+## Phase 1: Scan and Apply Visibility (Single Pass)
 
-1. Run the content review CLI with full analysis:
+The primary workflow scans and applies visibility in a single pass, avoiding redundant file re-discovery:
+
+1. Preview scan + visibility changes:
+
+   ```bash
+   node cli/review-content.mjs --path "${directory_path}" --apply-visibility --dry-run --progress
+   ```
+
+2. Apply after reviewing the preview:
+
+   ```bash
+   node cli/review-content.mjs --path "${directory_path}" --apply-visibility --progress
+   ```
+
+   - Stage 1 (regex): Scans against externalized patterns in `config/sensitive-patterns.json`
+   - Stage 2 (LLM): Classifies each file as `public`, `acquaintance`, or `private` via local Ollama model
+   - Applies `public_read` and `visibility_analyzed_at` immediately after each classification
+   - Classification mapping: `public` -> `public_read: true`, `acquaintance`/`private` -> `public_read: false`
+   - For markdown files, strips YAML frontmatter before scanning to avoid false positives
+   - For thread directories, scans `metadata.json` and `timeline.jsonl` (timeline uses regex-only by default)
+   - Files exceeding the size limit (32K chars) are chunked for LLM analysis
+   - Falls back to regex-only if Ollama is unavailable
+
+3. For scan-only (no visibility changes), omit `--apply-visibility`:
 
    ```bash
    node cli/review-content.mjs --path "${directory_path}" --progress --output /tmp/review-results.jsonl
    ```
 
-   - Stage 1 (regex): Scans against externalized patterns in `config/sensitive-patterns.json`
-   - Stage 2 (LLM): Classifies each file as `public`, `acquaintance`, or `private` via local Ollama model
-   - For markdown files, strips YAML frontmatter before scanning to avoid false positives
-   - For thread directories, scans `metadata.json` and `timeline.jsonl` (timeline uses regex-only by default)
-   - Files exceeding the size limit (32K chars) are chunked for LLM analysis
-   - Falls back to regex-only if Ollama is unavailable
    - JSONL output enables resume if scan is interrupted
 
-2. Launch parallel review agents using the Task tool for large directories:
+4. Launch parallel review agents using the Task tool for large directories:
    - Split the directory into segments and review in parallel
    - Each agent runs `review-content.mjs` on its segment
 
-3. Review the findings and classifications before proceeding
-
-## Phase 2: Apply Visibility and Propose Rules
-
-4. Apply visibility classifications to entities:
-
-   ```bash
-   # Preview changes first
-   node cli/review-content.mjs --path "${directory_path}" --apply-visibility --dry-run --progress
-
-   # Apply changes
-   node cli/review-content.mjs --path "${directory_path}" --apply-visibility --progress
-   ```
-
-   - Sets `public_read` on each entity/thread based on classification
-   - Sets `visibility_analyzed_at` timestamp for incremental scanning
-   - Classification mapping: `public` -> `public_read: true`, `acquaintance`/`private` -> `public_read: false`
+## Phase 2: Propose Role Permission Rules
 
 5. Propose role permission rule updates:
 
