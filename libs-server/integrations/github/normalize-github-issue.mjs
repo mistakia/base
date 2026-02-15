@@ -64,6 +64,8 @@ export function format_status(status_string) {
     case 'deferred':
     case 'inactive':
       return TASK_STATUS.PAUSED
+    case 'draft':
+      return TASK_STATUS.DRAFT
     case 'no status':
       return TASK_STATUS.NO_STATUS
     default:

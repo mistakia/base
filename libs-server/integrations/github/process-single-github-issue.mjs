@@ -16,7 +16,6 @@ const log = debug('github:process-single-github-issue')
  * @param {Object} options.issue - The GitHub issue data from webhook payload
  * @param {string} options.github_repository_owner - Repository owner
  * @param {string} options.github_repository_name - Repository name
- * @param {string} options.github_token - GitHub API token for fetching additional data
  * @param {string} options.user_public_key - User public key for task ownership
  * @param {Object} [options.project_item] - GitHub project item data (optional)
  * @param {string} [options.import_history_base_directory] - Base directory for import history (optional)
@@ -28,7 +27,6 @@ export async function process_single_github_issue({
   issue,
   github_repository_owner,
   github_repository_name,
-  github_token,
   user_public_key,
   project_item = null,
   import_history_base_directory = null,
@@ -52,10 +50,6 @@ export async function process_single_github_issue({
     throw new Error('Missing required parameter: github_repository_name')
   }
 
-  if (!github_token) {
-    throw new Error('Missing required parameter: github_token')
-  }
-
   if (!user_public_key) {
     throw new Error('Missing required parameter: user_public_key')
   }
@@ -74,7 +68,6 @@ export async function process_single_github_issue({
       github_repository_name,
       user_base_directory,
       user_public_key,
-      github_token,
       import_history_base_directory,
       force,
       comments

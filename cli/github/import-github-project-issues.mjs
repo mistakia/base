@@ -175,7 +175,6 @@ export default async function import_github_project_issues({
         user_base_directory,
         project_items_map,
         comments_map,
-        github_token,
         github_project_number,
         force
       })

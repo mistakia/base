@@ -91,7 +91,6 @@ function validate_and_filter_relations(relations, user_base_directory) {
  * @param {string} options.user_base_directory - Base directory for user data
  * @param {string} options.user_public_key - User public key for task ownership
  * @param {string} [options.import_history_base_directory] - Base directory for import history
- * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number] - GitHub project number
  * @param {boolean} [options.force=false] - Force update all tasks regardless of content
  * @param {Array} [options.comments=[]] - GitHub issue comments
@@ -105,7 +104,6 @@ export async function sync_github_issue_to_task({
   user_base_directory,
   user_public_key,
   import_history_base_directory = null,
-  github_token,
   github_project_number = null,
   force = false,
   comments = []
@@ -211,7 +209,6 @@ export async function sync_github_issue_to_task({
         user_base_directory,
         import_cid,
         import_history_base_directory,
-        github_token,
         github_project_number,
         force,
         comments

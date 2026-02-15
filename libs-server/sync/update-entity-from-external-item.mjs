@@ -215,29 +215,6 @@ function merge_properties_with_preservation({
 }
 
 /**
- * Determines what needs to be synced back to external system
- */
-function determine_sync_to_external({
-  external_updates,
-  internal_updates,
-  previous_import
-}) {
-  if (!external_updates || !previous_import) {
-    return null
-  }
-
-  const fields_to_sync = {}
-  for (const [field, change] of Object.entries(external_updates)) {
-    const external_field_changed = internal_updates && internal_updates[field]
-    if (!external_field_changed) {
-      fields_to_sync[field] = change
-    }
-  }
-
-  return Object.keys(fields_to_sync).length > 0 ? fields_to_sync : null
-}
-
-/**
  * Updates an internal entity from external system changes with conflict resolution
  *
  * @param {Object} options - Function options
@@ -440,20 +417,12 @@ export async function update_entity_from_external_item({
       }
     }
 
-    // Determine what needs to be synced back to external system
-    const sync_to_external = determine_sync_to_external({
-      external_updates,
-      internal_updates,
-      previous_import
-    })
-
     return {
       action:
         external_updates || internal_updates || force ? 'updated' : 'skipped',
       entity_id,
       absolute_path,
       external_updates,
-      sync_to_external,
       internal_updates
     }
   } catch (error) {

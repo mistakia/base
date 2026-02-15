@@ -123,7 +123,6 @@ export default async function import_github_issues({
         github_repository_name,
         user_public_key,
         import_history_base_directory,
-        github_token,
         force,
         comments
       })
@@ -191,7 +190,6 @@ export default async function import_github_issues({
       user_public_key,
       user_base_directory,
       import_history_base_directory,
-      github_token,
       force,
       comments_map
     })

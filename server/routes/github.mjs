@@ -104,7 +104,6 @@ router.post('/webhooks', async (req, res) => {
           issue,
           github_repository_owner: repository.owner.login,
           github_repository_name: repository.name,
-          github_token,
           user_public_key: default_user_public_key
         })
 
@@ -179,7 +178,6 @@ router.post('/webhooks', async (req, res) => {
             issue,
             github_repository_owner,
             github_repository_name,
-            github_token,
             user_public_key: default_user_public_key,
             project_item: card
           })

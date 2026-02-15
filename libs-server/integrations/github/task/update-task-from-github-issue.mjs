@@ -1,7 +1,6 @@
 import debug from 'debug'
 
 import { update_entity_from_external_item } from '#libs-server/sync/index.mjs'
-import { sync_task_to_github_issue } from '../sync-task-to-github-issue.mjs'
 
 const log = debug('github:task')
 
@@ -33,70 +32,11 @@ function validate_required_params({
 }
 
 /**
- * Prepares sync updates by filtering out status when it shouldn't be synced back
- */
-function prepare_sync_updates({
-  sync_to_external,
-  internal_updates,
-  github_issue
-}) {
-  if (!sync_to_external) {
-    return null
-  }
-
-  const sync_updates = { ...sync_to_external }
-  const issue_state = github_issue.state?.toLowerCase()
-
-  // Don't sync status back if it was just updated from GitHub (prevents feedback loops)
-  if (internal_updates?.status && sync_updates.status) {
-    log(
-      `Status was just updated from GitHub (${internal_updates.status.to}), skipping sync back to prevent feedback loop`
-    )
-    delete sync_updates.status
-  }
-
-  // Never sync status back if issue is closed (prevents reopening closed issues)
-  if (issue_state === 'closed' && sync_updates.status) {
-    log(
-      `Issue #${github_issue.number} is closed, skipping status sync back to prevent reopening (would sync: ${sync_updates.status.to || sync_updates.status})`
-    )
-    delete sync_updates.status
-  }
-
-  return Object.keys(sync_updates).length > 0 ? sync_updates : null
-}
-
-/**
- * Syncs local changes back to GitHub if needed
- */
-async function sync_changes_to_github({
-  sync_updates,
-  github_issue,
-  github_repository_owner,
-  github_repository_name,
-  github_token,
-  github_project_number
-}) {
-  if (!sync_updates) {
-    log(
-      `No changes to sync back to GitHub issue #${github_issue.number} (all changes were from GitHub)`
-    )
-    return
-  }
-
-  log(`Syncing local changes back to GitHub issue #${github_issue.number}`)
-  await sync_task_to_github_issue({
-    github_issue_number: github_issue.number,
-    github_repository_owner,
-    github_repository_name,
-    updates: sync_updates,
-    github_token,
-    github_project_number
-  })
-}
-
-/**
- * Updates an existing task from GitHub issue changes with conflict resolution
+ * Updates an existing task from GitHub issue changes with conflict resolution.
+ *
+ * This is a one-way sync: GitHub -> local only. Changes to the external
+ * source (GitHub/Notion) should be made directly via their APIs, then
+ * an import triggered to sync the local state.
  *
  * @param {Object} options - Function options
  * @param {Object} options.github_issue - The GitHub issue data
@@ -109,7 +49,6 @@ async function sync_changes_to_github({
  * @param {Object} [options.trx=null] - Optional database transaction
  * @param {string} [options.import_cid=null] - Optional import correlation ID
  * @param {string} [options.import_history_base_directory=null] - Optional base directory for import history
- * @param {string} options.github_token - GitHub token
  * @param {string} [options.github_project_number=null] - GitHub project number
  * @param {boolean} [options.force=false] - Force update even if content matches
  * @returns {Promise<Object>} - The update result with conflict information
@@ -125,7 +64,6 @@ export async function update_task_from_github_issue({
   trx = null,
   import_cid = null,
   import_history_base_directory = null,
-  github_token,
   github_project_number = null,
   force = false
 }) {
@@ -155,21 +93,6 @@ export async function update_task_from_github_issue({
     import_source,
     trx,
     force
-  })
-
-  const sync_updates = prepare_sync_updates({
-    sync_to_external: update_result.sync_to_external,
-    internal_updates: update_result.internal_updates,
-    github_issue
-  })
-
-  await sync_changes_to_github({
-    sync_updates,
-    github_issue,
-    github_repository_owner,
-    github_repository_name,
-    github_token,
-    github_project_number
   })
 
   return update_result

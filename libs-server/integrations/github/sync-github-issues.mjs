@@ -30,7 +30,6 @@ const log = debug('sync-github-issues')
  * @param {Object} [options.project_items_map] - Project items map (optional)
  * @param {Object} [options.comments_map] - Map of issue numbers to comments (optional)
  * @param {string} [options.import_history_base_directory] - Import history base directory (optional)
- * @param {string} options.github_token - GitHub token
  * @param {number} [options.github_project_number] - GitHub project number (optional)
  * @param {boolean} [options.force=false] - Force update all tasks regardless of content
  * @returns {Object} Import results
@@ -44,7 +43,6 @@ export async function sync_github_issues({
   project_items_map,
   comments_map = {},
   import_history_base_directory,
-  github_token,
   github_project_number,
   force = false
 }) {
@@ -96,7 +94,6 @@ export async function sync_github_issues({
         user_base_directory,
         user_public_key,
         import_history_base_directory,
-        github_token,
         github_project_number,
         force,
         comments

@@ -59,22 +59,6 @@ describe('process_single_github_issue', () => {
       }
     })
 
-    it('should throw error when github_token is missing', async () => {
-      try {
-        await process_single_github_issue({
-          issue: base_issue,
-          github_repository_owner: 'test-org',
-          github_repository_name: 'test-repo',
-          user_public_key: 'test-public-key'
-        })
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.message).to.equal(
-          'Missing required parameter: github_token'
-        )
-      }
-    })
-
     it('should throw error when user_public_key is missing', async () => {
       try {
         await process_single_github_issue({
