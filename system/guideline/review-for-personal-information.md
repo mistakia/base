@@ -21,4 +21,4 @@ Personal information includes anything that can be used to discover a specific i
 
 ## Allowable Information
 
-Allowable usernames, paths, and references are configured in the content review config (`allowable_usernames`). These are NOT considered personal information for privacy purposes when they appear in file paths, system references, and repository URLs.
+Allowable usernames, paths, and references are configured in the content review config (`allowable_usernames`). These are NOT considered personal information for privacy purposes when they appear in file paths (e.g., `/Users/trashman/`), GitHub URLs (e.g., `github.com/mistakia/`), repository references, or system configuration. The presence of an allowable username alone does not make content identity-revealing or warrant acquaintance-tier classification.
