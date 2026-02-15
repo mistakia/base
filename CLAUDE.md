@@ -210,13 +210,22 @@ The `cli/` directory contains utilities for managing entities and validating the
 base entity list -t task --status "In Progress"
 base entity list -t task --json
 base entity get "user:task/my-task.md"
+base entity update "user:task/my-task.md" --status "Completed" --priority High
+base entity update "user:task/my-task.md" --status "In Progress" --dry-run
+base entity observe "user:task/my-task.md" "[category] observation text"
+base entity tree "user:task/my-task.md"                    # Single task dependency tree
+base entity tree --project "user:tag/base-project.md"      # Project-wide dependency graph
 base entity move task/old.md task/new.md --dry-run
 base entity validate
 
-# Relation lookups
+# Relation management
 base relation list "user:task/my-task.md"
 base relation forward "user:task/my-task.md"
 base relation reverse "user:task/my-task.md" --json
+base relation add "user:task/a.md" blocked_by "user:task/b.md"
+base relation add "user:task/a.md" relates "user:task/b.md" --dry-run
+base relation remove "user:task/a.md" blocked_by "user:task/b.md"
+base relation remove "user:task/a.md" relates "user:task/b.md" --dry-run
 
 # Tag management
 base tag list
@@ -226,6 +235,10 @@ base tag remove -t legacy -i "**/*.md" --dry-run
 
 # Thread operations
 base thread list --state active
+base thread messages <thread-id> --role user --last 5      # Formatted conversation messages
+base thread messages <thread-id> --role assistant --first 3 --json
+base thread stale --days 7                                 # List active threads with no recent activity
+base thread stale --days 14 --json
 base thread archive <thread-id> --completed
 base thread archive <thread-id> --reactivate
 base thread analyze <thread-id> --dry-run

@@ -254,9 +254,61 @@ export const builder = (yargs) =>
           }),
       handle_timeline
     )
+    .command(
+      'messages <thread_id>',
+      'Read thread conversation messages',
+      (yargs) =>
+        yargs
+          .positional('thread_id', {
+            describe: 'Thread ID',
+            type: 'string'
+          })
+          .option('role', {
+            describe: 'Filter by message role (user or assistant)',
+            type: 'string'
+          })
+          .option('last', {
+            describe: 'Show last N messages',
+            type: 'number'
+          })
+          .option('first', {
+            describe: 'Show first N messages',
+            type: 'number'
+          })
+          .option('json', {
+            describe: 'Output as JSON',
+            type: 'boolean',
+            default: false
+          }),
+      handle_messages
+    )
+    .command(
+      'stale',
+      'List active threads with no recent activity',
+      (yargs) =>
+        yargs
+          .option('days', {
+            alias: 'd',
+            describe: 'Days threshold for staleness',
+            type: 'number',
+            default: 7
+          })
+          .option('limit', {
+            alias: 'l',
+            describe: 'Max results',
+            type: 'number',
+            default: 50
+          })
+          .option('json', {
+            describe: 'Output as JSON',
+            type: 'boolean',
+            default: false
+          }),
+      handle_stale
+    )
     .demandCommand(
       1,
-      'Specify a subcommand: list, get, status, timeline, archive, or analyze'
+      'Specify a subcommand: list, get, status, timeline, messages, stale, archive, or analyze'
     )
 
 export const handler = () => {}
@@ -539,6 +591,132 @@ async function handle_timeline(argv) {
     } else {
       for (const entry of timeline) {
         console.log(format_timeline_entry(entry, { verbose: argv.verbose }))
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+/**
+ * Extract text content from a message entry.
+ * Handles both string content and structured content arrays.
+ */
+function extract_message_text(entry) {
+  const content = entry.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n')
+  }
+  return String(content || '')
+}
+
+async function handle_messages(argv) {
+  let exit_code = 0
+  try {
+    const params = {
+      thread_id: argv.thread_id,
+      include_types: ['message']
+    }
+
+    if (argv.role) params.include_roles = [argv.role]
+    if (argv.last) params.take_last = argv.last
+    if (argv.first) params.take_first = argv.first
+
+    const thread_data = await get_thread(params)
+    const messages = (thread_data.timeline || []).filter(
+      (e) => e.type === 'message'
+    )
+
+    if (argv.json) {
+      console.log(JSON.stringify(messages, null, 2))
+    } else if (messages.length === 0) {
+      console.log('No messages found')
+    } else {
+      for (const msg of messages) {
+        const role_label = msg.role === 'user' ? '[user]' : '[assistant]'
+        const text = extract_message_text(msg)
+        console.log(`${role_label} ${text}`)
+        console.log()
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_stale(argv) {
+  let exit_code = 0
+  try {
+    const threshold_ms = argv.days * 24 * 60 * 60 * 1000
+    const now = Date.now()
+
+    // Fetch active threads
+    const params = new URLSearchParams({
+      thread_state: 'active',
+      include_timeline: 'false',
+      limit: String(argv.limit),
+      offset: '0'
+    })
+
+    let threads
+    try {
+      const response = await authenticated_fetch(
+        `${SERVER_URL}/api/threads?${params}`
+      )
+      if (!response.ok) throw new Error(`API returned ${response.status}`)
+      threads = await response.json()
+    } catch (error) {
+      if (is_api_unavailable(error)) {
+        throw new Error(
+          'Stale thread detection requires a running server. Start the server and try again.'
+        )
+      }
+      throw error
+    }
+
+    if (!threads || threads.length === 0) {
+      if (argv.json) {
+        console.log('[]')
+      } else {
+        console.log('No active threads found')
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    // Filter to stale threads
+    const stale_threads = threads
+      .map((thread) => {
+        const updated = thread.updated_at || thread.created_at
+        const updated_ms = updated ? new Date(updated).getTime() : 0
+        const days_stale = Math.floor(
+          (now - updated_ms) / (24 * 60 * 60 * 1000)
+        )
+        return { ...thread, days_stale }
+      })
+      .filter(
+        (thread) =>
+          now - new Date(thread.updated_at || thread.created_at).getTime() >=
+          threshold_ms
+      )
+      .sort((a, b) => b.days_stale - a.days_stale)
+
+    if (argv.json) {
+      console.log(JSON.stringify(stale_threads, null, 2))
+    } else if (stale_threads.length === 0) {
+      console.log(`No threads stale for ${argv.days}+ days`)
+    } else {
+      for (const thread of stale_threads) {
+        const title = thread.title || '(no title)'
+        console.log(`${thread.thread_id}\t${thread.days_stale}d\t${title}`)
       }
     }
   } catch (error) {

@@ -31,11 +31,14 @@ import {
   find_matching_files,
   get_visibility
 } from '../entity-visibility.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import config from '#config'
 
 export const command = 'entity <command>'
 export const describe =
-  'Entity operations (list, get, move, validate, visibility)'
+  'Entity operations (list, get, update, observe, tree, move, validate, visibility)'
 
 export const builder = (yargs) =>
   yargs
@@ -122,6 +125,72 @@ export const builder = (yargs) =>
           type: 'string'
         }),
       handle_get
+    )
+    .command(
+      'update <base_uri>',
+      'Update entity properties (status, priority)',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe: 'Entity base_uri',
+            type: 'string'
+          })
+          .option('status', {
+            describe: 'New status value',
+            type: 'string'
+          })
+          .option('priority', {
+            describe: 'New priority value',
+            type: 'string'
+          })
+          .option('dry-run', {
+            alias: 'n',
+            describe: 'Preview changes without executing',
+            type: 'boolean',
+            default: false
+          })
+          .check((argv) => {
+            if (!argv.status && !argv.priority) {
+              throw new Error(
+                'At least one of --status or --priority is required'
+              )
+            }
+            return true
+          }),
+      handle_update
+    )
+    .command(
+      'observe <base_uri> <observation>',
+      'Add an observation to entity frontmatter',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe: 'Entity base_uri',
+            type: 'string'
+          })
+          .positional('observation', {
+            describe:
+              'Observation text (should start with [category], e.g. "[blocked] waiting on X")',
+            type: 'string'
+          }),
+      handle_observe
+    )
+    .command(
+      'tree <base_uri>',
+      'Display task dependency tree',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe: 'Task base_uri to show tree for',
+            type: 'string'
+          })
+          .option('depth', {
+            alias: 'd',
+            describe: 'Maximum depth to traverse',
+            type: 'number',
+            default: 5
+          }),
+      handle_tree
     )
     .command(
       'move <source> <destination>',
@@ -241,7 +310,7 @@ export const builder = (yargs) =>
     )
     .demandCommand(
       1,
-      'Specify a subcommand: list, get, move, validate, threads, or visibility'
+      'Specify a subcommand: list, get, update, observe, tree, move, validate, threads, or visibility'
     )
 
 export const handler = () => {}
@@ -641,6 +710,238 @@ async function handle_visibility_get(argv) {
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_update(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri } = argv
+    const properties = {}
+    if (argv.status) properties.status = argv.status
+    if (argv.priority) properties.priority = argv.priority
+
+    if (argv['dry-run']) {
+      console.log(`Dry run - would update ${base_uri}:`)
+      for (const [key, value] of Object.entries(properties)) {
+        console.log(`  ${key}: ${value}`)
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    const result = await with_api_fallback(
+      async () => {
+        const response = await authenticated_fetch(`${SERVER_URL}/api/tasks`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_uri, properties })
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.error || `API returned ${response.status}`)
+        }
+        return response.json()
+      },
+      async () => {
+        const absolute_path = resolve_base_uri_from_registry(base_uri)
+        const entity_result = await read_entity_from_filesystem({
+          absolute_path
+        })
+        if (!entity_result.success) {
+          throw new Error(entity_result.error || 'Entity not found')
+        }
+        const merged = {
+          ...entity_result.entity_properties,
+          ...properties,
+          updated_at: new Date().toISOString()
+        }
+        await write_entity_to_filesystem({
+          absolute_path,
+          entity_properties: merged,
+          entity_type: entity_result.entity_properties.type,
+          entity_content: entity_result.entity_content || ''
+        })
+        return { success: true, base_uri, updated_properties: properties }
+      }
+    )
+
+    if (argv.json) {
+      console.log(JSON.stringify(result, null, 2))
+    } else {
+      console.log(`Updated ${base_uri}`)
+      for (const [key, value] of Object.entries(properties)) {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_observe(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri, observation } = argv
+
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+    const entity_result = await read_entity_from_filesystem({ absolute_path })
+    if (!entity_result.success) {
+      throw new Error(entity_result.error || 'Entity not found')
+    }
+
+    const props = entity_result.entity_properties
+    const observations = Array.isArray(props.observations)
+      ? [...props.observations]
+      : []
+    observations.push(observation)
+
+    const merged = {
+      ...props,
+      observations,
+      updated_at: new Date().toISOString()
+    }
+
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties: merged,
+      entity_type: props.type,
+      entity_content: entity_result.entity_content || ''
+    })
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify({ success: true, base_uri, observation }, null, 2)
+      )
+    } else {
+      console.log(`Added observation to ${base_uri}`)
+      console.log(`  ${observation}`)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_tree(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri, depth } = argv
+    const dependency_types = [
+      'blocked_by',
+      'blocks',
+      'subtask_of',
+      'has_subtask',
+      'precedes',
+      'succeeds'
+    ]
+
+    const fetch_relations = async (uri) => {
+      return with_api_fallback(
+        async () => {
+          const params = new URLSearchParams({
+            base_uri: uri,
+            direction: 'both'
+          })
+          const response = await authenticated_fetch(
+            `${SERVER_URL}/api/entities/relations?${params}`
+          )
+          if (!response.ok) throw new Error(`API returned ${response.status}`)
+          return response.json()
+        },
+        async () => {
+          const { find_related_entities, find_entities_relating_to } =
+            await import(
+              '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+            )
+          await embedded_index_manager.initialize()
+          const forward = await find_related_entities({
+            base_uri: uri,
+            limit: 100,
+            offset: 0
+          })
+          const reverse = await find_entities_relating_to({
+            base_uri: uri,
+            limit: 100,
+            offset: 0
+          })
+          return { forward, reverse }
+        }
+      )
+    }
+
+    const visited = new Set()
+    const build_tree = async (uri, current_depth) => {
+      if (current_depth > depth || visited.has(uri)) return null
+      visited.add(uri)
+
+      const result = await fetch_relations(uri)
+      const children = []
+
+      for (const rel of result.forward || []) {
+        if (!dependency_types.includes(rel.relation_type)) continue
+        const child = await build_tree(rel.base_uri, current_depth + 1)
+        children.push({
+          direction: '->',
+          relation_type: rel.relation_type,
+          base_uri: rel.base_uri,
+          title: rel.title || '',
+          status: rel.status || '',
+          children: child ? child.children : []
+        })
+      }
+
+      for (const rel of result.reverse || []) {
+        if (!dependency_types.includes(rel.relation_type)) continue
+        if (rel.base_uri && rel.base_uri.startsWith('user:thread/')) continue
+        const child = await build_tree(rel.base_uri, current_depth + 1)
+        children.push({
+          direction: '<-',
+          relation_type: rel.relation_type,
+          base_uri: rel.base_uri,
+          title: rel.title || '',
+          status: rel.status || '',
+          children: child ? child.children : []
+        })
+      }
+
+      return { base_uri: uri, children }
+    }
+
+    const tree = await build_tree(base_uri, 0)
+
+    if (argv.json) {
+      console.log(JSON.stringify(tree, null, 2))
+    } else {
+      const print_node = (node, indent = '') => {
+        for (const child of node.children) {
+          const status_indicator = child.status ? ` [${child.status}]` : ''
+          const title_part = child.title ? ` ${child.title}` : ''
+          console.log(
+            `${indent}${child.direction} ${child.relation_type}: ${child.base_uri}${title_part}${status_indicator}`
+          )
+          if (child.children.length > 0) {
+            print_node({ children: child.children }, indent + '  ')
+          }
+        }
+      }
+
+      console.log(base_uri)
+      if (tree && tree.children.length > 0) {
+        print_node(tree)
+      } else {
+        console.log('  (no dependency relations)')
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  } finally {
+    await embedded_index_manager.shutdown()
   }
   flush_and_exit(exit_code)
 }

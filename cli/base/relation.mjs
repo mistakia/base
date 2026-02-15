@@ -13,9 +13,13 @@ import {
   flush_and_exit
 } from './lib/format.mjs'
 import { authenticated_fetch } from './lib/auth.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 export const command = 'relation <command>'
-export const describe = 'Relation lookups (list, forward, reverse)'
+export const describe =
+  'Relation operations (list, forward, reverse, add, remove)'
 
 const relation_options = (yargs) =>
   yargs
@@ -92,7 +96,61 @@ export const builder = (yargs) =>
         ),
       (argv) => handle_relations(argv, 'reverse')
     )
-    .demandCommand(1, 'Specify a subcommand: list, forward, or reverse')
+    .command(
+      'add <source_uri> <relation_type> <target_uri>',
+      'Add a relation to an entity',
+      (yargs) =>
+        yargs
+          .positional('source_uri', {
+            describe: 'Source entity base_uri',
+            type: 'string'
+          })
+          .positional('relation_type', {
+            describe:
+              'Relation type (e.g., blocked_by, blocks, precedes, succeeds, relates, subtask_of)',
+            type: 'string'
+          })
+          .positional('target_uri', {
+            describe: 'Target entity base_uri',
+            type: 'string'
+          })
+          .option('dry-run', {
+            alias: 'n',
+            describe: 'Preview changes without executing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_add
+    )
+    .command(
+      'remove <source_uri> <relation_type> <target_uri>',
+      'Remove a relation from an entity',
+      (yargs) =>
+        yargs
+          .positional('source_uri', {
+            describe: 'Source entity base_uri',
+            type: 'string'
+          })
+          .positional('relation_type', {
+            describe: 'Relation type to remove',
+            type: 'string'
+          })
+          .positional('target_uri', {
+            describe: 'Target entity base_uri',
+            type: 'string'
+          })
+          .option('dry-run', {
+            alias: 'n',
+            describe: 'Preview changes without executing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_remove
+    )
+    .demandCommand(
+      1,
+      'Specify a subcommand: list, forward, reverse, add, or remove'
+    )
 
 export const handler = () => {}
 
@@ -279,6 +337,137 @@ async function handle_relations(argv, direction) {
           })
         }
       }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+/**
+ * Format a relation string for frontmatter: "relation_type [[target_uri]]"
+ */
+function format_relation_string(relation_type, target_uri) {
+  return `${relation_type} [[${target_uri}]]`
+}
+
+async function handle_add(argv) {
+  let exit_code = 0
+  try {
+    const { source_uri, relation_type, target_uri } = argv
+    const relation_string = format_relation_string(relation_type, target_uri)
+
+    const absolute_path = resolve_base_uri_from_registry(source_uri)
+    const entity_result = await read_entity_from_filesystem({ absolute_path })
+    if (!entity_result.success) {
+      throw new Error(entity_result.error || 'Source entity not found')
+    }
+
+    const props = entity_result.entity_properties
+    const relations = Array.isArray(props.relations) ? [...props.relations] : []
+
+    // Check for duplicates
+    if (relations.includes(relation_string)) {
+      console.log(`Relation already exists: ${relation_string}`)
+      flush_and_exit(0)
+      return
+    }
+
+    if (argv['dry-run']) {
+      console.log(`Dry run - would add to ${source_uri}:`)
+      console.log(`  ${relation_string}`)
+      flush_and_exit(0)
+      return
+    }
+
+    relations.push(relation_string)
+    const merged = {
+      ...props,
+      relations,
+      updated_at: new Date().toISOString()
+    }
+
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties: merged,
+      entity_type: props.type,
+      entity_content: entity_result.entity_content || ''
+    })
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          { success: true, source_uri, relation: relation_string },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Added relation to ${source_uri}`)
+      console.log(`  ${relation_string}`)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_remove(argv) {
+  let exit_code = 0
+  try {
+    const { source_uri, relation_type, target_uri } = argv
+    const relation_string = format_relation_string(relation_type, target_uri)
+
+    const absolute_path = resolve_base_uri_from_registry(source_uri)
+    const entity_result = await read_entity_from_filesystem({ absolute_path })
+    if (!entity_result.success) {
+      throw new Error(entity_result.error || 'Source entity not found')
+    }
+
+    const props = entity_result.entity_properties
+    const relations = Array.isArray(props.relations) ? [...props.relations] : []
+
+    const index = relations.indexOf(relation_string)
+    if (index === -1) {
+      console.error(`Relation not found: ${relation_string}`)
+      flush_and_exit(1)
+      return
+    }
+
+    if (argv['dry-run']) {
+      console.log(`Dry run - would remove from ${source_uri}:`)
+      console.log(`  ${relation_string}`)
+      flush_and_exit(0)
+      return
+    }
+
+    relations.splice(index, 1)
+    const merged = {
+      ...props,
+      relations,
+      updated_at: new Date().toISOString()
+    }
+
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties: merged,
+      entity_type: props.type,
+      entity_content: entity_result.entity_content || ''
+    })
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          { success: true, source_uri, removed: relation_string },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Removed relation from ${source_uri}`)
+      console.log(`  ${relation_string}`)
     }
   } catch (error) {
     console.error(`Error: ${error.message}`)
