@@ -65,7 +65,6 @@ export function directory_reducer(
 
     case directory_action_types.GET_PATH_INFO_PENDING:
       return state.merge({
-        path_info: null,
         is_loading_path_info: true,
         path_info_error: null
       })
@@ -85,6 +84,7 @@ export function directory_reducer(
 
     case directory_action_types.GET_DIRECTORY_MARKDOWN_PENDING:
       return state.merge({
+        directory_markdown_file: null,
         is_loading_directory_markdown: true,
         directory_markdown_error: null
       })

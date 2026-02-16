@@ -122,8 +122,9 @@ function* handle_page_refresh_after_session_success() {
         break
 
       default:
-        // Load path info first to determine if path is a file or directory
-        yield put(directory_actions.load_path_info(pathname))
+        // FileSystemBrowser's useFileSystemData hook handles initial path loading.
+        // No need to re-dispatch load_path_info here - it would cause redundant
+        // API calls since the component already loaded the data on mount.
         break
     }
   } catch (error) {

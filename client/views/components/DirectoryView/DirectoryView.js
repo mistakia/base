@@ -52,13 +52,18 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   )
   const is_cached = useSelector((state) => has_cached_repo_info(state, path))
 
+  const path_info_type = path_info?.type
+
   useEffect(() => {
     // Skip loading directory if path info is still loading or path is a file
-    if (is_loading_path_info || (path_info && path_info.type !== 'directory')) {
+    if (
+      is_loading_path_info ||
+      (path_info_type && path_info_type !== 'directory')
+    ) {
       return
     }
     dispatch(directory_actions.load_directory(path))
-  }, [dispatch, path, is_loading_path_info, path_info])
+  }, [dispatch, path, is_loading_path_info, path_info_type])
 
   // Load git repo info when path changes (only if not cached)
   useEffect(() => {
