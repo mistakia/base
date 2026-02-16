@@ -65,3 +65,4 @@ visibility_analyzed_at: '2026-02-16T04:30:44.381Z'
 - **Actionability**: Readers should understand what makes your system work
 - **Clarity**: Complex concepts should be explained in clear, direct language
 - **Completeness**: All significant design decisions should be documented with rationale
+- **Maintenance Justification**: Content should only be included when its informational value justifies the ongoing cost of keeping it accurate
