@@ -65,7 +65,7 @@ export function create_write_limiter() {
 export function create_read_limiter() {
   return rateLimit({
     windowMs: 60 * 1000, // 1 minute window
-    max: 300, // 300 requests per minute
+    max: 1000, // 1000 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
     message: {
