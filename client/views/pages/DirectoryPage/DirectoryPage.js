@@ -50,15 +50,23 @@ const DirectoryPage = ({
                 ? { display: 'flex', gap: 24, alignItems: 'flex-start' }
                 : undefined
             }>
-            <div style={
-              has_markdown_content
-                ? { flex: '1 1 50%', minWidth: 0, order: 2 }
-                : undefined
-            }>
+            <div
+              style={
+                has_markdown_content
+                  ? { flex: '1 1 50%', minWidth: 0, order: 2 }
+                  : undefined
+              }>
               <FileSystemBrowser />
             </div>
             {has_markdown_content && (
-              <div style={{ flex: '1 1 50%', minWidth: 0, position: 'sticky', top: 16, order: 1 }}>
+              <div
+                style={{
+                  flex: '1 1 50%',
+                  minWidth: 0,
+                  position: 'sticky',
+                  top: 16,
+                  order: 1
+                }}>
                 <DirectoryMarkdown
                   directory_markdown={directory_markdown}
                   is_loading_directory_markdown={is_loading_directory_markdown}
