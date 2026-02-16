@@ -69,12 +69,20 @@ export function directory_reducer(
         path_info_error: null
       })
 
-    case directory_action_types.GET_PATH_INFO_FULFILLED:
+    case directory_action_types.GET_PATH_INFO_FULFILLED: {
+      const new_path = payload.data?.path || ''
+      const old_path = state.get('path_info')?.path || ''
+      const path_changed = new_path !== old_path
       return state.merge({
         path_info: payload.data || null,
         is_loading_path_info: false,
-        path_info_error: null
+        path_info_error: null,
+        // Clear stale markdown when navigating to a different directory
+        ...(path_changed
+          ? { directory_markdown_file: null, directory_items: new List() }
+          : {})
       })
+    }
 
     case directory_action_types.GET_PATH_INFO_FAILED:
       return state.merge({
@@ -84,7 +92,6 @@ export function directory_reducer(
 
     case directory_action_types.GET_DIRECTORY_MARKDOWN_PENDING:
       return state.merge({
-        directory_markdown_file: null,
         is_loading_directory_markdown: true,
         directory_markdown_error: null
       })

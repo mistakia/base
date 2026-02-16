@@ -45,16 +45,16 @@ const DirectoryPage = ({
             width: '100%'
           }}>
           <div
-            style={{
-              display: has_markdown_content ? 'flex' : 'block',
-              gap: has_markdown_content ? 24 : 0,
-              alignItems: 'flex-start'
-            }}>
-            <div style={{
-              flex: has_markdown_content ? '1 1 50%' : undefined,
-              minWidth: 0,
-              order: 2
-            }}>
+            style={
+              has_markdown_content
+                ? { display: 'flex', gap: 24, alignItems: 'flex-start' }
+                : undefined
+            }>
+            <div style={
+              has_markdown_content
+                ? { flex: '1 1 50%', minWidth: 0, order: 2 }
+                : undefined
+            }>
               <FileSystemBrowser />
             </div>
             {has_markdown_content && (
