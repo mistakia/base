@@ -13,6 +13,8 @@ import {
   add_tags_to_entity,
   remove_tags_from_entity
 } from '#libs-server/tag/filesystem/manage-entity-tags.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
@@ -487,6 +489,118 @@ router.post('/tags', async (req, res) => {
     res.status(200).json(result)
   } catch (error) {
     log('Error managing entity tags: %s', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+/**
+ * PATCH /api/entities
+ *
+ * Update arbitrary frontmatter properties on any entity.
+ *
+ * Body:
+ * - base_uri (required): Entity base URI
+ * - properties (required): Object of property key/value pairs to merge
+ */
+router.patch('/', async (req, res) => {
+  try {
+    const user_public_key = req.user?.user_public_key
+    if (!user_public_key) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
+    const { base_uri, properties } = req.body
+
+    if (!base_uri) {
+      return res.status(400).json({ error: 'base_uri is required' })
+    }
+
+    if (!properties || typeof properties !== 'object') {
+      return res.status(400).json({ error: 'properties object is required' })
+    }
+
+    const immutable_fields = [
+      'entity_id',
+      'type',
+      'user_public_key',
+      'created_at',
+      'base_uri'
+    ]
+
+    const rejected_fields = Object.keys(properties).filter((key) =>
+      immutable_fields.includes(key)
+    )
+    if (rejected_fields.length > 0) {
+      return res.status(400).json({
+        error: `Cannot update immutable fields: ${rejected_fields.join(', ')}`
+      })
+    }
+
+    // Check write permission
+    const permission_result = await check_permission({
+      user_public_key,
+      resource_path: base_uri
+    })
+
+    if (!permission_result.write.allowed) {
+      return res.status(403).json({ error: 'Permission denied' })
+    }
+
+    // Resolve base_uri to absolute path and read entity
+    const absolute_path = resolve_base_uri(base_uri)
+    const entity = await read_entity_from_filesystem({ absolute_path })
+
+    if (!entity.success) {
+      return res.status(404).json({ error: entity.error })
+    }
+
+    // Coerce string values to native types where appropriate
+    const coerced_properties = {}
+    for (const [key, value] of Object.entries(properties)) {
+      if (typeof value === 'string') {
+        if (value === 'true') {
+          coerced_properties[key] = true
+        } else if (value === 'false') {
+          coerced_properties[key] = false
+        } else if (value !== '' && !isNaN(value) && !isNaN(parseFloat(value))) {
+          coerced_properties[key] = parseFloat(value)
+        } else {
+          coerced_properties[key] = value
+        }
+      } else {
+        coerced_properties[key] = value
+      }
+    }
+
+    // Merge properties and set updated_at
+    const updated_properties = {
+      ...entity.entity_properties,
+      ...coerced_properties,
+      updated_at: new Date().toISOString()
+    }
+
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties: updated_properties,
+      entity_type: updated_properties.type,
+      entity_content: entity.entity_content
+    })
+
+    const updated_keys = Object.keys(properties)
+
+    log(
+      'Entity updated for %s: properties=%o',
+      base_uri,
+      updated_keys
+    )
+
+    res.status(200).json({
+      success: true,
+      base_uri,
+      updated_properties: updated_keys
+    })
+  } catch (error) {
+    log('Error updating entity: %s', error.message)
     res.status(500).json({ error: error.message })
   }
 })
