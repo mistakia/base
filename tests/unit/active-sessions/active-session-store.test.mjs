@@ -217,6 +217,63 @@ describe('active-session-store', function () {
     })
   })
 
+  describe('job_id propagation', () => {
+    it('should store job_id when registering a session', async () => {
+      const session = await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path,
+        job_id: 'bullmq-job-123'
+      })
+
+      expect(session.job_id).to.equal('bullmq-job-123')
+
+      const retrieved = await get_active_session(test_session_id)
+      expect(retrieved.job_id).to.equal('bullmq-job-123')
+    })
+
+    it('should store job_id as null when not provided', async () => {
+      const session = await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      expect(session.job_id).to.be.null
+    })
+
+    it('should update job_id on an existing session', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      const updated = await update_active_session({
+        session_id: test_session_id,
+        job_id: 'bullmq-job-456'
+      })
+
+      expect(updated.job_id).to.equal('bullmq-job-456')
+    })
+
+    it('should include job_id in upserted sessions', async () => {
+      const upsert_session_id = 'upsert-job-test-' + Date.now()
+
+      try {
+        const session = await update_active_session({
+          session_id: upsert_session_id,
+          status: 'active',
+          job_id: 'bullmq-job-789'
+        })
+
+        expect(session.job_id).to.equal('bullmq-job-789')
+      } finally {
+        await remove_active_session(upsert_session_id)
+      }
+    })
+  })
+
   describe('get_active_session_for_thread', () => {
     it('should find session by thread_id', async () => {
       const test_thread_id = 'thread-' + Date.now()

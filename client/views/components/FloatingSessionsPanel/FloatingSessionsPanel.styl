@@ -1,0 +1,149 @@
+// Floating Sessions Panel - persistent bottom-right overlay
+// Shows active and pending sessions with lifecycle status
+
+.floating-sessions-panel
+  position: fixed
+  bottom: 16px
+  right: 16px
+  z-index: 1000
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  background: $color_surface
+  border: 1px solid $color_border
+  border-radius: $radius_md
+  box-shadow: $shadow_md
+  max-width: 360px
+  min-width: 200px
+  transition: all $transition_fast
+
+  @media (max-width: 768px)
+    bottom: 72px
+    right: 8px
+    left: 8px
+    max-width: none
+
+.floating-sessions-panel__bar
+  display: flex
+  align-items: center
+  gap: $space_xs
+  padding: 6px 10px
+  cursor: pointer
+  user-select: none
+  border-radius: $radius_md
+
+  &:hover
+    background: $color_surface_hover
+
+.floating-sessions-panel__indicator
+  width: 6px
+  height: 6px
+  border-radius: 50%
+  background-color: $color_text_tertiary
+  flex-shrink: 0
+
+  &--active
+    background-color: $color_success
+    animation: pulse 1.5s ease-in-out infinite
+
+.floating-sessions-panel__count
+  color: $color_text_secondary
+  font-size: $font_size_xs
+  flex: 1
+
+.floating-sessions-panel__dismiss
+  background: none
+  border: none
+  color: $color_text_tertiary
+  cursor: pointer
+  padding: 0 2px
+  font-family: $font_family_mono
+  font-size: $font_size_xs
+  line-height: 1
+
+  &:hover
+    color: $color_text
+
+// List mode
+.floating-sessions-panel__list
+  max-height: 320px
+  overflow-y: auto
+  border-top: 1px solid $color_border_light
+  padding: $space_xs
+
+  // Reuse session-card styles in compact mode
+  .session-card
+    margin-bottom: $space_xs
+    font-size: $font_size_xs
+
+    &:last-child
+      margin-bottom: 0
+
+.floating-sessions-panel__empty
+  padding: $space_sm
+  color: $color_text_tertiary
+  text-align: center
+
+// Pending session items
+.floating-sessions-panel__pending-item
+  padding: 6px 8px
+  border-radius: $radius_sm
+  background: rgba(0, 0, 0, 0.02)
+  border: 1px solid $color_border_light
+  margin-bottom: $space_xs
+
+  &:last-child
+    margin-bottom: 0
+
+.floating-sessions-panel__pending-row
+  display: flex
+  align-items: center
+  gap: $space_xs
+
+.floating-sessions-panel__pending-status
+  flex-shrink: 0
+
+.floating-sessions-panel__status-queued
+  color: $color_primary
+  font-weight: $font_weight_medium
+
+.floating-sessions-panel__status-failed
+  color: $color_error
+  font-weight: $font_weight_medium
+
+.floating-sessions-panel__pending-prompt
+  color: $color_text_secondary
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  flex: 1
+
+.floating-sessions-panel__pending-error
+  display: flex
+  align-items: center
+  gap: $space_xs
+  margin-top: 4px
+  padding-top: 4px
+  border-top: 1px solid $color_border_light
+
+.floating-sessions-panel__error-text
+  color: $color_text_tertiary
+  flex: 1
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  font-size: 10px
+
+.floating-sessions-panel__retry-button
+  background: none
+  border: 1px solid $color_border
+  border-radius: $radius_sm
+  color: $color_primary
+  cursor: pointer
+  padding: 1px 6px
+  font-family: $font_family_mono
+  font-size: 10px
+  flex-shrink: 0
+
+  &:hover
+    background: $color_surface_hover
+    border-color: $color_primary

@@ -28,5 +28,6 @@ export {
 export {
   emit_active_session_started,
   emit_active_session_updated,
-  emit_active_session_ended
+  emit_active_session_ended,
+  emit_thread_job_failed
 } from './session-event-emitter.mjs'

@@ -529,6 +529,7 @@ const restore_plan = async ({ thread_dir, user_base_directory }) => {
  * @param {string} [params.session_id] - Session ID to resume (creates new if omitted)
  * @param {string} [params.thread_id] - Thread ID for session state restoration on resume
  * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true)
+ * @param {string} [params.job_id] - BullMQ job ID for correlating with active sessions
  * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
@@ -539,6 +540,7 @@ export const create_session_claude_cli = async ({
   user_public_key,
   session_id = null,
   thread_id = null,
+  job_id = null,
   skip_permissions = true,
   execution_mode = 'host'
 }) => {
@@ -632,6 +634,7 @@ export const create_session_claude_cli = async ({
       'node',
       '-w',
       container_working_directory,
+      ...(job_id ? ['-e', `JOB_ID=${job_id}`] : []),
       DOCKER_CONTAINER_NAME,
       'claude',
       ...cli_args
@@ -644,7 +647,11 @@ export const create_session_claude_cli = async ({
     spawn_args = cli_args
     spawn_options = {
       ...base_spawn_options,
-      cwd: working_directory
+      cwd: working_directory,
+      env: {
+        ...process.env,
+        ...(job_id ? { JOB_ID: job_id } : {})
+      }
     }
   }
 

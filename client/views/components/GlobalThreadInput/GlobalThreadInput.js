@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, CircularProgress, Typography, Fade } from '@mui/material'
@@ -8,7 +8,7 @@ import MicIcon from '@mui/icons-material/Mic'
 import StopIcon from '@mui/icons-material/Stop'
 
 import Button from '@components/primitives/Button'
-import { threads_actions, threads_action_types } from '@core/threads/actions'
+import { threads_actions } from '@core/threads/actions'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { get_can_create_threads } from '@core/app/selectors'
 import { get_thread_by_id } from '@core/threads/selectors.js'
@@ -274,9 +274,10 @@ export default function GlobalThreadInput() {
       }
     }
 
-    // Reset draft_restored_ref when overlay closes
+    // Reset draft_restored_ref and submitting state when overlay closes
     if (!is_open) {
       draft_restored_ref.current = false
+      set_is_submitting(false)
     }
   }, [
     is_open,
@@ -303,13 +304,9 @@ export default function GlobalThreadInput() {
     draft_persistence.save_draft
   ])
 
-  // Redux selectors
-  const is_loading = useSelector((state) => {
-    const action_type = is_resume_mode
-      ? threads_action_types.RESUME_THREAD_SESSION
-      : threads_action_types.CREATE_THREAD_SESSION
-    return state.getIn(['threads', 'loading', action_type], false)
-  })
+  // Local submitting state - set on dispatch, cleared when overlay closes
+  const [is_submitting, set_is_submitting] = useState(false)
+  const is_loading = is_submitting
 
   const can_create_threads = useSelector(get_can_create_threads)
 
@@ -363,6 +360,8 @@ export default function GlobalThreadInput() {
         })
       )
     }
+
+    set_is_submitting(true)
 
     // Clear draft from localStorage on successful submit
     draft_persistence.clear_draft()
