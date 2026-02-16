@@ -8,6 +8,7 @@
 
 import { spawn } from 'child_process'
 import path from 'path'
+import { get_mime_type } from './mime-types.mjs'
 
 const DEFAULT_EXCLUDES = [
   '.git',
@@ -20,57 +21,6 @@ const DEFAULT_EXCLUDES = [
   'venv',
   'lost+found'
 ]
-
-// Reuse MIME type map from local collector
-const MIME_TYPES = {
-  '.pdf': 'application/pdf',
-  '.json': 'application/json',
-  '.xml': 'application/xml',
-  '.zip': 'application/zip',
-  '.gz': 'application/gzip',
-  '.tar': 'application/x-tar',
-  '.7z': 'application/x-7z-compressed',
-  '.rar': 'application/vnd.rar',
-  '.txt': 'text/plain',
-  '.md': 'text/markdown',
-  '.csv': 'text/csv',
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
-  '.mjs': 'text/javascript',
-  '.ts': 'text/typescript',
-  '.py': 'text/x-python',
-  '.sh': 'text/x-shellscript',
-  '.yaml': 'text/yaml',
-  '.yml': 'text/yaml',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-  '.mp3': 'audio/mpeg',
-  '.flac': 'audio/flac',
-  '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg',
-  '.m4a': 'audio/mp4',
-  '.aac': 'audio/aac',
-  '.mp4': 'video/mp4',
-  '.mkv': 'video/x-matroska',
-  '.avi': 'video/x-msvideo',
-  '.mov': 'video/quicktime',
-  '.webm': 'video/webm',
-  '.doc': 'application/msword',
-  '.docx':
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.xls': 'application/vnd.ms-excel',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  '.sql': 'application/sql',
-  '.db': 'application/x-sqlite3',
-  '.duckdb': 'application/x-duckdb',
-  '.parquet': 'application/x-parquet',
-  '.log': 'text/plain'
-}
 
 /**
  * Scan remote filesystem via SSH
@@ -235,7 +185,7 @@ function parse_find_output({ raw_output, host, scanned_at }) {
       files.push({
         base_uri,
         name,
-        mime_type: MIME_TYPES[ext] || null,
+        mime_type: get_mime_type(ext),
         size: isNaN(size) ? null : size,
         modified_at: isNaN(mtime_epoch) ? null : mtime.toISOString(),
         source: 'ssh',

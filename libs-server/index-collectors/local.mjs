@@ -7,6 +7,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { get_mime_type } from './mime-types.mjs'
 
 const DEFAULT_EXCLUDES = [
   '.git',
@@ -193,65 +194,3 @@ async function scan_directory({
   }
 }
 
-const MIME_TYPES = {
-  '.pdf': 'application/pdf',
-  '.json': 'application/json',
-  '.xml': 'application/xml',
-  '.zip': 'application/zip',
-  '.gz': 'application/gzip',
-  '.tar': 'application/x-tar',
-  '.7z': 'application/x-7z-compressed',
-  '.rar': 'application/vnd.rar',
-  '.txt': 'text/plain',
-  '.md': 'text/markdown',
-  '.csv': 'text/csv',
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
-  '.mjs': 'text/javascript',
-  '.ts': 'text/typescript',
-  '.py': 'text/x-python',
-  '.sh': 'text/x-shellscript',
-  '.yaml': 'text/yaml',
-  '.yml': 'text/yaml',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon',
-  '.mp3': 'audio/mpeg',
-  '.flac': 'audio/flac',
-  '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg',
-  '.m4a': 'audio/mp4',
-  '.aac': 'audio/aac',
-  '.mp4': 'video/mp4',
-  '.mkv': 'video/x-matroska',
-  '.avi': 'video/x-msvideo',
-  '.mov': 'video/quicktime',
-  '.webm': 'video/webm',
-  '.doc': 'application/msword',
-  '.docx':
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.xls': 'application/vnd.ms-excel',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  '.ppt': 'application/vnd.ms-powerpoint',
-  '.pptx':
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  '.sql': 'application/sql',
-  '.db': 'application/x-sqlite3',
-  '.duckdb': 'application/x-duckdb',
-  '.parquet': 'application/x-parquet',
-  '.log': 'text/plain',
-  '.env': 'text/plain',
-  '.toml': 'text/toml',
-  '.ini': 'text/plain',
-  '.cfg': 'text/plain',
-  '.conf': 'text/plain'
-}
-
-function get_mime_type(ext) {
-  return MIME_TYPES[ext] || null
-}
