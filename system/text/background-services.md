@@ -21,11 +21,15 @@ The Base system includes several PM2-managed background services that enable aut
 
 ## Service Overview
 
-| Service                    | Purpose                         | Polling Interval    |
-| -------------------------- | ------------------------------- | ------------------- |
-| `schedule-processor`       | Triggers due scheduled commands | 60 seconds          |
-| `cli-queue-worker`         | Executes queued CLI commands    | Continuous (BullMQ) |
-| `metadata-queue-processor` | Analyzes thread metadata        | File-based queue    |
+| Service                    | Purpose                                        | Type              |
+| -------------------------- | ---------------------------------------------- | ----------------- |
+| `base-api`                 | Express API server with database index, WebSocket, file watchers | HTTP server       |
+| `schedule-processor`       | Polls scheduled-command entities, enqueues due commands | Polling (60s)     |
+| `cli-queue-worker`         | Executes queued CLI commands with concurrency control | Continuous (BullMQ) |
+| `metadata-queue-processor` | Analyzes thread metadata using local Ollama models | File-based queue  |
+| `transcription-service`    | Audio transcription processing                 | On-demand         |
+
+All services are configured in `pm2.config.js`. The `cli-queue-worker` requires Redis.
 
 ## Scheduled Command System
 
@@ -164,15 +168,24 @@ base database insert <name> --data '{"field": "value"}'
 base database sync <name>             # Create/update table from schema
 ```
 
+## Multi-Machine Operation
+
+Services run on multiple machines simultaneously. Machine-specific behavior is controlled by:
+
+- **Machine identity**: Resolved from `machine_registry` in config via hostname matching. See `libs-server/schedule/machine-identity.mjs`.
+- **Environment injection**: `pm2.config.js` detects the current machine and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
+- **Schedule filtering**: Scheduled commands support a `run_on_machines` field (array of machine IDs). Commands without this field run on all machines; commands with it only run on listed machines.
+- **Machine info**: `base machine` CLI command shows current machine identity, platform, and registry config.
+
 ## Service Management
 
-All services are configured in `pm2.config.js`:
+All services are configured in `pm2.config.js`. Use `base-container.sh` for orchestration:
 
 ```bash
-pm2 start pm2.config.js         # Start all services
-pm2 stop schedule-processor     # Stop specific service
-pm2 logs cli-queue-worker       # View logs
-pm2 status                      # Check status
+base-container.sh start          # Start all PM2 services
+base-container.sh stop           # Stop all PM2 services
+base-container.sh status         # Show PM2 + Docker status
+base-container.sh logs base-api  # Tail specific service logs
 ```
 
 ## Related Documentation

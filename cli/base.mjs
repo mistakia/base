@@ -41,6 +41,7 @@ import * as permission_command from './base/permission.mjs'
 import * as setup_command from './base/setup.mjs'
 import * as review_command from './base/review.mjs'
 import * as index_command from './base/index.mjs'
+import * as machine_command from './base/machine.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const main = async () => {
@@ -65,6 +66,7 @@ const main = async () => {
     .command(setup_command)
     .command(review_command)
     .command(index_command)
+    .command(machine_command)
     .command(init_command)
     .option('json', {
       describe: 'Output as JSON',

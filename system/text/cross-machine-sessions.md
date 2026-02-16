@@ -36,15 +36,25 @@ Execution mode is available for:
 - Claude session creation/resume job queue
 - CLI queue jobs, including scheduled commands
 
+## Machine Identity
+
+Each machine is identified via hostname matching against the `machine_registry` in config, with platform-based fallback. Machine identity determines:
+
+- Which scheduled commands run on this machine (via `run_on_machines` field)
+- Machine-specific service configuration (SSL, ports) injected by `pm2.config.js`
+
+Use `base machine` to inspect the current machine's identity and registry.
+
 ## Sync Model
 
 Thread continuity is based on git sync of `thread/` data:
 
 1. Session hooks write thread raw-data and metadata.
-2. `push-threads.sh` publishes changes to remote storage.
-3. `pull-threads.sh` fetches/rebases changes onto other machines.
+2. `auto-commit-threads.sh` commits thread files on session end.
+3. `push-threads.sh` publishes changes to remote storage (scheduled every 15 minutes).
+4. `pull-threads.sh` fetches/rebases changes onto other machines (scheduled every 15 minutes, offset).
 
-This is the primary sync mechanism for cross-machine session continuity.
+The user-base and import-history submodule follow the same push/pull pattern with their own scheduled commands. All sync scripts use rebase-based conflict resolution with Discord notification on failure.
 
 ## Resume Flow
 

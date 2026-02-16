@@ -84,27 +84,37 @@ Each external data connection has bidirectional sync:
 
 - Google Drive
 - Notion
-- Apple Notes
 - Ubuntu servers
 - Github Projects
 - Other git repos
 
 ### 3. Deployment Architecture
 
-The system supports multi-machine deployment where the Base API and services run on one or more machines while agent sessions execute in various contexts.
+The system supports multi-machine deployment where the Base API and background services run on multiple machines simultaneously, each operating on its own clone of the user-base repository.
 
 #### 3.1 Execution Contexts
 
-- **Container Sessions**: Mainly non-interactive agent sessions run in user-specific Docker containers on the server. Containers provide isolation and consistent environments. Triggered by API, scheduled commands, or other sessions.
-- **Host Sessions**: Interactive sessions run directly on the user host machine with full terminal access. User-driven with real-time interaction.
+- **Host Sessions**: Interactive sessions run directly on the user's machine with full terminal access. User-driven with real-time interaction.
+- **Container Sessions**: Interactive agent sessions (Claude Code, OpenCode) run in Docker containers on the server. Containers provide isolation and a consistent Linux environment. Sessions are initiated by the user.
 
-#### 3.2 Data Sharing
+#### 3.2 Multi-Machine Operation
 
-All execution contexts share the same user-base directory via file system mounting and git synchronization:
+Multiple machines can run Base services concurrently against their own user-base clones. Machine identity is resolved automatically via hostname matching against the `machine_registry` in config, with platform-based fallback. This drives machine-specific configuration (SSL, ports, service selection).
 
-- User-base exists as a git repository
-- Containers and host machines push/pull to synchronize data via git synchronization
-- Thread data (`thread/`) is a submodule with its own git repository for high-churn isolation
+- **Machine identity**: `base machine` shows the current machine ID, hostname, platform, and registry config. Machine ID is resolved by `libs-server/schedule/machine-identity.mjs`.
+- **Scheduled commands**: Support a `run_on_machines` field to restrict execution to specific machines. Commands without this field run on all machines.
+- **Service configuration**: `pm2.config.js` reads machine registry to inject machine-specific environment variables (SSL, ports) before services start.
+
+#### 3.3 Data Synchronization
+
+All execution contexts share data through git synchronization. Each machine maintains its own working copy and syncs via scheduled push/pull commands with rebase-based conflict resolution.
+
+- **User-base**: The main repository syncs via scheduled push/pull commands. Submodule updates (excluding independently-synced submodules) run after pull.
+- **Thread submodule** (`thread/`): Isolated git repository for high-churn session data. Has its own push/pull cycle with file locking and auto-commit on session end.
+- **Import-history submodule** (`import-history/`): Isolated git repository for historical import data. Has its own push/pull cycle.
+- **Other submodules** (e.g., `base`, `base-ios`): Updated as part of the main user-base pull.
+
+See [[sys:system/text/background-services.md]] for service details and scheduling.
 
 ### 4. Glossary
 
