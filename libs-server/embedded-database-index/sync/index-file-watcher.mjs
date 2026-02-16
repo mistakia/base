@@ -9,7 +9,7 @@ import debug from 'debug'
 import chokidar from 'chokidar'
 
 import config from '#config'
-import { ENTITY_DIRECTORIES, ENTITY_FILE_PATTERN } from './sync-constants.mjs'
+import { ENTITY_DIRECTORIES, ENTITY_FILE_PATTERN } from './index-sync-filters.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 
 const log = debug('embedded-index:sync:watcher')

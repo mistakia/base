@@ -27,7 +27,7 @@ import {
   filter_entity_files,
   filter_thread_metadata_files,
   extract_thread_id_from_path
-} from './sync-constants.mjs'
+} from './index-sync-filters.mjs'
 import { get_all_changed_files } from './repository-discovery.mjs'
 import { sync_git_activity_incremental } from './sync-git-activity.mjs'
 

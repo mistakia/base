@@ -15,7 +15,7 @@ import {
   extract_base_uri_from_entity_path,
   extract_entity_type_from_path
 } from './index-file-watcher.mjs'
-import { extract_thread_id_from_path } from './sync-constants.mjs'
+import { extract_thread_id_from_path } from './index-sync-filters.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   write_thread_sync_request,

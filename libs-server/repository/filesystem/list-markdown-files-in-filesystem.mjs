@@ -11,6 +11,7 @@ import {
   handle_cli_directory_registration,
   get_registered_directories
 } from '#libs-server/base-uri/index.mjs'
+import { load_entity_scan_config } from '#libs-server/entity/filesystem/entity-scan-config.mjs'
 
 const log = debug('markdown:scanner:filesystem')
 debug.enable('markdown:scanner:filesystem')
@@ -30,6 +31,13 @@ export async function list_markdown_files_in_filesystem({
   const file_paths_seen = new Set() // Track file paths to handle duplicates
 
   try {
+    // Load entity scan config and merge exclude patterns
+    const scan_config = await load_entity_scan_config()
+    const merged_exclude_patterns = [
+      ...scan_config.exclude_path_patterns,
+      ...exclude_path_patterns
+    ]
+
     // Get registered directories
     const { system_base_directory, user_base_directory } =
       get_registered_directories()
@@ -49,7 +57,7 @@ export async function list_markdown_files_in_filesystem({
         file_extension: '.md',
         absolute_paths: false,
         include_path_patterns,
-        exclude_path_patterns
+        exclude_path_patterns: merged_exclude_patterns
       })
 
       // Add files from this directory

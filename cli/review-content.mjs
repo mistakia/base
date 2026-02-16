@@ -95,7 +95,7 @@ function check_forced_private(relative_path, matchers) {
  * @param {string} target_path - Absolute path to scan
  * @returns {Promise<{entity_files: string[], thread_ids: string[]}>}
  */
-async function discover_items(target_path) {
+async function discover_items(target_path, { exclude_patterns = [] } = {}) {
   const stat = await fs.stat(target_path).catch(() => null)
   if (!stat) {
     return { entity_files: [], thread_ids: [] }
@@ -127,6 +127,9 @@ async function discover_items(target_path) {
     return { entity_files: [], thread_ids: ids }
   }
 
+  // Merge thread exclusion with config-based exclude patterns
+  const all_exclude_patterns = ['thread/**', ...exclude_patterns]
+
   // Target contains the thread directory (e.g., scanning user base root)
   if (thread_resolved.startsWith(target_resolved + path.sep)) {
     const [md_files, ids] = await Promise.all([
@@ -134,7 +137,7 @@ async function discover_items(target_path) {
         directory: target_path,
         file_extension: '.md',
         absolute_paths: true,
-        exclude_path_patterns: ['thread/**']
+        exclude_path_patterns: all_exclude_patterns
       }),
       list_thread_ids()
     ])
@@ -146,7 +149,8 @@ async function discover_items(target_path) {
   const md_files = await list_files_recursive({
     directory: target_path,
     file_extension: '.md',
-    absolute_paths: true
+    absolute_paths: true,
+    exclude_path_patterns: exclude_patterns
   })
   const entity_files = await filter_entity_files(md_files)
   return { entity_files, thread_ids: [] }
@@ -490,12 +494,15 @@ async function main() {
     process.stderr.write('Discovering files...\n')
   }
 
-  const { entity_files, thread_ids } = await discover_items(target_path)
+  // Load config for exclude patterns and forced-private matchers
+  const review_config = await load_review_config()
+  const exclude_patterns = review_config.exclude_patterns || []
+
+  const { entity_files, thread_ids } = await discover_items(target_path, {
+    exclude_patterns
+  })
   const thread_base = get_thread_base_directory()
   const user_base = get_user_base_directory()
-
-  // Build forced-private matchers from config
-  const review_config = await load_review_config()
   const forced_private_patterns = review_config.forced_private_patterns || []
   const forced_private_matchers = forced_private_patterns.map((pattern) => ({
     pattern,

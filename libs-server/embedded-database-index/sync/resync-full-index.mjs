@@ -27,7 +27,7 @@ import {
 import {
   ENTITY_DIRECTORIES,
   DEFAULT_EXCLUDE_PATTERNS
-} from './sync-constants.mjs'
+} from './index-sync-filters.mjs'
 import {
   list_thread_ids,
   process_threads_in_batches

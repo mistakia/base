@@ -23,6 +23,7 @@ const DEFAULT_CONFIG = {
       'Contains personal information, secrets, credentials, infrastructure details, or other sensitive content that must remain restricted. Includes PII, financial records, property addresses, network topology, authentication credentials, and insurance/legal documents.'
   },
   guidance_notes: [],
+  exclude_patterns: [],
   forced_private_patterns: []
 }
 

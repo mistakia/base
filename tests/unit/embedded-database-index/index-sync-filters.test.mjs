@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for sync constants module
+ * @fileoverview Unit tests for index sync filters module
  */
 
 import { expect } from 'chai'
@@ -8,9 +8,9 @@ import {
   filter_entity_files,
   ENTITY_DIRECTORIES,
   SUBMODULE_EXCLUSION_PREFIXES
-} from '#libs-server/embedded-database-index/sync/sync-constants.mjs'
+} from '#libs-server/embedded-database-index/sync/index-sync-filters.mjs'
 
-describe('Sync Constants', () => {
+describe('Index Sync Filters', () => {
   describe('ENTITY_DIRECTORIES', () => {
     it('should include expected entity directories', () => {
       expect(ENTITY_DIRECTORIES).to.be.an('array')
@@ -190,7 +190,7 @@ describe('Sync Constants', () => {
         expect(result).to.deep.equal(['task/my-task.md'])
       })
 
-      it('should exclude files from repository/archive submodules', () => {
+      it('should not exclude files from repository/archive', () => {
         const file_paths = [
           'text/my-doc.md',
           'repository/archive/vscode/docs/readme.md'
@@ -201,7 +201,10 @@ describe('Sync Constants', () => {
           entity_directories: ['text', 'repository/archive']
         })
 
-        expect(result).to.deep.equal(['text/my-doc.md'])
+        expect(result).to.deep.equal([
+          'text/my-doc.md',
+          'repository/archive/vscode/docs/readme.md'
+        ])
       })
 
       it('should allow custom submodule exclusions', () => {
@@ -243,7 +246,12 @@ describe('Sync Constants', () => {
       )
       expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('import-history/')
       expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/active/')
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/archive/')
+    })
+
+    it('should not exclude repository/archive (archive entities are indexed)', () => {
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.not.include(
+        'repository/archive/'
+      )
     })
   })
 })

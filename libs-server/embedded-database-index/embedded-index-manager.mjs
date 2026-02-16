@@ -52,7 +52,7 @@ import {
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION
 } from './duckdb/duckdb-metadata-operations.mjs'
-import { ENTITY_DIRECTORIES } from './sync/sync-constants.mjs'
+import { ENTITY_DIRECTORIES } from './sync/index-sync-filters.mjs'
 import {
   discover_repositories,
   get_repository_head_sha

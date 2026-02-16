@@ -1,7 +1,8 @@
 /**
- * Sync Constants
+ * Index Sync Filters
  *
- * Shared constants for the embedded database index sync system.
+ * Constants and filter functions for the embedded database index sync system.
+ * Controls which files are included/excluded during entity indexing.
  */
 
 import debug from 'debug'
@@ -48,8 +49,7 @@ export const THREAD_METADATA_PATTERN = /^thread\/[0-9a-f-]+\/metadata\.json$/i
 export const SUBMODULE_EXCLUSION_PREFIXES = [
   'text/epstein/transparency-act/',
   'import-history/',
-  'repository/active/',
-  'repository/archive/'
+  'repository/active/'
 ]
 
 /**
