@@ -215,11 +215,9 @@ async function handle_scan(argv) {
     // Batch insert folders
     if (folders.length > 0) {
       const batch_size = folders.length > 10000 ? 5000 : 500
-      let inserted = 0
       for (let i = 0; i < folders.length; i += batch_size) {
         const batch = folders.slice(i, i + batch_size)
         await folder_adapter.insert(batch)
-        inserted += batch.length
       }
       console.log(`Indexed ${folders.length} folders`)
     }
