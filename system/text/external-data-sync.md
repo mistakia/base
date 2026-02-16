@@ -5,10 +5,12 @@ description: System for importing external data to local entities with conflict 
 base_uri: sys:system/text/external-data-sync.md
 created_at: '2025-05-27T18:10:20.244Z'
 entity_id: 11dc5b4c-365c-4e7f-b7f4-10c9851b1be1
+public_read: true
 relations:
   - part_of [[sys:system/text/system-design.md]]
 updated_at: '2026-01-05T19:24:59.754Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:36:27.794Z'
 ---
 
 # External Data Sync System

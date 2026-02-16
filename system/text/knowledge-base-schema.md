@@ -9,10 +9,12 @@ observations:
   - '[design] Knowledge base schema is a dual-system architecture'
   - '[implementation] System schema is in system/schema and user schema is in separate repositories'
   - '[feature] Schema extensions allow for user-specific customization'
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2026-01-05T19:25:18.033Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:36:45.269Z'
 ---
 
 # Knowledge Base Schema

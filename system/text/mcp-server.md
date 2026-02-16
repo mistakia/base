@@ -2,17 +2,20 @@
 title: MCP Server
 type: text
 description: Model Context Protocol server implementation with tool filtering capabilities
+base_uri: sys:system/text/mcp-server.md
 created_at: '2025-01-06T21:10:00.000Z'
-entity_id: 'a8b9c0d1-e2f3-4567-8901-234567890abc'
+entity_id: a8b9c0d1-e2f3-4567-8901-234567890abc
 observations:
   - '[architecture] Factory pattern enables tool filtering at server creation time'
   - '[security] Tool whitelisting prevents unauthorized access to system capabilities'
   - '[simplicity] Command line interface provides easy configuration without code changes'
+public_read: true
 relations:
   - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2025-01-06T21:10:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:36:56.923Z'
 ---
 
 # MCP Server

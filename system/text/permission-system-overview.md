@@ -7,8 +7,10 @@ description: >-
 base_uri: sys:system/text/permission-system-overview.md
 created_at: '2025-01-20T00:00:00.000Z'
 entity_id: a7b8c9d0-1234-5678-9abc-def012345678
+public_read: true
 updated_at: '2026-01-05T19:25:18.047Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:37:15.754Z'
 ---
 
 # Permission System Overview
