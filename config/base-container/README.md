@@ -1,6 +1,6 @@
 # Base Container
 
-Persistent Docker container providing Claude Code CLI, OpenCode CLI, and development tooling for interactive sessions. Services (base-api, metadata-queue-processor, cli-queue-worker) run natively via PM2 for filesystem performance.
+Persistent Docker container providing Claude Code CLI, OpenCode CLI, and development tooling for interactive sessions. Services (base-api, schedule-processor, cli-queue-worker, metadata-queue-processor, transcription-service) run natively via PM2 for filesystem performance.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ config/base-container/
   config.macbook.env          # Per-machine env for container hooks
 
 repository/active/base/
-  pm2.config.js               # Unified PM2 config for all 3 services (auto-detects machine)
+  pm2.config.js               # Unified PM2 config for all 5 services (auto-detects machine)
 ```
 
 ## Service Management (PM2)
