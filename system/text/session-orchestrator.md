@@ -8,15 +8,19 @@ base_uri: sys:system/text/session-orchestrator.md
 created_at: '2026-02-10T23:30:00.000Z'
 entity_id: 055d2a28-9338-4f90-a228-e702dd23cd58
 observations:
-  - '[architecture] Base does not run sessions internally; it manages and standardizes external session runners'
+  - >-
+    [architecture] Base does not run sessions internally; it manages and standardizes external
+    session runners
   - '[design] Session runner agnostic and execution environment agnostic by design'
   - '[integration] Supports spawned sessions (CLI) and imported sessions (after-the-fact)'
+public_read: true
 relations:
   - relates_to [[sys:system/text/execution-threads.md]]
   - relates_to [[sys:system/text/workflow.md]]
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2026-02-10T23:30:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:37:56.978Z'
 ---
 
 # Session Orchestrator

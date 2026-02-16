@@ -4,15 +4,17 @@ type: workflow
 description: >-
   Audit and maintain directory-level markdown documentation (ABOUT.md, INDEX.md) for coverage,
   compliance, and currency
+base_uri: sys:system/workflow/maintain-directory-markdown.md
 created_at: '2026-01-21T18:21:37.527Z'
 entity_id: 8ba3a348-63f0-4adb-98c6-f557647bf1ed
-public_read: false
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/directory-markdown-standards.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2026-01-21T18:45:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:40:51.980Z'
 ---
 
 <task>Audit and maintain directory markdown files to ensure coverage, compliance with standards, and current content</task>

@@ -8,10 +8,12 @@ entity_id: 64198ad4-c77b-42d5-813a-e26605bcada4
 observations:
   - '[design] Documents tool registration and execution model.'
   - '[architecture] Defines three distinct tool categories with different purposes.'
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2026-01-05T19:25:18.075Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:38:32.259Z'
 ---
 
 # Tool Information

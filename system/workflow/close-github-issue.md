@@ -2,13 +2,15 @@
 title: Close GitHub Issue
 type: workflow
 description: Workflow for closing GitHub issues and syncing project status to local task entities
+base_uri: sys:system/workflow/close-github-issue.md
 created_at: '2026-01-28T17:28:53.536Z'
 entity_id: 5f5fd370-70e8-4593-84c8-6e28acd27978
-public_read: false
-updated_at: '2026-01-28T17:32:00.000Z'
-user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+public_read: true
 relations:
   - references [[user:text/github-project-reference.md]]
+updated_at: '2026-01-28T17:32:00.000Z'
+user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:39:19.909Z'
 ---
 
 <task>Close a GitHub issue and sync the changes to the local task entity</task>

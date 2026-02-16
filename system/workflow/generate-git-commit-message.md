@@ -5,6 +5,7 @@ description: Generate a commit message from staged git changes using a local Oll
 base_uri: sys:system/workflow/generate-git-commit-message.md
 created_at: '2026-01-29T19:00:00.000Z'
 entity_id: 36a6251f-e23a-4984-a8c7-fb38c2bdff0a
+public_read: true
 relations:
   - follows [[sys:system/guideline/git-commit-message-format.md]]
   - relates_to [[user:tag/base-project.md]]
@@ -12,6 +13,7 @@ tags:
   - user:tag/base-project.md
 updated_at: '2026-01-29T19:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:40:22.003Z'
 ---
 
 # Generate Git Commit Message

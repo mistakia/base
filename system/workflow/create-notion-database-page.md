@@ -1,12 +1,11 @@
 ---
 title: Create Notion Database Page
 type: workflow
-description: >-
-  Create a new page in a Notion database via MCP tools, then sync the new entity locally
+description: Create a new page in a Notion database via MCP tools, then sync the new entity locally
 base_uri: sys:system/workflow/create-notion-database-page.md
 created_at: '2026-01-30T18:35:00.000Z'
 entity_id: 2fbde3e7-43c5-4cea-abf0-21d97a788ad0
-public_read: false
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
@@ -14,6 +13,7 @@ relations:
   - calls [[sys:system/workflow/sync-notion-entities.md]]
 updated_at: '2026-01-30T18:35:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:39:49.062Z'
 ---
 
 <task>Create a new page in a Notion database and sync it to a local entity file</task>

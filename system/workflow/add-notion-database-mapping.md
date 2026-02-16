@@ -1,12 +1,11 @@
 ---
 title: Add Notion Database Mapping
 type: workflow
-description: >-
-  Add a new Notion database to the entity mapping configuration and perform initial sync
+description: Add a new Notion database to the entity mapping configuration and perform initial sync
 base_uri: sys:system/workflow/add-notion-database-mapping.md
 created_at: '2026-01-30T18:35:00.000Z'
 entity_id: 2fb2cb59-2f18-45b3-94eb-3f856212b8a8
-public_read: false
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
@@ -14,6 +13,7 @@ relations:
   - calls [[sys:system/workflow/sync-notion-entities.md]]
 updated_at: '2026-01-30T18:35:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:39:04.477Z'
 ---
 
 <task>Add a new Notion database to the entity mapping configuration and perform initial sync</task>

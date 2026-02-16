@@ -7,12 +7,14 @@ description: >-
 base_uri: sys:system/workflow/write-software-implementation-plan.md
 created_at: '2025-06-18T00:44:36.058Z'
 entity_id: 2928d808-7e56-42aa-a888-8626046b35e8
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-software-implementation-plan.md]]
   - calls [[sys:system/workflow/write-task.md]]
 updated_at: '2026-02-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:42:40.148Z'
 ---
 
 <task>Write a software implementation plan by analyzing a task and breaking it into specific file changes</task>

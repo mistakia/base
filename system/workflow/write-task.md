@@ -1,15 +1,14 @@
 ---
 title: Write Task
 type: workflow
-description: >-
-  Create a simple or draft task entity with proper schema compliance, folder
-  placement, and tagging
+description: Create a simple or draft task entity with proper schema compliance, folder placement, and tagging
 base_uri: sys:system/workflow/write-task.md
 created_at: '2025-06-26T01:12:24.554Z'
 entity_id: 1b971f77-1344-45bf-8119-a277cc618237
 observations:
   - '[process] MCP entity creation ensures proper schema compliance'
   - '[pattern] Shared task setup steps used by implementation plan workflows'
+public_read: true
 relations:
   - follows [[sys:system/guideline/write-task.md]]
   - follows [[sys:system/guideline/choose-task-status.md]]
@@ -21,6 +20,7 @@ relations:
   - follows [[sys:system/text/base-uri.md]]
 updated_at: '2026-02-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:42:55.028Z'
 ---
 
 # Write Task

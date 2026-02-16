@@ -5,6 +5,7 @@ description: Diagnose and fix entity validation errors reported by validate-file
 base_uri: sys:system/workflow/fix-entity-validation-errors.md
 created_at: '2026-01-13T16:30:00.000Z'
 entity_id: eebd75c2-64ed-42c3-8283-e21af7323b92
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
@@ -12,6 +13,7 @@ relations:
   - uses [[user:repository/active/base/cli/update-entity-fields.mjs]]
 updated_at: '2026-01-13T17:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:40:07.174Z'
 ---
 
 <task>Fix entity validation errors reported by the filesystem markdown validator</task>

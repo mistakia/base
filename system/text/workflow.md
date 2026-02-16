@@ -9,6 +9,7 @@ observations:
   - '[architecture] Workflows define agent behaviors invoked via prompts and commands'
   - '[design] Threads represent sessions; workflows provide behavior templates'
   - '[principle] Tool integration enables complex agent capabilities'
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/execution-threads.md]]
@@ -16,6 +17,7 @@ relations:
   - relates_to [[sys:system/schema/workflow.md]]
 updated_at: '2026-01-05T19:24:57.362Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:38:45.688Z'
 ---
 
 # Workflow

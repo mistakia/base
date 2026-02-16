@@ -4,13 +4,15 @@ type: workflow
 description: >-
   Workflow for updating GitHub issue status, priority, and other project fields, then syncing
   changes to local task entities
+base_uri: sys:system/workflow/update-github-issue.md
 created_at: '2026-01-28T18:35:11.326Z'
 entity_id: 4a302041-5bc9-48ac-a014-cb277a846981
 public_read: true
-updated_at: '2026-01-28T18:35:11.326Z'
-user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 relations:
   - references [[user:text/github-project-reference.md]]
+updated_at: '2026-01-28T18:35:11.326Z'
+user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:41:57.339Z'
 ---
 
 <task>Update a GitHub issue's project fields (status, priority) and sync the changes to the local task entity</task>

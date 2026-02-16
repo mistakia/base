@@ -7,12 +7,14 @@ description: >-
 base_uri: sys:system/workflow/write-general-implementation-plan.md
 created_at: '2025-08-16T17:56:08.207Z'
 entity_id: d37369cd-8791-42dd-b696-6f9fc2389fa7
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-general-implementation-plan.md]]
   - calls [[sys:system/workflow/write-task.md]]
 updated_at: '2026-02-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:42:27.732Z'
 ---
 
 <task>Write a general implementation plan by gathering background information, analyzing a task, and breaking it into specific actionable steps</task>

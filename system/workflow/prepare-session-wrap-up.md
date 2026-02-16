@@ -2,8 +2,8 @@
 title: Prepare Session Wrap-Up
 type: workflow
 description: >-
-  Token-efficient pre-archive workflow that reflects on session work to identify
-  remaining cleanup actions and produces a continuation prompt for follow-up
+  Token-efficient pre-archive workflow that reflects on session work to identify remaining cleanup
+  actions and produces a continuation prompt for follow-up
 base_uri: sys:system/workflow/prepare-session-wrap-up.md
 created_at: '2026-02-13T00:00:00.000Z'
 entity_id: f7a1b2c3-4d5e-6f78-9a0b-c1d2e3f4a5b6
@@ -11,10 +11,12 @@ observations:
   - '[efficiency] Designed for minimal token usage near end of context window'
   - '[pattern] Output doubles as continuation prompt for new session'
   - '[principle] Relies on session context rather than prescriptive tool calls'
+public_read: true
 relations:
   - follows [[sys:system/guideline/write-workflow.md]]
 updated_at: '2026-02-13T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:41:18.895Z'
 ---
 
 # Prepare Session Wrap-Up

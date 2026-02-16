@@ -15,6 +15,7 @@ prompt_properties:
       When true, continue through all tasks without stopping for review. Only stops on errors or
       plan drift.
     default: false
+public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
@@ -23,6 +24,7 @@ relations:
   - uses [[user:guideline/write-text.md]]
 updated_at: '2026-01-05T19:25:18.081Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:40:34.543Z'
 ---
 
 <task>Execute a general task implementation following an implementation plan</task>

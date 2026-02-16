@@ -8,6 +8,7 @@ entity_id: b75fe9b3-4a83-427c-9e62-3105019df96c
 observations:
   - '[design] Human-in-the-loop system built on file primitives with git version control'
   - '[principle] Agnostic to model, session runner, and execution environment'
+public_read: true
 relations:
   - relates_to [[sys:system/text/directory-structure.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
@@ -16,6 +17,7 @@ relations:
   - relates_to [[sys:system/schema/database.md]]
 updated_at: '2026-01-05T19:25:18.031Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:38:15.994Z'
 ---
 
 # Base System Design
