@@ -11,8 +11,10 @@ observations:
   - '[standard] Standardized status values ensure consistent task management'
   - '[governance] Limited set of statuses helps with workflow automation'
   - '[organization] Clear status values improve task tracking and reporting'
+public_read: true
 updated_at: '2026-01-05T19:24:58.348Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:26:18.518Z'
 ---
 
 # Choose Task Status Guideline

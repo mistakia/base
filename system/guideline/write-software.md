@@ -17,11 +17,12 @@ observations:
   - '[maintainability] Consistent naming reduces cognitive load'
   - '[uniqueness] Globally unique names prevent naming conflicts'
   - '[philosophy] Start with core beliefs and iterate based on actual needs'
+public_read: true
 relations:
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
-public_read: true
 updated_at: '2025-08-16T18:28:11.394Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:32:23.594Z'
 ---
 
 # Write Software

@@ -5,12 +5,14 @@ description: Guidelines for writing general implementation plans
 base_uri: sys:system/guideline/write-general-implementation-plan.md
 created_at: '2025-08-16T17:56:08.200Z'
 entity_id: 70e29ce5-4339-41a7-98b3-c8e2ce0ea071
+public_read: true
 relations:
   - related_to [[sys:system/guideline/write-software-implementation-plan.md]]
   - implements [[sys:system/text/system-design.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
 updated_at: '2026-01-05T19:25:17.461Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:31:13.394Z'
 ---
 
 - List all specific actions that need to be taken, using clear descriptions.

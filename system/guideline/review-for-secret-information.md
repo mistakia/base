@@ -8,6 +8,7 @@ base_uri: sys:system/guideline/review-for-secret-information.md
 created_at: '2025-08-16T06:14:19.493Z'
 entity_id: 2f2c03c3-48b6-48e9-a365-bebeb1c02717
 observations: []
+public_read: true
 relations:
   - follows [[sys:system/guideline/write-guideline.md]]
   - follows [[user:guideline/write-text.md]]
@@ -15,6 +16,7 @@ relations:
 tags: []
 updated_at: '2026-01-05T19:25:17.453Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:28:24.152Z'
 ---
 
 Secret information includes any credentials, keys, or authentication data that could compromise system security if exposed.

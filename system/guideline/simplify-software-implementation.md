@@ -1,7 +1,10 @@
 ---
 title: Simplify Software Implementation
 type: guideline
-description: Guidelines for simplifying software implementation to reduce complexity while preserving functionality
+description: >-
+  Guidelines for simplifying software implementation to reduce complexity while preserving
+  functionality
+base_uri: sys:system/guideline/simplify-software-implementation.md
 created_at: '2026-01-13T18:51:06.255Z'
 entity_id: 821155d9-a96e-4bed-8e69-8e4571281bbd
 globs:
@@ -21,6 +24,7 @@ relations:
   - related_to [[sys:system/guideline/review-software.md]]
 updated_at: '2026-01-13T18:51:06.255Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:29:22.177Z'
 ---
 
 # Simplify Software Implementation

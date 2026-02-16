@@ -14,10 +14,12 @@ observations:
   - '[clarity] Specific design choices provide more value than generic descriptions #design-decisions'
   - '[maintainability] Code examples become stale quickly and require frequent updates #maintenance'
   - '[focus] Unique architectural decisions distinguish systems from common patterns #architecture'
+public_read: true
 relations:
   - implements [[sys:system/text/system-design.md]]
 updated_at: '2026-01-05T19:25:18.072Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:30:44.381Z'
 ---
 
 ### What to Include

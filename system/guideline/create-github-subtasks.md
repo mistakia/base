@@ -12,6 +12,7 @@ observations:
   - '[standard] GraphQL API required for proper sub-issue relationships #github'
   - '[principle] CLI with GraphQL mutations provides reliable sub-issue linking #automation'
   - '[convention] Parent-child relationships improve task organization #hierarchy'
+public_read: true
 relations:
   - related_to [[sys:system/workflow/create-github-subtasks.md]]
   - follows [[sys:system/guideline/write-guideline.md]]
@@ -19,6 +20,7 @@ tags:
   - user:tag/base-project.md
 updated_at: '2025-08-16T18:28:11.390Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:26:33.163Z'
 ---
 
 # Create GitHub Subtasks

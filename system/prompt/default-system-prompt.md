@@ -1,13 +1,14 @@
 ---
-title: 'Default System Prompt'
-type: 'prompt'
-description: |
-  The default system prompt for Execution Thread Agent
+title: Default System Prompt
+type: prompt
+description: The default system prompt for Execution Thread Agent
+base_uri: sys:system/prompt/default-system-prompt.md
 created_at: '2025-05-28T18:48:51.491Z'
-entity_id: 'b1a773c0-70d5-4f13-aa76-e6191119a27a'
-tags:
+entity_id: b1a773c0-70d5-4f13-aa76-e6191119a27a
+public_read: true
 updated_at: '2025-05-28T18:48:51.491Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:33:07.123Z'
 ---
 
 You are an Agent working in your own Execution Thread workspace. You have been assigned a specific workflow.

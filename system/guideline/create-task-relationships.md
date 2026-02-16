@@ -11,10 +11,12 @@ observations:
   - Task relationships create structure and context in a task management system
   - Clear relationship definitions improve task planning and execution
   - Consistent relationship usage enhances reporting and visibility
+public_read: true
 relations:
   - implements [[sys:system/schema/task.md]]
 updated_at: '2026-01-05T19:24:59.839Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:26:53.372Z'
 ---
 
 This guideline helps determine appropriate relationships for tasks, defining connections between tasks, people, and resources.

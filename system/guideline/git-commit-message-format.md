@@ -10,6 +10,7 @@ relations:
   - relates_to [[sys:system/guideline/write-software.md]]
 updated_at: '2026-01-29T18:30:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:27:35.009Z'
 ---
 
 # Git Commit Message Format

@@ -1,7 +1,10 @@
 ---
 title: Simplify Software Plan
 type: guideline
-description: Guidelines for reviewing implementation plans to prevent over-engineering before software is written
+description: >-
+  Guidelines for reviewing implementation plans to prevent over-engineering before software is
+  written
+base_uri: sys:system/guideline/simplify-software-plan.md
 created_at: '2026-01-26T22:53:41.454Z'
 entity_id: 206494e9-8c62-40bc-bec8-88e13360951f
 globs:
@@ -11,13 +14,14 @@ observations:
   - '[principle] YAGNI applies to design phase, not just implementation'
   - '[heuristic] Rule of three - defer abstraction until three concrete cases exist'
   - '[warning] Wrong abstractions are harder to fix than duplicated software'
-public_read: false
+public_read: true
 relations:
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
   - complements [[sys:system/guideline/simplify-software-implementation.md]]
   - informs [[sys:system/guideline/write-software.md]]
 updated_at: '2026-01-26T22:53:41.454Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:29:36.711Z'
 ---
 
 # Simplify Software Plan

@@ -9,12 +9,14 @@ globs:
   - '**/*.md'
 observations:
   - '[standard] Entity files must follow schema requirements'
+public_read: true
 relations:
   - implements [[sys:system/schema/entity.md]]
   - related_to [[sys:system/guideline/write-guideline.md]]
   - related_to [[sys:system/text/base-uri.md]]
 updated_at: '2026-01-05T19:25:18.593Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:30:59.888Z'
 ---
 
 ## Content Formatting

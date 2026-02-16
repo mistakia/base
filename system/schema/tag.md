@@ -16,9 +16,11 @@ properties:
     type: string
     required: false
     description: Optional color code for the tag (e.g., hex code)
+public_read: true
 type_name: tag
 updated_at: '2026-01-05T19:24:58.796Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:34:33.554Z'
 ---
 
 # Tag

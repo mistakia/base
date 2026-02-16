@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Organization Schema
+type: type_definition
 description: Organizations represent companies, departments, teams, or other organizational units
+base_uri: sys:system/schema/organization.md
 created_at: '2025-08-16T17:56:08.204Z'
 entity_id: 35757f6c-4c1c-4f0b-8f3a-c5cd5124ae72
 extends: entity
@@ -14,9 +15,11 @@ properties:
     type: string
     required: false
     description: Detailed description of the organization
+public_read: true
 type_name: organization
 updated_at: '2025-08-16T17:56:09.132Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:33:48.589Z'
 ---
 
 # Organization

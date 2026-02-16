@@ -7,11 +7,13 @@ description: >-
 base_uri: sys:system/text/base-uri.md
 created_at: '2025-06-06T20:45:00.000Z'
 entity_id: 27efa635-3493-41eb-adbc-7ceeff2eff90
+public_read: true
 relations:
   - implements [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
 updated_at: '2026-01-05T19:25:18.589Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:35:16.338Z'
 ---
 
 # Base URI Specification

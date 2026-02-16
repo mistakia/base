@@ -27,9 +27,11 @@ properties:
     type: string
     required: false
     description: Personal website
+public_read: true
 type_name: person
 updated_at: '2026-01-05T19:24:59.834Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:34:01.944Z'
 ---
 
 # Person

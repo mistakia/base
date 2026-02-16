@@ -9,12 +9,14 @@ observations:
   - '[safety] Default to human review prevents premature archival of valuable work'
   - '[simplicity] Binary confidence model avoids false precision'
   - '[continuity] Follow-up identification ensures work is not lost even after archival'
+public_read: true
 relations:
   - related_to [[sys:system/guideline/review-thread.md]]
   - implements [[sys:system/text/thread-metadata-schema.json]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
 updated_at: '2026-01-05T19:25:17.447Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:30:17.208Z'
 ---
 
 # Thread Archival Evaluation Standards

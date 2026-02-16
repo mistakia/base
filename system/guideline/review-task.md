@@ -9,6 +9,7 @@ observations:
   - '[entity] Task entities require proper status management during workflow execution'
   - '[status] Task status must be set to "In Progress" when beginning implementation workflows'
   - '[schema] Task status values must comply with the task schema enumeration'
+public_read: true
 relations:
   - implements [[sys:system/schema/guideline.md]]
   - related_to [[sys:system/guideline/write-guideline.md]]
@@ -17,6 +18,7 @@ relations:
   - supports [[sys:system/workflow/implement-general-task.md]]
 updated_at: '2026-01-05T19:25:18.012Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:28:54.344Z'
 ---
 
 # Review Task Entity

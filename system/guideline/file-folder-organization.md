@@ -12,13 +12,14 @@ observations:
   - '[principle] Domain-first organization creates intuitive navigation hierarchies'
   - '[threshold] Directories with fewer than 3 files indicate premature organization'
   - '[principle] Verbose names reduce ambiguity at the cost of brevity'
-public_read: false
+public_read: true
 relations:
   - implements [[sys:system/schema/guideline.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
   - related_to [[sys:system/guideline/directory-markdown-standards.md]]
 updated_at: '2026-01-08T16:41:10.697Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:27:24.713Z'
 ---
 
 # File and Folder Organization

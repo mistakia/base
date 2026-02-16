@@ -1,7 +1,8 @@
 ---
-type: type_definition
 title: Database View Schema
+type: type_definition
 description: Database views represent saved configurations of how to display database items
+base_uri: sys:system/schema/database-view.md
 created_at: '2025-08-16T17:56:08.202Z'
 entity_id: 2dc0616b-b7b1-40ba-8ee8-aee1568311e7
 extends: entity
@@ -22,9 +23,11 @@ properties:
     type: object
     required: false
     description: JSON configuration of view settings
+public_read: true
 type_name: database_view
 updated_at: '2025-08-16T17:56:09.130Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:33:36.599Z'
 ---
 
 # Database View

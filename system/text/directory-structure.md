@@ -9,11 +9,13 @@ observations:
   - '[architecture] Dual knowledge base separates system from user-specific content'
   - '[principle] Clear directory structure improves navigation and discoverability'
   - '[design] Organization follows separation of concerns principle'
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
   - implements [[sys:system/text/knowledge-base-schema.md]]
 updated_at: '2026-01-05T19:24:56.910Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:35:48.015Z'
 ---
 
 # Directory Structure

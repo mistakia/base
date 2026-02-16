@@ -12,8 +12,10 @@ globs:
 observations:
   - '[philosophy] Start minimal with what you know and expand based on actual needs'
   - '[pragmatism] Focus on essential and primitive elements first'
+public_read: true
 updated_at: '2025-08-16T18:28:11.393Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:29:45.655Z'
 ---
 
 ## Guidelines

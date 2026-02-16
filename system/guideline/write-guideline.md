@@ -12,6 +12,7 @@ observations:
   - '[standard] RFC 2119 language clarifies requirement levels #clarity'
   - '[distinction] Guidelines define reusable standards, workflows define specific processes'
   - '[philosophy] Start with core beliefs and iterate based on actual needs'
+public_read: true
 relations:
   - related_to [[sys:system/guideline/write-workflow.md]]
   - implements [[sys:system/text/system-design.md]]
@@ -19,6 +20,7 @@ relations:
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
 updated_at: '2026-01-05T19:25:02.704Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:31:29.358Z'
 ---
 
 # Create Guideline

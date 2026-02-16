@@ -2,6 +2,7 @@
 title: Review Software
 type: guideline
 description: Guidelines for conducting software reviews with focus on substantive issues and compliance
+base_uri: sys:system/guideline/review-software.md
 created_at: '2026-01-13T18:51:33.747Z'
 entity_id: d6d52ff5-701e-49cb-b1e7-9b22aa279cbb
 globs:
@@ -21,6 +22,7 @@ relations:
   - related_to [[sys:system/guideline/simplify-software-implementation.md]]
 updated_at: '2026-02-04T00:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:28:42.131Z'
 ---
 
 # Review Software

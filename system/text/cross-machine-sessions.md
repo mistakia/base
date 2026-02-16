@@ -11,12 +11,14 @@ observations:
   - '[execution-mode] Commands and Claude sessions can run on host or inside base-container'
   - '[sync] Thread continuity is driven by git sync in the thread submodule'
   - '[restore] Resume flow restores JSONL/todos/plans before launching Claude CLI'
+public_read: true
 relations:
   - relates_to [[sys:system/text/session-orchestrator.md]]
   - relates_to [[sys:system/text/background-services.md]]
   - relates_to [[sys:system/schema/scheduled-command.md]]
 updated_at: '2026-02-11T01:46:31.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:35:28.869Z'
 ---
 
 # Cross-Machine Sessions

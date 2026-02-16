@@ -1,15 +1,16 @@
 ---
-title: 'Write Stylus'
-type: 'guideline'
-description: |
-  Guidelines for writing Stylus stylesheets
+title: Write Stylus
+type: guideline
+description: Guidelines for writing Stylus stylesheets
+base_uri: sys:system/guideline/write-stylus.md
 created_at: '2025-05-27T18:10:20.240Z'
-entity_id: '5843993c-489c-442c-a162-f8b12ef8c8ec'
+entity_id: 5843993c-489c-442c-a162-f8b12ef8c8ec
 globs:
   - '**/*.styl'
-tags:
+public_read: true
 updated_at: '2025-05-27T18:10:20.240Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:32:34.631Z'
 ---
 
 # Stylus Style Guidelines

@@ -9,11 +9,13 @@ observations:
   - '[design] Standardized relation types create a consistent semantic graph'
   - '[implementation] Relations use a single canonical format'
   - '[feature] Entity relationships are handled through a single mechanism'
+public_read: true
 relations:
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
   - part_of [[sys:system/text/system-design.md]]
 updated_at: '2026-01-05T19:25:18.887Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:36:06.521Z'
 ---
 
 # Entity Relations

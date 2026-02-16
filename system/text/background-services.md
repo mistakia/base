@@ -5,12 +5,14 @@ description: Overview of PM2-managed background services for command scheduling,
 base_uri: sys:system/text/background-services.md
 created_at: '2026-02-09T00:00:00.000Z'
 entity_id: f8a92b4c-7d1e-4c3f-9a5b-2e6d8f0c1a3b
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/schema/scheduled-command.md]]
   - relates_to [[sys:system/schema/database.md]]
 updated_at: '2026-02-09T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:35:01.121Z'
 ---
 
 # Background Services

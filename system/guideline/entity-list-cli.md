@@ -14,6 +14,7 @@ observations:
   - '[design] Unified CLI replaces type-specific MCP tools for entity queries'
   - '[usability] Verbose mode provides human-readable multi-line output'
   - '[architecture] Two CLI variants exist for different server states'
+public_read: true
 relations:
   - implements [[sys:system/text/system-design.md]]
   - replaces list_tasks MCP tool
@@ -22,6 +23,7 @@ relations:
   - replaces thread_read MCP tool
 updated_at: '2026-01-27T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:27:11.758Z'
 ---
 
 # Entity List CLI Usage

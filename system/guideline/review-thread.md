@@ -9,11 +9,13 @@ observations:
   - '[entity] Thread entities require proper metadata management'
   - '[schema] Thread metadata values must comply with the thread metadata schema specification'
   - '[archival] Thread archival must follow proper lifecycle management with appropriate reasons'
+public_read: true
 relations:
   - applies [[sys:system/text/thread-metadata-schema.json]]
   - related_to [[sys:system/guideline/thread-archival-evaluation-standards.md]]
 updated_at: '2026-01-05T19:25:17.996Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+visibility_analyzed_at: '2026-02-16T04:29:09.134Z'
 ---
 
 # Review Thread Entity

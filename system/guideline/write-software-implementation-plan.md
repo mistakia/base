@@ -5,8 +5,10 @@ description: Guidelines for writing software implementation plans
 base_uri: sys:system/guideline/write-software-implementation-plan.md
 created_at: '2025-05-27T18:10:20.238Z'
 entity_id: e76459ed-cea8-4e1e-8601-8d3d1fc5ccb5
+public_read: true
 updated_at: '2026-01-05T19:25:18.915Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:31:56.658Z'
 ---
 
 - List all files that need to be modified or created, using their full paths.

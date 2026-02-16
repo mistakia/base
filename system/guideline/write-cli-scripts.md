@@ -7,8 +7,10 @@ created_at: '2025-05-27T18:10:20.237Z'
 entity_id: 25991601-4814-49b0-837c-60527876bdf4
 globs:
   - cli/**/*
+public_read: true
 updated_at: '2026-01-05T19:25:06.988Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:30:30.682Z'
 ---
 
 # Write CLI Scripts

@@ -11,6 +11,7 @@ observations:
   - '[principle] Clear titles improve task discoverability and understanding'
   - '[standard] Proper frontmatter enables system integration and tracking'
   - '[organization] Relationships connect tasks to broader work context'
+public_read: true
 relations:
   - implements [[sys:system/schema/task.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
@@ -19,6 +20,7 @@ relations:
   - relates_to [[sys:system/guideline/choose-task-priority.md]]
 updated_at: '2026-01-05T19:25:18.073Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:32:46.015Z'
 ---
 
 ## Essential Requirements

@@ -29,9 +29,11 @@ properties:
           type: string
           required: false
           description: Explanation for the rule
+public_read: true
 type_name: role
 updated_at: '2026-02-07T21:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:34:21.599Z'
 ---
 
 # Role
