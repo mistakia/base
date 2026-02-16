@@ -141,7 +141,12 @@ async function is_already_analyzed(file_path) {
 /**
  * Set public_read and visibility_analyzed_at on an entity
  */
-async function apply_visibility(file_path, classification, dry_run = false) {
+async function apply_visibility(
+  file_path,
+  classification,
+  dry_run = false,
+  { visibility_reason } = {}
+) {
   const public_read = classification === 'public'
   const now = new Date().toISOString()
 
@@ -150,22 +155,53 @@ async function apply_visibility(file_path, classification, dry_run = false) {
       file_path,
       public_read,
       visibility_analyzed_at: now,
+      ...(visibility_reason && { visibility_reason }),
       dry_run: true
     }
   }
 
-  // Set public_read and visibility_analyzed_at in a single read-write cycle
+  // Set public_read, visibility_analyzed_at, and [visibility] observation in a single read-write cycle
   if (file_path.endsWith('.md')) {
     const result = await read_entity_from_filesystem({
       absolute_path: file_path
     })
+    if (!result.entity_properties || !result.entity_properties.type) {
+      return {
+        file_path,
+        public_read,
+        visibility_analyzed_at: now,
+        dry_run: false,
+        skipped: true,
+        reason: 'no frontmatter'
+      }
+    }
+    const updated_props = {
+      ...result.entity_properties,
+      public_read,
+      visibility_analyzed_at: now
+    }
+    if (visibility_reason && !public_read) {
+      const observations = updated_props.observations || []
+      // Replace existing [visibility] observation or add new one (non-public only)
+      const vis_prefix = '[visibility]'
+      const filtered = observations.filter(
+        (o) => typeof o !== 'string' || !o.startsWith(vis_prefix)
+      )
+      filtered.push(`${vis_prefix} ${visibility_reason}`)
+      updated_props.observations = filtered
+    } else if (public_read) {
+      // Remove [visibility] observation from public entities
+      const observations = updated_props.observations || []
+      const filtered = observations.filter(
+        (o) => typeof o !== 'string' || !o.startsWith('[visibility]')
+      )
+      if (filtered.length !== observations.length) {
+        updated_props.observations = filtered
+      }
+    }
     await write_entity_to_filesystem({
       absolute_path: file_path,
-      entity_properties: {
-        ...result.entity_properties,
-        public_read,
-        visibility_analyzed_at: now
-      },
+      entity_properties: updated_props,
       entity_type: result.entity_properties.type,
       entity_content: result.entity_content
     })
@@ -173,10 +209,19 @@ async function apply_visibility(file_path, classification, dry_run = false) {
     const content = JSON.parse(await fs.readFile(file_path, 'utf8'))
     content.public_read = public_read
     content.visibility_analyzed_at = now
+    if (visibility_reason) {
+      content.visibility_reason = visibility_reason
+    }
     await fs.writeFile(file_path, JSON.stringify(content, null, 2) + '\n')
   }
 
-  return { file_path, public_read, visibility_analyzed_at: now, dry_run: false }
+  return {
+    file_path,
+    public_read,
+    visibility_analyzed_at: now,
+    ...(visibility_reason && { visibility_reason }),
+    dry_run: false
+  }
 }
 
 // ============================================================================
@@ -486,7 +531,8 @@ async function main() {
         const vis_result = await apply_visibility(
           file_path,
           result.classification,
-          options.dry_run
+          options.dry_run,
+          { visibility_reason: result.reasoning }
         )
         summary.visibility_changes.push(vis_result)
       }

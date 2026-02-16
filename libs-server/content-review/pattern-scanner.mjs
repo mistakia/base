@@ -59,11 +59,108 @@ export function clear_pattern_cache() {
   compiled_patterns = null
 }
 
+// Frontmatter fields excluded from pattern scanning to avoid false positives.
+// These contain structural metadata (UUIDs, system URIs, hex keys, timestamps)
+// that would trigger spurious matches.
+const EXCLUDED_FRONTMATTER_FIELDS = new Set([
+  'entity_id',
+  'base_uri',
+  'user_public_key',
+  'created_at',
+  'updated_at',
+  'visibility_analyzed_at',
+  'public_read',
+  'type'
+])
+
+/**
+ * Extract scannable text from frontmatter attributes.
+ * Scans all fields except structural metadata that causes false positives.
+ * Relations are included because their URIs can reference files with
+ * sensitive names (e.g., physical addresses, personal names).
+ *
+ * @param {object} attributes - Parsed frontmatter attributes
+ * @returns {string[]} Lines of scannable text from frontmatter fields
+ */
+function extract_scannable_frontmatter(attributes) {
+  if (!attributes || typeof attributes !== 'object') {
+    return []
+  }
+
+  const lines = []
+
+  for (const [key, value] of Object.entries(attributes)) {
+    if (EXCLUDED_FRONTMATTER_FIELDS.has(key)) {
+      continue
+    }
+
+    if (value == null) {
+      continue
+    }
+
+    if (typeof value === 'string') {
+      lines.push(value)
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string') {
+          lines.push(item)
+        } else if (item && typeof item === 'object') {
+          // Handle structured array items (e.g., rules with action/pattern/reason)
+          for (const v of Object.values(item)) {
+            if (typeof v === 'string') {
+              lines.push(v)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return lines
+}
+
+/**
+ * Run compiled patterns against an array of lines.
+ * @param {string[]} lines - Lines to scan
+ * @param {string} source - Source label for findings (e.g., 'filename', 'frontmatter', 'body')
+ * @returns {Array} Findings array
+ */
+function scan_lines(lines, source) {
+  const findings = []
+  for (const pattern of compiled_patterns) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      let match
+      pattern.regex.lastIndex = 0
+      while ((match = pattern.regex.exec(line)) !== null) {
+        findings.push({
+          line: line.trim(),
+          line_number: i + 1,
+          source,
+          pattern_name: pattern.name,
+          category: pattern.category,
+          matched_text: match[0],
+          description: pattern.description
+        })
+        // Prevent infinite loops on zero-length matches
+        if (match[0].length === 0) {
+          pattern.regex.lastIndex++
+        }
+      }
+    }
+  }
+  return findings
+}
+
 /**
  * Scan file content against configured regex patterns.
  *
- * For markdown files, YAML frontmatter is stripped before scanning to avoid
- * false positives from entity_ids, URIs, and relations metadata.
+ * For markdown files, scans three regions separately:
+ * 1. Filename - catches sensitive names/addresses in file paths
+ * 2. Frontmatter - selectively scans content-bearing fields, excludes
+ *    structural metadata (entity_id, base_uri, timestamps) to avoid
+ *    false positives
+ * 3. Body - the markdown content after frontmatter
  *
  * @param {object} options
  * @param {string} [options.file_path] - Path to file to scan (reads file if content not provided)
@@ -86,42 +183,42 @@ export async function scan_file_content({
 
   await load_pattern_config(config_path)
   const file_type = detect_file_type(file_path)
-
-  // Strip frontmatter for markdown files
-  let scannable_content = content
-  if (file_type === 'markdown') {
-    try {
-      scannable_content = frontMatter(content).body
-    } catch {
-      // If frontmatter parsing fails, scan full content
-      scannable_content = content
-    }
-  }
-
-  const lines = scannable_content.split('\n')
   const findings = []
 
-  for (const pattern of compiled_patterns) {
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      let match
-      pattern.regex.lastIndex = 0
-      while ((match = pattern.regex.exec(line)) !== null) {
-        findings.push({
-          line: line.trim(),
-          line_number: i + 1,
-          pattern_name: pattern.name,
-          category: pattern.category,
-          matched_text: match[0],
-          description: pattern.description
-        })
-        // Prevent infinite loops on zero-length matches
-        if (match[0].length === 0) {
-          pattern.regex.lastIndex++
-        }
+  // Scan filename against patterns
+  if (file_path) {
+    const filename = path.basename(file_path, path.extname(file_path))
+    findings.push(...scan_lines([filename], 'filename'))
+  }
+
+  if (file_type === 'markdown') {
+    let body = content
+    try {
+      const parsed = frontMatter(content)
+      body = parsed.body
+
+      // Scan selected frontmatter fields
+      const frontmatter_lines = extract_scannable_frontmatter(parsed.attributes)
+      if (frontmatter_lines.length > 0) {
+        findings.push(...scan_lines(frontmatter_lines, 'frontmatter'))
       }
+    } catch {
+      // If frontmatter parsing fails, scan full content as body
+    }
+
+    const body_lines = body.split('\n')
+    findings.push(...scan_lines(body_lines, 'body'))
+
+    return {
+      findings,
+      file_type,
+      lines_scanned: body_lines.length
     }
   }
+
+  // Non-markdown files: scan full content
+  const lines = content.split('\n')
+  findings.push(...scan_lines(lines, 'body'))
 
   return {
     findings,

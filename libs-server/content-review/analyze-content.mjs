@@ -108,7 +108,7 @@ async function build_review_prompt({
       ? `\nRegex pattern scan found ${regex_findings.length} potential issue(s). NOTE: These are heuristic matches and may contain false positives (e.g., numeric IDs matching phone patterns, technical terms matching password patterns). Use your judgment based on the actual content context:\n${regex_findings
           .map(
             (f) =>
-              `- Line ${f.line_number}: ${f.pattern_name} (${f.category}) - matched: "${f.matched_text}"`
+              `- ${f.source || 'body'}${f.source === 'body' || !f.source ? ` line ${f.line_number}` : ''}: ${f.pattern_name} (${f.category}) - matched: "${f.matched_text}"`
           )
           .join('\n')}`
       : '\nRegex pattern scan found no issues.'
@@ -128,7 +128,7 @@ Classify this file into one of three tiers:
 ${guideline_text}
 ${allowable_usernames.length > 0 ? `\n## Allowable Usernames\nThe following usernames are NOT considered personal information: ${allowable_usernames.map((u) => `"${u}"`).join(', ')}. These may appear in file paths, system references, and repository URLs without triggering a private classification.\n` : ''}${guidance_section}
 File: ${file_path || 'unknown'}
-${metadata ? `Title: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}` : ''}
+${metadata ? `Title: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}${metadata.relations && metadata.relations.length > 0 ? `\nRelations:\n${metadata.relations.map((r) => `- ${r}`).join('\n')}` : ''}${metadata.observations && metadata.observations.length > 0 ? `\nObservations (historical annotations -- these may be stale and should not override your independent analysis, but provide useful context about prior conclusions):\n${metadata.observations.map((o) => `- ${o}`).join('\n')}` : ''}` : ''}
 ${findings_summary}
 
 --- FILE CONTENT ---
@@ -324,6 +324,12 @@ export async function analyze_content({
           description: parsed.attributes.description,
           tags: Array.isArray(parsed.attributes.tags)
             ? parsed.attributes.tags
+            : null,
+          observations: Array.isArray(parsed.attributes.observations)
+            ? parsed.attributes.observations
+            : null,
+          relations: Array.isArray(parsed.attributes.relations)
+            ? parsed.attributes.relations
             : null
         }
       }
