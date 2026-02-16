@@ -52,8 +52,9 @@ Scan files and threads to determine visibility tier, then persist that classific
 
 ### Analysis Pipeline
 
-Two-stage analysis runs per file:
+Analysis runs per file with an optional pre-filter:
 
+0. **Forced-private check** -- files matching `forced_private_patterns` globs in `config/content-review-config.json` are classified as private immediately, skipping all analysis. Used for directories that must never be public regardless of content (e.g., `identity/**`, `role/**`).
 1. **Regex scan** -- pattern-based detection using externalized patterns from `config/sensitive-patterns.json`. Markdown files have YAML frontmatter stripped before scanning to reduce false positives.
 2. **LLM semantic analysis** -- local Ollama model classifies content using structured JSON output. Falls back to regex-only when LLM is unavailable or content exceeds size limit.
 

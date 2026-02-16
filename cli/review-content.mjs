@@ -27,6 +27,7 @@ import {
   analyze_content,
   analyze_thread
 } from '#libs-server/content-review/analyze-content.mjs'
+import { load_review_config } from '#libs-server/content-review/review-config.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { list_thread_ids } from '#libs-server/threads/list-threads.mjs'
@@ -68,6 +69,19 @@ async function has_entity_frontmatter(file_path) {
 async function filter_entity_files(file_paths) {
   const checks = await Promise.all(file_paths.map(has_entity_frontmatter))
   return file_paths.filter((_, i) => checks[i])
+}
+
+/**
+ * Check if a relative path matches any forced_private_patterns from config.
+ * Returns the matching pattern or null.
+ */
+function check_forced_private(relative_path, matchers) {
+  for (const { pattern, match } of matchers) {
+    if (match(relative_path)) {
+      return pattern
+    }
+  }
+  return null
 }
 
 // ============================================================================
@@ -478,6 +492,15 @@ async function main() {
 
   const { entity_files, thread_ids } = await discover_items(target_path)
   const thread_base = get_thread_base_directory()
+  const user_base = get_user_base_directory()
+
+  // Build forced-private matchers from config
+  const review_config = await load_review_config()
+  const forced_private_patterns = review_config.forced_private_patterns || []
+  const forced_private_matchers = forced_private_patterns.map((pattern) => ({
+    pattern,
+    match: picomatch(pattern)
+  }))
 
   const total_items = entity_files.length + thread_ids.length
   if (total_items === 0) {
@@ -525,7 +548,7 @@ async function main() {
       summary.skipped++
       if (options.show_progress) {
         process.stderr.write(
-          `[${scanned}/${total_items}] Skipped (resume): ${path.relative(get_user_base_directory(), file_path)}\n`
+          `[${scanned}/${total_items}] Skipped (resume): ${path.relative(user_base, file_path)}\n`
         )
       }
       continue
@@ -536,7 +559,48 @@ async function main() {
       summary.skipped++
       if (options.show_progress) {
         process.stderr.write(
-          `[${scanned}/${total_items}] Skipped (already analyzed): ${path.relative(get_user_base_directory(), file_path)}\n`
+          `[${scanned}/${total_items}] Skipped (already analyzed): ${path.relative(user_base, file_path)}\n`
+        )
+      }
+      continue
+    }
+
+    // Check forced-private patterns (skip analysis, classify as private directly)
+    const relative_path = path.relative(user_base, file_path)
+    const forced_pattern = check_forced_private(
+      relative_path,
+      forced_private_matchers
+    )
+    if (forced_pattern) {
+      const forced_result = {
+        file_path,
+        classification: 'private',
+        confidence: 1.0,
+        reasoning: `Matched forced_private_patterns: "${forced_pattern}"`,
+        method: 'forced_private',
+        regex_findings: [],
+        findings: []
+      }
+      results.push(forced_result)
+      summary.private++
+
+      if (options.output_path) {
+        await append_jsonl(options.output_path, forced_result)
+      }
+
+      if (options.apply_visibility) {
+        const vis_result = await apply_visibility(
+          file_path,
+          'private',
+          options.dry_run,
+          { visibility_reason: forced_result.reasoning }
+        )
+        summary.visibility_changes.push(vis_result)
+      }
+
+      if (options.show_progress) {
+        process.stderr.write(
+          `[${scanned}/${total_items}] Forced private: ${relative_path} (pattern: ${forced_pattern})\n`
         )
       }
       continue
@@ -544,7 +608,7 @@ async function main() {
 
     if (options.show_progress) {
       process.stderr.write(
-        `[${scanned}/${total_items}] Scanning: ${path.relative(get_user_base_directory(), file_path)}\n`
+        `[${scanned}/${total_items}] Scanning: ${path.relative(user_base, file_path)}\n`
       )
     }
 
@@ -609,6 +673,47 @@ async function main() {
       continue
     }
 
+    // Check forced-private patterns for thread directories
+    const thread_relative = path.relative(user_base, thread_dir)
+    const forced_thread_pattern = check_forced_private(
+      thread_relative,
+      forced_private_matchers
+    )
+    if (forced_thread_pattern) {
+      const forced_result = {
+        thread_dir,
+        classification: 'private',
+        confidence: 1.0,
+        reasoning: `Matched forced_private_patterns: "${forced_thread_pattern}"`,
+        method: 'forced_private',
+        total_regex_findings: 0,
+        file_results: []
+      }
+      results.push(forced_result)
+      summary.private++
+
+      if (options.output_path) {
+        await append_jsonl(options.output_path, forced_result)
+      }
+
+      if (options.apply_visibility) {
+        const vis_result = await apply_visibility(
+          metadata_path,
+          'private',
+          options.dry_run,
+          { visibility_reason: forced_result.reasoning }
+        )
+        summary.visibility_changes.push(vis_result)
+      }
+
+      if (options.show_progress) {
+        process.stderr.write(
+          `[${scanned}/${total_items}] Forced private thread: ${uuid} (pattern: ${forced_thread_pattern})\n`
+        )
+      }
+      continue
+    }
+
     if (options.show_progress) {
       process.stderr.write(
         `[${scanned}/${total_items}] Scanning thread: ${uuid}\n`
@@ -665,7 +770,6 @@ async function main() {
   // Rule proposals
   let rule_proposals = []
   if (options.propose_rules) {
-    const user_base = get_user_base_directory()
     const public_reader_path = path.join(user_base, 'role', 'public-reader.md')
     const acquaintance_path = path.join(user_base, 'role', 'acquaintance.md')
 
@@ -721,7 +825,6 @@ async function main() {
 
     if (results.length > 0) {
       console.log('\n--- Per-File Classifications ---\n')
-      const user_base = get_user_base_directory()
       for (const r of results) {
         const rel_path = path.relative(
           user_base,
@@ -738,7 +841,7 @@ async function main() {
     if (options.apply_visibility && summary.visibility_changes.length > 0) {
       console.log('\n--- Visibility Changes ---\n')
       for (const vc of summary.visibility_changes) {
-        const rel = path.relative(get_user_base_directory(), vc.file_path)
+        const rel = path.relative(user_base, vc.file_path)
         const prefix = vc.dry_run ? '[DRY RUN] ' : ''
         console.log(`  ${prefix}${rel} -> public_read: ${vc.public_read}`)
       }

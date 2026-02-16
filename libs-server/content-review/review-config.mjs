@@ -22,7 +22,8 @@ const DEFAULT_CONFIG = {
     private:
       'Contains personal information, secrets, credentials, infrastructure details, or other sensitive content that must remain restricted. Includes PII, financial records, property addresses, network topology, authentication credentials, and insurance/legal documents.'
   },
-  guidance_notes: []
+  guidance_notes: [],
+  forced_private_patterns: []
 }
 
 let cached_config = null
