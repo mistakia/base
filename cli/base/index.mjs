@@ -163,17 +163,10 @@ async function handle_scan(argv) {
     const folder_adapter = await get_folders_adapter()
 
     // Clear existing records for this scan scope before inserting
-    // Use base_uri prefix from scan results to scope the clear
-    const uri_prefix =
-      files.length > 0
-        ? get_common_uri_prefix(files)
-        : get_uri_prefix_for_source(source)
+    // Derive prefix from scan options (not data) to ensure full scope is cleared
+    const uri_prefix = get_scan_uri_prefix(source, argv)
     await clear_records_by_prefix(file_adapter, 'file_index', uri_prefix)
-    const folder_uri_prefix =
-      folders.length > 0
-        ? get_common_uri_prefix(folders)
-        : get_uri_prefix_for_source(source)
-    await clear_records_by_prefix(folder_adapter, 'folders', folder_uri_prefix)
+    await clear_records_by_prefix(folder_adapter, 'folders', uri_prefix)
 
     // Deduplicate files by base_uri (Google Drive can return duplicates)
     if (files.length > 0) {
@@ -297,28 +290,23 @@ async function clear_records_by_prefix(adapter, table_name, uri_prefix) {
 }
 
 /**
- * Get common URI prefix from a set of records
+ * Build URI prefix from scan options for scoped clearing
  */
-function get_common_uri_prefix(records) {
-  if (records.length === 0) return ''
-  const first = records[0].base_uri
-  // Find the scheme + host + first path segment
-  // e.g., "ssh://storage/mnt/md0/arrin/" -> "ssh://storage/mnt/md0/arrin/"
-  // e.g., "gdrive://tintmail/documents/" -> "gdrive://tintmail/documents/"
-  let prefix = first
-  for (let i = 1; i < Math.min(records.length, 100); i++) {
-    while (!records[i].base_uri.startsWith(prefix)) {
-      const last_slash = prefix.lastIndexOf('/')
-      if (last_slash <= prefix.indexOf('://') + 2) break
-      prefix = prefix.slice(0, last_slash + 1)
+function get_scan_uri_prefix(source, argv) {
+  const scan_path = argv.path
+  switch (source) {
+    case 'ssh': {
+      const host = argv.host || 'storage'
+      const trailing = scan_path?.endsWith('/') ? scan_path : scan_path + '/'
+      return scan_path ? `ssh://${host}${trailing}` : `ssh://${host}/`
     }
+    case 'local':
+      return scan_path ? `file://${scan_path}` : 'file://'
+    case 'gdrive':
+      return scan_path ? `gdrive://${scan_path}` : 'gdrive://'
+    default:
+      return get_uri_prefix_for_source(source)
   }
-  // Ensure prefix ends at a path boundary
-  if (!prefix.endsWith('/')) {
-    const last_slash = prefix.lastIndexOf('/')
-    prefix = prefix.slice(0, last_slash + 1)
-  }
-  return prefix
 }
 
 function get_uri_prefix_for_source(source) {
