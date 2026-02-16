@@ -160,12 +160,15 @@ function classify_from_regex(findings) {
     (f) => f.category === 'pii' || f.category === 'personal_names'
   )
   const has_financial = findings.some((f) => f.category === 'financial')
+  const has_personal_property = findings.some(
+    (f) => f.category === 'personal_property'
+  )
 
-  if (has_secrets || has_pii || has_financial) {
+  if (has_secrets || has_pii || has_financial || has_personal_property) {
     return {
       classification: 'private',
       confidence: 0.7,
-      reasoning: `Regex found ${has_secrets ? 'secrets' : ''}${has_pii ? ' PII' : ''}${has_financial ? ' financial data' : ''} patterns.`
+      reasoning: `Regex found ${has_secrets ? 'secrets' : ''}${has_pii ? ' PII' : ''}${has_financial ? ' financial data' : ''}${has_personal_property ? ' personal property' : ''} patterns.`
     }
   }
 

@@ -40,6 +40,7 @@ import * as role_command from './base/role.mjs'
 import * as permission_command from './base/permission.mjs'
 import * as setup_command from './base/setup.mjs'
 import * as review_command from './base/review.mjs'
+import * as index_command from './base/index.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const main = async () => {
@@ -63,6 +64,7 @@ const main = async () => {
     .command(permission_command)
     .command(setup_command)
     .command(review_command)
+    .command(index_command)
     .command(init_command)
     .option('json', {
       describe: 'Output as JSON',

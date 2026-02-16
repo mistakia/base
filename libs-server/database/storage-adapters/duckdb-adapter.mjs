@@ -501,6 +501,13 @@ export function create_duckdb_adapter(database_entity) {
     },
 
     /**
+     * Execute arbitrary SQL (for bulk operations like filtered deletes)
+     */
+    async execute({ query, parameters = [] }) {
+      await run_execute({ query, parameters })
+    },
+
+    /**
      * Close adapter and release resources
      */
     async close() {

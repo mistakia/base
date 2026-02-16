@@ -118,7 +118,11 @@ export const builder = (yargs) =>
  */
 async function ensure_index() {
   if (!embedded_index_manager.initialized) {
-    await embedded_index_manager.initialize()
+    try {
+      await embedded_index_manager.initialize({ read_only: true })
+    } catch {
+      // DuckDB may be locked by base-api; database commands fall back to filesystem
+    }
   }
 }
 
