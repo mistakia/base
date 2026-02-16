@@ -10,6 +10,7 @@ globs:
 observations:
   - '[standard] Proper entity type selection ensures data consistency'
   - '[governance] Entity types determine required fields and validation rules'
+public_read: true
 relations:
   - implements [[sys:system/schema/entity.md]]
   - related_to [[sys:system/guideline/write-entity.md]]
@@ -17,6 +18,7 @@ relations:
   - related_to [[sys:system/guideline/write-task.md]]
 updated_at: '2026-01-05T19:25:13.919Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+visibility_analyzed_at: '2026-02-16T04:25:55.599Z'
 ---
 
 # Choose Entity Type

@@ -36,6 +36,41 @@ import { list_files_recursive } from '#libs-server/repository/filesystem/list-fi
 const log = debug('cli:review-content')
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Check if a file has YAML frontmatter with a type field (i.e., is an entity).
+ * Reads only the first 1KB to avoid loading large files.
+ */
+async function has_entity_frontmatter(file_path) {
+  let fd
+  try {
+    fd = await fs.open(file_path, 'r')
+    const buffer = Buffer.alloc(1024)
+    const { bytesRead: bytes_read } = await fd.read(buffer, 0, 1024, 0)
+    const head = buffer.toString('utf8', 0, bytes_read)
+    if (!head.startsWith('---')) return false
+    const end = head.indexOf('\n---', 3)
+    if (end === -1) return false
+    const frontmatter = head.substring(3, end)
+    return /^type:\s*\S+/m.test(frontmatter)
+  } catch {
+    return false
+  } finally {
+    if (fd) await fd.close().catch(() => {})
+  }
+}
+
+/**
+ * Filter a list of markdown file paths to only include entity files.
+ */
+async function filter_entity_files(file_paths) {
+  const checks = await Promise.all(file_paths.map(has_entity_frontmatter))
+  return file_paths.filter((_, i) => checks[i])
+}
+
+// ============================================================================
 // File Discovery
 // ============================================================================
 
@@ -89,7 +124,8 @@ async function discover_items(target_path) {
       }),
       list_thread_ids()
     ])
-    return { entity_files: md_files, thread_ids: ids }
+    const entity_files = await filter_entity_files(md_files)
+    return { entity_files, thread_ids: ids }
   }
 
   // Entity directory only (e.g., task/, guideline/)
@@ -98,7 +134,8 @@ async function discover_items(target_path) {
     file_extension: '.md',
     absolute_paths: true
   })
-  return { entity_files: md_files, thread_ids: [] }
+  const entity_files = await filter_entity_files(md_files)
+  return { entity_files, thread_ids: [] }
 }
 
 // ============================================================================
