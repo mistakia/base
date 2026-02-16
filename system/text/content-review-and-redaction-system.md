@@ -55,29 +55,9 @@ Scan files and threads to determine visibility tier, then persist that classific
 Two-stage analysis runs per file:
 
 1. **Regex scan** -- pattern-based detection using externalized patterns from `config/sensitive-patterns.json`. Markdown files have YAML frontmatter stripped before scanning to reduce false positives.
-2. **LLM semantic analysis** -- local Ollama model classifies content using structured JSON output (classification, confidence, reasoning, findings). Falls back to regex-only when LLM is unavailable or content exceeds size limit.
+2. **LLM semantic analysis** -- local Ollama model classifies content using structured JSON output. Falls back to regex-only when LLM is unavailable or content exceeds size limit.
 
-Guidelines loaded during LLM analysis:
-
-- `sys:system/guideline/review-for-personal-information.md`
-- `sys:system/guideline/review-for-secret-information.md`
-
-### Key Files
-
-| File                                             | Role                                                                                                                              |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `cli/review-content.mjs`                         | CLI entry point. Accepts file, directory, or glob. Supports `--regex-only`, `--apply-visibility`, `--propose-rules`, `--dry-run`. |
-| `libs-server/content-review/analyze-content.mjs` | Core analysis: regex + LLM pipeline, thread analysis                                                                              |
-| `libs-server/content-review/pattern-scanner.mjs` | Compiles and runs regex patterns from config                                                                                      |
-| `libs-server/content-review/review-config.mjs`   | Loads and merges config (system defaults + user overlay from `config/content-review-config.json`)                                 |
-
-### Configuration (User-Base)
-
-| File                                | Purpose                                                               |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| `config/sensitive-patterns.json`    | Regex patterns organized by category (PII, secrets, financial)        |
-| `config/content-review-config.json` | LLM model, timeouts, tier definitions, guidance notes, guideline URIs |
-| `config/content-review-benchmarks/` | Evaluation data for tuning classification accuracy                    |
+Guidelines loaded during LLM analysis are referenced via the entity relations on this document.
 
 ### Operational Workflow
 
@@ -86,8 +66,6 @@ The review workflow (`sys:system/workflow/review-for-non-public-information.md`)
 1. **Regex-only pass** -- fast first scan to identify files needing deeper analysis
 2. **LLM semantic review** -- full classification with parallel agents for large directories
 3. **Apply visibility** -- write `public_read` and `visibility_analyzed_at` to entities; optionally propose role permission rule changes
-
-The `--apply-visibility` flag writes metadata; `--propose-rules` suggests additions to role entities like `role/public-reader.md` and `role/acquaintance.md`.
 
 ## Content Redaction (API Response Masking)
 
@@ -100,29 +78,11 @@ When a user lacks read permission for a resource, return a redacted response tha
 ### How It Works
 
 1. Permission middleware sets `req.access.read_allowed` based on identity, role rules, and entity `public_read`
-2. Response interceptor (`apply_redaction_interceptor`) wraps `res.json` to check access
+2. Response interceptor wraps `res.json` to check access
 3. If read denied, content-type-aware redaction replaces sensitive values with block characters (`U+2588`)
 4. Redacted responses include `is_redacted: true` flag
 
-### Redaction Strategies by Content Type
-
-- **Text/code**: replace non-whitespace with block chars, preserve word boundaries and indentation
-- **Markdown**: AST-aware redaction via remark -- preserves headings, lists, formatting structure
-- **Paths/URIs**: preserve directory separators, extensions, hyphen positions
-- **Relations**: preserve relation type and bracket structure, redact URIs
-- **Entity properties**: type-aware -- timestamps keep shape, UUIDs keep dash positions, booleans become false, numbers become 9999
-
-### Key Files
-
-| File                                                           | Role                                                                          |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `server/middleware/content-redactor.mjs`                       | All redaction functions (text, code, markdown, entities, threads, timelines)  |
-| `server/middleware/permissions.mjs`                            | Response interceptor that triggers redaction based on `req.access`            |
-| `client/views/components/primitives/styled/RedactedContent.js` | React component for rendering redacted content with restricted-access styling |
-
-### Timeline Redaction
-
-Thread timelines receive entry-type-specific redaction: message content, tool parameters (preserving structural params like `limit`/`offset`), tool results, thinking content, and state change metadata are all redacted independently.
+Redaction is type-aware: text preserves word boundaries, markdown preserves AST structure, paths preserve separators, and entity properties preserve type shapes (timestamp format, UUID dashes, etc.).
 
 ## Integration Between Subsystems
 

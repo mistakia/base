@@ -106,32 +106,30 @@ async function discover_items(target_path) {
 // ============================================================================
 
 /**
- * Check if a file has already been analyzed (has visibility_analyzed_at newer than updated_at)
+ * Check if a file has already been analyzed (visibility_analyzed_at >= updated_at)
  */
 async function is_already_analyzed(file_path) {
   try {
+    let visibility_analyzed_at = null
+    let updated_at = null
+
     if (file_path.endsWith('.md')) {
       const result = await read_entity_from_filesystem({
         absolute_path: file_path
       })
-      const props = result.entity_properties
-      if (
-        props.visibility_analyzed_at &&
-        props.updated_at &&
-        new Date(props.visibility_analyzed_at) >= new Date(props.updated_at)
-      ) {
-        return true
-      }
+      visibility_analyzed_at = result.entity_properties.visibility_analyzed_at
+      updated_at = result.entity_properties.updated_at
     } else if (file_path.endsWith('metadata.json')) {
       const content = JSON.parse(await fs.readFile(file_path, 'utf8'))
-      if (
-        content.visibility_analyzed_at &&
-        content.updated_at &&
-        new Date(content.visibility_analyzed_at) >= new Date(content.updated_at)
-      ) {
-        return true
-      }
+      visibility_analyzed_at = content.visibility_analyzed_at
+      updated_at = content.updated_at
     }
+
+    if (!visibility_analyzed_at || !updated_at) {
+      return false
+    }
+
+    return new Date(visibility_analyzed_at) >= new Date(updated_at)
   } catch {
     // If we can't read the file, it hasn't been analyzed
   }
