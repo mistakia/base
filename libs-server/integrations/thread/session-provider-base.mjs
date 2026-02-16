@@ -120,30 +120,6 @@ export class SessionProviderBase {
   }
 
   /**
-   * Build timeline entries from session messages
-   * Optional method - can be overridden by subclasses that need custom timeline building
-   *
-   * @param {Object} params - Parameters object
-   * @param {Array} params.messages - Array of session messages
-   * @param {Object} params.session_metadata - Session metadata (optional)
-   * @returns {Array} Array of timeline entries
-   */
-  build_timeline_entries({ messages, session_metadata = {} }) {
-    // Default implementation - subclasses can override for provider-specific logic
-    return messages.map((message, index) => ({
-      id: message.id || `msg_${index}`,
-      timestamp: message.timestamp || new Date().toISOString(),
-      type: 'message',
-      provider: this.provider_name,
-      data: {
-        role: message.role || 'unknown',
-        content: message.content || '',
-        ...message
-      }
-    }))
-  }
-
-  /**
    * Generate thread metadata for session
    * Optional method - can be overridden by subclasses for provider-specific metadata
    *

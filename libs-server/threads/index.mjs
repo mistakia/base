@@ -11,13 +11,7 @@ import {
   update_thread_state,
   update_thread_metadata
 } from './update-thread.mjs'
-import add_timeline_entry, {
-  add_user_message,
-  add_assistant_message,
-  add_tool_call,
-  add_tool_result,
-  add_error
-} from './add-timeline-entry.mjs'
+import add_timeline_entry from './add-timeline-entry.mjs'
 const log = debug('threads')
 
 log('Initializing threads module')
@@ -34,12 +28,7 @@ export {
   update_thread_metadata,
 
   // Timeline operations
-  add_timeline_entry,
-  add_user_message,
-  add_assistant_message,
-  add_tool_call,
-  add_tool_result,
-  add_error
+  add_timeline_entry
 }
 
 /**
@@ -51,10 +40,5 @@ export default {
   list_threads,
   update_thread_state,
   update_thread_metadata,
-  add_timeline_entry,
-  add_user_message,
-  add_assistant_message,
-  add_tool_call,
-  add_tool_result,
-  add_error
+  add_timeline_entry
 }

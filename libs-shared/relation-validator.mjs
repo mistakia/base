@@ -19,7 +19,7 @@ export const VALID_BASE_URI_PREFIXES = [
 /**
  * Invalid pseudo-schemes that look like valid URIs but are not supported
  */
-export const INVALID_PSEUDO_SCHEMES = [
+const INVALID_PSEUDO_SCHEMES = [
   'thread:',
   'entity:',
   'scheme:',
@@ -70,7 +70,7 @@ const PLACEHOLDER_PATTERN_REGEX =
 /**
  * Validation error reasons
  */
-export const VALIDATION_ERRORS = {
+const VALIDATION_ERRORS = {
   MISSING_PREFIX: 'missing_valid_prefix',
   INVALID_PSEUDO_SCHEME: 'invalid_pseudo_scheme',
   TEMPLATE_SYNTAX: 'template_syntax',
@@ -107,7 +107,7 @@ function has_invalid_pseudo_scheme(base_uri) {
  * @param {string} params.base_uri - The base_uri to validate
  * @returns {string|null} Error reason string, or null if valid
  */
-export function get_validation_error({ base_uri }) {
+function get_validation_error({ base_uri }) {
   if (!base_uri || typeof base_uri !== 'string') {
     return VALIDATION_ERRORS.EMPTY_OR_INVALID
   }

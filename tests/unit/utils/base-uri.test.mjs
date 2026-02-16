@@ -3,8 +3,6 @@ import { expect } from 'chai'
 import {
   create_system_uri,
   create_user_uri,
-  create_ssh_uri,
-  create_git_uri,
   parse_base_uri,
   is_valid_base_uri,
   resolve_base_uri,
@@ -35,36 +33,6 @@ describe('Base URI Utilities', () => {
       expect(create_user_uri('task/my-task.md/')).to.equal(
         'user:task/my-task.md'
       )
-    })
-  })
-
-  describe('create_ssh_uri', () => {
-    it('should create SSH URI with clean path', () => {
-      expect(
-        create_ssh_uri({ host_name: 'database', remote_path: '/etc/config.md' })
-      ).to.equal('ssh://database/etc/config.md')
-      expect(
-        create_ssh_uri({ host_name: 'league', remote_path: 'var/www/api.md' })
-      ).to.equal('ssh://league/var/www/api.md')
-    })
-  })
-
-  describe('create_git_uri', () => {
-    it('should create git URI without branch', () => {
-      const result = create_git_uri({
-        repo_url: 'github.com/owner/repo',
-        file_path: 'docs/api.md'
-      })
-      expect(result).to.equal('git://github.com/owner/repo/docs/api.md')
-    })
-
-    it('should create git URI with branch', () => {
-      const result = create_git_uri({
-        repo_url: 'github.com/owner/repo',
-        file_path: 'docs/api.md',
-        branch: 'main'
-      })
-      expect(result).to.equal('git://github.com/owner/repo/docs/api.md@main')
     })
   })
 

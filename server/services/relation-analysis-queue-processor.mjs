@@ -57,7 +57,7 @@ const processor = new FileBasedQueueProcessor({
  * @param {Object} [params] - Configuration parameters
  * @returns {Object} Watcher instance
  */
-export const start_relation_analysis_queue_processor = (params = {}) => {
+export const start_relation_analysis_queue_processor = () => {
   return processor.start()
 }
 
