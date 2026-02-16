@@ -18,6 +18,7 @@ import Routes from './routes.js'
 import DialogContainer from '@components/DialogContainer'
 import Notification from '@components/Notification'
 import GlobalThreadInput from '@components/GlobalThreadInput'
+import FloatingSessionsPanel from '@components/FloatingSessionsPanel/FloatingSessionsPanel.js'
 import CommandPalette from '@components/CommandPalette'
 import { get_notification_info } from '@core/notification/selectors'
 
@@ -257,6 +258,7 @@ const Root = () => {
             <DialogContainer />
             <NotificationContainer />
             <ThreadPromptContainer />
+            <FloatingSessionsPanel />
             <SearchPaletteContainer />
           </AppInitializer>
         </ThemeProvider>

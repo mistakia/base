@@ -84,7 +84,8 @@ const build_session_key = (session_id) => {
 export const register_active_session = async ({
   session_id,
   working_directory,
-  transcript_path
+  transcript_path,
+  job_id
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
@@ -97,6 +98,7 @@ export const register_active_session = async ({
     latest_timeline_event: null,
     working_directory,
     transcript_path,
+    job_id: job_id || null,
     started_at: new Date().toISOString(),
     last_activity_at: new Date().toISOString()
   }
@@ -126,6 +128,7 @@ export const register_active_session = async ({
  * @param {number} [params.duration_minutes] - Duration in minutes
  * @param {number} [params.total_tokens] - Total token count
  * @param {string} [params.source_provider] - Source provider name
+ * @param {string} [params.job_id] - BullMQ job ID for client correlation
  * @returns {Promise<Object|null>} Updated session record or null if not found
  */
 export const update_active_session = async ({
@@ -139,7 +142,8 @@ export const update_active_session = async ({
   message_count,
   duration_minutes,
   total_tokens,
-  source_provider
+  source_provider,
+  job_id
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
@@ -161,6 +165,7 @@ export const update_active_session = async ({
       session.duration_minutes = duration_minutes
     if (total_tokens !== undefined) session.total_tokens = total_tokens
     if (source_provider !== undefined) session.source_provider = source_provider
+    if (job_id !== undefined) session.job_id = job_id
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)
@@ -176,6 +181,7 @@ export const update_active_session = async ({
       duration_minutes: duration_minutes || null,
       total_tokens: total_tokens || null,
       source_provider: source_provider || null,
+      job_id: job_id || null,
       started_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString()
     }

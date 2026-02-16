@@ -6,6 +6,7 @@ import {
   close_redis_connection
 } from '#libs-server/redis/get-connection.mjs'
 import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
+import { emit_thread_job_failed } from '#libs-server/active-sessions/index.mjs'
 import { create_session_claude_cli } from './create-session-claude-cli.mjs'
 
 const log = debug('threads:worker')
@@ -59,6 +60,7 @@ const process_thread_creation_job = async (job) => {
       user_public_key,
       session_id,
       thread_id,
+      job_id: job.id,
       execution_mode
     })
 
@@ -102,6 +104,13 @@ const handle_job_completed = async (job, result) => {
 
 const handle_job_failed = (job, error) => {
   log(`Job ${job.id}: failed -`, error.message)
+
+  emit_thread_job_failed({
+    job_id: job.id,
+    error_message: error.message
+  }).catch((emit_error) => {
+    log(`Job ${job.id}: failed to emit THREAD_JOB_FAILED -`, emit_error.message)
+  })
 }
 
 const handle_job_active = (job) => {

@@ -49,6 +49,50 @@ export function get_active_sessions_error(state) {
   return get_active_sessions_state(state).get('error')
 }
 
+export function get_pending_sessions(state) {
+  const active_sessions_state = get_active_sessions_state(state)
+  const pending_map = active_sessions_state.get('pending_sessions')
+
+  if (!pending_map || pending_map.size === 0) {
+    return []
+  }
+
+  return pending_map
+    .valueSeq()
+    .map((session) => (session.toJS ? session.toJS() : session))
+    .toArray()
+}
+
+export const get_all_sessions_with_pending = createSelector(
+  [get_active_sessions_state],
+  (active_sessions_state) => {
+    const sessions_map = active_sessions_state.get('sessions')
+    const pending_map = active_sessions_state.get('pending_sessions')
+
+    const active = sessions_map
+      ? sessions_map
+          .valueSeq()
+          .map((s) => {
+            const session_js = s.toJS ? s.toJS() : s
+            return { ...session_js, is_pending: false }
+          })
+          .toArray()
+      : []
+
+    const pending = pending_map
+      ? pending_map
+          .valueSeq()
+          .map((s) => {
+            const session_js = s.toJS ? s.toJS() : s
+            return { ...session_js, is_pending: true }
+          })
+          .toArray()
+      : []
+
+    return [...pending, ...active]
+  }
+)
+
 // Memoized selector for active sessions with thread info
 export const get_active_sessions_with_details = createSelector(
   [get_active_sessions_state],

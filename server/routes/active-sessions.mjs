@@ -224,7 +224,7 @@ router.get('/:session_id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   const { log } = req.app.locals
-  const { session_id, working_directory, transcript_path } = req.body
+  const { session_id, working_directory, transcript_path, job_id } = req.body
 
   if (!session_id) {
     return res.status(400).json({
@@ -238,7 +238,8 @@ router.post('/', async (req, res) => {
     const session = await register_active_session({
       session_id,
       working_directory,
-      transcript_path
+      transcript_path,
+      job_id
     })
 
     // Try to find an associated thread
@@ -294,7 +295,8 @@ router.post('/', async (req, res) => {
 router.put('/:session_id', async (req, res) => {
   const { log } = req.app.locals
   const { session_id } = req.params
-  const { status, thread_id, working_directory, transcript_path } = req.body
+  const { status, thread_id, working_directory, transcript_path, job_id } =
+    req.body
 
   try {
     // Update (or upsert) the session
@@ -303,7 +305,8 @@ router.put('/:session_id', async (req, res) => {
       status,
       thread_id,
       working_directory,
-      transcript_path
+      transcript_path,
+      job_id
     })
 
     // If no thread_id yet, try to find one
