@@ -257,6 +257,24 @@ async function warm_activity_cache() {
  * Warm the tasks cache for public requests
  * Uses DuckDB when available for faster queries, falls back to filesystem.
  */
+/**
+ * Convert flat DuckDB task row to nested entity format expected by route handlers.
+ * Filesystem results already have entity_properties/file_info structure.
+ */
+function normalize_duckdb_task(task) {
+  // Already in nested format (from filesystem)
+  if (task.entity_properties) return task
+
+  // Convert flat DuckDB row to nested structure
+  return {
+    entity_properties: { ...task },
+    file_info: {
+      base_uri: task.base_uri,
+      absolute_path: null
+    }
+  }
+}
+
 async function warm_tasks_cache() {
   try {
     log('Warming tasks cache')
@@ -267,12 +285,15 @@ async function warm_tasks_cache() {
       fallback_fn: () => list_tasks_from_filesystem({ archived: false })
     })
 
+    // Normalize to nested entity format (DuckDB returns flat rows)
+    const normalized = all_tasks.map(normalize_duckdb_task)
+
     cache.tasks = {
-      data: all_tasks,
+      data: normalized,
       timestamp: Date.now()
     }
 
-    log('Tasks cache warmed (%d tasks)', all_tasks.length)
+    log('Tasks cache warmed (%d tasks)', normalized.length)
   } catch (error) {
     log('Failed to warm tasks cache: %s', error.message)
   }
