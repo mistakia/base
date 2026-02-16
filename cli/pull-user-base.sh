@@ -6,13 +6,15 @@
 #
 # Behavior:
 # 1. Fetches from remote
-# 2. Handles divergence scenarios:
+# 2. Stashes dirty working tree (submodule pointers, etc.) before rebase
+# 3. Handles divergence scenarios:
 #    - Up to date: no-op
 #    - Local behind: rebase local branch on remote
 #    - Local ahead: keep local commits (no push from pull job)
 #    - Diverged: rebase local on remote
-# 3. On rebase failure: abort and exit (requires manual intervention)
-# 4. After successful pull: update submodules
+# 4. Restores stashed changes after rebase
+# 5. On rebase failure: abort, restore stash, and exit
+# 6. After successful pull: update submodules
 
 set -e
 
@@ -58,16 +60,45 @@ LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH")
 MERGE_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
 
-PULLED=false
-
 if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
     echo "Already up to date with remote"
     exit 0
-elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
+elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
+    echo "Local is ahead of remote, leaving local commits unchanged"
+    exit 0
+fi
+
+# Stash dirty working tree before rebase (submodule pointers, uncommitted changes)
+STASHED=0
+if [ -n "$(git status --porcelain)" ]; then
+    STASH_MSG="pull-user-base auto-stash $(date +%Y%m%d-%H%M%S)"
+    echo "Stashing dirty working tree..."
+    if git stash push -m "$STASH_MSG" 2>/dev/null; then
+        STASHED=1
+    else
+        echo "WARNING: Failed to stash, attempting rebase with dirty tree"
+    fi
+fi
+
+restore_stash() {
+    if [ "$STASHED" = "1" ]; then
+        echo "Restoring stashed changes..."
+        if ! git stash pop 2>/dev/null; then
+            echo "WARNING: Stash pop had conflicts, dropping stash to avoid state accumulation"
+            git checkout -- . 2>/dev/null || true
+            git stash drop 2>/dev/null || true
+        fi
+    fi
+}
+
+PULLED=false
+
+if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     echo "Local is behind remote, rebasing on $REMOTE_BRANCH..."
     if ! git rebase "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
+        restore_stash
         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
             --title "User-base sync failed" \
             --message "pull-user-base: rebase failed on $(hostname), manual intervention required" || true
@@ -75,15 +106,12 @@ elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     fi
     echo "Pull completed successfully"
     PULLED=true
-elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
-    echo "Local is ahead of remote, leaving local commits unchanged"
-    exit 0
 else
     echo "Local and remote have diverged, rebasing..."
     if ! git rebase "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
-        echo "Manual intervention required to resolve divergence" >&2
+        restore_stash
         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
             --title "User-base sync failed" \
             --message "pull-user-base: rebase failed (diverged) on $(hostname), manual intervention required" || true
@@ -92,6 +120,8 @@ else
     echo "Rebase completed successfully"
     PULLED=true
 fi
+
+restore_stash
 
 # Update submodules after successful pull
 if [ "$PULLED" = true ]; then
@@ -107,10 +137,10 @@ if [ "$PULLED" = true ]; then
         fi
     done
 
-    # Update submodules but skip thread and import-history (each managed by
-    # their own push/pull cycle via scheduled commands)
-    git submodule update --init --recursive \
+    # Update only the base submodule -- other submodules are managed by
+    # their own push/pull cycles or are not needed on every machine
+    git submodule update --init \
         repository/active/base \
-        2>&1 || echo "WARNING: Some submodule updates failed"
+        2>&1 || echo "WARNING: Submodule update failed"
     echo "Submodule update completed"
 fi

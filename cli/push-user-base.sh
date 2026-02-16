@@ -5,11 +5,8 @@
 #
 # Behavior:
 # 1. Fetches from remote
-# 2. Handles divergence scenarios:
-#    - Local ahead: push directly
-#    - Local behind: pull with rebase, then check for new local commits
-#    - Diverged: rebase local on remote, then push
-# 3. On rebase failure: abort and exit (requires manual intervention)
+# 2. Only pushes if local is strictly ahead of remote
+# 3. Skips if behind or diverged (pull-user-base handles incoming changes)
 
 set -e
 
@@ -37,14 +34,12 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 1
 fi
 
-# Step 1: Fetch from remote
 echo "Fetching from remote..."
 if ! git fetch origin; then
     echo "Failed to fetch from remote" >&2
     exit 1
 fi
 
-# Get current branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 REMOTE_BRANCH="origin/$CURRENT_BRANCH"
 
@@ -56,7 +51,6 @@ if ! git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
     exit 0
 fi
 
-# Step 2: Determine divergence state
 LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH")
 MERGE_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
@@ -64,30 +58,6 @@ MERGE_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
 if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
     echo "Already up to date with remote"
     exit 0
-elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
-    # Local is behind remote - pull with rebase
-    echo "Local is behind remote, pulling with rebase..."
-    if ! git pull --rebase origin "$CURRENT_BRANCH"; then
-        echo "Rebase failed, aborting..." >&2
-        git rebase --abort 2>/dev/null || true
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
-            --title "User-base sync failed" \
-            --message "push-user-base: rebase failed on $(hostname), manual intervention required" || true
-        exit 1
-    fi
-    echo "Pull completed successfully"
-
-    # Check if we now have local commits to push
-    NEW_LOCAL=$(git rev-parse HEAD)
-    NEW_REMOTE=$(git rev-parse "$REMOTE_BRANCH")
-    if [ "$NEW_LOCAL" != "$NEW_REMOTE" ]; then
-        echo "New local commits detected, pushing..."
-        if ! git push origin "$CURRENT_BRANCH"; then
-            echo "Push failed" >&2
-            exit 1
-        fi
-        echo "Push completed successfully"
-    fi
 elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
     # Local is ahead - push directly
     echo "Local is ahead of remote, pushing..."
@@ -96,22 +66,10 @@ elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
         exit 1
     fi
     echo "Push completed successfully"
+elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
+    echo "Local is behind remote, skipping push (pull-user-base will sync)"
+    exit 0
 else
-    # Diverged - rebase local on remote, then push
-    echo "Local and remote have diverged, rebasing..."
-    if ! git rebase "$REMOTE_BRANCH"; then
-        echo "Rebase failed, aborting..." >&2
-        git rebase --abort 2>/dev/null || true
-        echo "Manual intervention required to resolve divergence" >&2
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
-            --title "User-base sync failed" \
-            --message "push-user-base: rebase failed (diverged) on $(hostname), manual intervention required" || true
-        exit 1
-    fi
-    echo "Rebase completed, pushing..."
-    if ! git push origin "$CURRENT_BRANCH"; then
-        echo "Push failed after rebase" >&2
-        exit 1
-    fi
-    echo "Push completed successfully"
+    echo "Local and remote have diverged, skipping push (pull-user-base will sync)"
+    exit 0
 fi
