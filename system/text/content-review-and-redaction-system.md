@@ -60,6 +60,22 @@ Analysis runs per file with an optional pre-filter:
 
 Guidelines loaded during LLM analysis are referenced via the entity relations on this document.
 
+### Thread Review
+
+Threads are multi-file units (unlike single-file entities) and require a distinct review strategy.
+
+**Scanned files per thread:**
+
+| File | Analysis | Rationale |
+| --- | --- | --- |
+| `metadata.json` | regex + LLM | Small file, contains title and session context |
+| `timeline.jsonl` | regex-only by default | Can be very large; LLM opt-in via `--timeline-llm` |
+| `raw-data/*` | opt-in via `--include-raw-data` | Original session imports; usually redundant with timeline |
+
+**Aggregation**: Most-restrictive-wins across all files in a thread. If any file is private, the thread is private.
+
+**Visibility storage**: Thread visibility is persisted as JSON fields in `metadata.json` (`public_read`, `visibility_analyzed_at`), not YAML frontmatter. Timeline entries are not individually classified.
+
 ### Operational Workflow
 
 The review workflow (`sys:system/workflow/review-for-non-public-information.md`) defines a three-phase process:
