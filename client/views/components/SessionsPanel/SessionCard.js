@@ -106,6 +106,7 @@ const SessionCard = ({ item }) => {
   const card_classes = [
     'session-card',
     item.status === 'running' ? 'session-card--running' : '',
+    item.status === 'ended' ? 'session-card--ended' : '',
     item.id ? 'session-card--clickable' : ''
   ]
     .filter(Boolean)
@@ -231,7 +232,7 @@ SessionCard.propTypes = {
   item: PropTypes.shape({
     id: PropTypes.string,
     title: PropTypes.string,
-    status: PropTypes.oneOf(['running', 'idle', 'review', 'archived']),
+    status: PropTypes.oneOf(['running', 'idle', 'review', 'archived', 'ended']),
     created_at: PropTypes.string,
     updated_at: PropTypes.string,
     working_directory: PropTypes.string,

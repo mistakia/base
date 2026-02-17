@@ -12,6 +12,12 @@ const ActiveSessionsState = new Record({
   sessions: new Map(),
   // Map of job_id -> pending session data (tracks sessions before hooks fire)
   pending_sessions: new Map(),
+  // Map of session_id -> ended session data (retained for late THREAD_CREATED correlation)
+  ended_sessions: new Map(),
+  // Map of session_id -> prompt_snippet (persistent, never overwritten by server data)
+  // Populated from pending sessions when they transition to active.
+  // Also keyed by job_id during the pending phase for early lookup.
+  prompt_snippets: new Map(),
   is_loading: false,
   error: null
 })
@@ -36,14 +42,33 @@ export function active_sessions_reducer(
       })
 
     case active_sessions_action_types.GET_ACTIVE_SESSIONS_FULFILLED: {
-      // Convert array to Map keyed by session_id
+      // Convert array to Map keyed by session_id, preserving client-side fields
       const sessions_array = payload.data || []
+      const existing_sessions = state.get('sessions')
       const sessions_map = new Map(
-        sessions_array.map((session) => [session.session_id, Map(session)])
+        sessions_array.map((session) => {
+          const existing = existing_sessions.get(session.session_id)
+          if (existing) {
+            // Merge server data onto existing, preserving client-side fields
+            // like prompt_snippet that the server doesn't know about
+            return [session.session_id, existing.merge(session)]
+          }
+          return [session.session_id, Map(session)]
+        })
       )
+
+      // Remove any ended_sessions that the server still reports as active
+      // to prevent duplicates across both maps
+      let new_ended = state.get('ended_sessions')
+      sessions_array.forEach((session) => {
+        if (new_ended.has(session.session_id)) {
+          new_ended = new_ended.delete(session.session_id)
+        }
+      })
 
       return state.merge({
         sessions: sessions_map,
+        ended_sessions: new_ended,
         is_loading: false,
         error: null
       })
@@ -65,13 +90,34 @@ export function active_sessions_reducer(
       // If session has a job_id matching a pending session, merge and remove from pending
       if (session.job_id && state.hasIn(['pending_sessions', session.job_id])) {
         const pending = state.getIn(['pending_sessions', session.job_id])
+        const snippet = pending.get('prompt_snippet') || null
         const merged_session = {
           ...session,
-          prompt_snippet: pending.get('prompt_snippet') || null
+          prompt_snippet: snippet
         }
-        return state
+        let new_state = state
           .setIn(['sessions', session.session_id], Map(merged_session))
           .deleteIn(['pending_sessions', session.job_id])
+        // Re-key snippet from job_id to session_id (permanent key)
+        if (snippet) {
+          new_state = new_state
+            .deleteIn(['prompt_snippets', session.job_id])
+            .setIn(['prompt_snippets', session.session_id], snippet)
+        }
+        return new_state
+      }
+
+      // No pending match -- check if a prompt_snippet was stored by job_id
+      // (handles race: WS STARTED arrives before HTTP FULFILLED)
+      if (session.job_id) {
+        const snippet = state.getIn(['prompt_snippets', session.job_id])
+        if (snippet) {
+          const merged_session = { ...session, prompt_snippet: snippet }
+          return state
+            .setIn(['sessions', session.session_id], Map(merged_session))
+            .deleteIn(['prompt_snippets', session.job_id])
+            .setIn(['prompt_snippets', session.session_id], snippet)
+        }
       }
 
       return state.setIn(['sessions', session.session_id], Map(session))
@@ -79,12 +125,76 @@ export function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
-      return state.setIn(['sessions', session.session_id], Map(session))
+
+      // If session is in ended_sessions, update there instead of creating a duplicate in sessions
+      if (state.hasIn(['ended_sessions', session.session_id])) {
+        return state.updateIn(['ended_sessions', session.session_id], (existing) =>
+          existing.merge(session)
+        )
+      }
+
+      // Only update if session exists in active sessions; don't create a new entry
+      if (!state.hasIn(['sessions', session.session_id])) {
+        return state
+      }
+
+      return state.updateIn(['sessions', session.session_id], (existing) =>
+        existing.merge(session)
+      )
     }
 
     case active_sessions_action_types.ACTIVE_SESSION_ENDED: {
       const { session_id } = payload
+      const session = state.getIn(['sessions', session_id])
+      if (session) {
+        return state
+          .deleteIn(['sessions', session_id])
+          .setIn(
+            ['ended_sessions', session_id],
+            session.set('status', 'ended')
+          )
+      }
       return state.deleteIn(['sessions', session_id])
+    }
+
+    case active_sessions_action_types.DISMISS_ENDED_SESSION: {
+      const { session_id } = payload
+      return state
+        .deleteIn(['ended_sessions', session_id])
+        .deleteIn(['prompt_snippets', session_id])
+    }
+
+    // ========================================================================
+    // Thread Creation Correlation
+    // ========================================================================
+
+    case threads_action_types.THREAD_CREATED: {
+      const thread = payload.thread
+      const source_session_id = thread?.source?.session_id
+      if (!source_session_id) return state
+
+      // Check active sessions first, then ended sessions
+      if (state.hasIn(['sessions', source_session_id])) {
+        return state.updateIn(['sessions', source_session_id], (session) =>
+          session.merge({
+            thread_id: thread.thread_id,
+            thread_title: thread.title || null
+          })
+        )
+      }
+
+      if (state.hasIn(['ended_sessions', source_session_id])) {
+        return state.updateIn(
+          ['ended_sessions', source_session_id],
+          (session) =>
+            session.merge({
+              thread_id: thread.thread_id,
+              thread_title: thread.title || null
+            })
+        )
+      }
+
+      return state
     }
 
     // ========================================================================
@@ -123,16 +233,28 @@ export function active_sessions_reducer(
     case threads_action_types.CREATE_THREAD_SESSION_PENDING: {
       const { opts } = payload
       const pending_id = `pending-${Date.now()}`
+      const prompt_snippet = (opts.prompt || '').slice(0, 120)
       const pending_session = Map({
         pending_id,
         status: 'queued',
-        prompt_snippet: (opts.prompt || '').slice(0, 120),
+        prompt_snippet,
         working_directory: opts.working_directory || null,
         created_at: new Date().toISOString()
       })
 
       // Store with pending_id as temp key; will be re-keyed on FULFILLED when job_id arrives
-      return state.setIn(['pending_sessions', pending_id], pending_session)
+      let new_state = state.setIn(
+        ['pending_sessions', pending_id],
+        pending_session
+      )
+      // Store prompt_snippet by pending_id for early lookup
+      if (prompt_snippet) {
+        new_state = new_state.setIn(
+          ['prompt_snippets', pending_id],
+          prompt_snippet
+        )
+      }
+      return new_state
     }
 
     case threads_action_types.CREATE_THREAD_SESSION_FULFILLED: {
@@ -153,14 +275,43 @@ export function active_sessions_reducer(
 
       if (pending_entry) {
         const [old_key, pending_session] = pending_entry
+        const snippet = pending_session.get('prompt_snippet')
+
+        // Check if ACTIVE_SESSION_STARTED already arrived via WS (race: WS before HTTP)
+        const existing_active = state
+          .get('sessions')
+          .find((s) => s.get('job_id') === job_id)
+
+        if (existing_active) {
+          // Session already in active state -- backfill prompt_snippet and clean up pending
+          const session_id = existing_active.get('session_id')
+          let new_state = state.deleteIn(['pending_sessions', old_key])
+          if (snippet) {
+            new_state = new_state
+              .setIn(['sessions', session_id, 'prompt_snippet'], snippet)
+              .deleteIn(['prompt_snippets', old_key])
+              .setIn(['prompt_snippets', session_id], snippet)
+          }
+          return new_state
+        }
+
+        // Normal path: re-key pending from pending_id to job_id
         const updated_session = pending_session.merge({
           job_id,
           queue_position: data.queue_position,
           status: 'queued'
         })
-        return state
+        let new_state = state
           .deleteIn(['pending_sessions', old_key])
           .setIn(['pending_sessions', job_id], updated_session)
+
+        // Re-key prompt_snippet from pending_id to job_id
+        if (snippet) {
+          new_state = new_state
+            .deleteIn(['prompt_snippets', old_key])
+            .setIn(['prompt_snippets', job_id], snippet)
+        }
+        return new_state
       }
 
       return state

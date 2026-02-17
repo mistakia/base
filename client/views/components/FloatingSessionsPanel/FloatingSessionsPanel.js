@@ -5,7 +5,8 @@ import { active_sessions_actions } from '@core/active-sessions/actions'
 import {
   get_all_sessions_with_pending,
   get_active_sessions_count,
-  get_pending_sessions
+  get_pending_sessions,
+  get_prompt_snippets
 } from '@core/active-sessions/selectors'
 import { threads_actions } from '@core/threads/actions'
 import SessionCard from '@components/SessionsPanel/SessionCard.js'
@@ -24,6 +25,7 @@ const FloatingSessionsPanel = () => {
   const all_sessions = useSelector(get_all_sessions_with_pending)
   const active_session_count = useSelector(get_active_sessions_count)
   const pending_sessions = useSelector(get_pending_sessions)
+  const prompt_snippets = useSelector(get_prompt_snippets)
 
   const [panel_mode, set_panel_mode] = useState(PANEL_MODE.COLLAPSED)
   const [is_dismissed, set_is_dismissed] = useState(false)
@@ -165,8 +167,14 @@ const FloatingSessionsPanel = () => {
               title:
                 session.thread_title ||
                 session.prompt_snippet ||
+                prompt_snippets[session.session_id] ||
                 format_directory(session.working_directory),
-              status: session.status === 'idle' ? 'idle' : 'running',
+              status:
+                session.status === 'ended'
+                  ? 'ended'
+                  : session.status === 'idle'
+                    ? 'idle'
+                    : 'running',
               updated_at: session.last_activity_at,
               created_at: session.started_at,
               working_directory: session.working_directory,

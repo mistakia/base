@@ -10,7 +10,9 @@ export const active_sessions_action_types = {
   // WebSocket events for real-time updates
   ACTIVE_SESSION_STARTED: 'ACTIVE_SESSION_STARTED',
   ACTIVE_SESSION_UPDATED: 'ACTIVE_SESSION_UPDATED',
-  ACTIVE_SESSION_ENDED: 'ACTIVE_SESSION_ENDED'
+  ACTIVE_SESSION_ENDED: 'ACTIVE_SESSION_ENDED',
+
+  DISMISS_ENDED_SESSION: 'DISMISS_ENDED_SESSION'
 }
 
 export const get_active_sessions_actions =
@@ -34,6 +36,11 @@ export const active_sessions_actions = {
 
   active_session_ended: (session_id) => ({
     type: active_sessions_action_types.ACTIVE_SESSION_ENDED,
+    payload: { session_id }
+  }),
+
+  dismiss_ended_session: (session_id) => ({
+    type: active_sessions_action_types.DISMISS_ENDED_SESSION,
     payload: { session_id }
   })
 }

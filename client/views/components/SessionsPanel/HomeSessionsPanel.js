@@ -8,7 +8,8 @@ import { List } from 'immutable'
 import { active_sessions_actions } from '@core/active-sessions/actions'
 import {
   get_all_active_sessions,
-  get_active_sessions_count
+  get_active_sessions_count,
+  get_prompt_snippets
 } from '@core/active-sessions/selectors'
 import { get_thread_by_id } from '@core/threads/selectors.js'
 import SessionCard from './SessionCard.js'
@@ -20,7 +21,7 @@ import './HomeSessionsPanel.styl'
  * @param {Function} get_thread - Function to get thread by ID from state
  * @returns {Object} Normalized item for SessionCard
  */
-const normalize_session = (session, get_thread) => {
+const normalize_session = (session, get_thread, prompt_snippets = {}) => {
   const is_running = session.status === 'active'
   const is_idle = session.status === 'idle'
   const has_thread = Boolean(session.thread_id)
@@ -39,10 +40,12 @@ const normalize_session = (session, get_thread) => {
     id: session.thread_id,
     title:
       session.thread_title ||
+      session.prompt_snippet ||
+      prompt_snippets[session.session_id] ||
       (session.working_directory
         ? session.working_directory.split('/').pop() || 'root'
         : 'Unknown'),
-    status: is_running ? 'running' : 'idle',
+    status: is_running ? 'running' : is_idle ? 'idle' : session.status,
     created_at: session.created_at,
     updated_at: session.last_activity_at,
     working_directory: session.working_directory,
@@ -105,6 +108,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   const dispatch = useDispatch()
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
+  const prompt_snippets = useSelector(get_prompt_snippets)
   const [sessions_collapsed, set_sessions_collapsed] = useState(true)
   const [threads_collapsed, set_threads_collapsed] = useState(true)
   const [selected_period, set_selected_period] = useState('3d')
@@ -218,7 +222,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
               {sessions_list.map((session) => (
                 <SessionCard
                   key={session.session_id}
-                  item={normalize_session(session, get_thread)}
+                  item={normalize_session(session, get_thread, prompt_snippets)}
                 />
               ))}
             </div>

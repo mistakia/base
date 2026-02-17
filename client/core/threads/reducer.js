@@ -441,15 +441,6 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return new_state
     }
 
-    case threads_action_types.THREAD_JOB_FAILED: {
-      const { thread_id, error } = payload
-      const job_info = Map({ status: 'failed', error })
-
-      return update_thread_in_all_views(state, thread_id, (thread) =>
-        thread.merge({ job_info, thread_state: 'failed' })
-      )
-    }
-
     default:
       return state
   }

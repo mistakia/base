@@ -24,6 +24,7 @@ const ALLOWED_WEBSOCKET_ACTIONS = new Set([
 export let ws = null
 let messages = []
 let interval = null
+let has_connected_before = false
 
 // Track active file subscriptions for reconnection
 const active_file_subscriptions = new Set()
@@ -65,6 +66,12 @@ export const open_websocket = (params) => {
     const store = StoreRegistry.getStore()
     console.log('connected to websocket')
     store.dispatch(websocket_actions.open())
+
+    if (has_connected_before) {
+      store.dispatch(websocket_actions.reconnected())
+    }
+    has_connected_before = true
+
     messages.forEach((msg) => ws.send(JSON.stringify(msg)))
     messages = []
 

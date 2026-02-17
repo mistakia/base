@@ -49,6 +49,12 @@ export function get_active_sessions_error(state) {
   return get_active_sessions_state(state).get('error')
 }
 
+export function get_prompt_snippets(state) {
+  const active_sessions_state = get_active_sessions_state(state)
+  const snippets_map = active_sessions_state.get('prompt_snippets')
+  return snippets_map ? snippets_map.toJS() : {}
+}
+
 export function get_pending_sessions(state) {
   const active_sessions_state = get_active_sessions_state(state)
   const pending_map = active_sessions_state.get('pending_sessions')
@@ -68,6 +74,8 @@ export const get_all_sessions_with_pending = createSelector(
   (active_sessions_state) => {
     const sessions_map = active_sessions_state.get('sessions')
     const pending_map = active_sessions_state.get('pending_sessions')
+
+    const ended_map = active_sessions_state.get('ended_sessions')
 
     const active = sessions_map
       ? sessions_map
@@ -89,7 +97,17 @@ export const get_all_sessions_with_pending = createSelector(
           .toArray()
       : []
 
-    return [...pending, ...active]
+    const ended = ended_map
+      ? ended_map
+          .valueSeq()
+          .map((s) => {
+            const session_js = s.toJS ? s.toJS() : s
+            return { ...session_js, is_pending: false, is_ended: true }
+          })
+          .toArray()
+      : []
+
+    return [...pending, ...active, ...ended]
   }
 )
 
