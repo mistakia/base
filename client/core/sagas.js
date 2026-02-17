@@ -9,6 +9,7 @@ import { active_sessions_sagas } from './active-sessions/index.js'
 import { activity_sagas } from './activity/index.js'
 import { git_sagas } from './git/index.js'
 import { search_sagas } from './search/index.js'
+import { thread_sheet_sagas } from './thread-sheet/index.js'
 
 export default function* root_saga() {
   yield all([
@@ -20,6 +21,7 @@ export default function* root_saga() {
     ...active_sessions_sagas,
     ...activity_sagas,
     ...git_sagas,
-    ...search_sagas
+    ...search_sagas,
+    ...thread_sheet_sagas
   ])
 }

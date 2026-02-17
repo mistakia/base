@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react'
 import PropTypes from 'prop-types'
-import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 
 import {
@@ -10,6 +9,7 @@ import {
 import CompactTimelineEvent from './CompactTimelineEvent.js'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { threads_actions } from '@core/threads/actions.js'
+import { thread_sheet_actions } from '@core/thread-sheet/index.js'
 import { use_discard_confirm } from '@views/hooks/use-discard-confirm.js'
 
 /**
@@ -30,7 +30,6 @@ import { use_discard_confirm } from '@views/hooks/use-discard-confirm.js'
  * @param {boolean} [props.item.show_actions] - Whether to show action buttons
  */
 const SessionCard = ({ item }) => {
-  const navigate = useNavigate()
   const dispatch = useDispatch()
 
   const abandoned_callback = useCallback(() => {
@@ -54,7 +53,7 @@ const SessionCard = ({ item }) => {
     if (event.metaKey || event.ctrlKey) {
       window.open(`/thread/${item.id}`, '_blank')
     } else {
-      navigate(`/thread/${item.id}`)
+      dispatch(thread_sheet_actions.open_thread_sheet({ thread_id: item.id }))
     }
   }
 

@@ -1,0 +1,99 @@
+@import '../../styles/variables'
+
+// Overlay
+.thread-sheet__overlay
+  position: fixed
+  inset: 0
+  background: rgba(0, 0, 0, 0.4)
+  z-index: 1100
+
+// Content - shared
+.thread-sheet__content
+  position: fixed
+  z-index: 1200
+  background: $color_white
+  display: flex
+  flex-direction: column
+  outline: none
+
+  // Desktop: right side panel
+  &--right
+    top: 0
+    right: 0
+    bottom: 0
+    width: 480px
+    max-width: 90vw
+    border-left: 1px solid $color_border_light
+
+  // Mobile: bottom sheet
+  &--bottom
+    left: 0
+    right: 0
+    bottom: 0
+    height: 85vh
+    max-height: 85vh
+    border-top-left-radius: 10px
+    border-top-right-radius: 10px
+
+// Header bar
+.thread-sheet__header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: $space_sm $space_base
+  border-bottom: 1px solid $color_border_light
+  flex-shrink: 0
+
+.thread-sheet__title
+  font-size: $font_size_sm
+  font-weight: $font_weight_medium
+  color: $color_text_secondary
+  margin: 0
+  text-transform: uppercase
+  letter-spacing: 0.5px
+
+.thread-sheet__close
+  background: none
+  border: none
+  cursor: pointer
+  font-size: 20px
+  line-height: 1
+  color: $color_text_tertiary
+  padding: $space_xs
+  border-radius: $radius_sm
+  transition: color $transition_fast
+
+  &:hover
+    color: $color_text
+
+// Scrollable area
+.thread-sheet__scroll-area
+  flex: 1
+  overflow-y: auto
+  overflow-x: hidden
+  padding: $space_base
+
+// Loading / error / empty states
+.thread-sheet__loading,
+.thread-sheet__error,
+.thread-sheet__empty
+  padding: $space_lg
+  font-size: $font_size_sm
+  color: $color_text_secondary
+  text-align: center
+
+.thread-sheet__error
+  color: $color_error
+
+// Body layout within the sheet
+.thread-sheet__body
+  display: flex
+  flex-direction: column
+  gap: $space_base
+
+.thread-sheet__timeline
+  flex: 1
+  min-width: 0
+
+.thread-sheet__sidebar
+  flex-shrink: 0
