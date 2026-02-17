@@ -1,21 +1,30 @@
 #!/bin/bash
 
 # Push import-history submodule to remote
-# This script pushes any local commits in the import-history submodule to remote
+# This script commits any uncommitted import-history files and pushes to remote
 # Called by scheduled-command/base/push-import-history.md
 #
 # Behavior:
-# 1. Fetches from remote
-# 2. Handles divergence scenarios:
+# 1. Acquires lock (shared with auto-commit-import-history.sh) with retry
+# 2. Commits any uncommitted import-history files via auto-commit-import-history.sh
+# 3. Fetches from remote
+# 4. Handles divergence scenarios:
 #    - Local ahead: push directly
-#    - Local behind: pull with rebase, then push if needed
+#    - Local behind: pull with rebase, then check for new local commits
 #    - Diverged: rebase local on remote, then push
-# 3. On rebase failure: abort and exit (requires manual intervention)
+# 5. On rebase failure: abort and exit (requires manual intervention)
 
 set -e
 
+# Locking configuration (shared with auto-commit-import-history.sh)
+LOCKFILE="/tmp/auto-commit-import-history.lock"
+MAX_RETRIES=3
+RETRY_DELAY=2  # seconds (constant delay, not exponential)
+
 # Require USER_BASE_DIRECTORY to be set
 source "$(dirname "$0")/lib/paths.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if [ ! -d "$IMPORT_HISTORY_DIR/.git" ] && [ ! -f "$IMPORT_HISTORY_DIR/.git" ]; then
     echo "Import-history submodule not initialized at $IMPORT_HISTORY_DIR" >&2
@@ -41,7 +50,52 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 1
 fi
 
-# Fetch from remote
+# Acquire lock with retry (scheduled job can wait)
+# Only this script handles stale lock removal to avoid race conditions
+acquire_lock() {
+    local retry=0
+    while [ $retry -lt $MAX_RETRIES ]; do
+        # Try to acquire lock atomically
+        if ( set -o noclobber; echo $$ > "$LOCKFILE" ) 2>/dev/null; then
+            trap 'rm -f "$LOCKFILE"' EXIT INT TERM
+            return 0
+        fi
+
+        # Lock file exists - check if holder is still alive
+        if [ -f "$LOCKFILE" ]; then
+            local lock_pid
+            lock_pid=$(cat "$LOCKFILE" 2>/dev/null) || true
+
+            if [ -n "$lock_pid" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+                # Lock holder is dead - safe to remove since we're the scheduled job
+                # and will immediately try to acquire
+                echo "Removing stale lock from dead PID $lock_pid"
+                rm -f "$LOCKFILE"
+                # Don't increment retry, try to acquire immediately
+                continue
+            fi
+        fi
+
+        echo "Lock held by PID $(cat "$LOCKFILE" 2>/dev/null || echo "unknown"), retrying in ${RETRY_DELAY}s (attempt $((retry + 1))/$MAX_RETRIES)"
+        sleep $RETRY_DELAY
+        retry=$((retry + 1))
+    done
+
+    echo "Could not acquire lock after $MAX_RETRIES attempts" >&2
+    return 1
+}
+
+# Acquire lock before proceeding
+if ! acquire_lock; then
+    exit 1
+fi
+
+# Step 1: Commit any uncommitted import-history files
+# Use --skip-lock since we already hold the lock
+echo "Checking for uncommitted import-history files..."
+"$SCRIPT_DIR/auto-commit-import-history.sh" --skip-lock || true
+
+# Step 2: Fetch from remote
 echo "Fetching from remote..."
 if ! git fetch origin; then
     echo "Failed to fetch from remote" >&2
@@ -58,6 +112,7 @@ if ! git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
     exit 0
 fi
 
+# Step 3: Determine divergence state
 LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH")
 MERGE_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
@@ -66,6 +121,7 @@ if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
     echo "Already up to date with remote"
     exit 0
 elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
+    # Local is behind remote - pull with rebase
     echo "Local is behind remote, pulling with rebase..."
     if ! git pull --rebase origin "$CURRENT_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
@@ -77,6 +133,7 @@ elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     fi
     echo "Pull completed successfully"
 
+    # Check if we now have local commits to push (created during the pull window)
     NEW_LOCAL=$(git rev-parse HEAD)
     NEW_REMOTE=$(git rev-parse "$REMOTE_BRANCH")
     if [ "$NEW_LOCAL" != "$NEW_REMOTE" ]; then
@@ -88,6 +145,7 @@ elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
         echo "Push completed successfully"
     fi
 elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
+    # Local is ahead - push directly
     echo "Local is ahead of remote, pushing..."
     if ! git push origin "$CURRENT_BRANCH"; then
         echo "Push failed" >&2
@@ -95,6 +153,7 @@ elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
     fi
     echo "Push completed successfully"
 else
+    # Diverged - rebase local on remote, then push
     echo "Local and remote have diverged, rebasing..."
     if ! git rebase "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
