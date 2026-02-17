@@ -9,6 +9,7 @@ import {
   get_prompt_snippets
 } from '@core/active-sessions/selectors'
 import { threads_actions } from '@core/threads/actions'
+import { get_thread_sheet_is_open } from '@core/thread-sheet/index.js'
 import SessionCard from '@components/SessionsPanel/SessionCard.js'
 import './FloatingSessionsPanel.styl'
 
@@ -26,6 +27,7 @@ const FloatingSessionsPanel = () => {
   const active_session_count = useSelector(get_active_sessions_count)
   const pending_sessions = useSelector(get_pending_sessions)
   const prompt_snippets = useSelector(get_prompt_snippets)
+  const thread_sheet_is_open = useSelector(get_thread_sheet_is_open)
 
   const [panel_mode, set_panel_mode] = useState(PANEL_MODE.COLLAPSED)
   const [is_dismissed, set_is_dismissed] = useState(false)
@@ -34,6 +36,13 @@ const FloatingSessionsPanel = () => {
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
   }, [dispatch])
+
+  // Auto-collapse when thread sheet opens
+  useEffect(() => {
+    if (thread_sheet_is_open) {
+      set_panel_mode(PANEL_MODE.COLLAPSED)
+    }
+  }, [thread_sheet_is_open])
 
   // Auto-expand when a new pending session is created
   const pending_count = pending_sessions.length
@@ -104,7 +113,9 @@ const FloatingSessionsPanel = () => {
           className={`floating-sessions-panel__indicator ${has_active ? 'floating-sessions-panel__indicator--active' : ''}`}
         />
         <span className='floating-sessions-panel__count'>
-          {total_count} session{total_count !== 1 ? 's' : ''}
+          {panel_mode === PANEL_MODE.COLLAPSED
+            ? total_count
+            : `${total_count} session${total_count !== 1 ? 's' : ''}`}
         </span>
         {panel_mode !== PANEL_MODE.COLLAPSED && (
           <button

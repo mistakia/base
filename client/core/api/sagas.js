@@ -33,6 +33,7 @@ import {
 } from '@core/directory/actions'
 import { get_active_sessions_actions } from '@core/active-sessions/actions'
 import { get_activity_heatmap_actions } from '@core/activity/actions'
+import { get_sheet_thread_request_actions } from '@core/thread-sheet/actions'
 import {
   get_git_status_all_actions,
   get_git_status_actions,
@@ -141,6 +142,12 @@ export const post_thread_execute_tool = fetch.bind(
 )
 
 export const get_models = fetch.bind(null, api.get_models, get_models_actions)
+
+export const get_sheet_thread = fetch.bind(
+  null,
+  api.get_thread,
+  get_sheet_thread_request_actions
+)
 
 // Create thread session via CLI
 export const create_thread_session = fetch.bind(

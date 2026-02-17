@@ -1,10 +1,9 @@
-// Floating Sessions Panel - persistent bottom-right overlay
+// Floating Sessions Panel - persistent overlay
+// Desktop: top-left below auth bar, Mobile: bottom-right above mobile input
 // Shows active and pending sessions with lifecycle status
 
 .floating-sessions-panel
   position: fixed
-  bottom: 16px
-  right: 16px
   z-index: 1000
   font-family: $font_family_mono
   font-size: $font_size_xs
@@ -13,14 +12,28 @@
   border-radius: $radius_md
   box-shadow: $shadow_md
   max-width: 360px
-  min-width: 200px
+  min-width: 40px
   transition: all $transition_fast
 
+  // Desktop: top-left below auth status bar
+  top: 56px
+  left: 16px
+
   @media (max-width: 768px)
+    // Mobile: bottom-right above mobile thread input trigger
+    top: auto
+    left: auto
     bottom: 72px
     right: 8px
-    left: 8px
     max-width: none
+
+  // Collapsed mode: compact pill
+  &--collapsed
+    min-width: 0
+
+    .floating-sessions-panel__bar
+      padding: 4px 8px
+      gap: $space_xxs
 
 .floating-sessions-panel__bar
   display: flex
@@ -33,6 +46,13 @@
 
   &:hover
     background: $color_surface_hover
+
+// Expanded list: drops down on desktop, expands up on mobile
+.floating-sessions-panel--list
+  min-width: 200px
+
+  @media (max-width: 768px)
+    left: 8px
 
 .floating-sessions-panel__indicator
   width: 6px
