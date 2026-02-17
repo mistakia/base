@@ -9,6 +9,10 @@ import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-tab
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
+import {
+  filter_entities_by_permission,
+  filter_threads_by_permission
+} from '#server/middleware/permission/redact-entity-references.mjs'
 
 const router = express.Router({ mergeParams: true })
 
@@ -154,6 +158,12 @@ router.get('/', async (req, res) => {
           log('Failed to query entities from DuckDB: %s', err.message)
           tagged_entities = []
         }
+
+        // Apply per-entity permission redaction
+        tagged_entities = await filter_entities_by_permission({
+          entities: tagged_entities,
+          user_public_key
+        })
       }
 
       // Count tasks (entities with type === 'task')
@@ -171,6 +181,12 @@ router.get('/', async (req, res) => {
           tag_base_uri: tag.base_uri,
           sort,
           limit: parsed_limit
+        })
+
+        // Apply per-thread permission redaction
+        threads = await filter_threads_by_permission({
+          threads,
+          user_public_key
         })
         thread_count = threads.length
       }

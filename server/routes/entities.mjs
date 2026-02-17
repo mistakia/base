@@ -31,16 +31,16 @@ import {
 import { PermissionContext } from '#server/middleware/permission/permission-context.mjs'
 import {
   redact_base_uri,
-  redact_entity_object,
   DEFAULT_REDACTED_STRING
 } from '#server/middleware/content-redactor.mjs'
+import { filter_entities_by_permission } from '#server/middleware/permission/redact-entity-references.mjs'
 
 const log = debug('api:entities')
 const router = express.Router({ mergeParams: true })
 
 /**
- * Apply permission-based redaction to relations array
- * Returns all relations, but redacts those the user cannot access
+ * Apply permission-based redaction to relations array (structured objects from DuckDB).
+ * Returns all relations, but redacts those the user cannot access.
  * @param {Object} params
  * @param {Array} params.relations - Array of relation objects with base_uri
  * @param {PermissionContext} params.permission_context - Permission context for checking access
@@ -81,38 +81,6 @@ async function redact_relations_by_permission({
         redacted: true,
         unique_key: `redacted-api-${index}`
       }
-    })
-  )
-
-  return results
-}
-
-/**
- * Apply permission-based filtering to entities
- * Returns entities with unauthorized ones redacted
- * @param {Object} params
- * @param {Array} params.entities - Array of entity objects
- * @param {PermissionContext} params.permission_context - Permission context
- * @returns {Promise<Array>} Array of entities with unauthorized ones redacted
- */
-async function filter_entities_by_permission({ entities, permission_context }) {
-  if (!entities || entities.length === 0) return []
-
-  const results = await Promise.all(
-    entities.map(async (entity) => {
-      if (!entity.base_uri) {
-        return redact_entity_object(entity)
-      }
-
-      const result = await permission_context.check_permission({
-        resource_path: entity.base_uri
-      })
-
-      if (result.read.allowed) {
-        return entity
-      }
-
-      return redact_entity_object(entity)
     })
   )
 
@@ -169,8 +137,6 @@ router.get('/', async (req, res) => {
       return res.status(503).send({ error: 'Database not available' })
     }
 
-    const permission_context = new PermissionContext({ user_public_key })
-
     // Single entity lookup mode
     if (base_uri || entity_id) {
       let entity = null
@@ -185,16 +151,13 @@ router.get('/', async (req, res) => {
         return res.send({ entities: [], total: 0, limit, offset })
       }
 
-      // Check permission
-      const permission_result = await permission_context.check_permission({
-        resource_path: entity.base_uri
+      // Apply permission-based redaction (entity + tag/relation references)
+      const [filtered_entity] = await filter_entities_by_permission({
+        entities: [entity],
+        user_public_key
       })
 
-      if (!permission_result.read.allowed) {
-        entity = redact_entity_object(entity)
-      }
-
-      return res.send({ entities: [entity], total: 1, limit, offset })
+      return res.send({ entities: [filtered_entity], total: 1, limit, offset })
     }
 
     // Build filters for query
@@ -236,10 +199,10 @@ router.get('/', async (req, res) => {
       count_entities_in_duckdb({ filters })
     ])
 
-    // Apply permission-based filtering
+    // Apply permission-based filtering and tag/relation redaction
     const filtered_entities = await filter_entities_by_permission({
       entities,
-      permission_context
+      user_public_key
     })
 
     log(

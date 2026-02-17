@@ -24,6 +24,19 @@ const DEFAULT_REDACTED_USER_KEY =
 const DEFAULT_REDACTED_ARRAY_ITEM =
   '████████████████████████████████████████████████'
 
+// Field-specific redactors for known entity properties.
+// Used by both redact_entity_properties and redact_entity_object to avoid duplication.
+const PROPERTY_REDACTORS = {
+  relations: (v) =>
+    Array.isArray(v) ? v.map((item) => redact_relation_string(item)) : v,
+  tags: (v) =>
+    Array.isArray(v) ? v.map(() => DEFAULT_REDACTED_ARRAY_ITEM) : v,
+  observations: (v) =>
+    Array.isArray(v) ? v.map(() => DEFAULT_REDACTED_ARRAY_ITEM) : v,
+  base_uri: (v) => (typeof v === 'string' ? redact_base_uri(v) : v),
+  tags_aggregated: (v) => (typeof v === 'string' ? redact_text_content(v) : v)
+}
+
 /**
  * Redacts a base_uri string, preserving only `-` characters
  * @param {string} base_uri - The base URI to redact
@@ -430,6 +443,12 @@ export const redact_entity_properties = (properties, options = {}) => {
       continue
     }
 
+    // Structure-preserving redaction for known fields
+    if (PROPERTY_REDACTORS[key]) {
+      redacted[key] = PROPERTY_REDACTORS[key](value)
+      continue
+    }
+
     if (redact_keys.includes(key) || should_redact_property(key, value)) {
       if (Array.isArray(value)) {
         redacted[key] = value.map(() => DEFAULT_REDACTED_ARRAY_ITEM)
@@ -477,18 +496,33 @@ export const redact_entity_object = (entity, options = {}) => {
     }
   }
 
-  // Redact properties directly on the object
+  // Redact frontmatter object (contains full entity data from DuckDB queries)
+  if (redacted.frontmatter && typeof redacted.frontmatter === 'object') {
+    redacted.frontmatter = redact_entity_properties(redacted.frontmatter, {
+      preserve_keys,
+      redact_keys
+    })
+  }
+
+  // Apply field-specific redactors for known top-level fields
+  for (const [field, redactor] of Object.entries(PROPERTY_REDACTORS)) {
+    if (redacted[field] != null) {
+      redacted[field] = redactor(redacted[field])
+    }
+  }
+
+  // Redact remaining properties on the object
+  const handled_keys = new Set([
+    'entity_properties',
+    'entity_content',
+    'absolute_path',
+    'file_info',
+    'frontmatter',
+    'is_redacted',
+    ...Object.keys(PROPERTY_REDACTORS)
+  ])
   for (const [key, value] of Object.entries(redacted)) {
-    if (
-      [
-        'entity_properties',
-        'entity_content',
-        'absolute_path',
-        'file_info',
-        'is_redacted'
-      ].includes(key) ||
-      preserve_keys.includes(key)
-    ) {
+    if (handled_keys.has(key) || preserve_keys.includes(key)) {
       continue
     }
 
