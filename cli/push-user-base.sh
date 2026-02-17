@@ -4,9 +4,12 @@
 # Called by scheduled-command/base/push-user-base.md
 #
 # Behavior:
-# 1. Fetches from remote
-# 2. Only pushes if local is strictly ahead of remote
-# 3. Skips if behind or diverged (pull-user-base handles incoming changes)
+# 1. Skips if working directory has uncommitted changes (dirty)
+#    - Commits should be user-driven, not automated
+#    - Prevents pushing incomplete work
+# 2. Fetches from remote
+# 3. Only pushes if local is strictly ahead of remote
+# 4. Skips if behind or diverged (pull-user-base handles incoming changes)
 
 set -e
 
@@ -32,6 +35,14 @@ GIT_DIR=$(git rev-parse --git-dir)
 if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     echo "Rebase in progress, cannot push" >&2
     exit 1
+fi
+
+# Check for uncommitted changes (dirty working directory)
+# Skip push entirely - commits should be user-driven
+# Ignore submodule pointer changes - they're low-risk and naturally committed with other changes
+if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
+    echo "Working directory has uncommitted changes, skipping push"
+    exit 0
 fi
 
 echo "Fetching from remote..."
