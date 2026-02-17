@@ -52,6 +52,13 @@ const emit_session_event = async ({ event_type, payload }) => {
 
       let session_to_send = session
 
+      // Skip sessions without a locally-available thread (unless they have
+      // a job_id indicating in-progress thread creation). These are from
+      // other machines whose thread data hasn't synced yet.
+      if (session && !thread_id && !session.job_id) {
+        continue
+      }
+
       // Apply permission-based redaction if session has a thread
       if (session && thread_id) {
         try {
@@ -72,12 +79,6 @@ const emit_session_event = async ({ event_type, payload }) => {
           // On permission check failure, send redacted to be safe
           session_to_send = redact_session_data(session)
         }
-      } else if (session && !thread_id && !session.job_id) {
-        // Session without thread or job_id - redact paths for safety
-        // (we can't verify ownership without a thread)
-        // Sessions with job_id are from authenticated thread creation and
-        // don't need redaction (the creating user initiated them)
-        session_to_send = redact_session_data(session)
       }
 
       const event_to_send = {

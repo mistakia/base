@@ -160,10 +160,14 @@ router.get('/', async (req, res) => {
       sessions.map(enrich_session_with_thread_info)
     )
 
-    // Filter out sessions where the associated thread is archived
-    // These sessions should not appear in the active sessions panel
+    // Filter out sessions without a locally-available thread (unless they have
+    // a job_id indicating in-progress thread creation) and archived threads.
+    // Sessions from other machines whose thread data hasn't synced yet are
+    // excluded rather than shown as redacted.
     const active_thread_sessions = enriched_sessions.filter(
-      (session) => session.thread_state !== 'archived'
+      (session) =>
+        session.thread_state !== 'archived' &&
+        (session.thread_id || session.job_id)
     )
 
     // Apply permission-based redaction to each session
@@ -174,7 +178,7 @@ router.get('/', async (req, res) => {
     )
 
     log(
-      `Retrieved ${redacted_sessions.length} active sessions (filtered ${enriched_sessions.length - active_thread_sessions.length} archived)`
+      `Retrieved ${redacted_sessions.length} active sessions (filtered ${enriched_sessions.length - active_thread_sessions.length} without local thread or archived)`
     )
     res.status(200).json(redacted_sessions)
   } catch (error) {
