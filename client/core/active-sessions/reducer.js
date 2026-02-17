@@ -64,8 +64,13 @@ export function active_sessions_reducer(
 
       // If session has a job_id matching a pending session, merge and remove from pending
       if (session.job_id && state.hasIn(['pending_sessions', session.job_id])) {
+        const pending = state.getIn(['pending_sessions', session.job_id])
+        const merged_session = {
+          ...session,
+          prompt_snippet: pending.get('prompt_snippet') || null
+        }
         return state
-          .setIn(['sessions', session.session_id], Map(session))
+          .setIn(['sessions', session.session_id], Map(merged_session))
           .deleteIn(['pending_sessions', session.job_id])
       }
 

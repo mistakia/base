@@ -72,9 +72,11 @@ const emit_session_event = async ({ event_type, payload }) => {
           // On permission check failure, send redacted to be safe
           session_to_send = redact_session_data(session)
         }
-      } else if (session && !thread_id) {
-        // Session without thread - redact paths for safety
+      } else if (session && !thread_id && !session.job_id) {
+        // Session without thread or job_id - redact paths for safety
         // (we can't verify ownership without a thread)
+        // Sessions with job_id are from authenticated thread creation and
+        // don't need redaction (the creating user initiated them)
         session_to_send = redact_session_data(session)
       }
 

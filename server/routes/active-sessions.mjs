@@ -55,7 +55,13 @@ async function apply_session_redaction(session, user_public_key) {
     }
   }
 
-  // Sessions without thread - redact paths and no write permission
+  // Sessions with job_id are from authenticated thread creation -
+  // don't redact since the creating user initiated them
+  if (session.job_id) {
+    return { ...session, can_write: false }
+  }
+
+  // Sessions without thread or job_id - redact paths and no write permission
   return { ...redact_session_data(session), can_write: false }
 }
 
@@ -276,7 +282,7 @@ router.post('/', async (req, res) => {
     // Emit WebSocket event
     await emit_active_session_started(session)
 
-    log(`Registered active session: ${session_id}`)
+    log(`Registered active session: ${session_id} (job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`)
     res.status(201).json(session)
   } catch (error) {
     log(`Error registering active session ${session_id}:`, error)

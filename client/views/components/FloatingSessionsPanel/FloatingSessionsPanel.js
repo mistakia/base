@@ -164,6 +164,7 @@ const FloatingSessionsPanel = () => {
               id: session.thread_id,
               title:
                 session.thread_title ||
+                session.prompt_snippet ||
                 format_directory(session.working_directory),
               status: session.status === 'idle' ? 'idle' : 'running',
               updated_at: session.last_activity_at,
