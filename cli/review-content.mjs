@@ -48,8 +48,8 @@ async function has_entity_frontmatter(file_path) {
   let fd
   try {
     fd = await fs.open(file_path, 'r')
-    const buffer = Buffer.alloc(1024)
-    const { bytesRead: bytes_read } = await fd.read(buffer, 0, 1024, 0)
+    const buffer = Buffer.alloc(8192)
+    const { bytesRead: bytes_read } = await fd.read(buffer, 0, 8192, 0)
     const head = buffer.toString('utf8', 0, bytes_read)
     if (!head.startsWith('---')) return false
     const end = head.indexOf('\n---', 3)
