@@ -111,6 +111,31 @@ describe('Entity Content Formatting', () => {
       expect(result.archived_at).to.equal('2023-02-01T00:00:00.000Z')
     })
 
+    it('should strip leading "- " from double-prefixed relation strings', () => {
+      const entity_properties = {
+        entity_id: uuid(),
+        title: 'Test Entity',
+        description: 'Test description',
+        user_public_key: 'abc123',
+        relations: [
+          '- relates [[user:text/example.md]]',
+          '- follows [[sys:system/guideline/example.md]]',
+          'implements [[user:task/normal.md]]'
+        ]
+      }
+
+      const result = format_entity_properties_to_frontmatter({
+        entity_properties,
+        entity_type: 'test'
+      })
+
+      expect(result.relations).to.deep.equal([
+        'relates [[user:text/example.md]]',
+        'follows [[sys:system/guideline/example.md]]',
+        'implements [[user:task/normal.md]]'
+      ])
+    })
+
     it('should include custom fields for extended entity types', () => {
       const entity_properties = {
         entity_id: uuid(),

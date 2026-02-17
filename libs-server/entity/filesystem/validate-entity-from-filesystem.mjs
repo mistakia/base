@@ -56,6 +56,23 @@ export async function validate_entity_from_filesystem({
           ]
         }
       }
+
+      // Detect double-prefixed relation strings where the YAML list marker
+      // "- " was included in the string value (e.g. "- relates [[...]]")
+      if (Array.isArray(relations)) {
+        const double_prefixed = relations.filter(
+          (rel) => typeof rel === 'string' && rel.startsWith('- ')
+        )
+        if (double_prefixed.length > 0) {
+          return {
+            success: false,
+            errors: double_prefixed.map(
+              (rel) =>
+                `Relation has double-prefixed YAML list marker: "${rel}". Remove the leading "- " from the relation string.`
+            )
+          }
+        }
+      }
     }
 
     // Run schema validation if schemas are provided

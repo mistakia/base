@@ -80,7 +80,13 @@ export function format_entity_properties_to_frontmatter({
     entity_properties.relations &&
     Array.isArray(entity_properties.relations)
   ) {
-    frontmatter.relations = entity_properties.relations
+    // Strip leading "- " from relation strings to handle double-prefixed
+    // YAML list markers (e.g. "- relates [[...]]" -> "relates [[...]]")
+    frontmatter.relations = entity_properties.relations.map((rel) =>
+      typeof rel === 'string' && rel.startsWith('- ')
+        ? rel.slice(2)
+        : rel
+    )
   }
 
   if (
