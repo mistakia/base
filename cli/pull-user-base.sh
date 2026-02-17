@@ -45,7 +45,8 @@ fi
 
 # Check for uncommitted changes (dirty working directory)
 # Skip pull entirely to avoid disrupting active sessions
-if ! git diff --quiet || ! git diff --cached --quiet; then
+# Ignore submodule pointer changes - they're low-risk and naturally committed with other changes
+if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
     echo "Working directory has uncommitted changes, skipping pull"
     exit 0
 fi
