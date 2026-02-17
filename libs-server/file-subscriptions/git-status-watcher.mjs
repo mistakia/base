@@ -312,12 +312,20 @@ function _handle_working_tree_change(file_path, on_git_status_change) {
  * Find the repository that contains a working tree file path.
  */
 function _find_repo_for_working_tree_path(file_path) {
+  // Use longest (most specific) match to handle nested repos correctly.
+  // e.g. a file in base-ios working tree must match base-ios, not the parent user-base.
+  let best_match = null
+  let best_length = 0
   for (const repo_path of current_repo_paths) {
-    if (file_path.startsWith(repo_path + path.sep)) {
-      return repo_path
+    if (
+      file_path.startsWith(repo_path + path.sep) &&
+      repo_path.length > best_length
+    ) {
+      best_match = repo_path
+      best_length = repo_path.length
     }
   }
-  return null
+  return best_match
 }
 
 /**
@@ -443,13 +451,20 @@ function handle_change(file_path, on_git_status_change) {
  * @returns {string|null} Repository path or null
  */
 function find_repo_for_path(file_path) {
-  // Check against all known git directories (handles worktrees)
+  // Use longest (most specific) match to handle nested repos correctly.
+  // e.g. base-ios git dir inside user-base .git/modules/ must match base-ios, not user-base.
+  let best_match = null
+  let best_length = 0
   for (const [git_dir, repo_path] of git_dir_to_repo_path.entries()) {
-    if (file_path.startsWith(git_dir + path.sep) || file_path === git_dir) {
-      return repo_path
+    if (
+      (file_path.startsWith(git_dir + path.sep) || file_path === git_dir) &&
+      git_dir.length > best_length
+    ) {
+      best_match = repo_path
+      best_length = git_dir.length
     }
   }
-  return null
+  return best_match
 }
 
 export async function stop_git_status_watcher() {

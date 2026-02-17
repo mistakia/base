@@ -24,7 +24,6 @@ let cache_initializing = null // Promise (for requests arriving during cold star
 let is_initialized = false // Flag set when initialization starts (prevents race condition)
 let _discover_repos_fn = null // injected repo discovery function
 let _on_repo_list_changed = null // callback when repo list changes
-let _oldest_updated_at = null // tracked to avoid recomputation on every request
 
 /**
  * Initialize the cache with a full repo discovery + status fetch
@@ -78,7 +77,6 @@ async function _do_full_cache_init() {
 
   // Fetch status + merge state for all repos in parallel
   const now = Date.now()
-  _oldest_updated_at = now // All repos initialized at the same time
   await Promise.all(
     repo_paths.map(async (repo_path) => {
       try {
@@ -236,8 +234,16 @@ export function get_cache_metadata() {
     return { oldest_updated_at: null, repo_count: 0 }
   }
 
+  // Compute oldest_updated_at on the fly from individual repo entries
+  let oldest = null
+  for (const entry of status_cache.values()) {
+    if (oldest === null || entry.updated_at < oldest) {
+      oldest = entry.updated_at
+    }
+  }
+
   return {
-    oldest_updated_at: _oldest_updated_at,
+    oldest_updated_at: oldest,
     repo_count: status_cache.size
   }
 }
@@ -261,7 +267,6 @@ export function destroy_cache() {
   is_initialized = false
   _discover_repos_fn = null
   _on_repo_list_changed = null
-  _oldest_updated_at = null
   log('Cache destroyed')
 }
 
