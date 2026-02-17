@@ -752,7 +752,7 @@ router.post('/create-session', async (req, res) => {
 router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
-    const { prompt, working_directory } = req.body
+    const { prompt } = req.body
     const execution_mode =
       req.body.execution_mode ||
       config.threads?.cli?.default_execution_mode ||
@@ -814,10 +814,15 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
+    // Use provided working_directory or fall back to thread's stored directory
+    const working_directory =
+      req.body.working_directory ||
+      thread.source?.provider_metadata?.working_directory
     if (!working_directory) {
       return res.status(400).json({
         error: 'Invalid working_directory',
-        message: 'working_directory is required'
+        message:
+          'working_directory is required and could not be inferred from thread metadata'
       })
     }
 
