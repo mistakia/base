@@ -21,11 +21,28 @@ const path = require('path')
 const home_dir = os.homedir()
 const logs_dir = process.env.PM2_LOGS_DIR || path.join(home_dir, 'logs')
 
-// User base directory: from env var or default to ~/user-base.
-// On the storage server, USER_BASE_DIRECTORY must be set in the shell profile
-// to /mnt/md0/user-base since homedir() returns /home/user.
+// Read a value from ~/.pm2/pm2.env when the env var is not set in the current
+// process. This covers manual PM2 restarts via non-login SSH sessions where
+// shell profile env vars (e.g. USER_BASE_DIRECTORY) are not inherited.
+function read_pm2_env(key) {
+  try {
+    const env_path = path.join(home_dir, '.pm2', 'pm2.env')
+    const lines = fs.readFileSync(env_path, 'utf8').split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eq = trimmed.indexOf('=')
+      if (eq > 0 && trimmed.slice(0, eq) === key) return trimmed.slice(eq + 1)
+    }
+  } catch {}
+  return null
+}
+
+// User base directory: from env var, pm2.env fallback, or default to ~/user-base.
 const user_base_directory =
-  process.env.USER_BASE_DIRECTORY || path.join(home_dir, 'user-base')
+  process.env.USER_BASE_DIRECTORY ||
+  read_pm2_env('USER_BASE_DIRECTORY') ||
+  path.join(home_dir, 'user-base')
 
 // Container user-base path: the fixed mount point inside the Docker container.
 // Both machines mount their local user-base to /Users/trashman/user-base inside
