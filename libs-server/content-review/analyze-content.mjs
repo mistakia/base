@@ -216,6 +216,46 @@ function chunk_content(content, max_size) {
 }
 
 /**
+ * Enforce minimum classification when curated regex categories match.
+ * Called after LLM analysis to prevent the LLM from dismissing known
+ * personal name or property patterns as false positives.
+ * Floors to private for both personal_names and personal_property,
+ * matching the classify_from_regex behavior.
+ *
+ * @param {object} result - The analysis result object (mutated in place)
+ * @param {Array} regex_findings - Regex findings from pattern scan
+ * @returns {object} The mutated result
+ */
+function apply_regex_floor(result, regex_findings) {
+  if (!regex_findings || regex_findings.length === 0) {
+    return result
+  }
+
+  const has_personal_names = regex_findings.some(
+    (f) => f.category === 'personal_names'
+  )
+  const has_personal_property = regex_findings.some(
+    (f) => f.category === 'personal_property'
+  )
+
+  if (
+    (has_personal_property || has_personal_names) &&
+    result.classification !== 'private'
+  ) {
+    const original = result.classification
+    const trigger_category = has_personal_property
+      ? 'personal_property'
+      : 'personal_names'
+    result.classification = 'private'
+    result.reasoning = `${result.reasoning} [Regex floor: ${original} overridden to private due to curated ${trigger_category} pattern match]`
+    result.regex_floor_applied = true
+    log(`Regex floor applied: ${original} -> private (${trigger_category})`)
+  }
+
+  return result
+}
+
+/**
  * Analyze a single chunk of content via LLM.
  * Used for files that fit within the size limit (single prompt).
  */
@@ -363,7 +403,7 @@ export async function analyze_content({
 
     if (chunks.length === 1) {
       // Single chunk - standard path
-      return await analyze_single_chunk({
+      const single_result = await analyze_single_chunk({
         content: content_body,
         file_path,
         metadata,
@@ -372,6 +412,12 @@ export async function analyze_content({
         model,
         timeout_ms
       })
+      // Skip floor for regex_fallback — classify_from_regex already
+      // handles these categories when LLM output is unparseable
+      if (single_result.method === 'llm') {
+        apply_regex_floor(single_result, scan_result.findings)
+      }
+      return single_result
     }
 
     // Multi-chunk path: analyze each chunk, aggregate with most-restrictive
@@ -449,7 +495,7 @@ export async function analyze_content({
       .map((r) => r.reasoning)
       .filter(Boolean)
 
-    return {
+    const chunked_result = {
       file_path,
       file_type: scan_result.file_type,
       lines_scanned: scan_result.lines_scanned,
@@ -464,6 +510,8 @@ export async function analyze_content({
       chunks_analyzed: chunk_results.length,
       chunks_total: chunks.length
     }
+    apply_regex_floor(chunked_result, scan_result.findings)
+    return chunked_result
   } catch (error) {
     // Graceful degradation - Ollama unreachable or error
     log(`LLM analysis failed: ${error.message}`)
