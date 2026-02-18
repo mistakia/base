@@ -1,10 +1,5 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  useRef
-} from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import { CircularProgress } from '@mui/material'
@@ -89,6 +84,10 @@ const SheetMetadataHeader = ({ thread_data, thread_id }) => {
     </div>
   )
 }
+SheetMetadataHeader.propTypes = {
+  thread_data: PropTypes.object,
+  thread_id: PropTypes.string
+}
 
 // Inline thread resume input
 const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
@@ -128,55 +127,70 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
       set_message('')
       setTimeout(() => set_is_submitting(false), 2000)
     },
-    [
-      message,
-      can_resume,
-      is_submitting,
-      dispatch,
-      thread_id,
-      working_directory
-    ]
+    [message, can_resume, is_submitting, dispatch, thread_id, working_directory]
   )
 
   const handle_key_down = useCallback(
     (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
         handle_submit(e)
       }
     },
     [handle_submit]
   )
 
+  const handle_form_submit = useCallback((e) => {
+    e.preventDefault()
+  }, [])
+
+  const handle_change = useCallback((e) => {
+    set_message(e.target.value)
+    // Auto-resize textarea
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [])
+
   if (!can_resume) return null
+
+  const has_text = message.trim().length > 0
 
   return (
     <div className='thread-sheet__input'>
-      <form onSubmit={handle_submit} className='thread-sheet__input-form'>
-        <input
+      <form onSubmit={handle_form_submit} className='thread-sheet__input-form'>
+        <textarea
           ref={input_ref}
-          type='text'
           value={message}
-          onChange={(e) => set_message(e.target.value)}
+          onChange={handle_change}
           onKeyDown={handle_key_down}
           placeholder='Continue thread...'
           className='thread-sheet__input-field'
           disabled={is_submitting}
+          rows={1}
         />
-        <Button
-          type='submit'
-          variant='primary'
-          icon
-          disabled={!message.trim() || is_submitting}
-          className='thread-sheet__input-send'>
-          {is_submitting ? (
-            <CircularProgress size={14} style={{ color: '#fff' }} />
-          ) : (
-            <ArrowUpwardIcon style={{ fontSize: 14 }} />
-          )}
-        </Button>
+        <div className='thread-sheet__input-bottom-row'>
+          <Button
+            type='submit'
+            variant='primary'
+            icon
+            disabled={!has_text || is_submitting}
+            className={`thread-sheet__input-send ${has_text || is_submitting ? 'thread-sheet__input-send--visible' : ''}`}>
+            {is_submitting ? (
+              <CircularProgress size={14} style={{ color: '#fff' }} />
+            ) : (
+              <ArrowUpwardIcon style={{ fontSize: 14 }} />
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   )
+}
+SheetThreadInput.propTypes = {
+  thread_id: PropTypes.string,
+  thread_data: PropTypes.object,
+  dispatch: PropTypes.func
 }
 
 // Individual sheet panel
@@ -323,6 +337,11 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
       />
     </div>
   )
+}
+SingleThreadSheet.propTypes = {
+  thread_id: PropTypes.string,
+  stack_index: PropTypes.number,
+  stack_size: PropTypes.number
 }
 
 // Container that renders all stacked sheets
