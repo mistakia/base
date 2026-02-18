@@ -266,8 +266,7 @@ export async function filter_entities_by_permission({
       return redact_entity_object(entity)
     }
 
-    const entity_readable =
-      permissions[entity.base_uri]?.read?.allowed ?? false
+    const entity_readable = permissions[entity.base_uri]?.read?.allowed ?? false
 
     if (entity_readable) {
       return apply_reference_permissions(entity, permissions)

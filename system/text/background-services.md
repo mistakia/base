@@ -21,13 +21,13 @@ The Base system includes several PM2-managed background services that enable aut
 
 ## Service Overview
 
-| Service                    | Purpose                                        | Type              |
-| -------------------------- | ---------------------------------------------- | ----------------- |
-| `base-api`                 | Express API server with database index, WebSocket, file watchers | HTTP server       |
-| `schedule-processor`       | Polls scheduled-command entities, enqueues due commands | Polling (60s)     |
-| `cli-queue-worker`         | Executes queued CLI commands with concurrency control | Continuous (BullMQ) |
-| `metadata-queue-processor` | Analyzes thread metadata using local Ollama models | File-based queue  |
-| `transcription-service`    | Audio transcription processing                 | On-demand         |
+| Service                    | Purpose                                                          | Type                |
+| -------------------------- | ---------------------------------------------------------------- | ------------------- |
+| `base-api`                 | Express API server with database index, WebSocket, file watchers | HTTP server         |
+| `schedule-processor`       | Polls scheduled-command entities, enqueues due commands          | Polling (60s)       |
+| `cli-queue-worker`         | Executes queued CLI commands with concurrency control            | Continuous (BullMQ) |
+| `metadata-queue-processor` | Analyzes thread metadata using local Ollama models               | File-based queue    |
+| `transcription-service`    | Audio transcription processing                                   | On-demand           |
 
 All services are configured in `pm2.config.js`. The `cli-queue-worker` requires Redis.
 

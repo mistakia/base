@@ -632,4 +632,4 @@ TimelineList.propTypes = {
   scroll_container_ref: PropTypes.object
 }
 
-export default TimelineList
+export default React.memo(TimelineList)

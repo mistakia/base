@@ -26,7 +26,7 @@ $sheet_border_radius = 6px
   bottom: $sheet_edge_gap
   width: $sheet_width
   max-width: "calc(100% - %s)" % ($sheet_edge_gap * 2)
-  background: $color_white
+  background: $color_surface
   border-radius: $sheet_border_radius
   border: 1px solid $color_border_light
   box-shadow: $shadow_lg
@@ -43,12 +43,32 @@ $sheet_border_radius = 6px
     left: $sheet_edge_gap
     width: auto
 
-// Floating close button - top right
+// ============================================================================
+// Fixed header: metadata summary + close
+// ============================================================================
+
+.thread-sheet__header
+  flex-shrink: 0
+  display: flex
+  align-items: center
+  gap: $space_sm
+  padding: $space_sm $space_base
+  border-bottom: 1px solid $color_border_light
+  min-height: 44px
+
+.thread-sheet__metadata-summary
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: $space_sm
+  cursor: pointer
+  user-select: none
+  min-width: 0
+  flex: 1
+
 .thread-sheet__close
-  position: absolute
-  top: $space_sm
-  right: $space_sm
-  z-index: 10
+  flex-shrink: 0
+  margin-left: auto
   background: $color_white
   border: 1px solid $color_border_light
   border-radius: $radius_base
@@ -61,30 +81,20 @@ $sheet_border_radius = 6px
   color: $color_text_tertiary
   transition: all $transition_fast
   box-shadow: $shadow_xs
-  flex-shrink: 0
 
   &:hover
     color: $color_text
     border-color: $color_border
     box-shadow: $shadow_sm
 
-// ============================================================================
-// Condensed metadata header (at top)
-// ============================================================================
-
-.thread-sheet__metadata
+// Metadata body (description / expanded content) below header
+.thread-sheet__metadata-body
   flex-shrink: 0
+  max-height: 40vh
+  overflow-y: auto
+  overflow-x: hidden
   border-bottom: 1px solid $color_border_light
   padding: $space_sm $space_base
-  padding-right: 44px // space for close button
-
-.thread-sheet__metadata-summary
-  display: flex
-  align-items: center
-  justify-content: space-between
-  gap: $space_sm
-  cursor: pointer
-  user-select: none
 
 .thread-sheet__metadata-main
   display: flex
@@ -220,7 +230,7 @@ $sheet_border_radius = 6px
   flex-direction: column
   min-height: 96px
   background: var(--color-bg, #ffffff)
-  border-radius: 20px
+  border-radius: 6px
   border: 1px solid var(--color-border-light, #e8e8e8)
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
   padding: 16px 16px 12px

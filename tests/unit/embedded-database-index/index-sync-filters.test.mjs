@@ -249,9 +249,7 @@ describe('Index Sync Filters', () => {
     })
 
     it('should not exclude repository/archive (archive entities are indexed)', () => {
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.not.include(
-        'repository/archive/'
-      )
+      expect(SUBMODULE_EXCLUSION_PREFIXES).to.not.include('repository/archive/')
     })
   })
 })

@@ -183,4 +183,3 @@ export default async function add_timeline_entry({ thread_id, entry }) {
     context_dir: thread.context_dir
   }
 }
-

@@ -9,11 +9,11 @@
   font-size: $font_size_xs
   background: $color_surface
   border: 1px solid $color_border
-  border-radius: $radius_md
+  border-radius: $radius_base
   box-shadow: $shadow_md
   max-width: 360px
   min-width: 40px
-  transition: all $transition_fast
+  transition: min-width $transition_fast, max-width $transition_fast, box-shadow $transition_fast
 
   // Desktop: top-left below auth status bar
   top: 56px
@@ -27,29 +27,41 @@
     right: 8px
     max-width: none
 
-  // Collapsed mode: compact pill
+  // Collapsed mode: square button
   &--collapsed
     min-width: 0
+    max-width: 42px
+    box-shadow: none
 
     .floating-sessions-panel__bar
-      padding: 4px 8px
-      gap: $space_xxs
+      flex-direction: row
+      justify-content: center
+      align-items: center
+      width: 40px
+      padding: 0
+
+    .floating-sessions-panel__count
+      font-size: $font_size_sm
+      line-height: 1
+      flex: none
 
 .floating-sessions-panel__bar
   display: flex
   align-items: center
-  gap: $space_xs
-  padding: 6px 10px
+  height: 40px
+  gap: $space_sm
+  padding: $space_sm $space_sm+2
   cursor: pointer
   user-select: none
-  border-radius: $radius_md
+  border-radius: $radius_base
 
   &:hover
     background: $color_surface_hover
 
 // Expanded list: drops down on desktop, expands up on mobile
 .floating-sessions-panel--list
-  min-width: 200px
+  min-width: 240px
+  border-color: $color_border
 
   @media (max-width: 768px)
     left: 8px
@@ -71,41 +83,49 @@
   flex: 1
 
 .floating-sessions-panel__dismiss
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 20px
+  height: 20px
   background: none
-  border: none
+  border: 1px solid $color_border
+  border-radius: $radius_sm
   color: $color_text_tertiary
   cursor: pointer
-  padding: 0 2px
+  padding: 0
   font-family: $font_family_mono
   font-size: $font_size_xs
   line-height: 1
+  flex-shrink: 0
 
   &:hover
     color: $color_text
+    border-color: $color_text_secondary
+    background: $color_surface_hover
 
 // List mode
 .floating-sessions-panel__list
   max-height: 320px
   overflow-y: auto
-  border-top: 1px solid $color_border_light
-  padding: $space_xs
+  padding: $space_sm
 
   // Reuse session-card styles in compact mode
   .session-card
-    margin-bottom: $space_xs
+    margin-bottom: $space_sm
     font-size: $font_size_xs
 
     &:last-child
       margin-bottom: 0
 
 .floating-sessions-panel__empty
-  padding: $space_sm
+  padding: $space_base $space_sm
   color: $color_text_tertiary
   text-align: center
 
 // Pending session items
 .floating-sessions-panel__pending-item
-  padding: 6px 8px
+  padding: $space_sm
   border-radius: $radius_sm
   background: rgba(0, 0, 0, 0.02)
   border: 1px solid $color_border_light

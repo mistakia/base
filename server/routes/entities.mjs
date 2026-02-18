@@ -551,11 +551,7 @@ router.patch('/', async (req, res) => {
 
     const updated_keys = Object.keys(properties)
 
-    log(
-      'Entity updated for %s: properties=%o',
-      base_uri,
-      updated_keys
-    )
+    log('Entity updated for %s: properties=%o', base_uri, updated_keys)
 
     res.status(200).json({
       success: true,

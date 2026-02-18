@@ -286,7 +286,9 @@ router.post('/', async (req, res) => {
     // Emit WebSocket event
     await emit_active_session_started(session)
 
-    log(`Registered active session: ${session_id} (job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`)
+    log(
+      `Registered active session: ${session_id} (job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`
+    )
     res.status(201).json(session)
   } catch (error) {
     log(`Error registering active session ${session_id}:`, error)

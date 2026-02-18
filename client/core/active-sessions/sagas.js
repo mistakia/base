@@ -90,10 +90,7 @@ export function* watch_session_ended() {
 }
 
 export function* watch_websocket_reconnected() {
-  yield takeLatest(
-    websocket_actions.WEBSOCKET_RECONNECTED,
-    reconnect_recovery
-  )
+  yield takeLatest(websocket_actions.WEBSOCKET_RECONNECTED, reconnect_recovery)
 }
 
 //= ====================================

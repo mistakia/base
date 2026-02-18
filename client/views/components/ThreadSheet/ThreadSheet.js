@@ -31,64 +31,6 @@ import Button from '@components/primitives/Button'
 
 import './ThreadSheet.styl'
 
-// Condensed metadata header with expand/collapse
-const SheetMetadataHeader = ({ thread_data, thread_id }) => {
-  const [is_expanded, set_is_expanded] = useState(false)
-
-  if (!thread_data) return null
-
-  const title = extract_thread_title(thread_data)
-  const description = extract_thread_description(thread_data)
-  const thread_state = extract_thread_state(thread_data)
-
-  if (!title && !thread_state) return null
-
-  return (
-    <div className='thread-sheet__metadata'>
-      <div
-        className='thread-sheet__metadata-summary'
-        onClick={() => set_is_expanded(!is_expanded)}>
-        <div className='thread-sheet__metadata-main'>
-          {title && (
-            <span className='thread-sheet__metadata-title'>{title}</span>
-          )}
-          {thread_state && (
-            <span
-              className={`thread-sheet__metadata-state thread-sheet__metadata-state--${thread_state}`}>
-              {thread_state}
-            </span>
-          )}
-        </div>
-        <button
-          className={`thread-sheet__metadata-toggle ${is_expanded ? 'thread-sheet__metadata-toggle--expanded' : ''}`}
-          aria-label={is_expanded ? 'Collapse metadata' : 'Expand metadata'}>
-          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
-            <path
-              d='M3 5l3 3 3-3'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
-        </button>
-      </div>
-      {description && !is_expanded && (
-        <p className='thread-sheet__metadata-description'>{description}</p>
-      )}
-      {is_expanded && (
-        <div className='thread-sheet__metadata-expanded'>
-          <ThreadHeader metadata={thread_data} thread_id={thread_id} />
-        </div>
-      )}
-    </div>
-  )
-}
-SheetMetadataHeader.propTypes = {
-  thread_data: PropTypes.object,
-  thread_id: PropTypes.string
-}
-
 // Inline thread resume input
 const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
   const input_ref = useRef(null)
@@ -199,6 +141,7 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
   const scroll_area_ref = useRef(null)
   const prev_timeline_length_ref = useRef(0)
   const [auto_scroll, set_auto_scroll] = useState(true)
+  const [is_metadata_expanded, set_is_metadata_expanded] = useState(false)
 
   const thread_data = useSelector((state) =>
     get_thread_sheet_data_for_id(state, thread_id)
@@ -234,6 +177,20 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
   const working_directory = thread_data
     ? extract_working_directory(thread_data).path
     : null
+
+  const { thread_title, thread_description, thread_state } = useMemo(() => {
+    if (!thread_data) return { thread_title: null, thread_description: null, thread_state: null }
+    return {
+      thread_title: extract_thread_title(thread_data),
+      thread_description: extract_thread_description(thread_data),
+      thread_state: extract_thread_state(thread_data)
+    }
+  }, [thread_data])
+  const show_metadata_summary = thread_title || thread_state
+
+  const toggle_metadata = useCallback(() => {
+    set_is_metadata_expanded((prev) => !prev)
+  }, [])
 
   // Scroll to bottom on initial load and auto-scroll on new entries
   useEffect(() => {
@@ -286,23 +243,72 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
 
   return (
     <div className='thread-sheet__panel' style={style}>
-      {/* Floating close button */}
-      <button
-        className='thread-sheet__close'
-        onClick={handle_close}
-        aria-label='Close thread sheet'>
-        <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
-          <path
-            d='M3 3l8 8M11 3l-8 8'
-            stroke='currentColor'
-            strokeWidth='1.5'
-            strokeLinecap='round'
-          />
-        </svg>
-      </button>
+      {/* Fixed header: metadata summary + close */}
+      <header className='thread-sheet__header'>
+        {show_metadata_summary && (
+          <div
+            className='thread-sheet__metadata-summary'
+            onClick={toggle_metadata}>
+            <div className='thread-sheet__metadata-main'>
+              {thread_title && (
+                <span className='thread-sheet__metadata-title'>
+                  {thread_title}
+                </span>
+              )}
+              {thread_state && (
+                <span
+                  className={`thread-sheet__metadata-state thread-sheet__metadata-state--${thread_state}`}>
+                  {thread_state}
+                </span>
+              )}
+            </div>
+            <button
+              className={`thread-sheet__metadata-toggle ${is_metadata_expanded ? 'thread-sheet__metadata-toggle--expanded' : ''}`}
+              aria-label={
+                is_metadata_expanded ? 'Collapse metadata' : 'Expand metadata'
+              }>
+              <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
+                <path
+                  d='M3 5l3 3 3-3'
+                  stroke='currentColor'
+                  strokeWidth='1.5'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+        <button
+          className='thread-sheet__close'
+          onClick={handle_close}
+          aria-label='Close thread sheet'>
+          <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
+            <path
+              d='M3 3l8 8M11 3l-8 8'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+            />
+          </svg>
+        </button>
+      </header>
 
-      {/* Metadata header at top */}
-      <SheetMetadataHeader thread_data={thread_data} thread_id={thread_id} />
+      {/* Metadata body: description or expanded content (scrolls if needed) */}
+      {(thread_description || is_metadata_expanded) && (
+        <div className='thread-sheet__metadata-body'>
+          {thread_description && !is_metadata_expanded && (
+            <p className='thread-sheet__metadata-description'>
+              {thread_description}
+            </p>
+          )}
+          {is_metadata_expanded && thread_data && (
+            <div className='thread-sheet__metadata-expanded'>
+              <ThreadHeader metadata={thread_data} thread_id={thread_id} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Scrollable timeline area */}
       <div className='thread-sheet__scroll-area' ref={scroll_area_ref}>

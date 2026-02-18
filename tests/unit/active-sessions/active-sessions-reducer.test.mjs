@@ -47,7 +47,11 @@ function active_sessions_reducer(
       const sessions_map = new Map(
         sessions_array.map((session) => [session.session_id, Map(session)])
       )
-      return state.merge({ sessions: sessions_map, is_loading: false, error: null })
+      return state.merge({
+        sessions: sessions_map,
+        is_loading: false,
+        error: null
+      })
     }
 
     case active_sessions_action_types.GET_ACTIVE_SESSIONS_FAILED:
@@ -82,7 +86,10 @@ function active_sessions_reducer(
       )
       if (session_entry) {
         const [session_id] = session_entry
-        return state.setIn(['sessions', session_id, 'latest_timeline_event'], entry)
+        return state.setIn(
+          ['sessions', session_id, 'latest_timeline_event'],
+          entry
+        )
       }
       return state
     }

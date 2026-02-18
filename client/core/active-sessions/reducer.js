@@ -128,8 +128,9 @@ export function active_sessions_reducer(
 
       // If session is in ended_sessions, update there instead of creating a duplicate in sessions
       if (state.hasIn(['ended_sessions', session.session_id])) {
-        return state.updateIn(['ended_sessions', session.session_id], (existing) =>
-          existing.merge(session)
+        return state.updateIn(
+          ['ended_sessions', session.session_id],
+          (existing) => existing.merge(session)
         )
       }
 
@@ -149,10 +150,7 @@ export function active_sessions_reducer(
       if (session) {
         return state
           .deleteIn(['sessions', session_id])
-          .setIn(
-            ['ended_sessions', session_id],
-            session.set('status', 'ended')
-          )
+          .setIn(['ended_sessions', session_id], session.set('status', 'ended'))
       }
       return state.deleteIn(['sessions', session_id])
     }
@@ -269,8 +267,7 @@ export function active_sessions_reducer(
         .findEntry(
           (session) =>
             !session.get('job_id') &&
-            session.get('prompt_snippet') ===
-              (opts.prompt || '').slice(0, 120)
+            session.get('prompt_snippet') === (opts.prompt || '').slice(0, 120)
         )
 
       if (pending_entry) {
@@ -325,8 +322,7 @@ export function active_sessions_reducer(
         .get('pending_sessions')
         .findEntry(
           (session) =>
-            session.get('prompt_snippet') ===
-            (opts.prompt || '').slice(0, 120)
+            session.get('prompt_snippet') === (opts.prompt || '').slice(0, 120)
         )
 
       if (pending_entry) {

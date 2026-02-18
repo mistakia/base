@@ -66,11 +66,11 @@ Threads are multi-file units (unlike single-file entities) and require a distinc
 
 **Scanned files per thread:**
 
-| File | Analysis | Rationale |
-| --- | --- | --- |
-| `metadata.json` | regex + LLM | Small file, contains title and session context |
-| `timeline.jsonl` | regex-only by default | Can be very large; LLM opt-in via `--timeline-llm` |
-| `raw-data/*` | opt-in via `--include-raw-data` | Original session imports; usually redundant with timeline |
+| File             | Analysis                        | Rationale                                                 |
+| ---------------- | ------------------------------- | --------------------------------------------------------- |
+| `metadata.json`  | regex + LLM                     | Small file, contains title and session context            |
+| `timeline.jsonl` | regex-only by default           | Can be very large; LLM opt-in via `--timeline-llm`        |
+| `raw-data/*`     | opt-in via `--include-raw-data` | Original session imports; usually redundant with timeline |
 
 **Aggregation**: Most-restrictive-wins across all files in a thread. If any file is private, the thread is private.
 

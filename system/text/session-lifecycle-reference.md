@@ -26,16 +26,16 @@ Throughout this document, Claude CLI is used as the reference implementation. Ha
 
 ## Architecture Components
 
-| Component | Role |
-|---|---|
-| **Client** | Submits prompt, receives job_id, tracks session via WebSocket |
-| **Base API** (PM2: `base-api`) | REST endpoints + WebSocket server, manages session store |
-| **BullMQ Queue** (Redis) | Job queue for session creation with concurrency control |
-| **AI Harness** (e.g. Claude CLI) | Spawned process that executes the prompt |
-| **Hook Scripts** | Fire during harness lifecycle, report state to API |
-| **Redis Store** | Active session records with TTL (default 10 minutes) |
-| **Thread Watcher** (chokidar) | Filesystem watcher that detects thread file and timeline changes |
-| **Metadata Queue** (PM2: `metadata-queue-processor`) | Async title/description generation via Ollama |
+| Component                                            | Role                                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------------- |
+| **Client**                                           | Submits prompt, receives job_id, tracks session via WebSocket    |
+| **Base API** (PM2: `base-api`)                       | REST endpoints + WebSocket server, manages session store         |
+| **BullMQ Queue** (Redis)                             | Job queue for session creation with concurrency control          |
+| **AI Harness** (e.g. Claude CLI)                     | Spawned process that executes the prompt                         |
+| **Hook Scripts**                                     | Fire during harness lifecycle, report state to API               |
+| **Redis Store**                                      | Active session records with TTL (default 10 minutes)             |
+| **Thread Watcher** (chokidar)                        | Filesystem watcher that detects thread file and timeline changes |
+| **Metadata Queue** (PM2: `metadata-queue-processor`) | Async title/description generation via Ollama                    |
 
 ### API Dual-Target
 
@@ -45,13 +45,13 @@ The hook scripts send requests to **both** the local API (`localhost:8080`) and 
 
 Claude Code provides a native hook system configured via `.claude/settings.local.json`. Hook scripts receive a JSON payload on stdin containing `session_id`, `transcript_path`, `cwd`, and `hook_event_name`. The hook event names map to Claude Code lifecycle stages:
 
-| Claude Code Hook Event | Base Session Lifecycle Equivalent |
-|---|---|
-| `SessionStart` | Session started (harness process began) |
-| `UserPromptSubmit` | Turn started (new prompt being processed) |
-| `PostToolUse` | Activity heartbeat (tool execution completed) |
-| `Stop` | Session idle (harness waiting for input) |
-| `SessionEnd` | Session ended (harness process exiting) |
+| Claude Code Hook Event | Base Session Lifecycle Equivalent             |
+| ---------------------- | --------------------------------------------- |
+| `SessionStart`         | Session started (harness process began)       |
+| `UserPromptSubmit`     | Turn started (new prompt being processed)     |
+| `PostToolUse`          | Activity heartbeat (tool execution completed) |
+| `Stop`                 | Session idle (harness waiting for input)      |
+| `SessionEnd`           | Session ended (harness process exiting)       |
 
 Other harnesses would need equivalent adapters that translate their lifecycle events into the same API calls (POST/PUT/DELETE to `/api/active-sessions`).
 
@@ -443,12 +443,12 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 
 The session lifecycle uses multiple identifiers at different stages:
 
-| Identifier | Source | Available When | Purpose |
-|---|---|---|---|
-| `job_id` | BullMQ job ID | From create-session response | Links client pending session to WS events |
-| `session_id` | AI harness session UUID | From ACTIVE_SESSION_STARTED | Identifies the harness session |
-| `thread_id` | Deterministic from session_id+provider | From THREAD_CREATED or ACTIVE_SESSION_UPDATED (after thread exists) | Identifies the thread for navigation |
-| `source.session_id` | Thread metadata | From THREAD_CREATED payload | Links thread back to the session_id |
+| Identifier          | Source                                 | Available When                                                      | Purpose                                   |
+| ------------------- | -------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------- |
+| `job_id`            | BullMQ job ID                          | From create-session response                                        | Links client pending session to WS events |
+| `session_id`        | AI harness session UUID                | From ACTIVE_SESSION_STARTED                                         | Identifies the harness session            |
+| `thread_id`         | Deterministic from session_id+provider | From THREAD_CREATED or ACTIVE_SESSION_UPDATED (after thread exists) | Identifies the thread for navigation      |
+| `source.session_id` | Thread metadata                        | From THREAD_CREATED payload                                         | Links thread back to the session_id       |
 
 ### Correlation Flow
 
@@ -467,18 +467,18 @@ session_id (from WS event)
 
 ## Timing Characteristics
 
-| Event | Typical Delay After Previous |
-|---|---|
-| create-session response | < 1 second |
-| BullMQ job pickup | 0-30 seconds (depends on queue) |
-| Harness startup | 2-5 seconds (varies by harness) |
-| ACTIVE_SESSION_STARTED | Immediate after startup |
-| First ACTIVE_SESSION_UPDATED | Seconds (after first prompt processing) |
+| Event                                 | Typical Delay After Previous                               |
+| ------------------------------------- | ---------------------------------------------------------- |
+| create-session response               | < 1 second                                                 |
+| BullMQ job pickup                     | 0-30 seconds (depends on queue)                            |
+| Harness startup                       | 2-5 seconds (varies by harness)                            |
+| ACTIVE_SESSION_STARTED                | Immediate after startup                                    |
+| First ACTIVE_SESSION_UPDATED          | Seconds (after first prompt processing)                    |
 | Thread creation (metadata.json write) | During first UserPromptSubmit sync (2-8s after first turn) |
-| THREAD_CREATED (watcher detection) | ~500ms after metadata.json write |
-| thread_id in ACTIVE_SESSION_UPDATED | Next hook fire after thread exists |
-| ACTIVE_SESSION_ENDED | After all SessionEnd hooks complete |
-| THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama) |
+| THREAD_CREATED (watcher detection)    | ~500ms after metadata.json write                           |
+| thread_id in ACTIVE_SESSION_UPDATED   | Next hook fire after thread exists                         |
+| ACTIVE_SESSION_ENDED                  | After all SessionEnd hooks complete                        |
+| THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama)                          |
 
 ## Client State Machine
 
@@ -524,6 +524,7 @@ REMOVED
 ```
 
 **Key ordering rules**:
+
 - THREAD_CREATED can arrive before or after ACTIVE_SESSION_ENDED depending on timing. The client must handle both orderings.
 - ACTIVE_SESSION_UPDATED with thread_id and THREAD_CREATED with matching source.session_id are redundant paths to linking. The client should accept whichever arrives first and ignore duplicates.
 - The "idle" status (from Stop events) indicates the harness is waiting for input or has paused processing. "active" means it is actively processing.
@@ -543,19 +544,20 @@ On WebSocket reconnect, the client should:
 
 ### Missed Event Scenarios
 
-| Missed Event | Recovery |
-|---|---|
-| ACTIVE_SESSION_STARTED | GET /api/active-sessions will include it (if it has a thread_id or job_id) |
-| ACTIVE_SESSION_UPDATED | GET /api/active-sessions returns current state |
-| ACTIVE_SESSION_ENDED | Session will be absent from GET /api/active-sessions; client infers ended |
-| THREAD_CREATED | Thread appears in GET /api/threads; active session may include thread_id |
-| THREAD_UPDATED | GET /api/threads/<id> returns current metadata |
-| THREAD_TIMELINE_ENTRY_ADDED | Subscribe to thread after reconnect; fetch timeline via REST |
-| THREAD_JOB_FAILED | Check job status via BullMQ job API if pending session has no matching active session |
+| Missed Event                | Recovery                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| ACTIVE_SESSION_STARTED      | GET /api/active-sessions will include it (if it has a thread_id or job_id)            |
+| ACTIVE_SESSION_UPDATED      | GET /api/active-sessions returns current state                                        |
+| ACTIVE_SESSION_ENDED        | Session will be absent from GET /api/active-sessions; client infers ended             |
+| THREAD_CREATED              | Thread appears in GET /api/threads; active session may include thread_id              |
+| THREAD_UPDATED              | GET /api/threads/<id> returns current metadata                                        |
+| THREAD_TIMELINE_ENTRY_ADDED | Subscribe to thread after reconnect; fetch timeline via REST                          |
+| THREAD_JOB_FAILED           | Check job status via BullMQ job API if pending session has no matching active session |
 
 ### Stale State Detection
 
 Sessions in Redis have a TTL (default 10 minutes from last update). If a session's hooks stop firing (harness crash without SessionEnd), the Redis key expires and the session silently disappears. Clients should:
+
 - Periodically poll GET /api/active-sessions to detect stale sessions that expired
 - Treat a session absent from the REST response but still tracked locally as ended
 - Not rely solely on ACTIVE_SESSION_ENDED for end-of-session detection
@@ -566,12 +568,12 @@ Sessions in Redis have a TTL (default 10 minutes from last update). If a session
 
 Any AI harness integration must make these HTTP calls at the appropriate lifecycle points:
 
-| Lifecycle Point | HTTP Call | Required Fields |
-|---|---|---|
-| Session start | `POST /api/active-sessions` | `session_id`, `working_directory`, `transcript_path`; optional: `jsonl_session_id`, `job_id` |
-| Activity/turn | `PUT /api/active-sessions/<session_id>` | `status: "active"`, `working_directory`, `transcript_path`; optional: `job_id` |
-| Idle/waiting | `PUT /api/active-sessions/<session_id>` | `status: "idle"`, `working_directory`, `transcript_path`; optional: `job_id` |
-| Session end | `DELETE /api/active-sessions/<session_id>` | (none) |
+| Lifecycle Point | HTTP Call                                  | Required Fields                                                                              |
+| --------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Session start   | `POST /api/active-sessions`                | `session_id`, `working_directory`, `transcript_path`; optional: `jsonl_session_id`, `job_id` |
+| Activity/turn   | `PUT /api/active-sessions/<session_id>`    | `status: "active"`, `working_directory`, `transcript_path`; optional: `job_id`               |
+| Idle/waiting    | `PUT /api/active-sessions/<session_id>`    | `status: "idle"`, `working_directory`, `transcript_path`; optional: `job_id`                 |
+| Session end     | `DELETE /api/active-sessions/<session_id>` | (none)                                                                                       |
 
 ### Required Sync Operations
 
@@ -585,6 +587,7 @@ Before or concurrent with the activity PUT calls, the harness integration should
 ### Session Provider Implementation
 
 To add a new harness, implement a `SessionProviderBase` subclass in `libs-server/integrations/<provider>/` with:
+
 - `find_sessions()` -- discover session transcript files
 - `normalize_session()` -- convert to the common session format
 - `validate_session()` -- validate session data integrity

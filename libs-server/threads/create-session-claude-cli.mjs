@@ -635,8 +635,12 @@ export const create_session_claude_cli = async ({
       '-w',
       container_working_directory,
       ...(job_id ? ['-e', `JOB_ID=${job_id}`] : []),
-      ...(process.env.SSL_ENABLED === 'true' ? ['-e', 'BASE_API_PROTO=https'] : []),
-      ...(process.env.SERVER_PORT ? ['-e', `BASE_API_PORT=${process.env.SERVER_PORT}`] : []),
+      ...(process.env.SSL_ENABLED === 'true'
+        ? ['-e', 'BASE_API_PROTO=https']
+        : []),
+      ...(process.env.SERVER_PORT
+        ? ['-e', `BASE_API_PORT=${process.env.SERVER_PORT}`]
+        : []),
       DOCKER_CONTAINER_NAME,
       'claude',
       ...cli_args
