@@ -1,7 +1,7 @@
 #!/bin/bash
 # post-receive hook for user-base-threads bare repository
 #
-# Deployment: /mnt/md0/user-base-threads.git/hooks/post-receive (storage server)
+# Deployment: /mnt/md0/git-repos/user-base-threads.git/hooks/post-receive (storage server)
 #
 # This hook runs when the MacBook pushes thread commits to the storage server's
 # bare repo. It updates the working directory (/mnt/md0/user-base/thread) to
