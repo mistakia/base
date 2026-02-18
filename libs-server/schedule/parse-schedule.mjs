@@ -24,7 +24,12 @@ export const parse_schedule = ({
   try {
     switch (schedule_type) {
       case 'expr':
-        return parse_cron_expression({ schedule, timezone })
+        return parse_cron_expression({
+          schedule,
+          timezone,
+          last_triggered_at,
+          created_at
+        })
       case 'at':
         return parse_at_timestamp({ schedule })
       case 'every':
@@ -46,9 +51,15 @@ export const parse_schedule = ({
  * @param {string} [params.timezone] - Timezone for the expression
  * @returns {string} ISO timestamp for next trigger
  */
-const parse_cron_expression = ({ schedule, timezone }) => {
+const parse_cron_expression = ({
+  schedule,
+  timezone,
+  last_triggered_at,
+  created_at
+}) => {
+  const reference = last_triggered_at || created_at
   const options = {
-    currentDate: new Date()
+    currentDate: reference ? new Date(reference) : new Date()
   }
 
   if (timezone) {
