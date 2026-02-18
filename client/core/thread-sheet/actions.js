@@ -5,6 +5,7 @@ const GET_SHEET_THREAD = 'GET_SHEET_THREAD'
 export const thread_sheet_action_types = {
   OPEN_THREAD_SHEET: 'OPEN_THREAD_SHEET',
   CLOSE_THREAD_SHEET: 'CLOSE_THREAD_SHEET',
+  CLOSE_TOP_THREAD_SHEET: 'CLOSE_TOP_THREAD_SHEET',
   LOAD_SHEET_THREAD: 'LOAD_SHEET_THREAD',
   ...create_api_action_types(GET_SHEET_THREAD)
 }
@@ -15,8 +16,13 @@ export const thread_sheet_actions = {
     payload: { thread_id }
   }),
 
-  close_thread_sheet: () => ({
-    type: thread_sheet_action_types.CLOSE_THREAD_SHEET
+  close_thread_sheet: (thread_id) => ({
+    type: thread_sheet_action_types.CLOSE_THREAD_SHEET,
+    payload: { thread_id }
+  }),
+
+  close_top_thread_sheet: () => ({
+    type: thread_sheet_action_types.CLOSE_TOP_THREAD_SHEET
   }),
 
   load_sheet_thread: (thread_id) => ({

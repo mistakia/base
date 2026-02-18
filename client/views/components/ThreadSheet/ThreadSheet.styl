@@ -1,77 +1,166 @@
 @import '@styles/variables'
 
-// Overlay
-.thread-sheet__overlay
-  position: fixed
-  inset: 0
-  background: rgba(0, 0, 0, 0.4)
-  z-index: 1100
+$sheet_width = 480px
+$sheet_edge_gap = 8px
+$sheet_border_radius = 6px
 
-// Content - shared
-.thread-sheet__content
+// Container for all stacked sheets - no overlay, pointer-events pass through
+.thread-sheet__container
   position: fixed
+  top: 0
+  right: 0
+  bottom: 0
+  width: $sheet_width + ($sheet_edge_gap * 2)
+  max-width: 95vw
   z-index: 1200
+  pointer-events: none
+
+  @media (max-width: 768px)
+    width: 100%
+
+// Individual sheet panel
+.thread-sheet__panel
+  position: absolute
+  top: $sheet_edge_gap
+  right: $sheet_edge_gap
+  bottom: $sheet_edge_gap
+  width: $sheet_width
+  max-width: "calc(100% - %s)" % ($sheet_edge_gap * 2)
   background: $color_white
+  border-radius: $sheet_border_radius
+  border: 1px solid $color_border_light
+  box-shadow: $shadow_lg
   display: flex
   flex-direction: column
-  outline: none
+  pointer-events: auto
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)
+  transform-origin: right center
 
-  // Desktop: right side panel
-  &--right
-    top: 0
-    right: 0
-    bottom: 0
-    width: 480px
-    max-width: 90vw
-    border-left: 1px solid $color_border_light
+  @media (max-width: 768px)
+    top: $sheet_edge_gap
+    right: $sheet_edge_gap
+    bottom: $sheet_edge_gap
+    left: $sheet_edge_gap
+    width: auto
 
-  // Mobile: bottom sheet
-  &--bottom
-    left: 0
-    right: 0
-    bottom: 0
-    height: 85vh
-    max-height: 85vh
-    border-top-left-radius: 10px
-    border-top-right-radius: 10px
-
-// Header bar
-.thread-sheet__header
+// Floating close button - top right
+.thread-sheet__close
+  position: absolute
+  top: $space_sm
+  right: $space_sm
+  z-index: 10
+  background: $color_white
+  border: 1px solid $color_border_light
+  border-radius: $radius_base
+  cursor: pointer
+  width: 28px
+  height: 28px
   display: flex
   align-items: center
-  justify-content: space-between
-  padding: $space_sm $space_base
-  border-bottom: 1px solid $color_border_light
-  flex-shrink: 0
-
-.thread-sheet__title
-  font-size: $font_size_sm
-  font-weight: $font_weight_medium
-  color: $color_text_secondary
-  margin: 0
-  text-transform: uppercase
-  letter-spacing: 0.5px
-
-.thread-sheet__close
-  background: none
-  border: none
-  cursor: pointer
-  font-size: 20px
-  line-height: 1
+  justify-content: center
   color: $color_text_tertiary
-  padding: $space_xs
-  border-radius: $radius_sm
-  transition: color $transition_fast
+  transition: all $transition_fast
+  box-shadow: $shadow_xs
+  flex-shrink: 0
 
   &:hover
     color: $color_text
+    border-color: $color_border
+    box-shadow: $shadow_sm
 
-// Scrollable area
+// ============================================================================
+// Condensed metadata header (at top)
+// ============================================================================
+
+.thread-sheet__metadata
+  flex-shrink: 0
+  border-bottom: 1px solid $color_border_light
+  padding: $space_sm $space_base
+  padding-right: 44px // space for close button
+
+.thread-sheet__metadata-summary
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: $space_sm
+  cursor: pointer
+  user-select: none
+
+.thread-sheet__metadata-main
+  display: flex
+  align-items: center
+  gap: $space_sm
+  min-width: 0
+  flex: 1
+
+.thread-sheet__metadata-title
+  font-size: $font_size_sm
+  font-weight: $font_weight_semibold
+  color: $color_text
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.thread-sheet__metadata-state
+  font-size: $font_size_xs
+  font-weight: $font_weight_medium
+  padding: 1px 6px
+  border-radius: $radius_sm
+  white-space: nowrap
+  flex-shrink: 0
+  text-transform: lowercase
+
+  &--active
+    background: rgba(40, 167, 69, 0.1)
+    color: $color_success
+
+  &--archived
+    background: rgba(108, 117, 125, 0.1)
+    color: $color_text_secondary
+
+.thread-sheet__metadata-toggle
+  background: none
+  border: none
+  cursor: pointer
+  color: $color_text_tertiary
+  padding: $space_xs
+  display: flex
+  align-items: center
+  justify-content: center
+  transition: transform $transition_fast
+  flex-shrink: 0
+
+  &--expanded
+    transform: rotate(180deg)
+
+.thread-sheet__metadata-description
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  margin: $space_xs 0 0
+  line-height: 1.4
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.thread-sheet__metadata-expanded
+  margin-top: $space_sm
+
+  // Override MetadataContainer styling within sheet context
+  .metadata-container
+    margin-top: 0
+    border-radius: 0
+    border: none
+    box-shadow: none
+
+// ============================================================================
+// Scrollable timeline area
+// ============================================================================
+
 .thread-sheet__scroll-area
   flex: 1
   overflow-y: auto
   overflow-x: hidden
-  padding: $space_base
+  padding: $space_sm $space_base
 
 // Loading / error / empty states
 .thread-sheet__loading,
@@ -85,15 +174,59 @@
 .thread-sheet__error
   color: $color_error
 
-// Body layout within the sheet
-.thread-sheet__body
-  display: flex
-  flex-direction: column
-  gap: $space_base
-
 .thread-sheet__timeline
-  flex: 1
   min-width: 0
 
-.thread-sheet__sidebar
+// ============================================================================
+// Fixed thread input at bottom
+// ============================================================================
+
+.thread-sheet__input
   flex-shrink: 0
+  border-top: 1px solid $color_border_light
+  padding: $space_sm $space_base
+  background: $color_white
+  border-radius: 0 0 $sheet_border_radius $sheet_border_radius
+
+.thread-sheet__input-form
+  display: flex
+  align-items: center
+  gap: $space_sm
+
+.thread-sheet__input-field
+  flex: 1
+  border: 1px solid $color_border_light
+  border-radius: $radius_base
+  padding: $space_xs $space_sm
+  font-family: inherit
+  font-size: $font_size_sm
+  color: $color_text
+  outline: none
+  background: $color_surface_secondary
+  transition: border-color $transition_fast
+
+  &:focus
+    border-color: $color_primary
+    background: $color_white
+
+  &::placeholder
+    color: $color_text_tertiary
+
+  &:disabled
+    opacity: 0.5
+
+.thread-sheet__input-send
+  flex-shrink: 0
+  min-width: auto
+  width: 28px
+  height: 28px
+  padding: 0
+  border-radius: $radius_base
+  background-color: var(--color-breadcrumb-dark)
+
+  &:hover
+    opacity: 0.9
+
+  &.Mui-disabled
+    background-color: $color_border_light
+    color: $color_text_tertiary

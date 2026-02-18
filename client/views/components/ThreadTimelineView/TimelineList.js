@@ -107,7 +107,8 @@ const TimelineList = ({
   timeline,
   working_directory = null,
   include_sidechain = false,
-  active_session = null
+  active_session = null,
+  scroll_container_ref = null
 }) => {
   /**
    * View mode state:
@@ -244,11 +245,14 @@ const TimelineList = ({
   // ============================================================================
 
   /**
-   * Get the scrollable container element (.page-layout or window fallback)
+   * Get the scrollable container element.
+   * Uses scroll_container_ref if provided (for sheet context),
+   * otherwise falls back to .page-layout or window.
    */
   const get_scroll_container = useCallback(() => {
+    if (scroll_container_ref?.current) return scroll_container_ref.current
     return document.querySelector('.page-layout') || window
-  }, [])
+  }, [scroll_container_ref])
 
   /**
    * Get scroll metrics from a container
@@ -624,7 +628,8 @@ TimelineList.propTypes = {
   timeline: PropTypes.array.isRequired,
   working_directory: PropTypes.string,
   include_sidechain: PropTypes.bool,
-  active_session: PropTypes.object
+  active_session: PropTypes.object,
+  scroll_container_ref: PropTypes.object
 }
 
 export default TimelineList
