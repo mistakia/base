@@ -334,6 +334,15 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       )
     }
 
+    case threads_action_types.SET_THREAD_TABLE_STATE: {
+      const { view_id: set_view_id, table_state: new_table_state } = payload
+      const target_view_id = set_view_id || 'active'
+      return state.setIn(
+        ['thread_table_views', target_view_id, 'thread_table_state'],
+        new Map(new_table_state)
+      )
+    }
+
     case threads_action_types.SELECT_THREAD_TABLE_VIEW:
       return state.set('selected_thread_table_view_id', payload.view_id)
 

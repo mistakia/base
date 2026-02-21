@@ -35,10 +35,17 @@ export function* load_tasks_table_data({ payload }) {
       'task_table_views',
       resolved_view_id
     ])
-    let table_state = selected_view.get('task_table_state')
-    table_state = table_state?.toJS ? table_state.toJS() : table_state
 
-    // Merge url_filters with existing table state filters
+    // When url_filters are provided, start from saved_table_state (the view's
+    // default) so we get a clean merge. When no url_filters, also use
+    // saved_table_state to reset any previously applied URL filters.
+    const base_state =
+      url_filters.length > 0
+        ? selected_view.get('saved_table_state')
+        : selected_view.get('task_table_state')
+    let table_state = base_state?.toJS ? base_state.toJS() : base_state
+
+    // Merge url_filters with saved table state filters and persist to Redux
     if (url_filters.length > 0) {
       const existing_where = table_state.where || []
       // Filter out any existing filters for the same columns (url takes priority)
@@ -50,6 +57,14 @@ export function* load_tasks_table_data({ payload }) {
         ...table_state,
         where: [...filtered_existing, ...url_filters]
       }
+
+      // Persist merged filters to Redux so the Table UI reflects URL filters
+      yield put(
+        tasks_actions.set_task_table_state({
+          view_id: resolved_view_id,
+          table_state
+        })
+      )
     }
 
     // For append requests, adjust offset based on current rows fetched

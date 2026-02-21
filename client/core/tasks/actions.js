@@ -19,6 +19,7 @@ export const tasks_action_types = {
 
   // Table view management actions
   UPDATE_TASK_TABLE_VIEW: 'UPDATE_TASK_TABLE_VIEW',
+  SET_TASK_TABLE_STATE: 'SET_TASK_TABLE_STATE',
   SELECT_TASK_TABLE_VIEW: 'SELECT_TASK_TABLE_VIEW',
 
   // Task property update actions
@@ -45,6 +46,12 @@ export const tasks_actions = {
   update_task_table_view: ({ view }) => ({
     type: tasks_action_types.UPDATE_TASK_TABLE_VIEW,
     payload: { view }
+  }),
+
+  // Set table state directly without triggering a debounced fetch
+  set_task_table_state: ({ view_id, table_state }) => ({
+    type: tasks_action_types.SET_TASK_TABLE_STATE,
+    payload: { view_id, table_state }
   }),
 
   select_task_table_view: ({ view_id }) => ({

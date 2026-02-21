@@ -18,7 +18,7 @@ import {
   resume_thread_session,
   delete_active_session
 } from '@core/api/sagas'
-import { threads_action_types } from './actions'
+import { threads_action_types, threads_actions } from './actions'
 import { get_threads_state } from './selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { active_sessions_actions } from '@core/active-sessions/actions'
@@ -84,13 +84,17 @@ export function* load_threads_table_data({ payload }) {
 
     const threads_state = yield select(get_threads_state)
     const selected_view = threads_state.getIn(['thread_table_views', view_id])
-    let table_state = serialize_table_state(
-      selected_view.get('thread_table_state')
-    )
 
-    // Merge url_filters with existing table state filters
-    // Note: Thread tag filtering will work once thread_tags table is populated
-    // by the automatic thread tag evaluation task
+    // When url_filters are provided, start from saved_table_state (the view's
+    // default) so we get a clean merge. When no url_filters, also use
+    // saved_table_state to reset any previously applied URL filters.
+    const base_state =
+      url_filters.length > 0
+        ? selected_view.get('saved_table_state')
+        : selected_view.get('thread_table_state')
+    let table_state = serialize_table_state(base_state)
+
+    // Merge url_filters with saved table state filters and persist to Redux
     if (url_filters.length > 0) {
       const existing_where = table_state.where || []
       // Filter out any existing filters for the same columns (url takes priority)
@@ -102,6 +106,14 @@ export function* load_threads_table_data({ payload }) {
         ...table_state,
         where: [...filtered_existing, ...url_filters]
       }
+
+      // Persist merged filters to Redux so the Table UI reflects URL filters
+      yield put(
+        threads_actions.set_thread_table_state({
+          view_id,
+          table_state
+        })
+      )
     }
 
     // Adjust offset for append requests based on current rows fetched

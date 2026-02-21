@@ -107,7 +107,8 @@ const sync_session_fallback = async (job) => {
 
     let session_file
     if (execution_mode === 'container') {
-      const container_working_dir = translate_to_container_path(working_directory)
+      const container_working_dir =
+        translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
       session_file = join(
         get_container_claude_home(),
@@ -130,7 +131,9 @@ const sync_session_fallback = async (job) => {
     // Check if session file exists before attempting import
     await access(session_file)
 
-    log(`Job ${job.id}: running post-session sync fallback from ${session_file}`)
+    log(
+      `Job ${job.id}: running post-session sync fallback from ${session_file}`
+    )
 
     const result = await create_threads_from_session_provider({
       provider_name: 'claude',
@@ -142,7 +145,9 @@ const sync_session_fallback = async (job) => {
 
     const updated = result.updated?.length || 0
     const created = result.created?.length || 0
-    log(`Job ${job.id}: sync fallback complete (created: ${created}, updated: ${updated})`)
+    log(
+      `Job ${job.id}: sync fallback complete (created: ${created}, updated: ${updated})`
+    )
   } catch (error) {
     log(`Job ${job.id}: sync fallback failed - ${error.message}`)
   }

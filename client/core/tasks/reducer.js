@@ -197,6 +197,15 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
       )
     }
 
+    case tasks_action_types.SET_TASK_TABLE_STATE: {
+      const { view_id: set_view_id, table_state: new_table_state } = payload
+      const target_view_id = set_view_id || 'open'
+      return state.setIn(
+        ['task_table_views', target_view_id, 'task_table_state'],
+        new Map(new_table_state)
+      )
+    }
+
     case tasks_action_types.SELECT_TASK_TABLE_VIEW:
       return state.set('selected_task_table_view_id', payload.view_id)
 

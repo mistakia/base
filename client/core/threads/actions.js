@@ -27,6 +27,7 @@ export const threads_action_types = {
 
   // Table view management actions
   UPDATE_THREAD_TABLE_VIEW: 'UPDATE_THREAD_TABLE_VIEW',
+  SET_THREAD_TABLE_STATE: 'SET_THREAD_TABLE_STATE',
   SELECT_THREAD_TABLE_VIEW: 'SELECT_THREAD_TABLE_VIEW',
   // WebSocket events for real-time thread updates
   THREAD_CREATED: 'THREAD_CREATED',
@@ -70,6 +71,12 @@ export const threads_actions = {
   update_thread_table_view: ({ view }) => ({
     type: threads_action_types.UPDATE_THREAD_TABLE_VIEW,
     payload: { view }
+  }),
+
+  // Set table state directly without triggering a debounced fetch
+  set_thread_table_state: ({ view_id, table_state }) => ({
+    type: threads_action_types.SET_THREAD_TABLE_STATE,
+    payload: { view_id, table_state }
   }),
 
   select_thread_table_view: ({ view_id }) => ({
