@@ -21,6 +21,7 @@ import {
   start_cache_warmer,
   stop_cache_warmer
 } from '#server/services/cache-warmer.mjs'
+import { set_watcher_status } from '#libs-server/watcher-state.mjs'
 import {
   start_file_subscription_watcher,
   stop_file_subscription_watcher,
@@ -52,6 +53,31 @@ const debounced_invalidate_file_path_cache = () => {
     file_path_cache_invalidation_timer = null
     invalidate_file_path_cache()
   }, 1000)
+}
+
+const WATCHER_READY_TIMEOUT_MS = 30000
+
+/**
+ * Wait for a chokidar watcher to emit 'ready', with timeout protection.
+ * @param {Object} watcher_instance - Chokidar watcher instance
+ * @param {string} watcher_name - Name for logging
+ * @returns {Promise<void>}
+ */
+function wait_for_watcher_ready(watcher_instance, watcher_name) {
+  if (!watcher_instance) return Promise.resolve()
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      logger(
+        `${watcher_name} ready timeout after ${WATCHER_READY_TIMEOUT_MS}ms, continuing`
+      )
+      resolve()
+    }, WATCHER_READY_TIMEOUT_MS)
+
+    watcher_instance.on('ready', () => {
+      clearTimeout(timeout)
+      resolve()
+    })
+  })
 }
 
 const SERVER_LOCK_FILE = '.server-lock'
@@ -148,40 +174,79 @@ try {
     // Write lock file to indicate server is running
     await write_server_lock_file({ port: server_port })
 
-    // Initialize thread watcher after server starts
-    try {
-      const thread_directory = path.join(config.user_base_directory, 'thread')
-      start_thread_watcher({ thread_directory })
-      logger('Thread watcher initialized')
-    } catch (watcher_error) {
-      logger(`Failed to start thread watcher: ${watcher_error.message}`)
-      logger(watcher_error)
+    const file_watcher_config = config.file_watchers || {}
+
+    // Sequential watcher initialization: start watchers one at a time,
+    // waiting for each to be ready before starting the next.
+    // Order: thread watcher -> file subscription -> git status (prioritize thread watcher for index sync)
+
+    // 1. Thread watcher (drives index sync, start first)
+    if (file_watcher_config.thread_watcher_enabled !== false) {
+      try {
+        const start_time = Date.now()
+        const thread_directory = path.join(
+          config.user_base_directory,
+          'thread'
+        )
+        const thread_watcher_instance = start_thread_watcher({
+          thread_directory
+        })
+        await wait_for_watcher_ready(
+          thread_watcher_instance,
+          'Thread watcher'
+        )
+        set_watcher_status('thread_watcher', 'ready')
+        logger(
+          `Thread watcher initialized (${Date.now() - start_time}ms)`
+        )
+      } catch (watcher_error) {
+        set_watcher_status('thread_watcher', 'failed')
+        logger(`Failed to start thread watcher: ${watcher_error.message}`)
+        logger(watcher_error)
+      }
+    } else {
+      set_watcher_status('thread_watcher', 'disabled')
+      logger('Thread watcher disabled by config')
     }
 
-    // Initialize file subscription watcher for WebSocket notifications
-    try {
-      start_file_subscription_watcher({
-        on_file_add: (relative_path) => {
-          debounced_invalidate_file_path_cache()
-          emit_file_changed(relative_path)
-        },
-        on_file_change: (relative_path) => {
-          emit_file_changed(relative_path)
-        },
-        on_file_delete: (relative_path) => {
-          debounced_invalidate_file_path_cache()
-          emit_file_deleted(relative_path)
-        }
-      })
-      logger('File subscription watcher initialized')
-    } catch (watcher_error) {
-      logger(
-        `Failed to start file subscription watcher: ${watcher_error.message}`
-      )
-      logger(watcher_error)
+    // 2. File subscription watcher (WebSocket entity notifications)
+    if (file_watcher_config.file_subscriptions_enabled !== false) {
+      try {
+        const start_time = Date.now()
+        const file_sub_watcher = start_file_subscription_watcher({
+          on_file_add: (relative_path) => {
+            debounced_invalidate_file_path_cache()
+            emit_file_changed(relative_path)
+          },
+          on_file_change: (relative_path) => {
+            emit_file_changed(relative_path)
+          },
+          on_file_delete: (relative_path) => {
+            debounced_invalidate_file_path_cache()
+            emit_file_deleted(relative_path)
+          }
+        })
+        await wait_for_watcher_ready(
+          file_sub_watcher,
+          'File subscription watcher'
+        )
+        set_watcher_status('file_subscription_watcher', 'ready')
+        logger(
+          `File subscription watcher initialized (${Date.now() - start_time}ms)`
+        )
+      } catch (watcher_error) {
+        set_watcher_status('file_subscription_watcher', 'failed')
+        logger(
+          `Failed to start file subscription watcher: ${watcher_error.message}`
+        )
+        logger(watcher_error)
+      }
+    } else {
+      set_watcher_status('file_subscription_watcher', 'disabled')
+      logger('File subscription watcher disabled by config')
     }
 
-    // Set up git status cache callbacks (cache was pre-warmed before server start)
+    // 3. Git status cache callbacks (cache was pre-warmed before server start)
     try {
       await initialize_cache({
         discover_repos: get_known_repositories,
@@ -200,26 +265,41 @@ try {
       logger(cache_error)
     }
 
-    // Initialize git status watcher for broadcasting changes via WebSocket
-    try {
-      await start_git_status_watcher({
-        on_git_status_change: async ({ repo_path }) => {
-          // Update cache FIRST, then broadcast to authenticated clients only
-          // GIT_STATUS_CHANGED reveals repository structure - restrict to authenticated users
-          await invalidate_repo(repo_path)
-          broadcast_authenticated({
-            type: 'GIT_STATUS_CHANGED',
-            payload: { repo_path }
-          })
-        },
-        on_repo_list_change: async () => {
-          await invalidate_repo_list()
+    // 4. Git status watcher (broadcasting changes via WebSocket)
+    if (file_watcher_config.git_status_watcher_enabled !== false) {
+      try {
+        const start_time = Date.now()
+        const git_watcher = await start_git_status_watcher({
+          on_git_status_change: async ({ repo_path }) => {
+            await invalidate_repo(repo_path)
+            broadcast_authenticated({
+              type: 'GIT_STATUS_CHANGED',
+              payload: { repo_path }
+            })
+          },
+          on_repo_list_change: async () => {
+            await invalidate_repo_list()
+          }
+        })
+        if (git_watcher) {
+          set_watcher_status('git_status_watcher', 'ready')
+          logger(
+            `Git status watcher initialized (${Date.now() - start_time}ms)`
+          )
+        } else {
+          set_watcher_status('git_status_watcher', 'failed')
+          logger('Git status watcher returned null, marking as failed')
         }
-      })
-      logger('Git status watcher initialized')
-    } catch (watcher_error) {
-      logger(`Failed to start git status watcher: ${watcher_error.message}`)
-      logger(watcher_error)
+      } catch (watcher_error) {
+        set_watcher_status('git_status_watcher', 'failed')
+        logger(
+          `Failed to start git status watcher: ${watcher_error.message}`
+        )
+        logger(watcher_error)
+      }
+    } else {
+      set_watcher_status('git_status_watcher', 'disabled')
+      logger('Git status watcher disabled by config')
     }
 
     // Initialize job worker for thread creation queue
@@ -238,11 +318,17 @@ try {
       if (index_config.file_watcher_enabled) {
         try {
           start_index_sync_watcher()
+          set_watcher_status('entity_file_watcher', 'ready')
           logger('Entity file watcher started')
         } catch (error) {
+          set_watcher_status('entity_file_watcher', 'failed')
           logger(`Failed to start entity file watcher: ${error.message}`)
         }
+      } else {
+        set_watcher_status('entity_file_watcher', 'disabled')
       }
+    } else {
+      set_watcher_status('entity_file_watcher', 'disabled')
     }
 
     // Start cache warmer after embedded index (can now use DuckDB for reads)
@@ -265,6 +351,8 @@ try {
         logger(hook_error)
       }
     }
+
+    logger('All watchers initialized')
   })
 } catch (err) {
   // Output to stderr for visibility to operators and container orchestration

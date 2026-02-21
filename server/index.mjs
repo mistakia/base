@@ -16,6 +16,7 @@ import jwt from 'jsonwebtoken'
 import wss from '#server/websocket.mjs'
 import config from '#config'
 import routes from '#server/routes/index.mjs'
+import health_router from '#server/routes/health.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { create_render_html_middleware } from '#server/middleware/render-html.mjs'
 import {
@@ -127,6 +128,9 @@ api.use(
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
+
+// Health endpoint - registered before auth middleware so it works without authentication
+api.use('/api/health', health_router)
 
 // JWT parsing middleware for all routes - parses tokens but doesn't block
 api.use(parse_jwt_token())

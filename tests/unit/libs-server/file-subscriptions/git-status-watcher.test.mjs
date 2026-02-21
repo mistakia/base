@@ -5,7 +5,8 @@ import fs from 'fs/promises'
 
 import {
   start_git_status_watcher,
-  stop_git_status_watcher
+  stop_git_status_watcher,
+  WORKING_TREE_IGNORE_PATTERNS
 } from '#libs-server/file-subscriptions/git-status-watcher.mjs'
 
 describe('Git Status Watcher', function () {
@@ -97,6 +98,27 @@ describe('Git Status Watcher', function () {
       const repo_paths_called = callbacks.map((c) => c.repo_path).sort()
       const expected = [repo_path_a, repo_path_b].sort()
       expect(repo_paths_called).to.deep.equal(expected)
+    })
+  })
+
+  describe('WORKING_TREE_IGNORE_PATTERNS', () => {
+    it('should include thread/ pattern to avoid overlap with thread-watcher', () => {
+      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/thread/**')
+    })
+
+    it('should include import-history/ pattern for git submodule', () => {
+      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/import-history/**')
+    })
+
+    it('should include embedded-database-index/ pattern for DuckDB files', () => {
+      expect(WORKING_TREE_IGNORE_PATTERNS).to.include(
+        '**/embedded-database-index/**'
+      )
+    })
+
+    it('should include standard ignore patterns', () => {
+      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/node_modules/**')
+      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/.git/**')
     })
   })
 
