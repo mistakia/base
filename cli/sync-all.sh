@@ -50,10 +50,30 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Global lock to prevent concurrent orchestrator runs
 LOCKFILE="/tmp/sync-all.lock"
-exec 200>"$LOCKFILE"
-if ! flock -n 200; then
-    log "Another sync-all instance is running, exiting"
-    exit 0
+if command -v flock >/dev/null 2>&1; then
+    exec 200>"$LOCKFILE"
+    if ! flock -n 200; then
+        log "Another sync-all instance is running, exiting"
+        exit 0
+    fi
+else
+    # macOS fallback: PID-based lock with stale detection
+    if ( set -o noclobber; echo $$ > "$LOCKFILE" ) 2>/dev/null; then
+        trap 'rm -f "$LOCKFILE"' EXIT INT TERM
+    elif [ -f "$LOCKFILE" ]; then
+        lock_pid=$(cat "$LOCKFILE" 2>/dev/null) || true
+        if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+            log "Another sync-all instance is running (PID $lock_pid), exiting"
+            exit 0
+        fi
+        rm -f "$LOCKFILE"
+        if ( set -o noclobber; echo $$ > "$LOCKFILE" ) 2>/dev/null; then
+            trap 'rm -f "$LOCKFILE"' EXIT INT TERM
+        else
+            log "Another sync-all instance is running, exiting"
+            exit 0
+        fi
+    fi
 fi
 
 # Track overall status
