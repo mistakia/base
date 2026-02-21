@@ -76,6 +76,7 @@
   "file_watchers": {
     "file_subscriptions_enabled": true,
     "git_status_watcher_enabled": true,
+    "git_working_tree_watcher_enabled": true,
     "thread_watcher_enabled": true,
     "subscription_watch_paths": null,
     "subscription_exclude_dirs": [

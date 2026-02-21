@@ -94,12 +94,14 @@ async function get_git_dir_for_repo(repo_path) {
  * @param {Function} params.on_git_status_change - Callback invoked with { repo_path } on debounced change
  * @param {Function} [params.on_repo_list_change] - Callback invoked when .gitmodules or worktrees change
  * @param {string[]} [params.repo_paths] - Repository paths to watch (discovered automatically if not provided)
+ * @param {boolean} [params.enable_working_tree_watcher=true] - Whether to start the working tree watcher (creates ~250k inotify watches on large repos)
  * @returns {Promise<Object|null>} Chokidar watcher instance or null if initialization fails
  */
 export async function start_git_status_watcher({
   on_git_status_change,
   on_repo_list_change,
-  repo_paths: provided_repo_paths
+  repo_paths: provided_repo_paths,
+  enable_working_tree_watcher = true
 }) {
   if (watcher) {
     log('Git status watcher already running')
@@ -178,7 +180,14 @@ export async function start_git_status_watcher({
 
     // Start working tree watcher for unstaged/untracked file changes
     // The git internals watcher only catches staged/committed changes
-    await _start_working_tree_watcher(repo_paths, on_git_status_change)
+    // This creates ~250k inotify watches on large repos so it can be disabled via config
+    if (enable_working_tree_watcher) {
+      await _start_working_tree_watcher(repo_paths, on_git_status_change)
+    } else {
+      log(
+        'Working tree watcher disabled -- git status will only update on staged/committed changes'
+      )
+    }
 
     log('Git status watcher started')
     return watcher
