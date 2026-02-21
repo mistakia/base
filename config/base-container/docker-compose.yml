@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: base-container
+    init: true
     restart: unless-stopped
     environment:
       - GIT_AUTHOR_NAME=trashman
