@@ -40,21 +40,18 @@ REMOTE_HOST="storage"
 BARE_REPO_DIR="/mnt/md0/git-repos"
 REMOTE_USER_BASE="/mnt/md0/user-base"
 
-# Map: bare_repo_name -> submodule_path -> pull_script
-# pull_script: either a dedicated script name or "pull-submodule.sh <path>"
-declare -A HOOK_CONFIG
-HOOK_CONFIG=(
-    ["user-base.git"]=".:pull-user-base.sh"
-    ["user-base-threads.git"]="thread:pull-threads.sh"
-    ["user-base-import-history.git"]="import-history:pull-import-history.sh"
-    ["user-base-homelab.git"]="repository/active/homelab:pull-submodule.sh repository/active/homelab"
-    ["user-base-base-ios.git"]="repository/active/base-ios:pull-submodule.sh repository/active/base-ios"
-    ["user-base-epstein-transparency-act.git"]="text/epstein/transparency-act:pull-submodule.sh text/epstein/transparency-act"
+# Post-receive hook configuration: bare_repo:pull_script
+# pull_script is relative to the CLI directory
+POST_RECEIVE_HOOKS=(
+    "user-base.git:pull-user-base.sh"
+    "user-base-threads.git:pull-threads.sh"
+    "user-base-import-history.git:pull-import-history.sh"
+    "user-base-homelab.git:pull-submodule.sh repository/active/homelab"
+    "user-base-base-ios.git:pull-submodule.sh repository/active/base-ios"
+    "user-base-epstein-transparency-act.git:pull-submodule.sh text/epstein/transparency-act"
 )
 
 # Storage-hosted submodules that get post-commit hooks
-# Format: submodule_path:git_hooks_dir
-# For submodules, hooks live in .git/modules/<path>/hooks/
 POST_COMMIT_SUBMODULES=(
     "thread"
     "import-history"
@@ -69,7 +66,7 @@ generate_post_commit_hook() {
 #!/bin/bash
 # Post-commit hook: trigger sync-all.sh in background
 # Installed by deploy-hooks.sh
-nohup "$USER_BASE_DIRECTORY/repository/active/base/cli/sync-all.sh" &>/dev/null &
+nohup "\$USER_BASE_DIRECTORY/repository/active/base/cli/sync-all.sh" &>/dev/null &
 HOOK
 }
 
@@ -78,8 +75,9 @@ HOOK
 if [ "$DEPLOY_POST_RECEIVE" = true ]; then
     echo "=== Deploying post-receive hooks to storage server ==="
 
-    for bare_repo in "${!HOOK_CONFIG[@]}"; do
-        IFS=':' read -r submodule_path pull_script <<< "${HOOK_CONFIG[$bare_repo]}"
+    for entry in "${POST_RECEIVE_HOOKS[@]}"; do
+        bare_repo="${entry%%:*}"
+        pull_script="${entry#*:}"
 
         hook_path="$BARE_REPO_DIR/$bare_repo/hooks/post-receive"
 
