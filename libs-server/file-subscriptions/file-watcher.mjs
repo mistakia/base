@@ -264,6 +264,54 @@ export function discover_watch_paths(
 }
 
 /**
+ * Discover git submodule working trees within watched directories.
+ * Submodules have a .git FILE (not directory) containing a gitdir pointer.
+ * These can contain millions of files and must be excluded from recursive watching.
+ *
+ * @param {string[]} watch_paths - Absolute paths to watched directories
+ * @returns {string[]} Array of glob ignore patterns for discovered submodule directories
+ */
+function discover_submodule_ignore_patterns(watch_paths) {
+  const patterns = []
+
+  for (const watch_path of watch_paths) {
+    _find_submodules_recursive(watch_path, watch_path, patterns)
+  }
+
+  if (patterns.length > 0) {
+    log('Discovered %d submodule ignore patterns: %o', patterns.length, patterns)
+  }
+
+  return patterns
+}
+
+function _find_submodules_recursive(dir, root, patterns) {
+  let entries
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  for (const entry of entries) {
+    if (entry.name === '.git' && entry.isFile()) {
+      // This directory is a submodule root -- exclude it
+      const relative = path.relative(root, dir)
+      patterns.push(`**/${path.basename(dir)}/**`)
+      log('Found submodule at %s, adding ignore pattern', relative)
+      return // Don't recurse into submodules
+    }
+  }
+
+  // Recurse into subdirectories (skip hidden dirs)
+  for (const entry of entries) {
+    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+      _find_submodules_recursive(path.join(dir, entry.name), root, patterns)
+    }
+  }
+}
+
+/**
  * Start the file subscription watcher
  * @param {Object} params
  * @param {Function} params.on_file_add - Callback for new file events (receives relative path)
@@ -311,11 +359,17 @@ export function start_file_subscription_watcher({
   // Store resolved paths for health endpoint consumption
   resolved_watch_paths = watch_paths.map((p) => path.relative(user_base_dir, p))
 
+  // Detect git submodules within watched directories and add ignore patterns.
+  // Submodule working trees can contain millions of files (e.g., transparency-act)
+  // which would exhaust inotify watches on Linux.
+  const submodule_patterns = discover_submodule_ignore_patterns(watch_paths)
+  const all_ignore_patterns = [...IGNORE_PATTERNS, ...submodule_patterns]
+
   try {
     file_watcher = chokidar.watch(watch_paths, {
       persistent: true,
       ignoreInitial: true,
-      ignored: IGNORE_PATTERNS,
+      ignored: all_ignore_patterns,
       awaitWriteFinish: {
         stabilityThreshold: DEBOUNCE_MS,
         pollInterval: 100
