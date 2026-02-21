@@ -4,10 +4,13 @@
  * Wraps thread query, archive, and analysis operations.
  */
 
+import path from 'path'
+
 import { update_thread_state } from '#libs-server/threads/update-thread.mjs'
 import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
+import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { thread_constants } from '#libs-shared'
 import {
   SERVER_URL,
@@ -20,6 +23,29 @@ import {
 import { authenticated_fetch } from './lib/auth.mjs'
 
 const { THREAD_STATE, ARCHIVE_REASON } = thread_constants
+
+/**
+ * Resolve a file or directory reference for thread search.
+ * If the input is an absolute path, extract the relative path within the
+ * repository for broad LIKE matching. This matches references stored under
+ * different URI schemes (sys:, user:) and worktree paths.
+ * Otherwise return the input as-is for pattern matching.
+ */
+function resolve_ref_pattern(ref) {
+  if (!ref) return ref
+  if (path.isAbsolute(ref)) {
+    try {
+      const base_uri = create_base_uri_from_path(ref)
+      // Extract just the path portion after the scheme prefix (e.g., "cli/file.mjs")
+      const colon_index = base_uri.indexOf(':')
+      return colon_index >= 0 ? base_uri.slice(colon_index + 1) : base_uri
+    } catch {
+      // Path outside managed repositories - fall back to basename
+      return path.basename(ref)
+    }
+  }
+  return ref
+}
 
 export const command = 'thread <command>'
 export const describe =
@@ -42,11 +68,13 @@ export const builder = (yargs) =>
             type: 'string'
           })
           .option('file-ref', {
-            describe: 'Filter by file reference pattern (e.g., user:config/*)',
+            describe:
+              'Filter by file reference (base URI pattern, filename, or absolute path)',
             type: 'string'
           })
           .option('dir-ref', {
-            describe: 'Filter by directory reference pattern',
+            describe:
+              'Filter by directory reference (base URI pattern, name, or absolute path)',
             type: 'string'
           })
           .option('tags', {
@@ -319,8 +347,10 @@ async function handle_list(argv) {
     const params = new URLSearchParams()
     if (argv.state) params.set('thread_state', argv.state)
     if (argv.search) params.set('search', argv.search)
-    if (argv['file-ref']) params.set('file_ref', argv['file-ref'])
-    if (argv['dir-ref']) params.set('dir_ref', argv['dir-ref'])
+    if (argv['file-ref'])
+      params.set('file_ref', resolve_ref_pattern(argv['file-ref']))
+    if (argv['dir-ref'])
+      params.set('dir_ref', resolve_ref_pattern(argv['dir-ref']))
     if (argv.tags) params.set('tags', argv.tags)
     if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
     if (argv['relation-type'])
