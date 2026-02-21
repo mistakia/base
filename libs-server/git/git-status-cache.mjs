@@ -6,6 +6,8 @@ import {
   get_current_branch_name,
   get_merge_head_branch_name
 } from '#libs-server/git/index.mjs'
+import config from '#config'
+import { map_with_concurrency } from '#libs-server/utils/promise-concurrency.mjs'
 
 const log = debug('git:status-cache')
 
@@ -75,10 +77,13 @@ async function _do_full_cache_init() {
   const { repo_paths, worktree_metadata } = await _discover_repos_fn()
   repo_list_cache = { repo_paths, worktree_metadata }
 
-  // Fetch status + merge state for all repos in parallel
+  // Fetch status + merge state for all repos with concurrency limit
+  const max_concurrent =
+    config.file_watchers?.max_concurrent_git_status || 5
   const now = Date.now()
-  await Promise.all(
-    repo_paths.map(async (repo_path) => {
+  await map_with_concurrency(
+    repo_paths,
+    async (repo_path) => {
       try {
         const [status, merge_state] = await Promise.all([
           get_status({ repo_path }),
@@ -93,7 +98,8 @@ async function _do_full_cache_init() {
           updated_at: now
         })
       }
-    })
+    },
+    max_concurrent
   )
 
   log(
@@ -179,11 +185,14 @@ export async function invalidate_repo_list() {
     log('Removed repo from cache: %s', repo_path)
   }
 
-  // Fetch status for new entries
+  // Fetch status for new entries with concurrency limit
   if (added.length > 0) {
+    const max_concurrent =
+      config.file_watchers?.max_concurrent_git_status || 5
     const now = Date.now()
-    await Promise.all(
-      added.map(async (repo_path) => {
+    await map_with_concurrency(
+      added,
+      async (repo_path) => {
         try {
           const [status, merge_state] = await Promise.all([
             get_status({ repo_path }),
@@ -203,7 +212,8 @@ export async function invalidate_repo_list() {
             updated_at: now
           })
         }
-      })
+      },
+      max_concurrent
     )
   }
 

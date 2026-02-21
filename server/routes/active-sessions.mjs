@@ -27,9 +27,15 @@ const log = debug('api:active-sessions')
  *
  * @param {Object} session - Session to potentially redact
  * @param {string|null} user_public_key - Requesting user's public key
+ * @param {Object} [options] - Options
+ * @param {Object} [options.thread_metadata] - Pre-loaded thread metadata to avoid duplicate disk reads
  * @returns {Promise<Object>} Session (possibly redacted) with can_write property
  */
-async function apply_session_redaction(session, user_public_key) {
+async function apply_session_redaction(
+  session,
+  user_public_key,
+  { thread_metadata = null } = {}
+) {
   if (!session) return session
 
   // Sessions with thread_id - check thread permission
@@ -37,7 +43,8 @@ async function apply_session_redaction(session, user_public_key) {
     try {
       const permission_result = await check_thread_permission({
         user_public_key,
-        thread_id: session.thread_id
+        thread_id: session.thread_id,
+        metadata: thread_metadata
       })
 
       if (!permission_result.read?.allowed) {
@@ -81,7 +88,8 @@ async function get_thread_info_for_session(thread_id) {
     message_count: null,
     duration_minutes: null,
     total_tokens: null,
-    source_provider: null
+    source_provider: null,
+    _metadata: null
   }
 
   if (!thread_id) return empty_result
@@ -103,7 +111,8 @@ async function get_thread_info_for_session(thread_id) {
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
       total_tokens: metadata.total_tokens || null,
-      source_provider: metadata.source?.provider || null
+      source_provider: metadata.source?.provider || null,
+      _metadata: metadata
     }
   } catch {
     // Thread may not exist yet or be inaccessible
@@ -137,7 +146,9 @@ async function enrich_session_with_thread_info(session) {
     message_count: thread_info.message_count,
     duration_minutes: thread_info.duration_minutes,
     total_tokens: thread_info.total_tokens,
-    source_provider: thread_info.source_provider
+    source_provider: thread_info.source_provider,
+    // Carry pre-loaded metadata for permission checks (avoids duplicate disk read)
+    _thread_metadata: thread_info._metadata
   }
 }
 
@@ -170,11 +181,17 @@ router.get('/', async (req, res) => {
         (session.thread_id || session.job_id)
     )
 
-    // Apply permission-based redaction to each session
+    // Apply permission-based redaction to each session, passing pre-loaded
+    // metadata to avoid duplicate disk reads in check_thread_permission
     const redacted_sessions = await Promise.all(
-      active_thread_sessions.map((session) =>
-        apply_session_redaction(session, user_public_key)
-      )
+      active_thread_sessions.map(async (session) => {
+        const { _thread_metadata, ...session_without_metadata } = session
+        return apply_session_redaction(
+          session_without_metadata,
+          user_public_key,
+          { thread_metadata: _thread_metadata }
+        )
+      })
     )
 
     log(
@@ -212,10 +229,12 @@ router.get('/:session_id', async (req, res) => {
     // Enrich session with fresh thread info (title and latest timeline event)
     const enriched_session = await enrich_session_with_thread_info(session)
 
-    // Apply permission-based redaction
+    // Apply permission-based redaction, passing pre-loaded metadata
+    const { _thread_metadata, ...session_without_metadata } = enriched_session
     const redacted_session = await apply_session_redaction(
-      enriched_session,
-      user_public_key
+      session_without_metadata,
+      user_public_key,
+      { thread_metadata: _thread_metadata }
     )
 
     res.status(200).json(redacted_session)

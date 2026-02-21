@@ -3,8 +3,20 @@
  *
  * Monitor user base directory for file changes using chokidar.
  * Emits targeted events to subscribed WebSocket clients.
+ *
+ * Uses exclusion-based directory discovery: instead of watching the entire
+ * user-base recursively, discovers top-level entity directories at startup
+ * and excludes known non-entity directories. This reduces inotify watch
+ * descriptors from ~250k to a few hundred on Linux.
+ *
+ * New entity directories (e.g., recipe/, bookmark/) are automatically picked
+ * up on next restart without code changes. New NON-entity directories must be
+ * added to the exclusion list in config (file_watchers.subscription_exclude_dirs).
+ *
+ * See: task/base/fix-file-watcher-scalability.md for full rationale.
  */
 
+import fs from 'fs'
 import path from 'path'
 
 import debug from 'debug'
@@ -18,10 +30,22 @@ import { create_user_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('file-subscriptions:watcher')
 
+// Directories excluded from file subscription watching because they are either
+// covered by dedicated watchers or contain non-entity data. The exclusion-based
+// approach means new entity directories are automatically watched without code
+// changes. Only add directories here that should NOT be watched.
+const DEFAULT_SUBSCRIPTION_EXCLUDE_DIRS = [
+  'repository', // covered by git-status-watcher
+  'thread', // covered by thread-watcher
+  '.git', // internal git data
+  'node_modules', // dependencies
+  'embedded-database-index', // DuckDB internal files
+  'import-history' // git submodule, not live entity data
+]
+
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
   '**/.git/**',
-  '**/thread/**',
   '**/*.swp',
   '**/*~',
   '**/.DS_Store'
@@ -31,6 +55,7 @@ const DEBOUNCE_MS = 500
 
 let file_watcher = null
 let is_watching = false
+let resolved_watch_paths = []
 
 // Timeout for permission checks to prevent hung operations
 const PERMISSION_CHECK_TIMEOUT_MS = 5000
@@ -44,17 +69,21 @@ async function check_permission_with_timeout({
   user_public_key,
   resource_path
 }) {
-  const timeout_promise = new Promise((_resolve, reject) => {
-    setTimeout(
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
       () => reject(new Error('Permission check timed out')),
       PERMISSION_CHECK_TIMEOUT_MS
     )
+    check_user_permission({ user_public_key, resource_path })
+      .then((result) => {
+        clearTimeout(timer)
+        resolve(result)
+      })
+      .catch((err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
   })
-
-  return Promise.race([
-    check_user_permission({ user_public_key, resource_path }),
-    timeout_promise
-  ])
 }
 
 /**
@@ -174,6 +203,67 @@ export async function emit_file_deleted(file_path) {
 }
 
 /**
+ * Discover entity directories to watch by scanning the user-base top level
+ * and excluding known non-entity directories.
+ *
+ * @param {string} user_base_dir - Absolute path to user base directory
+ * @param {Object} [options] - Options
+ * @param {string[]|null} [options.explicit_watch_paths] - If set, use these paths instead of auto-discovery
+ * @param {string[]} [options.exclude_dirs] - Directories to exclude during auto-discovery
+ * @returns {string[]} Array of absolute directory paths to watch
+ */
+export function discover_watch_paths(
+  user_base_dir,
+  { explicit_watch_paths = null, exclude_dirs = DEFAULT_SUBSCRIPTION_EXCLUDE_DIRS } = {}
+) {
+  // Config override: use explicit paths when provided
+  if (Array.isArray(explicit_watch_paths)) {
+    const resolved = explicit_watch_paths
+      .map((relative_path) => path.join(user_base_dir, relative_path))
+      .filter((absolute_path) => {
+        try {
+          const stat = fs.statSync(absolute_path)
+          return stat.isDirectory()
+        } catch {
+          log('Configured watch path does not exist: %s', absolute_path)
+          return false
+        }
+      })
+    log('Using explicit watch paths: %o', resolved)
+    return resolved
+  }
+
+  // Auto-discovery: scan top-level directories, exclude non-entity dirs
+  const exclude_set = new Set(exclude_dirs)
+
+  let entries
+  try {
+    entries = fs.readdirSync(user_base_dir, { withFileTypes: true })
+  } catch (error) {
+    log('Failed to read user base directory: %s', error.message)
+    return []
+  }
+
+  const watch_paths = entries
+    .filter((entry) => {
+      if (!entry.isDirectory()) return false
+      if (exclude_set.has(entry.name)) return false
+      if (entry.name.startsWith('.')) return false
+      return true
+    })
+    .map((entry) => path.join(user_base_dir, entry.name))
+
+  log(
+    'Auto-discovered %d entity directories (excluded: %o): %o',
+    watch_paths.length,
+    [...exclude_set],
+    watch_paths.map((p) => path.basename(p))
+  )
+
+  return watch_paths
+}
+
+/**
  * Start the file subscription watcher
  * @param {Object} params
  * @param {Function} params.on_file_add - Callback for new file events (receives relative path)
@@ -199,10 +289,30 @@ export function start_file_subscription_watcher({
     return null
   }
 
-  log('Starting file subscription watcher for %s', user_base_dir)
+  const file_watcher_config = config.file_watchers || {}
+  const watch_paths = discover_watch_paths(user_base_dir, {
+    explicit_watch_paths: file_watcher_config.subscription_watch_paths || null,
+    exclude_dirs:
+      file_watcher_config.subscription_exclude_dirs ||
+      DEFAULT_SUBSCRIPTION_EXCLUDE_DIRS
+  })
+
+  if (watch_paths.length === 0) {
+    log('No directories to watch, file subscription watcher not started')
+    return null
+  }
+
+  log(
+    'Starting file subscription watcher for %d directories in %s',
+    watch_paths.length,
+    user_base_dir
+  )
+
+  // Store resolved paths for health endpoint consumption
+  resolved_watch_paths = watch_paths.map((p) => path.relative(user_base_dir, p))
 
   try {
-    file_watcher = chokidar.watch(`${user_base_dir}/**/*`, {
+    file_watcher = chokidar.watch(watch_paths, {
       persistent: true,
       ignoreInitial: true,
       ignored: IGNORE_PATTERNS,
@@ -244,6 +354,15 @@ export function start_file_subscription_watcher({
 }
 
 /**
+ * Get the resolved watch paths (relative to user base directory).
+ * Used by the health endpoint to report which directories are being watched.
+ * @returns {string[]} Array of relative directory paths
+ */
+export function get_watched_paths() {
+  return resolved_watch_paths
+}
+
+/**
  * Stop the file subscription watcher
  * @returns {Promise<void>}
  */
@@ -256,5 +375,8 @@ export async function stop_file_subscription_watcher() {
   }
 
   is_watching = false
+  resolved_watch_paths = []
   log('File subscription watcher stopped')
 }
+
+export { DEFAULT_SUBSCRIPTION_EXCLUDE_DIRS }

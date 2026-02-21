@@ -35,7 +35,10 @@ const WORKING_TREE_IGNORE_PATTERNS = [
   '**/.DS_Store',
   '**/tmp/**',
   '**/.turbo/**',
-  '**/yarn-error.log'
+  '**/yarn-error.log',
+  '**/thread/**', // covered by thread-watcher
+  '**/import-history/**', // git submodule, high churn
+  '**/embedded-database-index/**' // DuckDB internal files
 ]
 
 let watcher = null
@@ -507,3 +510,5 @@ export async function stop_git_status_watcher() {
 
   log('Git status watcher stopped')
 }
+
+export { WORKING_TREE_IGNORE_PATTERNS }

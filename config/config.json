@@ -73,6 +73,21 @@
       "fast": ""
     }
   },
+  "file_watchers": {
+    "file_subscriptions_enabled": true,
+    "git_status_watcher_enabled": true,
+    "thread_watcher_enabled": true,
+    "subscription_watch_paths": null,
+    "subscription_exclude_dirs": [
+      "repository",
+      "thread",
+      ".git",
+      "node_modules",
+      "embedded-database-index",
+      "import-history"
+    ],
+    "max_concurrent_git_status": 5
+  },
   "embedded_database_index": {
     "enabled": true,
     "file_watcher_enabled": true
