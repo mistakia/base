@@ -131,15 +131,18 @@ function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
   }
 }
 
-module.exports = {
-  apps: [
-    app('base-api', 'services/server.mjs', {
-      watch: ['build/bundle-manifest.json'],
-      watch_delay: 1000,
-      ignore_watch: ['node_modules', 'logs', 'tmp'],
-      max_memory_restart: '3584M',
-      node_args: '--max-old-space-size=3584'
-    }),
+const is_macbook = machine_id === 'macbook'
+
+const all_apps = [
+  app('base-api', 'services/server.mjs', {
+    watch: ['build/bundle-manifest.json'],
+    watch_delay: 1000,
+    ignore_watch: ['node_modules', 'logs', 'tmp'],
+    max_memory_restart: '3584M',
+    node_args: '--max-old-space-size=3584'
+  }),
+  // LLM-dependent: runs on MacBook only (has Ollama models)
+  is_macbook &&
     app(
       'metadata-queue-processor',
       'server/services/metadata-queue-processor.mjs',
@@ -152,21 +155,24 @@ module.exports = {
         }
       }
     ),
-    app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
-      max_memory_restart: '512M',
-      env: { DEBUG: 'cli-queue:*' }
-    }),
-    app('schedule-processor', 'server/services/schedule-processor.mjs', {
-      max_memory_restart: '256M',
-      env: { DEBUG: 'schedule:*' }
-    }),
-    app('transcription-service', 'server/services/transcription-service.py', {
-      interpreter: 'python3',
-      max_memory_restart: '2G',
-      args:
-        machine_config.transcription_args ||
-        '--port 8089 --model base.en --compute-type int8',
-      env: common_env
-    })
-  ]
+  app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
+    max_memory_restart: '512M',
+    env: { DEBUG: 'cli-queue:*' }
+  }),
+  app('schedule-processor', 'server/services/schedule-processor.mjs', {
+    max_memory_restart: '256M',
+    env: { DEBUG: 'schedule:*' }
+  }),
+  app('transcription-service', 'server/services/transcription-service.py', {
+    interpreter: 'python3',
+    max_memory_restart: '2G',
+    args:
+      machine_config.transcription_args ||
+      '--port 8089 --model base.en --compute-type int8',
+    env: common_env
+  })
+]
+
+module.exports = {
+  apps: all_apps.filter(Boolean)
 }
