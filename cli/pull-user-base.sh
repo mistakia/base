@@ -2,12 +2,13 @@
 
 # Pull user-base from remote
 # This script fetches and rebases local user-base state on top of remote changes
-# Called by scheduled-command/base/pull-user-base.md
+# Called by sync-all.sh (parent sync step) and post-receive hooks
 #
 # Behavior:
-# 1. Skips if working directory has uncommitted changes (dirty)
-#    - Avoids disrupting active sessions that may be reading/modifying files
-#    - Changes should be committed by user before sync
+# 1. If dirty working directory: compute overlap between dirty files and incoming changes
+#    - No overlap: proceed with rebase (git only touches files in the rebase diff)
+#    - Overlap: log filenames, Discord alert, skip sync
+#    - No stash -- avoids risk of stash/pop interacting with active sessions
 # 2. Fetches from remote
 # 3. Handles divergence scenarios:
 #    - Up to date: no-op
@@ -43,14 +44,6 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 1
 fi
 
-# Check for uncommitted changes (dirty working directory)
-# Skip pull entirely to avoid disrupting active sessions
-# Ignore submodule pointer changes - they're low-risk and naturally committed with other changes
-if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
-    echo "Working directory has uncommitted changes, skipping pull"
-    exit 0
-fi
-
 echo "Fetching from remote..."
 if ! git fetch origin; then
     echo "Failed to fetch from remote" >&2
@@ -75,6 +68,35 @@ if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
 elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
     echo "Local is ahead of remote, leaving local commits unchanged"
     exit 0
+fi
+
+# Check for dirty working directory - use overlap check instead of skipping entirely
+IS_DIRTY=false
+if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
+    IS_DIRTY=true
+fi
+
+# If dirty, compute overlap between dirty files and incoming changes
+if [ "$IS_DIRTY" = true ]; then
+    # Collect dirty files (staged + unstaged, deduplicated)
+    dirty_files=$({ git diff --name-only --ignore-submodules 2>/dev/null; git diff --cached --name-only --ignore-submodules 2>/dev/null; } | sort -u)
+
+    # Collect incoming files from remote
+    incoming_files=$(git diff --name-only --ignore-submodules "$MERGE_BASE".."$REMOTE_BRANCH" 2>/dev/null | sort -u)
+
+    # Check for overlap
+    overlap=$(comm -12 <(echo "$dirty_files") <(echo "$incoming_files"))
+
+    if [ -n "$overlap" ]; then
+        echo "Overlap detected between dirty files and incoming changes:" >&2
+        echo "$overlap" | while read -r f; do echo "  $f" >&2; done
+        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity warning \
+            --title "Sync blocked: file overlap" \
+            --message "pull-user-base on $(hostname): dirty files overlap with incoming changes. Files: $(echo "$overlap" | tr '\n' ', ')" || true
+        exit 0
+    fi
+
+    echo "Dirty working directory but no overlap with incoming changes, proceeding with rebase..."
 fi
 
 PULLED=false
