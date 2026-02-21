@@ -232,10 +232,24 @@ async function process_thread_table_request_indexed({
   }
 
   const duckdb_connection = await get_duckdb_connection()
-  const filters = convert_table_state_to_duckdb_filters(table_state)
+  const all_filters = convert_table_state_to_duckdb_filters(table_state)
   const sort = convert_table_state_to_duckdb_sort(table_state)
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
+
+  // Separate tag filters from regular column filters.
+  // Tags are stored in the thread_tags join table, not as a column on threads,
+  // so they must be passed via the dedicated `tags` parameter.
+  const tag_filters = all_filters.filter((f) => f.column_id === 'tags')
+  const filters = all_filters.filter((f) => f.column_id !== 'tags')
+
+  // Extract tag values from IN filters
+  const tags = tag_filters.reduce((acc, f) => {
+    if (f.operator === 'IN' && Array.isArray(f.value)) {
+      acc.push(...f.value)
+    }
+    return acc
+  }, [])
 
   // Query threads from DuckDB
   const threads = await query_threads_from_duckdb({
@@ -243,13 +257,15 @@ async function process_thread_table_request_indexed({
     filters,
     sort,
     limit,
-    offset
+    offset,
+    tags: tags.length > 0 ? tags : undefined
   })
 
   // Get total count for pagination
   const total_count = await count_threads_in_duckdb({
     connection: duckdb_connection,
-    filters
+    filters,
+    tags: tags.length > 0 ? tags : undefined
   })
 
   // Normalize DuckDB results to match filesystem output structure
