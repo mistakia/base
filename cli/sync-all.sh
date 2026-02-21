@@ -147,14 +147,24 @@ sync_submodule() {
         fi
     fi
 
+    # Ensure we're on a branch (not detached HEAD)
+    local current_branch
+    current_branch=$(git -C "$full_path" rev-parse --abbrev-ref HEAD)
+    if [ "$current_branch" = "HEAD" ]; then
+        log "$submodule_name: detached HEAD, checking out main..."
+        if ! git -C "$full_path" checkout main 2>/dev/null; then
+            log_error "$submodule_name: failed to checkout main from detached HEAD"
+            return 1
+        fi
+        current_branch="main"
+    fi
+
     # Fetch
     if ! git -C "$full_path" fetch origin 2>/dev/null; then
         log_error "$submodule_name: fetch failed"
         return 1
     fi
 
-    local current_branch
-    current_branch=$(git -C "$full_path" rev-parse --abbrev-ref HEAD)
     local remote_branch="origin/$current_branch"
 
     # Check if remote branch exists
