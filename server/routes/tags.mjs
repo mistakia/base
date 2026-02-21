@@ -3,8 +3,11 @@ import {
   list_tags_from_filesystem,
   read_tag_from_filesystem
 } from '#libs-server/tag/index.mjs'
-import { query_entities_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import {
+  query_entities_from_duckdb,
+  count_entities_in_duckdb
+} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
@@ -17,7 +20,9 @@ import {
 const router = express.Router({ mergeParams: true })
 
 /**
- * Query threads by tag base_uri from DuckDB thread_tags table
+ * Query threads related to entities tagged with a given tag.
+ * Uses entity_relations to find threads that have relations to tagged entities,
+ * since the thread_tags table is not currently populated.
  *
  * @param {Object} params - Query parameters
  * @param {string} params.tag_base_uri - Tag base_uri to filter by
@@ -25,46 +30,28 @@ const router = express.Router({ mergeParams: true })
  * @param {number} [params.limit=50] - Maximum number of results
  * @returns {Promise<Array>} Array of normalized thread objects
  */
-async function query_threads_by_tag({
+async function query_threads_by_tag_via_relations({
   tag_base_uri,
   sort = 'updated_at',
   limit = 50
 }) {
-  let duckdb_connection
   try {
-    duckdb_connection = await get_duckdb_connection()
-  } catch {
-    // DuckDB not initialized - return empty array
-    return []
-  }
-
-  // If DuckDB isn't available or thread_tags table doesn't exist yet,
-  // return empty array (thread tagging is a separate implementation task)
-  if (!duckdb_connection) {
-    return []
-  }
-
-  try {
-    // Query threads that have this tag via thread_tags join table
-    // This will return results once the automatic thread tag evaluation task populates thread_tags
-    const sort_direction = 'DESC'
+    const sort_column = sort === 'created_at' ? 'created_at' : 'updated_at'
     const query = `
-      SELECT t.*
-      FROM threads t
-      INNER JOIN thread_tags tt ON t.thread_id = tt.thread_id
-      WHERE tt.tag_base_uri = ?
-      ORDER BY t.${sort === 'created_at' ? 'created_at' : 'updated_at'} ${sort_direction}
+      SELECT DISTINCT t.*
+      FROM entity_relations er
+      JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
+      JOIN entity_tags et ON er.target_base_uri = et.entity_base_uri
+      WHERE et.tag_base_uri = ?
+      ORDER BY t.${sort_column} DESC
       LIMIT ?
     `
 
-    const results = await new Promise((resolve, reject) => {
-      duckdb_connection.all(query, tag_base_uri, limit, (err, rows) => {
-        if (err) reject(err)
-        else resolve(rows || [])
-      })
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [tag_base_uri, limit]
     })
 
-    // Fetch models data for cost calculation
     let models_data = null
     try {
       const cache_data = await get_models_from_cache()
@@ -73,15 +60,37 @@ async function query_threads_by_tag({
       // Cost calculation will work without models data
     }
 
-    // Normalize thread data to match expected format
     return results.map((thread) => normalize_duckdb_thread(thread, models_data))
-  } catch (error) {
-    // thread_tags table may not exist yet - this is expected until
-    // the automatic thread tag evaluation task is implemented
-    if (error.message?.includes('thread_tags')) {
-      return []
-    }
-    throw error
+  } catch {
+    // DuckDB not initialized or tables don't exist yet
+    return []
+  }
+}
+
+/**
+ * Count threads related to entities tagged with a given tag.
+ */
+async function count_threads_by_tag_via_relations({ tag_base_uri }) {
+  try {
+    const query = `
+      SELECT COUNT(DISTINCT t.thread_id) as count
+      FROM entity_relations er
+      JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
+      JOIN entity_tags et ON er.target_base_uri = et.entity_base_uri
+      WHERE et.tag_base_uri = ?
+    `
+
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [tag_base_uri]
+    })
+
+    const count_value = results[0]?.count
+    return typeof count_value === 'bigint'
+      ? Number(count_value)
+      : count_value || 0
+  } catch {
+    return 0
   }
 }
 
@@ -144,6 +153,10 @@ router.get('/', async (req, res) => {
       // Get all entities associated with this tag using DuckDB index
       // For redacted tags, return empty entities list
       let tagged_entities = []
+      let task_count = 0
+      let completed_task_count = 0
+      let total_entity_count = 0
+
       if (!is_redacted) {
         try {
           tagged_entities = await query_entities_from_duckdb({
@@ -164,31 +177,84 @@ router.get('/', async (req, res) => {
           entities: tagged_entities,
           user_public_key
         })
+
+        // Get accurate counts using count queries (independent of entity limit)
+        try {
+          const tag_filter = {
+            column_id: 'tags',
+            operator: 'IN',
+            value: [tag.base_uri]
+          }
+
+          const [non_completed_count, completed_count, entity_count] =
+            await Promise.all([
+              count_entities_in_duckdb({
+                filters: [
+                  tag_filter,
+                  { column_id: 'type', operator: '=', value: 'task' },
+                  {
+                    column_id: 'status',
+                    operator: 'NOT IN',
+                    value: ['Completed', 'Abandoned']
+                  }
+                ]
+              }),
+              count_entities_in_duckdb({
+                filters: [
+                  tag_filter,
+                  { column_id: 'type', operator: '=', value: 'task' },
+                  {
+                    column_id: 'status',
+                    operator: 'IN',
+                    value: ['Completed', 'Abandoned']
+                  }
+                ]
+              }),
+              count_entities_in_duckdb({
+                filters: [tag_filter]
+              })
+            ])
+
+          task_count = non_completed_count
+          completed_task_count = completed_count
+          total_entity_count = entity_count
+        } catch (err) {
+          log('Failed to get entity counts: %s', err.message)
+          // Fallback to counting from fetched entities
+          const closed_statuses = ['Completed', 'Abandoned']
+          task_count = tagged_entities.filter(
+            (e) => e.type === 'task' && !closed_statuses.includes(e.status)
+          ).length
+          completed_task_count = tagged_entities.filter(
+            (e) => e.type === 'task' && closed_statuses.includes(e.status)
+          ).length
+          total_entity_count = tagged_entities.length
+        }
       }
 
-      // Count tasks (entities with type === 'task')
-      const task_count = tagged_entities.filter(
-        (entity) => entity.type === 'task'
-      ).length
-
-      // Get threads tagged with this tag (if include_threads is true)
+      // Get threads related to tagged entities via entity_relations
       // For redacted tags, return empty threads list
       let threads = []
       let thread_count = 0
 
       if (include_threads === 'true' && !is_redacted) {
-        threads = await query_threads_by_tag({
-          tag_base_uri: tag.base_uri,
-          sort,
-          limit: parsed_limit
-        })
+        const [thread_results, thread_total] = await Promise.all([
+          query_threads_by_tag_via_relations({
+            tag_base_uri: tag.base_uri,
+            sort,
+            limit: parsed_limit
+          }),
+          count_threads_by_tag_via_relations({
+            tag_base_uri: tag.base_uri
+          })
+        ])
 
         // Apply per-thread permission redaction
         threads = await filter_threads_by_permission({
-          threads,
+          threads: thread_results,
           user_public_key
         })
-        thread_count = threads.length
+        thread_count = thread_total
       }
 
       // Return tag with entities, threads, and counts
@@ -197,8 +263,9 @@ router.get('/', async (req, res) => {
         entities: tagged_entities,
         threads,
         task_count,
+        completed_task_count,
         thread_count,
-        total_entity_count: tagged_entities.length,
+        total_entity_count,
         is_redacted
       })
     } else {

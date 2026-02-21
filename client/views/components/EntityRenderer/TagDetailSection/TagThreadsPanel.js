@@ -17,8 +17,8 @@ import { format_relative_time } from '@views/utils/date-formatting.js'
  * @param {function} on_expand - Handler for expand button
  */
 const TagThreadsPanel = ({ threads, thread_count, base_uri, on_expand }) => {
-  const visible_threads = threads.slice(0, 5)
-  const has_more = thread_count > 5
+  const visible_threads = threads.slice(0, 15)
+  const has_more = thread_count > 15
 
   const get_state_class = (state) => {
     const state_lower = (state || 'unknown').toLowerCase()

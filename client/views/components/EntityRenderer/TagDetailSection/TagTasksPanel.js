@@ -17,8 +17,8 @@ import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
  * @param {function} on_expand - Handler for expand button
  */
 const TagTasksPanel = ({ tasks, task_count, base_uri, on_expand }) => {
-  const visible_tasks = tasks.slice(0, 5)
-  const has_more = task_count > 5
+  const visible_tasks = tasks.slice(0, 15)
+  const has_more = task_count > 15
 
   const get_status_class = (status) => {
     const status_lower = (status || '').toLowerCase().replace(/\s+/g, '-')

@@ -110,9 +110,11 @@ const TagDashboard = ({ frontmatter }) => {
     thread_count = 0
   } = tag_data
 
-  // Filter entities to get only non-completed tasks for the preview
+  // Filter entities to get only open tasks for the preview (match "open" view behavior)
+  const closed_statuses = ['Completed', 'Abandoned']
   const tasks = entities.filter(
-    (entity) => entity.type === 'task' && entity.status !== 'Completed'
+    (entity) =>
+      entity.type === 'task' && !closed_statuses.includes(entity.status)
   )
 
   // If expanded view is active, show only that view
