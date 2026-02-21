@@ -48,6 +48,11 @@ source "$(dirname "$0")/lib/paths.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Ensure SSH works for git operations (hook environments may lack proper SSH config)
+if [ -z "$GIT_SSH_COMMAND" ]; then
+    unset GIT_SSH_COMMAND
+fi
+
 # Global lock to prevent concurrent orchestrator runs
 LOCKFILE="/tmp/sync-all.lock"
 if command -v flock >/dev/null 2>&1; then
