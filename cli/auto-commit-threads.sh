@@ -101,6 +101,42 @@ if [ "$SKIP_LOCK" = false ]; then
     fi
 fi
 
+# Wait for git index.lock to be released (handles concurrent git operations)
+# Retries up to MAX_WAIT seconds, then removes stale locks
+wait_for_git_index_lock() {
+    local git_dir
+    git_dir=$(git rev-parse --git-dir)
+    local index_lock="$git_dir/index.lock"
+    local max_wait=10
+    local waited=0
+
+    while [ -f "$index_lock" ] && [ $waited -lt $max_wait ]; do
+        # Check if the lock holder is still alive (if lock contains PID info)
+        local lock_age
+        if [ "$(uname)" = "Darwin" ]; then
+            lock_age=$(( $(date +%s) - $(stat -f %m "$index_lock" 2>/dev/null || echo 0) ))
+        else
+            lock_age=$(( $(date +%s) - $(stat -c %Y "$index_lock" 2>/dev/null || echo 0) ))
+        fi
+
+        # If lock is older than 5 minutes, it's almost certainly stale
+        if [ "$lock_age" -gt 300 ]; then
+            echo "Removing stale git index.lock (age: ${lock_age}s)"
+            rm -f "$index_lock"
+            return 0
+        fi
+
+        echo "Waiting for git index.lock (age: ${lock_age}s)..."
+        sleep 1
+        waited=$((waited + 1))
+    done
+
+    if [ -f "$index_lock" ]; then
+        echo "Git index.lock still held after ${max_wait}s, skipping commit"
+        exit 0
+    fi
+}
+
 # Perform git operations
 do_commit() {
     if [ -n "$THREAD_ID" ]; then
@@ -165,4 +201,5 @@ do_commit() {
     fi
 }
 
+wait_for_git_index_lock
 do_commit

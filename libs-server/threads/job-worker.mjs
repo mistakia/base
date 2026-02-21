@@ -7,7 +7,13 @@ import {
 } from '#libs-server/redis/get-connection.mjs'
 import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
 import { emit_thread_job_failed } from '#libs-server/active-sessions/index.mjs'
-import { create_session_claude_cli } from './create-session-claude-cli.mjs'
+import {
+  create_session_claude_cli,
+  get_container_claude_home,
+  derive_projects_dir_name
+} from './create-session-claude-cli.mjs'
+import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
+import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
 const log = debug('threads:worker')
 
@@ -82,10 +88,74 @@ const process_thread_creation_job = async (job) => {
 }
 
 /**
+ * Re-import session JSONL back to thread raw-data as a fallback
+ * for when SessionEnd hooks fail (e.g., git lock contention).
+ *
+ * For container sessions, reads the updated JSONL from the container's
+ * claude-home mount. For host sessions, reads from the host's projects dir.
+ */
+const sync_session_fallback = async (job) => {
+  const { session_id, thread_id, working_directory, execution_mode } = job.data
+
+  if (!session_id || !thread_id) {
+    return
+  }
+
+  try {
+    const { join } = await import('path')
+    const { access } = await import('fs/promises')
+
+    let session_file
+    if (execution_mode === 'container') {
+      const container_working_dir = translate_to_container_path(working_directory)
+      const projects_dir_name = derive_projects_dir_name(container_working_dir)
+      session_file = join(
+        get_container_claude_home(),
+        'projects',
+        projects_dir_name,
+        `${session_id}.jsonl`
+      )
+    } else {
+      const { homedir } = await import('os')
+      const projects_dir_name = derive_projects_dir_name(working_directory)
+      session_file = join(
+        homedir(),
+        '.claude',
+        'projects',
+        projects_dir_name,
+        `${session_id}.jsonl`
+      )
+    }
+
+    // Check if session file exists before attempting import
+    await access(session_file)
+
+    log(`Job ${job.id}: running post-session sync fallback from ${session_file}`)
+
+    const result = await create_threads_from_session_provider({
+      provider_name: 'claude',
+      allow_updates: true,
+      provider_options: {
+        session_file
+      }
+    })
+
+    const updated = result.updated?.length || 0
+    const created = result.created?.length || 0
+    log(`Job ${job.id}: sync fallback complete (created: ${created}, updated: ${updated})`)
+  } catch (error) {
+    log(`Job ${job.id}: sync fallback failed - ${error.message}`)
+  }
+}
+
+/**
  * Event handlers
  */
 const handle_job_completed = async (job, result) => {
   log(`Job ${job.id}: completed successfully`, result)
+
+  // Re-import session as fallback for when SessionEnd hooks fail
+  await sync_session_fallback(job)
 
   // Queue immediate push-threads to reduce sync delay after session completion
   try {

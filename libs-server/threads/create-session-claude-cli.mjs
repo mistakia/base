@@ -38,7 +38,7 @@ const CLAUDE_CLI_PATHS = [join(homedir(), '.claude', 'local', 'claude')]
 let _container_claude_home = null
 let _container_claude_home_is_fallback = false
 
-const get_container_claude_home = () => {
+export const get_container_claude_home = () => {
   if (_container_claude_home && !_container_claude_home_is_fallback) {
     return _container_claude_home
   }
@@ -72,7 +72,7 @@ const get_container_claude_home = () => {
  * @param {string} working_directory - Absolute path to working directory
  * @returns {string} Derived projects directory name
  */
-const derive_projects_dir_name = (working_directory) => {
+export const derive_projects_dir_name = (working_directory) => {
   return working_directory.replace(/\//g, '-')
 }
 
@@ -390,22 +390,13 @@ const restore_session_jsonl = async ({
   const target_jsonl = join(target_dir, `${session_id}.jsonl`)
 
   try {
-    // Check if target already exists
-    await access(target_jsonl)
-    log(`Session JSONL already exists at ${target_jsonl}`)
-    return
-  } catch {
-    // Target doesn't exist, proceed with restore
-  }
-
-  try {
     // Check if source exists
     await access(source_jsonl)
 
     // Create target directory
     await mkdir(target_dir, { recursive: true })
 
-    // Copy the file
+    // Always overwrite - thread raw-data is the canonical copy
     await copyFile(source_jsonl, target_jsonl)
     log(`Restored session JSONL to ${target_jsonl}`)
   } catch (error) {
