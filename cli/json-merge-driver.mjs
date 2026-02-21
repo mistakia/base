@@ -36,10 +36,7 @@ const ARRAY_FIELDS = new Set([
   'directory_references'
 ])
 
-const NESTED_OBJECT_FIELDS = new Set([
-  'source',
-  'prompt_properties'
-])
+const NESTED_OBJECT_FIELDS = new Set(['source', 'prompt_properties'])
 
 const NUMERIC_MAX_FIELDS = new Set([
   'message_count',
@@ -161,9 +158,10 @@ function resolve_array(base_val, ours_val, theirs_val) {
 }
 
 function resolve_nested_object(base_val, ours_val, theirs_val) {
-  const base_obj = (base_val && typeof base_val === 'object') ? base_val : {}
-  const ours_obj = (ours_val && typeof ours_val === 'object') ? ours_val : {}
-  const theirs_obj = (theirs_val && typeof theirs_val === 'object') ? theirs_val : {}
+  const base_obj = base_val && typeof base_val === 'object' ? base_val : {}
+  const ours_obj = ours_val && typeof ours_val === 'object' ? ours_val : {}
+  const theirs_obj =
+    theirs_val && typeof theirs_val === 'object' ? theirs_val : {}
 
   const result = { ...ours_obj }
   const all_keys = new Set([
@@ -224,10 +222,12 @@ function values_equal(a, b) {
 }
 
 function main() {
-  const [,, base_path, ours_path, theirs_path] = process.argv
+  const [, , base_path, ours_path, theirs_path] = process.argv
 
   if (!base_path || !ours_path || !theirs_path) {
-    process.stderr.write('Usage: json-merge-driver.mjs <base> <ours> <theirs> [<marker-size>] [<path>]\n')
+    process.stderr.write(
+      'Usage: json-merge-driver.mjs <base> <ours> <theirs> [<marker-size>] [<path>]\n'
+    )
     process.exit(1)
   }
 
@@ -252,7 +252,9 @@ function main() {
   process.exit(0)
 }
 
-const is_main = process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
+const is_main =
+  process.argv[1] &&
+  resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])
 if (is_main) {
   main()
 }

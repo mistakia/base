@@ -179,7 +179,12 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
     : null
 
   const { thread_title, thread_description, thread_state } = useMemo(() => {
-    if (!thread_data) return { thread_title: null, thread_description: null, thread_state: null }
+    if (!thread_data)
+      return {
+        thread_title: null,
+        thread_description: null,
+        thread_state: null
+      }
     return {
       thread_title: extract_thread_title(thread_data),
       thread_description: extract_thread_description(thread_data),

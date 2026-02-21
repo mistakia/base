@@ -183,7 +183,9 @@ describe('json-merge-driver', () => {
     it('should merge disjoint sub-keys in source object', () => {
       const base = { source: { provider: 'claude' } }
       const ours = { source: { provider: 'claude', session_id: 'abc' } }
-      const theirs = { source: { provider: 'claude', imported_at: '2026-01-01T00:00:00Z' } }
+      const theirs = {
+        source: { provider: 'claude', imported_at: '2026-01-01T00:00:00Z' }
+      }
 
       const result = merge_json({ base, ours, theirs })
 
@@ -308,7 +310,9 @@ describe('json-merge-driver', () => {
         tool_call_count: 50,
         tags: ['user:tag/base-project.md', 'user:tag/git-workflow.md'],
         tags_analyzed_at: '2026-01-01T06:00:00Z',
-        relations: ['relates [[user:task/base/implement-json-merge-driver.md]]'],
+        relations: [
+          'relates [[user:task/base/implement-json-merge-driver.md]]'
+        ],
         relations_analyzed_at: '2026-01-01T06:00:00Z',
         source: { provider: 'claude', session_id: 'sess-1' }
       }
@@ -328,14 +332,18 @@ describe('json-merge-driver', () => {
 
       // LLM analysis fields accepted (disjoint)
       expect(result.title).to.equal('Implement JSON merge driver')
-      expect(result.short_description).to.equal('Custom git merge driver for metadata.json')
+      expect(result.short_description).to.equal(
+        'Custom git merge driver for metadata.json'
+      )
 
       // tags unioned
       expect(result.tags).to.include('user:tag/base-project.md')
       expect(result.tags).to.include('user:tag/git-workflow.md')
 
       // relations unioned
-      expect(result.relations).to.include('relates [[user:task/base/implement-json-merge-driver.md]]')
+      expect(result.relations).to.include(
+        'relates [[user:task/base/implement-json-merge-driver.md]]'
+      )
 
       // analysis timestamps accepted (disjoint)
       expect(result.tags_analyzed_at).to.equal('2026-01-01T06:00:00Z')
