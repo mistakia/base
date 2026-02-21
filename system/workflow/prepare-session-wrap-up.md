@@ -42,7 +42,7 @@ Based on what you know you've done in this session and the tasks you were given,
   - Deferred questions, decisions, or TODOs that were set aside
   - Tests or validation that should be run against changes made
 
-If any apply, recommend specific actions. If the user agrees, execute what can be done in this session. For anything that cannot be completed now, capture it in the continuation prompt.
+If any apply, recommend specific actions. If the user agrees, execute what can be done in this session. For anything that cannot be completed now, capture it in the continuation prompt. If everything is clean and no follow-up is needed, omit the continuation prompt section entirely.
 
 </instructions>
 
@@ -57,7 +57,7 @@ Keep the report short. Omit sections that have nothing to report.
 [Bulleted list of specific cleanup/follow-up actions, or "None — session is clean."]
 
 ### Continuation Prompt
-> [A ready-to-paste prompt for a new session that captures any remaining work. Include specific file paths, task references, and enough context to resume independently. If nothing remains, state "No continuation needed."]
+> [A ready-to-paste prompt for a new session that captures any remaining work. Include specific file paths, task references, and enough context to resume independently. Omit this section entirely if no continuation is needed.]
 ```
 
 </output_format>
