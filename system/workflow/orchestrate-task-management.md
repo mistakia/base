@@ -64,6 +64,10 @@ base entity list -t task --tags <project_tag> --json
 base thread list --state active --json
 base thread stale --days 7 --json
 
+# Recent activity (pure jq date math -- no platform-specific date command)
+base entity list -t task --status "Completed" --json | jq --argjson days 7 '((now - ($days * 86400)) | strftime("%Y-%m-%dT00:00:00Z")) as $cutoff | [.[] | select(.updated_at > $cutoff)]'
+base thread list --state archived --json | jq --argjson days 3 '((now - ($days * 86400)) | strftime("%Y-%m-%dT00:00:00Z")) as $cutoff | [.[] | select(.updated_at > $cutoff)]'
+
 # Relations and dependencies
 base relation list <base_uri>
 base entity tree <base_uri>
@@ -123,6 +127,15 @@ base relation reverse "<task_base_uri>" --json 2>/dev/null | \
 
 Include the most recent 1-2 threads per task in the briefing, showing thread ID (full, not truncated), title, state, and recency. This helps the admin understand where work left off.
 
+### 1.1c Recently Completed Tasks (last 7 days)
+
+```bash
+base entity list -t task --status "Completed" --json 2>/dev/null | \
+  jq --argjson days 7 '((now - ($days * 86400)) | strftime("%Y-%m-%dT00:00:00Z")) as $cutoff | [.[] | select(.updated_at > $cutoff) | {title, updated_at, base_uri}] | sort_by(.updated_at) | reverse | .[0:10]'
+```
+
+This provides a "what just shipped" view. Useful for spotting tasks whose completion may unblock other work.
+
 ### 1.2 Active Threads Summary (if include_threads is true)
 
 ```bash
@@ -132,6 +145,15 @@ base thread list --state active --json 2>/dev/null | jq '[.[] | {thread_id, titl
 # Stale threads
 base thread stale --days 7 --json 2>/dev/null
 ```
+
+### 1.2b Recently Archived Threads (last 3 days)
+
+```bash
+base thread list --state archived --json 2>/dev/null | \
+  jq --argjson days 3 '((now - ($days * 86400)) | strftime("%Y-%m-%dT00:00:00Z")) as $cutoff | [.[] | select(.updated_at > $cutoff) | {thread_id, title, updated_at}] | sort_by(.updated_at) | reverse | .[0:10]'
+```
+
+Shows recent work context -- what sessions just completed. The 3-day window captures the current work burst without excessive noise.
 
 ### 1.3 Present Briefing
 
@@ -146,8 +168,14 @@ Format and present the collected data:
 | In Progress | Z     |
 | Blocked     | W     |
 
+## Recently Completed Tasks (last 7 days)
+[List completed tasks with completion date. Note any that may unblock other work.]
+
 ## Active Threads (N total, M stale)
 [List stale threads first, then recent active threads. Always output full thread IDs (not truncated) so they can be opened in the web client or used for archival commands.]
+
+## Recently Archived Threads (last 3 days, max 10)
+[List recently archived threads with full thread IDs and dates. Shows recent work context.]
 
 ## In Progress Tasks
 [List each in-progress task with priority and latest related thread(s). Include full thread IDs.]
