@@ -7,7 +7,6 @@ import { get_user_token } from '@core/app/selectors'
 import TagTasksPanel from './TagTasksPanel.js'
 import TagThreadsPanel from './TagThreadsPanel.js'
 import TagExpandedViews from './TagExpandedViews.js'
-import TagGraph from './TagGraph.js'
 
 import '@styles/pages/tag-dashboard.styl'
 
@@ -107,11 +106,14 @@ const TagDashboard = ({ frontmatter }) => {
     entities = [],
     threads = [],
     task_count = 0,
+    completed_task_count = 0,
     thread_count = 0
   } = tag_data
 
-  // Filter entities to get only tasks
-  const tasks = entities.filter((entity) => entity.type === 'task')
+  // Filter entities to get only non-completed tasks for the preview
+  const tasks = entities.filter(
+    (entity) => entity.type === 'task' && entity.status !== 'Completed'
+  )
 
   // If expanded view is active, show only that view
   if (expanded_view) {
@@ -129,11 +131,18 @@ const TagDashboard = ({ frontmatter }) => {
   return (
     <div className='tag-dashboard'>
       <div className='tag-dashboard__header'>
-        <h2 className='tag-dashboard__title'>Tag Overview</h2>
         <div className='tag-dashboard__counts'>
           <span className='tag-dashboard__count'>
             {task_count} task{task_count !== 1 ? 's' : ''}
           </span>
+          {completed_task_count > 0 && (
+            <>
+              <span className='tag-dashboard__count-separator'>|</span>
+              <span className='tag-dashboard__count tag-dashboard__count--completed'>
+                {completed_task_count} completed
+              </span>
+            </>
+          )}
           <span className='tag-dashboard__count-separator'>|</span>
           <span className='tag-dashboard__count'>
             {thread_count} thread{thread_count !== 1 ? 's' : ''}
@@ -155,12 +164,6 @@ const TagDashboard = ({ frontmatter }) => {
           on_expand={handle_expand_threads}
         />
       </div>
-
-      {(tasks.length > 0 || threads.length > 0) && (
-        <div className='tag-dashboard__graph'>
-          <TagGraph tasks={tasks} threads={threads} />
-        </div>
-      )}
     </div>
   )
 }
