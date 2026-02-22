@@ -62,10 +62,11 @@ export const tasks_actions = {
   load_tasks_table: ({
     view_id,
     is_append = false,
-    url_filters = []
+    url_filters = [],
+    url_sort = null
   } = {}) => ({
     type: tasks_action_types.LOAD_TASKS_TABLE,
-    payload: { view_id, is_append, url_filters }
+    payload: { view_id, is_append, url_filters, url_sort }
   }),
 
   update_task_property: ({

@@ -11,95 +11,96 @@ import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 import {
   slug_to_view_id,
-  view_id_to_slug,
-  DEFAULT_THREAD_VIEW_ID
+  DEFAULT_THREAD_VIEW_ID,
+  KNOWN_THREAD_VIEW_IDS,
+  parse_url_table_state,
+  build_data_view_url
 } from '@core/utils/view-url-utils.js'
 
 // UUID pattern: 8-4-4-4-12 hex characters
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Pattern to detect file paths - require a file extension to distinguish from view slugs
-// This allows view slugs with slashes (e.g., "archived/2024") while still catching file paths
-const FILE_EXTENSION_PATTERN = /\.(md|json|txt|mjs|js|ts|yaml|yml)$/i
-
-const is_file_path = (param) => {
-  if (!param) return false
-  return FILE_EXTENSION_PATTERN.test(param)
-}
-
 const ThreadsPage = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { view_id: url_view_slug } = useParams()
+  const splat = useParams()['*'] || ''
   const [search_params] = useSearchParams()
 
-  // Check if the URL param is a thread UUID (not a view slug)
-  const is_thread_uuid = url_view_slug && UUID_PATTERN.test(url_view_slug)
+  // Disambiguate: UUID is a thread detail page, known view ID is a data view,
+  // everything else is a directory/entity path
+  const is_thread_uuid = splat && UUID_PATTERN.test(splat)
 
-  // Check if the URL param is a file path (not a view slug)
-  const is_file = is_file_path(url_view_slug)
+  const splat_view_id = splat ? slug_to_view_id(splat) : null
+  const is_known_view =
+    splat_view_id &&
+    !splat.includes('/') &&
+    KNOWN_THREAD_VIEW_IDS.has(splat_view_id)
+  const is_directory_path = splat && !is_thread_uuid && !is_known_view
 
-  // Convert URL slug to internal view_id
-  const url_view_id = url_view_slug ? slug_to_view_id(url_view_slug) : null
+  // Parse URL table state (tag, where, sort)
+  const tag_param = search_params.get('tag') || ''
+  const where_param = search_params.get('where') || ''
+  const sort_param = search_params.get('sort') || ''
+  const { url_filters, url_sort } = useMemo(
+    () => parse_url_table_state(search_params),
+    [tag_param, where_param, sort_param]
+  )
 
-  // Determine the resolved view_id to use
-  const resolved_view_id = url_view_id || DEFAULT_THREAD_VIEW_ID
+  const has_url_table_state = url_filters.length > 0 || url_sort
 
-  // Read tag filter from URL query params
-  // Note: Thread tag filtering will work once thread_tags table is populated
-  // by the automatic thread tag evaluation task
+  // When URL table state params are present without an explicit view,
+  // use the neutral 'default' view so only URL params define filters.
+  const resolved_view_id = is_known_view
+    ? splat_view_id
+    : has_url_table_state
+      ? 'default'
+      : DEFAULT_THREAD_VIEW_ID
+
   const url_tag_filter = search_params.get('tag')
-
-  // Build additional filters from URL params
-  const url_filters = useMemo(() => {
-    const filters = []
-    if (url_tag_filter) {
-      filters.push({
-        column_id: 'tags',
-        operator: 'IN',
-        value: [url_tag_filter]
-      })
-    }
-    return filters
-  }, [url_tag_filter])
 
   const page_meta = use_page_meta({
     custom_title: url_tag_filter ? `Threads - ${url_tag_filter}` : 'Threads',
-    custom_description: 'Browse and manage execution threads in the Base system'
+    custom_description:
+      'Browse and manage execution threads in the Base system'
   })
 
   useEffect(() => {
-    // Only load thread table data if not viewing a specific thread or file
-    if (!is_thread_uuid && !is_file) {
+    if (!is_thread_uuid && !is_directory_path) {
       dispatch(
-        threads_actions.select_thread_table_view({ view_id: resolved_view_id })
+        threads_actions.select_thread_table_view({
+          view_id: resolved_view_id
+        })
       )
       dispatch(
         threads_actions.load_threads_table({
           view_id: resolved_view_id,
-          url_filters
+          url_filters,
+          url_sort
         })
       )
     }
-  }, [dispatch, resolved_view_id, is_thread_uuid, is_file, url_filters])
+  }, [
+    dispatch,
+    resolved_view_id,
+    is_thread_uuid,
+    is_directory_path,
+    url_filters,
+    url_sort
+  ])
 
-  // Handle view selection - navigate to new URL
   const handle_view_select = useCallback(
     (view_id) => {
-      const slug = view_id_to_slug(view_id)
-      navigate(`/thread/${slug}`)
+      navigate(build_data_view_url({ base_path: '/thread', view_id }))
     },
     [navigate]
   )
 
-  // If the param is a thread UUID, render ThreadPage
   if (is_thread_uuid) {
     return <ThreadPage />
   }
 
-  // If the param is a file path, render DirectoryPage
-  if (is_file) {
+  if (is_directory_path) {
     return <DirectoryPage />
   }
 

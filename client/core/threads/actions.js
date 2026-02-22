@@ -87,10 +87,11 @@ export const threads_actions = {
   load_threads_table: ({
     view_id = 'default',
     is_append = false,
-    url_filters = []
+    url_filters = [],
+    url_sort = null
   } = {}) => ({
     type: threads_action_types.LOAD_THREADS_TABLE,
-    payload: { view_id, is_append, url_filters }
+    payload: { view_id, is_append, url_filters, url_sort }
   }),
 
   set_thread_archive_state: ({ thread_id, archive_reason, archived_at }) => ({
