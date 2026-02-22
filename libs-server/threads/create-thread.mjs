@@ -234,7 +234,8 @@ export default async function create_thread({
   }
 
   // Validate that we have at least one model
-  if (!models || models.length === 0) {
+  // Allow empty models for external sessions (in-progress import before model responds)
+  if ((!models || models.length === 0) && !source) {
     throw new Error('At least one model is required (pass models array)')
   }
 

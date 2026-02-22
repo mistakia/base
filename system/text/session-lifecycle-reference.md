@@ -8,7 +8,7 @@ description: >-
 base_uri: sys:system/text/session-lifecycle-reference.md
 created_at: '2026-02-22T01:01:36.309Z'
 entity_id: 9fe11418-4256-4058-b41c-1b12dd7c3ad8
-updated_at: '2026-02-22T01:01:36.309Z'
+updated_at: '2026-02-22T12:00:00.000Z'
 user_public_key: 00000000-0000-0000-0000-000000000000
 ---
 
@@ -205,16 +205,27 @@ UserPromptSubmit hook fires
 ```
 PostToolUse hook fires
   |
-  v
-active-session-hook.sh (background, fire-and-forget)
-  PUT /api/active-sessions/<session_id>
-    body: { status: "active", job_id, working_directory, transcript_path }
-    |
-    v
-  WS: ACTIVE_SESSION_UPDATED (same as above, thread_id may or may not be set)
+  +--> 1. active-session-hook.sh (background, fire-and-forget)
+  |     PUT /api/active-sessions/<session_id>
+  |       body: { status: "active", job_id, working_directory, transcript_path }
+  |       -> WS: ACTIVE_SESSION_UPDATED (same as above, thread_id may or may not be set)
+  |
+  +--> 2. sync-claude-session.sh (throttled: 30s minimum between runs, lock-guarded)
+        |
+        v
+        Throttle check: if last sync < 30s ago, exits immediately (<1ms)
+        Lock check: if another sync is running, exits immediately
+        |
+        v (when not throttled)
+        convert-external-sessions.mjs import --allow-updates
+          -> Updates thread metadata.json and timeline.jsonl
+          -> Thread watcher fires THREAD_UPDATED + THREAD_TIMELINE_ENTRY_ADDED
+        |
+        v
+        analyze-thread-relations.mjs (throttled: minimum 300s between runs)
 ```
 
-**Note**: PostToolUse does NOT run the sync script. Only the session hook. This means PostToolUse events provide activity heartbeats but do not update thread content.
+**Note**: PostToolUse runs the sync script with throttling. Most invocations exit in <1ms (throttle check). When the converter runs (~once per 30s), it updates the thread with the latest session data. This provides live thread updates during long-running sessions. The throttle file is cleaned up on SessionEnd.
 
 #### Stop (fires when harness goes idle)
 
@@ -231,7 +242,7 @@ active-session-hook.sh (background, fire-and-forget)
     payload.session.status: "idle"
 ```
 
-**Note**: The Stop event transitions the session status to "idle", distinct from "active". Clients should use this to show the session is waiting for input or has paused. Like PostToolUse, it does NOT run the sync script.
+**Note**: The Stop event transitions the session status to "idle", distinct from "active". Clients should use this to show the session is waiting for input or has paused. Stop does NOT run the sync script (PostToolUse handles periodic sync).
 
 ### Phase 4: Session End
 
@@ -482,9 +493,10 @@ session_id (from WS event)
 | Harness startup                       | 2-5 seconds (varies by harness)                            |
 | ACTIVE_SESSION_STARTED                | Immediate after startup                                    |
 | First ACTIVE_SESSION_UPDATED          | Seconds (after first prompt processing)                    |
-| Thread creation (metadata.json write) | During first UserPromptSubmit sync (2-8s after first turn) |
+| Thread creation (metadata.json write) | During first successful sync (UserPromptSubmit or PostToolUse, whichever succeeds first) |
 | THREAD_CREATED (watcher detection)    | ~500ms after metadata.json write                           |
 | thread_id in ACTIVE_SESSION_UPDATED   | Next hook fire after thread exists                         |
+| Periodic thread updates (PostToolUse) | Every ~30s during active tool use (throttled sync)         |
 | ACTIVE_SESSION_ENDED                  | After all SessionEnd hooks complete                        |
 | THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama)                          |
 
