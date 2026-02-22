@@ -5,9 +5,10 @@ import {
 } from '#libs-server/tag/index.mjs'
 import {
   query_entities_from_duckdb,
-  count_entities_in_duckdb
+  count_entities_in_duckdb,
+  query_threads_from_duckdb,
+  count_threads_in_duckdb
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
 import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
@@ -20,9 +21,7 @@ import {
 const router = express.Router({ mergeParams: true })
 
 /**
- * Query threads related to entities tagged with a given tag.
- * Uses entity_relations to find threads that have relations to tagged entities,
- * since the thread_tags table is not currently populated.
+ * Query threads directly tagged with a given tag via the thread_tags table.
  *
  * @param {Object} params - Query parameters
  * @param {string} params.tag_base_uri - Tag base_uri to filter by
@@ -30,26 +29,17 @@ const router = express.Router({ mergeParams: true })
  * @param {number} [params.limit=50] - Maximum number of results
  * @returns {Promise<Array>} Array of normalized thread objects
  */
-async function query_threads_by_tag_via_relations({
+async function query_threads_by_tag({
   tag_base_uri,
   sort = 'updated_at',
   limit = 50
 }) {
   try {
     const sort_column = sort === 'created_at' ? 'created_at' : 'updated_at'
-    const query = `
-      SELECT DISTINCT t.*
-      FROM entity_relations er
-      JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
-      JOIN entity_tags et ON er.target_base_uri = et.entity_base_uri
-      WHERE et.tag_base_uri = ?
-      ORDER BY t.${sort_column} DESC
-      LIMIT ?
-    `
-
-    const results = await execute_duckdb_query({
-      query,
-      parameters: [tag_base_uri, limit]
+    const duckdb_threads = await query_threads_from_duckdb({
+      tags: [tag_base_uri],
+      sort: [{ column_id: sort_column, desc: true }],
+      limit
     })
 
     let models_data = null
@@ -60,7 +50,9 @@ async function query_threads_by_tag_via_relations({
       // Cost calculation will work without models data
     }
 
-    return results.map((thread) => normalize_duckdb_thread(thread, models_data))
+    return duckdb_threads.map((thread) =>
+      normalize_duckdb_thread(thread, models_data)
+    )
   } catch {
     // DuckDB not initialized or tables don't exist yet
     return []
@@ -68,27 +60,13 @@ async function query_threads_by_tag_via_relations({
 }
 
 /**
- * Count threads related to entities tagged with a given tag.
+ * Count threads directly tagged with a given tag via the thread_tags table.
  */
-async function count_threads_by_tag_via_relations({ tag_base_uri }) {
+async function count_threads_by_tag({ tag_base_uri }) {
   try {
-    const query = `
-      SELECT COUNT(DISTINCT t.thread_id) as count
-      FROM entity_relations er
-      JOIN threads t ON er.source_base_uri = 'user:thread/' || t.thread_id
-      JOIN entity_tags et ON er.target_base_uri = et.entity_base_uri
-      WHERE et.tag_base_uri = ?
-    `
-
-    const results = await execute_duckdb_query({
-      query,
-      parameters: [tag_base_uri]
+    return await count_threads_in_duckdb({
+      tags: [tag_base_uri]
     })
-
-    const count_value = results[0]?.count
-    return typeof count_value === 'bigint'
-      ? Number(count_value)
-      : count_value || 0
   } catch {
     return 0
   }
@@ -232,19 +210,19 @@ router.get('/', async (req, res) => {
         }
       }
 
-      // Get threads related to tagged entities via entity_relations
+      // Get threads directly tagged with this tag
       // For redacted tags, return empty threads list
       let threads = []
       let thread_count = 0
 
       if (include_threads === 'true' && !is_redacted) {
         const [thread_results, thread_total] = await Promise.all([
-          query_threads_by_tag_via_relations({
+          query_threads_by_tag({
             tag_base_uri: tag.base_uri,
             sort,
             limit: parsed_limit
           }),
-          count_threads_by_tag_via_relations({
+          count_threads_by_tag({
             tag_base_uri: tag.base_uri
           })
         ])
