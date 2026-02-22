@@ -6,6 +6,10 @@ import { Close as CloseIcon } from '@mui/icons-material'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 import { format_relative_time } from '@views/utils/date-formatting.js'
 import { to_snake_slug } from '@core/utils'
+import {
+  get_entity_type_color,
+  get_entity_type_display_label
+} from '#libs-shared/entity-constants.mjs'
 
 /**
  * TagExpandedViews Component
@@ -23,11 +27,17 @@ const TagExpandedViews = ({
   expanded_view,
   tasks,
   threads,
+  entities_by_type = {},
+  entity_types = [],
   base_uri,
   on_close
 }) => {
-  const is_tasks_view = expanded_view === 'tasks'
-  const title = is_tasks_view ? 'All Tasks' : 'All Threads'
+  const title_map = {
+    tasks: 'All Tasks',
+    threads: 'All Threads',
+    entities: 'All Entities'
+  }
+  const title = title_map[expanded_view] || 'All Items'
 
   const get_status_slug = (status) => to_snake_slug(status) || 'no_status'
   const get_priority_slug = (priority) => to_snake_slug(priority) || 'none'
@@ -51,7 +61,7 @@ const TagExpandedViews = ({
       </div>
 
       <div className='tag-expanded__content'>
-        {is_tasks_view ? (
+        {expanded_view === 'tasks' && (
           <ul className='tag-expanded__list'>
             {tasks.map((task) => {
               const task_path = convert_base_uri_to_path(task.base_uri)
@@ -92,7 +102,9 @@ const TagExpandedViews = ({
               )
             })}
           </ul>
-        ) : (
+        )}
+
+        {expanded_view === 'threads' && (
           <ul className='tag-expanded__list'>
             {threads.map((thread) => (
               <li key={thread.thread_id} className='tag-expanded__item'>
@@ -132,15 +144,85 @@ const TagExpandedViews = ({
             ))}
           </ul>
         )}
+
+        {expanded_view === 'entities' && (
+          <div className='tag-expanded__entity-groups'>
+            {entity_types.map((type) => {
+              const type_color = get_entity_type_color(type)
+              const type_label = get_entity_type_display_label(type)
+              const type_entities = entities_by_type[type] || []
+
+              return (
+                <div key={type} className='tag-expanded__type-group'>
+                  <h3 className='tag-expanded__type-heading'>
+                    <span
+                      className='tag-expanded__type-label'
+                      style={{
+                        color: type_color,
+                        background: `${type_color}26`
+                      }}>
+                      {type_label}
+                    </span>
+                    <span className='tag-expanded__type-count'>
+                      {type_entities.length}
+                    </span>
+                  </h3>
+                  <ul className='tag-expanded__list'>
+                    {type_entities.map((entity) => {
+                      const entity_path = convert_base_uri_to_path(
+                        entity.base_uri
+                      )
+                      return (
+                        <li
+                          key={entity.entity_id}
+                          className='tag-expanded__item'>
+                          <Link to={entity_path} className='tag-expanded__link'>
+                            <div className='tag-expanded__item-main'>
+                              <span className='tag-expanded__item-title'>
+                                {entity.title || 'Untitled'}
+                              </span>
+                              {entity.description && (
+                                <span className='tag-expanded__item-description'>
+                                  {entity.description}
+                                </span>
+                              )}
+                            </div>
+                            <div className='tag-expanded__item-meta'>
+                              <span
+                                className='tag-expanded__type-label'
+                                style={{
+                                  color: type_color,
+                                  background: `${type_color}26`
+                                }}>
+                                {type_label}
+                              </span>
+                              {entity.updated_at && (
+                                <span className='tag-expanded__time'>
+                                  {format_relative_time(entity.updated_at)}
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 TagExpandedViews.propTypes = {
-  expanded_view: PropTypes.oneOf(['tasks', 'threads']).isRequired,
+  expanded_view: PropTypes.oneOf(['tasks', 'threads', 'entities']).isRequired,
   tasks: PropTypes.array.isRequired,
   threads: PropTypes.array.isRequired,
+  entities_by_type: PropTypes.object,
+  entity_types: PropTypes.arrayOf(PropTypes.string),
   base_uri: PropTypes.string.isRequired,
   on_close: PropTypes.func.isRequired
 }

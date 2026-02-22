@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
 import { OpenInNew as OpenInNewIcon } from '@mui/icons-material'
 
-import { format_relative_time } from '@views/utils/date-formatting.js'
+import { format_shorthand_time } from '@views/utils/date-formatting.js'
 
 /**
  * TagThreadsPanel Component
@@ -55,7 +55,7 @@ const TagThreadsPanel = ({ threads, thread_count, base_uri, on_expand }) => {
                 </span>
                 {thread.updated_at && (
                   <span className='tag-threads-panel__time'>
-                    {format_relative_time(thread.updated_at)}
+                    {format_shorthand_time(thread.updated_at)}
                   </span>
                 )}
               </Link>

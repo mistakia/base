@@ -6,6 +6,7 @@ import { api_request, api } from '@core/api/service'
 import { get_user_token } from '@core/app/selectors'
 import TagTasksPanel from './TagTasksPanel.js'
 import TagThreadsPanel from './TagThreadsPanel.js'
+import TagEntitiesPanel from './TagEntitiesPanel.js'
 import TagExpandedViews from './TagExpandedViews.js'
 
 import '@styles/pages/tag-dashboard.styl'
@@ -82,6 +83,10 @@ const TagDashboard = ({ frontmatter }) => {
     set_expanded_view(expanded_view === 'threads' ? null : 'threads')
   }
 
+  const handle_expand_entities = () => {
+    set_expanded_view(expanded_view === 'entities' ? null : 'entities')
+  }
+
   if (is_loading) {
     return (
       <div className='tag-dashboard tag-dashboard--loading'>
@@ -117,6 +122,21 @@ const TagDashboard = ({ frontmatter }) => {
       entity.type === 'task' && !closed_statuses.includes(entity.status)
   )
 
+  // Group non-task entities by type
+  const entities_by_type = {}
+  for (const entity of entities) {
+    if (entity.type === 'task') continue
+    if (!entities_by_type[entity.type]) {
+      entities_by_type[entity.type] = []
+    }
+    entities_by_type[entity.type].push(entity)
+  }
+  const entity_types = Object.keys(entities_by_type).sort()
+  const total_entity_count = entity_types.reduce(
+    (sum, type) => sum + entities_by_type[type].length,
+    0
+  )
+
   // If expanded view is active, show only that view
   if (expanded_view) {
     return (
@@ -124,11 +144,15 @@ const TagDashboard = ({ frontmatter }) => {
         expanded_view={expanded_view}
         tasks={tasks}
         threads={threads}
+        entities_by_type={entities_by_type}
+        entity_types={entity_types}
         base_uri={base_uri}
         on_close={() => set_expanded_view(null)}
       />
     )
   }
+
+  const panel_count = 1 + 1 + (total_entity_count > 0 ? 1 : 0) // tasks + threads + entities
 
   return (
     <div className='tag-dashboard'>
@@ -149,10 +173,19 @@ const TagDashboard = ({ frontmatter }) => {
           <span className='tag-dashboard__count'>
             {thread_count} thread{thread_count !== 1 ? 's' : ''}
           </span>
+          {total_entity_count > 0 && (
+            <>
+              <span className='tag-dashboard__count-separator'>|</span>
+              <span className='tag-dashboard__count'>
+                {total_entity_count} other entit
+                {total_entity_count !== 1 ? 'ies' : 'y'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      <div className='tag-dashboard__panels'>
+      <div className='tag-dashboard__panels' data-panel-count={panel_count}>
         <TagTasksPanel
           tasks={tasks}
           task_count={task_count}
@@ -165,6 +198,14 @@ const TagDashboard = ({ frontmatter }) => {
           base_uri={base_uri}
           on_expand={handle_expand_threads}
         />
+        {total_entity_count > 0 && (
+          <TagEntitiesPanel
+            entities_by_type={entities_by_type}
+            entity_types={entity_types}
+            base_uri={base_uri}
+            on_expand={handle_expand_entities}
+          />
+        )}
       </div>
     </div>
   )
