@@ -42,7 +42,12 @@ const format_number = (num) => {
   return num.toLocaleString()
 }
 
-const GitRepoInfo = ({ statistics, is_loading, compact = false, repo_path }) => {
+const GitRepoInfo = ({
+  statistics,
+  is_loading,
+  compact = false,
+  repo_path
+}) => {
   const [expanded, set_expanded] = useState(false)
 
   if (is_loading) {
@@ -71,7 +76,9 @@ const GitRepoInfo = ({ statistics, is_loading, compact = false, repo_path }) => 
   const { total_commits, branch_count, last_commit, first_commit } = statistics
 
   const normalized_path = repo_path ? repo_path.replace(/^\/+/, '') : ''
-  const commits_link = normalized_path ? `/${normalized_path}/commits` : '/commits'
+  const commits_link = normalized_path
+    ? `/${normalized_path}/commits`
+    : '/commits'
   const last_commit_display = last_commit ? (
     <>
       {format_relative_time(last_commit.date) || '-'} (

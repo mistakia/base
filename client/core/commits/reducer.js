@@ -32,8 +32,7 @@ export function commits_reducer(state = new CommitsState(), { payload, type }) {
     }
 
     case commits_action_types.GET_COMMITS_FULFILLED: {
-      const { commits, has_more, next_cursor, repo_name, branch } =
-        payload.data
+      const { commits, has_more, next_cursor, repo_name, branch } = payload.data
       const is_load_more = payload?.opts?.before
 
       if (is_load_more) {

@@ -11,7 +11,11 @@ import sync_operations from './sync.mjs'
 import conflict_operations from './conflicts.mjs'
 import { find_git_root } from './find-git-root.mjs'
 import { get_file_status, get_file_diff_stats } from './file-status.mjs'
-import { get_repo_statistics, get_commit_log, get_single_commit } from './repo-statistics.mjs'
+import {
+  get_repo_statistics,
+  get_commit_log,
+  get_single_commit
+} from './repo-statistics.mjs'
 
 // Export all operations
 export const {

@@ -33,9 +33,7 @@ const DirectoryPageRouter = () => {
   const pathname = location.pathname
 
   if (pathname.endsWith('/commits') || pathname === '/commits') {
-    const repo_path = pathname
-      .replace(/^\//, '')
-      .replace(/\/?commits$/, '')
+    const repo_path = pathname.replace(/^\//, '').replace(/\/?commits$/, '')
     return <CommitsPage repo_path={repo_path} />
   }
 

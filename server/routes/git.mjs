@@ -1738,9 +1738,7 @@ router.get('/commits', async (req, res) => {
     const branch = await get_current_branch_name({ repo_path })
     const repo_name = path.basename(repo_path)
     const next_cursor =
-      has_more && commits.length > 0
-        ? commits[commits.length - 1].hash
-        : null
+      has_more && commits.length > 0 ? commits[commits.length - 1].hash : null
 
     res.json({ commits, has_more, next_cursor, repo_name, branch })
   } catch (error) {

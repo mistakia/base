@@ -76,10 +76,7 @@ describe('Git Commits API', function () {
   describe('GET /api/git/commits', () => {
     it('should return commit list for root repo (empty path)', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
-          .get('/api/git/commits')
-          .query({ path: '' }),
+        chai.request(server).get('/api/git/commits').query({ path: '' }),
         test_user
       )
 
@@ -180,10 +177,7 @@ describe('Git Commits API', function () {
       const hash = list_res.body.commits[0].hash
 
       const res = await authenticate_request(
-        chai
-          .request(server)
-          .get(`/api/git/commit/${hash}`)
-          .query({ path: '' }),
+        chai.request(server).get(`/api/git/commit/${hash}`).query({ path: '' }),
         test_user
       )
 

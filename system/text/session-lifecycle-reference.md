@@ -486,19 +486,19 @@ session_id (from WS event)
 
 ## Timing Characteristics
 
-| Event                                 | Typical Delay After Previous                               |
-| ------------------------------------- | ---------------------------------------------------------- |
-| create-session response               | < 1 second                                                 |
-| BullMQ job pickup                     | 0-30 seconds (depends on queue)                            |
-| Harness startup                       | 2-5 seconds (varies by harness)                            |
-| ACTIVE_SESSION_STARTED                | Immediate after startup                                    |
-| First ACTIVE_SESSION_UPDATED          | Seconds (after first prompt processing)                    |
+| Event                                 | Typical Delay After Previous                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| create-session response               | < 1 second                                                                               |
+| BullMQ job pickup                     | 0-30 seconds (depends on queue)                                                          |
+| Harness startup                       | 2-5 seconds (varies by harness)                                                          |
+| ACTIVE_SESSION_STARTED                | Immediate after startup                                                                  |
+| First ACTIVE_SESSION_UPDATED          | Seconds (after first prompt processing)                                                  |
 | Thread creation (metadata.json write) | During first successful sync (UserPromptSubmit or PostToolUse, whichever succeeds first) |
-| THREAD_CREATED (watcher detection)    | ~500ms after metadata.json write                           |
-| thread_id in ACTIVE_SESSION_UPDATED   | Next hook fire after thread exists                         |
-| Periodic thread updates (PostToolUse) | Every ~30s during active tool use (throttled sync)         |
-| ACTIVE_SESSION_ENDED                  | After all SessionEnd hooks complete                        |
-| THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama)                          |
+| THREAD_CREATED (watcher detection)    | ~500ms after metadata.json write                                                         |
+| thread_id in ACTIVE_SESSION_UPDATED   | Next hook fire after thread exists                                                       |
+| Periodic thread updates (PostToolUse) | Every ~30s during active tool use (throttled sync)                                       |
+| ACTIVE_SESSION_ENDED                  | After all SessionEnd hooks complete                                                      |
+| THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama)                                                        |
 
 ## Client State Machine
 

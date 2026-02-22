@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -52,7 +51,9 @@ const CommitsPage = ({ repo_path }) => {
 
   const handle_load_more = () => {
     if (next_cursor) {
-      dispatch(commits_actions.load_more_commits({ repo_path, cursor: next_cursor }))
+      dispatch(
+        commits_actions.load_more_commits({ repo_path, cursor: next_cursor })
+      )
     }
   }
 
@@ -65,7 +66,6 @@ const CommitsPage = ({ repo_path }) => {
     }
   }
 
-  const back_path = repo_path ? `/${repo_path}` : '/'
   const display_name = repo_name || repo_path || 'Repository'
 
   return (
@@ -75,15 +75,6 @@ const CommitsPage = ({ repo_path }) => {
         <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
           {/* Header */}
           <Box sx={{ mb: 2, mt: 1 }}>
-            <Link
-              to={back_path}
-              style={{
-                color: COLORS.text_secondary,
-                fontSize: '13px',
-                textDecoration: 'none'
-              }}>
-              {'<'} Back to {display_name}
-            </Link>
             <Box
               sx={{
                 display: 'flex',
@@ -210,9 +201,7 @@ const CommitsPage = ({ repo_path }) => {
           {/* Empty state */}
           {!is_loading && commits.length === 0 && (
             <Box sx={{ py: 4, textAlign: 'center' }}>
-              <Typography
-                variant='body2'
-                sx={{ color: COLORS.text_secondary }}>
+              <Typography variant='body2' sx={{ color: COLORS.text_secondary }}>
                 No commits found
               </Typography>
             </Box>
