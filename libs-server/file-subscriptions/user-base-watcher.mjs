@@ -99,7 +99,12 @@ export async function start_user_base_watcher({
             repo_file
           })
         } catch (error) {
-          log('Error routing event %s %s: %s', event.type, event.path, error.message)
+          log(
+            'Error routing event %s %s: %s',
+            event.type,
+            event.path,
+            error.message
+          )
         }
       }
     }
@@ -157,7 +162,11 @@ function route_event({
   }
 
   // Entity index events (embedded database sync for .md files in entity dirs)
-  if (entity_index && ENTITY_DIR_SET.has(first_segment) && relative_path.endsWith('.md')) {
+  if (
+    entity_index &&
+    ENTITY_DIR_SET.has(first_segment) &&
+    relative_path.endsWith('.md')
+  ) {
     switch (event_type) {
       case 'create':
       case 'update':

@@ -438,4 +438,3 @@ export async function stop_git_status_watcher() {
 
   log('Git status watcher stopped')
 }
-

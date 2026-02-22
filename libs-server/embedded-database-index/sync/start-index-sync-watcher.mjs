@@ -173,4 +173,8 @@ export function start_index_sync_watcher() {
   log('Index sync watcher started')
 }
 
-export { stop_index_file_watcher, handle_entity_file_change, handle_entity_file_delete }
+export {
+  stop_index_file_watcher,
+  handle_entity_file_change,
+  handle_entity_file_delete
+}

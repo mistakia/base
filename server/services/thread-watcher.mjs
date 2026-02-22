@@ -532,8 +532,7 @@ export const start_thread_watcher = async ({ thread_directory, hooks }) => {
     watcher = await create_parcel_subscription({
       directory: thread_directory,
       ignore: ['**/raw-data'],
-      on_events: (events) =>
-        handle_thread_events(events, thread_directory)
+      on_events: (events) => handle_thread_events(events, thread_directory)
     })
 
     log('Thread watcher ready and monitoring for changes')

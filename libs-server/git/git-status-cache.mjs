@@ -78,8 +78,7 @@ async function _do_full_cache_init() {
   repo_list_cache = { repo_paths, worktree_metadata }
 
   // Fetch status + merge state for all repos with concurrency limit
-  const max_concurrent =
-    config.file_watchers?.max_concurrent_git_status || 5
+  const max_concurrent = config.file_watchers?.max_concurrent_git_status || 5
   const now = Date.now()
   await map_with_concurrency(
     repo_paths,
@@ -187,8 +186,7 @@ export async function invalidate_repo_list() {
 
   // Fetch status for new entries with concurrency limit
   if (added.length > 0) {
-    const max_concurrent =
-      config.file_watchers?.max_concurrent_git_status || 5
+    const max_concurrent = config.file_watchers?.max_concurrent_git_status || 5
     const now = Date.now()
     await map_with_concurrency(
       added,

@@ -61,8 +61,7 @@ const ThreadsPage = () => {
 
   const page_meta = use_page_meta({
     custom_title: url_tag_filter ? `Threads - ${url_tag_filter}` : 'Threads',
-    custom_description:
-      'Browse and manage execution threads in the Base system'
+    custom_description: 'Browse and manage execution threads in the Base system'
   })
 
   useEffect(() => {

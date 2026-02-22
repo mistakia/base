@@ -15,7 +15,9 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import {
   thread_index_sync_hooks,
   start_index_sync_watcher,
-  stop_index_file_watcher
+  stop_index_file_watcher,
+  handle_entity_file_change,
+  handle_entity_file_delete
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_cache_warmer,
@@ -39,10 +41,6 @@ import {
   start_user_base_watcher,
   stop_user_base_watcher
 } from '#libs-server/file-subscriptions/user-base-watcher.mjs'
-import {
-  handle_entity_file_change,
-  handle_entity_file_delete
-} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   initialize_cache,
   invalidate_repo,
@@ -168,17 +166,12 @@ try {
     if (file_watcher_config.thread_watcher_enabled !== false) {
       try {
         const start_time = Date.now()
-        const thread_directory = path.join(
-          config.user_base_directory,
-          'thread'
-        )
+        const thread_directory = path.join(config.user_base_directory, 'thread')
         await start_thread_watcher({
           thread_directory
         })
         set_watcher_status('thread_watcher', 'ready')
-        logger(
-          `Thread watcher initialized (${Date.now() - start_time}ms)`
-        )
+        logger(`Thread watcher initialized (${Date.now() - start_time}ms)`)
       } catch (watcher_error) {
         set_watcher_status('thread_watcher', 'failed')
         logger(`Failed to start thread watcher: ${watcher_error.message}`)
@@ -194,7 +187,9 @@ try {
       try {
         start_file_subscription_watcher()
         set_watcher_status('file_subscription_watcher', 'ready')
-        logger('File subscription watcher initialized (watching via user-base-watcher)')
+        logger(
+          'File subscription watcher initialized (watching via user-base-watcher)'
+        )
       } catch (watcher_error) {
         set_watcher_status('file_subscription_watcher', 'failed')
         logger(
@@ -253,9 +248,7 @@ try {
         }
       } catch (watcher_error) {
         set_watcher_status('git_status_watcher', 'failed')
-        logger(
-          `Failed to start git status watcher: ${watcher_error.message}`
-        )
+        logger(`Failed to start git status watcher: ${watcher_error.message}`)
         logger(watcher_error)
       }
     } else {
@@ -347,9 +340,7 @@ try {
             : null
       })
       set_watcher_status('user_base_watcher', 'ready')
-      logger(
-        `User-base watcher initialized (${Date.now() - start_time}ms)`
-      )
+      logger(`User-base watcher initialized (${Date.now() - start_time}ms)`)
     } catch (watcher_error) {
       set_watcher_status('user_base_watcher', 'failed')
       logger(`Failed to start user-base watcher: ${watcher_error.message}`)

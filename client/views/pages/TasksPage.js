@@ -26,7 +26,9 @@ const TasksPage = () => {
   // everything else is a directory/entity path
   const splat_view_id = splat ? slug_to_view_id(splat) : null
   const is_known_view =
-    splat_view_id && !splat.includes('/') && KNOWN_TASK_VIEW_IDS.has(splat_view_id)
+    splat_view_id &&
+    !splat.includes('/') &&
+    KNOWN_TASK_VIEW_IDS.has(splat_view_id)
   const is_directory_path = splat && !is_known_view
 
   // Parse URL table state (tag, where, sort)

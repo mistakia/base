@@ -136,13 +136,7 @@ export function parse_url_table_state(search_params) {
  * @param {string} [params.tag] - tag shorthand
  * @returns {string} URL path with query params
  */
-export function build_data_view_url({
-  base_path,
-  view_id,
-  where,
-  sort,
-  tag
-}) {
+export function build_data_view_url({ base_path, view_id, where, sort, tag }) {
   const slug = view_id ? view_id_to_slug(view_id) : ''
   const path = slug ? `${base_path}/${slug}` : base_path
 
