@@ -28,6 +28,7 @@ import {
   delete_entity_from_duckdb,
   sync_entity_tags_to_duckdb,
   sync_entity_relations_to_duckdb,
+  sync_thread_tags_to_duckdb,
   upsert_entities_batch,
   sync_entities_tags_batch,
   sync_entities_relations_batch,
@@ -804,6 +805,27 @@ class EmbeddedIndexManager {
           )
         } catch (error) {
           log('Error syncing thread relations: %s', error.message)
+        }
+      }
+
+      // Sync thread tags if present (outside main try-catch to not affect thread sync result)
+      if (
+        result.duckdb_synced &&
+        Array.isArray(metadata?.tags) &&
+        metadata.tags.length > 0
+      ) {
+        try {
+          await sync_thread_tags_to_duckdb({
+            thread_id,
+            tag_base_uris: metadata.tags
+          })
+          log(
+            'Thread tags synced: %s (%d tags)',
+            thread_id,
+            metadata.tags.length
+          )
+        } catch (error) {
+          log('Error syncing thread tags: %s', error.message)
         }
       }
     }
