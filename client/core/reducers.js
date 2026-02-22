@@ -10,6 +10,7 @@ import { active_sessions_reducer } from './active-sessions/index.js'
 import { thread_prompt_reducer } from './thread-prompt/index.js'
 import { activity_reducer } from './activity/index.js'
 import { git_reducer } from './git/index.js'
+import { commits_reducer } from './commits/index.js'
 import { search_reducer } from './search/index.js'
 import { thread_sheet_reducer } from './thread-sheet/index.js'
 
@@ -26,6 +27,7 @@ const root_reducer = (router) =>
     thread_prompt: thread_prompt_reducer,
     activity: activity_reducer,
     git: git_reducer,
+    commits: commits_reducer,
     search: search_reducer,
     thread_sheet: thread_sheet_reducer
   })

@@ -1,7 +1,10 @@
+import React from 'react'
 import { connect } from 'react-redux'
 import { createSelector } from 'reselect'
+import { useLocation } from 'react-router-dom'
 
 import { get_directory_state } from '@core/directory'
+import CommitsPage from '@pages/CommitsPage/index.js'
 
 import DirectoryPage from './DirectoryPage.js'
 
@@ -23,4 +26,20 @@ const map_state_to_props = createSelector(
   }
 )
 
-export default connect(map_state_to_props)(DirectoryPage)
+const ConnectedDirectoryPage = connect(map_state_to_props)(DirectoryPage)
+
+const DirectoryPageRouter = () => {
+  const location = useLocation()
+  const pathname = location.pathname
+
+  if (pathname.endsWith('/commits') || pathname === '/commits') {
+    const repo_path = pathname
+      .replace(/^\//, '')
+      .replace(/\/commits$/, '')
+    return <CommitsPage repo_path={repo_path} />
+  }
+
+  return <ConnectedDirectoryPage />
+}
+
+export default DirectoryPageRouter

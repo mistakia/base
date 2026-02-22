@@ -177,10 +177,127 @@ export async function get_repo_statistics({ repo_path }) {
   }
 }
 
+// Shared format string for commit log parsing
+// %H=hash %h=short_hash %s=subject %b=body %aI=date %an=author_name %ae=author_email
+const COMMIT_LOG_FORMAT = '%H%x1f%h%x1f%s%x1f%b%x1f%aI%x1f%an%x1f%ae%x1e'
+
+/**
+ * Parse a git log record using the shared format string
+ */
+function parse_commit_record(record) {
+  const parts = record.split('\x1f')
+  const [hash, short_hash, subject, body, date, author_name, author_email] =
+    parts
+
+  return {
+    hash: hash?.trim(),
+    short_hash,
+    subject,
+    body: body?.trim() || null,
+    date,
+    author_name,
+    author_email
+  }
+}
+
+/**
+ * Sanitize a user-provided string for use in a shell single-quoted argument
+ */
+function sanitize_shell_arg(value) {
+  return value.replace(/[\r\n]/g, '').replace(/'/g, "'\\''")
+}
+
+/**
+ * Get paginated commit log for a repository
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @param {number} [params.limit=50] Maximum number of commits to return
+ * @param {string} [params.before] Commit hash cursor - return commits before this commit
+ * @param {string} [params.author] Filter by author name/email
+ * @param {string} [params.search] Search commit messages (grep)
+ * @returns {Promise<Object>} { commits, has_more }
+ */
+export async function get_commit_log({
+  repo_path,
+  limit = 50,
+  before,
+  author,
+  search
+}) {
+  const fetch_limit = limit + 1
+
+  const args = [`git log --format='${COMMIT_LOG_FORMAT}' -n ${fetch_limit}`]
+
+  if (before) {
+    args.push(`${before}~1`)
+  }
+
+  if (author) {
+    args.push(`--author='${sanitize_shell_arg(author)}'`)
+  }
+
+  if (search) {
+    args.push(`--grep='${sanitize_shell_arg(search)}'`)
+  }
+
+  let stdout
+  try {
+    const result = await execute_shell_command(args.join(' '), {
+      cwd: repo_path
+    })
+    stdout = result.stdout
+  } catch (error) {
+    if (
+      error.message?.includes('unknown revision') ||
+      error.stderr?.includes('unknown revision')
+    ) {
+      return { commits: [], has_more: false }
+    }
+    throw error
+  }
+
+  const trimmed = stdout.trim()
+  if (!trimmed) {
+    return { commits: [], has_more: false }
+  }
+
+  // eslint-disable-next-line no-control-regex
+  const records = trimmed.split('\x1e').filter((r) => r.trim())
+  const commits = records.slice(0, limit).map(parse_commit_record)
+  const has_more = records.length > limit
+
+  return { commits, has_more }
+}
+
+/**
+ * Get single commit metadata by hash
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Path to the repository
+ * @param {string} params.hash Commit hash
+ * @returns {Promise<Object|null>} Commit metadata or null if not found
+ */
+export async function get_single_commit({ repo_path, hash }) {
+  const { stdout } = await execute_shell_command(
+    `git log -1 --format='${COMMIT_LOG_FORMAT}' ${hash}`,
+    { cwd: repo_path }
+  )
+
+  const trimmed = stdout.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  // eslint-disable-next-line no-control-regex
+  const record = trimmed.replace(/\x1e$/, '')
+  return parse_commit_record(record)
+}
+
 export default {
   get_repo_statistics,
   get_total_commits,
   get_last_commit,
   get_first_commit,
-  get_branch_count
+  get_branch_count,
+  get_commit_log,
+  get_single_commit
 }

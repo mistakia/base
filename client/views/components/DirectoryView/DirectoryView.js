@@ -207,6 +207,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
           statistics={repo_statistics}
           is_loading={is_loading_repo_info}
           compact={true}
+          repo_path={path}
         />
       )}
 
