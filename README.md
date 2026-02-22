@@ -1,6 +1,6 @@
 # Human-in-the-Loop LLM System
 
-A file system and workflow loop where a human and LLMs work in a tight loop to manage and build a knowledge base and complete tasks in an opinionated way.
+A file-first system where a human and LLM agents work in a tight loop to manage a knowledge base, orchestrate agent sessions, and complete tasks in an opinionated way.
 
 ## Prerequisites
 
