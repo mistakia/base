@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Typography, CircularProgress } from '@mui/material'
+import { PatchDiff } from '@pierre/diffs/react'
 
 import { COLORS } from '@theme/colors.js'
 
@@ -20,7 +21,25 @@ const status_colors = {
   C: '#0969da'
 }
 
+const diff_options = {
+  layout: 'unified',
+  themes: {
+    light: 'github-light',
+    dark: 'github-dark'
+  },
+  themeType: 'light',
+  lineNumbers: true,
+  wordWrap: true,
+  unsafeCSS: `
+    pre {
+      font-size: 11px !important;
+      line-height: 1.4 !important;
+    }
+  `
+}
+
 const CommitDetail = ({ detail, is_loading }) => {
+  const options_ref = useRef(diff_options).current
   if (is_loading) {
     return (
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
@@ -33,8 +52,7 @@ const CommitDetail = ({ detail, is_loading }) => {
     return null
   }
 
-  const { subject, body, author_name, author_email, date, files, diff } =
-    detail
+  const { subject, body, author_name, author_email, date, files, diff } = detail
 
   return (
     <Box
@@ -117,35 +135,8 @@ const CommitDetail = ({ detail, is_loading }) => {
 
       {/* Diff content */}
       {diff && (
-        <Box
-          component='pre'
-          sx={{
-            margin: 0,
-            p: 2,
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            lineHeight: 1.5,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            overflow: 'auto',
-            maxHeight: 600,
-            '& .diff-add': { color: '#2da44e', backgroundColor: '#dafbe1' },
-            '& .diff-del': { color: '#cf222e', backgroundColor: '#ffebe9' }
-          }}>
-          {diff.split('\n').map((line, index) => {
-            let class_name = ''
-            if (line.startsWith('+') && !line.startsWith('+++')) {
-              class_name = 'diff-add'
-            } else if (line.startsWith('-') && !line.startsWith('---')) {
-              class_name = 'diff-del'
-            }
-            return (
-              <span key={index} className={class_name}>
-                {line}
-                {'\n'}
-              </span>
-            )
-          })}
+        <Box sx={{ overflow: 'auto', maxHeight: 600 }}>
+          <PatchDiff patch={diff} options={options_ref} />
         </Box>
       )}
     </Box>
