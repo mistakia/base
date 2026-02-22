@@ -26,21 +26,32 @@ A human-in-the-loop LLM system that works alongside a user to manage and build a
 
 ### 1. System Overview
 
-The system is built on a small set of primitives. Most capabilities (composability, change tracking, knowledge graphs, self-improvement) emerge from these primitives rather than being implemented as separate features.
+The system is built on a small set of primitives. Complex capabilities -- composability, change tracking, knowledge graphs, self-improvement -- emerge from these primitives rather than being implemented as separate features.
 
 #### Primitives
 
 - **Files + Git**: All data is markdown files with YAML frontmatter in a git repository. This is the source of truth. Git provides version history, change review, branching, and multi-machine sync.
-- **Entities**: Files follow a typed entity model (task, workflow, guideline, etc.) with frontmatter properties and relations between entities.
-- **Workflows**: Text documents that define agent behavior through structured prompts. Because they are files, they can reference other workflows, be versioned, and be edited by both users and agents.
-- **Tools**: Capabilities exposed to agents during sessions (file access, shell, APIs). Tools have configurable permission levels.
-- **Guidelines**: Text documents that shape agent behavior based on user preferences. Agents access guidelines during sessions.
+- **Entities**: Markdown files follow a typed entity model defined by schemas (see [[sys:system/schema/entity.md]]). Every entity has a type, properties, relations to other entities, and observations. The system's core types -- task, workflow, guideline, text, tag, person, and others (see [[sys:system/text/knowledge-base-schema.md]]) -- are all instances of this single primitive. Schemas are themselves entities, making the system self-describing.
+- **Base URIs**: A URI scheme (`sys:`, `user:`, `ssh://`, `git://`, `https://`) that provides location-independent resource identification across local repositories, remote servers, and external systems. Entities reference each other through base URIs. See [[sys:system/text/base-uri.md]].
+- **Threads**: The standardized session representation for conversations and agentic loops. Every thread has metadata, a timeline, and analysis data regardless of which session runner produced it or where it ran. Threads capture all agent work and are the bridge between external session runners and the entity system. See [[sys:system/text/execution-threads.md]].
+
+#### Key Entity Types
+
+Several entity types carry special behavioral significance:
+
+- **Workflows**: Define agent behavior through structured prompts with inputs, outputs, and tool specifications. Composability, looping, and nesting emerge from workflows referencing each other. See [[sys:system/text/workflow.md]].
+- **Guidelines**: Shape agent behavior based on user preferences. Agents access guidelines during sessions.
+- **Tasks**: Discrete units of work with status, priority, and dependency tracking.
+- **Tags**: Classification and organization labels that form a taxonomy across entities.
+- **Schemas**: Type definitions (stored as `type_definition` entities) that govern the structure of all other entity types.
 
 #### Design Principles
 
 - **Agnostic**: Model agnostic, session runner agnostic, and execution environment agnostic. Base manages and standardizes sessions from any runner (Claude Code, Cursor, etc.) in any environment (host, container, cloud sandbox) using any model.
 - **Human-in-the-loop**: The user reviews, approves, and directs agent work. Agents operate within the user's repository.
 - **Sovereignty**: All data is local, user-owned, and portable. No external dependencies required for core operation.
+- **Self-describing**: The system describes itself using its own primitives. Schemas, documentation, guidelines, and workflows are all entities -- subject to the same versioning, relations, and tooling as any other content.
+- **Emergence over implementation**: Complex capabilities (knowledge graphs, composability, self-improvement) arise from the interaction of simple primitives rather than being built as discrete features.
 
 ### 2. Content Storage System
 
@@ -78,16 +89,6 @@ The system separates knowledge into two types:
 
 The relationship between these knowledge bases is hierarchical - the system knowledge base defines the core schema and behavior, while user knowledge bases extend and implement it for specific use cases. This separation allows for a robust core system while allowing flexibility to adjust to multiple users' preferences and workflows.
 
-#### 2.4 External Connections
-
-Each external data connection has bidirectional sync:
-
-- Google Drive
-- Notion
-- Ubuntu servers
-- Github Projects
-- Other git repos
-
 ### 3. Deployment Architecture
 
 The system supports multi-machine deployment where the Base API and background services run on multiple machines simultaneously, each operating on its own clone of the user-base repository.
@@ -118,12 +119,12 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 
 ### 4. Glossary
 
-- **Workflow**: A text document (markdown file) that defines agent behavior through a structured prompt with inputs, outputs, and tool specifications. Composability, looping, branching, and nesting are patterns that emerge from workflows referencing each other.
+- **Entity**: A markdown file with YAML frontmatter that follows a typed schema. The universal unit of content in the system.
 - **Thread**: The standardized session representation for conversations and agentic loops. See [[sys:system/text/execution-threads.md]].
-- **Guideline**: A text document containing rules or recommendations that agents access during sessions.
-- **Task**: A discrete unit of work that can be assigned, tracked, and completed.
-- **Tool**: A capability exposed to agents during sessions (e.g., file access, shell, APIs).
-- **Tags**: Labels assigned to entities for classification and organization.
+- **Tool**: A capability exposed to agents during sessions (e.g., file access, shell, APIs). See [[sys:system/text/tool-information.md]].
+- **Relation**: A typed link between two entities (e.g., `blocked_by`, `subtask_of`, `relates_to`). See [[sys:system/text/entity-relations.md]].
+- **Observation**: A structured fact attached to an entity in the format `[category] text`.
+- **Schema**: A `type_definition` entity that defines the properties and constraints for an entity type.
 - **Trigger**: An event or condition that activates a workflow.
 
 ## Related System Documentation
