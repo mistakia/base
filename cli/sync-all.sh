@@ -144,6 +144,109 @@ check_git_state() {
     return 0
 }
 
+# Check if a commit only changes submodule pointers (mode 160000).
+# Returns 0 if pointer-only, 1 if it has any non-submodule changes.
+# Args: $1 = commit SHA
+is_pointer_only_commit() {
+    local sha="$1"
+    local changes
+    changes=$(git diff-tree --no-commit-id -r "$sha" 2>/dev/null)
+    [ -z "$changes" ] && return 0
+    # Any entry without submodule mode (160000) means non-pointer content
+    if echo "$changes" | grep -qv '^:160000 160000 '; then
+        return 1
+    fi
+    return 0
+}
+
+# Rebase with pointer-only commit skipping and submodule conflict auto-resolution.
+# Phase 1: Drops local pointer-only commits via interactive rebase sequence editor.
+#           These commits are redundant since the remote has equivalent pointer state,
+#           and they're the primary source of submodule pointer conflicts.
+# Phase 2: Auto-resolves submodule pointer conflicts (mode 160000) by staging the
+#           current submodule HEAD, which is correct because Step 1 already synced it.
+# Returns 0 on success, 1 on unresolvable conflict or error.
+# Args: $1 = remote_branch
+smart_rebase() {
+    local remote_branch="$1"
+    local merge_base
+    merge_base=$(git merge-base HEAD "$remote_branch" 2>/dev/null) || return 1
+
+    # Phase 1: Identify pointer-only local commits to drop
+    local pointer_only_shas=()
+    local total_local=0
+    for sha in $(git rev-list "$merge_base"..HEAD); do
+        total_local=$((total_local + 1))
+        if is_pointer_only_commit "$sha"; then
+            pointer_only_shas+=("$sha")
+        fi
+    done
+
+    local dropping=${#pointer_only_shas[@]}
+    if [ $dropping -gt 0 ]; then
+        log "Dropping $dropping of $total_local pointer-only commit(s) during rebase"
+    fi
+
+    # Run rebase with sequence editor to drop pointer-only commits
+    local rebase_status
+    if [ $dropping -gt 0 ]; then
+        local drop_file
+        drop_file=$(mktemp /tmp/sync-rebase-drops.XXXXXX)
+        for sha in "${pointer_only_shas[@]}"; do
+            echo "${sha:0:7}" >> "$drop_file"
+        done
+
+        GIT_SEQUENCE_EDITOR="awk -v df='$drop_file' 'BEGIN{while((getline l<df)>0)d[l]=1} {if(\$1==\"pick\"&&(substr(\$2,1,7) in d))\$1=\"drop\"} 1'" \
+            git rebase -i --autostash --no-autosquash "$remote_branch" 2>/dev/null
+        rebase_status=$?
+        rm -f "$drop_file"
+    else
+        git rebase --autostash "$remote_branch" 2>/dev/null
+        rebase_status=$?
+    fi
+
+    # Phase 2: Auto-resolve submodule pointer conflicts
+    local max_retries=20
+    local retries=0
+    while [ $rebase_status -ne 0 ] && [ $retries -lt $max_retries ]; do
+        local unmerged
+        unmerged=$(git ls-files -u 2>/dev/null)
+        if [ -z "$unmerged" ]; then
+            # Rebase failed but no unmerged files - unknown error
+            git rebase --abort 2>/dev/null || true
+            return 1
+        fi
+
+        # Check if ALL unmerged entries are submodules (mode 160000)
+        local has_file_conflict
+        has_file_conflict=$(echo "$unmerged" | awk '$1 != "160000"' | head -1)
+        if [ -n "$has_file_conflict" ]; then
+            # Non-submodule conflict - cannot auto-resolve
+            git rebase --abort 2>/dev/null || true
+            return 1
+        fi
+
+        # All conflicts are submodule pointers - resolve with current HEAD
+        local conflict_paths
+        conflict_paths=$(echo "$unmerged" | awk '{print $4}' | sort -u)
+        while IFS= read -r conflict_path; do
+            git add "$conflict_path" 2>/dev/null
+            log_verbose "Auto-resolved submodule conflict: $conflict_path"
+        done <<< "$conflict_paths"
+
+        GIT_EDITOR=true git rebase --continue 2>/dev/null
+        rebase_status=$?
+        retries=$((retries + 1))
+    done
+
+    if [ $rebase_status -ne 0 ]; then
+        git rebase --abort 2>/dev/null || true
+        return 1
+    fi
+
+    return 0
+}
+
 # Sync a single submodule: fetch -> divergence check -> rebase/push
 sync_submodule() {
     local submodule_path="$1"
@@ -365,11 +468,39 @@ if [ "$POINTER_UPDATED" = true ]; then
     # POINTER_UPDATED guarantees at least one submodule was staged via git add.
     # Note: git diff --cached --quiet cannot be used here because submodules with
     # ignore=all in .gitmodules are invisible to git diff --cached, even when staged.
-    log "Committing pointer updates for: ${UPDATED_SUBMODULES[*]}"
-    git commit -m "chore: update submodule pointers" 2>/dev/null || {
-        log_error "Failed to commit submodule pointer updates"
-        ERRORS=$((ERRORS + 1))
-    }
+
+    # Throttle: if HEAD is an unpushed pointer-only commit, amend it instead of
+    # creating a new one. This keeps at most 1 unpushed pointer commit at any time,
+    # reducing divergence risk when both machines create pointer commits simultaneously.
+    local can_amend=false
+    local current_branch_name
+    current_branch_name=$(git rev-parse --abbrev-ref HEAD)
+    local head_sha remote_sha ptr_merge_base
+    head_sha=$(git rev-parse HEAD)
+    remote_sha=$(git rev-parse "origin/$current_branch_name" 2>/dev/null) || true
+    if [ -n "$remote_sha" ]; then
+        ptr_merge_base=$(git merge-base HEAD "origin/$current_branch_name" 2>/dev/null) || true
+        # HEAD must be strictly ahead of remote (unpushed commits exist)
+        if [ "$ptr_merge_base" = "$remote_sha" ] && [ "$head_sha" != "$remote_sha" ]; then
+            if is_pointer_only_commit HEAD; then
+                can_amend=true
+            fi
+        fi
+    fi
+
+    if [ "$can_amend" = true ]; then
+        log "Amending previous pointer commit with: ${UPDATED_SUBMODULES[*]}"
+        git commit --amend --no-edit 2>/dev/null || {
+            log_error "Failed to amend submodule pointer commit"
+            ERRORS=$((ERRORS + 1))
+        }
+    else
+        log "Committing pointer updates for: ${UPDATED_SUBMODULES[*]}"
+        git commit -m "chore: update submodule pointers" 2>/dev/null || {
+            log_error "Failed to commit submodule pointer updates"
+            ERRORS=$((ERRORS + 1))
+        }
+    fi
     log "Submodule pointers committed"
 else
     log_verbose "All submodule pointers are current"
@@ -412,7 +543,7 @@ else
                         ERRORS=$((ERRORS + 1))
                     else
                         log "Parent: dirty but no overlap, rebasing..."
-                        if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
+                        if ! git rebase --autostash "$REMOTE_BRANCH" 2>/dev/null; then
                             git rebase --abort 2>/dev/null || true
                             log_error "Parent: rebase failed"
                             "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
@@ -457,10 +588,9 @@ else
                             --message "sync-all on $(hostname): diverged and dirty files overlap with incoming changes. Files: $(echo "$OVERLAP_FILES" | tr '\n' ', ')" 2>/dev/null || true
                         ERRORS=$((ERRORS + 1))
                     else
-                        log "Parent: diverged and dirty but no overlap, rebasing..."
-                        if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
-                            git rebase --abort 2>/dev/null || true
-                            log_error "Parent: rebase failed (diverged)"
+                        log "Parent: diverged and dirty but no overlap, smart rebasing..."
+                        if ! smart_rebase "$REMOTE_BRANCH"; then
+                            log_error "Parent: smart rebase failed (diverged+dirty)"
                             "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
                                 --title "User-base sync failed" \
                                 --message "sync-all: rebase failed (diverged) on $(hostname), manual intervention required" 2>/dev/null || true
@@ -474,10 +604,9 @@ else
                         fi
                     fi
                 else
-                    log "Parent: diverged, rebasing..."
-                    if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
-                        git rebase --abort 2>/dev/null || true
-                        log_error "Parent: rebase failed (diverged)"
+                    log "Parent: diverged, smart rebasing..."
+                    if ! smart_rebase "$REMOTE_BRANCH"; then
+                        log_error "Parent: smart rebase failed (diverged)"
                         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
                             --title "User-base sync failed" \
                             --message "sync-all: rebase failed (diverged) on $(hostname), manual intervention required" 2>/dev/null || true
