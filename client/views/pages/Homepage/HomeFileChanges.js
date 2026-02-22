@@ -66,4 +66,4 @@ const HomeFileChanges = () => {
   )
 }
 
-export default HomeFileChanges
+export default React.memo(HomeFileChanges)

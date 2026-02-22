@@ -20,7 +20,7 @@ import {
   get_directory_markdown_request_actions
 } from './actions'
 import { get_app } from '@core/app/selectors'
-import { get_current_file_path } from './selectors'
+import { get_current_file_path, get_directory_state } from './selectors'
 
 export function* load_directory({ payload }) {
   yield call(get_directories, { path: payload?.path })
@@ -37,6 +37,21 @@ export function* load_path_info({ payload }) {
 
 export function* load_directory_markdown({ payload }) {
   const markdown_files = ['ABOUT.md', 'README.md', 'INDEX.md']
+
+  // Skip re-fetch if markdown is already loaded for this path
+  const directory_state = yield select(get_directory_state)
+  const existing = directory_state.get('directory_markdown_file')
+  const requested_path = payload?.path || ''
+  if (existing && !directory_state.get('directory_markdown_error')) {
+    const existing_path = existing.path || ''
+    const existing_dir = existing_path.substring(
+      0,
+      existing_path.lastIndexOf('/')
+    )
+    if (existing_dir === requested_path || (!existing_dir && !requested_path)) {
+      return
+    }
+  }
 
   yield put(get_directory_markdown_request_actions.pending({ opts: payload }))
 

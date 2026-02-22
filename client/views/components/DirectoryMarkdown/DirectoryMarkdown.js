@@ -49,4 +49,4 @@ DirectoryMarkdown.propTypes = {
   show_when_no_content: PropTypes.bool
 }
 
-export default DirectoryMarkdown
+export default React.memo(DirectoryMarkdown)

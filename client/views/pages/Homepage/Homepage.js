@@ -33,7 +33,7 @@ const Homepage = ({
 
   useEffect(() => {
     load_directory_markdown('')
-  }, [load_directory_markdown])
+  }, [])
 
   return (
     <>
