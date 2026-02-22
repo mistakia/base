@@ -13,5 +13,7 @@ import DOMPurify from 'dompurify'
  */
 export const sanitize_html = (html) => {
   if (!html) return ''
-  return DOMPurify.sanitize(html)
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ['target']
+  })
 }

@@ -117,19 +117,15 @@ export const process_links_in_html = (html) => {
       return
     }
 
-    // App-absolute path - treat as internal but open in new tab
+    // App-absolute path - treat as internal, navigate in same tab
     if (href.startsWith('/')) {
-      link.setAttribute('target', '_blank')
-      link.setAttribute('rel', 'noopener noreferrer')
       link.setAttribute('data-internal-link', 'true')
       return
     }
 
-    // Relative path - resolve against current path and open in new tab
+    // Relative path - resolve against current path, navigate in same tab
     const resolved_path = resolve_relative_path(href)
     link.setAttribute('href', resolved_path)
-    link.setAttribute('target', '_blank')
-    link.setAttribute('rel', 'noopener noreferrer')
     link.setAttribute('data-internal-link', 'true')
   })
 

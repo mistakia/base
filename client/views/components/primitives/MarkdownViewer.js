@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { sanitize_html } from '@views/utils/sanitize-html.mjs'
+import { history } from '@core/store.js'
 
 import { COLORS } from '@theme/colors.js'
 import '@styles/checkbox.styl'
@@ -158,6 +159,8 @@ const get_normal_styles = {
 }
 
 const MarkdownViewer = ({ content, is_redacted }) => {
+  const container_ref = useRef(null)
+
   const html_content = useMemo(() => {
     if (!content) return ''
 
@@ -170,8 +173,32 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     return sanitize_html(render_markdown(content_without_frontmatter))
   }, [content, is_redacted])
 
+  // Intercept clicks on internal links to use client-side routing
+  const handle_click = useCallback((event) => {
+    const link = event.target.closest('a[data-internal-link]')
+    if (!link) return
+
+    // Allow modifier keys for open-in-new-tab behavior
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return
+
+    const href = link.getAttribute('href')
+    if (!href) return
+
+    event.preventDefault()
+    history.push(href)
+  }, [])
+
+  useEffect(() => {
+    const container = container_ref.current
+    if (!container) return
+
+    container.addEventListener('click', handle_click)
+    return () => container.removeEventListener('click', handle_click)
+  }, [handle_click])
+
   return (
     <Box
+      ref={container_ref}
       sx={{
         ...get_normal_styles
       }}
