@@ -35,6 +35,10 @@ import { get_active_sessions_actions } from '@core/active-sessions/actions'
 import { get_activity_heatmap_actions } from '@core/activity/actions'
 import { get_sheet_thread_request_actions } from '@core/thread-sheet/actions'
 import {
+  get_commits_actions,
+  get_commit_detail_actions
+} from '@core/commits/actions'
+import {
   get_git_status_all_actions,
   get_git_status_actions,
   get_git_diff_actions,
@@ -331,4 +335,16 @@ export const get_repo_info = fetch.bind(
   null,
   api.get_repo_info,
   get_repo_info_actions
+)
+
+export const get_commits = fetch.bind(
+  null,
+  api.get_commits,
+  get_commits_actions
+)
+
+export const get_commit_detail = fetch.bind(
+  null,
+  api.get_commit_detail,
+  get_commit_detail_actions
 )

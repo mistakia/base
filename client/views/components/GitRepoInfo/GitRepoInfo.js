@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
+import { Link } from 'react-router-dom'
 import { Box, Collapse, IconButton, Typography } from '@mui/material'
 import {
   ExpandMore as ExpandMoreIcon,
@@ -41,7 +42,7 @@ const format_number = (num) => {
   return num.toLocaleString()
 }
 
-const GitRepoInfo = ({ statistics, is_loading, compact = false }) => {
+const GitRepoInfo = ({ statistics, is_loading, compact = false, repo_path }) => {
   const [expanded, set_expanded] = useState(false)
 
   if (is_loading) {
@@ -69,9 +70,24 @@ const GitRepoInfo = ({ statistics, is_loading, compact = false }) => {
 
   const { total_commits, branch_count, last_commit, first_commit } = statistics
 
-  const last_commit_display = last_commit
-    ? `${format_relative_time(last_commit.date) || '-'} (${last_commit.short_hash})`
-    : '-'
+  const commits_link = repo_path ? `/${repo_path}/commits` : '/commits'
+  const last_commit_display = last_commit ? (
+    <>
+      {format_relative_time(last_commit.date) || '-'} (
+      <Link
+        to={commits_link}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          color: '#0969da',
+          textDecoration: 'none'
+        }}>
+        {last_commit.short_hash}
+      </Link>
+      )
+    </>
+  ) : (
+    '-'
+  )
 
   const first_commit_display = first_commit
     ? format_date(first_commit.date)
@@ -231,7 +247,8 @@ GitRepoInfo.propTypes = {
     })
   }),
   is_loading: PropTypes.bool,
-  compact: PropTypes.bool
+  compact: PropTypes.bool,
+  repo_path: PropTypes.string
 }
 
 export default GitRepoInfo

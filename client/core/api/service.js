@@ -316,6 +316,21 @@ export const api = {
     return { url }
   },
 
+  get_commits({ repo_path, limit, before, author, search }) {
+    const params = { repo_path }
+    if (limit) params.limit = limit
+    if (before) params.before = before
+    if (author) params.author = author
+    if (search) params.search = search
+    const url = `${API_URL}/git/commits?${qs.stringify(params)}`
+    return { url }
+  },
+
+  get_commit_detail({ repo_path, hash }) {
+    const url = `${API_URL}/git/commit/${hash}?repo_path=${encodeURIComponent(repo_path)}`
+    return { url }
+  },
+
   // Search operations
   search({ q, mode = 'full', types, directory, limit }) {
     const params = { q, mode }

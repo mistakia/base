@@ -11,7 +11,7 @@ import sync_operations from './sync.mjs'
 import conflict_operations from './conflicts.mjs'
 import { find_git_root } from './find-git-root.mjs'
 import { get_file_status, get_file_diff_stats } from './file-status.mjs'
-import { get_repo_statistics } from './repo-statistics.mjs'
+import { get_repo_statistics, get_commit_log, get_single_commit } from './repo-statistics.mjs'
 
 // Export all operations
 export const {
@@ -72,7 +72,7 @@ export { find_git_root }
 
 export { get_file_status, get_file_diff_stats }
 
-export { get_repo_statistics }
+export { get_repo_statistics, get_commit_log, get_single_commit }
 
 // Export default as a single object with all operations
 export default {
@@ -144,5 +144,7 @@ export default {
   get_file_diff_stats,
 
   // Repository statistics
-  get_repo_statistics
+  get_repo_statistics,
+  get_commit_log,
+  get_single_commit
 }
