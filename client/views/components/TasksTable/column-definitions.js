@@ -194,7 +194,7 @@ const TagsCell = ({ row, column }) => {
                     }
                   : tag_uri
               }
-              max_width='90px'
+              max_width='none'
             />
           )
         })}

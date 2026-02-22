@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box } from '@mui/material'
-import { Link } from 'react-router-dom'
 
 import { tasks_actions } from '@core/tasks/actions'
 import { get_tasks_state } from '@core/tasks/selectors'
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
+import TagChip from '@views/components/primitives/styled/tag-chip.js'
 import TagPickerDropdown from './TagPickerDropdown'
 
 const container_sx = {
@@ -65,22 +65,12 @@ const EditableTagsField = ({ value, base_uri }) => {
     set_dropdown_open(false)
   }
 
-  const get_tag_display = (tag_base_uri) => {
-    return tag_base_uri.replace(/^(user|sys):tag\//, '').replace(/\.md$/, '')
-  }
-
   return (
     <Box sx={container_sx}>
       {local_tags.map((tag_base_uri, index) => {
         const tag_path = convert_base_uri_to_path(tag_base_uri)
         return (
-          <Link
-            key={index}
-            to={tag_path}
-            className='chip chip--link'
-            style={{ textDecoration: 'none' }}>
-            {get_tag_display(tag_base_uri)}
-          </Link>
+          <TagChip key={index} tag={tag_base_uri} to={tag_path} size='small' />
         )
       })}
       <span

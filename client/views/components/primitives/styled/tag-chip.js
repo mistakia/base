@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Chip } from '@mui/material'
+import { Link } from 'react-router-dom'
 
 /**
  * Extract display title from tag base_uri
@@ -38,6 +39,7 @@ const TagChip = ({
   variant = 'filled',
   max_width,
   show_color = true,
+  to,
   ...props
 }) => {
   // Support both tag objects and plain base_uri strings
@@ -51,32 +53,54 @@ const TagChip = ({
     : null
 
   const size_styles = {
-    small: { height: '20px', fontSize: '10px' },
-    medium: { height: '24px', fontSize: '12px' }
+    small: { height: '20px', fontSize: '10px', padding: '3px 8px' },
+    medium: { height: '24px', fontSize: '12px', padding: '4px 10px' }
   }
+
+  const link_props = to ? { component: Link, to, clickable: true } : {}
 
   return (
     <Chip
       label={display_label}
       size={size}
       variant={variant}
+      {...link_props}
       sx={{
         ...size_styles[size],
         maxWidth: max_width || 'none',
-        ...(chip_color && {
-          backgroundColor:
-            variant === 'filled'
-              ? `color-mix(in srgb, ${chip_color} 20%, transparent)`
-              : 'transparent',
-          borderColor: chip_color,
-          color: chip_color,
-          border: variant === 'outlined' ? `1px solid ${chip_color}` : 'none'
+        fontFamily: "'IBM Plex Mono', Monaco, Menlo, 'Ubuntu Mono', monospace",
+        fontWeight: 700,
+        lineHeight: 1,
+        borderRadius: '4px',
+        border: '1px solid #e9ecef',
+        ...(chip_color && { borderColor: chip_color }),
+        backgroundColor: chip_color
+          ? `color-mix(in srgb, ${chip_color} 10%, #f8f9fa)`
+          : '#f8f9fa',
+        color: '#6c757d',
+        transition: 'all 0.15s ease',
+        ...(to && {
+          cursor: 'pointer',
+          textDecoration: 'none',
+          '&:hover': {
+            backgroundColor: chip_color
+              ? `color-mix(in srgb, ${chip_color} 20%, #f8f9fa)`
+              : 'rgba(0, 123, 255, 0.08)',
+            borderColor: chip_color || '#007bff',
+            textDecoration: 'none'
+          }
+        }),
+        ...(!to && {
+          '&:hover': {
+            backgroundColor: '#fafafa',
+            borderColor: chip_color || '#dee2e6'
+          }
         }),
         '& .MuiChip-label': {
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
-          padding: '0 6px'
+          padding: 0
         },
         ...props.sx
       }}
@@ -103,6 +127,8 @@ TagChip.propTypes = {
   max_width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   /** Whether to show colors */
   show_color: PropTypes.bool,
+  /** Optional route path to make the chip a clickable link */
+  to: PropTypes.string,
   /** Additional styles */
   sx: PropTypes.object
 }

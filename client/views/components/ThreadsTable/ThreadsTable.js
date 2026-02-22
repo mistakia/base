@@ -1,15 +1,17 @@
-import React from 'react'
+import React, { useEffect, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
 import { thread_columns } from './column-definitions.js'
 import { threads_actions } from '@core/threads/actions.js'
+import { tasks_actions } from '@core/tasks/actions.js'
 import {
   get_threads_table_props,
   get_thread_table_views,
   get_selected_thread_table_view
 } from '@core/threads/selectors.js'
+import { get_available_tags_for_filter } from '@core/tasks/selectors.js'
 import './ThreadsTable.styl'
 
 const ThreadsTable = ({ on_view_select }) => {
@@ -17,6 +19,11 @@ const ThreadsTable = ({ on_view_select }) => {
   const table_props = useSelector(get_threads_table_props)
   const available_views = useSelector(get_thread_table_views)
   const selected_view = useSelector(get_selected_thread_table_view)
+  const available_tags = useSelector(get_available_tags_for_filter)
+
+  useEffect(() => {
+    dispatch(tasks_actions.load_available_tags())
+  }, [dispatch])
 
   const {
     data = [],
@@ -26,6 +33,20 @@ const ThreadsTable = ({ on_view_select }) => {
     is_loading = false,
     table_error = null
   } = table_props
+
+  const columns_with_tags = useMemo(() => {
+    const base_columns =
+      Object.keys(all_columns).length > 0 ? all_columns : thread_columns
+    if (!base_columns.tags) return base_columns
+
+    return {
+      ...base_columns,
+      tags: {
+        ...base_columns.tags,
+        column_values: available_tags
+      }
+    }
+  }, [all_columns, available_tags])
 
   const handle_view_change = (view) => {
     dispatch(
@@ -73,9 +94,7 @@ const ThreadsTable = ({ on_view_select }) => {
     <div className='threads-table-container'>
       <Table
         data={data}
-        all_columns={
-          Object.keys(all_columns).length > 0 ? all_columns : thread_columns
-        }
+        all_columns={columns_with_tags}
         table_state={table_state}
         saved_table_state={saved_table_state}
         views={available_views}
