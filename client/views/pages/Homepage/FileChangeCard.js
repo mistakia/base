@@ -167,8 +167,7 @@ const FileChangeCard = ({
           {is_expanded ? '-' : '+'}
         </span>
         <HelpTooltip title={status_config.help || file.status}>
-          <span
-            className={`file-change-card__status ${status_config.class}`}>
+          <span className={`file-change-card__status ${status_config.class}`}>
             {status_config.letter}
           </span>
         </HelpTooltip>

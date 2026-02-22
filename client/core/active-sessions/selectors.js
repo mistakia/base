@@ -107,7 +107,15 @@ export const get_all_sessions_with_pending = createSelector(
           .toArray()
       : []
 
-    return [...pending, ...active, ...ended]
+    // Sort active sessions by started_at descending so that sessions
+    // converted from pending (queued) retain their position at the top
+    const sorted_active = [...active].sort((a, b) => {
+      const a_time = new Date(a.started_at || a.created_at || 0).getTime()
+      const b_time = new Date(b.started_at || b.created_at || 0).getTime()
+      return b_time - a_time
+    })
+
+    return [...pending, ...sorted_active, ...ended]
   }
 )
 
