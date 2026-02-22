@@ -1,0 +1,114 @@
+// Shared overlay variables (matches CommandPalette)
+$overlay-border-radius = 12px
+$overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
+
+.shortcut-reference
+  &__paper
+    background-color var(--color-bg, #ffffff)
+    border 1px solid var(--color-border, #e1e4e8)
+    box-shadow $overlay-box-shadow
+    border-radius $overlay-border-radius
+    max-height 80vh
+    display flex
+    flex-direction column
+
+  &__content
+    flex 1
+    overflow-y auto
+    padding 16px
+
+  &__section
+    margin-bottom 16px
+    padding-bottom 16px
+    border-bottom 1px solid var(--color-border-light, #e9ecef)
+
+    &:last-child
+      border-bottom none
+      margin-bottom 0
+      padding-bottom 0
+
+  &__section-title
+    font-size 10px
+    font-weight 500
+    text-transform uppercase
+    color var(--color-text-tertiary)
+    letter-spacing 0.5px
+    padding 0 0 8px
+
+  &__shortcut-row
+    display flex
+    justify-content space-between
+    align-items center
+    padding 4px 0
+    gap 8px
+
+  &__shortcut-keys
+    display flex
+    gap 4px
+    flex-shrink 0
+
+  &__kbd
+    display inline-block
+    background-color var(--color-code-bg, #f5eee6)
+    border 1px solid var(--color-code-border, #e8dcc8)
+    padding 1px 6px
+    border-radius 3px
+    font-family var(--font-family-mono)
+    font-size 11px
+    line-height 18px
+    color var(--color-text)
+    white-space nowrap
+
+  &__shortcut-description
+    flex 1
+    color var(--color-text-secondary)
+    font-size 12px
+    text-align right
+
+  &__link-row
+    display flex
+    justify-content space-between
+    align-items center
+    padding 4px 0
+    gap 8px
+
+  &__link
+    color var(--color-primary, #007bff)
+    font-size 12px
+    text-decoration none
+
+    &:hover
+      text-decoration underline
+
+  &__link-path
+    color var(--color-text-tertiary)
+    font-size 11px
+    font-family var(--font-family-mono)
+
+  &__tip-row
+    padding 4px 0
+    color var(--color-text-secondary)
+    font-size 12px
+    line-height 1.4
+
+// Trigger label - fixed position bottom-right
+.shortcut-reference-trigger
+  position fixed
+  bottom 12px
+  right 16px
+  z-index 100
+  background var(--color-surface, #F7F7F4)
+  border 1px solid var(--color-border, #ced4da)
+  border-radius 4px
+  padding 4px 10px
+  cursor pointer
+  font-family var(--font-family-mono)
+  font-size 12px
+  color var(--color-text)
+  transition background-color 0.15s ease
+
+  &:hover
+    background-color var(--color-surface-hover, #fafafa)
+
+  @media (max-width: 768px)
+    display none

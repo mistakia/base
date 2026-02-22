@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { Provider, useSelector, useDispatch } from 'react-redux'
 import { HistoryRouter as Router } from 'redux-first-history/rr6'
@@ -21,6 +21,7 @@ import GlobalThreadInput from '@components/GlobalThreadInput'
 import FloatingSessionsPanel from '@components/FloatingSessionsPanel/FloatingSessionsPanel.js'
 import ThreadSheet from '@components/ThreadSheet/ThreadSheet.js'
 import CommandPalette from '@components/CommandPalette'
+import ShortcutReference from '@components/ShortcutReference'
 import { get_notification_info } from '@core/notification/selectors'
 
 // Import styles
@@ -249,6 +250,49 @@ const SearchPaletteContainer = () => {
   return <CommandPalette />
 }
 
+const ShortcutReferenceContainer = () => {
+  const [is_open, set_is_open] = useState(false)
+  const is_open_ref = useRef(false)
+
+  useEffect(() => {
+    is_open_ref.current = is_open
+  }, [is_open])
+
+  const handle_close = useCallback(() => {
+    set_is_open(false)
+  }, [])
+
+  const handle_open = useCallback(() => {
+    set_is_open(true)
+  }, [])
+
+  useEffect(() => {
+    const handle_keydown = (event) => {
+      // Cmd/Ctrl+/ to toggle shortcut reference
+      if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+        event.preventDefault()
+        if (is_open_ref.current) {
+          set_is_open(false)
+        } else {
+          set_is_open(true)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handle_keydown)
+    return () => document.removeEventListener('keydown', handle_keydown)
+  }, [])
+
+  return (
+    <>
+      <div className='shortcut-reference-trigger' onClick={handle_open}>
+        &#8984;/
+      </div>
+      <ShortcutReference is_open={is_open} on_close={handle_close} />
+    </>
+  )
+}
+
 const Root = () => {
   return (
     <Provider store={store}>
@@ -262,6 +306,7 @@ const Root = () => {
             <FloatingSessionsPanel />
             <ThreadSheet />
             <SearchPaletteContainer />
+            <ShortcutReferenceContainer />
           </AppInitializer>
         </ThemeProvider>
       </Router>
