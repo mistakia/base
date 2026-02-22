@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import Tooltip from '@mui/material/Tooltip'
 
 const ENTER_DELAY_MS = 500
@@ -38,5 +39,11 @@ const HelpTooltip = ({ title, children, placement = 'bottom', ...props }) => (
     {children}
   </Tooltip>
 )
+
+HelpTooltip.propTypes = {
+  title: PropTypes.node.isRequired,
+  children: PropTypes.node.isRequired,
+  placement: PropTypes.oneOf(['bottom', 'top', 'left', 'right'])
+}
 
 export default HelpTooltip
