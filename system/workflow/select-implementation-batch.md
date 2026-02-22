@@ -5,7 +5,7 @@ description: >-
   Select ready tasks for implementation based on dependencies, priority, and
   execution characteristics. Queues implementation workflows with appropriate tags.
 base_uri: sys:system/workflow/select-implementation-batch.md
-entity_id: e1f2a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b
+entity_id: 14992625-ef6e-4212-8b38-419d1aaceebe
 created_at: '2026-02-06T19:15:00.000Z'
 updated_at: '2026-02-06T19:15:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b

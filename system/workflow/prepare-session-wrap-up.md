@@ -6,7 +6,7 @@ description: >-
   actions and produces a continuation prompt for follow-up
 base_uri: sys:system/workflow/prepare-session-wrap-up.md
 created_at: '2026-02-13T00:00:00.000Z'
-entity_id: f7a1b2c3-4d5e-6f78-9a0b-c1d2e3f4a5b6
+entity_id: 8aa3705f-52fe-434c-b334-5e90585f92c3
 observations:
   - '[efficiency] Designed for minimal token usage near end of context window'
   - '[pattern] Output doubles as continuation prompt for new session'

@@ -1,7 +1,15 @@
 ---
 title: Session Lifecycle Reference
 type: text
-description: Complete reference for the active session lifecycle from submission through thread creation, including all WebSocket events, state transitions, and timing characteristics. Serves as the authoritative source of truth for client implementations.
+description: >-
+  Complete reference for the active session lifecycle from submission through thread creation,
+  including all WebSocket events, state transitions, and timing characteristics. Serves as the
+  authoritative source of truth for client implementations.
+base_uri: sys:system/text/session-lifecycle-reference.md
+created_at: '2026-02-22T01:01:36.309Z'
+entity_id: 9fe11418-4256-4058-b41c-1b12dd7c3ad8
+updated_at: '2026-02-22T01:01:36.309Z'
+user_public_key: 00000000-0000-0000-0000-000000000000
 ---
 
 # Session Lifecycle Reference

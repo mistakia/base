@@ -6,7 +6,7 @@ extends: entity
 description: Scheduled commands define CLI commands to execute at specified times
 base_uri: sys:system/schema/scheduled-command.md
 created_at: '2026-02-07T18:30:00.000Z'
-entity_id: 8f7e6d5c-4b3a-2918-0fed-cbba9a876543
+entity_id: d814d68f-97ec-4fda-aaf6-929e751a7533
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 updated_at: '2026-02-11T01:38:09.000Z'
 properties:

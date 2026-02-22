@@ -5,7 +5,7 @@ description: >-
   Analyze Planned tasks for a project to identify shared files, potential conflicts,
   and establish dependency relations between tasks.
 base_uri: sys:system/workflow/analyze-task-dependencies.md
-entity_id: c9d0e1f2-3a4b-5c6d-7e8f-9a0b1c2d3e4f
+entity_id: 8047e565-1d01-4717-a861-5f132df8015b
 created_at: '2026-02-06T18:45:00.000Z'
 updated_at: '2026-02-06T18:45:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
