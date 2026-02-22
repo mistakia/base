@@ -48,10 +48,9 @@ const GitRepoInfo = ({ statistics, is_loading, compact = false }) => {
     return (
       <Box
         sx={{
+          mt: 2,
           border: `1px solid ${COLORS.border_light}`,
           borderBottom: 'none',
-          borderTopLeftRadius: '6px',
-          borderTopRightRadius: '6px',
           backgroundColor: 'white',
           p: 2
         }}>
@@ -83,6 +82,7 @@ const GitRepoInfo = ({ statistics, is_loading, compact = false }) => {
   return (
     <Box
       sx={{
+        mt: 2,
         border: `1px solid ${COLORS.border_light}`,
         borderBottom: 'none',
         borderTopLeftRadius: '6px',

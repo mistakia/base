@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 
 const HomeFileBrowser = () => {
-  const [is_collapsed, set_is_collapsed] = useState(true)
+  const [is_collapsed, set_is_collapsed] = useState(false)
 
   const handle_toggle = () => {
     set_is_collapsed(!is_collapsed)

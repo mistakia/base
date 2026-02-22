@@ -97,6 +97,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
       borderBottomLeftRadius: '6px',
       borderBottomRightRadius: '6px',
       backgroundColor: 'white',
+      marginTop: is_git_root ? '0' : '16px',
       width: '100%',
       maxWidth: '100%'
     }),
