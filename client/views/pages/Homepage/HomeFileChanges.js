@@ -7,6 +7,7 @@ import {
   get_total_changed_files_count,
   get_is_loading_status
 } from '@core/git/selectors'
+import HelpTooltip from '@components/primitives/HelpTooltip.js'
 import RepoSection from './RepoSection.js'
 import './HomeFileChanges.styl'
 
@@ -43,10 +44,14 @@ const HomeFileChanges = () => {
           {is_collapsed ? '+' : '-'}
         </span>
         <span className='home-section-header__dot home-section-header__dot--changes' />
-        <span className='home-section-header__title'>File Changes</span>
-        <span className='home-section-header__count'>
-          {is_loading ? '...' : total_count}
-        </span>
+        <HelpTooltip title='Files that have been added, edited, or removed since the last commit (saved version). Click to see details.'>
+          <span className='home-section-header__title'>File Changes</span>
+        </HelpTooltip>
+        <HelpTooltip title='The total number of files with uncommitted changes across all projects. These changes have not been saved into a commit yet.'>
+          <span className='home-section-header__count'>
+            {is_loading ? '...' : total_count}
+          </span>
+        </HelpTooltip>
       </div>
 
       {!is_collapsed && (

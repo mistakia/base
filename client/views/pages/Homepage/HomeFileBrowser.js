@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
+import HelpTooltip from '@components/primitives/HelpTooltip.js'
 
 const HomeFileBrowser = () => {
   const [is_collapsed, set_is_collapsed] = useState(false)
@@ -25,7 +26,9 @@ const HomeFileBrowser = () => {
           {is_collapsed ? '+' : '-'}
         </span>
         <span className='home-section-header__dot home-section-header__dot--files' />
-        <span className='home-section-header__title'>Files</span>
+        <HelpTooltip title='Browse the files and folders in your knowledge base. You can open any file to view or edit it.'>
+          <span className='home-section-header__title'>Files</span>
+        </HelpTooltip>
       </div>
       {!is_collapsed && (
         <div className='home-file-browser-content'>

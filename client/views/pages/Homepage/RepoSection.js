@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { useDispatch } from 'react-redux'
 
 import { git_actions } from '@core/git/actions'
+import HelpTooltip from '@components/primitives/HelpTooltip.js'
 import FileChangeCard from './FileChangeCard.js'
 import CommitSection from './CommitSection.js'
 
@@ -120,25 +121,35 @@ const RepoSection = ({ repo }) => {
           }
         }}>
         <span className='repo-section__toggle'>{is_collapsed ? '+' : '-'}</span>
-        <span className='repo-section__name'>
-          {repo.is_worktree && repo.parent_repo_name && (
-            <>
-              <span className='repo-section__parent-repo-name'>
-                {repo.parent_repo_name}
-              </span>
-              {' / '}
-            </>
-          )}
-          {repo.repo_name}
-          {repo.is_worktree && (
-            <span className='repo-section__worktree-indicator'>worktree</span>
-          )}
-        </span>
-        <span className='repo-section__branch'>{repo.branch}</span>
-        {conflict_count > 0 && (
-          <span className='repo-section__conflict-indicator'>
-            {conflict_count} conflict{conflict_count > 1 ? 's' : ''}
+        <HelpTooltip title='The name of the project (repository) where these file changes were found. A repository is a project folder that tracks the full history of its files through commits.'>
+          <span className='repo-section__name'>
+            {repo.is_worktree && repo.parent_repo_name && (
+              <>
+                <span className='repo-section__parent-repo-name'>
+                  {repo.parent_repo_name}
+                </span>
+                {' / '}
+              </>
+            )}
+            {repo.repo_name}
+            {repo.is_worktree && (
+              <HelpTooltip title='A worktree is a separate working copy of the same project, used to work on different things at the same time without mixing changes.'>
+                <span className='repo-section__worktree-indicator'>
+                  worktree
+                </span>
+              </HelpTooltip>
+            )}
           </span>
+        </HelpTooltip>
+        <HelpTooltip title='The current branch -- a named line of work within this project. Different branches let you work on separate changes independently.'>
+          <span className='repo-section__branch'>{repo.branch}</span>
+        </HelpTooltip>
+        {conflict_count > 0 && (
+          <HelpTooltip title='Conflicts happen when two sets of changes affect the same part of a file. These need to be resolved manually before the changes can be committed (saved).'>
+            <span className='repo-section__conflict-indicator'>
+              {conflict_count} conflict{conflict_count > 1 ? 's' : ''}
+            </span>
+          </HelpTooltip>
         )}
         {is_merging && (
           <span className='repo-section__merge-indicator'>
@@ -158,18 +169,22 @@ const RepoSection = ({ repo }) => {
             )}
           </span>
         )}
-        <span className='repo-section__count'>{total_count}</span>
+        <HelpTooltip title='The number of files with uncommitted changes in this project.'>
+          <span className='repo-section__count'>{total_count}</span>
+        </HelpTooltip>
         {write_allowed &&
           !is_collapsed &&
           unstaged_count + untracked_count > 0 && (
-            <button
-              className='repo-section__stage-all'
-              onClick={(e) => {
-                e.stopPropagation()
-                handle_stage_all()
-              }}>
-              stage all
-            </button>
+            <HelpTooltip title='Staging marks files as ready to be included in the next commit (saved version). "Stage all" selects every changed file at once.'>
+              <button
+                className='repo-section__stage-all'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handle_stage_all()
+                }}>
+                stage all
+              </button>
+            </HelpTooltip>
           )}
       </div>
 

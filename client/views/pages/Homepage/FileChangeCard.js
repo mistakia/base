@@ -11,17 +11,42 @@ import {
   get_is_loading_file_content_for_key
 } from '@core/git/selectors'
 import { use_discard_confirm } from '@views/hooks/use-discard-confirm'
+import HelpTooltip from '@components/primitives/HelpTooltip.js'
 import ConflictResolver from '@views/components/ConflictResolver/index.js'
 import DiffViewer from '@views/components/DiffViewer/index.js'
 
 // Status display configuration
 const STATUS_CONFIG = {
-  modified: { class: 'file-change-card__status--modified', letter: 'M' },
-  added: { class: 'file-change-card__status--added', letter: 'A' },
-  deleted: { class: 'file-change-card__status--deleted', letter: 'D' },
-  untracked: { class: 'file-change-card__status--untracked', letter: '?' },
-  renamed: { class: 'file-change-card__status--renamed', letter: 'R' },
-  conflict: { class: 'file-change-card__status--conflict', letter: 'C' }
+  modified: {
+    class: 'file-change-card__status--modified',
+    letter: 'M',
+    help: 'Modified -- this file has been edited since the last commit (saved version).'
+  },
+  added: {
+    class: 'file-change-card__status--added',
+    letter: 'A',
+    help: 'Added -- this is a new file that has been staged (selected) to be included in the next commit.'
+  },
+  deleted: {
+    class: 'file-change-card__status--deleted',
+    letter: 'D',
+    help: 'Deleted -- this file has been removed since the last commit.'
+  },
+  untracked: {
+    class: 'file-change-card__status--untracked',
+    letter: '?',
+    help: 'Untracked -- this is a new file not yet included in any commit. Stage it to include it in the next commit.'
+  },
+  renamed: {
+    class: 'file-change-card__status--renamed',
+    letter: 'R',
+    help: 'Renamed -- this file was moved or given a new name since the last commit.'
+  },
+  conflict: {
+    class: 'file-change-card__status--conflict',
+    letter: 'C',
+    help: 'Conflict -- two different changes affect the same part of this file. Must be resolved before you can commit.'
+  }
 }
 
 const FileChangeCard = ({
@@ -141,51 +166,57 @@ const FileChangeCard = ({
         <span className='file-change-card__toggle'>
           {is_expanded ? '-' : '+'}
         </span>
-        <span
-          className={`file-change-card__status ${status_config.class}`}
-          title={file.status}>
-          {status_config.letter}
-        </span>
+        <HelpTooltip title={status_config.help || file.status}>
+          <span
+            className={`file-change-card__status ${status_config.class}`}>
+            {status_config.letter}
+          </span>
+        </HelpTooltip>
         <span className='file-change-card__path' title={file.path}>
           {file.path}
         </span>
         <div className='file-change-card__actions'>
           {file_url && (
-            <button
-              className='file-change-card__action-button'
-              onClick={handle_open}
-              title='Open file (Cmd/Ctrl+click for new tab)'>
-              open
-            </button>
+            <HelpTooltip title='Open this file to view its full contents. Hold Cmd or Ctrl and click to open in a new tab.'>
+              <button
+                className='file-change-card__action-button'
+                onClick={handle_open}>
+                open
+              </button>
+            </HelpTooltip>
           )}
           {write_allowed && (
             <>
               {file.status !== 'untracked' && file.status !== 'added' && (
-                <button
-                  className={`file-change-card__action-button file-change-card__action-button--danger${is_discard_confirming ? ' file-change-card__action-button--confirming' : ''}`}
-                  onClick={handle_discard}
+                <HelpTooltip
                   title={
                     is_discard_confirming
-                      ? 'Click again to confirm discard'
-                      : 'Discard changes'
+                      ? 'Click again to permanently undo your changes to this file.'
+                      : 'Discard your changes and revert this file back to the last commit (saved version). This cannot be undone.'
                   }>
-                  {is_discard_confirming ? 'confirm' : 'discard'}
-                </button>
+                  <button
+                    className={`file-change-card__action-button file-change-card__action-button--danger${is_discard_confirming ? ' file-change-card__action-button--confirming' : ''}`}
+                    onClick={handle_discard}>
+                    {is_discard_confirming ? 'confirm' : 'discard'}
+                  </button>
+                </HelpTooltip>
               )}
               {file.change_type === 'staged' ? (
-                <button
-                  className='file-change-card__action-button'
-                  onClick={handle_unstage}
-                  title='Unstage file'>
-                  unstage
-                </button>
+                <HelpTooltip title='Remove this file from the staging area. It will still have changes, but they will not be included in the next commit.'>
+                  <button
+                    className='file-change-card__action-button'
+                    onClick={handle_unstage}>
+                    unstage
+                  </button>
+                </HelpTooltip>
               ) : (
-                <button
-                  className='file-change-card__action-button file-change-card__action-button--primary'
-                  onClick={handle_stage}
-                  title='Stage file'>
-                  stage
-                </button>
+                <HelpTooltip title='Stage this file -- mark it as ready to be included in the next commit (saved version).'>
+                  <button
+                    className='file-change-card__action-button file-change-card__action-button--primary'
+                    onClick={handle_stage}>
+                    stage
+                  </button>
+                </HelpTooltip>
               )}
             </>
           )}
