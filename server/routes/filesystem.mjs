@@ -88,8 +88,10 @@ const resolve_user_path = (request_path = '') => {
 
 // GET /api/filesystem/directory - List directory contents
 router.get('/directory', async (req, res) => {
+  const request_path = req.query.path || ''
+  const normalized_path = request_path.replace(/^\/+/, '')
+
   try {
-    const request_path = req.query.path || ''
     const { full_path, relative_path } = resolve_user_path(request_path)
 
     log(`Listing directory: ${full_path}`)
@@ -248,28 +250,30 @@ router.get('/directory', async (req, res) => {
     if (error.code === 'ENOENT') {
       return res.status(404).json({
         error: 'Directory not found',
-        path: req.query.path || ''
+        path: normalized_path
       })
     }
 
     if (error.message.includes('Invalid path')) {
       return res.status(400).json({
         error: error.message,
-        path: req.query.path || ''
+        path: normalized_path
       })
     }
 
     res.status(500).json({
       error: 'Internal server error',
-      path: req.query.path || ''
+      path: normalized_path
     })
   }
 })
 
 // GET /api/filesystem/file - Get file content
 router.get('/file', async (req, res) => {
+  const request_path = req.query.path || ''
+  const normalized_path = request_path.replace(/^\/+/, '')
+
   try {
-    const request_path = req.query.path || ''
     const { full_path, relative_path } = resolve_user_path(request_path)
 
     log(`Reading file: ${full_path}`)
@@ -355,28 +359,31 @@ router.get('/file', async (req, res) => {
     if (error.code === 'ENOENT') {
       return res.status(404).json({
         error: 'File not found',
-        path: req.query.path || ''
+        path: normalized_path
       })
     }
 
     if (error.message.includes('Invalid path')) {
       return res.status(400).json({
         error: error.message,
-        path: req.query.path || ''
+        path: normalized_path
       })
     }
 
     res.status(500).json({
       error: 'Internal server error',
-      path: req.query.path || ''
+      path: normalized_path
     })
   }
 })
 
 // GET /api/filesystem/info - Get path info (file or directory)
 router.get('/info', async (req, res) => {
+  // Normalize path early so error handlers return consistent paths
+  const request_path = req.query.path || ''
+  const normalized_path = request_path.replace(/^\/+/, '')
+
   try {
-    const request_path = req.query.path || ''
     const { full_path, relative_path } = resolve_user_path(request_path)
 
     log(`Getting info for: ${full_path}`)
@@ -415,7 +422,7 @@ router.get('/info', async (req, res) => {
 
     if (error.code === 'ENOENT') {
       return res.json({
-        path: req.query.path || '',
+        path: normalized_path,
         exists: false
       })
     }
@@ -423,13 +430,13 @@ router.get('/info', async (req, res) => {
     if (error.message.includes('Invalid path')) {
       return res.status(400).json({
         error: error.message,
-        path: req.query.path || ''
+        path: normalized_path
       })
     }
 
     res.status(500).json({
       error: 'Internal server error',
-      path: req.query.path || ''
+      path: normalized_path
     })
   }
 })
