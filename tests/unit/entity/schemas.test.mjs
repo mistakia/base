@@ -275,4 +275,150 @@ describe('Entity Schema Module', function () {
       expect(result).to.be.null
     })
   })
+
+  describe('build_property_schema - nested property handling', () => {
+    it('should treat nested array-of-objects properties without required as optional', () => {
+      const schemas = {
+        database: {
+          properties: [
+            {
+              name: 'fields',
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: [
+                  { name: 'name', type: 'string', required: true },
+                  { name: 'type', type: 'string', required: true },
+                  { name: 'enum', type: 'array' },
+                  { name: 'primary_key', type: 'boolean' },
+                  { name: 'required', type: 'boolean' }
+                ]
+              }
+            }
+          ]
+        }
+      }
+      const result = build_validation_schema('database', schemas)
+      const fields_schema = result.fields.items.properties
+
+      // Properties without required should be optional
+      expect(fields_schema.enum.optional).to.be.true
+      expect(fields_schema.primary_key.optional).to.be.true
+      expect(fields_schema.required.optional).to.be.true
+
+      // Properties with required: true should not be optional
+      expect(fields_schema.name.optional).to.be.false
+      expect(fields_schema.name.required).to.be.true
+      expect(fields_schema.type.optional).to.be.false
+    })
+
+    it('should set optional: true on array properties with required: false', () => {
+      const schemas = {
+        identity: {
+          properties: [
+            {
+              name: 'rules',
+              type: 'array',
+              required: false,
+              items: {
+                type: 'object',
+                properties: [
+                  { name: 'action', type: 'string', required: true },
+                  { name: 'resource', type: 'string' }
+                ]
+              }
+            }
+          ]
+        }
+      }
+      const result = build_validation_schema('identity', schemas)
+
+      expect(result.rules.optional).to.be.true
+      expect(result.rules.required).to.be.false
+    })
+
+    it('should transform plain object properties array into keyed object schema', () => {
+      const schemas = {
+        identity: {
+          properties: [
+            {
+              name: 'permissions',
+              type: 'object',
+              properties: [
+                { name: 'read', type: 'boolean', required: true },
+                { name: 'write', type: 'boolean' },
+                { name: 'admin', type: 'boolean' }
+              ]
+            }
+          ]
+        }
+      }
+      const result = build_validation_schema('identity', schemas)
+
+      // Should be transformed from array to keyed object
+      expect(result.permissions.properties).to.be.an('object')
+      expect(result.permissions.properties).to.not.be.an('array')
+      expect(result.permissions.properties.read).to.deep.equal({
+        type: 'boolean',
+        optional: false
+      })
+      expect(result.permissions.properties.write).to.deep.equal({
+        type: 'boolean',
+        optional: true
+      })
+      expect(result.permissions.properties.admin).to.deep.equal({
+        type: 'boolean',
+        optional: true
+      })
+    })
+
+    it('should transform object-format (key-value) properties with optional flags', () => {
+      const schemas = {
+        database: {
+          properties: [
+            {
+              name: 'storage_config',
+              type: 'object',
+              required: false,
+              properties: {
+                backend: {
+                  type: 'string',
+                  enum: ['duckdb', 'tsv', 'postgres', 'markdown']
+                },
+                database: { type: 'string' },
+                path: { type: 'string' },
+                host: { type: 'string' },
+                indexes: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      fields: { type: 'array' },
+                      unique: { type: 'boolean' }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+      const result = build_validation_schema('database', schemas)
+
+      // storage_config itself should be optional
+      expect(result.storage_config.optional).to.be.true
+
+      // All nested properties should be optional (none have required: true)
+      const props = result.storage_config.properties
+      expect(props.backend.optional).to.be.true
+      expect(props.database.optional).to.be.true
+      expect(props.path.optional).to.be.true
+      expect(props.host.optional).to.be.true
+      expect(props.indexes.optional).to.be.true
+
+      // Nested array items properties should also be optional
+      expect(props.indexes.items.properties.fields.optional).to.be.true
+      expect(props.indexes.items.properties.unique.optional).to.be.true
+    })
+  })
 })

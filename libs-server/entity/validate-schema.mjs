@@ -115,6 +115,58 @@ function transform_property_type(property) {
   return property
 }
 
+/**
+ * Transform object-format properties (key-value) to include optional/required flags
+ * for fastest-validator compatibility. Handles nested objects and array items recursively.
+ * @param {Object} properties Object-format property definitions
+ * @returns {Object} Transformed properties with optional flags
+ */
+function transform_object_properties(properties) {
+  const result = {}
+  for (const [key, val] of Object.entries(properties)) {
+    if (!val || typeof val !== 'object') continue
+
+    const transformed = {
+      type: val.type || 'any',
+      optional: val.required !== true
+    }
+
+    if (val.description) transformed.description = val.description
+    if (val.enum) transformed.enum = val.enum
+    if (val.default !== undefined) transformed.default = val.default
+    if (val.min !== undefined) transformed.min = val.min
+    if (val.max !== undefined) transformed.max = val.max
+    if (val.format) transformed.format = val.format
+    if (val.pattern) transformed.pattern = val.pattern
+
+    // Handle nested object properties recursively
+    if (
+      val.properties &&
+      typeof val.properties === 'object' &&
+      !Array.isArray(val.properties)
+    ) {
+      transformed.properties = transform_object_properties(val.properties)
+    }
+
+    // Handle array items with nested object properties
+    if (val.items && typeof val.items === 'object') {
+      transformed.items = { ...val.items }
+      if (
+        val.items.properties &&
+        typeof val.items.properties === 'object' &&
+        !Array.isArray(val.items.properties)
+      ) {
+        transformed.items.properties = transform_object_properties(
+          val.items.properties
+        )
+      }
+    }
+
+    result[key] = transformed
+  }
+  return result
+}
+
 function build_property_schema(prop) {
   if (!prop || !prop.name) return null
 
@@ -139,8 +191,7 @@ function build_property_schema(prop) {
         const nested_schema = {
           type: nested_prop.type,
           required: nested_prop.required === true,
-          optional:
-            nested_prop.required === false || nested_prop.optional === true
+          optional: nested_prop.required !== true
         }
 
         // Copy additional property fields
@@ -163,7 +214,9 @@ function build_property_schema(prop) {
           properties: item_properties
         },
         ...(prop.required !== undefined ? { required: prop.required } : {}),
-        ...(prop.optional !== undefined ? { optional: prop.optional } : {}),
+        ...(prop.required === false || prop.optional === true
+          ? { optional: true }
+          : {}),
         ...(prop.description ? { description: prop.description } : {})
       }
     }
@@ -180,7 +233,20 @@ function build_property_schema(prop) {
   if (prop.enum) property_schema.enum = prop.enum
   if (prop.min !== undefined) property_schema.min = prop.min
   if (prop.max !== undefined) property_schema.max = prop.max
-  if (prop.properties) property_schema.properties = prop.properties
+  if (prop.properties && Array.isArray(prop.properties)) {
+    const nested_props = {}
+    prop.properties.forEach((nested) => {
+      if (nested && nested.name) {
+        nested_props[nested.name] = {
+          type: nested.type || 'any',
+          optional: nested.required !== true
+        }
+      }
+    })
+    property_schema.properties = nested_props
+  } else if (prop.properties) {
+    property_schema.properties = transform_object_properties(prop.properties)
+  }
   if (prop.description) property_schema.description = prop.description
   if (prop.format) property_schema.format = prop.format
   property_schema = transform_property_type(property_schema)
