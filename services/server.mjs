@@ -280,8 +280,8 @@ try {
           on_repo_list_change: async () => {
             await invalidate_repo_list()
           },
-          enable_working_tree_watcher:
-            file_watcher_config.git_working_tree_watcher_enabled !== false
+          enable_repo_file_watcher:
+            file_watcher_config.repo_file_watcher_enabled !== false
         })
         if (git_watcher) {
           set_watcher_status('git_status_watcher', 'ready')

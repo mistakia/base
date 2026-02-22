@@ -6,7 +6,8 @@ import fs from 'fs/promises'
 import {
   start_git_status_watcher,
   stop_git_status_watcher,
-  WORKING_TREE_IGNORE_PATTERNS
+  REPO_FILE_IGNORE_DIRS,
+  repo_file_ignore
 } from '#libs-server/file-subscriptions/git-status-watcher.mjs'
 
 describe('Git Status Watcher', function () {
@@ -101,24 +102,46 @@ describe('Git Status Watcher', function () {
     })
   })
 
-  describe('WORKING_TREE_IGNORE_PATTERNS', () => {
-    it('should include thread/ pattern to avoid overlap with thread-watcher', () => {
-      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/thread/**')
+  describe('REPO_FILE_IGNORE_DIRS', () => {
+    it('should include thread to avoid overlap with thread-watcher', () => {
+      expect(REPO_FILE_IGNORE_DIRS.has('thread')).to.be.true
     })
 
-    it('should include import-history/ pattern for git submodule', () => {
-      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/import-history/**')
+    it('should include import-history for git submodule', () => {
+      expect(REPO_FILE_IGNORE_DIRS.has('import-history')).to.be.true
     })
 
-    it('should include embedded-database-index/ pattern for DuckDB files', () => {
-      expect(WORKING_TREE_IGNORE_PATTERNS).to.include(
-        '**/embedded-database-index/**'
-      )
+    it('should include embedded-database-index for DuckDB files', () => {
+      expect(REPO_FILE_IGNORE_DIRS.has('embedded-database-index')).to.be.true
     })
 
-    it('should include standard ignore patterns', () => {
-      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/node_modules/**')
-      expect(WORKING_TREE_IGNORE_PATTERNS).to.include('**/.git/**')
+    it('should include standard ignore directories', () => {
+      expect(REPO_FILE_IGNORE_DIRS.has('node_modules')).to.be.true
+      expect(REPO_FILE_IGNORE_DIRS.has('.git')).to.be.true
+    })
+  })
+
+  describe('repo_file_ignore', () => {
+    it('should ignore excluded directories by basename', () => {
+      expect(repo_file_ignore('/some/path/node_modules')).to.be.true
+      expect(repo_file_ignore('/some/path/.git')).to.be.true
+      expect(repo_file_ignore('/some/path/dist')).to.be.true
+    })
+
+    it('should ignore swap and backup files', () => {
+      expect(repo_file_ignore('/some/path/file.swp')).to.be.true
+      expect(repo_file_ignore('/some/path/file.txt~')).to.be.true
+    })
+
+    it('should ignore specific files', () => {
+      expect(repo_file_ignore('/some/path/.DS_Store')).to.be.true
+      expect(repo_file_ignore('/some/path/yarn-error.log')).to.be.true
+    })
+
+    it('should not ignore regular source files', () => {
+      expect(repo_file_ignore('/some/path/index.mjs')).to.be.false
+      expect(repo_file_ignore('/some/path/src')).to.be.false
+      expect(repo_file_ignore('/some/path/package.json')).to.be.false
     })
   })
 
