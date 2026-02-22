@@ -5,6 +5,7 @@ import { OpenInNew as OpenInNewIcon } from '@mui/icons-material'
 
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 import { build_data_view_url } from '@core/utils/view-url-utils.js'
+import { to_snake_slug } from '@core/utils'
 
 /**
  * TagTasksPanel Component
@@ -21,15 +22,8 @@ const TagTasksPanel = ({ tasks, task_count, base_uri, on_expand }) => {
   const visible_tasks = tasks.slice(0, 15)
   const has_more = task_count > 15
 
-  const get_status_class = (status) => {
-    const status_lower = (status || '').toLowerCase().replace(/\s+/g, '-')
-    return `tag-tasks-panel__status--${status_lower}`
-  }
-
-  const get_priority_class = (priority) => {
-    const priority_lower = (priority || '').toLowerCase()
-    return `tag-tasks-panel__priority--${priority_lower}`
-  }
+  const get_status_slug = (status) => to_snake_slug(status) || 'no_status'
+  const get_priority_slug = (priority) => to_snake_slug(priority) || 'none'
 
   // Build URL for viewing all tasks with this tag
   const view_all_url = build_data_view_url({
@@ -57,12 +51,14 @@ const TagTasksPanel = ({ tasks, task_count, base_uri, on_expand }) => {
                     {task.title || 'Untitled'}
                   </span>
                   <span
-                    className={`tag-tasks-panel__status ${get_status_class(task.status)}`}>
+                    className='tag-tasks-panel__status'
+                    data-status={get_status_slug(task.status)}>
                     {task.status || 'No status'}
                   </span>
                   {task.priority && task.priority !== 'None' && (
                     <span
-                      className={`tag-tasks-panel__priority ${get_priority_class(task.priority)}`}>
+                      className='tag-tasks-panel__priority'
+                      data-priority={get_priority_slug(task.priority)}>
                       {task.priority}
                     </span>
                   )}

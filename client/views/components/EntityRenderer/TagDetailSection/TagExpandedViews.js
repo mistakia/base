@@ -5,6 +5,7 @@ import { Close as CloseIcon } from '@mui/icons-material'
 
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 import { format_relative_time } from '@views/utils/date-formatting.js'
+import { to_snake_slug } from '@core/utils'
 
 /**
  * TagExpandedViews Component
@@ -28,15 +29,8 @@ const TagExpandedViews = ({
   const is_tasks_view = expanded_view === 'tasks'
   const title = is_tasks_view ? 'All Tasks' : 'All Threads'
 
-  const get_status_class = (status) => {
-    const status_lower = (status || '').toLowerCase().replace(/\s+/g, '-')
-    return `tag-expanded__status--${status_lower}`
-  }
-
-  const get_priority_class = (priority) => {
-    const priority_lower = (priority || '').toLowerCase()
-    return `tag-expanded__priority--${priority_lower}`
-  }
+  const get_status_slug = (status) => to_snake_slug(status) || 'no_status'
+  const get_priority_slug = (priority) => to_snake_slug(priority) || 'none'
 
   const get_state_class = (state) => {
     const state_lower = (state || 'unknown').toLowerCase()
@@ -76,12 +70,14 @@ const TagExpandedViews = ({
                     </div>
                     <div className='tag-expanded__item-meta'>
                       <span
-                        className={`tag-expanded__status ${get_status_class(task.status)}`}>
+                        className='tag-expanded__status'
+                        data-status={get_status_slug(task.status)}>
                         {task.status || 'No status'}
                       </span>
                       {task.priority && task.priority !== 'None' && (
                         <span
-                          className={`tag-expanded__priority ${get_priority_class(task.priority)}`}>
+                          className='tag-expanded__priority'
+                          data-priority={get_priority_slug(task.priority)}>
                           {task.priority}
                         </span>
                       )}

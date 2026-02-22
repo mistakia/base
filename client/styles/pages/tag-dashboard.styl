@@ -4,6 +4,8 @@
 // Styles for the tag detail page dashboard showing
 // related tasks, threads, and distribution graphs.
 
+@import '../tasks'
+
 // =====================================================
 // MAIN CONTAINER
 // =====================================================
@@ -134,47 +136,35 @@
   border-radius: $radius_sm
   white-space: nowrap
 
-  &--planned
-    background: rgba($color_info, 0.15)
-    color: $color_info
-
-  &--in-progress
-    background: rgba($color_primary, 0.15)
-    color: $color_primary
-
-  &--completed
-    background: rgba($color_success, 0.15)
-    color: $color_success
-
-  &--blocked
-    background: rgba($color_error, 0.15)
-    color: $color_error
-
-  &--no-status
-    background: rgba(0, 0, 0, 0.05)
-    color: $color_text_secondary
-
 .tag-tasks-panel__priority
   font-size: $font_size_xs
   padding: 2px 6px
   border-radius: $radius_sm
   white-space: nowrap
 
-  &--critical
-    background: rgba($color_error, 0.15)
-    color: $color_error
+// Apply canonical status colors via data attributes
+.tag-tasks-panel__status,
+.tag-expanded__status
+  for status_name in completed in_progress started blocked abandoned planned paused waiting
+    &[data-status={'"' + status_name + '"'}]
+      color: $task_status_colors[status_name]
+      background: rgba($task_status_colors[status_name], 0.15)
+  &[data-status="no_status"],
+  &:not([data-status])
+    color: $task_status_colors[no_status]
+    background: rgba($task_status_colors[no_status], 0.15)
 
-  &--high
-    background: rgba($color_warning, 0.15)
-    color: $color_warning
-
-  &--medium
-    background: rgba($color_info, 0.15)
-    color: $color_info
-
-  &--low
-    background: rgba(0, 0, 0, 0.05)
-    color: $color_text_secondary
+// Apply canonical priority colors via data attributes
+.tag-tasks-panel__priority,
+.tag-expanded__priority
+  for priority_name in critical high medium low
+    &[data-priority={'"' + priority_name + '"'}]
+      color: $task_priority_colors[priority_name]
+      background: rgba($task_priority_colors[priority_name], 0.15)
+  &[data-priority="none"],
+  &:not([data-priority])
+    color: $task_priority_colors[none]
+    background: rgba($task_priority_colors[none], 0.15)
 
 .tag-tasks-panel__footer
   margin-top: 12px
