@@ -290,14 +290,14 @@ while IFS= read -r submodule_path; do
 done < <(git config --file .gitmodules --get-regexp '\.path$' | awk '{print $2}')
 
 if [ "$POINTER_UPDATED" = true ]; then
-    # Check for staged changes before committing
-    if ! git diff --cached --quiet; then
-        git commit -m "chore: update submodule pointers" 2>/dev/null || {
-            log_error "Failed to commit submodule pointer updates"
-            ERRORS=$((ERRORS + 1))
-        }
-        log "Submodule pointers committed"
-    fi
+    # POINTER_UPDATED guarantees at least one submodule was staged via git add.
+    # Note: git diff --cached --quiet cannot be used here because submodules with
+    # ignore=all in .gitmodules are invisible to git diff --cached, even when staged.
+    git commit -m "chore: update submodule pointers" 2>/dev/null || {
+        log_error "Failed to commit submodule pointer updates"
+        ERRORS=$((ERRORS + 1))
+    }
+    log "Submodule pointers committed"
 else
     log_verbose "All submodule pointers are current"
 fi
