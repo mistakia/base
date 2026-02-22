@@ -388,6 +388,29 @@ export const task_columns = {
     minSize: 25,
     maxSize: 100
   },
+  snooze_until: {
+    column_id: 'snooze_until',
+    header_label: 'Snoozed Until',
+    accessorKey: 'snooze_until',
+    accessorFn: ({ snooze_until }) => {
+      if (!snooze_until) return '—'
+      return format_shorthand_time(new Date(snooze_until))
+    },
+    data_type: TABLE_DATA_TYPES.DATE,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IS_NULL,
+      TABLE_OPERATORS.IS_NOT_NULL
+    ],
+    size: 60,
+    minSize: 25,
+    maxSize: 200
+  },
   tags: {
     column_id: 'tags',
     header_label: 'Tags',

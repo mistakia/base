@@ -20,7 +20,6 @@ const DEFAULT_TASK_TABLE_STATE = create_default_table_state({
     'priority',
     'tags',
     'finish_by',
-    'assigned_to',
     'created_at',
     'updated_at'
   ],
@@ -46,19 +45,22 @@ const DEFAULT_VIEWS = {
         'priority',
         'tags',
         'finish_by',
-        'assigned_to',
         'created_at',
         'updated_at'
       ],
       sort: [
-        { column_id: 'priority', desc: true },
-        { column_id: 'finish_by', desc: false }
+        { column_id: 'finish_by', desc: true },
+        { column_id: 'priority', desc: true }
       ],
       where: new List([
         new Map({
           column_id: 'status',
           operator: TABLE_OPERATORS.NOT_IN,
           value: [TASK_STATUS.COMPLETED, TASK_STATUS.ABANDONED]
+        }),
+        new Map({
+          column_id: 'snooze_until',
+          operator: 'IS_NULL_OR_IN_PAST'
         })
       ])
     })
@@ -74,16 +76,22 @@ const DEFAULT_VIEWS = {
         'priority',
         'tags',
         'finish_by',
-        'assigned_to',
         'created_at',
         'updated_at'
       ],
-      sort: [{ column_id: 'created_at', desc: true }],
+      sort: [
+        { column_id: 'finish_by', desc: true },
+        { column_id: 'priority', desc: true }
+      ],
       where: new List([
         new Map({
           column_id: 'status',
           operator: TABLE_OPERATORS.IN,
           value: [TASK_STATUS.STARTED, TASK_STATUS.IN_PROGRESS]
+        }),
+        new Map({
+          column_id: 'snooze_until',
+          operator: 'IS_NULL_OR_IN_PAST'
         })
       ])
     })
@@ -99,7 +107,6 @@ const DEFAULT_VIEWS = {
         'priority',
         'tags',
         'finish_by',
-        'assigned_to',
         'created_at',
         'updated_at'
       ],

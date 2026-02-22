@@ -99,7 +99,8 @@ const FILTER_OPERATOR_MAP = {
   'IS NULL': 'IS NULL',
   'IS NOT NULL': 'IS NOT NULL',
   IS_EMPTY: "= ''",
-  IS_NOT_EMPTY: "!= ''"
+  IS_NOT_EMPTY: "!= ''",
+  IS_NULL_OR_IN_PAST: 'IS_NULL_OR_IN_PAST'
 }
 
 export function build_duckdb_where_clause({
@@ -145,6 +146,13 @@ export function build_duckdb_where_clause({
     if (operator === 'IS_EMPTY' || operator === 'IS_NOT_EMPTY') {
       conditions.push(
         `(${column_ref} IS NULL OR ${column_ref} ${sql_operator})`
+      )
+      continue
+    }
+
+    if (operator === 'IS_NULL_OR_IN_PAST') {
+      conditions.push(
+        `(${column_ref} IS NULL OR TRY_CAST(${column_ref} AS TIMESTAMPTZ) <= CURRENT_TIMESTAMP)`
       )
       continue
     }

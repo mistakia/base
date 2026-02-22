@@ -33,7 +33,9 @@ export const FILTER_OPERATORS = {
     value !== null && value !== undefined,
   'IS EMPTY': (value) => value === null || value === undefined || value === '',
   'IS NOT EMPTY': (value) =>
-    value !== null && value !== undefined && value !== ''
+    value !== null && value !== undefined && value !== '',
+  'IS_NULL_OR_IN_PAST': (value) =>
+    value === null || value === undefined || new Date(value) <= new Date()
 }
 
 /**
