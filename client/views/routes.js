@@ -15,12 +15,11 @@ const Routes = () => {
       {/* Thread new route - entry point for voice/mobile thread creation */}
       <Route path='/thread/new' element={<Homepage />} />
 
-      {/* Threads routes */}
-      {/* ThreadsPage handles list views - checks if param is a known view slug */}
-      <Route path='/thread/:view_id?' element={<ThreadsPage />} />
+      {/* Threads routes - splat captures full path for subdirectory support */}
+      <Route path='/thread/*' element={<ThreadsPage />} />
 
-      {/* Tasks routes */}
-      <Route path='/task/:view_id?' element={<TasksPage />} />
+      {/* Tasks routes - splat captures full path for subdirectory support */}
+      <Route path='/task/*' element={<TasksPage />} />
 
       {/* Fallback to directory page for unmatched paths */}
       <Route path='/*' element={<DirectoryPage />} />

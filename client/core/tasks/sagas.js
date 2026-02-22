@@ -24,7 +24,12 @@ export function* load_tasks({ payload }) {
 export function* load_tasks_table_data({ payload }) {
   try {
     const tasks_state = yield select(get_tasks_state)
-    const { view_id, is_append = false, url_filters = [] } = payload || {}
+    const {
+      view_id,
+      is_append = false,
+      url_filters = [],
+      url_sort = null
+    } = payload || {}
 
     // Use provided view_id or get selected view from state, defaulting to 'open'
     const resolved_view_id =
@@ -36,16 +41,16 @@ export function* load_tasks_table_data({ payload }) {
       resolved_view_id
     ])
 
-    // When url_filters are provided, start from saved_table_state (the view's
-    // default) so we get a clean merge. When no url_filters, also use
-    // saved_table_state to reset any previously applied URL filters.
-    const base_state =
-      url_filters.length > 0
-        ? selected_view.get('saved_table_state')
-        : selected_view.get('task_table_state')
+    // When url params are provided, start from saved_table_state (the view's
+    // default) so we get a clean merge. When no url params, also use
+    // saved_table_state to reset any previously applied URL overrides.
+    const has_url_params = url_filters.length > 0 || url_sort
+    const base_state = has_url_params
+      ? selected_view.get('saved_table_state')
+      : selected_view.get('task_table_state')
     let table_state = base_state?.toJS ? base_state.toJS() : base_state
 
-    // Merge url_filters with saved table state filters and persist to Redux
+    // Merge url_filters with saved table state filters
     if (url_filters.length > 0) {
       const existing_where = table_state.where || []
       // Filter out any existing filters for the same columns (url takes priority)
@@ -57,8 +62,18 @@ export function* load_tasks_table_data({ payload }) {
         ...table_state,
         where: [...filtered_existing, ...url_filters]
       }
+    }
 
-      // Persist merged filters to Redux so the Table UI reflects URL filters
+    // Override sort when url_sort is provided
+    if (url_sort) {
+      table_state = {
+        ...table_state,
+        sort: url_sort
+      }
+    }
+
+    // Persist merged state to Redux so the Table UI reflects URL overrides
+    if (has_url_params) {
       yield put(
         tasks_actions.set_task_table_state({
           view_id: resolved_view_id,

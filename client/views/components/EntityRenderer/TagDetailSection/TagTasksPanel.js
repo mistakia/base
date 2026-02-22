@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { OpenInNew as OpenInNewIcon } from '@mui/icons-material'
 
 import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
+import { build_data_view_url } from '@core/utils/view-url-utils.js'
 
 /**
  * TagTasksPanel Component
@@ -31,7 +32,10 @@ const TagTasksPanel = ({ tasks, task_count, base_uri, on_expand }) => {
   }
 
   // Build URL for viewing all tasks with this tag
-  const view_all_url = `/task?tag=${encodeURIComponent(base_uri)}`
+  const view_all_url = build_data_view_url({
+    base_path: '/task',
+    tag: base_uri
+  })
 
   return (
     <div className='tag-tasks-panel'>
