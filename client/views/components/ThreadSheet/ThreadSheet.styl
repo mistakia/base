@@ -187,33 +187,9 @@ $sheet_border_radius = 6px
 .thread-sheet__timeline
   min-width: 0
 
-// Override scroll-to-bottom button within sheet context
-// Use sticky positioning so it stays at the bottom of the scroll viewport
-// and naturally adapts as the input area below grows/shrinks.
+// Override scroll-to-bottom button spacing within sheet context
 .thread-sheet__panel .timeline-scroll-button
-  position: sticky
   bottom: $space_sm
-  left: 50%
-  right: auto
-  transform: translateX(-50%)
-  width: 28px
-  height: 28px
-  margin: 0 auto
-  background-color: var(--color-bg, #ffffff)
-  color: var(--color-text-secondary)
-  border: 1px solid var(--color-border-light, #e1e4e8)
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
-
-  &:hover
-    transform: translateX(-50%) translateY(-2px)
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.06)
-
-  &:active
-    transform: translateX(-50%) translateY(0)
-
-  svg
-    width: 16px
-    height: 16px
 
 // ============================================================================
 // Floating thread input at bottom
