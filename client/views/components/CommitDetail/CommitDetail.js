@@ -1,7 +1,8 @@
-import React, { useRef } from 'react'
+import React, { useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Typography, CircularProgress } from '@mui/material'
-import { PatchDiff } from '@pierre/diffs/react'
+import { FileDiff } from '@pierre/diffs/react'
+import { parsePatchFiles } from '@pierre/diffs'
 
 import { COLORS } from '@theme/colors.js'
 
@@ -40,6 +41,15 @@ const diff_options = {
 
 const CommitDetail = ({ detail, is_loading }) => {
   const options_ref = useRef(diff_options).current
+  const parsed_files = useMemo(() => {
+    if (!detail?.diff) return []
+    try {
+      const patches = parsePatchFiles(detail.diff)
+      return patches.flatMap((patch) => patch.files)
+    } catch {
+      return []
+    }
+  }, [detail?.diff])
   if (is_loading) {
     return (
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
@@ -52,7 +62,7 @@ const CommitDetail = ({ detail, is_loading }) => {
     return null
   }
 
-  const { subject, body, author_name, author_email, date, files, diff } = detail
+  const { subject, body, author_name, author_email, date, files } = detail
 
   return (
     <Box
@@ -134,9 +144,15 @@ const CommitDetail = ({ detail, is_loading }) => {
       )}
 
       {/* Diff content */}
-      {diff && (
+      {parsed_files.length > 0 && (
         <Box sx={{ overflow: 'auto', maxHeight: 600 }}>
-          <PatchDiff patch={diff} options={options_ref} />
+          {parsed_files.map((file_diff, index) => (
+            <FileDiff
+              key={file_diff.name || index}
+              fileDiff={file_diff}
+              options={options_ref}
+            />
+          ))}
         </Box>
       )}
     </Box>
