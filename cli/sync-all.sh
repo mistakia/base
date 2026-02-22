@@ -404,7 +404,7 @@ if check_git_state "$USER_BASE_DIRECTORY"; then
                         log "Pre-pointer fetch: behind but dirty files overlap, skipping rebase"
                     else
                         log "Pre-pointer fetch: behind with no overlap, rebasing..."
-                        if ! git rebase "$STEP2_REMOTE" 2>/dev/null; then
+                        if ! git rebase --autostash "$STEP2_REMOTE" 2>/dev/null; then
                             git rebase --abort 2>/dev/null || true
                             log_error "Pre-pointer fetch: rebase failed"
                             ERRORS=$((ERRORS + 1))
@@ -415,7 +415,7 @@ if check_git_state "$USER_BASE_DIRECTORY"; then
                     fi
                 else
                     log "Pre-pointer fetch: behind remote, rebasing..."
-                    if ! git rebase "$STEP2_REMOTE" 2>/dev/null; then
+                    if ! git rebase --autostash "$STEP2_REMOTE" 2>/dev/null; then
                         git rebase --abort 2>/dev/null || true
                         log_error "Pre-pointer fetch: rebase failed"
                         ERRORS=$((ERRORS + 1))
