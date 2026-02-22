@@ -165,6 +165,24 @@ export const entity_field_config = {
       'archived_at'
     ]
   },
+  type_definition: {
+    always_visible: [
+      'type_name',
+      'extends',
+      'properties',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
   default: {
     always_visible: ['status', 'priority', 'tags', 'created_at', 'updated_at'],
     expandable: [
