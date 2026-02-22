@@ -72,27 +72,6 @@ body
     padding-top: 12px
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px))
 
-// Sessions panel shown below header on non-homepage pages
-.page-sessions-panel
-  padding: var(--space-sm) var(--space-base) 12px
-  margin: var(--space-base) auto 0
-  max-width: 1200px
-  background: rgba(0, 0, 0, 0.02)
-  border: 1px solid var(--color-border-light)
-  overflow: visible
-  min-height: 59px
-
-  // On mobile, make full width with no horizontal padding
-  @media (max-width: 768px)
-    margin-left: calc(-1 * var(--space-base))
-    margin-right: calc(-1 * var(--space-base))
-    padding-left: 0
-    padding-right: 0
-    border-left: none
-    border-right: none
-    max-width: none
-    width: calc(100% + 2 * var(--space-base))
-
 .all-threads-link
   color: var(--color-text-secondary)
   text-decoration: none

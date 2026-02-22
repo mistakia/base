@@ -27,23 +27,18 @@
     right: 16px
     max-width: none
 
-  // Collapsed mode: square button
+  // Collapsed mode: pill with label groups
   &--collapsed
     min-width: 0
-    max-width: 42px
+    max-width: 220px
     box-shadow: none
 
     .floating-sessions-panel__bar
       flex-direction: row
       justify-content: center
       align-items: center
-      width: 40px
-      padding: 0
-
-    .floating-sessions-panel__count
-      font-size: $font_size_sm
-      line-height: 1
-      flex: none
+      gap: $space_sm
+      padding: $space_xs $space_sm
 
 .floating-sessions-panel__bar
   display: flex
@@ -187,3 +182,39 @@
   &:hover
     background: $color_surface_hover
     border-color: $color_primary
+
+// Label group styles for collapsed bar
+.floating-sessions-panel__label-group
+  display: flex
+  align-items: center
+  gap: $space_xxs
+
+.floating-sessions-panel__label-dot
+  width: 6px
+  height: 6px
+  border-radius: 50%
+  flex-shrink: 0
+
+  &--active
+    background-color: $color_success
+    animation: pulse 1.5s ease-in-out infinite
+
+  &--review
+    background-color: $color_warning
+
+.floating-sessions-panel__label-text
+  font-size: $font_size_xs
+  font-weight: $font_weight_semibold
+  text-transform: uppercase
+  letter-spacing: 0.5px
+  color: $color_text_secondary
+  flex-shrink: 0
+
+.floating-sessions-panel__label-count
+  font-family: $font_family_mono
+  font-size: 10px
+  color: $color_text_tertiary
+  background: $color_surface_secondary
+  padding: 1px 5px
+  border-radius: $radius_sm
+  flex-shrink: 0

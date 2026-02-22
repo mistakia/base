@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PathBreadcrumb from '@components/PathBreadcrumb/index.js'
 import AuthStatusBar from '@components/AuthStatusBar/index.js'
-import SessionsPanelContainer from '@components/SessionsPanel/SessionsPanelContainer.js'
 import MobileThreadInputTrigger from '@components/GlobalThreadInput/MobileThreadInputTrigger.js'
 
 const PageLayout = ({ children }) => {
@@ -11,7 +10,6 @@ const PageLayout = ({ children }) => {
   const navigate = useNavigate()
 
   const current_path = location.pathname
-  const is_homepage = current_path === '/'
 
   const handle_navigate = (path) => {
     navigate(path || '/')
@@ -21,11 +19,6 @@ const PageLayout = ({ children }) => {
     <div className='page-layout'>
       <div className='page-header-area'>
         <AuthStatusBar />
-        {!is_homepage && (
-          <div className='page-sessions-panel'>
-            <SessionsPanelContainer max_threads={2} />
-          </div>
-        )}
       </div>
       <div className='page-content-container'>{children}</div>
       <div className='bottom-bar'>
