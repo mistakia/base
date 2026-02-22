@@ -74,12 +74,12 @@ describe('Git Commits API', function () {
   })
 
   describe('GET /api/git/commits', () => {
-    it('should return commit list for a valid repo', async () => {
+    it('should return commit list for root repo (empty path)', async () => {
       const res = await authenticate_request(
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ repo_path: test_repo.user_path }),
+          .query({ path: '' }),
         test_user
       )
 
@@ -98,12 +98,23 @@ describe('Git Commits API', function () {
       expect(commit).to.have.property('date')
     })
 
+    it('should return commits when no path param provided', async () => {
+      const res = await authenticate_request(
+        chai.request(server).get('/api/git/commits'),
+        test_user
+      )
+
+      expect(res).to.have.status(200)
+      expect(res.body.commits).to.be.an('array')
+      expect(res.body.commits.length).to.be.greaterThan(0)
+    })
+
     it('should respect limit parameter', async () => {
       const res = await authenticate_request(
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ repo_path: test_repo.user_path, limit: 2 }),
+          .query({ path: '', limit: 2 }),
         test_user
       )
 
@@ -118,7 +129,7 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ repo_path: test_repo.user_path, limit: 3 }),
+          .query({ path: '', limit: 3 }),
         test_user
       )
 
@@ -129,13 +140,12 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ repo_path: test_repo.user_path, limit: 3, before: cursor }),
+          .query({ path: '', limit: 3, before: cursor }),
         test_user
       )
 
       expect(second_page).to.have.status(200)
       expect(second_page.body.commits).to.be.an('array')
-      // Should not contain any commits from the first page
       const first_page_hashes = first_page.body.commits.map((c) => c.hash)
       const second_page_hashes = second_page.body.commits.map((c) => c.hash)
       const overlap = second_page_hashes.filter((h) =>
@@ -144,9 +154,12 @@ describe('Git Commits API', function () {
       expect(overlap).to.have.lengthOf(0)
     })
 
-    it('should return 400 for missing repo_path', async () => {
+    it('should return 400 for path outside base directory', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/commits'),
+        chai
+          .request(server)
+          .get('/api/git/commits')
+          .query({ path: '../../../etc' }),
         test_user
       )
 
@@ -157,12 +170,11 @@ describe('Git Commits API', function () {
 
   describe('GET /api/git/commit/:hash', () => {
     it('should return commit detail with files', async () => {
-      // First get a commit hash
       const list_res = await authenticate_request(
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ repo_path: test_repo.user_path, limit: 1 }),
+          .query({ path: '', limit: 1 }),
         test_user
       )
       const hash = list_res.body.commits[0].hash
@@ -171,7 +183,7 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get(`/api/git/commit/${hash}`)
-          .query({ repo_path: test_repo.user_path }),
+          .query({ path: '' }),
         test_user
       )
 
@@ -191,7 +203,7 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commit/not-a-hash')
-          .query({ repo_path: test_repo.user_path }),
+          .query({ path: '' }),
         test_user
       )
 

@@ -1678,15 +1678,42 @@ router.get('/repo-info', async (req, res) => {
 })
 
 /**
+ * Resolve a relative path to an absolute repo path (empty = user base root)
+ * Matches the pattern used by GET /api/git/repo-info
+ */
+const resolve_repo_path = (dir_path) => {
+  const user_base_dir = get_user_base_dir()
+  let full_path = user_base_dir
+  if (dir_path && dir_path !== '' && dir_path !== '/') {
+    full_path = path.join(user_base_dir, dir_path)
+  }
+  full_path = path.normalize(full_path)
+
+  if (
+    full_path !== user_base_dir &&
+    !full_path.startsWith(user_base_dir + path.sep)
+  ) {
+    return { valid: false, error: 'Invalid path' }
+  }
+
+  return { valid: true, resolved_path: full_path }
+}
+
+/**
  * GET /api/git/commits
  * Get paginated commit history for a repository
- * Query params: repo_path (required), limit, before (cursor), author, search
+ * Query params: path (relative, empty for root), limit, before (cursor), author, search
  */
-router.get('/commits', require_repo_read_permission, async (req, res) => {
+router.get('/commits', async (req, res) => {
   try {
-    const repo_path = req.validated_repo_path
-    const { before, author, search } = req.query
+    const { path: dir_path, before, author, search } = req.query
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200)
+
+    const resolution = resolve_repo_path(dir_path)
+    if (!resolution.valid) {
+      return res.status(400).json({ error: resolution.error })
+    }
+    const repo_path = resolution.resolved_path
 
     if (before && !/^[a-f0-9]{7,40}$/i.test(before)) {
       return res.status(400).json({ error: 'Invalid before cursor' })
@@ -1725,67 +1752,69 @@ router.get('/commits', require_repo_read_permission, async (req, res) => {
 /**
  * GET /api/git/commit/:hash
  * Get single commit detail with file changes and diffs
- * Query params: repo_path (required)
+ * Query params: path (relative, empty for root)
  */
-router.get(
-  '/commit/:hash',
-  require_repo_read_permission,
-  async (req, res) => {
-    try {
-      const repo_path = req.validated_repo_path
-      const { hash } = req.params
+router.get('/commit/:hash', async (req, res) => {
+  try {
+    const { path: dir_path } = req.query
+    const { hash } = req.params
 
-      if (!hash || !/^[a-f0-9]{7,40}$/i.test(hash)) {
-        return res.status(400).json({ error: 'Invalid commit hash' })
-      }
-
-      const commit = await get_single_commit({ repo_path, hash })
-      if (!commit) {
-        return res.status(404).json({ error: 'Commit not found' })
-      }
-
-      // Get file changes with name-status
-      const { stdout: files_output } = await execute_shell_command(
-        `git diff-tree --no-commit-id -r --name-status ${hash}`,
-        { cwd: repo_path }
-      )
-
-      const files = files_output
-        .trim()
-        .split('\n')
-        .filter((line) => line.trim())
-        .map((line) => {
-          const [status, ...file_parts] = line.split('\t')
-          return { status: status.trim(), path: file_parts.join('\t').trim() }
-        })
-
-      // Get full diff with explicit buffer limit
-      let diff_output = ''
-      try {
-        const diff_result = await execute_shell_command(
-          `git diff-tree -p ${hash}`,
-          { cwd: repo_path, maxBuffer: 10 * 1024 * 1024 }
-        )
-        diff_output = diff_result.stdout
-      } catch (diff_error) {
-        if (diff_error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
-          diff_output = '(diff too large to display)'
-        } else {
-          throw diff_error
-        }
-      }
-
-      res.json({
-        ...commit,
-        files,
-        diff: diff_output
-      })
-    } catch (error) {
-      log('Error getting commit detail:', error)
-      res.status(500).json({ error: 'Failed to get commit detail' })
+    const resolution = resolve_repo_path(dir_path)
+    if (!resolution.valid) {
+      return res.status(400).json({ error: resolution.error })
     }
+    const repo_path = resolution.resolved_path
+
+    if (!hash || !/^[a-f0-9]{7,40}$/i.test(hash)) {
+      return res.status(400).json({ error: 'Invalid commit hash' })
+    }
+
+    const commit = await get_single_commit({ repo_path, hash })
+    if (!commit) {
+      return res.status(404).json({ error: 'Commit not found' })
+    }
+
+    // Get file changes with name-status
+    const { stdout: files_output } = await execute_shell_command(
+      `git diff-tree --no-commit-id -r --name-status ${hash}`,
+      { cwd: repo_path }
+    )
+
+    const files = files_output
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim())
+      .map((line) => {
+        const [status, ...file_parts] = line.split('\t')
+        return { status: status.trim(), path: file_parts.join('\t').trim() }
+      })
+
+    // Get full diff with explicit buffer limit
+    let diff_output = ''
+    try {
+      const diff_result = await execute_shell_command(
+        `git diff-tree -p ${hash}`,
+        { cwd: repo_path, maxBuffer: 10 * 1024 * 1024 }
+      )
+      diff_output = diff_result.stdout
+    } catch (diff_error) {
+      if (diff_error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+        diff_output = '(diff too large to display)'
+      } else {
+        throw diff_error
+      }
+    }
+
+    res.json({
+      ...commit,
+      files,
+      diff: diff_output
+    })
+  } catch (error) {
+    log('Error getting commit detail:', error)
+    res.status(500).json({ error: 'Failed to get commit detail' })
   }
-)
+})
 
 export { get_known_repositories }
 export default router
