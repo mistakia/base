@@ -70,7 +70,8 @@ const GitRepoInfo = ({ statistics, is_loading, compact = false, repo_path }) => 
 
   const { total_commits, branch_count, last_commit, first_commit } = statistics
 
-  const commits_link = repo_path ? `/${repo_path}/commits` : '/commits'
+  const normalized_path = repo_path ? repo_path.replace(/^\/+/, '') : ''
+  const commits_link = normalized_path ? `/${normalized_path}/commits` : '/commits'
   const last_commit_display = last_commit ? (
     <>
       {format_relative_time(last_commit.date) || '-'} (
