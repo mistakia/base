@@ -2,6 +2,9 @@ import path from 'path'
 import fs from 'fs/promises'
 
 import debug from 'debug'
+// Chokidar retained for git_internals_watcher and repo_list_watcher (~280 watches total).
+// These watch specific .git internal files/patterns, not worth migrating to @parcel/watcher.
+// See: task/base/reduce-inotify-watch-count.md
 import chokidar from 'chokidar'
 
 import { get_known_repositories } from '#server/routes/git.mjs'
@@ -21,53 +24,10 @@ const GIT_WATCH_PATTERNS = [
 
 const REPO_LIST_WATCH_PATTERNS = ['.gitmodules', '.git/worktrees/**']
 
-// Directories to skip entirely when watching repo files for unstaged/untracked changes.
-// Using a Set + function-based ignore prevents chokidar from recursing into these
-// directories, which avoids creating inotify watches for their contents on Linux.
-// Glob patterns like '**/node_modules/**' only suppress events but still recurse.
-const REPO_FILE_IGNORE_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.next',
-  '.cache',
-  'coverage',
-  'tmp',
-  '.turbo',
-  'thread', // covered by thread-watcher
-  'import-history', // git submodule, high churn
-  'embedded-database-index' // DuckDB internal files
-])
-
-const REPO_FILE_IGNORE_FILES = new Set(['.DS_Store', 'yarn-error.log'])
-
-/**
- * Function-based ignore for chokidar that prevents recursion into excluded directories.
- * When this returns true for a directory, chokidar skips it entirely (no inotify watch).
- * @param {string} file_path - Absolute path being evaluated
- * @param {Object} [stats] - fs.Stats object (available after stat call)
- * @returns {boolean} True to ignore
- */
-function repo_file_ignore(file_path, stats) {
-  const basename = path.basename(file_path)
-
-  // Skip excluded directories entirely (prevents recursion and inotify watches)
-  if (REPO_FILE_IGNORE_DIRS.has(basename)) return true
-
-  // Skip temp/swap files
-  if (basename.endsWith('.swp') || basename.endsWith('~')) return true
-
-  // Skip specific files
-  if (REPO_FILE_IGNORE_FILES.has(basename)) return true
-
-  return false
-}
-
 let watcher = null
 let repo_list_watcher = null
-let repo_file_watcher = null // watches repo files for unstaged/untracked changes
 const debounce_timers = new Map()
+let stored_on_git_status_change = null // stored for use by handle_external_repo_file_event
 let current_repo_paths = [] // source of truth for repo-path lookups in handle_change
 const git_dir_to_repo_path = new Map() // maps actual git dir -> repo path (for worktree reverse lookup)
 
@@ -117,14 +77,12 @@ async function get_git_dir_for_repo(repo_path) {
  * @param {Function} params.on_git_status_change - Callback invoked with { repo_path } on debounced change
  * @param {Function} [params.on_repo_list_change] - Callback invoked when .gitmodules or worktrees change
  * @param {string[]} [params.repo_paths] - Repository paths to watch (discovered automatically if not provided)
- * @param {boolean} [params.enable_repo_file_watcher=true] - Whether to watch repo files for unstaged/untracked changes
  * @returns {Promise<Object|null>} Chokidar watcher instance or null if initialization fails
  */
 export async function start_git_status_watcher({
   on_git_status_change,
   on_repo_list_change,
-  repo_paths: provided_repo_paths,
-  enable_repo_file_watcher = true
+  repo_paths: provided_repo_paths
 }) {
   if (watcher) {
     log('Git status watcher already running')
@@ -148,6 +106,7 @@ export async function start_git_status_watcher({
   }
 
   current_repo_paths = [...repo_paths]
+  stored_on_git_status_change = on_git_status_change
   git_dir_to_repo_path.clear()
 
   // Build watch paths for git status changes
@@ -201,15 +160,8 @@ export async function start_git_status_watcher({
       await _start_repo_list_watcher(repo_paths, on_repo_list_change)
     }
 
-    // Start repo file watcher for unstaged/untracked file changes
-    // The git internals watcher only catches staged/committed changes
-    if (enable_repo_file_watcher) {
-      await _start_repo_file_watcher(repo_paths, on_git_status_change)
-    } else {
-      log(
-        'Repo file watcher disabled -- git status will only update on staged/committed changes'
-      )
-    }
+    // Repo file watching for unstaged/untracked changes is now handled by
+    // the consolidated user-base-watcher via handle_external_repo_file_event.
 
     log('Git status watcher started')
     return watcher
@@ -269,50 +221,14 @@ async function _start_repo_list_watcher(repo_paths, on_repo_list_change) {
 }
 
 /**
- * Start watching files across all repositories for unstaged/untracked changes.
- * Uses function-based ignore to prevent chokidar from recursing into excluded
- * directories, avoiding inotify watch creation for node_modules, .git, etc.
+ * Handle a repo file change event from the consolidated user-base-watcher.
+ * Finds the owning repository and debounces before calling the git status callback.
+ *
+ * @param {string} file_path - Absolute path to the changed file
  */
-async function _start_repo_file_watcher(repo_paths, on_git_status_change) {
-  try {
-    repo_file_watcher = chokidar.watch(
-      repo_paths.map((repo_path) => path.join(repo_path, '**', '*')),
-      {
-        persistent: true,
-        ignoreInitial: true,
-        ignored: repo_file_ignore,
-        awaitWriteFinish: {
-          stabilityThreshold: 300,
-          pollInterval: 100
-        }
-      }
-    )
+export function handle_external_repo_file_event(file_path) {
+  if (!stored_on_git_status_change) return
 
-    repo_file_watcher
-      .on('add', (file_path) =>
-        _handle_repo_file_change(file_path, on_git_status_change)
-      )
-      .on('change', (file_path) =>
-        _handle_repo_file_change(file_path, on_git_status_change)
-      )
-      .on('unlink', (file_path) =>
-        _handle_repo_file_change(file_path, on_git_status_change)
-      )
-      .on('error', (error) => {
-        log('Repo file watcher error: %s', error.message)
-      })
-
-    await new Promise((resolve) => repo_file_watcher.on('ready', resolve))
-    log('Repo file watcher started for %d repositories', repo_paths.length)
-  } catch (error) {
-    log('Failed to start repo file watcher: %s', error.message)
-  }
-}
-
-/**
- * Handle a repo file change by finding its repository and debouncing.
- */
-function _handle_repo_file_change(file_path, on_git_status_change) {
   const repo_path = _find_repo_for_file_path(file_path)
   if (!repo_path) return
 
@@ -333,7 +249,7 @@ function _handle_repo_file_change(file_path, on_git_status_change) {
       debounce_timers.delete(repo_path)
       log('Emitting git status change for %s (repo file)', repo_path)
       try {
-        on_git_status_change({ repo_path })
+        stored_on_git_status_change({ repo_path })
       } catch (error) {
         log('Error in repo file change callback: %s', error.message)
       }
@@ -393,11 +309,6 @@ export async function add_repo_to_watcher(repo_path) {
     }
   }
 
-  // Add to repo file watcher
-  if (repo_file_watcher) {
-    repo_file_watcher.add(path.join(repo_path, '**', '*'))
-  }
-
   log(
     'Added repo to watcher: %s%s',
     repo_path,
@@ -436,11 +347,6 @@ export async function remove_repo_from_watcher(repo_path) {
     for (const pattern of REPO_LIST_WATCH_PATTERNS) {
       repo_list_watcher.unwatch(path.join(repo_path, pattern))
     }
-  }
-
-  // Remove from repo file watcher
-  if (repo_file_watcher) {
-    repo_file_watcher.unwatch(path.join(repo_path, '**', '*'))
   }
 
   // Clean up any pending debounce timer
@@ -508,15 +414,6 @@ export async function stop_git_status_watcher() {
   }
   debounce_timers.clear()
 
-  if (repo_file_watcher) {
-    try {
-      await repo_file_watcher.close()
-    } catch (error) {
-      log('Error closing repo file watcher: %s', error.message)
-    }
-    repo_file_watcher = null
-  }
-
   if (repo_list_watcher) {
     try {
       await repo_list_watcher.close()
@@ -536,9 +433,9 @@ export async function stop_git_status_watcher() {
   }
 
   current_repo_paths = []
+  stored_on_git_status_change = null
   git_dir_to_repo_path.clear()
 
   log('Git status watcher stopped')
 }
 
-export { REPO_FILE_IGNORE_DIRS, REPO_FILE_IGNORE_FILES, repo_file_ignore }

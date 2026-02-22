@@ -1,4 +1,3 @@
-import chokidar from 'chokidar'
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
@@ -9,6 +8,7 @@ import {
 } from '#libs-server/threads/event-emitter.mjs'
 import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
+import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
 
 const log = debug('threads:watcher')
 
@@ -21,11 +21,8 @@ const log = debug('threads:watcher')
 // Constants
 // ============================================================================
 
-const WATCHER_CONFIG = {
-  STABILITY_THRESHOLD_MS: 500, // Wait after last file change before processing
-  POLL_INTERVAL_MS: 100, // File polling frequency
-  DEPTH: 2 // Watch thread/{uuid}/file.json
-}
+// Max path depth relative to thread directory: thread/{uuid}/file.json
+const THREAD_WATCH_DEPTH = 2
 
 const FILE_NAMES = {
   METADATA: 'metadata.json',
@@ -451,109 +448,76 @@ const handle_timeline_changed = async (file_path) => {
 // ============================================================================
 
 /**
- * Create watcher configuration object
+ * Check if a path is within the allowed depth for thread events.
+ * Only processes files at thread/{uuid}/file.json (depth 2 relative to thread dir).
  *
- * @returns {Object} Chokidar watcher configuration
+ * @param {string} file_path - Absolute file path
+ * @param {string} thread_directory - Absolute path to thread directory
+ * @returns {boolean} True if within allowed depth
  */
-const create_watcher_config = () => ({
-  // Wait for file writes to finish before emitting events
-  awaitWriteFinish: {
-    stabilityThreshold: WATCHER_CONFIG.STABILITY_THRESHOLD_MS,
-    pollInterval: WATCHER_CONFIG.POLL_INTERVAL_MS
-  },
-  // Only watch 2 levels deep (thread/{uuid}/file.json)
-  depth: WATCHER_CONFIG.DEPTH,
-  // Ignore dotfiles
-  ignored: /(^|[/\\])\../,
-  // Don't ignore initial add events
-  ignoreInitial: true,
-  // Use efficient watching (platform-specific)
-  persistent: true
-})
+const is_within_thread_depth = (file_path, thread_directory) => {
+  const relative = path.relative(thread_directory, file_path)
+  const segments = relative.split(path.sep)
+  return segments.length <= THREAD_WATCH_DEPTH
+}
 
 /**
- * Handle file add events
- * Only processes thread metadata files (thread/{uuid}/metadata.json)
+ * Handle a batch of @parcel/watcher events for the thread directory.
+ * Filters by depth and routes to appropriate handlers.
  *
- * @param {string} file_path - Path to the added file
+ * @param {Array<{type: string, path: string}>} events - Batch of file events
+ * @param {string} thread_directory - Absolute path to thread directory
  */
-const handle_file_add = async (file_path) => {
-  log(`'add' event fired for: ${file_path}`)
+const handle_thread_events = async (events, thread_directory) => {
+  for (const event of events) {
+    const file_path = event.path
 
-  if (is_thread_metadata_file(file_path)) {
+    // Filter by depth: only process thread/{uuid}/file.json
+    if (!is_within_thread_depth(file_path, thread_directory)) {
+      continue
+    }
+
     try {
-      await handle_metadata_added(file_path)
-    } catch (error) {
-      log(`Error in handle_metadata_added for ${file_path}:`, error)
-    }
-  }
-}
-
-/**
- * Handle file change events
- * Processes both metadata and timeline changes
- *
- * @param {string} file_path - Path to the changed file
- */
-const handle_file_change = async (file_path) => {
-  try {
-    if (is_thread_metadata_file(file_path)) {
-      await handle_metadata_changed(file_path)
-    } else if (is_timeline_file(file_path)) {
-      await handle_timeline_changed(file_path)
-    }
-  } catch (error) {
-    log(`Error in change handler for ${file_path}:`, error)
-  }
-}
-
-/**
- * Handle file unlink events
- * Notifies index sync hooks when metadata is deleted (thread removed)
- *
- * @param {string} file_path - Path to the deleted file
- */
-const handle_file_unlink = async (file_path) => {
-  if (is_thread_metadata_file(file_path)) {
-    log(`Detected metadata deleted: ${file_path}`)
-    if (index_sync_hooks?.on_thread_delete) {
-      try {
-        index_sync_hooks.on_thread_delete(file_path)
-      } catch (error) {
-        log(`Error in index sync on_thread_delete for ${file_path}:`, error)
+      switch (event.type) {
+        case 'create':
+          if (is_thread_metadata_file(file_path)) {
+            await handle_metadata_added(file_path)
+          }
+          break
+        case 'update':
+          if (is_thread_metadata_file(file_path)) {
+            await handle_metadata_changed(file_path)
+          } else if (is_timeline_file(file_path)) {
+            await handle_timeline_changed(file_path)
+          }
+          break
+        case 'delete':
+          if (is_thread_metadata_file(file_path)) {
+            log(`Detected metadata deleted: ${file_path}`)
+            if (index_sync_hooks?.on_thread_delete) {
+              index_sync_hooks.on_thread_delete(file_path)
+            }
+          }
+          break
       }
+    } catch (error) {
+      log(`Error handling ${event.type} event for ${file_path}:`, error)
     }
   }
 }
 
 /**
- * Register event handlers on the watcher instance
- *
- * @param {Object} watcher_instance - Chokidar watcher instance
- */
-const register_watcher_handlers = (watcher_instance) => {
-  watcher_instance.on('add', handle_file_add)
-  watcher_instance.on('change', handle_file_change)
-  watcher_instance.on('unlink', handle_file_unlink)
-  watcher_instance.on('error', (error) => {
-    log('Thread watcher error:', error)
-  })
-  watcher_instance.on('ready', () => {
-    log('Thread watcher ready and monitoring for changes')
-  })
-}
-
-/**
- * Start filesystem watcher for thread directory
+ * Start filesystem watcher for thread directory using @parcel/watcher.
+ * Uses directory-only watches (no per-file inotify overhead on Linux).
  *
  * @param {Object} params
  * @param {string} params.thread_directory - Absolute path to thread directory
  * @param {Object} [params.hooks] - Optional hooks for external consumers (e.g. index sync)
  * @param {Function} [params.hooks.on_thread_sync] - Called with { thread_id, metadata } on any thread file change (debounced by thread_id, coalesces metadata + timeline changes)
  * @param {Function} [params.hooks.on_thread_delete] - Called with metadata file path on unlink
- * @returns {Object} Watcher instance
+ * @returns {Promise<Object>} Subscription handle
  */
-export const start_thread_watcher = ({ thread_directory, hooks }) => {
+export const start_thread_watcher = async ({ thread_directory, hooks }) => {
   if (watcher) {
     log('Thread watcher already running')
     return watcher
@@ -565,13 +529,14 @@ export const start_thread_watcher = ({ thread_directory, hooks }) => {
   log(`Starting thread watcher for directory: ${thread_directory}`)
 
   try {
-    // Initialize watcher with chokidar
-    const config = create_watcher_config()
-    watcher = chokidar.watch(thread_directory, config)
+    watcher = await create_parcel_subscription({
+      directory: thread_directory,
+      ignore: ['**/raw-data'],
+      on_events: (events) =>
+        handle_thread_events(events, thread_directory)
+    })
 
-    // Register event handlers
-    register_watcher_handlers(watcher)
-
+    log('Thread watcher ready and monitoring for changes')
     return watcher
   } catch (error) {
     log('Failed to start thread watcher:', error)
@@ -604,7 +569,7 @@ export const stop_thread_watcher = async () => {
   log('Stopping thread watcher')
 
   try {
-    await watcher.close()
+    await watcher.unsubscribe()
     watcher = null
     last_seen_state.clear()
     latest_timeline_entry_cache.clear()

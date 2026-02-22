@@ -32,8 +32,17 @@ import {
   start_git_status_watcher,
   stop_git_status_watcher,
   add_repo_to_watcher,
-  remove_repo_from_watcher
+  remove_repo_from_watcher,
+  handle_external_repo_file_event
 } from '#libs-server/file-subscriptions/git-status-watcher.mjs'
+import {
+  start_user_base_watcher,
+  stop_user_base_watcher
+} from '#libs-server/file-subscriptions/user-base-watcher.mjs'
+import {
+  handle_entity_file_change,
+  handle_entity_file_delete
+} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   initialize_cache,
   invalidate_repo,
@@ -53,31 +62,6 @@ const debounced_invalidate_file_path_cache = () => {
     file_path_cache_invalidation_timer = null
     invalidate_file_path_cache()
   }, 1000)
-}
-
-const WATCHER_READY_TIMEOUT_MS = 30000
-
-/**
- * Wait for a chokidar watcher to emit 'ready', with timeout protection.
- * @param {Object} watcher_instance - Chokidar watcher instance
- * @param {string} watcher_name - Name for logging
- * @returns {Promise<void>}
- */
-function wait_for_watcher_ready(watcher_instance, watcher_name) {
-  if (!watcher_instance) return Promise.resolve()
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      logger(
-        `${watcher_name} ready timeout after ${WATCHER_READY_TIMEOUT_MS}ms, continuing`
-      )
-      resolve()
-    }, WATCHER_READY_TIMEOUT_MS)
-
-    watcher_instance.on('ready', () => {
-      clearTimeout(timeout)
-      resolve()
-    })
-  })
 }
 
 const SERVER_LOCK_FILE = '.server-lock'
@@ -188,13 +172,9 @@ try {
           config.user_base_directory,
           'thread'
         )
-        const thread_watcher_instance = start_thread_watcher({
+        await start_thread_watcher({
           thread_directory
         })
-        await wait_for_watcher_ready(
-          thread_watcher_instance,
-          'Thread watcher'
-        )
         set_watcher_status('thread_watcher', 'ready')
         logger(
           `Thread watcher initialized (${Date.now() - start_time}ms)`
@@ -209,31 +189,12 @@ try {
       logger('Thread watcher disabled by config')
     }
 
-    // 2. File subscription watcher (WebSocket entity notifications)
+    // 2. File subscription watcher (WebSocket entity notifications -- setup only)
     if (file_watcher_config.file_subscriptions_enabled !== false) {
       try {
-        const start_time = Date.now()
-        const file_sub_watcher = start_file_subscription_watcher({
-          on_file_add: (relative_path) => {
-            debounced_invalidate_file_path_cache()
-            emit_file_changed(relative_path)
-          },
-          on_file_change: (relative_path) => {
-            emit_file_changed(relative_path)
-          },
-          on_file_delete: (relative_path) => {
-            debounced_invalidate_file_path_cache()
-            emit_file_deleted(relative_path)
-          }
-        })
-        await wait_for_watcher_ready(
-          file_sub_watcher,
-          'File subscription watcher'
-        )
+        start_file_subscription_watcher()
         set_watcher_status('file_subscription_watcher', 'ready')
-        logger(
-          `File subscription watcher initialized (${Date.now() - start_time}ms)`
-        )
+        logger('File subscription watcher initialized (watching via user-base-watcher)')
       } catch (watcher_error) {
         set_watcher_status('file_subscription_watcher', 'failed')
         logger(
@@ -279,9 +240,7 @@ try {
           },
           on_repo_list_change: async () => {
             await invalidate_repo_list()
-          },
-          enable_repo_file_watcher:
-            file_watcher_config.repo_file_watcher_enabled !== false
+          }
         })
         if (git_watcher) {
           set_watcher_status('git_status_watcher', 'ready')
@@ -354,6 +313,49 @@ try {
       }
     }
 
+    // Start consolidated user-base watcher (replaces chokidar instances for
+    // file subscriptions, entity index sync, and repo file watching)
+    try {
+      const start_time = Date.now()
+      await start_user_base_watcher({
+        user_base_directory: config.user_base_directory,
+        file_subscription:
+          file_watcher_config.file_subscriptions_enabled !== false
+            ? {
+                on_add: (relative_path) => {
+                  debounced_invalidate_file_path_cache()
+                  emit_file_changed(relative_path)
+                },
+                on_change: (relative_path) => {
+                  emit_file_changed(relative_path)
+                },
+                on_delete: (relative_path) => {
+                  debounced_invalidate_file_path_cache()
+                  emit_file_deleted(relative_path)
+                }
+              }
+            : null,
+        entity_index: embedded_index_ready
+          ? {
+              on_change: handle_entity_file_change,
+              on_delete: handle_entity_file_delete
+            }
+          : null,
+        repo_file:
+          file_watcher_config.git_status_watcher_enabled !== false
+            ? { on_change: handle_external_repo_file_event }
+            : null
+      })
+      set_watcher_status('user_base_watcher', 'ready')
+      logger(
+        `User-base watcher initialized (${Date.now() - start_time}ms)`
+      )
+    } catch (watcher_error) {
+      set_watcher_status('user_base_watcher', 'failed')
+      logger(`Failed to start user-base watcher: ${watcher_error.message}`)
+      logger(watcher_error)
+    }
+
     logger('All watchers initialized')
   })
 } catch (err) {
@@ -412,7 +414,15 @@ const shutdown = async (signal) => {
       })(),
       (async () => {
         try {
-          await stop_index_file_watcher()
+          await stop_user_base_watcher()
+          logger('User-base watcher stopped')
+        } catch (error) {
+          logger(`Error stopping user-base watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          stop_index_file_watcher()
           logger('Entity file watcher stopped')
         } catch (error) {
           logger(`Error stopping entity file watcher: ${error.message}`)

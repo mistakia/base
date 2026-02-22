@@ -18,6 +18,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
+// Chokidar retained: watches 2 IPC files. Not worth migrating to @parcel/watcher.
 import chokidar from 'chokidar'
 
 import config from '#config'

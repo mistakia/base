@@ -1,18 +1,15 @@
 /**
  * Index File Watcher
  *
- * Monitor filesystem for entity and thread changes using chokidar.
+ * Monitor filesystem for entity changes and trigger embedded index sync.
+ * Actual file watching is handled by the consolidated user-base-watcher;
+ * this module provides the event handlers with debouncing.
  */
 
-import path from 'path'
 import debug from 'debug'
-import chokidar from 'chokidar'
 
 import config from '#config'
-import {
-  ENTITY_DIRECTORIES,
-  ENTITY_FILE_PATTERN
-} from './index-sync-filters.mjs'
+import { ENTITY_DIRECTORIES } from './index-sync-filters.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 
 const log = debug('embedded-index:sync:watcher')
@@ -20,9 +17,11 @@ const log = debug('embedded-index:sync:watcher')
 // Re-export for external use
 export { ENTITY_DIRECTORIES }
 
-// Single consolidated watcher for all entity directories
-let entity_watcher = null
 let is_watching = false
+
+// Stored callbacks from start_index_file_watcher
+let stored_on_entity_change = null
+let stored_on_entity_delete = null
 
 // Debounce to prevent rapid re-indexing
 const entity_debouncer = create_keyed_debouncer(500)
@@ -31,6 +30,11 @@ function get_user_base_directory() {
   return config.user_base_directory
 }
 
+/**
+ * Initialize the index file watcher.
+ * Stores callbacks for entity change/delete events.
+ * Actual file watching is handled by user-base-watcher.
+ */
 export function start_index_file_watcher({
   on_entity_change,
   on_entity_delete
@@ -46,65 +50,51 @@ export function start_index_file_watcher({
     return
   }
 
-  log('Starting index file watcher for %s', user_base_dir)
+  stored_on_entity_change = on_entity_change
+  stored_on_entity_delete = on_entity_delete
 
-  // Build watch paths for all entity directories
-  const watch_paths = ENTITY_DIRECTORIES.map(
-    (dir) => `${path.join(user_base_dir, dir)}/${ENTITY_FILE_PATTERN}`
+  log(
+    'Index file watcher initialized for %d entity directories (watching via user-base-watcher)',
+    ENTITY_DIRECTORIES.length
   )
-
-  // Single consolidated watcher for all entity directories
-  entity_watcher = chokidar.watch(watch_paths, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 300,
-      pollInterval: 100
-    }
-  })
-
-  entity_watcher
-    .on('add', (file_path) => {
-      log('Entity file added: %s', file_path)
-      if (on_entity_change) {
-        entity_debouncer.call(file_path, on_entity_change)
-      }
-    })
-    .on('change', (file_path) => {
-      log('Entity file changed: %s', file_path)
-      if (on_entity_change) {
-        entity_debouncer.call(file_path, on_entity_change)
-      }
-    })
-    .on('unlink', (file_path) => {
-      log('Entity file deleted: %s', file_path)
-      if (on_entity_delete) {
-        on_entity_delete(file_path)
-      }
-    })
-
-  log('Started watcher for %d entity directories', ENTITY_DIRECTORIES.length)
-
-  // Thread and timeline watchers are handled by the thread watcher
-  // (server/services/thread-watcher.mjs) via hooks to avoid duplicate
-  // chokidar instances on the thread/ directory.
 
   is_watching = true
   log('Index file watcher started')
 }
 
-export async function stop_index_file_watcher() {
+/**
+ * Handle an entity file change event from user-base-watcher.
+ * Applies debouncing per file path.
+ *
+ * @param {string} file_path - Absolute path to the changed entity file
+ */
+export function handle_entity_file_change(file_path) {
+  log('Entity file changed: %s', file_path)
+  if (stored_on_entity_change) {
+    entity_debouncer.call(file_path, stored_on_entity_change)
+  }
+}
+
+/**
+ * Handle an entity file delete event from user-base-watcher.
+ *
+ * @param {string} file_path - Absolute path to the deleted entity file
+ */
+export function handle_entity_file_delete(file_path) {
+  log('Entity file deleted: %s', file_path)
+  if (stored_on_entity_delete) {
+    stored_on_entity_delete(file_path)
+  }
+}
+
+export function stop_index_file_watcher() {
   log('Stopping index file watcher')
 
   // Clear all debounce timers
   entity_debouncer.clear_all()
 
-  // Close entity watcher
-  if (entity_watcher) {
-    await entity_watcher.close()
-    entity_watcher = null
-    log('Closed entity watcher')
-  }
+  stored_on_entity_change = null
+  stored_on_entity_delete = null
 
   is_watching = false
   log('Index file watcher stopped')

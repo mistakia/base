@@ -12,6 +12,8 @@ import { invalidate_tasks_cache } from '#server/services/cache-warmer.mjs'
 import {
   start_index_file_watcher,
   stop_index_file_watcher,
+  handle_entity_file_change,
+  handle_entity_file_delete,
   extract_base_uri_from_entity_path,
   extract_entity_type_from_path
 } from './index-file-watcher.mjs'
@@ -171,4 +173,4 @@ export function start_index_sync_watcher() {
   log('Index sync watcher started')
 }
 
-export { stop_index_file_watcher }
+export { stop_index_file_watcher, handle_entity_file_change, handle_entity_file_delete }

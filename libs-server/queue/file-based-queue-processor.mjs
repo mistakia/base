@@ -1,3 +1,4 @@
+// Chokidar retained: watches 1 queue file. Not worth migrating to @parcel/watcher.
 import chokidar from 'chokidar'
 import fs from 'fs/promises'
 import debug from 'debug'
