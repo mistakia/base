@@ -211,6 +211,27 @@ export const extract_thread_description = (thread) => {
 }
 
 /**
+ * Extract tags from thread metadata
+ * @param {Object} thread - Thread object (can be Immutable or plain JS)
+ * @returns {Array} Array of tag base_uris
+ */
+export const extract_tags = (thread) => {
+  if (!thread) return []
+
+  let tags
+  if (thread.get) {
+    tags = thread.get('tags')
+    if (tags && tags.toJS) {
+      tags = tags.toJS()
+    }
+  } else {
+    tags = thread.tags
+  }
+
+  return Array.isArray(tags) ? tags : []
+}
+
+/**
  * Extract user public key from thread metadata
  * @param {Object} thread - Thread object (can be Immutable or plain JS)
  * @returns {string|null} User public key or null

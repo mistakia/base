@@ -24,6 +24,7 @@ import {
   format_token_shorthand
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
+import { EditableTagsField } from '@views/components/InlineSelect'
 import {
   extract_message_counts,
   extract_tool_call_count,
@@ -33,7 +34,8 @@ import {
   extract_thread_state,
   extract_thread_title,
   extract_thread_description,
-  extract_user_public_key
+  extract_user_public_key,
+  extract_tags
 } from '@views/utils/thread-metadata-extractor.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
@@ -119,6 +121,7 @@ const use_thread_metadata = (metadata) => {
   const description = extract_thread_description(metadata)
   const thread_user_public_key = extract_user_public_key(metadata)
   const relations = extract_relations(metadata)
+  const tags = extract_tags(metadata)
 
   return {
     title,
@@ -137,7 +140,8 @@ const use_thread_metadata = (metadata) => {
     working_directory: working_directory.path,
     working_directory_formatted: working_directory.formatted,
     thread_user_public_key,
-    relations
+    relations,
+    tags
   }
 }
 
@@ -370,7 +374,8 @@ const ThreadStats = ({
   dispatch,
   user_owns_thread,
   active_session,
-  relations
+  relations,
+  tags
 }) => {
   const working_directory = source_info?.working_directory
   const session_provider = source_info?.provider
@@ -406,6 +411,19 @@ const ThreadStats = ({
           thread_state={thread_state}
           thread_id={thread_id}
           user_owns_thread={user_owns_thread}
+          is_first={get_is_first()}
+        />
+      )}
+
+      {thread_id && (
+        <MetadataRow
+          label='Tags'
+          value={
+            <EditableTagsField
+              value={tags}
+              base_uri={`user:thread/${thread_id}`}
+            />
+          }
           is_first={get_is_first()}
         />
       )}
@@ -535,7 +553,8 @@ ThreadStats.propTypes = {
   dispatch: PropTypes.func,
   user_owns_thread: PropTypes.bool.isRequired,
   active_session: PropTypes.object,
-  relations: PropTypes.array
+  relations: PropTypes.array,
+  tags: PropTypes.array
 }
 
 const SourceChips = ({ source_info, thread_state }) => {
@@ -584,7 +603,8 @@ const ThreadHeader = ({ metadata, thread_id }) => {
     tool_call_count,
     working_directory_formatted,
     thread_user_public_key,
-    relations
+    relations,
+    tags
   } = use_thread_metadata(metadata)
 
   // Get current user's public key and cost display from Redux store
@@ -634,6 +654,7 @@ const ThreadHeader = ({ metadata, thread_id }) => {
         user_owns_thread={user_owns_thread}
         active_session={active_session}
         relations={relations}
+        tags={tags}
       />
     </MetadataContainer>
   )
