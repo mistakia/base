@@ -15,7 +15,7 @@
 # Behavior:
 #   1. Acquires global lock to prevent concurrent orchestrator runs
 #   2. Syncs each storage-hosted submodule (auto-commit if applicable, fetch, rebase, push)
-#   3. Updates submodule pointers for ALL active submodules in the parent repo
+#   3. Fetches parent, rebases if behind, then updates storage-hosted submodule pointers
 #   4. Syncs parent repo (fetch, overlap-check pull, push)
 #   Each step tolerates failures and continues to the next
 
@@ -104,6 +104,27 @@ is_submodule_initialized() {
     local submodule_path="$1"
     local full_path="$USER_BASE_DIRECTORY/$submodule_path"
     [ -d "$full_path/.git" ] || [ -f "$full_path/.git" ]
+}
+
+# Check if dirty files overlap with incoming changes from a remote branch.
+# Returns 0 if there IS overlap (unsafe), 1 if no overlap (safe to rebase).
+# Sets OVERLAP_FILES variable with the overlapping files when overlap exists.
+# Args: $1 = directory, $2 = merge_base, $3 = remote_branch
+check_dirty_overlap() {
+    local dir="$1"
+    local merge_base="$2"
+    local remote_branch="$3"
+
+    local dirty_files incoming_files overlap
+    dirty_files=$({ git -C "$dir" diff --name-only --ignore-submodules 2>/dev/null; git -C "$dir" diff --cached --name-only --ignore-submodules 2>/dev/null; } | sort -u)
+    incoming_files=$(git -C "$dir" diff --name-only "$merge_base".."$remote_branch" --ignore-submodules 2>/dev/null | sort -u)
+    overlap=$(comm -12 <(echo "$dirty_files") <(echo "$incoming_files"))
+
+    if [ -n "$overlap" ]; then
+        OVERLAP_FILES="$overlap"
+        return 0
+    fi
+    return 1
 }
 
 # Check for merge/rebase in progress
@@ -255,19 +276,69 @@ for entry in "${STORAGE_SUBMODULES[@]}"; do
     fi
 done
 
-# --- Step 2: Update submodule pointers for all active submodules ---
+# --- Step 2: Update submodule pointers for storage-hosted submodules ---
 
 log_verbose "Step 2: Checking submodule pointers..."
 
 cd "$USER_BASE_DIRECTORY"
 
-POINTER_UPDATED=false
+# Fetch parent repo first to pull in any pointer commits from the other machine.
+# This prevents duplicate "chore: update submodule pointers" commits when both
+# machines detect the same pointer drift.
+if check_git_state "$USER_BASE_DIRECTORY"; then
+    if git fetch origin 2>/dev/null; then
+        STEP2_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        STEP2_REMOTE="origin/$STEP2_BRANCH"
+        if git rev-parse --verify "$STEP2_REMOTE" >/dev/null 2>&1; then
+            STEP2_LOCAL=$(git rev-parse HEAD)
+            STEP2_REMOTE_COMMIT=$(git rev-parse "$STEP2_REMOTE")
+            STEP2_MERGE_BASE=$(git merge-base HEAD "$STEP2_REMOTE")
 
-# Get list of all submodules from .gitmodules
-while IFS= read -r submodule_path; do
-    if [ -z "$submodule_path" ]; then
-        continue
+            if [ "$STEP2_LOCAL" = "$STEP2_MERGE_BASE" ] && [ "$STEP2_LOCAL" != "$STEP2_REMOTE_COMMIT" ]; then
+                # Strictly behind - rebase to pull in remote pointer commits
+                if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
+                    if check_dirty_overlap "$USER_BASE_DIRECTORY" "$STEP2_MERGE_BASE" "$STEP2_REMOTE"; then
+                        log "Pre-pointer fetch: behind but dirty files overlap, skipping rebase"
+                    else
+                        log "Pre-pointer fetch: behind with no overlap, rebasing..."
+                        if ! git rebase "$STEP2_REMOTE" 2>/dev/null; then
+                            git rebase --abort 2>/dev/null || true
+                            log_error "Pre-pointer fetch: rebase failed"
+                            ERRORS=$((ERRORS + 1))
+                        else
+                            log "Pre-pointer fetch: rebased successfully"
+                            git submodule update --init repository/active/base 2>/dev/null || true
+                        fi
+                    fi
+                else
+                    log "Pre-pointer fetch: behind remote, rebasing..."
+                    if ! git rebase "$STEP2_REMOTE" 2>/dev/null; then
+                        git rebase --abort 2>/dev/null || true
+                        log_error "Pre-pointer fetch: rebase failed"
+                        ERRORS=$((ERRORS + 1))
+                    else
+                        log "Pre-pointer fetch: rebased successfully"
+                        git submodule update --init repository/active/base 2>/dev/null || true
+                    fi
+                fi
+            else
+                log_verbose "Pre-pointer fetch: not strictly behind, skipping rebase"
+            fi
+        fi
+    else
+        log_verbose "Pre-pointer fetch: fetch failed, continuing with local state"
     fi
+fi
+
+POINTER_UPDATED=false
+UPDATED_SUBMODULES=()
+
+# Only update pointers for storage-hosted submodules (synced by Step 1).
+# GitHub-hosted submodules are pulled independently on each machine, so tracking
+# their pointers here would create duplicate commits when both machines pull the
+# same upstream changes at slightly different times.
+for entry in "${STORAGE_SUBMODULES[@]}"; do
+    IFS=':' read -r submodule_path _ _ <<< "$entry"
 
     # Skip if submodule is not initialized
     if [ ! -d "$submodule_path/.git" ] && [ ! -f "$submodule_path/.git" ]; then
@@ -286,13 +357,15 @@ while IFS= read -r submodule_path; do
         log "Updating pointer: $submodule_path (${recorded:0:7} -> ${actual:0:7})"
         git add "$submodule_path"
         POINTER_UPDATED=true
+        UPDATED_SUBMODULES+=("$submodule_path")
     fi
-done < <(git config --file .gitmodules --get-regexp '\.path$' | awk '{print $2}')
+done
 
 if [ "$POINTER_UPDATED" = true ]; then
     # POINTER_UPDATED guarantees at least one submodule was staged via git add.
     # Note: git diff --cached --quiet cannot be used here because submodules with
     # ignore=all in .gitmodules are invisible to git diff --cached, even when staged.
+    log "Committing pointer updates for: ${UPDATED_SUBMODULES[*]}"
     git commit -m "chore: update submodule pointers" 2>/dev/null || {
         log_error "Failed to commit submodule pointer updates"
         ERRORS=$((ERRORS + 1))
@@ -330,17 +403,12 @@ else
             elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
                 # Behind remote - check for dirty state
                 if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
-                    # Dirty working directory - compute overlap
-                    dirty_files=$({ git diff --name-only --ignore-submodules 2>/dev/null; git diff --cached --name-only --ignore-submodules 2>/dev/null; } | sort -u)
-                    incoming_files=$(git diff --name-only "$MERGE_BASE".."$REMOTE_BRANCH" --ignore-submodules 2>/dev/null | sort -u)
-                    overlap=$(comm -12 <(echo "$dirty_files") <(echo "$incoming_files"))
-
-                    if [ -n "$overlap" ]; then
+                    if check_dirty_overlap "$USER_BASE_DIRECTORY" "$MERGE_BASE" "$REMOTE_BRANCH"; then
                         log_error "Parent: overlap detected between dirty files and incoming changes:"
-                        echo "$overlap" | while read -r f; do log_error "  $f"; done
+                        echo "$OVERLAP_FILES" | while read -r f; do log_error "  $f"; done
                         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity warning \
                             --title "Sync blocked: file overlap" \
-                            --message "sync-all on $(hostname): dirty files overlap with incoming changes. Files: $(echo "$overlap" | tr '\n' ', ')" 2>/dev/null || true
+                            --message "sync-all on $(hostname): dirty files overlap with incoming changes. Files: $(echo "$OVERLAP_FILES" | tr '\n' ', ')" 2>/dev/null || true
                         ERRORS=$((ERRORS + 1))
                     else
                         log "Parent: dirty but no overlap, rebasing..."
@@ -372,20 +440,39 @@ else
                     fi
                 fi
             elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
-                # Ahead of remote
-                if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
-                    log_verbose "Parent: ahead but dirty, skipping push"
-                else
-                    log "Parent: ahead of remote, pushing..."
-                    git push origin "$CURRENT_BRANCH" 2>/dev/null || {
-                        log_error "Parent: push failed"
-                        ERRORS=$((ERRORS + 1))
-                    }
-                fi
+                # Ahead of remote - push (dirty state is irrelevant for push)
+                log "Parent: ahead of remote, pushing..."
+                git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+                    log_error "Parent: push failed"
+                    ERRORS=$((ERRORS + 1))
+                }
             else
                 # Diverged
                 if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
-                    log "Parent: diverged and dirty, skipping sync"
+                    if check_dirty_overlap "$USER_BASE_DIRECTORY" "$MERGE_BASE" "$REMOTE_BRANCH"; then
+                        log_error "Parent: diverged with overlapping dirty files, skipping sync:"
+                        echo "$OVERLAP_FILES" | while read -r f; do log_error "  $f"; done
+                        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity warning \
+                            --title "Sync blocked: diverged with overlap" \
+                            --message "sync-all on $(hostname): diverged and dirty files overlap with incoming changes. Files: $(echo "$OVERLAP_FILES" | tr '\n' ', ')" 2>/dev/null || true
+                        ERRORS=$((ERRORS + 1))
+                    else
+                        log "Parent: diverged and dirty but no overlap, rebasing..."
+                        if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
+                            git rebase --abort 2>/dev/null || true
+                            log_error "Parent: rebase failed (diverged)"
+                            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+                                --title "User-base sync failed" \
+                                --message "sync-all: rebase failed (diverged) on $(hostname), manual intervention required" 2>/dev/null || true
+                            ERRORS=$((ERRORS + 1))
+                        else
+                            log "Parent: rebased, pushing..."
+                            git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+                                log_error "Parent: push failed after rebase"
+                                ERRORS=$((ERRORS + 1))
+                            }
+                        fi
+                    fi
                 else
                     log "Parent: diverged, rebasing..."
                     if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
