@@ -161,6 +161,47 @@ export const emit_active_session_ended = async (session_id) => {
  * @param {string} params.error_message - Failure description
  * @returns {Promise<void>}
  */
+/**
+ * Emit THREAD_JOB_STARTED event
+ *
+ * Sent when a BullMQ thread job becomes active (worker picks it up).
+ * Broadcast to all authenticated clients so they can update pending resume status.
+ *
+ * @param {Object} params
+ * @param {string} params.job_id - BullMQ job ID
+ * @param {string} params.thread_id - Thread being resumed
+ * @returns {Promise<void>}
+ */
+export const emit_thread_job_started = async ({ job_id, thread_id }) => {
+  try {
+    const event = {
+      type: 'THREAD_JOB_STARTED',
+      payload: { job_id, thread_id }
+    }
+    const event_json = JSON.stringify(event)
+
+    let sent_count = 0
+    for (const client of wss.clients) {
+      if (client.readyState !== WebSocket.OPEN || !client.user_public_key) {
+        continue
+      }
+      try {
+        client.send(event_json)
+        sent_count++
+      } catch (send_error) {
+        log(
+          `Failed to send THREAD_JOB_STARTED to client: ${send_error.message}`
+        )
+      }
+    }
+    log(
+      `Emitted THREAD_JOB_STARTED (job_id=${job_id}, thread_id=${thread_id}) to ${sent_count} clients`
+    )
+  } catch (error) {
+    log(`Failed to emit THREAD_JOB_STARTED:`, error)
+  }
+}
+
 export const emit_thread_job_failed = async ({ job_id, error_message }) => {
   try {
     const event = {

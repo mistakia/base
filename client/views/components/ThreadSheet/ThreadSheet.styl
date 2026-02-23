@@ -192,6 +192,28 @@ $sheet_border_radius = 6px
   bottom: $space_sm
 
 // ============================================================================
+// Resume status indicator
+// ============================================================================
+
+.thread-sheet__resume-status
+  flex-shrink: 0
+  display: flex
+  align-items: center
+  gap: $space_sm
+  padding: $space_sm $space_base
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  border-top: 1px solid $color_border_light
+
+  &--failed
+    color: $color_error
+
+.thread-sheet__resume-status-label
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+// ============================================================================
 // Floating thread input at bottom
 // ============================================================================
 

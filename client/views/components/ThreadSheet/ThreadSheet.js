@@ -13,6 +13,7 @@ import {
 } from '@core/thread-sheet/index.js'
 import { threads_actions } from '@core/threads/actions'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
+import { get_thread_pending_resume } from '@core/threads/selectors'
 import {
   subscribe_to_thread,
   unsubscribe_from_thread
@@ -32,7 +33,12 @@ import Button from '@components/primitives/Button'
 import './ThreadSheet.styl'
 
 // Inline thread resume input
-const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
+const SheetThreadInput = ({
+  thread_id,
+  thread_data,
+  pending_resume,
+  dispatch
+}) => {
   const input_ref = useRef(null)
   const [message, set_message] = useState('')
   const [is_submitting, set_is_submitting] = useState(false)
@@ -53,10 +59,14 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
     ? extract_working_directory(thread_data).path
     : null
 
+  const has_pending_resume =
+    pending_resume && pending_resume.get('status') !== 'failed'
+
   const handle_submit = useCallback(
     (e) => {
       e.preventDefault()
-      if (!message.trim() || !can_resume || is_submitting) return
+      if (!message.trim() || !can_resume || is_submitting || has_pending_resume)
+        return
 
       dispatch(
         threads_actions.resume_thread_session({
@@ -67,9 +77,18 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
       )
       set_is_submitting(true)
       set_message('')
-      setTimeout(() => set_is_submitting(false), 2000)
+      // Brief guard; real disable comes from pending_resume state
+      setTimeout(() => set_is_submitting(false), 500)
     },
-    [message, can_resume, is_submitting, dispatch, thread_id, working_directory]
+    [
+      message,
+      can_resume,
+      is_submitting,
+      has_pending_resume,
+      dispatch,
+      thread_id,
+      working_directory
+    ]
   )
 
   const handle_key_down = useCallback(
@@ -97,6 +116,7 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
   if (!can_resume) return null
 
   const has_text = message.trim().length > 0
+  const input_disabled = is_submitting || has_pending_resume
 
   return (
     <div className='thread-sheet__input'>
@@ -108,7 +128,7 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
           onKeyDown={handle_key_down}
           placeholder='Continue thread...'
           className='thread-sheet__input-field'
-          disabled={is_submitting}
+          disabled={input_disabled}
           rows={1}
         />
         <div className='thread-sheet__input-bottom-row'>
@@ -116,9 +136,9 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
             type='submit'
             variant='primary'
             icon
-            disabled={!has_text || is_submitting}
-            className={`thread-sheet__input-send ${has_text || is_submitting ? 'thread-sheet__input-send--visible' : ''}`}>
-            {is_submitting ? (
+            disabled={!has_text || input_disabled}
+            className={`thread-sheet__input-send ${has_text || input_disabled ? 'thread-sheet__input-send--visible' : ''}`}>
+            {input_disabled ? (
               <CircularProgress size={14} style={{ color: '#fff' }} />
             ) : (
               <ArrowUpwardIcon style={{ fontSize: 14 }} />
@@ -132,7 +152,49 @@ const SheetThreadInput = ({ thread_id, thread_data, dispatch }) => {
 SheetThreadInput.propTypes = {
   thread_id: PropTypes.string,
   thread_data: PropTypes.object,
+  pending_resume: PropTypes.object,
   dispatch: PropTypes.func
+}
+
+// Resume status indicator
+const ResumeStatusIndicator = ({ pending_resume }) => {
+  const status = pending_resume.get('status')
+  const queue_position = pending_resume.get('queue_position')
+  const error_message = pending_resume.get('error_message')
+
+  let label
+  const modifier = status
+  switch (status) {
+    case 'submitted':
+      label = 'Prompt submitted...'
+      break
+    case 'queued':
+      label = queue_position
+        ? `Queued (position ${queue_position})...`
+        : 'Queued...'
+      break
+    case 'starting':
+      label = 'Starting session...'
+      break
+    case 'failed':
+      label = `Resume failed: ${error_message || 'Unknown error'}`
+      break
+    default:
+      label = 'Resuming...'
+  }
+
+  return (
+    <div
+      className={`thread-sheet__resume-status thread-sheet__resume-status--${modifier}`}>
+      {status !== 'failed' && (
+        <CircularProgress size={12} style={{ color: 'currentColor' }} />
+      )}
+      <span className='thread-sheet__resume-status-label'>{label}</span>
+    </div>
+  )
+}
+ResumeStatusIndicator.propTypes = {
+  pending_resume: PropTypes.object
 }
 
 // Individual sheet panel
@@ -158,6 +220,12 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
     [thread_id]
   )
   const active_session = useSelector(active_session_selector)
+
+  const pending_resume_selector = useMemo(
+    () => (state) => get_thread_pending_resume(state, thread_id),
+    [thread_id]
+  )
+  const pending_resume = useSelector(pending_resume_selector)
 
   // Load thread data and subscribe to WebSocket
   useEffect(() => {
@@ -340,10 +408,16 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
         )}
       </div>
 
+      {/* Pending resume status indicator */}
+      {pending_resume && (
+        <ResumeStatusIndicator pending_resume={pending_resume} />
+      )}
+
       {/* Fixed thread input at bottom */}
       <SheetThreadInput
         thread_id={thread_id}
         thread_data={thread_data}
+        pending_resume={pending_resume}
         dispatch={dispatch}
       />
     </div>

@@ -173,6 +173,15 @@ export const get_thread_cost_by_id = createSelector(
   }
 )
 
+// Selector to get pending resume state for a specific thread
+export function get_thread_pending_resume(state, thread_id) {
+  if (!thread_id) return null
+  return (
+    get_threads_state(state).getIn(['thread_pending_resumes', thread_id]) ||
+    null
+  )
+}
+
 // Memoized selector for thread_all_columns to avoid reference instability
 // This ensures the JS object reference only changes when the underlying Immutable data changes
 export function get_thread_all_columns_immutable(state) {

@@ -2,6 +2,7 @@ import { Record, List, Map } from 'immutable'
 
 import { threads_action_types } from './actions'
 import { thread_action_types } from '@core/thread/actions'
+import { active_sessions_action_types } from '@core/active-sessions/actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
 import { TABLE_OPERATORS } from 'react-table/src/constants.mjs'
 import { create_default_table_state } from '@core/table/create-default-table-state.js'
@@ -201,6 +202,9 @@ const ThreadsState = new Record({
   is_loading_thread: false,
   threads_error: null,
   thread_error: null,
+
+  // Pending resume state keyed by thread_id
+  thread_pending_resumes: new Map(),
 
   models_data: new Map({
     loading: false,
@@ -462,6 +466,119 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       }
 
       return new_state
+    }
+
+    // ========================================================================
+    // Thread Resume Lifecycle
+    // ========================================================================
+
+    case threads_action_types.RESUME_THREAD_SESSION_PENDING: {
+      const { opts } = payload
+      const thread_id = opts.thread_id
+      if (!thread_id) return state
+      return state.setIn(
+        ['thread_pending_resumes', thread_id],
+        Map({
+          prompt_snippet: (opts.prompt || '').slice(0, 120),
+          status: 'submitted',
+          job_id: null,
+          queue_position: null,
+          error_message: null,
+          submitted_at: new Date().toISOString()
+        })
+      )
+    }
+
+    case threads_action_types.RESUME_THREAD_SESSION_FULFILLED: {
+      const { opts, data } = payload
+      const thread_id = opts.thread_id
+      if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
+        return state
+      }
+      return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
+        entry.merge({
+          status: 'queued',
+          job_id: data?.job_id || null,
+          queue_position: data?.queue_position ?? null
+        })
+      )
+    }
+
+    case threads_action_types.RESUME_THREAD_SESSION_FAILED: {
+      const { opts, error } = payload
+      const thread_id = opts.thread_id
+      if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
+        return state
+      }
+      return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
+        entry.merge({
+          status: 'failed',
+          error_message: error || 'Resume failed'
+        })
+      )
+    }
+
+    case threads_action_types.THREAD_JOB_STARTED: {
+      const { job_id, thread_id } = payload
+      // Direct match by thread_id from the event
+      if (thread_id && state.hasIn(['thread_pending_resumes', thread_id])) {
+        return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
+          entry.set('status', 'starting')
+        )
+      }
+      // Fallback: find entry by job_id
+      if (job_id) {
+        const match = state
+          .get('thread_pending_resumes')
+          .findEntry((entry) => entry.get('job_id') === job_id)
+        if (match) {
+          const [matched_thread_id] = match
+          return state.updateIn(
+            ['thread_pending_resumes', matched_thread_id],
+            (entry) => entry.set('status', 'starting')
+          )
+        }
+      }
+      return state
+    }
+
+    case active_sessions_action_types.ACTIVE_SESSION_STARTED: {
+      const { session } = payload
+      // Clear pending resume when the real session starts
+      const thread_id = session?.thread_id
+      if (thread_id && state.hasIn(['thread_pending_resumes', thread_id])) {
+        return state.deleteIn(['thread_pending_resumes', thread_id])
+      }
+      // Fallback: match by job_id
+      if (session?.job_id) {
+        const match = state
+          .get('thread_pending_resumes')
+          .findEntry((entry) => entry.get('job_id') === session.job_id)
+        if (match) {
+          return state.deleteIn(['thread_pending_resumes', match[0]])
+        }
+      }
+      return state
+    }
+
+    case threads_action_types.THREAD_JOB_FAILED: {
+      const { job_id } = payload
+      if (!job_id) return state
+      const match = state
+        .get('thread_pending_resumes')
+        .findEntry((entry) => entry.get('job_id') === job_id)
+      if (match) {
+        const [matched_thread_id] = match
+        return state.updateIn(
+          ['thread_pending_resumes', matched_thread_id],
+          (entry) =>
+            entry.merge({
+              status: 'failed',
+              error_message: payload.error_message || 'Job failed'
+            })
+        )
+      }
+      return state
     }
 
     default:

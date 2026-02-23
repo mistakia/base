@@ -6,7 +6,10 @@ import {
   close_redis_connection
 } from '#libs-server/redis/get-connection.mjs'
 import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
-import { emit_thread_job_failed } from '#libs-server/active-sessions/index.mjs'
+import {
+  emit_thread_job_failed,
+  emit_thread_job_started
+} from '#libs-server/active-sessions/index.mjs'
 import {
   create_session_claude_cli,
   get_container_claude_home,
@@ -190,6 +193,14 @@ const handle_job_failed = (job, error) => {
 
 const handle_job_active = (job) => {
   log(`Job ${job.id}: active`)
+  if (job.data.thread_id) {
+    emit_thread_job_started({
+      job_id: job.id,
+      thread_id: job.data.thread_id
+    }).catch((err) => {
+      log(`Job ${job.id}: failed to emit THREAD_JOB_STARTED - ${err.message}`)
+    })
+  }
 }
 
 const handle_worker_error = (error) => {
