@@ -1,4 +1,5 @@
-import { CronExpressionParser } from 'cron-parser'
+import cronParser from 'cron-parser'
+const { CronExpressionParser } = cronParser
 import ms from 'ms'
 import debug from 'debug'
 
