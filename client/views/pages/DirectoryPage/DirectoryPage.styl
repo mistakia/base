@@ -1,0 +1,31 @@
+// DirectoryPage layout - two-column on desktop, single column on mobile
+
+.directory-page__two-column
+  display: flex
+  gap: 24px
+  align-items: flex-start
+
+  @media (max-width: 768px)
+    flex-direction: column
+    gap: 16px
+
+.directory-page__browser-column
+  flex: 1 1 50%
+  min-width: 0
+  order: 2
+
+  @media (max-width: 768px)
+    order: 2
+    width: 100%
+
+.directory-page__markdown-column
+  flex: 1 1 50%
+  min-width: 0
+  position: sticky
+  top: 16px
+  order: 1
+
+  @media (max-width: 768px)
+    position: static
+    order: 1
+    width: 100%

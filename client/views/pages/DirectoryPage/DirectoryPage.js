@@ -6,6 +6,7 @@ import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
+import './DirectoryPage.styl'
 
 const DirectoryPage = ({
   directory_markdown,
@@ -45,28 +46,19 @@ const DirectoryPage = ({
             width: '100%'
           }}>
           <div
-            style={
-              has_markdown_content
-                ? { display: 'flex', gap: 24, alignItems: 'flex-start' }
-                : undefined
+            className={
+              has_markdown_content ? 'directory-page__two-column' : undefined
             }>
             <div
-              style={
+              className={
                 has_markdown_content
-                  ? { flex: '1 1 50%', minWidth: 0, order: 2 }
+                  ? 'directory-page__browser-column'
                   : undefined
               }>
               <FileSystemBrowser />
             </div>
             {has_markdown_content && (
-              <div
-                style={{
-                  flex: '1 1 50%',
-                  minWidth: 0,
-                  position: 'sticky',
-                  top: 16,
-                  order: 1
-                }}>
+              <div className='directory-page__markdown-column'>
                 <DirectoryMarkdown
                   directory_markdown={directory_markdown}
                   is_loading_directory_markdown={is_loading_directory_markdown}

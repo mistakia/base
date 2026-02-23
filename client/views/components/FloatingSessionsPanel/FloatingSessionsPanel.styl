@@ -21,9 +21,10 @@
 
   @media (max-width: 768px)
     // Mobile: bottom-right above mobile thread input trigger
+    // Trigger is 48px tall at bottom: calc(16px + safe-area), add 8px gap
     top: auto
     left: auto
-    bottom: 72px
+    bottom: "calc(72px + env(safe-area-inset-bottom, 0px))"
     right: 16px
     max-width: none
 
@@ -60,6 +61,8 @@
 
   @media (max-width: 768px)
     left: 8px
+    display: flex
+    flex-direction: column-reverse
 
 .floating-sessions-panel__indicator
   width: 6px
