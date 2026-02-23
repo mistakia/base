@@ -156,40 +156,51 @@ SheetThreadInput.propTypes = {
   dispatch: PropTypes.func
 }
 
-// Resume status indicator
+// Resume status indicator -- shows the user's prompt snippet with a status badge
 const ResumeStatusIndicator = ({ pending_resume }) => {
   const status = pending_resume.get('status')
   const queue_position = pending_resume.get('queue_position')
   const error_message = pending_resume.get('error_message')
+  const prompt_snippet = pending_resume.get('prompt_snippet')
 
-  let label
-  const modifier = status
+  let badge_label
   switch (status) {
     case 'submitted':
-      label = 'Prompt submitted...'
+      badge_label = 'submitted'
       break
     case 'queued':
-      label = queue_position
-        ? `Queued (position ${queue_position})...`
-        : 'Queued...'
+      badge_label = queue_position ? `queued #${queue_position}` : 'queued'
       break
     case 'starting':
-      label = 'Starting session...'
+      badge_label = 'starting'
       break
     case 'failed':
-      label = `Resume failed: ${error_message || 'Unknown error'}`
+      badge_label = 'failed'
       break
     default:
-      label = 'Resuming...'
+      badge_label = 'resuming'
   }
 
   return (
     <div
-      className={`thread-sheet__resume-status thread-sheet__resume-status--${modifier}`}>
-      {status !== 'failed' && (
-        <CircularProgress size={12} style={{ color: 'currentColor' }} />
+      className={`thread-sheet__resume-status thread-sheet__resume-status--${status}`}>
+      <div className='thread-sheet__resume-status-header'>
+        {status !== 'failed' && (
+          <CircularProgress size={10} style={{ color: 'currentColor' }} />
+        )}
+        <span className='thread-sheet__resume-status-badge'>{badge_label}</span>
+      </div>
+      {status === 'failed' ? (
+        <span className='thread-sheet__resume-status-error'>
+          {error_message || 'Unknown error'}
+        </span>
+      ) : (
+        prompt_snippet && (
+          <span className='thread-sheet__resume-status-prompt'>
+            {prompt_snippet}
+          </span>
+        )
       )}
-      <span className='thread-sheet__resume-status-label'>{label}</span>
     </div>
   )
 }

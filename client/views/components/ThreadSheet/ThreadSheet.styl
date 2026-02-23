@@ -198,8 +198,8 @@ $sheet_border_radius = 6px
 .thread-sheet__resume-status
   flex-shrink: 0
   display: flex
-  align-items: center
-  gap: $space_sm
+  flex-direction: column
+  gap: 4px
   padding: $space_sm $space_base
   font-size: $font_size_xs
   color: $color_text_secondary
@@ -208,10 +208,31 @@ $sheet_border_radius = 6px
   &--failed
     color: $color_error
 
-.thread-sheet__resume-status-label
-  white-space: nowrap
+.thread-sheet__resume-status-header
+  display: flex
+  align-items: center
+  gap: 6px
+
+.thread-sheet__resume-status-badge
+  font-size: 10px
+  font-weight: $font_weight_semibold
+  text-transform: uppercase
+  letter-spacing: 0.04em
+  color: $color_text_tertiary
+
+  .thread-sheet__resume-status--failed &
+    color: $color_error
+
+.thread-sheet__resume-status-prompt
+  color: $color_text
+  line-height: 1.4
   overflow: hidden
-  text-overflow: ellipsis
+  display: -webkit-box
+  -webkit-line-clamp: 3
+  -webkit-box-orient: vertical
+
+.thread-sheet__resume-status-error
+  line-height: 1.4
 
 // ============================================================================
 // Floating thread input at bottom
