@@ -3,7 +3,7 @@ title: Maintain Directory Markdown
 type: workflow
 description: >-
   Audit and maintain directory-level markdown documentation (ABOUT.md, INDEX.md) for coverage,
-  compliance, and currency
+  compliance, graph navigation quality, and currency
 base_uri: sys:system/workflow/maintain-directory-markdown.md
 created_at: '2026-01-21T18:21:37.527Z'
 entity_id: 8ba3a348-63f0-4adb-98c6-f557647bf1ed
@@ -12,18 +12,20 @@ relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/directory-markdown-standards.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2026-01-21T18:45:00.000Z'
+updated_at: '2026-02-23T00:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 visibility_analyzed_at: '2026-02-16T04:40:51.980Z'
 ---
 
-<task>Audit and maintain directory markdown files to ensure coverage, compliance with standards, and current content</task>
+<task>Audit and maintain directory markdown files to ensure coverage, compliance with standards, graph navigation quality, and current content</task>
 
 <context>
 
-Directory markdown files (ABOUT.md, INDEX.md) provide essential context for navigating and understanding directory contents. This workflow identifies gaps and issues, then addresses them efficiently.
+Directory markdown files (ABOUT.md, INDEX.md) serve as navigable entry points to their domain, enabling agents to discover and load relevant context efficiently. This workflow identifies structural gaps, graph health issues, and quality problems, then addresses them.
 
-**Key Reference:** [[sys:system/guideline/directory-markdown-standards.md]]
+**Key References:**
+- [[sys:system/guideline/directory-markdown-standards.md]] -- structural standards and content requirements
+- Graph navigation principles from the directory-markdown-standards guideline (context phrases, progressive disclosure, context cohesion)
 
 **Scope:** User-base directories at depth 1-2, excluding system directories (thread, repository, node_modules, files, embedded-\*).
 
@@ -89,13 +91,34 @@ for f in $(find "$USER_BASE_DIRECTORY/task" -name "ABOUT.md"); do
 done
 ```
 
+### Check Graph Navigation Quality
+
+```bash
+# ABOUT.md files with wikilinks but no context phrases (bare link lists)
+for f in $(find "$USER_BASE_DIRECTORY" -name "ABOUT.md" -not -path "*/thread/*" -not -path "*/repository/*"); do
+  total_links=$(grep -c '\[\[' "$f" 2>/dev/null || echo 0)
+  annotated=$(grep -cE '\[\[.*\]\].*--' "$f" 2>/dev/null || echo 0)
+  if [ "$total_links" -gt 0 ] && [ "$annotated" -eq 0 ]; then
+    echo "THIN MOC: $f ($total_links links, none annotated)"
+  fi
+done
+
+# Entities with empty or missing description fields (progressive disclosure gap)
+for f in $(find "$USER_BASE_DIRECTORY/guideline" "$USER_BASE_DIRECTORY/workflow" -name "*.md" 2>/dev/null); do
+  desc=$(grep "^description:" "$f" 2>/dev/null | sed 's/^description:\s*//')
+  if [ -z "$desc" ] || [ "$desc" = "''" ] || [ "$desc" = '""' ]; then
+    echo "EMPTY DESC: $f"
+  fi
+done
+```
+
 ## Phase 2: Triage
 
 From discovery results, create a prioritized list:
 
 1. **High priority**: Task directories with 10+ entities and no ABOUT.md
-2. **Medium priority**: Existing ABOUT.md missing required sections
-3. **Lower priority**: Missing optional sections (Goals, Scope)
+2. **Medium priority**: Existing ABOUT.md missing required sections; thin MOCs (links without context phrases)
+3. **Lower priority**: Missing optional sections (Goals, Scope); empty description fields; readability improvements
 
 Present the triage list to the user and confirm which items to address.
 
@@ -120,6 +143,12 @@ Process one directory at a time to minimize context usage. Read [[sys:system/gui
 2. Add missing required sections
 3. Consider if optional sections would add value
 
+### For Thin MOCs (Missing Context Phrases)
+
+1. Read the existing ABOUT.md
+2. For each wikilink reference, add a context phrase explaining what it covers and when an agent would need it
+3. Use the format: `- [[entity]] -- brief explanation of relevance`
+
 ### For Stale Content
 
 1. Read current file
@@ -140,6 +169,8 @@ Re-run the "Find Missing Documentation" and "Check Structural Compliance" comman
 | Overlap with another directory exists | Add Scope section to both     |
 | Task directory has defined endpoint   | Add Goals section             |
 | Directory contents use specific tag   | Document in Notable Context   |
+| ABOUT.md has links without context phrases | Add context phrases to each reference |
+| Entity has empty description field    | Fill with 1-2 sentence summary |
 
 </instructions>
 
@@ -150,6 +181,8 @@ Re-run the "Find Missing Documentation" and "Check Structural Compliance" comman
 - Directories missing ABOUT.md: [count]
 - Files missing required sections: [count]
 - Files missing optional sections: [count]
+- Thin MOCs (links without context phrases): [count]
+- Empty description fields: [count]
 
 **Triage (prioritized):**
 

@@ -17,12 +17,14 @@ observations:
   - '[principle] Focus on stable context rather than volatile file listings'
   - '[notable] Document context that would otherwise require discovery effort'
   - '[boundaries] Clarify scope boundaries when directory overlap exists'
+  - '[graph] ABOUT.md files serve as navigable graph entry points, not just descriptions'
+  - '[disclosure] Description fields and context phrases enable progressive disclosure'
 relations:
   - implements [[sys:system/schema/guideline.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
   - related_to [[sys:system/guideline/write-documentation.md]]
   - related_to [[user:guideline/write-text.md]]
-updated_at: '2025-01-21T00:00:00.000Z'
+updated_at: '2026-02-23T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -37,7 +39,7 @@ Standards for directory-level markdown that communicates purpose, boundaries, an
 | `CLAUDE.md` | AI assistants | Tool permissions, commands, AI-specific guidance |
 | `README.md` | General       | Project overview, setup, usage                   |
 | `INDEX.md`  | Navigation    | Directory organization and structure             |
-| `ABOUT.md`  | Understanding | Domain concepts, background, rationale           |
+| `ABOUT.md`  | Understanding | Domain entry point, graph navigation, rationale  |
 
 Create documentation when a directory contains a cohesive set of content that benefits from shared context.
 
@@ -48,6 +50,8 @@ Create documentation when a directory contains a cohesive set of content that be
 - **Surface the non-obvious** - Highlight context that requires discovery effort to find
 - **Clarify boundaries** - When scope overlaps with other directories, define what belongs where
 - **Start minimal** - Expand based on actual confusion or repeated questions
+- **Graph navigation** - ABOUT.md files serve as navigable entry points to their domain, not just directory descriptions
+- **Progressive disclosure** - Enable agents to filter context before loading full documents, through description fields and context phrases
 
 ## Required Sections
 
@@ -95,6 +99,8 @@ When domain-specific terminology or ideas need explanation to understand directo
 
 Directory documentation SHOULD surface important context that would otherwise require discovery effort. This includes references to entities both inside and outside the directory.
 
+References MUST include context phrases that explain the relevance of each linked entity -- what it covers and when an agent would need it. A bare link list provides addresses but no navigation value.
+
 ### What Makes Context Notable
 
 Include context when it meets ANY of these criteria:
@@ -126,13 +132,15 @@ Include context when it meets ANY of these criteria:
 
 **Tags**: Content here should use `user:tag/passive-house.md`
 
-**Guidelines**: Follows [[user:guideline/building-standards.md]] for documentation format
+**Guidelines**:
+- [[user:guideline/building-standards.md]] -- documentation format for construction specs and material selections
 
 **Related directories**:
-
-- `task/land-search/` - Property acquisition (before site selection)
-- `task/parcels-system/` - GIS and parcel data management
+- `task/land-search/` -- property acquisition tasks (before site selection)
+- `task/parcels-system/` -- GIS and parcel data management tools
 ```
+
+Note: Each reference includes a brief phrase explaining what the target covers and when it is relevant. Bare references like `- [[user:guideline/building-standards.md]]` without explanation are insufficient.
 
 ## Boundary Disambiguation
 
@@ -190,6 +198,23 @@ Tasks here drive development of the league codebase at `repository/active/league
 For architecture, commands, and development patterns, see [[git://repository/active/league/CLAUDE.md]].
 ```
 
+## Context Cohesion
+
+Content belongs in the same document when its sections are typically needed together in the same agent session. When sections serve distinct session types, they SHOULD be extracted to dedicated entities and linked.
+
+- A document where all sections apply to the same kind of work is cohesive -- keep together regardless of length
+- A document where CLI reference, service architecture, and entity conventions serve different agents is non-cohesive -- extract and link
+
+The metric is co-occurrence in context windows, not document size.
+
+## Description Field Quality
+
+Every entity's `description` frontmatter field MUST be a useful 1-2 sentence summary sufficient for an agent to decide whether to load the full document. Descriptions serve as the progressive disclosure filter between seeing an entity referenced and committing to reading it.
+
+- Descriptions MUST be specific to the entity's content
+- Descriptions SHOULD mention the primary domain or scope
+- Descriptions MUST NOT be empty or placeholder text
+
 ## Anti-Patterns
 
 - **File inventories** - Listing directory contents (use `ls` or glob patterns instead)
@@ -197,3 +222,4 @@ For architecture, commands, and development patterns, see [[git://repository/act
 - **Process documentation** - Step-by-step procedures (use workflows)
 - **Implementation details** - Code-level specifics that belong in source files
 - **Duplicating CLAUDE.md** - Repeating architecture, commands, or patterns already documented in a codebase's CLAUDE.md
+- **Bare link lists** - Listing entity references without context phrases explaining relevance
