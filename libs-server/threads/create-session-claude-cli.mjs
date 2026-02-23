@@ -641,7 +641,7 @@ export const create_session_claude_cli = async ({
         'username and thread_config are required for container_user execution mode'
       )
     }
-    await ensure_user_container_running({ username, thread_config })
+    await ensure_user_container_running({ username, thread_config, user_public_key })
   }
 
   // -------------------------

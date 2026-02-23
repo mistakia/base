@@ -138,7 +138,8 @@ export const get_active_sessions = async ({ username }) => {
  */
 export const ensure_user_container_running = async ({
   username,
-  thread_config
+  thread_config,
+  user_public_key = null
 }) => {
   const container_name = get_user_container_name({ username })
 
@@ -169,7 +170,8 @@ export const ensure_user_container_running = async ({
     thread_config,
     user_base_directory,
     user_data_directory,
-    container_user_base_path: CONTAINER_USER_BASE_PATH
+    container_user_base_path: CONTAINER_USER_BASE_PATH,
+    user_public_key
   })
 
   // Start container via docker compose

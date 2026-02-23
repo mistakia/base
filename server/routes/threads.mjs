@@ -24,6 +24,7 @@ import {
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
+import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
@@ -972,6 +973,137 @@ router.post('/:thread_id/resume', async (req, res) => {
     }
 
     handle_errors(res, error, 'resuming thread session')
+  }
+})
+
+// Rate-limit map for sync-user-session: transcript_path -> last_sync_timestamp
+const sync_rate_limit = new Map()
+const SYNC_RATE_LIMIT_MS = 5000
+
+// Sync user session from container hooks
+router.post('/sync-user-session', async (req, res) => {
+  try {
+    const { username, transcript_path, hook_event_name, user_public_key } =
+      req.body
+
+    if (!username || !transcript_path || !user_public_key) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'username, transcript_path, and user_public_key are required'
+      })
+    }
+
+    // Validate user_public_key matches the username
+    const user = await user_registry.find_by_public_key(user_public_key)
+    if (!user || user.username !== username) {
+      log(
+        `sync-user-session: user_public_key does not match username ${username}`
+      )
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'user_public_key does not match username'
+      })
+    }
+
+    // Rate limit: skip if same transcript_path was synced within SYNC_RATE_LIMIT_MS
+    const last_sync = sync_rate_limit.get(transcript_path)
+    if (last_sync && Date.now() - last_sync < SYNC_RATE_LIMIT_MS) {
+      log(
+        `sync-user-session: rate limited for ${transcript_path} (${hook_event_name})`
+      )
+      return res.json({ status: 'skipped', reason: 'rate_limited' })
+    }
+    sync_rate_limit.set(transcript_path, Date.now())
+
+    // Translate container-internal path to host path
+    // Container path: /home/node/.claude/projects/...
+    // Host path: <user_data_dir>/<username>/claude-home/projects/...
+    const { get_user_container_claude_home } = await import(
+      '#libs-server/threads/user-container-manager.mjs'
+    )
+    const container_prefix = '/home/node/.claude'
+    if (!transcript_path.startsWith(container_prefix)) {
+      return res.status(400).json({
+        error: 'Invalid transcript_path',
+        message: `transcript_path must start with ${container_prefix}`
+      })
+    }
+    const relative_path = transcript_path.slice(container_prefix.length)
+    const host_path = get_user_container_claude_home({ username }) + relative_path
+
+    // Verify the host-path file exists
+    const { access } = await import('fs/promises')
+    try {
+      await access(host_path)
+    } catch {
+      log(`sync-user-session: file not found at ${host_path}`)
+      return res.status(404).json({
+        error: 'File not found',
+        message: 'Transcript file not found on host'
+      })
+    }
+
+    log(
+      `sync-user-session: importing ${host_path} for ${username} (${hook_event_name})`
+    )
+
+    const { create_threads_from_session_provider } = await import(
+      '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+    )
+    const result = await create_threads_from_session_provider({
+      provider_name: 'claude',
+      allow_updates: true,
+      provider_options: {
+        session_file: host_path
+      },
+      user_public_key,
+      source_overrides: {
+        execution_mode: 'container_user',
+        container_user: true,
+        container_name: `base-user-${username}`
+      }
+    })
+
+    const thread_id =
+      result.created?.[0]?.thread_id || result.updated?.[0]?.thread_id || null
+    const status = result.created?.length ? 'created' : 'updated'
+
+    // On SessionEnd: queue push-threads and auto-commit
+    if (hook_event_name === 'SessionEnd') {
+      try {
+        if (thread_id) {
+          await add_cli_job({
+            command: `$USER_BASE_DIRECTORY/repository/active/base/cli/auto-commit-threads.sh ${thread_id}`,
+            tags: ['thread-sync'],
+            priority: 5,
+            timeout_ms: 60000
+          })
+        }
+        await add_cli_job({
+          command:
+            '$USER_BASE_DIRECTORY/repository/active/base/cli/push-threads.sh',
+          tags: ['thread-sync'],
+          priority: 5,
+          timeout_ms: 120000
+        })
+        log(`sync-user-session: queued post-session jobs for ${username}`)
+      } catch (queue_error) {
+        log(
+          `sync-user-session: failed to queue post-session jobs - ${queue_error.message}`
+        )
+      }
+
+      // Clean up rate limit entry on session end
+      sync_rate_limit.delete(transcript_path)
+    }
+
+    log(
+      `sync-user-session: ${status} thread ${thread_id} for ${username}`
+    )
+
+    res.json({ thread_id, status })
+  } catch (error) {
+    handle_errors(res, error, 'syncing user session')
   }
 })
 

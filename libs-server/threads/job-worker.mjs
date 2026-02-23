@@ -1,5 +1,7 @@
 import { Worker } from 'bullmq'
 import debug from 'debug'
+import glob_pkg from 'glob'
+import { promisify } from 'util'
 import config from '#config'
 import {
   get_redis_connection,
@@ -18,6 +20,7 @@ import {
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 
+const glob = promisify(glob_pkg)
 const log = debug('threads:worker')
 
 // Constants
@@ -102,12 +105,34 @@ const process_thread_creation_job = async (job) => {
  * claude-home mount. For host sessions, reads from the host's projects dir.
  */
 const sync_session_fallback = async (job) => {
-  const { session_id, thread_id, working_directory, execution_mode, username } =
-    job.data
+  const { session_id, thread_id, execution_mode, username } = job.data
 
-  if (!session_id || !thread_id) {
-    return
+  // Build source overrides for all execution modes
+  const source_overrides =
+    execution_mode === 'container_user'
+      ? {
+          execution_mode: 'container_user',
+          container_user: true,
+          container_name: `base-user-${username}`
+        }
+      : execution_mode === 'container'
+        ? { execution_mode: 'container' }
+        : { execution_mode: execution_mode || 'host' }
+
+  if (session_id && thread_id) {
+    // Resume case: import the specific session file
+    await sync_session_fallback_by_file(job, source_overrides)
+  } else {
+    // New session case: glob for all JSONL files in the projects directory
+    await sync_session_fallback_by_glob(job, source_overrides)
   }
+}
+
+/**
+ * Import a specific session file (resume case where session_id is known)
+ */
+const sync_session_fallback_by_file = async (job, source_overrides) => {
+  const { session_id, working_directory, execution_mode, username } = job.data
 
   try {
     const { join } = await import('path')
@@ -149,24 +174,11 @@ const sync_session_fallback = async (job) => {
       )
     }
 
-    // Check if session file exists before attempting import
     await access(session_file)
 
     log(
       `Job ${job.id}: running post-session sync fallback from ${session_file}`
     )
-
-    // Build source overrides for container_user threads
-    const source_overrides =
-      execution_mode === 'container_user'
-        ? {
-            execution_mode: 'container_user',
-            container_user: true,
-            container_name: `base-user-${username}`
-          }
-        : execution_mode === 'container'
-          ? { execution_mode: 'container' }
-          : { execution_mode: execution_mode || 'host' }
 
     const result = await create_threads_from_session_provider({
       provider_name: 'claude',
@@ -185,6 +197,87 @@ const sync_session_fallback = async (job) => {
     )
   } catch (error) {
     log(`Job ${job.id}: sync fallback failed - ${error.message}`)
+  }
+}
+
+/**
+ * Glob for JSONL files in the projects directory (new session case where session_id is null)
+ * Handles deduplication via create_threads_from_session_provider's check_thread_exists
+ */
+const sync_session_fallback_by_glob = async (job, source_overrides) => {
+  const { working_directory, execution_mode, username } = job.data
+
+  try {
+    const { join } = await import('path')
+
+    let projects_dir
+    if (execution_mode === 'container_user' && username) {
+      const { get_user_container_claude_home } = await import(
+        './user-container-manager.mjs'
+      )
+      const container_working_dir =
+        translate_to_container_path(working_directory)
+      const projects_dir_name = derive_projects_dir_name(container_working_dir)
+      projects_dir = join(
+        get_user_container_claude_home({ username }),
+        'projects',
+        projects_dir_name
+      )
+    } else if (execution_mode === 'container') {
+      const container_working_dir =
+        translate_to_container_path(working_directory)
+      const projects_dir_name = derive_projects_dir_name(container_working_dir)
+      projects_dir = join(
+        get_container_claude_home(),
+        'projects',
+        projects_dir_name
+      )
+    } else {
+      const { homedir } = await import('os')
+      const projects_dir_name = derive_projects_dir_name(working_directory)
+      projects_dir = join(homedir(), '.claude', 'projects', projects_dir_name)
+    }
+
+    const jsonl_files = await glob(join(projects_dir, '*.jsonl'))
+
+    if (jsonl_files.length === 0) {
+      log(`Job ${job.id}: no JSONL files found in ${projects_dir}`)
+      return
+    }
+
+    log(
+      `Job ${job.id}: running post-session sync fallback (glob) - found ${jsonl_files.length} JSONL file(s) in ${projects_dir}`
+    )
+
+    let total_created = 0
+    let total_updated = 0
+
+    for (const session_file of jsonl_files) {
+      try {
+        const result = await create_threads_from_session_provider({
+          provider_name: 'claude',
+          allow_updates: true,
+          provider_options: {
+            session_file
+          },
+          user_public_key: job.data.user_public_key,
+          source_overrides
+        })
+
+        total_created += result.created?.length || 0
+        total_updated += result.updated?.length || 0
+      } catch (file_error) {
+        log(
+          `Job ${job.id}: sync fallback failed for ${session_file} - ${file_error.message}`
+        )
+      }
+    }
+
+    log(
+      `Job ${job.id}: sync fallback glob complete (created: ${total_created}, updated: ${total_updated})`
+    )
+  } catch (error) {
+    log(`Job ${job.id}: sync fallback glob failed - ${error.message}`)
   }
 }
 
@@ -297,3 +390,6 @@ export const stop_worker = async () => {
 
   log('Worker stopped')
 }
+
+// Exported for testing
+export { sync_session_fallback_by_file, sync_session_fallback_by_glob }

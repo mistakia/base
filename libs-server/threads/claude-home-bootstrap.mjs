@@ -136,6 +136,81 @@ export const generate_user_settings = ({
       deny: deny_rules
     },
     hooks: {
+      SessionStart: [
+        {
+          matcher: '',
+          hooks: [
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-active-session-hook.sh',
+              timeout: 5000
+            }
+          ]
+        }
+      ],
+      UserPromptSubmit: [
+        {
+          matcher: '',
+          hooks: [
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-sync-session-hook.sh',
+              timeout: 30000
+            },
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-active-session-hook.sh',
+              timeout: 5000
+            }
+          ]
+        }
+      ],
+      PostToolUse: [
+        {
+          matcher: '*',
+          hooks: [
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-active-session-hook.sh',
+              timeout: 5000
+            },
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-sync-session-hook.sh',
+              timeout: 30000
+            }
+          ]
+        }
+      ],
+      Stop: [
+        {
+          matcher: '',
+          hooks: [
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-active-session-hook.sh',
+              timeout: 5000
+            }
+          ]
+        }
+      ],
+      SessionEnd: [
+        {
+          matcher: '',
+          hooks: [
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-sync-session-hook.sh',
+              timeout: 30000
+            },
+            {
+              type: 'command',
+              command: '/usr/local/bin/user-active-session-hook.sh',
+              timeout: 5000
+            }
+          ]
+        }
+      ],
       PreToolUse: [
         {
           matcher: 'Bash',

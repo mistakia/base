@@ -211,6 +211,84 @@ describe('claude-home-bootstrap', () => {
       expect(settings.env).to.have.property('BASH_DEFAULT_TIMEOUT_MS', '120000')
       expect(settings.env).to.have.property('BASH_MAX_TIMEOUT_MS', '300000')
     })
+
+    it('should include session lifecycle hooks for all event types', () => {
+      const thread_config = {}
+      const settings = generate_user_settings({
+        thread_config,
+        container_user_base_path: CONTAINER_USER_BASE_PATH
+      })
+
+      const hook_types = [
+        'SessionStart',
+        'UserPromptSubmit',
+        'PostToolUse',
+        'Stop',
+        'SessionEnd'
+      ]
+
+      for (const hook_type of hook_types) {
+        expect(settings.hooks).to.have.property(hook_type)
+        expect(settings.hooks[hook_type]).to.be.an('array')
+        expect(settings.hooks[hook_type].length).to.be.greaterThan(0)
+      }
+    })
+
+    it('should reference user-active-session-hook.sh in SessionStart, Stop hooks', () => {
+      const thread_config = {}
+      const settings = generate_user_settings({
+        thread_config,
+        container_user_base_path: CONTAINER_USER_BASE_PATH
+      })
+
+      const session_start_hooks = settings.hooks.SessionStart[0].hooks
+      expect(session_start_hooks).to.have.lengthOf(1)
+      expect(session_start_hooks[0].command).to.equal(
+        '/usr/local/bin/user-active-session-hook.sh'
+      )
+      expect(session_start_hooks[0].timeout).to.equal(5000)
+
+      const stop_hooks = settings.hooks.Stop[0].hooks
+      expect(stop_hooks).to.have.lengthOf(1)
+      expect(stop_hooks[0].command).to.equal(
+        '/usr/local/bin/user-active-session-hook.sh'
+      )
+    })
+
+    it('should reference user-sync-session-hook.sh in UserPromptSubmit and SessionEnd hooks', () => {
+      const thread_config = {}
+      const settings = generate_user_settings({
+        thread_config,
+        container_user_base_path: CONTAINER_USER_BASE_PATH
+      })
+
+      const submit_hooks = settings.hooks.UserPromptSubmit[0].hooks
+      expect(submit_hooks).to.have.lengthOf(2)
+      expect(submit_hooks[0].command).to.equal(
+        '/usr/local/bin/user-sync-session-hook.sh'
+      )
+      expect(submit_hooks[0].timeout).to.equal(30000)
+
+      const end_hooks = settings.hooks.SessionEnd[0].hooks
+      expect(end_hooks).to.have.lengthOf(2)
+      expect(end_hooks[0].command).to.equal(
+        '/usr/local/bin/user-sync-session-hook.sh'
+      )
+      expect(end_hooks[0].timeout).to.equal(30000)
+    })
+
+    it('should include both active-session and sync hooks in PostToolUse', () => {
+      const thread_config = {}
+      const settings = generate_user_settings({
+        thread_config,
+        container_user_base_path: CONTAINER_USER_BASE_PATH
+      })
+
+      const post_tool_hooks = settings.hooks.PostToolUse[0].hooks
+      expect(post_tool_hooks).to.have.lengthOf(2)
+      expect(post_tool_hooks[0].command).to.include('user-active-session-hook.sh')
+      expect(post_tool_hooks[1].command).to.include('user-sync-session-hook.sh')
+    })
   })
 
   describe('bootstrap_claude_home', () => {

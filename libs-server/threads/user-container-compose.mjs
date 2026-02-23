@@ -17,6 +17,7 @@ const log = debug('threads:user-container-compose')
  * @param {string} params.user_base_directory - Host path to user-base
  * @param {string} params.user_data_directory - Host path to user container data parent
  * @param {string} [params.container_user_base_path] - Container-internal user-base path
+ * @param {string} [params.user_public_key] - User's public key for hook scripts
  * @returns {Promise<string>} Path to generated docker-compose.yml
  */
 export const generate_compose_config = async ({
@@ -24,7 +25,8 @@ export const generate_compose_config = async ({
   thread_config,
   user_base_directory,
   user_data_directory,
-  container_user_base_path = '/home/node/user-base'
+  container_user_base_path = '/home/node/user-base',
+  user_public_key = null
 }) => {
   const container_name = `base-user-${username}`
   const user_dir = join(user_data_directory, username)
@@ -45,8 +47,13 @@ export const generate_compose_config = async ({
   const environment = {
     USER_BASE_DIRECTORY: container_user_base_path,
     CONTAINER_MODE: 'user',
+    CONTAINER_USERNAME: username,
     DISABLE_AUTOUPDATER: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
+  }
+
+  if (user_public_key) {
+    environment.USER_PUBLIC_KEY = user_public_key
   }
 
   // Add API connection env vars if available
