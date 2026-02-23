@@ -317,7 +317,7 @@ sync_submodule() {
     elif [ "$local_commit" = "$merge_base" ]; then
         # Behind remote - rebase
         log "$submodule_name: behind remote, rebasing..."
-        if ! git -C "$full_path" rebase "$remote_branch" 2>/dev/null; then
+        if ! git -C "$full_path" rebase --autostash "$remote_branch" 2>/dev/null; then
             git -C "$full_path" rebase --abort 2>/dev/null || true
             log_error "$submodule_name: rebase failed"
             "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
@@ -349,7 +349,7 @@ sync_submodule() {
     else
         # Diverged - rebase then push
         log "$submodule_name: diverged, rebasing..."
-        if ! git -C "$full_path" rebase "$remote_branch" 2>/dev/null; then
+        if ! git -C "$full_path" rebase --autostash "$remote_branch" 2>/dev/null; then
             git -C "$full_path" rebase --abort 2>/dev/null || true
             log_error "$submodule_name: rebase failed (diverged)"
             "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
