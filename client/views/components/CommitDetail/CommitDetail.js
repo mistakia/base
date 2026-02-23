@@ -68,7 +68,9 @@ const CommitDetail = ({ detail, is_loading }) => {
     <Box
       sx={{
         borderTop: `1px solid ${COLORS.border_light}`,
-        backgroundColor: '#fafafa'
+        backgroundColor: '#fafafa',
+        overflow: 'hidden',
+        minWidth: 0
       }}>
       {/* Commit message */}
       <Box sx={{ p: 2, borderBottom: `1px solid ${COLORS.border_light}` }}>
@@ -145,7 +147,7 @@ const CommitDetail = ({ detail, is_loading }) => {
 
       {/* Diff content */}
       {parsed_files.length > 0 && (
-        <Box sx={{ overflow: 'auto', maxHeight: 600 }}>
+        <Box sx={{ overflow: 'auto', maxHeight: 600, maxWidth: '100%' }}>
           {parsed_files.map((file_diff, index) => (
             <FileDiff
               key={file_diff.name || index}

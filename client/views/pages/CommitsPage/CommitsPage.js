@@ -9,7 +9,6 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  Button,
   CircularProgress
 } from '@mui/material'
 
@@ -18,13 +17,14 @@ import { format_relative_time } from '@views/utils/date-formatting.js'
 import PageLayout from '@views/layout/PageLayout.js'
 import PageHead from '@views/components/PageHead/index.js'
 import CommitDetail from '@components/CommitDetail/index.js'
+import Button from '@components/primitives/Button/index.js'
 import { commits_actions } from '@core/commits/actions'
 import {
   get_commits_list,
   get_is_loading_commits,
-  get_is_loading_more_commits,
-  get_has_more_commits,
-  get_next_cursor,
+  get_commits_page,
+  get_commits_total_pages,
+  get_commits_total_count,
   get_commits_repo_name,
   get_commits_branch,
   get_commit_detail,
@@ -35,25 +35,34 @@ const CommitsPage = ({ repo_path }) => {
   const dispatch = useDispatch()
   const commits = useSelector(get_commits_list)
   const is_loading = useSelector(get_is_loading_commits)
-  const is_loading_more = useSelector(get_is_loading_more_commits)
-  const has_more = useSelector(get_has_more_commits)
-  const next_cursor = useSelector(get_next_cursor)
+  const page = useSelector(get_commits_page)
+  const total_pages = useSelector(get_commits_total_pages)
+  const total_count = useSelector(get_commits_total_count)
   const repo_name = useSelector(get_commits_repo_name)
   const branch = useSelector(get_commits_branch)
   const commit_detail = useSelector(get_commit_detail)
   const is_loading_detail = useSelector(get_is_loading_commit_detail)
 
   const [expanded_hash, set_expanded_hash] = useState(null)
+  const [page_input, set_page_input] = useState('')
 
   useEffect(() => {
     dispatch(commits_actions.load_commits({ repo_path }))
   }, [dispatch, repo_path])
 
-  const handle_load_more = () => {
-    if (next_cursor) {
-      dispatch(
-        commits_actions.load_more_commits({ repo_path, cursor: next_cursor })
-      )
+  const go_to_page = (new_page) => {
+    if (new_page >= 1 && new_page <= total_pages && new_page !== page) {
+      set_expanded_hash(null)
+      dispatch(commits_actions.load_commits({ repo_path, page: new_page }))
+    }
+  }
+
+  const handle_page_input_submit = (e) => {
+    e.preventDefault()
+    const target_page = parseInt(page_input, 10)
+    if (target_page >= 1 && target_page <= total_pages) {
+      go_to_page(target_page)
+      set_page_input('')
     }
   }
 
@@ -64,6 +73,16 @@ const CommitsPage = ({ repo_path }) => {
       set_expanded_hash(hash)
       dispatch(commits_actions.load_commit_detail({ repo_path, hash }))
     }
+  }
+
+  const get_page_numbers = () => {
+    const pages = []
+    const start = Math.max(1, page - 2)
+    const end = Math.min(total_pages, page + 2)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    return pages
   }
 
   const display_name = repo_name || repo_path || 'Repository'
@@ -91,10 +110,9 @@ const CommitsPage = ({ repo_path }) => {
                   sx={{
                     fontSize: '12px',
                     color: COLORS.text_secondary,
-                    backgroundColor: '#f0f0f0',
+                    backgroundColor: COLORS.surface_secondary,
                     px: 1,
                     py: 0.25,
-                    borderRadius: '4px',
                     fontFamily: 'monospace'
                   }}>
                   {branch}
@@ -115,10 +133,11 @@ const CommitsPage = ({ repo_path }) => {
             <TableContainer
               sx={{
                 border: `1px solid ${COLORS.border_light}`,
-                borderRadius: '6px',
-                backgroundColor: 'white'
+                borderRadius: 0,
+                backgroundColor: 'white',
+                maxWidth: '100%'
               }}>
-              <Table size='small'>
+              <Table size='small' sx={{ tableLayout: 'fixed' }}>
                 <TableBody>
                   {commits.map((commit) => (
                     <React.Fragment key={commit.hash}>
@@ -137,7 +156,7 @@ const CommitsPage = ({ repo_path }) => {
                             width: 80,
                             fontFamily: 'monospace',
                             fontSize: '12px',
-                            color: '#0969da',
+                            color: COLORS.info,
                             py: 1.5
                           }}>
                           {commit.short_hash}
@@ -179,7 +198,9 @@ const CommitsPage = ({ repo_path }) => {
                       {/* Expanded detail */}
                       {expanded_hash === commit.hash && (
                         <TableRow>
-                          <TableCell colSpan={4} sx={{ p: 0, borderBottom: 0 }}>
+                          <TableCell
+                            colSpan={4}
+                            sx={{ p: 0, borderBottom: 0, overflow: 'hidden' }}>
                             <CommitDetail
                               detail={
                                 commit_detail?.hash === commit.hash
@@ -207,20 +228,95 @@ const CommitsPage = ({ repo_path }) => {
             </Box>
           )}
 
-          {/* Load more button */}
-          {has_more && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          {/* Pagination controls */}
+          {total_pages > 1 && !is_loading && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                mt: 2,
+                fontFamily: 'monospace',
+                fontSize: '12px'
+              }}>
               <Button
-                variant='outlined'
                 size='small'
-                onClick={handle_load_more}
-                disabled={is_loading_more}
-                sx={{ textTransform: 'none' }}>
-                {is_loading_more ? (
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                ) : null}
-                Load more commits
+                variant='secondary'
+                disabled={page <= 1}
+                onClick={() => go_to_page(1)}>
+                First
               </Button>
+              <Button
+                size='small'
+                variant='secondary'
+                disabled={page <= 1}
+                onClick={() => go_to_page(page - 1)}>
+                Prev
+              </Button>
+
+              {get_page_numbers().map((p) => (
+                <Button
+                  key={p}
+                  size='small'
+                  variant={p === page ? 'primary' : 'secondary'}
+                  onClick={() => go_to_page(p)}>
+                  {p}
+                </Button>
+              ))}
+
+              <Button
+                size='small'
+                variant='secondary'
+                disabled={page >= total_pages}
+                onClick={() => go_to_page(page + 1)}>
+                Next
+              </Button>
+              <Button
+                size='small'
+                variant='secondary'
+                disabled={page >= total_pages}
+                onClick={() => go_to_page(total_pages)}>
+                Last
+              </Button>
+
+              <form
+                onSubmit={handle_page_input_submit}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginLeft: '8px'
+                }}>
+                <input
+                  type='number'
+                  min={1}
+                  max={total_pages}
+                  value={page_input}
+                  onChange={(e) => set_page_input(e.target.value)}
+                  placeholder={`${page}`}
+                  style={{
+                    width: '48px',
+                    padding: '2px 4px',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    border: `1px solid ${COLORS.border}`,
+                    textAlign: 'center'
+                  }}
+                />
+                <span style={{ color: COLORS.text_secondary }}>
+                  / {total_pages}
+                </span>
+              </form>
+
+              <span
+                style={{
+                  color: COLORS.text_tertiary,
+                  marginLeft: '8px',
+                  fontSize: '11px'
+                }}>
+                {total_count} commits
+              </span>
             </Box>
           )}
         </div>

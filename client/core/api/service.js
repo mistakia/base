@@ -316,10 +316,11 @@ export const api = {
     return { url }
   },
 
-  get_commits({ repo_path, limit, before, author, search }) {
-    const params = { path: repo_path }
+  get_commits({ repo_path, limit, page, author, search }) {
+    const params = {}
+    if (repo_path) params.repo_path = repo_path
     if (limit) params.limit = limit
-    if (before) params.before = before
+    if (page) params.page = page
     if (author) params.author = author
     if (search) params.search = search
     const url = `${API_URL}/git/commits?${qs.stringify(params)}`
@@ -327,7 +328,8 @@ export const api = {
   },
 
   get_commit_detail({ repo_path, hash }) {
-    const url = `${API_URL}/git/commit/${hash}?path=${encodeURIComponent(repo_path || '')}`
+    const params = repo_path ? `repo_path=${encodeURIComponent(repo_path)}` : ''
+    const url = `${API_URL}/git/commit/${hash}?${params}`
     return { url }
   },
 

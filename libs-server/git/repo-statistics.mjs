@@ -213,6 +213,7 @@ function sanitize_shell_arg(value) {
  * @param {string} params.repo_path Path to the repository
  * @param {number} [params.limit=50] Maximum number of commits to return
  * @param {string} [params.before] Commit hash cursor - return commits before this commit
+ * @param {number} [params.skip=0] Number of commits to skip (for page-based pagination)
  * @param {string} [params.author] Filter by author name/email
  * @param {string} [params.search] Search commit messages (grep)
  * @returns {Promise<Object>} { commits, has_more }
@@ -221,6 +222,7 @@ export async function get_commit_log({
   repo_path,
   limit = 50,
   before,
+  skip = 0,
   author,
   search
 }) {
@@ -230,6 +232,10 @@ export async function get_commit_log({
 
   if (before) {
     args.push(`${before}~1`)
+  }
+
+  if (skip > 0) {
+    args.push(`--skip=${skip}`)
   }
 
   if (author) {

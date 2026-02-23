@@ -76,13 +76,18 @@ describe('Git Commits API', function () {
   describe('GET /api/git/commits', () => {
     it('should return commit list for root repo (empty path)', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/commits').query({ path: '' }),
+        chai
+          .request(server)
+          .get('/api/git/commits')
+          .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
       expect(res).to.have.status(200)
       expect(res.body).to.have.property('commits')
-      expect(res.body).to.have.property('has_more')
+      expect(res.body).to.have.property('total_count')
+      expect(res.body).to.have.property('page')
+      expect(res.body).to.have.property('per_page')
       expect(res.body).to.have.property('repo_name')
       expect(res.body).to.have.property('branch')
       expect(res.body.commits).to.be.an('array')
@@ -95,7 +100,7 @@ describe('Git Commits API', function () {
       expect(commit).to.have.property('date')
     })
 
-    it('should return commits when no path param provided', async () => {
+    it('should default to user base when no repo_path param provided', async () => {
       const res = await authenticate_request(
         chai.request(server).get('/api/git/commits'),
         test_user
@@ -111,37 +116,38 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ path: '', limit: 2 }),
+          .query({ repo_path: test_repo.user_path, limit: 2 }),
         test_user
       )
 
       expect(res).to.have.status(200)
       expect(res.body.commits.length).to.equal(2)
-      expect(res.body.has_more).to.be.true
-      expect(res.body.next_cursor).to.be.a('string')
+      expect(res.body.per_page).to.equal(2)
+      expect(res.body.total_count).to.be.greaterThan(2)
     })
 
-    it('should paginate using before cursor', async () => {
+    it('should paginate using page parameter', async () => {
       const first_page = await authenticate_request(
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ path: '', limit: 3 }),
+          .query({ repo_path: test_repo.user_path, limit: 3, page: 1 }),
         test_user
       )
 
       expect(first_page).to.have.status(200)
-      const cursor = first_page.body.next_cursor
+      expect(first_page.body.page).to.equal(1)
 
       const second_page = await authenticate_request(
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ path: '', limit: 3, before: cursor }),
+          .query({ repo_path: test_repo.user_path, limit: 3, page: 2 }),
         test_user
       )
 
       expect(second_page).to.have.status(200)
+      expect(second_page.body.page).to.equal(2)
       expect(second_page.body.commits).to.be.an('array')
       const first_page_hashes = first_page.body.commits.map((c) => c.hash)
       const second_page_hashes = second_page.body.commits.map((c) => c.hash)
@@ -156,7 +162,7 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ path: '../../../etc' }),
+          .query({ repo_path: '../../../etc' }),
         test_user
       )
 
@@ -171,13 +177,16 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commits')
-          .query({ path: '', limit: 1 }),
+          .query({ repo_path: test_repo.user_path, limit: 1 }),
         test_user
       )
       const hash = list_res.body.commits[0].hash
 
       const res = await authenticate_request(
-        chai.request(server).get(`/api/git/commit/${hash}`).query({ path: '' }),
+        chai
+          .request(server)
+          .get(`/api/git/commit/${hash}`)
+          .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
@@ -197,7 +206,7 @@ describe('Git Commits API', function () {
         chai
           .request(server)
           .get('/api/git/commit/not-a-hash')
-          .query({ path: '' }),
+          .query({ repo_path: test_repo.user_path }),
         test_user
       )
 

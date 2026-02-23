@@ -10,16 +10,22 @@ export function get_is_loading_commits(state) {
   return get_commits_state(state).get('is_loading_commits')
 }
 
-export function get_is_loading_more_commits(state) {
-  return get_commits_state(state).get('is_loading_more')
+export function get_commits_page(state) {
+  return get_commits_state(state).get('page')
 }
 
-export function get_has_more_commits(state) {
-  return get_commits_state(state).get('has_more')
+export function get_commits_total_count(state) {
+  return get_commits_state(state).get('total_count')
 }
 
-export function get_next_cursor(state) {
-  return get_commits_state(state).get('next_cursor')
+export function get_commits_per_page(state) {
+  return get_commits_state(state).get('per_page')
+}
+
+export function get_commits_total_pages(state) {
+  const total_count = get_commits_total_count(state)
+  const per_page = get_commits_per_page(state)
+  return Math.max(1, Math.ceil(total_count / per_page))
 }
 
 export function get_commits_repo_name(state) {

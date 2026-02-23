@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { Box, Collapse, IconButton, Typography } from '@mui/material'
 import {
   ExpandMore as ExpandMoreIcon,
@@ -9,6 +10,7 @@ import {
 
 import { COLORS } from '@theme/colors.js'
 import { format_relative_time } from '@views/utils/date-formatting.js'
+import { get_user_permissions } from '@core/app/selectors'
 import TwoCellRow from '@components/MetadataDisplay/TwoCellRow.js'
 import LabeledCell from '@components/MetadataDisplay/LabeledCell.js'
 
@@ -49,6 +51,8 @@ const GitRepoInfo = ({
   repo_path
 }) => {
   const [expanded, set_expanded] = useState(false)
+  const user_permissions = useSelector(get_user_permissions)
+  const can_view_commits = user_permissions?.global_write === true
 
   if (is_loading) {
     return (
@@ -82,15 +86,21 @@ const GitRepoInfo = ({
   const last_commit_display = last_commit ? (
     <>
       {format_relative_time(last_commit.date) || '-'} (
-      <Link
-        to={commits_link}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          color: '#0969da',
-          textDecoration: 'none'
-        }}>
-        {last_commit.short_hash}
-      </Link>
+      {can_view_commits ? (
+        <Link
+          to={commits_link}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            color: COLORS.info,
+            textDecoration: 'none'
+          }}>
+          {last_commit.short_hash}
+        </Link>
+      ) : (
+        <span style={{ fontFamily: 'monospace' }}>
+          {last_commit.short_hash}
+        </span>
+      )}
       )
     </>
   ) : (

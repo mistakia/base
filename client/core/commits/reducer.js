@@ -5,9 +5,9 @@ import { commits_action_types } from './actions'
 const CommitsState = new Record({
   commits: [],
   is_loading_commits: false,
-  is_loading_more: false,
-  has_more: false,
-  next_cursor: null,
+  page: 1,
+  total_count: 0,
+  per_page: 50,
   repo_name: null,
   branch: null,
   commit_detail: null,
@@ -17,39 +17,22 @@ const CommitsState = new Record({
 
 export function commits_reducer(state = new CommitsState(), { payload, type }) {
   switch (type) {
-    case commits_action_types.GET_COMMITS_PENDING: {
-      const is_load_more = payload?.opts?.before
-      if (is_load_more) {
-        return state.merge({
-          is_loading_more: true,
-          error: null
-        })
-      }
+    case commits_action_types.GET_COMMITS_PENDING:
       return state.merge({
         is_loading_commits: true,
         error: null
       })
-    }
 
     case commits_action_types.GET_COMMITS_FULFILLED: {
-      const { commits, has_more, next_cursor, repo_name, branch } = payload.data
-      const is_load_more = payload?.opts?.before
-
-      if (is_load_more) {
-        return state.merge({
-          commits: [...state.get('commits'), ...commits],
-          is_loading_more: false,
-          has_more,
-          next_cursor
-        })
-      }
+      const { commits, total_count, page, per_page, repo_name, branch } =
+        payload.data
 
       return state.merge({
         commits,
         is_loading_commits: false,
-        is_loading_more: false,
-        has_more,
-        next_cursor,
+        total_count,
+        page,
+        per_page,
         repo_name,
         branch
       })
@@ -58,7 +41,6 @@ export function commits_reducer(state = new CommitsState(), { payload, type }) {
     case commits_action_types.GET_COMMITS_FAILED:
       return state.merge({
         is_loading_commits: false,
-        is_loading_more: false,
         error: payload.error
       })
 
