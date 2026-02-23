@@ -24,6 +24,8 @@ import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { active_sessions_actions } from '@core/active-sessions/actions'
 import { show_success_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
+import { thread_sheet_actions } from '@core/thread-sheet/actions'
+import { get_thread_sheet_sheets } from '@core/thread-sheet/selectors'
 
 //= ====================================
 //  UTILITY SAGAS
@@ -212,11 +214,24 @@ export function* set_thread_archive_state_saga({ payload }) {
         yield call(delete_active_session, {
           session_id: active_session.session_id
         })
+        // Remove session from active list and immediately dismiss from ended
+        // list to avoid a brief flicker of the "ended" card in the panel
         yield put(
           active_sessions_actions.active_session_ended(
             active_session.session_id
           )
         )
+        yield put(
+          active_sessions_actions.dismiss_ended_session(
+            active_session.session_id
+          )
+        )
+      }
+
+      // Close floating thread panel if open for this thread
+      const open_sheets = yield select(get_thread_sheet_sheets)
+      if (open_sheets.includes(thread_id)) {
+        yield put(thread_sheet_actions.close_thread_sheet(thread_id))
       }
     } else {
       // Reactivating - no reason needed, timeline entry shows state change
@@ -226,7 +241,10 @@ export function* set_thread_archive_state_saga({ payload }) {
       })
     }
     yield put(dialog_actions.cancel())
-    yield call(get_thread, { thread_id })
+    // No get_thread call needed. The PUT response dispatches
+    // PUT_THREAD_STATE_FULFILLED which the threads reducer handles
+    // to update the basic list. A separate get_thread races with
+    // the server-side index rebuild and can return stale data.
   } catch (error) {
     console.error('Error setting thread archive state:', error)
   }

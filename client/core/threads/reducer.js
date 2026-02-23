@@ -1,6 +1,7 @@
 import { Record, List, Map } from 'immutable'
 
 import { threads_action_types } from './actions'
+import { thread_action_types } from '@core/thread/actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
 import { TABLE_OPERATORS } from 'react-table/src/constants.mjs'
 import { create_default_table_state } from '@core/table/create-default-table-state.js'
@@ -234,12 +235,14 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         threads_error: null
       })
 
-    case threads_action_types.GET_THREADS_FULFILLED:
+    case threads_action_types.GET_THREADS_FULFILLED: {
+      const thread_list = payload.data || []
       return state.merge({
-        threads: new List(payload.data || []),
+        threads: new List(thread_list),
         is_loading_threads: false,
         threads_error: null
       })
+    }
 
     case threads_action_types.GET_THREADS_FAILED:
       return state.merge({
@@ -386,6 +389,17 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           error: payload.error
         })
       )
+    }
+
+    // ========================================================================
+    // Thread State Change (from PUT /threads/:id/state response)
+    // ========================================================================
+
+    case thread_action_types.PUT_THREAD_STATE_FULFILLED: {
+      const thread_data = payload.data
+      const thread_id = thread_data?.thread_id
+      if (!thread_id) return state
+      return update_thread_in_basic_list(state, thread_id, thread_data)
     }
 
     // ========================================================================
