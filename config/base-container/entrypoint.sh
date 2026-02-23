@@ -84,6 +84,26 @@ if [ ! -f "$SETTINGS_FILE" ] && [ -f "$SETTINGS_TEMPLATE" ]; then
     chown node:node "$SETTINGS_FILE"
 fi
 
+# Setup GitHub CLI config directory (persistent volume mount)
+GH_CONFIG_DIR="/home/node/.config/gh"
+if [ -d "$GH_CONFIG_DIR" ]; then
+    # Ensure ownership on mounted volume
+    chown -R node:node "$GH_CONFIG_DIR" 2>/dev/null || true
+    # If GITHUB_TOKEN is set and gh is not yet authenticated, bootstrap auth
+    if [ -n "${GITHUB_TOKEN:-}" ] && [ ! -f "$GH_CONFIG_DIR/hosts.yml" ]; then
+        echo "Bootstrapping gh CLI authentication from GITHUB_TOKEN..."
+        run_as_node mkdir -p "$GH_CONFIG_DIR"
+        cat > "$GH_CONFIG_DIR/hosts.yml" << GHEOF
+github.com:
+    oauth_token: ${GITHUB_TOKEN}
+    user: ${GIT_AUTHOR_NAME:-trashman}
+    git_protocol: ssh
+GHEOF
+        chown node:node "$GH_CONFIG_DIR/hosts.yml"
+        chmod 600 "$GH_CONFIG_DIR/hosts.yml"
+    fi
+fi
+
 # Configure git identity from environment variables (as node user)
 if [ -n "$GIT_AUTHOR_NAME" ]; then
     run_as_node git config --global user.name "$GIT_AUTHOR_NAME"
