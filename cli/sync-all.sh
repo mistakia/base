@@ -247,6 +247,30 @@ smart_rebase() {
     return 0
 }
 
+# Ensure merge driver git config is present for thread/import-history submodules
+ensure_thread_merge_drivers() {
+    local full_path="$1"
+
+    # Check if the primary driver is already configured
+    if git -C "$full_path" config --local merge.json-field-merge.driver >/dev/null 2>&1; then
+        return 0
+    fi
+
+    log_verbose "Configuring merge drivers for $(basename "$full_path")..."
+
+    # json-field-merge (metadata.json)
+    git -C "$full_path" config --local merge.json-field-merge.name "JSON field-level merge driver"
+    git -C "$full_path" config --local merge.json-field-merge.driver "node $SCRIPT_DIR/json-merge-driver.mjs %O %A %B"
+
+    # jsonl-append-merge (timeline.jsonl, claude-session.jsonl)
+    git -C "$full_path" config --local merge.jsonl-append-merge.name "JSONL append-only merge driver"
+    git -C "$full_path" config --local merge.jsonl-append-merge.driver "node $SCRIPT_DIR/jsonl-merge-driver.mjs %O %A %B"
+
+    # json-larger-file (normalized-session.json)
+    git -C "$full_path" config --local merge.json-larger-file.name "JSON take-larger-file merge driver"
+    git -C "$full_path" config --local merge.json-larger-file.driver "node $SCRIPT_DIR/json-larger-file-merge-driver.mjs %O %A %B"
+}
+
 # Sync a single submodule: fetch -> divergence check -> rebase/push
 sync_submodule() {
     local submodule_path="$1"
@@ -263,6 +287,11 @@ sync_submodule() {
 
     if ! check_git_state "$full_path"; then
         return 1
+    fi
+
+    # Ensure merge drivers are configured for thread-like submodules
+    if [ "$submodule_name" = "thread" ] || [ "$submodule_name" = "import-history" ]; then
+        ensure_thread_merge_drivers "$full_path"
     fi
 
     log_verbose "Syncing $submodule_name..."

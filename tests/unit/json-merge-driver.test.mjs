@@ -112,6 +112,26 @@ describe('json-merge-driver', () => {
 
       expect(result.archived_at).to.equal('2026-01-02T00:00:00Z')
     })
+
+    it('should resolve visibility_analyzed_at timestamp conflicts', () => {
+      const base = { visibility_analyzed_at: '2026-01-01T00:00:00Z' }
+      const ours = { visibility_analyzed_at: '2026-01-01T12:00:00Z' }
+      const theirs = { visibility_analyzed_at: '2026-01-01T18:00:00Z' }
+
+      const result = merge_json({ base, ours, theirs })
+
+      expect(result.visibility_analyzed_at).to.equal('2026-01-01T18:00:00Z')
+    })
+
+    it('should resolve relations_cleanup_at timestamp conflicts', () => {
+      const base = { relations_cleanup_at: '2026-01-01T00:00:00Z' }
+      const ours = { relations_cleanup_at: '2026-01-02T00:00:00Z' }
+      const theirs = { relations_cleanup_at: '2026-01-01T06:00:00Z' }
+
+      const result = merge_json({ base, ours, theirs })
+
+      expect(result.relations_cleanup_at).to.equal('2026-01-02T00:00:00Z')
+    })
   })
 
   describe('array union merge', () => {
@@ -204,14 +224,37 @@ describe('json-merge-driver', () => {
       expect(result.source).to.not.have.property('raw_data_saved')
     })
 
-    it('should return null for conflicting sub-key values', () => {
+    it('should take theirs for conflicting unknown sub-key values', () => {
       const base = { source: { provider: 'claude' } }
       const ours = { source: { provider: 'openai' } }
       const theirs = { source: { provider: 'gemini' } }
 
       const result = merge_json({ base, ours, theirs })
 
-      expect(result).to.be.null
+      expect(result).to.not.be.null
+      expect(result.source.provider).to.equal('gemini')
+    })
+
+    it('should resolve nested numeric sub-key conflicts via recursive resolution', () => {
+      const base = { source: { provider: 'claude', entry_count: 10 } }
+      const ours = { source: { provider: 'claude', entry_count: 15 } }
+      const theirs = { source: { provider: 'claude', entry_count: 20 } }
+
+      const result = merge_json({ base, ours, theirs })
+
+      expect(result).to.not.be.null
+      expect(result.source.entry_count).to.equal(20)
+    })
+
+    it('should resolve nested timestamp sub-key conflicts via recursive resolution', () => {
+      const base = { source: { provider: 'claude', start_time: '2026-01-01T00:00:00Z' } }
+      const ours = { source: { provider: 'claude', start_time: '2026-01-01T06:00:00Z' } }
+      const theirs = { source: { provider: 'claude', start_time: '2026-01-01T12:00:00Z' } }
+
+      const result = merge_json({ base, ours, theirs })
+
+      expect(result).to.not.be.null
+      expect(result.source.start_time).to.equal('2026-01-01T12:00:00Z')
     })
 
     it('should merge prompt_properties with disjoint changes', () => {
@@ -250,14 +293,15 @@ describe('json-merge-driver', () => {
   })
 
   describe('unknown scalar conflict', () => {
-    it('should return null for conflicting unknown scalar fields', () => {
+    it('should take theirs for conflicting unknown scalar fields', () => {
       const base = { title: 'original' }
       const ours = { title: 'ours title' }
       const theirs = { title: 'theirs title' }
 
       const result = merge_json({ base, ours, theirs })
 
-      expect(result).to.be.null
+      expect(result).to.not.be.null
+      expect(result.title).to.equal('theirs title')
     })
   })
 

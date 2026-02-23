@@ -22,7 +22,11 @@ const TIMESTAMP_FIELDS = new Set([
   'updated_at',
   'archived_at',
   'tags_analyzed_at',
-  'relations_analyzed_at'
+  'relations_analyzed_at',
+  'visibility_analyzed_at',
+  'relations_cleanup_at',
+  'start_time',
+  'end_time'
 ])
 
 const ARRAY_FIELDS = new Set([
@@ -46,7 +50,11 @@ const NUMERIC_MAX_FIELDS = new Set([
   'input_tokens',
   'output_tokens',
   'cache_creation_input_tokens',
-  'cache_read_input_tokens'
+  'cache_read_input_tokens',
+  'entry_count',
+  'total_tokens',
+  'duration_minutes',
+  'duration_ms'
 ])
 
 export function merge_json({ base, ours, theirs }) {
@@ -120,8 +128,8 @@ function resolve_conflict({ key, base_val, ours_val, theirs_val }) {
     return resolve_numeric_max(ours_val, theirs_val)
   }
 
-  // unknown scalar conflict - cannot auto-resolve, fall back to git
-  return resolve_unknown_scalar()
+  // unknown scalar conflict - take theirs (both sides produce acceptable values)
+  return resolve_unknown_scalar({ theirs_val })
 }
 
 function resolve_timestamp(ours_val, theirs_val) {
@@ -185,8 +193,12 @@ function resolve_nested_object(base_val, ours_val, theirs_val) {
         result[sub_key] = t
       }
     } else if (o_changed && t_changed && !values_equal(o, t)) {
-      // both changed sub-key to different values - unresolvable
-      return undefined
+      // both changed sub-key to different values - try field-type resolution
+      const resolved = resolve_conflict({ key: sub_key, base_val: b, ours_val: o, theirs_val: t })
+      if (resolved === undefined) {
+        return undefined
+      }
+      result[sub_key] = resolved
     }
   }
 
@@ -199,8 +211,8 @@ function resolve_numeric_max(ours_val, theirs_val) {
   return Math.max(o, t)
 }
 
-function resolve_unknown_scalar() {
-  return undefined
+function resolve_unknown_scalar({ theirs_val }) {
+  return theirs_val
 }
 
 function values_equal(a, b) {
