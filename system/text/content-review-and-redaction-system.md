@@ -21,6 +21,7 @@ relations:
   - relates [[sys:system/guideline/review-for-personal-information.md]]
   - relates [[sys:system/guideline/review-for-secret-information.md]]
   - relates [[sys:system/workflow/review-for-non-public-information.md]]
+  - relates [[sys:system/text/permission-system-design.md]]
 tags:
   - user:tag/base-project.md
 updated_at: '2026-02-15T03:35:58.772Z'
@@ -86,7 +87,7 @@ The review workflow (`sys:system/workflow/review-for-non-public-information.md`)
 
 ## Content Redaction (API Response Masking)
 
-Documented in detail in `docs/permission-system-design.md` Section 8. Key points summarized here.
+Documented in detail in [[sys:system/text/permission-system-design.md]] Section 8. Key points summarized here.
 
 ### Purpose
 

@@ -4,13 +4,10 @@ Generate a prioritized task list by retrieving and analyzing all active tasks.
 
 ## Step 1: Retrieve Active Tasks
 
-Use the MCP tool `mcp__base-mcp-server__list_tasks` with these parameters:
+Use the base CLI to retrieve active tasks:
 
-```json
-{
-  "include_status": ["Planned", "Started", "In Progress"],
-  "include_completed": false
-}
+```bash
+base entity list -t task --status "Planned,In Progress" --json
 ```
 
 ## Step 2: Group and Analyze

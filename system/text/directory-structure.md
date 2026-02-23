@@ -30,12 +30,10 @@ The system is organized into the following top-level directories:
 ├── client/             # Client-side React application and components
 ├── cli/                # Command-line tools and utilities
 ├── config/             # Configuration files and settings
-├── docs/               # Project documentation
-├── examples/           # Example code and usage patterns
 ├── libs-server/        # Server-side libraries and modules
 ├── libs-shared/        # Shared code (client & server)
 ├── server/             # API server
-├── services/           # Long-running processes and MCP servers
+├── services/           # Long-running processes
 ├── static/             # Static resources (favicon, etc.)
 ├── system/             # System Knowledge Base (schemas, guidelines, workflows)
 ├── tests/              # Test files (unit, integration, e2e)

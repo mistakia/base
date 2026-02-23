@@ -24,7 +24,7 @@
     "webpack/**/*.{js,mjs}",
     "tests/**/*.{js,mjs}"
   ],
-  "ignore": ["build/**", "static/**", "tmp/**", "docs/**"],
+  "ignore": ["build/**", "static/**", "tmp/**"],
   "ignoreDependencies": [
     "babel-loader",
     "css-loader",

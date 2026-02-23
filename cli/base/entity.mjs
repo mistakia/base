@@ -38,10 +38,60 @@ import config from '#config'
 
 export const command = 'entity <command>'
 export const describe =
-  'Entity operations (list, get, update, observe, tree, move, validate, visibility)'
+  'Entity operations (create, list, get, update, observe, tree, move, validate, visibility)'
 
 export const builder = (yargs) =>
   yargs
+    .command(
+      'create <base_uri>',
+      'Create a new entity file with auto-generated id and timestamps',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe:
+              'Base URI for the entity (e.g., user:task/my-task.md, user:text/doc.md)',
+            type: 'string'
+          })
+          .option('title', {
+            alias: 't',
+            describe: 'Entity title',
+            type: 'string',
+            demandOption: true
+          })
+          .option('type', {
+            describe: 'Entity type (task, text, workflow, guideline, tag, etc.)',
+            type: 'string',
+            demandOption: true
+          })
+          .option('description', {
+            alias: 'd',
+            describe: 'Brief description',
+            type: 'string'
+          })
+          .option('content', {
+            alias: 'c',
+            describe: 'Markdown content after frontmatter',
+            type: 'string',
+            default: ''
+          })
+          .option('properties', {
+            alias: 'p',
+            describe: 'Additional properties as JSON string',
+            type: 'string'
+          })
+          .option('public-read', {
+            describe: 'Set entity as publicly readable',
+            type: 'boolean',
+            default: false
+          })
+          .option('dry-run', {
+            alias: 'n',
+            describe: 'Preview without writing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_create
+    )
     .command(
       'list',
       'Query entities with filters',
@@ -310,10 +360,90 @@ export const builder = (yargs) =>
     )
     .demandCommand(
       1,
-      'Specify a subcommand: list, get, update, observe, tree, move, validate, threads, or visibility'
+      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, threads, or visibility'
     )
 
 export const handler = () => {}
+
+async function handle_create(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri, title, description, content } = argv
+    const entity_type = argv.type
+
+    let extra_properties = {}
+    if (argv.properties) {
+      try {
+        extra_properties = JSON.parse(argv.properties)
+      } catch {
+        throw new Error(
+          `Invalid JSON for --properties: ${argv.properties}`
+        )
+      }
+    }
+
+    const entity_properties = {
+      title,
+      ...extra_properties,
+      ...(description ? { description } : {}),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_public_key: config.user_public_key,
+      public_read: Boolean(argv['public-read'])
+    }
+
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+
+    if (argv['dry-run']) {
+      if (argv.json) {
+        console.log(
+          JSON.stringify(
+            { dry_run: true, base_uri, absolute_path, entity_type, entity_properties },
+            null,
+            2
+          )
+        )
+      } else {
+        console.log('Dry run - no changes made')
+        console.log(`  Path: ${absolute_path}`)
+        console.log(`  Type: ${entity_type}`)
+        console.log(`  Title: ${title}`)
+        if (description) console.log(`  Description: ${description}`)
+        if (Object.keys(extra_properties).length > 0) {
+          console.log(`  Properties: ${JSON.stringify(extra_properties)}`)
+        }
+        console.log(`  Public read: ${entity_properties.public_read}`)
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    const result = await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties,
+      entity_type,
+      entity_content: content || ''
+    })
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          { success: true, entity_id: result.entity_id, base_uri, path: absolute_path },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Created ${entity_type} entity at ${base_uri}`)
+      console.log(`  Entity ID: ${result.entity_id}`)
+      console.log(`  Path: ${absolute_path}`)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
 
 async function fetch_entities_from_api(argv) {
   const params = new URLSearchParams()

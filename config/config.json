@@ -3,7 +3,6 @@
   "production_url": "",
   "production_wss": "",
   "public_url": "",
-  "base_hostname": "",
   "github_access_token": "",
   "github": {
     "webhook_secret": ""
@@ -13,7 +12,6 @@
   "user_main_branch": "main",
   "user_id": "",
   "user_public_key": "",
-  "notion_api_key": "",
   "cloudflare": {
     "zone_id": "",
     "user_email": "",
