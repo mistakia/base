@@ -256,9 +256,13 @@ export const validate_claude_session_structure = ({ session }) => {
     'queue-operation'
   ]
 
+  // Conversation entry types that represent actual user/assistant interaction
+  const CONVERSATION_ENTRY_TYPES = ['user', 'assistant']
+
   if (session.entries) {
     const required_fields = ['uuid', 'timestamp', 'type']
     let has_meaningful_entry = false
+    let has_conversation_entry = false
 
     session.entries.forEach((entry, index) => {
       // Skip validation for system/metadata entry types
@@ -268,6 +272,11 @@ export const validate_claude_session_structure = ({ session }) => {
 
       // Track that we have at least one non-system entry
       has_meaningful_entry = true
+
+      // Track conversation entries (user or assistant messages)
+      if (entry.type && CONVERSATION_ENTRY_TYPES.includes(entry.type)) {
+        has_conversation_entry = true
+      }
 
       required_fields.forEach((field) => {
         if (!entry[field]) {
@@ -280,6 +289,14 @@ export const validate_claude_session_structure = ({ session }) => {
     if (!has_meaningful_entry) {
       errors.push(
         'Session contains only system entries (snapshots/metadata) with no conversation data'
+      )
+    }
+
+    // Session must have at least one conversation entry (user or assistant)
+    // Sessions with only system/progress entries (e.g. exited before initial prompt) are empty
+    if (has_meaningful_entry && !has_conversation_entry) {
+      errors.push(
+        'Session has no conversation entries (exited before initial user prompt)'
       )
     }
   }
