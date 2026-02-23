@@ -30,7 +30,7 @@ export const TOOL_ACCESS_TYPES = {
   Write: 'modify',
   NotebookEdit: 'modify',
 
-  // Create operations
+  // Create operations (legacy MCP tool, kept for historical thread compatibility)
   mcp__base__entity_create: 'create'
 }
 
@@ -240,6 +240,20 @@ export function extract_from_bash_commands({ timeline }) {
 
     const command = entry.content?.tool_parameters?.command
     if (!command) continue
+
+    // Detect `base entity create` CLI commands
+    const entity_create_match = command.match(
+      /base\s+entity\s+create\s+["']?((?:user|sys):[^\s"']+)["']?/
+    )
+    if (entity_create_match) {
+      references.push({
+        base_uri: entity_create_match[1],
+        access_type: 'create',
+        confidence: 'high',
+        source: 'bash_command'
+      })
+      continue
+    }
 
     const parsed = parse_bash_command(command)
     for (const { path, access_type } of parsed) {

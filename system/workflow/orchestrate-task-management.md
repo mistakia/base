@@ -226,7 +226,7 @@ base thread archive <thread_id> --completed
 ```
 
 ### Create Draft Tasks
-Use `mcp__base__entity_create` to create new draft task entities based on observations during the review.
+Use `base entity create` CLI (via Bash tool) to create new draft task entities based on observations during the review.
 
 ## Phase 3: Review Thread Context (on request)
 

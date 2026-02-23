@@ -107,7 +107,7 @@ Create a structured plan by understanding requirements, analyzing context, and p
   - Only update the task entity file at the very end, after the user confirms the final plan
 - If no task entity is known:
   - Follow **Step 2** (Task Entity Setup) from [[sys:system/workflow/write-task.md]] for schema reading, folder placement, and tag selection
-  - Create the entity using `mcp__base__entity_create`
+  - Create the entity using `base entity create` CLI (via Bash tool)
   - Include the full implementation plan in the `entity_content` field
 
 11. **Record completion observation**:

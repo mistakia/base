@@ -41,8 +41,7 @@
     "setup:cli": "sh cli/setup-cli-wrapper.sh"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.2",
-    "@notionhq/client": "^2.3.0",
+"@notionhq/client": "^2.3.0",
     "@parcel/watcher": "^2.5.6",
     "@pierre/diffs": "^1.0.4",
     "@shikijs/langs": "^3.9.2",

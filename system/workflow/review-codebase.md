@@ -118,7 +118,7 @@ For each section, define:
 
 ### 3.1 Create Review Task Entity
 
-Use the `mcp__base__entity_create` tool to create the review task entity:
+Use the `base entity create` CLI command (via Bash tool) to create the review task entity:
 
 - **Base URI**: `user:task/<project>/codebase-review-<date-slug>.md`
 - **Title**: `Codebase Review: <project> (<date-slug>)`
@@ -159,7 +159,7 @@ Record the absolute file path of the created review entity for use in Phase 4.
 
 ### 3.2 Create Findings Task Entity
 
-Use the `mcp__base__entity_create` tool to create the findings task entity:
+Use the `base entity create` CLI command (via Bash tool) to create the findings task entity:
 
 - **Base URI**: `user:task/<project>/codebase-review-findings-<date-slug>.md`
 - **Title**: `Codebase Review Findings: <project> (<date-slug>)`

@@ -3,9 +3,7 @@
   "entry": [
     "client/index.js",
     "services/server.mjs",
-    "services/mcp/mcp-server-sse.mjs",
-    "services/mcp/mcp-server-stdio.mjs",
-    "server/services/metadata-queue-processor.mjs",
+"server/services/metadata-queue-processor.mjs",
     "server/services/cli-queue-worker.mjs",
     "server/services/relation-analysis-queue-processor.mjs",
     "cli/**/*.mjs",

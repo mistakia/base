@@ -49,7 +49,7 @@ Universal tools are available to all threads and provide core system functionali
 
 **Entity Tools**:
 
-- `entity_create` - Create new entities
+- `base entity create` - Create new entities (CLI command via Bash tool)
 
 ### Workflow-Defined Tools
 

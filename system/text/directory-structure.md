@@ -71,14 +71,13 @@ The `libs-server/` directory contains server-specific code organized by function
     │   ├── shared/             # Shared integration utilities
     │   └── thread/             # Thread integration utilities
     ├── markdown/               # Markdown processing
-    ├── mcp/                    # Model Context Protocol service
     ├── repository/             # Repository processing (filesystem & git)
     ├── services/               # Service layer components
     ├── sync/                   # Data synchronization utilities
     ├── tag/                    # Tag management functionality
     ├── task/                   # Task management functionality
     ├── threads/                # Thread management functionality
-    ├── tools/                  # MCP tools implementation
+    ├── tools/                  # Tool implementations (entity create, etc.)
     ├── users/                  # User management functionality
     ├── utils/                  # General utilities
     └── workflow/               # Workflow management
@@ -101,9 +100,6 @@ The `services/` directory contains long-running processes and servers:
 ```
 └── services/
     ├── claude-session-import-service.mjs  # Claude session import service
-    ├── mcp/                               # MCP server implementations
-    │   ├── mcp-server-sse.mjs            # Server-sent events MCP server
-    │   └── mcp-server-stdio.mjs          # Standard I/O MCP server
     └── server.mjs                        # Main API server
 ```
 
