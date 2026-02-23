@@ -7,7 +7,10 @@ set -euo pipefail
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "Error: must be run from within a git repository" >&2
+    exit 1
+}
 GITMODULES_FILE="$REPO_ROOT/.gitmodules"
 
 # Default options
