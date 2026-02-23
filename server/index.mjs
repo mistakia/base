@@ -100,15 +100,14 @@ api.use(
     }
   })
 )
-const allowedOrigins = [
+const allowedOrigins = new Set([
   config.public_url || '',
   'http://localhost:8080',
   'https://localhost:8080',
   'http://localhost:8081',
   'https://localhost:8081',
-  'http://192.168.1.21:8081',
-  'https://192.168.1.21:8081'
-]
+  ...(config.cors_origins || [])
+])
 
 api.use(
   cors({
@@ -116,7 +115,7 @@ api.use(
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true)
 
-      if (allowedOrigins.indexOf(origin) === -1) {
+      if (!allowedOrigins.has(origin)) {
         const msg =
           'The CORS policy for this site does not allow access from the specified Origin.'
         return callback(new Error(msg), false)

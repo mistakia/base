@@ -6,11 +6,6 @@ services:
     container_name: base-container
     init: true
     restart: unless-stopped
-    environment:
-      - GIT_AUTHOR_NAME=trashman
-      - GIT_AUTHOR_EMAIL=trashman@users.noreply.github.com
-      - GIT_COMMITTER_NAME=trashman
-      - GIT_COMMITTER_EMAIL=trashman@users.noreply.github.com
 
   camofox-browser:
     image: ghcr.io/redf0x1/camofox-browser:latest

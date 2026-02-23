@@ -76,7 +76,7 @@ References to files within git repositories with optional branch specification u
 
 Examples:
 
-- `git://github.com/mistakia/league/docs/api.md`
+- `git://github.com/example/project/docs/api.md`
 - `git://gitlab.com/company/project/specs/feature.md?branch=develop`
 - `git://internal.example.com/project.git/docs/deployment.md?branch=main`
 

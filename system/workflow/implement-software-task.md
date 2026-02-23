@@ -21,7 +21,7 @@ prompt_properties:
     required: false
     description: Example workflow data to populate templates and examples
     default:
-      org: mistakia
+      org: example
       repo: base
       issue_number: '16'
       task_name: modify-thread-creation

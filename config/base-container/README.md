@@ -75,7 +75,7 @@ Each machine has a local data directory for persistent `~/.claude` and `~/.openc
 | Machine        | Path                                    |
 | -------------- | --------------------------------------- |
 | Storage server | `/mnt/md0/base-container-data/`         |
-| MacBook        | `/Users/trashman/.base-container-data/` |
+| MacBook        | `$HOME/.base-container-data/` |
 
 One-time setup:
 
@@ -85,7 +85,7 @@ mkdir -p /mnt/md0/base-container-data/{claude-home/projects,opencode-data}
 chown -R user:user /mnt/md0/base-container-data
 
 # MacBook
-mkdir -p /Users/trashman/.base-container-data/{claude-home/projects,opencode-data}
+mkdir -p $HOME/.base-container-data/{claude-home/projects,opencode-data}
 ```
 
 On first container start, the entrypoint automatically:
@@ -151,6 +151,6 @@ The context includes:
 
 **SSH host aliases not working**: The host's SSH config is mounted read-only with root ownership. The entrypoint copies the config to a node-owned directory (`/home/node/.ssh-local`) and symlinks `/home/node/.ssh` to it. If `ssh storage` fails with "Could not resolve hostname", restart the container to trigger the entrypoint SSH setup.
 
-**Hook scripts fail with "command not found"**: Ensure base submodule dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd /Users/trashman/user-base/repository/active/base && yarn install`.
+**Hook scripts fail with "command not found"**: Ensure base submodule dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd $USER_BASE_DIRECTORY/repository/active/base && yarn install`.
 
 **Submodule operations fail (storage server)**: Ensure `git config --global protocol.file.allow always` is set (done by entrypoint).

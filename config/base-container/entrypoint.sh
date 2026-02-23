@@ -169,10 +169,10 @@ SSH host aliases from the host machine's ~/.ssh/config are available. Use the al
 
 ### Machine-specific Notes
 $(if [ "$MACHINE_NAME" = "storage" ]; then
-    echo "- Running on the storage server (192.168.1.21)"
+    echo "- Running on the storage server (${STORAGE_IP:-local network})"
     echo "- network_mode: host (direct network access)"
     echo "- Local PostgreSQL, Redis, and NFS services available"
-    echo "- Git bare repos for submodules at /mnt/md0/"
+    echo "- Git bare repos for submodules at ${GIT_BARE_REPO_DIR:-/mnt/md0/}"
 elif [ "$MACHINE_NAME" = "macbook" ]; then
     echo "- Running on the MacBook (development machine)"
     echo "- Host services accessible via host.docker.internal"

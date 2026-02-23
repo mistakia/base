@@ -187,6 +187,23 @@ Machine-specific configuration (SSL, ports, transcription args) is resolved via 
 
 `pm2.config.js` auto-detects the current machine by matching `os.hostname()` against `machine_registry` entries and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
 
+### Core vs Extension Boundary
+
+The base repo is the generic engine. It must not contain user-specific values
+(paths, IPs, repo names, addresses, git identity). All customization lives in
+the user-base directory using the same two-layer pattern established for config,
+workflows, and guidelines:
+
+- Config: base `config/config.json` provides defaults, user-base overlays
+- Workflows: base `system/workflow/` provides core, user-base `workflow/` extends
+- Guidelines: base `system/guideline/` provides core, user-base `guideline/` extends
+- CLI scripts: base `cli/` provides core tools, user-base `cli/` adds user scripts
+- Container config: base provides generic Dockerfile/compose, user-base overrides per machine
+- Deployment config: user-base `config/` holds `deploy-hooks.conf`, `labels.mjs`, etc.
+
+When adding functionality: would another user need this exact value? If not,
+it belongs in user-base.
+
 ### Debug Logging
 
 Enable config loader debug output: `DEBUG=config:loader node ...`
@@ -397,27 +414,6 @@ base entity list -s "feature" -t task --json
 
 # Direct alternatives (when unified CLI is not available)
 node cli/entity-list.mjs -t task --status "In Progress"
-```
-
-### GitHub Integration
-
-```bash
-# Import GitHub issues into local entities
-node cli/github/import-github-issues.mjs
-node cli/github/import-github-project-issues.mjs
-
-# Create GitHub labels from tag entities
-node cli/github/create-github-labels.mjs
-```
-
-### Notion Integration
-
-```bash
-# Sync Notion databases to local entities
-node cli/notion/sync-notion-entities.mjs
-
-# Clean up orphaned Notion entity files
-node cli/notion/cleanup-notion-entities.mjs
 ```
 
 ## Git Workflow Rules

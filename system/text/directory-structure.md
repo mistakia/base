@@ -92,9 +92,7 @@ The `cli/` directory contains command-line tools and utilities for development, 
 
 ```
 └── cli/
-    ├── github/                 # GitHub integration utilities
     ├── import-history/         # Import history management
-    ├── notion/                 # Notion integration utilities
     └── *.mjs                   # Various CLI scripts for development and maintenance
 ```
 
@@ -180,8 +178,7 @@ The `config/` directory contains system configuration:
 └── config/
     ├── config.json     # Main configuration file
     ├── config-test.json # Test environment configuration
-    ├── index.mjs       # Configuration loader
-    └── labels.mjs      # Label definitions
+    └── index.mjs       # Configuration loader
 ```
 
 ## Implementation Notes

@@ -30,8 +30,6 @@
       "mcp__playwright__browser_close"
     ],
     "deny": [],
-    "additionalDirectories": [
-      "/Users/trashman/user-base/repository/active/react-table/"
-    ]
+    "additionalDirectories": []
   }
 }

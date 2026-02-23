@@ -28,15 +28,17 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN curl -fsSL https://opencode.ai/install | bash \
     && cp $(find / -name opencode -type f -executable 2>/dev/null | head -1) /usr/local/bin/opencode
 
-# Create directory structure to match host paths
-RUN mkdir -p /Users/trashman/user-base \
-    && chown -R node:node /Users/trashman/user-base
+ARG CONTAINER_WORKDIR=/home/node/user-base
+
+# Create directory structure for workdir
+RUN mkdir -p ${CONTAINER_WORKDIR} \
+    && chown -R node:node ${CONTAINER_WORKDIR}
 
 # Environment variables
 ENV DISABLE_AUTOUPDATER=1
 ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
-WORKDIR /Users/trashman/user-base
+WORKDIR ${CONTAINER_WORKDIR}
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

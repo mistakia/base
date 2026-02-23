@@ -11,6 +11,9 @@
 #   --post-receive  Deploy only post-receive hooks (storage server)
 #   --post-commit   Deploy only post-commit hooks (local machine)
 #   (default)       Deploy both
+#
+# Configuration:
+#   Reads deployment targets from $USER_BASE_DIRECTORY/config/deploy-hooks.conf
 
 set -e
 
@@ -36,29 +39,15 @@ if [ "$DEPLOY_POST_RECEIVE" = false ] && [ "$DEPLOY_POST_COMMIT" = false ]; then
     DEPLOY_POST_COMMIT=true
 fi
 
-REMOTE_HOST="storage"
-BARE_REPO_DIR="/mnt/md0/git-repos"
-REMOTE_USER_BASE="/mnt/md0/user-base"
-
-# Post-receive hook configuration: bare_repo:pull_script
-# pull_script is relative to the CLI directory
-POST_RECEIVE_HOOKS=(
-    "user-base.git:pull-user-base.sh"
-    "user-base-threads.git:pull-threads.sh"
-    "user-base-import-history.git:pull-import-history.sh"
-    "user-base-homelab.git:pull-submodule.sh repository/active/homelab"
-    "user-base-base-ios.git:pull-submodule.sh repository/active/base-ios"
-    "user-base-epstein-transparency-act.git:pull-submodule.sh text/epstein/transparency-act"
-)
-
-# Storage-hosted submodules that get post-commit hooks
-POST_COMMIT_SUBMODULES=(
-    "thread"
-    "import-history"
-    "repository/active/homelab"
-    "repository/active/base-ios"
-    "text/epstein/transparency-act"
-)
+# Load user-specific deployment configuration
+DEPLOY_HOOKS_CONF="$USER_BASE_DIRECTORY/config/deploy-hooks.conf"
+if [ ! -f "$DEPLOY_HOOKS_CONF" ]; then
+    echo "Error: Deploy hooks config not found: $DEPLOY_HOOKS_CONF" >&2
+    echo "Create this file with REMOTE_HOST, BARE_REPO_DIR, REMOTE_USER_BASE," >&2
+    echo "MACBOOK_USER_BASE, POST_RECEIVE_HOOKS, and POST_COMMIT_SUBMODULES." >&2
+    exit 1
+fi
+source "$DEPLOY_HOOKS_CONF"
 
 # Post-commit hook content (same for all repos)
 generate_post_commit_hook() {
@@ -98,7 +87,7 @@ USER_BASE_DIRECTORY=\"\$USER_BASE_DIRECTORY\" \\
 
 # Trigger MacBook sync (backgrounded, tolerates failure)
 ssh -o ConnectTimeout=5 -o BatchMode=yes macbook \\
-    'USER_BASE_DIRECTORY=/Users/trashman/user-base /Users/trashman/user-base/repository/active/base/cli/sync-all.sh' \\
+    'USER_BASE_DIRECTORY=$MACBOOK_USER_BASE $MACBOOK_USER_BASE/repository/active/base/cli/sync-all.sh' \\
     &>/dev/null &
 "
 
