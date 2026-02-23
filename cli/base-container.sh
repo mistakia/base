@@ -40,6 +40,80 @@ is_pm2_service() {
     esac
 }
 
+CONTAINER_NAME="base-container"
+WAIT_TIMEOUT=300  # 5 minutes
+WAIT_POLL_INTERVAL=10  # seconds
+
+# Check for active Claude CLI sessions inside the container
+# Returns 0 if sessions found, 1 if no sessions
+check_container_sessions() {
+    local sessions
+    sessions=$(docker top "$CONTAINER_NAME" -o pid,args 2>/dev/null | grep -v "^PID" | grep "claude" || true)
+
+    if [ -z "$sessions" ]; then
+        return 1
+    fi
+
+    local count
+    count=$(echo "$sessions" | wc -l | tr -d ' ')
+    echo "Active Claude CLI sessions ($count):"
+    echo "$sessions" | while IFS= read -r line; do
+        echo "  $line"
+    done
+    return 0
+}
+
+# Safe container stop with session detection
+# Usage: safe_container_stop [--force] [--wait]
+safe_container_stop() {
+    local force=false
+    local wait=false
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --force) force=true ;;
+            --wait) wait=true ;;
+            *) echo "Unknown flag: $1"; exit 1 ;;
+        esac
+        shift
+    done
+
+    if check_container_sessions; then
+        if [ "$force" = true ]; then
+            echo ""
+            echo "WARNING: Force stopping container despite active sessions"
+            compose_cmd down
+        elif [ "$wait" = true ]; then
+            echo ""
+            echo "Waiting for sessions to complete (timeout: ${WAIT_TIMEOUT}s)..."
+            local elapsed=0
+            while [ $elapsed -lt $WAIT_TIMEOUT ]; do
+                sleep $WAIT_POLL_INTERVAL
+                elapsed=$((elapsed + WAIT_POLL_INTERVAL))
+                if ! check_container_sessions; then
+                    echo "All sessions completed after ${elapsed}s"
+                    compose_cmd down
+                    return 0
+                fi
+                echo "  Still waiting... (${elapsed}s / ${WAIT_TIMEOUT}s)"
+            done
+            echo "ERROR: Timeout exceeded (${WAIT_TIMEOUT}s). Sessions still active."
+            echo "Use --force to stop anyway."
+            exit 1
+        else
+            echo ""
+            echo "ERROR: Cannot stop container -- active sessions would be killed."
+            echo "Options:"
+            echo "  --force  Stop anyway (kills active sessions)"
+            echo "  --wait   Wait for sessions to finish, then stop"
+            exit 1
+        fi
+    else
+        echo "No active sessions detected."
+        compose_cmd down
+    fi
+}
+
 usage() {
     echo "Usage: $(basename "$0") <command> [service]"
     echo ""
@@ -52,14 +126,19 @@ usage() {
     echo "  setup            Initial setup: pm2 startup, start services, pm2 save"
     echo ""
     echo "Container Commands (Docker):"
-    echo "  shell            Open a shell in the base-container"
-    echo "  claude           Run Claude CLI in the base-container"
-    echo "  opencode         Run OpenCode in the base-container"
-    echo "  container-start  Start the interactive Docker container"
-    echo "  container-stop   Stop the interactive Docker container"
-    echo "  build            Build the Docker container image"
-    echo "  rebuild          Rebuild Docker image from scratch (no cache)"
-    echo "  sync-sessions    Sync session JSONL files between machines"
+    echo "  shell              Open a shell in the base-container"
+    echo "  claude             Run Claude CLI in the base-container"
+    echo "  opencode           Run OpenCode in the base-container"
+    echo "  container-start    Start the interactive Docker container"
+    echo "  container-stop     Stop the interactive Docker container"
+    echo "    --force          Stop even if active Claude sessions are running"
+    echo "    --wait           Wait for active sessions to finish, then stop"
+    echo "  container-restart  Restart the interactive Docker container"
+    echo "    --force          Stop even if active Claude sessions are running"
+    echo "    --wait           Wait for active sessions to finish, then stop"
+    echo "  build              Build the Docker container image"
+    echo "  rebuild            Rebuild Docker image from scratch (no cache)"
+    echo "  sync-sessions      Sync session JSONL files between machines"
     echo ""
     echo "PM2 services: $PM2_SERVICES"
     echo "Detected machine: $MACHINE"
@@ -134,8 +213,16 @@ case "${1:-}" in
         compose_cmd up -d base-container
         ;;
     container-stop)
+        shift
         echo "Stopping interactive container..."
-        compose_cmd down
+        safe_container_stop "$@"
+        ;;
+    container-restart)
+        shift
+        echo "Restarting interactive container ($MACHINE)..."
+        safe_container_stop "$@"
+        echo "Starting interactive container..."
+        compose_cmd up -d base-container
         ;;
     shell)
         docker exec -it base-container bash
