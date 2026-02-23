@@ -152,6 +152,9 @@ if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
     fi
     # Also add to /etc/profile.d for non-interactive shells
     echo "$BASHRC_PATH" > /etc/profile.d/base-cli.sh
+    # Symlink base CLI into /usr/local/bin so it is available in non-login,
+    # non-interactive shells (docker exec, Claude Code Bash tool, etc.)
+    ln -sf "$BASE_SUBMODULE/node_modules/.bin/base" /usr/local/bin/base
 fi
 
 # Configure ripgrep and grep exclusions for large directories
