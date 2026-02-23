@@ -84,17 +84,9 @@ export const generate_compose_config = async ({
         }
       }
     },
+    network_mode: 'host',
     entrypoint: ['/usr/local/bin/entrypoint.sh'],
     command: ['tail', '-f', '/dev/null']
-  }
-
-  // Optional network configuration from thread_config.network_policy
-  if (thread_config.network_policy?.allowed_domains?.length > 0) {
-    // Network isolation can be configured via Docker networks
-    // For now, hooks handle network tool blocking
-    log(
-      `Network policy configured for ${username} with ${thread_config.network_policy.allowed_domains.length} allowed domains`
-    )
   }
 
   const compose = {
