@@ -48,7 +48,7 @@ PAYLOAD="{
 
 if [ "$HOOK_EVENT" = "SessionEnd" ]; then
   # SessionEnd: run synchronously to ensure import completes before process exits
-  curl -s -X POST "${API_BASE}/api/threads/sync-user-session" \
+  curl -sk -X POST "${API_BASE}/api/threads/sync-user-session" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" \
     --connect-timeout 5 --max-time 25 >/dev/null 2>&1
@@ -57,7 +57,7 @@ if [ "$HOOK_EVENT" = "SessionEnd" ]; then
   rm -f "$THROTTLE_FILE" 2>/dev/null
 else
   # All other events: run in background
-  curl -s -X POST "${API_BASE}/api/threads/sync-user-session" \
+  curl -sk -X POST "${API_BASE}/api/threads/sync-user-session" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" \
     --connect-timeout 5 --max-time 25 >/dev/null 2>&1 &

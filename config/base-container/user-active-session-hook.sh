@@ -28,7 +28,7 @@ fi
 
 case "$HOOK_EVENT" in
   SessionStart)
-    curl -s -X POST "${API_BASE}/api/active-sessions" \
+    curl -sk -X POST "${API_BASE}/api/active-sessions" \
       -H "Content-Type: application/json" \
       -d "{
         \"session_id\": \"${SESSION_ID}\",
@@ -40,19 +40,19 @@ case "$HOOK_EVENT" in
       --connect-timeout 5 --max-time 5 >/dev/null 2>&1 &
     ;;
   UserPromptSubmit|PostToolUse)
-    curl -s -X PUT "${API_BASE}/api/active-sessions/${SESSION_ID}" \
+    curl -sk -X PUT "${API_BASE}/api/active-sessions/${SESSION_ID}" \
       -H "Content-Type: application/json" \
       -d '{"status": "active"}' \
       --connect-timeout 5 --max-time 5 >/dev/null 2>&1 &
     ;;
   Stop)
-    curl -s -X PUT "${API_BASE}/api/active-sessions/${SESSION_ID}" \
+    curl -sk -X PUT "${API_BASE}/api/active-sessions/${SESSION_ID}" \
       -H "Content-Type: application/json" \
       -d '{"status": "idle"}' \
       --connect-timeout 5 --max-time 5 >/dev/null 2>&1 &
     ;;
   SessionEnd)
-    curl -s -X DELETE "${API_BASE}/api/active-sessions/${SESSION_ID}" \
+    curl -sk -X DELETE "${API_BASE}/api/active-sessions/${SESSION_ID}" \
       --connect-timeout 5 --max-time 5 >/dev/null 2>&1 &
     ;;
 esac
