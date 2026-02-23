@@ -482,6 +482,11 @@ const handle_thread_events = async (events, thread_directory) => {
         case 'create':
           if (is_thread_metadata_file(file_path)) {
             await handle_metadata_added(file_path)
+          } else if (is_timeline_file(file_path)) {
+            // Handle timeline creation from atomic rename (write_timeline_jsonl
+            // writes to a temp file then fs.rename to target, which @parcel/watcher
+            // may report as 'create' rather than 'update')
+            await handle_timeline_changed(file_path)
           }
           break
         case 'update':
