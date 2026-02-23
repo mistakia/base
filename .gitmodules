@@ -1,3 +1,5 @@
 [submodule "repository/archive/arscontexta"]
 	path = repository/archive/arscontexta
 	url = https://github.com/agenticnotetaking/arscontexta
+	ignore = dirty
+	active = false
