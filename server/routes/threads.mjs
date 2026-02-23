@@ -27,7 +27,6 @@ import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import { get_allowed_working_directories } from '#libs-server/threads/volume-mount-generator.mjs'
 import { get_active_sessions } from '#libs-server/threads/user-container-manager.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
@@ -701,25 +700,8 @@ router.post('/create-session', async (req, res) => {
       })
     }
 
-    // For container_user mode, validate working directory against allowed rw mounts
+    // For container_user mode, check concurrent session limit
     if (execution_mode === 'container_user' && thread_config) {
-      const allowed_dirs = get_allowed_working_directories({ thread_config })
-      const normalized_wd = working_directory.replace(/\/$/, '')
-      const is_allowed = allowed_dirs.some((dir) => {
-        const normalized_dir = dir.replace(/\/$/, '')
-        return (
-          normalized_wd === normalized_dir ||
-          normalized_wd.startsWith(normalized_dir + '/')
-        )
-      })
-      if (!is_allowed) {
-        return res.status(403).json({
-          error: 'Working directory not allowed',
-          message: `Working directory '${working_directory}' is not in the allowed list for this user. Allowed: ${allowed_dirs.join(', ')}`
-        })
-      }
-
-      // Check concurrent session limit
       const active = await get_active_sessions({ username })
       if (active >= thread_config.max_concurrent_threads) {
         return res.status(429).json({
@@ -735,24 +717,23 @@ router.post('/create-session', async (req, res) => {
         ? translate_to_host_path(working_directory)
         : working_directory
 
-    // Validate working directory (for non-container_user modes)
+    // Validate working directory -- resolves base URIs (e.g. 'user:') to
+    // host filesystem paths and ensures the path is within user-base.
+    // Volume mounts and permissions.deny are the security boundary for
+    // container_user mode, not the working directory itself.
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
-    if (execution_mode !== 'container_user') {
-      try {
-        validated_working_directory = await validate_working_directory({
-          working_directory: normalized_working_directory,
-          user_base_directory
-        })
-      } catch (validation_error) {
-        log(`Working directory validation failed: ${validation_error.message}`)
-        return res.status(400).json({
-          error: 'Invalid working directory',
-          message: validation_error.message
-        })
-      }
-    } else {
-      validated_working_directory = working_directory
+    try {
+      validated_working_directory = await validate_working_directory({
+        working_directory: normalized_working_directory,
+        user_base_directory
+      })
+    } catch (validation_error) {
+      log(`Working directory validation failed: ${validation_error.message}`)
+      return res.status(400).json({
+        error: 'Invalid working directory',
+        message: validation_error.message
+      })
     }
 
     log(
@@ -929,24 +910,21 @@ router.post('/:thread_id/resume', async (req, res) => {
         ? translate_to_host_path(working_directory)
         : working_directory
 
-    // Validate working directory (skip for container_user -- validated at creation)
+    // Validate working directory -- resolves base URIs and ensures path
+    // is within user-base bounds for all execution modes
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
-    if (execution_mode !== 'container_user') {
-      try {
-        validated_working_directory = await validate_working_directory({
-          working_directory: normalized_working_directory,
-          user_base_directory
-        })
-      } catch (validation_error) {
-        log(`Working directory validation failed: ${validation_error.message}`)
-        return res.status(400).json({
-          error: 'Invalid working directory',
-          message: validation_error.message
-        })
-      }
-    } else {
-      validated_working_directory = working_directory
+    try {
+      validated_working_directory = await validate_working_directory({
+        working_directory: normalized_working_directory,
+        user_base_directory
+      })
+    } catch (validation_error) {
+      log(`Working directory validation failed: ${validation_error.message}`)
+      return res.status(400).json({
+        error: 'Invalid working directory',
+        message: validation_error.message
+      })
     }
 
     log(

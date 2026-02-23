@@ -612,9 +612,10 @@ export const create_session_claude_cli = async ({
   log(`User: ${user_public_key}`)
   log(`Execution mode: ${execution_mode}`)
 
-  // Validate working directory is within user's base directory
+  // Validate working directory is within user's base directory.
+  // Also resolves base URIs (e.g. 'user:') to host filesystem paths.
   const user_base_directory = get_user_base_directory()
-  await validate_working_directory({
+  const validated_working_directory = await validate_working_directory({
     working_directory,
     user_base_directory
   })
@@ -627,8 +628,8 @@ export const create_session_claude_cli = async ({
   // e.g. host user-base path -> CONTAINER_USER_BASE_PATH mount point
   const container_working_directory =
     execution_mode === 'container' || execution_mode === 'container_user'
-      ? translate_to_container_path(working_directory)
-      : working_directory
+      ? translate_to_container_path(validated_working_directory)
+      : validated_working_directory
 
   // -------------------------
   // 3. Ensure User Container Running (container_user mode)
@@ -727,7 +728,7 @@ export const create_session_claude_cli = async ({
     spawn_args = cli_args
     spawn_options = {
       ...base_spawn_options,
-      cwd: working_directory,
+      cwd: validated_working_directory,
       env: {
         ...process.env,
         ...(job_id ? { JOB_ID: job_id } : {})
@@ -767,7 +768,7 @@ export const create_session_claude_cli = async ({
       if (code === 0) {
         resolve(
           build_success_result({
-            working_directory,
+            working_directory: validated_working_directory,
             session_id,
             exit_code: code
           })
