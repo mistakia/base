@@ -184,7 +184,7 @@ properties:
     required: false
     description: Miscellaneous notes
 type_name: physical_item
-updated_at: '2026-01-05T19:25:18.554Z'
+updated_at: '2026-02-23T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -200,6 +200,7 @@ Physical items commonly use these relation types:
 - `contains`: Components that make up this item
 - `requires`: Resources needed for this item
 - `used_in`: A project, activity, or event this item is used for
+- `stored_in`: The physical location where this item is stored
 
 Example:
 
@@ -209,4 +210,5 @@ relations:
   - 'contains [[sys:physical_item/component-item]]'
   - 'requires [[sys:physical_item/resource-item]]'
   - 'used_in [[sys:activities/activity-name]]'
+  - 'stored_in [[user:physical-location/some-location]]'
 ```
