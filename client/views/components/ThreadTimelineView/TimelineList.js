@@ -283,7 +283,10 @@ const TimelineList = ({
     const distance_from_bottom = scroll_height - scroll_top - client_height
     const is_scrollable = scroll_height > client_height
 
-    return is_scrollable && distance_from_bottom < SCROLL_THRESHOLD_PX
+    // Not scrollable means all content is visible - treat as "at bottom"
+    if (!is_scrollable) return true
+
+    return distance_from_bottom < SCROLL_THRESHOLD_PX
   }, [get_scroll_container, get_scroll_metrics])
 
   /**
