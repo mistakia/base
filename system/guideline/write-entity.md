@@ -67,14 +67,15 @@ visibility_analyzed_at: '2026-02-16T04:30:59.888Z'
 
 ### For New Entities
 
-Use the base entity create tool (`mcp__base__entity_create`) for creating new entity files:
+Use the `base entity create` CLI command (via Bash tool) for creating new entity files:
 
-- **base_uri**: Required. Must use `user:` prefix for user-created entities (e.g., `user:task/my-task.md`)
-- **title**: Required. Clear, identifiable name
-- **entity_type**: Required. Must match a defined type in `sys:system/schema/`
-- **description**: Optional but recommended
-- **entity_content**: The markdown content for the entity body
-- **entity_properties**: Additional properties specific to the entity type
+- **base_uri** (positional): Required. Must use `user:` prefix for user-created entities (e.g., `user:task/my-task.md`)
+- **--title**: Required. Clear, identifiable name
+- **--type**: Required. Must match a defined type in `sys:system/schema/`
+- **--description**: Optional but recommended
+- **--content**: The markdown content for the entity body
+- **--properties**: Additional properties as JSON string (tags, relations, status, priority, etc.)
+- **--dry-run**: Preview without writing
 
 ### For Existing Entities
 
@@ -82,31 +83,15 @@ Use the Edit tool to modify existing entity files while preserving schema requir
 
 ### Examples
 
-For a new task entity using the base entity create tool:
+For a new task entity using the CLI:
 
-```javascript
-// Tool call example
-mcp__base__entity_create({
-  base_uri: 'user:task/implement-login-feature.md',
-  title: 'Implement Login Feature',
-  entity_type: 'task',
-  description: 'Create a secure login system for the application',
-  entity_properties: {
-    priority: 'High',
-    status: 'In Progress',
-    assigned_to: 'john-smith',
-    finish_by: '2023-08-15',
-    tags: [
-      'sys:tag/authentication.md',
-      'sys:tag/security.md',
-      'sys:tag/frontend.md'
-    ],
-    relations: [
-      'implements [[user:text/requirements/user-authentication.md]]',
-      'depends_on [[user:task/setup-database.md]]'
-    ]
-  },
-  entity_content: `## Requirements
+```bash
+base entity create "user:task/implement-login-feature.md" \
+  --type task \
+  --title "Implement Login Feature" \
+  --description "Create a secure login system for the application" \
+  --properties '{"priority": "High", "status": "In Progress", "assigned_to": "john-smith", "finish_by": "2023-08-15", "tags": ["sys:tag/authentication.md", "sys:tag/security.md", "sys:tag/frontend.md"], "relations": ["implements [[user:text/requirements/user-authentication.md]]", "depends_on [[user:task/setup-database.md]]"]}' \
+  --content "## Requirements
 
 - Secure password storage using bcrypt
 - Email verification process
@@ -116,6 +101,5 @@ mcp__base__entity_create({
 
 - Users can register with email/password
 - Users can log in with registered credentials
-- Users can reset passwords via email`
-})
+- Users can reset passwords via email"
 ```
