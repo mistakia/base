@@ -194,7 +194,12 @@ function resolve_nested_object(base_val, ours_val, theirs_val) {
       }
     } else if (o_changed && t_changed && !values_equal(o, t)) {
       // both changed sub-key to different values - try field-type resolution
-      const resolved = resolve_conflict({ key: sub_key, base_val: b, ours_val: o, theirs_val: t })
+      const resolved = resolve_conflict({
+        key: sub_key,
+        base_val: b,
+        ours_val: o,
+        theirs_val: t
+      })
       if (resolved === undefined) {
         return undefined
       }

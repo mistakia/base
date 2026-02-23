@@ -247,9 +247,15 @@ describe('json-merge-driver', () => {
     })
 
     it('should resolve nested timestamp sub-key conflicts via recursive resolution', () => {
-      const base = { source: { provider: 'claude', start_time: '2026-01-01T00:00:00Z' } }
-      const ours = { source: { provider: 'claude', start_time: '2026-01-01T06:00:00Z' } }
-      const theirs = { source: { provider: 'claude', start_time: '2026-01-01T12:00:00Z' } }
+      const base = {
+        source: { provider: 'claude', start_time: '2026-01-01T00:00:00Z' }
+      }
+      const ours = {
+        source: { provider: 'claude', start_time: '2026-01-01T06:00:00Z' }
+      }
+      const theirs = {
+        source: { provider: 'claude', start_time: '2026-01-01T12:00:00Z' }
+      }
 
       const result = merge_json({ base, ours, theirs })
 

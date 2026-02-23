@@ -42,12 +42,7 @@ describe('jsonl-merge-driver', () => {
 
     const result = merge_jsonl({ base_lines, ours_lines, theirs_lines })
 
-    expect(result).to.deep.equal([
-      '{"a":1}',
-      '{"b":1}',
-      '{"c":1}',
-      '{"d":1}'
-    ])
+    expect(result).to.deep.equal(['{"a":1}', '{"b":1}', '{"c":1}', '{"d":1}'])
   })
 
   it('should return null when ours modifies a base line', () => {

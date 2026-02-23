@@ -12,7 +12,7 @@ services:
     container_name: camofox-browser
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9377/health || exit 1"]
+      test: ['CMD-SHELL', 'curl -sf http://localhost:9377/health || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3

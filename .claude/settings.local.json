@@ -12,7 +12,7 @@
       "Bash(gh project item-edit:*)",
       "WebFetch(domain:docs.anthropic.com)",
       "Edit",
-"Bash(ls:*)",
+      "Bash(ls:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(grep:*)",

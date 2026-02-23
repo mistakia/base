@@ -59,7 +59,8 @@ export const builder = (yargs) =>
             demandOption: true
           })
           .option('type', {
-            describe: 'Entity type (task, text, workflow, guideline, tag, etc.)',
+            describe:
+              'Entity type (task, text, workflow, guideline, tag, etc.)',
             type: 'string',
             demandOption: true
           })
@@ -376,9 +377,7 @@ async function handle_create(argv) {
       try {
         extra_properties = JSON.parse(argv.properties)
       } catch {
-        throw new Error(
-          `Invalid JSON for --properties: ${argv.properties}`
-        )
+        throw new Error(`Invalid JSON for --properties: ${argv.properties}`)
       }
     }
 
@@ -398,7 +397,13 @@ async function handle_create(argv) {
       if (argv.json) {
         console.log(
           JSON.stringify(
-            { dry_run: true, base_uri, absolute_path, entity_type, entity_properties },
+            {
+              dry_run: true,
+              base_uri,
+              absolute_path,
+              entity_type,
+              entity_properties
+            },
             null,
             2
           )
@@ -428,7 +433,12 @@ async function handle_create(argv) {
     if (argv.json) {
       console.log(
         JSON.stringify(
-          { success: true, entity_id: result.entity_id, base_uri, path: absolute_path },
+          {
+            success: true,
+            entity_id: result.entity_id,
+            base_uri,
+            path: absolute_path
+          },
           null,
           2
         )

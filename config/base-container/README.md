@@ -72,10 +72,10 @@ cli/base-container.sh container-stop
 
 Each machine has a local data directory for persistent `~/.claude` and `~/.opencode` state (not version controlled, not synced):
 
-| Machine        | Path                                    |
-| -------------- | --------------------------------------- |
-| Storage server | `/mnt/md0/base-container-data/`         |
-| MacBook        | `$HOME/.base-container-data/` |
+| Machine        | Path                            |
+| -------------- | ------------------------------- |
+| Storage server | `/mnt/md0/base-container-data/` |
+| MacBook        | `$HOME/.base-container-data/`   |
 
 One-time setup:
 
