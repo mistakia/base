@@ -180,6 +180,63 @@ class UserRegistry {
     }
   }
 
+  /**
+   * Get thread_config for a user with defaults applied
+   *
+   * @param {string} user_public_key - Public key to look up
+   * @returns {Promise<Object|null>} Thread config with defaults or null if not configured
+   */
+  async get_thread_config(user_public_key) {
+    if (!user_public_key) {
+      return null
+    }
+
+    try {
+      const identity = await load_identity_by_public_key({
+        public_key: user_public_key
+      })
+      if (!identity?.thread_config) {
+        return null
+      }
+
+      const tc = identity.thread_config
+      return {
+        tools: tc.tools || null,
+        disallowed_tools: tc.disallowed_tools || null,
+        permission_mode: tc.permission_mode || null,
+        mcp_config: tc.mcp_config || null,
+        mounts: tc.mounts || [],
+        deny_paths: tc.deny_paths || [],
+        max_concurrent_threads: tc.max_concurrent_threads || 1,
+        session_timeout_ms: tc.session_timeout_ms || 1800000,
+        append_system_prompt: tc.append_system_prompt || null,
+        network_policy: {
+          allowed_domains: tc.network_policy?.allowed_domains || [],
+          block_network_tools:
+            tc.network_policy?.block_network_tools !== false
+        },
+        base_cli: {
+          enabled: tc.base_cli?.enabled === true,
+          deny_commands: tc.base_cli?.deny_commands || [
+            'base entity create *',
+            'base entity update *',
+            'base entity observe *',
+            'base schedule *',
+            'base queue *',
+            'base relation add *',
+            'base relation remove *',
+            'base tag add *',
+            'base tag remove *',
+            'base entity visibility set *'
+          ]
+        }
+      }
+    } catch (error) {
+      log(`Error loading thread_config: ${error.message}`)
+      return null
+    }
+  }
+
   // Clear cache for testing
   _clear_cache() {
     clear_identity_cache()

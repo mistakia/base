@@ -30,11 +30,17 @@ if (!process.env.CONTAINER_USER_BASE_PATH) {
 export const CONTAINER_USER_BASE_PATH = process.env.CONTAINER_USER_BASE_PATH
 
 /**
+ * Prefix for user container names
+ */
+export const CONTAINER_USER_PREFIX = 'base-user-'
+
+/**
  * Valid execution modes for CLI commands
  * - 'host': Execute directly on the host machine (default)
  * - 'container': Execute inside the Docker container via docker exec
+ * - 'container_user': Execute inside a per-user Docker container
  */
-export const EXECUTION_MODES = ['host', 'container']
+export const EXECUTION_MODES = ['host', 'container', 'container_user']
 
 /**
  * Validate execution mode parameter
@@ -48,6 +54,28 @@ export const validate_execution_mode = (execution_mode) => {
       `Invalid execution_mode: ${execution_mode}. Must be one of: ${EXECUTION_MODES.join(', ')}`
     )
   }
+}
+
+/**
+ * Get the container name for a given execution mode
+ *
+ * @param {Object} params
+ * @param {string} params.execution_mode - Execution mode
+ * @param {string} [params.username] - Username (required for container_user mode)
+ * @returns {string} Docker container name
+ * @throws {Error} If username is missing for container_user mode
+ */
+export const get_container_name = ({ execution_mode, username }) => {
+  if (execution_mode === 'container') {
+    return DOCKER_CONTAINER_NAME
+  }
+  if (execution_mode === 'container_user') {
+    if (!username) {
+      throw new Error('username is required for container_user execution mode')
+    }
+    return `${CONTAINER_USER_PREFIX}${username}`
+  }
+  return null
 }
 
 /**

@@ -120,7 +120,9 @@ const calculate_queue_position = async (queue, job_id) => {
  * @param {string} params.user_public_key - User public key for permissions
  * @param {string} [params.session_id] - Optional Claude session ID for resume
  * @param {string} [params.thread_id] - Optional thread ID for session state restoration
- * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
+ * @param {string} [params.execution_mode] - Where to execute: 'host', 'container', or 'container_user'
+ * @param {Object} [params.thread_config] - Per-user thread configuration (for container_user mode)
+ * @param {string} [params.username] - Username (required for container_user mode)
  * @returns {Promise<Object>} Job object with id and queue_position
  */
 export const add_thread_creation_job = async ({
@@ -129,7 +131,9 @@ export const add_thread_creation_job = async ({
   user_public_key,
   session_id = null,
   thread_id = null,
-  execution_mode
+  execution_mode,
+  thread_config = null,
+  username = null
 }) => {
   try {
     const queue = get_thread_creation_queue()
@@ -142,7 +146,9 @@ export const add_thread_creation_job = async ({
         user_public_key,
         session_id,
         thread_id,
-        execution_mode
+        execution_mode,
+        thread_config,
+        username
       },
       {
         priority: 1 // Lower number = higher priority

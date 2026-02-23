@@ -41,7 +41,8 @@ ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 WORKDIR ${CONTAINER_WORKDIR}
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY validate-user-command.sh validate-file-access.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/validate-user-command.sh /usr/local/bin/validate-file-access.sh
 
 # Install gosu for dropping privileges in entrypoint
 RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-$(dpkg --print-architecture)" -o /usr/local/bin/gosu \

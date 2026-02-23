@@ -56,7 +56,8 @@ export const create_thread_from_session = async ({
   user_base_directory = get_user_base_directory(),
   inference_provider,
   models,
-  raw_session_data = null // Original raw data from provider
+  raw_session_data = null, // Original raw data from provider
+  source_overrides = null // Additional source fields (e.g. execution_mode, container_user)
 }) => {
   try {
     // Calculate message and tool call counts from normalized session
@@ -79,7 +80,9 @@ export const create_thread_from_session = async ({
         ...normalized_session.metadata,
         plan_slug: normalized_session.metadata?.plan_slug || null
       },
-      raw_data_saved: !!raw_session_data
+      raw_data_saved: !!raw_session_data,
+      // Apply source overrides (execution_mode, container_user, container_name)
+      ...(source_overrides || {})
     }
 
     // Extract timeline timestamps for thread creation

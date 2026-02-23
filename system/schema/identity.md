@@ -28,6 +28,114 @@ properties:
         type: boolean
         required: false
         description: Whether the identity has write access to all resources
+  - name: thread_config
+    type: object
+    required: false
+    description: Per-user thread execution configuration for container isolation
+    properties:
+      - name: tools
+        type: array
+        required: false
+        description: >-
+          Available built-in tools, maps to Claude CLI --tools flag (e.g. ["Read", "Glob", "Grep",
+          "Bash", "Edit", "Write"])
+        items:
+          type: string
+      - name: disallowed_tools
+        type: array
+        required: false
+        description: >-
+          Tool patterns to remove, maps to Claude CLI --disallowedTools flag (e.g. ["Bash(rm *)",
+          "Bash(sudo *)"])
+        items:
+          type: string
+      - name: permission_mode
+        type: string
+        required: false
+        description: >-
+          Maps to Claude CLI --permission-mode (e.g. "plan" for read-only). When unset, uses
+          --dangerously-skip-permissions
+      - name: mcp_config
+        type: object
+        required: false
+        description: MCP server configuration passed via --mcp-config + --strict-mcp-config
+      - name: mounts
+        type: array
+        required: false
+        description: >-
+          Volume mount allowlist. Each entry specifies a user-base directory to mount. Working
+          directories are derived from rw mounts.
+        items:
+          type: object
+          properties:
+            - name: source
+              type: string
+              required: true
+              description: Path relative to user-base root
+            - name: mode
+              type: string
+              required: true
+              enum:
+                - ro
+                - rw
+              description: Mount mode (read-only or read-write)
+            - name: target
+              type: string
+              required: false
+              description: Override container mount path
+      - name: deny_paths
+        type: array
+        required: false
+        description: >-
+          Gitignore-style patterns for sub-paths within mounted directories to deny via Claude Code
+          permissions.deny rules (e.g. ["league/private/**", "league/config.*.js"])
+        items:
+          type: string
+      - name: max_concurrent_threads
+        type: number
+        required: false
+        description: Maximum concurrent sessions per user
+      - name: session_timeout_ms
+        type: number
+        required: false
+        description: Per-session timeout in milliseconds
+      - name: append_system_prompt
+        type: string
+        required: false
+        description: Additional system prompt text via --append-system-prompt
+      - name: network_policy
+        type: object
+        required: false
+        description: Network isolation settings
+        properties:
+          - name: allowed_domains
+            type: array
+            required: false
+            description: Domain allowlist for sandbox network
+            items:
+              type: string
+          - name: block_network_tools
+            type: boolean
+            required: false
+            description: Block common network tools (curl, wget, etc.). Default true
+      - name: base_cli
+        type: object
+        required: false
+        description: Base CLI availability and permissions in user container
+        properties:
+          - name: enabled
+            type: boolean
+            required: false
+            description: Whether base CLI is available. Default false
+          - name: deny_commands
+            type: array
+            required: false
+            description: >-
+              Bash deny patterns for specific base subcommands. Default blocks write operations
+              (entity create, entity update, schedule, queue). Read operations (entity list, entity
+              get, search, thread list) are allowed.
+            items:
+              type: string
   - name: rules
     type: array
     required: false
@@ -70,6 +178,18 @@ Permissions are resolved in order:
 1. User-specific rules from the identity entity
 2. Role rules from `has_role` relations in order
 3. Default deny
+
+## Thread Configuration
+
+Identities with `permissions.create_threads: true` can have a `thread_config` object that controls how their threads execute in isolated Docker containers. This enables three-layer defense-in-depth:
+
+1. **Volume mounts** (`mounts`): Control which user-base directories are visible in the container
+2. **Claude Code permissions** (`deny_paths`): Block Read/Edit/Bash access to sensitive sub-paths within mounted directories
+3. **PreToolUse hooks**: Runtime validation scripts baked into the container image
+
+Tool availability is controlled via `tools` (allowlist), `disallowed_tools` (denylist), and `permission_mode`. Working directories are derived from `rw` mounts rather than configured separately.
+
+The `base_cli` sub-config controls whether the base CLI is available in user containers. When enabled, the base submodule is mounted read-only and write operations are blocked by default.
 
 ## Special Identities
 

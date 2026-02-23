@@ -18,13 +18,17 @@ import {
   check_thread_permission,
   check_thread_permission_for_user,
   check_create_threads_permission,
-  check_permissions_batch
+  check_permissions_batch,
+  validate_thread_ownership
 } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
+import user_registry from '#libs-server/users/user-registry.mjs'
+import { get_allowed_working_directories } from '#libs-server/threads/volume-mount-generator.mjs'
+import { get_active_sessions } from '#libs-server/threads/user-container-manager.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { thread_constants } from '#libs-shared'
@@ -642,7 +646,7 @@ router.post('/table', async (req, res) => {
 router.post('/create-session', async (req, res) => {
   try {
     const { prompt, working_directory } = req.body
-    const execution_mode =
+    let execution_mode =
       req.body.execution_mode ||
       config.threads?.cli?.default_execution_mode ||
       'host'
@@ -670,6 +674,18 @@ router.post('/create-session', async (req, res) => {
       })
     }
 
+    // Load thread_config from user registry
+    const thread_config = await user_registry.get_thread_config(user_public_key)
+    const user = thread_config
+      ? await user_registry.find_by_public_key(user_public_key)
+      : null
+    const username = user?.username || null
+
+    // If user has thread_config, route to container_user mode
+    if (thread_config) {
+      execution_mode = 'container_user'
+    }
+
     // Validate required parameters
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return res.status(400).json({
@@ -685,26 +701,58 @@ router.post('/create-session', async (req, res) => {
       })
     }
 
+    // For container_user mode, validate working directory against allowed rw mounts
+    if (execution_mode === 'container_user' && thread_config) {
+      const allowed_dirs = get_allowed_working_directories({ thread_config })
+      const normalized_wd = working_directory.replace(/\/$/, '')
+      const is_allowed = allowed_dirs.some((dir) => {
+        const normalized_dir = dir.replace(/\/$/, '')
+        return (
+          normalized_wd === normalized_dir ||
+          normalized_wd.startsWith(normalized_dir + '/')
+        )
+      })
+      if (!is_allowed) {
+        return res.status(403).json({
+          error: 'Working directory not allowed',
+          message: `Working directory '${working_directory}' is not in the allowed list for this user. Allowed: ${allowed_dirs.join(', ')}`
+        })
+      }
+
+      // Check concurrent session limit
+      const active = await get_active_sessions({ username })
+      if (active >= thread_config.max_concurrent_threads) {
+        return res.status(429).json({
+          error: 'Concurrent session limit reached',
+          message: `Maximum ${thread_config.max_concurrent_threads} concurrent sessions allowed. Currently active: ${active}`
+        })
+      }
+    }
+
     // Normalize container paths to host paths before validation
     const normalized_working_directory =
       execution_mode === 'container'
         ? translate_to_host_path(working_directory)
         : working_directory
 
-    // Validate working directory
+    // Validate working directory (for non-container_user modes)
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
-    try {
-      validated_working_directory = await validate_working_directory({
-        working_directory: normalized_working_directory,
-        user_base_directory
-      })
-    } catch (validation_error) {
-      log(`Working directory validation failed: ${validation_error.message}`)
-      return res.status(400).json({
-        error: 'Invalid working directory',
-        message: validation_error.message
-      })
+    if (execution_mode !== 'container_user') {
+      try {
+        validated_working_directory = await validate_working_directory({
+          working_directory: normalized_working_directory,
+          user_base_directory
+        })
+      } catch (validation_error) {
+        log(`Working directory validation failed: ${validation_error.message}`)
+        return res.status(400).json({
+          error: 'Invalid working directory',
+          message: validation_error.message
+        })
+      }
+    } else {
+      validated_working_directory = working_directory
     }
 
     log(
@@ -716,7 +764,9 @@ router.post('/create-session', async (req, res) => {
       prompt,
       working_directory: validated_working_directory,
       user_public_key,
-      execution_mode
+      execution_mode,
+      thread_config,
+      username
     })
 
     log(`Job queued: ${job.id} (position ${job.queue_position || 'unknown'})`)
@@ -753,10 +803,6 @@ router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
     const { prompt } = req.body
-    const execution_mode =
-      req.body.execution_mode ||
-      config.threads?.cli?.default_execution_mode ||
-      'host'
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
@@ -778,20 +824,71 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
-    // Check permissions for this thread
-    const permission_result = await check_thread_permission_for_user({
-      user_public_key,
-      thread_id
-    })
+    // Determine execution mode from thread metadata or request
+    const thread_execution_mode = thread.source?.execution_mode
+    const execution_mode =
+      thread_execution_mode ||
+      req.body.execution_mode ||
+      config.threads?.cli?.default_execution_mode ||
+      'host'
 
-    if (!permission_result.allowed) {
+    // Check if requesting user is a container_user (has thread_config)
+    const requesting_user_thread_config =
+      await user_registry.get_thread_config(user_public_key)
+    const is_container_user = requesting_user_thread_config !== null
+
+    // For container_user threads, enforce ownership
+    if (execution_mode === 'container_user') {
+      const is_owner = await validate_thread_ownership({
+        user_public_key,
+        thread_id
+      })
+      if (!is_owner) {
+        log(
+          `User ${user_public_key} is not the owner of container_user thread ${thread_id}`
+        )
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'You can only resume threads that you created'
+        })
+      }
+    } else if (is_container_user) {
+      // Container users can only resume their own container_user threads,
+      // not host/container threads created by other users (e.g., admin)
       log(
-        `User ${user_public_key} does not have permission to resume thread ${thread_id}`
+        `Container user ${user_public_key} attempted to resume non-container_user thread ${thread_id}`
       )
       return res.status(403).json({
         error: 'Permission denied',
-        message: 'You do not have permission to resume this thread'
+        message:
+          'You can only resume threads that you created'
       })
+    } else {
+      // For host/container threads from non-container users, use existing read permission check
+      const permission_result = await check_thread_permission_for_user({
+        user_public_key,
+        thread_id
+      })
+      if (!permission_result.allowed) {
+        log(
+          `User ${user_public_key} does not have permission to resume thread ${thread_id}`
+        )
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'You do not have permission to resume this thread'
+        })
+      }
+    }
+
+    // Use already-loaded thread_config for container_user mode
+    let thread_config = null
+    let username = null
+    if (execution_mode === 'container_user') {
+      thread_config = requesting_user_thread_config
+      const user = thread_config
+        ? await user_registry.find_by_public_key(user_public_key)
+        : null
+      username = user?.username || null
     }
 
     // Extract Claude session ID from thread metadata
@@ -832,20 +929,24 @@ router.post('/:thread_id/resume', async (req, res) => {
         ? translate_to_host_path(working_directory)
         : working_directory
 
-    // Validate working directory
+    // Validate working directory (skip for container_user -- validated at creation)
     const user_base_directory = get_user_base_directory()
     let validated_working_directory
-    try {
-      validated_working_directory = await validate_working_directory({
-        working_directory: normalized_working_directory,
-        user_base_directory
-      })
-    } catch (validation_error) {
-      log(`Working directory validation failed: ${validation_error.message}`)
-      return res.status(400).json({
-        error: 'Invalid working directory',
-        message: validation_error.message
-      })
+    if (execution_mode !== 'container_user') {
+      try {
+        validated_working_directory = await validate_working_directory({
+          working_directory: normalized_working_directory,
+          user_base_directory
+        })
+      } catch (validation_error) {
+        log(`Working directory validation failed: ${validation_error.message}`)
+        return res.status(400).json({
+          error: 'Invalid working directory',
+          message: validation_error.message
+        })
+      }
+    } else {
+      validated_working_directory = working_directory
     }
 
     log(
@@ -853,15 +954,15 @@ router.post('/:thread_id/resume', async (req, res) => {
     )
 
     // Add job to queue - thread will be updated by hook after session completes
-    // Pass the Claude session ID so the CLI can resume the correct session
-    // Pass thread_id so session state can be restored before spawning the CLI
     const job = await add_thread_creation_job({
       prompt,
       working_directory: validated_working_directory,
       user_public_key,
       session_id: claude_session_id,
       thread_id,
-      execution_mode
+      execution_mode,
+      thread_config,
+      username
     })
 
     log(

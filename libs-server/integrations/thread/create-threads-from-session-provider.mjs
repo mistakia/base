@@ -92,7 +92,8 @@ export const create_threads_from_session_provider = async ({
   verbose = false,
   merge_agents = true,
   include_warm_agents = false,
-  provider_options = {}
+  provider_options = {},
+  source_overrides = null
 }) => {
   if (!provider_name) {
     throw new Error('provider_name is required')
@@ -177,7 +178,8 @@ export const create_threads_from_session_provider = async ({
         user_public_key,
         user_base_directory,
         allow_updates,
-        verbose
+        verbose,
+        source_overrides
       })
 
       // Add result to appropriate category
@@ -236,7 +238,8 @@ const process_single_session = async ({
   user_public_key,
   user_base_directory,
   allow_updates,
-  verbose
+  verbose,
+  source_overrides = null
 }) => {
   const session_id = session_provider.get_session_id(raw_session)
 
@@ -274,7 +277,8 @@ const process_single_session = async ({
     session_provider,
     user_public_key,
     user_base_directory,
-    session_id
+    session_id,
+    source_overrides
   })
 }
 
@@ -287,7 +291,8 @@ const create_new_session_thread = async ({
   session_provider,
   user_public_key,
   user_base_directory,
-  session_id
+  session_id,
+  source_overrides = null
 }) => {
   // Normalize session just-in-time
   let normalized_session = session_provider.normalize_session(raw_session)
@@ -303,7 +308,8 @@ const create_new_session_thread = async ({
     user_base_directory,
     inference_provider: session_provider.get_inference_provider(),
     models,
-    raw_session_data: raw_session
+    raw_session_data: raw_session,
+    source_overrides
   })
 
   // Raw entries were nulled during write, release session wrapper

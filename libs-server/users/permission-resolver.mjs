@@ -165,7 +165,7 @@ export async function convert_identity_to_user({ identity }) {
   const rules = await resolve_user_rules({ identity })
   const permission_flags = get_identity_permissions({ identity })
 
-  return {
+  const user = {
     username: identity.username,
     created_at: identity.created_at,
     permissions: {
@@ -173,6 +173,12 @@ export async function convert_identity_to_user({ identity }) {
       rules
     }
   }
+
+  if (identity.thread_config) {
+    user.thread_config = identity.thread_config
+  }
+
+  return user
 }
 
 export default {

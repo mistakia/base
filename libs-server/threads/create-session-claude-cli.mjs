@@ -15,6 +15,11 @@ import {
   validate_execution_mode,
   translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
+import {
+  get_user_container_name,
+  get_user_container_claude_home,
+  ensure_user_container_running
+} from './user-container-manager.mjs'
 
 const execAsync = promisify(exec)
 const glob = promisify(glob_pkg)
@@ -151,25 +156,61 @@ const resolve_cli_command = async (command) => {
  * - `-p`: Non-interactive mode (programmatic)
  * - `-r <session_id>`: Resume existing session
  * - `--dangerously-skip-permissions`: Skip permission prompts (required for headless operation)
+ * - `--tools`, `--disallowedTools`, `--permission-mode`: Tool restrictions from thread_config
+ * - `--setting-sources user`: Restrict settings loading for user containers
  * - `--`: Separator to prevent prompts starting with `-` from being parsed as flags
  *
  * @param {Object} params
  * @param {string} params.prompt - User prompt text
  * @param {string} [params.session_id] - Session ID to resume (optional)
  * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true for headless)
+ * @param {Object} [params.thread_config] - Per-user thread configuration
+ * @param {string} [params.execution_mode] - Execution mode
  * @returns {string[]} CLI arguments array
  */
 const build_claude_cli_args = ({
   prompt,
   session_id,
-  skip_permissions = true
+  skip_permissions = true,
+  thread_config = null,
+  execution_mode = 'host'
 }) => {
   const args = ['-p']
 
-  // Skip permissions for headless/programmatic execution
-  // Without this, commands requiring approval will fail repeatedly
-  if (skip_permissions) {
+  // Permission mode: thread_config.permission_mode overrides skip_permissions
+  if (thread_config?.permission_mode) {
+    args.push('--permission-mode', thread_config.permission_mode)
+  } else if (skip_permissions) {
     args.push('--dangerously-skip-permissions')
+  }
+
+  // Tool restrictions from thread_config
+  if (thread_config?.tools?.length) {
+    args.push('--tools', thread_config.tools.join(','))
+  }
+  if (thread_config?.disallowed_tools?.length) {
+    for (const tool of thread_config.disallowed_tools) {
+      args.push('--disallowedTools', tool)
+    }
+  }
+
+  // MCP config
+  if (thread_config?.mcp_config) {
+    args.push(
+      '--mcp-config',
+      JSON.stringify(thread_config.mcp_config),
+      '--strict-mcp-config'
+    )
+  }
+
+  // System prompt append
+  if (thread_config?.append_system_prompt) {
+    args.push('--append-system-prompt', thread_config.append_system_prompt)
+  }
+
+  // For container_user mode, restrict settings to user-level only
+  if (execution_mode === 'container_user') {
+    args.push('--setting-sources', 'user')
   }
 
   if (session_id) {
@@ -327,7 +368,9 @@ const restore_session_state = async ({
   session_id,
   thread_id,
   working_directory,
-  user_base_directory
+  user_base_directory,
+  execution_mode = 'container',
+  username = null
 }) => {
   if (!session_id || !thread_id) {
     log('Skipping session state restoration - missing session_id or thread_id')
@@ -338,12 +381,23 @@ const restore_session_state = async ({
     `Restoring session state for session ${session_id} from thread ${thread_id}`
   )
 
-  // Ensure container is running before restoring files
-  await ensure_container_running(user_base_directory)
+  // Resolve the correct claude-home based on execution mode
+  const claude_home =
+    execution_mode === 'container_user' && username
+      ? get_user_container_claude_home({ username })
+      : get_container_claude_home()
+
+  // Ensure the appropriate container is running before restoring files
+  if (execution_mode === 'container_user') {
+    // User container should already be running (ensured earlier in the flow)
+    log(`Using user container claude-home for ${username}`)
+  } else {
+    await ensure_container_running(user_base_directory)
+  }
 
   // Pre-create container home if it doesn't exist
   try {
-    await mkdir(get_container_claude_home(), { recursive: true })
+    await mkdir(claude_home, { recursive: true })
   } catch {
     // Directory already exists
   }
@@ -356,18 +410,21 @@ const restore_session_state = async ({
   await restore_session_jsonl({
     session_id,
     raw_data_dir,
-    projects_dir_name
+    projects_dir_name,
+    claude_home
   })
 
   // 2. Restore todos
   await restore_todos({
-    raw_data_dir
+    raw_data_dir,
+    claude_home
   })
 
   // 3. Restore plan
   await restore_plan({
     thread_dir,
-    user_base_directory
+    user_base_directory,
+    claude_home
   })
 
   log('Session state restoration complete')
@@ -379,11 +436,12 @@ const restore_session_state = async ({
 const restore_session_jsonl = async ({
   session_id,
   raw_data_dir,
-  projects_dir_name
+  projects_dir_name,
+  claude_home
 }) => {
   const source_jsonl = join(raw_data_dir, 'claude-session.jsonl')
   const target_dir = join(
-    get_container_claude_home(),
+    claude_home || get_container_claude_home(),
     'projects',
     projects_dir_name
   )
@@ -407,9 +465,9 @@ const restore_session_jsonl = async ({
 /**
  * Restore todo files to container todos directory
  */
-const restore_todos = async ({ raw_data_dir }) => {
+const restore_todos = async ({ raw_data_dir, claude_home }) => {
   const source_todos_dir = join(raw_data_dir, 'todos')
-  const target_todos_dir = join(get_container_claude_home(), 'todos')
+  const target_todos_dir = join(claude_home || get_container_claude_home(), 'todos')
 
   try {
     // Check if source todos directory exists
@@ -449,8 +507,8 @@ const restore_todos = async ({ raw_data_dir }) => {
 /**
  * Restore plan file to container plans directory
  */
-const restore_plan = async ({ thread_dir, user_base_directory }) => {
-  const target_plans_dir = join(get_container_claude_home(), 'plans')
+const restore_plan = async ({ thread_dir, user_base_directory, claude_home }) => {
+  const target_plans_dir = join(claude_home || get_container_claude_home(), 'plans')
 
   try {
     // Read thread metadata to get plan_slug
@@ -521,7 +579,9 @@ const restore_plan = async ({ thread_dir, user_base_directory }) => {
  * @param {string} [params.thread_id] - Thread ID for session state restoration on resume
  * @param {boolean} [params.skip_permissions] - Skip permission prompts (default: true)
  * @param {string} [params.job_id] - BullMQ job ID for correlating with active sessions
- * @param {string} [params.execution_mode] - Where to execute: 'host' (default) or 'container'
+ * @param {string} [params.execution_mode] - Where to execute: 'host', 'container', or 'container_user'
+ * @param {Object} [params.thread_config] - Per-user thread configuration (for container_user mode)
+ * @param {string} [params.username] - Username (required for container_user mode)
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
  */
@@ -533,7 +593,9 @@ export const create_session_claude_cli = async ({
   thread_id = null,
   job_id = null,
   skip_permissions = true,
-  execution_mode = 'host'
+  execution_mode = 'host',
+  thread_config = null,
+  username = null
 }) => {
   // -------------------------
   // 1. Validate & Log
@@ -564,12 +626,25 @@ export const create_session_claude_cli = async ({
   // When executing in a container, translate host paths to container paths.
   // e.g. host user-base path -> CONTAINER_USER_BASE_PATH mount point
   const container_working_directory =
-    execution_mode === 'container'
+    execution_mode === 'container' || execution_mode === 'container_user'
       ? translate_to_container_path(working_directory)
       : working_directory
 
   // -------------------------
-  // 3. Restore Session State (for resume)
+  // 3. Ensure User Container Running (container_user mode)
+  // -------------------------
+
+  if (execution_mode === 'container_user') {
+    if (!username || !thread_config) {
+      throw new Error(
+        'username and thread_config are required for container_user execution mode'
+      )
+    }
+    await ensure_user_container_running({ username, thread_config })
+  }
+
+  // -------------------------
+  // 4. Restore Session State (for resume)
   // -------------------------
 
   if (session_id && thread_id) {
@@ -579,7 +654,9 @@ export const create_session_claude_cli = async ({
       // Use container path for JSONL project directory derivation so the
       // restored files land where the container's Claude CLI expects them
       working_directory: container_working_directory,
-      user_base_directory
+      user_base_directory,
+      execution_mode,
+      username
     })
   }
 
@@ -597,7 +674,9 @@ export const create_session_claude_cli = async ({
   const cli_args = build_claude_cli_args({
     prompt,
     session_id,
-    skip_permissions
+    skip_permissions,
+    thread_config,
+    execution_mode
   })
 
   // Common spawn options
@@ -614,10 +693,14 @@ export const create_session_claude_cli = async ({
   let spawn_args
   let spawn_options
 
-  if (execution_mode === 'container') {
+  if (execution_mode === 'container' || execution_mode === 'container_user') {
     // Container mode: spawn via docker exec
     // The -w flag uses the translated container path, not the host path
     // Use 'claude' directly since it's in the container's PATH
+    const target_container =
+      execution_mode === 'container_user'
+        ? get_user_container_name({ username })
+        : DOCKER_CONTAINER_NAME
     spawn_command = 'docker'
     spawn_args = [
       'exec',
@@ -632,7 +715,7 @@ export const create_session_claude_cli = async ({
       ...(process.env.SERVER_PORT
         ? ['-e', `BASE_API_PORT=${process.env.SERVER_PORT}`]
         : []),
-      DOCKER_CONTAINER_NAME,
+      target_container,
       'claude',
       ...cli_args
     ]

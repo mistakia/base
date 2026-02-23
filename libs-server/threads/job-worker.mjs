@@ -42,7 +42,9 @@ const process_thread_creation_job = async (job) => {
     user_public_key,
     session_id = null,
     thread_id = null,
-    execution_mode
+    execution_mode,
+    thread_config = null,
+    username = null
   } = job.data
 
   const action = session_id ? 'resuming' : 'starting new'
@@ -70,7 +72,9 @@ const process_thread_creation_job = async (job) => {
       session_id,
       thread_id,
       job_id: job.id,
-      execution_mode
+      execution_mode,
+      thread_config,
+      username
     })
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
@@ -98,7 +102,8 @@ const process_thread_creation_job = async (job) => {
  * claude-home mount. For host sessions, reads from the host's projects dir.
  */
 const sync_session_fallback = async (job) => {
-  const { session_id, thread_id, working_directory, execution_mode } = job.data
+  const { session_id, thread_id, working_directory, execution_mode, username } =
+    job.data
 
   if (!session_id || !thread_id) {
     return
@@ -109,7 +114,20 @@ const sync_session_fallback = async (job) => {
     const { access } = await import('fs/promises')
 
     let session_file
-    if (execution_mode === 'container') {
+    if (execution_mode === 'container_user' && username) {
+      const { get_user_container_claude_home } = await import(
+        './user-container-manager.mjs'
+      )
+      const container_working_dir =
+        translate_to_container_path(working_directory)
+      const projects_dir_name = derive_projects_dir_name(container_working_dir)
+      session_file = join(
+        get_user_container_claude_home({ username }),
+        'projects',
+        projects_dir_name,
+        `${session_id}.jsonl`
+      )
+    } else if (execution_mode === 'container') {
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
@@ -138,12 +156,26 @@ const sync_session_fallback = async (job) => {
       `Job ${job.id}: running post-session sync fallback from ${session_file}`
     )
 
+    // Build source overrides for container_user threads
+    const source_overrides =
+      execution_mode === 'container_user'
+        ? {
+            execution_mode: 'container_user',
+            container_user: true,
+            container_name: `base-user-${username}`
+          }
+        : execution_mode === 'container'
+          ? { execution_mode: 'container' }
+          : { execution_mode: execution_mode || 'host' }
+
     const result = await create_threads_from_session_provider({
       provider_name: 'claude',
       allow_updates: true,
       provider_options: {
         session_file
-      }
+      },
+      user_public_key: job.data.user_public_key,
+      source_overrides
     })
 
     const updated = result.updated?.length || 0

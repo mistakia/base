@@ -8,6 +8,85 @@ if [ -z "$USER_BASE_DIRECTORY" ]; then
 fi
 
 BASE_SUBMODULE="$USER_BASE_DIRECTORY/repository/active/base"
+CONTAINER_MODE="${CONTAINER_MODE:-admin}"
+
+# Helper to run commands as node user if we're root
+run_as_node() {
+    if [ "$(id -u)" = "0" ]; then
+        gosu node "$@"
+    else
+        "$@"
+    fi
+}
+
+# =============================================================================
+# User container mode (CONTAINER_MODE=user)
+# =============================================================================
+if [ "$CONTAINER_MODE" = "user" ]; then
+    echo "Starting in user container mode..."
+
+    # Set environment variables for user containers
+    export DISABLE_AUTOUPDATER=1
+    export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+
+    # Configure generic git identity
+    run_as_node git config --global user.name "base-user"
+    run_as_node git config --global user.email "noreply@base.local"
+    run_as_node git config --global protocol.file.allow always
+
+    # Verify claude-home directory structure exists (bootstrapper creates it)
+    if [ ! -d "/home/node/.claude" ]; then
+        echo "WARNING: Claude home directory not found -- bootstrapper may not have run" >&2
+        run_as_node mkdir -p /home/node/.claude/projects /home/node/.claude/cache /home/node/.claude/todos /home/node/.claude/plans
+    fi
+
+    # Verify credentials exist
+    if [ ! -f "/home/node/.claude/.credentials.json" ]; then
+        echo "ERROR: .credentials.json not found in claude-home -- user container cannot authenticate" >&2
+    fi
+
+    # Verify settings.json exists
+    if [ ! -f "/home/node/.claude/settings.json" ]; then
+        echo "WARNING: settings.json not found in claude-home -- bootstrapper may not have run" >&2
+    fi
+
+    # Add base CLI to PATH if node_modules are available (shared volume)
+    if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
+        export PATH="$BASE_SUBMODULE/node_modules/.bin:$PATH"
+        echo "export PATH=\"$BASE_SUBMODULE/node_modules/.bin:\$PATH\"" > /etc/profile.d/base-cli.sh
+        ln -sf "$BASE_SUBMODULE/node_modules/.bin/base" /usr/local/bin/base 2>/dev/null || true
+    fi
+
+    # Configure ripgrep if config available
+    RIPGREPRC="$USER_BASE_DIRECTORY/config/ripgreprc"
+    if [ -f "$RIPGREPRC" ]; then
+        export RIPGREP_CONFIG_PATH="$RIPGREPRC"
+        echo "export RIPGREP_CONFIG_PATH=\"$RIPGREPRC\"" >> /etc/profile.d/base-cli.sh
+    fi
+
+    # Write readiness marker
+    touch /tmp/entrypoint-ready
+
+    echo "---"
+    echo "User Container ready"
+    echo "  Working directory: $(pwd)"
+    echo "  Node: $(node --version)"
+    echo "  Claude Code: $(claude --version 2>/dev/null || echo 'not available')"
+    echo "  Base CLI: $(base --version 2>/dev/null || echo 'not available')"
+    echo "---"
+
+    # Drop privileges and execute
+    if [ "$(id -u)" = "0" ]; then
+        exec gosu node "$@"
+    else
+        exec "$@"
+    fi
+fi
+
+# =============================================================================
+# Admin container mode (CONTAINER_MODE=admin, default)
+# =============================================================================
+
 SSH_PROXY_SOCK="/var/run/ssh-agent-proxy.sock"
 DOCKER_SSH_SOCK="/run/host-services/ssh-auth.sock"
 
@@ -33,15 +112,6 @@ if [ -S "$DOCKER_SSH_SOCK" ] && [ "$(id -u)" = "0" ]; then
     export SSH_AUTH_SOCK="$SSH_PROXY_SOCK"
     echo "SSH agent proxy configured at $SSH_PROXY_SOCK"
 fi
-
-# Helper to run commands as node user if we're root
-run_as_node() {
-    if [ "$(id -u)" = "0" ]; then
-        gosu node "$@"
-    else
-        "$@"
-    fi
-}
 
 # Setup SSH config for node user
 # Mounted .ssh directory is read-only with root ownership, so SSH ignores the config.
