@@ -489,6 +489,42 @@ export default function GlobalThreadInput() {
   const show_thread_context = is_resume_mode && selected_thread
   const thread_title = selected_thread?.title
 
+  // Track input container height via CSS custom property for other components
+  const container_ref = useRef(null)
+  useEffect(() => {
+    if (!is_open) {
+      document.documentElement.style.setProperty(
+        '--global-thread-input-height',
+        '0px'
+      )
+      return
+    }
+
+    const el = container_ref.current
+    if (!el) return
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = Math.round(
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height
+        )
+        document.documentElement.style.setProperty(
+          '--global-thread-input-height',
+          `${height}px`
+        )
+      }
+    })
+
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.setProperty(
+        '--global-thread-input-height',
+        '0px'
+      )
+    }
+  }, [is_open])
+
   // If not open, don't render
   if (!is_open) {
     return null
@@ -499,7 +535,7 @@ export default function GlobalThreadInput() {
       <Box
         className='global-thread-input-backdrop'
         onClick={handle_backdrop_click}>
-        <Box className='global-thread-input'>
+        <Box ref={container_ref} className='global-thread-input'>
           <Box
             className='input-collapse-button'
             onClick={handle_close}

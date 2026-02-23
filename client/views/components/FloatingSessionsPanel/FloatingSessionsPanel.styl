@@ -24,9 +24,16 @@
     // Trigger is 48px tall at bottom: calc(16px + safe-area), add 8px gap
     top: auto
     left: auto
-    bottom: "calc(72px + env(safe-area-inset-bottom, 0px))"
+    bottom: "calc(%s + env(safe-area-inset-bottom, 0px))" % 72px
     right: 16px
     max-width: none
+
+  // When GlobalThreadInput overlay is open on mobile, position above it
+  // Uses --global-thread-input-height CSS variable set by GlobalThreadInput via ResizeObserver
+  &--input-open
+    @media (max-width: 768px)
+      // overlay margin + input height + gap + safe area
+      bottom: "calc(%s + var(--global-thread-input-height, 0px) + 8px + env(safe-area-inset-bottom, 0px))" % 24px
 
   // Collapsed mode: pill with label groups
   &--collapsed

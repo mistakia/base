@@ -57,6 +57,9 @@ const FloatingSessionsPanel = () => {
   const active_session_count = useSelector(get_active_sessions_count)
   const pending_sessions = useSelector(get_pending_sessions)
   const prompt_snippets = useSelector(get_prompt_snippets)
+  const is_input_open = useSelector((state) =>
+    state.getIn(['thread_prompt', 'is_open'], false)
+  )
   const threads_state = useSelector(get_threads_state)
   const threads = threads_state.get('threads')
 
@@ -154,7 +157,7 @@ const FloatingSessionsPanel = () => {
   return (
     <ClickAwayListener onClickAway={handle_click_away}>
       <div
-        className={`floating-sessions-panel floating-sessions-panel--${panel_mode}`}>
+        className={`floating-sessions-panel floating-sessions-panel--${panel_mode}${is_input_open ? ' floating-sessions-panel--input-open' : ''}`}>
         {/* Collapsed bar */}
         <div
           className='floating-sessions-panel__bar'
