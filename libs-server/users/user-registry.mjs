@@ -212,8 +212,7 @@ class UserRegistry {
         append_system_prompt: tc.append_system_prompt || null,
         network_policy: {
           allowed_domains: tc.network_policy?.allowed_domains || [],
-          block_network_tools:
-            tc.network_policy?.block_network_tools !== false
+          block_network_tools: tc.network_policy?.block_network_tools !== false
         },
         base_cli: {
           enabled: tc.base_cli?.enabled === true,

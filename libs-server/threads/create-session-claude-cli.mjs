@@ -467,7 +467,10 @@ const restore_session_jsonl = async ({
  */
 const restore_todos = async ({ raw_data_dir, claude_home }) => {
   const source_todos_dir = join(raw_data_dir, 'todos')
-  const target_todos_dir = join(claude_home || get_container_claude_home(), 'todos')
+  const target_todos_dir = join(
+    claude_home || get_container_claude_home(),
+    'todos'
+  )
 
   try {
     // Check if source todos directory exists
@@ -507,8 +510,15 @@ const restore_todos = async ({ raw_data_dir, claude_home }) => {
 /**
  * Restore plan file to container plans directory
  */
-const restore_plan = async ({ thread_dir, user_base_directory, claude_home }) => {
-  const target_plans_dir = join(claude_home || get_container_claude_home(), 'plans')
+const restore_plan = async ({
+  thread_dir,
+  user_base_directory,
+  claude_home
+}) => {
+  const target_plans_dir = join(
+    claude_home || get_container_claude_home(),
+    'plans'
+  )
 
   try {
     // Read thread metadata to get plan_slug
@@ -641,7 +651,11 @@ export const create_session_claude_cli = async ({
         'username and thread_config are required for container_user execution mode'
       )
     }
-    await ensure_user_container_running({ username, thread_config, user_public_key })
+    await ensure_user_container_running({
+      username,
+      thread_config,
+      user_public_key
+    })
   }
 
   // -------------------------

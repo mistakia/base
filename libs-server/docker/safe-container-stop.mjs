@@ -29,20 +29,15 @@ const DEFAULT_POLL_INTERVAL_MS = 10000 // 10 seconds
 const stop_container = (container_name) => {
   return new Promise((resolve, reject) => {
     log(`Stopping container: ${container_name}`)
-    execFile(
-      'docker',
-      ['compose', 'down'],
-      { timeout: 60000 },
-      (error) => {
-        if (error) {
-          log(`Failed to stop container: ${error.message}`)
-          reject(error)
-          return
-        }
-        log(`Container stopped: ${container_name}`)
-        resolve()
+    execFile('docker', ['compose', 'down'], { timeout: 60000 }, (error) => {
+      if (error) {
+        log(`Failed to stop container: ${error.message}`)
+        reject(error)
+        return
       }
-    )
+      log(`Container stopped: ${container_name}`)
+      resolve()
+    })
   })
 }
 
@@ -74,9 +69,7 @@ const wait_for_sessions_to_clear = async (
     }
 
     const elapsed = Math.round((Date.now() - start) / 1000)
-    log(
-      `Still ${result.active_sessions} active session(s) after ${elapsed}s`
-    )
+    log(`Still ${result.active_sessions} active session(s) after ${elapsed}s`)
   }
 
   log('Wait timeout exceeded')

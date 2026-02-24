@@ -842,8 +842,7 @@ router.post('/:thread_id/resume', async (req, res) => {
       )
       return res.status(403).json({
         error: 'Permission denied',
-        message:
-          'You can only resume threads that you created'
+        message: 'You can only resume threads that you created'
       })
     } else {
       // For host/container threads from non-container users, use existing read permission check
@@ -1029,7 +1028,8 @@ router.post('/sync-user-session', async (req, res) => {
       })
     }
     const relative_path = transcript_path.slice(container_prefix.length)
-    const host_path = get_user_container_claude_home({ username }) + relative_path
+    const host_path =
+      get_user_container_claude_home({ username }) + relative_path
 
     // Verify the host-path file exists
     const { access } = await import('fs/promises')
@@ -1097,9 +1097,7 @@ router.post('/sync-user-session', async (req, res) => {
       sync_rate_limit.delete(transcript_path)
     }
 
-    log(
-      `sync-user-session: ${status} thread ${thread_id} for ${username}`
-    )
+    log(`sync-user-session: ${status} thread ${thread_id} for ${username}`)
 
     res.json({ thread_id, status })
   } catch (error) {

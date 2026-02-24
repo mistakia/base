@@ -20,9 +20,7 @@ describe('Thread Config Integration', function () {
         container_user_base_path: '/home/node/user-base'
       })
       expect(dirs).to.have.lengthOf(1)
-      expect(dirs[0]).to.equal(
-        '/home/node/user-base/repository/active/league'
-      )
+      expect(dirs[0]).to.equal('/home/node/user-base/repository/active/league')
     })
 
     it('should not include ro mounts in allowed working directories', () => {

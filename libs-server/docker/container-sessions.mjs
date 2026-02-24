@@ -91,9 +91,7 @@ export const detect_container_sessions = async (
   const output = await run_docker_top(container_name)
   const session_details = parse_claude_processes(output)
 
-  log(
-    `Found ${session_details.length} active session(s) in ${container_name}`
-  )
+  log(`Found ${session_details.length} active session(s) in ${container_name}`)
 
   return {
     active_sessions: session_details.length,

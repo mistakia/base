@@ -410,14 +410,33 @@ export default function GlobalThreadInput() {
     }
 
     // Consistent newline handling in contentEditable
+    // Browsers do not visually render a trailing \n in text nodes even with
+    // white-space:pre-wrap. We always insert a single \n, then ensure the
+    // element ends with \n\n so the last visible newline is never trailing.
     if (e.key === 'Enter') {
       e.preventDefault()
+      const el = input_ref.current
       const selection = window.getSelection()
       if (selection.rangeCount) {
+        const range = selection.getRangeAt(0)
         selection.deleteFromDocument()
+
         const text_node = document.createTextNode('\n')
-        selection.getRangeAt(0).insertNode(text_node)
-        selection.collapseToEnd()
+        range.insertNode(text_node)
+
+        // Explicitly position cursor after the inserted newline
+        const cursor = document.createRange()
+        cursor.setStartAfter(text_node)
+        cursor.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(cursor)
+
+        // Append a sentinel \n if the element text ends with a single \n
+        // so the newline is rendered (the sentinel itself stays invisible)
+        const full_text = el.textContent || ''
+        if (full_text.endsWith('\n') && !full_text.endsWith('\n\n')) {
+          el.appendChild(document.createTextNode('\n'))
+        }
       }
     }
   }

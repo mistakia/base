@@ -157,9 +157,7 @@ describe('volume-mount-generator', () => {
 
     it('should use custom target path when provided', async () => {
       const thread_config = {
-        mounts: [
-          { source: 'task', mode: 'rw', target: '/workspace/tasks' }
-        ]
+        mounts: [{ source: 'task', mode: 'rw', target: '/workspace/tasks' }]
       }
 
       const mounts = await generate_volume_mounts({
@@ -243,9 +241,7 @@ describe('volume-mount-generator', () => {
 
     it('should use custom target when provided in mount config', () => {
       const thread_config = {
-        mounts: [
-          { source: 'task', mode: 'rw', target: '/workspace/tasks' }
-        ]
+        mounts: [{ source: 'task', mode: 'rw', target: '/workspace/tasks' }]
       }
 
       const dirs = get_allowed_working_directories({

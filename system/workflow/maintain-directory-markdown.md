@@ -24,6 +24,7 @@ visibility_analyzed_at: '2026-02-16T04:40:51.980Z'
 Directory markdown files (ABOUT.md, INDEX.md) serve as navigable entry points to their domain, enabling agents to discover and load relevant context efficiently. This workflow identifies structural gaps, graph health issues, and quality problems, then addresses them.
 
 **Key References:**
+
 - [[sys:system/guideline/directory-markdown-standards.md]] -- structural standards and content requirements
 - Graph navigation principles from the directory-markdown-standards guideline (context phrases, progressive disclosure, context cohesion)
 
@@ -162,15 +163,15 @@ Re-run the "Find Missing Documentation" and "Check Structural Compliance" comman
 
 ## Decision Standards
 
-| Scenario                              | Action                        |
-| ------------------------------------- | ----------------------------- |
-| Directory has <5 entities             | Skip unless high-value domain |
-| Directory is temporary/transient      | Skip documentation            |
-| Overlap with another directory exists | Add Scope section to both     |
-| Task directory has defined endpoint   | Add Goals section             |
-| Directory contents use specific tag   | Document in Notable Context   |
+| Scenario                                   | Action                                |
+| ------------------------------------------ | ------------------------------------- |
+| Directory has <5 entities                  | Skip unless high-value domain         |
+| Directory is temporary/transient           | Skip documentation                    |
+| Overlap with another directory exists      | Add Scope section to both             |
+| Task directory has defined endpoint        | Add Goals section                     |
+| Directory contents use specific tag        | Document in Notable Context           |
 | ABOUT.md has links without context phrases | Add context phrases to each reference |
-| Entity has empty description field    | Fill with 1-2 sentence summary |
+| Entity has empty description field         | Fill with 1-2 sentence summary        |
 
 </instructions>
 

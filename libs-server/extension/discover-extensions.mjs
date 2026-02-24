@@ -59,7 +59,11 @@ export function discover_extensions(extension_paths) {
  * @param {string} manifest_path - Absolute path to extension.md
  * @returns {Object|null} Extension metadata or null if manifest missing/invalid
  */
-function parse_extension_manifest(extension_name, extension_path, manifest_path) {
+function parse_extension_manifest(
+  extension_name,
+  extension_path,
+  manifest_path
+) {
   let attributes = {}
 
   if (existsSync(manifest_path)) {

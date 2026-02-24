@@ -78,12 +78,8 @@ describe('User Container Thread Flow', function () {
         container_user_base_path: '/home/node/user-base'
       })
 
-      expect(settings.permissions.deny).to.include(
-        'Bash(base entity create *)'
-      )
-      expect(settings.permissions.deny).to.include(
-        'Bash(base entity update *)'
-      )
+      expect(settings.permissions.deny).to.include('Bash(base entity create *)')
+      expect(settings.permissions.deny).to.include('Bash(base entity update *)')
     })
 
     it('should include dangerous Bash pattern denials', () => {
@@ -106,9 +102,7 @@ describe('User Container Thread Flow', function () {
       })
 
       expect(dirs).to.have.lengthOf(1)
-      expect(dirs).to.include(
-        '/home/node/user-base/repository/active/league'
-      )
+      expect(dirs).to.include('/home/node/user-base/repository/active/league')
     })
   })
 
@@ -120,12 +114,8 @@ describe('User Container Thread Flow', function () {
     })
 
     it('should configure disallowed_tools from thread_config', () => {
-      expect(sample_thread_config.disallowed_tools).to.include(
-        'Bash(rm -rf *)'
-      )
-      expect(sample_thread_config.disallowed_tools).to.include(
-        'Bash(sudo *)'
-      )
+      expect(sample_thread_config.disallowed_tools).to.include('Bash(rm -rf *)')
+      expect(sample_thread_config.disallowed_tools).to.include('Bash(sudo *)')
     })
   })
 

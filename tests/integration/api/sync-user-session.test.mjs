@@ -42,7 +42,10 @@ describe('POST /api/threads/sync-user-session', () => {
   })
 
   it('should reject requests missing required fields', async () => {
-    const res = await chai.request(server).post('/api/threads/sync-user-session').send({})
+    const res = await chai
+      .request(server)
+      .post('/api/threads/sync-user-session')
+      .send({})
     expect(res).to.have.status(400)
     expect(res.body.error).to.equal('Missing required fields')
   })

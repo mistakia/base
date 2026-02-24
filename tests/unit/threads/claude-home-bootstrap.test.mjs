@@ -38,12 +38,8 @@ describe('claude-home-bootstrap', () => {
         container_user_base_path: CONTAINER_USER_BASE_PATH
       })
 
-      expect(deny).to.include(
-        `Read(//${CONTAINER_USER_BASE_PATH}/secret/**)`
-      )
-      expect(deny).to.include(
-        `Edit(//${CONTAINER_USER_BASE_PATH}/secret/**)`
-      )
+      expect(deny).to.include(`Read(//${CONTAINER_USER_BASE_PATH}/secret/**)`)
+      expect(deny).to.include(`Edit(//${CONTAINER_USER_BASE_PATH}/secret/**)`)
       expect(deny).to.include(
         `Read(//${CONTAINER_USER_BASE_PATH}/private/notes/**)`
       )
@@ -286,7 +282,9 @@ describe('claude-home-bootstrap', () => {
 
       const post_tool_hooks = settings.hooks.PostToolUse[0].hooks
       expect(post_tool_hooks).to.have.lengthOf(2)
-      expect(post_tool_hooks[0].command).to.include('user-active-session-hook.sh')
+      expect(post_tool_hooks[0].command).to.include(
+        'user-active-session-hook.sh'
+      )
       expect(post_tool_hooks[1].command).to.include('user-sync-session-hook.sh')
     })
   })

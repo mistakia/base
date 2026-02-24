@@ -75,7 +75,10 @@ describe('discover_extensions', () => {
       path.join(ext_dir, 'extension.md'),
       '---\nname: skill-root\n---\n'
     )
-    fs.writeFileSync(path.join(ext_dir, 'SKILL.md'), '---\ntitle: Root Skill\n---\n')
+    fs.writeFileSync(
+      path.join(ext_dir, 'SKILL.md'),
+      '---\ntitle: Root Skill\n---\n'
+    )
 
     const result = discover_extensions([temp_dir])
     expect(result).to.have.lengthOf(1)

@@ -133,9 +133,11 @@ Include context when it meets ANY of these criteria:
 **Tags**: Content here should use `user:tag/passive-house.md`
 
 **Guidelines**:
+
 - [[user:guideline/building-standards.md]] -- documentation format for construction specs and material selections
 
 **Related directories**:
+
 - `task/land-search/` -- property acquisition tasks (before site selection)
 - `task/parcels-system/` -- GIS and parcel data management tools
 ```

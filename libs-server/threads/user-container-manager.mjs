@@ -8,9 +8,7 @@ import { generate_compose_config } from './user-container-compose.mjs'
 import { get_container_claude_home } from './create-session-claude-cli.mjs'
 import config from '#config'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
-import {
-  CONTAINER_USER_BASE_PATH
-} from '#libs-server/docker/execution-mode.mjs'
+import { CONTAINER_USER_BASE_PATH } from '#libs-server/docker/execution-mode.mjs'
 
 const execAsync = promisify(exec)
 const log = debug('threads:user-container-manager')
@@ -33,9 +31,7 @@ export const get_user_container_name = ({ username }) => {
  */
 export const get_user_data_directory = () => {
   const user_containers_config = config.user_containers || {}
-  return (
-    user_containers_config.data_directory || '/tmp/user-containers'
-  )
+  return user_containers_config.data_directory || '/tmp/user-containers'
 }
 
 /**
@@ -87,7 +83,9 @@ export const wait_for_container_ready = async ({
   const poll_interval = 1000
   const start = Date.now()
 
-  log(`Waiting for ${container_name} to be ready (timeout: ${effective_timeout}ms)`)
+  log(
+    `Waiting for ${container_name} to be ready (timeout: ${effective_timeout}ms)`
+  )
 
   while (Date.now() - start < effective_timeout) {
     try {

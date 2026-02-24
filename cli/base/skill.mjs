@@ -56,9 +56,7 @@ async function handle_list(argv) {
     } else {
       for (const skill of skills) {
         const source = skill.extension || skill.type
-        console.log(
-          `${skill.name}\t${source}\t${skill.description || ''}`
-        )
+        console.log(`${skill.name}\t${source}\t${skill.description || ''}`)
       }
     }
   } catch (error) {

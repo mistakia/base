@@ -17,8 +17,7 @@ describe('Thread Resume Ownership', function () {
         source: { execution_mode: 'container_user' }
       }
       const requesting_user = 'user-key-abc'
-      const is_owner =
-        thread_metadata.owner_public_key === requesting_user
+      const is_owner = thread_metadata.owner_public_key === requesting_user
       expect(is_owner).to.be.true
     })
 
@@ -28,8 +27,7 @@ describe('Thread Resume Ownership', function () {
         source: { execution_mode: 'container_user' }
       }
       const requesting_user = 'user-key-xyz'
-      const is_owner =
-        thread_metadata.owner_public_key === requesting_user
+      const is_owner = thread_metadata.owner_public_key === requesting_user
       expect(is_owner).to.be.false
     })
 
@@ -49,8 +47,7 @@ describe('Thread Resume Ownership', function () {
       // A user with thread_config (container_user) should not be able
       // to resume threads that were created in host or container mode
       const thread_source = { provider: 'claude' } // legacy thread, no execution_mode
-      const execution_mode =
-        thread_source.execution_mode || 'host'
+      const execution_mode = thread_source.execution_mode || 'host'
       const requesting_user_has_thread_config = true // arrin has thread_config
 
       // The resume route blocks container_users from resuming non-container_user threads

@@ -52,9 +52,7 @@ async function handle_list(argv) {
         ]
           .filter(Boolean)
           .join(', ')
-        console.log(
-          `${ext.name}\t${flags || '-'}\t${ext.description || ''}`
-        )
+        console.log(`${ext.name}\t${flags || '-'}\t${ext.description || ''}`)
       }
     }
   } catch (error) {

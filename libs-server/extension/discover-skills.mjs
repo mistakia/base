@@ -111,7 +111,8 @@ function parse_skill_file(file_path, extension_name) {
     if (type && type !== 'skill' && type !== 'workflow') return null
 
     return {
-      name: attributes.title || attributes.name || path.basename(file_path, '.md'),
+      name:
+        attributes.title || attributes.name || path.basename(file_path, '.md'),
       description: attributes.description || '',
       type: type || 'skill',
       extension: extension_name,
