@@ -12,7 +12,7 @@ public_read: false
 relations:
   - follows [[sys:system/schema/entity.md]]
   - follows [[sys:system/guideline/write-documentation.md]]
-updated_at: '2026-02-24T16:14:56.484Z'
+updated_at: '2026-02-24T16:54:27.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 ---
 
@@ -62,6 +62,18 @@ This is not a closed taxonomy. New categories are fine when existing ones do not
 One sentence per observation. If the observation requires a paragraph, the content belongs in the entity body or a dedicated text entity.
 
 Evaluation observations may be longer (2-3 sentences) when summarizing periodic assessment results, but should remain scannable. Date-prefix evaluation observations so they sort chronologically: `[evaluation] 2026-02-24 Summary of findings.`
+
+## Pipeline Observations
+
+Some observation categories track a task's progress through automated workflows (triage, planning). These are **transient** -- they serve a deduplication purpose during the Draft and Planned stages and are removed when the task reaches Completed or Abandoned status.
+
+| Category         | Written by                          | Purpose                                    |
+| ---------------- | ----------------------------------- | ------------------------------------------ |
+| `triage-queued`  | manage-task-drafts workflow          | Prevents re-queuing within 7 days          |
+| `draft-triaged`  | triage-draft-task workflow           | Records triage decision and status         |
+| `plan-completed` | write-software/general-implementation-plan | Marks planning phase completion      |
+
+These categories are valid and expected on Draft and Planned tasks. Task completion workflows (merge-worktree, implement-software-task, implement-general-task) remove them automatically. If cleanup is missed, the evaluate-context-graph workflow flags them during periodic scans.
 
 ## Consolidation
 

@@ -7,7 +7,7 @@ description: >-
 base_uri: sys:system/workflow/manage-task-drafts.md
 entity_id: c7d94e38-5b72-4f90-a6c1-9e8d7f2a3b45
 created_at: '2026-01-28T02:30:00.000Z'
-updated_at: '2026-01-28T04:50:00.000Z'
+updated_at: '2026-02-24T12:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 observations:
   - '[autonomy] Runs to completion without human review stops'
@@ -72,6 +72,8 @@ A task has a **valid implementation plan** if ALL of these are true:
 - `[plan-completed] <date>` - Planning workflow finished and wrote the implementation plan
 
 Drafts with recent observations (within 7 days) are skipped to prevent re-queuing.
+
+These observations are **transient pipeline markers**. They are removed automatically when the task reaches Completed or Abandoned status via the merge-worktree, implement-software-task, or implement-general-task workflows.
 
 **Queue Integration:**
 

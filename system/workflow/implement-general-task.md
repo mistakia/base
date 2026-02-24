@@ -21,7 +21,7 @@ relations:
   - follows [[sys:system/guideline/write-workflow.md]]
   - follows [[sys:system/workflow/write-general-implementation-plan.md]]
   - follows [[sys:system/guideline/review-task.md]]
-updated_at: '2026-01-05T19:25:18.081Z'
+updated_at: '2026-02-24T16:54:49.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:40:34.543Z'
 ---
@@ -87,6 +87,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - Check for any cleanup or follow-up actions needed
    - Update implementation plan status to "Completed"
    - Update `finished_at` to current ISO 8601 timestamp
+   - Remove transient pipeline observations from the task entity: strip any observations starting with `[plan-completed]`, `[triage-queued]`, or `[draft-triaged]` from the observations array
 
 ## Key Rules
 

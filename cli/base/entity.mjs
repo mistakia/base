@@ -933,6 +933,12 @@ async function handle_observe(argv) {
       )
     }
 
+    if (observation.length > 200) {
+      console.warn(
+        'Warning: observation exceeds 200 characters -- consider moving detailed content to entity body. See sys:system/guideline/write-observations.md'
+      )
+    }
+
     const absolute_path = resolve_base_uri_from_registry(base_uri)
     const entity_result = await read_entity_from_filesystem({ absolute_path })
     if (!entity_result.success) {

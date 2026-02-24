@@ -36,7 +36,7 @@ relations:
   - uses [[sys:system/guideline/write-software.md]]
   - uses [[sys:system/guideline/write-javascript.md]]
   - precedes [[sys:system/workflow/merge-worktree.md]]
-updated_at: '2026-01-19T00:00:00.000Z'
+updated_at: '2026-02-24T16:54:49.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -120,6 +120,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Review all changes: `git diff --name-only` and `git status`
    - Update implementation plan status to "Completed"
    - Update `finished_at` to current ISO 8601 timestamp
+   - Remove transient pipeline observations from the task entity: strip any observations starting with `[plan-completed]`, `[triage-queued]`, or `[draft-triaged]` from the observations array
    - **DO NOT commit any code** - committing is handled by [[sys:system/workflow/merge-worktree.md]]
 
 ## Critical Rules

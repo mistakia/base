@@ -29,7 +29,7 @@ prompt_properties:
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2026-01-05T19:25:18.079Z'
+updated_at: '2026-02-24T16:54:49.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -257,6 +257,7 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
   - Update the `status` field from current value to `Completed`
   - Update the `finished_at` field to current ISO 8601 timestamp
   - Update the `updated_at` field to current ISO 8601 timestamp
+  - Remove transient pipeline observations (`[plan-completed]`, `[triage-queued]`, `[draft-triaged]`) from the observations array -- these served their purpose during the planning pipeline and are no longer needed
   - Write the updated task file back
   - Report task completion: "Task [task_path] marked as Completed"
 - If no task file was found, skip this step
