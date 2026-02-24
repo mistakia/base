@@ -10,6 +10,7 @@ const WORD_BOUNDARY_OTHER_BONUS = 4
 const CAMEL_CASE_BONUS = 2
 const CASE_MATCH_BONUS = 1
 const PATH_LENGTH_PENALTY = 0.01
+const MAX_START_POSITIONS = 10
 
 /**
  * Check if a character is a word boundary separator
@@ -63,28 +64,30 @@ function get_word_boundary_bonus({ target, position }) {
 }
 
 /**
- * Score a single word against a target string
+ * Score a single word match starting from a specific position in the target
  *
  * @param {Object} params - Parameters
- * @param {string} params.word - Query word to match
- * @param {string} params.target - Target string to match against
- * @returns {number} Score for this word match (0 if no match)
+ * @param {string} params.word_lower - Lowercase query word
+ * @param {string} params.word - Original query word (for case matching)
+ * @param {string} params.target_lower - Lowercase target string
+ * @param {string} params.target - Original target string
+ * @param {number} params.start_index - Position to start matching from
+ * @returns {number} Score for this match attempt (0 if not all characters matched)
  */
-function score_word({ word, target }) {
-  if (!word || !target) {
-    return 0
-  }
-
-  const word_lower = word.toLowerCase()
-  const target_lower = target.toLowerCase()
-
+function score_word_from_position({
+  word_lower,
+  word,
+  target_lower,
+  target,
+  start_index
+}) {
   let word_index = 0
   let score = 0
   let prev_match_index = -1
   let consecutive_count = 0
 
   for (
-    let target_index = 0;
+    let target_index = start_index;
     target_index < target.length && word_index < word_lower.length;
     target_index++
   ) {
@@ -128,6 +131,66 @@ function score_word({ word, target }) {
   }
 
   return score
+}
+
+/**
+ * Score a single word against a target string
+ *
+ * Tries multiple starting positions for the first character to avoid greedy
+ * mismatch (e.g., matching 'p' in "physical" instead of 'p' in "peeler").
+ * Returns the best score across all valid starting positions.
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.word - Query word to match
+ * @param {string} params.target - Target string to match against
+ * @returns {number} Score for this word match (0 if no match)
+ */
+function score_word({ word, target }) {
+  if (!word || !target) {
+    return 0
+  }
+
+  const word_lower = word.toLowerCase()
+  const target_lower = target.toLowerCase()
+  const first_char = word_lower[0]
+
+  let best_score = 0
+  let positions_tried = 0
+
+  // Try each occurrence of the first character as a starting position
+  for (
+    let start = 0;
+    start < target_lower.length;
+    start++
+  ) {
+    if (target_lower[start] !== first_char) {
+      continue
+    }
+
+    // Not enough remaining characters to match the full word
+    if (target_lower.length - start < word_lower.length) {
+      break
+    }
+
+    // Cap iterations to prevent pathological performance
+    if (++positions_tried > MAX_START_POSITIONS) {
+      break
+    }
+
+    const score = score_word_from_position({
+      word_lower,
+      word,
+      target_lower,
+      target,
+      start_index: start
+    })
+
+    if (score > best_score) {
+      best_score = score
+    }
+  }
+
+  return best_score
 }
 
 /**
