@@ -55,7 +55,6 @@ tests/
     integrations/         # External system integrations
       claude/             # Claude session processing
       github/             # GitHub integration
-      notion/             # Notion integration
       thread/             # Thread data processing
     libs-server/          # Server library functions
     libs-shared/          # Shared library functions
@@ -76,7 +75,6 @@ tests/
     github/               # GitHub webhook tests
     mcp/                  # MCP server tests
     metadata/             # Metadata analysis tests
-    notion/               # Notion sync tests
     thread/               # Thread storage tests
   fixtures/               # Test data and mock files
   utils/                  # Test utility functions

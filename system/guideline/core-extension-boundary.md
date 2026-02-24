@@ -38,13 +38,13 @@ Core functionality must reflect consensus practices or established standards. Ap
 
 Examples of consensus (core): entity validation, git commit message format guidelines, task schema definitions, entity CRUD operations.
 
-Examples of opinionated (user-base): three-tier content classification (public/acquaintance/private), specific third-party integrations (GitHub, Notion), specific tooling choices (Ollama, Stylus).
+Examples of opinionated (user-base): three-tier content classification (public/acquaintance/private), specific third-party integrations (GitHub), specific tooling choices (Ollama, Stylus).
 
 ### Integration-specific functionality is user-specific
 
 Workflows, guidelines, and tools that depend on external services or integrations belong in user-base. Not all users will use the same external services.
 
-Examples: GitHub issue management, Notion database sync, specific LLM provider workflows.
+Examples: GitHub issue management, specific LLM provider workflows, custom deployment scripts.
 
 ### The two-layer pattern
 
