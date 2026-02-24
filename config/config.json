@@ -95,6 +95,9 @@
   "transcription": {
     "service_url": ""
   },
+  "extensions": {
+    "discovery_paths": []
+  },
   "machine_registry": {},
   "cli_queue": {
     "tag_limits": {

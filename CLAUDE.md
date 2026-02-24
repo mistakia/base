@@ -198,11 +198,57 @@ workflows, and guidelines:
 - Workflows: base `system/workflow/` provides core, user-base `workflow/` extends
 - Guidelines: base `system/guideline/` provides core, user-base `guideline/` extends
 - CLI scripts: base `cli/` provides core tools, user-base `cli/` adds user scripts
+- Extensions: user-base `extension/` provides convention-based CLI extensions
 - Container config: base provides generic Dockerfile/compose, user-base overrides per machine
 - Deployment config: user-base `config/` holds `deploy-hooks.conf`, `labels.mjs`, etc.
 
 When adding functionality: would another user need this exact value? If not,
 it belongs in user-base.
+
+## Extension System
+
+The extension system enables convention-based CLI subcommand registration and agent skill discovery. Extensions are directories in `{USER_BASE_DIRECTORY}/extension/` that contribute commands and skills without modifying core code.
+
+### Discovery and Registration
+
+At startup, `base.mjs` scans extension directories for `command.mjs` files and dynamically registers them as CLI subcommands. Discovery order (first-match-wins): user extensions, then system extensions.
+
+### Extension Structure
+
+```
+extension/
+  <name>/
+    extension.md     # Manifest (entity frontmatter + docs)
+    command.mjs      # Yargs command module (optional)
+    skill/           # Agent skills in workflow format (optional)
+    SKILL.md         # Consensus spec skill (optional)
+    lib/             # Supporting code (optional)
+```
+
+### CLI Commands
+
+```bash
+base extension list          # Show registered extensions
+base extension list --json   # JSON output with full metadata
+base skill list              # Show all discovered skills
+base skill list --json       # JSON output
+```
+
+### Core Modules
+
+- `libs-server/extension/discover-extensions.mjs` -- Extension discovery logic
+- `libs-server/extension/discover-skills.mjs` -- Skill discovery from extensions and workflows
+- `cli/base/extension.mjs` -- `base extension` CLI command
+- `cli/base/skill.mjs` -- `base skill` CLI command
+
+### Schemas
+
+- `system/schema/extension.md` -- Extension entity type definition
+- `system/schema/skill.md` -- Skill entity type definition
+
+### Documentation
+
+- `system/text/extension-system.md` -- Full extension system documentation
 
 ### Debug Logging
 
