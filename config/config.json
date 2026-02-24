@@ -17,9 +17,6 @@
     "user_email": "",
     "token": ""
   },
-  "notion": {
-    "api_key": ""
-  },
   "jwt": {
     "secret": "",
     "algorithms": ["HS256"]

@@ -7,8 +7,7 @@ export const id_field_keys = new Set([
   'import_cid',
   'user_public_key',
   'base_uri',
-  'thread_id',
-  'notion_id'
+  'thread_id'
 ])
 
 export const link_field_keys = new Set([

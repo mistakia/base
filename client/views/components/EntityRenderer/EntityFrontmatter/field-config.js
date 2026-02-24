@@ -28,7 +28,6 @@ export const entity_field_config = {
       'github_comments',
       'import_cid',
       'reference_url',
-      'notion_metadata',
       'public_read',
       'estimated_total_duration',
       'estimated_preparation_duration',
@@ -135,7 +134,6 @@ export const entity_field_config = {
       'standard_drawer_units',
       'storage_notes',
       'misc_notes',
-      'notion_metadata',
       'public_read',
       'archived_at'
     ]
@@ -196,7 +194,6 @@ export const entity_field_config = {
       'tools',
       'prompt_properties',
       'reference_url',
-      'notion_metadata',
       'public_read',
       'estimated_total_duration',
       'estimated_preparation_duration',
