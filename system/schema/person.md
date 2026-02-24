@@ -9,12 +9,16 @@ extends: entity
 properties:
   - name: first_name
     type: string
-    required: true
+    required: false
     description: First name of the person
   - name: last_name
     type: string
-    required: true
+    required: false
     description: Last name of the person
+  - name: alias
+    type: string
+    required: false
+    description: Alias or pseudonym (can be used instead of first/last name)
   - name: email
     type: string
     required: false
@@ -29,7 +33,7 @@ properties:
     description: Personal website
 public_read: true
 type_name: person
-updated_at: '2026-01-05T19:24:59.834Z'
+updated_at: '2026-02-24T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:34:01.944Z'
 ---
@@ -42,9 +46,11 @@ Persons represent individual people who may be involved in tasks, or organizatio
 
 The person schema captures:
 
-- Basic identity information
+- Basic identity information (name or alias/pseudonym)
 - Contact details
 - Organizational affiliations (through relations)
+
+A person entity requires at least one of: `first_name`, `last_name`, or `alias`.
 
 ## Privacy Considerations
 
