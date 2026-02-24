@@ -410,33 +410,36 @@ export default function GlobalThreadInput() {
     }
 
     // Consistent newline handling in contentEditable
-    // Browsers do not visually render a trailing \n in text nodes even with
-    // white-space:pre-wrap. We always insert a single \n, then ensure the
-    // element ends with \n\n so the last visible newline is never trailing.
+    // Browsers do not visually render a trailing \n in text nodes with
+    // white-space:pre-wrap. When the newline is at the end of the element,
+    // we insert \n\n (sentinel) so the visible newline is never trailing.
     if (e.key === 'Enter') {
       e.preventDefault()
-      const el = input_ref.current
       const selection = window.getSelection()
       if (selection.rangeCount) {
         const range = selection.getRangeAt(0)
         selection.deleteFromDocument()
 
+        // Check if cursor is at the end: after insertNode splits the text
+        // node, the inserted node's nextSibling is either null or an empty
+        // text node remainder from the split.
         const text_node = document.createTextNode('\n')
         range.insertNode(text_node)
 
-        // Explicitly position cursor after the inserted newline
+        const next = text_node.nextSibling
+        const at_end =
+          !next || (next.nodeType === Node.TEXT_NODE && !next.textContent)
+
+        if (at_end) {
+          text_node.textContent = '\n\n'
+        }
+
+        // Position cursor after the first \n (before sentinel if present)
         const cursor = document.createRange()
-        cursor.setStartAfter(text_node)
+        cursor.setStart(text_node, 1)
         cursor.collapse(true)
         selection.removeAllRanges()
         selection.addRange(cursor)
-
-        // Append a sentinel \n if the element text ends with a single \n
-        // so the newline is rendered (the sentinel itself stays invisible)
-        const full_text = el.textContent || ''
-        if (full_text.endsWith('\n') && !full_text.endsWith('\n\n')) {
-          el.appendChild(document.createTextNode('\n'))
-        }
       }
     }
   }
@@ -449,7 +452,7 @@ export default function GlobalThreadInput() {
     let text = el.textContent || ''
 
     // Normalize empty state for CSS :empty placeholder
-    if (!text || text === '\n') {
+    if (!text || !text.trim()) {
       text = ''
       el.innerHTML = ''
     }

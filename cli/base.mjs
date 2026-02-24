@@ -50,31 +50,24 @@ import * as init_command from './initial-setup.mjs'
 
 const load_extension_commands = async (parser) => {
   const config = (await import('#config')).default
-  const extension_dirs = [
-    config.user_base_directory
-      ? path.join(config.user_base_directory, 'extension')
-      : null
-  ].filter(Boolean)
+  if (!config.user_base_directory) return
 
-  let extension_count = 0
-  for (const dir of extension_dirs) {
-    if (!existsSync(dir)) continue
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue
-      const command_path = path.join(dir, entry.name, 'command.mjs')
-      if (!existsSync(command_path)) continue
-      try {
-        const mod = await import(command_path)
-        parser.command(mod)
-        extension_count++
-      } catch (error) {
-        console.error(
-          `Warning: Failed to load extension "${entry.name}": ${error.message}`
-        )
-      }
+  const dir = path.join(config.user_base_directory, 'extension')
+  if (!existsSync(dir)) return
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const command_path = path.join(dir, entry.name, 'command.mjs')
+    if (!existsSync(command_path)) continue
+    try {
+      const mod = await import(command_path)
+      parser.command(mod)
+    } catch (error) {
+      console.error(
+        `Warning: Failed to load extension "${entry.name}": ${error.message}`
+      )
     }
   }
-  return extension_count
 }
 
 const main = async () => {
