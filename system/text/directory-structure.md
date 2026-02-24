@@ -65,7 +65,6 @@ The `libs-server/` directory contains server-specific code organized by function
     │   ├── claude/             # Claude AI integration
     │   ├── cursor/             # Cursor IDE integration
     │   ├── github/             # GitHub API and sync
-    │   ├── notion/             # Notion API and sync
     │   ├── chatgpt/            # ChatGPT integration
     │   ├── pi/                 # Pi AI integration
     │   ├── shared/             # Shared integration utilities

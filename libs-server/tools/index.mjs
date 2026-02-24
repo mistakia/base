@@ -18,7 +18,6 @@ import {
 } from './registry.mjs'
 
 // Register tools
-// import './notion/index.mjs'
 // Task, thread, and file tools removed - use entity-list CLI instead
 import './entity/index.mjs'
 

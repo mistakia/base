@@ -35,7 +35,7 @@ function validate_required_params({
  * Updates an existing task from GitHub issue changes with conflict resolution.
  *
  * This is a one-way sync: GitHub -> local only. Changes to the external
- * source (GitHub/Notion) should be made directly via their APIs, then
+ * source (GitHub) should be made directly via their APIs, then
  * an import triggered to sync the local state.
  *
  * @param {Object} options - Function options

@@ -21,7 +21,7 @@ visibility_analyzed_at: '2026-02-16T04:36:56.923Z'
 
 The Base MCP server layer (`services/mcp/`, `libs-server/mcp/`) has been removed. The only Base-specific MCP tool was `entity_create`, which is now available as the `base entity create` CLI command with full feature parity.
 
-Third-party MCP servers (Notion, PostgreSQL, GraphQL, browser automation) configured in `.mcp.json` are unaffected by this removal.
+Third-party MCP servers (PostgreSQL, GraphQL, browser automation, etc.) configured in `.mcp.json` are unaffected by this removal.
 
 ## Migration
 

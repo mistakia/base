@@ -49,7 +49,7 @@ const PRESERVE_IF_EXISTS_PROPERTIES = new Set([
  *
  * @param {Object} existing_properties - Current entity properties
  * @param {Object} new_properties - New properties from external system
- * @param {string} external_system - External system identifier (e.g., 'notion', 'github')
+ * @param {string} external_system - External system identifier (e.g., 'github')
  * @returns {Object} Properties with stale external properties removed
  */
 export function remove_stale_external_properties(

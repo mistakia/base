@@ -26,7 +26,7 @@ const log = debug('files:store')
  * @param {string} [params.original_name] - Original filename for reference
  * @param {string} [params.mime_type] - MIME type of the file
  * @param {string} [params.source_uri] - Where the file came from (URL, integration, etc.)
- * @param {string} [params.context] - Storage context (notion, music, import, etc.)
+ * @param {string} [params.context] - Storage context (music, import, etc.)
  * @param {Object} [params.custom_hash] - Optional domain-specific hash
  * @param {string} [params.custom_hash.type] - Type of custom hash (e.g., 'audio-only-sha256')
  * @param {string} [params.custom_hash.value] - Pre-computed custom hash value

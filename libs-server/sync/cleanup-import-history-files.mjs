@@ -10,7 +10,7 @@ const log = debug('sync:cleanup-import-history-files')
  * Clean up old import history files, keeping only the most recent files
  *
  * @param {Object} options - Function options
- * @param {string} [options.external_system] - Filter by external system (github, notion)
+ * @param {string} [options.external_system] - Filter by external system (e.g., github)
  * @param {string} [options.entity_id] - Filter by specific entity ID
  * @param {number} [options.keep_count=10] - Number of files to keep per entity
  * @param {boolean} [options.dry_run=false] - Show what would be deleted without deleting
