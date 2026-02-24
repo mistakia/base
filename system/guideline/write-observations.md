@@ -67,11 +67,11 @@ Evaluation observations may be longer (2-3 sentences) when summarizing periodic 
 
 Some observation categories track a task's progress through automated workflows (triage, planning). These are **transient** -- they serve a deduplication purpose during the Draft and Planned stages and are removed when the task reaches Completed or Abandoned status.
 
-| Category         | Written by                          | Purpose                                    |
-| ---------------- | ----------------------------------- | ------------------------------------------ |
-| `triage-queued`  | manage-task-drafts workflow          | Prevents re-queuing within 7 days          |
-| `draft-triaged`  | triage-draft-task workflow           | Records triage decision and status         |
-| `plan-completed` | write-software/general-implementation-plan | Marks planning phase completion      |
+| Category         | Written by                                 | Purpose                            |
+| ---------------- | ------------------------------------------ | ---------------------------------- |
+| `triage-queued`  | manage-task-drafts workflow                | Prevents re-queuing within 7 days  |
+| `draft-triaged`  | triage-draft-task workflow                 | Records triage decision and status |
+| `plan-completed` | write-software/general-implementation-plan | Marks planning phase completion    |
 
 These categories are valid and expected on Draft and Planned tasks. Task completion workflows (merge-worktree, implement-software-task, implement-general-task) remove them automatically. If cleanup is missed, the evaluate-context-graph workflow flags them during periodic scans.
 

@@ -158,11 +158,7 @@ function score_word({ word, target }) {
   let positions_tried = 0
 
   // Try each occurrence of the first character as a starting position
-  for (
-    let start = 0;
-    start < target_lower.length;
-    start++
-  ) {
+  for (let start = 0; start < target_lower.length; start++) {
     if (target_lower[start] !== first_char) {
       continue
     }

@@ -45,9 +45,7 @@ export function active_sessions_reducer(
       // Build Map from API response, preserving client-side fields
       const sessions_array = payload.data || []
       const existing_sessions = state.get('sessions')
-      const api_session_ids = new Set(
-        sessions_array.map((s) => s.session_id)
-      )
+      const api_session_ids = new Set(sessions_array.map((s) => s.session_id))
 
       const now = Date.now()
       const stale_threshold_ms = 5 * 60 * 1000

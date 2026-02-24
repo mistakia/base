@@ -23,7 +23,9 @@ export const process_links_in_markdown = (
       const base_uri = `${scheme}:${path}`
       const client_path = convert_base_uri_to_path(base_uri)
       // Remove root slash if present
-      const display_text = client_path.startsWith('/') ? client_path.slice(1) : client_path
+      const display_text = client_path.startsWith('/')
+        ? client_path.slice(1)
+        : client_path
       return `[${display_text}](${client_path})`
     }
   )
