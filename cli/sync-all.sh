@@ -48,6 +48,26 @@ source "$(dirname "$0")/lib/paths.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Ensure SSH agent is reachable for git operations.
+# PM2 and other long-running processes may retain a stale SSH_AUTH_SOCK from a
+# previous login session. On macOS, the launchd agent socket is the canonical
+# source; fall back to it when the current socket is missing.
+if [ -n "$SSH_AUTH_SOCK" ] && [ ! -S "$SSH_AUTH_SOCK" ]; then
+    # Current socket is stale (file doesn't exist or isn't a socket)
+    LAUNCHD_SOCK=$(ls /private/tmp/com.apple.launchd.*/Listeners 2>/dev/null | head -1)
+    if [ -n "$LAUNCHD_SOCK" ] && [ -S "$LAUNCHD_SOCK" ]; then
+        export SSH_AUTH_SOCK="$LAUNCHD_SOCK"
+        log "SSH agent socket was stale, switched to launchd socket"
+    fi
+elif [ -z "$SSH_AUTH_SOCK" ]; then
+    # No socket at all -- try launchd
+    LAUNCHD_SOCK=$(ls /private/tmp/com.apple.launchd.*/Listeners 2>/dev/null | head -1)
+    if [ -n "$LAUNCHD_SOCK" ] && [ -S "$LAUNCHD_SOCK" ]; then
+        export SSH_AUTH_SOCK="$LAUNCHD_SOCK"
+        log "No SSH agent socket, using launchd socket"
+    fi
+fi
+
 # Ensure SSH works for git operations (hook environments may lack proper SSH config)
 if [ -z "$GIT_SSH_COMMAND" ]; then
     unset GIT_SSH_COMMAND
@@ -550,10 +570,8 @@ if [ "$POINTER_UPDATED" = true ]; then
     # Throttle: if HEAD is an unpushed pointer-only commit, amend it instead of
     # creating a new one. This keeps at most 1 unpushed pointer commit at any time,
     # reducing divergence risk when both machines create pointer commits simultaneously.
-    local can_amend=false
-    local current_branch_name
+    can_amend=false
     current_branch_name=$(git rev-parse --abbrev-ref HEAD)
-    local head_sha remote_sha ptr_merge_base
     head_sha=$(git rev-parse HEAD)
     remote_sha=$(git rev-parse "origin/$current_branch_name" 2>/dev/null) || true
     if [ -n "$remote_sha" ]; then
@@ -656,7 +674,6 @@ else
                     # Push failed - likely cross-machine race. Re-fetch and retry once.
                     log "Parent: push failed, re-fetching and retrying..."
                     if git fetch origin 2>/dev/null; then
-                        local RETRY_REMOTE RETRY_LOCAL RETRY_BASE
                         RETRY_REMOTE=$(git rev-parse "$REMOTE_BRANCH")
                         RETRY_LOCAL=$(git rev-parse HEAD)
                         RETRY_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
