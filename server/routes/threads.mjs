@@ -714,7 +714,7 @@ router.post('/create-session', async (req, res) => {
 
     // Normalize container paths to host paths before validation
     const normalized_working_directory =
-      execution_mode === 'container'
+      execution_mode === 'container' || execution_mode === 'container_user'
         ? translate_to_host_path(working_directory)
         : working_directory
 
@@ -906,7 +906,7 @@ router.post('/:thread_id/resume', async (req, res) => {
 
     // Normalize container paths to host paths before validation
     const normalized_working_directory =
-      execution_mode === 'container'
+      execution_mode === 'container' || execution_mode === 'container_user'
         ? translate_to_host_path(working_directory)
         : working_directory
 
