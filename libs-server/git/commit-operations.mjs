@@ -1,7 +1,11 @@
 import debug from 'debug'
+import { promisify } from 'util'
+import { execFile } from 'child_process'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 import { quote_files } from './utils.mjs'
+
+const exec_file = promisify(execFile)
 
 const log = debug('git:commit-operations')
 
@@ -45,11 +49,11 @@ export async function commit_changes({
     log(
       `Committing changes in ${worktree_path} with message: "${commit_message}"`
     )
-    let command = `git commit -m "${commit_message.replace(/"/g, '\\"')}"` // Escape double quotes in message
+    const args = ['commit', '-m', commit_message]
     if (author) {
-      command += ` --author="${author.replace(/"/g, '\\"')}"` // Escape double quotes in author
+      args.push('--author', author)
     }
-    await execute_shell_command(command, { cwd: worktree_path })
+    await exec_file('git', args, { cwd: worktree_path })
     return true
   } catch (error) {
     // Check if the error is because there's nothing to commit
