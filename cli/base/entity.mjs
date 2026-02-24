@@ -4,6 +4,7 @@
  * Wraps entity query, get, move, and validate operations.
  */
 
+import fs from 'fs/promises'
 import path from 'path'
 import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
@@ -31,14 +32,19 @@ import {
   find_matching_files,
   get_visibility
 } from '../entity-visibility.mjs'
+import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
+import {
+  resolve_base_uri_from_registry,
+  is_valid_base_uri,
+  create_base_uri_from_path
+} from '#libs-server/base-uri/index.mjs'
 import config from '#config'
 
 export const command = 'entity <command>'
 export const describe =
-  'Entity operations (create, list, get, update, observe, tree, move, validate, visibility)'
+  'Entity operations (create, convert, list, get, update, observe, tree, move, validate, visibility)'
 
 export const builder = (yargs) =>
   yargs
@@ -359,9 +365,47 @@ export const builder = (yargs) =>
           )
           .demandCommand(1, 'Specify a subcommand: set or get')
     )
+    .command(
+      'convert <path>',
+      'Convert a plain markdown file into a proper entity with frontmatter',
+      (yargs) =>
+        yargs
+          .positional('path', {
+            describe: 'Filesystem path or base_uri of the file to convert',
+            type: 'string'
+          })
+          .option('type', {
+            describe:
+              'Entity type (task, text, workflow, guideline, tag, etc.)',
+            type: 'string'
+          })
+          .option('title', {
+            alias: 't',
+            describe:
+              'Entity title (overrides existing frontmatter or heading)',
+            type: 'string'
+          })
+          .option('description', {
+            alias: 'd',
+            describe: 'Brief description',
+            type: 'string'
+          })
+          .option('properties', {
+            alias: 'p',
+            describe: 'Additional properties as JSON string',
+            type: 'string'
+          })
+          .option('dry-run', {
+            alias: 'n',
+            describe: 'Preview without writing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_convert
+    )
     .demandCommand(
       1,
-      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, threads, or visibility'
+      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, convert, threads, or visibility'
     )
 
 export const handler = () => {}
@@ -446,6 +490,189 @@ async function handle_create(argv) {
     } else {
       console.log(`Created ${entity_type} entity at ${base_uri}`)
       console.log(`  Entity ID: ${result.entity_id}`)
+      console.log(`  Path: ${absolute_path}`)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+function extract_title_from_heading(content) {
+  const match = content.match(/^#\s+(.+)$/m)
+  return match ? match[1].trim() : null
+}
+
+function title_from_filename(absolute_path) {
+  const basename = path.basename(absolute_path, path.extname(absolute_path))
+  return basename
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+async function handle_convert(argv) {
+  let exit_code = 0
+  try {
+    const input_path = argv.path
+
+    // Resolve to absolute path: accept base_uri or filesystem path
+    let absolute_path
+    if (is_valid_base_uri(input_path)) {
+      absolute_path = resolve_base_uri_from_registry(input_path)
+    } else if (path.isAbsolute(input_path)) {
+      absolute_path = input_path
+    } else {
+      absolute_path = path.resolve(config.user_base_directory, input_path)
+    }
+
+    // Read the file
+    const file_content = await fs.readFile(absolute_path, 'utf-8')
+
+    // Parse existing frontmatter and content
+    const { document_properties, document_content } =
+      format_document_from_file_content({
+        file_content,
+        file_path: absolute_path
+      })
+
+    // Determine base_uri for the file
+    const base_uri = create_base_uri_from_path(absolute_path)
+
+    // Determine entity type
+    const entity_type = argv.type || document_properties.type
+    if (!entity_type) {
+      throw new Error(
+        'Entity type could not be determined. Use --type to specify.'
+      )
+    }
+
+    // Determine title
+    const title =
+      argv.title ||
+      document_properties.title ||
+      extract_title_from_heading(document_content) ||
+      title_from_filename(absolute_path)
+
+    // Determine description
+    const description = argv.description || document_properties.description
+
+    // Parse extra properties from --properties flag
+    let extra_properties = {}
+    if (argv.properties) {
+      try {
+        extra_properties = JSON.parse(argv.properties)
+      } catch {
+        throw new Error(`Invalid JSON for --properties: ${argv.properties}`)
+      }
+    }
+
+    // Check if already a valid entity with no flags provided
+    const has_entity_id = Boolean(document_properties.entity_id)
+    const has_type = Boolean(document_properties.type)
+    const has_title = Boolean(document_properties.title)
+    const no_flags_provided =
+      !argv.type && !argv.title && !argv.description && !argv.properties
+    if (has_entity_id && has_type && has_title && no_flags_provided) {
+      if (argv.json) {
+        console.log(
+          JSON.stringify(
+            {
+              already_valid: true,
+              base_uri,
+              entity_id: document_properties.entity_id,
+              path: absolute_path
+            },
+            null,
+            2
+          )
+        )
+      } else {
+        console.log(`Already a valid entity: ${base_uri}`)
+        console.log(`  Entity ID: ${document_properties.entity_id}`)
+        console.log(`  Type: ${document_properties.type}`)
+        console.log(`  Title: ${document_properties.title}`)
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    // Merge properties: existing frontmatter < generated fields < flags
+    const now = new Date().toISOString()
+    const entity_properties = {
+      ...document_properties,
+      title,
+      type: entity_type,
+      ...(description ? { description } : {}),
+      ...extra_properties,
+      created_at: document_properties.created_at || now,
+      updated_at: now,
+      user_public_key:
+        document_properties.user_public_key || config.user_public_key,
+      base_uri
+    }
+
+    if (argv['dry-run']) {
+      if (argv.json) {
+        console.log(
+          JSON.stringify(
+            {
+              dry_run: true,
+              base_uri,
+              absolute_path,
+              entity_type,
+              entity_properties,
+              content_length: document_content.length
+            },
+            null,
+            2
+          )
+        )
+      } else {
+        console.log('Dry run - no changes made')
+        console.log(`  Path: ${absolute_path}`)
+        console.log(`  Base URI: ${base_uri}`)
+        console.log(`  Type: ${entity_type}`)
+        console.log(`  Title: ${title}`)
+        if (description) console.log(`  Description: ${description}`)
+        if (Object.keys(extra_properties).length > 0) {
+          console.log(`  Properties: ${JSON.stringify(extra_properties)}`)
+        }
+        console.log(`  Content length: ${document_content.length} chars`)
+        console.log(
+          `  Existing entity_id: ${document_properties.entity_id || 'none (will be generated)'}`
+        )
+      }
+      flush_and_exit(0)
+      return
+    }
+
+    const result = await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties,
+      entity_type,
+      entity_content: document_content
+    })
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          {
+            success: true,
+            entity_id: result.entity_id,
+            base_uri,
+            path: absolute_path,
+            converted: true
+          },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Converted to ${entity_type} entity: ${base_uri}`)
+      console.log(`  Entity ID: ${result.entity_id}`)
+      console.log(`  Title: ${title}`)
       console.log(`  Path: ${absolute_path}`)
     }
   } catch (error) {
