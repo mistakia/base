@@ -14,7 +14,7 @@ const log = debug('sync:list-import-history-files')
  * List import history files for entities
  *
  * @param {Object} options - Function options
- * @param {string} [options.external_system] - Filter by external system (github, notion)
+ * @param {string} [options.external_system] - Filter by external system (e.g., github)
  * @param {string} [options.entity_id] - Filter by specific entity ID
  * @param {string} [options.import_history_base_directory] - Optional override for base directory
  * @returns {Promise<Array>} Array of entity import history information
@@ -312,8 +312,8 @@ async function get_available_external_systems(
 
 /**
  * Discover import sources for an external system by scanning directory structure
- * This automatically detects whether a system uses flat structure (notion)
- * or nested structure with import sources (github with issues/project)
+ * This automatically detects whether a system uses flat structure
+ * or nested structure with import sources (e.g., github with issues/project)
  *
  * @param {Object} options - Function options
  * @param {string} options.external_system - External system name

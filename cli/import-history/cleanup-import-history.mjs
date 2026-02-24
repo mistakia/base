@@ -4,7 +4,7 @@
  * Import History Cleanup Script
  *
  * Manages import history files by limiting retention per entity.
- * Supports both flat structure (notion) and nested structure with import sources (github).
+ * Supports both flat and nested directory structures with import sources (e.g., github).
  */
 
 import debug from 'debug'
@@ -23,7 +23,7 @@ const log = debug('cli:import-history:cleanup')
 // Parse command line arguments
 const argv = yargs(hideBin(process.argv))
   .option('external-system', {
-    describe: 'Filter by external system (e.g., github, notion)',
+    describe: 'Filter by external system (e.g., github)',
     type: 'string'
   })
   .option('entity-id', {

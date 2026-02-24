@@ -173,7 +173,7 @@ export async function find_files_by_custom_hash(custom_hash) {
 /**
  * Find files by context
  *
- * @param {string} context - Storage context (e.g., 'notion', 'music')
+ * @param {string} context - Storage context (e.g., 'music', 'import')
  * @param {Object} [options] - Query options
  * @param {number} [options.limit=100] - Max results
  * @param {number} [options.offset=0] - Offset for pagination
