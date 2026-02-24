@@ -146,11 +146,13 @@ check_git_state() {
 
 # Check if a commit only changes submodule pointers (mode 160000).
 # Returns 0 if pointer-only, 1 if it has any non-submodule changes.
+# Uses -c diff.ignoreSubmodules=none to ensure submodules with ignore=all
+# in .gitmodules are still visible to diff-tree.
 # Args: $1 = commit SHA
 is_pointer_only_commit() {
     local sha="$1"
     local changes
-    changes=$(git diff-tree --no-commit-id -r "$sha" 2>/dev/null)
+    changes=$(git -c diff.ignoreSubmodules=none diff-tree --no-commit-id -r "$sha" 2>/dev/null)
     [ -z "$changes" ] && return 0
     # Any entry without submodule mode (160000) means non-pointer content
     if echo "$changes" | grep -qv '^:160000 160000 '; then
@@ -197,11 +199,11 @@ smart_rebase() {
         done
 
         GIT_SEQUENCE_EDITOR="awk -v df='$drop_file' 'BEGIN{while((getline l<df)>0)d[l]=1} {if(\$1==\"pick\"&&(substr(\$2,1,7) in d))\$1=\"drop\"} 1'" \
-            git rebase -i --autostash --no-autosquash "$remote_branch" 2>/dev/null
+            git -c diff.ignoreSubmodules=none rebase -i --autostash --no-autosquash "$remote_branch" 2>/dev/null
         rebase_status=$?
         rm -f "$drop_file"
     else
-        git rebase --autostash "$remote_branch" 2>/dev/null
+        git -c diff.ignoreSubmodules=none rebase --autostash "$remote_branch" 2>/dev/null
         rebase_status=$?
     fi
 
@@ -234,7 +236,7 @@ smart_rebase() {
             log_verbose "Auto-resolved submodule conflict: $conflict_path"
         done <<< "$conflict_paths"
 
-        GIT_EDITOR=true git rebase --continue 2>/dev/null
+        GIT_EDITOR=true git -c diff.ignoreSubmodules=none rebase --continue 2>/dev/null
         rebase_status=$?
         retries=$((retries + 1))
     done
