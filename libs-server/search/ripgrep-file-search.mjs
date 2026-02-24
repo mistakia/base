@@ -582,14 +582,16 @@ function parse_ripgrep_json_output({ output, base_dir, cwd, max_results }) {
     // Look backwards for context lines in the same file
     for (let j = i - 1; j >= 0; j--) {
       const prev = entries[j]
-      if (prev.type !== 'context' || prev.relative_path !== entry.relative_path) break
+      if (prev.type !== 'context' || prev.relative_path !== entry.relative_path)
+        break
       context_before.unshift(prev.text)
     }
 
     // Look forwards for context lines in the same file
     for (let j = i + 1; j < entries.length; j++) {
       const next = entries[j]
-      if (next.type !== 'context' || next.relative_path !== entry.relative_path) break
+      if (next.type !== 'context' || next.relative_path !== entry.relative_path)
+        break
       context_after.push(next.text)
     }
 

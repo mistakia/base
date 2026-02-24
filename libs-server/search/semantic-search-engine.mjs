@@ -55,7 +55,9 @@ export async function search_semantic({
 
     // Fetch entity metadata for the matching base_uris
     const unique_base_uris = [...new Set(similar_chunks.map((c) => c.base_uri))]
-    const entity_metadata = await fetch_entity_metadata({ base_uris: unique_base_uris })
+    const entity_metadata = await fetch_entity_metadata({
+      base_uris: unique_base_uris
+    })
 
     const results = similar_chunks.map((chunk) => {
       const entity = entity_metadata.get(chunk.base_uri) || {}

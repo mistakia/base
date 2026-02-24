@@ -354,7 +354,9 @@ try {
               on_delete: (file_path) => {
                 handle_entity_file_delete(file_path)
                 handle_embedding_file_delete(file_path).catch((error) => {
-                  logger(`Embedding delete failed for ${file_path}: ${error.message}`)
+                  logger(
+                    `Embedding delete failed for ${file_path}: ${error.message}`
+                  )
                 })
               }
             }

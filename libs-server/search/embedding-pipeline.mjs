@@ -16,9 +16,7 @@ import {
   delete_entity_embeddings,
   get_embedding_hashes
 } from '#libs-server/embedded-database-index/duckdb/duckdb-embedding-queries.mjs'
-import {
-  extract_base_uri_from_entity_path
-} from '#libs-server/embedded-database-index/sync/index-file-watcher.mjs'
+import { extract_base_uri_from_entity_path } from '#libs-server/embedded-database-index/sync/index-file-watcher.mjs'
 
 const log = debug('search:embedding-pipeline')
 
@@ -185,8 +183,11 @@ export async function process_entity_file({ file_path, hash_map }) {
     : await get_entity_hashes(base_uri)
 
   // If chunk count changed or any content changed, re-embed all chunks
-  const needs_update = chunks.length !== existing_map.size ||
-    chunks.some((chunk) => existing_map.get(chunk.chunk_index) !== chunk.content_hash)
+  const needs_update =
+    chunks.length !== existing_map.size ||
+    chunks.some(
+      (chunk) => existing_map.get(chunk.chunk_index) !== chunk.content_hash
+    )
 
   if (!needs_update) {
     log('All chunks up to date for %s', base_uri)

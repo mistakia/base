@@ -47,13 +47,15 @@ function parse_ripgrep_json_output({ output, max_results }) {
 
     for (let j = i - 1; j >= 0; j--) {
       const prev = entries[j]
-      if (prev.type !== 'context' || prev.relative_path !== entry.relative_path) break
+      if (prev.type !== 'context' || prev.relative_path !== entry.relative_path)
+        break
       context_before.unshift(prev.text)
     }
 
     for (let j = i + 1; j < entries.length; j++) {
       const next = entries[j]
-      if (next.type !== 'context' || next.relative_path !== entry.relative_path) break
+      if (next.type !== 'context' || next.relative_path !== entry.relative_path)
+        break
       context_after.push(next.text)
     }
 
@@ -207,14 +209,16 @@ describe('Ripgrep Content Search Parsing', function () {
   })
 
   it('should skip invalid JSON lines', () => {
-    const output = 'not json\n' + JSON.stringify({
-      type: 'match',
-      data: {
-        path: { text: 'file.md' },
-        line_number: 1,
-        lines: { text: 'valid match\n' }
-      }
-    })
+    const output =
+      'not json\n' +
+      JSON.stringify({
+        type: 'match',
+        data: {
+          path: { text: 'file.md' },
+          line_number: 1,
+          lines: { text: 'valid match\n' }
+        }
+      })
 
     const results = parse_ripgrep_json_output({
       output,

@@ -78,7 +78,8 @@ describe('Embedding Pipeline', function () {
     })
 
     it('should treat content without headers as a single chunk', () => {
-      const content = 'Just some plain text\nwith multiple lines\nand no headers'
+      const content =
+        'Just some plain text\nwith multiple lines\nand no headers'
       const chunks = chunk_markdown_content({
         content,
         title: 'Test',

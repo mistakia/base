@@ -185,9 +185,6 @@ const ResumeStatusIndicator = ({ pending_resume }) => {
     <div
       className={`thread-sheet__resume-status thread-sheet__resume-status--${status}`}>
       <div className='thread-sheet__resume-status-header'>
-        {status !== 'failed' && (
-          <CircularProgress size={10} style={{ color: 'currentColor' }} />
-        )}
         <span className='thread-sheet__resume-status-badge'>{badge_label}</span>
       </div>
       {status === 'failed' ? (

@@ -91,9 +91,7 @@ const ContentResultItem = ({ item, is_selected, onClick }) => (
       <span className='command-palette__result-type'>
         {item.relative_path?.split('.').pop() || 'file'}
       </span>
-      <span className='command-palette__result-text'>
-        {item.relative_path}
-      </span>
+      <span className='command-palette__result-text'>{item.relative_path}</span>
       <span className='command-palette__line-number'>:{item.line_number}</span>
     </div>
     <div className='command-palette__content-context'>
@@ -343,7 +341,9 @@ const CommandPalette = () => {
           <span className='command-palette__result-count'>{total}</span>
         )}
         {search_mode === 'semantic' && !semantic_available && (
-          <span className='command-palette__mode-status'>Ollama unavailable</span>
+          <span className='command-palette__mode-status'>
+            Ollama unavailable
+          </span>
         )}
       </Box>
 

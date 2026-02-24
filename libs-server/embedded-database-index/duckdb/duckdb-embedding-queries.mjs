@@ -65,7 +65,11 @@ export async function search_similar({
   limit = 20,
   similarity_threshold = 0.3
 }) {
-  log('Searching similar embeddings (limit: %d, threshold: %s)', limit, similarity_threshold)
+  log(
+    'Searching similar embeddings (limit: %d, threshold: %s)',
+    limit,
+    similarity_threshold
+  )
 
   const results = await execute_duckdb_query({
     query: `SELECT base_uri, chunk_index, chunk_text,
@@ -103,7 +107,8 @@ export async function get_embedding_hashes() {
   log('Fetching embedding hashes')
 
   const results = await execute_duckdb_query({
-    query: 'SELECT base_uri, chunk_index, content_hash FROM entity_embeddings ORDER BY base_uri, chunk_index'
+    query:
+      'SELECT base_uri, chunk_index, content_hash FROM entity_embeddings ORDER BY base_uri, chunk_index'
   })
 
   log('Found %d embedding hash entries', results.length)

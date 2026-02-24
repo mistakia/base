@@ -83,7 +83,12 @@ export const get_semantic_available = createSelector(
 // Get all results flattened into a single list for keyboard navigation
 // Mode-aware: returns appropriate results based on active search mode
 export const get_all_results_flat = createSelector(
-  [get_search_results, get_search_mode, get_content_results, get_semantic_results],
+  [
+    get_search_results,
+    get_search_mode,
+    get_content_results,
+    get_semantic_results
+  ],
   (results, search_mode, content_results, semantic_results) => {
     if (search_mode === 'content') {
       return content_results.map((item) => ({ ...item, category: 'content' }))
