@@ -11,6 +11,7 @@ import {
   get_active_sessions_count,
   get_prompt_snippets
 } from '@core/active-sessions/selectors'
+import { get_can_create_threads, get_app } from '@core/app/selectors.js'
 import { get_thread_by_id } from '@core/threads/selectors.js'
 import SessionCard from './SessionCard.js'
 import './HomeSessionsPanel.styl'
@@ -109,6 +110,9 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   const active_sessions = useSelector(get_all_active_sessions)
   const active_session_count = useSelector(get_active_sessions_count)
   const prompt_snippets = useSelector(get_prompt_snippets)
+  const can_create_threads = useSelector(get_can_create_threads)
+  const app = useSelector(get_app)
+  const user_public_key = app.get('user_public_key')
   const [sessions_collapsed, set_sessions_collapsed] = useState(true)
   const [threads_collapsed, set_threads_collapsed] = useState(true)
   const [selected_period, set_selected_period] = useState('3d')
@@ -123,9 +127,13 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
 
   useEffect(() => {
     if (load_threads) {
-      load_threads({ thread_state: 'active' })
+      const params = { thread_state: 'active' }
+      if (can_create_threads && user_public_key) {
+        params.user_public_key = user_public_key
+      }
+      load_threads(params)
     }
-  }, [load_threads])
+  }, [load_threads, can_create_threads, user_public_key])
 
   // Get thread IDs that have active sessions
   const active_session_thread_ids = new Set(
@@ -181,7 +189,20 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   // Sort by created_at descending
   const displayed_threads = sort_threads_by_created_at(threads_to_display)
 
-  const has_active_sessions = active_session_count > 0
+  const filtered_sessions =
+    can_create_threads && user_public_key
+      ? (active_sessions || []).filter((session) => {
+          if (!session.thread_id) return true
+          const thread = get_thread(session.thread_id)
+          if (!thread) return true
+          return thread.user_public_key === user_public_key
+        })
+      : active_sessions || []
+  const filtered_session_count =
+    can_create_threads && user_public_key
+      ? filtered_sessions.length
+      : active_session_count
+  const has_active_sessions = filtered_session_count > 0
   const has_active_threads =
     active_threads.size > 0 || active_threads.length > 0
 
@@ -190,7 +211,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
     return null
   }
 
-  const sessions_list = active_sessions || []
+  const sessions_list = filtered_sessions
   const threads_list = displayed_threads
 
   return (
@@ -214,7 +235,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
             <span className='home-section-header__dot home-section-header__dot--active' />
             <span className='home-section-header__title'>Active Sessions</span>
             <span className='home-section-header__count'>
-              {active_session_count}
+              {filtered_session_count}
             </span>
           </div>
           {!sessions_collapsed && (

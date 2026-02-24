@@ -11,6 +11,7 @@ import {
   get_pending_sessions,
   get_prompt_snippets
 } from '@core/active-sessions/selectors'
+import { get_can_create_threads, get_app } from '@core/app/selectors.js'
 import { threads_actions } from '@core/threads/actions'
 import { get_threads_state } from '@core/threads/index.js'
 import SessionCard from '@components/SessionsPanel/SessionCard.js'
@@ -54,11 +55,14 @@ const normalize_thread = (thread) => {
 const FloatingSessionsPanel = () => {
   const dispatch = useDispatch()
 
-  const all_sessions = useSelector(get_all_sessions_with_pending)
+  const all_sessions_raw = useSelector(get_all_sessions_with_pending)
   const active_session_count = useSelector(get_active_sessions_count)
   const ended_session_count = useSelector(get_ended_sessions_count)
   const pending_sessions = useSelector(get_pending_sessions)
   const prompt_snippets = useSelector(get_prompt_snippets)
+  const can_create_threads = useSelector(get_can_create_threads)
+  const app = useSelector(get_app)
+  const user_public_key = app.get('user_public_key')
   const is_input_open = useSelector((state) =>
     state.getIn(['thread_prompt', 'is_open'], false)
   )
@@ -68,11 +72,26 @@ const FloatingSessionsPanel = () => {
   const [panel_mode, set_panel_mode] = useState(PANEL_MODE.COLLAPSED)
   const [is_dismissed, set_is_dismissed] = useState(false)
 
+  // Filter sessions by user ownership when authenticated with create_threads
+  const all_sessions =
+    can_create_threads && user_public_key
+      ? (all_sessions_raw || []).filter((session) => {
+          if (session.is_pending) return true
+          if (!session.thread_id) return true
+          if (!session.user_public_key) return true
+          return session.user_public_key === user_public_key
+        })
+      : all_sessions_raw || []
+
   // Load active sessions and threads on mount
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
-    dispatch(threads_actions.load_threads())
-  }, [dispatch])
+    const params = {}
+    if (can_create_threads && user_public_key) {
+      params.user_public_key = user_public_key
+    }
+    dispatch(threads_actions.load_threads(params))
+  }, [dispatch, can_create_threads, user_public_key])
 
   // Auto-expand when a new pending session is created
   const pending_count = pending_sessions.length
@@ -96,7 +115,11 @@ const FloatingSessionsPanel = () => {
       ).filter(
         (t) =>
           t.thread_state === 'active' &&
-          !active_session_thread_ids.has(t.thread_id)
+          !active_session_thread_ids.has(t.thread_id) &&
+          (!can_create_threads ||
+            !user_public_key ||
+            !t.user_public_key ||
+            t.user_public_key === user_public_key)
       )
     : []
   const review_count = review_threads_list.length

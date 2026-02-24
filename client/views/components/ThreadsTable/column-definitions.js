@@ -555,6 +555,21 @@ export const thread_columns = {
     size: 80,
     minSize: 60,
     maxSize: 100
+  },
+  user_public_key: {
+    column_id: 'user_public_key',
+    header_label: 'Owner',
+    accessorKey: 'user_public_key',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IS_EMPTY,
+      TABLE_OPERATORS.IS_NOT_EMPTY
+    ],
+    size: 120,
+    minSize: 80,
+    maxSize: 200
   }
 }
 

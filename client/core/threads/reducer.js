@@ -2,6 +2,7 @@ import { Record, List, Map } from 'immutable'
 
 import { threads_action_types } from './actions'
 import { thread_action_types } from '@core/thread/actions'
+import { app_actions } from '@core/app/actions'
 import { active_sessions_action_types } from '@core/active-sessions/actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
 import { TABLE_OPERATORS } from 'react-table/src/constants.mjs'
@@ -322,6 +323,64 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         loading: false,
         error: payload.error
       })
+
+    // ========================================================================
+    // Auth - Inject user_public_key filter into table views
+    // ========================================================================
+
+    case app_actions.POST_USER_SESSION_FULFILLED: {
+      const permissions = payload.data?.permissions
+      const user_public_key = payload.data?.user_public_key
+      if (!permissions?.create_threads || !user_public_key) return state
+
+      const ownership_filter = {
+        column_id: 'user_public_key',
+        operator: '=',
+        value: user_public_key
+      }
+
+      const add_ownership_filter = (view, table_state_key) => {
+        const where = view.getIn([table_state_key, 'where'])
+        if (!where) return view
+        const already_has_filter = where.some(
+          (f) =>
+            (f.get ? f.get('column_id') : f.column_id) === 'user_public_key'
+        )
+        if (already_has_filter) return view
+        return view.updateIn([table_state_key, 'where'], (w) =>
+          w.push(new Map(ownership_filter))
+        )
+      }
+
+      return state.update('thread_table_views', (views) =>
+        views.map((view) => {
+          let updated = add_ownership_filter(view, 'saved_table_state')
+          updated = add_ownership_filter(updated, 'thread_table_state')
+          return updated
+        })
+      )
+    }
+
+    case app_actions.CLEAR_AUTH: {
+      const remove_ownership_filter = (view, table_state_key) => {
+        const where = view.getIn([table_state_key, 'where'])
+        if (!where) return view
+        return view.updateIn([table_state_key, 'where'], (w) =>
+          w.filter(
+            (f) =>
+              (f.get ? f.get('column_id') : f.column_id) !== 'user_public_key'
+          )
+        )
+      }
+
+      return state.update('thread_table_views', (views) =>
+        views.map((view) => {
+          let updated = remove_ownership_filter(view, 'saved_table_state')
+          updated = remove_ownership_filter(updated, 'thread_table_state')
+          return updated
+        })
+      )
+    }
 
     // ========================================================================
     // Table View Management Actions
