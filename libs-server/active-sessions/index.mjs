@@ -14,6 +14,7 @@ export {
   get_active_session,
   get_all_active_sessions,
   remove_active_session,
+  get_and_remove_active_session,
   get_active_session_for_thread,
   close_session_store
 } from './active-session-store.mjs'

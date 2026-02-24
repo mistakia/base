@@ -138,29 +138,58 @@ export const emit_active_session_updated = async (session) => {
 /**
  * Emit ACTIVE_SESSION_ENDED event
  *
- * Sent when a session ends (SessionEnd hook)
+ * Sent when a session ends (SessionEnd hook). Sessions with a thread
+ * association route through the standard emitter for permission-based
+ * filtering. All other cases (no thread_id, or session data unavailable)
+ * broadcast session_id directly to all authenticated clients -- the
+ * emit_session_event guard skips sessions without thread_id/job_id,
+ * which would silently drop ENDED events for sessions that ended before
+ * acquiring a thread.
  *
  * @param {string} session_id - ID of the ended session
+ * @param {Object} [session] - Full session data read before removal
  * @returns {Promise<void>}
  */
-export const emit_active_session_ended = async (session_id) => {
-  return await emit_session_event({
-    event_type: 'ACTIVE_SESSION_ENDED',
-    payload: { session_id }
-  })
+export const emit_active_session_ended = async (session_id, session = null) => {
+  // Sessions with thread association: use permission-based filtering
+  if (session?.thread_id) {
+    return await emit_session_event({
+      event_type: 'ACTIVE_SESSION_ENDED',
+      payload: { session_id, session }
+    })
+  }
+
+  // No thread association or session data unavailable: broadcast to all
+  // authenticated clients. The client only needs session_id for ENDED events.
+  try {
+    const event = {
+      type: 'ACTIVE_SESSION_ENDED',
+      payload: { session_id }
+    }
+    const event_json = JSON.stringify(event)
+
+    let sent_count = 0
+    for (const client of wss.clients) {
+      if (client.readyState !== WebSocket.OPEN || !client.user_public_key) {
+        continue
+      }
+      try {
+        client.send(event_json)
+        sent_count++
+      } catch (send_error) {
+        log(
+          `Failed to send ACTIVE_SESSION_ENDED to client: ${send_error.message}`
+        )
+      }
+    }
+    log(
+      `Emitted ACTIVE_SESSION_ENDED (broadcast, session_id=${session_id}) to ${sent_count} clients`
+    )
+  } catch (error) {
+    log(`Failed to emit ACTIVE_SESSION_ENDED:`, error)
+  }
 }
 
-/**
- * Emit THREAD_JOB_FAILED event
- *
- * Sent when a BullMQ thread creation job fails. Broadcast to all
- * authenticated clients so they can match by job_id to update pending sessions.
- *
- * @param {Object} params
- * @param {string} params.job_id - BullMQ job ID
- * @param {string} params.error_message - Failure description
- * @returns {Promise<void>}
- */
 /**
  * Emit THREAD_JOB_STARTED event
  *

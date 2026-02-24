@@ -90,6 +90,7 @@ export const register_active_session = async ({
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
 
+  const now = new Date().toISOString()
   const session = {
     session_id,
     status: 'active',
@@ -99,8 +100,9 @@ export const register_active_session = async ({
     working_directory,
     transcript_path,
     job_id: job_id || null,
-    started_at: new Date().toISOString(),
-    last_activity_at: new Date().toISOString()
+    created_at: now,
+    started_at: now,
+    last_activity_at: now
   }
 
   await redis.setex(
@@ -169,6 +171,7 @@ export const update_active_session = async ({
     session.last_activity_at = new Date().toISOString()
   } else {
     // Upsert: create new session if missing (handles missed SessionStart)
+    const now_upsert = new Date().toISOString()
     session = {
       session_id,
       status: status || 'active',
@@ -182,8 +185,9 @@ export const update_active_session = async ({
       total_tokens: total_tokens || null,
       source_provider: source_provider || null,
       job_id: job_id || null,
-      started_at: new Date().toISOString(),
-      last_activity_at: new Date().toISOString()
+      created_at: now_upsert,
+      started_at: now_upsert,
+      last_activity_at: now_upsert
     }
     log(`Upserted new session (missed SessionStart): ${session_id}`)
   }
@@ -269,6 +273,32 @@ export const remove_active_session = async (session_id) => {
   }
 
   return removed
+}
+
+/**
+ * Get and remove an active session atomically
+ *
+ * Uses Redis GETDEL to read and delete in a single atomic command,
+ * preventing race conditions from concurrent session termination requests.
+ * The caller can include session data in the ENDED WebSocket event for
+ * permission checks.
+ *
+ * @param {string} session_id - Claude session ID
+ * @returns {Promise<Object|null>} Session data before removal, or null if not found
+ */
+export const get_and_remove_active_session = async (session_id) => {
+  const redis = get_redis_connection()
+  const key = build_session_key(session_id)
+
+  const data = await redis.getdel(key)
+  if (data) {
+    const session = JSON.parse(data)
+    log(`Got and removed active session: ${session_id}`)
+    return session
+  }
+
+  log(`Session ${session_id} not found for get-and-remove`)
+  return null
 }
 
 /**
