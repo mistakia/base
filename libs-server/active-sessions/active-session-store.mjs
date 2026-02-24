@@ -276,10 +276,12 @@ export const remove_active_session = async (session_id) => {
 }
 
 /**
- * Get and remove an active session in one operation
+ * Get and remove an active session atomically
  *
- * Reads the session data before deleting the Redis key, so the caller
- * can include session data in the ENDED WebSocket event for permission checks.
+ * Uses Redis GETDEL to read and delete in a single atomic command,
+ * preventing race conditions from concurrent session termination requests.
+ * The caller can include session data in the ENDED WebSocket event for
+ * permission checks.
  *
  * @param {string} session_id - Claude session ID
  * @returns {Promise<Object|null>} Session data before removal, or null if not found
@@ -288,9 +290,8 @@ export const get_and_remove_active_session = async (session_id) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
 
-  const data = await redis.get(key)
+  const data = await redis.getdel(key)
   if (data) {
-    await redis.del(key)
     const session = JSON.parse(data)
     log(`Got and removed active session: ${session_id}`)
     return session

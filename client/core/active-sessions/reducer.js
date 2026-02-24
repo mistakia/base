@@ -49,6 +49,9 @@ export function active_sessions_reducer(
         sessions_array.map((s) => s.session_id)
       )
 
+      const now = Date.now()
+      const stale_threshold_ms = 5 * 60 * 1000
+
       let sessions_map = new Map(
         sessions_array.map((session) => {
           const existing = existing_sessions.get(session.session_id)
@@ -61,13 +64,21 @@ export function active_sessions_reducer(
         })
       )
 
-      // Preserve sessions added via WebSocket that the API didn't return.
-      // These may have arrived between the API request and response, or the
-      // server may not yet have indexed them (e.g., thread not synced locally).
-      existing_sessions.forEach((session, session_id) => {
-        if (!api_session_ids.has(session_id)) {
-          sessions_map = sessions_map.set(session_id, session)
-        }
+      // Preserve recent sessions added via WebSocket that the API didn't
+      // return. These may have arrived between the API request and response,
+      // or the server may not yet have indexed them. Sessions older than 5
+      // minutes that the API has never returned are considered stale and
+      // dropped to prevent permanent accumulation from missed ENDED events.
+      sessions_map = sessions_map.withMutations((mutable) => {
+        existing_sessions.forEach((session, session_id) => {
+          if (api_session_ids.has(session_id)) return
+          const session_time = new Date(
+            session.get('created_at') || session.get('started_at') || 0
+          ).getTime()
+          if (now - session_time < stale_threshold_ms) {
+            mutable.set(session_id, session)
+          }
+        })
       })
 
       // Remove any ended_sessions that the server still reports as active

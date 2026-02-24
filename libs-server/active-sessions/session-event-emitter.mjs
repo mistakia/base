@@ -138,24 +138,29 @@ export const emit_active_session_updated = async (session) => {
 /**
  * Emit ACTIVE_SESSION_ENDED event
  *
- * Sent when a session ends (SessionEnd hook). When session data is available
- * (read before Redis deletion), routes through the standard emitter for
- * permission-based filtering. When unavailable, broadcasts session_id to all
- * authenticated clients as a fallback.
+ * Sent when a session ends (SessionEnd hook). Sessions with a thread
+ * association route through the standard emitter for permission-based
+ * filtering. All other cases (no thread_id, or session data unavailable)
+ * broadcast session_id directly to all authenticated clients -- the
+ * emit_session_event guard skips sessions without thread_id/job_id,
+ * which would silently drop ENDED events for sessions that ended before
+ * acquiring a thread.
  *
  * @param {string} session_id - ID of the ended session
  * @param {Object} [session] - Full session data read before removal
  * @returns {Promise<void>}
  */
 export const emit_active_session_ended = async (session_id, session = null) => {
-  if (session) {
+  // Sessions with thread association: use permission-based filtering
+  if (session?.thread_id) {
     return await emit_session_event({
       event_type: 'ACTIVE_SESSION_ENDED',
       payload: { session_id, session }
     })
   }
 
-  // Fallback: session data unavailable, broadcast to all authenticated clients
+  // No thread association or session data unavailable: broadcast to all
+  // authenticated clients. The client only needs session_id for ENDED events.
   try {
     const event = {
       type: 'ACTIVE_SESSION_ENDED',
@@ -178,7 +183,7 @@ export const emit_active_session_ended = async (session_id, session = null) => {
       }
     }
     log(
-      `Emitted ACTIVE_SESSION_ENDED (fallback, session_id=${session_id}) to ${sent_count} clients`
+      `Emitted ACTIVE_SESSION_ENDED (broadcast, session_id=${session_id}) to ${sent_count} clients`
     )
   } catch (error) {
     log(`Failed to emit ACTIVE_SESSION_ENDED:`, error)
