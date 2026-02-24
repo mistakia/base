@@ -212,7 +212,7 @@ export const builder = (yargs) =>
     )
     .command(
       'observe <base_uri> <observation>',
-      'Add an observation to entity frontmatter',
+      'Add an observation to entity frontmatter (see sys:system/guideline/write-observations.md)',
       (yargs) =>
         yargs
           .positional('base_uri', {
@@ -926,6 +926,12 @@ async function handle_observe(argv) {
   let exit_code = 0
   try {
     const { base_uri, observation } = argv
+
+    if (!/^\[.+?\]/.test(observation)) {
+      console.warn(
+        'Warning: observation should start with [category] (e.g. "[decision] Selected X over Y"). See sys:system/guideline/write-observations.md'
+      )
+    }
 
     const absolute_path = resolve_base_uri_from_registry(base_uri)
     const entity_result = await read_entity_from_filesystem({ absolute_path })

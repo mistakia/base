@@ -98,7 +98,7 @@ Every knowledge item can include observations and relations in the frontmatter t
 
 ### Observations
 
-Structured facts with semantic categorization in frontmatter:
+Structured facts with semantic categorization in frontmatter. See [[sys:system/guideline/write-observations.md]] for standards on when to observe vs edit body content, format, and consolidation.
 
 ```yaml
 observations:
