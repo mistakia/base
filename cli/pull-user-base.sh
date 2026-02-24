@@ -103,7 +103,7 @@ PULLED=false
 
 if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     echo "Local is behind remote, rebasing on $REMOTE_BRANCH..."
-    if ! git rebase "$REMOTE_BRANCH"; then
+    if ! git rebase --autostash "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
@@ -115,7 +115,7 @@ if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     PULLED=true
 else
     echo "Local and remote have diverged, rebasing..."
-    if ! git rebase "$REMOTE_BRANCH"; then
+    if ! git rebase --autostash "$REMOTE_BRANCH"; then
         echo "Rebase failed, aborting..." >&2
         git rebase --abort 2>/dev/null || true
         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \

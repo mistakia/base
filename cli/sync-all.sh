@@ -370,13 +370,60 @@ sync_submodule() {
             }
         fi
     elif [ "$remote_commit" = "$merge_base" ]; then
-        # Ahead of remote - push
+        # Ahead of remote - push with retry on ref contention
         log "$submodule_name: ahead of remote, pushing..."
-        git -C "$full_path" push origin "$current_branch" 2>/dev/null || {
-            log_error "$submodule_name: push failed"
-            return 1
-        }
-        log "$submodule_name: pushed successfully"
+        if ! git -C "$full_path" push origin "$current_branch" 2>/dev/null; then
+            # Push failed - likely cross-machine race (remote ref changed between
+            # fetch and push). Re-fetch and re-evaluate divergence state once.
+            log "$submodule_name: push failed, re-fetching and retrying..."
+            if ! git -C "$full_path" fetch origin 2>/dev/null; then
+                log_error "$submodule_name: re-fetch failed"
+                return 1
+            fi
+            local retry_remote retry_local retry_base
+            retry_remote=$(git -C "$full_path" rev-parse "$remote_branch")
+            retry_local=$(git -C "$full_path" rev-parse HEAD)
+            retry_base=$(git -C "$full_path" merge-base HEAD "$remote_branch")
+            if [ "$retry_local" = "$retry_remote" ]; then
+                log "$submodule_name: already up to date after re-fetch"
+            elif [ "$retry_local" = "$retry_base" ]; then
+                log "$submodule_name: now behind remote, rebasing..."
+                if ! git -C "$full_path" rebase --autostash "$remote_branch" 2>/dev/null; then
+                    git -C "$full_path" rebase --abort 2>/dev/null || true
+                    log_error "$submodule_name: rebase failed on retry"
+                    return 1
+                fi
+                # Push if we have local commits after rebase
+                local retry_new_local retry_new_remote
+                retry_new_local=$(git -C "$full_path" rev-parse HEAD)
+                retry_new_remote=$(git -C "$full_path" rev-parse "$remote_branch")
+                if [ "$retry_new_local" != "$retry_new_remote" ]; then
+                    git -C "$full_path" push origin "$current_branch" 2>/dev/null || {
+                        log_error "$submodule_name: push failed on retry"
+                        return 1
+                    }
+                fi
+            elif [ "$retry_remote" = "$retry_base" ]; then
+                git -C "$full_path" push origin "$current_branch" 2>/dev/null || {
+                    log_error "$submodule_name: push failed on retry"
+                    return 1
+                }
+            else
+                log "$submodule_name: diverged on retry, rebasing..."
+                if ! git -C "$full_path" rebase --autostash "$remote_branch" 2>/dev/null; then
+                    git -C "$full_path" rebase --abort 2>/dev/null || true
+                    log_error "$submodule_name: rebase failed on retry (diverged)"
+                    return 1
+                fi
+                git -C "$full_path" push origin "$current_branch" 2>/dev/null || {
+                    log_error "$submodule_name: push failed on retry after rebase"
+                    return 1
+                }
+            fi
+            log "$submodule_name: retry succeeded"
+        else
+            log "$submodule_name: pushed successfully"
+        fi
     else
         # Diverged - rebase then push
         log "$submodule_name: diverged, rebasing..."
@@ -586,9 +633,10 @@ else
                         fi
                     fi
                 else
-                    # Clean working directory - safe to rebase
+                    # Clean working directory (ignoring submodules) - use autostash
+                    # since dirty submodule pointers may still block plain rebase
                     log "Parent: behind remote, rebasing..."
-                    if ! git rebase "$REMOTE_BRANCH" 2>/dev/null; then
+                    if ! git rebase --autostash "$REMOTE_BRANCH" 2>/dev/null; then
                         git rebase --abort 2>/dev/null || true
                         log_error "Parent: rebase failed"
                         "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
@@ -602,12 +650,56 @@ else
                     fi
                 fi
             elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
-                # Ahead of remote - push (dirty state is irrelevant for push)
+                # Ahead of remote - push with retry on ref contention
                 log "Parent: ahead of remote, pushing..."
-                git push origin "$CURRENT_BRANCH" 2>/dev/null || {
-                    log_error "Parent: push failed"
-                    ERRORS=$((ERRORS + 1))
-                }
+                if ! git push origin "$CURRENT_BRANCH" 2>/dev/null; then
+                    # Push failed - likely cross-machine race. Re-fetch and retry once.
+                    log "Parent: push failed, re-fetching and retrying..."
+                    if git fetch origin 2>/dev/null; then
+                        local RETRY_REMOTE RETRY_LOCAL RETRY_BASE
+                        RETRY_REMOTE=$(git rev-parse "$REMOTE_BRANCH")
+                        RETRY_LOCAL=$(git rev-parse HEAD)
+                        RETRY_BASE=$(git merge-base HEAD "$REMOTE_BRANCH")
+                        if [ "$RETRY_LOCAL" = "$RETRY_REMOTE" ]; then
+                            log "Parent: already up to date after re-fetch"
+                        elif [ "$RETRY_REMOTE" = "$RETRY_BASE" ]; then
+                            git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+                                log_error "Parent: push failed on retry"
+                                ERRORS=$((ERRORS + 1))
+                            }
+                        elif [ "$RETRY_LOCAL" = "$RETRY_BASE" ]; then
+                            log "Parent: now behind remote after re-fetch, rebasing..."
+                            if ! git rebase --autostash "$REMOTE_BRANCH" 2>/dev/null; then
+                                git rebase --abort 2>/dev/null || true
+                                log_error "Parent: rebase failed on retry"
+                                ERRORS=$((ERRORS + 1))
+                            else
+                                git submodule update --init repository/active/base 2>/dev/null || true
+                                # Push if we have local commits after rebase
+                                if [ "$(git rev-parse HEAD)" != "$(git rev-parse "$REMOTE_BRANCH")" ]; then
+                                    git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+                                        log_error "Parent: push failed on retry after rebase"
+                                        ERRORS=$((ERRORS + 1))
+                                    }
+                                fi
+                            fi
+                        else
+                            log "Parent: diverged on retry, smart rebasing..."
+                            if ! smart_rebase "$REMOTE_BRANCH"; then
+                                log_error "Parent: smart rebase failed on retry"
+                                ERRORS=$((ERRORS + 1))
+                            else
+                                git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+                                    log_error "Parent: push failed on retry after rebase"
+                                    ERRORS=$((ERRORS + 1))
+                                }
+                            fi
+                        fi
+                    else
+                        log_error "Parent: re-fetch failed"
+                        ERRORS=$((ERRORS + 1))
+                    fi
+                fi
             else
                 # Diverged
                 if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
