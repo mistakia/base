@@ -12,6 +12,11 @@ export {
   get_all_results_flat,
   get_recent_files,
   get_recent_files_loading,
-  get_recent_files_loaded
+  get_recent_files_loaded,
+  get_search_mode,
+  get_stripped_query,
+  get_content_results,
+  get_semantic_results,
+  get_semantic_available
 } from './selectors.js'
 export { search_sagas, navigate_to_result } from './sagas.js'

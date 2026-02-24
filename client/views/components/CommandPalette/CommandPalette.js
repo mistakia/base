@@ -14,7 +14,10 @@ import {
   get_selected_index,
   get_search_total,
   get_recent_files,
-  get_recent_files_loading
+  get_recent_files_loading,
+  get_search_mode,
+  get_semantic_available,
+  get_stripped_query
 } from '@core/search'
 
 import './CommandPalette.styl'
@@ -80,6 +83,92 @@ ResultItem.propTypes = {
   onClick: PropTypes.func
 }
 
+const ContentResultItem = ({ item, is_selected, onClick }) => (
+  <div
+    className={`command-palette__result-item command-palette__result-item--content ${is_selected ? 'command-palette__result-item--selected' : ''}`}
+    onClick={onClick}>
+    <div className='command-palette__content-header'>
+      <span className='command-palette__result-type'>
+        {item.relative_path?.split('.').pop() || 'file'}
+      </span>
+      <span className='command-palette__result-text'>
+        {item.relative_path}
+      </span>
+      <span className='command-palette__line-number'>:{item.line_number}</span>
+    </div>
+    <div className='command-palette__content-context'>
+      {item.context_before?.map((line, i) => (
+        <div key={`before-${i}`} className='command-palette__context-line'>
+          {line}
+        </div>
+      ))}
+      <div className='command-palette__match-line'>{item.match_line}</div>
+      {item.context_after?.map((line, i) => (
+        <div key={`after-${i}`} className='command-palette__context-line'>
+          {line}
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+ContentResultItem.propTypes = {
+  item: PropTypes.object.isRequired,
+  is_selected: PropTypes.bool,
+  onClick: PropTypes.func
+}
+
+const SemanticResultItem = ({ item, is_selected, onClick }) => (
+  <div
+    className={`command-palette__result-item command-palette__result-item--semantic ${is_selected ? 'command-palette__result-item--selected' : ''}`}
+    onClick={onClick}>
+    <div className='command-palette__semantic-header'>
+      <span className='command-palette__result-type'>
+        {item.type || 'entity'}
+      </span>
+      <span className='command-palette__result-text'>
+        {item.title || item.base_uri}
+      </span>
+      <span className='command-palette__similarity-score'>
+        {Math.round((item.similarity_score || 0) * 100)}%
+      </span>
+    </div>
+    {item.description && (
+      <div className='command-palette__semantic-description'>
+        {item.description}
+      </div>
+    )}
+    {item.chunk_text && (
+      <div className='command-palette__semantic-chunk'>
+        {item.chunk_text.slice(0, 200)}
+        {item.chunk_text.length > 200 ? '...' : ''}
+      </div>
+    )}
+  </div>
+)
+
+SemanticResultItem.propTypes = {
+  item: PropTypes.object.isRequired,
+  is_selected: PropTypes.bool,
+  onClick: PropTypes.func
+}
+
+const MODE_LABELS = {
+  content: 'Content Search',
+  semantic: 'Semantic Search'
+}
+
+const MODE_PLACEHOLDERS = {
+  content: '# Search file contents...',
+  semantic: '? Search by meaning...'
+}
+
+const encode_path = (p) =>
+  p
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+
 const CommandPalette = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -93,9 +182,13 @@ const CommandPalette = () => {
   const total = useSelector(get_search_total)
   const recent_files = useSelector(get_recent_files)
   const recent_files_loading = useSelector(get_recent_files_loading)
+  const search_mode = useSelector(get_search_mode)
+  const semantic_available = useSelector(get_semantic_available)
+  const stripped_query = useSelector(get_stripped_query)
 
   // Determine what to display: recent files (when no query) or search results
-  const show_recent_files = !query || query.length < 2
+  // Use stripped_query length to align with the saga's 2-char search threshold
+  const show_recent_files = !stripped_query || stripped_query.length < 2
   const display_items = show_recent_files
     ? recent_files.map((item) => ({ ...item, category: 'recent' }))
     : results
@@ -123,15 +216,16 @@ const CommandPalette = () => {
       let url
       if (item.category === 'thread') {
         url = `/thread/${item.thread_id}`
+      } else if (item.category === 'semantic' && item.base_uri) {
+        const entity_path = item.base_uri.replace(/^user:/, '')
+        url = `/${encode_path(entity_path)}`
+      } else if (item.category === 'content' && item.relative_path) {
+        const line_suffix = item.line_number ? `#L${item.line_number}` : ''
+        url = `/${encode_path(item.relative_path)}${line_suffix}`
       } else {
         const file_path = item.file_path || item.relative_path
         if (file_path) {
-          // Encode each path segment separately to preserve slashes
-          const encoded_path = file_path
-            .split('/')
-            .map((segment) => encodeURIComponent(segment))
-            .join('/')
-          url = `/${encoded_path}`
+          url = `/${encode_path(file_path)}`
         }
       }
 
@@ -223,11 +317,16 @@ const CommandPalette = () => {
       }}>
       <Box className='command-palette__input-container'>
         <SearchIcon className='command-palette__search-icon' />
+        {search_mode !== 'default' && (
+          <span className='command-palette__mode-indicator'>
+            {MODE_LABELS[search_mode]}
+          </span>
+        )}
         <input
           ref={input_ref}
           type='text'
           className='command-palette__input'
-          placeholder='Search...'
+          placeholder={MODE_PLACEHOLDERS[search_mode] || 'Search...'}
           value={query}
           onChange={handle_query_change}
           onKeyDown={handle_key_down}
@@ -242,6 +341,9 @@ const CommandPalette = () => {
         )}
         {!show_recent_files && total > 0 && (
           <span className='command-palette__result-count'>{total}</span>
+        )}
+        {search_mode === 'semantic' && !semantic_available && (
+          <span className='command-palette__mode-status'>Ollama unavailable</span>
         )}
       </Box>
 
@@ -264,19 +366,41 @@ const CommandPalette = () => {
       {!show_recent_files && display_items.size > 0 && (
         <Box className='command-palette__results'>
           <List disablePadding>
-            {display_items.map((item, index) => (
-              <ResultItem
-                key={`${item.category}-${item.file_path || item.thread_id}-${index}`}
-                item={item}
-                is_selected={index === selected_index}
-                onClick={() => navigate_to_item(item)}
-              />
-            ))}
+            {display_items.map((item, index) => {
+              if (item.category === 'content') {
+                return (
+                  <ContentResultItem
+                    key={`content-${item.relative_path}-${item.line_number}-${index}`}
+                    item={item}
+                    is_selected={index === selected_index}
+                    onClick={() => navigate_to_item(item)}
+                  />
+                )
+              }
+              if (item.category === 'semantic') {
+                return (
+                  <SemanticResultItem
+                    key={`semantic-${item.base_uri}-${item.chunk_index}-${index}`}
+                    item={item}
+                    is_selected={index === selected_index}
+                    onClick={() => navigate_to_item(item)}
+                  />
+                )
+              }
+              return (
+                <ResultItem
+                  key={`${item.category}-${item.file_path || item.thread_id}-${index}`}
+                  item={item}
+                  is_selected={index === selected_index}
+                  onClick={() => navigate_to_item(item)}
+                />
+              )
+            })}
           </List>
         </Box>
       )}
 
-      {query.length >= 2 && !is_loading && results.size === 0 && (
+      {!show_recent_files && !is_loading && results.size === 0 && (
         <Box className='command-palette__empty'>No results found</Box>
       )}
     </Dialog>

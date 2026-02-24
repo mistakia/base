@@ -49,6 +49,11 @@ import {
 } from '#libs-server/git/git-status-cache.mjs'
 import { get_known_repositories } from '#server/routes/git.mjs'
 import { invalidate as invalidate_file_path_cache } from '#libs-server/search/file-path-cache.mjs'
+import {
+  initialize_embedding_pipeline,
+  handle_embedding_file_change,
+  handle_embedding_file_delete
+} from '#libs-server/search/embedding-pipeline.mjs'
 import { broadcast_authenticated } from '#server/websocket.mjs'
 
 // Debounce file path cache invalidation so rapid file changes
@@ -285,6 +290,18 @@ try {
       set_watcher_status('entity_file_watcher', 'disabled')
     }
 
+    // Initialize embedding pipeline for semantic search (non-blocking background sync)
+    if (embedded_index_ready) {
+      try {
+        initialize_embedding_pipeline({
+          user_base_directory: config.user_base_directory
+        })
+        logger('Embedding pipeline initialized')
+      } catch (error) {
+        logger(`Failed to initialize embedding pipeline: ${error.message}`)
+      }
+    }
+
     // Start cache warmer after embedded index (can now use DuckDB for reads)
     try {
       await start_cache_warmer()
@@ -330,8 +347,16 @@ try {
             : null,
         entity_index: embedded_index_ready
           ? {
-              on_change: handle_entity_file_change,
-              on_delete: handle_entity_file_delete
+              on_change: (file_path) => {
+                handle_entity_file_change(file_path)
+                handle_embedding_file_change(file_path)
+              },
+              on_delete: (file_path) => {
+                handle_entity_file_delete(file_path)
+                handle_embedding_file_delete(file_path).catch((error) => {
+                  logger(`Embedding delete failed for ${file_path}: ${error.message}`)
+                })
+              }
             }
           : null,
         repo_file:

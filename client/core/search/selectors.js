@@ -1,6 +1,8 @@
 import { createSelector } from 'reselect'
 import { List } from 'immutable'
 
+const EMPTY_LIST = new List()
+
 export const get_search_state = (state) => state.get('search')
 
 export const get_is_command_palette_open = createSelector(
@@ -53,12 +55,45 @@ export const get_recent_files_loaded = createSelector(
   (search_state) => search_state?.get('recent_files_loaded') || false
 )
 
+export const get_search_mode = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('search_mode') || 'default'
+)
+
+export const get_stripped_query = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('stripped_query') || ''
+)
+
+export const get_content_results = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('content_results') || EMPTY_LIST
+)
+
+export const get_semantic_results = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('semantic_results') || EMPTY_LIST
+)
+
+export const get_semantic_available = createSelector(
+  [get_search_state],
+  (search_state) => search_state?.get('semantic_available') !== false
+)
+
 // Get all results flattened into a single list for keyboard navigation
-// Order: entities, threads, directories, files
+// Mode-aware: returns appropriate results based on active search mode
 export const get_all_results_flat = createSelector(
-  [get_search_results],
-  (results) => {
-    if (!results) return new List()
+  [get_search_results, get_search_mode, get_content_results, get_semantic_results],
+  (results, search_mode, content_results, semantic_results) => {
+    if (search_mode === 'content') {
+      return content_results.map((item) => ({ ...item, category: 'content' }))
+    }
+
+    if (search_mode === 'semantic') {
+      return semantic_results.map((item) => ({ ...item, category: 'semantic' }))
+    }
+
+    if (!results) return EMPTY_LIST
 
     // Helper to add category to items from a list
     const add_category = (list, category) =>

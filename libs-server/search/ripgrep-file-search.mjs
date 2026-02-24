@@ -7,6 +7,8 @@ import { load_search_config } from './search-config.mjs'
 
 const log = debug('search:ripgrep')
 
+const escape_regex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /**
  * Resolve search directory, handling both absolute and relative paths
  *
@@ -112,9 +114,6 @@ function build_ripgrep_args({ pattern, rg_config, options }) {
     file_types = [],
     directory = null
   } = options
-
-  // Escape regex special characters in the pattern
-  const escape_regex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
   // For multi-word queries, convert to regex pattern that matches words in sequence
   // "transition secure" -> "transition.*secure" (matches both words on same line)
@@ -437,8 +436,181 @@ export async function check_ripgrep_availability() {
   }
 }
 
+/**
+ * Search file contents using ripgrep --json for structured match data with context.
+ *
+ * @param {Object} params - Search parameters
+ * @param {string} params.query - Search query
+ * @param {string} [params.directory] - Optional directory to scope search
+ * @param {number} [params.context_lines=2] - Lines of context before and after match
+ * @param {number} [params.max_results=50] - Maximum match results to return
+ * @returns {Promise<Array<{file_path: string, relative_path: string, line_number: number, match_line: string, context_before: string[], context_after: string[]}>>}
+ */
+export async function search_file_contents_with_context({
+  query,
+  directory = null,
+  context_lines = 2,
+  max_results = 50
+}) {
+  if (!query || !query.trim()) {
+    return []
+  }
+
+  const search_config = await load_search_config()
+  const rg_config = search_config.ripgrep || {}
+
+  const user_base_dir =
+    config.user_base_directory || process.env.USER_BASE_DIRECTORY
+
+  if (!user_base_dir) {
+    throw new Error('USER_BASE_DIRECTORY not configured')
+  }
+
+  const cwd = resolve_search_directory(user_base_dir, directory)
+
+  const words = query.trim().split(/\s+/).map(escape_regex)
+  const search_pattern =
+    words.length > 1 ? words.join('.*') : escape_regex(query)
+
+  // Limit ripgrep output to bound memory usage; multiply by context factor
+  // since context lines add output but don't count as separate matches
+  const max_count = max_results * 3
+
+  const args = [
+    search_pattern,
+    '--json',
+    '--ignore-case',
+    '-C',
+    String(context_lines),
+    '--max-count',
+    String(max_count)
+  ]
+
+  if (rg_config.max_filesize) {
+    args.push('--max-filesize', rg_config.max_filesize)
+  }
+
+  for (const exclude_pattern of rg_config.exclude_patterns || []) {
+    args.push('--glob', `!${exclude_pattern}`)
+  }
+
+  if (!rg_config.include_hidden) {
+    args.push('--no-hidden')
+  }
+
+  if (rg_config.follow_symlinks) {
+    args.push('--follow')
+  }
+
+  args.push('.')
+
+  try {
+    const result = await execute_ripgrep({
+      args,
+      cwd,
+      timeout_ms: search_config.search?.timeout_ms || 10000
+    })
+
+    return parse_ripgrep_json_output({
+      output: result.stdout,
+      base_dir: user_base_dir,
+      cwd,
+      max_results
+    })
+  } catch (error) {
+    log('Content search with context failed: %s', error.message)
+    return []
+  }
+}
+
+/**
+ * Parse ripgrep --json output into structured match results with context.
+ *
+ * @param {Object} params
+ * @param {string} params.output - Raw ripgrep JSON lines output
+ * @param {string} params.base_dir - Base directory for relative paths
+ * @param {string} params.cwd - Current working directory
+ * @param {number} params.max_results - Maximum results
+ * @returns {Array<Object>} Parsed match results
+ */
+function parse_ripgrep_json_output({ output, base_dir, cwd, max_results }) {
+  if (!output.trim()) return []
+
+  const lines = output.trim().split('\n')
+
+  // First pass: collect all entries in order
+  const entries = []
+  for (const line of lines) {
+    let parsed
+    try {
+      parsed = JSON.parse(line)
+    } catch {
+      continue
+    }
+
+    if (parsed.type !== 'match' && parsed.type !== 'context') continue
+
+    const data = parsed.data
+    const raw_path = data.path?.text
+    if (!raw_path) continue
+
+    const absolute_path = path.isAbsolute(raw_path)
+      ? raw_path
+      : path.join(cwd, raw_path)
+    const relative_path = absolute_path.startsWith(base_dir)
+      ? path.relative(base_dir, absolute_path)
+      : raw_path
+
+    entries.push({
+      type: parsed.type,
+      file_path: absolute_path,
+      relative_path,
+      line_number: data.line_number,
+      text: (data.lines?.text || '').trimEnd()
+    })
+  }
+
+  // Second pass: group context lines around matches
+  const results = []
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]
+    if (entry.type !== 'match') continue
+
+    const context_before = []
+    const context_after = []
+
+    // Look backwards for context lines in the same file
+    for (let j = i - 1; j >= 0; j--) {
+      const prev = entries[j]
+      if (prev.type !== 'context' || prev.relative_path !== entry.relative_path) break
+      context_before.unshift(prev.text)
+    }
+
+    // Look forwards for context lines in the same file
+    for (let j = i + 1; j < entries.length; j++) {
+      const next = entries[j]
+      if (next.type !== 'context' || next.relative_path !== entry.relative_path) break
+      context_after.push(next.text)
+    }
+
+    results.push({
+      file_path: entry.file_path,
+      relative_path: entry.relative_path,
+      line_number: entry.line_number,
+      match_line: entry.text,
+      context_before,
+      context_after
+    })
+
+    if (results.length >= max_results) break
+  }
+
+  return results
+}
+
 export default {
   search_file_contents,
+  search_file_contents_with_context,
   search_all_file_paths,
   check_ripgrep_availability
 }
