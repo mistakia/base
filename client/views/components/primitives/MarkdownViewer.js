@@ -85,6 +85,7 @@ const get_normal_styles = {
   '& a': {
     color: 'inherit',
     textDecoration: 'none',
+    fontWeight: 600,
     borderBottom: '1px dotted var(--color-primary)',
     cursor: 'pointer',
     transition: 'color 0.2s, border-bottom-color 0.2s',
