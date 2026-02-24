@@ -20,36 +20,10 @@ properties:
     type: string
     required: false
     description: Unique serial number
-  - name: storage_location
-    type: string
-    required: false
-    description: Where the item is stored
   - name: acquisition_date
     type: date
     required: false
     description: When the item was acquired
-
-  # Additional location properties
-  - name: target_location
-    type: string
-    required: false
-    description: Where the item should be stored
-  - name: current_location
-    type: string
-    required: false
-    description: Where the item currently is
-  - name: home_areas
-    type: array
-    items:
-      type: string
-    required: false
-    description: Areas where this item belongs
-  - name: home_attribute
-    type: array
-    items:
-      type: string
-    required: false
-    description: Attributes of ideal storage location
 
   # Physical characteristics
   - name: height_inches
