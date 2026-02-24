@@ -25,7 +25,6 @@ prompt_properties:
     default: false
 relations:
   - follows [[sys:system/guideline/task-implementation-plan-standards.md]]
-  - follows [[user:guideline/project-mappings.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
   - calls [[sys:system/workflow/write-software-implementation-plan.md]]
   - calls [[sys:system/workflow/write-general-implementation-plan.md]]
@@ -50,7 +49,7 @@ This workflow operates in two modes:
 - **Auto-queue path** (no user interaction): All checks pass with high confidence. Queue the enriched planning prompt and auto-archive the session.
 - **Interactive path** (user discussion): Duplicates found, task is stale, or clarity gaps exist. Present findings and work with the user before proceeding.
 
-**Project Mappings:** See [[user:guideline/project-mappings.md]] for tag-to-directory and tag-to-repository mappings, including directory-based inference rules.
+**Project Mappings:** See project-mappings guideline (if available in user directory) for tag-to-directory and tag-to-repository mappings, including directory-based inference rules.
 
 **Queue Integration:**
 

@@ -18,6 +18,7 @@ relations:
   - implements [[sys:system/text/system-design.md]]
   - implements [[sys:system/schema/guideline.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
+  - follows [[sys:system/guideline/core-extension-boundary.md]]
 updated_at: '2026-01-05T19:25:02.704Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:31:29.358Z'

@@ -16,7 +16,6 @@ prompt_properties:
     required: true
 relations:
   - follows [[sys:system/guideline/write-workflow.md]]
-  - follows [[user:guideline/project-mappings.md]]
   - supports [[sys:system/workflow/orchestrate-task-management.md]]
   - supports [[sys:system/workflow/select-implementation-batch.md]]
 tools:

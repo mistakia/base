@@ -21,7 +21,6 @@ prompt_properties:
     default: 1
 relations:
   - follows [[sys:system/guideline/write-workflow.md]]
-  - follows [[user:guideline/project-mappings.md]]
   - supports [[sys:system/workflow/orchestrate-task-management.md]]
   - calls [[sys:system/workflow/implement-software-task.md]]
   - calls [[sys:system/workflow/implement-general-task.md]]

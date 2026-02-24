@@ -15,7 +15,6 @@ public_read: true
 relations:
   - implements [[sys:system/schema/task.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
-  - follows [[user:guideline/write-text.md]]
   - relates_to [[sys:system/guideline/choose-task-status.md]]
   - relates_to [[sys:system/guideline/choose-task-priority.md]]
 updated_at: '2026-01-05T19:25:18.073Z'

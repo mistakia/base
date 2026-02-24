@@ -11,7 +11,6 @@ public_read: true
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-  - follows [[user:guideline/tag-standards.md]]
   - uses [[sys:cli/entity-list.mjs]]
   - uses [[sys:cli/manage-tags.mjs]]
   - uses [[sys:cli/move-entity.mjs]]
@@ -26,7 +25,7 @@ visibility_analyzed_at: '2026-02-16T04:41:07.200Z'
 
 <instructions>
 
-Before starting, read [[user:guideline/tag-standards.md]] for current standards.
+Before starting, read tag-standards guideline (if available in user directory) for current standards.
 
 ## CLI Tools
 

@@ -19,6 +19,7 @@ relations:
   - implements [[sys:system/schema/workflow.md]]
   - related_to [[sys:system/guideline/write-guideline.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
+  - follows [[sys:system/guideline/core-extension-boundary.md]]
 updated_at: '2026-01-05T19:25:18.038Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

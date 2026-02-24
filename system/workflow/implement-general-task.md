@@ -21,7 +21,6 @@ relations:
   - follows [[sys:system/guideline/write-workflow.md]]
   - follows [[sys:system/workflow/write-general-implementation-plan.md]]
   - follows [[sys:system/guideline/review-task.md]]
-  - uses [[user:guideline/write-text.md]]
 updated_at: '2026-01-05T19:25:18.081Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:40:34.543Z'

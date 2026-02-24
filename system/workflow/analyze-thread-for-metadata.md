@@ -50,8 +50,6 @@ relations:
   - follows [[sys:system/guideline/review-thread.md]]
   - follows [[sys:system/guideline/starting-point-philosophy.md]]
   - uses [[sys:system/workflow/read-thread.md]]
-tags:
-  - user:tag/base-project.md
 tools:
   - read
   - bash

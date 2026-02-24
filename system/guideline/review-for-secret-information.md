@@ -11,8 +11,6 @@ observations: []
 public_read: true
 relations:
   - follows [[sys:system/guideline/write-guideline.md]]
-  - follows [[user:guideline/write-text.md]]
-  - related_to [[sys:system/guideline/review-for-personal-information.md]]
 tags: []
 updated_at: '2026-01-05T19:25:17.453Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b

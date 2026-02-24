@@ -32,8 +32,6 @@ public_read: false
 relations:
   - implements [[sys:system/schema/workflow.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-tags:
-  - user:tag/base-project.md
 tools:
   - bash
 updated_at: '2026-01-28T20:28:18.931Z'
