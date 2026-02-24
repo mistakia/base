@@ -131,6 +131,22 @@ CREATE TABLE IF NOT EXISTS entity_relations (
 )
 `
 
+const ENTITY_EMBEDDINGS_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS entity_embeddings (
+  base_uri VARCHAR NOT NULL,
+  chunk_index INTEGER NOT NULL,
+  content_hash VARCHAR NOT NULL,
+  chunk_text TEXT NOT NULL,
+  embedding FLOAT[768] NOT NULL,
+  updated_at TIMESTAMP NOT NULL,
+  PRIMARY KEY (base_uri, chunk_index)
+)
+`
+
+const ENTITY_EMBEDDINGS_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_entity_embeddings_base_uri ON entity_embeddings(base_uri)'
+]
+
 const INDEX_METADATA_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS index_metadata (
   key VARCHAR PRIMARY KEY,
@@ -223,6 +239,14 @@ export async function create_duckdb_schema() {
     await execute_duckdb_run({ query: ACTIVITY_HEATMAP_DAILY_TABLE_SCHEMA })
     log('Activity heatmap daily table created')
 
+    await execute_duckdb_run({ query: ENTITY_EMBEDDINGS_TABLE_SCHEMA })
+    log('Entity embeddings table created')
+
+    for (const index_sql of ENTITY_EMBEDDINGS_INDEXES) {
+      await execute_duckdb_run({ query: index_sql })
+    }
+    log('Entity embeddings indexes created')
+
     log('DuckDB schema creation complete')
   } catch (error) {
     log('Error creating DuckDB schema: %s', error.message)
@@ -245,6 +269,9 @@ export async function drop_duckdb_schema() {
     })
     await execute_duckdb_run({
       query: 'DROP TABLE IF EXISTS activity_heatmap_daily'
+    })
+    await execute_duckdb_run({
+      query: 'DROP TABLE IF EXISTS entity_embeddings'
     })
     log('DuckDB schema dropped')
   } catch (error) {

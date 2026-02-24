@@ -8,6 +8,8 @@ import {
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
+import { search_file_contents_with_context } from '#libs-server/search/ripgrep-file-search.mjs'
+import { search_semantic } from '#libs-server/search/semantic-search-engine.mjs'
 import {
   get_recent_entity_files,
   get_recent_files_config
@@ -52,9 +54,13 @@ async function filter_results_by_permission(results, user_public_key) {
     return []
   }
 
-  // Collect all absolute paths for batch permission checking
+  // Collect all resource paths for batch permission checking
+  // Use pre-computed base_uri when available (semantic search), otherwise derive from absolute_path
   const resource_paths = results
     .map((result) => {
+      if (result.base_uri) {
+        return result.base_uri
+      }
       if (result.absolute_path) {
         return create_base_uri_from_path(result.absolute_path)
       }
@@ -84,7 +90,7 @@ async function filter_results_by_permission(results, user_public_key) {
       continue
     }
 
-    const resource_path = create_base_uri_from_path(result.absolute_path)
+    const resource_path = result.base_uri || create_base_uri_from_path(result.absolute_path)
     const permission = permission_results[resource_path]
 
     // Include result only if permission explicitly allows read access
@@ -125,9 +131,10 @@ router.get('/', async (req, res) => {
     }
 
     // Validate mode
-    if (mode !== 'paths' && mode !== 'full') {
+    const valid_modes = ['paths', 'full', 'content', 'semantic']
+    if (!valid_modes.includes(mode)) {
       return res.status(400).json({
-        error: 'Invalid mode. Must be "paths" or "full"',
+        error: `Invalid mode. Must be one of: ${valid_modes.join(', ')}`,
         param: 'mode'
       })
     }
@@ -171,7 +178,48 @@ router.get('/', async (req, res) => {
     // Get user public key for permission checking
     const user_public_key = req.user?.user_public_key || null
 
-    // Perform search
+    // Content search mode
+    if (mode === 'content') {
+      const content_results = await search_file_contents_with_context({
+        query,
+        directory,
+        max_results: limit
+      })
+
+      const filtered_content = await filter_results_by_permission(
+        content_results.map((r) => ({ ...r, absolute_path: r.file_path })),
+        user_public_key
+      )
+
+      return res.json({
+        content_results: filtered_content,
+        total: filtered_content.length,
+        mode: 'content'
+      })
+    }
+
+    // Semantic search mode
+    if (mode === 'semantic') {
+      const { results: semantic_results, available } = await search_semantic({
+        query,
+        limit
+      })
+
+      // Filter by permission using base_uri (already present on semantic results)
+      const filtered_semantic = await filter_results_by_permission(
+        semantic_results,
+        user_public_key
+      )
+
+      return res.json({
+        semantic_results: filtered_semantic,
+        total: filtered_semantic.length,
+        available,
+        mode: 'semantic'
+      })
+    }
+
+    // Perform default search (paths or full mode)
     const search_results = await unified_search({
       query,
       mode,

@@ -13,7 +13,9 @@ import {
   get_all_results_flat,
   get_selected_index,
   get_recent_files_loaded,
-  get_recent_files_loading
+  get_recent_files_loading,
+  get_search_mode,
+  get_stripped_query
 } from './selectors.js'
 import { api, api_request } from '@core/api/service.js'
 import { get_app } from '@core/app/selectors.js'
@@ -51,20 +53,15 @@ function* handle_search_query({ payload }) {
 }
 
 // Handle query change with debounce
-function* handle_query_change({ payload }) {
-  const { query } = payload
+function* handle_query_change() {
+  const search_mode = yield select(get_search_mode)
+  const stripped_query = yield select(get_stripped_query)
 
-  if (query && query.trim().length >= 2) {
-    yield put(search_actions.search({ query, mode: 'full' }))
+  if (stripped_query && stripped_query.trim().length >= 2) {
+    const api_mode = search_mode === 'default' ? 'full' : search_mode
+    yield put(search_actions.search({ query: stripped_query, mode: api_mode }))
   } else {
-    yield put(
-      search_actions.search_success({
-        files: [],
-        threads: [],
-        entities: [],
-        total: 0
-      })
-    )
+    yield put(search_actions.clear())
   }
 }
 
@@ -103,12 +100,24 @@ export function* navigate_to_result() {
   // Close palette
   yield put(search_actions.close())
 
+  // Encode path segments individually to preserve slashes
+  const encode_path = (p) =>
+    p
+      .split('/')
+      .map((s) => encodeURIComponent(s))
+      .join('/')
+
   // Navigate based on result type
   if (selected.category === 'thread') {
     yield put(push(`/thread/${selected.thread_id}`))
+  } else if (selected.category === 'semantic' && selected.base_uri) {
+    const entity_path = selected.base_uri.replace(/^user:/, '')
+    yield put(push(`/${encode_path(entity_path)}`))
+  } else if (selected.category === 'content' && selected.relative_path) {
+    const line_suffix = selected.line_number ? `#L${selected.line_number}` : ''
+    yield put(push(`/${encode_path(selected.relative_path)}${line_suffix}`))
   } else if (selected.file_path) {
-    // Navigate to file view
-    yield put(push(`/file/${encodeURIComponent(selected.file_path)}`))
+    yield put(push(`/${encode_path(selected.file_path)}`))
   }
 }
 
