@@ -7,6 +7,7 @@ import { active_sessions_actions } from '@core/active-sessions/actions'
 import {
   get_all_sessions_with_pending,
   get_active_sessions_count,
+  get_ended_sessions_count,
   get_pending_sessions,
   get_prompt_snippets
 } from '@core/active-sessions/selectors'
@@ -55,6 +56,7 @@ const FloatingSessionsPanel = () => {
 
   const all_sessions = useSelector(get_all_sessions_with_pending)
   const active_session_count = useSelector(get_active_sessions_count)
+  const ended_session_count = useSelector(get_ended_sessions_count)
   const pending_sessions = useSelector(get_pending_sessions)
   const prompt_snippets = useSelector(get_prompt_snippets)
   const is_input_open = useSelector((state) =>
@@ -100,7 +102,7 @@ const FloatingSessionsPanel = () => {
   const review_count = review_threads_list.length
 
   const active_count = active_session_count + pending_sessions.length
-  const total_count = active_count + review_count
+  const total_count = active_count + ended_session_count + review_count
 
   const handle_collapse_click = useCallback(() => {
     if (panel_mode === PANEL_MODE.COLLAPSED) {
@@ -265,7 +267,7 @@ const FloatingSessionsPanel = () => {
                       ? 'idle'
                       : 'running',
                 updated_at: session.last_activity_at,
-                created_at: session.started_at,
+                created_at: session.created_at || session.started_at,
                 working_directory: session.working_directory,
                 message_count: session.message_count,
                 duration_minutes: session.duration_minutes,

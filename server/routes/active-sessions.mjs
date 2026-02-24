@@ -6,7 +6,7 @@ import {
   update_active_session,
   get_active_session,
   get_all_active_sessions,
-  remove_active_session,
+  get_and_remove_active_session,
   find_thread_for_session,
   emit_active_session_started,
   emit_active_session_updated,
@@ -410,17 +410,18 @@ router.delete('/:session_id', async (req, res) => {
   const { session_id } = req.params
 
   try {
-    const removed = await remove_active_session(session_id)
+    // Read session data before removal so the ENDED event can include it
+    // for permission-based filtering (consistent with STARTED/UPDATED events)
+    const session = await get_and_remove_active_session(session_id)
 
-    if (!removed) {
-      // Session was already removed or never existed - still return success
+    if (!session) {
       log(
         `Session ${session_id} was not in store (already removed or never registered)`
       )
     }
 
-    // Emit WebSocket event
-    await emit_active_session_ended(session_id)
+    // Emit WebSocket event with session data for permission checks
+    await emit_active_session_ended(session_id, session)
 
     log(`Removed active session: ${session_id}`)
     res.status(200).json({ success: true, session_id })

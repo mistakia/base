@@ -41,6 +41,12 @@ export function get_active_sessions_count(state) {
   return sessions_map ? sessions_map.size : 0
 }
 
+export function get_ended_sessions_count(state) {
+  const active_sessions_state = get_active_sessions_state(state)
+  const ended_map = active_sessions_state.get('ended_sessions')
+  return ended_map ? ended_map.size : 0
+}
+
 export function get_active_sessions_loading(state) {
   return get_active_sessions_state(state).get('is_loading')
 }
@@ -107,11 +113,12 @@ export const get_all_sessions_with_pending = createSelector(
           .toArray()
       : []
 
-    // Sort active sessions by started_at descending so that sessions
-    // converted from pending (queued) retain their position at the top
+    // Sort active sessions by created_at descending for stable ordering.
+    // created_at is immutable (set once at registration), preventing visual
+    // reordering when other timestamp fields update during the session lifecycle.
     const sorted_active = [...active].sort((a, b) => {
-      const a_time = new Date(a.started_at || a.created_at || 0).getTime()
-      const b_time = new Date(b.started_at || b.created_at || 0).getTime()
+      const a_time = new Date(a.created_at || a.started_at || 0).getTime()
+      const b_time = new Date(b.created_at || b.started_at || 0).getTime()
       return b_time - a_time
     })
 

@@ -42,10 +42,14 @@ export function active_sessions_reducer(
       })
 
     case active_sessions_action_types.GET_ACTIVE_SESSIONS_FULFILLED: {
-      // Convert array to Map keyed by session_id, preserving client-side fields
+      // Build Map from API response, preserving client-side fields
       const sessions_array = payload.data || []
       const existing_sessions = state.get('sessions')
-      const sessions_map = new Map(
+      const api_session_ids = new Set(
+        sessions_array.map((s) => s.session_id)
+      )
+
+      let sessions_map = new Map(
         sessions_array.map((session) => {
           const existing = existing_sessions.get(session.session_id)
           if (existing) {
@@ -56,6 +60,15 @@ export function active_sessions_reducer(
           return [session.session_id, Map(session)]
         })
       )
+
+      // Preserve sessions added via WebSocket that the API didn't return.
+      // These may have arrived between the API request and response, or the
+      // server may not yet have indexed them (e.g., thread not synced locally).
+      existing_sessions.forEach((session, session_id) => {
+        if (!api_session_ids.has(session_id)) {
+          sessions_map = sessions_map.set(session_id, session)
+        }
+      })
 
       // Remove any ended_sessions that the server still reports as active
       // to prevent duplicates across both maps
@@ -126,7 +139,7 @@ export function active_sessions_reducer(
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
 
-      // If session is in ended_sessions, update there instead of creating a duplicate in sessions
+      // If session is in ended_sessions, update there instead of creating a duplicate
       if (state.hasIn(['ended_sessions', session.session_id])) {
         return state.updateIn(
           ['ended_sessions', session.session_id],
@@ -134,14 +147,16 @@ export function active_sessions_reducer(
         )
       }
 
-      // Only update if session exists in active sessions; don't create a new entry
-      if (!state.hasIn(['sessions', session.session_id])) {
-        return state
+      // Merge into existing session or upsert if not yet known.
+      // Upsert handles missed STARTED events (e.g., browser opened after
+      // session began, or WS was disconnected during STARTED broadcast).
+      if (state.hasIn(['sessions', session.session_id])) {
+        return state.updateIn(['sessions', session.session_id], (existing) =>
+          existing.merge(session)
+        )
       }
 
-      return state.updateIn(['sessions', session.session_id], (existing) =>
-        existing.merge(session)
-      )
+      return state.setIn(['sessions', session.session_id], Map(session))
     }
 
     case active_sessions_action_types.ACTIVE_SESSION_ENDED: {
