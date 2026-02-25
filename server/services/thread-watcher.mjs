@@ -11,6 +11,7 @@ import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
 
 const log = debug('threads:watcher')
+const log_lifecycle = debug('base:session-lifecycle')
 
 /**
  * Filesystem watcher for thread directory
@@ -252,6 +253,7 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
       latest_timeline_entry_cache.set(thread_id, latest)
     }
 
+    log_lifecycle('WATCHER timeline_changed thread_id=%s prev_offset=%d new_offset=%d new_entries=%d', thread_id, tracked.byte_offset, result.new_byte_offset, result.entries.length)
     log(
       `Read ${result.entries.length} new entries from offset ${tracked.byte_offset} for thread ${thread_id}`
     )
@@ -309,6 +311,7 @@ const initialize_timeline_tracking_for_new_thread = async (
       latest_timeline_entry_cache.set(thread_id, latest)
     }
 
+    log_lifecycle('WATCHER thread_initialized thread_id=%s byte_offset=%d cached_latest=%s', thread_id, result.new_byte_offset, !!latest)
     log(
       `Initialized new thread tracking for ${thread_id}: offset=${result.new_byte_offset}, cached latest entry`
     )
@@ -335,6 +338,7 @@ const handle_metadata_added = async (file_path) => {
   // Cache metadata for use by timeline change handler
   metadata_cache.set(thread_id, metadata)
 
+  log_lifecycle('WATCHER metadata_added thread_id=%s', thread_id)
   log(`Emitting THREAD_CREATED for thread: ${thread_id}`)
   emit_thread_created(metadata)
 
@@ -382,6 +386,7 @@ const handle_metadata_changed = async (file_path) => {
  * @param {Object} metadata - Thread metadata
  */
 const emit_timeline_entry_events = (thread_id, new_entries, metadata) => {
+  log_lifecycle('WATCHER timeline_emit thread_id=%s entry_count=%d', thread_id, new_entries.length)
   log(
     `Emitting ${new_entries.length} new timeline entries for thread ${thread_id}`
   )

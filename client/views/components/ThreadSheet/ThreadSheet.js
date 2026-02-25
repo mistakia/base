@@ -12,7 +12,10 @@ import {
   thread_sheet_actions
 } from '@core/thread-sheet/index.js'
 import { threads_actions } from '@core/threads/actions'
-import { get_active_session_for_thread } from '@core/active-sessions/selectors'
+import {
+  get_active_session_for_thread,
+  get_active_session_by_id
+} from '@core/active-sessions/selectors'
 import { get_thread_pending_resume } from '@core/threads/selectors'
 import {
   subscribe_to_thread,
@@ -31,6 +34,14 @@ import TimelineList from '@components/ThreadTimelineView/TimelineList'
 import Button from '@components/primitives/Button'
 
 import './ThreadSheet.styl'
+
+function compute_sheet_style(stack_index, stack_size) {
+  const depth = stack_size - 1 - stack_index
+  return {
+    transform: `translateX(${depth * -12}px) scale(${1 - depth * 0.03})`,
+    zIndex: 1200 + stack_index
+  }
+}
 
 // Inline thread resume input
 const SheetThreadInput = ({
@@ -312,15 +323,7 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
     return () => el.removeEventListener('scroll', handle_scroll)
   }, [])
 
-  // Calculate stacking transform
-  const depth = stack_size - 1 - stack_index // 0 = topmost
-  const scale = 1 - depth * 0.03
-  const translate_x = depth * -12
-
-  const style = {
-    transform: `translateX(${translate_x}px) scale(${scale})`,
-    zIndex: 1200 + stack_index
-  }
+  const style = compute_sheet_style(stack_index, stack_size)
 
   return (
     <div className='thread-sheet__panel' style={style}>
@@ -437,6 +440,85 @@ SingleThreadSheet.propTypes = {
   stack_size: PropTypes.number
 }
 
+// Session-only sheet panel (before thread exists)
+const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
+  const dispatch = useDispatch()
+  const session_id = sheet_key.replace('session:', '')
+
+  const session = useSelector((state) =>
+    get_active_session_by_id(state, session_id)
+  )
+  const session_status = useSelector((state) =>
+    state.getIn([
+      'thread_sheet',
+      'sheet_data',
+      sheet_key,
+      'session_status'
+    ])
+  )
+
+  const handle_close = useCallback(() => {
+    dispatch(thread_sheet_actions.close_thread_sheet(sheet_key))
+  }, [dispatch, sheet_key])
+
+  const style = compute_sheet_style(stack_index, stack_size)
+
+  const status = session_status || session?.status || 'starting'
+  const working_directory = session?.working_directory
+  const directory_name = working_directory
+    ? working_directory.split('/').pop() || 'root'
+    : null
+  const prompt_snippet = session?.prompt_snippet
+
+  return (
+    <div className='thread-sheet__panel' style={style}>
+      <header className='thread-sheet__header'>
+        <div className='thread-sheet__metadata-summary'>
+          <div className='thread-sheet__metadata-main'>
+            <span className='thread-sheet__metadata-title'>
+              {prompt_snippet || 'New Session'}
+            </span>
+            <span
+              className={`thread-sheet__metadata-state thread-sheet__metadata-state--${status === 'active' ? 'active' : status === 'ended' ? 'archived' : 'active'}`}>
+              {status}
+            </span>
+          </div>
+        </div>
+        <button
+          className='thread-sheet__close'
+          onClick={handle_close}
+          aria-label='Close session sheet'>
+          <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
+            <path
+              d='M3 3l8 8M11 3l-8 8'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+            />
+          </svg>
+        </button>
+      </header>
+      <div className='thread-sheet__scroll-area'>
+        <div className='thread-sheet__session-waiting'>
+          {directory_name && (
+            <div className='thread-sheet__session-directory'>
+              {directory_name}
+            </div>
+          )}
+          <div className='thread-sheet__session-status'>
+            Waiting for thread data...
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+SessionSheetPanel.propTypes = {
+  sheet_key: PropTypes.string,
+  stack_index: PropTypes.number,
+  stack_size: PropTypes.number
+}
+
 // Container that renders all stacked sheets
 const ThreadSheet = () => {
   const sheets = useSelector(get_thread_sheet_sheets)
@@ -449,14 +531,23 @@ const ThreadSheet = () => {
 
   return (
     <div className='thread-sheet__container'>
-      {sheet_list.map((thread_id, index) => (
-        <SingleThreadSheet
-          key={thread_id}
-          thread_id={thread_id}
-          stack_index={index}
-          stack_size={sheet_list.length}
-        />
-      ))}
+      {sheet_list.map((sheet_id, index) =>
+        sheet_id.startsWith('session:') ? (
+          <SessionSheetPanel
+            key={sheet_id}
+            sheet_key={sheet_id}
+            stack_index={index}
+            stack_size={sheet_list.length}
+          />
+        ) : (
+          <SingleThreadSheet
+            key={sheet_id}
+            thread_id={sheet_id}
+            stack_index={index}
+            stack_size={sheet_list.length}
+          />
+        )
+      )}
     </div>
   )
 }

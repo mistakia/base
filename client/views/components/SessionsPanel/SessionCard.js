@@ -47,13 +47,19 @@ const SessionCard = ({ item }) => {
     use_discard_confirm({ on_discard: abandoned_callback })
 
   const handle_click = (event) => {
-    if (!item.id) return
-
-    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
-    if (event.metaKey || event.ctrlKey) {
-      window.open(`/thread/${item.id}`, '_blank')
-    } else {
-      dispatch(thread_sheet_actions.open_thread_sheet({ thread_id: item.id }))
+    if (item.id) {
+      // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+      if (event.metaKey || event.ctrlKey) {
+        window.open(`/thread/${item.id}`, '_blank')
+      } else {
+        dispatch(thread_sheet_actions.open_thread_sheet({ thread_id: item.id }))
+      }
+    } else if (item.session_id) {
+      dispatch(
+        thread_sheet_actions.open_session_sheet({
+          session_id: item.session_id
+        })
+      )
     }
   }
 
@@ -106,7 +112,7 @@ const SessionCard = ({ item }) => {
     'session-card',
     item.status === 'running' ? 'session-card--running' : '',
     item.status === 'ended' ? 'session-card--ended' : '',
-    item.id ? 'session-card--clickable' : ''
+    item.id || item.session_id ? 'session-card--clickable' : ''
   ]
     .filter(Boolean)
     .join(' ')
@@ -122,7 +128,7 @@ const SessionCard = ({ item }) => {
   const show_footer = has_details || item.show_actions
 
   return (
-    <div className={card_classes} onClick={item.id ? handle_click : undefined}>
+    <div className={card_classes} onClick={item.id || item.session_id ? handle_click : undefined}>
       <div className='session-card__main-row'>
         <span className='session-card__title'>{item.title || '-'}</span>
         <span className='session-card__time'>
@@ -230,6 +236,7 @@ const SessionCard = ({ item }) => {
 SessionCard.propTypes = {
   item: PropTypes.shape({
     id: PropTypes.string,
+    session_id: PropTypes.string,
     title: PropTypes.string,
     status: PropTypes.oneOf(['running', 'idle', 'review', 'archived', 'ended']),
     created_at: PropTypes.string,

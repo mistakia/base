@@ -26,19 +26,27 @@ export function* load_active_sessions() {
 //  AUTO-DISMISS ENDED SESSIONS
 //= ====================================
 
-const DISMISS_DELAY_WITH_THREAD = 30000
+const DISMISS_DELAY_WITH_THREAD = 5 * 60 * 1000
 const DISMISS_DELAY_WITHOUT_THREAD = 60000
 
 export function* auto_dismiss_ended_session({ payload }) {
   const { session_id } = payload
 
-  // Check if the ended session has a thread_id
-  const ended_session = yield select((state) =>
-    state.getIn(['active_sessions', 'ended_sessions', session_id])
+  // Check if session ended with a thread (kept inline in sessions map)
+  const active_session = yield select((state) =>
+    state.getIn(['active_sessions', 'sessions', session_id])
   )
+  const has_thread_inline = active_session && !!active_session.get('thread_id')
 
-  const has_thread = ended_session && ended_session.get('thread_id')
-  const dismiss_delay = has_thread
+  if (!has_thread_inline) {
+    // Sessions without threads are in ended_sessions -- auto-dismiss after 60s
+    const ended_session = yield select((state) =>
+      state.getIn(['active_sessions', 'ended_sessions', session_id])
+    )
+    if (!ended_session) return
+  }
+
+  const dismiss_delay = has_thread_inline
     ? DISMISS_DELAY_WITH_THREAD
     : DISMISS_DELAY_WITHOUT_THREAD
 
@@ -52,8 +60,17 @@ export function* auto_dismiss_ended_session({ payload }) {
     )
   })
 
-  // Only dispatch if the delay won (not manually dismissed)
+  // Before dismissing, re-check if a late THREAD_CREATED linked a thread
+  // (handles the case where thread creation happens after session end)
   if (timeout) {
+    const current_ended = yield select((state) =>
+      state.getIn(['active_sessions', 'ended_sessions', session_id])
+    )
+    if (current_ended && current_ended.get('thread_id')) {
+      // Thread was linked after session ended -- don't auto-dismiss
+      return
+    }
+
     yield put({
       type: active_sessions_action_types.DISMISS_ENDED_SESSION,
       payload: { session_id }

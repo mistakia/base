@@ -7,6 +7,7 @@ import StoreRegistry from '@core/store-registry'
 import { normalize_file_path } from '#libs-shared/path-utils.mjs'
 
 import { websocket_actions } from './actions'
+import { log_lifecycle } from '@core/utils/session-lifecycle-debug'
 
 // Allowlist of valid WebSocket action types that can be dispatched to Redux
 const ALLOWED_WEBSOCKET_ACTIONS = new Set([
@@ -95,6 +96,17 @@ export const open_websocket = (params) => {
       const store = StoreRegistry.getStore()
       const message = JSON.parse(event.data)
       console.log(`websocket message: ${message.type}`)
+
+      // Trace session lifecycle messages
+      if (
+        message.type.startsWith('ACTIVE_SESSION_') || message.type.startsWith('THREAD_')
+      ) {
+        const p = message.payload || {}
+        log_lifecycle('WS_RECV', message.type, {
+          session_id: p.session_id || p.session?.session_id,
+          thread_id: p.thread_id || p.session?.thread_id
+        })
+      }
 
       // Validate action type before dispatching to Redux
       if (!ALLOWED_WEBSOCKET_ACTIONS.has(message.type)) {

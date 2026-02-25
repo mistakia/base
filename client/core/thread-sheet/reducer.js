@@ -2,6 +2,7 @@ import { Map, List } from 'immutable'
 
 import { thread_sheet_action_types } from './actions'
 import { threads_action_types } from '@core/threads/actions'
+import { active_sessions_action_types } from '@core/active-sessions/actions'
 
 const initial_state = new Map({
   // Ordered list of open sheet thread_ids (last = topmost)
@@ -31,6 +32,29 @@ function append_sheet_timeline_entry(state, thread_id, entry) {
         return [entry]
       })
   )
+}
+
+/**
+ * Transition a session sheet to a thread sheet by replacing the session key
+ * with the thread_id in the sheets stack and resetting sheet_data.
+ */
+function transition_session_sheet_to_thread(state, session_id, thread_id) {
+  const sheet_key = `session:${session_id}`
+  const sheets = state.get('sheets')
+  const sheet_index = sheets.indexOf(sheet_key)
+  if (sheet_index < 0) return state
+
+  return state
+    .update('sheets', (s) => s.set(sheet_index, thread_id))
+    .deleteIn(['sheet_data', sheet_key])
+    .setIn(
+      ['sheet_data', thread_id],
+      Map({
+        thread_data: null,
+        is_loading: false,
+        error: null
+      })
+    )
 }
 
 export function thread_sheet_reducer(state = initial_state, { type, payload }) {
@@ -131,6 +155,61 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
         return append_sheet_timeline_entry(state, thread_id, entry)
       }
       return state
+    }
+
+    // Session sheet support: open with session_id before thread exists
+    case thread_sheet_action_types.OPEN_SESSION_SHEET: {
+      const { session_id } = payload
+      const sheet_key = `session:${session_id}`
+      const sheets = state.get('sheets')
+
+      // If already open, move to top
+      const existing_index = sheets.indexOf(sheet_key)
+      if (existing_index >= 0) {
+        return state.set(
+          'sheets',
+          sheets.delete(existing_index).push(sheet_key)
+        )
+      }
+
+      return state
+        .update('sheets', (s) => s.push(sheet_key))
+        .setIn(
+          ['sheet_data', sheet_key],
+          Map({
+            thread_data: null,
+            is_loading: false,
+            error: null,
+            session_id
+          })
+        )
+    }
+
+    // When a session gains a thread_id, transition any open session sheet
+    case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
+      const { session } = payload
+      if (!session.thread_id || !session.session_id) return state
+      return transition_session_sheet_to_thread(state, session.session_id, session.thread_id)
+    }
+
+    // When a thread is created matching a session sheet, transition it
+    case threads_action_types.THREAD_CREATED: {
+      const thread = payload.thread
+      const source_session_id = thread?.source?.session_id
+      if (!source_session_id) return state
+      return transition_session_sheet_to_thread(state, source_session_id, thread.thread_id)
+    }
+
+    // Keep session sheet open when session ends, just update status
+    case active_sessions_action_types.ACTIVE_SESSION_ENDED: {
+      const { session_id } = payload
+      const sheet_key = `session:${session_id}`
+      if (!state.getIn(['sheet_data', sheet_key])) return state
+
+      return state.setIn(
+        ['sheet_data', sheet_key, 'session_status'],
+        'ended'
+      )
     }
 
     default:

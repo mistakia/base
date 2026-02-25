@@ -15,6 +15,7 @@ import { get_can_create_threads, get_app } from '@core/app/selectors.js'
 import { threads_actions } from '@core/threads/actions'
 import { get_threads_state } from '@core/threads/index.js'
 import SessionCard from '@components/SessionsPanel/SessionCard.js'
+import normalize_thread from '@components/SessionsPanel/normalize-thread.js'
 import './FloatingSessionsPanel.styl'
 
 // Panel display modes
@@ -22,34 +23,6 @@ const PANEL_MODE = {
   COLLAPSED: 'collapsed',
   LIST: 'list',
   DETAIL: 'detail'
-}
-
-const normalize_thread = (thread) => {
-  const working_directory =
-    thread.working_directory ||
-    thread.source?.provider_metadata?.working_directory
-
-  const duration_minutes =
-    thread.duration_minutes ||
-    thread.source?.provider_metadata?.duration_minutes
-
-  const can_write = thread.can_write !== false
-
-  return {
-    id: thread.thread_id,
-    title: thread.title,
-    status: thread.thread_state === 'active' ? 'review' : 'archived',
-    created_at: thread.created_at,
-    updated_at: thread.updated_at,
-    working_directory,
-    message_count: thread.message_count,
-    duration_minutes,
-    total_tokens:
-      thread.total_tokens || thread.source?.provider_metadata?.total_tokens,
-    latest_timeline_event: thread.latest_timeline_event || null,
-    user_public_key: thread.user_public_key || null,
-    show_actions: thread.thread_state === 'active' && can_write
-  }
 }
 
 const FloatingSessionsPanel = () => {
@@ -278,6 +251,7 @@ const FloatingSessionsPanel = () => {
               // Active session - render as a compact card
               const item = {
                 id: session.thread_id,
+                session_id: session.session_id,
                 title:
                   session.thread_title ||
                   session.prompt_snippet ||
