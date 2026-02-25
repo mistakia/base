@@ -65,12 +65,18 @@ describe('Unified Base CLI', function () {
         return // Skip if no entities exist
       }
 
+      const entity = entities[0]
+      // Skip when API server returns redacted entities (no auth token)
+      if (entity.is_redacted) {
+        return
+      }
+
       const { stdout } = await run(
-        `entity get "${entities[0].base_uri}" --json`
+        `entity get "${entity.base_uri}" --json`
       )
       const parsed = JSON.parse(stdout.trim())
       expect(parsed).to.be.an('array').with.lengthOf(1)
-      expect(parsed[0]).to.have.property('base_uri', entities[0].base_uri)
+      expect(parsed[0]).to.have.property('base_uri', entity.base_uri)
     })
   })
 
