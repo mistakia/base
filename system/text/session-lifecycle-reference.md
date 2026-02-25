@@ -116,6 +116,15 @@ Container:  docker exec -u node -w <path> [-e JOB_ID=...] [-e BASE_API_PROTO=...
 - `-r <session_id>`: Resume an existing session
 - Container mode also passes `BASE_API_PROTO` and `BASE_API_PORT` env vars when applicable
 
+#### Container User Mode
+
+When `execution_mode` is `container_user`, sessions run inside the Docker container as the `node` user. This affects hook script behavior:
+
+- Hook scripts must resolve paths relative to the container filesystem
+- API calls from hooks use `BASE_API_PROTO` and `BASE_API_PORT` env vars (defaulting to `http` and `8080`)
+- The session transcript path is a container-local path, which the sync script maps to the host path for thread file creation
+- Thread files are written to the shared volume mount, so the thread watcher on the host detects them normally
+
 ### Phase 3: Session Hooks (async, during harness execution)
 
 #### SessionStart (fires once when harness starts)
@@ -458,6 +467,67 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 **Emitted**: When the BullMQ job fails (harness crash, timeout, etc.).
 **Broadcast**: Sent to all authenticated WebSocket clients without permission filtering (since there is no thread to check permissions against). Clients match by `job_id` to correlate with pending sessions.
 
+### THREAD_JOB_STARTED
+
+```json
+{
+  "type": "THREAD_JOB_STARTED",
+  "payload": {
+    "job_id": "string",
+    "thread_id": "string"
+  }
+}
+```
+
+**Emitted**: When the BullMQ worker picks up a job and begins executing.
+**Broadcast**: Sent to all authenticated WebSocket clients without permission filtering.
+**Client use**: Transitions pending sessions from "queued" to "starting" status.
+
+## Debug Tracing
+
+### Server-Side Tracing
+
+Enable the `base:session-lifecycle` debug namespace to trace the full session lifecycle on the server:
+
+```bash
+DEBUG=base:session-lifecycle node server/...
+# or append to existing DEBUG patterns:
+DEBUG=api:*,base:session-lifecycle node server/...
+```
+
+Trace output includes structured log entries at every state transition:
+
+- **Routes** (`active-sessions.mjs`): POST/PUT/DELETE with session_id, job_id, thread_id, thread discovery status
+- **Event emitter** (`session-event-emitter.mjs`): WebSocket emission with event type, recipient count, redacted count
+- **Thread watcher** (`thread-watcher.mjs`): Thread creation detection, byte offset tracking, timeline entry emission
+- **Session-thread matcher** (`session-thread-matcher.mjs`): Thread lookup attempts, match method (session_id vs transcript_path)
+
+### Client-Side Tracing
+
+Enable client tracing via localStorage:
+
+```javascript
+localStorage.setItem('debug:session-lifecycle', '1')
+```
+
+Trace output appears in browser console as `[session-lifecycle]` entries:
+
+- **Reducer**: ACTIVE_SESSION_STARTED (with pending match status), ACTIVE_SESSION_UPDATED (with thread link status), ACTIVE_SESSION_ENDED, THREAD_CREATED (with match target), THREAD_TIMELINE_ENTRY_ADDED (with session match)
+- **WebSocket service**: All incoming ACTIVE_SESSION_* and THREAD_* messages with key IDs
+
+Disable with `localStorage.removeItem('debug:session-lifecycle')`.
+
+## Early Session Clickability
+
+Sessions are clickable as soon as they start, before a thread exists on disk. The flow:
+
+1. Session starts -- `session_id` is available immediately
+2. SessionCard checks for `item.session_id` when `item.id` (thread_id) is absent
+3. Clicking opens a session sheet (`session:${session_id}` key in thread-sheet stack)
+4. Session sheet shows prompt snippet, status, and working directory with a "Waiting for thread data..." placeholder
+5. When the session gains a thread_id (via ACTIVE_SESSION_UPDATED or THREAD_CREATED), the sheet auto-transitions to the full thread view
+6. The thread-sheet saga detects the transition and auto-loads thread data + subscribes to WebSocket updates
+
 ## Correlation Keys
 
 The session lifecycle uses multiple identifiers at different stages:
@@ -505,34 +575,37 @@ session_id (from WS event)
 Based on the event flow, the client should track sessions through these states:
 
 ```
-PENDING (has job_id, no session_id)
+PENDING (has job_id, no session_id, clickable: no)
   |
   |-- ACTIVE_SESSION_STARTED (matching job_id) --> ACTIVE
   |-- THREAD_JOB_FAILED (matching job_id) -------> FAILED
   v
-ACTIVE (has session_id, thread_id: null, status: "active")
+ACTIVE (has session_id, thread_id: null, status: "active", clickable: yes via session sheet)
   |
   |-- ACTIVE_SESSION_UPDATED (status: "idle") --> IDLE (waiting for input)
   |-- THREAD_CREATED (matching source.session_id)
   |   or ACTIVE_SESSION_UPDATED (with thread_id)
   v
-ACTIVE_LINKED (has session_id + thread_id, clickable)
+ACTIVE_LINKED (has session_id + thread_id, clickable: yes via thread sheet)
   |
   |-- ACTIVE_SESSION_UPDATED (status: "idle") --> IDLE_LINKED
-  |-- ACTIVE_SESSION_ENDED ----------------------> ENDED_LINKED
+  |-- ACTIVE_SESSION_ENDED ----------------------> ENDED_LINKED (stays in sessions map)
   v
 IDLE_LINKED (has session_id + thread_id, status: "idle")
   |
   |-- ACTIVE_SESSION_UPDATED (status: "active") --> ACTIVE_LINKED
-  |-- ACTIVE_SESSION_ENDED -----------------------> ENDED_LINKED
+  |-- ACTIVE_SESSION_ENDED -----------------------> ENDED_LINKED (stays in sessions map)
   v
-ENDED (has session_id, may or may not have thread_id)
+ENDED_LINKED (has thread_id, status: "ended", stays inline in sessions map, clickable)
   |
-  |-- THREAD_CREATED (if not linked yet, matching source.session_id)
+  |-- manual dismiss
   v
-ENDED_LINKED (has thread_id, clickable)
+REMOVED
+
+ENDED_NO_THREAD (no thread_id, moved to ended_sessions map)
   |
-  |-- auto-dismiss timer or manual dismiss
+  |-- THREAD_CREATED (if matching source.session_id)
+  |-- auto-dismiss after 60s
   v
 REMOVED
 
@@ -542,6 +615,12 @@ FAILED (has job_id + error_message)
   v
 REMOVED
 ```
+
+**Key behavioral changes**:
+
+- **Early clickability**: Sessions are clickable as soon as they have a `session_id` (before thread exists). The click opens a session sheet that auto-transitions to a thread sheet when `thread_id` becomes available.
+- **Inline ended sessions**: Sessions that end with a `thread_id` stay in the `sessions` map with status "ended" rather than moving to `ended_sessions`. This prevents the card from disappearing. Only sessions without a thread are auto-dismissed after 60s.
+- **Unified sorting**: All sessions (pending, active, ended) are sorted by `created_at` descending in a single array, preventing visual reordering when sessions transition between states.
 
 **Key ordering rules**:
 

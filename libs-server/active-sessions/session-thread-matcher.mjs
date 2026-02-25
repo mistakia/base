@@ -6,6 +6,7 @@ import { get_thread_base_directory } from '#libs-server/threads/threads-constant
 import { read_json_file } from '#libs-server/threads/thread-utils.mjs'
 
 const log = debug('active-sessions:matcher')
+const log_lifecycle = debug('base:session-lifecycle')
 
 /**
  * Match active sessions to existing threads
@@ -62,6 +63,7 @@ export const find_thread_for_session = async ({
         // Primary match: session_id
         const source = metadata.source
         if (session_id && source?.session_id === session_id) {
+          log_lifecycle('MATCHER found session_id=%s thread_id=%s method=session_id', session_id, thread_id)
           log(`Found thread ${thread_id} matching session_id ${session_id}`)
           return thread_id
         }
@@ -71,6 +73,7 @@ export const find_thread_for_session = async ({
           transcript_path &&
           source?.provider_metadata?.file_source === transcript_path
         ) {
+          log_lifecycle('MATCHER found session_id=%s thread_id=%s method=transcript_path', session_id, thread_id)
           log(
             `Found thread ${thread_id} matching transcript_path ${transcript_path}`
           )
@@ -82,6 +85,7 @@ export const find_thread_for_session = async ({
       }
     }
 
+    log_lifecycle('MATCHER not_found session_id=%s', session_id)
     log('No matching thread found')
     return null
   } catch (error) {

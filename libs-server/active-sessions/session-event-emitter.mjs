@@ -6,6 +6,7 @@ import { check_thread_permission_for_user } from '#server/middleware/permission/
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('active-sessions:events')
+const log_lifecycle = debug('base:session-lifecycle')
 
 /**
  * WebSocket event emitter for active session changes
@@ -94,6 +95,8 @@ const emit_session_event = async ({ event_type, payload }) => {
       }
     }
 
+    const redacted_count = wss.clients.size - sent_count
+    log_lifecycle('EMIT event=%s session_id=%s thread_id=%s recipients=%d redacted=%d', event_type, session?.session_id || 'unknown', thread_id || 'none', sent_count, redacted_count)
     log(`Emitted ${event_type} to ${sent_count} clients`)
   } catch (error) {
     log(`Failed to emit ${event_type}:`, error)
@@ -182,6 +185,7 @@ export const emit_active_session_ended = async (session_id, session = null) => {
         )
       }
     }
+    log_lifecycle('EMIT event=ACTIVE_SESSION_ENDED session_id=%s thread_id=none recipients=%d redacted=0', session_id, sent_count)
     log(
       `Emitted ACTIVE_SESSION_ENDED (broadcast, session_id=${session_id}) to ${sent_count} clients`
     )

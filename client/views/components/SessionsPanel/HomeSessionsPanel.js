@@ -14,6 +14,7 @@ import {
 import { get_can_create_threads, get_app } from '@core/app/selectors.js'
 import { get_thread_by_id } from '@core/threads/selectors.js'
 import SessionCard from './SessionCard.js'
+import normalize_thread from './normalize-thread.js'
 import './HomeSessionsPanel.styl'
 
 /**
@@ -39,6 +40,7 @@ const normalize_session = (session, get_thread, prompt_snippets = {}) => {
 
   return {
     id: session.thread_id,
+    session_id: session.session_id,
     title:
       session.thread_title ||
       session.prompt_snippet ||
@@ -55,42 +57,6 @@ const normalize_session = (session, get_thread, prompt_snippets = {}) => {
     total_tokens: session.total_tokens,
     latest_timeline_event: session.latest_timeline_event,
     user_public_key: thread?.user_public_key || null,
-    show_actions
-  }
-}
-
-/**
- * Normalize a thread to the unified card format
- * @param {Object} thread - Thread from Redux
- * @returns {Object} Normalized item for SessionCard
- */
-const normalize_thread = (thread) => {
-  const working_directory =
-    thread.working_directory ||
-    thread.source?.provider_metadata?.working_directory
-
-  const duration_minutes =
-    thread.duration_minutes ||
-    thread.source?.provider_metadata?.duration_minutes
-
-  const can_write = thread.can_write !== false
-
-  // Show actions for active threads (ready for review) with write permission
-  const show_actions = thread.thread_state === 'active' && can_write
-
-  return {
-    id: thread.thread_id,
-    title: thread.title,
-    status: thread.thread_state === 'active' ? 'review' : 'archived',
-    created_at: thread.created_at,
-    updated_at: thread.updated_at,
-    working_directory,
-    message_count: thread.message_count,
-    duration_minutes,
-    total_tokens:
-      thread.total_tokens || thread.source?.provider_metadata?.total_tokens,
-    latest_timeline_event: thread.latest_timeline_event || null,
-    user_public_key: thread.user_public_key || null,
     show_actions
   }
 }

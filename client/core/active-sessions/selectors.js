@@ -80,7 +80,6 @@ export const get_all_sessions_with_pending = createSelector(
   (active_sessions_state) => {
     const sessions_map = active_sessions_state.get('sessions')
     const pending_map = active_sessions_state.get('pending_sessions')
-
     const ended_map = active_sessions_state.get('ended_sessions')
 
     const active = sessions_map
@@ -113,16 +112,17 @@ export const get_all_sessions_with_pending = createSelector(
           .toArray()
       : []
 
-    // Sort active sessions by created_at descending for stable ordering.
-    // created_at is immutable (set once at registration), preventing visual
-    // reordering when other timestamp fields update during the session lifecycle.
-    const sorted_active = [...active].sort((a, b) => {
+    // Unified sort by created_at descending across all states.
+    // This prevents visual reordering when sessions transition between
+    // pending -> active -> ended states.
+    const all_sessions = [...pending, ...active, ...ended]
+    all_sessions.sort((a, b) => {
       const a_time = new Date(a.created_at || a.started_at || 0).getTime()
       const b_time = new Date(b.created_at || b.started_at || 0).getTime()
       return b_time - a_time
     })
 
-    return [...pending, ...sorted_active, ...ended]
+    return all_sessions
   }
 )
 
