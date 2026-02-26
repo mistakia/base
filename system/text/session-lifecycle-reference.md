@@ -459,6 +459,7 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
   "type": "THREAD_JOB_FAILED",
   "payload": {
     "job_id": "string",
+    "thread_id": "string | null",
     "error_message": "string"
   }
 }
@@ -466,6 +467,7 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 
 **Emitted**: When the BullMQ job fails (harness crash, timeout, etc.).
 **Broadcast**: Sent to all authenticated WebSocket clients without permission filtering (since there is no thread to check permissions against). Clients match by `job_id` to correlate with pending sessions.
+**thread_id**: Null for new session jobs (no thread exists yet). Non-null for resumed session jobs where the thread already exists. Clients use this to update thread-specific pending resume state.
 
 ### THREAD_JOB_STARTED
 
@@ -513,7 +515,7 @@ localStorage.setItem('debug:session-lifecycle', '1')
 Trace output appears in browser console as `[session-lifecycle]` entries:
 
 - **Reducer**: ACTIVE_SESSION_STARTED (with pending match status), ACTIVE_SESSION_UPDATED (with thread link status), ACTIVE_SESSION_ENDED, THREAD_CREATED (with match target), THREAD_TIMELINE_ENTRY_ADDED (with session match)
-- **WebSocket service**: All incoming ACTIVE_SESSION_* and THREAD_* messages with key IDs
+- **WebSocket service**: All incoming ACTIVE*SESSION*_ and THREAD\__ messages with key IDs
 
 Disable with `localStorage.removeItem('debug:session-lifecycle')`.
 

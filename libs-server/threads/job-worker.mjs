@@ -310,6 +310,7 @@ const handle_job_failed = (job, error) => {
 
   emit_thread_job_failed({
     job_id: job.id,
+    thread_id: job.data.thread_id,
     error_message: error.message
   }).catch((emit_error) => {
     log(`Job ${job.id}: failed to emit THREAD_JOB_FAILED -`, emit_error.message)

@@ -61,12 +61,20 @@ export function* auto_dismiss_ended_session({ payload }) {
   })
 
   // Before dismissing, re-check if a late THREAD_CREATED linked a thread
-  // (handles the case where thread creation happens after session end)
+  // (handles the case where thread creation happens after session end --
+  // the THREAD_CREATED handler promotes ended sessions with threads back
+  // to the sessions map)
   if (timeout) {
     const current_ended = yield select((state) =>
       state.getIn(['active_sessions', 'ended_sessions', session_id])
     )
-    if (current_ended && current_ended.get('thread_id')) {
+    const current_active = yield select((state) =>
+      state.getIn(['active_sessions', 'sessions', session_id])
+    )
+    if (
+      (current_ended && current_ended.get('thread_id')) ||
+      (current_active && current_active.get('thread_id'))
+    ) {
       // Thread was linked after session ended -- don't auto-dismiss
       return
     }

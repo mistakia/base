@@ -109,8 +109,14 @@ export function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_STARTED: {
       const { session } = payload
-      const matched_pending = !!(session.job_id && state.hasIn(['pending_sessions', session.job_id]))
-      log_lifecycle('ACTIVE_SESSION_STARTED', { session_id: session.session_id, job_id: session.job_id, matched_pending })
+      const matched_pending = !!(
+        session.job_id && state.hasIn(['pending_sessions', session.job_id])
+      )
+      log_lifecycle('ACTIVE_SESSION_STARTED', {
+        session_id: session.session_id,
+        job_id: session.job_id,
+        matched_pending
+      })
 
       // If session has a job_id matching a pending session, merge and remove from pending
       if (session.job_id && state.hasIn(['pending_sessions', session.job_id])) {
@@ -150,9 +156,23 @@ export function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
-      const existing_thread = state.getIn(['sessions', session.session_id, 'thread_id'])
-      const thread_link = !existing_thread && session.thread_id ? 'new' : session.thread_id ? 'existing' : 'none'
-      log_lifecycle('ACTIVE_SESSION_UPDATED', { session_id: session.session_id, thread_id: session.thread_id, thread_link, status: session.status })
+      const existing_thread = state.getIn([
+        'sessions',
+        session.session_id,
+        'thread_id'
+      ])
+      const thread_link =
+        !existing_thread && session.thread_id
+          ? 'new'
+          : session.thread_id
+            ? 'existing'
+            : 'none'
+      log_lifecycle('ACTIVE_SESSION_UPDATED', {
+        session_id: session.session_id,
+        thread_id: session.thread_id,
+        thread_link,
+        status: session.status
+      })
 
       // If session is in ended_sessions, update there instead of creating a duplicate
       if (state.hasIn(['ended_sessions', session.session_id])) {
@@ -177,14 +197,21 @@ export function active_sessions_reducer(
     case active_sessions_action_types.ACTIVE_SESSION_ENDED: {
       const { session_id } = payload
       const session = state.getIn(['sessions', session_id])
-      log_lifecycle('ACTIVE_SESSION_ENDED', { session_id, thread_id: session?.get('thread_id') || null, had_session: !!session })
+      log_lifecycle('ACTIVE_SESSION_ENDED', {
+        session_id,
+        thread_id: session?.get('thread_id') || null,
+        had_session: !!session
+      })
       if (session) {
         const has_thread = !!session.get('thread_id')
         if (has_thread) {
           // Keep session with thread inline as ended (visible as completed card)
           return state.setIn(
             ['sessions', session_id],
-            session.merge({ status: 'ended', ended_at: new Date().toISOString() })
+            session.merge({
+              status: 'ended',
+              ended_at: new Date().toISOString()
+            })
           )
         }
         // No thread -- move to ended_sessions for auto-dismiss
@@ -215,8 +242,18 @@ export function active_sessions_reducer(
     case threads_action_types.THREAD_CREATED: {
       const thread = payload.thread
       const source_session_id = thread?.source?.session_id
-      const matched_in = source_session_id && state.hasIn(['sessions', source_session_id]) ? 'active' : source_session_id && state.hasIn(['ended_sessions', source_session_id]) ? 'ended' : 'none'
-      log_lifecycle('THREAD_CREATED', { thread_id: thread?.thread_id, source_session_id, matched_in })
+      const matched_in =
+        source_session_id && state.hasIn(['sessions', source_session_id])
+          ? 'active'
+          : source_session_id &&
+              state.hasIn(['ended_sessions', source_session_id])
+            ? 'ended'
+            : 'none'
+      log_lifecycle('THREAD_CREATED', {
+        thread_id: thread?.thread_id,
+        source_session_id,
+        matched_in
+      })
       if (!source_session_id) return state
 
       // Check active sessions first, then ended sessions
@@ -230,14 +267,22 @@ export function active_sessions_reducer(
       }
 
       if (state.hasIn(['ended_sessions', source_session_id])) {
-        return state.updateIn(
-          ['ended_sessions', source_session_id],
-          (session) =>
-            session.merge({
+        // Session ended before thread was linked. Now that we have a thread_id,
+        // promote it back to sessions (consistent with ACTIVE_SESSION_ENDED
+        // keeping sessions with thread_id inline in the sessions map).
+        const ended_session = state.getIn([
+          'ended_sessions',
+          source_session_id
+        ])
+        return state
+          .deleteIn(['ended_sessions', source_session_id])
+          .setIn(
+            ['sessions', source_session_id],
+            ended_session.merge({
               thread_id: thread.thread_id,
               thread_title: thread.title || null
             })
-        )
+          )
       }
 
       return state
@@ -261,7 +306,11 @@ export function active_sessions_reducer(
         (session) => session.get('thread_id') === thread_id
       )
 
-      log_lifecycle('THREAD_TIMELINE_ENTRY_ADDED', { thread_id, matched_session: session_entry ? session_entry[0] : null, truncated: !!entry.truncated })
+      log_lifecycle('THREAD_TIMELINE_ENTRY_ADDED', {
+        thread_id,
+        matched_session: session_entry ? session_entry[0] : null,
+        truncated: !!entry.truncated
+      })
 
       if (session_entry) {
         const [session_id] = session_entry

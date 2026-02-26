@@ -20,7 +20,9 @@ export function get_all_active_sessions(state) {
 
 export function get_active_session_by_id(state, session_id) {
   const active_sessions_state = get_active_sessions_state(state)
-  const session = active_sessions_state.getIn(['sessions', session_id])
+  const session =
+    active_sessions_state.getIn(['sessions', session_id]) ||
+    active_sessions_state.getIn(['ended_sessions', session_id])
   return session ? session.toJS() : null
 }
 

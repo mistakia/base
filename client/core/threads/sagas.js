@@ -22,7 +22,7 @@ import { threads_action_types, threads_actions } from './actions'
 import { get_threads_state } from './selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { active_sessions_actions } from '@core/active-sessions/actions'
-import { show_success_notification } from '@core/notification/sagas'
+import { show_error_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
 import { thread_sheet_actions } from '@core/thread-sheet/actions'
 import { get_thread_sheet_sheets } from '@core/thread-sheet/selectors'
@@ -274,10 +274,11 @@ export function* resume_thread_session_saga({ payload }) {
 
 export function* handle_thread_job_failed({ payload }) {
   try {
-    const { thread_id, job_id, error } = payload
-    console.error(`Thread ${thread_id} job failed:`, job_id, error)
+    const { thread_id, job_id, error_message } = payload
+    console.error(`Job ${job_id} failed:`, error_message)
 
-    yield call(show_success_notification, `Job failed for thread ${thread_id}`)
+    const label = thread_id ? `thread ${thread_id}` : `job ${job_id}`
+    yield call(show_error_notification, `Session failed for ${label}`)
   } catch (err) {
     console.error('Error handling job failed event:', err)
   }
