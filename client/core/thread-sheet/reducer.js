@@ -189,7 +189,11 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
       if (!session.thread_id || !session.session_id) return state
-      return transition_session_sheet_to_thread(state, session.session_id, session.thread_id)
+      return transition_session_sheet_to_thread(
+        state,
+        session.session_id,
+        session.thread_id
+      )
     }
 
     // When a thread is created matching a session sheet, transition it
@@ -197,7 +201,11 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
       const thread = payload.thread
       const source_session_id = thread?.source?.session_id
       if (!source_session_id) return state
-      return transition_session_sheet_to_thread(state, source_session_id, thread.thread_id)
+      return transition_session_sheet_to_thread(
+        state,
+        source_session_id,
+        thread.thread_id
+      )
     }
 
     // Keep session sheet open when session ends, just update status
@@ -206,10 +214,7 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
       const sheet_key = `session:${session_id}`
       if (!state.getIn(['sheet_data', sheet_key])) return state
 
-      return state.setIn(
-        ['sheet_data', sheet_key, 'session_status'],
-        'ended'
-      )
+      return state.setIn(['sheet_data', sheet_key, 'session_status'], 'ended')
     }
 
     default:

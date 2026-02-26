@@ -99,7 +99,8 @@ export const open_websocket = (params) => {
 
       // Trace session lifecycle messages
       if (
-        message.type.startsWith('ACTIVE_SESSION_') || message.type.startsWith('THREAD_')
+        message.type.startsWith('ACTIVE_SESSION_') ||
+        message.type.startsWith('THREAD_')
       ) {
         const p = message.payload || {}
         log_lifecycle('WS_RECV', message.type, {

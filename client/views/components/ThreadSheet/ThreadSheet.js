@@ -31,6 +31,7 @@ import {
 
 import ThreadHeader from '@components/ThreadTimelineView/ThreadHeader'
 import TimelineList from '@components/ThreadTimelineView/TimelineList'
+import UserMessage from '@components/ThreadTimelineView/UserMessage'
 import Button from '@components/primitives/Button'
 
 import './ThreadSheet.styl'
@@ -449,13 +450,21 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
     get_active_session_by_id(state, session_id)
   )
   const session_status = useSelector((state) =>
-    state.getIn([
-      'thread_sheet',
-      'sheet_data',
-      sheet_key,
-      'session_status'
-    ])
+    state.getIn(['thread_sheet', 'sheet_data', sheet_key, 'session_status'])
   )
+
+  // If session already has a thread_id, transition to thread sheet immediately.
+  // This handles the case where a session sheet is opened for a session that
+  // has already been linked to a thread (e.g., clicking the card a second time).
+  const session_thread_id = session?.thread_id
+  useEffect(() => {
+    if (session_thread_id) {
+      dispatch(thread_sheet_actions.close_thread_sheet(sheet_key))
+      dispatch(
+        thread_sheet_actions.open_thread_sheet({ thread_id: session_thread_id })
+      )
+    }
+  }, [session_thread_id, sheet_key, dispatch])
 
   const handle_close = useCallback(() => {
     dispatch(thread_sheet_actions.close_thread_sheet(sheet_key))
@@ -465,9 +474,6 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
 
   const status = session_status || session?.status || 'starting'
   const working_directory = session?.working_directory
-  const directory_name = working_directory
-    ? working_directory.split('/').pop() || 'root'
-    : null
   const prompt_snippet = session?.prompt_snippet
 
   return (
@@ -499,15 +505,21 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
         </button>
       </header>
       <div className='thread-sheet__scroll-area'>
-        <div className='thread-sheet__session-waiting'>
-          {directory_name && (
-            <div className='thread-sheet__session-directory'>
-              {directory_name}
+        <div className='thread-sheet__timeline' style={{ paddingTop: 24 }}>
+          {prompt_snippet && (
+            <UserMessage
+              message={{ content: prompt_snippet }}
+              working_directory={working_directory}
+            />
+          )}
+          {status !== 'ended' && (
+            <div className='thread-sheet__session-live-indicator'>
+              <span className='thread-sheet__session-live-dot' />
+              <span className='thread-sheet__session-live-text'>
+                Session in progress
+              </span>
             </div>
           )}
-          <div className='thread-sheet__session-status'>
-            Waiting for thread data...
-          </div>
         </div>
       </div>
     </div>

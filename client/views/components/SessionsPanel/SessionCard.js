@@ -128,7 +128,9 @@ const SessionCard = ({ item }) => {
   const show_footer = has_details || item.show_actions
 
   return (
-    <div className={card_classes} onClick={item.id || item.session_id ? handle_click : undefined}>
+    <div
+      className={card_classes}
+      onClick={item.id || item.session_id ? handle_click : undefined}>
       <div className='session-card__main-row'>
         <span className='session-card__title'>{item.title || '-'}</span>
         <span className='session-card__time'>

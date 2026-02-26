@@ -39,7 +39,11 @@ export function* handle_session_sheet_transition({ type, payload }) {
   const sheet_data = yield select((state) =>
     state.getIn(['thread_sheet', 'sheet_data', thread_id])
   )
-  if (sheet_data && (sheet_data.get('is_loading') || sheet_data.get('thread_data'))) return
+  if (
+    sheet_data &&
+    (sheet_data.get('is_loading') || sheet_data.get('thread_data'))
+  )
+    return
 
   // Load thread data and subscribe
   subscribe_to_thread(thread_id)

@@ -19,7 +19,12 @@ export const VALID_BASE_URI_PREFIXES = [
 /**
  * Invalid pseudo-schemes that look like valid URIs but are not supported
  */
-export const INVALID_PSEUDO_SCHEMES = ['thread:', 'entity:', 'scheme:', 'github:']
+export const INVALID_PSEUDO_SCHEMES = [
+  'thread:',
+  'entity:',
+  'scheme:',
+  'github:'
+]
 
 /**
  * Regex pattern to detect template syntax: ${...}, $var, {{...}}

@@ -264,7 +264,12 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    log_lifecycle('POST session_started session_id=%s job_id=%s working_directory=%s', session_id, job_id || 'none', working_directory)
+    log_lifecycle(
+      'POST session_started session_id=%s job_id=%s working_directory=%s',
+      session_id,
+      job_id || 'none',
+      working_directory
+    )
 
     // Register the session
     const session = await register_active_session({
@@ -308,7 +313,12 @@ router.post('/', async (req, res) => {
     // Emit WebSocket event
     await emit_active_session_started(session)
 
-    log_lifecycle('POST session_registered session_id=%s job_id=%s thread_id=%s', session_id, session.job_id || 'none', session.thread_id || 'none')
+    log_lifecycle(
+      'POST session_registered session_id=%s job_id=%s thread_id=%s',
+      session_id,
+      session.job_id || 'none',
+      session.thread_id || 'none'
+    )
     log(
       `Registered active session: ${session_id} (job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`
     )
@@ -336,7 +346,7 @@ router.put('/:session_id', async (req, res) => {
   try {
     // Read stored session state before updating to track thread discovery
     const existing_session = await get_active_session(session_id)
-    const had_thread_before = !!(existing_session?.thread_id)
+    const had_thread_before = !!existing_session?.thread_id
 
     // Update (or upsert) the session
     const session = await update_active_session({
@@ -360,7 +370,11 @@ router.put('/:session_id', async (req, res) => {
         const thread_info = await get_thread_info_for_session(found_thread_id)
 
         if (!thread_info.latest_timeline_event) {
-          log_lifecycle('PUT thread_discovery_no_timeline session_id=%s thread_id=%s (watcher cache empty, possible race)', session_id, found_thread_id)
+          log_lifecycle(
+            'PUT thread_discovery_no_timeline session_id=%s thread_id=%s (watcher cache empty, possible race)',
+            session_id,
+            found_thread_id
+          )
         }
 
         session.thread_id = found_thread_id
@@ -402,8 +416,20 @@ router.put('/:session_id', async (req, res) => {
     // Emit WebSocket event
     await emit_active_session_updated(session)
 
-    const thread_discovery = !had_thread_before && session.thread_id ? 'new' : session.thread_id ? 'existing' : 'none'
-    log_lifecycle('PUT session_updated session_id=%s status=%s thread_id=%s thread_discovery=%s latest_timeline_updated=%s', session_id, session.status, session.thread_id || 'none', thread_discovery, !!session.latest_timeline_event)
+    const thread_discovery =
+      !had_thread_before && session.thread_id
+        ? 'new'
+        : session.thread_id
+          ? 'existing'
+          : 'none'
+    log_lifecycle(
+      'PUT session_updated session_id=%s status=%s thread_id=%s thread_discovery=%s latest_timeline_updated=%s',
+      session_id,
+      session.status,
+      session.thread_id || 'none',
+      thread_discovery,
+      !!session.latest_timeline_event
+    )
     log(`Updated active session: ${session_id} status=${session.status}`)
     res.status(200).json(session)
   } catch (error) {
@@ -437,7 +463,11 @@ router.delete('/:session_id', async (req, res) => {
     // Emit WebSocket event with session data for permission checks
     await emit_active_session_ended(session_id, session)
 
-    log_lifecycle('DELETE session_ended session_id=%s thread_id=%s', session_id, session?.thread_id || 'none')
+    log_lifecycle(
+      'DELETE session_ended session_id=%s thread_id=%s',
+      session_id,
+      session?.thread_id || 'none'
+    )
     log(`Removed active session: ${session_id}`)
     res.status(200).json({ success: true, session_id })
   } catch (error) {

@@ -71,9 +71,7 @@ describe('Unified Base CLI', function () {
         return
       }
 
-      const { stdout } = await run(
-        `entity get "${entity.base_uri}" --json`
-      )
+      const { stdout } = await run(`entity get "${entity.base_uri}" --json`)
       const parsed = JSON.parse(stdout.trim())
       expect(parsed).to.be.an('array').with.lengthOf(1)
       expect(parsed[0]).to.have.property('base_uri', entity.base_uri)
