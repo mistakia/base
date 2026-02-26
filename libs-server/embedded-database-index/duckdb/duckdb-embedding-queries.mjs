@@ -31,15 +31,17 @@ export async function upsert_embeddings({ base_uri, chunks }) {
     })
 
     for (const chunk of chunks) {
+      // DuckDB node driver serializes JS arrays as VARCHAR strings, which can't
+      // be cast to FLOAT[768]. Inline the array literal in the SQL instead.
+      const embedding_literal = `[${chunk.embedding.join(',')}]::FLOAT[768]`
       await execute_duckdb_run({
         query: `INSERT INTO entity_embeddings (base_uri, chunk_index, content_hash, chunk_text, embedding, updated_at)
-                VALUES (?, ?, ?, ?, ?, NOW())`,
+                VALUES (?, ?, ?, ?, ${embedding_literal}, NOW())`,
         parameters: [
           base_uri,
           chunk.chunk_index,
           chunk.content_hash,
-          chunk.chunk_text,
-          chunk.embedding
+          chunk.chunk_text
         ]
       })
     }
@@ -71,14 +73,15 @@ export async function search_similar({
     similarity_threshold
   )
 
+  const embedding_literal = `[${embedding.join(',')}]::FLOAT[768]`
   const results = await execute_duckdb_query({
     query: `SELECT base_uri, chunk_index, chunk_text,
-                   array_cosine_similarity(embedding, ?::FLOAT[768]) AS similarity_score
+                   array_cosine_similarity(embedding, ${embedding_literal}) AS similarity_score
             FROM entity_embeddings
-            WHERE array_cosine_similarity(embedding, ?::FLOAT[768]) >= ?
+            WHERE array_cosine_similarity(embedding, ${embedding_literal}) >= ?
             ORDER BY similarity_score DESC
             LIMIT ?`,
-    parameters: [embedding, embedding, similarity_threshold, limit]
+    parameters: [similarity_threshold, limit]
   })
 
   log('Found %d similar embeddings', results.length)
