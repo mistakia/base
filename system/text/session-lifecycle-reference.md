@@ -8,7 +8,7 @@ description: >-
 base_uri: sys:system/text/session-lifecycle-reference.md
 created_at: '2026-02-22T01:01:36.309Z'
 entity_id: 9fe11418-4256-4058-b41c-1b12dd7c3ad8
-updated_at: '2026-02-22T12:00:00.000Z'
+updated_at: '2026-02-25T00:00:00.000Z'
 user_public_key: 00000000-0000-0000-0000-000000000000
 ---
 
@@ -481,9 +481,9 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 }
 ```
 
-**Emitted**: When the BullMQ worker picks up a job and begins executing.
+**Emitted**: When the BullMQ worker picks up a job and begins executing. Only emitted for resume jobs where `job.data.thread_id` is set -- new session jobs do not emit this event since no thread exists yet.
 **Broadcast**: Sent to all authenticated WebSocket clients without permission filtering.
-**Client use**: Transitions pending sessions from "queued" to "starting" status.
+**Client use**: Transitions pending session resumes from "queued" to "starting" status.
 
 ## Debug Tracing
 
@@ -515,7 +515,7 @@ localStorage.setItem('debug:session-lifecycle', '1')
 Trace output appears in browser console as `[session-lifecycle]` entries:
 
 - **Reducer**: ACTIVE_SESSION_STARTED (with pending match status), ACTIVE_SESSION_UPDATED (with thread link status), ACTIVE_SESSION_ENDED, THREAD_CREATED (with match target), THREAD_TIMELINE_ENTRY_ADDED (with session match)
-- **WebSocket service**: All incoming ACTIVE*SESSION*_ and THREAD\__ messages with key IDs
+- **WebSocket service**: All incoming `ACTIVE_SESSION_*` and `THREAD_*` messages with key IDs
 
 Disable with `localStorage.removeItem('debug:session-lifecycle')`.
 
@@ -526,9 +526,9 @@ Sessions are clickable as soon as they start, before a thread exists on disk. Th
 1. Session starts -- `session_id` is available immediately
 2. SessionCard checks for `item.session_id` when `item.id` (thread_id) is absent
 3. Clicking opens a session sheet (`session:${session_id}` key in thread-sheet stack)
-4. Session sheet shows prompt snippet, status, and working directory with a "Waiting for thread data..." placeholder
-5. When the session gains a thread_id (via ACTIVE_SESSION_UPDATED or THREAD_CREATED), the sheet auto-transitions to the full thread view
-6. The thread-sheet saga detects the transition and auto-loads thread data + subscribes to WebSocket updates
+4. Session sheet renders the prompt as a user message in the same timeline format used by the full thread view, with a live session indicator below it. This ensures zero visual discontinuity when the thread data loads.
+5. When the session gains a thread_id (via ACTIVE_SESSION_UPDATED or THREAD_CREATED), the thread-sheet reducer auto-transitions the sheet key from `session:<id>` to the thread_id
+6. The thread-sheet saga detects the transition (by checking if the thread_id is now in the sheets stack) and auto-loads thread data + subscribes to WebSocket updates
 
 ## Correlation Keys
 
@@ -606,8 +606,9 @@ REMOVED
 
 ENDED_NO_THREAD (no thread_id, moved to ended_sessions map)
   |
-  |-- THREAD_CREATED (if matching source.session_id)
-  |-- auto-dismiss after 60s
+  |-- THREAD_CREATED (matching source.session_id) --> promoted back to ENDED_LINKED
+  |     (moved from ended_sessions back to sessions map with thread_id)
+  |-- auto-dismiss after 60s (re-checks both maps for late thread linkage)
   v
 REMOVED
 
