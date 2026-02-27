@@ -147,7 +147,10 @@ check_dirty_overlap() {
     return 1
 }
 
-# Check for merge/rebase in progress
+# Check for merge/rebase in progress.
+# Detects and auto-recovers from corrupt rebase state where the rebase-merge
+# or rebase-apply directory exists but is missing critical files (head-name),
+# indicating a partially cleaned up rebase rather than one truly in progress.
 check_git_state() {
     local dir="$1"
     local git_dir
@@ -157,7 +160,30 @@ check_git_state() {
         log_error "$dir: merge in progress, skipping"
         return 1
     fi
-    if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+
+    local rebase_dir=""
+    if [ -d "$git_dir/rebase-merge" ]; then
+        rebase_dir="$git_dir/rebase-merge"
+    elif [ -d "$git_dir/rebase-apply" ]; then
+        rebase_dir="$git_dir/rebase-apply"
+    fi
+
+    if [ -n "$rebase_dir" ]; then
+        if [ ! -f "$rebase_dir/head-name" ]; then
+            # Corrupt/stale rebase state -- missing critical files.
+            # Attempt git rebase --abort first; if that fails (expected
+            # when state is too incomplete), remove the directory manually.
+            log "$dir: detected corrupt rebase state (missing head-name), recovering..."
+            if ! git -C "$dir" rebase --abort 2>/dev/null; then
+                rm -rf "$rebase_dir"
+            fi
+            if [ -d "$rebase_dir" ]; then
+                log_error "$dir: failed to clean up corrupt rebase state"
+                return 1
+            fi
+            log "$dir: recovered from corrupt rebase state"
+            return 0
+        fi
         log_error "$dir: rebase in progress, skipping"
         return 1
     fi
@@ -211,7 +237,25 @@ smart_rebase() {
 
     # Run rebase with sequence editor to drop pointer-only commits
     local rebase_status
-    if [ $dropping -gt 0 ]; then
+    if [ $dropping -gt 0 ] && [ $dropping -eq $total_local ]; then
+        # All local commits are pointer-only -- skip them entirely by
+        # resetting to the remote branch. An interactive rebase that drops
+        # every commit produces a noop that can stall in "editing commit"
+        # state. Autostash handles dirty working tree.
+        log "All $total_local local commit(s) are pointer-only, fast-forwarding to $remote_branch"
+        local stash_ref=""
+        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+            stash_ref=$(git stash create 2>/dev/null)
+            if [ -n "$stash_ref" ]; then
+                git reset --hard HEAD 2>/dev/null
+            fi
+        fi
+        git reset --hard "$remote_branch" 2>/dev/null
+        rebase_status=$?
+        if [ -n "$stash_ref" ]; then
+            git stash apply "$stash_ref" 2>/dev/null || true
+        fi
+    elif [ $dropping -gt 0 ]; then
         local drop_file
         drop_file=$(mktemp /tmp/sync-rebase-drops.XXXXXX)
         for sha in "${pointer_only_shas[@]}"; do
