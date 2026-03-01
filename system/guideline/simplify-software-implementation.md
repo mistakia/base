@@ -7,11 +7,6 @@ description: >-
 base_uri: sys:system/guideline/simplify-software-implementation.md
 created_at: '2026-01-13T18:51:06.255Z'
 entity_id: 821155d9-a96e-4bed-8e69-8e4571281bbd
-globs:
-  - '**/*.mjs'
-  - '**/*.js'
-  - '**/*.ts'
-  - '**/*.py'
 observations:
   - '[philosophy] Every line of software is a liability with maintenance burden and bug risk'
   - '[principle] Simplest solution that works is the best solution'

@@ -7,8 +7,6 @@ description: >-
 base_uri: sys:system/guideline/starting-point-philosophy.md
 created_at: '2025-01-27T00:00:00.000Z'
 entity_id: 759039bd-367a-4280-9335-cdd664a8ca78
-globs:
-  - '**/*.md'
 observations:
   - '[philosophy] Start minimal with what you know and expand based on actual needs'
   - '[pragmatism] Focus on essential and primitive elements first'

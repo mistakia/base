@@ -7,7 +7,12 @@ description: >-
 created_at: '2026-02-24T16:14:56.484Z'
 entity_id: 45862edf-edf3-41f8-9f5c-ca0c246df2f1
 globs:
-  - '**/*.md'
+  - 'task/**/*.md'
+  - 'text/**/*.md'
+  - 'person/**/*.md'
+  - 'physical-item/**/*.md'
+  - 'physical-location/**/*.md'
+  - 'tag/**/*.md'
 public_read: false
 relations:
   - follows [[sys:system/schema/entity.md]]

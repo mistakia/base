@@ -5,8 +5,6 @@ description: Guidelines for creating new entity files that conform to the entity
 base_uri: sys:system/guideline/write-entity.md
 created_at: '2025-05-27T18:10:20.239Z'
 entity_id: 544ca576-6602-4332-b02a-18c5e06122e0
-globs:
-  - '**/*.md'
 observations:
   - '[standard] Entity files must follow schema requirements'
 public_read: true

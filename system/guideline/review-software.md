@@ -5,11 +5,6 @@ description: Guidelines for conducting software reviews with focus on substantiv
 base_uri: sys:system/guideline/review-software.md
 created_at: '2026-01-13T18:51:33.747Z'
 entity_id: d6d52ff5-701e-49cb-b1e7-9b22aa279cbb
-globs:
-  - '**/*.mjs'
-  - '**/*.js'
-  - '**/*.ts'
-  - '**/*.py'
 observations:
   - '[quality] Focus on substantive issues that affect functionality'
   - '[efficiency] Avoid flagging issues that linters and compilers catch'
