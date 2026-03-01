@@ -1,9 +1,14 @@
 import express from 'express'
 import debug from 'debug'
 import crypto from 'crypto'
+import path from 'path'
 
 import config from '#config'
 import { github } from '#libs-server'
+import {
+  add_files,
+  commit_changes
+} from '#libs-server/git/commit-operations.mjs'
 
 const router = express.Router()
 const log = debug('api:github')
@@ -39,6 +44,30 @@ const verify_github_signature = (req, secret) => {
   } catch (error) {
     log(`Error verifying signature: ${error.message}`)
     return false
+  }
+}
+
+// Auto-commit a webhook-created or updated task file
+const auto_commit_task_file = async ({ absolute_path, action, issue_number, repository_full_name }) => {
+  const user_base_directory = config.user_base_directory
+  if (!user_base_directory || !absolute_path) {
+    log('Skipping auto-commit: missing user_base_directory or absolute_path')
+    return
+  }
+
+  try {
+    const relative_path = path.relative(user_base_directory, absolute_path)
+    await add_files({
+      worktree_path: user_base_directory,
+      files_to_add: [relative_path]
+    })
+    await commit_changes({
+      worktree_path: user_base_directory,
+      commit_message: `chore: github webhook ${action} task for ${repository_full_name}#${issue_number}`
+    })
+    log(`Auto-committed ${action} task: ${relative_path}`)
+  } catch (error) {
+    log(`Auto-commit failed (non-fatal): ${error.message}`)
   }
 }
 
@@ -110,6 +139,15 @@ router.post('/webhooks', async (req, res) => {
         log(
           `Issue processed: ${repository.full_name}#${issue.number} - Action: ${result.action}`
         )
+
+        if (result.action === 'created' || result.action === 'updated') {
+          await auto_commit_task_file({
+            absolute_path: result.absolute_path,
+            action: result.action,
+            issue_number: issue.number,
+            repository_full_name: repository.full_name
+          })
+        }
 
         return res.json({
           ok: true,
@@ -185,6 +223,15 @@ router.post('/webhooks', async (req, res) => {
           log(
             `Project card processed: ${github_repository_owner}/${github_repository_name}#${issue_number} - Action: ${result.action}`
           )
+
+          if (result.action === 'created' || result.action === 'updated') {
+            await auto_commit_task_file({
+              absolute_path: result.absolute_path,
+              action: result.action,
+              issue_number,
+              repository_full_name: `${github_repository_owner}/${github_repository_name}`
+            })
+          }
 
           return res.json({
             ok: true,

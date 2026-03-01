@@ -80,6 +80,7 @@ export async function process_single_github_issue({
     return {
       action: sync_result.action,
       entity_id: sync_result.entity_id,
+      absolute_path: sync_result.absolute_path,
       conflicts_found: sync_result.conflicts_found || false
     }
   } catch (error) {
