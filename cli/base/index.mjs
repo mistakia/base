@@ -53,6 +53,29 @@ export const builder = (yargs) =>
       handle_scan
     )
     .command(
+      'duplicates',
+      'Find potential duplicate files by size',
+      (yargs) =>
+        yargs
+          .option('source', {
+            alias: 's',
+            describe: 'Filter to one source',
+            type: 'string'
+          })
+          .option('min-size', {
+            describe: 'Minimum file size (e.g. 1KB, 1MB)',
+            type: 'string',
+            default: '1KB'
+          })
+          .option('limit', {
+            alias: 'l',
+            describe: 'Maximum number of duplicate groups',
+            type: 'number',
+            default: 50
+          }),
+      handle_duplicates
+    )
+    .command(
       'stats',
       'Show index statistics',
       (yargs) =>
@@ -109,9 +132,12 @@ async function handle_scan(argv) {
       case 'gdrive':
         collector = await import_gdrive_collector()
         break
+      case 'apple-notes':
+        collector = await import_apple_notes_collector()
+        break
       default:
         console.error(`Unknown source: ${source}`)
-        console.error('Available sources: local, ssh, gdrive')
+        console.error('Available sources: local, ssh, gdrive, apple-notes')
         flush_and_exit(1)
         return
     }
@@ -233,6 +259,87 @@ async function handle_scan(argv) {
 }
 
 /**
+ * Handle duplicates command
+ */
+async function handle_duplicates(argv) {
+  try {
+    const min_bytes = parse_size_string(argv['min-size'])
+    const limit = argv.limit
+
+    const file_adapter = await get_file_index_adapter()
+
+    let where_clause = 'WHERE "size" > $1'
+    const params = [min_bytes]
+
+    if (argv.source) {
+      where_clause += ' AND "source" = $2'
+      params.push(argv.source)
+    }
+
+    const sql = `
+      SELECT "size", COUNT(*) as count, array_agg("base_uri") as locations
+      FROM "file_index"
+      ${where_clause}
+      GROUP BY "size"
+      HAVING COUNT(*) > 1
+      ORDER BY "size" DESC
+      LIMIT $${params.length + 1}
+    `
+    params.push(limit)
+
+    const results = await file_adapter.raw_query({ query: sql, parameters: params })
+    await file_adapter.close()
+
+    // Convert bigint values
+    const groups = results.map((row) => ({
+      size: typeof row.size === 'bigint' ? Number(row.size) : row.size,
+      count: typeof row.count === 'bigint' ? Number(row.count) : row.count,
+      locations: row.locations
+    }))
+
+    if (argv.json) {
+      console.log(JSON.stringify(groups, null, 2))
+      flush_and_exit(0)
+      return
+    }
+
+    if (groups.length === 0) {
+      console.log('No duplicate candidates found.')
+      flush_and_exit(0)
+      return
+    }
+
+    console.log(`Found ${groups.length} size-based duplicate groups:\n`)
+
+    for (const group of groups) {
+      console.log(`Size: ${format_size(group.size)} (${group.count} files)`)
+      for (const uri of group.locations) {
+        console.log(`  ${uri}`)
+      }
+      console.log('')
+    }
+
+    flush_and_exit(0)
+  } catch (error) {
+    console.error('Error:', error.message)
+    flush_and_exit(1)
+  }
+}
+
+/**
+ * Parse human-readable size string to bytes
+ */
+function parse_size_string(size_str) {
+  if (typeof size_str === 'number') return size_str
+  const match = String(size_str).match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB)?$/i)
+  if (!match) return 1024 // default 1KB
+  const value = parseFloat(match[1])
+  const unit = (match[2] || 'B').toUpperCase()
+  const multipliers = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }
+  return Math.floor(value * (multipliers[unit] || 1))
+}
+
+/**
  * Handle stats command
  */
 async function handle_stats(argv) {
@@ -304,6 +411,8 @@ function get_scan_uri_prefix(source, argv) {
       return scan_path ? `file://${scan_path}` : 'file://'
     case 'gdrive':
       return scan_path ? `gdrive://${scan_path}` : 'gdrive://'
+    case 'apple-notes':
+      return 'apple-notes://'
     default:
       return get_uri_prefix_for_source(source)
   }
@@ -348,6 +457,11 @@ async function import_ssh_collector() {
 
 async function import_gdrive_collector() {
   const { scan } = await import('#libs-server/index-collectors/gdrive.mjs')
+  return { scan }
+}
+
+async function import_apple_notes_collector() {
+  const { scan } = await import('#libs-server/index-collectors/apple-notes.mjs')
   return { scan }
 }
 

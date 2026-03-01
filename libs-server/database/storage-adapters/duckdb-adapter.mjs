@@ -508,6 +508,13 @@ export function create_duckdb_adapter(database_entity) {
     },
 
     /**
+     * Execute arbitrary SQL and return rows (for aggregate queries like GROUP BY)
+     */
+    async raw_query({ query, parameters = [] }) {
+      return run_query({ query, parameters })
+    },
+
+    /**
      * Close adapter and release resources
      */
     async close() {
