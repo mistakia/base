@@ -148,9 +148,13 @@ check_dirty_overlap() {
 }
 
 # Check for merge/rebase in progress.
-# Detects and auto-recovers from corrupt rebase state where the rebase-merge
-# or rebase-apply directory exists but is missing critical files (head-name),
-# indicating a partially cleaned up rebase rather than one truly in progress.
+# Detects and auto-recovers from two types of stale rebase state:
+# 1. Corrupt state: rebase-merge/rebase-apply directory missing critical files (head-name)
+# 2. Stuck state: rebase directory older than STALE_REBASE_MINUTES, indicating a rebase
+#    that was interrupted or stalled (e.g., landed in "editing commit" state) and will
+#    never resolve unattended. Safe to abort because no human is doing interactive
+#    rebases on these automated-sync repos.
+STALE_REBASE_MINUTES=5
 check_git_state() {
     local dir="$1"
     local git_dir
@@ -169,19 +173,41 @@ check_git_state() {
     fi
 
     if [ -n "$rebase_dir" ]; then
+        local should_recover=false
+        local reason=""
+
         if [ ! -f "$rebase_dir/head-name" ]; then
-            # Corrupt/stale rebase state -- missing critical files.
-            # Attempt git rebase --abort first; if that fails (expected
-            # when state is too incomplete), remove the directory manually.
-            log "$dir: detected corrupt rebase state (missing head-name), recovering..."
+            # Corrupt state -- missing critical files
+            should_recover=true
+            reason="corrupt rebase state (missing head-name)"
+        else
+            # Check age of the rebase directory. On macOS, stat -f %m gives
+            # mtime as epoch seconds; on Linux, stat -c %Y.
+            local rebase_mtime
+            if stat -f %m "$rebase_dir" >/dev/null 2>&1; then
+                rebase_mtime=$(stat -f %m "$rebase_dir")
+            else
+                rebase_mtime=$(stat -c %Y "$rebase_dir")
+            fi
+            local now
+            now=$(date +%s)
+            local age_minutes=$(( (now - rebase_mtime) / 60 ))
+            if [ $age_minutes -ge $STALE_REBASE_MINUTES ]; then
+                should_recover=true
+                reason="stuck rebase (${age_minutes}m old, threshold ${STALE_REBASE_MINUTES}m)"
+            fi
+        fi
+
+        if [ "$should_recover" = true ]; then
+            log "$dir: detected $reason, recovering..."
             if ! git -C "$dir" rebase --abort 2>/dev/null; then
                 rm -rf "$rebase_dir"
             fi
             if [ -d "$rebase_dir" ]; then
-                log_error "$dir: failed to clean up corrupt rebase state"
+                log_error "$dir: failed to clean up $reason"
                 return 1
             fi
-            log "$dir: recovered from corrupt rebase state"
+            log "$dir: recovered from $reason"
             return 0
         fi
         log_error "$dir: rebase in progress, skipping"
