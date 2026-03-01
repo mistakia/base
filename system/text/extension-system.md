@@ -27,7 +27,7 @@ Extensions are the right choice for higher-level tooling that composes core oper
 
 Create an extension when you need to:
 
-- Add a new \`base <name>\` CLI command group
+- Add a new `base <name>` CLI command group
 - Package agent skills alongside supporting code
 - Import and use libs-server modules directly
 - Handle optional infrastructure dependencies (e.g., Ollama)
@@ -36,7 +36,7 @@ For pure agent behaviors without code dependencies, a workflow in the workflow/ 
 
 ## Directory Structure
 
-\`\`\`
+```
 extension/
 <name>/
 extension.md # Manifest with entity frontmatter
@@ -46,29 +46,29 @@ _.md
 SKILL.md # Consensus spec skill (optional)
 lib/ # Supporting code (optional)
 _.mjs
-\`\`\`
+```
 
 ## Writing command.mjs
 
 The command module must export the standard Yargs interface:
 
-\`\`\`javascript
+```javascript
 import { get_config } from '#base/config'
 
 export const command = 'myext <command>'
 export const describe = 'My extension description'
 
 export const builder = (yargs) =>
-yargs
-.command('subcommand', 'Description', {}, handle_subcommand)
-.demandCommand(1)
+  yargs
+    .command('subcommand', 'Description', {}, handle_subcommand)
+    .demandCommand(1)
 
 export const handler = () => {}
 
 async function handle_subcommand(argv) {
-// Implementation using libs-server imports
+  // Implementation using libs-server imports
 }
-\`\`\`
+```
 
 This is identical to the pattern used by built-in commands in cli/base/.
 
@@ -76,8 +76,7 @@ This is identical to the pattern used by built-in commands in cli/base/.
 
 Skills use the same format as workflows: markdown with YAML frontmatter and task/context/instructions XML.
 
-## \`\`\`markdown
-
+```markdown
 title: My Skill
 type: skill
 description: What this skill does
@@ -87,7 +86,7 @@ description: What this skill does
 <task>The task this skill performs</task>
 <context>When and why to use this skill</context>
 <instructions>Step-by-step instructions for the agent</instructions>
-\`\`\`
+```
 
 Place skills in the extension's skill/ directory, or use a single SKILL.md at the extension root following the consensus spec (agentskills.io).
 
@@ -95,39 +94,41 @@ Place skills in the extension's skill/ directory, or use a single SKILL.md at th
 
 Extension code imports via package aliases, the same mechanism used by user-base CLI scripts:
 
-\`\`\`javascript
+```javascript
 import config from '#config'
 import { some_function } from '#libs-server/module/file.mjs'
-\`\`\`
+```
 
 ## Optional Dependencies
 
 Declare optional services in extension.md for documentation:
 
-\`\`\`yaml
+```yaml
 optional:
 services: [ollama]
-\`\`\`
+```
 
 At runtime, use dynamic import with try/catch:
 
-\`\`\`javascript
+```javascript
 let ollama_available = false
 try {
-const { embed_texts } = await import('#libs-server/integrations/ollama-client.mjs')
-ollama_available = true
+  const { embed_texts } = await import(
+    '#libs-server/integrations/ollama-client.mjs'
+  )
+  ollama_available = true
 } catch {
-console.warn('Ollama not available, semantic features disabled')
+  console.warn('Ollama not available, semantic features disabled')
 }
-\`\`\`
+```
 
 ## Composition Between Extensions
 
 Extensions import each other's lib/ modules via relative paths:
 
-\`\`\`javascript
+```javascript
 import { graph_stats } from '../graph/lib/graph-stats.mjs'
-\`\`\`
+```
 
 This is standard Node.js module resolution -- no framework needed.
 
@@ -135,28 +136,27 @@ This is standard Node.js module resolution -- no framework needed.
 
 Extensions are discovered from:
 
-1. \`{USER_BASE_DIRECTORY}/extension/\` (user extensions, highest priority)
-2. \`{BASE_REPO_PATH}/system/extension/\` (system extensions, future)
+1. `{USER_BASE_DIRECTORY}/extension/` (user extensions, highest priority)
+2. `{BASE_REPO_PATH}/system/extension/` (system extensions, future)
 
 First-match-wins for duplicate names: user extensions override system extensions.
 
 ## CLI Commands
 
-- \`base extension list\` -- show registered extensions with capabilities
-- \`base extension list --json\` -- JSON output with full metadata
-- \`base skill list\` -- show all discovered skills (from extensions and workflows)
-- \`base skill list --json\` -- JSON output
+- `base extension list` -- show registered extensions with capabilities
+- `base extension list --json` -- JSON output with full metadata
+- `base skill list` -- show all discovered skills (from extensions and workflows)
+- `base skill list --json` -- JSON output
 
 ## Example: Creating a Minimal Extension
 
-\`\`\`bash
+```bash
 mkdir -p extension/hello
-\`\`\`
+```
 
 Create extension/hello/extension.md:
 
-## \`\`\`markdown
-
+```markdown
 name: hello
 type: extension
 description: Example extension
@@ -166,15 +166,15 @@ description: Example extension
 # Hello Extension
 
 A minimal example extension.
-\`\`\`
+```
 
 Create extension/hello/command.mjs:
 
-\`\`\`javascript
+```javascript
 export const command = 'hello'
 export const describe = 'Say hello'
 export const builder = {}
 export const handler = () => console.log('Hello from extension!')
-\`\`\`
+```
 
-Now \`base hello\` works.
+Now `base hello` works.
