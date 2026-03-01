@@ -262,10 +262,21 @@ smart_rebase() {
             echo "${sha:0:7}" >> "$drop_file"
         done
 
-        GIT_SEQUENCE_EDITOR="awk -v df='$drop_file' 'BEGIN{while((getline l<df)>0)d[l]=1} {if(\$1==\"pick\"&&(substr(\$2,1,7) in d))\$1=\"drop\"} 1'" \
-            git -c diff.ignoreSubmodules=none rebase -i --autostash --no-autosquash "$remote_branch" 2>/dev/null
+        # Create a wrapper script that edits the todo file in-place.
+        # GIT_SEQUENCE_EDITOR must modify the file, not print to stdout.
+        local editor_script
+        editor_script=$(mktemp /tmp/sync-rebase-editor.XXXXXX)
+        cat > "$editor_script" <<EDITOR_EOF
+#!/bin/bash
+tmpout=\$(mktemp)
+awk -v df='$drop_file' 'BEGIN{while((getline l<df)>0)d[l]=1} {if(\$1=="pick"&&(substr(\$2,1,7) in d))\$1="drop"} 1' "\$1" > "\$tmpout" && mv "\$tmpout" "\$1"
+EDITOR_EOF
+        chmod +x "$editor_script"
+
+        GIT_SEQUENCE_EDITOR="$editor_script" \
+            git -c diff.ignoreSubmodules=none rebase -i --autostash --no-autosquash --empty=drop "$remote_branch" 2>/dev/null
         rebase_status=$?
-        rm -f "$drop_file"
+        rm -f "$drop_file" "$editor_script"
     else
         git -c diff.ignoreSubmodules=none rebase --autostash "$remote_branch" 2>/dev/null
         rebase_status=$?
@@ -578,6 +589,14 @@ fi
 POINTER_UPDATED=false
 UPDATED_SUBMODULES=()
 
+# Guard: skip pointer updates if a rebase/merge is in progress (e.g. from a
+# previous failed Step 3). Creating commits during an active rebase corrupts
+# the rebase state and prevents recovery.
+if ! check_git_state "$USER_BASE_DIRECTORY"; then
+    log_error "Parent repo has git operation in progress, skipping pointer updates"
+    ERRORS=$((ERRORS + 1))
+else
+
 # Only update pointers for storage-hosted submodules (synced by Step 1).
 # GitHub-hosted submodules are pulled independently on each machine, so tracking
 # their pointers here would create duplicate commits when both machines pull the
@@ -645,6 +664,8 @@ if [ "$POINTER_UPDATED" = true ]; then
 else
     log_verbose "All submodule pointers are current"
 fi
+
+fi  # check_git_state guard for pointer updates
 
 # --- Step 3: Sync parent repo (user-base) ---
 
