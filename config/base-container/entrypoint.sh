@@ -227,6 +227,15 @@ if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
     ln -sf "$BASE_SUBMODULE/node_modules/.bin/base" /usr/local/bin/base
 fi
 
+# Persist MCP environment variables for Claude Code subprocesses
+MCP_ENV_FILE="/etc/profile.d/mcp-env.sh"
+{
+    for var in MCP_LEAGUE_DATABASE_URL MCP_PARCELS_DATABASE_URL MCP_FINANCE_DATABASE_URL \
+               MCP_EPSTEIN_DATABASE_URL MCP_GITHUB_GRAPHQL_HEADERS MCP_NOTION_HEADERS; do
+        [ -n "${!var:-}" ] && echo "export $var='${!var}'"
+    done
+} > "$MCP_ENV_FILE"
+
 # Configure ripgrep and grep exclusions for large directories
 # Uses shared config from user-base (mounted in container at same path as host)
 RIPGREPRC="$USER_BASE_DIRECTORY/config/ripgreprc"
