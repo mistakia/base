@@ -46,6 +46,7 @@ import * as index_command from './base/index.mjs'
 import * as machine_command from './base/machine.mjs'
 import * as extension_command from './base/extension.mjs'
 import * as skill_command from './base/skill.mjs'
+import * as workflow_command from './base/workflow.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const load_extension_commands = async (parser) => {
@@ -95,6 +96,7 @@ const main = async () => {
     .command(machine_command)
     .command(extension_command)
     .command(skill_command)
+    .command(workflow_command)
     .command(init_command)
 
   await load_extension_commands(parser)
