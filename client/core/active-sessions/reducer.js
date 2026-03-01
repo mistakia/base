@@ -270,19 +270,14 @@ export function active_sessions_reducer(
         // Session ended before thread was linked. Now that we have a thread_id,
         // promote it back to sessions (consistent with ACTIVE_SESSION_ENDED
         // keeping sessions with thread_id inline in the sessions map).
-        const ended_session = state.getIn([
-          'ended_sessions',
-          source_session_id
-        ])
-        return state
-          .deleteIn(['ended_sessions', source_session_id])
-          .setIn(
-            ['sessions', source_session_id],
-            ended_session.merge({
-              thread_id: thread.thread_id,
-              thread_title: thread.title || null
-            })
-          )
+        const ended_session = state.getIn(['ended_sessions', source_session_id])
+        return state.deleteIn(['ended_sessions', source_session_id]).setIn(
+          ['sessions', source_session_id],
+          ended_session.merge({
+            thread_id: thread.thread_id,
+            thread_title: thread.title || null
+          })
+        )
       }
 
       return state

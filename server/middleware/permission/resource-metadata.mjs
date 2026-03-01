@@ -83,7 +83,18 @@ export const load_entity_metadata = async ({ resource_path }) => {
       return null
     }
 
-    const result = await read_entity_from_filesystem({ absolute_path })
+    // Only .md files can contain YAML frontmatter with entity metadata.
+    // Skip non-.md files (e.g. .db, .duckdb) to avoid reading large binary
+    // files into memory just to discover they have no frontmatter.
+    if (!absolute_path.endsWith('.md')) {
+      log(`Skipping non-markdown file for metadata: ${resource_path}`)
+      return null
+    }
+
+    const result = await read_entity_from_filesystem({
+      absolute_path,
+      metadata_only: true
+    })
 
     if (!result.success) {
       log(`Could not read entity at ${absolute_path}: ${result.error}`)
