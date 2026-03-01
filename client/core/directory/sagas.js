@@ -43,17 +43,45 @@ export function* load_directory_markdown({ payload }) {
   const existing = directory_state.get('directory_markdown_file')
   const requested_path = payload?.path || ''
   if (existing && !directory_state.get('directory_markdown_error')) {
-    const existing_path = existing.path || ''
-    const existing_dir = existing_path.substring(
-      0,
-      existing_path.lastIndexOf('/')
-    )
+    const existing_dir =
+      existing._directory !== undefined
+        ? existing._directory
+        : (existing.path || '').substring(
+            0,
+            (existing.path || '').lastIndexOf('/')
+          )
     if (existing_dir === requested_path || (!existing_dir && !requested_path)) {
       return
     }
   }
 
   yield put(get_directory_markdown_request_actions.pending({ opts: payload }))
+
+  // For root directory, use the homepage content endpoint
+  if (!requested_path) {
+    try {
+      const { user_token } = yield select(get_app)
+      const { request } = api_request(
+        api.get_homepage_content,
+        {},
+        user_token
+      )
+
+      const file_data = yield call(request)
+
+      if (file_data && file_data.content) {
+        yield put(
+          get_directory_markdown_request_actions.fulfilled({
+            opts: payload,
+            data: { ...file_data, _directory: '' }
+          })
+        )
+        return
+      }
+    } catch (error) {
+      // Fall through to standard file lookup
+    }
+  }
 
   for (const filename of markdown_files) {
     const markdown_path = payload?.path

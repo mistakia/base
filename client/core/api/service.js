@@ -171,6 +171,11 @@ export const api = {
     return { url }
   },
 
+  get_homepage_content() {
+    const url = `${API_URL}/filesystem/homepage-content`
+    return { url }
+  },
+
   get_active_sessions() {
     const url = `${API_URL}/active-sessions`
     return { url }

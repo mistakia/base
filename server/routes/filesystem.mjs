@@ -7,8 +7,10 @@ import fm from 'front-matter'
 import config from '#config'
 import {
   check_filesystem_permission,
-  check_permissions_batch
+  check_permissions_batch,
+  PermissionContext
 } from '#server/middleware/permission/index.mjs'
+import { load_identity_by_public_key } from '#libs-server/users/identity-loader.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import {
@@ -438,6 +440,101 @@ router.get('/info', async (req, res) => {
       error: 'Internal server error',
       path: normalized_path
     })
+  }
+})
+
+// GET /api/filesystem/homepage-content - Resolve identity-specific homepage variant
+router.get('/homepage-content', async (req, res) => {
+  try {
+    const user_public_key = req.user?.user_public_key || null
+    const candidate_paths = []
+
+    if (user_public_key) {
+      const identity = await load_identity_by_public_key({
+        public_key: user_public_key
+      })
+
+      if (identity) {
+        // Try username-specific variant first
+        if (identity.username) {
+          candidate_paths.push(`text/homepage/${identity.username}.md`)
+        }
+
+        // Try role-specific variant
+        const relations = identity.relations || []
+        for (const relation of relations) {
+          const role_match = relation.match(
+            /^has_role\s+\[\[user:role\/([^/]+)\.md\]\]$/
+          )
+          if (role_match) {
+            candidate_paths.push(`text/homepage/${role_match[1]}.md`)
+          }
+        }
+      }
+    }
+
+    // Fall back to public variant, then ABOUT.md
+    candidate_paths.push('text/homepage/public.md')
+    candidate_paths.push('ABOUT.md')
+
+    const context = new PermissionContext({ user_public_key })
+
+    for (const candidate of candidate_paths) {
+      try {
+        const { full_path, relative_path } = resolve_user_path(candidate)
+        const stats = await fs.stat(full_path)
+        if (!stats.isFile()) continue
+
+        // Check permission on the resolved file
+        const resource_path = create_base_uri_from_path(full_path)
+        const permission = await context.check_permission({ resource_path })
+        if (permission?.read?.allowed === false) continue
+
+        const content = await fs.readFile(full_path, 'utf8')
+
+        let frontmatter = null
+        let markdown = content
+
+        if (relative_path.endsWith('.md')) {
+          try {
+            const parsed = fm(content)
+            if (
+              parsed.attributes &&
+              Object.keys(parsed.attributes).length > 0
+            ) {
+              frontmatter = parsed.attributes
+              markdown = parsed.body
+            }
+          } catch (error) {
+            log(
+              `Error parsing frontmatter for ${full_path}:`,
+              error.message
+            )
+          }
+        }
+
+        return res.json({
+          path: relative_path,
+          type: 'file',
+          content,
+          frontmatter,
+          markdown,
+          size: stats.size,
+          modified: stats.mtime.toISOString()
+        })
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          log(`Skipping homepage candidate ${candidate}: ${error.message}`)
+        }
+        continue
+      }
+    }
+
+    // No homepage variant found
+    res.json({ content: null })
+  } catch (error) {
+    log('Error resolving homepage content:', error.message)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 
