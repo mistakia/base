@@ -6,8 +6,13 @@ base_uri: sys:system/text/search-system-design.md
 created_at: '2026-01-14T05:11:24.063Z'
 entity_id: 42df8f5c-24e8-4889-a9d9-c474fd84ace6
 public_read: true
-updated_at: '2026-01-16T18:30:00.000Z'
-user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+relations:
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/permission-system-design.md]]
+  - relates_to [[sys:system/text/database-and-indexing.md]]
+  - relates_to [[sys:system/text/background-services.md]]
+updated_at: '2026-03-02T00:00:00.000Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:37:40.256Z'
 ---
 

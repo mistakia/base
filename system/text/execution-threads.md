@@ -18,9 +18,13 @@ observations:
     [integration] Base does not run sessions internally; it manages and standardizes sessions
     from external runners
   - '[focus] Agentic loops are the primary use case, with conversations as a secondary pattern'
+public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/workflow.md]]
+  - relates_to [[sys:system/text/session-orchestrator.md]]
+  - relates_to [[sys:system/text/session-lifecycle-reference.md]]
+  - relates_to [[sys:system/text/git-operations.md]]
 updated_at: '2026-01-05T19:24:56.466Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
@@ -54,25 +58,7 @@ Supported session runners include Claude Code, Cursor, ChatGPT, and Pi. New runn
 
 ## Session Runners
 
-Base supports importing and tracking sessions from the following runners:
-
-### Claude (Anthropic)
-
-- Source: Chat conversations from claude.ai
-- Format: JSONL export files
-- Preserves: Messages, tool calls, artifacts, context
-
-### Cursor
-
-- Source: AI coding sessions from Cursor IDE
-- Format: SQLite database export
-- Preserves: Code edits, AI interactions, file context
-
-### ChatGPT
-
-- Source: ChatGPT conversations
-- Format: JSON export from data archive
-- Preserves: Messages, model responses, conversation metadata
+Base supports importing and tracking sessions from multiple runners (Claude Code, Cursor, ChatGPT, Pi). Each runner has a session provider adapter that handles discovery, normalization, and metadata extraction. See [[sys:system/text/session-orchestrator.md]] for provider details and the provider architecture.
 
 ## Session Normalization
 

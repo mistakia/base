@@ -18,6 +18,8 @@ relations:
   - relates_to [[sys:system/text/execution-threads.md]]
   - relates_to [[sys:system/text/workflow.md]]
   - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/session-lifecycle-reference.md]]
+  - relates_to [[sys:system/text/cross-machine-sessions.md]]
 updated_at: '2026-02-10T23:30:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:37:56.978Z'

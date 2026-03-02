@@ -4,7 +4,7 @@ type: text
 description: The Base MCP server layer has been removed in favor of the base entity create CLI command
 base_uri: sys:system/text/mcp-server.md
 created_at: '2025-01-06T21:10:00.000Z'
-entity_id: a8b9c0d1-e2f3-4567-8901-234567890abc
+entity_id: cd0f483c-1392-43cc-8e6a-6ef35f961774
 observations:
   - '[removed] MCP service layer removed 2026-02-23 in favor of CLI-based entity creation'
   - '[migration] entity_create functionality replaced by base entity create CLI command'

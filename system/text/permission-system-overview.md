@@ -201,7 +201,7 @@ Comprehensive test coverage includes integration tests, CLI validation, permissi
 
 ## Related Documentation
 
-- [Entity Relations](./entity-relations.md): Understanding entity relationships
-- [Thread Metadata Schema](./thread-metadata-schema.json): Thread metadata structure
-- [System Design](./system-design.md): Overall system architecture
-- [Workflow](./workflow.md): Workflow execution and permissions
+- [[sys:system/text/entity-relations.md]] - Understanding entity relationships
+- [[sys:system/text/thread-metadata-schema.json]] - Thread metadata structure
+- [[sys:system/text/system-design.md]] - Overall system architecture
+- [[sys:system/text/workflow.md]] - Workflow execution and permissions

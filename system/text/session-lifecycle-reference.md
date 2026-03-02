@@ -8,8 +8,13 @@ description: >-
 base_uri: sys:system/text/session-lifecycle-reference.md
 created_at: '2026-02-22T01:01:36.309Z'
 entity_id: 9fe11418-4256-4058-b41c-1b12dd7c3ad8
-updated_at: '2026-02-25T00:00:00.000Z'
-user_public_key: 00000000-0000-0000-0000-000000000000
+public_read: true
+relations:
+  - relates_to [[sys:system/text/session-orchestrator.md]]
+  - relates_to [[sys:system/text/execution-threads.md]]
+  - relates_to [[sys:system/text/background-services.md]]
+updated_at: '2026-03-02T00:00:00.000Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Session Lifecycle Reference
@@ -47,7 +52,7 @@ Throughout this document, Claude CLI is used as the reference implementation. Ha
 
 ### API Dual-Target
 
-The hook scripts send requests to **both** the local API (`localhost:8080`) and the production API (`https://base.tint.space`). Clients connected to either endpoint will receive WebSocket events. This is relevant for network resilience -- a client connected to the remote API will still receive events from locally-running sessions.
+The hook scripts send requests to **both** the local API and the production API (configured via `config.production_url`). Clients connected to either endpoint will receive WebSocket events. This is relevant for network resilience -- a client connected to the remote API will still receive events from locally-running sessions.
 
 ### Harness-Specific: Claude Code Hooks
 

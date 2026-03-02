@@ -108,65 +108,31 @@ relations:
   - 'assigned_to [[user:person/jane-doe.md]]'
 ```
 
-Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared` and include:
-
-- **Association Relations**
-
-  - `relates_to`: General relationship between items
-  - `implements`: Implements a pattern, guideline, or design
-
-- **Dependency Relations**
-
-  - `blocked_by`: Entity is blocked by another entity
-  - `blocks`: Entity blocks another entity
-  - `requires`: Requires a resource or item
-
-- **Sequence Relations**
-
-  - `precedes`: Entity should be completed before another
-  - `succeeds`: Entity should be completed after another
-
-- **Hierarchy Relations**
-
-  - `part_of`: Hierarchical relationship (item is part of a larger whole)
-  - `contains`: Contains other items
-  - `subtask_of`: Task is a subtask of another task
-  - `has_subtask`: Task has subtasks
-
-- **Assignment Relations**
-
-  - `assigned_to`: Assignment relationship
-
-- **Membership Relations**
-
-  - `member_of`: Membership relationship
-  - `has_member`: Organization-member relationship
-
-- **Resource Relations**
-
-  - `needs_item`: Entity requires a specific item
-  - `uses_item`: Entity uses a specific item
-
-- **Involvement Relations**
-  - `involves`: Involvement relationship
+Canonical relation types are centralized in the `entity_relations` namespace in `libs-shared`. See [[sys:system/text/entity-relations.md]] for the full catalog of relation types organized by category (association, dependency, sequence, hierarchy, assignment, membership, resource, and involvement).
 
 ## Available Content Types
 
 The knowledge base supports the following content types. See the actual schema files in `sys:system/schema/` for detailed property definitions and usage guidance:
 
-- [Entity](../schema/entity.md) - Core properties shared by all content types
-- [Workflow](../schema/workflow.md) - Defines agentic behavior
-- [Task](../schema/task.md) - Describes discrete units of work
-- [Guideline](../schema/guideline.md) - Standards, procedures, or best practices
-- [Physical Item](../schema/physical_item.md) - Tangible objects or materials
-- [Digital Item](../schema/digital_item.md) - Files (remote files or hyperlinks)
-- [Physical Location](../schema/physical_location.md) - Discreet physical space, addresses, or geographical points
-- [Person](../schema/person.md) - Individual people
-- [Organization](../schema/organization.md) - Companies, departments, or teams
-- [Text](../schema/text.md) - General content, documentation, or notes
-- [Database](../schema/database.md) - Defines a structured dataset
-- [Database Item](../schema/database_item.md) - Records within a dataset
-- [Database View](../schema/database_view.md) - Saved display configurations for datasets
-- [Type Definition](../schema/type_definition.md) - Defines structure of content types
-- [Type Extension](../schema/type_extension.md) - Adds properties to existing types
-- [Prompt](../schema/prompt.md) - Structured input for models, used to guide response generation
+- [[sys:system/schema/entity.md]] - Core properties shared by all content types
+- [[sys:system/schema/workflow.md]] - Defines agentic behavior
+- [[sys:system/schema/task.md]] - Describes discrete units of work
+- [[sys:system/schema/guideline.md]] - Standards, procedures, or best practices
+- [[sys:system/schema/physical_item.md]] - Tangible objects or materials
+- [[sys:system/schema/digital_item.md]] - Files (remote files or hyperlinks)
+- [[sys:system/schema/physical_location.md]] - Discreet physical space, addresses, or geographical points
+- [[sys:system/schema/person.md]] - Individual people
+- [[sys:system/schema/organization.md]] - Companies, departments, or teams
+- [[sys:system/schema/text.md]] - General content, documentation, or notes
+- [[sys:system/schema/tag.md]] - Classification and organization labels
+- [[sys:system/schema/identity.md]] - User accounts with authentication keys
+- [[sys:system/schema/role.md]] - Reusable permission rule sets
+- [[sys:system/schema/scheduled_command.md]] - CLI commands scheduled for automated execution
+- [[sys:system/schema/skill.md]] - Agent skills discovered from extensions
+- [[sys:system/schema/extension.md]] - Convention-based CLI extensions
+- [[sys:system/schema/database.md]] - Defines a structured dataset
+- [[sys:system/schema/database_item.md]] - Records within a dataset
+- [[sys:system/schema/database_view.md]] - Saved display configurations for datasets
+- [[sys:system/schema/type_definition.md]] - Defines structure of content types
+- [[sys:system/schema/type_extension.md]] - Adds properties to existing types
+- [[sys:system/schema/prompt.md]] - Structured input for models, used to guide response generation

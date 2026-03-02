@@ -92,7 +92,7 @@ Thread tools manage thread execution state and user communication. These tools c
 
 ### Model Context Protocol (MCP)
 
-The MCP server exposes registered tools to external agents through standardized interfaces. Tools maintain consistent schemas across MCP and internal execution.
+The Base MCP server layer has been removed. The only Base-specific MCP tool (`entity_create`) is now available as the `base entity create` CLI command. Third-party MCP servers configured in `.mcp.json` are unaffected. See [[sys:system/text/mcp-server.md]] for migration details.
 
 ### Thread Execution
 
@@ -104,6 +104,4 @@ Threads execute workflows by first registering the workflow's custom tools, then
 
 ## Permissions and Access Control
 
-_[Placeholder - Tool permission system design in progress]_
-
-The system will implement role-based access control for tools with different permission levels. Current implementation provides basic access through the centralized registry without granular permissions.
+Tool access is governed by the permission system. See [[sys:system/text/identity-and-authentication.md]] for the identity model and [[sys:system/text/permission-system-design.md]] for the ABAC rule evaluation that controls tool execution.
