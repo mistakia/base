@@ -16,17 +16,19 @@ export const process_links_in_markdown = (
 
   let processed_content = content
 
-  // Transform wiki links [[scheme:path]] to markdown links
+  // Transform wiki links [[scheme:path]] or [[scheme:path|Display Text]] to markdown links
   processed_content = processed_content.replace(
     BASE_URI_PATTERNS.WIKI_LINK,
-    (match, scheme, path) => {
+    (match, scheme, path, display_text) => {
       const base_uri = `${scheme}:${path}`
       const client_path = convert_base_uri_to_path(base_uri)
-      // Remove root slash if present
-      const display_text = client_path.startsWith('/')
-        ? client_path.slice(1)
-        : client_path
-      return `[${display_text}](${client_path})`
+      const label =
+        display_text != null
+          ? display_text
+          : client_path.startsWith('/')
+            ? client_path.slice(1)
+            : client_path
+      return `[${label}](${client_path})`
     }
   )
 

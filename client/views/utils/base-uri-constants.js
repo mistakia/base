@@ -26,8 +26,8 @@ export const BASE_DIRECTORIES = {
 
 // Regex patterns for detecting base URI references
 export const BASE_URI_PATTERNS = {
-  // Matches [[user:path/to/file.md]] or [[sys:path/to/file.md]]
-  WIKI_LINK: /\[\[(sys|user):([^\]]+)\]\]/g,
+  // Matches [[user:path/to/file.md]] or [[sys:path/to/file.md|Display Text]]
+  WIKI_LINK: /\[\[(sys|user):([^\]|]+)(?:\|([^\]]*))?\]\]/g,
 
   // Matches [text](user:path/to/file.md) or [text](sys:path/to/file.md)
   MARKDOWN_LINK: /\[([^\]]*)\]\((sys|user):([^)]+)\)/g,
