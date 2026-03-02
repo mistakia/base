@@ -1,3 +1,21 @@
+---
+title: Permission System Design
+type: text
+description: >-
+  Architecture reference for the permission system covering ABAC model, rule evaluation, ownership,
+  public access, middleware integration, and developer implementation guide
+base_uri: sys:system/text/permission-system-design.md
+created_at: '2025-01-20T00:00:00.000Z'
+entity_id: 99b9e1c2-f871-4a8e-bc9c-df8eaba8eae9
+public_read: true
+relations:
+  - relates_to [[sys:system/text/permission-system-overview.md]]
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/identity-and-authentication.md]]
+updated_at: '2026-03-02T00:00:00.000Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+---
+
 # Permission System Design
 
 This document describes the permission system architecture in the Base system, providing guidance for developers integrating permission checks into new features.

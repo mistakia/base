@@ -4,9 +4,14 @@ type: text
 description: Documentation for the convention-based extension system
 created_at: '2026-02-24T01:55:49.498Z'
 entity_id: 1e8632f8-598a-40dd-ac0b-80fa603f837a
-public_read: false
-updated_at: '2026-02-24T01:55:49.498Z'
-user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+base_uri: sys:system/text/extension-system.md
+public_read: true
+relations:
+  - relates_to [[sys:system/text/system-design.md]]
+  - relates_to [[sys:system/text/workflow.md]]
+  - relates_to [[sys:system/text/tool-information.md]]
+updated_at: '2026-03-02T00:00:00.000Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Extension System
