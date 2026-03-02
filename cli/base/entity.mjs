@@ -1158,11 +1158,34 @@ async function handle_update(argv) {
         if (!entity_result.success) {
           throw new Error(entity_result.error || 'Entity not found')
         }
+        const now = new Date().toISOString()
         const merged = {
           ...entity_result.entity_properties,
           ...properties,
-          updated_at: new Date().toISOString()
+          updated_at: now
         }
+
+        // Auto-set timestamps for task status transitions
+        if (
+          entity_result.entity_properties.type === 'task' &&
+          properties.status
+        ) {
+          if (
+            (properties.status === 'Started' ||
+              properties.status === 'In Progress') &&
+            !merged.started_at
+          ) {
+            merged.started_at = now
+          }
+          if (
+            (properties.status === 'Completed' ||
+              properties.status === 'Abandoned') &&
+            !merged.finished_at
+          ) {
+            merged.finished_at = now
+          }
+        }
+
         await write_entity_to_filesystem({
           absolute_path,
           entity_properties: merged,

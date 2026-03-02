@@ -586,10 +586,31 @@ router.patch('/', async (req, res) => {
     }
 
     // Merge properties and write back
+    const now = new Date().toISOString()
     const merged_properties = {
       ...task.entity_properties,
       ...update_properties,
-      updated_at: new Date().toISOString()
+      updated_at: now
+    }
+
+    // Auto-set started_at when transitioning to a work-in-progress status
+    if (
+      update_properties.status &&
+      (update_properties.status === TASK_STATUS.STARTED ||
+        update_properties.status === TASK_STATUS.IN_PROGRESS) &&
+      !merged_properties.started_at
+    ) {
+      merged_properties.started_at = now
+    }
+
+    // Auto-set finished_at when transitioning to a terminal status
+    if (
+      update_properties.status &&
+      (update_properties.status === TASK_STATUS.COMPLETED ||
+        update_properties.status === TASK_STATUS.ABANDONED) &&
+      !merged_properties.finished_at
+    ) {
+      merged_properties.finished_at = now
     }
 
     const write_result = await write_task_to_filesystem({
