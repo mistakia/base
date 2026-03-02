@@ -90,8 +90,7 @@ When unsure, prefer **Draft** -- it is better to refine a task than to attempt e
 - Use `base entity create` CLI (via Bash tool) with base_uri pattern `user:task/<subfolder>/task-name.md`
 - Set `--type` to "task"
 - Set `title` to the task name and include a brief `description`
-- Set `status` and `priority` per Steps 2d and 2e
-- Include tags in entity_properties
+- Pass `status`, `priority`, `tags`, and `relations` inside `--properties` JSON (these are NOT top-level CLI flags). Example: `--properties '{"status": "Planned", "priority": "Medium", "tags": ["user:tag/my-tag.md"]}'`
 
 ## Step 4: Structure Content
 
