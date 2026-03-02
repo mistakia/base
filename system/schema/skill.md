@@ -36,14 +36,14 @@ Skills are discovered from multiple locations:
 
 The SKILL.md consensus format (agentskills.io) maps to Base entities:
 
-- SKILL.md \`name\` = Base \`title\`
-- SKILL.md \`allowed-tools\` = informational only in Base (not enforced)
-- SKILL.md \`task/context/instructions\` XML = identical to Base workflow format
+- SKILL.md `name` = Base `title`
+- SKILL.md `allowed-tools` = informational only in Base (not enforced)
+- SKILL.md `task/context/instructions` XML = identical to Base workflow format
 
 ## Creating a Skill
 
 Skills can be placed in:
 
-- An extension's \`skill/\` directory for extension-scoped skills
-- An extension root as \`SKILL.md\` for the consensus format
-- The user \`workflow/\` directory as standalone skills
+- An extension's `skill/` directory for extension-scoped skills
+- An extension root as `SKILL.md` for the consensus format
+- The user `workflow/` directory as standalone skills

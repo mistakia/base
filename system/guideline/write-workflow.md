@@ -122,14 +122,12 @@ claude-session "Run workflow [[user:workflow/example.md]] with input: [context]"
 
 **Workflow handoff pattern** (in `<instructions>` section):
 
-```markdown
 ## Handoff
 
 Present results to user. To continue with the next phase:
 
-\`\`\`bash
+```bash
 claude-session "Run [[user:workflow/next-phase.md]] for task [[user:task/example.md]]"
-\`\`\`
 ```
 
 Use the `calls` relation to document workflow dependencies.

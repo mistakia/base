@@ -38,10 +38,10 @@ An extension directory contains:
 
 command.mjs must export the standard Yargs command module interface:
 
-- \`command\` (string): Command name and positional args (e.g., 'graph <command>')
-- \`describe\` (string): One-line description
-- \`builder\` (function): Accepts yargs instance, returns configured yargs with subcommands/options
-- \`handler\` (function): Handler for the parent command (typically empty for command groups)
+- `command` (string): Command name and positional args (e.g., 'graph <command>')
+- `describe` (string): One-line description
+- `builder` (function): Accepts yargs instance, returns configured yargs with subcommands/options
+- `handler` (function): Handler for the parent command (typically empty for command groups)
 
 ## Discovery
 
