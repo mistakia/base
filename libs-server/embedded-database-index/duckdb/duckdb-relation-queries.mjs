@@ -47,7 +47,7 @@ export async function find_related_entities({
   parameters.push(limit_int, offset_int)
 
   const query = `
-    SELECT e.base_uri, e.entity_id, e.type, e.title, e.updated_at,
+    SELECT e.base_uri, e.entity_id, e.type, e.title, e.status, e.updated_at,
            er.relation_type, er.context
     FROM entity_relations er
     JOIN entities e ON er.target_base_uri = e.base_uri
@@ -64,6 +64,7 @@ export async function find_related_entities({
       entity_id: row.entity_id,
       type: row.type,
       title: row.title,
+      status: row.status,
       updated_at: row.updated_at,
       relation_type: row.relation_type,
       context: row.context
@@ -124,9 +125,9 @@ export async function find_entities_relating_to({
 
   // Use UNION to query both entities and threads tables
   const query = `
-    SELECT base_uri, entity_id, type, title, updated_at, relation_type, context, thread_state
+    SELECT base_uri, entity_id, type, title, status, updated_at, relation_type, context, thread_state
     FROM (
-      SELECT e.base_uri, e.entity_id, e.type, e.title, e.updated_at,
+      SELECT e.base_uri, e.entity_id, e.type, e.title, e.status, e.updated_at,
              er.relation_type, er.context, NULL as thread_state
       FROM entity_relations er
       JOIN entities e ON er.source_base_uri = e.base_uri
@@ -138,6 +139,7 @@ export async function find_entities_relating_to({
              t.thread_id as entity_id,
              'thread' as type,
              t.title,
+             NULL as status,
              t.updated_at,
              er.relation_type,
              er.context,
@@ -159,6 +161,7 @@ export async function find_entities_relating_to({
       entity_id: row.entity_id,
       type: row.type,
       title: row.title,
+      status: row.status,
       updated_at: row.updated_at,
       relation_type: row.relation_type,
       context: row.context,

@@ -277,6 +277,8 @@ base entity update "user:task/my-task.md" --status "Completed" --priority High
 base entity update "user:task/my-task.md" --status "In Progress" --dry-run
 base entity observe "user:task/my-task.md" "[category] observation text"
 base entity tree "user:task/my-task.md"                    # Single task dependency tree
+base entity tree "user:task/my-task.md" -r blocked_by,blocks  # Filter by relation type
+base entity tree "user:task/my-task.md" -s "In Progress,Planned"  # Filter by status
 base entity tree --project "user:tag/base-project.md"      # Project-wide dependency graph
 base entity move task/old.md task/new.md --dry-run
 base entity validate

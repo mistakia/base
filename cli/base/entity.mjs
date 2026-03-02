@@ -77,9 +77,14 @@ export const builder = (yargs) =>
           })
           .option('content', {
             alias: 'c',
-            describe: 'Markdown content after frontmatter',
+            describe:
+              'Markdown content after frontmatter (use "-" to read from stdin)',
             type: 'string',
             default: ''
+          })
+          .option('content-file', {
+            describe: 'Read markdown content from a file path',
+            type: 'string'
           })
           .option('properties', {
             alias: 'p',
@@ -233,7 +238,7 @@ export const builder = (yargs) =>
       handle_observe
     )
     .command(
-      'tree <base_uri>',
+      'tree [base_uri]',
       'Display task dependency tree',
       (yargs) =>
         yargs
@@ -246,6 +251,21 @@ export const builder = (yargs) =>
             describe: 'Maximum depth to traverse',
             type: 'number',
             default: 5
+          })
+          .option('relation-type', {
+            alias: 'r',
+            describe: 'Comma-separated relation types to traverse',
+            type: 'string'
+          })
+          .option('status', {
+            alias: 's',
+            describe: 'Comma-separated entity statuses to include',
+            type: 'string'
+          })
+          .option('project', {
+            alias: 'p',
+            describe: 'Tag URI for project-wide dependency graph',
+            type: 'string'
           }),
       handle_tree
     )
@@ -410,10 +430,29 @@ export const builder = (yargs) =>
 
 export const handler = () => {}
 
+async function read_stdin() {
+  const chunks = []
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+async function resolve_content(argv) {
+  if (argv['content-file']) {
+    return await fs.readFile(argv['content-file'], 'utf8')
+  }
+  if (argv.content === '-') {
+    return await read_stdin()
+  }
+  return argv.content || ''
+}
+
 async function handle_create(argv) {
   let exit_code = 0
   try {
-    const { base_uri, title, description, content } = argv
+    const { base_uri, title, description } = argv
+    const content = await resolve_content(argv)
     const entity_type = argv.type
 
     let extra_properties = {}
@@ -1210,7 +1249,7 @@ async function handle_tree(argv) {
   let exit_code = 0
   try {
     const { base_uri, depth } = argv
-    const dependency_types = [
+    const default_dependency_types = [
       'blocked_by',
       'blocks',
       'subtask_of',
@@ -1219,38 +1258,60 @@ async function handle_tree(argv) {
       'succeeds'
     ]
 
+    const relation_type_arg = argv.relationType || argv['relation-type']
+    const allowed_types = relation_type_arg
+      ? relation_type_arg.split(',').map((t) => t.trim())
+      : default_dependency_types
+
+    const status_filter = argv.status
+      ? argv.status.split(',').map((s) => s.trim().toLowerCase())
+      : null
+
+    if (!base_uri && !argv.project) {
+      console.error('Error: either base_uri or --project is required')
+      flush_and_exit(1)
+      return
+    }
+
+    const fetch_relations_duckdb = async (uri) => {
+      const { find_related_entities, find_entities_relating_to } =
+        await import(
+          '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+        )
+      await embedded_index_manager.initialize({ read_only: true })
+      const forward = await find_related_entities({
+        base_uri: uri,
+        limit: 100,
+        offset: 0
+      })
+      const reverse = await find_entities_relating_to({
+        base_uri: uri,
+        limit: 100,
+        offset: 0
+      })
+      return { forward, reverse }
+    }
+
     const fetch_relations = async (uri) => {
-      return with_api_fallback(
-        async () => {
-          const params = new URLSearchParams({
-            base_uri: uri,
-            direction: 'both'
-          })
-          const response = await authenticated_fetch(
-            `${SERVER_URL}/api/entities/relations?${params}`
-          )
-          if (!response.ok) throw new Error(`API returned ${response.status}`)
-          return response.json()
-        },
-        async () => {
-          const { find_related_entities, find_entities_relating_to } =
-            await import(
-              '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+      try {
+        return await with_api_fallback(
+          async () => {
+            const params = new URLSearchParams({
+              base_uri: uri,
+              direction: 'both'
+            })
+            const response = await authenticated_fetch(
+              `${SERVER_URL}/api/entities/relations?${params}`
             )
-          await embedded_index_manager.initialize()
-          const forward = await find_related_entities({
-            base_uri: uri,
-            limit: 100,
-            offset: 0
-          })
-          const reverse = await find_entities_relating_to({
-            base_uri: uri,
-            limit: 100,
-            offset: 0
-          })
-          return { forward, reverse }
-        }
-      )
+            if (!response.ok)
+              throw new Error(`API returned ${response.status}`)
+            return response.json()
+          },
+          () => fetch_relations_duckdb(uri)
+        )
+      } catch {
+        return await fetch_relations_duckdb(uri)
+      }
     }
 
     const visited = new Set()
@@ -1262,7 +1323,7 @@ async function handle_tree(argv) {
       const children = []
 
       for (const rel of result.forward || []) {
-        if (!dependency_types.includes(rel.relation_type)) continue
+        if (!allowed_types.includes(rel.relation_type)) continue
         const child = await build_tree(rel.base_uri, current_depth + 1)
         children.push({
           direction: '->',
@@ -1275,7 +1336,7 @@ async function handle_tree(argv) {
       }
 
       for (const rel of result.reverse || []) {
-        if (!dependency_types.includes(rel.relation_type)) continue
+        if (!allowed_types.includes(rel.relation_type)) continue
         if (rel.base_uri && rel.base_uri.startsWith('user:thread/')) continue
         const child = await build_tree(rel.base_uri, current_depth + 1)
         children.push({
@@ -1291,29 +1352,105 @@ async function handle_tree(argv) {
       return { base_uri: uri, children }
     }
 
-    const tree = await build_tree(base_uri, 0)
-
-    if (argv.json) {
-      console.log(JSON.stringify(tree, null, 2))
-    } else {
-      const print_node = (node, indent = '') => {
-        for (const child of node.children) {
-          const status_indicator = child.status ? ` [${child.status}]` : ''
-          const title_part = child.title ? ` ${child.title}` : ''
-          console.log(
-            `${indent}${child.direction} ${child.relation_type}: ${child.base_uri}${title_part}${status_indicator}`
-          )
-          if (child.children.length > 0) {
-            print_node({ children: child.children }, indent + '  ')
-          }
+    const prune_tree = (node) => {
+      if (!status_filter) return node
+      const pruned_children = []
+      for (const child of node.children) {
+        const pruned_child = prune_tree(child)
+        const status_matches =
+          child.status && status_filter.includes(child.status.toLowerCase())
+        if (status_matches || pruned_child.children.length > 0) {
+          pruned_children.push({ ...child, children: pruned_child.children })
         }
       }
+      return { ...node, children: pruned_children }
+    }
 
-      console.log(base_uri)
-      if (tree && tree.children.length > 0) {
-        print_node(tree)
+    const fetch_project_entities = async (tag_uri) => {
+      const duckdb_fallback = async () => {
+        const { execute_duckdb_query } = await import(
+          '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+        )
+        await embedded_index_manager.initialize({ read_only: true })
+        const result = await execute_duckdb_query({
+          query:
+            'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
+          parameters: [tag_uri]
+        })
+        return result.map((r) => r.entity_base_uri)
+      }
+
+      try {
+        return await with_api_fallback(
+          async () => {
+            const params = new URLSearchParams({ tags: tag_uri })
+            const response = await authenticated_fetch(
+              `${SERVER_URL}/api/entities?${params}`
+            )
+            if (!response.ok) throw new Error(`API returned ${response.status}`)
+            const data = await response.json()
+            return (data.entities || data).map((e) => e.base_uri)
+          },
+          duckdb_fallback
+        )
+      } catch {
+        return await duckdb_fallback()
+      }
+    }
+
+    const print_node = (node, indent = '') => {
+      for (const child of node.children) {
+        const status_indicator = child.status ? ` [${child.status}]` : ''
+        const title_part = child.title ? ` ${child.title}` : ''
+        console.log(
+          `${indent}${child.direction} ${child.relation_type}: ${child.base_uri}${title_part}${status_indicator}`
+        )
+        if (child.children.length > 0) {
+          print_node({ children: child.children }, indent + '  ')
+        }
+      }
+    }
+
+    if (argv.project) {
+      const entity_uris = await fetch_project_entities(argv.project)
+      if (entity_uris.length === 0) {
+        console.log(`No entities found with tag: ${argv.project}`)
+        flush_and_exit(0)
+        return
+      }
+
+      const trees = []
+      for (const uri of entity_uris) {
+        const tree = await build_tree(uri, 0)
+        if (tree) trees.push(prune_tree(tree))
+      }
+
+      if (argv.json) {
+        console.log(JSON.stringify(trees, null, 2))
       } else {
-        console.log('  (no dependency relations)')
+        for (const tree of trees) {
+          console.log(tree.base_uri)
+          if (tree.children.length > 0) {
+            print_node(tree)
+          } else {
+            console.log('  (no dependency relations)')
+          }
+          console.log()
+        }
+      }
+    } else {
+      const tree = await build_tree(base_uri, 0)
+      const pruned = prune_tree(tree)
+
+      if (argv.json) {
+        console.log(JSON.stringify(pruned, null, 2))
+      } else {
+        console.log(base_uri)
+        if (pruned && pruned.children.length > 0) {
+          print_node(pruned)
+        } else {
+          console.log('  (no dependency relations)')
+        }
       }
     }
   } catch (error) {
