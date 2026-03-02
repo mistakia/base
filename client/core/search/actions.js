@@ -6,6 +6,7 @@ export const search_action_types = {
   SEARCH_SUCCESS: 'SEARCH_SUCCESS',
   SEARCH_FAILURE: 'SEARCH_FAILURE',
   CLEAR_SEARCH: 'CLEAR_SEARCH',
+  CLEAR_SEARCH_RESULTS: 'CLEAR_SEARCH_RESULTS',
   SET_SELECTED_INDEX: 'SET_SELECTED_INDEX',
   FETCH_RECENT_FILES_REQUEST: 'FETCH_RECENT_FILES_REQUEST',
   FETCH_RECENT_FILES_SUCCESS: 'FETCH_RECENT_FILES_SUCCESS',
@@ -43,6 +44,10 @@ export const search_actions = {
 
   clear: () => ({
     type: search_action_types.CLEAR_SEARCH
+  }),
+
+  clear_results: () => ({
+    type: search_action_types.CLEAR_SEARCH_RESULTS
   }),
 
   set_selected_index: (index) => ({

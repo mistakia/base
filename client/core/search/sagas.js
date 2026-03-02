@@ -61,7 +61,7 @@ function* handle_query_change() {
     const api_mode = search_mode === 'default' ? 'full' : search_mode
     yield put(search_actions.search({ query: stripped_query, mode: api_mode }))
   } else {
-    yield put(search_actions.clear())
+    yield put(search_actions.clear_results())
   }
 }
 

@@ -124,6 +124,21 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
         total: 0
       })
 
+    case search_action_types.CLEAR_SEARCH_RESULTS:
+      return state.merge({
+        results: new Map({
+          files: new List(),
+          threads: new List(),
+          entities: new List(),
+          directories: new List()
+        }),
+        content_results: new List(),
+        semantic_results: new List(),
+        semantic_available: true,
+        selected_index: 0,
+        total: 0
+      })
+
     case search_action_types.SET_SELECTED_INDEX:
       return state.set('selected_index', payload.index)
 
