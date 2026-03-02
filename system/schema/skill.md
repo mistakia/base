@@ -18,7 +18,7 @@ user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349
 
 # Skill
 
-Skills are agent-readable behavior definitions using the same format as workflows: markdown files with YAML frontmatter and task/context/instructions XML structure. The difference is naming convention -- \"workflow\" is the Base standard term, while \"skill\" and \"SKILL.md\" reflect the broader agent ecosystem consensus (agentskills.io, Claude Code plugins).
+Skills are agent-readable behavior definitions using the same format as workflows: markdown files with YAML frontmatter and task/context/instructions XML structure. The difference is naming convention -- "workflow" is the Base standard term, while "skill" and "SKILL.md" reflect the broader agent ecosystem consensus (agentskills.io, Claude Code plugins).
 
 ## Relationship to Workflows
 
