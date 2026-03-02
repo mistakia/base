@@ -45,8 +45,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
 2. **Update Plan Status**
 
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
-   - If `started_at` is not already set, update it to current ISO 8601 timestamp
-   - This signals that active work has begun on the implementation
+   - The `started_at` timestamp is automatically set when status changes to "In Progress"
 
 3. **Prepare Work Environment**
    - Navigate to the appropriate working directory
@@ -85,8 +84,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - Review all changes made
    - Verify task completion against original requirements
    - Check for any cleanup or follow-up actions needed
-   - Update implementation plan status to "Completed"
-   - Update `finished_at` to current ISO 8601 timestamp
+   - Update implementation plan status to "Completed" (the `finished_at` timestamp is automatically set)
    - Remove transient pipeline observations from the task entity: strip any observations starting with `[plan-completed]`, `[triage-queued]`, or `[draft-triaged]` from the observations array
 
 ## Key Rules

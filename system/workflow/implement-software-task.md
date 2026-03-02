@@ -59,8 +59,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 2. **Update Plan Status**
 
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
-   - If `started_at` is not already set, update it to current ISO 8601 timestamp
-   - This signals that active work has begun on the implementation
+   - The `started_at` timestamp is automatically set when status changes to "In Progress"
 
 3. **Set Up Work Environment**
    - Navigate to the target repository (not user-base)
@@ -118,8 +117,7 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
    - Run code quality checks: `yarn lint` and `yarn typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
-   - Update implementation plan status to "Completed"
-   - Update `finished_at` to current ISO 8601 timestamp
+   - Update implementation plan status to "Completed" (the `finished_at` timestamp is automatically set)
    - Remove transient pipeline observations from the task entity: strip any observations starting with `[plan-completed]`, `[triage-queued]`, or `[draft-triaged]` from the observations array
    - **DO NOT commit any code** - committing is handled by [[sys:system/workflow/merge-worktree.md]]
 
