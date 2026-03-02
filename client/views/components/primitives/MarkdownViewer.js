@@ -61,6 +61,32 @@ const get_normal_styles = {
     backgroundColor: 'transparent',
     padding: '24px 0'
   },
+  '& pre:has(code.language-prompt)': {
+    backgroundColor: '#fff',
+    border: '1px solid var(--color-border)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontFamily:
+      "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+    fontSize: '0.9rem',
+    lineHeight: 1.55,
+    letterSpacing: '0.01em',
+    '& code': {
+      fontFamily: 'inherit',
+      fontSize: 'inherit'
+    },
+    '& .prompt-file-ref': {
+      fontFamily: 'var(--font-family-mono)',
+      fontSize: '0.85em',
+      backgroundColor: COLORS.border_light,
+      padding: '1px 5px',
+      borderRadius: '3px',
+      color: COLORS.text
+    },
+    '& .prompt-slash-cmd': {
+      color: COLORS.warning
+    }
+  },
   '& blockquote': {
     borderLeft: '2px solid var(--color-border)',
     padding: '9px 20px',
