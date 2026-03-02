@@ -1,21 +1,19 @@
 #!/bin/bash
 
 # Pull user-base from remote
-# This script fetches and rebases local user-base state on top of remote changes
-# Called by sync-all.sh (parent sync step) and post-receive hooks
+# This script fetches and integrates remote changes into the local user-base.
+# Called by post-receive hooks on the storage server.
 #
 # Behavior:
-# 1. If dirty working directory: compute overlap between dirty files and incoming changes
-#    - No overlap: proceed with rebase (git only touches files in the rebase diff)
-#    - Overlap: log filenames, Discord alert, skip sync
-#    - No stash -- avoids risk of stash/pop interacting with active sessions
+# 1. If dirty working directory (ignoring submodules): skip entirely (hard invariant)
+#    - No stash, no overlap check -- wait for next cycle when clean
 # 2. Fetches from remote
 # 3. Handles divergence scenarios:
 #    - Up to date: no-op
-#    - Local behind: rebase local branch on remote
+#    - Local behind: fast-forward merge
 #    - Local ahead: keep local commits (no push from pull job)
-#    - Diverged: rebase local on remote
-# 4. On rebase failure: abort and exit
+#    - Diverged: merge with submodule pointer auto-resolution
+# 4. On merge failure: abort and exit
 # 5. After successful pull: update submodules
 
 set -e
@@ -31,17 +29,22 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check for merge conflicts
-if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+# Check for merge/rebase in progress
+GIT_DIR=$(git rev-parse --git-dir)
+if [ -f "$GIT_DIR/MERGE_HEAD" ]; then
     echo "Merge in progress, cannot pull" >&2
     exit 1
 fi
-
-# Check for rebase in progress
-GIT_DIR=$(git rev-parse --git-dir)
 if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     echo "Rebase in progress, cannot pull" >&2
     exit 1
+fi
+
+# Hard invariant: never pull when dirty (ignoring submodules)
+if ! git diff --quiet --ignore-submodules 2>/dev/null || \
+   ! git diff --cached --quiet --ignore-submodules 2>/dev/null; then
+    echo "Dirty working directory, skipping pull (will retry next cycle)"
+    exit 0
 fi
 
 echo "Fetching from remote..."
@@ -70,60 +73,57 @@ elif [ "$REMOTE_COMMIT" = "$MERGE_BASE" ]; then
     exit 0
 fi
 
-# Check for dirty working directory - use overlap check instead of skipping entirely
-IS_DIRTY=false
-if ! git diff --quiet --ignore-submodules || ! git diff --cached --quiet --ignore-submodules; then
-    IS_DIRTY=true
-fi
-
-# If dirty, compute overlap between dirty files and incoming changes
-if [ "$IS_DIRTY" = true ]; then
-    # Collect dirty files (staged + unstaged, deduplicated)
-    dirty_files=$({ git diff --name-only --ignore-submodules 2>/dev/null; git diff --cached --name-only --ignore-submodules 2>/dev/null; } | sort -u)
-
-    # Collect incoming files from remote
-    incoming_files=$(git diff --name-only --ignore-submodules "$MERGE_BASE".."$REMOTE_BRANCH" 2>/dev/null | sort -u)
-
-    # Check for overlap
-    overlap=$(comm -12 <(echo "$dirty_files") <(echo "$incoming_files"))
-
-    if [ -n "$overlap" ]; then
-        echo "Overlap detected between dirty files and incoming changes:" >&2
-        echo "$overlap" | while read -r f; do echo "  $f" >&2; done
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity warning \
-            --title "Sync blocked: file overlap" \
-            --message "pull-user-base on $(hostname): dirty files overlap with incoming changes. Files: $(echo "$overlap" | tr '\n' ', ')" || true
-        exit 0
-    fi
-
-    echo "Dirty working directory but no overlap with incoming changes, proceeding with rebase..."
-fi
-
 PULLED=false
 
 if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
-    echo "Local is behind remote, rebasing on $REMOTE_BRANCH..."
-    if ! git rebase --autostash "$REMOTE_BRANCH"; then
-        echo "Rebase failed, aborting..." >&2
-        git rebase --abort 2>/dev/null || true
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
-            --title "User-base sync failed" \
-            --message "pull-user-base: rebase failed on $(hostname), manual intervention required" || true
+    # Strictly behind - fast-forward
+    echo "Local is behind remote, fast-forwarding..."
+    if ! git merge --ff-only "$REMOTE_BRANCH"; then
+        echo "Fast-forward merge failed" >&2
         exit 1
     fi
     echo "Pull completed successfully"
     PULLED=true
 else
-    echo "Local and remote have diverged, rebasing..."
-    if ! git rebase --autostash "$REMOTE_BRANCH"; then
-        echo "Rebase failed, aborting..." >&2
-        git rebase --abort 2>/dev/null || true
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
-            --title "User-base sync failed" \
-            --message "pull-user-base: rebase failed (diverged) on $(hostname), manual intervention required" || true
-        exit 1
+    # Diverged - merge with submodule pointer auto-resolution
+    echo "Local and remote have diverged, merging..."
+    if ! git merge "$REMOTE_BRANCH" 2>/dev/null; then
+        # Check for unmerged files
+        unmerged=$(git ls-files -u 2>/dev/null)
+        if [ -z "$unmerged" ]; then
+            git merge --abort 2>/dev/null || true
+            echo "Merge failed (unknown error)" >&2
+            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+                --title "User-base sync failed" \
+                --message "pull-user-base: merge failed on $(hostname), manual intervention required" || true
+            exit 1
+        fi
+        # Check if ALL conflicts are submodule pointers (mode 160000)
+        has_file_conflict=$(echo "$unmerged" | awk '$1 != "160000"' | head -1)
+        if [ -n "$has_file_conflict" ]; then
+            git merge --abort 2>/dev/null || true
+            echo "Merge has non-submodule conflicts, aborting" >&2
+            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+                --title "User-base sync failed" \
+                --message "pull-user-base: merge conflict (non-submodule files) on $(hostname), manual intervention required" || true
+            exit 1
+        fi
+        # Auto-resolve submodule pointer conflicts with current HEAD
+        conflict_paths=$(echo "$unmerged" | awk '{print $4}' | sort -u)
+        while IFS= read -r conflict_path; do
+            git add "$conflict_path" 2>/dev/null
+            echo "Auto-resolved submodule conflict: $conflict_path"
+        done <<< "$conflict_paths"
+        if ! GIT_EDITOR=true git merge --continue 2>/dev/null; then
+            git merge --abort 2>/dev/null || true
+            echo "Merge --continue failed" >&2
+            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+                --title "User-base sync failed" \
+                --message "pull-user-base: merge continue failed on $(hostname), manual intervention required" || true
+            exit 1
+        fi
     fi
-    echo "Rebase completed successfully"
+    echo "Merge completed successfully"
     PULLED=true
 fi
 

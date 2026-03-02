@@ -86,6 +86,12 @@ if ! acquire_lock; then
     exit 1
 fi
 
+# Hard invariant: never pull when dirty (auto-commit handles dirty state)
+if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+    echo "Dirty working directory, skipping pull (auto-commit will handle)"
+    exit 0
+fi
+
 echo "Fetching from remote..."
 if ! git fetch origin; then
     echo "Failed to fetch from remote" >&2
