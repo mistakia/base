@@ -468,6 +468,7 @@ async function handle_create(argv) {
       title,
       ...extra_properties,
       ...(description ? { description } : {}),
+      base_uri,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       user_public_key: config.user_public_key,
