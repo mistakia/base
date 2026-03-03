@@ -24,7 +24,6 @@
     "lint": "eslint . --ext js,mjs --ignore-pattern build",
     "knip": "knip",
     "prettier": "prettier --write .",
-    "find-large-files": "node cli/find-large-files.mjs",
     "test": "USER_BASE_DIRECTORY= CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --exit",
     "test:all": "USER_BASE_DIRECTORY= CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test TEST=all mocha --exit --ignore './tests/unit/embedded-database-index/**/*.mjs' --ignore './tests/integration/embedded-database-index/**/*.mjs' ./tests/unit/**/*.mjs ./tests/integration/**/*.mjs && yarn test:embedded-db",
     "test:embedded-db": "USER_BASE_DIRECTORY= CONFIG_ENCRYPTION_KEY=ca25b9c4f1c26bc9a6475af467d9885d3b2a9d9a98a815a15af1264e6c50444a NODE_ENV=test mocha --exit ./tests/unit/embedded-database-index/**/*.mjs ./tests/integration/embedded-database-index/**/*.mjs",
