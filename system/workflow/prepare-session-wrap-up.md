@@ -29,9 +29,11 @@ Rely on your knowledge of what happened in this session — do not perform explo
 
 <instructions>
 
+This workflow accepts an optional `--continue` flag. When set, uncommitted changes are left in place for the next session. When not set (the default), commit all uncommitted work before ending.
+
 Based on what you know you've done in this session and the tasks you were given, consider whether any of the following apply:
 
-- **Uncommitted changes** — files you created or edited that should be committed or staged
+- **Uncommitted changes** — files you created or edited that should be committed. Unless `--continue` is set, commit these now with descriptive messages. Group related changes into logical commits.
 - **Temporary artifacts** — scratch files, temp outputs, or debug additions that should be cleaned up
 - **Worktree cleanup** — feature branches or worktrees created during the session that should be merged or removed
 - **Multi-machine sync** — changes to entities, configs, services, or scheduled commands that need to be pushed or deployed to the storage server
@@ -42,7 +44,7 @@ Based on what you know you've done in this session and the tasks you were given,
   - Deferred questions, decisions, or TODOs that were set aside
   - Tests or validation that should be run against changes made
 
-If any apply, recommend specific actions. If the user agrees, execute what can be done in this session. For anything that cannot be completed now, capture it in the continuation prompt. If everything is clean and no follow-up is needed, omit the continuation prompt section entirely.
+For commits: proceed without asking for approval -- the user invoked wrap-up to finalize the session. For other cleanup actions (deleting files, merging worktrees), recommend and execute after confirmation. For anything that cannot be completed now, capture it in the continuation prompt. If everything is clean and no follow-up is needed, omit the continuation prompt section entirely.
 
 </instructions>
 
