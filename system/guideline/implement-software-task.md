@@ -11,13 +11,19 @@ observations:
   - '[workflow] Isolated worktrees prevent conflicts with main development branch'
   - '[quality] Step-by-step execution with review stops ensures quality'
   - '[safety] Working directory verification prevents errors'
-  - '[safety] User-base must never have worktrees created for it -- it is the orchestration layer and must remain the central coordination point'
+  - >-
+    [safety] User-base must never have worktrees created for it -- it is the orchestration layer and
+    must remain the central coordination point
+  - >-
+    [safety] Agents must never discard uncommitted working tree changes without verifying
+    authorship; in multi-session environments uncommitted changes may belong to another concurrent
+    session or manual user edits
 public_read: true
 relations:
   - related_to [[sys:system/guideline/write-workflow.md]]
   - implements [[sys:system/text/system-design.md]]
   - follows [[sys:system/workflow/write-software-implementation-plan.md]]
-updated_at: '2026-01-05T19:25:18.079Z'
+updated_at: '2026-03-03T18:58:28.326Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 ---
@@ -94,6 +100,15 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 - File paths MUST be verified before making edits
 - Changes MUST be reviewed with `git diff` before staging
 
+### Working Tree Change Ownership
+
+In multi-session and shared repository environments, uncommitted working tree changes may belong to another concurrent agent session or to manual user edits.
+
+- Agents MUST NOT run `git restore`, `git checkout -- <file>`, `git clean`, or any command that discards uncommitted working tree changes unless the agent has verified it authored those changes in the current session
+- Before discarding uncommitted changes, agents MUST check whether those changes were made by the current session (e.g., by reviewing `git diff` output and confirming the changes match their own prior edits)
+- If uncommitted changes exist that the agent did not author, the agent MUST leave them intact and work around them (e.g., by stashing, using a worktree, or asking the user for guidance)
+- Agents SHOULD treat uncommitted changes as "potentially valuable work from another source" rather than "dirty state to clean up"
+
 ## Common Pitfalls to Avoid
 
 - DO NOT commit directly to main or master branches
@@ -104,3 +119,4 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 - DO NOT stage changes until all tasks are complete and tested
 - DO NOT update the plan without review when drift is discovered - stop and get approval first
 - DO NOT create worktrees for user-base -- only for target project repositories
+- DO NOT discard uncommitted changes (via `git restore`, `git checkout --`, `git clean`) without verifying those changes belong to the current session -- they may belong to another concurrent session or manual user edits

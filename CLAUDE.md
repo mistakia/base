@@ -509,3 +509,10 @@ node cli/entity-list.mjs -t task --status "In Progress"
 - Merge feature branches to main when ready, then clean up the worktree
 - Small changes (documentation, single-file fixes) can be committed directly to main
 - Avoid force pushes to main that would disrupt other developers
+
+**Never discard uncommitted changes you did not author:**
+
+- Do not run `git restore`, `git checkout -- <file>`, `git clean`, or any command that discards working tree changes unless you have verified those changes were made by the current session
+- In multi-session environments, uncommitted changes may belong to another concurrent agent session or to manual user edits -- discarding them causes silent data loss
+- Treat uncommitted changes as potentially valuable work, not dirty state to clean up
+- If unknown uncommitted changes block your work, stash them, use a worktree, or ask the user
