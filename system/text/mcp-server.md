@@ -8,11 +8,12 @@ entity_id: cd0f483c-1392-43cc-8e6a-6ef35f961774
 observations:
   - '[removed] MCP service layer removed 2026-02-23 in favor of CLI-based entity creation'
   - '[migration] entity_create functionality replaced by base entity create CLI command'
+  - '[evaluation] Retained as deprecation record with migration guidance for historical references.'
 public_read: true
 relations:
   - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/system-design.md]]
-updated_at: '2026-02-23T00:00:00.000Z'
+updated_at: '2026-03-02T06:41:47.455Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:36:56.923Z'
 ---
