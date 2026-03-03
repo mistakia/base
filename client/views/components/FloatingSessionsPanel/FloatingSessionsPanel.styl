@@ -193,6 +193,39 @@
     background: $color_surface_hover
     border-color: $color_primary
 
+// Filter row for all-users toggle
+.floating-sessions-panel__filter-row
+  display: flex
+  justify-content: flex-end
+  padding-bottom: $space_xs
+  margin-bottom: $space_xs
+  border-bottom: 1px solid $color_border_light
+
+.floating-sessions-panel__filter-toggle
+  background: none
+  border: 1px solid $color_border
+  border-radius: $radius_sm
+  color: $color_text_tertiary
+  cursor: pointer
+  padding: 1px 6px
+  font-family: $font_family_mono
+  font-size: 10px
+  line-height: 1.4
+  transition: all $transition_fast
+
+  &:hover
+    color: $color_text_secondary
+    border-color: $color_text_tertiary
+    background: $color_surface_hover
+
+  &--active
+    color: $color_text_secondary
+    border-color: $color_primary
+    background: rgba($color_primary, 0.06)
+
+    &:hover
+      background: rgba($color_primary, 0.1)
+
 // Label group styles for collapsed bar
 .floating-sessions-panel__label-group
   display: flex

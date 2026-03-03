@@ -112,7 +112,8 @@ const SessionCard = ({ item }) => {
     'session-card',
     item.status === 'running' ? 'session-card--running' : '',
     item.status === 'ended' ? 'session-card--ended' : '',
-    item.id || item.session_id ? 'session-card--clickable' : ''
+    item.id || item.session_id ? 'session-card--clickable' : '',
+    item.is_other_user ? 'session-card--other-user' : ''
   ]
     .filter(Boolean)
     .join(' ')
@@ -249,6 +250,7 @@ SessionCard.propTypes = {
     total_tokens: PropTypes.number,
     latest_timeline_event: PropTypes.object,
     user_public_key: PropTypes.string,
+    is_other_user: PropTypes.bool,
     show_actions: PropTypes.bool
   }).isRequired
 }

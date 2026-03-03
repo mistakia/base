@@ -44,10 +44,12 @@ const FloatingSessionsPanel = () => {
 
   const [panel_mode, set_panel_mode] = useState(PANEL_MODE.COLLAPSED)
   const [is_dismissed, set_is_dismissed] = useState(false)
+  const [show_all_users, set_show_all_users] = useState(false)
 
   // Filter sessions by user ownership when authenticated with create_threads
+  // Unless show_all_users is enabled
   const all_sessions =
-    can_create_threads && user_public_key
+    can_create_threads && user_public_key && !show_all_users
       ? (all_sessions_raw || []).filter((session) => {
           if (session.is_pending) return true
           if (!session.thread_id) return true
@@ -56,15 +58,15 @@ const FloatingSessionsPanel = () => {
         })
       : all_sessions_raw || []
 
-  // Load active sessions and threads on mount
+  // Load active sessions and threads on mount and when show_all_users changes
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
     const params = {}
-    if (can_create_threads && user_public_key) {
+    if (can_create_threads && user_public_key && !show_all_users) {
       params.user_public_key = user_public_key
     }
     dispatch(threads_actions.load_threads(params))
-  }, [dispatch, can_create_threads, user_public_key])
+  }, [dispatch, can_create_threads, user_public_key, show_all_users])
 
   // Auto-expand when a new pending session is created
   const pending_count = pending_sessions.length
@@ -89,7 +91,8 @@ const FloatingSessionsPanel = () => {
         (t) =>
           t.thread_state === 'active' &&
           !active_session_thread_ids.has(t.thread_id) &&
-          (!can_create_threads ||
+          (show_all_users ||
+            !can_create_threads ||
             !user_public_key ||
             !t.user_public_key ||
             t.user_public_key === user_public_key)
@@ -118,6 +121,19 @@ const FloatingSessionsPanel = () => {
     set_is_dismissed(true)
     set_panel_mode(PANEL_MODE.COLLAPSED)
   }, [])
+
+  const handle_toggle_all_users = useCallback(
+    (e) => {
+      e.stopPropagation()
+      set_show_all_users((prev) => !prev)
+    },
+    []
+  )
+
+  const is_other_user_session = (session) => {
+    if (!user_public_key || !session.user_public_key) return false
+    return session.user_public_key !== user_public_key
+  }
 
   const handle_retry = useCallback(
     (session) => {
@@ -208,6 +224,20 @@ const FloatingSessionsPanel = () => {
         {/* Expanded list mode */}
         {panel_mode === PANEL_MODE.LIST && (
           <div className='floating-sessions-panel__list'>
+            {can_create_threads && user_public_key && (
+              <div className='floating-sessions-panel__filter-row'>
+                <button
+                  className={`floating-sessions-panel__filter-toggle${show_all_users ? ' floating-sessions-panel__filter-toggle--active' : ''}`}
+                  onClick={handle_toggle_all_users}
+                  title={
+                    show_all_users
+                      ? 'Showing all users'
+                      : 'Showing only your sessions'
+                  }>
+                  {show_all_users ? 'all users' : 'mine'}
+                </button>
+              </div>
+            )}
             {all_sessions.map((session) => {
               if (session.is_pending) {
                 return (
@@ -271,18 +301,23 @@ const FloatingSessionsPanel = () => {
                 total_tokens: session.total_tokens,
                 latest_timeline_event: session.latest_timeline_event,
                 user_public_key: session.user_public_key,
+                is_other_user: is_other_user_session(session),
                 show_actions: false
               }
 
               return <SessionCard key={session.session_id} item={item} />
             })}
 
-            {review_threads_list.map((thread) => (
-              <SessionCard
-                key={thread.thread_id}
-                item={normalize_thread(thread)}
-              />
-            ))}
+            {review_threads_list.map((thread) => {
+              const normalized = normalize_thread(thread)
+              normalized.is_other_user =
+                user_public_key &&
+                thread.user_public_key &&
+                thread.user_public_key !== user_public_key
+              return (
+                <SessionCard key={thread.thread_id} item={normalized} />
+              )
+            })}
 
             {all_sessions.length === 0 && review_threads_list.length === 0 && (
               <div className='floating-sessions-panel__empty'>
