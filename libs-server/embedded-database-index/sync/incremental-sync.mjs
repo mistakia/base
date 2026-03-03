@@ -49,21 +49,23 @@ function is_file_not_found_error(error) {
 }
 
 /**
- * Error patterns that indicate expected failures (non-entity files that passed filtering).
+ * Error codes that indicate expected failures (non-entity files that passed filtering).
  * These should be skipped rather than counted as failures.
  */
-const EXPECTED_FAILURE_PATTERNS = ['No entity type found']
+const EXPECTED_FAILURE_CODES = new Set(['NO_FRONTMATTER', 'MISSING_TYPE'])
 
 /**
- * Check if an error is an expected failure (non-entity file that passed filtering).
- * @param {string} error_message - The error message
+ * Check if a read failure is an expected failure (non-entity file that passed filtering).
+ * Uses error_code when available, falls back to pattern matching for backwards compatibility.
+ * @param {Object} result - The read_entity_from_filesystem result
  * @returns {boolean}
  */
-function is_expected_failure(error_message) {
-  if (!error_message) return false
-  return EXPECTED_FAILURE_PATTERNS.some((pattern) =>
-    error_message.includes(pattern)
-  )
+function is_expected_failure(result) {
+  if (result.error_code) {
+    return EXPECTED_FAILURE_CODES.has(result.error_code)
+  }
+  // Fallback for results without error_code
+  return result.error?.includes('No entity type found') || false
 }
 
 /**
@@ -85,7 +87,7 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
       }
 
       // Check if this is an expected failure (non-entity file)
-      if (is_expected_failure(result.error)) {
+      if (is_expected_failure(result)) {
         log('Skipped non-entity file %s: %s', file_path, result.error)
         return { action: 'skipped', reason: result.error }
       }

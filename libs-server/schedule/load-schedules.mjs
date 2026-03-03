@@ -44,6 +44,15 @@ export const load_schedules = async ({ directory }) => {
 
     for (const { file_path, result } of read_results) {
       if (!result.success) {
+        if (
+          result.error_code &&
+          result.error_code !== 'NO_FRONTMATTER' &&
+          result.error_code !== 'FILE_NOT_FOUND'
+        ) {
+          console.warn(
+            `Warning: unparseable entity file ${file_path}: ${result.error}`
+          )
+        }
         log(`Failed to read ${file_path}: ${result.error}`)
         continue
       }

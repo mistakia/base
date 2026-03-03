@@ -5,6 +5,8 @@ import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
+import { list_markdown_files_in_filesystem } from '#libs-server/repository/filesystem/list-markdown-files-in-filesystem.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   add_directory_cli_options,
   handle_cli_directory_registration
@@ -26,6 +28,53 @@ const validate_filesystem = async ({
     exclude_path_patterns
   })
 
+  // Scan for unparseable files that entity listing silently skipped.
+  // list_entity_files_from_filesystem (used by process_repositories_from_filesystem)
+  // drops files that fail to parse, so broken entity files are invisible to validation.
+  // This second pass discovers all markdown files and identifies those with frontmatter
+  // that failed to parse -- likely broken entities rather than intentional non-entity files.
+  log('Scanning for unparseable entity files...')
+  const all_markdown_files = await list_markdown_files_in_filesystem({
+    include_path_patterns,
+    exclude_path_patterns
+  })
+
+  const validated_paths = new Set(
+    result.files.map((f) => f.absolute_path)
+  )
+
+  const unparseable_files = []
+  let non_entity_count = 0
+
+  for (const file of all_markdown_files) {
+    if (validated_paths.has(file.absolute_path)) {
+      continue
+    }
+
+    const read_result = await read_entity_from_filesystem({
+      absolute_path: file.absolute_path,
+      metadata_only: true
+    })
+
+    if (read_result.success) {
+      // Entity parsed fine but was filtered out by type/path -- not a problem
+      continue
+    }
+
+    if (read_result.error_code === 'NO_FRONTMATTER') {
+      non_entity_count++
+      continue
+    }
+
+    // File has frontmatter but failed to parse -- likely a broken entity
+    unparseable_files.push({
+      absolute_path: file.absolute_path,
+      base_uri: file.base_uri,
+      error: read_result.error,
+      error_code: read_result.error_code
+    })
+  }
+
   // Report results
   console.log('\nFilesystem Validation Results:')
   console.log('============================')
@@ -33,8 +82,14 @@ const validate_filesystem = async ({
   console.log(`Successfully validated: ${result.processed}`)
   console.log(`Skipped: ${result.skipped}`)
   console.log(`Errors: ${result.errors}`)
+  if (unparseable_files.length > 0) {
+    console.log(`Unparseable entity files: ${unparseable_files.length}`)
+  }
+  if (non_entity_count > 0) {
+    console.log(`Non-entity markdown files: ${non_entity_count}`)
+  }
 
-  // Output errors
+  // Output entity validation errors
   let has_errors = false
   for (const file of result.files) {
     if (file.errors && file.errors.length > 0) {
@@ -51,8 +106,26 @@ const validate_filesystem = async ({
     }
   }
 
+  // Output unparseable file errors
+  if (unparseable_files.length > 0) {
+    if (!has_errors) {
+      console.error('\nFilesystem Validation Errors:')
+      console.error('===========================')
+    }
+    console.error('\nUnparseable Entity Files:')
+    console.error('------------------------')
+    for (const file of unparseable_files) {
+      console.error(`\nFile: ${file.absolute_path}`)
+      console.error(`Base Path: ${file.base_uri || 'N/A'}`)
+      console.error(`  • ${file.error_code}: ${file.error}`)
+    }
+    has_errors = true
+  }
+
   return {
     ...result,
+    unparseable_files,
+    non_entity_count,
     has_errors
   }
 }

@@ -62,6 +62,7 @@ export async function read_entity_from_filesystem({
       return {
         success: false,
         error: `File not found at ${absolute_path}`,
+        error_code: 'FILE_NOT_FOUND',
         absolute_path
       }
     }
@@ -70,6 +71,9 @@ export async function read_entity_from_filesystem({
     const file_content = metadata_only
       ? await read_file_head(absolute_path)
       : await fs.readFile(absolute_path, 'utf8')
+
+    // Check if file appears to have frontmatter (starts with ---)
+    const has_frontmatter_delimiter = file_content.trimStart().startsWith('---')
 
     // Parse the entity from file content
     const { entity_properties, entity_content, formatted_entity_metadata } =
@@ -95,6 +99,9 @@ export async function read_entity_from_filesystem({
       return {
         success: false,
         error: `No entity type found in properties for ${absolute_path}`,
+        error_code: has_frontmatter_delimiter
+          ? 'MISSING_TYPE'
+          : 'NO_FRONTMATTER',
         absolute_path
       }
     }
@@ -116,6 +123,7 @@ export async function read_entity_from_filesystem({
     return {
       success: false,
       error: error.message,
+      error_code: 'PARSE_ERROR',
       absolute_path
     }
   }
