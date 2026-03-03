@@ -462,6 +462,14 @@ base job check-missed        # Check for missed executions
 - `check-missed-jobs.mjs` - Missed execution detection with grace periods
 - `notify-discord.mjs` - Discord webhook notifications
 
+**Crontab build preprocessor** (`base crontab build`): Reads a crontab source file and produces a deploy-ready crontab on stdout. It auto-injects `JOB_SCHEDULE` and `JOB_SCHEDULE_TYPE=expr` environment variables from cron timing fields so each job-wrapper invocation knows its own schedule. It strips `JOB_API_URL`, `JOB_API_KEY`, and standalone `JOB_SCHEDULE_TYPE` lines from the source (these are provided by the host environment). Adds a "Built by: base crontab build" header. Idempotent. Typical deploy pattern:
+
+```bash
+base crontab build server/crontab.cron | ssh <host> 'crontab -'
+```
+
+**Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. On Linux servers they live in `/etc/environment`. On macOS (MacBook), they are set in `~/crontab/00-env.cron` which is prepended alphabetically by the `load_crontab_files` helper. The storage server uses `JOB_API_URL=https://localhost:8081` (API runs locally); all other servers use `JOB_API_URL=https://192.168.1.21:8081`.
+
 ### External Session Import
 
 ```bash
