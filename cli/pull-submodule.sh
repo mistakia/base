@@ -53,6 +53,13 @@ if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     exit 1
 fi
 
+# Hard invariant: never pull when dirty
+if ! git -C "$FULL_PATH" diff --quiet 2>/dev/null || \
+   ! git -C "$FULL_PATH" diff --cached --quiet 2>/dev/null; then
+    echo "$SUBMODULE_NAME: dirty working directory, skipping pull"
+    exit 0
+fi
+
 echo "Fetching $SUBMODULE_NAME from remote..."
 if ! git -C "$FULL_PATH" fetch origin 2>/dev/null; then
     echo "$SUBMODULE_NAME: fetch failed" >&2

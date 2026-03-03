@@ -234,14 +234,18 @@ log_telemetry() {
     ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     hostname_val=$(hostname)
 
-    local json="{\"ts\":\"$ts\",\"repo\":\"$repo\",\"host\":\"$hostname_val\",\"event\":\"$event\""
-    if [ -n "$details" ]; then
-        json="$json,\"details\":\"$details\""
-    fi
-    json="$json}"
-
     mkdir -p "$(dirname "$telemetry_file")"
-    echo "$json" >> "$telemetry_file" 2>/dev/null || true
+    if [ -n "$details" ]; then
+        jq -nc --arg ts "$ts" --arg repo "$repo" --arg host "$hostname_val" \
+            --arg event "$event" --arg details "$details" \
+            '{ts:$ts,repo:$repo,host:$host,event:$event,details:$details}' \
+            >> "$telemetry_file" 2>/dev/null || true
+    else
+        jq -nc --arg ts "$ts" --arg repo "$repo" --arg host "$hostname_val" \
+            --arg event "$event" \
+            '{ts:$ts,repo:$repo,host:$host,event:$event}' \
+            >> "$telemetry_file" 2>/dev/null || true
+    fi
 }
 
 # Send Discord notification for sync failures.
