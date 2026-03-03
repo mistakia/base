@@ -11,6 +11,7 @@ observations:
   - '[workflow] Isolated worktrees prevent conflicts with main development branch'
   - '[quality] Step-by-step execution with review stops ensures quality'
   - '[safety] Working directory verification prevents errors'
+  - '[safety] User-base must never have worktrees created for it -- it is the orchestration layer and must remain the central coordination point'
 public_read: true
 relations:
   - related_to [[sys:system/guideline/write-workflow.md]]
@@ -34,6 +35,8 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 ### Worktree and Environment Setup
 
 **CRITICAL: Never commit directly to `main` or `master` branches**
+
+**CRITICAL: Never create a worktree for the user-base repository.** User-base is the orchestration layer that tracks tasks, plans, and workflows referencing target project repositories. Creating a worktree for user-base would disconnect it from its role as the central coordination point. Worktrees are only for target project repositories (base, league, finance, etc.).
 
 - A dedicated worktree MUST be created for each software task to isolate changes
 - ALL development work MUST be done in feature branches within worktrees
@@ -100,3 +103,4 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 - DO NOT make changes without verifying working directory
 - DO NOT stage changes until all tasks are complete and tested
 - DO NOT update the plan without review when drift is discovered - stop and get approval first
+- DO NOT create worktrees for user-base -- only for target project repositories
