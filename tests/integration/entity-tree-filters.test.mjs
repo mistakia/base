@@ -248,8 +248,7 @@ describe('Entity Tree Filter Integration', function () {
       for (const child of node.children) {
         const pruned_child = prune_tree(child, status_filter)
         const status_matches =
-          child.status &&
-          status_filter.includes(child.status.toLowerCase())
+          child.status && status_filter.includes(child.status.toLowerCase())
         if (status_matches || pruned_child.children.length > 0) {
           pruned_children.push({ ...child, children: pruned_child.children })
         }
@@ -382,10 +381,9 @@ describe('Entity Tree Filter Integration', function () {
 
   describe('--project mode (entity_tags query)', () => {
     it('should find entities by tag', async () => {
-      const { execute_duckdb_query } =
-        await import(
-          '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-        )
+      const { execute_duckdb_query } = await import(
+        '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+      )
       const result = await execute_duckdb_query({
         query:
           'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ? ORDER BY entity_base_uri',
@@ -399,13 +397,11 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     it('should return empty for non-existent tag', async () => {
-      const { execute_duckdb_query } =
-        await import(
-          '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-        )
+      const { execute_duckdb_query } = await import(
+        '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+      )
       const result = await execute_duckdb_query({
-        query:
-          'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
+        query: 'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
         parameters: ['user:tag/nonexistent.md']
       })
 

@@ -287,7 +287,10 @@ async function handle_duplicates(argv) {
     `
     params.push(limit)
 
-    const results = await file_adapter.raw_query({ query: sql, parameters: params })
+    const results = await file_adapter.raw_query({
+      query: sql,
+      parameters: params
+    })
     await file_adapter.close()
 
     // Convert bigint values
@@ -335,7 +338,13 @@ function parse_size_string(size_str) {
   if (!match) return 1024 // default 1KB
   const value = parseFloat(match[1])
   const unit = (match[2] || 'B').toUpperCase()
-  const multipliers = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }
+  const multipliers = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4
+  }
   return Math.floor(value * (multipliers[unit] || 1))
 }
 

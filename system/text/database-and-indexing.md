@@ -26,8 +26,8 @@ A singleton DuckDB embedded database indexes all entities and threads for fast q
 
 ### Schema Tables
 
-| Table                      | Purpose                              | Primary Key                                           |
-| -------------------------- | ------------------------------------ | ----------------------------------------------------- |
+| Table                    | Purpose                              | Primary Key                                         |
+| ------------------------ | ------------------------------------ | --------------------------------------------------- |
 | `entities`               | Unified storage for all entity types | `base_uri`                                          |
 | `threads`                | Thread execution metadata            | `thread_id`                                         |
 | `entity_tags`            | Entity-to-tag associations           | `(entity_base_uri, tag_base_uri)`                   |
@@ -81,7 +81,7 @@ Three sync modes with automatic fallback:
    Match -> try incremental sync
    Failure -> try resync
    Failure -> reset_and_rebuild
-   ```
+```
 
 A queue-based lock prevents concurrent sync operations.
 
@@ -94,6 +94,7 @@ The index supports read-only initialization (`access_mode: 'READ_ONLY'`) for API
 Entity relations are stored in the `entity_relations` table with composite primary key preventing duplicates.
 
 Relations are extracted from entity frontmatter using the wiki-link syntax:
+
 ```
 relation_type [[target_base_uri]] (optional context)
 ```
@@ -123,11 +124,11 @@ Separate from the embedded index, the database entity system provides configurab
 
 ### Supported Backends
 
-| Backend              | Storage                                | Use Case                                     |
-| -------------------- | -------------------------------------- | -------------------------------------------- |
+| Backend              | Storage                              | Use Case                                     |
+| -------------------- | ------------------------------------ | -------------------------------------------- |
 | **DuckDB** (default) | Local `.db` file per database entity | Fast local analytics                         |
-| **PostgreSQL**       | External database connection           | Shared/production data                       |
-| **TSV**              | Tab-separated text files               | Manual inspection, data exchange             |
+| **PostgreSQL**       | External database connection         | Shared/production data                       |
+| **TSV**              | Tab-separated text files             | Manual inspection, data exchange             |
 | **Markdown**         | Directory of `.md` entity files      | Full entity system integration with git sync |
 
 ### Storage Adapter Interface
@@ -162,8 +163,8 @@ Database entities define their structure via `fields` array with type mappings:
 
 ## Key Modules
 
-| Module                                                                       | Purpose                                                     |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Module                                                                     | Purpose                                                     |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `libs-server/embedded-database-index/embedded-index-manager.mjs`           | Singleton manager for init, sync, rebuild, shutdown         |
 | `libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs` | Table and index definitions                                 |
 | `libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs`        | Entity batch upsert and tag/relation sync                   |

@@ -43,10 +43,7 @@ export async function classify_item({
   try {
     result = JSON.parse(output)
   } catch {
-    console.error(
-      'Failed to parse Ollama response:',
-      output.substring(0, 200)
-    )
+    console.error('Failed to parse Ollama response:', output.substring(0, 200))
     return { tags: [], confidence: 0 }
   }
 

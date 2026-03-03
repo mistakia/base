@@ -173,8 +173,8 @@ In-memory cache for repository status with:
 
 ## Key Modules
 
-| Module                                           | Purpose                                      |
-| ------------------------------------------------ | -------------------------------------------- |
+| Module                                         | Purpose                                      |
+| ---------------------------------------------- | -------------------------------------------- |
 | `libs-server/git/index.mjs`                    | Public API exporting all git operations      |
 | `libs-server/git/branch.mjs`                   | Branch create, checkout, merge, delete, push |
 | `libs-server/git/worktree.mjs`                 | Worktree create and remove                   |

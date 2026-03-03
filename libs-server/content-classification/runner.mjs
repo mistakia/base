@@ -99,9 +99,7 @@ export async function run_classification({
         ? get_item_preview(item)
         : String(item[db.primary_key]).substring(0, 60)
 
-      process.stdout.write(
-        `\r[${i + 1}/${items.length}] ${preview}...`
-      )
+      process.stdout.write(`\r[${i + 1}/${items.length}] ${preview}...`)
 
       const links = extract_links(item, taxonomy.social_media_domains)
 

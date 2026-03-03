@@ -52,5 +52,7 @@ export const html_tag_whitelist = new Set([
   'figure',
   'figcaption',
   'details',
-  'summary'
+  'summary',
+  'small',
+  'center'
 ])

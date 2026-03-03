@@ -71,21 +71,21 @@ The `machine_registry` object in user-base config maps machine identifiers to th
 
 ```json
 {
-"machine_registry": {
-"macbook": {
-"hostname": "machine-hostname.local",
-"platform": "darwin",
-"server_port": 8081,
-"ssl_key_path": "/path/to/key.pem",
-"ssl_cert_path": "/path/to/cert.pem",
-"transcription_args": "--port 8089 --model base.en"
-},
-"storage": {
-"hostname": "storage-server",
-"platform": "linux",
-"server_port": 8080
-}
-}
+  "machine_registry": {
+    "macbook": {
+      "hostname": "machine-hostname.local",
+      "platform": "darwin",
+      "server_port": 8081,
+      "ssl_key_path": "/path/to/key.pem",
+      "ssl_cert_path": "/path/to/cert.pem",
+      "transcription_args": "--port 8089 --model base.en"
+    },
+    "storage": {
+      "hostname": "storage-server",
+      "platform": "linux",
+      "server_port": 8080
+    }
+  }
 }
 ```
 
@@ -126,8 +126,8 @@ SERVER_PORT=8081
 
 Set for all PM2 services:
 
-| Variable                     | Source           | Purpose                                |
-| ---------------------------- | ---------------- | -------------------------------------- |
+| Variable                   | Source           | Purpose                                |
+| -------------------------- | ---------------- | -------------------------------------- |
 | `USER_BASE_DIRECTORY`      | Resolution chain | User data directory path               |
 | `CONFIG_ENCRYPTION_KEY`    | process.env      | Decryption key for config values       |
 | `CONTAINER_USER_BASE_PATH` | pm2.config.js    | User-base path inside Docker container |
@@ -177,13 +177,13 @@ Specific fields support runtime overrides:
 
 The base repo must not contain user-specific values (paths, IPs, repo names, git identity). All customization lives in user-base:
 
-| Layer      | Base Repo                         | User-Base                         |
-| ---------- | --------------------------------- | --------------------------------- |
+| Layer      | Base Repo                       | User-Base                       |
+| ---------- | ------------------------------- | ------------------------------- |
 | Config     | `config/config.json` (defaults) | `config/config.json` (overlay)  |
 | Workflows  | `system/workflow/` (core)       | `workflow/` (extensions)        |
 | Guidelines | `system/guideline/` (core)      | `guideline/` (extensions)       |
 | CLI        | `cli/` (core tools)             | `cli/` (user scripts)           |
-| Extensions | -                                 | `extension/` (convention-based) |
+| Extensions | -                               | `extension/` (convention-based) |
 
 ## Debug Logging
 
@@ -195,8 +195,8 @@ DEBUG=config:loader node ...
 
 ## Key Modules
 
-| Module                                        | Purpose                                    |
-| --------------------------------------------- | ------------------------------------------ |
+| Module                                      | Purpose                                    |
+| ------------------------------------------- | ------------------------------------------ |
 | `config/index.mjs`                          | Config loading, merging, and export        |
 | `config/config.json`                        | Base defaults                              |
 | `config/config-test.json`                   | Test mode config                           |

@@ -130,12 +130,14 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 ## Related System Documentation
 
 **Core Architecture**
+
 - [[sys:system/text/directory-structure.md]] - File organization and structure
 - [[sys:system/text/knowledge-base-schema.md]] - Entity schemas and data models
 - [[sys:system/text/entity-relations.md]] - Entity relationship system
 - [[sys:system/text/base-uri.md]] - URI system for entity references
 
 **Execution and Sessions**
+
 - [[sys:system/text/execution-threads.md]] - Thread lifecycle and management
 - [[sys:system/text/session-orchestrator.md]] - Session runner management and standardization
 - [[sys:system/text/session-lifecycle-reference.md]] - Thread state transitions and lifecycle
@@ -144,6 +146,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/tool-information.md]] - Tool capabilities and usage
 
 **Infrastructure**
+
 - [[sys:system/text/background-services.md]] - PM2 services and background processing
 - [[sys:system/text/scheduled-command-system.md]] - Schedule types and processor
 - [[sys:system/text/cli-queue-system.md]] - BullMQ command queue and tag concurrency
@@ -153,6 +156,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/external-data-sync.md]] - External system integrations
 
 **Security and Organization**
+
 - [[sys:system/text/permission-system-overview.md]] - Permission system overview
 - [[sys:system/text/permission-system-design.md]] - ABAC model and rule evaluation
 - [[sys:system/text/identity-and-authentication.md]] - JWT auth and identity model
@@ -160,5 +164,6 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/search-system-design.md]] - Unified search architecture
 
 **Other**
+
 - [[sys:system/text/extension-system.md]] - Convention-based CLI extensions
 - [[sys:system/text/mcp-server.md]] - Model Context Protocol server (removed)

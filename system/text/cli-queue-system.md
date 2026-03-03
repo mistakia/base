@@ -40,7 +40,7 @@ Each job contains:
 | `tags`              | array         | Tag base_uris for concurrency control         |
 | `working_directory` | string        | Execution directory                           |
 | `timeout_ms`        | number        | Command timeout (default: 300000)             |
-| `execution_mode`    | enum          | `host` or `container`                     |
+| `execution_mode`    | enum          | `host` or `container`                         |
 | `metadata`          | object        | Caller-provided context (schedule info, etc.) |
 | `queued_at`         | ISO timestamp | When the job was created                      |
 
@@ -77,13 +77,13 @@ Tag limits are set in `config.json` under `cli_queue.tag_limits`:
 
 ```json
 {
-"cli_queue": {
-"tag_limits": {
-"default": { "max_concurrent": 10 },
-"user:tag/deploy.md": { "max_concurrent": 1 },
-"user:tag/sync.md": { "max_concurrent": 5 }
-}
-}
+  "cli_queue": {
+    "tag_limits": {
+      "default": { "max_concurrent": 10 },
+      "user:tag/deploy.md": { "max_concurrent": 1 },
+      "user:tag/sync.md": { "max_concurrent": 5 }
+    }
+  }
 }
 ```
 
@@ -185,8 +185,8 @@ Namespaces: `cli-queue:queue`, `cli-queue:executor`, `cli-queue:tag-limiter`, `c
 
 ## Key Modules
 
-| Module                                        | Purpose                                      |
-| --------------------------------------------- | -------------------------------------------- |
+| Module                                      | Purpose                                      |
+| ------------------------------------------- | -------------------------------------------- |
 | `libs-server/cli-queue/queue.mjs`           | Job creation, status queries, queue stats    |
 | `libs-server/cli-queue/tag-limiter.mjs`     | Lua-based atomic tag acquisition and release |
 | `libs-server/cli-queue/execute-command.mjs` | Host and container command execution         |

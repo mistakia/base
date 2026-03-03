@@ -66,16 +66,16 @@ Identity entities are stored in `{USER_BASE_DIRECTORY}/identity/` as markdown fi
 
 ### Required Fields
 
-| Field               | Type       | Description                           |
-| ------------------- | ---------- | ------------------------------------- |
-| `type`            | string     | Must be `identity`                  |
+| Field             | Type       | Description                           |
+| ----------------- | ---------- | ------------------------------------- |
+| `type`            | string     | Must be `identity`                    |
 | `auth_public_key` | hex string | Ed25519 public key for authentication |
 | `username`        | string     | Unique username identifier            |
 
 ### Permission Fields
 
-| Field                          | Type    | Description                                       |
-| ------------------------------ | ------- | ------------------------------------------------- |
+| Field                        | Type    | Description                                       |
+| ---------------------------- | ------- | ------------------------------------------------- |
 | `permissions.create_threads` | boolean | Can create execution threads                      |
 | `permissions.global_write`   | boolean | Write access to any resource                      |
 | `rules`                      | array   | User-specific permission rules (highest priority) |
@@ -84,8 +84,8 @@ Identity entities are stored in `{USER_BASE_DIRECTORY}/identity/` as markdown fi
 
 Identity entities can include per-user thread execution configuration:
 
-| Field                      | Description                                      |
-| -------------------------- | ------------------------------------------------ |
+| Field                    | Description                                      |
+| ------------------------ | ------------------------------------------------ |
 | `tools`                  | Allowlist of available tools                     |
 | `disallowed_tools`       | Denylist patterns                                |
 | `permission_mode`        | Claude CLI permission mode                       |
@@ -104,24 +104,23 @@ Role entities are stored in `{USER_BASE_DIRECTORY}/role/` and provide reusable p
 ```yaml
 type: role
 rules:
-
-- action: allow
-  pattern: 'user:\*\*'
-  reason: 'Full access to user resources'
-- action: deny
-  pattern: 'sys:system/schema/\*\*'
-  reason: 'Cannot modify system schemas'
-  ```
+  - action: allow
+    pattern: 'user:\*\*'
+    reason: 'Full access to user resources'
+  - action: deny
+    pattern: 'sys:system/schema/\*\*'
+    reason: 'Cannot modify system schemas'
+```
 
 ### Role Assignment
 
 Identities link to roles via relations:
+
 ```yaml
 relations:
-
-- 'has_role [[user:role/admin.md]]'
-- 'has_role [[user:role/public-reader.md]]'
-  ```
+  - 'has_role [[user:role/admin.md]]'
+  - 'has_role [[user:role/public-reader.md]]'
+```
 
 ## Permission Rule Evaluation
 
@@ -178,8 +177,8 @@ Request processing chain:
 
 ## Key Modules
 
-| Module                                                  | Purpose                                         |
-| ------------------------------------------------------- | ----------------------------------------------- |
+| Module                                                | Purpose                                         |
+| ----------------------------------------------------- | ----------------------------------------------- |
 | `libs-server/auth/nonce-cache.mjs`                    | Nonce-based replay protection                   |
 | `libs-server/users/user-registry.mjs`                 | User lookup and permission resolution           |
 | `libs-server/users/identity-loader.mjs`               | Identity entity caching with mtime invalidation |

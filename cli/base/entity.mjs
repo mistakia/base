@@ -1297,10 +1297,9 @@ async function handle_tree(argv) {
     }
 
     const fetch_relations_duckdb = async (uri) => {
-      const { find_related_entities, find_entities_relating_to } =
-        await import(
-          '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
-        )
+      const { find_related_entities, find_entities_relating_to } = await import(
+        '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+      )
       await embedded_index_manager.initialize({ read_only: true })
       const forward = await find_related_entities({
         base_uri: uri,
@@ -1326,8 +1325,7 @@ async function handle_tree(argv) {
             const response = await authenticated_fetch(
               `${SERVER_URL}/api/entities/relations?${params}`
             )
-            if (!response.ok)
-              throw new Error(`API returned ${response.status}`)
+            if (!response.ok) throw new Error(`API returned ${response.status}`)
             return response.json()
           },
           () => fetch_relations_duckdb(uri)
@@ -1404,18 +1402,15 @@ async function handle_tree(argv) {
       }
 
       try {
-        return await with_api_fallback(
-          async () => {
-            const params = new URLSearchParams({ tags: tag_uri })
-            const response = await authenticated_fetch(
-              `${SERVER_URL}/api/entities?${params}`
-            )
-            if (!response.ok) throw new Error(`API returned ${response.status}`)
-            const data = await response.json()
-            return (data.entities || data).map((e) => e.base_uri)
-          },
-          duckdb_fallback
-        )
+        return await with_api_fallback(async () => {
+          const params = new URLSearchParams({ tags: tag_uri })
+          const response = await authenticated_fetch(
+            `${SERVER_URL}/api/entities?${params}`
+          )
+          if (!response.ok) throw new Error(`API returned ${response.status}`)
+          const data = await response.json()
+          return (data.entities || data).map((e) => e.base_uri)
+        }, duckdb_fallback)
       } catch {
         return await duckdb_fallback()
       }

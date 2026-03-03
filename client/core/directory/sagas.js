@@ -61,11 +61,7 @@ export function* load_directory_markdown({ payload }) {
   if (!requested_path) {
     try {
       const { user_token } = yield select(get_app)
-      const { request } = api_request(
-        api.get_homepage_content,
-        {},
-        user_token
-      )
+      const { request } = api_request(api.get_homepage_content, {}, user_token)
 
       const file_data = yield call(request)
 

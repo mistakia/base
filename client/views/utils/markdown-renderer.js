@@ -106,7 +106,9 @@ export const render_markdown = (content) => {
   const html_with_table_containers = wrap_tables_in_containers(html_with_links)
 
   // Process plaintext blocks to highlight numbers
-  const html_with_plaintext = process_plaintext_blocks(html_with_table_containers)
+  const html_with_plaintext = process_plaintext_blocks(
+    html_with_table_containers
+  )
 
   // Process prompt blocks to highlight @file-path references
   return process_prompt_blocks(html_with_plaintext)

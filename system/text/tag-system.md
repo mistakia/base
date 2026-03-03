@@ -23,9 +23,9 @@ Tags are a core organizational primitive for categorizing entities and threads. 
 
 Tags extend the base entity schema with one additional property:
 
-| Field     | Type   | Description                              |
-| --------- | ------ | ---------------------------------------- |
-| `type`  | string | Must be `tag`                          |
+| Field   | Type   | Description                              |
+| ------- | ------ | ---------------------------------------- |
+| `type`  | string | Must be `tag`                            |
 | `title` | string | Human-readable tag name (required)       |
 | `color` | string | Hex color code for UI display (optional) |
 
@@ -37,10 +37,9 @@ Tags are referenced in entity frontmatter as an array of base_uri strings:
 
 ```yaml
 tags:
-
-- user:tag/base-project.md
-- user:tag/javascript.md
-  ```
+  - user:tag/base-project.md
+  - user:tag/javascript.md
+```
 
 Tags are indexed in the DuckDB embedded index via junction tables (`entity_tags` and `thread_tags`) for fast tag-based queries.
 
@@ -95,11 +94,11 @@ Same options as add. Reports which tags were removed vs. not found.
 
 The CLI supports shorthand tag input that resolves to full base_uri format:
 
-| Input                        | Resolved                                   |
-| ---------------------------- | ------------------------------------------ |
+| Input                      | Resolved                                 |
+| -------------------------- | ---------------------------------------- |
 | `base-project`             | `user:tag/base-project.md`               |
 | `user:tag/base-project.md` | `user:tag/base-project.md` (passthrough) |
-| `javascript, feature`      | Array of resolved base_uris                |
+| `javascript, feature`      | Array of resolved base_uris              |
 
 ## Tag-Based Queries
 
@@ -109,7 +108,7 @@ Filter entities by tag in DuckDB:
 
 ```javascript
 query_entities_from_duckdb({
-filters: [{ column_id: 'tags', operator: 'IN', value: [tag_base_uri] }]
+  filters: [{ column_id: 'tags', operator: 'IN', value: [tag_base_uri] }]
 })
 ```
 
@@ -159,8 +158,8 @@ Tags can relate to other tags through the relation system for parent-child taxon
 
 ## Key Modules
 
-| Module                                                   | Purpose                          |
-| -------------------------------------------------------- | -------------------------------- |
+| Module                                                 | Purpose                          |
+| ------------------------------------------------------ | -------------------------------- |
 | `system/schema/tag.md`                                 | Tag entity type definition       |
 | `cli/base/tag.mjs`                                     | CLI command implementation       |
 | `libs-server/tag/filesystem/`                          | Tag filesystem CRUD operations   |

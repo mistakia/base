@@ -48,7 +48,12 @@ const verify_github_signature = (req, secret) => {
 }
 
 // Auto-commit a webhook-created or updated task file
-const auto_commit_task_file = async ({ absolute_path, action, issue_number, repository_full_name }) => {
+const auto_commit_task_file = async ({
+  absolute_path,
+  action,
+  issue_number,
+  repository_full_name
+}) => {
   const user_base_directory = config.user_base_directory
   if (!user_base_directory || !absolute_path) {
     log('Skipping auto-commit: missing user_base_directory or absolute_path')

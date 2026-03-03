@@ -41,7 +41,7 @@ const get_normal_styles = {
   '& pre': {
     backgroundColor: COLORS.code_bg,
     p: '0 16px',
-    borderRadius: 1,
+    borderRadius: 2,
     overflow: 'visible',
     mt: 2,
     mb: 2,
@@ -66,8 +66,7 @@ const get_normal_styles = {
     border: '1px solid var(--color-border)',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
-    fontFamily:
-      "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+    fontFamily: "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
     fontSize: '0.9rem',
     lineHeight: 1.55,
     letterSpacing: '0.01em',
@@ -77,11 +76,8 @@ const get_normal_styles = {
     },
     '& .prompt-file-ref': {
       fontFamily: 'var(--font-family-mono)',
-      fontSize: '0.85em',
-      backgroundColor: COLORS.border_light,
       padding: '1px 5px',
-      borderRadius: '3px',
-      color: COLORS.text
+      color: COLORS.icon_link
     },
     '& .prompt-slash-cmd': {
       color: COLORS.warning

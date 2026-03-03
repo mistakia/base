@@ -506,10 +506,7 @@ router.get('/homepage-content', async (req, res) => {
               markdown = parsed.body
             }
           } catch (error) {
-            log(
-              `Error parsing frontmatter for ${full_path}:`,
-              error.message
-            )
+            log(`Error parsing frontmatter for ${full_path}:`, error.message)
           }
         }
 
