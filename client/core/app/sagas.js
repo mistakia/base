@@ -111,7 +111,14 @@ function* handle_page_refresh_after_session_success() {
 
       case pathname.startsWith('/thread/'): {
         const threadId = pathname.split('/')[2]
-        if (threadId) {
+        // Only load individual thread data for UUID paths; view slugs
+        // (e.g. /thread/active, /thread/default) are handled by ThreadsPage
+        if (
+          threadId &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            threadId
+          )
+        ) {
           yield put(threads_actions.load_thread(threadId))
         }
         break
