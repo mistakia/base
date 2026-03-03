@@ -164,6 +164,9 @@ api.use('/api/git', read_limiter, routes.git)
 // Transcription endpoint - write limits (handles file upload)
 api.use('/api/transcribe', write_limiter, routes.transcribe)
 
+// Job tracker endpoint - write limiter (POST report handles API key internally)
+api.use('/api/jobs', write_limiter, routes.jobs)
+
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)
@@ -366,5 +369,27 @@ server.on('clientError', (error, socket) => {
   // Destroy the socket to free resources
   socket.destroy()
 })
+
+// Periodic missed job check (storage server only)
+if (config.job_tracker?.enabled && config.job_tracker?.path) {
+  const { get_current_machine_id } = await import(
+    '#libs-server/schedule/machine-identity.mjs'
+  )
+  if (get_current_machine_id() === 'storage') {
+    const { check_missed_jobs } = await import(
+      '#libs-server/jobs/check-missed-jobs.mjs'
+    )
+    const interval_ms =
+      config.job_tracker.missed_check_interval_ms || 300000
+    setInterval(async () => {
+      try {
+        await check_missed_jobs()
+      } catch (error) {
+        log('Missed job check error: %s', error.message)
+      }
+    }, interval_ms)
+    log('Missed job check scheduled every %dms', interval_ms)
+  }
+}
 
 export default server

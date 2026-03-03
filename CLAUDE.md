@@ -426,6 +426,42 @@ pm2 stop schedule-processor    # Stop the processor
 pm2 logs schedule-processor    # View logs
 ```
 
+### Job Tracker
+
+Unified job tracking for both internal scheduled-command executions and external cron jobs. Stores execution results as JSON files on the storage server (`/mnt/md0/job/`).
+
+**Configuration** (`job_tracker` in config):
+- `enabled` - Enable/disable job tracking
+- `path` - Job file directory path
+- `ssh_host` - SSH host alias for remote reads
+- `api_key` - Bearer token for external job reporting
+- `discord_webhook_url` - Discord webhook for failure/missed alerts
+- `missed_check_interval_ms` - Missed execution check interval
+
+**Internal jobs** are auto-reported by the CLI queue worker when `metadata.schedule_entity_id` is present. Job ID format: `internal-{schedule-entity-uuid}`.
+
+**External jobs** report via HTTP API. Job ID format: `{project}-{script-name}`.
+
+**HTTP API**:
+- `POST /api/jobs/report` - Report job execution (API key auth via Bearer header)
+- `GET /api/jobs` - List all tracked jobs
+- `GET /api/jobs/:job_id` - Get specific job details
+
+**CLI commands**:
+```bash
+base job list                # List all tracked jobs
+base job list --json         # JSON output
+base job get <job_id>        # Get job details
+base job check-missed        # Check for missed executions
+```
+
+**Job wrapper** (`scripts/job-wrapper.sh`): Bash wrapper for external cron commands that captures exit code, duration, and stderr, then reports to the API. Environment variables: `JOB_API_URL`, `JOB_API_KEY`, `JOB_PROJECT`, `JOB_SCHEDULE`, `JOB_SCHEDULE_TYPE`.
+
+**Core modules** in `libs-server/jobs/`:
+- `report-job.mjs` - Job reporting, loading, saving (atomic writes)
+- `check-missed-jobs.mjs` - Missed execution detection with grace periods
+- `notify-discord.mjs` - Discord webhook notifications
+
 ### External Session Import
 
 ```bash

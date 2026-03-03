@@ -2,6 +2,8 @@ import { Worker, DelayedError } from 'bullmq'
 import debug from 'debug'
 import config from '#config'
 
+import os from 'os'
+
 import { get_redis_connection, QUEUE_CONFIG } from './queue.mjs'
 import { execute_command } from './execute-command.mjs'
 import { try_acquire_tags, unregister_job_tags } from './tag-limiter.mjs'
@@ -86,16 +88,56 @@ const process_cli_job = async (job) => {
 }
 
 /**
+ * Report internal scheduled-command execution to job tracker
+ */
+const report_to_job_tracker = async ({ job, success, result, error }) => {
+  if (!config.job_tracker?.enabled) {
+    return
+  }
+
+  const metadata = job.data?.metadata
+  if (!metadata?.schedule_entity_id) {
+    return
+  }
+
+  try {
+    const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+
+    const reason_text = success
+      ? null
+      : (result?.stderr || error?.message || null)
+
+    await report_job({
+      job_id: `internal-${metadata.schedule_entity_id}`,
+      name: metadata.schedule_title,
+      source: 'internal',
+      success,
+      duration_ms: result?.duration_ms ?? null,
+      exit_code: result?.exit_code ?? null,
+      reason: reason_text ? reason_text.slice(0, 500) : null,
+      project: 'base',
+      server: os.hostname(),
+      schedule: metadata.schedule_expression,
+      schedule_type: metadata.schedule_type
+    })
+  } catch (report_error) {
+    log(`Job ${job.id}: job tracker report failed - ${report_error.message}`)
+  }
+}
+
+/**
  * Event handlers
  */
 const handle_job_completed = (job, result) => {
   if (result) {
-    log(`Job ${job.id}: completed successfully`)
+    log(`Job ${job.id}: completed${result.success ? '' : ' (command failed)'}`)
+    report_to_job_tracker({ job, success: result.success, result })
   }
 }
 
 const handle_job_failed = (job, error) => {
   log(`Job ${job.id}: failed - ${error.message}`)
+  report_to_job_tracker({ job, success: false, error })
 }
 
 const handle_job_active = (job) => {

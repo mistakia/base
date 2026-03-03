@@ -101,6 +101,14 @@
       "default": { "max_concurrent": 10 }
     }
   },
+  "job_tracker": {
+    "enabled": false,
+    "path": "",
+    "ssh_host": "storage",
+    "api_key": "",
+    "discord_webhook_url": "",
+    "missed_check_interval_ms": 300000
+  },
   "user_containers": {
     "enabled": false,
     "data_directory": "/tmp/user-containers",

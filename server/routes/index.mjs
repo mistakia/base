@@ -11,6 +11,7 @@ import entities from './entities.mjs'
 import git from './git.mjs'
 import search from './search.mjs'
 import transcribe from './transcribe.mjs'
+import jobs from './jobs.mjs'
 
 export default {
   users,
@@ -25,5 +26,6 @@ export default {
   entities,
   git,
   search,
-  transcribe
+  transcribe,
+  jobs
 }

@@ -30,6 +30,8 @@ export const trigger_schedule = async ({ schedule, directory }) => {
       metadata: {
         schedule_title: schedule.title,
         schedule_entity_id: schedule.entity_id,
+        schedule_expression: schedule.schedule,
+        schedule_type: schedule.schedule_type,
         triggered_at: now
       }
     })
