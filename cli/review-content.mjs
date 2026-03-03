@@ -295,6 +295,8 @@ async function load_processed_paths(output_path) {
       try {
         const record = JSON.parse(line)
         if (record.type === 'summary') continue
+        // Skip llm_unavailable records so they are retried on resume
+        if (record.method === 'llm_unavailable') continue
         if (record.file_path) processed.add(record.file_path)
         if (record.thread_dir) processed.add(record.thread_dir)
       } catch {
@@ -542,6 +544,7 @@ async function main() {
     private: 0,
     errors: 0,
     skipped: 0,
+    llm_unavailable: 0,
     visibility_changes: []
   }
 
@@ -626,6 +629,20 @@ async function main() {
         regex_only: options.regex_only,
         max_content_size: options.max_content_size
       })
+
+      if (result.method === 'llm_unavailable') {
+        summary.llm_unavailable++
+        if (options.show_progress) {
+          process.stderr.write(
+            `  Warning: LLM unavailable, skipping classification for ${path.relative(user_base, file_path)}\n`
+          )
+        }
+        if (options.output_path) {
+          await append_jsonl(options.output_path, result)
+        }
+        continue
+      }
+
       results.push(result)
       summary[result.classification]++
 
@@ -736,6 +753,20 @@ async function main() {
         include_raw_data: options.include_raw_data,
         timeline_llm: options.timeline_llm
       })
+
+      if (result.method === 'llm_unavailable') {
+        summary.llm_unavailable++
+        if (options.show_progress) {
+          process.stderr.write(
+            `  Warning: LLM unavailable, skipping classification for thread ${uuid}\n`
+          )
+        }
+        if (options.output_path) {
+          await append_jsonl(options.output_path, result)
+        }
+        continue
+      }
+
       results.push(result)
       summary[result.classification]++
 
@@ -770,6 +801,7 @@ async function main() {
       public: summary.public,
       acquaintance: summary.acquaintance,
       private: summary.private,
+      llm_unavailable: summary.llm_unavailable,
       errors: summary.errors
     })
   }
@@ -807,6 +839,7 @@ async function main() {
             public: summary.public,
             acquaintance: summary.acquaintance,
             private: summary.private,
+            llm_unavailable: summary.llm_unavailable,
             errors: summary.errors
           },
           results,
@@ -828,6 +861,9 @@ async function main() {
     console.log(`Public:       ${summary.public}`)
     console.log(`Acquaintance: ${summary.acquaintance}`)
     console.log(`Private:      ${summary.private}`)
+    if (summary.llm_unavailable > 0) {
+      console.log(`LLM N/A:      ${summary.llm_unavailable}`)
+    }
     console.log(`Errors:       ${summary.errors}`)
 
     if (results.length > 0) {

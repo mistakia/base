@@ -163,12 +163,21 @@ function classify_from_regex(findings) {
   const has_personal_property = findings.some(
     (f) => f.category === 'personal_property'
   )
+  const has_personal_locations = findings.some(
+    (f) => f.category === 'personal_locations'
+  )
 
-  if (has_secrets || has_pii || has_financial || has_personal_property) {
+  if (
+    has_secrets ||
+    has_pii ||
+    has_financial ||
+    has_personal_property ||
+    has_personal_locations
+  ) {
     return {
       classification: 'private',
       confidence: 0.7,
-      reasoning: `Regex found ${has_secrets ? 'secrets' : ''}${has_pii ? ' PII' : ''}${has_financial ? ' financial data' : ''}${has_personal_property ? ' personal property' : ''} patterns.`
+      reasoning: `Regex found ${has_secrets ? 'secrets' : ''}${has_pii ? ' PII' : ''}${has_financial ? ' financial data' : ''}${has_personal_property ? ' personal property' : ''}${has_personal_locations ? ' personal locations' : ''} patterns.`
     }
   }
 
@@ -237,15 +246,20 @@ function apply_regex_floor(result, regex_findings) {
   const has_personal_property = regex_findings.some(
     (f) => f.category === 'personal_property'
   )
+  const has_personal_locations = regex_findings.some(
+    (f) => f.category === 'personal_locations'
+  )
 
   if (
-    (has_personal_property || has_personal_names) &&
+    (has_personal_property || has_personal_names || has_personal_locations) &&
     result.classification !== 'private'
   ) {
     const original = result.classification
     const trigger_category = has_personal_property
       ? 'personal_property'
-      : 'personal_names'
+      : has_personal_locations
+        ? 'personal_locations'
+        : 'personal_names'
     result.classification = 'private'
     result.reasoning = `${result.reasoning} [Regex floor: ${original} overridden to private due to curated ${trigger_category} pattern match]`
     result.regex_floor_applied = true
@@ -307,18 +321,17 @@ async function analyze_single_chunk({
     }
   }
 
-  log('LLM output could not be parsed, falling back to regex classification')
-  const regex_classification = classify_from_regex(regex_findings)
+  log('LLM output could not be parsed, marking as llm_unavailable')
   return {
     file_path,
     file_type: scan_result.file_type,
     lines_scanned: scan_result.lines_scanned,
     regex_findings,
     llm_analysis: null,
-    classification: regex_classification.classification,
-    confidence: regex_classification.confidence,
-    reasoning: `${regex_classification.reasoning} (LLM output unparseable)`,
-    method: 'regex_fallback',
+    classification: null,
+    confidence: 0,
+    reasoning: 'LLM output could not be parsed as valid JSON',
+    method: 'llm_unavailable',
     warning: 'LLM output could not be parsed as valid JSON'
   }
 }
@@ -412,8 +425,8 @@ export async function analyze_content({
         model,
         timeout_ms
       })
-      // Skip floor for regex_fallback — classify_from_regex already
-      // handles these categories when LLM output is unparseable
+      // Skip floor for llm_unavailable — classification is null when
+      // LLM output is unparseable, so there is nothing to floor
       if (single_result.method === 'llm') {
         apply_regex_floor(single_result, scan_result.findings)
       }
@@ -464,18 +477,17 @@ export async function analyze_content({
     }
 
     if (chunk_results.length === 0) {
-      log('All chunks failed, falling back to regex classification')
-      const regex_classification = classify_from_regex(scan_result.findings)
+      log('All chunks failed, marking as llm_unavailable')
       return {
         file_path,
         file_type: scan_result.file_type,
         lines_scanned: scan_result.lines_scanned,
         regex_findings: scan_result.findings,
         llm_analysis: null,
-        classification: regex_classification.classification,
-        confidence: regex_classification.confidence,
-        reasoning: `${regex_classification.reasoning} (all LLM chunks failed)`,
-        method: 'regex_fallback',
+        classification: null,
+        confidence: 0,
+        reasoning: 'All LLM chunks failed analysis',
+        method: 'llm_unavailable',
         warning: `All ${chunks.length} chunks failed LLM analysis`
       }
     }
@@ -513,19 +525,18 @@ export async function analyze_content({
     apply_regex_floor(chunked_result, scan_result.findings)
     return chunked_result
   } catch (error) {
-    // Graceful degradation - Ollama unreachable or error
+    // Ollama unreachable - do not classify without LLM
     log(`LLM analysis failed: ${error.message}`)
-    const regex_classification = classify_from_regex(scan_result.findings)
     return {
       file_path,
       file_type: scan_result.file_type,
       lines_scanned: scan_result.lines_scanned,
       regex_findings: scan_result.findings,
       llm_analysis: null,
-      classification: regex_classification.classification,
-      confidence: regex_classification.confidence,
-      reasoning: `${regex_classification.reasoning} (LLM unavailable)`,
-      method: 'regex_fallback',
+      classification: null,
+      confidence: 0,
+      reasoning: `Ollama unavailable: ${error.message}`,
+      method: 'llm_unavailable',
       warning: `Ollama unavailable: ${error.message}`
     }
   }
@@ -607,6 +618,32 @@ export async function analyze_thread({
       reasoning: 'No files could be analyzed. Defaulting to private.',
       method: 'default',
       file_results: []
+    }
+  }
+
+  // If any file result has llm_unavailable, propagate it for the thread
+  const has_llm_unavailable = results.some(
+    (r) => r.method === 'llm_unavailable'
+  )
+  if (has_llm_unavailable) {
+    const total_findings = results.reduce(
+      (sum, r) => sum + (r.regex_findings?.length || 0),
+      0
+    )
+    return {
+      thread_dir,
+      classification: null,
+      confidence: 0,
+      reasoning: `LLM unavailable for one or more files in thread`,
+      method: 'llm_unavailable',
+      total_regex_findings: total_findings,
+      file_results: results.map((r) => ({
+        file_path: r.file_path,
+        classification: r.classification,
+        method: r.method,
+        regex_finding_count: r.regex_findings?.length || 0,
+        warning: r.warning || null
+      }))
     }
   }
 
