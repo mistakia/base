@@ -145,7 +145,37 @@ check_git_state() {
     git_dir=$(git -C "$dir" rev-parse --git-dir 2>/dev/null) || return 1
 
     if [ -f "$git_dir/MERGE_HEAD" ]; then
-        log_error "$dir: merge in progress, skipping"
+        # Check if merge is fully resolved (no unmerged files) -- can be committed
+        local merge_unmerged
+        merge_unmerged=$(git -C "$dir" ls-files -u 2>/dev/null)
+        if [ -z "$merge_unmerged" ]; then
+            log "$dir: stale merge in progress (fully resolved), committing..."
+            if GIT_EDITOR=true git -C "$dir" commit --no-edit 2>/dev/null; then
+                log "$dir: recovered stale merge via commit"
+                return 0
+            fi
+        fi
+        # Merge has unresolved conflicts or commit failed -- check age for abort
+        local merge_mtime
+        if stat -f %m "$git_dir/MERGE_HEAD" >/dev/null 2>&1; then
+            merge_mtime=$(stat -f %m "$git_dir/MERGE_HEAD")
+        else
+            merge_mtime=$(stat -c %Y "$git_dir/MERGE_HEAD")
+        fi
+        local now
+        now=$(date +%s)
+        local merge_age_minutes=$(( (now - merge_mtime) / 60 ))
+        if [ $merge_age_minutes -ge $STALE_REBASE_MINUTES ]; then
+            log "$dir: stale merge (${merge_age_minutes}m old), aborting..."
+            if git -C "$dir" merge --abort 2>/dev/null; then
+                log "$dir: recovered from stale merge via abort"
+                return 0
+            fi
+            log_error "$dir: merge --abort failed for stale merge"
+            discord_notify_failure "$(basename "$dir")" "stale merge recovery failed"
+            return 1
+        fi
+        log_error "$dir: merge in progress (${merge_age_minutes}m old), skipping"
         return 1
     fi
 
@@ -376,11 +406,27 @@ sync_repo() {
                 local unmerged
                 unmerged=$(git -C "$dir" ls-files -u 2>/dev/null)
                 if [ -z "$unmerged" ]; then
-                    git -C "$dir" merge --abort 2>/dev/null || true
-                    log_error "$repo_name: merge failed (unknown error)"
-                    discord_notify_failure "$repo_name" "merge failed"
-                    log_telemetry "$repo_name" "merge_failed" "no_unmerged"
-                    return 1
+                    # No unmerged files -- merge resolved cleanly but needs committing
+                    # (e.g., dirty submodule pointers caused non-zero exit from git merge)
+                    if [ -f "$(git -C "$dir" rev-parse --git-dir)/MERGE_HEAD" ]; then
+                        log "$repo_name: merge resolved cleanly, committing..."
+                        if GIT_EDITOR=true git -C "$dir" commit --no-edit 2>/dev/null; then
+                            log "$repo_name: merge committed"
+                            log_telemetry "$repo_name" "sync" "diverged:merge_commit_recovery"
+                        else
+                            git -C "$dir" merge --abort 2>/dev/null || true
+                            log_error "$repo_name: merge commit failed after clean resolution"
+                            discord_notify_failure "$repo_name" "merge commit failed"
+                            log_telemetry "$repo_name" "merge_failed" "commit_recovery_failed"
+                            return 1
+                        fi
+                    else
+                        git -C "$dir" merge --abort 2>/dev/null || true
+                        log_error "$repo_name: merge failed (unknown error, no MERGE_HEAD)"
+                        discord_notify_failure "$repo_name" "merge failed"
+                        log_telemetry "$repo_name" "merge_failed" "no_unmerged"
+                        return 1
+                    fi
                 fi
                 # Check if ALL conflicts are submodule pointers (mode 160000)
                 local has_file_conflict
