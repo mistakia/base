@@ -48,6 +48,7 @@ import * as extension_command from './base/extension.mjs'
 import * as skill_command from './base/skill.mjs'
 import * as workflow_command from './base/workflow.mjs'
 import * as job_command from './base/job.mjs'
+import * as crontab_command from './base/crontab.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const load_extension_commands = async (parser) => {
@@ -99,6 +100,7 @@ const main = async () => {
     .command(skill_command)
     .command(workflow_command)
     .command(job_command)
+    .command(crontab_command)
     .command(init_command)
 
   await load_extension_commands(parser)
