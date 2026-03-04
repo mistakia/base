@@ -267,6 +267,7 @@ export const report_job = async ({
         reason,
         duration_ms,
         exit_code,
+        schedule: job.schedule,
         discord_webhook_url: config.job_tracker?.discord_webhook_url
       })
     } catch (error) {

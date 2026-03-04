@@ -25,19 +25,27 @@ export const notify_job_failure = async ({
   reason,
   duration_ms,
   exit_code,
+  schedule,
   discord_webhook_url
 }) => {
   if (!discord_webhook_url) {
     return
   }
 
-  const title = name ? `Job Failed: ${name}` : `Job Failed: ${job_id}`
+  const display_name = name && name !== job_id ? name : null
+  const title = display_name
+    ? `Job Failed: ${display_name}`
+    : `Job Failed: ${job_id}`
 
   const fields = [
     { name: 'Source', value: source || 'unknown', inline: true },
     { name: 'Project', value: project || 'unknown', inline: true },
     { name: 'Server', value: server || 'unknown', inline: true }
   ]
+
+  if (schedule) {
+    fields.push({ name: 'Schedule', value: schedule, inline: true })
+  }
 
   if (duration_ms != null) {
     const duration_str = duration_ms >= 60000
@@ -52,7 +60,7 @@ export const notify_job_failure = async ({
 
   fields.push({ name: 'Reason', value: reason || 'No reason provided' })
 
-  if (name) {
+  if (display_name) {
     fields.push({ name: 'Job ID', value: job_id, inline: false })
   }
 
@@ -96,6 +104,7 @@ export const notify_job_failure = async ({
  */
 export const notify_missed_job = async ({
   job_id,
+  name,
   source,
   project,
   schedule,
@@ -106,20 +115,28 @@ export const notify_missed_job = async ({
     return
   }
 
+  const display_name = name && name !== job_id ? name : null
+  const title = display_name
+    ? `Missed Execution: ${display_name}`
+    : `Missed Execution: ${job_id}`
+
+  const fields = [
+    { name: 'Source', value: source || 'unknown', inline: true },
+    { name: 'Project', value: project || 'unknown', inline: true },
+    { name: 'Schedule', value: schedule || 'unknown', inline: true },
+    { name: 'Last Run', value: last_execution_timestamp || 'Never' }
+  ]
+
+  if (display_name) {
+    fields.push({ name: 'Job ID', value: job_id, inline: false })
+  }
+
   const payload = {
     embeds: [
       {
-        title: `Missed Execution: ${job_id}`,
+        title,
         color: 16776960,
-        fields: [
-          { name: 'Source', value: source || 'unknown', inline: true },
-          { name: 'Project', value: project || 'unknown', inline: true },
-          { name: 'Schedule', value: schedule || 'unknown', inline: true },
-          {
-            name: 'Last Run',
-            value: last_execution_timestamp || 'Never'
-          }
-        ],
+        fields,
         timestamp: new Date().toISOString()
       }
     ]

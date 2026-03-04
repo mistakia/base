@@ -147,6 +147,7 @@ export const check_missed_jobs = async () => {
     try {
       await notify_missed_job({
         job_id: job.job_id,
+        name: job.name,
         source: job.source,
         project: job.project,
         schedule: job.schedule,
