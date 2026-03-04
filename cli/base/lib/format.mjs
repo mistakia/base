@@ -203,6 +203,73 @@ export function output_results(
 }
 
 /**
+ * Format a duration in milliseconds to a human-readable relative string
+ *
+ * @param {string|Date} timestamp - ISO timestamp or Date
+ * @returns {string} Relative time string (e.g., "2h ago", "3d ago")
+ */
+export function format_relative_time(timestamp) {
+  if (!timestamp) return '-'
+  const now = Date.now()
+  const then = new Date(timestamp).getTime()
+  const diff_ms = now - then
+  if (diff_ms < 0) return 'future'
+
+  const seconds = Math.floor(diff_ms / 1000)
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
+
+/**
+ * Format job for output
+ *
+ * @param {Object} job - Job object
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.verbose - Multi-line output
+ * @returns {string} Formatted output
+ */
+export function format_job(job, { verbose = false } = {}) {
+  const last_ok = job.last_execution?.success
+  const status = job.last_execution ? (last_ok ? 'OK' : 'FAIL') : 'NEW'
+  const name = job.name || job.job_id
+  const schedule = job.schedule || '-'
+  const last_run = format_relative_time(job.last_execution?.timestamp)
+  const total = job.stats?.total_runs ?? 0
+  const fails = job.stats?.failure_count ?? 0
+
+  if (verbose) {
+    const lines = [`[${status}] ${name}`]
+    if (job.name && job.name !== job.job_id) {
+      lines.push(`  ID: ${job.job_id}`)
+    }
+    lines.push(`  Source: ${job.source}`)
+    if (job.schedule) {
+      lines.push(`  Schedule: ${schedule} (${job.schedule_type})`)
+    }
+    lines.push(`  Total runs: ${total}`)
+    lines.push(`  Failures: ${fails}`)
+    if (job.last_execution) {
+      lines.push(`  Last run: ${last_run} (${job.last_execution.timestamp})`)
+      lines.push(`  Duration: ${job.last_execution.duration_ms}ms`)
+    }
+    if (job.stats?.last_failure) {
+      lines.push(`  Last failure: ${format_relative_time(job.stats.last_failure)}`)
+    }
+    return lines.join('\n')
+  }
+
+  // Tab-separated: status, name, schedule, last_run, total, fails
+  return [status, name, schedule, last_run, total, fails].join('\t')
+}
+
+/**
  * Truncate text to a max length with ellipsis
  *
  * @param {string} text - Text to truncate
