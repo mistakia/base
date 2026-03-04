@@ -7,35 +7,61 @@ const log = debug('jobs:discord')
  *
  * @param {Object} params
  * @param {string} params.job_id - Job identifier
+ * @param {string} params.name - Job name / schedule title
  * @param {string} params.source - 'internal' or 'external'
  * @param {string} params.project - Project name
  * @param {string} params.server - Server hostname
  * @param {string} params.reason - Failure reason
+ * @param {number} [params.duration_ms] - Execution duration in milliseconds
+ * @param {number} [params.exit_code] - Process exit code
  * @param {string} params.discord_webhook_url - Discord webhook URL
  */
 export const notify_job_failure = async ({
   job_id,
+  name,
   source,
   project,
   server,
   reason,
+  duration_ms,
+  exit_code,
   discord_webhook_url
 }) => {
   if (!discord_webhook_url) {
     return
   }
 
+  const title = name ? `Job Failed: ${name}` : `Job Failed: ${job_id}`
+
+  const fields = [
+    { name: 'Source', value: source || 'unknown', inline: true },
+    { name: 'Project', value: project || 'unknown', inline: true },
+    { name: 'Server', value: server || 'unknown', inline: true }
+  ]
+
+  if (duration_ms != null) {
+    const duration_str = duration_ms >= 60000
+      ? `${(duration_ms / 60000).toFixed(1)}m`
+      : `${(duration_ms / 1000).toFixed(1)}s`
+    fields.push({ name: 'Duration', value: duration_str, inline: true })
+  }
+
+  if (exit_code != null) {
+    fields.push({ name: 'Exit Code', value: String(exit_code), inline: true })
+  }
+
+  fields.push({ name: 'Reason', value: reason || 'No reason provided' })
+
+  if (name) {
+    fields.push({ name: 'Job ID', value: job_id, inline: false })
+  }
+
   const payload = {
     embeds: [
       {
-        title: `Job Failed: ${job_id}`,
+        title,
         color: 15548997,
-        fields: [
-          { name: 'Source', value: source || 'unknown', inline: true },
-          { name: 'Project', value: project || 'unknown', inline: true },
-          { name: 'Server', value: server || 'unknown', inline: true },
-          { name: 'Reason', value: reason || 'No reason provided' }
-        ],
+        fields,
         timestamp: new Date().toISOString()
       }
     ]

@@ -103,9 +103,19 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
   try {
     const { report_job } = await import('#libs-server/jobs/report-job.mjs')
 
-    const reason_text = success
-      ? null
-      : (result?.stderr || error?.message || null)
+    let reason_text = null
+    if (!success) {
+      if (result?.stderr) {
+        reason_text = result.stderr
+      } else if (error?.message) {
+        reason_text = error.message
+      } else if (result?.timed_out) {
+        reason_text = `Timed out after ${Math.round((result.duration_ms || 0) / 1000)}s`
+      } else if (result?.exit_code != null) {
+        const signal_info = result.signal ? ` (signal: ${result.signal})` : ''
+        reason_text = `Exit code ${result.exit_code}${signal_info} — no stderr output`
+      }
+    }
 
     await report_job({
       job_id: `internal-${metadata.schedule_entity_id}`,

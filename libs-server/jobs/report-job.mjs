@@ -260,10 +260,13 @@ export const report_job = async ({
     try {
       await notify_job_failure({
         job_id,
+        name: job.name,
         source: job.source,
         project: job.project,
         server: job.server,
         reason,
+        duration_ms,
+        exit_code,
         discord_webhook_url: config.job_tracker?.discord_webhook_url
       })
     } catch (error) {
