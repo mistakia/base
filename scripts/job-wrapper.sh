@@ -51,8 +51,12 @@ else
   # Capture last 500 chars of stderr
   stderr_content=$(tail -c 500 "$stderr_file" 2>/dev/null || echo "")
   if [ -n "$stderr_content" ]; then
-    # Escape for JSON
-    reason=$(printf '%s' "$stderr_content" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || echo '""')
+    # Escape for JSON using python3, with sed fallback
+    reason=$(printf '%s' "$stderr_content" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null)
+    if [ -z "$reason" ]; then
+      escaped=$(printf '%s' "$stderr_content" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+      reason="\"${escaped}\""
+    fi
   else
     reason="\"Exit code ${exit_code} — no stderr output\""
   fi

@@ -111,9 +111,13 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
         reason_text = error.message
       } else if (result?.timed_out) {
         reason_text = `Timed out after ${Math.round((result.duration_ms || 0) / 1000)}s`
-      } else if (result?.exit_code != null) {
+      } else if (result?.stdout) {
+        reason_text = result.stdout
+      }
+
+      if (!reason_text && result?.exit_code != null) {
         const signal_info = result.signal ? ` (signal: ${result.signal})` : ''
-        reason_text = `Exit code ${result.exit_code}${signal_info} — no stderr output`
+        reason_text = `Exit code ${result.exit_code}${signal_info} — no output`
       }
     }
 
