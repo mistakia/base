@@ -262,6 +262,8 @@ async function handle_thread_list_by_relation({
     thread_id: thread.thread_id,
     title: thread.title,
     thread_state: thread.thread_state,
+    archived_at: thread.archived_at || null,
+    archive_reason: thread.archive_reason || null,
     created_at: thread.created_at,
     updated_at: thread.updated_at,
     relation_type: thread.relation_type,

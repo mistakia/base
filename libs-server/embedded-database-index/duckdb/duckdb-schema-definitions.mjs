@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS threads (
   file_references TEXT,
   directory_references TEXT,
   public_read BOOLEAN,
-  visibility_analyzed_at TIMESTAMP
+  visibility_analyzed_at TIMESTAMP,
+  archived_at TIMESTAMP,
+  archive_reason VARCHAR
 )
 `
 

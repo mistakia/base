@@ -51,6 +51,8 @@ export function normalize_duckdb_thread(thread, models_data) {
 
     // State and status
     thread_state: thread.thread_state || 'unknown',
+    archived_at: thread.archived_at || null,
+    archive_reason: thread.archive_reason || null,
 
     // Timestamps
     created_at: thread.created_at,

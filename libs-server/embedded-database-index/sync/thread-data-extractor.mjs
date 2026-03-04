@@ -243,7 +243,9 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     file_references,
     directory_references,
     public_read: metadata.public_read != null ? metadata.public_read : null,
-    visibility_analyzed_at: metadata.visibility_analyzed_at || null
+    visibility_analyzed_at: metadata.visibility_analyzed_at || null,
+    archived_at: metadata.archived_at || null,
+    archive_reason: metadata.archive_reason || null
   }
 }
 
