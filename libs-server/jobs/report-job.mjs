@@ -191,7 +191,9 @@ export const report_job = async ({
   server,
   schedule,
   schedule_type,
-  schedule_entity_id
+  schedule_entity_id,
+  schedule_entity_uri,
+  command
 }) => {
   const now = new Date().toISOString()
 
@@ -268,6 +270,8 @@ export const report_job = async ({
         duration_ms,
         exit_code,
         schedule: job.schedule,
+        schedule_entity_uri,
+        command,
         discord_webhook_url: config.job_tracker?.discord_webhook_url
       })
     } catch (error) {

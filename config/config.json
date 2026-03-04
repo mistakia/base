@@ -96,6 +96,11 @@
     "discovery_paths": []
   },
   "machine_registry": {},
+  "discord": {
+    "user_api_token": "",
+    "channels": {},
+    "server_id": ""
+  },
   "cli_queue": {
     "tag_limits": {
       "default": { "max_concurrent": 10 }

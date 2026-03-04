@@ -26,6 +26,8 @@ export const notify_job_failure = async ({
   duration_ms,
   exit_code,
   schedule,
+  schedule_entity_uri,
+  command,
   discord_webhook_url
 }) => {
   if (!discord_webhook_url) {
@@ -56,6 +58,14 @@ export const notify_job_failure = async ({
 
   if (exit_code != null) {
     fields.push({ name: 'Exit Code', value: String(exit_code), inline: true })
+  }
+
+  if (schedule_entity_uri) {
+    fields.push({ name: 'Entity', value: schedule_entity_uri, inline: true })
+  }
+
+  if (command) {
+    fields.push({ name: 'Command', value: command.slice(0, 200), inline: false })
   }
 
   fields.push({ name: 'Reason', value: reason || 'No reason provided' })
