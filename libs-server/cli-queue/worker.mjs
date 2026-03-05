@@ -117,7 +117,15 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
 
       if (!reason_text && result?.exit_code != null) {
         const signal_info = result.signal ? ` (signal: ${result.signal})` : ''
-        reason_text = `Exit code ${result.exit_code}${signal_info} — no output`
+        const stdout_tail = result?.stdout?.trim()?.slice(-300)
+        reason_text = stdout_tail
+          ? `Exit code ${result.exit_code}${signal_info}\n\nOutput (last 300 chars):\n${stdout_tail}`
+          : `Exit code ${result.exit_code}${signal_info} — no output captured`
+      } else if (!reason_text) {
+        const stdout_tail = result?.stdout?.trim()?.slice(-200)
+        reason_text = stdout_tail
+          ? `Unknown failure\n\nOutput:\n${stdout_tail}`
+          : 'Unknown failure — no output or exit code captured'
       }
     }
 

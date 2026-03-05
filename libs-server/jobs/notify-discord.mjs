@@ -68,7 +68,8 @@ export const notify_job_failure = async ({
     fields.push({ name: 'Command', value: command.slice(0, 200), inline: false })
   }
 
-  fields.push({ name: 'Reason', value: reason || 'No reason provided' })
+  const reason_display = reason?.trim() || 'No reason provided — check service logs with: pm2 logs cli-queue-worker'
+  fields.push({ name: 'Reason', value: reason_display.slice(0, 1024) })
 
   if (display_name) {
     fields.push({ name: 'Job ID', value: job_id, inline: false })
