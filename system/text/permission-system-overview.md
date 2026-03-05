@@ -65,7 +65,7 @@ Thread metadata can include a `public_read: true` field:
 {
   "thread_id": "example-thread-id",
   "user_public_key": "owner-public-key",
-  "session_provider": "base",
+  "session_provider": "claude",
   "thread_state": "active",
   "public_read": true,
   "created_at": "2025-01-20T00:00:00.000Z",

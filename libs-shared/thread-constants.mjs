@@ -15,25 +15,6 @@ export const ARCHIVE_REASON = {
 }
 
 /**
- * Default tools available to threads
- */
-export const DEFAULT_THREAD_TOOLS = [
-  'task_get',
-  'list_tasks',
-  'task_create',
-  'task_update',
-  'task_delete',
-  'file_read',
-  'file_list',
-  'file_write',
-  'file_delete',
-  'file_diff',
-  'file_search',
-  'message_notify_creator',
-  'message_ask_creator'
-]
-
-/**
  * Validates if a thread state is valid
  *
  * @param {string} thread_state - The state to validate

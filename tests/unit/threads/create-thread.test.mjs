@@ -146,7 +146,7 @@ describe('create_thread', () => {
 
     expect(metadata.tools).to.be.an('array')
     expect(metadata.tools).to.include.members(['web_search', 'calculator'])
-    expect(metadata.tools).to.have.length(6) // 2 custom + 4 thread tools
+    expect(metadata.tools).to.have.length(2)
   })
 
   it('should create a thread with archived state', async () => {

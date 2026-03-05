@@ -11,7 +11,6 @@ import {
   workflow_exists_in_filesystem,
   get_workflow_tools
 } from '#libs-server/workflow/index.mjs'
-import { get_thread_tool_names } from './thread-tools.mjs'
 import { generate_thread_id_from_session } from './generate-thread-id-from-session.mjs'
 import {
   get_registered_directories,
@@ -19,8 +18,7 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
-const { THREAD_STATE, validate_thread_state, DEFAULT_THREAD_TOOLS } =
-  thread_constants
+const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:create')
 
 /**
@@ -171,8 +169,10 @@ export function build_thread_metadata({
     ...additional_fields
   }
 
-  // Set source (required by schema) - default to base provider
-  metadata.source = source || { provider: 'base' }
+  // Set source if provided
+  if (source) {
+    metadata.source = source
+  }
 
   // Add title and description if provided
   if (title) {
@@ -214,7 +214,7 @@ export default async function create_thread({
   thread_state = THREAD_STATE.ACTIVE,
   thread_main_request,
   prompt_properties = {},
-  tools = DEFAULT_THREAD_TOOLS,
+  tools = [],
   create_git_branches = false,
   create_memory_repository = false,
   source = null,
@@ -338,15 +338,9 @@ export default async function create_thread({
   // Generate timestamps
   const now = new Date().toISOString()
 
-  // Add thread-specific tools
-  const thread_tool_names = get_thread_tool_names()
-
   // Determine final tools list
-  // If workflow defines tools, use those + thread tools, otherwise use provided tools + thread tools
-  const final_tools =
-    workflow_tools.length > 0
-      ? [...workflow_tools, ...thread_tool_names]
-      : [...tools, ...thread_tool_names]
+  // If workflow defines tools, use those, otherwise use provided tools
+  const final_tools = workflow_tools.length > 0 ? workflow_tools : tools
 
   // Create metadata using shared builder
   const metadata = build_thread_metadata({
