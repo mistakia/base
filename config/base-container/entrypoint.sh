@@ -260,6 +260,7 @@ fi
 # Generate container context file for Claude Code system prompt
 MACHINE_NAME="${BASE_CONTAINER_MACHINE:-unknown}"
 CONTEXT_FILE="/tmp/container-context.txt"
+rm -f "$CONTEXT_FILE"
 cat > "$CONTEXT_FILE" << EOF
 ## Container Environment
 
