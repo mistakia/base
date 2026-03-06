@@ -14,6 +14,7 @@ import { clear_identity_cache } from '#libs-server/users/identity-loader.mjs'
  * @param {string} [user_data.email] - Email address
  * @param {Buffer} [user_data.user_private_key] - Private key (required)
  * @param {Array} [user_data.rules] - Permission rules
+ * @param {Array} [user_data.relations] - Relation strings (e.g., 'has_role [[user:role/acquaintance.md]]')
  * @param {Object} [user_data.permissions] - Capability flags (create_threads, global_write)
  * @returns {Object} User information including user_private_key
  * @throws {Error} If username or private key is not provided
@@ -26,6 +27,7 @@ export default async function create_user({
     { action: 'allow', pattern: 'user:**' },
     { action: 'allow', pattern: 'sys:**' }
   ],
+  relations = [],
   permissions = {}
 } = {}) {
   if (!username) {
@@ -69,6 +71,10 @@ export default async function create_user({
     username
   }
 
+  if (relations && relations.length > 0) {
+    frontmatter.relations = relations
+  }
+
   if (rules && rules.length > 0) {
     frontmatter.rules = rules
   }
@@ -89,6 +95,13 @@ export default async function create_user({
   yaml_lines.push(`created_at: '${now}'`)
   yaml_lines.push(`entity_id: ${frontmatter.entity_id}`)
   yaml_lines.push(`username: ${username}`)
+
+  if (relations && relations.length > 0) {
+    yaml_lines.push('relations:')
+    for (const relation of relations) {
+      yaml_lines.push(`  - ${relation}`)
+    }
+  }
 
   if (rules && rules.length > 0) {
     yaml_lines.push('rules:')
