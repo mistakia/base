@@ -7,7 +7,11 @@ export const id_field_keys = new Set([
   'import_cid',
   'user_public_key',
   'base_uri',
-  'thread_id'
+  'thread_id',
+  'auth_public_key',
+  'file_cid',
+  'database_table_id',
+  'job_id'
 ])
 
 export const link_field_keys = new Set([
@@ -16,7 +20,7 @@ export const link_field_keys = new Set([
   'permalink'
 ])
 
-export const dual_field_keys = new Set(['base_uri'])
+export const dual_field_keys = new Set(['base_uri', 'database_table_id'])
 
 export const resolve_field_type = (key, value) => {
   if (id_field_keys.has(key)) return 'id'

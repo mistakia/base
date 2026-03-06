@@ -181,6 +181,219 @@ export const entity_field_config = {
       'archived_at'
     ]
   },
+  'scheduled-command': {
+    always_visible: [
+      'command',
+      'schedule_type',
+      'schedule',
+      'enabled',
+      'timezone',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'working_directory',
+      'execution_mode',
+      'queue_tags',
+      'queue_priority',
+      'timeout_ms',
+      'run_on_machines',
+      'job_id',
+      'last_triggered_at',
+      'next_trigger_at',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  database: {
+    always_visible: [
+      'table_name',
+      'fields',
+      'storage_config',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'table_description',
+      'import_cli',
+      'import_schedule',
+      'views',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  database_item: {
+    always_visible: [
+      'database_table_id',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  database_view: {
+    always_visible: [
+      'view_name',
+      'table_name',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'view_description',
+      'table_state',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  person: {
+    always_visible: [
+      'first_name',
+      'last_name',
+      'alias',
+      'email',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'mobile_phone',
+      'website_url',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  organization: {
+    always_visible: [
+      'website_url',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  identity: {
+    always_visible: [
+      'username',
+      'permissions',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'auth_public_key',
+      'thread_config',
+      'rules',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  role: {
+    always_visible: [
+      'rules',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  digital_item: {
+    always_visible: [
+      'file_mime_type',
+      'file_uri',
+      'file_size',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'file_cid',
+      'text',
+      'html',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  extension: {
+    always_visible: [
+      'requires',
+      'optional',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
+  skill: {
+    always_visible: [
+      'extension',
+      'tags',
+      'created_at',
+      'updated_at'
+    ],
+    expandable: [
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink',
+      'public_read',
+      'archived_at'
+    ]
+  },
   default: {
     always_visible: ['status', 'priority', 'tags', 'created_at', 'updated_at'],
     expandable: [
