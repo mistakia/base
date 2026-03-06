@@ -4,15 +4,21 @@
  * Manage identity entities (user accounts)
  */
 
+import fs from 'fs/promises'
+import crypto from 'crypto'
+import path from 'path'
+
 import {
   load_all_identities,
   load_identity_by_username
 } from '#libs-server/users/identity-loader.mjs'
 import { resolve_user_rules } from '#libs-server/users/permission-resolver.mjs'
+import create_user from '#libs-server/users/create-user.mjs'
+import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'identity <command>'
-export const describe = 'Identity operations (list, get)'
+export const describe = 'Identity operations (list, get, create)'
 
 export const builder = (yargs) =>
   yargs
@@ -43,7 +49,32 @@ export const builder = (yargs) =>
           }),
       handle_get
     )
-    .demandCommand(1, 'Specify a subcommand: list or get')
+    .command(
+      'create',
+      'Create a new identity with Blake2b Ed25519 key pair',
+      (yargs) =>
+        yargs
+          .option('username', {
+            describe: 'Username for the new identity',
+            type: 'string',
+            demandOption: true
+          })
+          .option('role', {
+            describe: 'Role name (e.g., "acquaintance", maps to user:role/<name>.md)',
+            type: 'string'
+          })
+          .option('rules', {
+            describe: 'JSON array of permission rules',
+            type: 'string'
+          })
+          .option('dry-run', {
+            describe: 'Preview without writing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_create
+    )
+    .demandCommand(1, 'Specify a subcommand: list, get, or create')
 
 export const handler = () => {}
 
@@ -151,6 +182,107 @@ async function handle_get(argv) {
           console.log(`    - ${rule.action}: ${rule.pattern}${reason}${source}`)
         }
       }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_create(argv) {
+  let exit_code = 0
+  try {
+    // Check for duplicate username
+    const existing = await load_identity_by_username({
+      username: argv.username
+    })
+    if (existing) {
+      console.error(`Error: Identity already exists for username: ${argv.username}`)
+      flush_and_exit(1)
+      return
+    }
+
+    // Build relations from --role
+    const relations = []
+    if (argv.role) {
+      const role_uri = `user:role/${argv.role}.md`
+      const user_base_dir = get_user_base_directory()
+      const role_path = path.join(user_base_dir, 'role', `${argv.role}.md`)
+      try {
+        await fs.access(role_path)
+      } catch {
+        console.error(`Error: Role file not found: ${role_path}`)
+        flush_and_exit(1)
+        return
+      }
+      relations.push(`has_role [[${role_uri}]]`)
+    }
+
+    // Parse --rules JSON
+    let rules
+    if (argv.rules) {
+      try {
+        rules = JSON.parse(argv.rules)
+        if (!Array.isArray(rules)) {
+          throw new Error('Rules must be a JSON array')
+        }
+      } catch (error) {
+        console.error(`Error: Invalid --rules JSON: ${error.message}`)
+        flush_and_exit(1)
+        return
+      }
+    }
+
+    // Generate private key
+    const user_private_key = crypto.randomBytes(32)
+
+    if (argv['dry-run']) {
+      console.log('Dry run - would create identity:')
+      console.log(`  Username: ${argv.username}`)
+      if (argv.role) {
+        console.log(`  Role: ${argv.role}`)
+      }
+      if (rules) {
+        console.log(`  Rules: ${JSON.stringify(rules)}`)
+      }
+      console.log(`  File: identity/${argv.username}.md`)
+      flush_and_exit(0)
+      return
+    }
+
+    const result = await create_user({
+      username: argv.username,
+      user_private_key,
+      relations,
+      ...(rules ? { rules } : {})
+    })
+
+    const file_path = `identity/${argv.username}.md`
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          {
+            username: result.username,
+            public_key: result.user_public_key,
+            private_key: user_private_key.toString('hex'),
+            role: argv.role || null,
+            file: file_path
+          },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Identity created:`)
+      console.log(`  Username:    ${result.username}`)
+      console.log(`  Public Key:  ${result.user_public_key}`)
+      console.log(`  Private Key: ${user_private_key.toString('hex')}`)
+      if (argv.role) {
+        console.log(`  Role:        ${argv.role}`)
+      }
+      console.log(`  File:        ${file_path}`)
     }
   } catch (error) {
     console.error(`Error: ${error.message}`)
