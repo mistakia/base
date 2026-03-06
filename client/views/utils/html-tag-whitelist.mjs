@@ -30,6 +30,7 @@ export const html_tag_whitelist = new Set([
   'em',
   'b',
   'i',
+  's',
   'form',
   'input',
   'button',
