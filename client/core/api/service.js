@@ -55,7 +55,7 @@ export const api = {
     return { url, ...POST(params) }
   },
 
-  get_threads({ user_public_key, thread_state, limit, offset }) {
+  get_threads({ user_public_key, thread_state, limit = 50, offset }) {
     const params = { user_public_key, thread_state, limit, offset }
     const url = `${API_URL}/threads?${qs.stringify(params)}`
     return { url }

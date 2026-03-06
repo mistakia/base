@@ -300,10 +300,10 @@ router.get('/', async (req, res) => {
       .map((t) => t.trim())
       .filter((t) => t.length > 0)
     const tags = parsed_tags?.length > 0 ? parsed_tags : undefined
-    const limit = parseInt(req.query.limit) || 1000
+    const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
-    const include_timeline = req.query.include_timeline !== 'false'
+    const include_timeline = req.query.include_timeline === 'true'
 
     const is_public_request = !requesting_user_key
 
