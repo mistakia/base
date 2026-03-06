@@ -25,8 +25,8 @@ observations:
     [fix] Log files must be namespaced by project and date-slug to prevent collision across
     concurrent reviews
   - >-
-    [gap] Entity filename uses only date-slug, causing collision when multiple reviews share the
-    same project directory -- needs target-name in filename
+    [fix] Entity filenames now include target-name to prevent collision when multiple reviews share
+    the same project directory
 prompt_properties:
   - name: path
     type: string
@@ -71,6 +71,7 @@ user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349
 4. Determine `project` name:
    - Use the provided value, or default to the repository directory name (e.g., `base` for `/path/to/base`)
 5. Generate a date slug for entity naming: `YYYY-MM-DD` format using today's date
+6. Derive a `target-name` for entity filename namespacing: use the basename of the `path` directory (e.g., `cli` for `/path/to/cli`, `league` for `/path/to/league`). This prevents filename collision when multiple reviews share the same project directory.
 
 ### 1.2 Discover Review Guidelines
 
@@ -132,8 +133,8 @@ For each section, define:
 
 Use the `base entity create` CLI command (via Bash tool) to create the review task entity:
 
-- **Base URI**: `user:task/<project>/codebase-review-<date-slug>.md`
-- **Title**: `Codebase Review: <project> (<date-slug>)`
+- **Base URI**: `user:task/<project>/codebase-review-<target-name>-<date-slug>.md`
+- **Title**: `Codebase Review: <target-name> (<date-slug>)`
 - **Type**: `task`
 - **Status**: `In Progress`
 - **Description**: `Codebase review for <path>. Defines section decomposition and tracks review progress.`
@@ -146,7 +147,7 @@ The entity body should contain:
 **Target**: <path>
 **Scope**: <scope or "Full codebase">
 **Generated**: <ISO 8601 timestamp>
-**Findings**: user:task/<project>/codebase-review-findings-<date-slug>.md
+**Findings**: user:task/<project>/codebase-review-findings-<target-name>-<date-slug>.md
 
 ## Documentation
 
@@ -173,8 +174,8 @@ Record the absolute file path of the created review entity for use in Phase 4.
 
 Use the `base entity create` CLI command (via Bash tool) to create the findings task entity:
 
-- **Base URI**: `user:task/<project>/codebase-review-findings-<date-slug>.md`
-- **Title**: `Codebase Review Findings: <project> (<date-slug>)`
+- **Base URI**: `user:task/<project>/codebase-review-findings-<target-name>-<date-slug>.md`
+- **Title**: `Codebase Review Findings: <target-name> (<date-slug>)`
 - **Type**: `task`
 - **Status**: `In Progress`
 - **Description**: `Accumulated review findings for <path>. Issues organized by section with confidence scoring.`
@@ -187,7 +188,7 @@ The entity body should contain:
 **Target**: <path>
 **Scope**: <scope or "Full codebase">
 **Started**: <ISO 8601 timestamp>
-**Review**: user:task/<project>/codebase-review-<date-slug>.md
+**Review**: user:task/<project>/codebase-review-<target-name>-<date-slug>.md
 
 ---
 ```
@@ -207,7 +208,7 @@ Pass the absolute file path of the review entity (not the base URI):
 ```bash
 nohup env -u CLAUDECODE claude --print --dangerously-skip-permissions \
   "Run workflow [[sys:system/workflow/continue-review-codebase.md]] with review: <absolute path to review entity file>" \
-  > /tmp/review-<project>-<date-slug>-section-1.log 2>&1 &
+  > /tmp/review-<project>-<target-name>-<date-slug>-section-1.log 2>&1 &
 ```
 
 </instructions>

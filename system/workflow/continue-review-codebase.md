@@ -287,10 +287,10 @@ Re-read the review entity to check if unchecked sections remain.
 ```bash
 nohup env -u CLAUDECODE claude --print --dangerously-skip-permissions \
   "Run workflow [[sys:system/workflow/continue-review-codebase.md]] with review: <review entity file path>" \
-  > /tmp/review-<project>-<date-slug>-section-<N>.log 2>&1 &
+  > /tmp/review-<project>-<target-name>-<date-slug>-section-<N>.log 2>&1 &
 ```
 
-Where `<project>` and `<date-slug>` are extracted from the review entity filename (e.g., `codebase-review-2026-03-06.md` in `task/league/` yields `league` and `2026-03-06`), and `<N>` is the next section number. This prevents log file collisions when multiple codebase reviews run concurrently.
+Where `<project>` is the parent directory name, and `<target-name>` and `<date-slug>` are extracted from the review entity filename (e.g., `codebase-review-cli-2026-03-06.md` in `task/base/` yields `base`, `cli`, and `2026-03-06`), and `<N>` is the next section number. This prevents log file collisions when multiple codebase reviews run concurrently.
 
 ### 5.3 If All Sections Complete (Final Summary)
 
