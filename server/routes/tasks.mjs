@@ -132,7 +132,9 @@ router.get('/', async (req, res) => {
   try {
     const user_public_key = req.user?.user_public_key || null
     const is_public_request = !user_public_key
-    const { base_uri, archived, ...filter_params } = req.query
+    const { base_uri, archived, limit: limit_param, offset: offset_param, ...filter_params } = req.query
+    const limit = parseInt(limit_param) || 100
+    const offset = parseInt(offset_param) || 0
 
     // Set Vary header for all requests to ensure browsers cache authenticated
     // and unauthenticated responses separately
@@ -159,7 +161,9 @@ router.get('/', async (req, res) => {
       res,
       filter_params,
       archived,
-      user_public_key
+      user_public_key,
+      limit,
+      offset
     )
   } catch (error) {
     log(error)
@@ -297,19 +301,20 @@ function build_duckdb_filters_from_query(params) {
 async function handle_task_list_request_indexed(
   filter_params,
   archived,
-  user_public_key
+  user_public_key,
+  limit,
+  offset
 ) {
   const filters = build_duckdb_filters_from_query({
     ...filter_params,
     archived
   })
 
-  // Query from DuckDB with high limit (no pagination for GET endpoint)
   const tasks = await query_tasks_from_entities({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
-    limit: 10000,
-    offset: 0
+    limit,
+    offset
   })
 
   // Convert to API response format
@@ -369,7 +374,9 @@ async function handle_task_list_request(
   res,
   filter_params,
   archived,
-  user_public_key
+  user_public_key,
+  limit,
+  offset
 ) {
   const {
     status,
@@ -458,7 +465,9 @@ async function handle_task_list_request(
         const result = await handle_task_list_request_indexed(
           filter_params,
           archived,
-          user_public_key
+          user_public_key,
+          limit,
+          offset
         )
         return res.status(200).send(result)
       } catch (error) {
@@ -507,7 +516,10 @@ async function handle_task_list_request(
     user_public_key
   })
 
-  res.status(200).send({ tasks, tag_visibility })
+  // Apply pagination
+  const paginated_tasks = tasks.slice(offset, offset + limit)
+
+  res.status(200).send({ tasks: paginated_tasks, tag_visibility })
 }
 
 // PATCH /api/tasks - Update task status and/or priority

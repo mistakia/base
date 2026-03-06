@@ -26,8 +26,8 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
-  get_tasks(params = {}) {
-    const url = `${API_URL}/tasks`
+  get_tasks({ limit = 100, offset = 0, ...params } = {}) {
+    const url = `${API_URL}/tasks?${qs.stringify({ limit, offset, ...params })}`
     return { url }
   },
   get_available_tags() {

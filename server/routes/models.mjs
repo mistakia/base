@@ -42,6 +42,7 @@ router.get('/', async (req, res) => {
     }
 
     log(`Returning ${response.metadata.model_count} models from cache`)
+    res.set('Cache-Control', 'public, max-age=3600')
     res.json(response)
   } catch (error) {
     handle_errors(res, error, 'getting models data')

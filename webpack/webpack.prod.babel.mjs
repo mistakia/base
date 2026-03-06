@@ -1,5 +1,6 @@
 // Important modules this config uses
 import path from 'path'
+import zlib from 'zlib'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import webpack from 'webpack'
 import CompressionPlugin from 'compression-webpack-plugin'
@@ -85,6 +86,19 @@ export default base({
       new CompressionPlugin({
         algorithm: 'gzip',
         test: /\.js$|\.css$|\.html$/,
+        threshold: 10240,
+        minRatio: 0.8
+      }),
+
+      new CompressionPlugin({
+        algorithm: 'brotliCompress',
+        filename: '[path][base].br',
+        test: /\.(js|css|html)$/,
+        compressionOptions: {
+          params: {
+            [zlib.constants.BROTLI_PARAM_QUALITY]: 11
+          }
+        },
         threshold: 10240,
         minRatio: 0.8
       }),
