@@ -255,6 +255,7 @@ ensure_thread_merge_drivers() {
 
 # Log a sync telemetry event to JSONL file.
 # Args: $1 = repo name, $2 = event type, $3 = details (optional, format varies by event)
+# Throttled events (dirty_skip) are only logged on state transitions to reduce volume.
 log_telemetry() {
     local repo="$1"
     local event="$2"
@@ -263,6 +264,28 @@ log_telemetry() {
     local ts hostname_val
     ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     hostname_val=$(hostname)
+
+    # Throttle dirty_skip: only log on state entry (first dirty_skip per repo)
+    # and on periodic intervals (every DIRTY_SKIP_LOG_INTERVAL_MINUTES)
+    if [ "$event" = "dirty_skip" ]; then
+        local throttle_marker="/tmp/sync-telemetry-dirty-${repo}.marker"
+        if [ -f "$throttle_marker" ]; then
+            local last_logged
+            last_logged=$(cat "$throttle_marker" 2>/dev/null) || return
+            local now
+            now=$(date +%s)
+            local elapsed_minutes=$(( (now - last_logged) / 60 ))
+            if [ $elapsed_minutes -lt ${DIRTY_SKIP_LOG_INTERVAL_MINUTES:-5} ]; then
+                return
+            fi
+        fi
+        date +%s > "$throttle_marker"
+    fi
+
+    # Clear dirty_skip throttle marker when repo transitions to a non-dirty state
+    if [ "$event" != "dirty_skip" ]; then
+        rm -f "/tmp/sync-telemetry-dirty-${repo}.marker"
+    fi
 
     mkdir -p "$(dirname "$telemetry_file")"
     if [ -n "$details" ]; then
