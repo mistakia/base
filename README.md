@@ -1,3 +1,17 @@
+---
+title: Base
+type: text
+description: >-
+  Human-in-the-loop LLM system built on file primitives with markdown entities, git version control,
+  and agent orchestration
+base_uri: user:repository/active/base/README.md
+created_at: '2026-03-06T19:51:48.678Z'
+entity_id: 3f9c752d-0a8d-4ea9-bf4f-619f3d2433b0
+public_read: true
+updated_at: '2026-03-06T19:51:48.678Z'
+user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
+---
+
 # Base
 
 A human-in-the-loop LLM system built on file primitives. All data is markdown files with YAML frontmatter in git.
