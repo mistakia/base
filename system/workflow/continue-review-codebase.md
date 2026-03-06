@@ -89,7 +89,7 @@ Compile for each agent:
 
 ## Phase 3: Parallel Agent Analysis
 
-Launch four agents in parallel using the Task tool. Each agent receives the section file contents, documentation paths, and focus areas.
+Launch four agents in parallel using the Agent tool. Each agent receives the section file contents, documentation paths, and focus areas.
 
 | Agent       | Model  | Purpose                                             |
 | ----------- | ------ | --------------------------------------------------- |
@@ -100,7 +100,7 @@ Launch four agents in parallel using the Task tool. Each agent receives the sect
 
 ### 3.1 Compliance Agent
 
-Use Task tool with `model: haiku` and `subagent_type: general-purpose`:
+Use Agent tool with `model: haiku` and `subagent_type: general-purpose`:
 
 ```
 Task: Check compliance with project documentation for section "<section name>"
@@ -128,7 +128,7 @@ Return findings as a list. Each finding must include:
 
 ### 3.2 Bug Scanner Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Scan for bugs in section "<section name>"
@@ -156,7 +156,7 @@ Return findings as a list. Each finding must include:
 
 ### 3.3 Performance Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Analyze performance of section "<section name>"
@@ -188,7 +188,7 @@ Return findings as a list. Each finding must include:
 
 ### 3.4 Simplicity Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Review section "<section name>" for simplification opportunities
@@ -273,14 +273,15 @@ Re-read the review entity to check if unchecked sections remain.
 
 ### 5.2 If More Sections Remain
 
-1. Run `/archive` to archive the current session
-2. Trigger the next section review. Run `claude` directly (this workflow already runs inside the container). Use `nohup` with background execution so the current session can exit without waiting.
+1. Trigger the next section review. Run `claude` directly (this workflow already runs inside the container). Use `nohup` with background execution so the current session can exit without waiting. Unset `CLAUDECODE` to allow the nested session to launch.
 
 ```bash
-nohup claude --print --dangerously-skip-permissions \
+nohup env -u CLAUDECODE claude --print --dangerously-skip-permissions \
   "Run workflow [[sys:system/workflow/continue-review-codebase.md]] with review: <review entity file path>" \
-  > /tmp/review-codebase-section-next.log 2>&1 &
+  > /tmp/review-<project>-<date-slug>-section-<N>.log 2>&1 &
 ```
+
+Where `<project>` and `<date-slug>` are extracted from the review entity filename (e.g., `codebase-review-2026-03-06.md` in `task/league/` yields `league` and `2026-03-06`), and `<N>` is the next section number. This prevents log file collisions when multiple codebase reviews run concurrently.
 
 ### 5.3 If All Sections Complete (Final Summary)
 
@@ -315,8 +316,6 @@ Append the final summary to the findings task entity:
 
 Update the review task entity status to `Completed` in the YAML frontmatter.
 Update the findings task entity status to `Completed` in the YAML frontmatter.
-
-Then run `/archive` to archive the final session.
 
 </instructions>
 

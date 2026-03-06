@@ -116,7 +116,7 @@ Document the discovered files for agent reference.
 
 ## Phase 2: Parallel Agent Analysis
 
-Launch four agents in parallel using the Task tool. Each agent receives:
+Launch four agents in parallel using the Agent tool. Each agent receives:
 
 - List of changed files
 - Relevant documentation paths from discovery phase
@@ -133,7 +133,7 @@ Launch four agents in parallel using the Task tool. Each agent receives:
 
 ### 2.1 Compliance Agent
 
-Use Task tool with `model: haiku` and `subagent_type: general-purpose`:
+Use Agent tool with `model: haiku` and `subagent_type: general-purpose`:
 
 ```
 Task: Check compliance with project documentation
@@ -159,7 +159,7 @@ Return findings with:
 
 ### 2.2 Bug Scanner Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Scan for obvious bugs in changed software
@@ -187,7 +187,7 @@ Return findings with:
 
 ### 2.3 Performance Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Analyze performance of changed software
@@ -219,7 +219,7 @@ Return findings with:
 
 ### 2.4 Simplicity Agent
 
-Use Task tool with `model: sonnet` and `subagent_type: general-purpose`:
+Use Agent tool with `model: sonnet` and `subagent_type: general-purpose`:
 
 ```
 Task: Review software for simplification opportunities

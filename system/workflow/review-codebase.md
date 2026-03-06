@@ -188,14 +188,14 @@ Run `/archive` to archive the current session thread.
 
 ### 4.2 Trigger First Section Review
 
-Execute the continuation command to start reviewing the first section. The command runs `claude` directly (not via `docker exec`) since this workflow is already running inside the container. Use `nohup` with background execution so the current session can exit without waiting for the child to complete.
+Execute the continuation command to start reviewing the first section. The command runs `claude` directly (not via `docker exec`) since this workflow is already running inside the container. Use `nohup` with background execution so the current session can exit without waiting for the child to complete. Unset `CLAUDECODE` to allow the nested session to launch.
 
 Pass the absolute file path of the review entity (not the base URI):
 
 ```bash
-nohup claude --print --dangerously-skip-permissions \
+nohup env -u CLAUDECODE claude --print --dangerously-skip-permissions \
   "Run workflow [[sys:system/workflow/continue-review-codebase.md]] with review: <absolute path to review entity file>" \
-  > /tmp/review-codebase-section-1.log 2>&1 &
+  > /tmp/review-<project>-<date-slug>-section-1.log 2>&1 &
 ```
 
 </instructions>
