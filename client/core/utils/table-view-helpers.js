@@ -81,7 +81,7 @@ export const build_table_props = ({
     can_fetch_more: total_rows_fetched < total_row_count,
     table_error,
     has_data: transformed_rows.length > 0,
-    is_loading: is_fetching,
+    is_loading: is_fetching && transformed_rows.length === 0,
     view_id
   }
 }

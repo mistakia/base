@@ -16,6 +16,7 @@ import {
 } from '@core/api/sagas'
 import { tasks_action_types, tasks_actions } from './actions'
 import { get_tasks_state } from './selectors'
+import { get_app } from '@core/app/selectors'
 
 export function* load_tasks({ payload }) {
   yield call(get_tasks, payload)
@@ -166,6 +167,8 @@ export function* handle_patch_task_failed({ payload }) {
 }
 
 export function* load_available_tags() {
+  const app = yield select(get_app)
+  if (!app.get('user_token')) return
   yield call(get_available_tags, {})
 }
 

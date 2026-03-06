@@ -217,7 +217,7 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
       return state.set('selected_task_table_view_id', payload.view_id)
 
     case tasks_action_types.GET_TASKS_TABLE_PENDING: {
-      const view_id_pending = payload.view_id || 'default'
+      const view_id_pending = payload.opts?.view_id || 'default'
       return state.updateIn(['task_table_views', view_id_pending], (view) =>
         on_table_pending({
           view,
@@ -248,7 +248,7 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
     }
 
     case tasks_action_types.GET_TASKS_TABLE_FAILED: {
-      const view_id_failed = payload.view_id || 'default'
+      const view_id_failed = payload.opts?.view_id || 'default'
       return state.updateIn(['task_table_views', view_id_failed], (view) =>
         on_table_failed({
           view,

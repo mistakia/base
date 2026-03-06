@@ -413,7 +413,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.set('selected_thread_table_view_id', payload.view_id)
 
     case threads_action_types.GET_THREADS_TABLE_PENDING: {
-      const view_id_pending = payload.view_id || 'default'
+      const view_id_pending = payload.opts?.view_id || 'default'
       return state.updateIn(['thread_table_views', view_id_pending], (view) =>
         on_table_pending({
           view,
@@ -444,7 +444,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
     }
 
     case threads_action_types.GET_THREADS_TABLE_FAILED: {
-      const view_id_failed = payload.view_id || 'default'
+      const view_id_failed = payload.opts?.view_id || 'default'
       return state.updateIn(['thread_table_views', view_id_failed], (view) =>
         on_table_failed({
           view,
