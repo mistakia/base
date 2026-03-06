@@ -1,4 +1,4 @@
-import http2 from 'node:http2'
+import https from 'https'
 import http from 'http'
 import fs, { promises as fsPromises } from 'fs'
 import url, { fileURLToPath } from 'url'
@@ -291,10 +291,9 @@ const create_server = () => {
 
   const sslOptions = {
     key: fs.readFileSync(config.key),
-    cert: fs.readFileSync(config.cert),
-    allowHTTP1: true
+    cert: fs.readFileSync(config.cert)
   }
-  return http2.createSecureServer(sslOptions, api)
+  return https.createServer(sslOptions, api)
 }
 
 const server = create_server()
