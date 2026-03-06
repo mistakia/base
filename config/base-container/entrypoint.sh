@@ -186,8 +186,13 @@ fi
 run_as_node git config --global protocol.file.allow always
 
 # Install base submodule dependencies if missing or outdated (needed for hook scripts)
-# On macOS hosts, a named volume overlays node_modules so the container gets Linux-native binaries
+# A named volume overlays node_modules so the container gets its own Linux-native binaries
+# without corrupting the host's node_modules (needed on both macOS and storage)
 if [ -d "$BASE_SUBMODULE" ]; then
+    # Ensure node user owns the node_modules directory (Docker creates named volumes as root)
+    if [ -d "$BASE_SUBMODULE/node_modules" ] && [ "$(stat -c '%u' "$BASE_SUBMODULE/node_modules" 2>/dev/null)" != "$(id -u node)" ]; then
+        chown node:node "$BASE_SUBMODULE/node_modules"
+    fi
     LOCKFILE_HASH=""
     INSTALLED_HASH=""
     if [ -f "$BASE_SUBMODULE/yarn.lock" ]; then
