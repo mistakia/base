@@ -99,7 +99,7 @@ export function* load_directory_markdown({ payload }) {
         yield put(
           get_directory_markdown_request_actions.fulfilled({
             opts: payload,
-            data: file_data
+            data: { ...file_data, _directory: requested_path }
           })
         )
         return
@@ -114,7 +114,7 @@ export function* load_directory_markdown({ payload }) {
   yield put(
     get_directory_markdown_request_actions.fulfilled({
       opts: payload,
-      data: { content: null }
+      data: { content: null, _directory: requested_path }
     })
   )
 }
