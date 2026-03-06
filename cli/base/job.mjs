@@ -40,9 +40,7 @@ export const handler = () => {}
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const { load_all_jobs } = await import(
-      '#libs-server/jobs/report-job.mjs'
-    )
+    const { load_all_jobs } = await import('#libs-server/jobs/report-job.mjs')
     const jobs = await load_all_jobs()
 
     // Sort: failures first, then by most recent run
@@ -84,7 +82,9 @@ async function handle_get(argv) {
       console.log(JSON.stringify(job, null, 2))
     } else {
       const status = job.last_execution
-        ? (job.last_execution.success ? 'OK' : 'FAIL')
+        ? job.last_execution.success
+          ? 'OK'
+          : 'FAIL'
         : 'NEW'
       console.log(`Job: ${job.name || job.job_id} [${status}]`)
       if (job.name && job.name !== job.job_id) {
@@ -100,14 +100,22 @@ async function handle_get(argv) {
       console.log(`Successes: ${job.stats.success_count}`)
       console.log(`Failures: ${job.stats.failure_count}`)
       if (job.stats.last_success) {
-        console.log(`Last success: ${format_relative_time(job.stats.last_success)} (${job.stats.last_success})`)
+        console.log(
+          `Last success: ${format_relative_time(job.stats.last_success)} (${job.stats.last_success})`
+        )
       }
       if (job.stats.last_failure) {
-        console.log(`Last failure: ${format_relative_time(job.stats.last_failure)} (${job.stats.last_failure})`)
+        console.log(
+          `Last failure: ${format_relative_time(job.stats.last_failure)} (${job.stats.last_failure})`
+        )
       }
       if (job.last_execution) {
-        console.log(`Last run: ${format_relative_time(job.last_execution.timestamp)} (${job.last_execution.timestamp})`)
-        console.log(`Last result: ${job.last_execution.success ? 'success' : 'failure'}`)
+        console.log(
+          `Last run: ${format_relative_time(job.last_execution.timestamp)} (${job.last_execution.timestamp})`
+        )
+        console.log(
+          `Last result: ${job.last_execution.success ? 'success' : 'failure'}`
+        )
         console.log(`Last duration: ${job.last_execution.duration_ms}ms`)
       }
       if (argv.verbose && job.failure_history.length > 0) {

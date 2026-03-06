@@ -60,7 +60,8 @@ export const builder = (yargs) =>
             demandOption: true
           })
           .option('role', {
-            describe: 'Role name (e.g., "acquaintance", maps to user:role/<name>.md)',
+            describe:
+              'Role name (e.g., "acquaintance", maps to user:role/<name>.md)',
             type: 'string'
           })
           .option('rules', {
@@ -198,7 +199,9 @@ async function handle_create(argv) {
       username: argv.username
     })
     if (existing) {
-      console.error(`Error: Identity already exists for username: ${argv.username}`)
+      console.error(
+        `Error: Identity already exists for username: ${argv.username}`
+      )
       flush_and_exit(1)
       return
     }

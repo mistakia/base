@@ -311,21 +311,29 @@ async function run_benchmark() {
       try {
         const opencode_result = await run_opencode({ prompt, model })
         const response_text = extract_model_response(opencode_result.output)
-        const parse_result = parse_tag_analysis_response(response_text, available_tags)
+        const parse_result = parse_tag_analysis_response(
+          response_text,
+          available_tags
+        )
 
         const predicted_tags = parse_result.success ? parse_result.tags : []
         const predicted_primary = predicted_tags[0] || null
 
         // Check primary tag match
-        const primary_match = predicted_primary === bench_case.expected_primary_tag
+        const primary_match =
+          predicted_primary === bench_case.expected_primary_tag
         if (primary_match) model_results[model].primary_matches++
 
         // Check secondary tag overlap
         const expected_secondary = bench_case.expected_secondary_tags || []
         const predicted_secondary = predicted_tags.slice(1)
-        const overlap = expected_secondary.length > 0
-          ? predicted_secondary.filter(t => expected_secondary.includes(t)).length / expected_secondary.length
-          : predicted_secondary.length === 0 ? 1 : 0
+        const overlap =
+          expected_secondary.length > 0
+            ? predicted_secondary.filter((t) => expected_secondary.includes(t))
+                .length / expected_secondary.length
+            : predicted_secondary.length === 0
+              ? 1
+              : 0
         model_results[model].secondary_overlaps.push(overlap)
 
         model_results[model].latencies.push(opencode_result.duration_ms)
@@ -339,7 +347,7 @@ async function run_benchmark() {
         })
 
         process.stderr.write(
-          `  ${model}: ${primary_match ? 'OK' : 'MISS'} [${predicted_tags.map(t => t.split('/').pop().replace('.md', '')).join(', ')}] (${opencode_result.duration_ms}ms)\n`
+          `  ${model}: ${primary_match ? 'OK' : 'MISS'} [${predicted_tags.map((t) => t.split('/').pop().replace('.md', '')).join(', ')}] (${opencode_result.duration_ms}ms)\n`
         )
       } catch (error) {
         model_results[model].errors++
@@ -360,43 +368,51 @@ async function run_benchmark() {
   } else {
     console.log(
       'Model'.padEnd(30) +
-      'Primary Acc'.padEnd(14) +
-      'Secondary'.padEnd(12) +
-      'Avg Latency'.padEnd(14) +
-      'Errors'
+        'Primary Acc'.padEnd(14) +
+        'Secondary'.padEnd(12) +
+        'Avg Latency'.padEnd(14) +
+        'Errors'
     )
     console.log('-'.repeat(80))
 
     for (const model of models) {
       const r = model_results[model]
       const total = r.case_results.length
-      const primary_acc = total > 0
-        ? `${r.primary_matches}/${total} (${Math.round(r.primary_matches / total * 100)}%)`
-        : 'N/A'
+      const primary_acc =
+        total > 0
+          ? `${r.primary_matches}/${total} (${Math.round((r.primary_matches / total) * 100)}%)`
+          : 'N/A'
       const sec_overlaps = r.secondary_overlaps
-      const avg_secondary = sec_overlaps.length > 0
-        ? `${Math.round(sec_overlaps.reduce((a, b) => a + b, 0) / sec_overlaps.length * 100)}%`
-        : 'N/A'
-      const avg_latency = r.latencies.length > 0
-        ? `${Math.round(r.latencies.reduce((a, b) => a + b, 0) / r.latencies.length)}ms`
-        : 'N/A'
+      const avg_secondary =
+        sec_overlaps.length > 0
+          ? `${Math.round((sec_overlaps.reduce((a, b) => a + b, 0) / sec_overlaps.length) * 100)}%`
+          : 'N/A'
+      const avg_latency =
+        r.latencies.length > 0
+          ? `${Math.round(r.latencies.reduce((a, b) => a + b, 0) / r.latencies.length)}ms`
+          : 'N/A'
 
       console.log(
         model.padEnd(30) +
-        primary_acc.padEnd(14) +
-        avg_secondary.padEnd(12) +
-        avg_latency.padEnd(14) +
-        `${r.errors}`
+          primary_acc.padEnd(14) +
+          avg_secondary.padEnd(12) +
+          avg_latency.padEnd(14) +
+          `${r.errors}`
       )
     }
 
     // Show misses
     for (const model of models) {
-      const misses = model_results[model].case_results.filter(r => !r.primary_match)
+      const misses = model_results[model].case_results.filter(
+        (r) => !r.primary_match
+      )
       if (misses.length > 0) {
         console.log(`\n${model} - Mismatches:`)
         for (const miss of misses) {
-          const expected = miss.expected_primary.split('/').pop().replace('.md', '')
+          const expected = miss.expected_primary
+            .split('/')
+            .pop()
+            .replace('.md', '')
           const got = miss.predicted_tags[0]
             ? miss.predicted_tags[0].split('/').pop().replace('.md', '')
             : '(none)'

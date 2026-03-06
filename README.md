@@ -18,16 +18,16 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 
 ## Documentation
 
-| Topic | Description |
-|-------|-------------|
-| [System Design](system/text/system-design.md) | Architecture, primitives, design principles, deployment |
-| [Directory Structure](system/text/directory-structure.md) | Code and data organization |
-| [Knowledge Base Schema](system/text/knowledge-base-schema.md) | Entity types and data models |
-| [Execution Threads](system/text/execution-threads.md) | Thread format and lifecycle |
-| [Workflows](system/text/workflow.md) | Workflow definitions and composition |
-| [Configuration](system/text/configuration-system.md) | Two-tier config loading and machine registry |
-| [Extension System](system/text/extension-system.md) | CLI extensions and agent skills |
-| [Background Services](system/text/background-services.md) | PM2 services and scheduling |
+| Topic                                                         | Description                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| [System Design](system/text/system-design.md)                 | Architecture, primitives, design principles, deployment |
+| [Directory Structure](system/text/directory-structure.md)     | Code and data organization                              |
+| [Knowledge Base Schema](system/text/knowledge-base-schema.md) | Entity types and data models                            |
+| [Execution Threads](system/text/execution-threads.md)         | Thread format and lifecycle                             |
+| [Workflows](system/text/workflow.md)                          | Workflow definitions and composition                    |
+| [Configuration](system/text/configuration-system.md)          | Two-tier config loading and machine registry            |
+| [Extension System](system/text/extension-system.md)           | CLI extensions and agent skills                         |
+| [Background Services](system/text/background-services.md)     | PM2 services and scheduling                             |
 
 ## License
 

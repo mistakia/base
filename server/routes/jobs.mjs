@@ -2,7 +2,11 @@ import express from 'express'
 import debug from 'debug'
 import config from '#config'
 
-import { report_job, load_job, load_all_jobs } from '#libs-server/jobs/report-job.mjs'
+import {
+  report_job,
+  load_job,
+  load_all_jobs
+} from '#libs-server/jobs/report-job.mjs'
 
 const log = debug('api:jobs')
 const router = express.Router({ mergeParams: true })
@@ -24,10 +28,23 @@ router.post('/report', async (req, res) => {
     return res.status(401).json({ error: 'Invalid API key' })
   }
 
-  const { job_id, success, reason, duration_ms, exit_code, project, server, name, schedule, schedule_type } = req.body
+  const {
+    job_id,
+    success,
+    reason,
+    duration_ms,
+    exit_code,
+    project,
+    server,
+    name,
+    schedule,
+    schedule_type
+  } = req.body
 
   if (!job_id || typeof success !== 'boolean') {
-    return res.status(400).json({ error: 'Missing required fields: job_id, success' })
+    return res
+      .status(400)
+      .json({ error: 'Missing required fields: job_id, success' })
   }
 
   try {

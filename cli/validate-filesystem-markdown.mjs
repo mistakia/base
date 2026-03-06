@@ -39,9 +39,7 @@ const validate_filesystem = async ({
     exclude_path_patterns
   })
 
-  const validated_paths = new Set(
-    result.files.map((f) => f.absolute_path)
-  )
+  const validated_paths = new Set(result.files.map((f) => f.absolute_path))
 
   const unparseable_files = []
   let non_entity_count = 0

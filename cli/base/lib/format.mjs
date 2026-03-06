@@ -260,7 +260,9 @@ export function format_job(job, { verbose = false } = {}) {
       lines.push(`  Duration: ${job.last_execution.duration_ms}ms`)
     }
     if (job.stats?.last_failure) {
-      lines.push(`  Last failure: ${format_relative_time(job.stats.last_failure)}`)
+      lines.push(
+        `  Last failure: ${format_relative_time(job.stats.last_failure)}`
+      )
     }
     return lines.join('\n')
   }

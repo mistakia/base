@@ -130,6 +130,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 ## Related System Documentation
 
 ### Core Architecture
+
 - [[sys:system/text/directory-structure.md]] - File organization and structure
 - [[sys:system/text/knowledge-base-schema.md]] - Entity schemas and data models
 - [[sys:system/text/entity-relations.md]] - Entity relationship system
@@ -137,6 +138,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/configuration-system.md]] - Two-tier config loading and machine registry
 
 ### Execution and Sessions
+
 - [[sys:system/text/execution-threads.md]] - Thread data format and lifecycle
 - [[sys:system/text/session-orchestrator.md]] - Session spawning and provider adapters
 - [[sys:system/text/session-lifecycle-reference.md]] - WebSocket events and state transitions
@@ -145,6 +147,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/tool-information.md]] - Tool capabilities and usage
 
 ### Infrastructure
+
 - [[sys:system/text/background-services.md]] - PM2 services overview
 - [[sys:system/text/scheduled-command-system.md]] - Schedule types and processor architecture
 - [[sys:system/text/cli-queue-system.md]] - BullMQ queue with tag concurrency control
@@ -152,6 +155,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/git-operations.md]] - Worktrees, sync, and git utility library
 
 ### Security and Organization
+
 - [[sys:system/text/permission-system-design.md]] - ABAC permission model and rule evaluation
 - [[sys:system/text/permission-system-overview.md]] - Permission system summary
 - [[sys:system/text/identity-and-authentication.md]] - JWT auth, Ed25519 keys, and roles
@@ -160,5 +164,6 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/extension-system.md]] - Convention-based CLI extensions and skills
 
 ### Other
+
 - [[sys:system/text/external-data-sync.md]] - External system integrations
 - [[sys:system/text/mcp-server.md]] - Model Context Protocol server (removed)

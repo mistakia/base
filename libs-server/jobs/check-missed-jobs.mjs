@@ -47,7 +47,11 @@ const calculate_grace_ms = ({ schedule, schedule_type }) => {
       }
     }
   } catch (error) {
-    log('Error calculating grace period for schedule %s: %s', schedule, error.message)
+    log(
+      'Error calculating grace period for schedule %s: %s',
+      schedule,
+      error.message
+    )
   }
 
   return MIN_GRACE_MS
@@ -56,7 +60,11 @@ const calculate_grace_ms = ({ schedule, schedule_type }) => {
 /**
  * Calculate when the last execution should have occurred
  */
-const get_expected_last_run = ({ schedule, schedule_type, last_execution_timestamp }) => {
+const get_expected_last_run = ({
+  schedule,
+  schedule_type,
+  last_execution_timestamp
+}) => {
   try {
     if (schedule_type === 'expr') {
       const cron = CronExpressionParser.parse(schedule, {
@@ -68,7 +76,9 @@ const get_expected_last_run = ({ schedule, schedule_type, last_execution_timesta
     if (schedule_type === 'every' && last_execution_timestamp) {
       const interval_ms = parse_interval_ms(schedule)
       if (interval_ms) {
-        return new Date(new Date(last_execution_timestamp).getTime() + interval_ms)
+        return new Date(
+          new Date(last_execution_timestamp).getTime() + interval_ms
+        )
       }
     }
   } catch (error) {
@@ -132,7 +142,12 @@ export const check_missed_jobs = async () => {
       }
     }
 
-    log('Missed execution detected: %s (expected: %s, last: %s)', job.job_id, expected_run.toISOString(), last_run?.toISOString() || 'never')
+    log(
+      'Missed execution detected: %s (expected: %s, last: %s)',
+      job.job_id,
+      expected_run.toISOString(),
+      last_run?.toISOString() || 'never'
+    )
 
     missed.push({
       job_id: job.job_id,

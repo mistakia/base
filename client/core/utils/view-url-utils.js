@@ -13,7 +13,12 @@ export const DEFAULT_THREAD_VIEW_ID = 'active'
 // These must stay in sync with the view definitions in:
 //   - client/core/tasks/reducers.js (task_table_views)
 //   - client/core/threads/reducers.js (thread_table_views)
-export const KNOWN_TASK_VIEW_IDS = new Set(['default', 'open', 'active', 'upcoming'])
+export const KNOWN_TASK_VIEW_IDS = new Set([
+  'default',
+  'open',
+  'active',
+  'upcoming'
+])
 export const KNOWN_THREAD_VIEW_IDS = new Set([
   'default',
   'active',

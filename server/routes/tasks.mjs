@@ -132,7 +132,13 @@ router.get('/', async (req, res) => {
   try {
     const user_public_key = req.user?.user_public_key || null
     const is_public_request = !user_public_key
-    const { base_uri, archived, limit: limit_param, offset: offset_param, ...filter_params } = req.query
+    const {
+      base_uri,
+      archived,
+      limit: limit_param,
+      offset: offset_param,
+      ...filter_params
+    } = req.query
     const limit = parseInt(limit_param) || 100
     const offset = parseInt(offset_param) || 0
 

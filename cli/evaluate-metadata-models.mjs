@@ -19,9 +19,7 @@ import {
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
-import {
-  run_opencode
-} from '#libs-server/metadata/run-opencode-analysis.mjs'
+import { run_opencode } from '#libs-server/metadata/run-opencode-analysis.mjs'
 import {
   parse_metadata_response,
   generate_analysis_prompt
@@ -78,8 +76,17 @@ Respond with ONLY a JSON object:
 \`\`\``
 }
 
-async function score_with_judge({ generated, expected, first_user_message, judge_model }) {
-  const prompt = generate_judge_prompt({ generated, expected, first_user_message })
+async function score_with_judge({
+  generated,
+  expected,
+  first_user_message,
+  judge_model
+}) {
+  const prompt = generate_judge_prompt({
+    generated,
+    expected,
+    first_user_message
+  })
 
   try {
     const result = await run_opencode({
@@ -90,7 +97,8 @@ async function score_with_judge({ generated, expected, first_user_message, judge
 
     const response_text = result.output || ''
     // Parse JSON from response
-    const json_match = response_text.match(/```(?:json)?\s*([\s\S]*?)```/) ||
+    const json_match =
+      response_text.match(/```(?:json)?\s*([\s\S]*?)```/) ||
       response_text.match(/\{[\s\S]*\}/)
     if (json_match) {
       const text = json_match[1] || json_match[0]
@@ -100,14 +108,24 @@ async function score_with_judge({ generated, expected, first_user_message, judge
         accuracy: scores.accuracy || 0,
         conciseness: scores.conciseness || 0,
         reasoning: scores.reasoning || '',
-        avg: Math.round(((scores.specificity + scores.accuracy + scores.conciseness) / 3) * 100) / 100
+        avg:
+          Math.round(
+            ((scores.specificity + scores.accuracy + scores.conciseness) / 3) *
+              100
+          ) / 100
       }
     }
   } catch (error) {
     log(`Judge scoring failed: ${error.message}`)
   }
 
-  return { specificity: 0, accuracy: 0, conciseness: 0, reasoning: 'scoring failed', avg: 0 }
+  return {
+    specificity: 0,
+    accuracy: 0,
+    conciseness: 0,
+    reasoning: 'scoring failed',
+    avg: 0
+  }
 }
 
 // ============================================================================
@@ -120,7 +138,9 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
 
   for (let i = 0; i < cases.length; i++) {
     const test_case = cases[i]
-    const prompt = generate_analysis_prompt({ user_message: test_case.first_user_message })
+    const prompt = generate_analysis_prompt({
+      user_message: test_case.first_user_message
+    })
 
     try {
       const start = Date.now()
@@ -168,7 +188,9 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
           `  [${i + 1}/${cases.length}] avg=${scores.avg} "${generated.title}" (${latency}ms)\n`
         )
       } else {
-        process.stderr.write(`  [${i + 1}/${cases.length}] ${scores.avg >= 3.5 ? '.' : 'X'}`)
+        process.stderr.write(
+          `  [${i + 1}/${cases.length}] ${scores.avg >= 3.5 ? '.' : 'X'}`
+        )
       }
     } catch (error) {
       log(`Error evaluating case ${test_case.thread_id}: ${error.message}`)
@@ -177,12 +199,20 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
         category: test_case.category,
         expected_title: test_case.expected_title,
         generated_title: null,
-        scores: { specificity: 0, accuracy: 0, conciseness: 0, avg: 0, reasoning: error.message },
+        scores: {
+          specificity: 0,
+          accuracy: 0,
+          conciseness: 0,
+          avg: 0,
+          reasoning: error.message
+        },
         latency_ms: 0,
         error: error.message
       })
       if (verbose) {
-        process.stderr.write(`  [${i + 1}/${cases.length}] ERROR: ${error.message}\n`)
+        process.stderr.write(
+          `  [${i + 1}/${cases.length}] ERROR: ${error.message}\n`
+        )
       }
     }
   }
@@ -192,22 +222,43 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
   }
 
   // Compute aggregates
-  const valid_results = results.filter(r => r.scores.avg > 0)
-  const avg_quality = valid_results.length > 0
-    ? Math.round((valid_results.reduce((sum, r) => sum + r.scores.avg, 0) / valid_results.length) * 100) / 100
-    : 0
-  const avg_specificity = valid_results.length > 0
-    ? Math.round((valid_results.reduce((sum, r) => sum + r.scores.specificity, 0) / valid_results.length) * 100) / 100
-    : 0
-  const avg_accuracy = valid_results.length > 0
-    ? Math.round((valid_results.reduce((sum, r) => sum + r.scores.accuracy, 0) / valid_results.length) * 100) / 100
-    : 0
-  const avg_conciseness = valid_results.length > 0
-    ? Math.round((valid_results.reduce((sum, r) => sum + r.scores.conciseness, 0) / valid_results.length) * 100) / 100
-    : 0
-  const avg_latency = latencies.length > 0
-    ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
-    : 0
+  const valid_results = results.filter((r) => r.scores.avg > 0)
+  const avg_quality =
+    valid_results.length > 0
+      ? Math.round(
+          (valid_results.reduce((sum, r) => sum + r.scores.avg, 0) /
+            valid_results.length) *
+            100
+        ) / 100
+      : 0
+  const avg_specificity =
+    valid_results.length > 0
+      ? Math.round(
+          (valid_results.reduce((sum, r) => sum + r.scores.specificity, 0) /
+            valid_results.length) *
+            100
+        ) / 100
+      : 0
+  const avg_accuracy =
+    valid_results.length > 0
+      ? Math.round(
+          (valid_results.reduce((sum, r) => sum + r.scores.accuracy, 0) /
+            valid_results.length) *
+            100
+        ) / 100
+      : 0
+  const avg_conciseness =
+    valid_results.length > 0
+      ? Math.round(
+          (valid_results.reduce((sum, r) => sum + r.scores.conciseness, 0) /
+            valid_results.length) *
+            100
+        ) / 100
+      : 0
+  const avg_latency =
+    latencies.length > 0
+      ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
+      : 0
 
   return {
     model,
@@ -266,7 +317,12 @@ async function main() {
   const user_base = get_user_base_directory()
   const benchmark_path = argv.benchmarkPath
     ? path.resolve(argv.benchmarkPath)
-    : path.join(user_base, 'config', 'metadata-benchmarks', 'benchmark-cases.json')
+    : path.join(
+        user_base,
+        'config',
+        'metadata-benchmarks',
+        'benchmark-cases.json'
+      )
 
   const cases = await load_benchmark_cases(benchmark_path)
   const models = argv.models.split(',').map((m) => m.trim())
@@ -294,24 +350,24 @@ async function main() {
   console.log('\n\n========== RESULTS ==========\n')
   console.log(
     'Model'.padEnd(30) +
-    'Quality'.padEnd(10) +
-    'Specific'.padEnd(10) +
-    'Accurate'.padEnd(10) +
-    'Concise'.padEnd(10) +
-    'Latency'.padEnd(12) +
-    'Cases'
+      'Quality'.padEnd(10) +
+      'Specific'.padEnd(10) +
+      'Accurate'.padEnd(10) +
+      'Concise'.padEnd(10) +
+      'Latency'.padEnd(12) +
+      'Cases'
   )
   console.log('-'.repeat(92))
 
   for (const r of all_results) {
     console.log(
       r.model.padEnd(30) +
-      `${r.avg_quality}`.padEnd(10) +
-      `${r.avg_specificity}`.padEnd(10) +
-      `${r.avg_accuracy}`.padEnd(10) +
-      `${r.avg_conciseness}`.padEnd(10) +
-      `${r.avg_latency_ms}ms`.padEnd(12) +
-      `${r.successful_cases}/${r.total_cases}`
+        `${r.avg_quality}`.padEnd(10) +
+        `${r.avg_specificity}`.padEnd(10) +
+        `${r.avg_accuracy}`.padEnd(10) +
+        `${r.avg_conciseness}`.padEnd(10) +
+        `${r.avg_latency_ms}ms`.padEnd(12) +
+        `${r.successful_cases}/${r.total_cases}`
     )
   }
 

@@ -135,7 +135,16 @@ const save_job = async ({ job_id, data }) => {
 /**
  * Create a new job object with defaults
  */
-const create_job = ({ job_id, name, source, project, server, schedule, schedule_type, schedule_entity_id }) => {
+const create_job = ({
+  job_id,
+  name,
+  source,
+  project,
+  server,
+  schedule,
+  schedule_type,
+  schedule_entity_id
+}) => {
   const now = new Date().toISOString()
   return {
     job_id,
@@ -226,7 +235,7 @@ export const report_job = async ({
     success,
     duration_ms: duration_ms ?? null,
     exit_code: exit_code ?? null,
-    reason: success ? null : (reason || null)
+    reason: success ? null : reason || null
   }
 
   // Update stats

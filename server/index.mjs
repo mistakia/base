@@ -382,8 +382,7 @@ if (config.job_tracker?.enabled && config.job_tracker?.path) {
     const { check_missed_jobs } = await import(
       '#libs-server/jobs/check-missed-jobs.mjs'
     )
-    const interval_ms =
-      config.job_tracker.missed_check_interval_ms || 300000
+    const interval_ms = config.job_tracker.missed_check_interval_ms || 300000
     setInterval(async () => {
       try {
         await check_missed_jobs()

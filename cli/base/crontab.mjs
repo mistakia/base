@@ -83,7 +83,9 @@ async function handle_build(argv) {
   try {
     const content = readFileSync(argv.file, 'utf-8')
     const lines = content.split('\n')
-    const output_lines = ['# Built by: base crontab build -- do not edit directly']
+    const output_lines = [
+      '# Built by: base crontab build -- do not edit directly'
+    ]
 
     for (const line of lines) {
       // Skip existing build header (idempotency)

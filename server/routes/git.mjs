@@ -471,7 +471,8 @@ const filter_md_files_by_permission = async ({
  */
 const require_repo_read_permission = async (req, res, next) => {
   try {
-    const repo_path = req.query.repo_path || req.default_repo_path || req.body?.repo_path
+    const repo_path =
+      req.query.repo_path || req.default_repo_path || req.body?.repo_path
 
     const validation = await validate_repo_path(repo_path)
     if (!validation.valid) {

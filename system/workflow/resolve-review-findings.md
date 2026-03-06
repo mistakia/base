@@ -97,6 +97,7 @@ Before starting, read these guidelines to understand code quality standards:
 ### 2.1 Parse Unresolved Findings
 
 For each unresolved finding, extract:
+
 - Section name (from the parent `## Section:` heading)
 - Title
 - File path and line number (from the backtick-wrapped `file:line` reference)
@@ -192,7 +193,9 @@ For each finding that was successfully fixed, update the findings entity by chan
 ```
 - [ ] **finding title** ...
 ```
+
 to:
+
 ```
 - [x] **finding title** ...
 ```
@@ -228,6 +231,7 @@ Where `<project>` is the parent directory of the findings entity, `<target-name>
 ### 6.3 If All Findings Resolved (Finalize)
 
 1. If a worktree was created, present the branch for merge:
+
    - Log the worktree path and branch name
    - Suggest running `/merge-worktree` or manual merge
 
@@ -254,11 +258,13 @@ base entity observe "<findings-base-uri>" "[resolution] All findings resolved. B
 **Progress**: [resolved]/[total] findings resolved
 
 **This Batch**: [batch-size] findings processed
+
 - Fixed: [count]
 - Skipped: [count] ([reasons])
 - Tests: [pass/fail]
 
 **Commits**:
+
 - [commit hash] [commit message]
 
 **Next**: [Triggering next batch / All findings resolved - merge branch]

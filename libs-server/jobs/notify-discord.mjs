@@ -50,9 +50,10 @@ export const notify_job_failure = async ({
   }
 
   if (duration_ms != null) {
-    const duration_str = duration_ms >= 60000
-      ? `${(duration_ms / 60000).toFixed(1)}m`
-      : `${(duration_ms / 1000).toFixed(1)}s`
+    const duration_str =
+      duration_ms >= 60000
+        ? `${(duration_ms / 60000).toFixed(1)}m`
+        : `${(duration_ms / 1000).toFixed(1)}s`
     fields.push({ name: 'Duration', value: duration_str, inline: true })
   }
 
@@ -65,10 +66,16 @@ export const notify_job_failure = async ({
   }
 
   if (command) {
-    fields.push({ name: 'Command', value: command.slice(0, 200), inline: false })
+    fields.push({
+      name: 'Command',
+      value: command.slice(0, 200),
+      inline: false
+    })
   }
 
-  const reason_display = reason?.trim() || 'No reason provided — check service logs with: pm2 logs cli-queue-worker'
+  const reason_display =
+    reason?.trim() ||
+    'No reason provided — check service logs with: pm2 logs cli-queue-worker'
   fields.push({ name: 'Reason', value: reason_display.slice(0, 1024) })
 
   if (display_name) {
@@ -95,7 +102,11 @@ export const notify_job_failure = async ({
     })
 
     if (!response.ok) {
-      log('Discord notification failed: %d %s', response.status, response.statusText)
+      log(
+        'Discord notification failed: %d %s',
+        response.status,
+        response.statusText
+      )
     }
   } catch (error) {
     log('Discord notification error: %s', error.message)

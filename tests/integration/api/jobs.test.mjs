@@ -143,9 +143,7 @@ describe('API /jobs', function () {
 
   describe('GET /api/jobs/:job_id', () => {
     it('should return a specific job', async () => {
-      const res = await chai
-        .request(server)
-        .get('/api/jobs/test-my-script')
+      const res = await chai.request(server).get('/api/jobs/test-my-script')
 
       expect(res).to.have.status(200)
       expect(res.body).to.have.property('job_id', 'test-my-script')
@@ -153,9 +151,7 @@ describe('API /jobs', function () {
     })
 
     it('should return 404 for unknown job', async () => {
-      const res = await chai
-        .request(server)
-        .get('/api/jobs/nonexistent-job')
+      const res = await chai.request(server).get('/api/jobs/nonexistent-job')
 
       expect(res).to.have.status(404)
     })
@@ -164,9 +160,7 @@ describe('API /jobs', function () {
   describe('Internal source job report', () => {
     it('should handle internal job reporting', async () => {
       // Import report_job directly to simulate worker callback
-      const { report_job } = await import(
-        '#libs-server/jobs/report-job.mjs'
-      )
+      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
 
       const job = await report_job({
         job_id: 'internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9',
@@ -190,9 +184,7 @@ describe('API /jobs', function () {
       // Verify via API
       const res = await chai
         .request(server)
-        .get(
-          '/api/jobs/internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9'
-        )
+        .get('/api/jobs/internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9')
 
       expect(res).to.have.status(200)
       expect(res.body).to.have.property('source', 'internal')

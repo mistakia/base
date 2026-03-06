@@ -122,13 +122,10 @@ const FloatingSessionsPanel = () => {
     set_panel_mode(PANEL_MODE.COLLAPSED)
   }, [])
 
-  const handle_toggle_all_users = useCallback(
-    (e) => {
-      e.stopPropagation()
-      set_show_all_users((prev) => !prev)
-    },
-    []
-  )
+  const handle_toggle_all_users = useCallback((e) => {
+    e.stopPropagation()
+    set_show_all_users((prev) => !prev)
+  }, [])
 
   const is_other_user_session = (session) => {
     if (!user_public_key || !session.user_public_key) return false
@@ -314,9 +311,7 @@ const FloatingSessionsPanel = () => {
                 user_public_key &&
                 thread.user_public_key &&
                 thread.user_public_key !== user_public_key
-              return (
-                <SessionCard key={thread.thread_id} item={normalized} />
-              )
+              return <SessionCard key={thread.thread_id} item={normalized} />
             })}
 
             {all_sessions.length === 0 && review_threads_list.length === 0 && (

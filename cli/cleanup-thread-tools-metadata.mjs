@@ -52,7 +52,9 @@ async function main() {
   }
 
   const user_base_directory = get_user_base_directory()
-  const thread_base_directory = get_thread_base_directory({ user_base_directory })
+  const thread_base_directory = get_thread_base_directory({
+    user_base_directory
+  })
 
   let entries
   try {
@@ -69,7 +71,11 @@ async function main() {
   let error_count = 0
 
   for (const thread_id of thread_dirs) {
-    const metadata_path = path.join(thread_base_directory, thread_id, 'metadata.json')
+    const metadata_path = path.join(
+      thread_base_directory,
+      thread_id,
+      'metadata.json'
+    )
 
     let raw
     try {
@@ -93,11 +99,15 @@ async function main() {
 
     // Clean tools array
     if (Array.isArray(metadata.tools)) {
-      const cleaned_tools = metadata.tools.filter((t) => !DEAD_TOOL_NAMES.has(t))
+      const cleaned_tools = metadata.tools.filter(
+        (t) => !DEAD_TOOL_NAMES.has(t)
+      )
       if (cleaned_tools.length !== metadata.tools.length) {
         const removed = metadata.tools.filter((t) => DEAD_TOOL_NAMES.has(t))
         if (dry_run) {
-          console.log(`  ${thread_id}: would remove ${removed.length} dead tools: ${removed.join(', ')}`)
+          console.log(
+            `  ${thread_id}: would remove ${removed.length} dead tools: ${removed.join(', ')}`
+          )
         }
         metadata.tools = cleaned_tools
         changed = true
@@ -121,7 +131,11 @@ async function main() {
     modified_count++
 
     if (!dry_run) {
-      await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
+      await fs.writeFile(
+        metadata_path,
+        JSON.stringify(metadata, null, 2) + '\n',
+        'utf-8'
+      )
     }
   }
 
