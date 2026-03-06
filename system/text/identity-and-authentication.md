@@ -4,9 +4,14 @@ type: text
 description: >-
   Reference for the authentication and identity system covering JWT auth flow, Ed25519 key
   management, user registry, identity entities, role-based permissions, and nonce replay protection
+base_uri: sys:system/text/identity-and-authentication.md
 created_at: '2026-03-02T06:35:46.540Z'
 entity_id: 1be2748c-d02f-4393-ac28-009562fbeb32
-base_uri: sys:system/text/identity-and-authentication.md
+observations:
+  - >-
+    [design] Ed25519 key derivation uses Blake2b (via @trashman/ed25519-blake2b), not standard
+    SHA-512; the same private key seed produces different public keys across libraries, so identity
+    creation MUST use the correct library or authentication silently fails.
 public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
@@ -14,7 +19,7 @@ relations:
   - relates_to [[sys:system/text/permission-system-overview.md]]
   - relates_to [[sys:system/schema/identity.md]]
   - relates_to [[sys:system/schema/role.md]]
-updated_at: '2026-03-02T06:35:46.540Z'
+updated_at: '2026-03-06T05:59:00.090Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -49,6 +54,14 @@ Key operations:
 - `ed25519.verify(signature, hash, public_key)` -- Verify signature
 
 No credentials are stored server-side. Authentication is purely signature-based with the public key as the identity anchor.
+
+### Blake2b vs SHA-512 Derivation
+
+The `@trashman/ed25519-blake2b` library uses Blake2b for key derivation instead of the standard SHA-512 used by Node.js `crypto.generateKeyPairSync('ed25519')` and most other Ed25519 implementations. The same 32-byte private key seed produces a different public key depending on which derivation is used.
+
+Identity key pairs MUST be generated using `@trashman/ed25519-blake2b` or a compatible Blake2b-based library (the client uses `nanocurrency-web`'s Ed25519, which is compatible). Using Node.js `crypto` or any SHA-512-based Ed25519 library will produce a valid key pair, but authentication will silently fail because the stored `auth_public_key` will not match what the client derives.
+
+The correct creation path is via `base identity create`, `cli/create-user.mjs`, or the `libs-server/users/create-user.mjs` library, all of which use the correct derivation.
 
 ## Replay Protection
 
