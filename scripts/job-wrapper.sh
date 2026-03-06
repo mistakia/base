@@ -30,8 +30,9 @@ if [ -z "$JOB_API_URL" ] || [ -z "$JOB_API_KEY" ]; then
   exec "$@"
 fi
 
-# Capture start time in milliseconds
-start_ms=$(date +%s%3N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1000))')
+# Capture start time in milliseconds (macOS date does not support %N)
+get_ms() { python3 -c 'import time; print(int(time.time()*1000))'; }
+start_ms=$(get_ms)
 
 # Execute the command, capturing stderr
 stderr_file=$(mktemp)
@@ -39,7 +40,7 @@ stderr_file=$(mktemp)
 exit_code=$?
 
 # Calculate duration
-end_ms=$(date +%s%3N 2>/dev/null || python3 -c 'import time; print(int(time.time()*1000))')
+end_ms=$(get_ms)
 duration_ms=$((end_ms - start_ms))
 
 # Determine success
