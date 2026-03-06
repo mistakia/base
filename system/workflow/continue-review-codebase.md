@@ -1,10 +1,10 @@
 ---
 title: Continue Review Codebase
 type: workflow
-public_read: true
 description: >-
-  Recursive continuation workflow that reviews one codebase section per context window,
-  appends findings, and triggers the next iteration or finalizes the review
+  Recursive continuation workflow that reviews one codebase section per context window, appends
+  findings, and triggers the next iteration or finalizes the review
+base_uri: sys:system/workflow/continue-review-codebase.md
 created_at: '2026-02-03T00:00:00.000Z'
 entity_id: b2c3d4e5-6789-4bcd-aef0-123456789012
 guidelines:
@@ -12,22 +12,31 @@ guidelines:
   - sys:system/guideline/simplify-software-implementation.md
   - sys:system/guideline/review-for-secret-information.md
 observations:
-  - '[pattern] Each context window is self-contained: reads state from review entity, reviews one section, persists results'
-  - '[automation] Detached nohup claude calls chain context windows until all sections are reviewed without blocking the parent session'
+  - >-
+    [pattern] Each context window is self-contained: reads state from review entity, reviews one
+    section, persists results
+  - >-
+    [automation] Detached nohup claude calls chain context windows until all sections are reviewed
+    without blocking the parent session
   - '[quality] Four parallel agents maximize coverage while confidence filtering reduces noise'
   - '[entity] Review and findings are task entities in the user-base, not files in the target repo'
+  - >-
+    [fix] Slash commands like /archive are unavailable in --print mode -- removed from continuation
+    workflow
+  - '[fix] Tool references corrected from Task tool to Agent tool'
 prompt_properties:
   - name: review
     type: string
     required: true
     description: Absolute file path to the review task entity created by review-codebase workflow
+public_read: true
 relations:
   - follows [[sys:system/guideline/review-software.md]]
   - follows [[sys:system/guideline/simplify-software-implementation.md]]
   - follows [[sys:system/guideline/review-for-secret-information.md]]
   - supports [[sys:system/workflow/review-codebase.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2026-02-04T00:00:00.000Z'
+updated_at: '2026-03-06T16:16:11.764Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 ---
 

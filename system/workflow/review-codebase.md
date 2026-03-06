@@ -4,18 +4,29 @@ type: workflow
 description: >-
   Orchestrate a multi-context-window codebase review by decomposing the codebase into sections,
   creating task entities for tracking and findings, and triggering the first section review
+base_uri: sys:system/workflow/review-codebase.md
 created_at: '2026-02-03T00:00:00.000Z'
 entity_id: a1b2c3d4-5678-4abc-9def-012345678901
-public_read: true
 guidelines:
   - sys:system/guideline/review-software.md
   - sys:system/guideline/simplify-software-implementation.md
   - sys:system/guideline/review-for-secret-information.md
 observations:
-  - '[architecture] Multi-context-window design works around token limits by reviewing one section per session'
+  - >-
+    [architecture] Multi-context-window design works around token limits by reviewing one section
+    per session
   - '[pattern] Review task entity serves as shared state across context windows'
-  - '[automation] Detached nohup claude triggers enable fully autonomous continuation without blocking the parent session'
+  - >-
+    [automation] Detached nohup claude triggers enable fully autonomous continuation without
+    blocking the parent session
   - '[entity] Review output stored as task entities in user-base rather than files in the target repo'
+  - '[fix] env -u CLAUDECODE required for nohup claude spawning to bypass nested session detection'
+  - >-
+    [fix] Log files must be namespaced by project and date-slug to prevent collision across
+    concurrent reviews
+  - >-
+    [gap] Entity filename uses only date-slug, causing collision when multiple reviews share the
+    same project directory -- needs target-name in filename
 prompt_properties:
   - name: path
     type: string
@@ -25,21 +36,22 @@ prompt_properties:
     type: string
     required: false
     description: >-
-      Glob patterns or directory paths to limit review scope (comma-separated).
-      Defaults to full codebase review.
+      Glob patterns or directory paths to limit review scope (comma-separated). Defaults to full
+      codebase review.
   - name: project
     type: string
     required: false
     description: >-
-      Project subdirectory name for task entity placement (e.g., "base", "league").
-      Defaults to the repository directory name.
+      Project subdirectory name for task entity placement (e.g., "base", "league"). Defaults to the
+      repository directory name.
+public_read: true
 relations:
   - follows [[sys:system/guideline/review-software.md]]
   - follows [[sys:system/guideline/simplify-software-implementation.md]]
   - follows [[sys:system/guideline/review-for-secret-information.md]]
   - calls [[sys:system/workflow/continue-review-codebase.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
-updated_at: '2026-02-04T00:00:00.000Z'
+updated_at: '2026-03-06T16:16:04.206Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 ---
 
