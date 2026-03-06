@@ -278,6 +278,39 @@ log_telemetry() {
     fi
 }
 
+# Track persistent dirty-skip state and alert after threshold.
+# Uses marker files in /tmp to track when a repo first entered dirty-skip.
+# Args: $1 = repo name, $2 = dirty file count
+DIRTY_ALERT_MINUTES=30
+check_dirty_duration() {
+    local repo="$1"
+    local dirty_count="$2"
+    local marker="/tmp/sync-dirty-${repo}.marker"
+
+    if [ ! -f "$marker" ]; then
+        date +%s > "$marker"
+        return
+    fi
+
+    local first_dirty
+    first_dirty=$(cat "$marker" 2>/dev/null) || return
+    local now
+    now=$(date +%s)
+    local age_minutes=$(( (now - first_dirty) / 60 ))
+
+    if [ $age_minutes -ge $DIRTY_ALERT_MINUTES ]; then
+        discord_notify_failure "$repo" "dirty for ${age_minutes}m ($dirty_count files), sync blocked"
+        # Reset marker to avoid spamming (will re-alert after another threshold period)
+        date +%s > "$marker"
+    fi
+}
+
+# Clear dirty-skip marker when a repo syncs successfully.
+# Args: $1 = repo name
+clear_dirty_marker() {
+    rm -f "/tmp/sync-dirty-${1}.marker"
+}
+
 # Send Discord notification for sync failures.
 # Args: $1 = repo name, $2 = error description
 discord_notify_failure() {
@@ -351,16 +384,20 @@ sync_repo() {
                 return 1
             }
             log_telemetry "$repo_name" "dirty_push" ""
+            clear_dirty_marker "$repo_name"
         else
             local dirty_count
             dirty_count=$(git -C "$dir" status --porcelain --ignore-submodules 2>/dev/null | wc -l | tr -d ' ')
             log_verbose "$repo_name: dirty ($dirty_count files), skipping sync"
             log_telemetry "$repo_name" "dirty_skip" "files:$dirty_count"
+            check_dirty_duration "$repo_name" "$dirty_count"
         fi
         return 0
     fi
 
-    # Clean working directory - handle 4-way divergence
+    # Clean working directory - clear dirty marker and handle 4-way divergence
+    clear_dirty_marker "$repo_name"
+
     if [ "$local_commit" = "$remote_commit" ]; then
         log_verbose "$repo_name: up to date"
         return 0
