@@ -1,1 +1,1 @@
-export { default } from './CommitDetail'
+export { default } from './CommitDetail.js'

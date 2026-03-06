@@ -1,10 +1,11 @@
-import https from 'https'
+import http2 from 'node:http2'
 import http from 'http'
 import fs, { promises as fsPromises } from 'fs'
 import url, { fileURLToPath } from 'url'
 import path, { dirname } from 'path'
 
 import express from 'express'
+import expressStaticGzip from 'express-static-gzip'
 import compression from 'compression'
 import extend from 'deep-extend'
 import debug from 'debug'
@@ -199,21 +200,23 @@ api.use((err, req, res, next) => {
 })
 
 if (IS_DEV) {
-  api.get('*', (req, res) => {
+  api.get('{*splat}', (req, res) => {
     res.redirect(307, `http://localhost:8081${req.path}`)
   })
 } else {
   const build_path = path.join(__dirname, '..', 'build')
   const static_path = path.join(__dirname, '..', 'static')
 
-  // Serve built assets with long-term caching
+  // Serve built assets with long-term caching (Brotli > gzip > uncompressed)
   api.use(
     '/build',
-    express.static(build_path, {
-      fallthrough: true,
-      setHeaders: (res, filepath) => {
-        // Set Cache-Control to cache forever for built assets
-        res.set('Cache-Control', 'public, max-age=31536000, immutable')
+    expressStaticGzip(build_path, {
+      enableBrotli: true,
+      orderPreference: ['br', 'gz'],
+      serveStatic: {
+        maxAge: '1y',
+        immutable: true,
+        fallthrough: true
       }
     })
   )
@@ -288,9 +291,10 @@ const create_server = () => {
 
   const sslOptions = {
     key: fs.readFileSync(config.key),
-    cert: fs.readFileSync(config.cert)
+    cert: fs.readFileSync(config.cert),
+    allowHTTP1: true
   }
-  return https.createServer(sslOptions, api)
+  return http2.createSecureServer(sslOptions, api)
 }
 
 const server = create_server()

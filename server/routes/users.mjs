@@ -15,7 +15,7 @@ const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 const router = express.Router()
 
 // Get all users endpoint
-router.get('/?', async (req, res) => {
+router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
     const users_array = await user_registry.list_users()
@@ -52,7 +52,7 @@ const filter_public_user_data = (user) => {
   }
 }
 
-router.post('/?', async (req, res) => {
+router.post('/', async (req, res) => {
   const { log } = req.app.locals
   try {
     const { data, signature } = req.body

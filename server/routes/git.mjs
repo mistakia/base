@@ -471,7 +471,7 @@ const filter_md_files_by_permission = async ({
  */
 const require_repo_read_permission = async (req, res, next) => {
   try {
-    const repo_path = req.query.repo_path || req.body?.repo_path
+    const repo_path = req.query.repo_path || req.default_repo_path || req.body?.repo_path
 
     const validation = await validate_repo_path(repo_path)
     if (!validation.valid) {
@@ -1711,7 +1711,7 @@ router.get('/repo-info', async (req, res) => {
  */
 const default_repo_path_to_user_base = (req, _res, next) => {
   if (!req.query.repo_path) {
-    req.query.repo_path = get_user_base_dir()
+    req.default_repo_path = get_user_base_dir()
   }
   next()
 }
@@ -1799,10 +1799,10 @@ router.get(
  */
 router.get(
   '/commit/:hash',
-  // Map path -> repo_path for backward compatibility before middleware runs
+  // Map path -> default_repo_path for backward compatibility before middleware runs
   (req, _res, next) => {
     if (req.query.path && !req.query.repo_path) {
-      req.query.repo_path = req.query.path
+      req.default_repo_path = req.query.path
     }
     next()
   },
