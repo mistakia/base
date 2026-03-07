@@ -67,13 +67,7 @@ export const convert_base_uri_to_path = (base_uri) => {
   const base_path = BASE_URI_PATHS[scheme]
   if (!base_path) return base_uri
 
-  const full_path = base_path + (base_path.endsWith('/') ? '' : '/') + path
-  // Strip .md extension so SPA uses extensionless URLs
-  // URLs with .md will trigger raw file serving instead
-  if (full_path.endsWith('.md')) {
-    return full_path.slice(0, -3)
-  }
-  return full_path
+  return base_path + (base_path.endsWith('/') ? '' : '/') + path
 }
 
 // Get current window path for relative link resolution
@@ -110,21 +104,11 @@ export const convert_url_path_to_filesystem_path = (url_path) => {
 
   // Check if path maps to system directory
   if (normalized_path.startsWith(BASE_URI_PATHS['sys:'].slice(1))) {
-    const sys_relative = normalized_path.substring(BASE_URI_PATHS['sys:'].length)
-    const sys_filesystem_path = sys_relative.includes('.')
-      ? sys_relative
-      : sys_relative + '.md'
-    return `${BASE_DIRECTORIES.system}/${sys_filesystem_path}`
+    return `${BASE_DIRECTORIES.system}/${normalized_path.substring(BASE_URI_PATHS['sys:'].length)}`
   }
 
-  // For extensionless paths, check if adding .md would match an entity path pattern
-  // This handles SPA extensionless URLs that were stripped by convert_base_uri_to_path
-  const filesystem_path = normalized_path.includes('.')
-    ? normalized_path
-    : normalized_path + '.md'
-
   // Default to user directory for all other paths
-  return `${BASE_DIRECTORIES.user}/${filesystem_path}`
+  return `${BASE_DIRECTORIES.user}/${normalized_path}`
 }
 
 // Resolve @<relative-path> to proper base URI using working directory context
