@@ -23,6 +23,7 @@ import { RedactedContent } from '@components/primitives/styled'
 import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
 import GitFileActions from '@components/FileActions/GitFileActions.js'
+import CopyPageButton from '@components/FileActions/CopyPageButton.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import ConflictResolver from '@components/ConflictResolver/index.js'
 
@@ -238,7 +239,8 @@ const FileView = ({ path }) => {
   return (
     <Box sx={{ height: '100%' }}>
       {show_top_actions && (
-        <FileActions path={path}>
+        <FileActions>
+          <CopyPageButton path={path} content={file_data?.content} />
           <GitFileActions git_context={git_context} />
           <FileDiffToggle
             git_context={git_context}
