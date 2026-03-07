@@ -472,7 +472,7 @@ base job check-missed        # Check for missed executions
 base crontab build server/crontab.cron | ssh <host> 'crontab -'
 ```
 
-**Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. On Linux servers they live in `/etc/environment`. On macOS (MacBook), they are set in `~/crontab/00-env.cron` which is prepended alphabetically by the `load_crontab_files` helper. The storage server uses `JOB_API_URL=https://localhost:8081` (API runs locally); all other servers use `JOB_API_URL=https://192.168.1.21:8081`.
+**Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. On Linux servers they live in `/etc/environment`. On macOS (MacBook), they are set in `~/crontab/00-env.cron` which is prepended alphabetically by the `load_crontab_files` helper. The storage server uses `JOB_API_URL=https://localhost:8081` (API runs locally); all other servers use `JOB_API_URL=https://storage.localdomain:8081`.
 
 ### External Session Import
 
