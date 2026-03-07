@@ -578,9 +578,9 @@ sync_submodule() {
 
     log_verbose "Syncing $submodule_name..."
 
-    # Auto-commit if applicable
-    if [ "$auto_commit" = "yes" ]; then
-        local auto_commit_script="$SCRIPT_DIR/auto-commit-${submodule_name}.sh"
+    # Auto-commit if applicable (lock_name matches the script basename, e.g. "auto-commit-threads")
+    if [ "$auto_commit" = "yes" ] && [ -n "$lock_name" ]; then
+        local auto_commit_script="$SCRIPT_DIR/${lock_name}.sh"
         if [ -x "$auto_commit_script" ]; then
             log_verbose "$submodule_name: running auto-commit..."
             "$auto_commit_script" --skip-lock 2>&1 | while read -r line; do log_verbose "  $line"; done || true

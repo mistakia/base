@@ -55,6 +55,7 @@ generate_post_commit_hook() {
 #!/bin/bash
 # Post-commit hook: trigger sync-all.sh in background
 # Installed by deploy-hooks.sh
+unset GIT_DIR GIT_WORK_TREE
 nohup "\$USER_BASE_DIRECTORY/repository/active/base/cli/sync-all.sh" &>/dev/null &
 HOOK
 }
