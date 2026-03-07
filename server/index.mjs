@@ -20,6 +20,7 @@ import routes from '#server/routes/index.mjs'
 import health_router from '#server/routes/health.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { create_render_html_middleware } from '#server/middleware/render-html.mjs'
+import { create_raw_file_middleware } from '#server/middleware/raw-file.mjs'
 import {
   create_auth_limiter,
   create_search_limiter,
@@ -110,24 +111,36 @@ const allowedOrigins = new Set([
   ...(config.cors_origins || [])
 ])
 
-api.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true)
+// Permissive CORS for raw file requests (cross-origin agent access)
+const raw_cors = cors({ origin: '*', methods: ['GET', 'OPTIONS'] })
+api.use('/raw', raw_cors)
+api.use((req, res, next) => {
+  if (req.query.raw === 'true') return raw_cors(req, res, next)
+  next()
+})
 
-      if (!allowedOrigins.has(origin)) {
-        const msg =
-          'The CORS policy for this site does not allow access from the specified Origin.'
-        return callback(new Error(msg), false)
-      }
-      return callback(null, true)
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  })
-)
+const restricted_cors = cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+
+    if (!allowedOrigins.has(origin)) {
+      const msg =
+        'The CORS policy for this site does not allow access from the specified Origin.'
+      return callback(new Error(msg), false)
+    }
+    return callback(null, true)
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+})
+
+// Skip restricted CORS for raw file requests (already handled above)
+api.use((req, res, next) => {
+  if (req.path.startsWith('/raw/') || req.query.raw === 'true') return next()
+  return restricted_cors(req, res, next)
+})
 
 // Health endpoint - registered before auth middleware so it works without authentication
 api.use('/api/health', health_router)
@@ -199,7 +212,11 @@ api.use((err, req, res, next) => {
   })
 })
 
+// Raw file serving middleware (before SPA fallback)
+const raw_file = create_raw_file_middleware()
+
 if (IS_DEV) {
+  api.use(raw_file)
   api.get('{*splat}', (req, res) => {
     res.redirect(307, `http://localhost:8081${req.path}`)
   })
@@ -245,6 +262,9 @@ if (IS_DEV) {
   const render_html = create_render_html_middleware({
     base_url: config.production_url
   })
+
+  // Raw file serving (after static assets, before SPA fallback)
+  api.use(raw_file)
 
   // Serve assets from build directory only if they exist
   api.use(async (req, res, next) => {

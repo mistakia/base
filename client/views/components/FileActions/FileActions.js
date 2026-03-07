@@ -1,9 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import CursorButton from '@components/CursorButton/index.js'
 
-const FileActions = ({ path, title, children }) => {
+const FileActions = ({ children }) => {
   return (
     <Box
       className='file-actions'
@@ -19,14 +18,11 @@ const FileActions = ({ path, title, children }) => {
         px: 2
       }}>
       {children}
-      {path && <CursorButton path={path} title={title} />}
     </Box>
   )
 }
 
 FileActions.propTypes = {
-  path: PropTypes.string,
-  title: PropTypes.string,
   children: PropTypes.node
 }
 

@@ -30,7 +30,6 @@ const ThreadTimelineView = () => {
   const thread_id = current_path.startsWith('/thread/')
     ? current_path.split('/')[2]
     : null
-  const thread_path = thread_id ? `/thread/${thread_id}/metadata.json` : null
 
   // Get active session for this thread if it exists
   const active_session = useSelector((state) =>
@@ -104,7 +103,7 @@ const ThreadTimelineView = () => {
     <Box>
       <ThreadHeader metadata={metadata} thread_id={thread_id} />
       {selected_thread_data && (
-        <FileActions path={thread_path} title='Open thread metadata in Cursor'>
+        <FileActions>
           <button
             className='file-browser-toggle-button'
             onClick={toggle_file_browser}

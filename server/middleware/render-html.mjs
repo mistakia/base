@@ -5,6 +5,7 @@ import debug from 'debug'
 import { extract_meta_data } from '../services/meta-extractor.mjs'
 import { generate_script_tags } from '../services/bundle-injector.mjs'
 import config from '#config'
+import { is_path_within_directory } from '#libs-server/utils/is-path-within-directory.mjs'
 
 const log = debug('server:render-html')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -61,7 +62,7 @@ function render_template(template, meta_data) {
  * @param {string} url_path - Request URL path
  * @returns {Object} Content type and identifiers
  */
-function parse_request_url(url_path) {
+async function parse_request_url(url_path) {
   // Remove leading slash and split path
   const clean_path = url_path.replace(/^\/+/, '')
   const parts = clean_path.split('/')
@@ -83,6 +84,18 @@ function parse_request_url(url_path) {
     return {
       type: 'entity',
       entity_path: clean_path
+    }
+  }
+
+  // Check for extensionless entity paths (e.g., /task/my-task -> task/my-task.md)
+  if (parts.length > 1 && !clean_path.includes('.')) {
+    const md_path = clean_path + '.md'
+    const entity_match = await check_entity_file_exists(md_path)
+    if (entity_match) {
+      return {
+        type: 'entity',
+        entity_path: md_path
+      }
     }
   }
 
@@ -113,6 +126,41 @@ function parse_request_url(url_path) {
   return { type: 'page', path: clean_path }
 }
 
+async function check_entity_file_exists(relative_path) {
+  const user_base_dir = config.user_base_directory
+  const system_base_dir = config.system_base_directory
+
+  // Check system directory for repository/active/base/ paths
+  if (relative_path.startsWith('repository/active/base/')) {
+    const sys_relative = relative_path.replace(
+      /^repository\/active\/base\//,
+      ''
+    )
+    const sys_path = path.join(system_base_dir, sys_relative)
+    if (is_path_within_directory(sys_path, system_base_dir)) {
+      try {
+        const stats = await fs.stat(sys_path)
+        if (stats.isFile()) return true
+      } catch {
+        /* not found */
+      }
+    }
+  }
+
+  // Check user directory
+  const user_path = path.join(user_base_dir, relative_path)
+  if (is_path_within_directory(user_path, user_base_dir)) {
+    try {
+      const stats = await fs.stat(user_path)
+      if (stats.isFile()) return true
+    } catch {
+      /* not found */
+    }
+  }
+
+  return false
+}
+
 /**
  * Dynamic HTML rendering middleware
  * Replaces static file serving with dynamic meta tag generation
@@ -129,7 +177,7 @@ export function create_render_html_middleware({
       log(`Processing request for: ${req.path}`)
 
       // Parse the request URL
-      const content_info = parse_request_url(req.path)
+      const content_info = await parse_request_url(req.path)
 
       let meta_data
       let user_public_key = null
