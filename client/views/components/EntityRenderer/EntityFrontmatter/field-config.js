@@ -233,12 +233,7 @@ export const entity_field_config = {
     ]
   },
   database_item: {
-    always_visible: [
-      'database_table_id',
-      'tags',
-      'created_at',
-      'updated_at'
-    ],
+    always_visible: ['database_table_id', 'tags', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
@@ -289,12 +284,7 @@ export const entity_field_config = {
     ]
   },
   organization: {
-    always_visible: [
-      'website_url',
-      'tags',
-      'created_at',
-      'updated_at'
-    ],
+    always_visible: ['website_url', 'tags', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
@@ -325,12 +315,7 @@ export const entity_field_config = {
     ]
   },
   role: {
-    always_visible: [
-      'rules',
-      'tags',
-      'created_at',
-      'updated_at'
-    ],
+    always_visible: ['rules', 'tags', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
@@ -379,12 +364,7 @@ export const entity_field_config = {
     ]
   },
   skill: {
-    always_visible: [
-      'extension',
-      'tags',
-      'created_at',
-      'updated_at'
-    ],
+    always_visible: ['extension', 'tags', 'created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
