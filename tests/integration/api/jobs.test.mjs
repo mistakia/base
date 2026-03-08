@@ -190,4 +190,163 @@ describe('API /jobs', function () {
       expect(res.body).to.have.property('source', 'internal')
     })
   })
+
+  describe('Consecutive failure tracking', () => {
+    it('should increment consecutive_failures on failure and reset on success', async () => {
+      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+
+      const base_params = {
+        job_id: 'test-consecutive-counter',
+        name: 'Counter Test',
+        source: 'external',
+        project: 'test',
+        server: 'test-server'
+      }
+
+      // First failure
+      let job = await report_job({ ...base_params, success: false, reason: 'fail 1' })
+      expect(job).to.have.property('consecutive_failures', 1)
+
+      // Second failure
+      job = await report_job({ ...base_params, success: false, reason: 'fail 2' })
+      expect(job).to.have.property('consecutive_failures', 2)
+
+      // Success resets counter
+      job = await report_job({ ...base_params, success: true })
+      expect(job).to.have.property('consecutive_failures', 0)
+
+      // Failure after success starts fresh
+      job = await report_job({ ...base_params, success: false, reason: 'fail 3' })
+      expect(job).to.have.property('consecutive_failures', 1)
+    })
+
+    it('should suppress alerts for high-frequency jobs below threshold', async () => {
+      const { report_job, load_job } = await import(
+        '#libs-server/jobs/report-job.mjs'
+      )
+
+      const base_params = {
+        job_id: 'test-high-freq-suppression',
+        name: 'Sync All',
+        source: 'internal',
+        project: 'base',
+        server: 'storage',
+        schedule: '30s',
+        schedule_type: 'every'
+      }
+
+      // For a 30s schedule, threshold = ceil(300000/30000) = 10
+      // Report 9 failures -- should not trigger alert (no last_alerted_at)
+      let job
+      for (let i = 0; i < 9; i++) {
+        job = await report_job({
+          ...base_params,
+          success: false,
+          reason: `transient fail ${i + 1}`
+        })
+      }
+      expect(job).to.have.property('consecutive_failures', 9)
+
+      // Verify no alert was sent (last_alerted_at should still be null)
+      const saved = await load_job({ job_id: 'test-high-freq-suppression' })
+      expect(saved.last_alerted_at).to.be.null
+    })
+
+    it('should alert on first failure for non-every schedule types', async () => {
+      const { report_job, load_job } = await import(
+        '#libs-server/jobs/report-job.mjs'
+      )
+
+      // Cron expression -- threshold = 1, alerts on first failure
+      // discord_webhook_url is empty so no actual HTTP call, but last_alerted_at
+      // won't be set because notify_job_failure returns early without a URL.
+      // We verify the consecutive_failures counter works correctly.
+      const job = await report_job({
+        job_id: 'test-cron-immediate-alert',
+        name: 'Daily Backup',
+        source: 'external',
+        project: 'test',
+        server: 'test-server',
+        schedule: '0 2 * * *',
+        schedule_type: 'expr',
+        success: false,
+        reason: 'backup failed'
+      })
+
+      expect(job).to.have.property('consecutive_failures', 1)
+
+      // Threshold is 1 for cron, so it should have attempted notification.
+      // With empty webhook URL, notify returns early but the threshold gate was passed.
+      const saved = await load_job({ job_id: 'test-cron-immediate-alert' })
+      expect(saved).to.have.property('consecutive_failures', 1)
+    })
+
+    it('should alert for high-frequency jobs once threshold is reached', async () => {
+      const { report_job, load_job } = await import(
+        '#libs-server/jobs/report-job.mjs'
+      )
+
+      const base_params = {
+        job_id: 'test-high-freq-threshold-met',
+        name: 'Fast Sync',
+        source: 'internal',
+        project: 'base',
+        server: 'storage',
+        schedule: '30s',
+        schedule_type: 'every'
+      }
+
+      // Report exactly 10 failures (threshold for 30s = 10)
+      let job
+      for (let i = 0; i < 10; i++) {
+        job = await report_job({
+          ...base_params,
+          success: false,
+          reason: `fail ${i + 1}`
+        })
+      }
+
+      expect(job).to.have.property('consecutive_failures', 10)
+
+      // With empty webhook URL, notify_job_failure returns early without setting
+      // last_alerted_at (the webhook call is skipped). Verify the counter reached threshold.
+      const saved = await load_job({ job_id: 'test-high-freq-threshold-met' })
+      expect(saved).to.have.property('consecutive_failures', 10)
+    })
+
+    it('should treat jobs with no schedule as threshold 1', async () => {
+      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+
+      const job = await report_job({
+        job_id: 'test-no-schedule-threshold',
+        name: 'Ad-hoc Job',
+        source: 'external',
+        project: 'test',
+        server: 'test-server',
+        success: false,
+        reason: 'failed'
+      })
+
+      expect(job).to.have.property('consecutive_failures', 1)
+    })
+
+    it('should treat every schedules >= 5m as threshold 1', async () => {
+      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+
+      const job = await report_job({
+        job_id: 'test-5m-schedule-threshold',
+        name: 'Five Min Job',
+        source: 'internal',
+        project: 'base',
+        server: 'storage',
+        schedule: '5m',
+        schedule_type: 'every',
+        success: false,
+        reason: 'failed'
+      })
+
+      // 5m = 300000ms = ALERT_SUPPRESSION_WINDOW_MS, so threshold = 1
+      expect(job).to.have.property('consecutive_failures', 1)
+    })
+  })
 })

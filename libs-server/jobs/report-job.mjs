@@ -10,6 +10,41 @@ import { notify_job_failure } from './notify-discord.mjs'
 const log = debug('jobs:report')
 
 const MAX_FAILURE_HISTORY = 50
+const ALERT_SUPPRESSION_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Parse an interval string (e.g., '30s', '5m', '1h', '1d') to milliseconds
+ */
+const parse_interval_ms = (interval_str) => {
+  const match = interval_str?.match(/^(\d+)(s|m|h|d)$/)
+  if (!match) {
+    return null
+  }
+
+  const value = parseInt(match[1], 10)
+  const unit = match[2]
+
+  const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 }
+  return value * multipliers[unit]
+}
+
+/**
+ * Calculate the consecutive failure threshold before alerting.
+ * For high-frequency "every" schedules (interval < 5 minutes), require enough
+ * consecutive failures to span ~5 minutes. All other schedules alert on first failure.
+ */
+const get_alert_threshold = ({ schedule, schedule_type }) => {
+  if (schedule_type !== 'every') {
+    return 1
+  }
+
+  const interval_ms = parse_interval_ms(schedule)
+  if (!interval_ms || interval_ms >= ALERT_SUPPRESSION_WINDOW_MS) {
+    return 1
+  }
+
+  return Math.ceil(ALERT_SUPPRESSION_WINDOW_MS / interval_ms)
+}
 
 /**
  * Determine whether job files are accessed locally or via SSH.
@@ -155,6 +190,7 @@ const create_job = ({
     schedule: schedule || null,
     schedule_type: schedule_type || null,
     schedule_entity_id: schedule_entity_id || null,
+    consecutive_failures: 0,
     last_execution: null,
     failure_history: [],
     stats: {
@@ -243,10 +279,12 @@ export const report_job = async ({
   if (success) {
     job.stats.success_count += 1
     job.stats.last_success = now
+    job.consecutive_failures = 0
     job.last_alerted_at = null
   } else {
     job.stats.failure_count += 1
     job.stats.last_failure = now
+    job.consecutive_failures = (job.consecutive_failures || 0) + 1
 
     // Append to failure history
     job.failure_history.push({
@@ -266,25 +304,42 @@ export const report_job = async ({
 
   await save_job({ job_id, data: job })
 
-  // Notify on failure
+  // Notify on failure (with threshold-based suppression for high-frequency jobs)
   if (!success) {
-    try {
-      await notify_job_failure({
-        job_id,
-        name: job.name,
-        source: job.source,
-        project: job.project,
-        server: job.server,
-        reason,
-        duration_ms,
-        exit_code,
-        schedule: job.schedule,
-        schedule_entity_uri,
-        command,
-        discord_webhook_url: config.job_tracker?.discord_webhook_url
-      })
-    } catch (error) {
-      log('Discord notification error: %s', error.message)
+    const threshold = get_alert_threshold({
+      schedule: job.schedule,
+      schedule_type: job.schedule_type
+    })
+
+    const meets_threshold = job.consecutive_failures >= threshold
+    const cooldown_elapsed =
+      !job.last_alerted_at ||
+      new Date(now).getTime() - new Date(job.last_alerted_at).getTime() >=
+        ALERT_SUPPRESSION_WINDOW_MS
+
+    if (meets_threshold && cooldown_elapsed) {
+      try {
+        await notify_job_failure({
+          job_id,
+          name: job.name,
+          source: job.source,
+          project: job.project,
+          server: job.server,
+          reason,
+          duration_ms,
+          exit_code,
+          schedule: job.schedule,
+          schedule_entity_uri,
+          command,
+          consecutive_failures: job.consecutive_failures,
+          discord_webhook_url: config.job_tracker?.discord_webhook_url
+        })
+
+        job.last_alerted_at = now
+        await save_job({ job_id, data: job })
+      } catch (error) {
+        log('Discord notification error: %s', error.message)
+      }
     }
   }
 
