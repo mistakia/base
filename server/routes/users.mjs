@@ -9,16 +9,16 @@ import {
   mark_nonce_used
 } from '#libs-server/auth/nonce-cache.mjs'
 
-const IS_DEV = process.env.NODE_ENV === 'development'
-
 // Timestamp validation window: 5 minutes (in milliseconds)
 const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 
+// SameSite=Lax + signed POST payloads provide CSRF protection
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: !IS_DEV,
+  secure: process.env.NODE_ENV !== 'development',
   sameSite: 'lax',
-  path: '/'
+  path: '/',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 }
 
 const router = express.Router()

@@ -13,40 +13,28 @@ export const parse_jwt_token = () => {
   return async (req, res, next) => {
     const auth_header = req.headers.authorization
     let token = null
-    let source = null
 
-    // Check Authorization header first
+    // Check Authorization header first, fall back to cookie
     if (auth_header && auth_header.startsWith('Bearer ')) {
       token = auth_header.replace('Bearer ', '')
-      source = 'header'
     } else if (req.cookies?.base_token) {
-      // Fall back to cookie
       token = req.cookies.base_token
-      source = 'cookie'
     }
 
     if (!token) {
-      log('No token found in header or cookie, proceeding without user')
       req.user = null
       return next()
     }
 
     try {
-      // Verify and decode the token
       const decoded = jwt.verify(token, config.jwt.secret)
-
-      // Set req.user with the decoded token data
       req.user = {
         user_public_key: decoded.user_public_key,
         ...decoded
       }
-
-      log(
-        `JWT token validated for user: ${decoded.user_public_key} (source: ${source})`
-      )
+      log(`JWT token validated for user: ${decoded.user_public_key}`)
     } catch (error) {
-      // Log the error but don't block the request
-      log(`JWT verification failed (source: ${source}): ${error.message}`)
+      log(`JWT verification failed: ${error.message}`)
       req.user = null
     }
 

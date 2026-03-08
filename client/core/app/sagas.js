@@ -92,7 +92,7 @@ export function* clear_auth() {
   try {
     yield call(dispatch_fetch, api.delete_user_session())
   } catch (err) {
-    // Logout should still work if API call fails
+    console.warn('Failed to clear server session:', err.message)
   }
 
   yield call(async () => {
