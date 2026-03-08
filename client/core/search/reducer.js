@@ -2,25 +2,115 @@ import { Record, List, Map } from 'immutable'
 
 import { search_action_types } from './actions.js'
 
-/**
- * Derive search mode and stripped query from raw query input.
- * '#' prefix -> content mode, '?' prefix -> semantic mode, else default.
- */
-function derive_search_mode(query) {
-  if (query.startsWith('#')) {
-    return { search_mode: 'content', stripped_query: query.slice(1).trim() }
+const OPERATOR_PATTERNS = [
+  {
+    regex: /^(?:type|t):(\S+)$/,
+    key: 'type',
+    chip_type: 'operator',
+    label_fn: (v) => `type: ${v}`
+  },
+  {
+    regex: /^tag:(\S+)$/,
+    key: 'tag',
+    chip_type: 'operator',
+    label_fn: (v) => `tag: ${v}`
+  },
+  {
+    regex: /^(?:in|dir):(\S+)$/,
+    key: 'in',
+    chip_type: 'operator',
+    label_fn: (v) => `in: ${v}`
   }
-  if (query.startsWith('?')) {
-    return { search_mode: 'semantic', stripped_query: query.slice(1).trim() }
+]
+
+function parse_query_input(raw_query, existing_chips = new List()) {
+  let chips = existing_chips
+  let query = raw_query
+
+  // Mode detection: # or ? at start followed by at least one more character
+  if (query.length >= 2 && (query[0] === '#' || query[0] === '?')) {
+    // Only add and strip if no mode chip already exists
+    if (!chips.some((c) => c.type === 'mode')) {
+      const mode = query[0] === '#' ? 'content' : 'semantic'
+      const label = query[0] === '#' ? 'Content' : 'Semantic'
+      chips = chips.push({ type: 'mode', key: 'mode', value: mode, label })
+      query = query.slice(1).trimStart()
+    }
   }
-  return { search_mode: 'default', stripped_query: query }
+
+  // Operator parsing: split on spaces, convert completed tokens (not the last
+  // token unless the raw query ends with a space, indicating the user pressed space)
+  const tokens = query.split(/\s+/)
+  const remaining_tokens = []
+  const ends_with_space = query.length > 0 && query[query.length - 1] === ' '
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (!token) continue
+
+    // Only convert a token to a chip if it's not the last token, or if
+    // the query ends with a space (user committed the token with space)
+    const is_committed = i < tokens.length - 1 || ends_with_space
+
+    if (!is_committed) {
+      remaining_tokens.push(token)
+      continue
+    }
+
+    let matched = false
+
+    // Check value operators (type:, tag:, in:, dir:)
+    for (const pattern of OPERATOR_PATTERNS) {
+      const match = token.match(pattern.regex)
+      if (match) {
+        const value = match[1]
+        const chip = {
+          type: pattern.chip_type,
+          key: pattern.key,
+          value,
+          label: pattern.label_fn(value)
+        }
+        if (!chips.some((c) => c.key === chip.key && c.value === chip.value)) {
+          chips = chips.push(chip)
+        }
+        matched = true
+        break
+      }
+    }
+
+    // Check exclude terms: -term at word boundary
+    if (!matched && token.match(/^-(\S+)$/) && token.length > 1) {
+      const value = token.slice(1)
+      const chip = {
+        type: 'exclude',
+        key: 'exclude',
+        value,
+        label: `-${value}`
+      }
+      if (!chips.some((c) => c.key === chip.key && c.value === chip.value)) {
+        chips = chips.push(chip)
+      }
+      matched = true
+    }
+
+    if (!matched) {
+      remaining_tokens.push(token)
+    }
+  }
+
+  let result_query = remaining_tokens.join(' ')
+  // Preserve trailing space so the controlled input doesn't eat spaces.
+  // The trailing space is what the user just typed to commit a token.
+  if (ends_with_space && remaining_tokens.length > 0) {
+    result_query += ' '
+  }
+  return { chips, query: result_query }
 }
 
 const SearchState = new Record({
   is_open: false,
   query: '',
-  search_mode: 'default',
-  stripped_query: '',
+  chips: new List(),
   results: new Map({
     files: new List(),
     threads: new List(),
@@ -49,11 +139,21 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
       return new SearchState()
 
     case search_action_types.SET_SEARCH_QUERY: {
-      const { search_mode, stripped_query } = derive_search_mode(payload.query)
+      const { chips, query } = parse_query_input(
+        payload.query,
+        state.get('chips')
+      )
       return state.merge({
-        query: payload.query,
-        search_mode,
-        stripped_query,
+        query,
+        chips,
+        selected_index: 0
+      })
+    }
+
+    case search_action_types.REMOVE_CHIP: {
+      const chips = state.get('chips').delete(payload.index)
+      return state.merge({
+        chips,
         selected_index: 0
       })
     }
@@ -109,8 +209,7 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
     case search_action_types.CLEAR_SEARCH:
       return state.merge({
         query: '',
-        search_mode: 'default',
-        stripped_query: '',
+        chips: new List(),
         results: new Map({
           files: new List(),
           threads: new List(),

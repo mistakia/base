@@ -14,9 +14,13 @@ export {
   get_recent_files_loading,
   get_recent_files_loaded,
   get_search_mode,
-  get_stripped_query,
   get_content_results,
   get_semantic_results,
-  get_semantic_available
+  get_semantic_available,
+  get_chips,
+  get_active_types,
+  get_active_tags,
+  get_active_directory,
+  get_exclude_terms
 } from './selectors.js'
 export { search_sagas, navigate_to_result } from './sagas.js'

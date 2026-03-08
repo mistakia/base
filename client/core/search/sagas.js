@@ -15,7 +15,11 @@ import {
   get_recent_files_loaded,
   get_recent_files_loading,
   get_search_mode,
-  get_stripped_query
+  get_search_query,
+  get_active_types,
+  get_active_tags,
+  get_active_directory,
+  get_exclude_terms
 } from './selectors.js'
 import { api, api_request } from '@core/api/service.js'
 import { get_app } from '@core/app/selectors.js'
@@ -24,7 +28,13 @@ import { get_app } from '@core/app/selectors.js'
 function* handle_search_query({ payload }) {
   const { query, mode = 'full', types, limit } = payload
 
-  if (!query || query.trim().length < 2) {
+  const has_filters =
+    (payload.entity_types && payload.entity_types.length > 0) ||
+    (payload.tags && payload.tags.length > 0) ||
+    payload.directory ||
+    (payload.exclude && payload.exclude.length > 0)
+
+  if ((!query || query.trim().length < 2) && !has_filters) {
     yield put(
       search_actions.search_success({
         files: [],
@@ -40,6 +50,13 @@ function* handle_search_query({ payload }) {
     const params = { q: query, mode }
     if (types) params.types = types.join(',')
     if (limit) params.limit = limit
+    if (payload.entity_types && payload.entity_types.length > 0)
+      params.entity_types = payload.entity_types.join(',')
+    if (payload.tags && payload.tags.length > 0)
+      params.tags = payload.tags.join(',')
+    if (payload.directory) params.directory = payload.directory
+    if (payload.exclude && payload.exclude.length > 0)
+      params.exclude = payload.exclude.join(',')
 
     const app = yield select(get_app)
     const token = app.get('user_token')
@@ -55,11 +72,36 @@ function* handle_search_query({ payload }) {
 // Handle query change with debounce
 function* handle_query_change() {
   const search_mode = yield select(get_search_mode)
-  const stripped_query = yield select(get_stripped_query)
+  const current_query = yield select(get_search_query)
+  const active_types = yield select(get_active_types)
+  const active_tags = yield select(get_active_tags)
+  const active_directory = yield select(get_active_directory)
+  const exclude_terms = yield select(get_exclude_terms)
 
-  if (stripped_query && stripped_query.trim().length >= 2) {
+  const has_filters =
+    active_types.length > 0 ||
+    active_tags.length > 0 ||
+    active_directory ||
+    exclude_terms.length > 0
+
+  if ((current_query && current_query.trim().length >= 2) || has_filters) {
     const api_mode = search_mode === 'default' ? 'full' : search_mode
-    yield put(search_actions.search({ query: stripped_query, mode: api_mode }))
+    const search_payload = { query: current_query || '', mode: api_mode }
+
+    if (active_types.length > 0) {
+      const non_thread_types = active_types.filter((t) => t !== 'thread')
+      const types = []
+      if (non_thread_types.length > 0) types.push('entities')
+      if (active_types.includes('thread')) types.push('threads')
+      if (non_thread_types.length > 0)
+        search_payload.entity_types = non_thread_types
+      search_payload.types = types
+    }
+    if (active_tags.length > 0) search_payload.tags = active_tags
+    if (active_directory) search_payload.directory = active_directory
+    if (exclude_terms.length > 0) search_payload.exclude = exclude_terms
+
+    yield put(search_actions.search(search_payload))
   } else {
     yield put(search_actions.clear_results())
   }
@@ -129,6 +171,10 @@ export function* watch_search_query_change() {
   yield debounce(300, search_action_types.SET_SEARCH_QUERY, handle_query_change)
 }
 
+export function* watch_chip_removal() {
+  yield takeLatest(search_action_types.REMOVE_CHIP, handle_query_change)
+}
+
 export function* watch_search_request() {
   yield takeLatest(search_action_types.SEARCH_REQUEST, handle_search_query)
 }
@@ -153,6 +199,7 @@ export function* watch_fetch_recent_files() {
 
 export const search_sagas = [
   fork(watch_search_query_change),
+  fork(watch_chip_removal),
   fork(watch_search_request),
   fork(watch_palette_open),
   fork(watch_fetch_recent_files)

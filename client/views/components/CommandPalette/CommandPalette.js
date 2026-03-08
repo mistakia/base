@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react'
+import React, { useEffect, useCallback, useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -17,7 +17,7 @@ import {
   get_recent_files_loading,
   get_search_mode,
   get_semantic_available,
-  get_stripped_query
+  get_chips
 } from '@core/search'
 
 import './CommandPalette.styl'
@@ -151,14 +151,30 @@ SemanticResultItem.propTypes = {
   onClick: PropTypes.func
 }
 
-const MODE_LABELS = {
-  content: 'Content Search',
-  semantic: 'Semantic Search'
+const SearchChip = ({ chip, on_remove }) => {
+  const variant_class =
+    chip.type === 'mode'
+      ? 'command-palette__chip--mode'
+      : chip.type === 'exclude'
+        ? 'command-palette__chip--exclude'
+        : 'command-palette__chip--operator'
+
+  return (
+    <span className={`command-palette__chip ${variant_class}`}>
+      <span className='command-palette__chip-label'>{chip.label}</span>
+      <span className='command-palette__chip-remove' onClick={on_remove}>
+        &times;
+      </span>
+    </span>
+  )
 }
 
-const MODE_PLACEHOLDERS = {
-  content: '# Search file contents...',
-  semantic: '? Search by meaning...'
+SearchChip.propTypes = {
+  chip: PropTypes.shape({
+    type: PropTypes.string.isRequired,
+    label: PropTypes.string.isRequired
+  }).isRequired,
+  on_remove: PropTypes.func.isRequired
 }
 
 const encode_path = (p) =>
@@ -182,14 +198,18 @@ const CommandPalette = () => {
   const recent_files_loading = useSelector(get_recent_files_loading)
   const search_mode = useSelector(get_search_mode)
   const semantic_available = useSelector(get_semantic_available)
-  const stripped_query = useSelector(get_stripped_query)
+  const chips = useSelector(get_chips)
 
-  // Determine what to display: recent files (when no query) or search results
-  // Use stripped_query length to align with the saga's 2-char search threshold
-  const show_recent_files = !stripped_query || stripped_query.length < 2
-  const display_items = show_recent_files
-    ? recent_files.map((item) => ({ ...item, category: 'recent' }))
-    : results
+  // Determine what to display: recent files (when no query/filters) or search results
+  const has_filter_chips = chips.some((c) => c.type !== 'mode')
+  const show_recent_files = (!query || query.length < 2) && !has_filter_chips
+  const display_items = useMemo(
+    () =>
+      show_recent_files
+        ? recent_files.map((item) => ({ ...item, category: 'recent' }))
+        : results,
+    [show_recent_files, recent_files, results]
+  )
   const display_loading = show_recent_files ? recent_files_loading : is_loading
 
   const handle_close = useCallback(() => {
@@ -271,13 +291,28 @@ const CommandPalette = () => {
           break
         }
 
+        case 'Backspace':
+          if (!query && chips.size > 0) {
+            event.preventDefault()
+            dispatch(search_actions.remove_chip(chips.size - 1))
+          }
+          break
+
         case 'Escape':
           event.preventDefault()
           handle_close()
           break
       }
     },
-    [dispatch, display_items, selected_index, navigate_to_item, handle_close]
+    [
+      dispatch,
+      display_items,
+      selected_index,
+      navigate_to_item,
+      handle_close,
+      query,
+      chips
+    ]
   )
 
   // Reset selected index to 0 when display items change
@@ -315,16 +350,22 @@ const CommandPalette = () => {
       }}>
       <Box className='command-palette__input-container'>
         <SearchIcon className='command-palette__search-icon' />
-        {search_mode !== 'default' && (
-          <span className='command-palette__mode-indicator'>
-            {MODE_LABELS[search_mode]}
-          </span>
-        )}
+        {chips.map((chip, index) => (
+          <SearchChip
+            key={`${chip.key}-${chip.value}-${index}`}
+            chip={chip}
+            on_remove={() => dispatch(search_actions.remove_chip(index))}
+          />
+        ))}
         <input
           ref={input_ref}
           type='text'
           className='command-palette__input'
-          placeholder={MODE_PLACEHOLDERS[search_mode] || 'Search...'}
+          placeholder={
+            chips.size > 0
+              ? 'Filter...'
+              : 'Search... (# content, ? semantic, type: tag: in: -exclude)'
+          }
           value={query}
           onChange={handle_query_change}
           onKeyDown={handle_key_down}

@@ -15,10 +15,11 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
   &__input-container
     display flex
     align-items center
+    flex-wrap wrap
     padding 6px 12px
     border-bottom 1px solid var(--color-border)
-    gap 8px
-    height 32px
+    gap 4px
+    min-height 32px
 
   &__search-icon
     color var(--color-text-secondary)
@@ -26,6 +27,7 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
 
   &__input
     flex 1
+    min-width 120px
     background transparent
     border none
     outline none
@@ -127,16 +129,46 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
     color var(--color-text-secondary)
     font-size var(--font-size-sm)
 
-  &__mode-indicator
-    font-size 10px
-    font-weight 500
-    text-transform uppercase
-    color var(--color-primary)
-    background-color var(--color-surface-hover)
-    padding 1px 6px
-    border-radius 3px
+  &__chip
+    display inline-flex
+    align-items center
+    height 20px
+    padding 0 6px
+    border-radius 4px
+    font-size 11px
+    font-family var(--font-family-mono)
     flex-shrink 0
-    letter-spacing 0.3px
+    gap 2px
+
+    &--mode
+      background-color rgba(0, 123, 255, 0.15)
+      color var(--color-primary)
+
+    &--operator
+      background-color var(--color-surface-hover)
+      border 1px solid var(--color-border)
+      color var(--color-text-secondary)
+
+    &--exclude
+      background-color rgba(215, 58, 73, 0.10)
+      color var(--color-error)
+
+  &__chip-label
+    white-space nowrap
+
+  &__chip-remove
+    display none
+    cursor pointer
+    font-size 14px
+    line-height 1
+    color var(--color-text-tertiary)
+    margin-left 2px
+
+    &:hover
+      color var(--color-text)
+
+  &__chip:hover &__chip-remove
+    display inline
 
   &__mode-status
     font-size 10px

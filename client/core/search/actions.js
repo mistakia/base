@@ -10,7 +10,8 @@ export const search_action_types = {
   SET_SELECTED_INDEX: 'SET_SELECTED_INDEX',
   FETCH_RECENT_FILES_REQUEST: 'FETCH_RECENT_FILES_REQUEST',
   FETCH_RECENT_FILES_SUCCESS: 'FETCH_RECENT_FILES_SUCCESS',
-  FETCH_RECENT_FILES_FAILURE: 'FETCH_RECENT_FILES_FAILURE'
+  FETCH_RECENT_FILES_FAILURE: 'FETCH_RECENT_FILES_FAILURE',
+  REMOVE_CHIP: 'REMOVE_CHIP'
 }
 
 export const search_actions = {
@@ -27,9 +28,9 @@ export const search_actions = {
     payload: { query }
   }),
 
-  search: ({ query, mode = 'full', types, limit }) => ({
+  search: ({ query, mode = 'full', types, limit, ...filters }) => ({
     type: search_action_types.SEARCH_REQUEST,
-    payload: { query, mode, types, limit }
+    payload: { query, mode, types, limit, ...filters }
   }),
 
   search_success: (results) => ({
@@ -67,5 +68,10 @@ export const search_actions = {
   fetch_recent_files_failure: (error) => ({
     type: search_action_types.FETCH_RECENT_FILES_FAILURE,
     payload: { error }
+  }),
+
+  remove_chip: (index) => ({
+    type: search_action_types.REMOVE_CHIP,
+    payload: { index }
   })
 }

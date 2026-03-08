@@ -1,4 +1,8 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+
 import debug from 'debug'
+import front_matter from 'front-matter'
 
 import { load_search_config } from './search-config.mjs'
 import { search_file_contents } from './ripgrep-file-search.mjs'
@@ -10,6 +14,7 @@ import {
   is_valid_base_uri,
   parse_base_uri
 } from '#libs-server/base-uri/index.mjs'
+import config from '#config'
 
 const log = debug('search:unified')
 
@@ -218,7 +223,9 @@ function add_categorized_result({
 export async function search_full({
   query,
   types = ['files', 'threads', 'entities', 'directories'],
-  limit = 20
+  limit = 20,
+  entity_types = null,
+  tags = null
 }) {
   if (!query || !query.trim()) {
     return { files: [], threads: [], entities: [], directories: [], total: 0 }
@@ -365,6 +372,37 @@ export async function search_full({
   results.directories = results.directories.slice(0, per_type_limit)
   results.threads = results.threads.slice(0, per_type_limit)
 
+  // Apply entity_types filter (filter by first path segment = entity type)
+  if (entity_types && entity_types.length > 0) {
+    const type_set = new Set(entity_types.filter((t) => t !== 'thread'))
+    if (type_set.size > 0) {
+      results.entities = results.entities.filter((entity) => {
+        const first_segment = (entity.file_path || '').split('/')[0]
+        return type_set.has(first_segment)
+      })
+    }
+  }
+
+  // Apply tags filter (requires reading frontmatter)
+  if (tags && tags.length > 0) {
+    const user_base_dir =
+      config.user_base_directory || process.env.USER_BASE_DIRECTORY
+    const tag_checks = await Promise.all(
+      results.entities.map(async (entity) => {
+        try {
+          const abs_path = join(user_base_dir, entity.file_path)
+          const content = await readFile(abs_path, 'utf-8')
+          const { attributes } = front_matter(content)
+          const entity_tags = attributes.tags || []
+          return tags.some((tag) => entity_tags.includes(tag))
+        } catch {
+          return false
+        }
+      })
+    )
+    results.entities = results.entities.filter((_, i) => tag_checks[i])
+  }
+
   // Calculate total (may slightly exceed limit due to ceil-based per-type allocation)
   results.total =
     results.files.length +
@@ -391,7 +429,9 @@ export async function unified_search({
   mode = 'full',
   directory = null,
   types = ['files', 'threads', 'entities', 'directories'],
-  limit = 20
+  limit = 20,
+  entity_types = null,
+  tags = null
 }) {
   const search_config = await load_search_config()
   const effective_limit = Math.min(
@@ -418,7 +458,9 @@ export async function unified_search({
   const results = await search_full({
     query,
     types,
-    limit: effective_limit
+    limit: effective_limit,
+    entity_types,
+    tags
   })
 
   return {

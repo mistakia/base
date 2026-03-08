@@ -117,6 +117,46 @@ Search behavior is controlled by a JSON configuration file in the user base dire
 - **Timeline search toggle**: Enable thread timeline content search (disabled by default)
 - **Limits**: Max file size, timeout, result counts
 
+## Search Operators
+
+The Command Palette supports operator-based filtering via typed chips. Users type operator syntax which converts to visual chip elements on space.
+
+### Operator Syntax
+
+| Operator        | Aliases       | Example                | Chip label          |
+| --------------- | ------------- | ---------------------- | ------------------- |
+| Content mode    | `#`           | `# docker config`      | `Content`           |
+| Semantic mode   | `?`           | `? how does auth work` | `Semantic`          |
+| Entity type     | `type:`, `t:` | `type:task deploy`     | `type: task`        |
+| Tag             | `tag:`        | `tag:base-project`     | `tag: base-project` |
+| Directory scope | `in:`, `dir:` | `in:task/ migration`   | `in: task/`         |
+| Exclude         | `-term`       | `search -archived`     | `-archived`         |
+
+### Conversion Triggers
+
+- **Mode prefixes** (`#`, `?`): Convert on first character typed after the prefix
+- **Value operators** (`type:value`, `tag:value`, `in:path`, `-term`): Convert on space after the complete token
+
+### Chip Interaction
+
+- Chips render inline before the text input in the Command Palette
+- Backspace with empty input removes the last chip
+- Hover reveals an X button for click removal
+- Removing a chip re-triggers search with updated filters
+
+### API Parameters
+
+The search API (`GET /api/search`) accepts these filter parameters alongside existing ones:
+
+- `entity_types`: Comma-separated entity type names, filters entity results by type directory
+- `tags`: Comma-separated tag base URIs, filters entity results to those with matching tags
+- `exclude`: Comma-separated terms, post-filtered from result titles and paths (case-insensitive)
+- When `entity_types` includes `thread`, threads are automatically included in result types
+
+### Implementation
+
+Chip state is managed in the Redux search reducer as an Immutable List. Selectors derive filter values from chips for the saga to pass to the API. Entity type filtering uses the first path segment. Tag filtering reads frontmatter. Exclude filtering is a post-filter on result titles/paths.
+
 ## Trade-offs
 
 | Decision                 | Trade-off                                                                   |
@@ -127,6 +167,8 @@ Search behavior is controlled by a JSON configuration file in the user base dire
 | Score-then-limit (20k)   | Higher memory for large codebases vs. accurate multi-word path matching     |
 | Dirs from file paths     | Cannot discover empty directories vs. fast extraction                       |
 | Read-after-match         | Additional file reads for matched threads vs. streaming results             |
+| Operator chip parsing    | Parsing complexity on each keystroke vs. discoverable filter syntax         |
+| Tag filter reads files   | Frontmatter reads for tag matching vs. no index dependency                  |
 
 ## Performance
 

@@ -339,11 +339,23 @@ export const api = {
   },
 
   // Search operations
-  search({ q, mode = 'full', types, directory, limit }) {
+  search({
+    q,
+    mode = 'full',
+    types,
+    directory,
+    limit,
+    entity_types,
+    tags,
+    exclude
+  }) {
     const params = { q, mode }
     if (types) params.types = types
     if (directory) params.directory = directory
     if (limit) params.limit = limit
+    if (entity_types) params.entity_types = entity_types
+    if (tags) params.tags = tags
+    if (exclude) params.exclude = exclude
     const url = `${API_URL}/search?${qs.stringify(params)}`
     return { url }
   },

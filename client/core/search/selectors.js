@@ -55,14 +55,40 @@ export const get_recent_files_loaded = createSelector(
   (search_state) => search_state?.get('recent_files_loaded') || false
 )
 
-export const get_search_mode = createSelector(
+export const get_chips = createSelector(
   [get_search_state],
-  (search_state) => search_state?.get('search_mode') || 'default'
+  (search_state) => search_state?.get('chips') || new List()
 )
 
-export const get_stripped_query = createSelector(
-  [get_search_state],
-  (search_state) => search_state?.get('stripped_query') || ''
+export const get_search_mode = createSelector([get_chips], (chips) => {
+  const mode_chip = chips.find((c) => c.type === 'mode')
+  return mode_chip ? mode_chip.value : 'default'
+})
+
+export const get_active_types = createSelector([get_chips], (chips) =>
+  chips
+    .filter((c) => c.key === 'type')
+    .map((c) => c.value)
+    .toArray()
+)
+
+export const get_active_tags = createSelector([get_chips], (chips) =>
+  chips
+    .filter((c) => c.key === 'tag')
+    .map((c) => c.value)
+    .toArray()
+)
+
+export const get_active_directory = createSelector([get_chips], (chips) => {
+  const dir_chip = chips.find((c) => c.key === 'in')
+  return dir_chip ? dir_chip.value : null
+})
+
+export const get_exclude_terms = createSelector([get_chips], (chips) =>
+  chips
+    .filter((c) => c.type === 'exclude')
+    .map((c) => c.value)
+    .toArray()
 )
 
 export const get_content_results = createSelector(

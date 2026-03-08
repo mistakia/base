@@ -122,6 +122,9 @@ router.get('/', async (req, res) => {
     const directory = req.query.directory || null
     const types_param = req.query.types
     const limit_param = req.query.limit
+    const entity_types_param = req.query.entity_types
+    const tags_param = req.query.tags
+    const exclude_param = req.query.exclude
 
     // Validate required query parameter
     if (!query || !query.trim()) {
@@ -172,12 +175,63 @@ router.get('/', async (req, res) => {
       limit = Math.min(limit, search_config.search?.max_limit || 100)
     }
 
+    // Parse comma-separated filter parameters
+    const parse_csv_param = (value) =>
+      value
+        ? value
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : null
+
+    const entity_types = parse_csv_param(entity_types_param)
+    const tags = parse_csv_param(tags_param)
+    const exclude = parse_csv_param(exclude_param)
+
+    // When entity_types includes 'thread', ensure threads are in result types
+    if (
+      entity_types &&
+      entity_types.includes('thread') &&
+      !types.includes('threads')
+    ) {
+      types.push('threads')
+    }
+
     log(
       `Search request: q="${query}", mode=${mode}, types=${types.join(',')}, limit=${limit}`
     )
 
     // Get user public key for permission checking
     const user_public_key = req.user?.user_public_key || null
+
+    // Entity type filter helper (shared across all modes)
+    // For semantic results: filter by `type` field
+    // For content/file results: filter by first path segment
+    const apply_entity_types_filter = (results_list) => {
+      if (!entity_types || entity_types.length === 0) return results_list
+      const type_set = new Set(entity_types)
+      return results_list.filter((item) => {
+        // Semantic results have a `type` field
+        if (item.type && type_set.has(item.type)) return true
+        // File-based results: check first path segment
+        const path = item.file_path || item.relative_path || ''
+        const first_segment = path.replace(/^\.\//, '').split('/')[0]
+        return type_set.has(first_segment)
+      })
+    }
+
+    // Exclude filter helper (shared across all modes)
+    const apply_exclude_filter = (results_list) => {
+      if (!exclude || exclude.length === 0) return results_list
+      const exclude_lower = exclude.map((t) => t.toLowerCase())
+      return results_list.filter((item) => {
+        const title = (item.title || '').toLowerCase()
+        const path = (item.file_path || item.relative_path || '').toLowerCase()
+        return !exclude_lower.some(
+          (term) => title.includes(term) || path.includes(term)
+        )
+      })
+    }
 
     // Content search mode
     if (mode === 'content') {
@@ -187,10 +241,12 @@ router.get('/', async (req, res) => {
         max_results: limit
       })
 
-      const filtered_content = await filter_results_by_permission(
+      let filtered_content = await filter_results_by_permission(
         content_results.map((r) => ({ ...r, absolute_path: r.file_path })),
         user_public_key
       )
+      filtered_content = apply_entity_types_filter(filtered_content)
+      filtered_content = apply_exclude_filter(filtered_content)
 
       return res.json({
         content_results: filtered_content,
@@ -206,11 +262,12 @@ router.get('/', async (req, res) => {
         limit
       })
 
-      // Filter by permission using base_uri (already present on semantic results)
-      const filtered_semantic = await filter_results_by_permission(
+      let filtered_semantic = await filter_results_by_permission(
         semantic_results,
         user_public_key
       )
+      filtered_semantic = apply_entity_types_filter(filtered_semantic)
+      filtered_semantic = apply_exclude_filter(filtered_semantic)
 
       return res.json({
         semantic_results: filtered_semantic,
@@ -226,26 +283,32 @@ router.get('/', async (req, res) => {
       mode,
       directory,
       types,
-      limit
+      limit,
+      entity_types,
+      tags
     })
 
-    // Filter results by permission
+    const full_result_types = ['files', 'threads', 'entities', 'directories']
+
+    // Filter results by permission and apply exclude filter
     if (mode === 'paths') {
-      search_results.results = await filter_results_by_permission(
-        search_results.results,
-        user_public_key
+      search_results.results = apply_exclude_filter(
+        await filter_results_by_permission(
+          search_results.results,
+          user_public_key
+        )
       )
       search_results.total = search_results.results.length
     } else {
-      // Full mode - filter each category
-      const result_types = ['files', 'threads', 'entities', 'directories']
-      for (const type of result_types) {
-        search_results[type] = await filter_results_by_permission(
-          search_results[type],
-          user_public_key
+      for (const type of full_result_types) {
+        search_results[type] = apply_exclude_filter(
+          await filter_results_by_permission(
+            search_results[type],
+            user_public_key
+          )
         )
       }
-      search_results.total = result_types.reduce(
+      search_results.total = full_result_types.reduce(
         (sum, type) => sum + search_results[type].length,
         0
       )
