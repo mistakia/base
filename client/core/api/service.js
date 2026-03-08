@@ -26,6 +26,10 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, ...POST({ data, signature }) }
   },
+  delete_user_session() {
+    const url = `${API_URL}/users/session`
+    return { url, method: 'DELETE' }
+  },
   get_tasks({ limit = 100, offset = 0, ...params } = {}) {
     const url = `${API_URL}/tasks?${qs.stringify({ limit, offset, ...params })}`
     return { url }
