@@ -8,6 +8,7 @@ import { app_actions } from './actions'
 import { get_app } from './selectors'
 import { local_storage_adapter } from '@core/utils'
 import { post_user_session } from '@core/api'
+import { api, dispatch_fetch } from '@core/api/service'
 import { directory_actions } from '@core/directory/actions'
 import { threads_actions } from '@core/threads/actions'
 import { tasks_actions } from '@core/tasks/actions'
@@ -87,6 +88,13 @@ function* handle_post_user_session_fulfilled({ payload }) {
 }
 
 export function* clear_auth() {
+  // Clear server-side cookie before clearing local storage
+  try {
+    yield call(dispatch_fetch, api.delete_user_session())
+  } catch (err) {
+    console.warn('Failed to clear server session:', err.message)
+  }
+
   yield call(async () => {
     await local_storage_adapter.removeItem('base_private_key')
     await local_storage_adapter.removeItem('base_public_key')

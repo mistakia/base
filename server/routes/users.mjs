@@ -12,6 +12,15 @@ import {
 // Timestamp validation window: 5 minutes (in milliseconds)
 const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 
+// SameSite=Lax + signed POST payloads provide CSRF protection
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== 'development',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+}
+
 const router = express.Router()
 
 // Get all users endpoint
@@ -107,6 +116,7 @@ router.post('/', async (req, res) => {
       { user_public_key: data.user_public_key },
       config.jwt.secret
     )
+    res.cookie('base_token', token, COOKIE_OPTIONS)
     res.status(200).send({
       token,
       user_public_key: data.user_public_key,
@@ -175,6 +185,7 @@ router.post('/session', async (req, res) => {
       { user_public_key: data.user_public_key },
       config.jwt.secret
     )
+    res.cookie('base_token', token, COOKIE_OPTIONS)
     res.status(200).send({
       token,
       user_public_key: data.user_public_key,
@@ -187,6 +198,11 @@ router.post('/session', async (req, res) => {
     log(error)
     res.status(500).send({ error: error.message })
   }
+})
+
+router.delete('/session', (req, res) => {
+  res.clearCookie('base_token', COOKIE_OPTIONS)
+  res.status(200).send({ success: true })
 })
 
 router.get('/public_keys/:user_public_key', async (req, res) => {

@@ -10,6 +10,7 @@ import compression from 'compression'
 import extend from 'deep-extend'
 import debug from 'debug'
 import bodyParser from 'body-parser'
+import cookie_parser from 'cookie-parser'
 import cors from 'cors'
 import qs from 'qs'
 import jwt from 'jsonwebtoken'
@@ -144,6 +145,9 @@ api.use((req, res, next) => {
 
 // Health endpoint - registered before auth middleware so it works without authentication
 api.use('/api/health', health_router)
+
+// Cookie parser - populates req.cookies for JWT cookie fallback
+api.use(cookie_parser())
 
 // JWT parsing middleware for all routes - parses tokens but doesn't block
 api.use(parse_jwt_token())
