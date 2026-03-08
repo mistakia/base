@@ -37,6 +37,7 @@ Based on what you know you've done in this session and the tasks you were given,
 - **Temporary artifacts** — scratch files, temp outputs, or debug additions that should be cleaned up
 - **Worktree cleanup** — feature branches or worktrees created during the session that should be merged or removed
 - **Multi-machine sync** — changes to entities, configs, services, or scheduled commands that need to be pushed or deployed to the storage server
+- **Task status** — if this session worked on a task entity (implementation, checklist items, subtasks), evaluate whether the task should be marked Completed. If all required checklist items are done, or remaining items are explicitly optional/deferred/moot, mark the task Completed now. Also check whether completing a subtask means a parent task should be updated. If uncertain, surface it as a follow-up action rather than leaving a stale "In Progress" status.
 - **Follow-up tasks** — consider what tasks naturally follow from this session's work, including:
   - Incomplete work that needs to be continued
   - Next steps that the completed work enables or reveals
