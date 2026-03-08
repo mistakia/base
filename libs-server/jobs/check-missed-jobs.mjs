@@ -4,28 +4,13 @@ import config from '#config'
 
 import { load_all_jobs, save_job } from './report-job.mjs'
 import { notify_missed_job } from './notify-discord.mjs'
+import { parse_interval_ms } from './job-utils.mjs'
 
 const { CronExpressionParser } = cronParser
 const log = debug('jobs:missed')
 
 const MIN_GRACE_MS = 5 * 60 * 1000 // 5 minutes
 const GRACE_MULTIPLIER = 1.5
-
-/**
- * Parse an interval string (e.g., '30s', '5m', '1h', '1d') to milliseconds
- */
-const parse_interval_ms = (interval_str) => {
-  const match = interval_str.match(/^(\d+)(s|m|h|d)$/)
-  if (!match) {
-    return null
-  }
-
-  const value = parseInt(match[1], 10)
-  const unit = match[2]
-
-  const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 }
-  return value * multipliers[unit]
-}
 
 /**
  * Calculate the grace period for a job based on its schedule

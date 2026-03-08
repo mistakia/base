@@ -32,7 +32,7 @@ export const notify_job_failure = async ({
   discord_webhook_url
 }) => {
   if (!discord_webhook_url) {
-    return
+    return false
   }
 
   const display_name = name && name !== job_id ? name : null
@@ -116,9 +116,13 @@ export const notify_job_failure = async ({
         response.status,
         response.statusText
       )
+      return false
     }
+
+    return true
   } catch (error) {
     log('Discord notification error: %s', error.message)
+    return false
   }
 }
 
