@@ -88,7 +88,10 @@ fi
 json_body="${json_body}}"
 
 # Report to API (fire-and-forget, 10s timeout)
-curl -s -S --max-time 10 \
+# Use -k to skip cert validation for localhost/LAN connections where the
+# TLS cert (issued for base.tint.space) doesn't match the hostname.
+# Authentication is handled by the API key, not the certificate.
+curl -s -S -k --max-time 10 \
   -X POST "${JOB_API_URL}/api/jobs/report" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${JOB_API_KEY}" \
