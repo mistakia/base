@@ -204,11 +204,19 @@ describe('API /jobs', function () {
       }
 
       // First failure
-      let job = await report_job({ ...base_params, success: false, reason: 'fail 1' })
+      let job = await report_job({
+        ...base_params,
+        success: false,
+        reason: 'fail 1'
+      })
       expect(job).to.have.property('consecutive_failures', 1)
 
       // Second failure
-      job = await report_job({ ...base_params, success: false, reason: 'fail 2' })
+      job = await report_job({
+        ...base_params,
+        success: false,
+        reason: 'fail 2'
+      })
       expect(job).to.have.property('consecutive_failures', 2)
 
       // Success resets counter
@@ -216,7 +224,11 @@ describe('API /jobs', function () {
       expect(job).to.have.property('consecutive_failures', 0)
 
       // Failure after success starts fresh
-      job = await report_job({ ...base_params, success: false, reason: 'fail 3' })
+      job = await report_job({
+        ...base_params,
+        success: false,
+        reason: 'fail 3'
+      })
       expect(job).to.have.property('consecutive_failures', 1)
     })
 
