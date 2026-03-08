@@ -136,7 +136,7 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
       success,
       duration_ms: result?.duration_ms ?? null,
       exit_code: result?.exit_code ?? null,
-      reason: reason_text ? reason_text.slice(0, 500) : null,
+      reason: reason_text ? reason_text.slice(-2000) : null,
       project: 'base',
       server: os.hostname(),
       schedule: metadata.schedule_expression,
