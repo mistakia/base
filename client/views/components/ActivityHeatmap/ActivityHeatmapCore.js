@@ -57,9 +57,7 @@ function recalculate_filtered_score(entry, filter) {
       )
     case 'threads':
       return (
-        Math.floor(
-          (entry.activity_token_usage || 0) / W.token_usage_divisor
-        ) +
+        Math.floor((entry.activity_token_usage || 0) / W.token_usage_divisor) +
         (entry.activity_thread_edits || 0) * W.thread_edits +
         Math.floor(
           (entry.activity_thread_lines_changed || 0) /
@@ -241,22 +239,18 @@ const ActivityHeatmap = ({
         }
       ]
     }),
-    [chart_data, heatmap_data_js, max_score, filtered_max_score, range_start, range_end]
+    [
+      chart_data,
+      heatmap_data_js,
+      max_score,
+      filtered_max_score,
+      range_start,
+      range_end
+    ]
   )
 
   return (
     <div className='activity-heatmap'>
-      <div className='activity-heatmap-filters'>
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            className={`activity-heatmap-filter${filter === f ? ' active' : ''}`}
-            onClick={() => set_filter(f)}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
       <ReactEChartsCore
         echarts={echarts}
         option={option}
@@ -267,6 +261,16 @@ const ActivityHeatmap = ({
         }}
         opts={{ renderer: 'canvas' }}
       />
+      <div className='activity-heatmap-filters'>
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            className={`activity-heatmap-filter${filter === f ? ' active' : ''}`}
+            onClick={() => set_filter(f)}>
+            {f}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

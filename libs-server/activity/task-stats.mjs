@@ -235,7 +235,11 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
         row.week instanceof Date
           ? row.week.toISOString().split('T')[0]
           : String(row.week).split('T')[0]
-      by_week.set(week, { week, created: Number(row.created || 0), completed: 0 })
+      by_week.set(week, {
+        week,
+        created: Number(row.created || 0),
+        completed: 0
+      })
     }
     for (const row of completion_rows) {
       const week =
@@ -245,7 +249,11 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
       if (by_week.has(week)) {
         by_week.get(week).completed = Number(row.completed || 0)
       } else {
-        by_week.set(week, { week, created: 0, completed: Number(row.completed || 0) })
+        by_week.set(week, {
+          week,
+          created: 0,
+          completed: Number(row.completed || 0)
+        })
       }
     }
 

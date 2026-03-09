@@ -63,8 +63,8 @@ const Homepage = ({
             right_content={
               <div className='homepage-right-column'>
                 <ActivityHeatmap />
-                <TaskStatusBar />
                 <TaskStats />
+                <TaskStatusBar />
                 <HomeSessionsPanel
                   threads={threads}
                   is_loading_threads={is_loading_threads}

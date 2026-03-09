@@ -27,8 +27,7 @@ export const TaskStatusBar = ({ by_status }) => {
     <div className='task-status-bar-wrapper'>
       <div
         className='task-stats-status-bar'
-        onClick={() => set_show_labels((s) => !s)}
-      >
+        onClick={() => set_show_labels((s) => !s)}>
         {entries.map(([status, count]) => (
           <div
             key={status}
@@ -38,8 +37,7 @@ export const TaskStatusBar = ({ by_status }) => {
               backgroundColor: STATUS_COLORS[status] || '#9ca3af'
             }}
             onMouseEnter={() => set_hovered(status)}
-            onMouseLeave={() => set_hovered(null)}
-          >
+            onMouseLeave={() => set_hovered(null)}>
             {hovered === status && !show_labels && (
               <div className='task-stats-status-tooltip'>
                 {status}: {count}
@@ -140,14 +138,15 @@ const TaskFlowChart = ({ data }) => {
     const backlog = []
     let cumulative = 0
     for (let i = 0; i < data.length; i++) {
-      cumulative += (created[i] - completed[i])
+      cumulative += created[i] - completed[i]
       backlog.push(cumulative)
     }
     const backlog_min = Math.min(...backlog)
     const backlog_max = Math.max(...backlog)
     const backlog_range = backlog_max - backlog_min || 1
     const backlog_ys = backlog.map(
-      (v) => CHART_HEIGHT - padding - ((v - backlog_min) / backlog_range) * usable
+      (v) =>
+        CHART_HEIGHT - padding - ((v - backlog_min) / backlog_range) * usable
     )
 
     return {
@@ -182,15 +181,13 @@ const TaskFlowChart = ({ data }) => {
       ref={container_ref}
       className='task-flow-chart'
       onMouseMove={handle_mouse_move}
-      onMouseLeave={() => set_hover_idx(null)}
-    >
+      onMouseLeave={() => set_hover_idx(null)}>
       {width > 0 && chart && (
         <>
           <svg
             width={width}
             height={CHART_HEIGHT}
-            viewBox={`0 0 ${width} ${CHART_HEIGHT}`}
-          >
+            viewBox={`0 0 ${width} ${CHART_HEIGHT}`}>
             {/* Background bars: interpolated, color intensity = smoothed net */}
             {chart.interp_momentum.map((m, i) => {
               const intensity = Math.min(Math.abs(m) / chart.max_net, 1)
@@ -236,31 +233,28 @@ const TaskFlowChart = ({ data }) => {
             />
 
             {/* Hover highlight */}
-            {hover_idx !== null && (() => {
-              const data_width = width / data.length
-              return (
-                <rect
-                  x={hover_idx * data_width}
-                  y={0}
-                  width={data_width}
-                  height={CHART_HEIGHT}
-                  fill='#ffffff'
-                  opacity='0.08'
-                />
-              )
-            })()}
+            {hover_idx !== null &&
+              (() => {
+                const data_width = width / data.length
+                return (
+                  <rect
+                    x={hover_idx * data_width}
+                    y={0}
+                    width={data_width}
+                    height={CHART_HEIGHT}
+                    fill='#ffffff'
+                    opacity='0.08'
+                  />
+                )
+              })()}
           </svg>
 
           {hover_idx !== null && (
             <div
               className='task-flow-tooltip'
               style={{
-                left: Math.min(
-                  hover_idx * (width / data.length),
-                  width - 120
-                )
-              }}
-            >
+                left: Math.min(hover_idx * (width / data.length), width - 120)
+              }}>
               <div className='task-flow-tooltip-week'>
                 {data[hover_idx].week}
               </div>
@@ -274,12 +268,16 @@ const TaskFlowChart = ({ data }) => {
                 </span>
               </div>
               <div>
-                <span style={{ color: chart.net[hover_idx] >= 0 ? '#22c55e' : '#f97316' }}>
-                  net: {chart.net[hover_idx] > 0 ? '+' : ''}{chart.net[hover_idx]}
-                </span>
-                {' '}
+                <span
+                  style={{
+                    color: chart.net[hover_idx] >= 0 ? '#22c55e' : '#f97316'
+                  }}>
+                  net: {chart.net[hover_idx] > 0 ? '+' : ''}
+                  {chart.net[hover_idx]}
+                </span>{' '}
                 <span style={{ color: '#f97316', opacity: 0.7 }}>
-                  backlog: {chart.backlog[hover_idx] > 0 ? '+' : ''}{chart.backlog[hover_idx]}
+                  backlog: {chart.backlog[hover_idx] > 0 ? '+' : ''}
+                  {chart.backlog[hover_idx]}
                 </span>
               </div>
             </div>
@@ -294,11 +292,7 @@ TaskFlowChart.propTypes = {
   data: PropTypes.array
 }
 
-const TaskStats = ({
-  completion_series,
-  is_loading,
-  load_task_stats
-}) => {
+const TaskStats = ({ completion_series, is_loading, load_task_stats }) => {
   useEffect(() => {
     load_task_stats()
   }, [load_task_stats])

@@ -32,6 +32,5 @@ const status_bar_map_state = createSelector(
   })
 )
 
-export const ConnectedTaskStatusBar = connect(status_bar_map_state)(
-  TaskStatusBar
-)
+export const ConnectedTaskStatusBar =
+  connect(status_bar_map_state)(TaskStatusBar)

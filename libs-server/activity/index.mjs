@@ -61,8 +61,7 @@ export function merge_activity_and_calculate_scores({
     const existing = combined_by_date.get(entry.date)
     existing.activity_token_usage = entry.activity_token_usage
     existing.activity_thread_edits = entry.activity_thread_edits
-    existing.activity_thread_lines_changed =
-      entry.activity_thread_lines_changed
+    existing.activity_thread_lines_changed = entry.activity_thread_lines_changed
   }
 
   // Merge task activity

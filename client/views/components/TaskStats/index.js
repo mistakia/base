@@ -1,8 +1,6 @@
 import React, { Suspense } from 'react'
 
-const TaskStatsConnected = React.lazy(
-  () => import('./TaskStatsConnected.js')
-)
+const TaskStatsConnected = React.lazy(() => import('./TaskStatsConnected.js'))
 
 const TaskStatusBarConnected = React.lazy(() =>
   import('./TaskStatsConnected.js').then((m) => ({
