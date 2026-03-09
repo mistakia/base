@@ -1,5 +1,4 @@
-import { expect } from 'chai'
-import chai from 'chai'
+import chai, { expect } from 'chai'
 import chaiHttp from 'chai-http'
 import crypto, { randomUUID } from 'crypto'
 
