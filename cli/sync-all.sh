@@ -369,6 +369,7 @@ sync_repo() {
     # Fetch
     if ! git -C "$dir" fetch origin 2>/dev/null; then
         log_error "$repo_name: fetch failed"
+        log_telemetry "$repo_name" "fetch_failed" ""
         return 1
     fi
 
