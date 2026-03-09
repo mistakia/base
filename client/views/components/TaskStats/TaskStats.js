@@ -112,13 +112,25 @@ const TaskFlowChart = ({ data }) => {
     const bar_width = width / data.length
     const max_net = Math.max(...momentum.map(Math.abs), 1)
 
+    // Completions line (smoothed)
+    const smoothed_completed = rolling_average(completed, MOMENTUM_WINDOW)
+    const max_completed = Math.max(...smoothed_completed, 1)
+    const padding = 4
+    const usable = CHART_HEIGHT - padding * 2
+    const completion_xs = data.map((_, i) => i * bar_width + bar_width / 2)
+    const completion_ys = smoothed_completed.map(
+      (v) => CHART_HEIGHT - padding - (v / max_completed) * usable
+    )
+
     return {
       bar_width,
       completed,
       created,
       momentum,
       max_net,
-      net
+      net,
+      completion_xs,
+      completion_ys
     }
   }, [data, width])
 
@@ -164,6 +176,19 @@ const TaskFlowChart = ({ data }) => {
                 />
               )
             })}
+
+            {/* Completions trend line */}
+            <polyline
+              points={chart.completion_xs
+                .map((x, i) => `${x},${chart.completion_ys[i]}`)
+                .join(' ')}
+              fill='none'
+              stroke='#22c55e'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              opacity='0.6'
+            />
 
             {/* Hover highlight */}
             {hover_idx !== null && (
