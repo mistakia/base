@@ -4,7 +4,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes'
 
 import './TaskStats.styl'
 
-const STATUS_COLORS = {
+export const STATUS_COLORS = {
   Planned: '#3b82f6',
   'In Progress': '#f59e0b',
   Started: '#06b6d4',
@@ -92,30 +92,60 @@ Sparkline.propTypes = {
   height: PropTypes.number
 }
 
-const StatusBar = ({ by_status }) => {
+export const TaskStatusBar = ({ by_status }) => {
+  const [show_labels, set_show_labels] = useState(false)
+  const [hovered, set_hovered] = useState(null)
+
   if (!by_status) return null
   const entries = Object.entries(by_status)
   const total = entries.reduce((sum, [, count]) => sum + count, 0)
   if (total === 0) return null
 
   return (
-    <div className='task-stats-status-bar'>
-      {entries.map(([status, count]) => (
-        <div
-          key={status}
-          className='task-stats-status-segment'
-          style={{
-            width: `${(count / total) * 100}%`,
-            backgroundColor: STATUS_COLORS[status] || '#9ca3af'
-          }}
-          title={`${status}: ${count}`}
-        />
-      ))}
+    <div className='task-status-bar-wrapper'>
+      <div
+        className='task-stats-status-bar'
+        onClick={() => set_show_labels((s) => !s)}
+      >
+        {entries.map(([status, count]) => (
+          <div
+            key={status}
+            className='task-stats-status-segment'
+            style={{
+              width: `${(count / total) * 100}%`,
+              backgroundColor: STATUS_COLORS[status] || '#9ca3af'
+            }}
+            onMouseEnter={() => set_hovered(status)}
+            onMouseLeave={() => set_hovered(null)}
+          >
+            {hovered === status && !show_labels && (
+              <div className='task-stats-status-tooltip'>
+                {status}: {count}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {show_labels && (
+        <div className='task-stats-status-legend'>
+          {entries.map(([status, count]) => (
+            <span key={status} className='task-stats-legend-item'>
+              <span
+                className='task-stats-legend-dot'
+                style={{
+                  backgroundColor: STATUS_COLORS[status] || '#9ca3af'
+                }}
+              />
+              {status} ({count})
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-StatusBar.propTypes = {
+TaskStatusBar.propTypes = {
   by_status: PropTypes.object
 }
 
@@ -125,8 +155,7 @@ const TaskStats = ({
   summary,
   completion_series,
   is_loading,
-  load_task_stats,
-  is_public
+  load_task_stats
 }) => {
   useEffect(() => {
     load_task_stats()
@@ -203,27 +232,6 @@ const TaskStats = ({
           />
         </div>
       </div>
-
-      {!is_public && summary_js.open_by_status && (
-        <>
-          <StatusBar by_status={summary_js.open_by_status} />
-          <div className='task-stats-status-legend'>
-            {Object.entries(summary_js.open_by_status).map(
-              ([status, count]) => (
-                <span key={status} className='task-stats-legend-item'>
-                  <span
-                    className='task-stats-legend-dot'
-                    style={{
-                      backgroundColor: STATUS_COLORS[status] || '#9ca3af'
-                    }}
-                  />
-                  {status} ({count})
-                </span>
-              )
-            )}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -232,8 +240,7 @@ TaskStats.propTypes = {
   summary: ImmutablePropTypes.map,
   completion_series: ImmutablePropTypes.list,
   is_loading: PropTypes.bool,
-  load_task_stats: PropTypes.func.isRequired,
-  is_public: PropTypes.bool
+  load_task_stats: PropTypes.func.isRequired
 }
 
 export default TaskStats

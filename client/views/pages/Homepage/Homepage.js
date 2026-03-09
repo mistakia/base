@@ -7,7 +7,7 @@ import DirectoryMarkdown from '@views/components/DirectoryMarkdown/index.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout'
 import HomeSessionsPanel from '@components/SessionsPanel/HomeSessionsPanel.js'
 import ActivityHeatmap from '@components/ActivityHeatmap/index.js'
-import TaskStats from '@components/TaskStats/index.js'
+import TaskStats, { TaskStatusBar } from '@components/TaskStats/index.js'
 import HomePageTasks from './HomePageTasks.js'
 import HomeFileBrowser from './HomeFileBrowser.js'
 import HomeFileChanges from './HomeFileChanges.js'
@@ -63,6 +63,7 @@ const Homepage = ({
             right_content={
               <div className='homepage-right-column'>
                 <ActivityHeatmap />
+                <TaskStatusBar />
                 <TaskStats />
                 <HomeSessionsPanel
                   threads={threads}

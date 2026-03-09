@@ -51,15 +51,38 @@
   height 32px
 
 // Status bar
+.task-status-bar-wrapper
+  padding 0 $space_sm
+
 .task-stats-status-bar
   display flex
   height 6px
   border-radius 3px
-  overflow hidden
-  margin-bottom $space_xs
+  overflow visible
+  cursor pointer
+  position relative
 
 .task-stats-status-segment
   min-width 2px
+  position relative
+  &:first-child
+    border-radius 3px 0 0 3px
+  &:last-child
+    border-radius 0 3px 3px 0
+
+.task-stats-status-tooltip
+  position absolute
+  bottom 10px
+  left 50%
+  transform translateX(-50%)
+  background #0d1117
+  color #f0f6fc
+  border 1px solid #30363d
+  font-size 11px
+  padding 2px 6px
+  white-space nowrap
+  pointer-events none
+  z-index 10
 
 .task-stats-status-legend
   display flex
@@ -67,7 +90,7 @@
   gap $space_sm
   font-size 11px
   color $color_text_secondary
-  margin-bottom $space_sm
+  padding-top $space_xs
 
 .task-stats-legend-item
   display flex
