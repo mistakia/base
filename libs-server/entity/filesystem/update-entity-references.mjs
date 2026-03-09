@@ -52,6 +52,32 @@ function update_relations_references({
 }
 
 /**
+ * Update references in entity tags array
+ * Tags are plain base_uri strings (e.g., "user:tag/home/my-tag.md")
+ * @param {Object} options - Function options
+ * @param {Array} options.tags - Array of tag base_uri strings
+ * @param {string} options.old_base_uri - The old base_uri to replace
+ * @param {string} options.new_base_uri - The new base_uri to use
+ * @returns {Object} - { updated_tags, update_count }
+ */
+function update_tags_references({ tags, old_base_uri, new_base_uri }) {
+  if (!tags || !Array.isArray(tags)) {
+    return { updated_tags: tags, update_count: 0 }
+  }
+
+  let update_count = 0
+  const updated_tags = tags.map((tag) => {
+    if (typeof tag === 'string' && tag === old_base_uri) {
+      update_count++
+      return new_base_uri
+    }
+    return tag
+  })
+
+  return { updated_tags, update_count }
+}
+
+/**
  * Update references in entity content (markdown body)
  * @param {Object} options - Function options
  * @param {string} options.entity_content - The entity markdown content
@@ -138,6 +164,7 @@ export async function update_entity_references({
         let file_update_count = 0
         let relation_updates = 0
         let content_updates = 0
+        let tag_updates = 0
 
         // Check and update relations
         const relations_result = update_relations_references({
@@ -147,6 +174,14 @@ export async function update_entity_references({
         })
         relation_updates = relations_result.update_count
 
+        // Check and update tags
+        const tags_result = update_tags_references({
+          tags: entity_properties.tags,
+          old_base_uri,
+          new_base_uri
+        })
+        tag_updates = tags_result.update_count
+
         // Check and update content
         const content_result = update_content_references({
           entity_content,
@@ -155,17 +190,18 @@ export async function update_entity_references({
         })
         content_updates = content_result.update_count
 
-        file_update_count = relation_updates + content_updates
+        file_update_count = relation_updates + tag_updates + content_updates
 
         if (file_update_count > 0) {
           log(
-            `Found ${file_update_count} references in ${file.absolute_path} (relations: ${relation_updates}, content: ${content_updates})`
+            `Found ${file_update_count} references in ${file.absolute_path} (relations: ${relation_updates}, tags: ${tag_updates}, content: ${content_updates})`
           )
 
           files_with_references.push({
             absolute_path: file.absolute_path,
             base_uri: file.base_uri,
             relation_updates,
+            tag_updates,
             content_updates,
             total_updates: file_update_count
           })
@@ -176,7 +212,8 @@ export async function update_entity_references({
           if (!dry_run) {
             const updated_properties = {
               ...entity_properties,
-              relations: relations_result.updated_relations
+              relations: relations_result.updated_relations,
+              tags: tags_result.updated_tags
             }
 
             await write_entity_to_filesystem({

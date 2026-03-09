@@ -81,12 +81,13 @@ Paths can be specified as:
       `What this tool does:
   1. Validates source exists and destination does not exist
   2. Scans all entity files for references to the source
-  3. Updates all relations and inline references in other files
+  3. Updates all relations, tags, and inline references in other files
   4. Updates the entity's own base_uri property
   5. Moves the file to the new location
 
 Reference Updates:
   - Relations in frontmatter: "subtask_of [[user:task/old.md]]"
+  - Tags in frontmatter: "user:tag/old-tag.md"
   - Inline wikilinks: "See [[user:task/old.md]] for details"
 
 Exit Codes:
@@ -123,9 +124,13 @@ const format_move_result = (result) => {
     for (const file of result.files_with_references) {
       const relation_str =
         file.relation_updates > 0 ? `${file.relation_updates} relation(s)` : ''
+      const tag_str =
+        file.tag_updates > 0 ? `${file.tag_updates} tag(s)` : ''
       const content_str =
         file.content_updates > 0 ? `${file.content_updates} content ref(s)` : ''
-      const details = [relation_str, content_str].filter(Boolean).join(', ')
+      const details = [relation_str, tag_str, content_str]
+        .filter(Boolean)
+        .join(', ')
       lines.push(`  - ${file.base_uri} (${details})`)
     }
     lines.push('')
