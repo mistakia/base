@@ -549,8 +549,22 @@ router.patch('/', async (req, res) => {
       return res.status(400).json({ error: 'properties object is required' })
     }
 
-    // Whitelist only status and priority fields
-    const allowed_fields = ['status', 'priority']
+    // Whitelist allowed fields for update
+    const allowed_fields = [
+      'status',
+      'priority',
+      'tags',
+      'relations',
+      'observations',
+      'description',
+      'start_by',
+      'finish_by',
+      'assigned_to',
+      'snooze_until',
+      'abandoned_reason',
+      'started_at',
+      'finished_at'
+    ]
     const update_properties = {}
 
     for (const field of allowed_fields) {
@@ -561,8 +575,7 @@ router.patch('/', async (req, res) => {
 
     if (Object.keys(update_properties).length === 0) {
       return res.status(400).json({
-        error:
-          'No valid properties to update. Only status and priority are allowed.'
+        error: `No valid properties to update. Allowed fields: ${allowed_fields.join(', ')}`
       })
     }
 
@@ -582,6 +595,16 @@ router.patch('/', async (req, res) => {
       if (!valid_priorities.includes(update_properties.priority)) {
         return res.status(400).json({
           error: `Invalid priority value. Must be one of: ${valid_priorities.join(', ')}`
+        })
+      }
+    }
+
+    // Validate array-type fields
+    const array_fields = ['tags', 'relations', 'observations']
+    for (const field of array_fields) {
+      if (field in update_properties && !Array.isArray(update_properties[field])) {
+        return res.status(400).json({
+          error: `${field} must be an array`
         })
       }
     }

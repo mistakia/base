@@ -190,7 +190,7 @@ export const builder = (yargs) =>
     )
     .command(
       'update <base_uri>',
-      'Update entity properties (status, priority)',
+      'Update entity properties (status, priority, tags, arbitrary fields)',
       (yargs) =>
         yargs
           .positional('base_uri', {
@@ -205,6 +205,16 @@ export const builder = (yargs) =>
             describe: 'New priority value',
             type: 'string'
           })
+          .option('properties', {
+            alias: 'p',
+            describe: 'Additional properties as JSON string',
+            type: 'string'
+          })
+          .option('tags', {
+            describe:
+              'Comma-separated tag URIs (replaces existing tags)',
+            type: 'string'
+          })
           .option('dry-run', {
             alias: 'n',
             describe: 'Preview changes without executing',
@@ -212,9 +222,14 @@ export const builder = (yargs) =>
             default: false
           })
           .check((argv) => {
-            if (!argv.status && !argv.priority) {
+            if (
+              !argv.status &&
+              !argv.priority &&
+              !argv.properties &&
+              !argv.tags
+            ) {
               throw new Error(
-                'At least one of --status or --priority is required'
+                'At least one of --status, --priority, --properties, or --tags is required'
               )
             }
             return true
@@ -1125,14 +1140,41 @@ async function handle_update(argv) {
   let exit_code = 0
   try {
     const { base_uri } = argv
-    const properties = {}
+
+    // Parse --properties JSON string
+    let extra_properties = {}
+    if (argv.properties) {
+      try {
+        extra_properties = JSON.parse(argv.properties)
+      } catch {
+        throw new Error(`Invalid JSON for --properties: ${argv.properties}`)
+      }
+    }
+
+    // Parse --tags comma-separated string into array
+    if (argv.tags) {
+      const tag_list = argv.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => {
+          if (t.includes(':') || t.includes('/')) return t
+          return `user:tag/${t}.md`
+        })
+      extra_properties.tags = tag_list
+    }
+
+    // Build properties: start with --properties, then overlay explicit flags
+    const properties = { ...extra_properties }
     if (argv.status) properties.status = argv.status
     if (argv.priority) properties.priority = argv.priority
 
     if (argv['dry-run']) {
       console.log(`Dry run - would update ${base_uri}:`)
       for (const [key, value] of Object.entries(properties)) {
-        console.log(`  ${key}: ${value}`)
+        console.log(
+          `  ${key}: ${Array.isArray(value) ? JSON.stringify(value) : value}`
+        )
       }
       flush_and_exit(0)
       return
@@ -1202,7 +1244,9 @@ async function handle_update(argv) {
     } else {
       console.log(`Updated ${base_uri}`)
       for (const [key, value] of Object.entries(properties)) {
-        console.log(`  ${key}: ${value}`)
+        console.log(
+          `  ${key}: ${Array.isArray(value) ? JSON.stringify(value) : value}`
+        )
       }
     }
   } catch (error) {

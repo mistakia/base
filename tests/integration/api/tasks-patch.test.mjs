@@ -155,6 +155,114 @@ describe('API /tasks PATCH', () => {
     })
   })
 
+  describe('expanded field updates', () => {
+    it('should update tags with valid array', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: { tags: ['user:tag/foo.md', 'user:tag/bar.md'] }
+        })
+
+      res.should.have.status(200)
+      res.body.should.have.property('success', true)
+      res.body.updated_properties.should.have.property('tags')
+      res.body.updated_properties.tags.should.deep.equal([
+        'user:tag/foo.md',
+        'user:tag/bar.md'
+      ])
+    })
+
+    it('should update description field', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: { description: 'Updated description' }
+        })
+
+      res.should.have.status(200)
+      res.body.should.have.property('success', true)
+      res.body.updated_properties.should.have.property(
+        'description',
+        'Updated description'
+      )
+    })
+
+    it('should update multiple expanded fields at once', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: {
+            status: TASK_STATUS.IN_PROGRESS,
+            tags: ['user:tag/test.md'],
+            description: 'New description'
+          }
+        })
+
+      res.should.have.status(200)
+      res.body.should.have.property('success', true)
+      res.body.updated_properties.should.have.property(
+        'status',
+        TASK_STATUS.IN_PROGRESS
+      )
+      res.body.updated_properties.should.have.property('tags')
+      res.body.updated_properties.should.have.property(
+        'description',
+        'New description'
+      )
+    })
+
+    it('should return 400 when tags is not an array', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: { tags: 'not-an-array' }
+        })
+
+      res.should.have.status(400)
+      res.body.should.have.property('error', 'tags must be an array')
+    })
+
+    it('should return 400 when relations is not an array', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: { relations: 'not-an-array' }
+        })
+
+      res.should.have.status(400)
+      res.body.should.have.property('error', 'relations must be an array')
+    })
+
+    it('should return 400 when observations is not an array', async () => {
+      const res = await chai
+        .request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: task_base_uri,
+          properties: { observations: 'not-an-array' }
+        })
+
+      res.should.have.status(400)
+      res.body.should.have.property('error', 'observations must be an array')
+    })
+  })
+
   describe('validation errors', () => {
     it('should return 400 for invalid status value', async () => {
       const res = await chai
