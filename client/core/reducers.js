@@ -13,6 +13,7 @@ import { git_reducer } from './git/index.js'
 import { commits_reducer } from './commits/index.js'
 import { search_reducer } from './search/index.js'
 import { thread_sheet_reducer } from './thread-sheet/index.js'
+import { task_stats_reducer } from './task-stats/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -29,7 +30,8 @@ const root_reducer = (router) =>
     git: git_reducer,
     commits: commits_reducer,
     search: search_reducer,
-    thread_sheet: thread_sheet_reducer
+    thread_sheet: thread_sheet_reducer,
+    task_stats: task_stats_reducer
   })
 
 export default root_reducer

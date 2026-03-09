@@ -195,6 +195,11 @@ export const api = {
     return { url }
   },
 
+  get_task_stats() {
+    const url = `${API_URL}/activity/task-stats`
+    return { url }
+  },
+
   get_entity_relations({
     base_uri,
     direction = 'both',

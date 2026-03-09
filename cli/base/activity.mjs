@@ -10,7 +10,13 @@ import {
   parse_time_period_date,
   is_valid_time_period
 } from '#libs-server/utils/parse-time-period.mjs'
-import { format_entity, flush_and_exit } from './lib/format.mjs'
+import {
+  format_entity,
+  flush_and_exit,
+  SERVER_URL,
+  with_api_fallback
+} from './lib/format.mjs'
+import { authenticated_fetch } from './lib/auth.mjs'
 
 export const command = 'activity <command>'
 export const describe = 'Activity metrics (entities)'
@@ -46,7 +52,13 @@ export const builder = (yargs) =>
           }),
       handle_entities
     )
-    .demandCommand(1, 'Specify a subcommand: entities')
+    .command(
+      'rebuild-heatmap',
+      'Rebuild the activity heatmap from scratch',
+      () => {},
+      handle_rebuild_heatmap
+    )
+    .demandCommand(1, 'Specify a subcommand: entities, rebuild-heatmap')
 
 export const handler = () => {}
 
@@ -73,6 +85,42 @@ function format_relative_time(date) {
   } else {
     return 'just now'
   }
+}
+
+async function handle_rebuild_heatmap() {
+  let exit_code = 0
+  try {
+    console.log('Rebuilding activity heatmap...')
+    await with_api_fallback(
+      async () => {
+        const response = await authenticated_fetch(
+          `${SERVER_URL}/api/activity/rebuild-heatmap`,
+          { method: 'POST' }
+        )
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}))
+          throw new Error(body.message || `HTTP ${response.status}`)
+        }
+      },
+      async () => {
+        console.log('API unavailable, using direct DuckDB access')
+        const { rebuild_activity_heatmap } = await import(
+          '#server/services/cache-warmer.mjs'
+        )
+        await embedded_index_manager.initialize()
+        try {
+          await rebuild_activity_heatmap()
+        } finally {
+          await embedded_index_manager.shutdown()
+        }
+      }
+    )
+    console.log('Activity heatmap rebuild complete')
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
 }
 
 async function handle_entities(argv) {

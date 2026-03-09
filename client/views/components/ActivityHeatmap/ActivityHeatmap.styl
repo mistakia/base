@@ -5,6 +5,26 @@
   padding $space_sm
   overflow-x auto
 
+.activity-heatmap-filters
+  display flex
+  gap $space_xs
+  padding 0 0 $space_xs 0
+
+.activity-heatmap-filter
+  background none
+  border 1px solid $color_border
+  color $color_text_secondary
+  font-size 10px
+  padding 1px 6px
+  cursor pointer
+  font-family inherit
+  text-transform capitalize
+  &.active
+    color $color_text_primary
+    border-color $color_text_secondary
+  &:hover
+    color $color_text_primary
+
 // Tooltip styles (terminal theme)
 .activity-tooltip-date
   color #f0f6fc

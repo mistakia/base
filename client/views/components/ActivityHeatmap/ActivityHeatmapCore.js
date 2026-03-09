@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
 import ReactEChartsCore from 'echarts-for-react/lib/core'
@@ -12,6 +12,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers'
 
 import { COLORS } from '@theme/colors.js'
+import { ACTIVITY_SCORE_WEIGHTS } from '#libs-shared/activity-score-weights.mjs'
 import './ActivityHeatmap.styl'
 
 // Register ECharts components
@@ -35,39 +36,88 @@ const ORANGE_COLORS = [
   '#9a3412' // orange-800
 ]
 
+const FILTERS = ['all', 'git', 'tasks', 'threads']
+
+const W = ACTIVITY_SCORE_WEIGHTS
+
+function recalculate_filtered_score(entry, filter) {
+  switch (filter) {
+    case 'git':
+      return (
+        (entry.activity_git_commits || 0) * W.git_commits +
+        (entry.activity_git_files_changed || 0) * W.git_files_changed +
+        Math.floor(
+          (entry.activity_git_lines_changed || 0) / W.git_lines_changed_divisor
+        )
+      )
+    case 'tasks':
+      return (
+        (entry.tasks_completed || 0) * W.tasks_completed +
+        (entry.tasks_created || 0) * W.tasks_created
+      )
+    case 'threads':
+      return (
+        Math.floor(
+          (entry.activity_token_usage || 0) / W.token_usage_divisor
+        ) +
+        (entry.activity_thread_edits || 0) * W.thread_edits +
+        Math.floor(
+          (entry.activity_thread_lines_changed || 0) /
+            W.thread_lines_changed_divisor
+        )
+      )
+    default:
+      return entry.score
+  }
+}
+
 const ActivityHeatmap = ({
   heatmap_data,
   max_score,
   load_activity_heatmap
 }) => {
+  const [filter, set_filter] = useState('all')
+
   useEffect(() => {
     load_activity_heatmap({ days: 365 })
   }, [load_activity_heatmap])
 
-  // Convert heatmap_data to JS once, calculate chart data and date range
-  const { heatmap_data_js, chart_data, range_start, range_end } =
+  // Convert heatmap_data to JS once
+  const heatmap_data_js = useMemo(() => {
+    if (!heatmap_data || heatmap_data.size === 0) return []
+    return heatmap_data.toJS()
+  }, [heatmap_data])
+
+  // Calculate chart data and max score based on filter
+  const { chart_data, filtered_max_score, range_start, range_end } =
     useMemo(() => {
       const end = new Date()
       const start = new Date()
-      start.setDate(start.getDate() - 364) // 52 weeks
+      start.setDate(start.getDate() - 364)
 
-      if (!heatmap_data || heatmap_data.size === 0) {
+      if (heatmap_data_js.length === 0) {
         return {
-          heatmap_data_js: [],
           chart_data: [],
+          filtered_max_score: 0,
           range_start: start.toISOString().split('T')[0],
           range_end: end.toISOString().split('T')[0]
         }
       }
 
-      const data_js = heatmap_data.toJS()
+      let max_s = 0
+      const data = heatmap_data_js.map((entry) => {
+        const s = recalculate_filtered_score(entry, filter)
+        if (s > max_s) max_s = s
+        return [entry.date, s]
+      })
+
       return {
-        heatmap_data_js: data_js,
-        chart_data: data_js.map((entry) => [entry.date, entry.score]),
+        chart_data: data,
+        filtered_max_score: max_s,
         range_start: start.toISOString().split('T')[0],
         range_end: end.toISOString().split('T')[0]
       }
-    }, [heatmap_data])
+    }, [heatmap_data_js, filter])
 
   // Format number with k/m suffix
   const format_num = (n) => {
@@ -122,6 +172,17 @@ const ActivityHeatmap = ({
             )
           }
 
+          const task_items = []
+          if (entry.tasks_created > 0)
+            task_items.push(`${entry.tasks_created} created`)
+          if (entry.tasks_completed > 0)
+            task_items.push(`${entry.tasks_completed} completed`)
+          if (task_items.length > 0) {
+            lines.push(
+              `<div class='activity-tooltip-row'>tasks: ${task_items.join(' · ')}</div>`
+            )
+          }
+
           return lines.join('')
         },
         backgroundColor: '#0d1117',
@@ -137,7 +198,7 @@ const ActivityHeatmap = ({
       visualMap: {
         show: false,
         min: 0,
-        max: max_score || 100,
+        max: filtered_max_score || max_score || 100,
         calculable: false,
         orient: 'horizontal',
         inRange: {
@@ -180,11 +241,22 @@ const ActivityHeatmap = ({
         }
       ]
     }),
-    [chart_data, heatmap_data_js, max_score, range_start, range_end]
+    [chart_data, heatmap_data_js, max_score, filtered_max_score, range_start, range_end]
   )
 
   return (
     <div className='activity-heatmap'>
+      <div className='activity-heatmap-filters'>
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            className={`activity-heatmap-filter${filter === f ? ' active' : ''}`}
+            onClick={() => set_filter(f)}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
       <ReactEChartsCore
         echarts={echarts}
         option={option}

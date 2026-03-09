@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS activity_heatmap_daily (
   activity_token_usage INTEGER DEFAULT 0,
   activity_thread_edits INTEGER DEFAULT 0,
   activity_thread_lines_changed INTEGER DEFAULT 0,
+  tasks_created INTEGER DEFAULT 0,
+  tasks_completed INTEGER DEFAULT 0,
   score DOUBLE DEFAULT 0,
   updated_at TIMESTAMP NOT NULL
 )

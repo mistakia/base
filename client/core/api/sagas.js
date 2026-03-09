@@ -33,6 +33,7 @@ import {
 } from '@core/directory/actions'
 import { get_active_sessions_actions } from '@core/active-sessions/actions'
 import { get_activity_heatmap_actions } from '@core/activity/actions'
+import { get_task_stats_actions } from '@core/task-stats/actions'
 import { get_sheet_thread_request_actions } from '@core/thread-sheet/actions'
 import {
   get_commits_actions,
@@ -209,6 +210,12 @@ export const get_activity_heatmap = fetch.bind(
   null,
   api.get_activity_heatmap,
   get_activity_heatmap_actions
+)
+
+export const get_task_stats = fetch.bind(
+  null,
+  api.get_task_stats,
+  get_task_stats_actions
 )
 
 // Delete active session - best effort operation

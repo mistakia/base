@@ -1,12 +1,14 @@
 import debug from 'debug'
 
 import { aggregate_git_activity } from './aggregate-git-activity.mjs'
+import { aggregate_task_activity } from './aggregate-task-activity.mjs'
 import { aggregate_thread_activity } from './aggregate-thread-activity.mjs'
 import { calculate_activity_score } from './calculate-activity-score.mjs'
 
 const log = debug('activity')
 
 export { aggregate_git_activity } from './aggregate-git-activity.mjs'
+export { aggregate_task_activity } from './aggregate-task-activity.mjs'
 export { aggregate_thread_activity } from './aggregate-thread-activity.mjs'
 export { calculate_activity_score } from './calculate-activity-score.mjs'
 
@@ -17,49 +19,60 @@ export { calculate_activity_score } from './calculate-activity-score.mjs'
  * @param {Object} params Parameters
  * @param {Array} params.git_activity Array of git activity entries
  * @param {Array} params.thread_activity Array of thread activity entries
+ * @param {Array} [params.task_activity] Array of task activity entries
  * @param {number} params.days Number of trailing days (for date range calculation)
  * @returns {Object} Heatmap data with data array, max_score, and date_range
  */
 export function merge_activity_and_calculate_scores({
   git_activity,
   thread_activity,
+  task_activity = [],
   days
 }) {
   // Merge activities by date
   const combined_by_date = new Map()
 
+  const empty_entry = (date) => ({
+    date,
+    activity_git_commits: 0,
+    activity_git_lines_changed: 0,
+    activity_git_files_changed: 0,
+    activity_token_usage: 0,
+    activity_thread_edits: 0,
+    activity_thread_lines_changed: 0,
+    tasks_created: 0,
+    tasks_completed: 0
+  })
+
   // Add git activity
   for (const entry of git_activity) {
-    combined_by_date.set(entry.date, {
-      date: entry.date,
-      activity_git_commits: entry.activity_git_commits,
-      activity_git_lines_changed: entry.activity_git_lines_changed,
-      activity_git_files_changed: entry.activity_git_files_changed,
-      activity_token_usage: 0,
-      activity_thread_edits: 0,
-      activity_thread_lines_changed: 0
-    })
+    const combined = empty_entry(entry.date)
+    combined.activity_git_commits = entry.activity_git_commits
+    combined.activity_git_lines_changed = entry.activity_git_lines_changed
+    combined.activity_git_files_changed = entry.activity_git_files_changed
+    combined_by_date.set(entry.date, combined)
   }
 
   // Merge thread activity
   for (const entry of thread_activity) {
-    if (combined_by_date.has(entry.date)) {
-      const existing = combined_by_date.get(entry.date)
-      existing.activity_token_usage = entry.activity_token_usage
-      existing.activity_thread_edits = entry.activity_thread_edits
-      existing.activity_thread_lines_changed =
-        entry.activity_thread_lines_changed
-    } else {
-      combined_by_date.set(entry.date, {
-        date: entry.date,
-        activity_git_commits: 0,
-        activity_git_lines_changed: 0,
-        activity_git_files_changed: 0,
-        activity_token_usage: entry.activity_token_usage,
-        activity_thread_edits: entry.activity_thread_edits,
-        activity_thread_lines_changed: entry.activity_thread_lines_changed
-      })
+    if (!combined_by_date.has(entry.date)) {
+      combined_by_date.set(entry.date, empty_entry(entry.date))
     }
+    const existing = combined_by_date.get(entry.date)
+    existing.activity_token_usage = entry.activity_token_usage
+    existing.activity_thread_edits = entry.activity_thread_edits
+    existing.activity_thread_lines_changed =
+      entry.activity_thread_lines_changed
+  }
+
+  // Merge task activity
+  for (const entry of task_activity) {
+    if (!combined_by_date.has(entry.date)) {
+      combined_by_date.set(entry.date, empty_entry(entry.date))
+    }
+    const existing = combined_by_date.get(entry.date)
+    existing.tasks_created = entry.tasks_created
+    existing.tasks_completed = entry.tasks_completed
   }
 
   // Calculate scores and convert to array
@@ -107,15 +120,17 @@ export function merge_activity_and_calculate_scores({
 export async function get_activity_heatmap_data({ days = 365 } = {}) {
   log(`Getting activity heatmap data for ${days} days`)
 
-  // Fetch both activity sources in parallel
-  const [git_activity, thread_activity] = await Promise.all([
+  // Fetch all activity sources in parallel
+  const [git_activity, thread_activity, task_activity] = await Promise.all([
     aggregate_git_activity({ days }),
-    aggregate_thread_activity({ days })
+    aggregate_thread_activity({ days }),
+    aggregate_task_activity({ days })
   ])
 
   const result = merge_activity_and_calculate_scores({
     git_activity,
     thread_activity,
+    task_activity,
     days
   })
 

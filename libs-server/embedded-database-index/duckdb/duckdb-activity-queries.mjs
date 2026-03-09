@@ -201,6 +201,8 @@ export async function query_heatmap_daily_all({ days = 365 } = {}) {
         activity_token_usage,
         activity_thread_edits,
         activity_thread_lines_changed,
+        tasks_created,
+        tasks_completed,
         score
       FROM activity_heatmap_daily
       WHERE date >= ?
@@ -219,6 +221,8 @@ export async function query_heatmap_daily_all({ days = 365 } = {}) {
     activity_token_usage: row.activity_token_usage,
     activity_thread_edits: row.activity_thread_edits,
     activity_thread_lines_changed: row.activity_thread_lines_changed,
+    tasks_created: row.tasks_created,
+    tasks_completed: row.tasks_completed,
     score: row.score
   }))
 }
@@ -241,7 +245,7 @@ export async function upsert_heatmap_daily_batch({ entries }) {
   for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
     const chunk = entries.slice(i, i + CHUNK_SIZE)
     const placeholders = chunk
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const parameters = chunk.flatMap((entry) => [
       entry.date,
@@ -251,6 +255,8 @@ export async function upsert_heatmap_daily_batch({ entries }) {
       entry.activity_token_usage ?? 0,
       entry.activity_thread_edits ?? 0,
       entry.activity_thread_lines_changed ?? 0,
+      entry.tasks_created ?? 0,
+      entry.tasks_completed ?? 0,
       entry.score ?? 0,
       updated_at
     ])
@@ -261,6 +267,7 @@ export async function upsert_heatmap_daily_batch({ entries }) {
           date, activity_git_commits, activity_git_lines_changed,
           activity_git_files_changed, activity_token_usage,
           activity_thread_edits, activity_thread_lines_changed,
+          tasks_created, tasks_completed,
           score, updated_at
         ) VALUES ${placeholders}
         ON CONFLICT (date) DO UPDATE SET
@@ -270,6 +277,8 @@ export async function upsert_heatmap_daily_batch({ entries }) {
           activity_token_usage = excluded.activity_token_usage,
           activity_thread_edits = excluded.activity_thread_edits,
           activity_thread_lines_changed = excluded.activity_thread_lines_changed,
+          tasks_created = excluded.tasks_created,
+          tasks_completed = excluded.tasks_completed,
           score = excluded.score,
           updated_at = excluded.updated_at
       `,
@@ -278,6 +287,16 @@ export async function upsert_heatmap_daily_batch({ entries }) {
   }
 
   log('Upserted %d heatmap daily entries', entries.length)
+}
+
+/**
+ * Delete all rows from activity_heatmap_daily to force a full rebuild.
+ */
+export async function truncate_heatmap_daily() {
+  await execute_duckdb_run({
+    query: 'DELETE FROM activity_heatmap_daily'
+  })
+  log('Truncated activity_heatmap_daily table')
 }
 
 /**

@@ -3,9 +3,14 @@ import debug from 'debug'
 
 import {
   get_activity_heatmap_data,
-  merge_activity_and_calculate_scores
+  merge_activity_and_calculate_scores,
+  aggregate_task_activity
 } from '#libs-server/activity/index.mjs'
-import { get_cached_activity_heatmap } from '#server/services/cache-warmer.mjs'
+import {
+  get_cached_activity_heatmap,
+  get_cached_task_stats,
+  rebuild_activity_heatmap
+} from '#server/services/cache-warmer.mjs'
 import {
   HTTP_MAX_AGE,
   HTTP_STALE_WHILE_REVALIDATE
@@ -19,6 +24,11 @@ import {
   parse_time_period_date,
   is_valid_time_period
 } from '#libs-server/utils/parse-time-period.mjs'
+import {
+  get_task_summary_stats,
+  get_task_stats_by_tag,
+  get_task_completion_series
+} from '#libs-server/activity/task-stats.mjs'
 
 const log = debug('api:activity')
 const router = express.Router({ mergeParams: true })
@@ -52,15 +62,21 @@ router.get('/heatmap', async (req, res) => {
       `Fetching activity heatmap data for ${days} days (cache miss, trying DuckDB)`
     )
     try {
-      const [git_activity, thread_activity] = await Promise.all([
+      const [git_activity, thread_activity, task_activity] = await Promise.all([
         query_git_activity_daily({ days }),
-        query_thread_activity_aggregated({ days })
+        query_thread_activity_aggregated({ days }),
+        aggregate_task_activity({ days })
       ])
 
-      if (git_activity.length > 0 || thread_activity.length > 0) {
+      if (
+        git_activity.length > 0 ||
+        thread_activity.length > 0 ||
+        task_activity.length > 0
+      ) {
         const heatmap_data = merge_activity_and_calculate_scores({
           git_activity,
           thread_activity,
+          task_activity,
           days
         })
         log(
@@ -128,6 +144,75 @@ router.get('/entities', async (req, res) => {
     log(`Error fetching entity activity: ${error.message}`)
     res.status(500).json({
       error: 'Failed to fetch entity activity data',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/activity/rebuild-heatmap
+ *
+ * Truncates the heatmap cache table and performs a full recomputation.
+ * Requires authentication.
+ */
+router.post('/rebuild-heatmap', async (req, res) => {
+  try {
+    if (!req.user?.user_public_key) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
+    log('Rebuilding activity heatmap (requested via API)')
+    await rebuild_activity_heatmap()
+    res.json({ success: true })
+  } catch (error) {
+    log(`Error rebuilding activity heatmap: ${error.message}`)
+    res.status(500).json({
+      error: 'Failed to rebuild activity heatmap',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/activity/task-stats
+ *
+ * Returns task productivity statistics.
+ * Unauthenticated: returns summary and completion_series only (no by_tag)
+ */
+router.get('/task-stats', async (req, res) => {
+  try {
+    res.set(
+      'Cache-Control',
+      `public, max-age=${HTTP_MAX_AGE}, stale-while-revalidate=${HTTP_STALE_WHILE_REVALIDATE}`
+    )
+
+    // Check cache first, fall back to direct queries
+    let data = get_cached_task_stats()
+    if (data) {
+      log('Returning cached task stats')
+    } else {
+      log('Computing task stats (cache miss)')
+      const [summary, by_tag, completion_series] = await Promise.all([
+        get_task_summary_stats(),
+        get_task_stats_by_tag(),
+        get_task_completion_series()
+      ])
+      data = { summary, by_tag, completion_series }
+    }
+
+    const is_authenticated = Boolean(req.user?.user_public_key)
+    if (!is_authenticated) {
+      return res.json({
+        summary: data.summary,
+        completion_series: data.completion_series
+      })
+    }
+
+    res.json(data)
+  } catch (error) {
+    log(`Error fetching task stats: ${error.message}`)
+    res.status(500).json({
+      error: 'Failed to fetch task stats',
       message: error.message
     })
   }

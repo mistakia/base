@@ -10,8 +10,14 @@ import debug from 'debug'
 
 import {
   get_activity_heatmap_data,
-  merge_activity_and_calculate_scores
+  merge_activity_and_calculate_scores,
+  aggregate_task_activity
 } from '#libs-server/activity/index.mjs'
+import {
+  get_task_summary_stats,
+  get_task_stats_by_tag,
+  get_task_completion_series
+} from '#libs-server/activity/task-stats.mjs'
 import { list_tasks_from_filesystem } from '#libs-server/task/index.mjs'
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
@@ -21,7 +27,8 @@ import {
   query_thread_activity_aggregated,
   query_heatmap_daily_all,
   upsert_heatmap_daily_batch,
-  get_heatmap_daily_count
+  get_heatmap_daily_count,
+  truncate_heatmap_daily
 } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
 
 const log = debug('server:cache-warmer')
@@ -54,6 +61,7 @@ const TASKS_REFRESH_INTERVAL = 20 * 60 * 1000 // 20 minutes
 // Store interval IDs for cleanup
 let activity_interval = null
 let tasks_interval = null
+let task_stats_interval = null
 
 // Cache storage (shared with route handlers via exports)
 export const cache = {
@@ -63,6 +71,10 @@ export const cache = {
     days: 365
   },
   tasks: {
+    data: null,
+    timestamp: 0
+  },
+  task_stats: {
     data: null,
     timestamp: 0
   }
@@ -81,13 +93,15 @@ export const CACHE_TTL = {
  * @returns {Promise<Object>} Heatmap data with data array, max_score, date_range
  */
 async function compute_fresh_days(days) {
-  const [git_activity, thread_activity] = await Promise.all([
+  const [git_activity, thread_activity, task_activity] = await Promise.all([
     query_git_activity_daily({ days }),
-    query_thread_activity_aggregated({ days })
+    query_thread_activity_aggregated({ days }),
+    aggregate_task_activity({ days })
   ])
   return merge_activity_and_calculate_scores({
     git_activity,
     thread_activity,
+    task_activity,
     days
   })
 }
@@ -185,6 +199,8 @@ async function warm_activity_cache() {
       activity_token_usage: 0,
       activity_thread_edits: 0,
       activity_thread_lines_changed: 0,
+      tasks_created: 0,
+      tasks_completed: 0,
       score: 0
     }
 
@@ -300,6 +316,44 @@ async function warm_tasks_cache() {
 }
 
 /**
+ * Warm the task stats cache
+ */
+async function warm_task_stats_cache() {
+  try {
+    log('Warming task stats cache')
+
+    const [summary, by_tag, completion_series] = await Promise.all([
+      get_task_summary_stats(),
+      get_task_stats_by_tag(),
+      get_task_completion_series()
+    ])
+
+    cache.task_stats = {
+      data: { summary, by_tag, completion_series },
+      timestamp: Date.now()
+    }
+
+    log('Task stats cache warmed')
+  } catch (error) {
+    log('Failed to warm task stats cache: %s', error.message)
+  }
+}
+
+/**
+ * Rebuild the activity heatmap from scratch.
+ * Truncates the DuckDB cache table and performs a full recomputation.
+ */
+export async function rebuild_activity_heatmap() {
+  log('Rebuilding activity heatmap from scratch')
+  if (embedded_index_manager.is_duckdb_ready()) {
+    await truncate_heatmap_daily()
+  }
+  cache.activity_heatmap.timestamp = 0
+  await warm_activity_cache()
+  log('Activity heatmap rebuild complete')
+}
+
+/**
  * Invalidate activity cache (called by file watcher or on-demand)
  */
 export function invalidate_activity_cache() {
@@ -314,9 +368,11 @@ export function invalidate_activity_cache() {
  */
 export function invalidate_tasks_cache() {
   cache.tasks.timestamp = 0
+  cache.task_stats.timestamp = 0
   log('Tasks cache invalidated')
   // Immediately re-warm in background
   warm_tasks_cache()
+  warm_task_stats_cache()
 }
 
 /**
@@ -332,6 +388,21 @@ export function get_cached_activity_heatmap({ days = 365 }) {
     cached.days === days &&
     now - cached.timestamp < CACHE_TTL.activity
   ) {
+    return cached.data
+  }
+
+  return null
+}
+
+/**
+ * Get cached task stats
+ * Returns cached data if fresh, null otherwise
+ */
+export function get_cached_task_stats() {
+  const cached = cache.task_stats
+  const now = Date.now()
+
+  if (cached.data && now - cached.timestamp < CACHE_TTL.tasks) {
     return cached.data
   }
 
@@ -361,7 +432,11 @@ export async function start_cache_warmer() {
   log('Starting cache warmer service')
 
   // Immediately warm all caches
-  await Promise.all([warm_activity_cache(), warm_tasks_cache()])
+  await Promise.all([
+    warm_activity_cache(),
+    warm_tasks_cache(),
+    warm_task_stats_cache()
+  ])
 
   // Set up periodic refresh intervals
   activity_interval = setInterval(
@@ -369,6 +444,10 @@ export async function start_cache_warmer() {
     ACTIVITY_REFRESH_INTERVAL
   )
   tasks_interval = setInterval(warm_tasks_cache, TASKS_REFRESH_INTERVAL)
+  task_stats_interval = setInterval(
+    warm_task_stats_cache,
+    TASKS_REFRESH_INTERVAL
+  )
 
   log('Cache warmer service started')
 }
@@ -387,6 +466,11 @@ export function stop_cache_warmer() {
   if (tasks_interval) {
     clearInterval(tasks_interval)
     tasks_interval = null
+  }
+
+  if (task_stats_interval) {
+    clearInterval(task_stats_interval)
+    task_stats_interval = null
   }
 
   log('Cache warmer service stopped')
