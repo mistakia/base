@@ -143,7 +143,7 @@ do_commit() {
         # Specific thread mode: stage entire thread folder
         if [ ! -d "$THREAD_ID" ]; then
             echo "Thread directory not found: $THREAD_ID" >&2
-            exit 0
+            return 0
         fi
 
         # Stage all files in the thread folder (untracked + modified)
@@ -152,7 +152,7 @@ do_commit() {
         # Check if there are any staged changes
         if git diff --cached --quiet; then
             echo "No changes in thread $THREAD_ID"
-            exit 0
+            return 0
         fi
 
         # Show what will be committed
@@ -186,7 +186,7 @@ do_commit() {
         # Check if there are any staged changes
         if git diff --cached --quiet; then
             echo "No thread files to commit"
-            exit 0
+            return 0
         fi
 
         # Show what will be committed
@@ -204,8 +204,13 @@ do_commit() {
 wait_for_git_index_lock
 do_commit
 
-# Push immediately after commit (best-effort, bypasses sync_repo overhead)
+# Push any unpushed commits (best-effort, bypasses sync_repo overhead)
+# Runs after every invocation, not just after new commits, to drain backlog
 # sync-all Step 1 remains as fallback for failures and diverged state
 if git remote get-url origin &>/dev/null; then
-    git push origin main 2>/dev/null || true
+    local_head=$(git rev-parse HEAD 2>/dev/null)
+    remote_head=$(git rev-parse origin/main 2>/dev/null)
+    if [ "$local_head" != "$remote_head" ]; then
+        git push origin main 2>/dev/null || true
+    fi
 fi
