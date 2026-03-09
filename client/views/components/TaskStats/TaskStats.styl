@@ -4,51 +4,31 @@
   padding $space_sm
   width 100%
 
-// Period table
-.task-stats-periods
-  font-size 12px
-  margin-bottom $space_sm
-
-.task-stats-period-header
-  display flex
-  color $color_text_secondary
-  font-size 10px
-  text-transform uppercase
-  letter-spacing 0.5px
-  padding-bottom 2px
-
-.task-stats-period-row
-  display flex
-  padding 1px 0
-
-.task-stats-period-label
-  width 36px
-  color $color_text_secondary
-  flex-shrink 0
-
-.task-stats-period-col
-  width 48px
-  text-align right
-  flex-shrink 0
-
-// Sparklines
-.task-stats-sparklines
-  margin-bottom $space_sm
-
-.task-stats-sparkline-row
-  margin-bottom $space_xs
-
-.task-stats-sparkline-label
-  display block
-  font-size 10px
-  color $color_text_secondary
-  text-transform uppercase
-  letter-spacing 0.5px
-  margin-bottom 1px
-
-.task-stats-sparkline-container
+// Task flow chart
+.task-flow-chart
   width 100%
-  height 32px
+  height 64px
+  position relative
+  cursor crosshair
+
+.task-flow-tooltip
+  position absolute
+  top -4px
+  transform translateY(-100%)
+  background #0d1117
+  border 1px solid #30363d
+  font-size 11px
+  color #f0f6fc
+  padding 4px 8px
+  white-space nowrap
+  pointer-events none
+  z-index 10
+  font-family inherit
+
+.task-flow-tooltip-week
+  color #9ca3af
+  font-size 10px
+  margin-bottom 1px
 
 // Status bar
 .task-status-bar-wrapper

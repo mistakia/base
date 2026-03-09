@@ -11,9 +11,8 @@ import { task_stats_actions } from '@core/task-stats/actions'
 import TaskStats, { TaskStatusBar } from './TaskStats.js'
 
 const map_state_to_props = createSelector(
-  [get_task_stats_summary, get_task_completion_series, get_task_stats_is_loading],
-  (summary, completion_series, is_loading) => ({
-    summary,
+  [get_task_completion_series, get_task_stats_is_loading],
+  (completion_series, is_loading) => ({
     completion_series,
     is_loading
   })
