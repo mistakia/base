@@ -184,10 +184,10 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
 /**
  * Get weekly task completion series for sparkline
  * @param {Object} [params] Parameters
- * @param {number} [params.weeks=16] Number of trailing weeks
+ * @param {number} [params.weeks=52] Number of trailing weeks
  * @returns {Promise<Array>} Array of { week, completed, created }
  */
-export async function get_task_completion_series({ weeks = 16 } = {}) {
+export async function get_task_completion_series({ weeks = 52 } = {}) {
   if (!is_duckdb_initialized()) {
     log('DuckDB not initialized, returning empty series')
     return []
