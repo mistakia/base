@@ -203,3 +203,9 @@ do_commit() {
 
 wait_for_git_index_lock
 do_commit
+
+# Push immediately after commit (best-effort, bypasses sync_repo overhead)
+# sync-all Step 1 remains as fallback for failures and diverged state
+if git remote get-url origin &>/dev/null; then
+    git push origin main 2>/dev/null || true
+fi
