@@ -112,14 +112,29 @@ const TaskFlowChart = ({ data }) => {
     const bar_width = width / data.length
     const max_net = Math.max(...momentum.map(Math.abs), 1)
 
+    const padding = 4
+    const usable = CHART_HEIGHT - padding * 2
+    const xs = data.map((_, i) => i * bar_width + bar_width / 2)
+
     // Completions line (smoothed)
     const smoothed_completed = rolling_average(completed, MOMENTUM_WINDOW)
     const max_completed = Math.max(...smoothed_completed, 1)
-    const padding = 4
-    const usable = CHART_HEIGHT - padding * 2
-    const completion_xs = data.map((_, i) => i * bar_width + bar_width / 2)
     const completion_ys = smoothed_completed.map(
       (v) => CHART_HEIGHT - padding - (v / max_completed) * usable
+    )
+
+    // Backlog change line (cumulative net: created - completed)
+    const backlog = []
+    let cumulative = 0
+    for (let i = 0; i < data.length; i++) {
+      cumulative += (created[i] - completed[i])
+      backlog.push(cumulative)
+    }
+    const backlog_min = Math.min(...backlog)
+    const backlog_max = Math.max(...backlog)
+    const backlog_range = backlog_max - backlog_min || 1
+    const backlog_ys = backlog.map(
+      (v) => CHART_HEIGHT - padding - ((v - backlog_min) / backlog_range) * usable
     )
 
     return {
@@ -129,8 +144,10 @@ const TaskFlowChart = ({ data }) => {
       momentum,
       max_net,
       net,
-      completion_xs,
-      completion_ys
+      xs,
+      completion_ys,
+      backlog,
+      backlog_ys
     }
   }, [data, width])
 
@@ -177,9 +194,22 @@ const TaskFlowChart = ({ data }) => {
               )
             })}
 
+            {/* Backlog change trend line */}
+            <polyline
+              points={chart.xs
+                .map((x, i) => `${x},${chart.backlog_ys[i]}`)
+                .join(' ')}
+              fill='none'
+              stroke='#f97316'
+              strokeWidth='1'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              opacity='0.5'
+            />
+
             {/* Completions trend line */}
             <polyline
-              points={chart.completion_xs
+              points={chart.xs
                 .map((x, i) => `${x},${chart.completion_ys[i]}`)
                 .join(' ')}
               fill='none'
@@ -225,9 +255,14 @@ const TaskFlowChart = ({ data }) => {
                   {chart.created[hover_idx]} new
                 </span>
               </div>
-              <div style={{ color: chart.net[hover_idx] >= 0 ? '#22c55e' : '#f97316' }}>
-                net: {chart.net[hover_idx] > 0 ? '+' : ''}
-                {chart.net[hover_idx]}
+              <div>
+                <span style={{ color: chart.net[hover_idx] >= 0 ? '#22c55e' : '#f97316' }}>
+                  net: {chart.net[hover_idx] > 0 ? '+' : ''}{chart.net[hover_idx]}
+                </span>
+                {' '}
+                <span style={{ color: '#f97316', opacity: 0.7 }}>
+                  backlog: {chart.backlog[hover_idx] > 0 ? '+' : ''}{chart.backlog[hover_idx]}
+                </span>
               </div>
             </div>
           )}
