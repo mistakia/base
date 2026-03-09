@@ -109,8 +109,20 @@ const TaskFlowChart = ({ data }) => {
     const net = data.map((d) => (d.completed || 0) - (d.created || 0))
     const momentum = rolling_average(net, MOMENTUM_WINDOW)
 
-    const bar_width = width / data.length
-    const max_net = Math.max(...momentum.map(Math.abs), 1)
+    // Interpolate momentum for higher resolution background bars
+    const INTERP = 4
+    const interp_momentum = []
+    for (let i = 0; i < momentum.length - 1; i++) {
+      for (let j = 0; j < INTERP; j++) {
+        const t = j / INTERP
+        interp_momentum.push(momentum[i] * (1 - t) + momentum[i + 1] * t)
+      }
+    }
+    interp_momentum.push(momentum[momentum.length - 1])
+
+    const bar_count = interp_momentum.length
+    const bar_width = width / bar_count
+    const max_net = Math.max(...interp_momentum.map(Math.abs), 1)
 
     const padding = 4
     const usable = CHART_HEIGHT - padding * 2
@@ -139,9 +151,10 @@ const TaskFlowChart = ({ data }) => {
 
     return {
       bar_width,
+      bar_count,
+      interp_momentum,
       completed,
       created,
-      momentum,
       max_net,
       net,
       xs,
@@ -155,7 +168,9 @@ const TaskFlowChart = ({ data }) => {
     if (!chart || !container_ref.current) return
     const rect = container_ref.current.getBoundingClientRect()
     const x = e.clientX - rect.left
-    const idx = Math.floor(x / chart.bar_width)
+    // Map pixel position back to data index (bars are interpolated)
+    const data_width = width / data.length
+    const idx = Math.floor(x / data_width)
     set_hover_idx(Math.max(0, Math.min(idx, data.length - 1)))
   }
 
@@ -175,18 +190,17 @@ const TaskFlowChart = ({ data }) => {
             height={CHART_HEIGHT}
             viewBox={`0 0 ${width} ${CHART_HEIGHT}`}
           >
-            {/* Background bars: color intensity = smoothed net direction */}
-            {data.map((_, i) => {
-              const m = chart.momentum[i]
+            {/* Background bars: interpolated, color intensity = smoothed net */}
+            {chart.interp_momentum.map((m, i) => {
               const intensity = Math.min(Math.abs(m) / chart.max_net, 1)
               const color = m >= 0 ? '#22c55e' : '#f97316'
-              const opacity = 0.08 + intensity * 0.35
+              const opacity = 0.04 + intensity * 0.2
               return (
                 <rect
                   key={i}
                   x={i * chart.bar_width}
                   y={0}
-                  width={chart.bar_width}
+                  width={chart.bar_width + 0.5}
                   height={CHART_HEIGHT}
                   fill={color}
                   opacity={opacity}
@@ -221,16 +235,19 @@ const TaskFlowChart = ({ data }) => {
             />
 
             {/* Hover highlight */}
-            {hover_idx !== null && (
-              <rect
-                x={hover_idx * chart.bar_width}
-                y={0}
-                width={chart.bar_width}
-                height={CHART_HEIGHT}
-                fill='#ffffff'
-                opacity='0.08'
-              />
-            )}
+            {hover_idx !== null && (() => {
+              const data_width = width / data.length
+              return (
+                <rect
+                  x={hover_idx * data_width}
+                  y={0}
+                  width={data_width}
+                  height={CHART_HEIGHT}
+                  fill='#ffffff'
+                  opacity='0.08'
+                />
+              )
+            })()}
           </svg>
 
           {hover_idx !== null && (
@@ -238,7 +255,7 @@ const TaskFlowChart = ({ data }) => {
               className='task-flow-tooltip'
               style={{
                 left: Math.min(
-                  hover_idx * chart.bar_width,
+                  hover_idx * (width / data.length),
                   width - 120
                 )
               }}
