@@ -21,6 +21,7 @@
 #   1. Acquires global lock to prevent concurrent orchestrator runs
 #   2. Syncs each storage-hosted submodule (auto-commit, fetch, sync_repo with rebase)
 #   3. Detects pointer drift, commits if clean, then syncs parent (fetch, sync_repo with merge)
+#   4. After parent merge/ff, updates all repository/active/ submodule working dirs to match pointers
 #   Each step tolerates failures and continues to the next
 
 set -o pipefail
@@ -433,9 +434,9 @@ sync_repo() {
             return 1
         fi
         log "$repo_name: fast-forwarded successfully"
-        # Update base submodule after pulling parent
+        # Update active submodules after pulling parent (keeps working dirs in sync with pointers)
         if [ "$use_merge" = true ]; then
-            git -C "$dir" submodule update --init repository/active/base 2>/dev/null || true
+            git -C "$dir" submodule update --init -- repository/active/ 2>/dev/null || true
         fi
         log_telemetry "$repo_name" "sync" "behind:ff_merge"
         return 0
@@ -515,7 +516,7 @@ sync_repo() {
                 fi
             fi
             log "$repo_name: merged successfully"
-            git -C "$dir" submodule update --init repository/active/base 2>/dev/null || true
+            git -C "$dir" submodule update --init -- repository/active/ 2>/dev/null || true
             log_telemetry "$repo_name" "sync" "diverged:merge"
         else
             # Submodule: rebase (autostash for dirty submodule pointers from GitHub repos)
