@@ -83,28 +83,7 @@ function rolling_average(values, window) {
   return result
 }
 
-function area_path(xs, ys, baseline_y) {
-  if (xs.length === 0) return ''
-  const parts = [`M ${xs[0]},${baseline_y}`]
-  for (let i = 0; i < xs.length; i++) {
-    parts.push(`L ${xs[i]},${ys[i]}`)
-  }
-  parts.push(`L ${xs[xs.length - 1]},${baseline_y} Z`)
-  return parts.join(' ')
-}
-
-function smooth_line_path(xs, ys) {
-  if (xs.length < 2) return ''
-  const parts = [`M ${xs[0]},${ys[0]}`]
-  for (let i = 1; i < xs.length; i++) {
-    const cx = (xs[i - 1] + xs[i]) / 2
-    parts.push(`C ${cx},${ys[i - 1]} ${cx},${ys[i]} ${xs[i]},${ys[i]}`)
-  }
-  return parts.join(' ')
-}
-
 const CHART_HEIGHT = 64
-const PADDING_Y = 4
 
 const TaskFlowChart = ({ data }) => {
   const container_ref = useRef(null)
@@ -130,38 +109,15 @@ const TaskFlowChart = ({ data }) => {
     const net = data.map((d) => (d.completed || 0) - (d.created || 0))
     const momentum = rolling_average(net, MOMENTUM_WINDOW)
 
-    // Shared y-scale for areas (max of either series)
-    const max_area = Math.max(...completed, ...created, 1)
-    const usable = CHART_HEIGHT - PADDING_Y * 2
-    const baseline_y = CHART_HEIGHT - PADDING_Y
-
-    const x_step = width / Math.max(data.length - 1, 1)
-    const xs = data.map((_, i) => i * x_step)
-
-    const scale_area = (v) => baseline_y - (v / max_area) * usable
-
-    const completed_ys = completed.map(scale_area)
-    const created_ys = created.map(scale_area)
-
-    // Momentum line: scale to its own range, centered vertically
-    const mom_max = Math.max(...momentum.map(Math.abs), 0.5)
-    const mid_y = CHART_HEIGHT / 2
-    const mom_range = usable * 0.4
-    const momentum_ys = momentum.map(
-      (v) => mid_y - (v / mom_max) * mom_range
-    )
+    const bar_width = width / data.length
+    const max_net = Math.max(...momentum.map(Math.abs), 1)
 
     return {
-      xs,
-      completed_ys,
-      created_ys,
-      momentum_ys,
-      mid_y,
-      baseline_y,
-      x_step,
+      bar_width,
       completed,
       created,
       momentum,
+      max_net,
       net
     }
   }, [data, width])
@@ -170,7 +126,7 @@ const TaskFlowChart = ({ data }) => {
     if (!chart || !container_ref.current) return
     const rect = container_ref.current.getBoundingClientRect()
     const x = e.clientX - rect.left
-    const idx = Math.round(x / chart.x_step)
+    const idx = Math.floor(x / chart.bar_width)
     set_hover_idx(Math.max(0, Math.min(idx, data.length - 1)))
   }
 
@@ -190,48 +146,34 @@ const TaskFlowChart = ({ data }) => {
             height={CHART_HEIGHT}
             viewBox={`0 0 ${width} ${CHART_HEIGHT}`}
           >
-            {/* Completed area (green) */}
-            <path
-              d={area_path(chart.xs, chart.completed_ys, chart.baseline_y)}
-              fill='#22c55e'
-              opacity='0.25'
-            />
-            {/* Created area (orange) */}
-            <path
-              d={area_path(chart.xs, chart.created_ys, chart.baseline_y)}
-              fill='#f97316'
-              opacity='0.2'
-            />
+            {/* Background bars: color intensity = smoothed net direction */}
+            {data.map((_, i) => {
+              const m = chart.momentum[i]
+              const intensity = Math.min(Math.abs(m) / chart.max_net, 1)
+              const color = m >= 0 ? '#22c55e' : '#f97316'
+              const opacity = 0.08 + intensity * 0.35
+              return (
+                <rect
+                  key={i}
+                  x={i * chart.bar_width}
+                  y={0}
+                  width={chart.bar_width}
+                  height={CHART_HEIGHT}
+                  fill={color}
+                  opacity={opacity}
+                />
+              )
+            })}
 
-            {/* Momentum zero line */}
-            <line
-              x1='0'
-              y1={chart.mid_y}
-              x2={width}
-              y2={chart.mid_y}
-              stroke='#6b7280'
-              strokeWidth='0.5'
-              strokeDasharray='3,3'
-            />
-
-            {/* Momentum line */}
-            <path
-              d={smooth_line_path(chart.xs, chart.momentum_ys)}
-              fill='none'
-              stroke='#e5e7eb'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-            />
-
-            {/* Hover indicator */}
+            {/* Hover highlight */}
             {hover_idx !== null && (
-              <line
-                x1={chart.xs[hover_idx]}
-                y1={0}
-                x2={chart.xs[hover_idx]}
-                y2={CHART_HEIGHT}
-                stroke='#9ca3af'
-                strokeWidth='0.5'
+              <rect
+                x={hover_idx * chart.bar_width}
+                y={0}
+                width={chart.bar_width}
+                height={CHART_HEIGHT}
+                fill='#ffffff'
+                opacity='0.08'
               />
             )}
           </svg>
@@ -241,7 +183,7 @@ const TaskFlowChart = ({ data }) => {
               className='task-flow-tooltip'
               style={{
                 left: Math.min(
-                  chart.xs[hover_idx],
+                  hover_idx * chart.bar_width,
                   width - 120
                 )
               }}
@@ -258,9 +200,9 @@ const TaskFlowChart = ({ data }) => {
                   {chart.created[hover_idx]} new
                 </span>
               </div>
-              <div style={{ color: '#e5e7eb' }}>
-                momentum: {chart.momentum[hover_idx] > 0 ? '+' : ''}
-                {chart.momentum[hover_idx].toFixed(1)}
+              <div style={{ color: chart.net[hover_idx] >= 0 ? '#22c55e' : '#f97316' }}>
+                net: {chart.net[hover_idx] > 0 ? '+' : ''}
+                {chart.net[hover_idx]}
               </div>
             </div>
           )}
