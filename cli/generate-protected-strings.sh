@@ -30,7 +30,7 @@ OUTPUT_FILE="${1:-${PROTECTED_STRINGS_FILE:-$USER_CONFIG_DIR/protected-strings.t
 # --- Extract known plaintext secrets ---
 
 # Discord webhook URL from discord-notify.sh
-DISCORD_SCRIPT="$USER_BASE_DIR/cli/discord-notify.sh"
+DISCORD_SCRIPT="$USER_BASE_DIR/cli/monitoring/discord-notify.sh"
 if [ -f "$DISCORD_SCRIPT" ]; then
   grep -oE 'https://discord\.com/api/webhooks/[^ "]+' "$DISCORD_SCRIPT" 2>/dev/null | while read -r url; do
     echo "$url" >> "$OUTPUT_FILE"
@@ -58,7 +58,7 @@ if [ -f "$FINANCE_CONFIG" ]; then
 fi
 
 # Firebase API key from fantasypoints-auth.sh
-FP_AUTH="$USER_BASE_DIR/cli/fantasypoints-auth.sh"
+FP_AUTH="$USER_BASE_DIR/cli/nfl/fantasypoints-auth.sh"
 if [ -f "$FP_AUTH" ]; then
   grep -oE 'AIza[A-Za-z0-9_-]{35}' "$FP_AUTH" 2>/dev/null >> "$OUTPUT_FILE" || true
 fi

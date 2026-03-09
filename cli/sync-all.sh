@@ -340,7 +340,7 @@ clear_dirty_marker() {
 discord_notify_failure() {
     local repo="$1"
     local error_desc="$2"
-    "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+    "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
         --title "Sync failed: $repo" \
         --message "sync-all: $error_desc on $(hostname), manual intervention required" 2>/dev/null || true
 }

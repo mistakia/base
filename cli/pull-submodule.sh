@@ -89,7 +89,7 @@ elif [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     if ! git -C "$FULL_PATH" rebase "$REMOTE_BRANCH" 2>/dev/null; then
         git -C "$FULL_PATH" rebase --abort 2>/dev/null || true
         echo "$SUBMODULE_NAME: rebase failed, manual intervention required" >&2
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+        "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
             --title "Sync failed: $SUBMODULE_NAME" \
             --message "pull-submodule: rebase failed on $(hostname)" 2>/dev/null || true
         exit 1
@@ -100,7 +100,7 @@ else
     if ! git -C "$FULL_PATH" rebase "$REMOTE_BRANCH" 2>/dev/null; then
         git -C "$FULL_PATH" rebase --abort 2>/dev/null || true
         echo "$SUBMODULE_NAME: rebase failed (diverged), manual intervention required" >&2
-        "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+        "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
             --title "Sync failed: $SUBMODULE_NAME" \
             --message "pull-submodule: rebase failed (diverged) on $(hostname)" 2>/dev/null || true
         exit 1

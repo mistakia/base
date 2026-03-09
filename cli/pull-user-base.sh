@@ -93,7 +93,7 @@ else
         if [ -z "$unmerged" ]; then
             git merge --abort 2>/dev/null || true
             echo "Merge failed (unknown error)" >&2
-            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
                 --title "User-base sync failed" \
                 --message "pull-user-base: merge failed on $(hostname), manual intervention required" || true
             exit 1
@@ -103,7 +103,7 @@ else
         if [ -n "$has_file_conflict" ]; then
             git merge --abort 2>/dev/null || true
             echo "Merge has non-submodule conflicts, aborting" >&2
-            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
                 --title "User-base sync failed" \
                 --message "pull-user-base: merge conflict (non-submodule files) on $(hostname), manual intervention required" || true
             exit 1
@@ -117,7 +117,7 @@ else
         if ! GIT_EDITOR=true git merge --continue 2>/dev/null; then
             git merge --abort 2>/dev/null || true
             echo "Merge --continue failed" >&2
-            "$USER_BASE_DIRECTORY/cli/discord-notify.sh" --template service --severity error \
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
                 --title "User-base sync failed" \
                 --message "pull-user-base: merge continue failed on $(hostname), manual intervention required" || true
             exit 1
