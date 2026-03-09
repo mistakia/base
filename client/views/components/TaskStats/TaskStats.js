@@ -126,7 +126,8 @@ const TaskFlowChart = ({ data }) => {
 
     const padding = 4
     const usable = CHART_HEIGHT - padding * 2
-    const xs = data.map((_, i) => i * bar_width + bar_width / 2)
+    const data_width = width / data.length
+    const xs = data.map((_, i) => i * data_width + data_width / 2)
 
     // Completions line (smoothed)
     const smoothed_completed = rolling_average(completed, MOMENTUM_WINDOW)
