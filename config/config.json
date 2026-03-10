@@ -110,6 +110,7 @@
     "enabled": false,
     "path": "",
     "ssh_host": "storage",
+    "api_url": "",
     "api_key": "",
     "discord_webhook_url": "",
     "missed_check_interval_ms": 300000

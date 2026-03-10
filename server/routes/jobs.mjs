@@ -37,8 +37,11 @@ router.post('/report', async (req, res) => {
     project,
     server,
     name,
+    source,
     schedule,
-    schedule_type
+    schedule_type,
+    schedule_entity_uri,
+    command
   } = req.body
 
   if (!job_id || typeof success !== 'boolean') {
@@ -51,7 +54,7 @@ router.post('/report', async (req, res) => {
     const job = await report_job({
       job_id,
       name,
-      source: 'external',
+      source: source || 'external',
       success,
       reason,
       duration_ms,
@@ -59,7 +62,9 @@ router.post('/report', async (req, res) => {
       project,
       server,
       schedule,
-      schedule_type
+      schedule_type,
+      schedule_entity_uri,
+      command
     })
 
     const is_new = job.stats.total_runs === 1

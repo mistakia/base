@@ -7,6 +7,12 @@ import os from 'os'
 import { get_redis_connection, QUEUE_CONFIG } from './queue.mjs'
 import { execute_command } from './execute-command.mjs'
 import { try_acquire_tags, unregister_job_tags } from './tag-limiter.mjs'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
+import { http_report_job } from '#libs-server/jobs/http-report-job.mjs'
+import {
+  buffer_report,
+  drain_buffer
+} from '#libs-server/jobs/job-report-buffer.mjs'
 
 const log = debug('cli-queue:worker')
 
@@ -88,6 +94,54 @@ const process_cli_job = async (job) => {
 }
 
 /**
+ * Build the reason text for a failed job execution
+ */
+const build_failure_reason = ({ result, error }) => {
+  if (result?.stderr) return result.stderr
+  if (error?.message) return error.message
+  if (result?.timed_out) {
+    return `Timed out after ${Math.round((result.duration_ms || 0) / 1000)}s`
+  }
+  if (result?.stdout) return result.stdout
+
+  if (result?.exit_code != null) {
+    const signal_info = result.signal ? ` (signal: ${result.signal})` : ''
+    const stdout_tail = result?.stdout?.trim()?.slice(-300)
+    return stdout_tail
+      ? `Exit code ${result.exit_code}${signal_info}\n\nOutput (last 300 chars):\n${stdout_tail}`
+      : `Exit code ${result.exit_code}${signal_info} — no output captured`
+  }
+
+  const stdout_tail = result?.stdout?.trim()?.slice(-200)
+  return stdout_tail
+    ? `Unknown failure\n\nOutput:\n${stdout_tail}`
+    : 'Unknown failure — no output or exit code captured'
+}
+
+/**
+ * Send a report payload via HTTP API, buffering on failure
+ */
+const send_http_report = async (payload) => {
+  const api_url = config.job_tracker?.api_url
+  const api_key = config.job_tracker?.api_key
+  if (!api_url || !api_key) {
+    log('HTTP report skipped: missing api_url or api_key in config')
+    return
+  }
+
+  const http_result = await http_report_job({ api_url, api_key, payload })
+  if (http_result.success) {
+    // Opportunistically drain any previously buffered reports
+    drain_buffer({
+      report_fn: (p) => http_report_job({ api_url, api_key, payload: p })
+    }).catch((err) => log('Buffer drain error: %s', err.message))
+  } else {
+    log('HTTP report failed, buffering: %s', http_result.error)
+    await buffer_report({ payload })
+  }
+}
+
+/**
  * Report internal scheduled-command execution to job tracker
  */
 const report_to_job_tracker = async ({ job, success, result, error }) => {
@@ -101,35 +155,11 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
   }
 
   try {
-    const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+    const reason_text = !success
+      ? build_failure_reason({ result, error })
+      : null
 
-    let reason_text = null
-    if (!success) {
-      if (result?.stderr) {
-        reason_text = result.stderr
-      } else if (error?.message) {
-        reason_text = error.message
-      } else if (result?.timed_out) {
-        reason_text = `Timed out after ${Math.round((result.duration_ms || 0) / 1000)}s`
-      } else if (result?.stdout) {
-        reason_text = result.stdout
-      }
-
-      if (!reason_text && result?.exit_code != null) {
-        const signal_info = result.signal ? ` (signal: ${result.signal})` : ''
-        const stdout_tail = result?.stdout?.trim()?.slice(-300)
-        reason_text = stdout_tail
-          ? `Exit code ${result.exit_code}${signal_info}\n\nOutput (last 300 chars):\n${stdout_tail}`
-          : `Exit code ${result.exit_code}${signal_info} — no output captured`
-      } else if (!reason_text) {
-        const stdout_tail = result?.stdout?.trim()?.slice(-200)
-        reason_text = stdout_tail
-          ? `Unknown failure\n\nOutput:\n${stdout_tail}`
-          : 'Unknown failure — no output or exit code captured'
-      }
-    }
-
-    await report_job({
+    const payload = {
       job_id: `internal-${metadata.schedule_entity_id}`,
       name: metadata.schedule_title,
       source: 'internal',
@@ -140,8 +170,17 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
       project: 'base',
       server: os.hostname(),
       schedule: metadata.schedule_expression,
-      schedule_type: metadata.schedule_type
-    })
+      schedule_type: metadata.schedule_type,
+      schedule_entity_uri: metadata.schedule_entity_uri || null,
+      command: metadata.command || null
+    }
+
+    if (get_current_machine_id() === 'storage') {
+      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
+      await report_job(payload)
+    } else {
+      await send_http_report(payload)
+    }
   } catch (report_error) {
     log(`Job ${job.id}: job tracker report failed - ${report_error.message}`)
   }
@@ -211,6 +250,18 @@ export const start_cli_queue_worker = () => {
   cli_queue_worker.on('stalled', handle_job_stalled)
 
   log('CLI queue worker ready')
+
+  // Drain any buffered job reports from previous offline periods
+  if (get_current_machine_id() !== 'storage' && config.job_tracker?.api_url) {
+    drain_buffer({
+      report_fn: (payload) =>
+        http_report_job({
+          api_url: config.job_tracker.api_url,
+          api_key: config.job_tracker.api_key,
+          payload
+        })
+    }).catch((err) => log('Startup buffer drain error: %s', err.message))
+  }
 
   return cli_queue_worker
 }
