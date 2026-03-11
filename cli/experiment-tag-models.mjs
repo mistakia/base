@@ -47,8 +47,7 @@ debug.enable('metadata:*')
 
 const DEFAULT_MODELS = [
   'ollama/qwen2.5:72b',
-  'ollama/qwen3:32b',
-  'ollama/llama3.3:70b'
+  'ollama/qwen3:32b'
 ]
 
 const DEFAULT_USER_PUBLIC_KEY = config.user_public_key
@@ -83,7 +82,7 @@ if (!thread_id && !benchmark_path) {
   console.error('')
   console.error('Options:')
   console.error(
-    '  --models          Comma-separated list of models to test (default: qwen2.5:72b,qwen3:32b,llama3.3:70b)'
+    '  --models          Comma-separated list of models to test (default: qwen2.5:72b,qwen3:32b)'
   )
   console.error('  --output          Output format: table (default), json')
   console.error(
