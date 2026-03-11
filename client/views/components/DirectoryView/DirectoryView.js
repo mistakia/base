@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -7,7 +7,8 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  Box
+  Box,
+  Button
 } from '@mui/material'
 import {
   Folder as FolderIcon,
@@ -85,6 +86,20 @@ const DirectoryView = ({ path = '', on_navigate }) => {
     })
     return sorted
   }, [items])
+
+  const [show_redacted, set_show_redacted] = useState(false)
+
+  const redacted_count = useMemo(
+    () => sorted_items.filter((item) => item.is_redacted).length,
+    [sorted_items]
+  )
+
+  const visible_items = useMemo(() => {
+    if (show_redacted || redacted_count === 0) {
+      return sorted_items
+    }
+    return sorted_items.filter((item) => !item.is_redacted)
+  }, [sorted_items, show_redacted, redacted_count])
 
   // Memoize TableContainer styles to prevent unnecessary re-renders
   // Must be before early returns to maintain consistent hook order
@@ -214,9 +229,9 @@ const DirectoryView = ({ path = '', on_navigate }) => {
       <TableContainer sx={table_container_sx}>
         <Table size='small' sx={{ width: '100%', tableLayout: 'fixed' }}>
           <TableBody>
-            {sorted_items.map((item, index) => (
+            {visible_items.map((item, index) => (
               <TableRow
-                key={item.name}
+                key={item.is_redacted ? `redacted-${index}` : item.name}
                 hover={!item.is_redacted}
                 sx={{
                   cursor: item.is_redacted ? 'default' : 'pointer',
@@ -235,7 +250,8 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '65%',
                     borderBottom:
-                      index === sorted_items.length - 1
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -299,7 +315,8 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '80px',
                     borderBottom:
-                      index === sorted_items.length - 1
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -331,7 +348,8 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '100px',
                     borderBottom:
-                      index === sorted_items.length - 1
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -358,6 +376,60 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                 </TableCell>
               </TableRow>
             ))}
+            {redacted_count > 0 && !show_redacted && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  sx={{
+                    py: 0.75,
+                    px: 2,
+                    borderBottom: 'none',
+                    textAlign: 'center'
+                  }}>
+                  <Button
+                    variant='text'
+                    size='small'
+                    onClick={() => set_show_redacted(true)}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      color: COLORS.text_secondary,
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}>
+                    {`show ${redacted_count} redacted file${redacted_count === 1 ? '' : 's'} & folder${redacted_count === 1 ? '' : 's'}`}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+            {show_redacted && redacted_count > 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  sx={{
+                    py: 0.75,
+                    px: 2,
+                    borderBottom: 'none',
+                    textAlign: 'center'
+                  }}>
+                  <Button
+                    variant='text'
+                    size='small'
+                    onClick={() => set_show_redacted(false)}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      color: COLORS.text_secondary,
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}>
+                    hide redacted files & folders
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
