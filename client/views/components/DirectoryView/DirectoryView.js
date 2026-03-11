@@ -89,10 +89,28 @@ const DirectoryView = ({ path = '', on_navigate }) => {
 
   const [show_redacted, set_show_redacted] = useState(false)
 
-  const redacted_count = useMemo(
-    () => sorted_items.filter((item) => item.is_redacted).length,
-    [sorted_items]
-  )
+  const { redacted_count, redacted_folders, redacted_files } = useMemo(() => {
+    let folders = 0
+    let files = 0
+    for (const item of sorted_items) {
+      if (item.is_redacted) {
+        if (item.type === 'directory') folders++
+        else files++
+      }
+    }
+    return { redacted_count: folders + files, redacted_folders: folders, redacted_files: files }
+  }, [sorted_items])
+
+  const redacted_label = useMemo(() => {
+    const parts = []
+    if (redacted_folders > 0) {
+      parts.push(`${redacted_folders} folder${redacted_folders === 1 ? '' : 's'}`)
+    }
+    if (redacted_files > 0) {
+      parts.push(`${redacted_files} file${redacted_files === 1 ? '' : 's'}`)
+    }
+    return parts.join(' & ')
+  }, [redacted_folders, redacted_files])
 
   const visible_items = useMemo(() => {
     if (show_redacted || redacted_count === 0) {
@@ -398,7 +416,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
                       }
                     }}>
-                    {`show ${redacted_count} redacted file${redacted_count === 1 ? '' : 's'} & folder${redacted_count === 1 ? '' : 's'}`}
+                    {`show ${redacted_label}`}
                   </Button>
                 </TableCell>
               </TableRow>
