@@ -1,6 +1,7 @@
 FROM node:20-slim
 
-# Install system packages
+# Install system packages and build tools (python3, make, g++ needed by node-gyp
+# for native modules like sqlite3, duckdb, ed25519-blake2b)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep \
     git \
@@ -10,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     rsync \
     socat \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI (binary from GitHub releases, avoids apt repo SSL issues)
