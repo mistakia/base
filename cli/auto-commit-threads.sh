@@ -43,6 +43,12 @@ fi
 
 cd "$THREAD_DIR"
 
+# Enforce working tree boundary to prevent cross-submodule contamination.
+# Without this, detached HEAD or misconfigured core.worktree can cause git to
+# resolve the working tree to the parent user-base directory, staging files
+# from sibling submodules (e.g., import-history's github/, notion/ dirs).
+export GIT_WORK_TREE="$THREAD_DIR"
+
 # Safety checks
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Not in a git repository" >&2
