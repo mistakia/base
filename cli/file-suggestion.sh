@@ -113,6 +113,11 @@ search_files() {
   # --no-ignore-vcs: don't use .gitignore (we have explicit excludes)
   # Note: Using --no-ignore-vcs because some repos have overly broad .gitignore
 
+  # Disable pipefail for the search pipeline - fzf --filter returns exit 1
+  # for fuzzy-only matches (no exact match), and head closing the pipe early
+  # causes SIGPIPE. Non-zero exit codes cause Claude Code to ignore results.
+  set +o pipefail
+
   if command -v fzf >/dev/null 2>&1; then
     # Use fzf for fuzzy matching - much better results
     # Combine directories and files for matching, dedupe with awk
@@ -138,5 +143,6 @@ search_files() {
   fi
 }
 
-# Run the search
+# Run the search - always exit 0 so Claude Code accepts the results
 search_files "$QUERY"
+exit 0
