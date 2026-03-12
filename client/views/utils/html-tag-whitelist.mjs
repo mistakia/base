@@ -55,5 +55,7 @@ export const html_tag_whitelist = new Set([
   'details',
   'summary',
   'small',
-  'center'
+  'center',
+  'svg',
+  'path'
 ])
