@@ -654,6 +654,12 @@ sync_submodule() {
         ensure_thread_merge_drivers "$full_path"
     fi
 
+    # Ensure pull.rebase is set to prevent accidental merge commits from git pull
+    if [ "$(git -C "$full_path" config pull.rebase 2>/dev/null)" != "true" ]; then
+        git -C "$full_path" config pull.rebase true
+        log_verbose "$submodule_name: set pull.rebase=true"
+    fi
+
     log_verbose "Syncing $submodule_name..."
 
     # Auto-commit if applicable (lock_name matches the script basename, e.g. "auto-commit-threads")

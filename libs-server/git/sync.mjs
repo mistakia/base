@@ -55,10 +55,10 @@ export async function pull({
       { cwd: repo_path }
     )
 
-    // Perform the pull
+    // Perform the pull (always rebase to maintain linear history)
     const pull_command = branch
-      ? `git pull ${remote} ${branch}`
-      : `git pull ${remote}`
+      ? `git pull --rebase ${remote} ${branch}`
+      : `git pull --rebase ${remote}`
 
     let pull_result
     let had_conflicts = false
