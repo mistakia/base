@@ -378,31 +378,46 @@ export async function upsert_entity_to_duckdb({ entity_data }) {
       frontmatter = excluded.frontmatter
   `
 
+  const parameters = [
+    base_uri,
+    entity_id,
+    type,
+    title,
+    description,
+    status,
+    priority,
+    archived,
+    public_read,
+    visibility_analyzed_at,
+    user_public_key,
+    created_at,
+    updated_at,
+    archived_at,
+    JSON.stringify(frontmatter || {})
+  ]
+
   try {
-    await execute_duckdb_run({
-      query,
-      parameters: [
-        base_uri,
-        entity_id,
-        type,
-        title,
-        description,
-        status,
-        priority,
-        archived,
-        public_read,
-        visibility_analyzed_at,
-        user_public_key,
-        created_at,
-        updated_at,
-        archived_at,
-        JSON.stringify(frontmatter || {})
-      ]
-    })
+    await execute_duckdb_run({ query, parameters })
     log('Entity upserted: %s', base_uri)
   } catch (error) {
-    log('Error upserting entity: %s', error.message)
-    throw error
+    // Handle entity_id unique constraint violation: a stale row with a
+    // different base_uri holds this entity_id (e.g. after a file rename).
+    // Delete the stale row and retry the upsert.
+    if (error.message && error.message.includes('Duplicate key "entity_id')) {
+      log(
+        'Entity_id conflict for %s, removing stale entry and retrying',
+        base_uri
+      )
+      await execute_duckdb_run({
+        query: 'DELETE FROM entities WHERE entity_id = ? AND base_uri != ?',
+        parameters: [entity_id, base_uri]
+      })
+      await execute_duckdb_run({ query, parameters })
+      log('Entity upserted after conflict resolution: %s', base_uri)
+    } else {
+      log('Error upserting entity: %s', error.message)
+      throw error
+    }
   }
 }
 
@@ -482,6 +497,18 @@ export async function upsert_entities_batch({ entities }) {
 
   for (let i = 0; i < entities.length; i += BATCH_CHUNK_SIZE) {
     const chunk = entities.slice(i, i + BATCH_CHUNK_SIZE)
+
+    // Pre-clean stale rows where entity_id exists under a different base_uri.
+    // This prevents unique constraint violations when files have been renamed.
+    for (const entity_data of chunk) {
+      if (entity_data.entity_id && entity_data.base_uri) {
+        await execute_duckdb_run({
+          query:
+            'DELETE FROM entities WHERE entity_id = ? AND base_uri != ?',
+          parameters: [entity_data.entity_id, entity_data.base_uri]
+        })
+      }
+    }
 
     const placeholders = chunk
       .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
