@@ -448,11 +448,26 @@ export const check_thread_exists = async (
 
   try {
     const stats = await fs.stat(thread_dir)
-    return {
-      exists: stats.isDirectory(),
-      thread_id,
-      thread_dir
+    if (!stats.isDirectory()) {
+      return { exists: false, thread_id, thread_dir }
     }
+
+    // Verify metadata.json exists -- a directory without it is a partial/broken
+    // thread (e.g. prior import failed mid-way) and should be recreated
+    const metadata_path = path.join(thread_dir, 'metadata.json')
+    try {
+      await fs.stat(metadata_path)
+    } catch (meta_error) {
+      if (meta_error.code === 'ENOENT') {
+        log_debug(
+          `Thread directory ${thread_id} exists but metadata.json is missing, treating as non-existent`
+        )
+        return { exists: false, thread_id, thread_dir }
+      }
+      throw meta_error
+    }
+
+    return { exists: true, thread_id, thread_dir }
   } catch (error) {
     if (error.code === 'ENOENT') {
       return {
