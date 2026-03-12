@@ -132,6 +132,42 @@ is_submodule_initialized() {
     [ -d "$full_path/.git" ] || [ -f "$full_path/.git" ]
 }
 
+# Stash untracked files, run an abort command, then restore the stash.
+# Returns 0 if the abort succeeded, 1 if it failed. Stash is always restored
+# (or left in stash list on pop failure) regardless of abort outcome.
+# Args: $1 = directory, $2 = abort command (e.g., "rebase --abort"), $3 = context label
+stash_and_abort() {
+    local dir="$1"
+    local abort_cmd="$2"
+    local context="$3"
+    local stashed=false
+
+    if git -C "$dir" ls-files --others --exclude-standard | grep -q .; then
+        log "$dir: stashing untracked files before $context abort..."
+        if git -C "$dir" stash --include-untracked >/dev/null 2>&1; then
+            stashed=true
+        else
+            log_error "$dir: stash failed, proceeding with abort attempt anyway"
+        fi
+    fi
+
+    # shellcheck disable=SC2086
+    if git -C "$dir" $abort_cmd 2>/dev/null; then
+        if [ "$stashed" = true ]; then
+            git -C "$dir" stash pop >/dev/null 2>&1 || \
+                log_error "$dir: stash pop failed after $context abort, files preserved in stash"
+        fi
+        return 0
+    fi
+
+    # Abort failed -- restore stash so files are not lost
+    if [ "$stashed" = true ]; then
+        git -C "$dir" stash pop >/dev/null 2>&1 || \
+            log_error "$dir: stash pop failed after $context abort failure, files preserved in stash"
+    fi
+    return 1
+}
+
 # Check for merge/rebase in progress.
 # Detects and auto-recovers from two types of stale rebase state:
 # 1. Corrupt state: rebase-merge/rebase-apply directory missing critical files (head-name)
@@ -168,12 +204,13 @@ check_git_state() {
         local merge_age_minutes=$(( (now - merge_mtime) / 60 ))
         if [ $merge_age_minutes -ge $STALE_REBASE_MINUTES ]; then
             log "$dir: stale merge (${merge_age_minutes}m old), aborting..."
-            if git -C "$dir" merge --abort 2>/dev/null; then
+            if stash_and_abort "$dir" "merge --abort" "merge"; then
+                clear_recovery_failure_marker "$dir"
                 log "$dir: recovered from stale merge via abort"
                 return 0
             fi
             log_error "$dir: merge --abort failed for stale merge"
-            discord_notify_failure "$(basename "$dir")" "stale merge recovery failed"
+            check_recovery_failure_throttle "$dir" "stale merge recovery failed (${merge_age_minutes}m old)"
             return 1
         fi
         log_error "$dir: merge in progress (${merge_age_minutes}m old), skipping"
@@ -215,14 +252,14 @@ check_git_state() {
 
         if [ "$should_recover" = true ]; then
             log "$dir: detected $reason, recovering..."
-            if ! git -C "$dir" rebase --abort 2>/dev/null; then
-                # No rm -rf fallback: skip and notify instead of risking data loss
-                log_error "$dir: rebase --abort failed for $reason, skipping"
-                discord_notify_failure "$(basename "$dir")" "stale rebase recovery failed ($reason)"
-                return 1
+            if stash_and_abort "$dir" "rebase --abort" "rebase"; then
+                clear_recovery_failure_marker "$dir"
+                log "$dir: recovered from $reason"
+                return 0
             fi
-            log "$dir: recovered from $reason"
-            return 0
+            log_error "$dir: rebase --abort failed for $reason, skipping"
+            check_recovery_failure_throttle "$dir" "stale rebase recovery failed ($reason)"
+            return 1
         fi
         log_error "$dir: rebase in progress, skipping"
         return 1
@@ -300,6 +337,45 @@ log_telemetry() {
             '{ts:$ts,repo:$repo,host:$host,event:$event}' \
             >> "$telemetry_file" 2>/dev/null || true
     fi
+}
+
+# Track persistent recovery-failure state and alert after threshold.
+# Uses marker files in /tmp to throttle repeated alerts for stale rebase/merge
+# recovery failures. First failure sends an alert immediately; subsequent failures
+# are suppressed until the threshold elapses.
+# Args: $1 = directory path, $2 = reason string
+RECOVERY_ALERT_MINUTES=30
+check_recovery_failure_throttle() {
+    local dir="$1"
+    local reason="$2"
+    local repo_name
+    repo_name=$(basename "$dir")
+    local marker="/tmp/sync-recovery-failure-${repo_name}.marker"
+
+    if [ ! -f "$marker" ]; then
+        date +%s > "$marker"
+        discord_notify_failure "$repo_name" "$reason"
+        return
+    fi
+
+    local first_failure
+    first_failure=$(cat "$marker" 2>/dev/null) || return
+    local now
+    now=$(date +%s)
+    local age_minutes=$(( (now - first_failure) / 60 ))
+
+    if [ $age_minutes -ge $RECOVERY_ALERT_MINUTES ]; then
+        date +%s > "$marker"
+        discord_notify_failure "$repo_name" "$reason (${age_minutes}m since first failure)"
+    fi
+}
+
+# Clear recovery-failure marker when a repo recovers successfully.
+# Args: $1 = directory path
+clear_recovery_failure_marker() {
+    local repo_name
+    repo_name=$(basename "$1")
+    rm -f "/tmp/sync-recovery-failure-${repo_name}.marker"
 }
 
 # Track persistent dirty-skip state and alert after threshold.
