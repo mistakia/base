@@ -10,6 +10,34 @@ import '@styles/checkbox.styl'
 import '@styles/plaintext-highlighting.styl'
 
 const get_normal_styles = {
+  // Heading anchor link (visible on hover, pointer devices only)
+  '& h1[id], & h2[id], & h3[id], & h4[id], & h5[id], & h6[id]': {
+    position: 'relative',
+    '& .heading-anchor-link': {
+      position: 'absolute',
+      left: '-1.5em',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: 'transparent',
+      textDecoration: 'none',
+      border: 'none',
+      borderBottom: 'none',
+      cursor: 'pointer',
+      transition: 'color 0.15s',
+      userSelect: 'none',
+      display: 'inline-flex',
+      alignItems: 'center',
+      lineHeight: 1
+    },
+    '@media (pointer: fine)': {
+      '&:hover .heading-anchor-link': {
+        color: 'var(--color-text-disabled)'
+      },
+      '& .heading-anchor-link:hover': {
+        color: 'var(--color-primary)'
+      }
+    }
+  },
   '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 4 },
   '& h2': {
     fontSize: '1.125rem',
@@ -196,8 +224,41 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     return sanitize_html(render_markdown(content_without_frontmatter))
   }, [content, is_redacted])
 
+  // Scroll to a heading element by fragment ID
+  const scroll_to_fragment = useCallback((fragment) => {
+    if (!fragment) return
+    const id = fragment.startsWith('#') ? fragment.slice(1) : fragment
+    if (!id) return
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
+
   // Intercept clicks on internal links to use client-side routing
   const handle_click = useCallback((event) => {
+    // Handle heading anchor link clicks -- copy section URL to clipboard
+    const anchor_link = event.target.closest('a[data-heading-anchor]')
+    if (anchor_link) {
+      event.preventDefault()
+      const href = anchor_link.getAttribute('href')
+      if (!href) return
+      const url = `${window.location.origin}${window.location.pathname}${href}`
+      navigator.clipboard.writeText(url)
+      scroll_to_fragment(href)
+      window.history.replaceState(null, '', href)
+
+      // Brief checkmark confirmation
+      const original_html = anchor_link.innerHTML
+      anchor_link.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>'
+      anchor_link.style.color = 'var(--color-primary)'
+      setTimeout(() => {
+        anchor_link.innerHTML = original_html
+        anchor_link.style.color = ''
+      }, 1500)
+      return
+    }
+
     const link = event.target.closest('a[data-internal-link]')
     if (!link) return
 
@@ -208,8 +269,16 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     if (!href) return
 
     event.preventDefault()
+
+    // Same-page hash link: scroll to target and update URL without pushing history
+    if (href.startsWith('#')) {
+      scroll_to_fragment(href)
+      window.history.replaceState(null, '', href)
+      return
+    }
+
     history.push(href)
-  }, [])
+  }, [scroll_to_fragment])
 
   useEffect(() => {
     const container = container_ref.current
@@ -218,6 +287,16 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     container.addEventListener('click', handle_click)
     return () => container.removeEventListener('click', handle_click)
   }, [handle_click])
+
+  // Scroll to fragment target after content renders (cross-page navigation)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash || !html_content) return
+
+    requestAnimationFrame(() => {
+      scroll_to_fragment(hash)
+    })
+  }, [html_content, scroll_to_fragment])
 
   return (
     <Box

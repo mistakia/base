@@ -3,6 +3,7 @@ import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
 import markdownItXmlStyling from './markdown-it-xml-styling.mjs'
 import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
+import markdownItHeadingAnchor from './markdown-it-heading-anchor.js'
 import {
   process_links_in_markdown,
   process_links_in_html
@@ -77,6 +78,7 @@ const md = new MarkdownIt({
   })
   .use(markdownItXmlStyling)
   .use(markdownItTaskCheckbox)
+  .use(markdownItHeadingAnchor)
 
 // Wrap tables in scrollable containers
 const wrap_tables_in_containers = (html) => {

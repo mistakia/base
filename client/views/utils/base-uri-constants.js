@@ -40,7 +40,7 @@ export const BASE_URI_PATTERNS = {
 
   // Matches bare base URI patterns like user:path/file.ext or sys:path/file.ext
   BARE_BASE_URI_PATTERN:
-    /\b(user:|sys:)[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)\b/g
+    /\b(user:|sys:)[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)(?:#[a-zA-Z0-9_-]+)?\b/g
 }
 
 // Check if a URL is absolute
