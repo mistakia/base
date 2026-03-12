@@ -8,7 +8,11 @@ const log = debug('jobs:buffer')
 const MAX_DRAIN_ENTRIES = 10
 
 const get_default_buffer_path = () =>
-  path.join(config.user_base_directory || '', 'tmp', 'pending-job-reports.jsonl')
+  path.join(
+    config.user_base_directory || '',
+    'tmp',
+    'pending-job-reports.jsonl'
+  )
 
 // Serializes concurrent drain calls to prevent read-modify-write races
 let drain_promise = null

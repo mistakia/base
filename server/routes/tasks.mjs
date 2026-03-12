@@ -602,7 +602,10 @@ router.patch('/', async (req, res) => {
     // Validate array-type fields
     const array_fields = ['tags', 'relations', 'observations']
     for (const field of array_fields) {
-      if (field in update_properties && !Array.isArray(update_properties[field])) {
+      if (
+        field in update_properties &&
+        !Array.isArray(update_properties[field])
+      ) {
         return res.status(400).json({
           error: `${field} must be an array`
         })

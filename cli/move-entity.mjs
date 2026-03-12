@@ -124,8 +124,7 @@ const format_move_result = (result) => {
     for (const file of result.files_with_references) {
       const relation_str =
         file.relation_updates > 0 ? `${file.relation_updates} relation(s)` : ''
-      const tag_str =
-        file.tag_updates > 0 ? `${file.tag_updates} tag(s)` : ''
+      const tag_str = file.tag_updates > 0 ? `${file.tag_updates} tag(s)` : ''
       const content_str =
         file.content_updates > 0 ? `${file.content_updates} content ref(s)` : ''
       const details = [relation_str, tag_str, content_str]

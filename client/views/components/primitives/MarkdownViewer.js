@@ -236,49 +236,53 @@ const MarkdownViewer = ({ content, is_redacted }) => {
   }, [])
 
   // Intercept clicks on internal links to use client-side routing
-  const handle_click = useCallback((event) => {
-    // Handle heading anchor link clicks -- copy section URL to clipboard
-    const anchor_link = event.target.closest('a[data-heading-anchor]')
-    if (anchor_link) {
-      event.preventDefault()
-      const href = anchor_link.getAttribute('href')
+  const handle_click = useCallback(
+    (event) => {
+      // Handle heading anchor link clicks -- copy section URL to clipboard
+      const anchor_link = event.target.closest('a[data-heading-anchor]')
+      if (anchor_link) {
+        event.preventDefault()
+        const href = anchor_link.getAttribute('href')
+        if (!href) return
+        const url = `${window.location.origin}${window.location.pathname}${href}`
+        navigator.clipboard.writeText(url)
+        scroll_to_fragment(href)
+        window.history.replaceState(null, '', href)
+
+        // Brief checkmark confirmation
+        const original_html = anchor_link.innerHTML
+        anchor_link.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>'
+        anchor_link.style.color = 'var(--color-primary)'
+        setTimeout(() => {
+          anchor_link.innerHTML = original_html
+          anchor_link.style.color = ''
+        }, 1500)
+        return
+      }
+
+      const link = event.target.closest('a[data-internal-link]')
+      if (!link) return
+
+      // Allow modifier keys for open-in-new-tab behavior
+      if (event.metaKey || event.ctrlKey || event.shiftKey) return
+
+      const href = link.getAttribute('href')
       if (!href) return
-      const url = `${window.location.origin}${window.location.pathname}${href}`
-      navigator.clipboard.writeText(url)
-      scroll_to_fragment(href)
-      window.history.replaceState(null, '', href)
 
-      // Brief checkmark confirmation
-      const original_html = anchor_link.innerHTML
-      anchor_link.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>'
-      anchor_link.style.color = 'var(--color-primary)'
-      setTimeout(() => {
-        anchor_link.innerHTML = original_html
-        anchor_link.style.color = ''
-      }, 1500)
-      return
-    }
+      event.preventDefault()
 
-    const link = event.target.closest('a[data-internal-link]')
-    if (!link) return
+      // Same-page hash link: scroll to target and update URL without pushing history
+      if (href.startsWith('#')) {
+        scroll_to_fragment(href)
+        window.history.replaceState(null, '', href)
+        return
+      }
 
-    // Allow modifier keys for open-in-new-tab behavior
-    if (event.metaKey || event.ctrlKey || event.shiftKey) return
-
-    const href = link.getAttribute('href')
-    if (!href) return
-
-    event.preventDefault()
-
-    // Same-page hash link: scroll to target and update URL without pushing history
-    if (href.startsWith('#')) {
-      scroll_to_fragment(href)
-      window.history.replaceState(null, '', href)
-      return
-    }
-
-    history.push(href)
-  }, [scroll_to_fragment])
+      history.push(href)
+    },
+    [scroll_to_fragment]
+  )
 
   useEffect(() => {
     const container = container_ref.current

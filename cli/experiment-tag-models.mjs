@@ -45,10 +45,7 @@ debug.enable('metadata:*')
 // Constants
 // ============================================================================
 
-const DEFAULT_MODELS = [
-  'ollama/qwen2.5:72b',
-  'ollama/qwen3:32b'
-]
+const DEFAULT_MODELS = ['ollama/qwen2.5:72b', 'ollama/qwen3:32b']
 
 const DEFAULT_USER_PUBLIC_KEY = config.user_public_key
 

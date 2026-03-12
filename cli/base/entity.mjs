@@ -211,8 +211,7 @@ export const builder = (yargs) =>
             type: 'string'
           })
           .option('tags', {
-            describe:
-              'Comma-separated tag URIs (replaces existing tags)',
+            describe: 'Comma-separated tag URIs (replaces existing tags)',
             type: 'string'
           })
           .option('dry-run', {

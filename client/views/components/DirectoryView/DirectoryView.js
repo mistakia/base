@@ -98,13 +98,19 @@ const DirectoryView = ({ path = '', on_navigate }) => {
         else files++
       }
     }
-    return { redacted_count: folders + files, redacted_folders: folders, redacted_files: files }
+    return {
+      redacted_count: folders + files,
+      redacted_folders: folders,
+      redacted_files: files
+    }
   }, [sorted_items])
 
   const redacted_label = useMemo(() => {
     const parts = []
     if (redacted_folders > 0) {
-      parts.push(`${redacted_folders} folder${redacted_folders === 1 ? '' : 's'}`)
+      parts.push(
+        `${redacted_folders} folder${redacted_folders === 1 ? '' : 's'}`
+      )
     }
     if (redacted_files > 0) {
       parts.push(`${redacted_files} file${redacted_files === 1 ? '' : 's'}`)
@@ -268,8 +274,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '65%',
                     borderBottom:
-                      index === visible_items.length - 1 &&
-                      redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -333,8 +338,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '80px',
                     borderBottom:
-                      index === visible_items.length - 1 &&
-                      redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -366,8 +370,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '100px',
                     borderBottom:
-                      index === visible_items.length - 1 &&
-                      redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
