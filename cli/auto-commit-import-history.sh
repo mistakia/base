@@ -40,6 +40,12 @@ fi
 
 cd "$IMPORT_HISTORY_DIR"
 
+# Enforce working tree boundary to prevent cross-submodule contamination.
+# Without this, detached HEAD or misconfigured core.worktree can cause git to
+# resolve the working tree to the parent user-base directory, staging files
+# from sibling submodules (e.g., thread's UUID dirs).
+export GIT_WORK_TREE="$IMPORT_HISTORY_DIR"
+
 # Safety checks
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Not in a git repository" >&2
