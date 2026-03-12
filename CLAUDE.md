@@ -466,10 +466,13 @@ base job check-missed        # Check for missed executions
 - `check-missed-jobs.mjs` - Missed execution detection with grace periods
 - `notify-discord.mjs` - Discord webhook notifications
 
-**Crontab build preprocessor** (`base crontab build`): Thin shim that delegates to `build-crontab` (pure bash/awk script from the bootstrap repo, deployed to `~/bin/`). Reads a crontab source file and produces a deploy-ready crontab on stdout. Auto-injects `JOB_SCHEDULE` and `JOB_SCHEDULE_TYPE=expr` from cron timing fields. Strips `JOB_API_URL`, `JOB_API_KEY`, and standalone `JOB_SCHEDULE_TYPE` lines. Idempotent. Typical deploy pattern:
+**Crontab build preprocessor** (`base crontab build`): Thin shim that delegates to `build-crontab` (pure bash/awk script from the bootstrap repo, deployed to `~/bin/`). Reads a crontab source file and produces a deploy-ready crontab on stdout. Auto-injects `JOB_SCHEDULE` and `JOB_SCHEDULE_TYPE=expr` from cron timing fields. Strips `JOB_API_URL`, `JOB_API_KEY`, and standalone `JOB_SCHEDULE_TYPE` lines. Idempotent. Typical deploy pattern: process source files, copy built `.cron` files to `~/crontab/` on the target server, then run `load_crontab_files` to rebuild the active crontab from all files in that directory.
 
 ```bash
-base crontab build server/crontab.cron | ssh <host> 'crontab -'
+# Build and deploy crontab files to a remote server
+base crontab build server/crontab.cron > /tmp/crontab.cron
+scp /tmp/crontab.cron <host>:~/crontab/
+ssh <host> 'load_crontab_files'
 ```
 
 **Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. On Linux servers they live in `/etc/environment`. On macOS (MacBook), they are set in `~/crontab/00-env.cron` which is prepended alphabetically by the `load_crontab_files` helper. The storage server uses `JOB_API_URL=https://localhost:8081` (API runs locally); all other servers use `JOB_API_URL=https://storage.localdomain:8081`.
