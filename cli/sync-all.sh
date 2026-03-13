@@ -511,9 +511,9 @@ sync_repo() {
             return 1
         fi
         log "$repo_name: fast-forwarded successfully"
-        # Update active submodules after pulling parent (keeps working dirs in sync with pointers)
+        # Initialize any new submodules (register URL only, no checkout)
         if [ "$use_merge" = true ]; then
-            git -C "$dir" submodule update --init -- repository/active/ 2>/dev/null || true
+            git -C "$dir" submodule init -- repository/active/ 2>/dev/null || true
         fi
         log_telemetry "$repo_name" "sync" "behind:ff_merge"
         return 0
@@ -593,7 +593,7 @@ sync_repo() {
                 fi
             fi
             log "$repo_name: merged successfully"
-            git -C "$dir" submodule update --init -- repository/active/ 2>/dev/null || true
+            git -C "$dir" submodule init -- repository/active/ 2>/dev/null || true
             log_telemetry "$repo_name" "sync" "diverged:merge"
         else
             # Submodule: rebase (autostash for dirty submodule pointers from GitHub repos)
@@ -697,6 +697,79 @@ for entry in "${STORAGE_SUBMODULES[@]}"; do
     fi
 done
 
+# --- Step 1b: Sync GitHub-hosted active submodules ---
+# Fetch from remote and fast-forward the local branch for each initialized
+# repository/active/ submodule that is NOT storage-hosted. This keeps submodule
+# working dirs up to date without detaching HEAD (unlike git submodule update).
+
+log_verbose "Step 1b: Syncing GitHub-hosted active submodules..."
+
+# Build set of storage-hosted submodule basenames for fast lookup
+declare -A STORAGE_SUBMODULE_PATHS
+for entry in "${STORAGE_SUBMODULES[@]}"; do
+    IFS=':' read -r _path _ _ <<< "$entry"
+    STORAGE_SUBMODULE_PATHS["$_path"]=1
+done
+
+for sub_path in "$USER_BASE_DIRECTORY"/repository/active/*/; do
+    [ -d "$sub_path" ] || continue
+    # Skip if not initialized
+    [ -d "$sub_path/.git" ] || [ -f "$sub_path/.git" ] || continue
+
+    sub_name=$(basename "$sub_path")
+    sub_rel_path="repository/active/$sub_name"
+
+    # Skip storage-hosted submodules (handled in Step 1)
+    [ "${STORAGE_SUBMODULE_PATHS[$sub_rel_path]+_}" ] && continue
+
+    # Skip if not on a branch (detached HEAD = not actively developed, leave alone)
+    current_branch=$(git -C "$sub_path" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
+    if [ "$current_branch" = "HEAD" ]; then
+        log_verbose "$sub_name: detached HEAD, skipping"
+        continue
+    fi
+
+    # Skip if dirty
+    if ! git -C "$sub_path" diff --quiet --ignore-submodules 2>/dev/null || \
+       ! git -C "$sub_path" diff --cached --quiet --ignore-submodules 2>/dev/null; then
+        log_verbose "$sub_name: dirty, skipping"
+        continue
+    fi
+
+    # Skip if merge/rebase in progress
+    if ! check_git_state "$sub_path"; then
+        continue
+    fi
+
+    # Fetch from remote
+    if ! git -C "$sub_path" fetch origin 2>/dev/null; then
+        log_verbose "$sub_name: fetch failed, skipping"
+        continue
+    fi
+
+    remote_branch="origin/$current_branch"
+    if ! git -C "$sub_path" rev-parse --verify "$remote_branch" >/dev/null 2>&1; then
+        continue
+    fi
+
+    local_commit=$(git -C "$sub_path" rev-parse HEAD)
+    remote_commit=$(git -C "$sub_path" rev-parse "$remote_branch")
+
+    if [ "$local_commit" = "$remote_commit" ]; then
+        log_verbose "$sub_name: up to date"
+    elif [ "$(git -C "$sub_path" merge-base HEAD "$remote_branch")" = "$local_commit" ]; then
+        # Behind remote - fast-forward
+        log "$sub_name: behind remote, fast-forwarding..."
+        if git -C "$sub_path" merge --ff-only "$remote_branch" 2>/dev/null; then
+            log_verbose "$sub_name: fast-forwarded"
+        else
+            log_verbose "$sub_name: fast-forward failed, skipping"
+        fi
+    else
+        log_verbose "$sub_name: ahead or diverged, skipping"
+    fi
+done
+
 # --- Step 2: Detect pointer drift, commit if needed, sync parent repo ---
 
 log_verbose "Step 2: Syncing parent repo (with deferred pointer commits)..."
@@ -721,9 +794,8 @@ else
         POINTER_UPDATED=false
         UPDATED_SUBMODULES=()
 
-        for entry in "${STORAGE_SUBMODULES[@]}"; do
-            IFS=':' read -r submodule_path _ _ <<< "$entry"
-
+        # Check all initialized submodules for pointer drift (storage-hosted and GitHub-hosted)
+        for submodule_path in $(git config --file .gitmodules --get-regexp 'submodule\..*\.path' 2>/dev/null | awk '{print $2}'); do
             # Skip if submodule is not initialized
             if [ ! -d "$submodule_path/.git" ] && [ ! -f "$submodule_path/.git" ]; then
                 continue
