@@ -19,7 +19,11 @@ import {
 } from './create-session-claude-cli.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
-import { select_account } from '#libs-server/integrations/claude/account-rotation/index.mjs'
+import {
+  select_account,
+  handle_rate_limit_failure
+} from '#libs-server/integrations/claude/account-rotation/index.mjs'
+import { check_account_usage } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 
 const glob = promisify(glob_pkg)
 const log = debug('threads:worker')
@@ -61,6 +65,51 @@ const get_exhausted_delay_ms = async () => {
       : min_ttl_ms + 30000
   } catch {
     return EXHAUSTED_DELAY_DEFAULT_MS
+  }
+}
+
+/**
+ * Check if an account is rate-limited by querying the usage API.
+ * If utilization is at or above threshold, mark the account exhausted.
+ * This avoids false positives from non-rate-limit failures (git errors,
+ * timeouts, etc.) by confirming with the actual usage data.
+ */
+const check_and_mark_if_exhausted = async (job_id, account) => {
+  const threshold = config.claude_accounts?.utilization_threshold || 90
+  try {
+    const usage = await check_account_usage({
+      namespace: account.namespace,
+      org_uuid: account.org_uuid,
+      browser_profile: account.browser_profile
+    })
+
+    if (!usage.available) {
+      log(
+        `Job ${job_id}: account %s confirmed exhausted via usage API, marking`,
+        account.namespace
+      )
+      await handle_rate_limit_failure({
+        namespace: account.namespace,
+        org_uuid: account.org_uuid,
+        browser_profile: account.browser_profile
+      })
+    } else if (usage.utilization) {
+      const five_hour = usage.utilization.five_hour?.utilization || 0
+      const seven_day = usage.utilization.seven_day?.utilization || 0
+      log(
+        `Job ${job_id}: account %s not rate-limited (5h: %d%%, 7d: %d%%, threshold: %d%%)`,
+        account.namespace,
+        five_hour,
+        seven_day,
+        threshold
+      )
+    }
+  } catch (check_error) {
+    log(
+      `Job ${job_id}: usage check failed for %s, skipping exhaustion marking: %s`,
+      account.namespace,
+      check_error.message
+    )
   }
 }
 
@@ -148,10 +197,13 @@ const process_thread_creation_job = async (job) => {
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
 
-    // TODO: Rate-limit detection -- when the specific exit code or output
-    // pattern for Claude CLI rate limiting is identified, check result.exit_code
-    // here and call handle_rate_limit_failure() to mark the account exhausted.
-    // For now, non-zero exits are logged but not treated as rate limits.
+    // On non-zero exit with a selected account, check if the account is
+    // rate-limited by querying the usage API. Only mark exhausted if
+    // utilization confirms a rate limit (avoids false positives from
+    // git errors, timeouts, etc.)
+    if (result.exit_code !== 0 && selected_account) {
+      await check_and_mark_if_exhausted(job.id, selected_account)
+    }
 
     return {
       success: true,
@@ -162,10 +214,11 @@ const process_thread_creation_job = async (job) => {
       account_namespace: selected_account?.namespace || null
     }
   } catch (error) {
-    // TODO: When rate-limit exit code/pattern is identified, detect it here
-    // and call handle_rate_limit_failure({ namespace, org_uuid, browser_profile })
-    // to mark the account exhausted before retrying with a different account.
-    // Do NOT mark exhausted on generic failures (timeouts, git errors, etc.).
+    // On failure with a selected account, check usage API to determine
+    // if this was a rate-limit failure vs a generic error
+    if (selected_account) {
+      await check_and_mark_if_exhausted(job.id, selected_account)
+    }
 
     log(`Job ${job.id}: failed -`, error.message)
     throw error
