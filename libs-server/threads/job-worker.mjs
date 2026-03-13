@@ -31,9 +31,38 @@ const LOCK_DURATION_MS = 600000 // 10 minutes - long-running Claude CLI sessions
 const STALLED_INTERVAL_MS = 30000 // Check for stalled jobs every 30 seconds
 const LOCK_EXTEND_INTERVAL_MS = 300000 // Extend lock every 5 minutes
 const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes survive crashes)
+const EXHAUSTED_DELAY_DEFAULT_MS = 300000 // 5 minutes default delay when all accounts exhausted
+const EXHAUSTED_KEY_PREFIX = 'claude:exhausted:'
 
 // Module state
 let thread_worker = null
+
+/**
+ * Get delay in ms until the earliest exhausted account marker expires.
+ * Falls back to EXHAUSTED_DELAY_DEFAULT_MS if TTLs cannot be read.
+ */
+const get_exhausted_delay_ms = async () => {
+  try {
+    const redis = get_redis_connection()
+    const keys = await redis.keys(`${EXHAUSTED_KEY_PREFIX}*`)
+    if (keys.length === 0) return EXHAUSTED_DELAY_DEFAULT_MS
+
+    let min_ttl_ms = Infinity
+    for (const key of keys) {
+      const ttl = await redis.ttl(key)
+      if (ttl > 0) {
+        min_ttl_ms = Math.min(min_ttl_ms, ttl * 1000)
+      }
+    }
+
+    // Add 30s buffer after TTL expiry
+    return min_ttl_ms === Infinity
+      ? EXHAUSTED_DELAY_DEFAULT_MS
+      : min_ttl_ms + 30000
+  } catch {
+    return EXHAUSTED_DELAY_DEFAULT_MS
+  }
+}
 
 /**
  * Process a thread creation job
@@ -86,8 +115,16 @@ const process_thread_creation_job = async (job) => {
       }
     } catch (account_error) {
       if (account_error.name === 'AllAccountsExhaustedError') {
-        log(`Job ${job.id}: all accounts exhausted, throwing`)
-        throw account_error
+        // Delay job until earliest exhausted marker expires instead of
+        // consuming a retry attempt (markers may have TTLs of hours)
+        const delay_ms = await get_exhausted_delay_ms()
+        log(
+          `Job ${job.id}: all accounts exhausted, delaying %dms`,
+          delay_ms
+        )
+        await job.moveToDelayed(Date.now() + delay_ms, job.token)
+        // Return without result -- job will be re-processed after delay
+        return
       }
       // Non-fatal: fall back to default account
       log(
