@@ -19,6 +19,7 @@ import {
 } from './create-session-claude-cli.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import { select_account } from '#libs-server/integrations/claude/account-rotation/index.mjs'
 
 const glob = promisify(glob_pkg)
 const log = debug('threads:worker')
@@ -68,6 +69,33 @@ const process_thread_creation_job = async (job) => {
   }, LOCK_EXTEND_INTERVAL_MS)
 
   try {
+    // Select account for rotation (returns null if feature disabled)
+    let claude_config_dir = null
+    let selected_account = null
+    try {
+      selected_account = await select_account({
+        execution_mode: execution_mode || 'host'
+      })
+      if (selected_account) {
+        claude_config_dir = selected_account.config_dir
+        log(
+          `Job ${job.id}: using account %s (config_dir: %s)`,
+          selected_account.namespace,
+          claude_config_dir
+        )
+      }
+    } catch (account_error) {
+      if (account_error.name === 'AllAccountsExhaustedError') {
+        log(`Job ${job.id}: all accounts exhausted, throwing`)
+        throw account_error
+      }
+      // Non-fatal: fall back to default account
+      log(
+        `Job ${job.id}: account selection failed, using default: %s`,
+        account_error.message
+      )
+    }
+
     const result = await create_session_claude_cli({
       prompt,
       working_directory,
@@ -77,7 +105,8 @@ const process_thread_creation_job = async (job) => {
       job_id: job.id,
       execution_mode,
       thread_config,
-      username
+      username,
+      claude_config_dir
     })
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
@@ -87,7 +116,8 @@ const process_thread_creation_job = async (job) => {
       session_directory: result.session_directory,
       session_id,
       exit_code: result.exit_code,
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      account_namespace: selected_account?.namespace || null
     }
   } catch (error) {
     log(`Job ${job.id}: failed -`, error.message)
