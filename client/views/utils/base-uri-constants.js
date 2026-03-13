@@ -206,12 +206,12 @@ export const resolve_relative_path = (
     base_directory = current_path
   }
 
-  // Handle ./relative/path
+  // Handle ./relative/path - explicitly relative to current directory
   if (relative_path.startsWith('./')) {
     return base_directory + '/' + relative_path.substring(2)
   }
 
-  // Handle ../relative/path
+  // Handle ../relative/path - explicitly relative navigation
   if (relative_path.startsWith('../')) {
     let working_directory = base_directory
     let remaining_path = relative_path
@@ -227,6 +227,9 @@ export const resolve_relative_path = (
     return working_directory + '/' + remaining_path
   }
 
-  // Otherwise, resolve relative to current directory
-  return base_directory + '/' + relative_path
+  // Bare paths (no ./ or ../ prefix) are treated as root-relative.
+  // In the entity system, bare paths like "task/foo.md" are entity
+  // references that should resolve from root, not relative to the
+  // current page directory. Use "./" prefix for true relative paths.
+  return '/' + relative_path
 }
