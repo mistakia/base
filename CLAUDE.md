@@ -398,6 +398,7 @@ Schedule CLI commands for automated execution at specified times. Schedules are 
 ```bash
 # List all scheduled commands
 base schedule list
+base schedule list --jobs              # Enrich with job execution status
 
 # Create a new scheduled command
 base schedule add "yarn test:all" --type expr --schedule "0 2 * * *" --title "Nightly tests"

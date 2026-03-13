@@ -127,6 +127,7 @@ All commands are under `base schedule`:
 ```bash
 # List all schedules
 base schedule list
+base schedule list --jobs              # Enrich with job execution data (last_run_at, last_run_status)
 base schedule list --verbose --json
 
 # Create a schedule

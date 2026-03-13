@@ -39,7 +39,18 @@ const resolve_schedule_path = (target) => {
 
 export const builder = (yargs) =>
   yargs
-    .command('list', 'List all scheduled commands', {}, handle_list)
+    .command(
+      'list',
+      'List all scheduled commands',
+      (yargs) =>
+        yargs.option('jobs', {
+          alias: 'j',
+          describe: 'Enrich with job execution data',
+          type: 'boolean',
+          default: false
+        }),
+      handle_list
+    )
     .command(
       'add <cmd>',
       'Create a new scheduled command',
@@ -154,8 +165,34 @@ async function handle_list(argv) {
     const directory = get_schedule_directory()
     const schedules = await load_schedules({ directory })
 
+    // Enrich with job data when --jobs flag is set
+    let job_map = null
+    if (argv.jobs) {
+      try {
+        const { load_all_jobs } = await import(
+          '#libs-server/jobs/report-job.mjs'
+        )
+        const jobs = await load_all_jobs()
+        job_map = new Map(jobs.map((j) => [j.job_id, j]))
+      } catch (error) {
+        console.error(`Warning: failed to load job data: ${error.message}`)
+      }
+    }
+
+    const enrich = (schedule) => {
+      if (!job_map || !schedule.entity_id) return schedule
+      const job = job_map.get(`internal-${schedule.entity_id}`)
+      if (!job || !job.last_execution) return schedule
+      return {
+        ...schedule,
+        last_run_at: job.last_execution.timestamp,
+        last_run_status: job.last_execution.success ? 'ok' : 'fail',
+        last_run_duration_ms: job.last_execution.duration_ms
+      }
+    }
+
     if (argv.json) {
-      console.log(JSON.stringify(schedules, null, 2))
+      console.log(JSON.stringify(schedules.map(enrich), null, 2))
       flush_and_exit(exit_code)
       return
     }
@@ -175,7 +212,8 @@ async function handle_list(argv) {
     })
 
     if (argv.verbose) {
-      for (const schedule of sorted) {
+      for (const raw_schedule of sorted) {
+        const schedule = enrich(raw_schedule)
         const status = schedule.enabled ? '[ENABLED]' : '[DISABLED]'
         const relative_path = path.relative(directory, schedule.file_path)
         console.log(`${status} ${relative_path}`)
@@ -185,14 +223,25 @@ async function handle_list(argv) {
         if (schedule.next_trigger_at) {
           console.log(`  Next: ${schedule.next_trigger_at}`)
         }
+        if (schedule.last_run_at) {
+          console.log(
+            `  Last run: ${schedule.last_run_status} at ${schedule.last_run_at}${schedule.last_run_duration_ms != null ? ` (${schedule.last_run_duration_ms}ms)` : ''}`
+          )
+        }
         console.log('')
       }
     } else {
-      for (const schedule of sorted) {
+      for (const raw_schedule of sorted) {
+        const schedule = enrich(raw_schedule)
         const status = schedule.enabled ? 'enabled' : 'disabled'
         const relative_path = path.relative(directory, schedule.file_path)
         const next = schedule.next_trigger_at || '-'
-        console.log(`${relative_path}\t${status}\t${next}`)
+        const cols = [relative_path, status, next]
+        if (argv.jobs) {
+          cols.push(schedule.last_run_status || '-')
+          cols.push(schedule.last_run_at || '-')
+        }
+        console.log(cols.join('\t'))
       }
     }
   } catch (error) {
