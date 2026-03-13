@@ -23,6 +23,7 @@ import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { get_cached_tasks } from '#server/services/cache-warmer.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { query_tasks_from_entities } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
 
 const log = debug('api:tasks')
 const router = express.Router({ mergeParams: true })
@@ -674,6 +675,21 @@ router.patch('/', async (req, res) => {
       base_uri,
       updated_properties: update_properties
     })
+
+    // Sync status/priority changes to GitHub project fields (best-effort, after response)
+    if (
+      !req.body.no_sync &&
+      (update_properties.status || update_properties.priority)
+    ) {
+      sync_task_to_github({
+        entity_properties: merged_properties,
+        changed_fields: {
+          status: update_properties.status,
+          priority: update_properties.priority
+        },
+        previous_status: task.entity_properties.status
+      }).catch((err) => log('GitHub sync failed for %s: %s', base_uri, err.message))
+    }
   } catch (error) {
     log('Error updating task:', error)
     res.status(500).json({ error: error.message })

@@ -3,7 +3,7 @@
 # Optimized for performance with configurable exclusions
 # Uses ripgrep for fast file enumeration + fzf for fuzzy matching
 
-set -euo pipefail
+set -u
 
 # Parse JSON input to get query
 QUERY=$(jq -r '.query // ""')

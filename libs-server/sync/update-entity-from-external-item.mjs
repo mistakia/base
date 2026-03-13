@@ -104,35 +104,38 @@ function apply_github_field_preservation({
     updates_to_apply.tags = merged_tags
   }
 
-  // Preserve status if more specific than "No status"
+  // Preserve status/priority when import has no project field context
+  const has_project_field_data = Boolean(external_item?.fieldValues)
+
+  // When the import has project field data, it is authoritative -- allow the update.
+  // When the import lacks project field context (issue-only webhook), preserve existing values.
   if (
-    entity_properties.status &&
+    updates_to_apply.status &&
     existing_entity_properties.status &&
-    entity_properties.status === 'No status' &&
-    existing_entity_properties.status !== 'No status'
+    existing_entity_properties.status !== 'No status' &&
+    (!has_project_field_data || entity_properties.status === 'No status')
   ) {
     const issue_state = external_item?.state?.toLowerCase()
-    if (external_item && issue_state === 'closed') {
+    if (issue_state === 'closed') {
       log(
-        `Issue is closed, updating status from '${existing_entity_properties.status}' to Completed`
+        `Issue is closed, allowing status update from '${existing_entity_properties.status}'`
       )
     } else {
       log(
-        `Preserving existing status '${existing_entity_properties.status}' instead of overwriting with 'No status' from issue import`
+        `Preserving existing status '${existing_entity_properties.status}' - import has no project field context`
       )
       delete updates_to_apply.status
     }
   }
 
-  // Preserve priority if more specific than "None"
   if (
-    entity_properties.priority &&
+    updates_to_apply.priority &&
     existing_entity_properties.priority &&
-    entity_properties.priority === 'None' &&
-    existing_entity_properties.priority !== 'None'
+    existing_entity_properties.priority !== 'None' &&
+    (!has_project_field_data || entity_properties.priority === 'None')
   ) {
     log(
-      `Preserving existing priority '${existing_entity_properties.priority}' instead of overwriting with 'None' from issue import`
+      `Preserving existing priority '${existing_entity_properties.priority}' - import has no project field context`
     )
     delete updates_to_apply.priority
   }
@@ -329,6 +332,7 @@ export async function update_entity_from_external_item({
     })
 
     // Build and apply updates if needed
+    let file_was_written = false
     if (internal_updates || file_updates || force) {
       if (force) {
         log(`Force updating ${entity_type} from ${external_system}`)
@@ -409,6 +413,7 @@ export async function update_entity_from_external_item({
             entity_content:
               entity_content || existing_entity_result.entity_content
           })
+          file_was_written = true
         } else {
           log(
             `Skipping file write for ${entity_type} ${external_id} - no actual changes after preserving local-only and protected properties`
@@ -418,8 +423,7 @@ export async function update_entity_from_external_item({
     }
 
     return {
-      action:
-        external_updates || internal_updates || force ? 'updated' : 'skipped',
+      action: file_was_written ? 'updated' : 'skipped',
       entity_id,
       absolute_path,
       external_updates,

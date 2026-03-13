@@ -5,7 +5,8 @@
   "public_url": "",
   "github_access_token": "",
   "github": {
-    "webhook_secret": ""
+    "webhook_secret": "",
+    "projects": {}
   },
   "cors_origins": [],
   "system_main_branch": "main",
