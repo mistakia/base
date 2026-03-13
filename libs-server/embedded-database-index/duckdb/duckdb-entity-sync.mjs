@@ -503,8 +503,7 @@ export async function upsert_entities_batch({ entities }) {
     for (const entity_data of chunk) {
       if (entity_data.entity_id && entity_data.base_uri) {
         await execute_duckdb_run({
-          query:
-            'DELETE FROM entities WHERE entity_id = ? AND base_uri != ?',
+          query: 'DELETE FROM entities WHERE entity_id = ? AND base_uri != ?',
           parameters: [entity_data.entity_id, entity_data.base_uri]
         })
       }

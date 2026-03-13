@@ -182,10 +182,12 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
 }
 
 /**
- * Get weekly task completion series for sparkline
+ * Get weekly task completion series with actual backlog per week.
+ * Queries all historical creation/completion events to compute accurate
+ * running open-task count at each week boundary.
  * @param {Object} [params] Parameters
- * @param {number} [params.weeks=52] Number of trailing weeks
- * @returns {Promise<Array>} Array of { week, completed, created }
+ * @param {number} [params.weeks=52] Number of trailing weeks to return
+ * @returns {Promise<Array>} Array of { week, completed, created, open }
  */
 export async function get_task_completion_series({ weeks = 52 } = {}) {
   if (!is_duckdb_initialized()) {
@@ -198,17 +200,19 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
     since.setDate(since.getDate() - weeks * 7)
     const since_str = since.toISOString().split('T')[0]
 
-    const [creation_rows, completion_rows] = await Promise.all([
+    // Query all historical creation and completion events (not windowed)
+    // so we can compute accurate cumulative open count
+    const [all_creation_rows, all_completion_rows] = await Promise.all([
       execute_duckdb_query({
         query: `
           SELECT
             DATE_TRUNC('week', created_at) as week,
             COUNT(*) as created
           FROM entities
-          WHERE type = 'task' AND created_at >= ?
+          WHERE type = 'task'
           GROUP BY DATE_TRUNC('week', created_at)
-        `,
-        parameters: [since_str]
+          ORDER BY week
+        `
       }),
       execute_duckdb_query({
         query: `
@@ -221,45 +225,56 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
             WHERE type = 'task' AND status = 'Completed'
           ) task_completions
           WHERE finished_at_str IS NOT NULL
-            AND finished_at_str::TIMESTAMP >= ?::TIMESTAMP
           GROUP BY DATE_TRUNC('week', finished_at_str::TIMESTAMP)
-        `,
-        parameters: [since_str]
+          ORDER BY week
+        `
       })
     ])
 
-    // Merge by week
-    const by_week = new Map()
-    for (const row of creation_rows) {
-      const week =
-        row.week instanceof Date
-          ? row.week.toISOString().split('T')[0]
-          : String(row.week).split('T')[0]
-      by_week.set(week, {
-        week,
-        created: Number(row.created || 0),
-        completed: 0
-      })
-    }
-    for (const row of completion_rows) {
-      const week =
-        row.week instanceof Date
-          ? row.week.toISOString().split('T')[0]
-          : String(row.week).split('T')[0]
-      if (by_week.has(week)) {
-        by_week.get(week).completed = Number(row.completed || 0)
-      } else {
-        by_week.set(week, {
-          week,
-          created: 0,
-          completed: Number(row.completed || 0)
-        })
-      }
+    const format_week = (w) =>
+      w instanceof Date
+        ? w.toISOString().split('T')[0]
+        : String(w).split('T')[0]
+
+    // Build maps of all historical weekly events
+    const created_by_week = new Map()
+    for (const row of all_creation_rows) {
+      const week = format_week(row.week)
+      created_by_week.set(week, Number(row.created || 0))
     }
 
-    return Array.from(by_week.values()).sort((a, b) =>
-      a.week.localeCompare(b.week)
-    )
+    const completed_by_week = new Map()
+    for (const row of all_completion_rows) {
+      const week = format_week(row.week)
+      completed_by_week.set(week, Number(row.completed || 0))
+    }
+
+    // Collect all weeks and sort chronologically
+    const all_weeks = new Set([
+      ...created_by_week.keys(),
+      ...completed_by_week.keys()
+    ])
+    const sorted_weeks = Array.from(all_weeks).sort()
+
+    // Compute cumulative open count at each week
+    let cum_created = 0
+    let cum_completed = 0
+    const open_by_week = new Map()
+    for (const week of sorted_weeks) {
+      cum_created += created_by_week.get(week) || 0
+      cum_completed += completed_by_week.get(week) || 0
+      open_by_week.set(week, Math.max(0, cum_created - cum_completed))
+    }
+
+    // Return only the display window, with open count at each week
+    return sorted_weeks
+      .filter((week) => week >= since_str)
+      .map((week) => ({
+        week,
+        created: created_by_week.get(week) || 0,
+        completed: completed_by_week.get(week) || 0,
+        open: open_by_week.get(week) || 0
+      }))
   } catch (error) {
     log(`Failed to get task completion series: ${error.message}`)
     return []
