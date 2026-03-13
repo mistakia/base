@@ -1,4 +1,5 @@
 import debug from 'debug'
+import path from 'path'
 import config from '#config'
 import os from 'os'
 
@@ -74,10 +75,15 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
     }
 
     // Account not marked exhausted -- use it
-    const config_dir =
+    const raw_dir =
       execution_mode === 'container' || execution_mode === 'container_user'
         ? account.container_config_dir
         : account.config_dir
+
+    // Resolve tilde to absolute path (tilde won't expand in env vars)
+    const config_dir = raw_dir?.startsWith('~/')
+      ? path.join(os.homedir(), raw_dir.slice(2))
+      : raw_dir
 
     log('Selected account: %s (config_dir: %s)', account.namespace, config_dir)
 
@@ -125,13 +131,13 @@ export const handle_rate_limit_failure = async ({
       })
 
       if (result.utilization) {
-        // Use the earliest reset time
+        // Use the latest reset time (account unavailable until all windows reset)
         const five_hour_reset = result.utilization.five_hour?.resets_at
         const seven_day_reset = result.utilization.seven_day?.resets_at
 
         if (five_hour_reset && seven_day_reset) {
           resets_at =
-            new Date(five_hour_reset) < new Date(seven_day_reset)
+            new Date(five_hour_reset) > new Date(seven_day_reset)
               ? five_hour_reset
               : seven_day_reset
         } else {

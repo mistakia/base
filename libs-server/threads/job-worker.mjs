@@ -111,6 +111,11 @@ const process_thread_creation_job = async (job) => {
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
 
+    // TODO: Rate-limit detection -- when the specific exit code or output
+    // pattern for Claude CLI rate limiting is identified, check result.exit_code
+    // here and call handle_rate_limit_failure() to mark the account exhausted.
+    // For now, non-zero exits are logged but not treated as rate limits.
+
     return {
       success: true,
       session_directory: result.session_directory,
@@ -120,6 +125,11 @@ const process_thread_creation_job = async (job) => {
       account_namespace: selected_account?.namespace || null
     }
   } catch (error) {
+    // TODO: When rate-limit exit code/pattern is identified, detect it here
+    // and call handle_rate_limit_failure({ namespace, org_uuid, browser_profile })
+    // to mark the account exhausted before retrying with a different account.
+    // Do NOT mark exhausted on generic failures (timeouts, git errors, etc.).
+
     log(`Job ${job.id}: failed -`, error.message)
     throw error
   } finally {
