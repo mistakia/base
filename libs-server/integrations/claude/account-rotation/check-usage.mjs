@@ -16,7 +16,7 @@ const CLOAKBROWSER_PATHS = {
   linux: `${process.env.HOME}/.local/share/cloakbrowser-venv/bin/python3`
 }
 
-const CLOAKBROWSER_SCRIPT = `${process.env.HOME}/user-base/cli/browser/cloak-browser.py`
+const CLOAKBROWSER_SCRIPT = `${config.user_base_directory || process.env.USER_BASE_DIRECTORY}/cli/browser/cloak-browser.py`
 
 /**
  * Get cached usage data from Redis
