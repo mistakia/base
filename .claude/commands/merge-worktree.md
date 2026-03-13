@@ -6,7 +6,7 @@
 
 <context>
 This command implements the workflow defined in [[system/workflow/merge-worktree.md]].
-The system uses git worktrees to isolate development work, and all changes must go through 
+The system uses git worktrees to isolate development work, and all changes must go through
 a proper merge process rather than direct commits to main. This ensures code quality and
 maintains a clean git history.
 
