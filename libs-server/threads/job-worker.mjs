@@ -19,6 +19,7 @@ import {
 } from './create-session-claude-cli.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import { select_account } from '#libs-server/integrations/claude/account-rotation/index.mjs'
 
 const glob = promisify(glob_pkg)
 const log = debug('threads:worker')
@@ -30,9 +31,38 @@ const LOCK_DURATION_MS = 600000 // 10 minutes - long-running Claude CLI sessions
 const STALLED_INTERVAL_MS = 30000 // Check for stalled jobs every 30 seconds
 const LOCK_EXTEND_INTERVAL_MS = 300000 // Extend lock every 5 minutes
 const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes survive crashes)
+const EXHAUSTED_DELAY_DEFAULT_MS = 300000 // 5 minutes default delay when all accounts exhausted
+const EXHAUSTED_KEY_PREFIX = 'claude:exhausted:'
 
 // Module state
 let thread_worker = null
+
+/**
+ * Get delay in ms until the earliest exhausted account marker expires.
+ * Falls back to EXHAUSTED_DELAY_DEFAULT_MS if TTLs cannot be read.
+ */
+const get_exhausted_delay_ms = async () => {
+  try {
+    const redis = get_redis_connection()
+    const keys = await redis.keys(`${EXHAUSTED_KEY_PREFIX}*`)
+    if (keys.length === 0) return EXHAUSTED_DELAY_DEFAULT_MS
+
+    let min_ttl_ms = Infinity
+    for (const key of keys) {
+      const ttl = await redis.ttl(key)
+      if (ttl > 0) {
+        min_ttl_ms = Math.min(min_ttl_ms, ttl * 1000)
+      }
+    }
+
+    // Add 30s buffer after TTL expiry
+    return min_ttl_ms === Infinity
+      ? EXHAUSTED_DELAY_DEFAULT_MS
+      : min_ttl_ms + 30000
+  } catch {
+    return EXHAUSTED_DELAY_DEFAULT_MS
+  }
+}
 
 /**
  * Process a thread creation job
@@ -68,6 +98,41 @@ const process_thread_creation_job = async (job) => {
   }, LOCK_EXTEND_INTERVAL_MS)
 
   try {
+    // Select account for rotation (returns null if feature disabled)
+    let claude_config_dir = null
+    let selected_account = null
+    try {
+      selected_account = await select_account({
+        execution_mode: execution_mode || 'host'
+      })
+      if (selected_account) {
+        claude_config_dir = selected_account.config_dir
+        log(
+          `Job ${job.id}: using account %s (config_dir: %s)`,
+          selected_account.namespace,
+          claude_config_dir
+        )
+      }
+    } catch (account_error) {
+      if (account_error.name === 'AllAccountsExhaustedError') {
+        // Delay job until earliest exhausted marker expires instead of
+        // consuming a retry attempt (markers may have TTLs of hours)
+        const delay_ms = await get_exhausted_delay_ms()
+        log(
+          `Job ${job.id}: all accounts exhausted, delaying %dms`,
+          delay_ms
+        )
+        await job.moveToDelayed(Date.now() + delay_ms, job.token)
+        // Return without result -- job will be re-processed after delay
+        return
+      }
+      // Non-fatal: fall back to default account
+      log(
+        `Job ${job.id}: account selection failed, using default: %s`,
+        account_error.message
+      )
+    }
+
     const result = await create_session_claude_cli({
       prompt,
       working_directory,
@@ -77,19 +142,31 @@ const process_thread_creation_job = async (job) => {
       job_id: job.id,
       execution_mode,
       thread_config,
-      username
+      username,
+      claude_config_dir
     })
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
+
+    // TODO: Rate-limit detection -- when the specific exit code or output
+    // pattern for Claude CLI rate limiting is identified, check result.exit_code
+    // here and call handle_rate_limit_failure() to mark the account exhausted.
+    // For now, non-zero exits are logged but not treated as rate limits.
 
     return {
       success: true,
       session_directory: result.session_directory,
       session_id,
       exit_code: result.exit_code,
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      account_namespace: selected_account?.namespace || null
     }
   } catch (error) {
+    // TODO: When rate-limit exit code/pattern is identified, detect it here
+    // and call handle_rate_limit_failure({ namespace, org_uuid, browser_profile })
+    // to mark the account exhausted before retrying with a different account.
+    // Do NOT mark exhausted on generic failures (timeouts, git errors, etc.).
+
     log(`Job ${job.id}: failed -`, error.message)
     throw error
   } finally {

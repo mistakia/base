@@ -102,6 +102,12 @@
     "channels": {},
     "server_id": ""
   },
+  "claude_accounts": {
+    "enabled": false,
+    "accounts": [],
+    "usage_check_cache_seconds": 300,
+    "utilization_threshold": 90
+  },
   "cli_queue": {
     "tag_limits": {
       "default": { "max_concurrent": 10 }

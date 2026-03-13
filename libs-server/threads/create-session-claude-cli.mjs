@@ -592,6 +592,7 @@ const restore_plan = async ({
  * @param {string} [params.execution_mode] - Where to execute: 'host', 'container', or 'container_user'
  * @param {Object} [params.thread_config] - Per-user thread configuration (for container_user mode)
  * @param {string} [params.username] - Username (required for container_user mode)
+ * @param {string} [params.claude_config_dir] - Override CLAUDE_CONFIG_DIR for account rotation
  * @returns {Promise<Object>} Result with exit_code and session_directory
  * @throws {Error} If validation fails, process errors, or timeout occurs
  */
@@ -605,7 +606,8 @@ export const create_session_claude_cli = async ({
   skip_permissions = true,
   execution_mode = 'host',
   thread_config = null,
-  username = null
+  username = null,
+  claude_config_dir = null
 }) => {
   // -------------------------
   // 1. Validate & Log
@@ -621,6 +623,9 @@ export const create_session_claude_cli = async ({
   log(`Working directory: ${working_directory}`)
   log(`User: ${user_public_key}`)
   log(`Execution mode: ${execution_mode}`)
+  if (claude_config_dir) {
+    log(`Claude config dir: ${claude_config_dir}`)
+  }
 
   // Validate working directory is within user's base directory.
   // Also resolves base URIs (e.g. 'user:') to host filesystem paths.
@@ -724,6 +729,9 @@ export const create_session_claude_cli = async ({
       '-w',
       container_working_directory,
       ...(job_id ? ['-e', `JOB_ID=${job_id}`] : []),
+      ...(claude_config_dir
+        ? ['-e', `CLAUDE_CONFIG_DIR=${claude_config_dir}`]
+        : []),
       ...(process.env.SSL_ENABLED === 'true'
         ? ['-e', 'BASE_API_PROTO=https']
         : []),
@@ -745,7 +753,10 @@ export const create_session_claude_cli = async ({
       cwd: validated_working_directory,
       env: {
         ...process.env,
-        ...(job_id ? { JOB_ID: job_id } : {})
+        ...(job_id ? { JOB_ID: job_id } : {}),
+        ...(claude_config_dir
+          ? { CLAUDE_CONFIG_DIR: claude_config_dir }
+          : {})
       }
     }
   }

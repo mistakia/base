@@ -40,6 +40,12 @@ if [ "$CONTAINER_MODE" = "user" ]; then
         run_as_node mkdir -p /home/node/.claude/projects /home/node/.claude/cache /home/node/.claude/todos /home/node/.claude/plans
     fi
 
+    # Initialize per-account Claude directories (for account rotation)
+    for account_dir in /home/node/.claude-*/; do
+        [ -d "$account_dir" ] || continue
+        run_as_node mkdir -p "$account_dir/projects" "$account_dir/cache" "$account_dir/todos" "$account_dir/plans"
+    done
+
     # Verify credentials exist
     if [ ! -f "/home/node/.claude/.credentials.json" ]; then
         echo "ERROR: .credentials.json not found in claude-home -- user container cannot authenticate" >&2
@@ -144,6 +150,14 @@ fi
 
 # Create Claude home directory structure if missing (as node user)
 run_as_node mkdir -p /home/node/.claude/projects /home/node/.claude/cache /home/node/.claude/todos /home/node/.claude/plans
+
+# Initialize per-account Claude directories (for account rotation)
+# Each mounted account directory needs the same subdirectory structure
+for account_dir in /home/node/.claude-*/; do
+    [ -d "$account_dir" ] || continue
+    run_as_node mkdir -p "$account_dir/projects" "$account_dir/cache" "$account_dir/todos" "$account_dir/plans"
+    echo "Initialized account directory: $account_dir"
+done
 
 # Initialize settings.json from template if not exists
 SETTINGS_TEMPLATE="$USER_BASE_DIRECTORY/config/base-container/settings.container.json"
