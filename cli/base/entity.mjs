@@ -41,6 +41,7 @@ import {
   create_base_uri_from_path
 } from '#libs-server/base-uri/index.mjs'
 import config from '#config'
+import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
 
 export const command = 'entity <command>'
 export const describe =
@@ -217,6 +218,11 @@ export const builder = (yargs) =>
           .option('dry-run', {
             alias: 'n',
             describe: 'Preview changes without executing',
+            type: 'boolean',
+            default: false
+          })
+          .option('no-sync', {
+            describe: 'Skip GitHub project field sync',
             type: 'boolean',
             default: false
           })
@@ -1184,7 +1190,11 @@ async function handle_update(argv) {
         const response = await authenticated_fetch(`${SERVER_URL}/api/tasks`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base_uri, properties })
+          body: JSON.stringify({
+            base_uri,
+            properties,
+            no_sync: argv['no-sync'] || undefined
+          })
         })
         if (!response.ok) {
           const data = await response.json().catch(() => ({}))
@@ -1234,7 +1244,28 @@ async function handle_update(argv) {
           entity_type: entity_result.entity_properties.type,
           entity_content: entity_result.entity_content || ''
         })
-        return { success: true, base_uri, updated_properties: properties }
+
+        // Sync status/priority changes to GitHub project fields (best-effort)
+        const github_sync_result =
+          !argv['no-sync'] &&
+          entity_result.entity_properties.type === 'task' &&
+          (properties.status || properties.priority)
+            ? await sync_task_to_github({
+                entity_properties: merged,
+                changed_fields: {
+                  status: properties.status,
+                  priority: properties.priority
+                },
+                previous_status: entity_result.entity_properties.status
+              })
+            : null
+
+        return {
+          success: true,
+          base_uri,
+          updated_properties: properties,
+          github_sync_result
+        }
       }
     )
 
@@ -1246,6 +1277,21 @@ async function handle_update(argv) {
         console.log(
           `  ${key}: ${Array.isArray(value) ? JSON.stringify(value) : value}`
         )
+      }
+
+      // Display GitHub sync result
+      const sync = result.github_sync_result
+      if (sync) {
+        if (sync.pushed_fields?.length > 0) {
+          console.log(`  github: pushed ${sync.pushed_fields.join(', ')}`)
+        } else if (sync.skipped_reason) {
+          console.log(`  github: skipped (${sync.skipped_reason})`)
+        }
+        if (sync.errors?.length > 0) {
+          for (const err of sync.errors) {
+            console.error(`  github error (${err.field}): ${err.message}`)
+          }
+        }
       }
     }
   } catch (error) {
