@@ -97,9 +97,8 @@ const type_label_sx = (color) => ({
   opacity: 0.8
 })
 
-const active_indicator_sx = {
+const thread_state_indicator_sx = {
   fontSize: '9px',
-  color: COLORS.success,
   marginLeft: '2px',
   flexShrink: 0
 }
@@ -172,16 +171,23 @@ const RelationItem = ({
         }}>
         {display_title}
       </a>
+      {entity_type === 'thread' && thread_state && (
+        <Box
+          component='span'
+          sx={{
+            ...thread_state_indicator_sx,
+            color:
+              thread_state === 'active' ? COLORS.success : COLORS.text_tertiary
+          }}
+          title={thread_state === 'active' ? 'Active thread' : 'Archived thread'}>
+          {thread_state === 'active' ? '●' : '○'}
+        </Box>
+      )}
       {entity_type && (
         <Box
           component='span'
           sx={type_label_sx(get_entity_type_color(entity_type))}>
           {get_entity_type_display_label(entity_type)}
-        </Box>
-      )}
-      {entity_type === 'thread' && thread_state === 'active' && (
-        <Box component='span' sx={active_indicator_sx} title='Active thread'>
-          {'●'}
         </Box>
       )}
     </Box>

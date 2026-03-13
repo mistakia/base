@@ -199,6 +199,7 @@ const RelatedEntities = ({
                 relation.type ||
                 infer_entity_type_from_base_uri(relation.base_uri)
               }
+              thread_state={relation.thread_state}
             />
           )
         })}
