@@ -30,14 +30,24 @@ visibility_analyzed_at: '2026-02-16T04:31:44.217Z'
 - Use aliased absolute imports for project modules with the appropriate namespace prefix
 - Separate global libraries from project-specific imports with a blank line
 - Use consistent ordering: external libraries first, then project modules
+- Cross-package imports MUST use package aliases (`#libs-server`, `#base/config`, etc.), never `../` to escape the current package boundary
+- Within the same package, `./` and `../` for sibling/parent directory imports are acceptable
 - Examples:
 
   ```js
-  // Correct
-  import { function_name } from './module-name.mjs'
-  import function_name from '../path/to/module.mjs'
+  // Correct - package alias for cross-package imports
+  import create_tag from '#libs-server/tags/create-tag.mjs'
+  import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
 
-  // Incorrect
+  // Correct - relative import within the same package
+  import { function_name } from './module-name.mjs'
+  import function_name from '../sibling-dir/module.mjs'
+
+  // Incorrect - relative path crossing package boundary
+  import function_name from '../../libs-server/tags/create-tag.mjs'
+  import reset_all_tables from '../../../tests/utils/reset-all-tables.mjs'
+
+  // Incorrect - missing .mjs extension
   import { function_name } from './module-name'
   import function_name from '../path/to/module'
   ```
@@ -50,15 +60,6 @@ visibility_analyzed_at: '2026-02-16T04:31:44.217Z'
   // Project imports
   import create_tag from '#libs-server/tags/create-tag.mjs'
   import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
-  ```
-
-  ```js
-  // Correct
-  import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
-
-  // Incorrect
-  import reset_all_tables from '#tests/utils/reset-all-tables'
-  import create_test_user from '#tests/utils/create-test-user'
   ```
 
 ## Namespaces and Organization

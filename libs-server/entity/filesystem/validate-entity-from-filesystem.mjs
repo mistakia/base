@@ -2,6 +2,7 @@ import debug from 'debug'
 import { validate_entity_properties } from '../validate-schema.mjs'
 import { validate_constraints } from '../validation/validate-constraints.mjs'
 import { validate_relation_cardinality } from '../validation/validate-relation-cardinality.mjs'
+import { validate_relative_path_links } from '../validation/validate-relative-path-links.mjs'
 import { validate_tags_from_filesystem } from './validate-tags-from-filesystem.mjs'
 import { validate_relations_from_filesystem } from './validate-relations-from-filesystem.mjs'
 import { validate_references_from_filesystem } from './validate-references-from-filesystem.mjs'
@@ -15,12 +16,14 @@ const log = debug('entity:filesystem:validate')
  * @param {Object} params.entity_properties - Entity properties for schema validation
  * @param {Object} [params.formatted_entity_metadata] - Entity metadata for validation
  * @param {Object} [params.schemas] - Schema definitions map
+ * @param {string} [params.entity_content] - Raw markdown body content for content-level checks
  * @returns {Promise<Object>} - Validation result {success, errors?}
  */
 export async function validate_entity_from_filesystem({
   entity_properties,
   formatted_entity_metadata = {},
-  schemas
+  schemas,
+  entity_content
 }) {
   // Validate required parameters
   if (!entity_properties || typeof entity_properties !== 'object') {
@@ -124,7 +127,7 @@ export async function validate_entity_from_filesystem({
       ...(references_result.errors || [])
     ].map(String)
 
-    // Run warning-level validators (constraints and relation cardinality)
+    // Run warning-level validators (constraints, relation cardinality, relative path links)
     const constraint_params = {
       entity_properties,
       entity_type: entity_properties.type,
@@ -132,10 +135,14 @@ export async function validate_entity_from_filesystem({
     }
     const constraints_result = validate_constraints(constraint_params)
     const cardinality_result = validate_relation_cardinality(constraint_params)
+    const relative_path_result = validate_relative_path_links({
+      entity_content
+    })
 
     const all_warnings = [
       ...constraints_result.warnings,
-      ...cardinality_result.warnings
+      ...cardinality_result.warnings,
+      ...relative_path_result.warnings
     ]
 
     if (all_errors.length > 0) {

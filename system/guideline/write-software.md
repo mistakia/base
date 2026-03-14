@@ -29,6 +29,13 @@ visibility_analyzed_at: '2026-02-16T04:32:23.594Z'
 
 Follow the [[sys:system/guideline/starting-point-philosophy.md]] when writing software.
 
+## Module Imports
+
+- Import paths MUST use package aliases when crossing package boundaries
+- Relative paths (`../`) SHOULD only be used within the same package or directory subtree
+- When a package alias exists (e.g., `#libs-server`, `#config`, `#base/libs-server`), it MUST be used instead of relative path traversal
+- Package aliases are defined in `package.json` under `imports` or `exports`
+
 ## DRY Principle (Don't Repeat Yourself)
 
 - Software MUST NOT be duplicated across the codebase

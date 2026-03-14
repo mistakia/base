@@ -44,7 +44,8 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
     const validation = await validate_entity_from_filesystem({
       entity_properties: entity_result.entity_properties,
       formatted_entity_metadata: entity_result.formatted_entity_metadata,
-      schemas
+      schemas,
+      entity_content: entity_result.entity_content
     })
 
     // Check for validation errors
