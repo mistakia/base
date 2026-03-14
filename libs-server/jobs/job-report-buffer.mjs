@@ -57,9 +57,34 @@ const do_drain = async ({
   buffer_path = get_default_buffer_path(),
   report_fn
 }) => {
+  // Atomically rename the buffer file to a snapshot so buffer_report can
+  // continue appending to buffer_path without racing our read-modify-write.
+  const snapshot_path = buffer_path + '.draining'
+
+  // Recover from a previous drain that crashed after rename but before cleanup
+  try {
+    const stale = await fs.readFile(snapshot_path, 'utf-8')
+    if (stale.trim()) {
+      await fs.appendFile(buffer_path, stale.endsWith('\n') ? stale : stale + '\n', 'utf-8')
+    }
+    await fs.unlink(snapshot_path)
+    log('Recovered stale draining snapshot')
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err
+  }
+
+  try {
+    await fs.rename(buffer_path, snapshot_path)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return
+    }
+    throw err
+  }
+
   let content
   try {
-    content = await fs.readFile(buffer_path, 'utf-8')
+    content = await fs.readFile(snapshot_path, 'utf-8')
   } catch (err) {
     if (err.code === 'ENOENT') {
       return
@@ -69,7 +94,7 @@ const do_drain = async ({
 
   const lines = content.trim().split('\n').filter(Boolean)
   if (lines.length === 0) {
-    await fs.unlink(buffer_path).catch(() => {})
+    await fs.unlink(snapshot_path).catch(() => {})
     return
   }
 
@@ -101,10 +126,13 @@ const do_drain = async ({
 
   const remaining = [...failed, ...deferred]
   if (remaining.length === 0) {
-    await fs.unlink(buffer_path).catch(() => {})
+    await fs.unlink(snapshot_path).catch(() => {})
     log('Buffer fully drained')
   } else {
-    await fs.writeFile(buffer_path, remaining.join('\n') + '\n', 'utf-8')
+    // Write remaining entries back to the snapshot, then append them to the
+    // main buffer (which may have received new entries during the drain).
+    await fs.appendFile(buffer_path, remaining.join('\n') + '\n', 'utf-8')
+    await fs.unlink(snapshot_path).catch(() => {})
     log('Buffer partially drained: %d remaining', remaining.length)
   }
 }
