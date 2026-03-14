@@ -60,7 +60,10 @@ Keep the report short. Omit sections that have nothing to report.
 [Bulleted list of specific cleanup/follow-up actions, or "None — session is clean."]
 
 ### Continuation Prompt
-> [A ready-to-paste prompt for a new session that captures any remaining work. Include specific file paths, task references, and enough context to resume independently. Omit this section entirely if no continuation is needed.]
+
+~~~
+[A ready-to-paste prompt for a new session that captures any remaining work. Include specific file paths, task references, and enough context to resume independently. Omit this section entirely if no continuation is needed.]
+~~~
 ```
 
 </output_format>
