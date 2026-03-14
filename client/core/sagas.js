@@ -12,6 +12,7 @@ import { commits_sagas } from './commits/index.js'
 import { search_sagas } from './search/index.js'
 import { thread_sheet_sagas } from './thread-sheet/index.js'
 import { task_stats_sagas } from './task-stats/index.js'
+import { finance_sagas } from './finance/index.js'
 
 export default function* root_saga() {
   yield all([
@@ -26,6 +27,7 @@ export default function* root_saga() {
     ...commits_sagas,
     ...search_sagas,
     ...thread_sheet_sagas,
-    ...task_stats_sagas
+    ...task_stats_sagas,
+    ...finance_sagas
   ])
 }

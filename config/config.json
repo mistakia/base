@@ -93,6 +93,9 @@
   "transcription": {
     "service_url": ""
   },
+  "finance": {
+    "api_url": ""
+  },
   "extensions": {
     "discovery_paths": []
   },

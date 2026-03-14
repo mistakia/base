@@ -14,6 +14,7 @@ import { commits_reducer } from './commits/index.js'
 import { search_reducer } from './search/index.js'
 import { thread_sheet_reducer } from './thread-sheet/index.js'
 import { task_stats_reducer } from './task-stats/index.js'
+import { finance_reducer } from './finance/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -31,7 +32,8 @@ const root_reducer = (router) =>
     commits: commits_reducer,
     search: search_reducer,
     thread_sheet: thread_sheet_reducer,
-    task_stats: task_stats_reducer
+    task_stats: task_stats_reducer,
+    finance: finance_reducer
   })
 
 export default root_reducer

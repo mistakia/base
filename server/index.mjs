@@ -185,6 +185,9 @@ api.use('/api/transcribe', write_limiter, routes.transcribe)
 // Job tracker endpoint - write limiter (POST report handles API key internally)
 api.use('/api/jobs', write_limiter, routes.jobs)
 
+// Finance API proxy - forwards requests to finance service
+api.use('/api/proxy/finance', read_limiter, routes.finance)
+
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)

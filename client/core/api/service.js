@@ -375,6 +375,11 @@ export const api = {
       ? `${API_URL}/search/recent?${query_string}`
       : `${API_URL}/search/recent`
     return { url }
+  },
+
+  get_finance_overview() {
+    const url = `${API_URL}/proxy/finance/dashboard/overview`
+    return { url }
   }
 }
 

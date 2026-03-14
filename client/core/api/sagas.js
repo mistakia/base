@@ -34,6 +34,7 @@ import {
 import { get_active_sessions_actions } from '@core/active-sessions/actions'
 import { get_activity_heatmap_actions } from '@core/activity/actions'
 import { get_task_stats_actions } from '@core/task-stats/actions'
+import { get_finance_overview_actions } from '@core/finance/actions'
 import { get_sheet_thread_request_actions } from '@core/thread-sheet/actions'
 import {
   get_commits_actions,
@@ -216,6 +217,12 @@ export const get_task_stats = fetch.bind(
   null,
   api.get_task_stats,
   get_task_stats_actions
+)
+
+export const get_finance_overview = fetch.bind(
+  null,
+  api.get_finance_overview,
+  get_finance_overview_actions
 )
 
 // Delete active session - best effort operation

@@ -1,0 +1,83 @@
+.finance-page
+  padding 20px
+  max-width 1200px
+  margin 0 auto
+
+  &__title
+    font-size 24px
+    font-weight 600
+    margin-bottom 20px
+
+  &__loading
+    text-align center
+    padding 40px
+    color var(--text-secondary, #888)
+
+.finance-kpi-grid
+  display grid
+  grid-template-columns repeat(auto-fit, minmax(250px, 1fr))
+  gap 16px
+  margin-bottom 32px
+
+.finance-kpi-card
+  background var(--surface, #1e1e1e)
+  border 1px solid var(--border, #333)
+  border-radius 8px
+  padding 20px
+
+  &.positive
+    border-left 3px solid #4caf50
+
+  &.negative
+    border-left 3px solid #f44336
+
+  &__title
+    font-size 13px
+    color var(--text-secondary, #888)
+    margin-bottom 8px
+    text-transform uppercase
+    letter-spacing 0.5px
+
+  &__value
+    font-size 28px
+    font-weight 600
+    margin-bottom 4px
+
+  &__subtitle
+    font-size 13px
+    color var(--text-secondary, #888)
+
+.finance-allocation
+  background var(--surface, #1e1e1e)
+  border 1px solid var(--border, #333)
+  border-radius 8px
+  padding 20px
+
+  &__title
+    font-size 16px
+    font-weight 600
+    margin-bottom 16px
+
+  &__list
+    display flex
+    flex-direction column
+    gap 8px
+
+  &__item
+    display flex
+    justify-content space-between
+    align-items center
+    padding 8px 0
+    border-bottom 1px solid var(--border, #333)
+
+    &:last-child
+      border-bottom none
+
+  &__label
+    font-size 14px
+    text-transform capitalize
+
+  &__pct
+    font-size 14px
+    font-weight 500
+    color var(--text-secondary, #888)

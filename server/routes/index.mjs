@@ -12,6 +12,7 @@ import git from './git.mjs'
 import search from './search.mjs'
 import transcribe from './transcribe.mjs'
 import jobs from './jobs.mjs'
+import finance from './finance.mjs'
 
 export default {
   users,
@@ -27,5 +28,6 @@ export default {
   git,
   search,
   transcribe,
-  jobs
+  jobs,
+  finance
 }
