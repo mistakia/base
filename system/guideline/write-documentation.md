@@ -42,6 +42,7 @@ visibility_analyzed_at: '2026-02-16T04:30:44.381Z'
 - **Ambiguous Statements**: Avoid vague descriptions that could apply to any system
 - **Future Plans**: Do not document intended features or potential improvements
 - **Debugging Information**: Exclude temporary notes, TODO items, or troubleshooting steps
+- **Completed Transitions**: Do not preserve migration histories, changelog narratives, or before/after mapping tables once a transition is finished. Git history records what changed; living documentation should describe the current design, not how it got there
 
 ### Structure and Style
 

@@ -1,7 +1,9 @@
 ---
 title: Fix Entity Validation Errors
 type: workflow
-description: Diagnose and fix entity validation errors reported by validate-filesystem-markdown.mjs
+description: >-
+  Diagnose and fix structural entity validation errors reported by validate-filesystem-markdown.mjs:
+  schema compliance, reference integrity, enum values, and required fields
 base_uri: sys:system/workflow/fix-entity-validation-errors.md
 created_at: '2026-01-13T16:30:00.000Z'
 entity_id: eebd75c2-64ed-42c3-8283-e21af7323b92
@@ -11,27 +13,28 @@ relations:
   - follows [[sys:system/guideline/write-workflow.md]]
   - uses [[sys:cli/validate-filesystem-markdown.mjs]]
   - uses [[sys:cli/update-entity-fields.mjs]]
-updated_at: '2026-01-13T17:00:00.000Z'
+updated_at: '2026-03-14T00:00:00.000Z'
 user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349b
 visibility_analyzed_at: '2026-02-16T04:40:07.174Z'
 ---
 
-<task>Fix entity validation errors reported by the filesystem markdown validator</task>
+<task>Fix structural entity validation errors reported by the filesystem markdown validator</task>
 
 <context>
 
 **Validation Command:**
 
 ```bash
-# Run from base repository directory
 base entity validate --exclude-path-patterns "repository/**"
-# or: node cli/validate-filesystem-markdown.mjs --exclude_path_patterns "repository/**"
 ```
+
+**Scope:** This workflow covers structural schema errors caught by the generic validator: missing required fields, invalid enums, broken references, malformed relations. For type-specific content quality checks (description quality, guideline-required fields, relation cardinality), use the appropriate type-specific validation workflow instead (e.g., [[user:workflow/validate-physical-item.md]] for physical items).
 
 **Key References:**
 
 - [[sys:system/schema/entity.md]] - Base entity schema (entity_id must be UUID format)
 - [[sys:system/schema/task.md]] - Task schema with status/priority enum values
+- [[sys:system/schema/physical-item.md]] - Physical item schema with enum fields (importance, frequency_of_use)
 - [[user:repository/active/base/cli/update-entity-fields.mjs]] - Auto-fix missing required fields
 - [[user:repository/active/base/cli/move-entity.mjs]] - Rename/move entities with reference updates
 
@@ -95,9 +98,19 @@ base entity validate --exclude-path-patterns "repository/**"
 
 **Fix:** Replace with local repository path (e.g., `user:repository/active/league`)
 
+### Invalid Enum Values (physical_item)
+
+**Physical item importance values:**
+`Core`, `Standard`, `Premium`, `Potential`
+
+**Physical item frequency_of_use values:**
+`Daily`, `Weekly`, `Infrequent`
+
+**Fix:** Edit frontmatter to use exact case from schema.
+
 ## Resolution Process
 
-1. Run validation to get error list
+1. Run `base entity validate --exclude-path-patterns "repository/**"` to get error list
 2. Group errors by category
 3. Fix enum values first (simple edits)
 4. Run `update-entity-fields.mjs` for missing fields
@@ -109,6 +122,8 @@ base entity validate --exclude-path-patterns "repository/**"
 7. For confirmed missing files: remove stale reference and document in report
 8. Re-run validation to verify fixes
 9. Present stale references report to user for awareness
+
+**After structural validation is clean**, run type-specific content quality workflows for guideline compliance (e.g., [[user:workflow/validate-physical-item.md]]).
 
 ## Decision Standards
 
@@ -141,8 +156,6 @@ base entity validate --exclude-path-patterns "repository/**"
 | Invalid entity_id | N     | file5.md            |
 
 **Stale References Removed:**
-
-Report all references that were removed after confirming the target no longer exists:
 
 | Source File | Removed Reference       | Search Performed             | Reason                  |
 | ----------- | ----------------------- | ---------------------------- | ----------------------- |

@@ -129,16 +129,6 @@ properties:
     description: Whether the item expires
 
   # Organizational properties
-  - name: kit_name
-    type: string
-    required: false
-    description: Name of kit this item belongs to
-  - name: kit_items
-    type: array
-    items:
-      type: string
-    required: false
-    description: Items in this kit
   - name: large_drawer_units
     type: number
     required: false
