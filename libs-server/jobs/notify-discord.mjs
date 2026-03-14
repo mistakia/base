@@ -32,7 +32,7 @@ export const notify_job_failure = async ({
   discord_webhook_url
 }) => {
   if (!discord_webhook_url) {
-    return false
+    return null
   }
 
   const display_name = name && name !== job_id ? name : null
@@ -103,7 +103,10 @@ export const notify_job_failure = async ({
   }
 
   try {
-    const response = await fetch(discord_webhook_url, {
+    const webhook_url = new URL(discord_webhook_url)
+    webhook_url.searchParams.set('wait', 'true')
+
+    const response = await fetch(webhook_url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -116,13 +119,49 @@ export const notify_job_failure = async ({
         response.status,
         response.statusText
       )
-      return false
+      return null
     }
 
-    return true
+    const body = await response.json()
+    return body?.id || null
   } catch (error) {
     log('Discord notification error: %s', error.message)
-    return false
+    return null
+  }
+}
+
+/**
+ * Delete previous failure alert messages from Discord (best effort).
+ * Uses the Discord API (not webhook) to delete messages by ID.
+ *
+ * @param {Object} params
+ * @param {string[]} params.message_ids - Discord message IDs to delete
+ * @param {Object} params.discord_config
+ * @param {string} params.discord_config.user_api_token - Discord user/bot token
+ * @param {string} params.discord_config.alerts_channel_id - Channel ID where alerts were posted
+ */
+export const delete_failure_alerts = async ({ message_ids, discord_config }) => {
+  const { user_api_token, alerts_channel_id } = discord_config || {}
+  if (!user_api_token || !alerts_channel_id || !message_ids?.length) {
+    return
+  }
+
+  for (const message_id of message_ids) {
+    try {
+      const url = `https://discord.com/api/v10/channels/${alerts_channel_id}/messages/${message_id}`
+      await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: user_api_token },
+        signal: AbortSignal.timeout(10000)
+      })
+    } catch (error) {
+      log('Failed to delete Discord message %s: %s', message_id, error.message)
+    }
+
+    // Rate limit: 1.1s between deletes
+    if (message_ids.indexOf(message_id) < message_ids.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1100))
+    }
   }
 }
 
