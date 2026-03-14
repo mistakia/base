@@ -1,5 +1,6 @@
 {
   "server_port": 8080,
+  "server_host": "0.0.0.0",
   "production_url": "",
   "production_wss": "",
   "public_url": "",

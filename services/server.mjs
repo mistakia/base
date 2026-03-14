@@ -154,9 +154,9 @@ try {
 }
 
 try {
-  const { server_port } = config
-  server.listen(server_port, async () => {
-    logger(`API listening on port ${server_port}`)
+  const { server_port, server_host } = config
+  server.listen(server_port, server_host, async () => {
+    logger(`API listening on ${server_host}:${server_port}`)
 
     // Write lock file to indicate server is running
     await write_server_lock_file({ port: server_port })

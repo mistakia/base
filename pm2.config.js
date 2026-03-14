@@ -95,13 +95,19 @@ const ssl_env = machine_config.ssl_key_path
     }
   : {}
 
+// Server host from machine_registry (defaults to 0.0.0.0 via config)
+const host_env = machine_config.server_host
+  ? { SERVER_HOST: machine_config.server_host }
+  : {}
+
 const common_env = {
   CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
   USER_BASE_DIRECTORY: user_base_directory,
   CONTAINER_USER_BASE_PATH: container_user_base_path,
   GIT_SSH_COMMAND: `ssh -F ${path.join(home_dir, '.ssh', 'config')}`,
   DEBUG_COLORS: 'false',
-  ...ssl_env
+  ...ssl_env,
+  ...host_env
 }
 
 const defaults = {

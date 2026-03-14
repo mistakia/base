@@ -119,5 +119,8 @@ if (process.env.SSL_CERT_PATH) {
 if (process.env.SERVER_PORT) {
   config.server_port = parseInt(process.env.SERVER_PORT, 10)
 }
+if (process.env.SERVER_HOST) {
+  config.server_host = process.env.SERVER_HOST
+}
 
 export default config
