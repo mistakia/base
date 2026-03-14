@@ -21,7 +21,9 @@ const log = debug('markdown:process-filesystem-repository')
  */
 async function process_filesystem_file({ file, schemas, entity_processor }) {
   file.errors = file.errors || []
+  file.warnings = file.warnings || []
   let has_errors = false
+  let has_warnings = false
   let processed = false
   let skipped = false
 
@@ -53,6 +55,12 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
       )
     }
 
+    // Propagate warnings
+    if (Array.isArray(validation.warnings) && validation.warnings.length > 0) {
+      has_warnings = true
+      file.warnings = file.warnings.concat(validation.warnings)
+    }
+
     // Run custom entity processor if provided
     if (entity_processor) {
       const result = await entity_processor({
@@ -78,7 +86,7 @@ async function process_filesystem_file({ file, schemas, entity_processor }) {
     has_errors = true
   }
 
-  return { processed, skipped, has_errors }
+  return { processed, skipped, has_errors, has_warnings }
 }
 
 /**
@@ -140,6 +148,7 @@ export async function process_repositories_from_filesystem({
   let processed = 0
   let skipped = 0
   let errors = 0
+  let warnings = 0
 
   for (const file of all_files) {
     const result = await process_filesystem_file({
@@ -151,12 +160,14 @@ export async function process_repositories_from_filesystem({
     if (result.processed) processed++
     if (result.skipped) skipped++
     if (result.has_errors) errors++
+    if (result.has_warnings) warnings++
   }
 
   return {
     processed,
     skipped,
     errors,
+    warnings,
     total: all_files.length,
     schemas,
     files: all_files,

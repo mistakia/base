@@ -1,5 +1,7 @@
 import debug from 'debug'
 import { validate_entity_properties } from '../validate-schema.mjs'
+import { validate_constraints } from '../validation/validate-constraints.mjs'
+import { validate_relation_cardinality } from '../validation/validate-relation-cardinality.mjs'
 import { validate_tags_from_filesystem } from './validate-tags-from-filesystem.mjs'
 import { validate_relations_from_filesystem } from './validate-relations-from-filesystem.mjs'
 import { validate_references_from_filesystem } from './validate-references-from-filesystem.mjs'
@@ -53,7 +55,8 @@ export async function validate_entity_from_filesystem({
           success: false,
           errors: [
             'Empty relations property is not allowed. If there are no relations, omit the relations property entirely.'
-          ]
+          ],
+          warnings: []
         }
       }
 
@@ -69,7 +72,8 @@ export async function validate_entity_from_filesystem({
             errors: double_prefixed.map(
               (rel) =>
                 `Relation has double-prefixed YAML list marker: "${rel}". Remove the leading "- " from the relation string.`
-            )
+            ),
+            warnings: []
           }
         }
       }
@@ -88,7 +92,8 @@ export async function validate_entity_from_filesystem({
     if (!schema_result.valid) {
       return {
         success: schema_result.valid,
-        errors: schema_result.errors || []
+        errors: schema_result.errors || [],
+        warnings: []
       }
     }
 
@@ -119,16 +124,32 @@ export async function validate_entity_from_filesystem({
       ...(references_result.errors || [])
     ].map(String)
 
+    // Run warning-level validators (constraints and relation cardinality)
+    const constraint_params = {
+      entity_properties,
+      entity_type: entity_properties.type,
+      schemas
+    }
+    const constraints_result = validate_constraints(constraint_params)
+    const cardinality_result = validate_relation_cardinality(constraint_params)
+
+    const all_warnings = [
+      ...constraints_result.warnings,
+      ...cardinality_result.warnings
+    ]
+
     if (all_errors.length > 0) {
       return {
         success: false,
-        errors: all_errors
+        errors: all_errors,
+        warnings: all_warnings
       }
     }
 
     log('Entity validation successful')
     return {
-      success: true
+      success: true,
+      warnings: all_warnings
     }
   } catch (error) {
     log('Error validating entity from filesystem:', error)

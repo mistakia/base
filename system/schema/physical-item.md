@@ -147,8 +147,27 @@ properties:
     type: string
     required: false
     description: Miscellaneous notes
+constraints:
+  - rule: conflicts
+    condition_field: perishable
+    condition_value: true
+    field: consumable
+    field_value: true
+    message: >-
+      perishable and consumable are both true -- an item that expires (perishable) is not typically
+      depleted with use (consumable); review whether both flags are correct
+relation_constraints:
+  - type: target_area
+    max_count: 1
+    message: >-
+      Multiple target_area relations found -- a physical item should have at most one target area
+  - type: current_location
+    max_count: 1
+    message: >-
+      Multiple current_location relations found -- a physical item should have at most one current
+      location
 type_name: physical_item
-updated_at: '2026-02-23T00:00:00.000Z'
+updated_at: '2026-03-14T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

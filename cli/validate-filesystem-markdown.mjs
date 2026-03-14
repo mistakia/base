@@ -19,7 +19,8 @@ debug.enable(
 
 const validate_filesystem = async ({
   include_path_patterns = [],
-  exclude_path_patterns = []
+  exclude_path_patterns = [],
+  strict = false
 } = {}) => {
   // Process from filesystem
   log('Processing repositories from filesystem...')
@@ -73,6 +74,24 @@ const validate_filesystem = async ({
     })
   }
 
+  // In strict mode, promote warnings to errors before output
+  if (strict) {
+    for (const file of result.files) {
+      if (Array.isArray(file.warnings) && file.warnings.length > 0) {
+        file.errors = (file.errors || []).concat(file.warnings)
+        file.warnings = []
+      }
+    }
+  }
+
+  // Count total warnings across files
+  let warning_count = 0
+  for (const file of result.files) {
+    if (Array.isArray(file.warnings)) {
+      warning_count += file.warnings.length
+    }
+  }
+
   // Report results
   console.log('\nFilesystem Validation Results:')
   console.log('============================')
@@ -80,6 +99,7 @@ const validate_filesystem = async ({
   console.log(`Successfully validated: ${result.processed}`)
   console.log(`Skipped: ${result.skipped}`)
   console.log(`Errors: ${result.errors}`)
+  console.log(`Warnings: ${warning_count}`)
   if (unparseable_files.length > 0) {
     console.log(`Unparseable entity files: ${unparseable_files.length}`)
   }
@@ -100,6 +120,23 @@ const validate_filesystem = async ({
       console.error(`Base Path: ${file.base_uri || 'N/A'}`)
       file.errors.forEach((error) => {
         console.error(`  • ${error}`)
+      })
+    }
+  }
+
+  // Output validation warnings
+  let has_warnings = false
+  for (const file of result.files) {
+    if (Array.isArray(file.warnings) && file.warnings.length > 0) {
+      if (!has_warnings) {
+        console.warn('\nValidation Warnings:')
+        console.warn('====================')
+        has_warnings = true
+      }
+      console.warn(`\nFile: ${file.absolute_path}`)
+      console.warn(`Base Path: ${file.base_uri || 'N/A'}`)
+      file.warnings.forEach((warning) => {
+        console.warn(`  • ${warning}`)
       })
     }
   }
@@ -149,6 +186,11 @@ const main = async () => {
         'Path patterns to exclude files by (e.g., "system/temp/*.md")',
       type: 'array'
     })
+    .option('strict', {
+      description: 'Promote warnings to errors',
+      type: 'boolean',
+      default: false
+    })
     .strict()
     .help().argv
 
@@ -159,7 +201,8 @@ const main = async () => {
   try {
     const result = await validate_filesystem({
       include_path_patterns: argv.include_path_patterns,
-      exclude_path_patterns: argv.exclude_path_patterns
+      exclude_path_patterns: argv.exclude_path_patterns,
+      strict: argv.strict
     })
 
     if (result.has_errors) {
