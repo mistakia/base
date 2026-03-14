@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import debug from 'debug'
 import fm from 'front-matter'
+import sharp from 'sharp'
 
 import config from '#config'
 import {
@@ -427,12 +428,22 @@ router.get('/file/raw', async (req, res) => {
       })
     }
 
-    res.setHeader('Content-Type', content_type)
-    res.setHeader('Content-Length', stats.size)
-    res.setHeader('Cache-Control', 'private, max-age=300')
-
     const file_buffer = await fs.readFile(full_path)
-    res.send(file_buffer)
+
+    // Convert browser-unsupported formats to PNG
+    const needs_conversion = ext === 'tiff' || ext === 'tif'
+    if (needs_conversion) {
+      const converted = await sharp(file_buffer).png().toBuffer()
+      res.setHeader('Content-Type', 'image/png')
+      res.setHeader('Content-Length', converted.length)
+      res.setHeader('Cache-Control', 'private, max-age=300')
+      res.send(converted)
+    } else {
+      res.setHeader('Content-Type', content_type)
+      res.setHeader('Content-Length', stats.size)
+      res.setHeader('Cache-Control', 'private, max-age=300')
+      res.send(file_buffer)
+    }
   } catch (error) {
     log('Error serving raw file:', error.message)
 

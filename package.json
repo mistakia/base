@@ -79,6 +79,7 @@
     "react-helmet": "^6.1.0",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
+    "sharp": "^0.34.5",
     "shiki": "^3.9.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
