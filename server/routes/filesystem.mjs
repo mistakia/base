@@ -379,6 +379,84 @@ router.get('/file', async (req, res) => {
   }
 })
 
+// GET /api/filesystem/file/raw - Serve raw file content (for images and other binary files)
+router.get('/file/raw', async (req, res) => {
+  const request_path = req.query.path || ''
+  const normalized_path = request_path.replace(/^\/+/, '')
+
+  try {
+    const { full_path, relative_path } = resolve_user_path(request_path)
+
+    log(`Serving raw file: ${full_path}`)
+
+    // Check read permission (redaction interceptor only covers res.json)
+    if (req.access && req.access.read_allowed === false) {
+      return res.status(403).json({
+        error: 'Access denied',
+        path: relative_path
+      })
+    }
+
+    const stats = await fs.stat(full_path)
+    if (!stats.isFile()) {
+      return res.status(400).json({
+        error: 'Path is not a file',
+        path: relative_path
+      })
+    }
+
+    const ext = path.extname(full_path).toLowerCase().slice(1)
+    const mime_types = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      svg: 'image/svg+xml',
+      webp: 'image/webp',
+      bmp: 'image/bmp',
+      ico: 'image/x-icon',
+      tiff: 'image/tiff',
+      tif: 'image/tiff'
+    }
+
+    const content_type = mime_types[ext]
+    if (!content_type) {
+      return res.status(400).json({
+        error: 'Unsupported file type for raw serving',
+        path: relative_path
+      })
+    }
+
+    res.setHeader('Content-Type', content_type)
+    res.setHeader('Content-Length', stats.size)
+    res.setHeader('Cache-Control', 'private, max-age=300')
+
+    const file_buffer = await fs.readFile(full_path)
+    res.send(file_buffer)
+  } catch (error) {
+    log('Error serving raw file:', error.message)
+
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        error: 'File not found',
+        path: normalized_path
+      })
+    }
+
+    if (error.message.includes('Invalid path')) {
+      return res.status(400).json({
+        error: error.message,
+        path: normalized_path
+      })
+    }
+
+    res.status(500).json({
+      error: 'Internal server error',
+      path: normalized_path
+    })
+  }
+})
+
 // GET /api/filesystem/info - Get path info (file or directory)
 router.get('/info', async (req, res) => {
   // Normalize path early so error handlers return consistent paths

@@ -378,7 +378,7 @@ export const get_file_type_from_path = (path) => {
 
   // Image files
   if (
-    ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(ext)
+    ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tiff', 'tif'].includes(ext)
   ) {
     return 'image'
   }

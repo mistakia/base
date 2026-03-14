@@ -15,6 +15,7 @@ import {
   detect_shell_script_from_content
 } from '@views/utils/language-utils.js'
 import { COLORS } from '@theme/colors.js'
+import { API_URL } from '@core/constants'
 
 import EntityRenderer from '@components/EntityRenderer/index.js'
 import CodeViewer from '@components/primitives/CodeViewer.js'
@@ -155,6 +156,21 @@ const FileView = ({ path }) => {
             language={detected_language || 'text'}
             is_redacted={file_data?.is_redacted}
           />
+        )
+
+      case 'image':
+        return (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <img
+              src={`${API_URL}/filesystem/file/raw?path=${encodeURIComponent(path)}`}
+              alt={path.split('/').pop()}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain'
+              }}
+            />
+          </Box>
         )
 
       default:
