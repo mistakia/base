@@ -84,11 +84,15 @@ const validate_filesystem = async ({
     }
   }
 
-  // Count total warnings across files
+  // Count totals from files (accounts for strict promotion)
   let warning_count = 0
+  let error_file_count = 0
   for (const file of result.files) {
     if (Array.isArray(file.warnings)) {
       warning_count += file.warnings.length
+    }
+    if (Array.isArray(file.errors) && file.errors.length > 0) {
+      error_file_count++
     }
   }
 
@@ -98,7 +102,7 @@ const validate_filesystem = async ({
   console.log(`Total files processed: ${result.total}`)
   console.log(`Successfully validated: ${result.processed}`)
   console.log(`Skipped: ${result.skipped}`)
-  console.log(`Errors: ${result.errors}`)
+  console.log(`Errors: ${error_file_count}`)
   console.log(`Warnings: ${warning_count}`)
   if (unparseable_files.length > 0) {
     console.log(`Unparseable entity files: ${unparseable_files.length}`)
