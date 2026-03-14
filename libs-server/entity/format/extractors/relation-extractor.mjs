@@ -16,9 +16,37 @@ export function extract_entity_relations({ entity_properties }) {
     entity_properties.relations &&
     Array.isArray(entity_properties.relations)
   ) {
-    entity_properties.relations.forEach((relation_str) => {
+    entity_properties.relations.forEach((relation_entry) => {
+      // Handle object-format relations: { type: "relation_type", target: "base_uri" }
+      if (relation_entry && typeof relation_entry === 'object') {
+        const { type: relation_type, target } = relation_entry
+        if (relation_type && target) {
+          relations.push({
+            relation_type,
+            base_uri: target,
+            context: relation_entry.context || null
+          })
+        } else {
+          log(
+            'Failed to extract relation from object %o in entity %s - expected { type, target }',
+            relation_entry,
+            entity_properties.base_uri || entity_properties.title || 'unknown'
+          )
+        }
+        return
+      }
+
       // Parse relation string in format: "relation_type [[base_uri]] (optional context)"
-      const relation_match = relation_str.match(
+      if (typeof relation_entry !== 'string') {
+        log(
+          'Skipping non-string, non-object relation %o in entity %s',
+          relation_entry,
+          entity_properties.base_uri || entity_properties.title || 'unknown'
+        )
+        return
+      }
+
+      const relation_match = relation_entry.match(
         /^(.*?) \[\[(.*?)\]\]( \((.*?)\))?$/
       )
 
@@ -31,7 +59,7 @@ export function extract_entity_relations({ entity_properties }) {
       } else {
         log(
           'Failed to extract relation from "%s" in entity %s - expected format: "relation_type [[base_uri]]"',
-          relation_str,
+          relation_entry,
           entity_properties.base_uri || entity_properties.title || 'unknown'
         )
       }
