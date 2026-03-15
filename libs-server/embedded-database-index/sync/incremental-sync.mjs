@@ -50,10 +50,17 @@ function is_file_not_found_error(error) {
 }
 
 /**
- * Error codes that indicate expected failures (non-entity files that passed filtering).
- * These should be skipped rather than counted as failures.
+ * Error codes that indicate expected/recoverable failures.
+ * These are skipped rather than counted as hard failures that block sync.
+ * - NO_FRONTMATTER: Non-entity markdown files that passed filtering
+ * - MISSING_TYPE: Files with frontmatter but no entity type
+ * - PARSE_ERROR: Malformed YAML frontmatter (user data issue, not infrastructure)
  */
-const EXPECTED_FAILURE_CODES = new Set(['NO_FRONTMATTER', 'MISSING_TYPE'])
+const EXPECTED_FAILURE_CODES = new Set([
+  'NO_FRONTMATTER',
+  'MISSING_TYPE',
+  'PARSE_ERROR'
+])
 
 /**
  * Check if a read failure is an expected failure (non-entity file that passed filtering).

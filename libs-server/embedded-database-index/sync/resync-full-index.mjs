@@ -244,6 +244,7 @@ export async function resync_full_index({ index_manager }) {
     }
 
     const total_failed = stats.entities_failed + stats.threads_failed
+    const total_synced = stats.entities_synced + stats.threads_synced
 
     log(
       'Full resync complete: %d entities synced, %d orphans removed, %d threads synced, %d thread orphans removed, %d failed, metadata_updated: %s',
@@ -255,8 +256,21 @@ export async function resync_full_index({ index_manager }) {
       metadata_updated
     )
 
+    if (total_failed > 0) {
+      log(
+        'Warning: %d items failed during resync (entity-level data issues, not infrastructure)',
+        total_failed
+      )
+    }
+
+    // Individual entity/thread sync failures (bad YAML, missing fields,
+    // constraint violations) are data-level issues that should not block
+    // the overall resync from succeeding. Only infrastructure-level failures
+    // (DuckDB unavailable, filesystem errors) should cause resync failure.
+    // A resync that synced zero items but also had failures likely indicates
+    // a systemic problem, so treat that as a failure.
     return {
-      success: total_failed === 0,
+      success: total_synced > 0 || total_failed === 0,
       method: 'resync',
       stats,
       metadata_updated
