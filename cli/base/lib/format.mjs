@@ -5,10 +5,15 @@
  * default output (optimized for agents), verbose multi-line, and JSON modes.
  */
 
-// Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues.
-// Node 18+ resolves localhost to ::1 (IPv6) first, which fails when
-// the server binds only to 127.0.0.1.
-export const SERVER_URL = 'http://127.0.0.1:8080'
+import config from '#config'
+
+// Derive SERVER_URL from config to work across machines and containers.
+// Uses 127.0.0.1 (not localhost) to avoid Node 18+ IPv6 resolution issues.
+// Inside Docker, BASE_API_HOST is set per-machine in compose overrides
+// (host.docker.internal on MacBook, 127.0.0.1 on storage server).
+const server_host = process.env.BASE_API_HOST || '127.0.0.1'
+const server_port = config.server_port || 8080
+export const SERVER_URL = `http://${server_host}:${server_port}`
 
 /**
  * Exit the process after flushing stdout.
