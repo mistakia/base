@@ -712,11 +712,12 @@ done
 
 log_verbose "Step 1b: Syncing GitHub-hosted active submodules..."
 
-# Build set of storage-hosted submodule basenames for fast lookup
-declare -A STORAGE_SUBMODULE_PATHS
+# Build delimited string of storage-hosted submodule paths for lookup
+# (avoids declare -A which requires bash 4+; /bin/bash on macOS is 3.2)
+_storage_submodule_paths="|"
 for entry in "${STORAGE_SUBMODULES[@]}"; do
     IFS=':' read -r _path _ _ <<< "$entry"
-    STORAGE_SUBMODULE_PATHS["$_path"]=1
+    _storage_submodule_paths="${_storage_submodule_paths}${_path}|"
 done
 
 for sub_path in "$USER_BASE_DIRECTORY"/repository/active/*/; do
@@ -728,7 +729,7 @@ for sub_path in "$USER_BASE_DIRECTORY"/repository/active/*/; do
     sub_rel_path="repository/active/$sub_name"
 
     # Skip storage-hosted submodules (handled in Step 1)
-    [ "${STORAGE_SUBMODULE_PATHS[$sub_rel_path]+_}" ] && continue
+    case "$_storage_submodule_paths" in *"|$sub_rel_path|"*) continue ;; esac
 
     # Skip if not on a branch (detached HEAD = not actively developed, leave alone)
     current_branch=$(git -C "$sub_path" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
