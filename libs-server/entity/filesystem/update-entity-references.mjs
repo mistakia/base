@@ -45,6 +45,17 @@ function update_relations_references({
       update_count++
       return relation.replace(`[[${old_base_uri}]]`, `[[${new_base_uri}]]`)
     }
+
+    // Handle object-format relations: { type, target, context? }
+    if (
+      relation &&
+      typeof relation === 'object' &&
+      relation.target === old_base_uri
+    ) {
+      update_count++
+      return { ...relation, target: new_base_uri }
+    }
+
     return relation
   })
 

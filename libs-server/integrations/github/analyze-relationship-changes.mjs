@@ -1,25 +1,8 @@
 import debug from 'debug'
 
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
+
 const log = debug('github:analyze-relationships')
-
-/**
- * Parse a relation string to extract type and target
- * @param {string} relation - Relation string like "subtask_of [[user:task/github/owner/repo/123-title]]"
- * @returns {Object|null} Parsed relation or null if invalid
- */
-function parse_relation_string(relation) {
-  if (!relation || typeof relation !== 'string') {
-    return null
-  }
-
-  const match = relation.match(/^(\w+)\s*\[\[([^\]]+)\]\]/)
-  if (!match) {
-    return null
-  }
-
-  const [, type, target] = match
-  return { type, target }
-}
 
 /**
  * Extract GitHub repository and issue information from a base_uri
@@ -94,24 +77,24 @@ export function analyze_relationship_changes({ from = [], to = [] }) {
 
   // Process added relations
   for (const relation of added_relations) {
-    const parsed = parse_relation_string(relation)
+    const parsed = parse_relation_entry(relation)
     if (!parsed) {
       log(`Skipping invalid relation format: ${relation}`)
       continue
     }
 
-    const github_info = extract_github_info_from_base_uri(parsed.target)
+    const github_info = extract_github_info_from_base_uri(parsed.base_uri)
     if (!github_info) {
       log(`Skipping non-GitHub relation: ${relation}`)
       continue
     }
 
-    const category = categorize_relation_type(parsed.type)
+    const category = categorize_relation_type(parsed.relation_type)
 
     const change_entry = {
       action: 'add',
-      relation_type: parsed.type,
-      target_base_uri: parsed.target,
+      relation_type: parsed.relation_type,
+      target_base_uri: parsed.base_uri,
       ...github_info,
       original_relation: relation
     }
@@ -129,24 +112,24 @@ export function analyze_relationship_changes({ from = [], to = [] }) {
 
   // Process removed relations
   for (const relation of removed_relations) {
-    const parsed = parse_relation_string(relation)
+    const parsed = parse_relation_entry(relation)
     if (!parsed) {
       log(`Skipping invalid relation format: ${relation}`)
       continue
     }
 
-    const github_info = extract_github_info_from_base_uri(parsed.target)
+    const github_info = extract_github_info_from_base_uri(parsed.base_uri)
     if (!github_info) {
       log(`Skipping non-GitHub relation: ${relation}`)
       continue
     }
 
-    const category = categorize_relation_type(parsed.type)
+    const category = categorize_relation_type(parsed.relation_type)
 
     const change_entry = {
       action: 'remove',
-      relation_type: parsed.type,
-      target_base_uri: parsed.target,
+      relation_type: parsed.relation_type,
+      target_base_uri: parsed.base_uri,
       ...github_info,
       original_relation: relation
     }

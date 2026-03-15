@@ -1,32 +1,9 @@
 import debug from 'debug'
 
 import { load_role } from '#libs-server/users/role-loader.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 
 const log = debug('permission-resolver')
-
-/**
- * Parse relation string to extract relation type and target base_uri
- * Expected format: "relation_type [[base_uri]] (optional context)"
- *
- * @param {string} relation_str - Relation string from frontmatter
- * @returns {Object|null} Parsed relation or null if invalid
- */
-function parse_relation(relation_str) {
-  if (!relation_str || typeof relation_str !== 'string') {
-    return null
-  }
-
-  const match = relation_str.match(/^(\S+)\s+\[\[(.*?)\]\](?:\s+\((.*?)\))?$/)
-  if (!match) {
-    return null
-  }
-
-  return {
-    relation_type: match[1],
-    base_uri: match[2],
-    context: match[3] || null
-  }
-}
 
 /**
  * Extract has_role relations from identity in order
@@ -41,7 +18,7 @@ function get_role_base_uris_from_identity(identity) {
   const role_base_uris = []
 
   for (const relation_str of identity.relations) {
-    const parsed = parse_relation(relation_str)
+    const parsed = parse_relation_entry(relation_str)
     if (parsed && parsed.relation_type === 'has_role') {
       role_base_uris.push(parsed.base_uri)
     }

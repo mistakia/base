@@ -1,6 +1,7 @@
 import debug from 'debug'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { format_entity_from_file_content } from '#libs-server/entity/format/format-entity-from-file-content.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 import { read_file_from_filesystem } from '#libs-server/filesystem/read-file-from-filesystem.mjs'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 
@@ -106,33 +107,28 @@ export async function find_entities_with_relations_to({
         }
 
         // Check each relation to see if it points to our target base_uri
-        for (const relation_str of entity_properties.relations) {
-          // Parse relation string in format: "relation_type [[base_uri]] (optional context)"
-          const relation_match = relation_str.match(
-            /^(.*?) \[\[(.*?)\]\]( \((.*?)\))?$/
-          )
+        for (const relation_entry of entity_properties.relations) {
+          const parsed = parse_relation_entry(relation_entry)
 
-          if (relation_match) {
-            const [, rel_type, rel_base_uri, , rel_context] = relation_match
-
-            if (rel_base_uri === target_base_uri) {
+          if (parsed) {
+            if (parsed.base_uri === target_base_uri) {
               // Check if we need to filter by relation type
-              if (!relation_type || rel_type === relation_type) {
+              if (!relation_type || parsed.relation_type === relation_type) {
                 matching_entities.push({
                   base_uri: entity_properties.base_uri,
                   entity_type: entity_properties.type,
                   entity_title:
                     entity_properties.title || entity_properties.name,
-                  relation_type: rel_type,
-                  relation_context: rel_context
+                  relation_type: parsed.relation_type,
+                  relation_context: parsed.context
                 })
               }
             }
           } else {
             log(
-              'Malformed relation in %s: "%s" - expected format: "relation_type [[base_uri]]"',
+              'Malformed relation in %s: %o - expected format: "relation_type [[base_uri]]" or { type, target }',
               entity_properties.base_uri,
-              relation_str
+              relation_entry
             )
           }
         }
@@ -169,17 +165,10 @@ export async function get_entity_relations({ base_uri }) {
       entity_properties.relations &&
       Array.isArray(entity_properties.relations)
     ) {
-      entity_properties.relations.forEach((relation_str) => {
-        const relation_match = relation_str.match(
-          /^(.*?) \[\[(.*?)\]\]( \((.*?)\))?$/
-        )
-
-        if (relation_match) {
-          relations.push({
-            relation_type: relation_match[1],
-            base_uri: relation_match[2],
-            context: relation_match[4] || null
-          })
+      entity_properties.relations.forEach((relation_entry) => {
+        const parsed = parse_relation_entry(relation_entry)
+        if (parsed) {
+          relations.push(parsed)
         }
       })
     }
@@ -228,17 +217,10 @@ export async function build_relation_index({ entity_types = [] } = {}) {
           const relations = []
 
           // Parse relations from frontmatter
-          entity_properties.relations.forEach((relation_str) => {
-            const relation_match = relation_str.match(
-              /^(.*?) \[\[(.*?)\]\]( \((.*?)\))?$/
-            )
-
-            if (relation_match) {
-              relations.push({
-                relation_type: relation_match[1],
-                base_uri: relation_match[2],
-                context: relation_match[4] || null
-              })
+          entity_properties.relations.forEach((relation_entry) => {
+            const parsed = parse_relation_entry(relation_entry)
+            if (parsed) {
+              relations.push(parsed)
             }
           })
 
