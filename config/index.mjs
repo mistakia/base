@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { tmpdir } from 'os'
+import { tmpdir, hostname } from 'os'
 import { randomUUID } from 'crypto'
 import secure_config from '@tsmx/secure-config'
 import debug from 'debug'
@@ -94,6 +94,33 @@ if (
     'cli',
     'notify-discord.mjs'
   )
+}
+
+// Resolve machine-specific config from machine_registry.
+// Matches os.hostname() against registry entries and applies overrides.
+// Environment variables (SERVER_PORT, SERVER_HOST, etc.) still take precedence below.
+if (config.machine_registry && process.env.NODE_ENV !== 'test') {
+  const current_hostname = hostname()
+  const machine_entry = Object.entries(config.machine_registry).find(
+    ([, entry]) => entry.hostname === current_hostname
+  )
+  if (machine_entry) {
+    const [machine_id, machine_config] = machine_entry
+    log('Matched machine registry entry: %s (hostname: %s)', machine_id, current_hostname)
+    if (machine_config.server_port) {
+      config.server_port = machine_config.server_port
+    }
+    if (machine_config.server_host) {
+      config.server_host = machine_config.server_host
+    }
+    if (machine_config.ssl_key_path) {
+      config.ssl = true
+      config.key = machine_config.ssl_key_path
+      config.cert = machine_config.ssl_cert_path
+    }
+  } else {
+    log('No machine registry match for hostname: %s', current_hostname)
+  }
 }
 
 if (process.env.BASE_PUBLIC_URL) {
