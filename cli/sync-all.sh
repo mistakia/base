@@ -34,6 +34,12 @@ for arg in "$@"; do
     esac
 done
 
+# Migration sentinel: halt all sync-all invocations during migration window
+if [ -f /tmp/sync-all-migration.disable ]; then
+    echo "[sync-all] Migration sentinel detected, exiting (remove /tmp/sync-all-migration.disable to re-enable)"
+    exit 0
+fi
+
 log() {
     echo "[sync-all] $*"
 }
@@ -278,17 +284,9 @@ ensure_thread_merge_drivers() {
 
     log_verbose "Configuring merge drivers for $(basename "$full_path")..."
 
-    # json-field-merge (metadata.json)
+    # json-field-merge (metadata.json) -- only remaining driver after bulk data moved to rsync
     git -C "$full_path" config --local merge.json-field-merge.name "JSON field-level merge driver"
     git -C "$full_path" config --local merge.json-field-merge.driver "node $SCRIPT_DIR/json-merge-driver.mjs %O %A %B"
-
-    # jsonl-append-merge (timeline.jsonl, claude-session.jsonl)
-    git -C "$full_path" config --local merge.jsonl-append-merge.name "JSONL append-only merge driver"
-    git -C "$full_path" config --local merge.jsonl-append-merge.driver "node $SCRIPT_DIR/jsonl-merge-driver.mjs %O %A %B"
-
-    # json-larger-file (normalized-session.json)
-    git -C "$full_path" config --local merge.json-larger-file.name "JSON take-larger-file merge driver"
-    git -C "$full_path" config --local merge.json-larger-file.driver "node $SCRIPT_DIR/json-larger-file-merge-driver.mjs %O %A %B"
 }
 
 # Log a sync telemetry event to JSONL file.
@@ -695,6 +693,16 @@ for entry in "${STORAGE_SUBMODULES[@]}"; do
     if ! sync_submodule "$path" "$auto_commit" "$lock_name"; then
         ERRORS=$((ERRORS + 1))
     fi
+
+    # After thread git sync completes, push bulk data via rsync (non-fatal)
+    if [ "$path" = "thread" ]; then
+        if [ -x "$SCRIPT_DIR/sync-thread-data.sh" ]; then
+            log_verbose "Pushing thread bulk data via rsync..."
+            "$SCRIPT_DIR/sync-thread-data.sh" $([ "$VERBOSE" = true ] && echo "--verbose") || {
+                log_error "sync-thread-data.sh failed (non-fatal)"
+            }
+        fi
+    fi
 done
 
 # --- Step 1b: Sync GitHub-hosted active submodules ---
@@ -790,7 +798,23 @@ else
     # Detect and commit pointer drift only when clean.
     # Pointer commits are deferred to push time to eliminate the window where
     # both machines create competing pointer commits.
-    if [ "$PARENT_IS_DIRTY" = false ]; then
+    # Throttle: skip if last pointer commit was less than 5 minutes ago to reduce
+    # parent repo churn (983 of 2,218 commits are pointer updates).
+    POINTER_THROTTLE_MARKER="/tmp/sync-pointer-commit.marker"
+    POINTER_THROTTLED=false
+    if [ -f "$POINTER_THROTTLE_MARKER" ]; then
+        last_pointer=$(cat "$POINTER_THROTTLE_MARKER" 2>/dev/null) || true
+        if [ -n "$last_pointer" ]; then
+            now_epoch=$(date +%s)
+            elapsed=$(( now_epoch - last_pointer ))
+            if [ $elapsed -lt 300 ]; then
+                POINTER_THROTTLED=true
+                log_verbose "Pointer commit throttled (${elapsed}s since last, min 300s)"
+            fi
+        fi
+    fi
+
+    if [ "$PARENT_IS_DIRTY" = false ] && [ "$POINTER_THROTTLED" = false ]; then
         POINTER_UPDATED=false
         UPDATED_SUBMODULES=()
 
@@ -823,11 +847,13 @@ else
                 log_error "Failed to commit submodule pointer updates"
                 ERRORS=$((ERRORS + 1))
             }
+            # Update throttle marker after successful pointer commit
+            date +%s > "$POINTER_THROTTLE_MARKER"
             log_telemetry "user-base" "pointer_commit" "submodules:${UPDATED_SUBMODULES[*]}"
         else
             log_verbose "All submodule pointers are current"
         fi
-    else
+    elif [ "$PARENT_IS_DIRTY" = true ]; then
         log_verbose "Parent dirty, skipping pointer detection"
     fi
 

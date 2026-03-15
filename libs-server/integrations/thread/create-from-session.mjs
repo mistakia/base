@@ -221,46 +221,8 @@ const save_raw_session_data = async ({
     }
   }
 
-  // Always save the normalized session for comparison
-  // Use streaming writes to avoid building a massive string for large sessions
-  const normalized_file = path.join(raw_data_dir, 'normalized-session.json')
-  await stream_write_normalized_session(normalized_file, normalized_session)
-  log_debug(`Saved normalized session data to ${normalized_file}`)
-}
-
-/**
- * Write normalized session JSON using streaming to avoid building one massive
- * string for sessions with thousands of messages. Writes messages one at a time.
- */
-const stream_write_normalized_session = (file_path, session) => {
-  return new Promise((resolve, reject) => {
-    const ws = createWriteStream(file_path)
-    ws.on('error', reject)
-    ws.on('finish', resolve)
-
-    const { messages, ...rest } = session
-
-    // Write non-message properties first (these are small)
-    ws.write('{\n')
-    const rest_entries = Object.entries(rest)
-    for (let i = 0; i < rest_entries.length; i++) {
-      const [key, value] = rest_entries[i]
-      const formatted = JSON.stringify(value, null, 2).replace(/\n/g, '\n  ')
-      ws.write(`  ${JSON.stringify(key)}: ${formatted},\n`)
-    }
-
-    // Write messages array incrementally - one message at a time
-    ws.write('  "messages": [')
-    if (messages && messages.length > 0) {
-      for (let i = 0; i < messages.length; i++) {
-        ws.write(i > 0 ? ',\n    ' : '\n    ')
-        ws.write(JSON.stringify(messages[i]))
-      }
-      ws.write('\n  ')
-    }
-    ws.write(']\n}\n')
-    ws.end()
-  })
+  // normalized-session.json intentionally not written -- 8.8 GB of dead weight
+  // that is never read back by any code. Bulk session data is synced via rsync.
 }
 
 const save_claude_raw_data = async ({ raw_data_dir, raw_data, session_id }) => {

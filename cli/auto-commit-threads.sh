@@ -171,21 +171,20 @@ do_commit() {
 
         echo "Thread $THREAD_ID committed successfully"
     else
-        # Batch mode: stage files matching patterns (for push-threads.sh)
-        # Stage untracked thread files (new threads get all files including metadata.json)
-        # Also stage todo files in raw-data/todos/ and shared plans in plans/
-        untracked_files=$(git ls-files --others --exclude-standard -- '*/raw-data/*' '*/timeline.json*' '*/metadata.json' 'plans/*.md' 2>/dev/null || true)
+        # Batch mode: stage metadata files (bulk data synced via rsync, not git)
+        # Stage untracked metadata (new threads)
+        untracked_files=$(git ls-files --others --exclude-standard -- '*/metadata.json' 2>/dev/null || true)
 
         if [ -n "$untracked_files" ]; then
-            echo "Staging untracked thread files..."
+            echo "Staging untracked metadata..."
             echo "$untracked_files" | xargs git add
         fi
 
-        # Stage modifications to raw-data, timeline, metadata, and shared plans
-        modified_files=$(git diff --name-only -- '*/raw-data/*' '*/timeline.json*' '*/metadata.json' 'plans/*.md' 2>/dev/null || true)
+        # Stage modified metadata
+        modified_files=$(git diff --name-only -- '*/metadata.json' 2>/dev/null || true)
 
         if [ -n "$modified_files" ]; then
-            echo "Staging modified thread files..."
+            echo "Staging modified metadata..."
             echo "$modified_files" | xargs git add
         fi
 
