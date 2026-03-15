@@ -6,6 +6,7 @@ import { promisify } from 'util'
 import glob_pkg from 'glob'
 import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
@@ -601,10 +602,10 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
 
       updated_metadata.updated_at = timeline_updated_at
 
-      await fs.writeFile(
-        metadata_path,
-        JSON.stringify(updated_metadata, null, 2)
-      )
+      await write_file_to_filesystem({
+        absolute_path: metadata_path,
+        file_content: JSON.stringify(updated_metadata, null, 2)
+      })
       log_debug(`Updated thread metadata at ${metadata_path}`)
     } else {
       log_debug(`Metadata unchanged, skipping write for ${metadata_path}`)
