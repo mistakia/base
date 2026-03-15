@@ -5,7 +5,10 @@
  * default output (optimized for agents), verbose multi-line, and JSON modes.
  */
 
-export const SERVER_URL = 'http://localhost:8080'
+// Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues.
+// Node 18+ resolves localhost to ::1 (IPv6) first, which fails when
+// the server binds only to 127.0.0.1.
+export const SERVER_URL = 'http://127.0.0.1:8080'
 
 /**
  * Exit the process after flushing stdout.
