@@ -338,6 +338,11 @@ export const builder = (yargs) =>
             describe: 'Glob patterns to exclude',
             type: 'array',
             default: []
+          })
+          .option('strict', {
+            describe: 'Promote warnings to errors',
+            type: 'boolean',
+            default: false
           }),
       handle_validate
     )
@@ -922,13 +927,38 @@ async function handle_validate(argv) {
       exclude_path_patterns: argv['exclude-path-patterns']
     })
 
+    const strict = argv.strict
+
+    // In strict mode, promote warnings to errors
+    if (strict) {
+      for (const file of result.files) {
+        if (Array.isArray(file.warnings) && file.warnings.length > 0) {
+          file.errors = (file.errors || []).concat(file.warnings)
+          file.warnings = []
+        }
+      }
+    }
+
+    // Count warnings and errors from files (accounts for strict promotion)
+    let warning_count = 0
+    let error_count = 0
+    for (const file of result.files) {
+      if (Array.isArray(file.warnings)) {
+        warning_count += file.warnings.length
+      }
+      if (Array.isArray(file.errors) && file.errors.length > 0) {
+        error_count++
+      }
+    }
+
     if (argv.json) {
       console.log(JSON.stringify(result, null, 2))
     } else {
       console.log(`Total: ${result.total}`)
       console.log(`Validated: ${result.processed}`)
       console.log(`Skipped: ${result.skipped}`)
-      console.log(`Errors: ${result.errors}`)
+      console.log(`Errors: ${error_count}`)
+      console.log(`Warnings: ${warning_count}`)
 
       for (const file of result.files) {
         if (file.errors && file.errors.length > 0) {
@@ -938,9 +968,18 @@ async function handle_validate(argv) {
           }
         }
       }
+
+      for (const file of result.files) {
+        if (Array.isArray(file.warnings) && file.warnings.length > 0) {
+          console.warn(`\n${file.base_uri || file.absolute_path}`)
+          for (const warning of file.warnings) {
+            console.warn(`  ${warning}`)
+          }
+        }
+      }
     }
 
-    if (result.errors > 0) {
+    if (error_count > 0) {
       exit_code = 1
     }
   } catch (error) {
