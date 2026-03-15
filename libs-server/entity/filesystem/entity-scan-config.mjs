@@ -7,7 +7,8 @@ import { get_user_base_directory } from '#libs-server/base-uri/base-directory-re
 const log = debug('entity:scan-config')
 
 const DEFAULT_CONFIG = {
-  exclude_path_patterns: []
+  exclude_path_patterns: [],
+  submodule_exclusion_prefixes: []
 }
 
 let cached_config = null

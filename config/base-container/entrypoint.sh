@@ -180,7 +180,7 @@ if [ -d "$GH_CONFIG_DIR" ]; then
         cat > "$GH_CONFIG_DIR/hosts.yml" << GHEOF
 github.com:
     oauth_token: ${GITHUB_TOKEN}
-    user: ${GIT_AUTHOR_NAME:-trashman}
+    user: ${GIT_AUTHOR_NAME:-base-user}
     git_protocol: ssh
 GHEOF
         chown node:node "$GH_CONFIG_DIR/hosts.yml"

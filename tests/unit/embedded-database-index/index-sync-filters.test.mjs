@@ -7,7 +7,7 @@ import { expect } from 'chai'
 import {
   filter_entity_files,
   ENTITY_DIRECTORIES,
-  SUBMODULE_EXCLUSION_PREFIXES
+  DEFAULT_SUBMODULE_EXCLUSION_PREFIXES
 } from '#libs-server/embedded-database-index/sync/index-sync-filters.mjs'
 
 describe('Index Sync Filters', () => {
@@ -141,17 +141,17 @@ describe('Index Sync Filters', () => {
     })
 
     describe('submodule exclusion', () => {
-      it('should exclude files from transparency-act submodule', () => {
+      it('should exclude files from custom submodule prefixes', () => {
         const file_paths = [
           'text/my-text.md',
-          'text/epstein/transparency-act/scripts/SETUP.md',
-          'text/epstein/transparency-act/tracking/torrent-sources.md',
+          'text/some-submodule/nested/doc.md',
           'text/normal-text/doc.md'
         ]
 
         const result = filter_entity_files({
           file_paths,
-          entity_directories: ENTITY_DIRECTORIES
+          entity_directories: ENTITY_DIRECTORIES,
+          submodule_exclusions: ['text/some-submodule/']
         })
 
         expect(result).to.deep.equal([
@@ -221,8 +221,8 @@ describe('Index Sync Filters', () => {
 
       it('should include entity files that do not match exclusion patterns', () => {
         const file_paths = [
-          'text/epstein/local-notes.md',
-          'text/notes/transparency.md'
+          'text/research/local-notes.md',
+          'text/notes/project.md'
         ]
 
         const result = filter_entity_files({
@@ -231,25 +231,29 @@ describe('Index Sync Filters', () => {
         })
 
         expect(result).to.deep.equal([
-          'text/epstein/local-notes.md',
-          'text/notes/transparency.md'
+          'text/research/local-notes.md',
+          'text/notes/project.md'
         ])
       })
     })
   })
 
-  describe('SUBMODULE_EXCLUSION_PREFIXES', () => {
-    it('should include known submodule paths', () => {
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.be.an('array')
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include(
-        'text/epstein/transparency-act/'
-      )
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('import-history/')
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/active/')
+  describe('DEFAULT_SUBMODULE_EXCLUSION_PREFIXES', () => {
+    it('should include generic submodule paths', () => {
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.be.an('array')
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.include('import-history/')
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/active/')
+    })
+
+    it('should not include user-specific paths', () => {
+      // User-specific submodule exclusions belong in user-base entity-scan-config.json
+      for (const prefix of DEFAULT_SUBMODULE_EXCLUSION_PREFIXES) {
+        expect(['import-history/', 'repository/active/']).to.include(prefix)
+      }
     })
 
     it('should not exclude repository/archive (archive entities are indexed)', () => {
-      expect(SUBMODULE_EXCLUSION_PREFIXES).to.not.include('repository/archive/')
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.not.include('repository/archive/')
     })
   })
 })

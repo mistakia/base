@@ -120,14 +120,27 @@ ERRORS=0
 # Format: path:auto_commit:lock_name
 # auto_commit: yes = has generated files that need auto-commit before push
 # lock_name: lockfile name shared with auto-commit scripts (empty if none)
-STORAGE_SUBMODULES=(
-    "thread:yes:auto-commit-threads"
-    "import-history:yes:auto-commit-import-history"
-    "repository/active/homelab:no:"
-    "repository/active/base-ios:no:"
-    "text/epstein/transparency-act:no:"
-    "content-feed:no:"
-)
+#
+# Loaded from user-base config/storage-submodules.conf.
+# Falls back to core submodules only (thread + import-history) if config not found.
+SUBMODULES_CONF="$USER_BASE_DIRECTORY/config/storage-submodules.conf"
+STORAGE_SUBMODULES=()
+if [ -f "$SUBMODULES_CONF" ]; then
+    while IFS= read -r line; do
+        # Skip comments and blank lines
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// }" ]] && continue
+        STORAGE_SUBMODULES+=("$line")
+    done < "$SUBMODULES_CONF"
+    log_verbose "Loaded ${#STORAGE_SUBMODULES[@]} submodules from $SUBMODULES_CONF"
+else
+    # Core defaults only -- user-specific submodules belong in config
+    STORAGE_SUBMODULES=(
+        "thread:yes:auto-commit-threads"
+        "import-history:yes:auto-commit-import-history"
+    )
+    log "No storage-submodules.conf found, using core defaults only"
+fi
 
 # --- Helper Functions ---
 

@@ -6,6 +6,7 @@
  */
 
 import debug from 'debug'
+import { load_entity_scan_config } from '#libs-server/entity/filesystem/entity-scan-config.mjs'
 
 const log = debug('embedded-index:sync:filter')
 
@@ -42,15 +43,40 @@ export const ENTITY_FILE_PATTERN = '**/*.md'
 export const THREAD_METADATA_PATTERN = /^thread\/[0-9a-f-]+\/metadata\.json$/i
 
 /**
- * Known submodule prefixes that contain non-entity markdown files.
+ * Default submodule prefixes that contain non-entity markdown files.
  * Files in these paths are excluded from entity sync even if they match
- * entity directory patterns (e.g., text/epstein/transparency-act/ matches text/).
+ * entity directory patterns. User-specific prefixes should be configured
+ * in the user-base entity-scan-config.json submodule_exclusion_prefixes field.
  */
-export const SUBMODULE_EXCLUSION_PREFIXES = [
-  'text/epstein/transparency-act/',
+export const DEFAULT_SUBMODULE_EXCLUSION_PREFIXES = [
   'import-history/',
   'repository/active/'
 ]
+
+/**
+ * Load submodule exclusion prefixes, merging defaults with user config.
+ * @returns {Promise<string[]>} Combined exclusion prefixes
+ */
+export async function get_submodule_exclusion_prefixes() {
+  const config = await load_entity_scan_config()
+  const user_prefixes = config.submodule_exclusion_prefixes || []
+  if (user_prefixes.length === 0) {
+    return DEFAULT_SUBMODULE_EXCLUSION_PREFIXES
+  }
+  // Deduplicate while preserving order (user prefixes first)
+  const seen = new Set()
+  const combined = []
+  for (const prefix of [...user_prefixes, ...DEFAULT_SUBMODULE_EXCLUSION_PREFIXES]) {
+    if (!seen.has(prefix)) {
+      seen.add(prefix)
+      combined.push(prefix)
+    }
+  }
+  return combined
+}
+
+// Backwards-compatible sync export for callers that pass explicit submodule_exclusions
+export const SUBMODULE_EXCLUSION_PREFIXES = DEFAULT_SUBMODULE_EXCLUSION_PREFIXES
 
 /**
  * Filter file paths to only include entity files

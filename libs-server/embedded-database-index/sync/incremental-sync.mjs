@@ -26,7 +26,8 @@ import {
   ENTITY_DIRECTORIES,
   filter_entity_files,
   filter_thread_metadata_files,
-  extract_thread_id_from_path
+  extract_thread_id_from_path,
+  get_submodule_exclusion_prefixes
 } from './index-sync-filters.mjs'
 import { get_all_changed_files } from './repository-discovery.mjs'
 import { sync_git_activity_incremental } from './sync-git-activity.mjs'
@@ -223,10 +224,12 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       changed_files.length
     )
 
-    // Filter to entity files
+    // Filter to entity files (with user-configured submodule exclusions)
+    const submodule_exclusions = await get_submodule_exclusion_prefixes()
     const entity_file_paths = filter_entity_files({
       file_paths: changed_files,
-      entity_directories: ENTITY_DIRECTORIES
+      entity_directories: ENTITY_DIRECTORIES,
+      submodule_exclusions
     })
 
     // Filter to thread metadata files
