@@ -337,12 +337,25 @@ log_telemetry() {
     fi
 }
 
-# Track persistent recovery-failure state and alert after threshold.
+# Exponential backoff for sync alert suppression windows.
+# Matches the pattern in report-job.mjs: escalates suppression as failures persist.
+# Args: $1 = alert count (number of alerts already sent)
+# Returns: suppression window in minutes
+get_sync_suppression_minutes() {
+    local alert_count="${1:-0}"
+    if [ "$alert_count" -le 1 ]; then echo 30;   # 30 min for first 1-2 alerts
+    elif [ "$alert_count" -le 3 ]; then echo 120; # 2 hours for alerts 2-3
+    elif [ "$alert_count" -le 6 ]; then echo 360; # 6 hours for alerts 4-6
+    else echo 720;                                 # 12 hours max
+    fi
+}
+
+# Track persistent recovery-failure state and alert with exponential backoff.
 # Uses marker files in /tmp to throttle repeated alerts for stale rebase/merge
 # recovery failures. First failure sends an alert immediately; subsequent failures
-# are suppressed until the threshold elapses.
+# use escalating suppression windows.
+# Marker format: <last_alert_epoch> <alert_count>
 # Args: $1 = directory path, $2 = reason string
-RECOVERY_ALERT_MINUTES=30
 check_recovery_failure_throttle() {
     local dir="$1"
     local reason="$2"
@@ -351,20 +364,24 @@ check_recovery_failure_throttle() {
     local marker="/tmp/sync-recovery-failure-${repo_name}.marker"
 
     if [ ! -f "$marker" ]; then
-        date +%s > "$marker"
+        echo "$(date +%s) 1" > "$marker"
         discord_notify_failure "$repo_name" "$reason"
         return
     fi
 
-    local first_failure
-    first_failure=$(cat "$marker" 2>/dev/null) || return
+    local last_alert alert_count
+    read -r last_alert alert_count < "$marker" 2>/dev/null || return
+    alert_count=${alert_count:-0}
     local now
     now=$(date +%s)
-    local age_minutes=$(( (now - first_failure) / 60 ))
+    local age_minutes=$(( (now - last_alert) / 60 ))
+    local suppression
+    suppression=$(get_sync_suppression_minutes "$alert_count")
 
-    if [ $age_minutes -ge $RECOVERY_ALERT_MINUTES ]; then
-        date +%s > "$marker"
-        discord_notify_failure "$repo_name" "$reason (${age_minutes}m since first failure)"
+    if [ $age_minutes -ge $suppression ]; then
+        alert_count=$(( alert_count + 1 ))
+        echo "$(date +%s) $alert_count" > "$marker"
+        discord_notify_failure "$repo_name" "$reason (${age_minutes}m since last alert, next in ${suppression}m)"
     fi
 }
 
@@ -376,8 +393,11 @@ clear_recovery_failure_marker() {
     rm -f "/tmp/sync-recovery-failure-${repo_name}.marker"
 }
 
-# Track persistent dirty-skip state and alert after threshold.
-# Uses marker files in /tmp to track when a repo first entered dirty-skip.
+# Track persistent dirty-skip state and alert with exponential backoff.
+# Uses marker files in /tmp to track dirty state duration and alert count.
+# First alert after 30 minutes of dirty state; subsequent alerts use escalating
+# suppression windows via get_sync_suppression_minutes().
+# Marker format: <first_dirty_epoch> <last_alert_epoch> <alert_count>
 # Args: $1 = repo name, $2 = dirty file count
 DIRTY_ALERT_MINUTES=30
 check_dirty_duration() {
@@ -386,20 +406,36 @@ check_dirty_duration() {
     local marker="/tmp/sync-dirty-${repo}.marker"
 
     if [ ! -f "$marker" ]; then
-        date +%s > "$marker"
+        echo "$(date +%s) 0 0" > "$marker"
         return
     fi
 
-    local first_dirty
-    first_dirty=$(cat "$marker" 2>/dev/null) || return
+    local first_dirty last_alert alert_count
+    read -r first_dirty last_alert alert_count < "$marker" 2>/dev/null || return
+    last_alert=${last_alert:-0}
+    alert_count=${alert_count:-0}
     local now
     now=$(date +%s)
-    local age_minutes=$(( (now - first_dirty) / 60 ))
+    local total_minutes=$(( (now - first_dirty) / 60 ))
 
-    if [ $age_minutes -ge $DIRTY_ALERT_MINUTES ]; then
-        discord_notify_failure "$repo" "dirty for ${age_minutes}m ($dirty_count files), sync blocked"
-        # Reset marker to avoid spamming (will re-alert after another threshold period)
-        date +%s > "$marker"
+    # First alert: wait for initial threshold
+    if [ "$alert_count" -eq 0 ]; then
+        if [ $total_minutes -ge $DIRTY_ALERT_MINUTES ]; then
+            echo "$first_dirty $(date +%s) 1" > "$marker"
+            discord_notify_failure "$repo" "dirty for ${total_minutes}m ($dirty_count files), sync blocked"
+        fi
+        return
+    fi
+
+    # Subsequent alerts: use escalating suppression window
+    local since_last=$(( (now - last_alert) / 60 ))
+    local suppression
+    suppression=$(get_sync_suppression_minutes "$alert_count")
+
+    if [ $since_last -ge $suppression ]; then
+        alert_count=$(( alert_count + 1 ))
+        echo "$first_dirty $(date +%s) $alert_count" > "$marker"
+        discord_notify_failure "$repo" "dirty for ${total_minutes}m ($dirty_count files), sync blocked (next alert in ~$(get_sync_suppression_minutes "$alert_count")m)"
     fi
 }
 
