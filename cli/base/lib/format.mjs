@@ -13,7 +13,8 @@ import config from '#config'
 // (host.docker.internal on MacBook, 127.0.0.1 on storage server).
 const server_host = process.env.BASE_API_HOST || '127.0.0.1'
 const server_port = config.server_port || 8080
-export const SERVER_URL = `http://${server_host}:${server_port}`
+const server_protocol = config.ssl ? 'https' : 'http'
+export const SERVER_URL = `${server_protocol}://${server_host}:${server_port}`
 
 /**
  * Exit the process after flushing stdout.
