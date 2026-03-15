@@ -19,6 +19,7 @@ import {
   get_file_status,
   get_file_diff_stats
 } from '#libs-server/git/index.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 
 const router = express.Router()
 const log = debug('api:filesystem')
@@ -552,11 +553,14 @@ router.get('/homepage-content', async (req, res) => {
         // Try role-specific variant
         const relations = identity.relations || []
         for (const relation of relations) {
-          const role_match = relation.match(
-            /^has_role\s+\[\[user:role\/([^/]+)\.md\]\]$/
-          )
-          if (role_match) {
-            candidate_paths.push(`text/homepage/${role_match[1]}.md`)
+          const parsed = parse_relation_entry(relation)
+          if (parsed && parsed.relation_type === 'has_role') {
+            const role_uri_match = parsed.base_uri.match(
+              /^user:role\/([^/]+)\.md$/
+            )
+            if (role_uri_match) {
+              candidate_paths.push(`text/homepage/${role_uri_match[1]}.md`)
+            }
           }
         }
       }

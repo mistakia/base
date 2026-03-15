@@ -6,6 +6,8 @@
 
 import debug from 'debug'
 
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
+
 const log = debug('embedded-index:sync:entity')
 
 export function extract_tags_from_entity({ entity_properties }) {
@@ -35,39 +37,18 @@ export function extract_relations_from_entity({ entity_properties }) {
     return []
   }
 
-  for (const relation_string of relations) {
-    if (typeof relation_string !== 'string') {
-      continue
-    }
-
-    const parsed = parse_relation_string(relation_string)
+  for (const relation_entry of relations) {
+    const parsed = parse_relation_entry(relation_entry)
     if (parsed) {
-      parsed_relations.push(parsed)
+      parsed_relations.push({
+        relation_type: parsed.relation_type,
+        target_base_uri: parsed.base_uri,
+        context: parsed.context
+      })
     }
   }
 
   return parsed_relations
-}
-
-function parse_relation_string(relation_string) {
-  // Format: "relation_type [[target_base_uri]] (optional_context)"
-  // Example: "implements [[sys:system/schema/task.md]]"
-  // Example: "relates_to [[user:task/other.md]] (some context)"
-
-  const relation_regex = /^(\S+)\s+\[\[([^\]]+)\]\](?:\s+\(([^)]*)\))?$/
-
-  const match = relation_string.match(relation_regex)
-
-  if (!match) {
-    log('Could not parse relation string: %s', relation_string)
-    return null
-  }
-
-  return {
-    relation_type: match[1],
-    target_base_uri: match[2],
-    context: match[3] || null
-  }
 }
 
 export function extract_tag_index_data({ entity_properties, file_info = {} }) {

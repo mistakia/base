@@ -5,5 +5,6 @@ export {
   extract_entity_tags,
   extract_entity_observations,
   extract_entity_relations,
+  parse_relation_entry,
   extract_entity_references
 } from './extractors/index.mjs'

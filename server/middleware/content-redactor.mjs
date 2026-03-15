@@ -55,6 +55,22 @@ export const redact_base_uri = (base_uri) => {
  * @returns {string} Redacted relation string preserving structure
  */
 const redact_relation_string = (relation_string) => {
+  // Handle object-format relations: { type, target, context? }
+  if (relation_string && typeof relation_string === 'object') {
+    const { type: relation_type, target, context } = relation_string
+    if (relation_type && target) {
+      const redacted = {
+        type: relation_type,
+        target: redact_base_uri(target)
+      }
+      if (context) {
+        redacted.context = REDACT_CHAR.repeat(context.length)
+      }
+      return redacted
+    }
+    return DEFAULT_REDACTED_ARRAY_ITEM
+  }
+
   if (!is_valid_string(relation_string)) return DEFAULT_REDACTED_ARRAY_ITEM
 
   const match = relation_string.match(RELATION_STRING_REGEX)

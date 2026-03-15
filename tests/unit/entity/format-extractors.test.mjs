@@ -2,7 +2,8 @@ import { expect } from 'chai'
 import {
   extract_entity_tags,
   extract_entity_relations,
-  extract_entity_observations
+  extract_entity_observations,
+  parse_relation_entry
 } from '#libs-server/entity/format/index.mjs'
 
 describe('Entity Format Extractors', () => {
@@ -137,6 +138,177 @@ describe('Entity Format Extractors', () => {
         base_uri: 'sys:system/server-configuration',
         context: null
       })
+    })
+
+    it('should extract object-format relations', () => {
+      const entity_properties = {
+        relations: [
+          { type: 'depends_on', target: 'sys:system/project-setup' },
+          {
+            type: 'blocked_by',
+            target: 'sys:system/server-configuration',
+            context: 'awaiting approval'
+          }
+        ]
+      }
+
+      const relations = extract_entity_relations({ entity_properties })
+
+      expect(relations).to.be.an('array')
+      expect(relations).to.have.lengthOf(2)
+
+      expect(relations[0]).to.deep.equal({
+        relation_type: 'depends_on',
+        base_uri: 'sys:system/project-setup',
+        context: null
+      })
+
+      expect(relations[1]).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server-configuration',
+        context: 'awaiting approval'
+      })
+    })
+
+    it('should handle mixed string and object-format relations', () => {
+      const entity_properties = {
+        relations: [
+          'depends_on [[sys:system/project-setup]]',
+          { type: 'blocked_by', target: 'sys:system/server-configuration' },
+          'related_to [[sys:system/api-documentation]] (needs review)'
+        ]
+      }
+
+      const relations = extract_entity_relations({ entity_properties })
+
+      expect(relations).to.be.an('array')
+      expect(relations).to.have.lengthOf(3)
+
+      expect(relations[0]).to.deep.equal({
+        relation_type: 'depends_on',
+        base_uri: 'sys:system/project-setup',
+        context: null
+      })
+
+      expect(relations[1]).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server-configuration',
+        context: null
+      })
+
+      expect(relations[2]).to.deep.equal({
+        relation_type: 'related_to',
+        base_uri: 'sys:system/api-documentation',
+        context: 'needs review'
+      })
+    })
+
+    it('should skip object-format relations missing required fields', () => {
+      const entity_properties = {
+        relations: [
+          { type: 'depends_on' }, // Missing target
+          { target: 'sys:system/project-setup' }, // Missing type
+          { type: 'blocked_by', target: 'sys:system/server-configuration' } // Valid
+        ]
+      }
+
+      const relations = extract_entity_relations({ entity_properties })
+
+      expect(relations).to.be.an('array')
+      expect(relations).to.have.lengthOf(1)
+
+      expect(relations[0]).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server-configuration',
+        context: null
+      })
+    })
+
+    it('should skip non-string, non-object relation entries', () => {
+      const entity_properties = {
+        relations: [
+          42,
+          null,
+          true,
+          'blocked_by [[sys:system/server-configuration]]'
+        ]
+      }
+
+      const relations = extract_entity_relations({ entity_properties })
+
+      expect(relations).to.be.an('array')
+      expect(relations).to.have.lengthOf(1)
+
+      expect(relations[0]).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server-configuration',
+        context: null
+      })
+    })
+  })
+
+  describe('parse_relation_entry', () => {
+    it('should parse string-format relations', () => {
+      const result = parse_relation_entry(
+        'depends_on [[sys:system/project-setup]]'
+      )
+
+      expect(result).to.deep.equal({
+        relation_type: 'depends_on',
+        base_uri: 'sys:system/project-setup',
+        context: null
+      })
+    })
+
+    it('should parse string-format relations with context', () => {
+      const result = parse_relation_entry(
+        'blocked_by [[sys:system/server]] (phase 1)'
+      )
+
+      expect(result).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server',
+        context: 'phase 1'
+      })
+    })
+
+    it('should parse object-format relations', () => {
+      const result = parse_relation_entry({
+        type: 'depends_on',
+        target: 'sys:system/project-setup'
+      })
+
+      expect(result).to.deep.equal({
+        relation_type: 'depends_on',
+        base_uri: 'sys:system/project-setup',
+        context: null
+      })
+    })
+
+    it('should parse object-format relations with context', () => {
+      const result = parse_relation_entry({
+        type: 'blocked_by',
+        target: 'sys:system/server',
+        context: 'phase 1'
+      })
+
+      expect(result).to.deep.equal({
+        relation_type: 'blocked_by',
+        base_uri: 'sys:system/server',
+        context: 'phase 1'
+      })
+    })
+
+    it('should return null for invalid inputs', () => {
+      expect(parse_relation_entry(null)).to.be.null
+      expect(parse_relation_entry(undefined)).to.be.null
+      expect(parse_relation_entry(42)).to.be.null
+      expect(parse_relation_entry('')).to.be.null
+      expect(parse_relation_entry('malformed string')).to.be.null
+      expect(parse_relation_entry({ type: 'depends_on' })).to.be.null
+      expect(
+        parse_relation_entry({ target: 'sys:system/project-setup' })
+      ).to.be.null
     })
   })
 

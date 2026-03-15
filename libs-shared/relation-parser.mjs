@@ -60,6 +60,19 @@ export function is_redacted_base_uri(base_uri) {
  * @returns {Object|null} Object with relation_type, base_uri, and context, or null if invalid
  */
 export function parse_relation_string({ relation_string }) {
+  // Handle object-format relations: { type, target, context? }
+  if (relation_string && typeof relation_string === 'object') {
+    const { type: relation_type, target } = relation_string
+    if (relation_type && target) {
+      return {
+        relation_type,
+        base_uri: target,
+        context: relation_string.context || null
+      }
+    }
+    return null
+  }
+
   if (!relation_string || typeof relation_string !== 'string') {
     return null
   }

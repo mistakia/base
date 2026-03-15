@@ -9,6 +9,7 @@ import { normalize_github_issue } from './normalize-github-issue.mjs'
 import { create_content_identifier } from '#libs-server/utils/create-content-identifier.mjs'
 import { format_external_id } from '#libs-server/sync/format-external-id.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 
 const log = debug('github:sync-github-issue-to-task')
 
@@ -50,14 +51,14 @@ function validate_and_filter_relations(relations, user_base_directory) {
 
   for (const relation of relations) {
     try {
-      // Extract base_uri from relation string format: "relation_type [[base_uri]]"
-      const match = relation.match(/\[\[([^\]]+)\]\]/)
-      if (!match) {
+      // Extract base_uri from relation (string or object format)
+      const parsed = parse_relation_entry(relation)
+      if (!parsed) {
         log(`Skipping invalid relation format: ${relation}`)
         continue
       }
 
-      const target_base_uri = match[1]
+      const target_base_uri = parsed.base_uri
 
       // Convert base_uri to absolute path
       const target_absolute_path = resolve_base_uri(target_base_uri, {

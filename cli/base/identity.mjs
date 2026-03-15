@@ -12,6 +12,7 @@ import {
   load_all_identities,
   load_identity_by_username
 } from '#libs-server/users/identity-loader.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 import { resolve_user_rules } from '#libs-server/users/permission-resolver.mjs'
 import create_user from '#libs-server/users/create-user.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
@@ -303,12 +304,10 @@ function get_role_names(identity) {
   }
 
   const role_names = []
-  for (const relation_str of identity.relations) {
-    const match = relation_str.match(/^has_role\s+\[\[(.*?)\]\]/)
-    if (match) {
-      // Extract just the role name from the path
-      const role_path = match[1]
-      const role_name = role_path.split('/').pop().replace('.md', '')
+  for (const relation_entry of identity.relations) {
+    const parsed = parse_relation_entry(relation_entry)
+    if (parsed && parsed.relation_type === 'has_role') {
+      const role_name = parsed.base_uri.split('/').pop().replace('.md', '')
       role_names.push(role_name)
     }
   }
