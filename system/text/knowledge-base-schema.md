@@ -126,13 +126,13 @@ The knowledge base supports the following content types. See the actual schema f
 - [[sys:system/schema/skill.md]] - Agent skills discoverable from extensions and workflows
 - [[sys:system/schema/extension.md]] - Convention-based CLI extensions
 - [[sys:system/schema/database.md]] - Defines a structured dataset
-- [[sys:system/schema/database_item.md]] - Records within a dataset
-- [[sys:system/schema/database_view.md]] - Saved display configurations for datasets
+- [[sys:system/schema/database-item.md]] - Records within a dataset
+- [[sys:system/schema/database-view.md]] - Saved display configurations for datasets
 - [[sys:system/schema/person.md]] - Individual people
 - [[sys:system/schema/organization.md]] - Companies, departments, or teams
-- [[sys:system/schema/physical_item.md]] - Tangible objects or materials
-- [[sys:system/schema/digital_item.md]] - Files (remote files or hyperlinks)
-- [[sys:system/schema/physical_location.md]] - Discreet physical space, addresses, or geographical points
-- [[sys:system/schema/type_definition.md]] - Defines structure of content types
-- [[sys:system/schema/type_extension.md]] - Adds properties to existing types
+- [[sys:system/schema/physical-item.md]] - Tangible objects or materials
+- [[sys:system/schema/digital-item.md]] - Files (remote files or hyperlinks)
+- [[sys:system/schema/physical-location.md]] - Discreet physical space, addresses, or geographical points
+- [[sys:system/schema/type-definition.md]] - Defines structure of content types
+- [[sys:system/schema/extension.md]] - Convention-based CLI extensions
 - [[sys:system/schema/prompt.md]] - Structured input for models, used to guide response generation

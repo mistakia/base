@@ -2,9 +2,9 @@
 title: Resolve Review Findings
 type: workflow
 description: >-
-  Work through codebase review findings by grouping issues by proximity, applying fixes in a worktree,
-  running tests after batches, and marking findings resolved. Supports chaining across context windows
-  for large finding sets.
+  Work through codebase review findings by grouping issues by proximity, applying fixes in a
+  worktree, running tests after batches, and marking findings resolved. Supports chaining across
+  context windows for large finding sets.
 base_uri: sys:system/workflow/resolve-review-findings.md
 created_at: '2026-03-06T00:00:00.000Z'
 entity_id: c3d4e5f6-7890-4cde-bf01-234567890123
@@ -33,13 +33,14 @@ prompt_properties:
     type: string
     required: false
     description: >-
-      Command to run tests after each batch. Defaults to auto-detection from package.json or Makefile.
+      Command to run tests after each batch. Defaults to auto-detection from package.json or
+      Makefile.
   - name: skip-worktree
     type: boolean
     required: false
     description: >-
-      If true, apply fixes directly on the current branch instead of creating a worktree. Useful when
-      already working in a worktree.
+      If true, apply fixes directly on the current branch instead of creating a worktree. Useful
+      when already working in a worktree.
     default: false
 public_read: true
 relations:
@@ -49,6 +50,8 @@ relations:
   - follows [[sys:system/guideline/write-javascript.md]]
   - supports [[sys:system/workflow/review-codebase.md]]
   - follows [[sys:system/guideline/write-workflow.md]]
+updated_at: '2026-03-15T02:01:02.299Z'
+user_public_key: 00000000-0000-0000-0000-000000000000
 ---
 
 <task>Resolve codebase review findings by applying fixes grouped by file proximity, running tests, and marking findings complete</task>

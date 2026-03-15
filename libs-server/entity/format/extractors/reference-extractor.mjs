@@ -21,7 +21,8 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
     let match
 
     while ((match = wikilink_regex.exec(entity_content)) !== null) {
-      const base_uri = match[1]
+      const raw = match[1]
+      const base_uri = raw.includes('|') ? raw.split('|')[0] : raw
       if (is_valid_base_uri({ base_uri })) {
         references.push({ base_uri })
       }
@@ -78,7 +79,8 @@ export function extract_entity_references({ entity_content, tokens = [] }) {
         let match
 
         while ((match = wikilink_regex.exec(part)) !== null) {
-          const base_uri = match[1]
+          const raw = match[1]
+          const base_uri = raw.includes('|') ? raw.split('|')[0] : raw
           if (is_valid_base_uri({ base_uri })) {
             references.push({ base_uri })
           }
