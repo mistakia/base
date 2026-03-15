@@ -9,16 +9,16 @@
  * @param {Object} params - Parameters
  * @param {string} params.entity_content - Raw markdown content body
  * @param {Array} [params.tokens] - Parsed markdown-it tokens (for code block awareness)
- * @returns {Object} - { warnings: string[] }
+ * @returns {Object} - { errors: string[] }
  */
 export function validate_relative_path_links({
   entity_content,
   tokens = []
 } = {}) {
-  const warnings = []
+  const errors = []
 
   if (!entity_content) {
-    return { warnings }
+    return { errors }
   }
 
   // Pattern matches markdown links and images with relative paths
@@ -36,7 +36,7 @@ export function validate_relative_path_links({
         const parts = token.content.split('`')
         for (let i = 0; i < parts.length; i++) {
           if (i % 2 === 1) continue
-          find_relative_links(parts[i], relative_link_regex, warnings)
+          find_relative_links(parts[i], relative_link_regex, errors)
         }
       }
     }
@@ -46,20 +46,20 @@ export function validate_relative_path_links({
       /```[\s\S]*?```/g,
       ''
     )
-    find_relative_links(content_without_code, relative_link_regex, warnings)
+    find_relative_links(content_without_code, relative_link_regex, errors)
   }
 
-  return { warnings }
+  return { errors }
 }
 
-function find_relative_links(text, regex, warnings) {
+function find_relative_links(text, regex, errors) {
   let match
   // Reset regex lastIndex for reuse
   regex.lastIndex = 0
   while ((match = regex.exec(text)) !== null) {
     const full_match = match[0]
     const path = match[2]
-    warnings.push(
+    errors.push(
       `Relative path link found: ${full_match} -- use base-uri format (e.g., user:path/to/file) or wikilinks instead of "${path}"`
     )
   }

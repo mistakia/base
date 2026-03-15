@@ -127,7 +127,7 @@ export async function validate_entity_from_filesystem({
       ...(references_result.errors || [])
     ].map(String)
 
-    // Run warning-level validators (constraints, relation cardinality, relative path links)
+    // Run warning-level validators (constraints, relation cardinality)
     const constraint_params = {
       entity_properties,
       entity_type: entity_properties.type,
@@ -135,14 +135,18 @@ export async function validate_entity_from_filesystem({
     }
     const constraints_result = validate_constraints(constraint_params)
     const cardinality_result = validate_relation_cardinality(constraint_params)
+
+    // Relative path links are errors (entity content must use base-uri or wikilinks)
     const relative_path_result = validate_relative_path_links({
       entity_content
     })
+    all_errors.push(
+      ...(relative_path_result.errors || []).map(String)
+    )
 
     const all_warnings = [
       ...constraints_result.warnings,
-      ...cardinality_result.warnings,
-      ...relative_path_result.warnings
+      ...cardinality_result.warnings
     ]
 
     if (all_errors.length > 0) {
