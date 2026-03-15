@@ -73,9 +73,12 @@ api.use((req, res, next) => {
   // Content Security Policy - restrict resource loading
   // Note: 'unsafe-inline' and 'unsafe-eval' may be needed for some SPAs
   // Adjust based on actual application requirements
+  const frame_src = IS_DEV
+    ? 'http://localhost:8080 http://localhost:8081'
+    : "'self'"
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:"
+    `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:; frame-src ${frame_src}`
   )
 
   // HSTS - enforce HTTPS (1 year)

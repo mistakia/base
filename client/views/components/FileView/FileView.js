@@ -173,6 +173,21 @@ const FileView = ({ path }) => {
           </Box>
         )
 
+      case 'pdf':
+        return (
+          <Box sx={{ height: 'calc(100vh - 120px)', width: '100%' }}>
+            <iframe
+              src={`${API_URL}/filesystem/file/raw?path=${encodeURIComponent(path)}`}
+              title={path.split('/').pop()}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none'
+              }}
+            />
+          </Box>
+        )
+
       default:
         // For other file types, use RedactedContent component if redacted
         if (file_data?.is_redacted) {

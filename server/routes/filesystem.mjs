@@ -418,7 +418,8 @@ router.get('/file/raw', async (req, res) => {
       bmp: 'image/bmp',
       ico: 'image/x-icon',
       tiff: 'image/tiff',
-      tif: 'image/tiff'
+      tif: 'image/tiff',
+      pdf: 'application/pdf'
     }
 
     const content_type = mime_types[ext]
@@ -430,6 +431,15 @@ router.get('/file/raw', async (req, res) => {
     }
 
     const file_buffer = await fs.readFile(full_path)
+
+    // Allow framing for embeddable content types (PDF viewer)
+    if (ext === 'pdf') {
+      res.removeHeader('X-Frame-Options')
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'none'; style-src 'unsafe-inline'"
+      )
+    }
 
     // Convert browser-unsupported formats to PNG
     const needs_conversion = ext === 'tiff' || ext === 'tif'

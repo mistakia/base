@@ -383,6 +383,11 @@ export const get_file_type_from_path = (path) => {
     return 'image'
   }
 
+  // PDF files
+  if (ext === 'pdf') {
+    return 'pdf'
+  }
+
   // Binary files
   if (
     [
