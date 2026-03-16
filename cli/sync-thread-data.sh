@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# sync-thread-data.sh - Push-only rsync of thread bulk data to remote machine
+# sync-thread-data.sh - Rsync thread bulk data between macbook and storage
 #
 # Syncs timeline, raw-data, memory, and plans directories via rsync with
 # --append-verify for efficient incremental transfer of append-only files.
@@ -13,7 +13,8 @@
 #   - sync-all.sh Step 1 (after thread git sync completes)
 #
 # Key invariants:
-#   - Push-only: local machine pushes to remote. No pull direction.
+#   - MacBook-initiated: macbook pushes to storage AND pulls from storage.
+#     Storage never initiates connections to macbook (laptop may be unreachable).
 #   - No lock needed: sync-all.sh's global lock prevents concurrent instances.
 #   - Non-fatal: failures are logged but do not abort the caller.
 
@@ -57,47 +58,70 @@ elif [ -z "$SSH_AUTH_SOCK" ]; then
     fi
 fi
 
-# Detect current host and determine remote target
-CURRENT_HOSTNAME=$(hostname)
-case "$CURRENT_HOSTNAME" in
-    macbook2025)
-        REMOTE_THREAD_PATH="storage:/mnt/md0/user-base/thread/"
-        ;;
-    storage)
-        REMOTE_THREAD_PATH="macbook:$THREAD_DIR/"
-        ;;
-    *)
-        log_error "Unknown hostname '$CURRENT_HOSTNAME', cannot determine remote target"
-        exit 1
-        ;;
-esac
+REMOTE_STORAGE_THREAD_PATH="storage:/mnt/md0/user-base/thread/"
 
-log_verbose "Pushing thread bulk data to $REMOTE_THREAD_PATH"
-
-# Rsync with append-verify for efficient incremental transfer of append-only files.
+# Common rsync filter flags for thread bulk data.
 # Filter order matters (first match wins):
 #   1. Exclude normalized-session.json (8.8 GB dead weight, never read)
 #   2. Include directories for traversal
 #   3. Include bulk data patterns
 #   4. Exclude everything else (metadata.json, .git, etc. are excluded by catchall)
-rsync -rlptD \
-    --append-verify \
-    --timeout=120 \
-    --prune-empty-dirs \
-    --exclude='normalized-session.json' \
-    --include='*/' \
-    --include='*/timeline.jsonl' \
-    --include='*/timeline.json' \
-    --include='*/raw-data/***' \
-    --include='*/memory/***' \
-    --include='plans/***' \
-    --exclude='*' \
-    "$THREAD_DIR/" "$REMOTE_THREAD_PATH"
+RSYNC_COMMON_OPTS=(
+    -rlptD
+    --append-verify
+    --timeout=120
+    --prune-empty-dirs
+    --exclude='normalized-session.json'
+    --include='*/'
+    --include='*/timeline.jsonl'
+    --include='*/timeline.json'
+    --include='*/raw-data/***'
+    --include='*/memory/***'
+    --include='plans/***'
+    --exclude='*'
+)
 
-RSYNC_EXIT=$?
+# Detect current host
+CURRENT_HOSTNAME=$(hostname)
+
+case "$CURRENT_HOSTNAME" in
+    macbook2025)
+        # MacBook: push local data to storage, then pull storage data locally
+        RSYNC_EXIT=0
+
+        log_verbose "Pushing thread bulk data to storage"
+        rsync "${RSYNC_COMMON_OPTS[@]}" "$THREAD_DIR/" "$REMOTE_STORAGE_THREAD_PATH"
+        PUSH_EXIT=$?
+        if [ $PUSH_EXIT -ne 0 ]; then
+            log_error "push to storage failed with exit code $PUSH_EXIT"
+            RSYNC_EXIT=$PUSH_EXIT
+        else
+            log_verbose "Push to storage completed"
+        fi
+
+        log_verbose "Pulling thread bulk data from storage"
+        rsync "${RSYNC_COMMON_OPTS[@]}" "$REMOTE_STORAGE_THREAD_PATH" "$THREAD_DIR/"
+        PULL_EXIT=$?
+        if [ $PULL_EXIT -ne 0 ]; then
+            log_error "pull from storage failed with exit code $PULL_EXIT"
+            [ $RSYNC_EXIT -eq 0 ] && RSYNC_EXIT=$PULL_EXIT
+        else
+            log_verbose "Pull from storage completed"
+        fi
+        ;;
+    storage)
+        # Storage: no-op. MacBook initiates all connections.
+        log_verbose "Running on storage -- skipping (macbook initiates sync)"
+        RSYNC_EXIT=0
+        ;;
+    *)
+        log_error "Unknown hostname '$CURRENT_HOSTNAME', cannot determine sync target"
+        exit 1
+        ;;
+esac
 
 if [ $RSYNC_EXIT -eq 0 ]; then
-    log_verbose "Thread bulk data push completed successfully"
+    log_verbose "Thread bulk data sync completed successfully"
     # Log telemetry event
     TELEMETRY_FILE="$USER_BASE_DIRECTORY/data/sync-telemetry.jsonl"
     if command -v jq >/dev/null 2>&1; then
@@ -108,7 +132,7 @@ if [ $RSYNC_EXIT -eq 0 ]; then
             >> "$TELEMETRY_FILE" 2>/dev/null || true
     fi
 else
-    log_error "rsync failed with exit code $RSYNC_EXIT"
+    log_error "Thread bulk data sync completed with errors"
 fi
 
 exit $RSYNC_EXIT

@@ -3,6 +3,7 @@ import debug from 'debug'
 
 import {
   DOCKER_CONTAINER_NAME,
+  CONTAINER_USER_BASE_PATH,
   validate_execution_mode,
   translate_to_container_path
 } from '#libs-server/docker/execution-mode.mjs'
@@ -24,10 +25,20 @@ const KILL_TIMEOUT_MS = 5000 // Time between SIGTERM and SIGKILL
  */
 export const execute_command = async ({
   command,
-  working_directory = process.cwd(),
+  working_directory,
   timeout_ms = DEFAULT_TIMEOUT_MS,
   execution_mode = 'host'
 }) => {
+  // Default working directory based on execution mode:
+  // - container: use CONTAINER_USER_BASE_PATH (host cwd may not exist in container,
+  //   and cross-machine workers would have the wrong host path)
+  // - host: use process.cwd()
+  if (!working_directory) {
+    working_directory =
+      execution_mode === 'container' || execution_mode === 'container_user'
+        ? CONTAINER_USER_BASE_PATH
+        : process.cwd()
+  }
   // Validate command for shell metacharacter injection
   // Uses the queued-command variant that allows $VAR/${VAR} and && (needed by scheduled commands)
   validate_queued_command(command)

@@ -110,11 +110,22 @@ export const add_cli_job = async ({
   command,
   tags = [],
   priority = 10,
-  working_directory = process.cwd(),
+  working_directory,
   timeout_ms = QUEUE_CONFIG.default_timeout_ms,
   execution_mode,
   metadata = {}
 }) => {
+  // Default working_directory for host-mode jobs to the caller's cwd.
+  // For container/container_user modes, leave undefined so execute_command
+  // uses CONTAINER_USER_BASE_PATH on the actual worker machine (avoids
+  // cross-machine path mismatch when different workers share the queue).
+  if (
+    !working_directory &&
+    execution_mode !== 'container' &&
+    execution_mode !== 'container_user'
+  ) {
+    working_directory = process.cwd()
+  }
   if (!command || typeof command !== 'string' || !command.trim()) {
     throw new Error('command must be a non-empty string')
   }
