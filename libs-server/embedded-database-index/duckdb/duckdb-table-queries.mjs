@@ -834,6 +834,47 @@ export async function count_tasks_from_entities({ filters = [] }) {
 }
 
 /**
+ * Query distinct tag base_uris that are used by a specific entity type or by threads.
+ * Returns a Set of tag_base_uri strings for efficient lookup/filtering.
+ *
+ * @param {Object} params - Parameters
+ * @param {string} params.used_by - 'task' (or other entity type) to query entity_tags filtered by type, or 'thread' to query thread_tags
+ * @returns {Promise<Set<string>>} Set of tag_base_uri values
+ */
+export async function query_tags_used_by({ used_by } = {}) {
+  if (!used_by) {
+    throw new Error('used_by parameter is required')
+  }
+
+  log('Querying tags used by %s from DuckDB', used_by)
+
+  let query
+  const parameters = []
+
+  if (used_by === 'thread') {
+    query = `SELECT DISTINCT tag_base_uri FROM thread_tags`
+  } else {
+    query = `
+      SELECT DISTINCT et.tag_base_uri
+      FROM entity_tags et
+      JOIN entities e ON e.base_uri = et.entity_base_uri
+      WHERE e.type = $1
+    `
+    parameters.push(used_by)
+  }
+
+  try {
+    const results = await execute_duckdb_query({ query, parameters })
+    const tag_set = new Set(results.map((row) => row.tag_base_uri))
+    log('Found %d tags used by %s', tag_set.size, used_by)
+    return tag_set
+  } catch (error) {
+    log('Error querying tags used by %s: %s', used_by, error.message)
+    throw error
+  }
+}
+
+/**
  * Query tag statistics - entity counts per tag
  * Returns all tags with their usage counts, sorted by count descending
  *

@@ -7,7 +7,8 @@ import {
   query_entities_from_duckdb,
   count_entities_in_duckdb,
   query_threads_from_duckdb,
-  count_threads_in_duckdb
+  count_threads_in_duckdb,
+  query_tags_used_by
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
@@ -82,7 +83,8 @@ router.get('/', async (req, res) => {
       search_term,
       include_threads = 'true',
       sort = 'updated_at',
-      limit = '50'
+      limit = '50',
+      used_by
     } = req.query
     const user_public_key = req.user?.user_public_key || null
 
@@ -253,11 +255,21 @@ router.get('/', async (req, res) => {
         return res.status(401).send({ error: 'authentication required' })
       }
 
-      const tags = await list_tags_from_filesystem({
+      let tags = await list_tags_from_filesystem({
         user_public_key,
         include_archived: include_archived === 'true',
         search_term
       })
+
+      // Filter to only tags used by a specific entity type or threads
+      if (used_by) {
+        try {
+          const used_tag_uris = await query_tags_used_by({ used_by })
+          tags = tags.filter((tag) => used_tag_uris.has(tag.base_uri))
+        } catch (err) {
+          log('Failed to filter tags by used_by=%s: %s', used_by, err.message)
+        }
+      }
 
       res.send(tags)
     }

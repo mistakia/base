@@ -84,8 +84,9 @@ export const tasks_actions = {
     payload: { base_uri, property_name, previous_value }
   }),
 
-  load_available_tags: () => ({
-    type: tasks_action_types.LOAD_AVAILABLE_TAGS
+  load_available_tags: ({ used_by } = {}) => ({
+    type: tasks_action_types.LOAD_AVAILABLE_TAGS,
+    payload: { used_by }
   }),
 
   add_entity_tag: ({ base_uri, tag_base_uri }) => ({

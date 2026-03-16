@@ -22,9 +22,9 @@ const TasksTable = ({ on_view_select }) => {
   const selected_view = useSelector(get_selected_task_table_view)
   const available_tags = useSelector(get_available_tags_for_filter)
 
-  // Load available tags on mount
+  // Load available tags on mount (filtered to tags used by tasks)
   useEffect(() => {
-    dispatch(tasks_actions.load_available_tags())
+    dispatch(tasks_actions.load_available_tags({ used_by: 'task' }))
   }, [dispatch])
   const {
     data = [],

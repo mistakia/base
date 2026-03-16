@@ -166,10 +166,11 @@ export function* handle_patch_task_failed({ payload }) {
   }
 }
 
-export function* load_available_tags() {
+export function* load_available_tags({ payload } = {}) {
   const app = yield select(get_app)
   if (!app.get('user_token')) return
-  yield call(get_available_tags, {})
+  const { used_by } = payload
+  yield call(get_available_tags, { used_by })
 }
 
 export function* handle_add_entity_tag({ payload }) {

@@ -34,8 +34,8 @@ export const api = {
     const url = `${API_URL}/tasks?${qs.stringify({ limit, offset, ...params })}`
     return { url }
   },
-  get_available_tags() {
-    const url = `${API_URL}/tags`
+  get_available_tags({ used_by } = {}) {
+    const url = `${API_URL}/tags?${qs.stringify({ used_by })}`
     return { url }
   },
 
