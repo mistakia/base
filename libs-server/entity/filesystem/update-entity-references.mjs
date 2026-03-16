@@ -126,6 +126,7 @@ function update_content_references({
  * @param {boolean} [options.dry_run=false] - If true, preview changes without writing
  * @param {string[]} [options.include_path_patterns=[]] - Path patterns to include
  * @param {string[]} [options.exclude_path_patterns=[]] - Path patterns to exclude
+ * @param {Object} [options.transaction=null] - Transaction object from with_transaction; when provided, files are backed up before writing for rollback support
  * @returns {Promise<Object>} - Result with files_scanned, files_with_references, total_updates, errors
  */
 export async function update_entity_references({
@@ -133,7 +134,8 @@ export async function update_entity_references({
   new_base_uri,
   dry_run = false,
   include_path_patterns = [],
-  exclude_path_patterns = []
+  exclude_path_patterns = [],
+  transaction = null
 }) {
   log(
     `Updating references from ${old_base_uri} to ${new_base_uri} (dry_run: ${dry_run})`
@@ -222,6 +224,11 @@ export async function update_entity_references({
 
           // Write updates if not dry run
           if (!dry_run) {
+            // Backup before write so transaction can roll back if later steps fail
+            if (transaction) {
+              await transaction.backup_file(file.absolute_path)
+            }
+
             const updated_properties = {
               ...entity_properties,
               relations: relations_result.updated_relations,
@@ -276,12 +283,14 @@ export async function update_entity_references({
  * @param {string} options.old_base_uri - The old base_uri to find and replace
  * @param {string} options.new_base_uri - The new base_uri to use as replacement
  * @param {boolean} [options.dry_run=false] - If true, preview changes without writing
+ * @param {Object} [options.transaction=null] - Transaction object from with_transaction; when provided, files are backed up before writing for rollback support
  * @returns {Promise<Object>} - Result with threads_with_references, total_updates, errors
  */
 export async function update_thread_metadata_references({
   old_base_uri,
   new_base_uri,
-  dry_run = false
+  dry_run = false,
+  transaction = null
 }) {
   log(
     `Updating thread metadata references from ${old_base_uri} to ${new_base_uri} (dry_run: ${dry_run})`
@@ -368,6 +377,10 @@ export async function update_thread_metadata_references({
           total_updates += relations_result.update_count
 
           if (!dry_run) {
+            if (transaction) {
+              await transaction.backup_file(metadata_path)
+            }
+
             metadata.relations = relations_result.updated_relations
             await write_file_to_filesystem({
               absolute_path: metadata_path,

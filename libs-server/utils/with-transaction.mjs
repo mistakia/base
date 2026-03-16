@@ -54,6 +54,24 @@ export async function with_transaction(operation) {
      */
     register_new_file(file_path) {
       backups.push({ file_path, content: null, existed: false })
+    },
+
+    /**
+     * Backup an existing file without writing new content.
+     * Use when another function handles the write but rollback protection
+     * is needed. Idempotent -- skips if already backed up.
+     * @param {string} file_path - Absolute path
+     */
+    async backup_file(file_path) {
+      if (backups.some((b) => b.file_path === file_path)) {
+        return
+      }
+      try {
+        const existing = await fs.readFile(file_path, 'utf8')
+        backups.push({ file_path, content: existing, existed: true })
+      } catch {
+        backups.push({ file_path, content: null, existed: false })
+      }
     }
   }
 

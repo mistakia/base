@@ -134,40 +134,41 @@ export async function move_entity_filesystem({
       return result
     }
 
-    // Update references in all other files
-    log('Scanning for references to update...')
-    const reference_result = await update_entity_references({
-      old_base_uri: source_resolved.base_uri,
-      new_base_uri: destination_resolved.base_uri,
-      dry_run,
-      include_path_patterns,
-      exclude_path_patterns
-    })
+    if (dry_run) {
+      // Dry run: scan for references without writing
+      log('Scanning for references to update (dry run)...')
+      const reference_result = await update_entity_references({
+        old_base_uri: source_resolved.base_uri,
+        new_base_uri: destination_resolved.base_uri,
+        dry_run: true,
+        include_path_patterns,
+        exclude_path_patterns
+      })
 
-    result.files_with_references = reference_result.files_with_references
-    result.entity_reference_updates = reference_result.total_updates
+      result.files_with_references = reference_result.files_with_references
+      result.entity_reference_updates = reference_result.total_updates
 
-    if (reference_result.errors.length > 0) {
-      result.errors.push(...reference_result.errors.map((e) => e.error))
-    }
+      if (reference_result.errors.length > 0) {
+        result.errors.push(...reference_result.errors.map((e) => e.error))
+      }
 
-    // Update references in thread metadata.json files
-    log('Scanning thread metadata for references to update...')
-    const thread_reference_result = await update_thread_metadata_references({
-      old_base_uri: source_resolved.base_uri,
-      new_base_uri: destination_resolved.base_uri,
-      dry_run
-    })
+      log('Scanning thread metadata for references to update (dry run)...')
+      const thread_reference_result = await update_thread_metadata_references({
+        old_base_uri: source_resolved.base_uri,
+        new_base_uri: destination_resolved.base_uri,
+        dry_run: true
+      })
 
-    result.threads_with_references =
-      thread_reference_result.threads_with_references
-    result.thread_reference_updates = thread_reference_result.total_updates
+      result.threads_with_references =
+        thread_reference_result.threads_with_references
+      result.thread_reference_updates = thread_reference_result.total_updates
 
-    if (thread_reference_result.errors.length > 0) {
-      result.errors.push(...thread_reference_result.errors.map((e) => e.error))
-    }
-
-    if (!dry_run) {
+      if (thread_reference_result.errors.length > 0) {
+        result.errors.push(
+          ...thread_reference_result.errors.map((e) => e.error)
+        )
+      }
+    } else {
       // Create destination directory if needed
       const destination_directory = path.dirname(
         destination_resolved.absolute_path
@@ -175,15 +176,54 @@ export async function move_entity_filesystem({
       await fs.mkdir(destination_directory, { recursive: true })
       log(`Ensured destination directory exists: ${destination_directory}`)
 
-      // Use transaction for rollback: if source deletion fails after write,
-      // the destination is cleaned up automatically
+      // All writes (reference updates, destination write, source delete) are
+      // wrapped in a single transaction so a failure at any step rolls back
+      // all changes, preventing inconsistent reference state
       await with_transaction(async (txn) => {
+        // Update references in all other entity files
+        log('Scanning for references to update...')
+        const reference_result = await update_entity_references({
+          old_base_uri: source_resolved.base_uri,
+          new_base_uri: destination_resolved.base_uri,
+          dry_run: false,
+          include_path_patterns,
+          exclude_path_patterns,
+          transaction: txn
+        })
+
+        result.files_with_references = reference_result.files_with_references
+        result.entity_reference_updates = reference_result.total_updates
+
+        if (reference_result.errors.length > 0) {
+          result.errors.push(...reference_result.errors.map((e) => e.error))
+        }
+
+        // Update references in thread metadata.json files
+        log('Scanning thread metadata for references to update...')
+        const thread_reference_result =
+          await update_thread_metadata_references({
+            old_base_uri: source_resolved.base_uri,
+            new_base_uri: destination_resolved.base_uri,
+            dry_run: false,
+            transaction: txn
+          })
+
+        result.threads_with_references =
+          thread_reference_result.threads_with_references
+        result.thread_reference_updates = thread_reference_result.total_updates
+
+        if (thread_reference_result.errors.length > 0) {
+          result.errors.push(
+            ...thread_reference_result.errors.map((e) => e.error)
+          )
+        }
+
+        // Write entity to destination
         const updated_properties = {
           ...entity_result.entity_properties,
           base_uri: destination_resolved.base_uri
         }
 
-        // Register before write so rollback covers partial writes too
         txn.register_new_file(destination_resolved.absolute_path)
 
         await write_entity_to_filesystem({
