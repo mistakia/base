@@ -11,10 +11,10 @@ import { normalize_file_path } from '#libs-shared/path-utils.mjs'
 
 const log = debug('file-subscriptions:manager')
 
-// Map to store connection -> Set<path> mapping
+// Concurrency safety: subscribe_to_file and remove_connection are synchronous
+// (no await between Map/Set check and mutation), so operations complete atomically
+// within a single microtask under Node.js's single-threaded event loop. No locks needed.
 const file_subscriptions = new Map()
-
-// Map to track path -> Set<ws> for efficient subscriber lookup
 const path_to_subscribers = new Map()
 
 /**

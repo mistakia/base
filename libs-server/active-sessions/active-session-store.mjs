@@ -133,6 +133,46 @@ export const register_active_session = async ({
  * @param {string} [params.job_id] - BullMQ job ID for client correlation
  * @returns {Promise<Object|null>} Updated session record or null if not found
  */
+// Lua script for atomic session update: reads existing session, merges
+// update fields, sets last_activity_at, and writes back with TTL -- all
+// in a single Redis command to prevent concurrent update races.
+const UPDATE_SESSION_SCRIPT = `
+local key = KEYS[1]
+local ttl = tonumber(ARGV[1])
+local update_json = ARGV[2]
+local now = ARGV[3]
+local session_id = ARGV[4]
+
+local existing = redis.call('GET', key)
+local session
+
+if existing then
+  session = cjson.decode(existing)
+else
+  -- Upsert: create new session if missing (handles missed SessionStart).
+  -- Nullable fields are omitted (absent keys encode as missing in JSON,
+  -- which JavaScript JSON.parse reads as undefined -- callers handle both).
+  session = {
+    session_id = session_id,
+    status = 'active',
+    created_at = now,
+    started_at = now
+  }
+end
+
+-- Merge update fields (only non-nil values)
+local updates = cjson.decode(update_json)
+for k, v in pairs(updates) do
+  session[k] = v
+end
+
+session.last_activity_at = now
+
+local result = cjson.encode(session)
+redis.call('SETEX', key, ttl, result)
+return result
+`
+
 export const update_active_session = async ({
   session_id,
   status,
@@ -150,54 +190,36 @@ export const update_active_session = async ({
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
 
-  // Get existing session
-  const existing = await redis.get(key)
-  let session
+  // Build update fields object (only include defined values)
+  const updates = {}
+  if (status !== undefined) updates.status = status
+  if (thread_id !== undefined) updates.thread_id = thread_id
+  if (thread_title !== undefined) updates.thread_title = thread_title
+  if (latest_timeline_event !== undefined)
+    updates.latest_timeline_event = latest_timeline_event
+  if (working_directory !== undefined)
+    updates.working_directory = working_directory
+  if (transcript_path !== undefined) updates.transcript_path = transcript_path
+  if (message_count !== undefined) updates.message_count = message_count
+  if (duration_minutes !== undefined)
+    updates.duration_minutes = duration_minutes
+  if (total_tokens !== undefined) updates.total_tokens = total_tokens
+  if (source_provider !== undefined) updates.source_provider = source_provider
+  if (job_id !== undefined) updates.job_id = job_id
 
-  if (existing) {
-    // Update existing session
-    session = JSON.parse(existing)
-    if (status !== undefined) session.status = status
-    if (thread_id !== undefined) session.thread_id = thread_id
-    if (thread_title !== undefined) session.thread_title = thread_title
-    if (latest_timeline_event !== undefined)
-      session.latest_timeline_event = latest_timeline_event
-    if (message_count !== undefined) session.message_count = message_count
-    if (duration_minutes !== undefined)
-      session.duration_minutes = duration_minutes
-    if (total_tokens !== undefined) session.total_tokens = total_tokens
-    if (source_provider !== undefined) session.source_provider = source_provider
-    if (job_id !== undefined) session.job_id = job_id
-    session.last_activity_at = new Date().toISOString()
-  } else {
-    // Upsert: create new session if missing (handles missed SessionStart)
-    const now_upsert = new Date().toISOString()
-    session = {
-      session_id,
-      status: status || 'active',
-      thread_id: thread_id || null,
-      thread_title: thread_title || null,
-      latest_timeline_event: latest_timeline_event || null,
-      working_directory: working_directory || null,
-      transcript_path: transcript_path || null,
-      message_count: message_count || null,
-      duration_minutes: duration_minutes || null,
-      total_tokens: total_tokens || null,
-      source_provider: source_provider || null,
-      job_id: job_id || null,
-      created_at: now_upsert,
-      started_at: now_upsert,
-      last_activity_at: now_upsert
-    }
-    log(`Upserted new session (missed SessionStart): ${session_id}`)
-  }
+  const now = new Date().toISOString()
 
-  await redis.setex(
+  const result = await redis.eval(
+    UPDATE_SESSION_SCRIPT,
+    1,
     key,
     STORE_CONFIG.stale_timeout_seconds,
-    JSON.stringify(session)
+    JSON.stringify(updates),
+    now,
+    session_id
   )
 
+  const session = JSON.parse(result)
   log(`Updated active session: ${session_id} status=${session.status}`)
   return session
 }

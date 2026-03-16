@@ -9,6 +9,7 @@ import {
   update_thread_metadata_references
 } from '#libs-server/entity/filesystem/update-entity-references.mjs'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
+import { with_transaction } from '#libs-server/utils/with-transaction.mjs'
 import {
   create_base_uri_from_path,
   resolve_base_uri,
@@ -174,23 +175,31 @@ export async function move_entity_filesystem({
       await fs.mkdir(destination_directory, { recursive: true })
       log(`Ensured destination directory exists: ${destination_directory}`)
 
-      // Update the entity's base_uri and write to destination
-      const updated_properties = {
-        ...entity_result.entity_properties,
-        base_uri: destination_resolved.base_uri
-      }
+      // Use transaction for rollback: if source deletion fails after write,
+      // the destination is cleaned up automatically
+      await with_transaction(async (txn) => {
+        const updated_properties = {
+          ...entity_result.entity_properties,
+          base_uri: destination_resolved.base_uri
+        }
 
-      await write_entity_to_filesystem({
-        absolute_path: destination_resolved.absolute_path,
-        entity_properties: updated_properties,
-        entity_type: entity_result.entity_properties.type,
-        entity_content: entity_result.entity_content
+        // Register before write so rollback covers partial writes too
+        txn.register_new_file(destination_resolved.absolute_path)
+
+        await write_entity_to_filesystem({
+          absolute_path: destination_resolved.absolute_path,
+          entity_properties: updated_properties,
+          entity_type: entity_result.entity_properties.type,
+          entity_content: entity_result.entity_content
+        })
+        log(
+          `Wrote entity to destination: ${destination_resolved.absolute_path}`
+        )
+
+        // Remove source with backup for rollback
+        await txn.delete_file(source_resolved.absolute_path)
+        log(`Removed source file: ${source_resolved.absolute_path}`)
       })
-      log(`Wrote entity to destination: ${destination_resolved.absolute_path}`)
-
-      // Remove the source file
-      await fs.unlink(source_resolved.absolute_path)
-      log(`Removed source file: ${source_resolved.absolute_path}`)
 
       result.file_moved = true
     }

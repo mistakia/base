@@ -7,6 +7,7 @@ import { process_repositories_from_filesystem } from '#libs-server/repository/fi
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
 const log = debug('update-entity-references')
 
@@ -368,11 +369,10 @@ export async function update_thread_metadata_references({
 
           if (!dry_run) {
             metadata.relations = relations_result.updated_relations
-            await fs.writeFile(
-              metadata_path,
-              JSON.stringify(metadata, null, 2),
-              'utf-8'
-            )
+            await write_file_to_filesystem({
+              absolute_path: metadata_path,
+              file_content: JSON.stringify(metadata, null, 2)
+            })
             log(`Updated thread metadata: ${metadata_path}`)
           }
         }

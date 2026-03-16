@@ -123,6 +123,11 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
 
 /**
  * Perform incremental sync for changed entity files.
+ *
+ * Concurrency: the sync lock in embedded-index-manager prevents concurrent syncs.
+ * DuckDB's internal MVCC provides read isolation for queries during sync --
+ * readers see a consistent snapshot and are not blocked by in-progress writes.
+ *
  * @returns {Promise<{synced: number, deleted: number, skipped: number, failed: number, skipped_details: Array}>}
  */
 export async function perform_incremental_sync({

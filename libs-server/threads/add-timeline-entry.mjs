@@ -1,4 +1,3 @@
-import fs from 'fs/promises'
 import path from 'path'
 import { v4 as uuid } from 'uuid'
 import debug from 'debug'
@@ -9,6 +8,7 @@ import {
   append_timeline_entry_jsonl,
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 
 const log = debug('threads:timeline')
 
@@ -156,19 +156,17 @@ export default async function add_timeline_entry({ thread_id, entry }) {
   // Append entry to timeline (streaming write - avoids read-modify-write)
   await append_timeline_entry_jsonl({ timeline_path, entry: new_entry })
 
-  // Update metadata.updated_at
-  const metadata = { ...thread }
-  delete metadata.timeline
-  delete metadata.context_dir
-
-  metadata.updated_at = new_entry.timestamp
-
-  // Write updated metadata
-  await fs.writeFile(
-    path.join(thread.context_dir, 'metadata.json'),
-    JSON.stringify(metadata, null, 2),
-    'utf-8'
-  )
+  // Update metadata.updated_at with optimistic concurrency
+  const metadata_path = path.join(thread.context_dir, 'metadata.json')
+  const written = await read_modify_write({
+    absolute_path: metadata_path,
+    modify: (content) => {
+      const metadata = JSON.parse(content)
+      metadata.updated_at = new_entry.timestamp
+      return JSON.stringify(metadata, null, 2)
+    }
+  })
+  const metadata = JSON.parse(written)
 
   // Read updated timeline for return value
   const timeline = await read_timeline_jsonl_or_default({

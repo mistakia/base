@@ -86,10 +86,11 @@ export const get_thread_creation_queue = () => {
  * @returns {Object} Mock job object
  */
 const create_mock_job = () => {
-  log('Redis not available, returning mock job object')
+  log('WARNING: Redis not available, returning mock job object')
   return {
     id: `mock-${randomUUID()}`,
-    queue_position: 1
+    queue_position: 1,
+    is_mock: true
   }
 }
 

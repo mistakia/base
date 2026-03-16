@@ -5,7 +5,7 @@ import { hideBin } from 'yargs/helpers'
 
 import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
-import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import config from '#config'
 import is_main from '#libs-server/utils/is-main.mjs'
@@ -59,22 +59,8 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     return thread
   }
 
-  // Update metadata
-  const metadata_path = path.join(thread.context_dir, 'metadata.json')
-  const metadata = { ...thread }
-
-  delete metadata.is_redacted
-  delete metadata.timeline
-  delete metadata.context_dir
-
-  // Set new thread_state
-  metadata.thread_state = thread_state
-  metadata.updated_at = new Date().toISOString()
-
-  // Add thread_state-specific fields
+  // Validate archive requirements before attempting write
   if (thread_state === THREAD_STATE.ARCHIVED) {
-    metadata.archived_at = new Date().toISOString()
-    // Require archive_reason when archiving
     if (!reason) {
       const valid_reasons = Object.values(ARCHIVE_REASON).join(', ')
       throw new Error(
@@ -82,20 +68,32 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
       )
     }
     validate_archive_reason(reason)
-    metadata.archive_reason = reason
   }
 
-  // Remove thread_state-specific fields if no longer applicable
-  if (thread_state !== THREAD_STATE.ARCHIVED) {
-    delete metadata.archived_at
-    delete metadata.archive_reason
-  }
-
-  // Write updated metadata
-  await write_file_to_filesystem({
+  // Atomic read-modify-write with optimistic concurrency
+  const metadata_path = path.join(thread.context_dir, 'metadata.json')
+  const written = await read_modify_write({
     absolute_path: metadata_path,
-    file_content: JSON.stringify(metadata, null, 2)
+    modify: (content) => {
+      const metadata = JSON.parse(content)
+
+      metadata.thread_state = thread_state
+      metadata.updated_at = new Date().toISOString()
+
+      if (thread_state === THREAD_STATE.ARCHIVED) {
+        metadata.archived_at = new Date().toISOString()
+        metadata.archive_reason = reason
+      }
+
+      if (thread_state !== THREAD_STATE.ARCHIVED) {
+        delete metadata.archived_at
+        delete metadata.archive_reason
+      }
+
+      return JSON.stringify(metadata, null, 2)
+    }
   })
+  const metadata = JSON.parse(written)
 
   // Add thread_state change entry to timeline
   const timeline_entry = {
@@ -173,13 +171,7 @@ export async function update_thread_metadata({
     thread_id
   })
 
-  // Update metadata
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
-  const current_metadata = { ...thread }
-
-  delete current_metadata.is_redacted
-  delete current_metadata.timeline
-  delete current_metadata.context_dir
 
   // Prevent updating protected fields
   const protected_fields = ['thread_id', 'user_public_key', 'created_at']
@@ -228,18 +220,20 @@ export async function update_thread_metadata({
     })
   }
 
-  // Update metadata
-  const updated_metadata = {
-    ...current_metadata,
-    ...metadata,
-    updated_at: new Date().toISOString()
-  }
-
-  // Write updated metadata
-  await write_file_to_filesystem({
+  // Atomic read-modify-write with optimistic concurrency
+  const written = await read_modify_write({
     absolute_path: metadata_path,
-    file_content: JSON.stringify(updated_metadata, null, 2)
+    modify: (content) => {
+      const current = JSON.parse(content)
+      const updated = {
+        ...current,
+        ...metadata,
+        updated_at: new Date().toISOString()
+      }
+      return JSON.stringify(updated, null, 2)
+    }
   })
+  const updated_metadata = JSON.parse(written)
 
   // Return updated thread data
   return {

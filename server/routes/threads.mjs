@@ -37,6 +37,7 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { handle_errors } from '#libs-server/utils/api-error.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -106,14 +107,6 @@ async function apply_permission_based_redaction(thread, user_public_key) {
 
   const can_write = permission_result.write?.allowed ?? false
   return { ...thread, can_write }
-}
-
-function handle_errors(res, error, operation) {
-  log(`Error ${operation}: ${error.message}`)
-  res.status(500).json({
-    error: `Failed to ${operation}`,
-    message: error.message
-  })
 }
 
 /**

@@ -770,6 +770,22 @@ export const create_session_claude_cli = async ({
   // -------------------------
 
   return new Promise((resolve, reject) => {
+    // Settlement guard: prevent double resolve/reject when timeout fires
+    // but process close event also fires shortly after
+    let settled = false
+
+    const guarded_resolve = (value) => {
+      if (settled) return
+      settled = true
+      resolve(value)
+    }
+
+    const guarded_reject = (error) => {
+      if (settled) return
+      settled = true
+      reject(error)
+    }
+
     // Spawn Claude CLI process
     // stdio: 'ignore' because CLI writes output to .claude/ directory
     const child = spawn(spawn_command, spawn_args, spawn_options)
@@ -778,7 +794,7 @@ export const create_session_claude_cli = async ({
     const timeout_handle = setup_process_timeout({
       child,
       timeout_minutes,
-      reject
+      reject: guarded_reject
     })
 
     // -------------------------
@@ -791,7 +807,7 @@ export const create_session_claude_cli = async ({
       log(`Process closed: exit_code=${code}, signal=${signal || 'none'}`)
 
       if (code === 0) {
-        resolve(
+        guarded_resolve(
           build_success_result({
             working_directory: validated_working_directory,
             session_id,
@@ -802,7 +818,7 @@ export const create_session_claude_cli = async ({
         const signal_info = signal ? ` (signal: ${signal})` : ''
         const error_message = `Claude CLI exited with code ${code}${signal_info}`
         log(`Error: ${error_message}`)
-        reject(new Error(error_message))
+        guarded_reject(new Error(error_message))
       }
     })
 
@@ -810,7 +826,7 @@ export const create_session_claude_cli = async ({
       clear_process_timeout(timeout_handle)
 
       log(`Process spawn error: ${error.message}`)
-      reject(new Error(`Failed to spawn Claude CLI: ${error.message}`))
+      guarded_reject(new Error(`Failed to spawn Claude CLI: ${error.message}`))
     })
   })
 }

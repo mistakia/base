@@ -1,21 +1,9 @@
 import express from 'express'
-import debug from 'debug'
 
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
+import { handle_errors } from '#libs-server/utils/api-error.mjs'
 
 const router = express.Router()
-const log = debug('api:models')
-
-/**
- * Handle errors consistently
- */
-function handle_errors(res, error, operation) {
-  log(`Error ${operation}: ${error.message}`)
-  res.status(500).json({
-    error: `Failed to ${operation}`,
-    message: error.message
-  })
-}
 
 // Get cached models data
 router.get('/', async (req, res) => {

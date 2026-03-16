@@ -153,6 +153,7 @@ async function emit_to_subscribers(file_path, event_type) {
  * @returns {Promise<number>} Number of clients notified
  */
 export async function emit_file_changed(file_path) {
+  if (!is_watching) return 0
   return emit_to_subscribers(file_path, 'FILE_CHANGED')
 }
 
@@ -162,6 +163,7 @@ export async function emit_file_changed(file_path) {
  * @returns {Promise<number>} Number of clients notified
  */
 export async function emit_file_deleted(file_path) {
+  if (!is_watching) return 0
   return emit_to_subscribers(file_path, 'FILE_DELETED')
 }
 
