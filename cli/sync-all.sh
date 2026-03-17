@@ -645,10 +645,14 @@ sync_repo() {
         else
             # Submodule: rebase (autostash for dirty submodule pointers from GitHub repos)
             log "$repo_name: diverged, rebasing..."
-            if ! git -C "$dir" rebase --autostash "$remote_branch" 2>/dev/null; then
+            local rebase_stderr rebase_rc=0
+            rebase_stderr=$(git -C "$dir" rebase --autostash "$remote_branch" 2>&1 >/dev/null) || rebase_rc=$?
+            if [ "$rebase_rc" -ne 0 ]; then
                 git -C "$dir" rebase --abort 2>/dev/null || true
-                log_error "$repo_name: rebase failed (diverged)"
-                discord_notify_failure "$repo_name" "rebase failed (diverged)"
+                local rebase_reason
+                rebase_reason=$(echo "$rebase_stderr" | grep -m1 -iE "error:|fatal:" | sed 's/^[[:space:]]*//' | head -c 200)
+                log_error "$repo_name: rebase failed (diverged)${rebase_reason:+ -- $rebase_reason}"
+                discord_notify_failure "$repo_name" "rebase failed (diverged)${rebase_reason:+ -- $rebase_reason}"
                 log_telemetry "$repo_name" "rebase_failed" "diverged"
                 return 1
             fi
