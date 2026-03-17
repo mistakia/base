@@ -146,10 +146,11 @@ const process_thread_creation_job = async (job) => {
     }
   }, LOCK_EXTEND_INTERVAL_MS)
 
+  // Declared outside try/catch so the catch block can access them
+  let claude_config_dir = null
+  let selected_account = null
+
   try {
-    // Select account for rotation (returns null if feature disabled)
-    let claude_config_dir = null
-    let selected_account = null
     try {
       selected_account = await select_account({
         execution_mode: execution_mode || 'host'
