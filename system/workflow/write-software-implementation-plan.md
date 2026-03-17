@@ -107,6 +107,7 @@ Create structured implementation plans by understanding requirements, analyzing 
   - Only update the task entity file at the very end, after the user confirms the final plan
 - If no task entity is known:
   - Follow **Step 2** (Task Entity Setup) from [[sys:system/workflow/write-task.md]] for schema reading, folder placement, and tag selection
+  - **Before creating, verify the target path does not already exist** (check the filesystem or use `base entity get`). If a file exists at the intended path, choose a different filename to avoid overwriting existing work.
   - Create the entity using `base entity create` CLI (via Bash tool)
   - Include the full implementation plan in the `entity_content` field
 

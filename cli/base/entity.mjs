@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs/promises'
+import { existsSync } from 'fs'
 import path from 'path'
 import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
@@ -94,6 +95,12 @@ export const builder = (yargs) =>
           })
           .option('public-read', {
             describe: 'Set entity as publicly readable',
+            type: 'boolean',
+            default: false
+          })
+          .option('force', {
+            alias: 'f',
+            describe: 'Overwrite existing entity file',
             type: 'boolean',
             default: false
           })
@@ -501,6 +508,12 @@ async function handle_create(argv) {
     }
 
     const absolute_path = resolve_base_uri_from_registry(base_uri)
+
+    if (existsSync(absolute_path) && !argv.force) {
+      throw new Error(
+        `Entity already exists at ${absolute_path}. Use --force to overwrite.`
+      )
+    }
 
     if (argv['dry-run']) {
       if (argv.json) {
