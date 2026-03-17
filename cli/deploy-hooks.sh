@@ -77,7 +77,8 @@ if [ "$DEPLOY_POST_RECEIVE" = true ]; then
 # Post-receive hook for $bare_repo
 # Deployed by deploy-hooks.sh - do not edit manually
 #
-# Updates local working copy and triggers MacBook sync
+# Updates local working copy
+# MacBook-initiated sync model: storage does not trigger macbook sync (see sync-thread-data.sh)
 
 USER_BASE_DIRECTORY=$REMOTE_USER_BASE
 CLI_DIR=\"\$USER_BASE_DIRECTORY/repository/active/base/cli\"
@@ -85,11 +86,6 @@ CLI_DIR=\"\$USER_BASE_DIRECTORY/repository/active/base/cli\"
 # Update local working copy (backgrounded so hook returns quickly)
 USER_BASE_DIRECTORY=\"\$USER_BASE_DIRECTORY\" \\
     \"\$CLI_DIR/$pull_script\" &
-
-# Trigger MacBook sync (backgrounded, tolerates failure)
-ssh -o ConnectTimeout=5 -o BatchMode=yes macbook \\
-    'USER_BASE_DIRECTORY=$MACBOOK_USER_BASE $MACBOOK_USER_BASE/repository/active/base/cli/sync-all.sh' \\
-    &>/dev/null &
 "
 
         if [ "$DRY_RUN" = true ]; then
