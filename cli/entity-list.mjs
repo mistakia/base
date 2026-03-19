@@ -162,13 +162,8 @@ export async function list_entities({
     })
   }
 
-  if (search) {
-    filters.push({
-      column_id: 'title',
-      operator: 'LIKE',
-      value: search
-    })
-  }
+  // search is passed as a dedicated parameter to query_entities_from_duckdb
+  // which searches across title and description using ILIKE
 
   // Note: yargs interprets --no-<option> as negating the option, setting it to false
   // We need to check that tags contains actual tag URIs, not just [false]
@@ -198,7 +193,8 @@ export async function list_entities({
     filters,
     sort,
     limit,
-    offset
+    offset,
+    search
   })
 
   // Include content if requested

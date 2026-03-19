@@ -568,7 +568,8 @@ export async function query_entities_from_duckdb({
   filters = [],
   sort = [],
   limit = 1000,
-  offset = 0
+  offset = 0,
+  search
 }) {
   log('Querying entities from DuckDB')
 
@@ -580,8 +581,27 @@ export async function query_entities_from_duckdb({
     filters: regular_filters
   })
   const order_sql = build_duckdb_order_clause({ sort })
-  const final_where = combine_where_clauses({
-    base_where: where_sql,
+
+  // Build search conditions for title and description (case-insensitive)
+  const search_params = []
+  let search_condition = null
+  if (search) {
+    const escaped_search = escape_like_metacharacters(search)
+    const search_pattern = `%${escaped_search}%`
+    search_condition =
+      '(e.title ILIKE ? OR e.description ILIKE ?)'
+    search_params.push(search_pattern, search_pattern)
+  }
+
+  let final_where = where_sql
+  if (search_condition) {
+    final_where = combine_where_clauses({
+      base_where: final_where,
+      additional_condition: search_condition
+    })
+  }
+  final_where = combine_where_clauses({
+    base_where: final_where,
     additional_condition: tag_conditions.sql
   })
 
@@ -592,7 +612,13 @@ export async function query_entities_from_duckdb({
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, ...tag_conditions.parameters, limit, offset]
+      parameters: [
+        ...parameters,
+        ...search_params,
+        ...tag_conditions.parameters,
+        limit,
+        offset
+      ]
     })
 
     const entities_with_tags = results.map(transform_entity_result)
@@ -657,7 +683,7 @@ export async function get_entity_by_id({ entity_id }) {
 /**
  * Count entities in unified entities table
  */
-export async function count_entities_in_duckdb({ filters = [] }) {
+export async function count_entities_in_duckdb({ filters = [], search }) {
   log('Counting entities in DuckDB')
 
   const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
@@ -667,8 +693,26 @@ export async function count_entities_in_duckdb({ filters = [] }) {
   const { where_sql, parameters } = build_duckdb_where_clause({
     filters: regular_filters
   })
-  const final_where = combine_where_clauses({
-    base_where: where_sql,
+
+  const search_params = []
+  let search_condition = null
+  if (search) {
+    const escaped_search = escape_like_metacharacters(search)
+    const search_pattern = `%${escaped_search}%`
+    search_condition =
+      '(e.title ILIKE ? OR e.description ILIKE ?)'
+    search_params.push(search_pattern, search_pattern)
+  }
+
+  let final_where = where_sql
+  if (search_condition) {
+    final_where = combine_where_clauses({
+      base_where: final_where,
+      additional_condition: search_condition
+    })
+  }
+  final_where = combine_where_clauses({
+    base_where: final_where,
     additional_condition: tag_conditions.sql
   })
 
@@ -677,7 +721,11 @@ export async function count_entities_in_duckdb({ filters = [] }) {
   try {
     const results = await execute_duckdb_query({
       query,
-      parameters: [...parameters, ...tag_conditions.parameters]
+      parameters: [
+        ...parameters,
+        ...search_params,
+        ...tag_conditions.parameters
+      ]
     })
     const count_value = results[0]?.count
     const count =

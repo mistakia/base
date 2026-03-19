@@ -179,10 +179,6 @@ router.get('/', async (req, res) => {
       filters.push({ column_id: 'archived', operator: '=', value: false })
     }
 
-    if (search) {
-      filters.push({ column_id: 'title', operator: 'LIKE', value: search })
-    }
-
     if (tags.length > 0 && !without_tags_filter) {
       filters.push({ column_id: 'tags', operator: 'IN', value: tags })
     }
@@ -194,9 +190,16 @@ router.get('/', async (req, res) => {
     const sort_config = [{ column_id: sort, desc: sort_descending }]
 
     // Query entities and count
+    // search is passed as a dedicated parameter to search across title and description
     const [entities, total] = await Promise.all([
-      query_entities_from_duckdb({ filters, sort: sort_config, limit, offset }),
-      count_entities_in_duckdb({ filters })
+      query_entities_from_duckdb({
+        filters,
+        sort: sort_config,
+        limit,
+        offset,
+        search
+      }),
+      count_entities_in_duckdb({ filters, search })
     ])
 
     // Apply permission-based filtering and tag/relation redaction
