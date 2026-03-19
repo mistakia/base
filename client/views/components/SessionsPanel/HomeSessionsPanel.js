@@ -34,9 +34,9 @@ const normalize_session = (session, get_thread, prompt_snippets = {}) => {
   const thread = has_thread ? get_thread(session.thread_id) : null
   const is_thread_archived = !thread || thread.thread_state === 'archived'
 
-  // Show actions only for idle sessions with non-archived threads and write permission
+  // Show actions for non-running sessions with non-archived threads and write permission
   const show_actions =
-    is_idle && has_thread && !is_redacted && !is_thread_archived && can_write
+    !is_running && has_thread && !is_redacted && !is_thread_archived && can_write
 
   return {
     id: session.thread_id,

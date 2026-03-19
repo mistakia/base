@@ -112,7 +112,6 @@ const SessionCard = ({ item }) => {
   const card_classes = [
     'session-card',
     item.status === 'running' ? 'session-card--running' : '',
-    item.status === 'ended' ? 'session-card--ended' : '',
     item.id || item.session_id ? 'session-card--clickable' : '',
     item.is_other_user ? 'session-card--other-user' : ''
   ]
