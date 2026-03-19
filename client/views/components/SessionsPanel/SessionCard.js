@@ -152,27 +152,35 @@ const SessionCard = ({ item }) => {
         </span>
       </div>
 
-      {(item.status === 'running' || item.status === 'idle') ? (
-        <SessionActivityBar
-          active_session={{
-            session_id: item.session_id,
-            status: item.status === 'running' ? 'active' : 'idle',
-            started_at: item.created_at,
-            last_activity_at: item.updated_at,
-            total_tokens: item.total_tokens
-          }}
-          compact
-        />
-      ) : item.latest_timeline_event ? (
+      {item.latest_timeline_event &&
+        item.status !== 'running' &&
+        item.status !== 'idle' && (
         <CompactTimelineEvent
           timeline_event={item.latest_timeline_event}
           thread_id={item.id}
         />
-      ) : null}
+      )}
 
-      {show_footer && (
+      {(show_footer || item.status === 'running' || item.status === 'idle') && (
         <div className='session-card__footer'>
           <div className='session-card__details'>
+            {(item.status === 'running' || item.status === 'idle') && (
+              <>
+                <SessionActivityBar
+                  active_session={{
+                    session_id: item.session_id,
+                    status: item.status === 'running' ? 'active' : 'idle',
+                    started_at: item.created_at,
+                    last_activity_at: item.updated_at,
+                    total_tokens: item.total_tokens
+                  }}
+                  compact
+                />
+                {has_details && (
+                  <span className='session-card__separator'>•</span>
+                )}
+              </>
+            )}
             {working_directory && (
               <>
                 <span className='session-card__directory'>

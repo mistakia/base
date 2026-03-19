@@ -547,7 +547,7 @@ SessionSheetPanel.propTypes = {
   stack_size: PropTypes.number
 }
 
-// Container that renders all stacked sheets
+// Container that renders only the topmost sheet
 const ThreadSheet = () => {
   const sheets = useSelector(get_thread_sheet_sheets)
 
@@ -556,25 +556,24 @@ const ThreadSheet = () => {
   }
 
   const sheet_list = sheets.toJS()
+  const top_sheet_id = sheet_list[sheet_list.length - 1]
 
   return (
     <div className='thread-sheet__container'>
-      {sheet_list.map((sheet_id, index) =>
-        sheet_id.startsWith('session:') ? (
-          <SessionSheetPanel
-            key={sheet_id}
-            sheet_key={sheet_id}
-            stack_index={index}
-            stack_size={sheet_list.length}
-          />
-        ) : (
-          <SingleThreadSheet
-            key={sheet_id}
-            thread_id={sheet_id}
-            stack_index={index}
-            stack_size={sheet_list.length}
-          />
-        )
+      {top_sheet_id.startsWith('session:') ? (
+        <SessionSheetPanel
+          key={top_sheet_id}
+          sheet_key={top_sheet_id}
+          stack_index={0}
+          stack_size={1}
+        />
+      ) : (
+        <SingleThreadSheet
+          key={top_sheet_id}
+          thread_id={top_sheet_id}
+          stack_index={0}
+          stack_size={1}
+        />
       )}
     </div>
   )
