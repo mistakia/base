@@ -81,11 +81,27 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
         : account.config_dir
 
     // Resolve tilde to absolute path (tilde won't expand in env vars)
-    const config_dir = raw_dir?.startsWith('~/')
+    const resolved_dir = raw_dir?.startsWith('~/')
       ? path.join(os.homedir(), raw_dir.slice(2))
       : raw_dir
 
-    log('Selected account: %s (config_dir: %s)', account.namespace, config_dir)
+    // Do not set CLAUDE_CONFIG_DIR for the default ~/.claude/ directory.
+    // Claude Code stores its config at ~/.claude.json by default; setting
+    // CLAUDE_CONFIG_DIR=~/.claude/ makes it look for ~/.claude/.claude.json
+    // instead, which is a different file that lacks auth data.
+    const default_dir = path.join(os.homedir(), '.claude')
+    const is_default =
+      resolved_dir === default_dir ||
+      resolved_dir === default_dir + '/' ||
+      raw_dir === '~/.claude/' ||
+      raw_dir === '~/.claude'
+    const config_dir = is_default ? null : resolved_dir
+
+    log(
+      'Selected account: %s (config_dir: %s)',
+      account.namespace,
+      config_dir || '(default)'
+    )
 
     return {
       namespace: account.namespace,
