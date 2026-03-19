@@ -121,7 +121,10 @@ export const get_all_sessions_with_pending = createSelector(
     all_sessions.sort((a, b) => {
       const a_time = new Date(a.created_at || a.started_at || 0).getTime()
       const b_time = new Date(b.created_at || b.started_at || 0).getTime()
-      return b_time - a_time
+      if (b_time !== a_time) return b_time - a_time
+      const a_id = a.session_id || a.job_id || ''
+      const b_id = b.session_id || b.job_id || ''
+      return a_id.localeCompare(b_id)
     })
 
     return all_sessions

@@ -340,8 +340,15 @@ router.post('/', async (req, res) => {
 router.put('/:session_id', async (req, res) => {
   const { log } = req.app.locals
   const { session_id } = req.params
-  const { status, thread_id, working_directory, transcript_path, job_id } =
-    req.body
+  const {
+    status,
+    thread_id,
+    working_directory,
+    transcript_path,
+    job_id,
+    context_percentage,
+    context_window_size
+  } = req.body
 
   try {
     // Read stored session state before updating to track thread discovery
@@ -355,7 +362,9 @@ router.put('/:session_id', async (req, res) => {
       thread_id,
       working_directory,
       transcript_path,
-      job_id
+      job_id,
+      context_percentage,
+      context_window_size
     })
 
     // If no thread_id yet, try to find one

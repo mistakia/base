@@ -511,7 +511,40 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       // thread and contain only summary fields for session card display.
       let new_state = state
       if (!entry.truncated) {
-        new_state = append_timeline_entry(state, thread_id, entry)
+        // If this is a user message, check for and replace any optimistic entry
+        if (entry.type === 'message' && entry.role === 'user') {
+          new_state = update_selected_thread_if_matches(
+            new_state,
+            thread_id,
+            (thread_data) =>
+              thread_data.update('timeline', (timeline) => {
+                if (!timeline || !Array.isArray(timeline)) return timeline
+                const optimistic_index = timeline.findIndex(
+                  (e) => e._optimistic && e.role === 'user'
+                )
+                if (optimistic_index !== -1) {
+                  const updated = [...timeline]
+                  updated[optimistic_index] = entry
+                  return updated
+                }
+                return timeline
+              })
+          )
+          // If we replaced an optimistic entry, don't append again
+          const current_timeline = new_state.getIn([
+            'selected_thread_data',
+            'timeline'
+          ])
+          const already_has_entry =
+            current_timeline &&
+            Array.isArray(current_timeline) &&
+            current_timeline.some((e) => e.id === entry.id)
+          if (!already_has_entry) {
+            new_state = append_timeline_entry(new_state, thread_id, entry)
+          }
+        } else {
+          new_state = append_timeline_entry(new_state, thread_id, entry)
+        }
       }
 
       // Update the basic threads list with the latest_timeline_event
@@ -554,13 +587,30 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
         return state
       }
-      return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
-        entry.merge({
-          status: 'queued',
-          job_id: data?.job_id || null,
-          queue_position: data?.queue_position ?? null
-        })
+      let new_state = state.updateIn(
+        ['thread_pending_resumes', thread_id],
+        (entry) =>
+          entry.merge({
+            status: 'queued',
+            job_id: data?.job_id || null,
+            queue_position: data?.queue_position ?? null
+          })
       )
+
+      // Insert optimistic user message into the selected thread timeline
+      if (opts.prompt) {
+        const optimistic_entry = {
+          id: `optimistic-${thread_id}-${Date.now()}`,
+          type: 'message',
+          role: 'user',
+          content: opts.prompt,
+          created_at: new Date().toISOString(),
+          _optimistic: true
+        }
+        new_state = append_timeline_entry(new_state, thread_id, optimistic_entry)
+      }
+
+      return new_state
     }
 
     case threads_action_types.RESUME_THREAD_SESSION_FAILED: {

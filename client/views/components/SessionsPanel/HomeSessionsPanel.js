@@ -177,7 +177,12 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
     return null
   }
 
-  const sessions_list = filtered_sessions
+  const sessions_list = [...filtered_sessions].sort((a, b) => {
+    const a_time = new Date(a.created_at || 0).getTime()
+    const b_time = new Date(b.created_at || 0).getTime()
+    if (b_time !== a_time) return b_time - a_time
+    return (a.session_id || '').localeCompare(b.session_id || '')
+  })
   const threads_list = displayed_threads
 
   return (

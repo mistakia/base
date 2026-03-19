@@ -7,6 +7,7 @@ import {
   format_shorthand_number
 } from '@views/utils/date-formatting.js'
 import CompactTimelineEvent from './CompactTimelineEvent.js'
+import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { threads_actions } from '@core/threads/actions.js'
 import { thread_sheet_actions } from '@core/thread-sheet/index.js'
@@ -151,12 +152,23 @@ const SessionCard = ({ item }) => {
         </span>
       </div>
 
-      {item.latest_timeline_event && (
+      {(item.status === 'running' || item.status === 'idle') ? (
+        <SessionActivityBar
+          active_session={{
+            session_id: item.session_id,
+            status: item.status === 'running' ? 'active' : 'idle',
+            started_at: item.created_at,
+            last_activity_at: item.updated_at,
+            total_tokens: item.total_tokens
+          }}
+          compact
+        />
+      ) : item.latest_timeline_event ? (
         <CompactTimelineEvent
           timeline_event={item.latest_timeline_event}
           thread_id={item.id}
         />
-      )}
+      ) : null}
 
       {show_footer && (
         <div className='session-card__footer'>

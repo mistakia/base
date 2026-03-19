@@ -32,6 +32,7 @@ import {
 import ThreadHeader from '@components/ThreadTimelineView/ThreadHeader'
 import TimelineList from '@components/ThreadTimelineView/TimelineList'
 import UserMessage from '@components/ThreadTimelineView/UserMessage'
+import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
 import Button from '@components/primitives/Button'
 
 import './ThreadSheet.styl'
@@ -420,9 +421,20 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
         )}
       </div>
 
-      {/* Pending resume status indicator */}
+      {/* Pending resume status indicator with activity bar */}
       {pending_resume && (
-        <ResumeStatusIndicator pending_resume={pending_resume} />
+        <>
+          <ResumeStatusIndicator pending_resume={pending_resume} />
+          {['queued', 'starting'].includes(pending_resume.get('status')) && (
+            <SessionActivityBar
+              active_session={{
+                session_id: thread_id,
+                status: pending_resume.get('status') === 'starting' ? 'active' : 'pending',
+                created_at: pending_resume.get('submitted_at')
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Fixed thread input at bottom */}
@@ -513,12 +525,16 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
             />
           )}
           {status !== 'ended' && (
-            <div className='thread-sheet__session-live-indicator'>
-              <span className='thread-sheet__session-live-dot' />
-              <span className='thread-sheet__session-live-text'>
-                Session in progress
-              </span>
-            </div>
+            <SessionActivityBar
+              active_session={{
+                session_id,
+                status: status === 'active' ? 'active' : 'pending',
+                started_at: session?.started_at || session?.created_at,
+                created_at: session?.created_at,
+                last_activity_at: session?.last_activity_at,
+                total_tokens: session?.total_tokens
+              }}
+            />
           )}
         </div>
       </div>

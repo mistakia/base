@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
-import { COLORS } from '@theme/colors.js'
 import TimelineEvent from './TimelineEvent'
 import CollapsibleEventGroup from './CollapsibleEventGroup'
 import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
 import { group_tool_entries } from './utils/group-tool-entries'
+import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
 
 // Length threshold for considering an assistant message as "notable"
 const NOTABLE_ASSISTANT_MESSAGE_LENGTH = 500
@@ -53,54 +52,6 @@ const is_notable_event = (entry) => {
   }
 
   return false
-}
-
-// Live Session Indicator component
-const LIVE_INDICATOR_STYLES = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 16px',
-    marginLeft: '0',
-    marginTop: '8px',
-    marginBottom: '8px',
-    borderRadius: '8px',
-    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-    border: '1px solid rgba(76, 175, 80, 0.2)'
-  },
-  dot: {
-    fontSize: '12px',
-    color: COLORS.success,
-    animation: 'pulse 1.5s ease-in-out infinite'
-  },
-  text: {
-    fontSize: '13px',
-    fontWeight: 500,
-    color: COLORS.success
-  }
-}
-
-const LiveSessionIndicator = ({ active_session }) => {
-  if (!active_session) return null
-
-  const status = active_session.get
-    ? active_session.get('status')
-    : active_session.status
-  const is_active = status === 'active'
-
-  if (!is_active) return null
-
-  return (
-    <Box sx={LIVE_INDICATOR_STYLES.container}>
-      <FiberManualRecordIcon sx={LIVE_INDICATOR_STYLES.dot} />
-      <span style={LIVE_INDICATOR_STYLES.text}>Live session in progress</span>
-    </Box>
-  )
-}
-
-LiveSessionIndicator.propTypes = {
-  active_session: PropTypes.object
 }
 
 const TimelineList = ({
@@ -588,9 +539,9 @@ const TimelineList = ({
       {/* Render timeline events */}
       {render_content()}
 
-      {/* Live session indicator - only show for top-level timeline with active session */}
+      {/* Activity bar - only show for top-level timeline with active session */}
       {!include_sidechain && active_session && (
-        <LiveSessionIndicator active_session={active_session} />
+        <SessionActivityBar active_session={active_session} />
       )}
 
       {/* Floating scroll to bottom button - only show for top-level timeline */}

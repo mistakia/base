@@ -185,7 +185,9 @@ export const update_active_session = async ({
   duration_minutes,
   total_tokens,
   source_provider,
-  job_id
+  job_id,
+  context_percentage,
+  context_window_size
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
@@ -206,6 +208,10 @@ export const update_active_session = async ({
   if (total_tokens !== undefined) updates.total_tokens = total_tokens
   if (source_provider !== undefined) updates.source_provider = source_provider
   if (job_id !== undefined) updates.job_id = job_id
+  if (context_percentage !== undefined)
+    updates.context_percentage = context_percentage
+  if (context_window_size !== undefined)
+    updates.context_window_size = context_window_size
 
   const now = new Date().toISOString()
 
