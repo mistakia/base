@@ -605,8 +605,17 @@ export async function query_entities_from_duckdb({
     additional_condition: tag_conditions.sql
   })
 
+  // When search is provided and no explicit sort, order by relevance:
+  // title matches first, then description-only matches, then by updated_at
+  let final_order = order_sql
+  const relevance_params = []
+  if (search && sort.length === 0) {
+    final_order = 'ORDER BY CASE WHEN e.title ILIKE ? THEN 0 ELSE 1 END, e.updated_at DESC'
+    relevance_params.push(search_params[0])
+  }
+
   const query =
-    build_entity_query({ where_clause: final_where, order_clause: order_sql }) +
+    build_entity_query({ where_clause: final_where, order_clause: final_order }) +
     'LIMIT ? OFFSET ?'
 
   try {
@@ -616,6 +625,7 @@ export async function query_entities_from_duckdb({
         ...parameters,
         ...search_params,
         ...tag_conditions.parameters,
+        ...relevance_params,
         limit,
         offset
       ]

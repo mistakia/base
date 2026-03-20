@@ -6,8 +6,10 @@ import {
   check_permissions_batch
 } from '#server/middleware/permission/index.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
-import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { create_base_uri_from_path, resolve_base_uri, parse_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { query_entities_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
 import { search_file_contents_with_context } from '#libs-server/search/ripgrep-file-search.mjs'
 import { search_semantic } from '#libs-server/search/semantic-search-engine.mjs'
 import {
@@ -277,16 +279,89 @@ router.get('/', async (req, res) => {
       })
     }
 
+    // In full mode, query entities from DuckDB directly instead of path-based scoring
+    let duckdb_entity_results = null
+    let unified_types = [...types]
+
+    if (mode === 'full' && types.includes('entities')) {
+      const duckdb_ready = embedded_index_manager.is_duckdb_ready()
+
+      if (duckdb_ready) {
+        // Build DuckDB filters for entity_types and tags
+        const duckdb_filters = []
+        if (entity_types && entity_types.length > 0) {
+          const non_thread_types = entity_types.filter((t) => t !== 'thread')
+          if (non_thread_types.length > 0) {
+            duckdb_filters.push({
+              column_id: 'type',
+              operator: 'IN',
+              value: non_thread_types
+            })
+          }
+        }
+        if (tags && tags.length > 0) {
+          duckdb_filters.push({
+            column_id: 'tags',
+            operator: 'IN',
+            value: tags
+          })
+        }
+
+        const per_type_limit = Math.max(
+          1,
+          Math.ceil(limit / types.length)
+        )
+
+        try {
+          const db_results = await query_entities_from_duckdb({
+            filters: duckdb_filters,
+            search: query,
+            limit: per_type_limit
+          })
+
+          // Only use DuckDB results if we got matches; otherwise let unified_search handle entities
+          if (db_results.length > 0) {
+            // Shape results to match expected entity result format
+            duckdb_entity_results = db_results.map((entity) => {
+              const absolute_path = resolve_base_uri(entity.base_uri)
+              const file_path = parse_base_uri(entity.base_uri).path
+              return {
+                file_path,
+                absolute_path,
+                base_uri: entity.base_uri,
+                category: 'entity',
+                type: 'entity',
+                title: entity.title,
+                description: entity.description
+              }
+            })
+
+            // Remove entities from unified_search types since DuckDB handles them
+            unified_types = unified_types.filter((t) => t !== 'entities')
+          }
+        } catch (err) {
+          log('DuckDB entity search failed, falling back to path scoring: %s', err.message)
+          // Fall through to unified_search with entities included
+        }
+      }
+    }
+
     // Perform default search (paths or full mode)
-    const search_results = await unified_search({
-      query,
-      mode,
-      directory,
-      types,
-      limit,
-      entity_types,
-      tags
-    })
+    // Skip unified_search entirely when DuckDB handled all requested types
+    const search_results = (mode === 'full' && unified_types.length === 0)
+      ? { mode: 'full', query, files: [], threads: [], entities: [], directories: [], total: 0 }
+      : await unified_search({
+          query,
+          mode,
+          directory,
+          types: unified_types,
+          limit
+        })
+
+    // Merge DuckDB entity results if available
+    if (duckdb_entity_results) {
+      search_results.entities = duckdb_entity_results
+    }
 
     const full_result_types = ['files', 'threads', 'entities', 'directories']
 
