@@ -35,7 +35,7 @@ const FILE_NAMES = {
 // ============================================================================
 
 // Track last-seen timeline state per thread
-// Map<thread_id, { timestamp: string, byte_offset: number }>
+// Map<thread_id, { timestamp: string, byte_offset: number, ino: number|null }>
 const last_seen_state = new Map()
 
 // Cache of latest non-system timeline entry per thread
@@ -169,6 +169,24 @@ const read_thread_metadata = async (file_path) => {
   }
 }
 
+/**
+ * Get thread metadata from cache, falling back to disk read.
+ *
+ * @param {string} thread_id - UUID of the thread
+ * @param {string} metadata_dir - Directory containing metadata.json
+ * @returns {Promise<Object|null>} Parsed metadata or null
+ */
+const get_or_read_metadata = async (thread_id, metadata_dir) => {
+  let metadata = metadata_cache.get(thread_id)
+  if (!metadata) {
+    metadata = await read_thread_metadata(path.join(metadata_dir, FILE_NAMES.METADATA))
+    if (metadata) {
+      metadata_cache.set(thread_id, metadata)
+    }
+  }
+  return metadata
+}
+
 // ============================================================================
 // Incremental Timeline Tracking
 // ============================================================================
@@ -188,14 +206,15 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
   })
 
   if (!result || result.entries.length === 0) {
-    last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
+    last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0, ino: result?.ino ?? null })
     return []
   }
 
   const last_entry = result.entries[result.entries.length - 1]
   last_seen_state.set(thread_id, {
     timestamp: last_entry.timestamp || null,
-    byte_offset: result.new_byte_offset
+    byte_offset: result.new_byte_offset,
+    ino: result.ino ?? null
   })
 
   // Populate latest entry cache
@@ -204,7 +223,7 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
     latest_timeline_entry_cache.set(thread_id, latest)
   }
 
-  log(`Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}`)
+  log(`Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}, ino=${result.ino}`)
   return result.entries
 }
 
@@ -229,22 +248,24 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
 
   const result = await read_timeline_jsonl_from_offset({
     timeline_path,
-    byte_offset: tracked.byte_offset
+    byte_offset: tracked.byte_offset,
+    expected_ino: tracked.ino
   })
 
-  // Truncation detected (atomic rewrite) -- reinitialize from scratch
+  // Inode mismatch or truncation detected (atomic rewrite) -- reinitialize from scratch
   if (result === null) {
-    log(`Truncation detected for thread ${thread_id}, reinitializing tracking`)
+    log(`Rewrite detected for thread ${thread_id} (inode or size mismatch), reinitializing tracking`)
     last_seen_state.delete(thread_id)
     return initialize_thread_tracking(thread_id, timeline_path)
   }
 
-  // Update state with new offset
+  // Update state with new offset and inode
   if (result.entries.length > 0) {
     const latest_entry = result.entries[result.entries.length - 1]
     last_seen_state.set(thread_id, {
       timestamp: latest_entry.timestamp || tracked.timestamp,
-      byte_offset: result.new_byte_offset
+      byte_offset: result.new_byte_offset,
+      ino: result.ino ?? null
     })
 
     // Update latest entry cache
@@ -267,7 +288,8 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
     // Update offset even if no entries (possible blank lines appended)
     last_seen_state.set(thread_id, {
       ...tracked,
-      byte_offset: result.new_byte_offset
+      byte_offset: result.new_byte_offset,
+      ino: result.ino ?? null
     })
   }
 
@@ -300,7 +322,7 @@ const initialize_timeline_tracking_for_new_thread = async (
     })
 
     if (!result || result.entries.length === 0) {
-      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0 })
+      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0, ino: result?.ino ?? null })
       log(`No timeline entries yet for thread ${thread_id}`)
       return
     }
@@ -308,7 +330,8 @@ const initialize_timeline_tracking_for_new_thread = async (
     const last_entry = result.entries[result.entries.length - 1]
     last_seen_state.set(thread_id, {
       timestamp: last_entry.timestamp || null,
-      byte_offset: result.new_byte_offset
+      byte_offset: result.new_byte_offset,
+      ino: result.ino ?? null
     })
 
     // Populate latest entry cache so get_cached_latest_timeline_entry returns a value
@@ -439,18 +462,7 @@ const handle_timeline_changed = async (file_path) => {
     return
   }
 
-  // Use cached metadata if available, otherwise read from disk
-  let metadata = metadata_cache.get(thread_id)
-  if (!metadata) {
-    const metadata_path = path.join(
-      path.dirname(file_path),
-      FILE_NAMES.METADATA
-    )
-    metadata = await read_thread_metadata(metadata_path)
-    if (metadata) {
-      metadata_cache.set(thread_id, metadata)
-    }
-  }
+  const metadata = await get_or_read_metadata(thread_id, path.dirname(file_path))
 
   if (!metadata) {
     log(`Could not read metadata for thread ${thread_id}`)
@@ -461,6 +473,100 @@ const handle_timeline_changed = async (file_path) => {
 
   // Notify index sync hooks (debounced by thread_id)
   schedule_thread_index_sync(thread_id)
+}
+
+// ============================================================================
+// FSEvents Error Recovery
+// ============================================================================
+
+const RECONCILIATION_DEBOUNCE_MS = 5000
+
+let reconciliation_timer = null
+
+/**
+ * Reconcile tracked threads after FSEvents drops events.
+ * Iterates last_seen_state, stats each timeline file, and processes any
+ * with changed inode or size via detect_new_timeline_entries.
+ *
+ * @param {string} thread_directory - Absolute path to thread directory
+ */
+const reconcile_tracked_threads = async (thread_directory) => {
+  log('Starting reconciliation scan of %d tracked threads', last_seen_state.size)
+  let changes_found = 0
+
+  for (const [thread_id, tracked] of last_seen_state.entries()) {
+    const timeline_path = path.join(thread_directory, thread_id, FILE_NAMES.TIMELINE)
+
+    let stat
+    try {
+      stat = await fs.stat(timeline_path)
+    } catch {
+      // File gone or inaccessible -- skip
+      continue
+    }
+
+    // Check for inode or size change
+    const ino_changed = tracked.ino !== null && stat.ino !== tracked.ino
+    const size_changed = stat.size !== tracked.byte_offset
+
+    if (!ino_changed && !size_changed) {
+      continue
+    }
+
+    log(
+      'Reconciliation: thread %s changed (ino: %s, size: %s)',
+      thread_id,
+      ino_changed ? `${tracked.ino}->${stat.ino}` : 'same',
+      size_changed ? `${tracked.byte_offset}->${stat.size}` : 'same'
+    )
+
+    try {
+      const new_entries = await detect_new_timeline_entries({
+        thread_id,
+        timeline_path
+      })
+
+      if (new_entries.length > 0) {
+        changes_found++
+
+        const metadata = await get_or_read_metadata(
+          thread_id,
+          path.join(thread_directory, thread_id)
+        )
+
+        if (metadata) {
+          emit_timeline_entry_events(thread_id, new_entries, metadata)
+          schedule_thread_index_sync(thread_id)
+        }
+      }
+    } catch (error) {
+      log('Reconciliation error for thread %s: %O', thread_id, error)
+    }
+  }
+
+  if (changes_found > 0) {
+    log('Reconciliation scan found missed changes in %d threads', changes_found)
+  } else {
+    log('Reconciliation scan complete, no missed changes')
+  }
+}
+
+/**
+ * Schedule a debounced reconciliation scan.
+ * Coalesces multiple rapid FSEvents errors into a single scan.
+ *
+ * @param {string} thread_directory - Absolute path to thread directory
+ */
+const schedule_reconciliation = (thread_directory) => {
+  if (reconciliation_timer) {
+    clearTimeout(reconciliation_timer)
+  }
+  reconciliation_timer = setTimeout(() => {
+    reconciliation_timer = null
+    reconcile_tracked_threads(thread_directory).catch((error) => {
+      log('Reconciliation scan failed: %O', error)
+    })
+  }, RECONCILIATION_DEBOUNCE_MS)
 }
 
 // ============================================================================
@@ -557,7 +663,11 @@ export const start_thread_watcher = async ({ thread_directory, hooks }) => {
     watcher = await create_parcel_subscription({
       directory: thread_directory,
       ignore: ['**/raw-data'],
-      on_events: (events) => handle_thread_events(events, thread_directory)
+      on_events: (events) => handle_thread_events(events, thread_directory),
+      on_error: () => {
+        log('FSEvents error received, scheduling reconciliation scan')
+        schedule_reconciliation(thread_directory)
+      }
     })
 
     log('Thread watcher ready and monitoring for changes')
@@ -599,6 +709,12 @@ export const stop_thread_watcher = async () => {
     latest_timeline_entry_cache.clear()
     metadata_cache.clear()
     index_sync_hooks = null
+
+    // Clear reconciliation timer
+    if (reconciliation_timer) {
+      clearTimeout(reconciliation_timer)
+      reconciliation_timer = null
+    }
 
     // Clear index sync debounce timers
     index_sync_debouncer.clear_all()

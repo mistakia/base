@@ -173,6 +173,28 @@ export async function append_timeline_entry_jsonl({ timeline_path, entry }) {
 }
 
 /**
+ * Append multiple entries to a JSONL timeline file in a single write.
+ * Preserves inode (no atomic rename), making byte-offset tracking work naturally.
+ * Partial append on crash is handled by existing malformed-line skip logic in
+ * read_timeline_jsonl_from_offset.
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.timeline_path Path to the timeline.jsonl file
+ * @param {Array} params.entries Array of timeline entries to append
+ * @returns {Promise<void>}
+ */
+export async function append_timeline_entries({ timeline_path, entries }) {
+  if (entries.length === 0) return
+
+  const dir = path.dirname(timeline_path)
+  await fs.mkdir(dir, { recursive: true })
+
+  const data = entries.map((entry) => JSON.stringify(entry) + '\n').join('')
+  await fs.appendFile(timeline_path, data, 'utf-8')
+  log(`Appended ${entries.length} entries to ${timeline_path}`)
+}
+
+/**
  * Read timeline entries or return default if file doesn't exist
  *
  * @param {Object} params Parameters
@@ -191,24 +213,34 @@ export async function read_timeline_jsonl_or_default({
 /**
  * Read timeline entries appended after a given byte offset using streaming.
  * Returns new entries and the updated byte offset, or null if the file was
- * truncated (atomic rewrite detected via stat.size < offset).
+ * truncated or atomically rewritten (detected via size or inode mismatch).
  *
  * @param {Object} params Parameters
  * @param {string} params.timeline_path Path to the timeline.jsonl file
  * @param {number} params.byte_offset Byte position to start reading from
- * @returns {Promise<{entries: Array, new_byte_offset: number}|null>}
- *   Object with new entries and updated offset, or null on truncation
+ * @param {number} [params.expected_ino] Optional expected inode -- mismatch signals atomic rewrite
+ * @returns {Promise<{entries: Array, new_byte_offset: number, ino: number}|null>}
+ *   Object with new entries, updated offset, and current inode, or null on rewrite detection
  */
 export async function read_timeline_jsonl_from_offset({
   timeline_path,
-  byte_offset
+  byte_offset,
+  expected_ino
 }) {
   let stat
   try {
     stat = await fs.stat(timeline_path)
   } catch {
     log(`Timeline file not found for offset read: ${timeline_path}`)
-    return { entries: [], new_byte_offset: byte_offset }
+    return { entries: [], new_byte_offset: byte_offset, ino: 0 }
+  }
+
+  // Detect atomic rewrite via inode mismatch (file replaced by rename)
+  if (expected_ino != null && stat.ino !== expected_ino) {
+    log(
+      `Inode mismatch for ${timeline_path}: expected=${expected_ino} actual=${stat.ino}`
+    )
+    return null
   }
 
   // Detect atomic rewrite (file smaller than expected offset)
@@ -221,7 +253,7 @@ export async function read_timeline_jsonl_from_offset({
 
   // Nothing new appended
   if (stat.size === byte_offset) {
-    return { entries: [], new_byte_offset: byte_offset }
+    return { entries: [], new_byte_offset: byte_offset, ino: stat.ino }
   }
 
   const entries = []
@@ -256,7 +288,7 @@ export async function read_timeline_jsonl_from_offset({
     `Read ${entries.length} new entries from offset ${byte_offset} in ${timeline_path}`
   )
 
-  return { entries, new_byte_offset: stat.size }
+  return { entries, new_byte_offset: stat.size, ino: stat.ino }
 }
 
 /**
