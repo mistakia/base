@@ -413,6 +413,14 @@ clear_recovery_failure_marker() {
 # Marker format: <first_dirty_epoch> <last_alert_epoch> <alert_count>
 # Args: $1 = repo name, $2 = dirty file count
 DIRTY_ALERT_MINUTES=30
+DIRTY_ALERT_MINUTES_SESSION_ACTIVE=240  # 4 hours when Claude sessions are running
+
+# Check if Claude Code sessions are actively running on this machine.
+# Returns 0 (true) if sessions found, 1 (false) if none.
+has_active_claude_sessions() {
+    pgrep -x claude >/dev/null 2>&1
+}
+
 check_dirty_duration() {
     local repo="$1"
     local dirty_count="$2"
@@ -431,11 +439,21 @@ check_dirty_duration() {
     now=$(date +%s)
     local total_minutes=$(( (now - first_dirty) / 60 ))
 
+    # Use longer threshold when Claude sessions are active (dirty repo is expected)
+    local threshold=$DIRTY_ALERT_MINUTES
+    if has_active_claude_sessions; then
+        threshold=$DIRTY_ALERT_MINUTES_SESSION_ACTIVE
+    fi
+
     # First alert: wait for initial threshold
     if [ "$alert_count" -eq 0 ]; then
-        if [ $total_minutes -ge $DIRTY_ALERT_MINUTES ]; then
+        if [ $total_minutes -ge $threshold ]; then
             echo "$first_dirty $(date +%s) 1" > "$marker"
-            discord_notify_failure "$repo" "dirty for ${total_minutes}m ($dirty_count files), sync blocked"
+            local session_note=""
+            if has_active_claude_sessions; then
+                session_note=" (sessions active)"
+            fi
+            discord_notify_failure "$repo" "dirty for ${total_minutes}m ($dirty_count files), sync blocked${session_note}"
         fi
         return
     fi
