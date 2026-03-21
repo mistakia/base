@@ -63,18 +63,14 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
       const { thread_id } = payload
       const sheets = state.get('sheets')
 
-      // If already open, move to top of stack
-      const existing_index = sheets.indexOf(thread_id)
-      if (existing_index >= 0) {
-        return state.set(
-          'sheets',
-          sheets.delete(existing_index).push(thread_id)
-        )
+      // If already the active sheet, no-op
+      if (sheets.size === 1 && sheets.first() === thread_id) {
+        return state
       }
 
-      // Add new sheet to top of stack
-      return state
-        .update('sheets', (s) => s.push(thread_id))
+      // Replace all sheets with this one (no stacking)
+      return initial_state
+        .set('sheets', List([thread_id]))
         .setIn(
           ['sheet_data', thread_id],
           Map({
@@ -104,6 +100,10 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
       return state
         .update('sheets', (s) => s.pop())
         .deleteIn(['sheet_data', top_thread_id])
+    }
+
+    case thread_sheet_action_types.CLOSE_ALL_SHEETS: {
+      return initial_state
     }
 
     case thread_sheet_action_types.GET_SHEET_THREAD_PENDING: {
@@ -163,17 +163,14 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
       const sheet_key = `session:${session_id}`
       const sheets = state.get('sheets')
 
-      // If already open, move to top
-      const existing_index = sheets.indexOf(sheet_key)
-      if (existing_index >= 0) {
-        return state.set(
-          'sheets',
-          sheets.delete(existing_index).push(sheet_key)
-        )
+      // If already the active sheet, no-op
+      if (sheets.size === 1 && sheets.first() === sheet_key) {
+        return state
       }
 
-      return state
-        .update('sheets', (s) => s.push(sheet_key))
+      // Replace all sheets with this one (no stacking)
+      return initial_state
+        .set('sheets', List([sheet_key]))
         .setIn(
           ['sheet_data', sheet_key],
           Map({

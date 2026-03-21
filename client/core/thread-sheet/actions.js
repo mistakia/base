@@ -7,6 +7,7 @@ export const thread_sheet_action_types = {
   OPEN_SESSION_SHEET: 'OPEN_SESSION_SHEET',
   CLOSE_THREAD_SHEET: 'CLOSE_THREAD_SHEET',
   CLOSE_TOP_THREAD_SHEET: 'CLOSE_TOP_THREAD_SHEET',
+  CLOSE_ALL_SHEETS: 'CLOSE_ALL_SHEETS',
   LOAD_SHEET_THREAD: 'LOAD_SHEET_THREAD',
   ...create_api_action_types(GET_SHEET_THREAD)
 }
@@ -29,6 +30,10 @@ export const thread_sheet_actions = {
 
   close_top_thread_sheet: () => ({
     type: thread_sheet_action_types.CLOSE_TOP_THREAD_SHEET
+  }),
+
+  close_all_sheets: () => ({
+    type: thread_sheet_action_types.CLOSE_ALL_SHEETS
   }),
 
   load_sheet_thread: (thread_id) => ({

@@ -1,29 +1,26 @@
+@import '@styles/variables'
+
 .session-activity-bar
   display flex
   align-items center
-  gap 8px
-  padding 12px 16px
-  margin-top 8px
-  margin-bottom 8px
-  border-radius 8px
-  font-size 13px
-  font-weight 500
+  gap $space_sm
+  padding $space_sm 0
+  margin-top $space_sm
+  margin-bottom $space_sm
+  border-radius 0
+  background transparent
+  font-size $font_size_sm
+  font-weight $font_weight_medium
 
   &--active
-    background-color rgba(76, 175, 80, 0.08)
-    border 1px solid rgba(76, 175, 80, 0.2)
-    color #4caf50
+    color $color_success
 
   &--idle
-    background-color rgba(255, 193, 7, 0.08)
-    border 1px solid rgba(255, 193, 7, 0.2)
-    color #ffc107
+    color $color_warning
 
   &--pending
   &--queued
-    background-color rgba(33, 150, 243, 0.08)
-    border 1px solid rgba(33, 150, 243, 0.2)
-    color #2196f3
+    color $color_info
 
   &--compact
     display inline
@@ -32,24 +29,24 @@
     border none
     background none
     border-radius 0
-    font-size 12px
-    font-family 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace
+    font-size $font_size_sm
+    font-family $font_family_mono
     flex-shrink 0
 
   &__dot
-    width 8px
-    height 8px
+    width 6px
+    height 6px
     border-radius 50%
     background-color currentColor
     flex-shrink 0
-    animation session-activity-pulse 1.5s ease-in-out infinite
+    animation session-activity-pulse 1.2s ease-in-out infinite
 
   &__text
     white-space nowrap
     overflow hidden
     text-overflow ellipsis
-    font-family 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace
-    font-size 13px
+    font-family $font_family_mono
+    font-size $font_size_sm
 
 @keyframes session-activity-pulse
   0%, 100%

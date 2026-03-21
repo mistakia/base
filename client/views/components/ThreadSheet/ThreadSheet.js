@@ -23,9 +23,6 @@ import {
 } from '@core/websocket/service'
 import {
   extract_working_directory,
-  extract_thread_title,
-  extract_thread_description,
-  extract_thread_state,
   extract_user_public_key
 } from '@views/utils/thread-metadata-extractor.js'
 
@@ -36,14 +33,6 @@ import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBa
 import Button from '@components/primitives/Button'
 
 import './ThreadSheet.styl'
-
-function compute_sheet_style(stack_index, stack_size) {
-  const depth = stack_size - 1 - stack_index
-  return {
-    transform: `translateX(${depth * -12}px) scale(${1 - depth * 0.03})`,
-    zIndex: 1200 + stack_index
-  }
-}
 
 // Inline thread resume input
 const SheetThreadInput = ({
@@ -90,7 +79,6 @@ const SheetThreadInput = ({
       )
       set_is_submitting(true)
       set_message('')
-      // Brief guard; real disable comes from pending_resume state
       setTimeout(() => set_is_submitting(false), 500)
     },
     [
@@ -120,7 +108,6 @@ const SheetThreadInput = ({
 
   const handle_change = useCallback((e) => {
     set_message(e.target.value)
-    // Auto-resize textarea
     const el = e.target
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
@@ -169,7 +156,7 @@ SheetThreadInput.propTypes = {
   dispatch: PropTypes.func
 }
 
-// Resume status indicator -- shows the user's prompt snippet with a status badge
+// Resume status indicator
 const ResumeStatusIndicator = ({ pending_resume }) => {
   const status = pending_resume.get('status')
   const queue_position = pending_resume.get('queue_position')
@@ -218,13 +205,30 @@ ResumeStatusIndicator.propTypes = {
   pending_resume: PropTypes.object
 }
 
+// Close button for sheet header actions
+const CloseButton = ({ on_close }) => (
+  <button
+    className='thread-sheet__close'
+    onClick={on_close}
+    aria-label='Close thread sheet'>
+    <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
+      <path
+        d='M3 3l8 8M11 3l-8 8'
+        stroke='currentColor'
+        strokeWidth='1.5'
+        strokeLinecap='round'
+      />
+    </svg>
+  </button>
+)
+CloseButton.propTypes = {
+  on_close: PropTypes.func
+}
+
 // Individual sheet panel
-const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
+const SingleThreadSheet = ({ thread_id }) => {
   const dispatch = useDispatch()
   const scroll_area_ref = useRef(null)
-  const prev_timeline_length_ref = useRef(0)
-  const [auto_scroll, set_auto_scroll] = useState(true)
-  const [is_metadata_expanded, set_is_metadata_expanded] = useState(false)
 
   const thread_data = useSelector((state) =>
     get_thread_sheet_data_for_id(state, thread_id)
@@ -248,7 +252,6 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
   )
   const pending_resume = useSelector(pending_resume_selector)
 
-  // Load thread data and subscribe to WebSocket
   useEffect(() => {
     dispatch(thread_sheet_actions.load_sheet_thread(thread_id))
     subscribe_to_thread(thread_id)
@@ -259,140 +262,31 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
   }, [thread_id, dispatch])
 
   const handle_close = useCallback(() => {
-    dispatch(thread_sheet_actions.close_thread_sheet(thread_id))
-  }, [dispatch, thread_id])
+    dispatch(thread_sheet_actions.close_all_sheets())
+  }, [dispatch])
 
   const timeline = thread_data?.get('timeline')
   const working_directory = thread_data
     ? extract_working_directory(thread_data).path
     : null
 
-  const { thread_title, thread_description, thread_state } = useMemo(() => {
-    if (!thread_data)
-      return {
-        thread_title: null,
-        thread_description: null,
-        thread_state: null
-      }
-    return {
-      thread_title: extract_thread_title(thread_data),
-      thread_description: extract_thread_description(thread_data),
-      thread_state: extract_thread_state(thread_data)
-    }
-  }, [thread_data])
-  const show_metadata_summary = thread_title || thread_state
-
-  const toggle_metadata = useCallback(() => {
-    set_is_metadata_expanded((prev) => !prev)
-  }, [])
-
-  // Scroll to bottom on initial load and auto-scroll on new entries
-  useEffect(() => {
-    const el = scroll_area_ref.current
-    if (!el || !timeline) return
-
-    const current_length = Array.isArray(timeline) ? timeline.length : 0
-    const prev_length = prev_timeline_length_ref.current
-
-    if (current_length > 0 && prev_length === 0) {
-      // Initial load - scroll to bottom instantly
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight
-      })
-      set_auto_scroll(true)
-    } else if (current_length > prev_length && auto_scroll) {
-      // New entries while auto-scrolling
-      requestAnimationFrame(() => {
-        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-      })
-    }
-
-    prev_timeline_length_ref.current = current_length
-  }, [timeline, auto_scroll])
-
-  // Track scroll position for auto-scroll
-  useEffect(() => {
-    const el = scroll_area_ref.current
-    if (!el) return
-
-    const handle_scroll = () => {
-      const distance = el.scrollHeight - el.scrollTop - el.clientHeight
-      const near_bottom = distance < 100
-      set_auto_scroll(near_bottom)
-    }
-
-    el.addEventListener('scroll', handle_scroll, { passive: true })
-    return () => el.removeEventListener('scroll', handle_scroll)
-  }, [])
-
-  const style = compute_sheet_style(stack_index, stack_size)
+  const header_actions = (
+    <CloseButton on_close={handle_close} />
+  )
 
   return (
-    <div className='thread-sheet__panel' style={style}>
-      {/* Fixed header: metadata summary + close */}
-      <header className='thread-sheet__header'>
-        {show_metadata_summary && (
-          <div
-            className='thread-sheet__metadata-summary'
-            onClick={toggle_metadata}>
-            <div className='thread-sheet__metadata-main'>
-              {thread_title && (
-                <span className='thread-sheet__metadata-title'>
-                  {thread_title}
-                </span>
-              )}
-              {thread_state && (
-                <span
-                  className={`thread-sheet__metadata-state thread-sheet__metadata-state--${thread_state}`}>
-                  {thread_state}
-                </span>
-              )}
-            </div>
-            <button
-              className={`thread-sheet__metadata-toggle ${is_metadata_expanded ? 'thread-sheet__metadata-toggle--expanded' : ''}`}
-              aria-label={
-                is_metadata_expanded ? 'Collapse metadata' : 'Expand metadata'
-              }>
-              <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
-                <path
-                  d='M3 5l3 3 3-3'
-                  stroke='currentColor'
-                  strokeWidth='1.5'
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                />
-              </svg>
-            </button>
-          </div>
-        )}
-        <button
-          className='thread-sheet__close'
-          onClick={handle_close}
-          aria-label='Close thread sheet'>
-          <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
-            <path
-              d='M3 3l8 8M11 3l-8 8'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-            />
-          </svg>
-        </button>
-      </header>
-
-      {/* Metadata body: description or expanded content (scrolls if needed) */}
-      {(thread_description || is_metadata_expanded) && (
-        <div className='thread-sheet__metadata-body'>
-          {thread_description && !is_metadata_expanded && (
-            <p className='thread-sheet__metadata-description'>
-              {thread_description}
-            </p>
-          )}
-          {is_metadata_expanded && thread_data && (
-            <div className='thread-sheet__metadata-expanded'>
-              <ThreadHeader metadata={thread_data} thread_id={thread_id} />
-            </div>
-          )}
+    <div className='thread-sheet__panel'>
+      {thread_data && (
+        <div className='thread-sheet__header-area'>
+          <ThreadHeader
+            metadata={thread_data}
+            thread_id={thread_id}
+            collapsible
+            default_collapsed
+            actions={header_actions}
+            title_href={`/thread/${thread_id}`}
+            sx={{ marginTop: 0, borderRadius: 0, border: 'none' }}
+          />
         </div>
       )}
 
@@ -421,7 +315,7 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
         )}
       </div>
 
-      {/* Pending resume status indicator with activity bar */}
+      {/* Pending resume status indicator */}
       {pending_resume && (
         <>
           <ResumeStatusIndicator pending_resume={pending_resume} />
@@ -448,13 +342,11 @@ const SingleThreadSheet = ({ thread_id, stack_index, stack_size }) => {
   )
 }
 SingleThreadSheet.propTypes = {
-  thread_id: PropTypes.string,
-  stack_index: PropTypes.number,
-  stack_size: PropTypes.number
+  thread_id: PropTypes.string
 }
 
 // Session-only sheet panel (before thread exists)
-const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
+const SessionSheetPanel = ({ sheet_key }) => {
   const dispatch = useDispatch()
   const session_id = sheet_key.replace('session:', '')
 
@@ -465,9 +357,6 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
     state.getIn(['thread_sheet', 'sheet_data', sheet_key, 'session_status'])
   )
 
-  // If session already has a thread_id, transition to thread sheet immediately.
-  // This handles the case where a session sheet is opened for a session that
-  // has already been linked to a thread (e.g., clicking the card a second time).
   const session_thread_id = session?.thread_id
   useEffect(() => {
     if (session_thread_id) {
@@ -479,43 +368,25 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
   }, [session_thread_id, sheet_key, dispatch])
 
   const handle_close = useCallback(() => {
-    dispatch(thread_sheet_actions.close_thread_sheet(sheet_key))
-  }, [dispatch, sheet_key])
-
-  const style = compute_sheet_style(stack_index, stack_size)
+    dispatch(thread_sheet_actions.close_all_sheets())
+  }, [dispatch])
 
   const status = session_status || session?.status || 'starting'
   const working_directory = session?.working_directory
   const prompt_snippet = session?.prompt_snippet
 
   return (
-    <div className='thread-sheet__panel' style={style}>
-      <header className='thread-sheet__header'>
-        <div className='thread-sheet__metadata-summary'>
-          <div className='thread-sheet__metadata-main'>
-            <span className='thread-sheet__metadata-title'>
-              {prompt_snippet || 'New Session'}
-            </span>
-            <span
-              className={`thread-sheet__metadata-state thread-sheet__metadata-state--${status === 'active' ? 'active' : status === 'ended' ? 'archived' : 'active'}`}>
-              {status}
-            </span>
-          </div>
-        </div>
-        <button
-          className='thread-sheet__close'
-          onClick={handle_close}
-          aria-label='Close session sheet'>
-          <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
-            <path
-              d='M3 3l8 8M11 3l-8 8'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-            />
-          </svg>
-        </button>
-      </header>
+    <div className='thread-sheet__panel'>
+      <div className='thread-sheet__session-header'>
+        <span className='thread-sheet__session-title'>
+          {prompt_snippet || 'New Session'}
+        </span>
+        <span
+          className={`thread-sheet__metadata-state thread-sheet__metadata-state--${status === 'active' ? 'active' : status === 'ended' ? 'archived' : 'active'}`}>
+          {status}
+        </span>
+        <CloseButton on_close={handle_close} />
+      </div>
       <div className='thread-sheet__scroll-area'>
         <div className='thread-sheet__timeline' style={{ paddingTop: 24 }}>
           {prompt_snippet && (
@@ -542,38 +413,46 @@ const SessionSheetPanel = ({ sheet_key, stack_index, stack_size }) => {
   )
 }
 SessionSheetPanel.propTypes = {
-  sheet_key: PropTypes.string,
-  stack_index: PropTypes.number,
-  stack_size: PropTypes.number
+  sheet_key: PropTypes.string
 }
 
-// Container that renders only the topmost sheet
+// Container that renders the topmost sheet and manages layout class.
+// Always mounted so CSS can animate the slide in/out.
 const ThreadSheet = () => {
   const sheets = useSelector(get_thread_sheet_sheets)
+  const is_open = sheets && sheets.size > 0
 
-  if (!sheets || sheets.size === 0) {
-    return null
-  }
+  useEffect(() => {
+    if (is_open) {
+      document.documentElement.classList.add('thread-sheet-open')
+    } else {
+      document.documentElement.classList.remove('thread-sheet-open')
+    }
 
-  const sheet_list = sheets.toJS()
-  const top_sheet_id = sheet_list[sheet_list.length - 1]
+    return () => {
+      document.documentElement.classList.remove('thread-sheet-open')
+    }
+  }, [is_open])
+
+  const sheet_list = is_open ? sheets.toJS() : []
+  const top_sheet_id = sheet_list.length > 0
+    ? sheet_list[sheet_list.length - 1]
+    : null
 
   return (
-    <div className='thread-sheet__container'>
-      {top_sheet_id.startsWith('session:') ? (
-        <SessionSheetPanel
-          key={top_sheet_id}
-          sheet_key={top_sheet_id}
-          stack_index={0}
-          stack_size={1}
-        />
-      ) : (
-        <SingleThreadSheet
-          key={top_sheet_id}
-          thread_id={top_sheet_id}
-          stack_index={0}
-          stack_size={1}
-        />
+    <div className={`thread-sheet__container ${is_open ? 'thread-sheet__container--open' : ''}`}>
+      {top_sheet_id && (
+        top_sheet_id.startsWith('session:') ? (
+          <SessionSheetPanel
+            key={top_sheet_id}
+            sheet_key={top_sheet_id}
+          />
+        ) : (
+          <SingleThreadSheet
+            key={top_sheet_id}
+            thread_id={top_sheet_id}
+          />
+        )
       )}
     </div>
   )

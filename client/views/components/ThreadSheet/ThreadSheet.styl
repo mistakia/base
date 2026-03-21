@@ -1,53 +1,93 @@
 @import '@styles/variables'
 
 $sheet_width = 480px
-$sheet_edge_gap = 8px
-$sheet_border_radius = 6px
 
-// Container for all stacked sheets - no overlay, pointer-events pass through
+// Global layout adjustment when panel is open
+html.thread-sheet-open
+  margin-right $sheet_width
+  transition margin-right $transition_layout
+
+  @media (max-width: 768px)
+    margin-right 0
+
+  // Adjust fixed-position bottom bar to stop at the panel edge
+  .bottom-bar
+    right $sheet_width
+    transition right $transition_layout
+
+    @media (max-width: 768px)
+      right 0
+
+// Container for all stacked sheets - always mounted, slides in/out via transform
 .thread-sheet__container
   position: fixed
   top: 0
   right: 0
   bottom: 0
-  width: $sheet_width + ($sheet_edge_gap * 2)
+  width: $sheet_width
   max-width: 95vw
   z-index: 1200
+  transform: translateX(100%)
+  transition: transform $transition_layout
   pointer-events: none
 
+  &--open
+    transform: translateX(0)
+    pointer-events: auto
+
   @media (max-width: 768px)
+    top: auto
+    bottom: 0
+    left: 0
     width: 100%
+    height: 95vh
+    max-width: 100%
+    transform: translateY(100%)
+
+    &--open
+      transform: translateY(0)
 
 // Individual sheet panel
 .thread-sheet__panel
-  position: absolute
-  top: $sheet_edge_gap
-  right: $sheet_edge_gap
-  bottom: $sheet_edge_gap
-  width: $sheet_width
-  max-width: "calc(100% - %s)" % ($sheet_edge_gap * 2)
+  position: relative
+  height: 100%
   background: $color_surface
-  border-radius: $sheet_border_radius
-  border: 1px solid $color_border_light
-  box-shadow: $shadow_lg
+  border-left: 1px solid $color_border_light
   display: flex
   flex-direction: column
-  pointer-events: auto
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)
-  transform-origin: right center
 
   @media (max-width: 768px)
-    top: $sheet_edge_gap
-    right: $sheet_edge_gap
-    bottom: $sheet_edge_gap
-    left: $sheet_edge_gap
-    width: auto
+    border-left: none
+    border-top: 1px solid $color_border_light
 
 // ============================================================================
-// Fixed header: metadata summary + close
+// Header area: ThreadHeader with sheet overrides
 // ============================================================================
 
-.thread-sheet__header
+.thread-sheet__header-area
+  flex-shrink: 0
+  border-bottom: 1px solid $color_border_light
+  max-height: 50vh
+  overflow-y: auto
+
+.thread-sheet__close
+  flex-shrink: 0
+  background: none
+  border: none
+  cursor: pointer
+  width: 28px
+  height: 28px
+  display: flex
+  align-items: center
+  justify-content: center
+  color: $color_text_tertiary
+  transition: color $transition_fast
+
+  &:hover
+    color: $color_text
+
+// Session-only sheet header (simple bar before thread data exists)
+.thread-sheet__session-header
   flex-shrink: 0
   display: flex
   align-items: center
@@ -56,60 +96,15 @@ $sheet_border_radius = 6px
   border-bottom: 1px solid $color_border_light
   min-height: 44px
 
-.thread-sheet__metadata-summary
-  display: flex
-  align-items: center
-  justify-content: space-between
-  gap: $space_sm
-  cursor: pointer
-  user-select: none
-  min-width: 0
-  flex: 1
-
-.thread-sheet__close
-  flex-shrink: 0
-  margin-left: auto
-  background: $color_white
-  border: 1px solid $color_border_light
-  border-radius: $radius_base
-  cursor: pointer
-  width: 28px
-  height: 28px
-  display: flex
-  align-items: center
-  justify-content: center
-  color: $color_text_tertiary
-  transition: all $transition_fast
-  box-shadow: $shadow_xs
-
-  &:hover
-    color: $color_text
-    border-color: $color_border
-    box-shadow: $shadow_sm
-
-// Metadata body (description / expanded content) below header
-.thread-sheet__metadata-body
-  flex-shrink: 0
-  max-height: 40vh
-  overflow-y: auto
-  overflow-x: hidden
-  border-bottom: 1px solid $color_border_light
-  padding: $space_sm $space_base
-
-.thread-sheet__metadata-main
-  display: flex
-  align-items: center
-  gap: $space_sm
-  min-width: 0
-  flex: 1
-
-.thread-sheet__metadata-title
+.thread-sheet__session-title
   font-size: $font_size_sm
   font-weight: $font_weight_semibold
   color: $color_text
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
+  flex: 1
+  min-width: 0
 
 .thread-sheet__metadata-state
   font-size: $font_size_xs
@@ -128,40 +123,6 @@ $sheet_border_radius = 6px
     background: rgba(108, 117, 125, 0.1)
     color: $color_text_secondary
 
-.thread-sheet__metadata-toggle
-  background: none
-  border: none
-  cursor: pointer
-  color: $color_text_tertiary
-  padding: $space_xs
-  display: flex
-  align-items: center
-  justify-content: center
-  transition: transform $transition_fast
-  flex-shrink: 0
-
-  &--expanded
-    transform: rotate(180deg)
-
-.thread-sheet__metadata-description
-  font-size: $font_size_xs
-  color: $color_text_secondary
-  margin: $space_xs 0 0
-  line-height: 1.4
-  overflow: hidden
-  text-overflow: ellipsis
-  white-space: nowrap
-
-.thread-sheet__metadata-expanded
-  margin-top: $space_sm
-
-  // Override MetadataContainer styling within sheet context
-  .metadata-container
-    margin-top: 0
-    border-radius: 0
-    border: none
-    box-shadow: none
-
 // ============================================================================
 // Scrollable timeline area
 // ============================================================================
@@ -171,6 +132,7 @@ $sheet_border_radius = 6px
   overflow-y: auto
   overflow-x: hidden
   padding: $space_sm $space_base
+  padding-bottom: 64px
 
 // Loading / error / empty states
 .thread-sheet__loading,
@@ -187,40 +149,11 @@ $sheet_border_radius = 6px
 .thread-sheet__timeline
   min-width: 0
 
-// Session-only sheet: live session indicator (before thread exists)
-.thread-sheet__session-live-indicator
-  display: flex
-  align-items: center
-  gap: 8px
-  padding: 12px 16px
-  margin-top: 8px
-  margin-bottom: 8px
-  border-radius: 8px
-  background: rgba(40, 167, 69, 0.08)
-  border: 1px solid rgba(40, 167, 69, 0.2)
-
-.thread-sheet__session-live-dot
-  display: inline-block
-  width: 10px
-  height: 10px
-  border-radius: 50%
-  background: $color_success
-  animation: session-live-pulse 1.5s ease-in-out infinite
-
-.thread-sheet__session-live-text
-  font-size: $font_size_sm
-  font-weight: $font_weight_medium
-  color: $color_success
-
-@keyframes session-live-pulse
-  0%, 100%
-    opacity: 1
-  50%
-    opacity: 0.4
-
-// Override scroll-to-bottom button spacing within sheet context
-.thread-sheet__panel .timeline-scroll-button
-  bottom: $space_sm
+// Override scroll-to-bottom button in sheet context: position above floating input
+.thread-sheet__scroll-area .timeline-scroll-button
+  position: sticky
+  bottom: 48px
+  z-index: 2
 
 // ============================================================================
 // Resume status indicator
@@ -270,33 +203,32 @@ $sheet_border_radius = 6px
 // ============================================================================
 
 .thread-sheet__input
-  flex-shrink: 0
-  padding-right: $space_sm
-  padding-bottom: $space_sm
-  padding-left: $space_sm
+  position: absolute
+  bottom: $space_base
+  left: $space_sm
+  right: $space_sm
+  z-index: 1
 
 .thread-sheet__input-form
   display: flex
   flex-direction: column
-  min-height: 96px
   background: var(--color-bg, #ffffff)
-  border-radius: 6px
+  border-radius: 4px
   border: 1px solid var(--color-border-light, #e8e8e8)
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04)
-  padding: 16px 16px 12px
+  padding: $space_sm $space_sm
 
 .thread-sheet__input-field
   border: none
   padding: 0
   font-family: inherit
-  font-size: 15px
+  font-size: $font_size_base
   color: var(--color-text, #1a1a1a)
   outline: none
   background: transparent
-  line-height: 1.5
+  line-height: 1.4
   min-width: 0
   resize: none
-  min-height: 22px
+  min-height: 20px
   max-height: 160px
   overflow-y: auto
 
@@ -310,8 +242,7 @@ $sheet_border_radius = 6px
   display: flex
   align-items: center
   justify-content: flex-end
-  margin-top: auto
-  padding-top: 8px
+  padding-top: $space_xs
 
 .thread-sheet__input-send
   flex-shrink: 0
@@ -319,9 +250,8 @@ $sheet_border_radius = 6px
   width: 24px
   height: 24px
   padding: 0
-  border-radius: 8px
+  border-radius: 0
   background-color: var(--color-breadcrumb-dark)
-  // Hidden by default, animate in
   transform: scale(0)
   opacity: 0
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease

@@ -1,10 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 
 import { COLORS } from '@theme/colors.js'
 import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
@@ -24,6 +23,7 @@ import {
   format_token_shorthand
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
+import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
 import { EditableTagsField } from '@views/components/InlineSelect'
 import {
   extract_message_counts,
@@ -267,82 +267,6 @@ ExternalSessionIdDisplay.propTypes = {
   session_id: PropTypes.string.isRequired
 }
 
-// Active Session Status Component
-const ACTIVE_SESSION_STYLES = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  },
-  status_dot: {
-    fontSize: '10px',
-    animation: 'pulse 1.5s ease-in-out infinite'
-  },
-  status_text: {
-    fontSize: '13px',
-    fontWeight: 500
-  },
-  elapsed_time: {
-    fontSize: '11px',
-    color: HEADER_STYLES.TEXT_LIGHT,
-    marginLeft: '4px'
-  }
-}
-
-const format_elapsed_time = (last_activity_at) => {
-  if (!last_activity_at) return ''
-
-  const elapsed_ms = Date.now() - new Date(last_activity_at).getTime()
-  const seconds = Math.floor(elapsed_ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) return `${hours}h ${minutes % 60}m ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return `${seconds}s ago`
-}
-
-const ActiveSessionStatus = ({ session }) => {
-  if (!session) return null
-
-  const status = session.get ? session.get('status') : session.status
-  const last_activity_at = session.get
-    ? session.get('last_activity_at')
-    : session.last_activity_at
-
-  const is_active = status === 'active'
-  const status_color = is_active ? COLORS.success : COLORS.text_tertiary
-  const status_label = is_active ? 'Active' : 'Idle'
-
-  return (
-    <Box sx={ACTIVE_SESSION_STYLES.container}>
-      <FiberManualRecordIcon
-        sx={{
-          ...ACTIVE_SESSION_STYLES.status_dot,
-          color: status_color,
-          animation: is_active ? 'pulse 1.5s ease-in-out infinite' : 'none'
-        }}
-      />
-      <span
-        style={{
-          ...ACTIVE_SESSION_STYLES.status_text,
-          color: status_color
-        }}>
-        {status_label}
-      </span>
-      {last_activity_at && (
-        <span style={ACTIVE_SESSION_STYLES.elapsed_time}>
-          {format_elapsed_time(last_activity_at)}
-        </span>
-      )}
-    </Box>
-  )
-}
-
-ActiveSessionStatus.propTypes = {
-  session: PropTypes.object
-}
-
 // Helper to determine if a metadata row should be marked as first
 const use_first_row_tracker = () => {
   let has_rendered_row = false
@@ -362,7 +286,6 @@ const ThreadStats = ({
   duration,
   models,
   source_info,
-  thread_state,
   created_at,
   updated_at,
   message_count,
@@ -371,9 +294,6 @@ const ThreadStats = ({
   tool_call_count,
   thread_cost_display,
   thread_id,
-  dispatch,
-  user_owns_thread,
-  active_session,
   relations,
   tags
 }) => {
@@ -390,27 +310,10 @@ const ThreadStats = ({
 
   return (
     <Box>
-      {active_session && (
-        <MetadataRow
-          label='Live Session'
-          value={<ActiveSessionStatus session={active_session} />}
-          is_first={get_is_first()}
-        />
-      )}
-
       {session_provider && (
         <MetadataRow
           label='Session Provider'
           value={session_provider}
-          is_first={get_is_first()}
-        />
-      )}
-
-      {thread_state && thread_id && (
-        <ThreadStateField
-          thread_state={thread_state}
-          thread_id={thread_id}
-          user_owns_thread={user_owns_thread}
           is_first={get_is_first()}
         />
       )}
@@ -541,7 +444,6 @@ ThreadStats.propTypes = {
     session_id: PropTypes.string,
     working_directory: PropTypes.string
   }),
-  thread_state: PropTypes.string,
   created_at: PropTypes.string,
   updated_at: PropTypes.string,
   message_count: PropTypes.number,
@@ -550,9 +452,6 @@ ThreadStats.propTypes = {
   tool_call_count: PropTypes.number,
   thread_cost_display: PropTypes.string,
   thread_id: PropTypes.string,
-  dispatch: PropTypes.func,
-  user_owns_thread: PropTypes.bool.isRequired,
-  active_session: PropTypes.object,
   relations: PropTypes.array,
   tags: PropTypes.array
 }
@@ -585,8 +484,21 @@ SourceChips.propTypes = {
   thread_state: PropTypes.string
 }
 
-const ThreadHeader = ({ metadata, thread_id }) => {
-  const dispatch = useDispatch()
+const ThreadHeader = ({
+  metadata,
+  thread_id,
+  collapsible = false,
+  default_collapsed = false,
+  actions = null,
+  title_href = null,
+  sx: container_sx = {}
+}) => {
+  const [is_collapsed, set_is_collapsed] = useState(default_collapsed)
+
+  useEffect(() => {
+    set_is_collapsed(default_collapsed)
+  }, [default_collapsed])
+
   const {
     title,
     description,
@@ -623,46 +535,187 @@ const ThreadHeader = ({ metadata, thread_id }) => {
     thread_user_public_key &&
     current_user_public_key === thread_user_public_key
 
+  const toggle_collapse = () => set_is_collapsed((prev) => !prev)
+
+  const title_element = title_href ? (
+    <a
+      href={title_href}
+      style={{
+        textDecoration: 'none',
+        color: 'inherit'
+      }}>
+      <h5
+        style={{
+          fontWeight: 'bold',
+          fontSize: '20px',
+          margin: 0,
+          lineHeight: '1.2'
+        }}>
+        {title || 'Thread'}
+      </h5>
+    </a>
+  ) : null
+
   return (
     <MetadataContainer
       background_color='white'
       border_radius={2}
-      sx={{ marginTop: '16px' }}>
+      sx={{ marginTop: '16px', ...container_sx }}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-        <ThreadTitle
-          title={title}
-          description={description}
-          working_directory_formatted={working_directory_formatted}
-        />
+        {/* Title row with optional actions (e.g. close button) */}
+        {(title_element || actions) ? (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: title ? 1 : 0 }}>
+            {title_element || (
+              <ThreadTitle
+                title={title}
+                description={null}
+                working_directory_formatted={null}
+              />
+            )}
+            {actions && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                {actions}
+              </Box>
+            )}
+          </Box>
+        ) : null}
+        {/* Description and working directory below the title/actions row */}
+        {title_element && (description || working_directory_formatted) && (
+          <Box>
+            {description && (
+              <p
+                style={{
+                  margin: `0 0 ${working_directory_formatted ? SPACING.TITLE_MARGIN : SPACING.DESCRIPTION_MARGIN} 0`,
+                  fontSize: '14px',
+                  color: HEADER_STYLES.TEXT_MEDIUM,
+                  lineHeight: '1.4'
+                }}>
+                {description}
+              </p>
+            )}
+            {working_directory_formatted && working_directory_formatted !== title && (
+              <p
+                style={{
+                  margin: `0 0 ${SPACING.DESCRIPTION_MARGIN} 0`,
+                  fontSize: '12px',
+                  color: HEADER_STYLES.TEXT_LIGHT,
+                  fontFamily: 'monospace',
+                  backgroundColor: HEADER_STYLES.BG_HOVER,
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  display: 'inline-block'
+                }}>
+                {working_directory_formatted}
+              </p>
+            )}
+          </Box>
+        )}
+        {/* When not using title_element, render the original ThreadTitle */}
+        {!title_element && !actions && (
+          <ThreadTitle
+            title={title}
+            description={description}
+            working_directory_formatted={working_directory_formatted}
+          />
+        )}
       </Box>
-      <ThreadStats
-        total_tokens={total_tokens}
-        session_id={source_info?.session_id}
-        duration={duration}
-        models={models}
-        source_info={source_info}
-        thread_state={thread_state}
-        created_at={created_at}
-        updated_at={updated_at}
-        message_count={message_count}
-        user_message_count={user_message_count}
-        assistant_message_count={assistant_message_count}
-        tool_call_count={tool_call_count}
-        thread_cost_display={thread_cost_display}
-        thread_id={thread_id}
-        dispatch={dispatch}
-        user_owns_thread={user_owns_thread}
-        active_session={active_session}
-        relations={relations}
-        tags={tags}
-      />
+
+      {/* Always-visible: Live Session + Thread State */}
+      {(active_session || thread_state) && (
+        <Box>
+          {active_session && (
+            <MetadataRow
+              label='Live Session'
+              value={
+                <SessionActivityBar
+                  active_session={active_session}
+                  compact
+                />
+              }
+              is_first
+            />
+          )}
+          {thread_state && thread_id && (
+            <ThreadStateField
+              thread_state={thread_state}
+              thread_id={thread_id}
+              user_owns_thread={user_owns_thread}
+              is_first={!active_session}
+            />
+          )}
+        </Box>
+      )}
+
+      {/* Collapse toggle - after live session and thread state */}
+      {collapsible && (
+        <Box
+          onClick={toggle_collapse}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            fontSize: '11px',
+            color: HEADER_STYLES.TEXT_LIGHT,
+            px: 3,
+            py: 1,
+            borderTop: `1px solid ${COLORS.border_light}`,
+            '&:hover': { color: HEADER_STYLES.TEXT_MEDIUM }
+          }}>
+          <svg
+            width='10'
+            height='10'
+            viewBox='0 0 10 10'
+            fill='none'
+            style={{
+              transform: is_collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.15s ease'
+            }}>
+            <path
+              d='M2.5 4l2.5 2.5L7.5 4'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            />
+          </svg>
+          {is_collapsed ? 'show details' : 'hide details'}
+        </Box>
+      )}
+
+      {/* Collapsible detail stats */}
+      {(!collapsible || !is_collapsed) && (
+        <ThreadStats
+          total_tokens={total_tokens}
+          session_id={source_info?.session_id}
+          duration={duration}
+          models={models}
+          source_info={source_info}
+          created_at={created_at}
+          updated_at={updated_at}
+          message_count={message_count}
+          user_message_count={user_message_count}
+          assistant_message_count={assistant_message_count}
+          tool_call_count={tool_call_count}
+          thread_cost_display={thread_cost_display}
+          thread_id={thread_id}
+          relations={relations}
+          tags={tags}
+        />
+      )}
     </MetadataContainer>
   )
 }
 
 ThreadHeader.propTypes = {
   metadata: PropTypes.object,
-  thread_id: PropTypes.string
+  thread_id: PropTypes.string,
+  collapsible: PropTypes.bool,
+  default_collapsed: PropTypes.bool,
+  actions: PropTypes.node,
+  title_href: PropTypes.string,
+  sx: PropTypes.object
 }
 
 export default ThreadHeader

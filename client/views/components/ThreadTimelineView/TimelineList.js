@@ -7,6 +7,7 @@ import CollapsibleEventGroup from './CollapsibleEventGroup'
 import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
 import { group_tool_entries } from './utils/group-tool-entries'
 import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
+import './Timeline.styl'
 
 // Length threshold for considering an assistant message as "notable"
 const NOTABLE_ASSISTANT_MESSAGE_LENGTH = 500
