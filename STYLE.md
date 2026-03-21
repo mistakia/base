@@ -15,6 +15,14 @@ documentation, and industrial design -- with warmth from the breadcrumb brown pa
 - **Terminal Heritage** - Dark code blocks, green success, red errors
 - **Square Corners** - No rounded corners on interactive elements
 
+## Crispness Principles
+
+- **Flat Depth** - Use background color shifts and 1px borders to create visual layers. Never use box-shadow for elevation; reserve shadows exclusively for focus rings and overlays/modals.
+- **Hairline Borders** - 1px solid borders (`$color_border` or `$color_border_light`) as the primary depth cue. Borders define regions, not shadows.
+- **Two-Speed Transitions** - Fast transitions (0.15s) for color and opacity changes on hover/focus. Slower transitions (0.2-0.3s) for geometry changes like layout shifts, slide-ins, and panel resizing.
+- **Color Restraint** - Monochrome palette as default. Semantic colors (success, warning, error, info) appear only to convey status. Accent color (`$color_breadcrumb_dark`) appears only on active/selected interactive elements, never as decoration.
+- **Interaction-Only Accent** - Color and visual emphasis appear in response to user action (hover, focus, active state), not at rest. Resting state is neutral and understated.
+
 ## Architecture Overview
 
 The styling system uses a layered architecture with a single source of truth for design tokens.
@@ -334,6 +342,7 @@ Use the utility classes from `utilities.styl`:
 2. **Never use MUI Button** - Use the custom Button component
 3. **Never use border-radius > 4px** - Keep corners minimal
 4. **Never add decorative gradients or shadows** - Keep it utilitarian
+6. **Never use box-shadow for elevation** - Reserve box-shadow for focus rings only; use borders and background shifts for depth
 5. **Never use non-monospace fonts** - IBM Plex Mono everywhere
 
 ## Cross-Platform Notes
