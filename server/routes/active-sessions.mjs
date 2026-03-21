@@ -108,6 +108,7 @@ async function get_thread_info_for_session(thread_id) {
     return {
       thread_title: metadata.title || null,
       thread_state: metadata.thread_state || null,
+      thread_created_at: metadata.created_at || null,
       latest_timeline_event: cached_entry || null,
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
@@ -142,6 +143,8 @@ async function enrich_session_with_thread_info(session) {
     // Use fresh data, falling back to cached if read fails
     thread_title: thread_info.thread_title || session.thread_title,
     thread_state: thread_info.thread_state,
+    thread_created_at:
+      thread_info.thread_created_at || session.thread_created_at,
     latest_timeline_event:
       thread_info.latest_timeline_event || session.latest_timeline_event,
     message_count: thread_info.message_count,
@@ -292,6 +295,7 @@ router.post('/', async (req, res) => {
       // Update session with thread association and info
       session.thread_id = thread_id
       session.thread_title = thread_info.thread_title
+      session.thread_created_at = thread_info.thread_created_at
       session.latest_timeline_event = thread_info.latest_timeline_event
       session.message_count = thread_info.message_count
       session.duration_minutes = thread_info.duration_minutes
@@ -302,6 +306,7 @@ router.post('/', async (req, res) => {
         session_id,
         thread_id,
         thread_title: thread_info.thread_title,
+        thread_created_at: thread_info.thread_created_at,
         latest_timeline_event: thread_info.latest_timeline_event,
         message_count: thread_info.message_count,
         duration_minutes: thread_info.duration_minutes,
@@ -388,6 +393,7 @@ router.put('/:session_id', async (req, res) => {
 
         session.thread_id = found_thread_id
         session.thread_title = thread_info.thread_title
+        session.thread_created_at = thread_info.thread_created_at
         session.latest_timeline_event = thread_info.latest_timeline_event
         session.message_count = thread_info.message_count
         session.duration_minutes = thread_info.duration_minutes
@@ -398,6 +404,7 @@ router.put('/:session_id', async (req, res) => {
           session_id,
           thread_id: found_thread_id,
           thread_title: thread_info.thread_title,
+          thread_created_at: thread_info.thread_created_at,
           latest_timeline_event: thread_info.latest_timeline_event,
           message_count: thread_info.message_count,
           duration_minutes: thread_info.duration_minutes,

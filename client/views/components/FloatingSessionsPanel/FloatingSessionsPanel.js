@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { List } from 'immutable'
 import { ClickAwayListener } from '@mui/base'
@@ -77,28 +77,56 @@ const FloatingSessionsPanel = () => {
     }
   }, [pending_count])
 
-  // Compute review threads (active threads without active sessions)
-  const active_session_thread_ids = new Set(
-    (all_sessions || []).filter((s) => s.thread_id).map((s) => s.thread_id)
-  )
-  const review_threads_list = threads
-    ? (List.isList(threads)
+  // Merge sessions and review threads into a single sorted list so that
+  // resuming a review thread doesn't cause it to jump between sections.
+  // Review threads = active threads without a corresponding active session.
+  const { merged_items, review_count } = useMemo(() => {
+    const active_session_thread_ids = new Set(
+      (all_sessions || []).filter((s) => s.thread_id).map((s) => s.thread_id)
+    )
+
+    const session_items = (all_sessions || []).map((session) => ({
+      type: session.is_pending ? 'pending' : 'session',
+      session,
+      sort_time: new Date(
+        session.thread_created_at || session.created_at || session.started_at || 0
+      ).getTime(),
+      sort_id: session.session_id || session.job_id || session.pending_id || ''
+    }))
+
+    const threads_array = threads
+      ? List.isList(threads)
         ? threads.toJS()
         : Array.isArray(threads)
           ? threads
           : []
-      ).filter(
-        (t) =>
-          t.thread_state === 'active' &&
-          !active_session_thread_ids.has(t.thread_id) &&
-          (show_all_users ||
-            !can_create_threads ||
-            !user_public_key ||
-            !t.user_public_key ||
-            t.user_public_key === user_public_key)
-      )
-    : []
-  const review_count = review_threads_list.length
+      : []
+
+    const review_threads = threads_array.filter(
+      (t) =>
+        t.thread_state === 'active' &&
+        !active_session_thread_ids.has(t.thread_id) &&
+        (show_all_users ||
+          !can_create_threads ||
+          !user_public_key ||
+          !t.user_public_key ||
+          t.user_public_key === user_public_key)
+    )
+
+    const review_items = review_threads.map((thread) => ({
+      type: 'review',
+      thread,
+      sort_time: new Date(thread.created_at || 0).getTime(),
+      sort_id: thread.thread_id || ''
+    }))
+
+    const combined = [...session_items, ...review_items]
+    combined.sort((a, b) => {
+      if (b.sort_time !== a.sort_time) return b.sort_time - a.sort_time
+      return a.sort_id.localeCompare(b.sort_id)
+    })
+    return { merged_items: combined, review_count: review_threads.length }
+  }, [all_sessions, threads, show_all_users, can_create_threads, user_public_key])
 
   const active_count = active_session_count + pending_sessions.length
   const total_count = active_count + ended_session_count + review_count
@@ -235,11 +263,12 @@ const FloatingSessionsPanel = () => {
                 </button>
               </div>
             )}
-            {all_sessions.map((session) => {
-              if (session.is_pending) {
+            {merged_items.map((entry) => {
+              if (entry.type === 'pending') {
+                const session = entry.session
                 return (
                   <div
-                    key={session.pending_id || session.job_id}
+                    key={`pending-${session.pending_id || session.job_id}`}
                     className='floating-sessions-panel__pending-item'>
                     <div className='floating-sessions-panel__pending-row'>
                       <span className='floating-sessions-panel__pending-status'>
@@ -275,7 +304,18 @@ const FloatingSessionsPanel = () => {
                 )
               }
 
-              // Active session - render as a compact card
+              if (entry.type === 'review') {
+                const thread = entry.thread
+                const normalized = normalize_thread(thread)
+                normalized.is_other_user =
+                  user_public_key &&
+                  thread.user_public_key &&
+                  thread.user_public_key !== user_public_key
+                return <SessionCard key={`review-${thread.thread_id}`} item={normalized} />
+              }
+
+              // Active/ended session - render as a compact card
+              const session = entry.session
               const item = {
                 id: session.thread_id,
                 session_id: session.session_id,
@@ -302,19 +342,10 @@ const FloatingSessionsPanel = () => {
                 show_actions: false
               }
 
-              return <SessionCard key={session.session_id} item={item} />
+              return <SessionCard key={`session-${session.session_id}`} item={item} />
             })}
 
-            {review_threads_list.map((thread) => {
-              const normalized = normalize_thread(thread)
-              normalized.is_other_user =
-                user_public_key &&
-                thread.user_public_key &&
-                thread.user_public_key !== user_public_key
-              return <SessionCard key={thread.thread_id} item={normalized} />
-            })}
-
-            {all_sessions.length === 0 && review_threads_list.length === 0 && (
+            {merged_items.length === 0 && (
               <div className='floating-sessions-panel__empty'>
                 No active sessions
               </div>

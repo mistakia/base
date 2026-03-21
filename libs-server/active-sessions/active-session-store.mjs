@@ -91,18 +91,40 @@ export const register_active_session = async ({
   const key = build_session_key(session_id)
 
   const now = new Date().toISOString()
-  const session = {
-    session_id,
-    status: 'active',
-    thread_id: null,
-    thread_title: null,
-    latest_timeline_event: null,
-    working_directory,
-    transcript_path,
-    job_id: job_id || null,
-    created_at: now,
-    started_at: now,
-    last_activity_at: now
+
+  // Check for existing session (resume case: same session_id re-registers)
+  const existing_raw = await redis.get(key)
+  let session
+
+  if (existing_raw) {
+    // Preserve created_at, thread_id, and other accumulated fields from the
+    // original registration. Only reset status and activity timestamps.
+    const existing = JSON.parse(existing_raw)
+    session = {
+      ...existing,
+      status: 'active',
+      working_directory,
+      transcript_path,
+      job_id: job_id || existing.job_id || null,
+      started_at: now,
+      last_activity_at: now
+    }
+    log(`Re-registered active session (resume): ${session_id}`)
+  } else {
+    session = {
+      session_id,
+      status: 'active',
+      thread_id: null,
+      thread_title: null,
+      latest_timeline_event: null,
+      working_directory,
+      transcript_path,
+      job_id: job_id || null,
+      created_at: now,
+      started_at: now,
+      last_activity_at: now
+    }
+    log(`Registered active session: ${session_id}`)
   }
 
   await redis.setex(
@@ -111,7 +133,6 @@ export const register_active_session = async ({
     JSON.stringify(session)
   )
 
-  log(`Registered active session: ${session_id}`)
   return session
 }
 
@@ -178,6 +199,7 @@ export const update_active_session = async ({
   status,
   thread_id,
   thread_title,
+  thread_created_at,
   latest_timeline_event,
   working_directory,
   transcript_path,
@@ -197,6 +219,8 @@ export const update_active_session = async ({
   if (status !== undefined) updates.status = status
   if (thread_id !== undefined) updates.thread_id = thread_id
   if (thread_title !== undefined) updates.thread_title = thread_title
+  if (thread_created_at !== undefined)
+    updates.thread_created_at = thread_created_at
   if (latest_timeline_event !== undefined)
     updates.latest_timeline_event = latest_timeline_event
   if (working_directory !== undefined)

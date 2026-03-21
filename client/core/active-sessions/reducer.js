@@ -261,7 +261,8 @@ export function active_sessions_reducer(
         return state.updateIn(['sessions', source_session_id], (session) =>
           session.merge({
             thread_id: thread.thread_id,
-            thread_title: thread.title || null
+            thread_title: thread.title || null,
+            thread_created_at: thread.created_at || null
           })
         )
       }
@@ -275,7 +276,8 @@ export function active_sessions_reducer(
           ['sessions', source_session_id],
           ended_session.merge({
             thread_id: thread.thread_id,
-            thread_title: thread.title || null
+            thread_title: thread.title || null,
+            thread_created_at: thread.created_at || null
           })
         )
       }

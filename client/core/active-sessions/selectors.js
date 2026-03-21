@@ -114,13 +114,18 @@ export const get_all_sessions_with_pending = createSelector(
           .toArray()
       : []
 
-    // Unified sort by created_at descending across all states.
-    // This prevents visual reordering when sessions transition between
-    // pending -> active -> ended states.
+    // Sort by thread_created_at (immutable) when available, falling back to
+    // session created_at for pending sessions that don't have a thread yet.
+    // thread_created_at never changes, so ordering is stable across session
+    // lifecycle transitions (pending -> active -> ended -> resumed).
     const all_sessions = [...pending, ...active, ...ended]
     all_sessions.sort((a, b) => {
-      const a_time = new Date(a.created_at || a.started_at || 0).getTime()
-      const b_time = new Date(b.created_at || b.started_at || 0).getTime()
+      const a_time = new Date(
+        a.thread_created_at || a.created_at || a.started_at || 0
+      ).getTime()
+      const b_time = new Date(
+        b.thread_created_at || b.created_at || b.started_at || 0
+      ).getTime()
       if (b_time !== a_time) return b_time - a_time
       const a_id = a.session_id || a.job_id || ''
       const b_id = b.session_id || b.job_id || ''
