@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useSelector } from 'react-redux'
@@ -108,41 +108,44 @@ const extract_relations = (metadata) => {
   return relations.toJS ? relations.toJS() : relations
 }
 
-// Custom hook for metadata processing
+// Custom hook for metadata processing -- memoized to avoid re-extracting
+// on every render when only unrelated selectors (e.g. active_session) change
 const use_thread_metadata = (metadata) => {
-  const dates = extract_dates(metadata)
-  const message_counts = extract_message_counts(metadata)
-  const tool_call_count = extract_tool_call_count(metadata)
-  const total_tokens = extract_total_tokens(metadata)
-  const duration = extract_duration(metadata)
-  const working_directory = extract_working_directory(metadata)
-  const thread_state = extract_thread_state(metadata)
-  const title = extract_thread_title(metadata)
-  const description = extract_thread_description(metadata)
-  const thread_user_public_key = extract_user_public_key(metadata)
-  const relations = extract_relations(metadata)
-  const tags = extract_tags(metadata)
+  return useMemo(() => {
+    const dates = extract_dates(metadata)
+    const message_counts = extract_message_counts(metadata)
+    const tool_call_count = extract_tool_call_count(metadata)
+    const total_tokens = extract_total_tokens(metadata)
+    const duration = extract_duration(metadata)
+    const working_directory = extract_working_directory(metadata)
+    const thread_state = extract_thread_state(metadata)
+    const title = extract_thread_title(metadata)
+    const description = extract_thread_description(metadata)
+    const thread_user_public_key = extract_user_public_key(metadata)
+    const relations = extract_relations(metadata)
+    const tags = extract_tags(metadata)
 
-  return {
-    title,
-    description,
-    total_tokens,
-    duration,
-    models: extract_models(metadata),
-    source_info: extract_source_info(metadata),
-    thread_state,
-    created_at: dates.created_at,
-    updated_at: dates.updated_at,
-    message_count: message_counts.message_count,
-    user_message_count: message_counts.user_message_count,
-    assistant_message_count: message_counts.assistant_message_count,
-    tool_call_count,
-    working_directory: working_directory.path,
-    working_directory_formatted: working_directory.formatted,
-    thread_user_public_key,
-    relations,
-    tags
-  }
+    return {
+      title,
+      description,
+      total_tokens,
+      duration,
+      models: extract_models(metadata),
+      source_info: extract_source_info(metadata),
+      thread_state,
+      created_at: dates.created_at,
+      updated_at: dates.updated_at,
+      message_count: message_counts.message_count,
+      user_message_count: message_counts.user_message_count,
+      assistant_message_count: message_counts.assistant_message_count,
+      tool_call_count,
+      working_directory: working_directory.path,
+      working_directory_formatted: working_directory.formatted,
+      thread_user_public_key,
+      relations,
+      tags
+    }
+  }, [metadata])
 }
 
 // Sub-components for better organization
@@ -535,88 +538,46 @@ const ThreadHeader = ({
     thread_user_public_key &&
     current_user_public_key === thread_user_public_key
 
-  const toggle_collapse = () => set_is_collapsed((prev) => !prev)
+  const toggle_collapse = useCallback(() => set_is_collapsed((prev) => !prev), [])
 
-  const title_element = title_href ? (
-    <a
-      href={title_href}
-      style={{
-        textDecoration: 'none',
-        color: 'inherit'
-      }}>
-      <h5
-        style={{
-          fontWeight: 'bold',
-          fontSize: '20px',
-          margin: 0,
-          lineHeight: '1.2'
-        }}>
-        {title || 'Thread'}
-      </h5>
+  const merged_sx = useMemo(
+    () => ({ marginTop: '16px', ...container_sx }),
+    [container_sx]
+  )
+
+  const title_content = title_href ? (
+    <a href={title_href} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <ThreadTitle
+        title={title || 'Thread'}
+        description={description}
+        working_directory_formatted={working_directory_formatted}
+      />
     </a>
-  ) : null
+  ) : (
+    <ThreadTitle
+      title={title}
+      description={description}
+      working_directory_formatted={working_directory_formatted}
+    />
+  )
 
   return (
     <MetadataContainer
       background_color='white'
       border_radius={2}
-      sx={{ marginTop: '16px', ...container_sx }}>
+      sx={merged_sx}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-        {/* Title row with optional actions (e.g. close button) */}
-        {(title_element || actions) ? (
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: title ? 1 : 0 }}>
-            {title_element || (
-              <ThreadTitle
-                title={title}
-                description={null}
-                working_directory_formatted={null}
-              />
-            )}
-            {actions && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                {actions}
-              </Box>
-            )}
+        {actions ? (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              {title_content}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+              {actions}
+            </Box>
           </Box>
-        ) : null}
-        {/* Description and working directory below the title/actions row */}
-        {title_element && (description || working_directory_formatted) && (
-          <Box>
-            {description && (
-              <p
-                style={{
-                  margin: `0 0 ${working_directory_formatted ? SPACING.TITLE_MARGIN : SPACING.DESCRIPTION_MARGIN} 0`,
-                  fontSize: '14px',
-                  color: HEADER_STYLES.TEXT_MEDIUM,
-                  lineHeight: '1.4'
-                }}>
-                {description}
-              </p>
-            )}
-            {working_directory_formatted && working_directory_formatted !== title && (
-              <p
-                style={{
-                  margin: `0 0 ${SPACING.DESCRIPTION_MARGIN} 0`,
-                  fontSize: '12px',
-                  color: HEADER_STYLES.TEXT_LIGHT,
-                  fontFamily: 'monospace',
-                  backgroundColor: HEADER_STYLES.BG_HOVER,
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  display: 'inline-block'
-                }}>
-                {working_directory_formatted}
-              </p>
-            )}
-          </Box>
-        )}
-        {/* When not using title_element, render the original ThreadTitle */}
-        {!title_element && !actions && (
-          <ThreadTitle
-            title={title}
-            description={description}
-            working_directory_formatted={working_directory_formatted}
-          />
+        ) : (
+          title_content
         )}
       </Box>
 

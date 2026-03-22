@@ -25,7 +25,7 @@ import { active_sessions_actions } from '@core/active-sessions/actions'
 import { show_error_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
 import { thread_sheet_actions } from '@core/thread-sheet/actions'
-import { get_thread_sheet_sheets } from '@core/thread-sheet/selectors'
+import { get_thread_sheet_active_sheet } from '@core/thread-sheet/selectors'
 
 //= ====================================
 //  UTILITY SAGAS
@@ -229,8 +229,8 @@ export function* set_thread_archive_state_saga({ payload }) {
       }
 
       // Close floating thread panel if open for this thread
-      const open_sheets = yield select(get_thread_sheet_sheets)
-      if (open_sheets.includes(thread_id)) {
+      const active_sheet = yield select(get_thread_sheet_active_sheet)
+      if (active_sheet === thread_id) {
         yield put(thread_sheet_actions.close_thread_sheet(thread_id))
       }
     } else {

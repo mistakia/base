@@ -3,7 +3,7 @@
 $sheet_width = 480px
 
 // Global layout adjustment when panel is open
-html.thread-sheet-open
+body.thread-sheet-open
   margin-right $sheet_width
   transition margin-right $transition_layout
 
@@ -119,7 +119,7 @@ html.thread-sheet-open
     background: rgba(40, 167, 69, 0.1)
     color: $color_success
 
-  &--archived
+  &--ended
     background: rgba(108, 117, 125, 0.1)
     color: $color_text_secondary
 

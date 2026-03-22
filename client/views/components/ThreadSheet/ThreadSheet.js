@@ -5,7 +5,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import { CircularProgress } from '@mui/material'
 
 import {
-  get_thread_sheet_sheets,
+  get_thread_sheet_active_sheet,
   get_thread_sheet_data_for_id,
   get_thread_sheet_is_loading_for_id,
   get_thread_sheet_error_for_id,
@@ -205,25 +205,16 @@ ResumeStatusIndicator.propTypes = {
   pending_resume: PropTypes.object
 }
 
-// Close button for sheet header actions
-const CloseButton = ({ on_close }) => (
-  <button
-    className='thread-sheet__close'
-    onClick={on_close}
-    aria-label='Close thread sheet'>
-    <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
-      <path
-        d='M3 3l8 8M11 3l-8 8'
-        stroke='currentColor'
-        strokeWidth='1.5'
-        strokeLinecap='round'
-      />
-    </svg>
-  </button>
+const close_button_svg = (
+  <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
+    <path
+      d='M3 3l8 8M11 3l-8 8'
+      stroke='currentColor'
+      strokeWidth='1.5'
+      strokeLinecap='round'
+    />
+  </svg>
 )
-CloseButton.propTypes = {
-  on_close: PropTypes.func
-}
 
 // Individual sheet panel
 const SingleThreadSheet = ({ thread_id }) => {
@@ -270,8 +261,25 @@ const SingleThreadSheet = ({ thread_id }) => {
     ? extract_working_directory(thread_data).path
     : null
 
+  // Scroll to bottom on initial timeline load
+  const has_scrolled_ref = useRef(false)
+  useEffect(() => {
+    const el = scroll_area_ref.current
+    if (!el || !timeline || timeline.length === 0) return
+    if (has_scrolled_ref.current) return
+    has_scrolled_ref.current = true
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+    })
+  }, [timeline])
+
   const header_actions = (
-    <CloseButton on_close={handle_close} />
+    <button
+      className='thread-sheet__close'
+      onClick={handle_close}
+      aria-label='Close thread sheet'>
+      {close_button_svg}
+    </button>
   )
 
   return (
@@ -357,15 +365,15 @@ const SessionSheetPanel = ({ sheet_key }) => {
     state.getIn(['thread_sheet', 'sheet_data', sheet_key, 'session_status'])
   )
 
+  // When session gains a thread_id, transition to thread sheet atomically
   const session_thread_id = session?.thread_id
   useEffect(() => {
     if (session_thread_id) {
-      dispatch(thread_sheet_actions.close_thread_sheet(sheet_key))
       dispatch(
         thread_sheet_actions.open_thread_sheet({ thread_id: session_thread_id })
       )
     }
-  }, [session_thread_id, sheet_key, dispatch])
+  }, [session_thread_id, dispatch])
 
   const handle_close = useCallback(() => {
     dispatch(thread_sheet_actions.close_all_sheets())
@@ -382,10 +390,15 @@ const SessionSheetPanel = ({ sheet_key }) => {
           {prompt_snippet || 'New Session'}
         </span>
         <span
-          className={`thread-sheet__metadata-state thread-sheet__metadata-state--${status === 'active' ? 'active' : status === 'ended' ? 'archived' : 'active'}`}>
+          className={`thread-sheet__metadata-state thread-sheet__metadata-state--${status === 'ended' ? 'ended' : 'active'}`}>
           {status}
         </span>
-        <CloseButton on_close={handle_close} />
+        <button
+          className='thread-sheet__close'
+          onClick={handle_close}
+          aria-label='Close session sheet'>
+          {close_button_svg}
+        </button>
       </div>
       <div className='thread-sheet__scroll-area'>
         <div className='thread-sheet__timeline' style={{ paddingTop: 24 }}>
@@ -416,41 +429,34 @@ SessionSheetPanel.propTypes = {
   sheet_key: PropTypes.string
 }
 
-// Container that renders the topmost sheet and manages layout class.
+// Container that renders the active sheet and manages layout class.
 // Always mounted so CSS can animate the slide in/out.
 const ThreadSheet = () => {
-  const sheets = useSelector(get_thread_sheet_sheets)
-  const is_open = sheets && sheets.size > 0
+  const active_sheet = useSelector(get_thread_sheet_active_sheet)
+  const is_open = !!active_sheet
 
   useEffect(() => {
+    const el = document.body
     if (is_open) {
-      document.documentElement.classList.add('thread-sheet-open')
+      el.classList.add('thread-sheet-open')
     } else {
-      document.documentElement.classList.remove('thread-sheet-open')
+      el.classList.remove('thread-sheet-open')
     }
-
-    return () => {
-      document.documentElement.classList.remove('thread-sheet-open')
-    }
+    return () => el.classList.remove('thread-sheet-open')
   }, [is_open])
-
-  const sheet_list = is_open ? sheets.toJS() : []
-  const top_sheet_id = sheet_list.length > 0
-    ? sheet_list[sheet_list.length - 1]
-    : null
 
   return (
     <div className={`thread-sheet__container ${is_open ? 'thread-sheet__container--open' : ''}`}>
-      {top_sheet_id && (
-        top_sheet_id.startsWith('session:') ? (
+      {active_sheet && (
+        active_sheet.startsWith('session:') ? (
           <SessionSheetPanel
-            key={top_sheet_id}
-            sheet_key={top_sheet_id}
+            key={active_sheet}
+            sheet_key={active_sheet}
           />
         ) : (
           <SingleThreadSheet
-            key={top_sheet_id}
-            thread_id={top_sheet_id}
+            key={active_sheet}
+            thread_id={active_sheet}
           />
         )
       )}

@@ -1,14 +1,20 @@
-import { Map, List } from 'immutable'
+import { Map } from 'immutable'
 
 import { thread_sheet_action_types } from './actions'
 import { threads_action_types } from '@core/threads/actions'
 import { active_sessions_action_types } from '@core/active-sessions/actions'
 
 const initial_state = new Map({
-  // Ordered list of open sheet thread_ids (last = topmost)
-  sheets: List(),
+  // Currently open sheet id (thread_id or "session:<id>"), or null
+  active_sheet: null,
   // Map of thread_id -> { thread_data, is_loading, error }
   sheet_data: Map()
+})
+
+const empty_sheet_data = Map({
+  thread_data: null,
+  is_loading: false,
+  error: null
 })
 
 /**
@@ -36,70 +42,41 @@ function append_sheet_timeline_entry(state, thread_id, entry) {
 
 /**
  * Transition a session sheet to a thread sheet by replacing the session key
- * with the thread_id in the sheets stack and resetting sheet_data.
+ * with the thread_id and resetting sheet_data.
  */
 function transition_session_sheet_to_thread(state, session_id, thread_id) {
   const sheet_key = `session:${session_id}`
-  const sheets = state.get('sheets')
-  const sheet_index = sheets.indexOf(sheet_key)
-  if (sheet_index < 0) return state
+  if (state.get('active_sheet') !== sheet_key) return state
 
   return state
-    .update('sheets', (s) => s.set(sheet_index, thread_id))
+    .set('active_sheet', thread_id)
     .deleteIn(['sheet_data', sheet_key])
-    .setIn(
-      ['sheet_data', thread_id],
-      Map({
-        thread_data: null,
-        is_loading: false,
-        error: null
-      })
-    )
+    .setIn(['sheet_data', thread_id], empty_sheet_data)
 }
 
 export function thread_sheet_reducer(state = initial_state, { type, payload }) {
   switch (type) {
     case thread_sheet_action_types.OPEN_THREAD_SHEET: {
       const { thread_id } = payload
-      const sheets = state.get('sheets')
 
       // If already the active sheet, no-op
-      if (sheets.size === 1 && sheets.first() === thread_id) {
+      if (state.get('active_sheet') === thread_id) {
         return state
       }
 
-      // Replace all sheets with this one (no stacking)
+      // Preserve existing sheet_data for this thread if it exists (avoids
+      // discarding in-flight API responses on rapid re-open)
+      const existing_data = state.getIn(['sheet_data', thread_id])
       return initial_state
-        .set('sheets', List([thread_id]))
-        .setIn(
-          ['sheet_data', thread_id],
-          Map({
-            thread_data: null,
-            is_loading: false,
-            error: null
-          })
-        )
+        .set('active_sheet', thread_id)
+        .setIn(['sheet_data', thread_id], existing_data || empty_sheet_data)
     }
 
     case thread_sheet_action_types.CLOSE_THREAD_SHEET: {
       const { thread_id } = payload
-      const sheets = state.get('sheets')
-      const index = sheets.indexOf(thread_id)
-      if (index < 0) return state
+      if (state.get('active_sheet') !== thread_id) return state
 
-      return state
-        .update('sheets', (s) => s.delete(index))
-        .deleteIn(['sheet_data', thread_id])
-    }
-
-    case thread_sheet_action_types.CLOSE_TOP_THREAD_SHEET: {
-      const sheets = state.get('sheets')
-      if (sheets.size === 0) return state
-
-      const top_thread_id = sheets.last()
-      return state
-        .update('sheets', (s) => s.pop())
-        .deleteIn(['sheet_data', top_thread_id])
+      return initial_state
     }
 
     case thread_sheet_action_types.CLOSE_ALL_SHEETS: {
@@ -161,24 +138,17 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
     case thread_sheet_action_types.OPEN_SESSION_SHEET: {
       const { session_id } = payload
       const sheet_key = `session:${session_id}`
-      const sheets = state.get('sheets')
 
       // If already the active sheet, no-op
-      if (sheets.size === 1 && sheets.first() === sheet_key) {
+      if (state.get('active_sheet') === sheet_key) {
         return state
       }
 
-      // Replace all sheets with this one (no stacking)
       return initial_state
-        .set('sheets', List([sheet_key]))
+        .set('active_sheet', sheet_key)
         .setIn(
           ['sheet_data', sheet_key],
-          Map({
-            thread_data: null,
-            is_loading: false,
-            error: null,
-            session_id
-          })
+          empty_sheet_data.set('session_id', session_id)
         )
     }
 
