@@ -59,9 +59,7 @@ describe('validate_entity_from_filesystem - warnings pipeline', () => {
         entity_id: '11111111-1111-4111-8111-111111111111',
         perishable: true,
         consumable: true,
-        relations: [
-          'relates [[user:nonexistent/does-not-exist.md]]'
-        ]
+        relations: ['relates [[user:nonexistent/does-not-exist.md]]']
       },
       formatted_entity_metadata: {
         property_tags: [],

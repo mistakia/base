@@ -179,7 +179,9 @@ const RelationItem = ({
             color:
               thread_state === 'active' ? COLORS.success : COLORS.text_tertiary
           }}
-          title={thread_state === 'active' ? 'Active thread' : 'Archived thread'}>
+          title={
+            thread_state === 'active' ? 'Active thread' : 'Archived thread'
+          }>
           {thread_state === 'active' ? '●' : '○'}
         </Box>
       )}

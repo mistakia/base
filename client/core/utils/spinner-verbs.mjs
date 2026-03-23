@@ -49,7 +49,7 @@ const SPINNER_VERBS = [
   'Untangling',
   'Deciphering',
   'Lollygagging',
-  'Beboppin\'',
+  "Beboppin'",
   'Vibing'
 ]
 

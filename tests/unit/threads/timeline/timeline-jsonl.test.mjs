@@ -22,7 +22,11 @@ describe('timeline-jsonl', function () {
   describe('read_timeline_jsonl_from_offset - inode tracking', () => {
     it('should return ino in result object', async () => {
       const timeline_path = path.join(tmp_dir, 'timeline.jsonl')
-      await fs.writeFile(timeline_path, JSON.stringify({ type: 'message', timestamp: '2026-01-01T00:00:00Z' }) + '\n')
+      await fs.writeFile(
+        timeline_path,
+        JSON.stringify({ type: 'message', timestamp: '2026-01-01T00:00:00Z' }) +
+          '\n'
+      )
 
       const result = await read_timeline_jsonl_from_offset({
         timeline_path,
@@ -55,7 +59,10 @@ describe('timeline-jsonl', function () {
 
     it('should return null when expected_ino differs from actual inode', async () => {
       const timeline_path = path.join(tmp_dir, 'timeline.jsonl')
-      await fs.writeFile(timeline_path, JSON.stringify({ type: 'message' }) + '\n')
+      await fs.writeFile(
+        timeline_path,
+        JSON.stringify({ type: 'message' }) + '\n'
+      )
 
       const result = await read_timeline_jsonl_from_offset({
         timeline_path,
@@ -91,7 +98,10 @@ describe('timeline-jsonl', function () {
       const original_ino = original_stat.ino
 
       // Simulate atomic rewrite (temp file + rename, which changes inode)
-      const entry2 = { type: 'message', content: 'rewritten with more data to be larger' }
+      const entry2 = {
+        type: 'message',
+        content: 'rewritten with more data to be larger'
+      }
       const temp_path = timeline_path + '.tmp'
       await fs.writeFile(temp_path, JSON.stringify(entry2) + '\n')
       await fs.rename(temp_path, timeline_path)
@@ -150,7 +160,8 @@ describe('timeline-jsonl', function () {
 
     it('should preserve existing content (byte-level verification)', async () => {
       const timeline_path = path.join(tmp_dir, 'timeline.jsonl')
-      const original_line = JSON.stringify({ type: 'message', content: 'original' }) + '\n'
+      const original_line =
+        JSON.stringify({ type: 'message', content: 'original' }) + '\n'
       await fs.writeFile(timeline_path, original_line)
 
       const bytes_before = await fs.readFile(timeline_path)
@@ -188,7 +199,12 @@ describe('timeline-jsonl', function () {
       await fs.mkdir(thread_dir, { recursive: true })
 
       const timeline_path = path.join(thread_dir, 'timeline.jsonl')
-      const entry = { type: 'message', role: 'user', content: 'hello', timestamp: '2026-01-01T00:00:00Z' }
+      const entry = {
+        type: 'message',
+        role: 'user',
+        content: 'hello',
+        timestamp: '2026-01-01T00:00:00Z'
+      }
       await fs.writeFile(timeline_path, JSON.stringify(entry) + '\n')
 
       const initial = await read_timeline_jsonl_from_offset({
@@ -201,7 +217,12 @@ describe('timeline-jsonl', function () {
       expect(initial.entries).to.have.lengthOf(1)
 
       // Append more data (preserves inode)
-      const entry2 = { type: 'message', role: 'assistant', content: 'hi', timestamp: '2026-01-01T00:01:00Z' }
+      const entry2 = {
+        type: 'message',
+        role: 'assistant',
+        content: 'hi',
+        timestamp: '2026-01-01T00:01:00Z'
+      }
       await fs.appendFile(timeline_path, JSON.stringify(entry2) + '\n')
 
       // Read from previous offset with matching inode -- should succeed
@@ -222,7 +243,11 @@ describe('timeline-jsonl', function () {
       await fs.mkdir(thread_dir, { recursive: true })
 
       const timeline_path = path.join(thread_dir, 'timeline.jsonl')
-      const entry = { type: 'message', content: 'original', timestamp: '2026-01-01T00:00:00Z' }
+      const entry = {
+        type: 'message',
+        content: 'original',
+        timestamp: '2026-01-01T00:00:00Z'
+      }
       await fs.writeFile(timeline_path, JSON.stringify(entry) + '\n')
 
       const initial = await read_timeline_jsonl_from_offset({
@@ -231,7 +256,11 @@ describe('timeline-jsonl', function () {
       })
 
       // Atomic rewrite via temp + rename
-      const new_entry = { type: 'message', content: 'rewritten with longer content to exceed original size', timestamp: '2026-01-01T00:02:00Z' }
+      const new_entry = {
+        type: 'message',
+        content: 'rewritten with longer content to exceed original size',
+        timestamp: '2026-01-01T00:02:00Z'
+      }
       const temp_path = timeline_path + '.tmp.' + Date.now()
       await fs.writeFile(temp_path, JSON.stringify(new_entry) + '\n')
       await fs.rename(temp_path, timeline_path)

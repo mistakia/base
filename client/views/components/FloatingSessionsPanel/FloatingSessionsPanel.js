@@ -89,7 +89,10 @@ const FloatingSessionsPanel = () => {
       type: session.is_pending ? 'pending' : 'session',
       session,
       sort_time: new Date(
-        session.thread_created_at || session.created_at || session.started_at || 0
+        session.thread_created_at ||
+          session.created_at ||
+          session.started_at ||
+          0
       ).getTime(),
       sort_id: session.session_id || session.job_id || session.pending_id || ''
     }))
@@ -126,7 +129,13 @@ const FloatingSessionsPanel = () => {
       return a.sort_id.localeCompare(b.sort_id)
     })
     return { merged_items: combined, review_count: review_threads.length }
-  }, [all_sessions, threads, show_all_users, can_create_threads, user_public_key])
+  }, [
+    all_sessions,
+    threads,
+    show_all_users,
+    can_create_threads,
+    user_public_key
+  ])
 
   const active_count = active_session_count + pending_sessions.length
   const total_count = active_count + ended_session_count + review_count
@@ -311,7 +320,12 @@ const FloatingSessionsPanel = () => {
                   user_public_key &&
                   thread.user_public_key &&
                   thread.user_public_key !== user_public_key
-                return <SessionCard key={`review-${thread.thread_id}`} item={normalized} />
+                return (
+                  <SessionCard
+                    key={`review-${thread.thread_id}`}
+                    item={normalized}
+                  />
+                )
               }
 
               // Active/ended session - render as a compact card
@@ -342,7 +356,12 @@ const FloatingSessionsPanel = () => {
                 show_actions: false
               }
 
-              return <SessionCard key={`session-${session.session_id}`} item={item} />
+              return (
+                <SessionCard
+                  key={`session-${session.session_id}`}
+                  item={item}
+                />
+              )
             })}
 
             {merged_items.length === 0 && (

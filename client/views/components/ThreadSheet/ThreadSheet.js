@@ -331,7 +331,10 @@ const SingleThreadSheet = ({ thread_id }) => {
             <SessionActivityBar
               active_session={{
                 session_id: thread_id,
-                status: pending_resume.get('status') === 'starting' ? 'active' : 'pending',
+                status:
+                  pending_resume.get('status') === 'starting'
+                    ? 'active'
+                    : 'pending',
                 created_at: pending_resume.get('submitted_at')
               }}
             />
@@ -446,20 +449,14 @@ const ThreadSheet = () => {
   }, [is_open])
 
   return (
-    <div className={`thread-sheet__container ${is_open ? 'thread-sheet__container--open' : ''}`}>
-      {active_sheet && (
-        active_sheet.startsWith('session:') ? (
-          <SessionSheetPanel
-            key={active_sheet}
-            sheet_key={active_sheet}
-          />
+    <div
+      className={`thread-sheet__container ${is_open ? 'thread-sheet__container--open' : ''}`}>
+      {active_sheet &&
+        (active_sheet.startsWith('session:') ? (
+          <SessionSheetPanel key={active_sheet} sheet_key={active_sheet} />
         ) : (
-          <SingleThreadSheet
-            key={active_sheet}
-            thread_id={active_sheet}
-          />
-        )
-      )}
+          <SingleThreadSheet key={active_sheet} thread_id={active_sheet} />
+        ))}
     </div>
   )
 }

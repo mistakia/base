@@ -34,7 +34,15 @@ class UserRegistry {
         })
         if (public_identity) {
           log('Found public identity entity')
-          return await convert_identity_to_user({ identity: public_identity })
+          const user = await convert_identity_to_user({
+            identity: public_identity
+          })
+          if (user) {
+            return {
+              user_public_key: public_identity.auth_public_key,
+              ...user
+            }
+          }
         }
       } catch (error) {
         log(`Error loading public identity: ${error.message}`)
@@ -50,7 +58,13 @@ class UserRegistry {
         log(
           `Found identity entity for public key: ${user_public_key.slice(0, 8)}...`
         )
-        return await convert_identity_to_user({ identity })
+        const user = await convert_identity_to_user({ identity })
+        if (user) {
+          return {
+            user_public_key: identity.auth_public_key,
+            ...user
+          }
+        }
       }
     } catch (error) {
       log(`Error loading identity by public key: ${error.message}`)

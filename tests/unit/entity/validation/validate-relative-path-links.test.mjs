@@ -21,8 +21,7 @@ describe('validate_relative_path_links', () => {
 
   it('should error on image links with ../', () => {
     const result = validate_relative_path_links({
-      entity_content:
-        '![Chart](../../text/land-cruiser/chart.png)'
+      entity_content: '![Chart](../../text/land-cruiser/chart.png)'
     })
     expect(result.errors).to.have.lengthOf(1)
     expect(result.errors[0]).to.include('../../text/land-cruiser/chart.png')
@@ -38,8 +37,7 @@ describe('validate_relative_path_links', () => {
 
   it('should detect multiple relative links', () => {
     const result = validate_relative_path_links({
-      entity_content:
-        '[A](../a.md) and [B](../../b.md) and ![C](./c.png)'
+      entity_content: '[A](../a.md) and [B](../../b.md) and ![C](./c.png)'
     })
     expect(result.errors).to.have.lengthOf(3)
   })

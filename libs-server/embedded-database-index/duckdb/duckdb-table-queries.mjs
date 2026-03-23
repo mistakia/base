@@ -588,8 +588,7 @@ export async function query_entities_from_duckdb({
   if (search) {
     const escaped_search = escape_like_metacharacters(search)
     const search_pattern = `%${escaped_search}%`
-    search_condition =
-      '(e.title ILIKE ? OR e.description ILIKE ?)'
+    search_condition = '(e.title ILIKE ? OR e.description ILIKE ?)'
     search_params.push(search_pattern, search_pattern)
   }
 
@@ -610,13 +609,16 @@ export async function query_entities_from_duckdb({
   let final_order = order_sql
   const relevance_params = []
   if (search && sort.length === 0) {
-    final_order = 'ORDER BY CASE WHEN e.title ILIKE ? THEN 0 ELSE 1 END, e.updated_at DESC'
+    final_order =
+      'ORDER BY CASE WHEN e.title ILIKE ? THEN 0 ELSE 1 END, e.updated_at DESC'
     relevance_params.push(search_params[0])
   }
 
   const query =
-    build_entity_query({ where_clause: final_where, order_clause: final_order }) +
-    'LIMIT ? OFFSET ?'
+    build_entity_query({
+      where_clause: final_where,
+      order_clause: final_order
+    }) + 'LIMIT ? OFFSET ?'
 
   try {
     const results = await execute_duckdb_query({
@@ -709,8 +711,7 @@ export async function count_entities_in_duckdb({ filters = [], search }) {
   if (search) {
     const escaped_search = escape_like_metacharacters(search)
     const search_pattern = `%${escaped_search}%`
-    search_condition =
-      '(e.title ILIKE ? OR e.description ILIKE ?)'
+    search_condition = '(e.title ILIKE ? OR e.description ILIKE ?)'
     search_params.push(search_pattern, search_pattern)
   }
 

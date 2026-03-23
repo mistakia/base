@@ -36,7 +36,11 @@ const normalize_session = (session, get_thread, prompt_snippets = {}) => {
 
   // Show actions for non-running sessions with non-archived threads and write permission
   const show_actions =
-    !is_running && has_thread && !is_redacted && !is_thread_archived && can_write
+    !is_running &&
+    has_thread &&
+    !is_redacted &&
+    !is_thread_archived &&
+    can_write
 
   return {
     id: session.thread_id,
@@ -178,12 +182,8 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   }
 
   const sessions_list = [...filtered_sessions].sort((a, b) => {
-    const a_time = new Date(
-      a.thread_created_at || a.created_at || 0
-    ).getTime()
-    const b_time = new Date(
-      b.thread_created_at || b.created_at || 0
-    ).getTime()
+    const a_time = new Date(a.thread_created_at || a.created_at || 0).getTime()
+    const b_time = new Date(b.thread_created_at || b.created_at || 0).getTime()
     if (b_time !== a_time) return b_time - a_time
     return (a.session_id || '').localeCompare(b.session_id || '')
   })

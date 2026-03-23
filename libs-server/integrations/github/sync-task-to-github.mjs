@@ -116,7 +116,11 @@ export async function sync_task_to_github({
 
       const option_id = options?.[value]
       if (!option_id) {
-        log('no option_id for %s "%s", skipping project field update', name, value)
+        log(
+          'no option_id for %s "%s", skipping project field update',
+          name,
+          value
+        )
         continue
       }
 
@@ -144,9 +148,7 @@ export async function sync_task_to_github({
 
     // Sync issue state for terminal status transitions
     if (changed_fields.status) {
-      const is_now_terminal = TERMINAL_STATUSES.includes(
-        changed_fields.status
-      )
+      const is_now_terminal = TERMINAL_STATUSES.includes(changed_fields.status)
       const was_terminal =
         previous_status && TERMINAL_STATUSES.includes(previous_status)
 
@@ -160,7 +162,12 @@ export async function sync_task_to_github({
             data: { state: 'closed' }
           })
           result.pushed_fields.push('issue_state:closed')
-          log('closed issue %s/%s#%d', parsed.owner, parsed.repo, parsed.issue_number)
+          log(
+            'closed issue %s/%s#%d',
+            parsed.owner,
+            parsed.repo,
+            parsed.issue_number
+          )
         } catch (error) {
           result.errors.push({
             field: 'issue_state',
@@ -178,7 +185,12 @@ export async function sync_task_to_github({
             data: { state: 'open' }
           })
           result.pushed_fields.push('issue_state:open')
-          log('reopened issue %s/%s#%d', parsed.owner, parsed.repo, parsed.issue_number)
+          log(
+            'reopened issue %s/%s#%d',
+            parsed.owner,
+            parsed.repo,
+            parsed.issue_number
+          )
         } catch (error) {
           result.errors.push({
             field: 'issue_state',

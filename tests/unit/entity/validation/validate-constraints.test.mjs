@@ -37,7 +37,11 @@ describe('validate_constraints', () => {
     ])
 
     const result = validate_constraints({
-      entity_properties: { type: 'physical_item', perishable: true, consumable: true },
+      entity_properties: {
+        type: 'physical_item',
+        perishable: true,
+        consumable: true
+      },
       entity_type: 'physical_item',
       schemas
     })
@@ -78,7 +82,11 @@ describe('validate_constraints', () => {
     ])
 
     const result = validate_constraints({
-      entity_properties: { type: 'physical_item', perishable: true, consumable: false },
+      entity_properties: {
+        type: 'physical_item',
+        perishable: true,
+        consumable: false
+      },
       entity_type: 'physical_item',
       schemas
     })
@@ -98,7 +106,11 @@ describe('validate_constraints', () => {
     ])
 
     const result = validate_constraints({
-      entity_properties: { type: 'physical_item', perishable: false, consumable: true },
+      entity_properties: {
+        type: 'physical_item',
+        perishable: false,
+        consumable: true
+      },
       entity_type: 'physical_item',
       schemas
     })

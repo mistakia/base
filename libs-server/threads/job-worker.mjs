@@ -168,10 +168,7 @@ const process_thread_creation_job = async (job) => {
         // Delay job until earliest exhausted marker expires instead of
         // consuming a retry attempt (markers may have TTLs of hours)
         const delay_ms = await get_exhausted_delay_ms()
-        log(
-          `Job ${job.id}: all accounts exhausted, delaying %dms`,
-          delay_ms
-        )
+        log(`Job ${job.id}: all accounts exhausted, delaying %dms`, delay_ms)
         await job.moveToDelayed(Date.now() + delay_ms, job.token)
         // Return without result -- job will be re-processed after delay
         return

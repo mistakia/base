@@ -25,9 +25,7 @@ const KPICard = ({ title, value, subtitle, color_class }) => (
   <div className={`finance-kpi-card ${color_class || ''}`}>
     <div className='finance-kpi-card__title'>{title}</div>
     <div className='finance-kpi-card__value'>{value}</div>
-    {subtitle && (
-      <div className='finance-kpi-card__subtitle'>{subtitle}</div>
-    )}
+    {subtitle && <div className='finance-kpi-card__subtitle'>{subtitle}</div>}
   </div>
 )
 
@@ -63,11 +61,7 @@ const FinancePage = ({
 
   const ytd_color = ytd_change_pct >= 0 ? 'positive' : 'negative'
   const safe_to_spend_color =
-    safe_to_spend === null
-      ? ''
-      : safe_to_spend > 0
-        ? 'positive'
-        : 'negative'
+    safe_to_spend === null ? '' : safe_to_spend > 0 ? 'positive' : 'negative'
 
   // compute allocation percentages
   const allocation_entries = Object.entries(asset_allocation || {})

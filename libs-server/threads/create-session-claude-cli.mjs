@@ -754,9 +754,7 @@ export const create_session_claude_cli = async ({
       env: {
         ...process.env,
         ...(job_id ? { JOB_ID: job_id } : {}),
-        ...(claude_config_dir
-          ? { CLAUDE_CONFIG_DIR: claude_config_dir }
-          : {})
+        ...(claude_config_dir ? { CLAUDE_CONFIG_DIR: claude_config_dir } : {})
       }
     }
   }

@@ -306,9 +306,8 @@ describe('Entity Format Extractors', () => {
       expect(parse_relation_entry('')).to.be.null
       expect(parse_relation_entry('malformed string')).to.be.null
       expect(parse_relation_entry({ type: 'depends_on' })).to.be.null
-      expect(
-        parse_relation_entry({ target: 'sys:system/project-setup' })
-      ).to.be.null
+      expect(parse_relation_entry({ target: 'sys:system/project-setup' })).to.be
+        .null
     })
   })
 

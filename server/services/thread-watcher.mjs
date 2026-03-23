@@ -179,7 +179,9 @@ const read_thread_metadata = async (file_path) => {
 const get_or_read_metadata = async (thread_id, metadata_dir) => {
   let metadata = metadata_cache.get(thread_id)
   if (!metadata) {
-    metadata = await read_thread_metadata(path.join(metadata_dir, FILE_NAMES.METADATA))
+    metadata = await read_thread_metadata(
+      path.join(metadata_dir, FILE_NAMES.METADATA)
+    )
     if (metadata) {
       metadata_cache.set(thread_id, metadata)
     }
@@ -206,7 +208,11 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
   })
 
   if (!result || result.entries.length === 0) {
-    last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0, ino: result?.ino ?? null })
+    last_seen_state.set(thread_id, {
+      timestamp: null,
+      byte_offset: 0,
+      ino: result?.ino ?? null
+    })
     return []
   }
 
@@ -223,7 +229,9 @@ const initialize_thread_tracking = async (thread_id, timeline_path) => {
     latest_timeline_entry_cache.set(thread_id, latest)
   }
 
-  log(`Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}, ino=${result.ino}`)
+  log(
+    `Initialized tracking for ${thread_id}: offset=${result.new_byte_offset}, ino=${result.ino}`
+  )
   return result.entries
 }
 
@@ -254,7 +262,9 @@ const detect_new_timeline_entries = async ({ thread_id, timeline_path }) => {
 
   // Inode mismatch or truncation detected (atomic rewrite) -- reinitialize from scratch
   if (result === null) {
-    log(`Rewrite detected for thread ${thread_id} (inode or size mismatch), reinitializing tracking`)
+    log(
+      `Rewrite detected for thread ${thread_id} (inode or size mismatch), reinitializing tracking`
+    )
     last_seen_state.delete(thread_id)
     return initialize_thread_tracking(thread_id, timeline_path)
   }
@@ -322,7 +332,11 @@ const initialize_timeline_tracking_for_new_thread = async (
     })
 
     if (!result || result.entries.length === 0) {
-      last_seen_state.set(thread_id, { timestamp: null, byte_offset: 0, ino: result?.ino ?? null })
+      last_seen_state.set(thread_id, {
+        timestamp: null,
+        byte_offset: 0,
+        ino: result?.ino ?? null
+      })
       log(`No timeline entries yet for thread ${thread_id}`)
       return
     }
@@ -462,7 +476,10 @@ const handle_timeline_changed = async (file_path) => {
     return
   }
 
-  const metadata = await get_or_read_metadata(thread_id, path.dirname(file_path))
+  const metadata = await get_or_read_metadata(
+    thread_id,
+    path.dirname(file_path)
+  )
 
   if (!metadata) {
     log(`Could not read metadata for thread ${thread_id}`)
@@ -491,11 +508,18 @@ let reconciliation_timer = null
  * @param {string} thread_directory - Absolute path to thread directory
  */
 const reconcile_tracked_threads = async (thread_directory) => {
-  log('Starting reconciliation scan of %d tracked threads', last_seen_state.size)
+  log(
+    'Starting reconciliation scan of %d tracked threads',
+    last_seen_state.size
+  )
   let changes_found = 0
 
   for (const [thread_id, tracked] of last_seen_state.entries()) {
-    const timeline_path = path.join(thread_directory, thread_id, FILE_NAMES.TIMELINE)
+    const timeline_path = path.join(
+      thread_directory,
+      thread_id,
+      FILE_NAMES.TIMELINE
+    )
 
     let stat
     try {

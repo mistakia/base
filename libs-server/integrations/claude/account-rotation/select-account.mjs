@@ -17,10 +17,7 @@ const log = debug('claude:account-selector')
 export class AllAccountsExhaustedError extends Error {
   constructor(account_details = []) {
     const summary = account_details
-      .map(
-        (a) =>
-          `${a.namespace}: ${a.reason || 'exhausted'}`
-      )
+      .map((a) => `${a.namespace}: ${a.reason || 'exhausted'}`)
       .join(', ')
     super(`All Claude accounts exhausted: ${summary}`)
     this.name = 'AllAccountsExhaustedError'

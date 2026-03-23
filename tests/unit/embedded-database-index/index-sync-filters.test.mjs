@@ -242,7 +242,9 @@ describe('Index Sync Filters', () => {
     it('should include generic submodule paths', () => {
       expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.be.an('array')
       expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.include('import-history/')
-      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.include('repository/active/')
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.include(
+        'repository/active/'
+      )
     })
 
     it('should not include user-specific paths', () => {
@@ -253,7 +255,9 @@ describe('Index Sync Filters', () => {
     })
 
     it('should not exclude repository/archive (archive entities are indexed)', () => {
-      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.not.include('repository/archive/')
+      expect(DEFAULT_SUBMODULE_EXCLUSION_PREFIXES).to.not.include(
+        'repository/archive/'
+      )
     })
   })
 })

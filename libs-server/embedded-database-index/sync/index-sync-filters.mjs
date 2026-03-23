@@ -66,7 +66,10 @@ export async function get_submodule_exclusion_prefixes() {
   // Deduplicate while preserving order (user prefixes first)
   const seen = new Set()
   const combined = []
-  for (const prefix of [...user_prefixes, ...DEFAULT_SUBMODULE_EXCLUSION_PREFIXES]) {
+  for (const prefix of [
+    ...user_prefixes,
+    ...DEFAULT_SUBMODULE_EXCLUSION_PREFIXES
+  ]) {
     if (!seen.has(prefix)) {
       seen.add(prefix)
       combined.push(prefix)

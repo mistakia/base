@@ -24,7 +24,8 @@ export async function authenticated_fetch(url, options = {}) {
   // Node 18 fetch doesn't support custom agents directly, but undici
   // (which powers Node's fetch) accepts a dispatcher. For HTTPS to
   // localhost, disable TLS verification via env var scoped to this call.
-  const is_local_https = url_string.startsWith('https://127.0.0.1') ||
+  const is_local_https =
+    url_string.startsWith('https://127.0.0.1') ||
     url_string.startsWith('https://localhost')
 
   try {

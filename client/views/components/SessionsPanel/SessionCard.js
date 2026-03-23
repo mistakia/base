@@ -154,11 +154,11 @@ const SessionCard = ({ item }) => {
       {item.latest_timeline_event &&
         item.status !== 'running' &&
         item.status !== 'idle' && (
-        <CompactTimelineEvent
-          timeline_event={item.latest_timeline_event}
-          thread_id={item.id}
-        />
-      )}
+          <CompactTimelineEvent
+            timeline_event={item.latest_timeline_event}
+            thread_id={item.id}
+          />
+        )}
 
       {(show_footer || item.status === 'running' || item.status === 'idle') && (
         <div className='session-card__footer'>

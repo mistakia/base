@@ -200,13 +200,14 @@ export async function move_entity_filesystem({
 
         // Update references in thread metadata.json files
         log('Scanning thread metadata for references to update...')
-        const thread_reference_result =
-          await update_thread_metadata_references({
+        const thread_reference_result = await update_thread_metadata_references(
+          {
             old_base_uri: source_resolved.base_uri,
             new_base_uri: destination_resolved.base_uri,
             dry_run: false,
             transaction: txn
-          })
+          }
+        )
 
         result.threads_with_references =
           thread_reference_result.threads_with_references

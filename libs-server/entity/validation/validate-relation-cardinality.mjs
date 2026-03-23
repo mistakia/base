@@ -11,7 +11,11 @@ const log = debug('entity:validation:relation-cardinality')
  * @param {Object} params.schemas - Schema definitions map
  * @returns {Object} - { warnings: string[] }
  */
-export function validate_relation_cardinality({ entity_properties, entity_type, schemas }) {
+export function validate_relation_cardinality({
+  entity_properties,
+  entity_type,
+  schemas
+}) {
   const warnings = []
 
   if (!entity_type || !schemas) {
@@ -32,7 +36,9 @@ export function validate_relation_cardinality({ entity_properties, entity_type, 
     return { warnings }
   }
 
-  log(`Evaluating ${schema.relation_constraints.length} relation constraints for type: ${entity_type}`)
+  log(
+    `Evaluating ${schema.relation_constraints.length} relation constraints for type: ${entity_type}`
+  )
 
   // Group relations by type (first token before [[)
   const counts_by_type = {}
@@ -45,7 +51,9 @@ export function validate_relation_cardinality({ entity_properties, entity_type, 
   for (const constraint of schema.relation_constraints) {
     const count = counts_by_type[constraint.type] || 0
     if (count > constraint.max_count) {
-      log(`Cardinality exceeded for ${constraint.type}: ${count} > ${constraint.max_count}`)
+      log(
+        `Cardinality exceeded for ${constraint.type}: ${count} > ${constraint.max_count}`
+      )
       warnings.push(constraint.message)
     }
   }

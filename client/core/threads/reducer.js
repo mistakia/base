@@ -607,7 +607,11 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           created_at: new Date().toISOString(),
           _optimistic: true
         }
-        new_state = append_timeline_entry(new_state, thread_id, optimistic_entry)
+        new_state = append_timeline_entry(
+          new_state,
+          thread_id,
+          optimistic_entry
+        )
       }
 
       return new_state

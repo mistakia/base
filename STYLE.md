@@ -342,8 +342,8 @@ Use the utility classes from `utilities.styl`:
 2. **Never use MUI Button** - Use the custom Button component
 3. **Never use border-radius > 4px** - Keep corners minimal
 4. **Never add decorative gradients or shadows** - Keep it utilitarian
-6. **Never use box-shadow for elevation** - Reserve box-shadow for focus rings only; use borders and background shifts for depth
-5. **Never use non-monospace fonts** - IBM Plex Mono everywhere
+5. **Never use box-shadow for elevation** - Reserve box-shadow for focus rings only; use borders and background shifts for depth
+6. **Never use non-monospace fonts** - IBM Plex Mono everywhere
 
 ## Cross-Platform Notes
 

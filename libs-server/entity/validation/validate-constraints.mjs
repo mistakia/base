@@ -11,7 +11,11 @@ const log = debug('entity:validation:constraints')
  * @param {Object} params.schemas - Schema definitions map
  * @returns {Object} - { warnings: string[] }
  */
-export function validate_constraints({ entity_properties, entity_type, schemas }) {
+export function validate_constraints({
+  entity_properties,
+  entity_type,
+  schemas
+}) {
   const warnings = []
 
   if (!entity_type || !schemas) {
@@ -19,16 +23,23 @@ export function validate_constraints({ entity_properties, entity_type, schemas }
   }
 
   const schema = schemas[entity_type]
-  if (!schema || !Array.isArray(schema.constraints) || schema.constraints.length === 0) {
+  if (
+    !schema ||
+    !Array.isArray(schema.constraints) ||
+    schema.constraints.length === 0
+  ) {
     return { warnings }
   }
 
-  log(`Evaluating ${schema.constraints.length} constraints for type: ${entity_type}`)
+  log(
+    `Evaluating ${schema.constraints.length} constraints for type: ${entity_type}`
+  )
 
   for (const constraint of schema.constraints) {
     if (constraint.rule === 'conflicts') {
       const condition_matches =
-        entity_properties[constraint.condition_field] === constraint.condition_value
+        entity_properties[constraint.condition_field] ===
+        constraint.condition_value
       const field_matches =
         entity_properties[constraint.field] === constraint.field_value
 

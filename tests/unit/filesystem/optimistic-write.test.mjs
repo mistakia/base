@@ -51,11 +51,7 @@ describe('read_modify_write', () => {
 
         // On first attempt, simulate a concurrent write by touching the file
         if (modify_call_count === 1) {
-          await fs.writeFile(
-            file_path,
-            JSON.stringify({ count: 5 }),
-            'utf8'
-          )
+          await fs.writeFile(file_path, JSON.stringify({ count: 5 }), 'utf8')
         }
 
         data.count += 10

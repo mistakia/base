@@ -42,10 +42,7 @@ export function validate_relative_path_links({
     }
   } else {
     // Simple extraction: strip fenced code blocks, then scan
-    const content_without_code = entity_content.replace(
-      /```[\s\S]*?```/g,
-      ''
-    )
+    const content_without_code = entity_content.replace(/```[\s\S]*?```/g, '')
     find_relative_links(content_without_code, relative_link_regex, errors)
   }
 

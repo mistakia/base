@@ -538,7 +538,10 @@ const ThreadHeader = ({
     thread_user_public_key &&
     current_user_public_key === thread_user_public_key
 
-  const toggle_collapse = useCallback(() => set_is_collapsed((prev) => !prev), [])
+  const toggle_collapse = useCallback(
+    () => set_is_collapsed((prev) => !prev),
+    []
+  )
 
   const merged_sx = useMemo(
     () => ({ marginTop: '16px', ...container_sx }),
@@ -568,11 +571,21 @@ const ThreadHeader = ({
       sx={merged_sx}>
       <Box sx={{ px: 3, pt: 3, pb: 2 }}>
         {actions ? (
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              {title_content}
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 1
+            }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>{title_content}</Box>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                flexShrink: 0
+              }}>
               {actions}
             </Box>
           </Box>
@@ -588,10 +601,7 @@ const ThreadHeader = ({
             <MetadataRow
               label='Live Session'
               value={
-                <SessionActivityBar
-                  active_session={active_session}
-                  compact
-                />
+                <SessionActivityBar active_session={active_session} compact />
               }
               is_first
             />

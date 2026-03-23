@@ -106,7 +106,11 @@ if (config.machine_registry && process.env.NODE_ENV !== 'test') {
   )
   if (machine_entry) {
     const [machine_id, machine_config] = machine_entry
-    log('Matched machine registry entry: %s (hostname: %s)', machine_id, current_hostname)
+    log(
+      'Matched machine registry entry: %s (hostname: %s)',
+      machine_id,
+      current_hostname
+    )
     if (machine_config.server_port) {
       config.server_port = machine_config.server_port
     }

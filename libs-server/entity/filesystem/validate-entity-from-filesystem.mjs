@@ -140,9 +140,7 @@ export async function validate_entity_from_filesystem({
     const relative_path_result = validate_relative_path_links({
       entity_content
     })
-    all_errors.push(
-      ...(relative_path_result.errors || []).map(String)
-    )
+    all_errors.push(...(relative_path_result.errors || []).map(String))
 
     const all_warnings = [
       ...constraints_result.warnings,

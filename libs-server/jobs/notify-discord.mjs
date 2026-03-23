@@ -140,7 +140,10 @@ export const notify_job_failure = async ({
  * @param {string} params.discord_config.user_api_token - Discord user/bot token
  * @param {string} params.discord_config.alerts_channel_id - Channel ID where alerts were posted
  */
-export const delete_failure_alerts = async ({ message_ids, discord_config }) => {
+export const delete_failure_alerts = async ({
+  message_ids,
+  discord_config
+}) => {
   const { user_api_token, alerts_channel_id } = discord_config || {}
   if (!user_api_token || !alerts_channel_id || !message_ids?.length) {
     return

@@ -65,7 +65,11 @@ const do_drain = async ({
   try {
     const stale = await fs.readFile(snapshot_path, 'utf-8')
     if (stale.trim()) {
-      await fs.appendFile(buffer_path, stale.endsWith('\n') ? stale : stale + '\n', 'utf-8')
+      await fs.appendFile(
+        buffer_path,
+        stale.endsWith('\n') ? stale : stale + '\n',
+        'utf-8'
+      )
     }
     await fs.unlink(snapshot_path)
     log('Recovered stale draining snapshot')

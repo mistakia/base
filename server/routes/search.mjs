@@ -6,7 +6,11 @@ import {
   check_permissions_batch
 } from '#server/middleware/permission/index.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
-import { create_base_uri_from_path, resolve_base_uri, parse_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import {
+  create_base_uri_from_path,
+  resolve_base_uri,
+  parse_base_uri
+} from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { query_entities_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
@@ -307,10 +311,7 @@ router.get('/', async (req, res) => {
           })
         }
 
-        const per_type_limit = Math.max(
-          1,
-          Math.ceil(limit / types.length)
-        )
+        const per_type_limit = Math.max(1, Math.ceil(limit / types.length))
 
         try {
           const db_results = await query_entities_from_duckdb({
@@ -340,7 +341,10 @@ router.get('/', async (req, res) => {
             unified_types = unified_types.filter((t) => t !== 'entities')
           }
         } catch (err) {
-          log('DuckDB entity search failed, falling back to path scoring: %s', err.message)
+          log(
+            'DuckDB entity search failed, falling back to path scoring: %s',
+            err.message
+          )
           // Fall through to unified_search with entities included
         }
       }
@@ -348,15 +352,24 @@ router.get('/', async (req, res) => {
 
     // Perform default search (paths or full mode)
     // Skip unified_search entirely when DuckDB handled all requested types
-    const search_results = (mode === 'full' && unified_types.length === 0)
-      ? { mode: 'full', query, files: [], threads: [], entities: [], directories: [], total: 0 }
-      : await unified_search({
-          query,
-          mode,
-          directory,
-          types: unified_types,
-          limit
-        })
+    const search_results =
+      mode === 'full' && unified_types.length === 0
+        ? {
+            mode: 'full',
+            query,
+            files: [],
+            threads: [],
+            entities: [],
+            directories: [],
+            total: 0
+          }
+        : await unified_search({
+            query,
+            mode,
+            directory,
+            types: unified_types,
+            limit
+          })
 
     // Merge DuckDB entity results if available
     if (duckdb_entity_results) {

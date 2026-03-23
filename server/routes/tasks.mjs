@@ -688,7 +688,9 @@ router.patch('/', async (req, res) => {
           priority: update_properties.priority
         },
         previous_status: task.entity_properties.status
-      }).catch((err) => log('GitHub sync failed for %s: %s', base_uri, err.message))
+      }).catch((err) =>
+        log('GitHub sync failed for %s: %s', base_uri, err.message)
+      )
     }
   } catch (error) {
     log('Error updating task:', error)

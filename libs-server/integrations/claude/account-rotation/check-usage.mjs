@@ -177,8 +177,7 @@ export const check_account_usage = async ({
   org_uuid,
   browser_profile
 }) => {
-  const cache_ttl =
-    config.claude_accounts?.usage_check_cache_seconds || 300
+  const cache_ttl = config.claude_accounts?.usage_check_cache_seconds || 300
   const threshold = config.claude_accounts?.utilization_threshold || 90
 
   // Check cache first
