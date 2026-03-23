@@ -751,9 +751,27 @@ sync_submodule() {
         fi
     fi
 
+    # Skip network sync when storage is unreachable (auto-commit still ran above)
+    if [ "$STORAGE_REACHABLE" != "true" ]; then
+        log_verbose "$submodule_name: storage unreachable, skipping fetch/push"
+        return 1
+    fi
+
     # Delegate to unified sync function (submodules use rebase for diverged state)
     sync_repo "$full_path" "false"
 }
+
+# --- Storage connectivity pre-check ---
+# Single quick SSH test before iterating submodules. Avoids ~10s timeout per repo
+# when storage is unreachable (e.g., VPN flap, route loss). Auto-commit scripts
+# still run so local commits aren't delayed.
+STORAGE_REACHABLE=true
+if ! ssh -o ConnectTimeout=3 -o BatchMode=yes storage true 2>/dev/null; then
+    log_error "Storage server unreachable (SSH pre-check failed), skipping storage sync"
+    log_telemetry "storage" "connectivity_failed" ""
+    STORAGE_REACHABLE=false
+    ERRORS=$((ERRORS + 1))
+fi
 
 # --- Step 1: Sync storage-hosted submodules ---
 
@@ -766,7 +784,7 @@ for entry in "${STORAGE_SUBMODULES[@]}"; do
     fi
 
     # After thread git sync completes, push bulk data via rsync (non-fatal)
-    if [ "$path" = "thread" ]; then
+    if [ "$path" = "thread" ] && [ "$STORAGE_REACHABLE" = "true" ]; then
         if [ -x "$SCRIPT_DIR/sync-thread-data.sh" ]; then
             log_verbose "Pushing thread bulk data via rsync..."
             "$SCRIPT_DIR/sync-thread-data.sh" $([ "$VERBOSE" = true ] && echo "--verbose") || {
@@ -930,8 +948,12 @@ else
     fi
 
     # Sync parent repo (uses merge for diverged state)
-    if ! sync_repo "$USER_BASE_DIRECTORY" "true"; then
-        ERRORS=$((ERRORS + 1))
+    if [ "$STORAGE_REACHABLE" = "true" ]; then
+        if ! sync_repo "$USER_BASE_DIRECTORY" "true"; then
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        log_verbose "Skipping parent repo sync (storage unreachable)"
     fi
 fi
 
