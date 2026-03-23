@@ -130,7 +130,10 @@ export function parse_relations_for_display({ relations }) {
         base_uri: null,
         title: null,
         malformed: true,
-        raw_string: relation_string,
+        raw_string:
+          typeof relation_string === 'string'
+            ? relation_string
+            : JSON.stringify(relation_string),
         // Use index to ensure unique keys for malformed relations
         unique_key: `malformed-${index}`
       })
