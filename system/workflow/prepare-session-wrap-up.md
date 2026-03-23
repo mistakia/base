@@ -45,7 +45,7 @@ Based on what you know you've done in this session and the tasks you were given,
   - Deferred questions, decisions, or TODOs that were set aside
   - Tests or validation that should be run against changes made
 
-For commits: proceed without asking for approval -- the user invoked wrap-up to finalize the session. For other cleanup actions (deleting files, merging worktrees), recommend and execute after confirmation. For anything that cannot be completed now, capture it in the continuation prompt. If everything is clean and no follow-up is needed, omit the continuation prompt section entirely.
+For commits and task status updates: proceed without asking for approval -- the user invoked wrap-up to finalize the session. For other cleanup actions (deleting files, merging worktrees), recommend and execute after confirmation. For anything that cannot be completed now, capture it in the continuation prompt. If everything is clean and no follow-up is needed, omit the continuation prompt section entirely.
 
 </instructions>
 
