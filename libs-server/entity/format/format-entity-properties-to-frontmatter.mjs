@@ -80,11 +80,30 @@ export function format_entity_properties_to_frontmatter({
     entity_properties.relations &&
     Array.isArray(entity_properties.relations)
   ) {
-    // Strip leading "- " from relation strings to handle double-prefixed
-    // YAML list markers (e.g. "- relates [[...]]" -> "relates [[...]]")
-    frontmatter.relations = entity_properties.relations.map((rel) =>
-      typeof rel === 'string' && rel.startsWith('- ') ? rel.slice(2) : rel
-    )
+    // Validate and normalize relation entries to canonical string format.
+    // Schema requires: "relation_type [[base_uri]] (optional context)"
+    // Reject object-format relations ({type, target} or {predicate, target_uri})
+    // which are not schema-compliant and indicate a caller bug.
+    frontmatter.relations = entity_properties.relations.map((rel) => {
+      if (rel && typeof rel === 'object') {
+        // Attempt to normalize known object formats to string
+        const relation_type = rel.type || rel.predicate || rel.relation_type
+        const target = rel.target || rel.target_uri || rel.base_uri
+        if (relation_type && target) {
+          const context_suffix = rel.context ? ` (${rel.context})` : ''
+          return `${relation_type} [[${target}]]${context_suffix}`
+        }
+        throw new Error(
+          `Invalid object-format relation: ${JSON.stringify(rel)}. Relations must be strings in format "relation_type [[base_uri]]".`
+        )
+      }
+      // Strip leading "- " from relation strings to handle double-prefixed
+      // YAML list markers (e.g. "- relates [[...]]" -> "relates [[...]]")
+      if (typeof rel === 'string' && rel.startsWith('- ')) {
+        return rel.slice(2)
+      }
+      return rel
+    })
   }
 
   if (

@@ -109,7 +109,9 @@ observations:
 
 ### Relations
 
-Connections to other knowledge items in frontmatter:
+Connections to other knowledge items in frontmatter. Each relation MUST be a plain string -- never a YAML object. The system rejects object-format relations (e.g., `{type: relates, target: ...}` or `{predicate: ..., target_uri: ...}`).
+
+Required format: `"relation_type [[base_uri]] (optional context)"`
 
 ```yaml
 relations:

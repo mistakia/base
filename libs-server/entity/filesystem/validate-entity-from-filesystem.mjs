@@ -63,9 +63,26 @@ export async function validate_entity_from_filesystem({
         }
       }
 
-      // Detect double-prefixed relation strings where the YAML list marker
-      // "- " was included in the string value (e.g. "- relates [[...]]")
       if (Array.isArray(relations)) {
+        // Detect object-format relations that should be strings.
+        // Schema requires: "relation_type [[base_uri]] (optional context)"
+        // Object formats like {type, target} or {predicate, target_uri} are not compliant.
+        const object_relations = relations.filter(
+          (rel) => rel && typeof rel === 'object'
+        )
+        if (object_relations.length > 0) {
+          return {
+            success: false,
+            errors: object_relations.map(
+              (rel) =>
+                `Relation is an object instead of a string: ${JSON.stringify(rel)}. Use format: "relation_type [[base_uri]]"`
+            ),
+            warnings: []
+          }
+        }
+
+        // Detect double-prefixed relation strings where the YAML list marker
+        // "- " was included in the string value (e.g. "- relates [[...]]")
         const double_prefixed = relations.filter(
           (rel) => typeof rel === 'string' && rel.startsWith('- ')
         )
