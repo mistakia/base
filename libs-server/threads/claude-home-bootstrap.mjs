@@ -1,9 +1,56 @@
-import { join } from 'path'
-import { mkdir, copyFile, writeFile, access } from 'fs/promises'
+import { join, basename, resolve } from 'path'
+import { mkdir, copyFile, writeFile, access, symlink, readlink, unlink } from 'fs/promises'
 import { constants } from 'fs'
+import { homedir } from 'os'
 import debug from 'debug'
 
+import config from '#config'
+
 const log = debug('threads:claude-home-bootstrap')
+
+/**
+ * Resolve a config_dir path (handles ~ prefix)
+ */
+const resolve_config_dir = (dir) => {
+  if (!dir) return null
+  return dir.startsWith('~/') ? join(homedir(), dir.slice(2)) : resolve(dir)
+}
+
+/**
+ * Get configured Claude accounts (if multi-account rotation is enabled)
+ * @returns {Array} Account list or empty array
+ */
+const get_configured_accounts = () => {
+  const accounts_config = config.claude_accounts
+  if (!accounts_config?.enabled) return []
+  return accounts_config.accounts || []
+}
+
+/**
+ * Resolve secondary account directories for a user.
+ * Filters out the primary account (.claude) and returns resolved paths.
+ *
+ * @param {string} user_dir - Parent directory for this user's container data
+ * @returns {Array<{account: Object, user_account_dir: string, admin_source: string|null}>}
+ */
+const get_secondary_account_dirs = (user_dir) => {
+  const accounts = get_configured_accounts()
+  const results = []
+
+  for (const account of accounts) {
+    const container_dir = account.container_config_dir
+    if (!container_dir) continue
+
+    const normalized = container_dir.replace(/\/$/, '')
+    if (basename(normalized) === '.claude') continue
+
+    const user_account_dir = join(user_dir, basename(normalized).replace(/^\./, ''))
+    const admin_source = resolve_config_dir(account.config_dir)
+    results.push({ account, user_account_dir, admin_source })
+  }
+
+  return results
+}
 
 /**
  * Hardcoded safety list -- these directories must never be mounted or accessible
@@ -242,18 +289,66 @@ export const generate_user_settings = ({
 }
 
 /**
+ * Copy credentials from an admin source to a target directory (idempotent)
+ */
+const copy_credentials_idempotent = async ({
+  source_dir,
+  target_dir,
+  label,
+  required = true
+}) => {
+  const credentials_target = join(target_dir, '.credentials.json')
+  const credentials_source = join(source_dir, '.credentials.json')
+
+  try {
+    await access(credentials_target, constants.F_OK)
+    log(`Credentials already exist for ${label}, skipping copy`)
+    return
+  } catch {
+    // Does not exist yet -- proceed to copy
+  }
+
+  try {
+    await access(credentials_source, constants.F_OK)
+    await copyFile(credentials_source, credentials_target)
+    log(`Copied credentials for ${label}`)
+  } catch (error) {
+    if (required) {
+      throw new Error(
+        `Admin credentials not found at ${credentials_source}: ${error.message}`
+      )
+    }
+    log(`Warning: credentials not found at ${credentials_source}, skipping`)
+  }
+}
+
+/**
+ * Create directory structure (projects, cache, todos, plans) in a claude config dir
+ */
+const create_claude_dir_structure = async (base_dir) => {
+  const dirs = ['projects', 'cache', 'todos', 'plans']
+  for (const dir of dirs) {
+    await mkdir(join(base_dir, dir), { recursive: true })
+  }
+}
+
+/**
  * Bootstrap a user's claude-home directory
  *
  * Creates directory structure, copies credentials, and generates settings.
+ * When multi-account rotation is enabled, bootstraps credential directories
+ * for all configured accounts. Settings.json is generated in the primary dir;
+ * secondary dirs get a symlink to it.
+ *
  * Idempotent -- skips credential copy if already present (tokens may have been refreshed).
  *
  * @param {Object} params
  * @param {string} params.username - User's username
  * @param {Object} params.thread_config - User's thread configuration
  * @param {string} params.user_data_directory - Parent directory for user container data
- * @param {string} params.admin_claude_home - Path to admin's claude-home directory
+ * @param {string} params.admin_claude_home - Path to admin's claude-home directory (primary account)
  * @param {string} params.container_user_base_path - User-base path inside the container
- * @returns {Promise<string>} Path to the user's claude-home directory
+ * @returns {Promise<string>} Path to the user's primary claude-home directory
  */
 export const bootstrap_claude_home = async ({
   username,
@@ -262,37 +357,24 @@ export const bootstrap_claude_home = async ({
   admin_claude_home,
   container_user_base_path
 }) => {
-  const claude_home = join(user_data_directory, username, 'claude-home')
+  const user_dir = join(user_data_directory, username)
+  const claude_home = join(user_dir, 'claude-home')
 
   log(`Bootstrapping claude-home for ${username} at ${claude_home}`)
 
-  // Create directory structure
-  const dirs = ['projects', 'cache', 'todos', 'plans']
-  for (const dir of dirs) {
-    await mkdir(join(claude_home, dir), { recursive: true })
-  }
+  // Create primary directory structure
+  await create_claude_dir_structure(claude_home)
   log(`Created directory structure for ${username}`)
 
-  // Copy .credentials.json from admin source (idempotent -- skip if exists)
-  const credentials_target = join(claude_home, '.credentials.json')
-  const credentials_source = join(admin_claude_home, '.credentials.json')
+  // Copy primary credentials
+  await copy_credentials_idempotent({
+    source_dir: admin_claude_home,
+    target_dir: claude_home,
+    label: `${username} (primary)`,
+    required: true
+  })
 
-  try {
-    await access(credentials_target, constants.F_OK)
-    log(`Credentials already exist for ${username}, skipping copy`)
-  } catch {
-    try {
-      await access(credentials_source, constants.F_OK)
-      await copyFile(credentials_source, credentials_target)
-      log(`Copied credentials for ${username}`)
-    } catch (error) {
-      throw new Error(
-        `Admin claude-home credentials not found at ${credentials_source}: ${error.message}`
-      )
-    }
-  }
-
-  // Generate and write settings.json
+  // Generate and write settings.json in primary dir
   const settings = generate_user_settings({
     thread_config,
     container_user_base_path
@@ -301,29 +383,78 @@ export const bootstrap_claude_home = async ({
   await writeFile(settings_path, JSON.stringify(settings, null, 2), 'utf-8')
   log(`Generated settings.json for ${username}`)
 
+  // Bootstrap secondary account directories (if multi-account enabled)
+  const secondary_dirs = get_secondary_account_dirs(user_dir)
+  await Promise.all(secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
+    log(`Bootstrapping secondary account dir for ${username}: ${user_account_dir}`)
+
+    await create_claude_dir_structure(user_account_dir)
+
+    if (admin_source) {
+      await copy_credentials_idempotent({
+        source_dir: admin_source,
+        target_dir: user_account_dir,
+        label: `${username} (${account.namespace})`,
+        required: false
+      })
+    }
+
+    // Symlink settings.json to primary dir's copy
+    const secondary_settings = join(user_account_dir, 'settings.json')
+    try {
+      const existing_target = await readlink(secondary_settings)
+      if (existing_target === settings_path) return
+    } catch {
+      // Not a symlink or doesn't exist -- create it
+    }
+    try {
+      try { await unlink(secondary_settings) } catch { /* doesn't exist */ }
+      await symlink(settings_path, secondary_settings)
+      log(`Symlinked settings.json for ${username} (${account.namespace})`)
+    } catch (error) {
+      log(`Warning: failed to symlink settings.json for ${account.namespace}: ${error.message}`)
+    }
+  }))
+
   return claude_home
 }
 
 /**
- * Refresh credentials from admin source
+ * Refresh credentials from admin source for all configured accounts
  *
  * @param {Object} params
  * @param {string} params.username - User's username
  * @param {string} params.user_data_directory - Parent directory for user container data
- * @param {string} params.admin_claude_home - Path to admin's claude-home directory
+ * @param {string} params.admin_claude_home - Path to admin's claude-home directory (primary)
  */
 export const refresh_credentials = async ({
   username,
   user_data_directory,
   admin_claude_home
 }) => {
-  const claude_home = join(user_data_directory, username, 'claude-home')
-  const credentials_target = join(claude_home, '.credentials.json')
-  const credentials_source = join(admin_claude_home, '.credentials.json')
+  const user_dir = join(user_data_directory, username)
 
+  // Refresh primary account
+  const claude_home = join(user_dir, 'claude-home')
+  const credentials_source = join(admin_claude_home, '.credentials.json')
   await access(credentials_source, constants.F_OK)
-  await copyFile(credentials_source, credentials_target)
-  log(`Refreshed credentials for ${username}`)
+  await copyFile(credentials_source, join(claude_home, '.credentials.json'))
+  log(`Refreshed primary credentials for ${username}`)
+
+  // Refresh secondary accounts
+  const secondary_dirs = get_secondary_account_dirs(user_dir)
+  await Promise.all(secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
+    if (!admin_source) return
+    try {
+      const source = join(admin_source, '.credentials.json')
+      await access(source, constants.F_OK)
+      await mkdir(user_account_dir, { recursive: true })
+      await copyFile(source, join(user_account_dir, '.credentials.json'))
+      log(`Refreshed credentials for ${username} (${account.namespace})`)
+    } catch (error) {
+      log(`Warning: failed to refresh credentials for ${account.namespace}: ${error.message}`)
+    }
+  }))
 }
 
 /**

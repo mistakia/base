@@ -16,7 +16,7 @@ const log = debug('threads:user-container-compose')
  * @param {Object} params.thread_config - User's thread configuration
  * @param {string} params.user_base_directory - Host path to user-base
  * @param {string} params.user_data_directory - Host path to user container data parent
- * @param {string} [params.container_user_base_path] - Container-internal user-base path
+ * @param {string} params.container_user_base_path - Container-internal user-base path
  * @param {string} [params.user_public_key] - User's public key for hook scripts
  * @returns {Promise<string>} Path to generated docker-compose.yml
  */
@@ -25,9 +25,13 @@ export const generate_compose_config = async ({
   thread_config,
   user_base_directory,
   user_data_directory,
-  container_user_base_path = '/home/node/user-base',
+  container_user_base_path,
   user_public_key = null
 }) => {
+  if (!container_user_base_path) {
+    throw new Error('container_user_base_path is required for compose config generation')
+  }
+
   const container_name = `base-user-${username}`
   const user_dir = join(user_data_directory, username)
   const compose_path = join(user_dir, 'docker-compose.yml')

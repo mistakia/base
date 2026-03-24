@@ -253,15 +253,18 @@ describe('volume-mount-generator', () => {
       expect(dirs).to.include('/workspace/tasks')
     })
 
-    it('should use default container_user_base_path when not provided', () => {
+    it('should require container_user_base_path parameter', () => {
       const thread_config = {
         mounts: [{ source: 'task', mode: 'rw' }]
       }
 
-      const dirs = get_allowed_working_directories({ thread_config })
+      const dirs = get_allowed_working_directories({
+        thread_config,
+        container_user_base_path: '/mnt/user-base'
+      })
 
       expect(dirs).to.have.lengthOf(1)
-      expect(dirs[0]).to.equal('/home/node/user-base/task')
+      expect(dirs[0]).to.equal('/mnt/user-base/task')
     })
   })
 })

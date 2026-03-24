@@ -1,9 +1,17 @@
 import { expect } from 'chai'
+import { mkdtemp, mkdir, readFile } from 'fs/promises'
+import { join } from 'path'
+import { tmpdir } from 'os'
 import {
   generate_user_settings,
+  bootstrap_claude_home,
   NEVER_MOUNT_DIRS
 } from '#libs-server/threads/claude-home-bootstrap.mjs'
-import { get_allowed_working_directories } from '#libs-server/threads/volume-mount-generator.mjs'
+import {
+  generate_volume_mounts,
+  get_allowed_working_directories
+} from '#libs-server/threads/volume-mount-generator.mjs'
+import { generate_compose_config } from '#libs-server/threads/user-container-compose.mjs'
 
 /**
  * Integration tests for the full user container thread flow.
@@ -116,6 +124,140 @@ describe('User Container Thread Flow', function () {
     it('should configure disallowed_tools from thread_config', () => {
       expect(sample_thread_config.disallowed_tools).to.include('Bash(rm -rf *)')
       expect(sample_thread_config.disallowed_tools).to.include('Bash(sudo *)')
+    })
+  })
+
+  describe('path translation and volume mounts', () => {
+    let tmp_dir
+    let user_base_directory
+    let user_data_directory
+    const CONTAINER_BASE = '/Users/trashman/user-base'
+
+    before(async () => {
+      tmp_dir = await mkdtemp(join(tmpdir(), 'path-test-'))
+      user_base_directory = join(tmp_dir, 'user-base')
+      user_data_directory = join(tmp_dir, 'user-data')
+
+      await mkdir(join(user_base_directory, 'task'), { recursive: true })
+      await mkdir(join(user_base_directory, 'text'), { recursive: true })
+      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), { recursive: true })
+    })
+
+    it('should use container_user_base_path for volume mount destinations', async () => {
+      const thread_config = {
+        mounts: [
+          { source: 'task', mode: 'rw' },
+          { source: 'text', mode: 'ro' }
+        ]
+      }
+
+      const mounts = await generate_volume_mounts({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: CONTAINER_BASE
+      })
+
+      const task_mount = mounts.find((m) => m.includes('/task:'))
+      expect(task_mount).to.include(`:${CONTAINER_BASE}/task:`)
+
+      const text_mount = mounts.find((m) => m.includes('/text:'))
+      expect(text_mount).to.include(`:${CONTAINER_BASE}/text:`)
+    })
+
+    it('should set USER_BASE_DIRECTORY in compose env to container_user_base_path', async () => {
+      const thread_config = {
+        mounts: [{ source: 'task', mode: 'rw' }]
+      }
+
+      const compose_path = await generate_compose_config({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: CONTAINER_BASE
+      })
+
+      const content = await readFile(compose_path, 'utf-8')
+      expect(content).to.include(`USER_BASE_DIRECTORY: ${CONTAINER_BASE}`)
+    })
+
+    it('should produce working directories that match volume mount destinations', () => {
+      const thread_config = {
+        mounts: [
+          { source: 'task', mode: 'rw' },
+          { source: 'text', mode: 'ro' }
+        ]
+      }
+
+      const dirs = get_allowed_working_directories({
+        thread_config,
+        container_user_base_path: CONTAINER_BASE
+      })
+
+      for (const dir of dirs) {
+        expect(dir.startsWith(CONTAINER_BASE)).to.be.true
+      }
+    })
+  })
+
+  describe('multi-account volume mounts', () => {
+    let tmp_dir
+    let user_base_directory
+    let user_data_directory
+
+    before(async () => {
+      tmp_dir = await mkdtemp(join(tmpdir(), 'multi-account-test-'))
+      user_base_directory = join(tmp_dir, 'user-base')
+      user_data_directory = join(tmp_dir, 'user-data')
+      await mkdir(join(user_base_directory, 'task'), { recursive: true })
+      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), { recursive: true })
+    })
+
+    it('should include claude-home mount at /home/node/.claude when rotation is disabled', async () => {
+      const thread_config = { mounts: [] }
+
+      const mounts = await generate_volume_mounts({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: '/Users/trashman/user-base'
+      })
+
+      expect(mounts).to.have.lengthOf(1)
+      expect(mounts[0]).to.include('claude-home:/home/node/.claude:cached')
+    })
+  })
+
+  describe('multi-account bootstrap', () => {
+    let tmp_dir
+
+    before(async () => {
+      tmp_dir = await mkdtemp(join(tmpdir(), 'bootstrap-multi-test-'))
+    })
+
+    it('should create primary claude-home directory structure', async () => {
+      const admin_claude_home = join(tmp_dir, 'admin-claude-home')
+      await mkdir(admin_claude_home, { recursive: true })
+      const { writeFile } = await import('fs/promises')
+      await writeFile(join(admin_claude_home, '.credentials.json'), JSON.stringify({ token: 'test' }))
+
+      const user_data_dir = join(tmp_dir, 'user-data')
+      await mkdir(user_data_dir, { recursive: true })
+
+      const claude_home = await bootstrap_claude_home({
+        username: 'testuser',
+        thread_config: {},
+        user_data_directory: user_data_dir,
+        admin_claude_home,
+        container_user_base_path: '/Users/trashman/user-base'
+      })
+
+      const settings = JSON.parse(await readFile(join(claude_home, 'settings.json'), 'utf-8'))
+      expect(settings).to.have.property('permissions')
+      expect(settings).to.have.property('hooks')
     })
   })
 

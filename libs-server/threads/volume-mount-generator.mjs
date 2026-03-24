@@ -1,8 +1,9 @@
-import { join } from 'path'
+import { join, basename } from 'path'
 import { access } from 'fs/promises'
 import { constants } from 'fs'
 import debug from 'debug'
 
+import config from '#config'
 import { NEVER_MOUNT_DIRS } from './claude-home-bootstrap.mjs'
 
 const log = debug('threads:volume-mount-generator')
@@ -31,7 +32,7 @@ const is_safe_mount_source = (source) => {
  * @param {Object} params.thread_config - User's thread configuration
  * @param {string} params.user_base_directory - Host path to user-base
  * @param {string} params.user_data_directory - Host path to user container data parent
- * @param {string} [params.container_user_base_path] - Container-internal user-base path
+ * @param {string} params.container_user_base_path - Container-internal user-base path
  * @returns {Promise<string[]>} Array of Docker volume mount strings (host:container:mode)
  */
 export const generate_volume_mounts = async ({
@@ -39,13 +40,36 @@ export const generate_volume_mounts = async ({
   thread_config,
   user_base_directory,
   user_data_directory,
-  container_user_base_path = '/home/node/user-base'
+  container_user_base_path
 }) => {
-  const mounts = []
+  if (!container_user_base_path) {
+    throw new Error('container_user_base_path is required for volume mount generation')
+  }
 
-  // Always include the user-scoped claude-home volume mount
-  const claude_home_host = join(user_data_directory, username, 'claude-home')
-  mounts.push(`${claude_home_host}:/home/node/.claude:cached`)
+  const mounts = []
+  const user_dir = join(user_data_directory, username)
+
+  // Mount credential directories for account rotation
+  const accounts_config = config.claude_accounts
+  if (accounts_config?.enabled && accounts_config.accounts?.length > 0) {
+    for (const account of accounts_config.accounts) {
+      const container_dir = account.container_config_dir?.replace(/\/$/, '')
+      if (!container_dir) continue
+
+      const dir_basename = basename(container_dir)
+      // Primary account (.claude) -> claude-home on host
+      // Secondary accounts (.claude-xxx) -> claude-xxx on host (strip leading dot)
+      const host_dir_name = dir_basename === '.claude'
+        ? 'claude-home'
+        : dir_basename.replace(/^\./, '')
+      const host_path = join(user_dir, host_dir_name)
+      mounts.push(`${host_path}:${container_dir}:cached`)
+    }
+  } else {
+    // Fallback: single claude-home mount (no account rotation)
+    const claude_home_host = join(user_dir, 'claude-home')
+    mounts.push(`${claude_home_host}:/home/node/.claude:cached`)
+  }
 
   // Process thread_config.mounts
   const config_mounts = thread_config.mounts || []
@@ -85,12 +109,12 @@ export const generate_volume_mounts = async ({
  *
  * @param {Object} params
  * @param {Object} params.thread_config - User's thread configuration
- * @param {string} [params.container_user_base_path] - Container-internal user-base path
+ * @param {string} params.container_user_base_path - Container-internal user-base path
  * @returns {string[]} Array of container-internal absolute paths
  */
 export const get_allowed_working_directories = ({
   thread_config,
-  container_user_base_path = '/home/node/user-base'
+  container_user_base_path
 }) => {
   const config_mounts = thread_config.mounts || []
   const dirs = []
