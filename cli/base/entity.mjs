@@ -770,7 +770,7 @@ async function fetch_entities_from_api(argv) {
   if (argv.tags) {
     for (const tag of argv.tags) params.append('tags', tag)
   }
-  if (argv['without-tags']) params.set('no_tags', 'true')
+  if (argv['without-tags']) params.set('without_tags', 'true')
   if (argv.archived) params.set('include_archived', 'true')
   if (argv.search) params.set('search', argv.search)
   if (argv.content) params.set('content', 'true')
