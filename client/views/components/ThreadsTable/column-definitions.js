@@ -556,6 +556,23 @@ export const thread_columns = {
     minSize: 60,
     maxSize: 100
   },
+  external_session_id: {
+    column_id: 'external_session_id',
+    header_label: 'Session ID',
+    accessorKey: 'external_session_id',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [
+      TABLE_OPERATORS.LIKE,
+      TABLE_OPERATORS.NOT_LIKE,
+      TABLE_OPERATORS.EQUAL,
+      TABLE_OPERATORS.NOT_EQUAL,
+      TABLE_OPERATORS.IS_EMPTY,
+      TABLE_OPERATORS.IS_NOT_EMPTY
+    ],
+    size: 150,
+    minSize: 80,
+    maxSize: 300
+  },
   user_public_key: {
     column_id: 'user_public_key',
     header_label: 'Owner',

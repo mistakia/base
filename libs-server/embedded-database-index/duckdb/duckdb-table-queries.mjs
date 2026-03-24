@@ -62,7 +62,8 @@ const VALID_COLUMNS = new Set([
   'file_references',
   'directory_references',
   'archived_at',
-  'archive_reason'
+  'archive_reason',
+  'external_session_id'
 ])
 
 /**
@@ -425,7 +426,8 @@ export async function query_threads_from_duckdb({
       working_directory, working_directory_path, source_provider,
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
-      file_references, directory_references, archived_at, archive_reason
+      file_references, directory_references, archived_at, archive_reason,
+      external_session_id
     FROM threads
     ${final_where}
     ${order_sql}

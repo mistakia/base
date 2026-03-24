@@ -174,6 +174,9 @@ function format_for_table_display(thread, extracted_data) {
     total_tokens,
     ...cost_data,
 
+    // External session identifier
+    external_session_id: thread.source?.session_id || null,
+
     // Additional metadata
     description: thread.description || '',
     tags: thread.tags || [],
@@ -250,6 +253,7 @@ export async function extract_thread_metadata(thread) {
       input_cost: 0,
       output_cost: 0,
       currency: 'USD',
+      external_session_id: null,
       tags: [],
       is_redacted: false,
       raw_thread: thread

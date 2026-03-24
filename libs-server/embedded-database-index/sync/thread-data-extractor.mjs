@@ -190,6 +190,7 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     : null
 
   const source_provider = metadata.source?.provider || null
+  const external_session_id = metadata.source?.session_id || null
 
   // Extract inference provider (for cost calculation)
   const inference_provider = metadata.inference_provider || null
@@ -245,7 +246,8 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     public_read: metadata.public_read != null ? metadata.public_read : null,
     visibility_analyzed_at: metadata.visibility_analyzed_at || null,
     archived_at: metadata.archived_at || null,
-    archive_reason: metadata.archive_reason || null
+    archive_reason: metadata.archive_reason || null,
+    external_session_id
   }
 }
 

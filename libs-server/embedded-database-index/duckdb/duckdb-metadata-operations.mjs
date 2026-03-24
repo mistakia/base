@@ -99,8 +99,9 @@ export const INDEX_METADATA_KEYS = {
  * v3: Changed token fields from INTEGER to BIGINT to handle large token counts
  * v4: Added file_references and directory_references columns to threads table
  * v5: Renamed session_provider to source_provider
+ * v6: Added external_session_id column to threads table
  */
-export const CURRENT_SCHEMA_VERSION = '5'
+export const CURRENT_SCHEMA_VERSION = '6'
 
 /**
  * Get repository sync state (handles backwards compatibility)

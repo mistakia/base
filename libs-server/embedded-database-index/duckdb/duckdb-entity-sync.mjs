@@ -44,7 +44,8 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
     public_read,
     visibility_analyzed_at,
     archived_at,
-    archive_reason
+    archive_reason,
+    external_session_id
   } = thread_data
 
   // Derive primary_model from nested path if not directly set
@@ -71,8 +72,9 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       inference_provider, primary_model, user_public_key,
       latest_event_timestamp, latest_event_type, latest_event_data,
       edit_count, lines_changed, file_references, directory_references,
-      public_read, visibility_analyzed_at, archived_at, archive_reason
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      public_read, visibility_analyzed_at, archived_at, archive_reason,
+      external_session_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -106,7 +108,8 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
       public_read = excluded.public_read,
       visibility_analyzed_at = excluded.visibility_analyzed_at,
       archived_at = excluded.archived_at,
-      archive_reason = excluded.archive_reason
+      archive_reason = excluded.archive_reason,
+      external_session_id = excluded.external_session_id
   `
 
   try {
@@ -146,7 +149,8 @@ export async function upsert_thread_to_duckdb({ thread_data }) {
         public_read ?? null,
         visibility_analyzed_at ?? null,
         archived_at ?? null,
-        archive_reason ?? null
+        archive_reason ?? null,
+        external_session_id ?? null
       ]
     })
     log('Thread upserted: %s', thread_id)

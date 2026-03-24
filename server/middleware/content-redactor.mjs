@@ -733,6 +733,11 @@ export const redact_thread_data = (thread) => {
     )
   }
 
+  // Redact external session identifier
+  if (redacted.external_session_id) {
+    redacted.external_session_id = DEFAULT_REDACTED_UUID
+  }
+
   // Redact thread main request content
   if (redacted.thread_main_request) {
     redacted.thread_main_request = redact_text_content(

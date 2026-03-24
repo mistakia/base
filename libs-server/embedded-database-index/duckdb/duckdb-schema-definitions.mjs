@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS threads (
   public_read BOOLEAN,
   visibility_analyzed_at TIMESTAMP,
   archived_at TIMESTAMP,
-  archive_reason VARCHAR
+  archive_reason VARCHAR,
+  external_session_id VARCHAR
 )
 `
 

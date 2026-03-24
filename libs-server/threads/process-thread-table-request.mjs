@@ -93,6 +93,9 @@ export function normalize_duckdb_thread(thread, models_data) {
     // Latest timeline event (from DuckDB index)
     latest_timeline_event,
 
+    // External session identifier
+    external_session_id: thread.external_session_id || null,
+
     // Additional metadata
     description: thread.description || '',
     tags: thread.tags || []
