@@ -121,7 +121,8 @@ const DEFAULT_TABLE_COLUMNS = [
   'assistant_message_count',
   'tool_call_count',
   'total_tokens',
-  'cost'
+  'cost',
+  'external_session_id'
 ]
 
 const DEFAULT_TABLE_STATE = create_default_table_state({
