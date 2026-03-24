@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# deploy-hooks.sh - Deploy post-receive hooks to storage server bare repos
-#                   and post-commit hooks to local working copies
+# deploy-git-hooks.sh - Deploy post-receive hooks to storage server bare repos
+#                       and post-commit hooks to local working copies
 #
 # Usage:
-#   deploy-hooks.sh [--dry-run] [--post-receive] [--post-commit]
+#   deploy-git-hooks.sh [--dry-run] [--post-receive] [--post-commit]
 #
 # Options:
 #   --dry-run       Show what would be done without making changes
@@ -54,7 +54,7 @@ generate_post_commit_hook() {
     cat << HOOK
 #!/bin/bash
 # Post-commit hook: trigger sync-all.sh in background
-# Installed by deploy-hooks.sh
+# Installed by deploy-git-hooks.sh
 unset GIT_DIR GIT_WORK_TREE
 nohup "\$USER_BASE_DIRECTORY/repository/active/base/cli/sync-all.sh" &>/dev/null &
 HOOK
@@ -75,7 +75,7 @@ if [ "$DEPLOY_POST_RECEIVE" = true ]; then
         hook_content="#!/bin/bash
 
 # Post-receive hook for $bare_repo
-# Deployed by deploy-hooks.sh - do not edit manually
+# Deployed by deploy-git-hooks.sh - do not edit manually
 #
 # Updates local working copy
 # MacBook-initiated sync model: storage does not trigger macbook sync (see sync-thread-data.sh)
