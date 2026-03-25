@@ -147,15 +147,6 @@ properties:
     type: string
     required: false
     description: Miscellaneous notes
-constraints:
-  - rule: conflicts
-    condition_field: perishable
-    condition_value: true
-    field: consumable
-    field_value: true
-    message: >-
-      perishable and consumable are both true -- an item that expires (perishable) is not typically
-      depleted with use (consumable); review whether both flags are correct
 relation_constraints:
   - type: target_area
     max_count: 1
