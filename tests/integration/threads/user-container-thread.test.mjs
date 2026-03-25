@@ -96,7 +96,35 @@ describe('User Container Thread Flow', function () {
         container_user_base_path: '/home/node/user-base'
       })
 
+      expect(settings.permissions.deny).to.include('Bash(docker *)')
+      expect(settings.permissions.deny).to.include('Bash(sudo *)')
+    })
+
+    it('should include network tool denials when block_network_tools is true', () => {
+      const settings = generate_user_settings({
+        thread_config: sample_thread_config,
+        container_user_base_path: '/home/node/user-base'
+      })
+
       expect(settings.permissions.deny).to.include('Bash(curl *)')
+      expect(settings.permissions.deny).to.include('Bash(wget *)')
+      expect(settings.permissions.deny).to.include('Bash(ssh *)')
+    })
+
+    it('should omit network tool denials when block_network_tools is false', () => {
+      const config_with_network = {
+        ...sample_thread_config,
+        network_policy: { block_network_tools: false }
+      }
+      const settings = generate_user_settings({
+        thread_config: config_with_network,
+        container_user_base_path: '/home/node/user-base'
+      })
+
+      expect(settings.permissions.deny).to.not.include('Bash(curl *)')
+      expect(settings.permissions.deny).to.not.include('Bash(wget *)')
+      expect(settings.permissions.deny).to.not.include('Bash(ssh *)')
+      // Non-network patterns should still be present
       expect(settings.permissions.deny).to.include('Bash(docker *)')
       expect(settings.permissions.deny).to.include('Bash(sudo *)')
     })

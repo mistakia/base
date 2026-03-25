@@ -64,9 +64,9 @@ export const NEVER_MOUNT_DIRS = [
 ]
 
 /**
- * Default Bash deny patterns for dangerous commands
+ * Bash deny patterns for network tools -- applied when block_network_tools is true (default)
  */
-const DEFAULT_DENY_BASH_PATTERNS = [
+const NETWORK_DENY_BASH_PATTERNS = [
   'Bash(curl *)',
   'Bash(wget *)',
   'Bash(nc *)',
@@ -77,7 +77,13 @@ const DEFAULT_DENY_BASH_PATTERNS = [
   'Bash(rsync *)',
   'Bash(telnet *)',
   'Bash(ftp *)',
-  'Bash(socat *)',
+  'Bash(socat *)'
+]
+
+/**
+ * Default Bash deny patterns for dangerous commands (always applied)
+ */
+const DEFAULT_DENY_BASH_PATTERNS = [
   'Bash(sudo *)',
   'Bash(docker *)',
   'Bash(nsenter *)',
@@ -145,7 +151,12 @@ export const generate_deny_rules = ({
   // 3. Default dangerous Bash patterns
   deny.push(...DEFAULT_DENY_BASH_PATTERNS)
 
-  // 4. Base CLI deny commands (when base_cli is enabled)
+  // 4. Network tool deny patterns (when block_network_tools is true, which is the default)
+  if (thread_config.network_policy?.block_network_tools !== false) {
+    deny.push(...NETWORK_DENY_BASH_PATTERNS)
+  }
+
+  // 5. Base CLI deny commands (when base_cli is enabled)
   if (thread_config.base_cli?.enabled) {
     const deny_commands =
       thread_config.base_cli.deny_commands || DEFAULT_BASE_CLI_DENY_COMMANDS
