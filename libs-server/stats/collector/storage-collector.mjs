@@ -26,14 +26,15 @@ async function count_files_and_folders({ dir_path, machine = 'macbook' }) {
     const [files_result, folders_result, size_result] = await Promise.all([
       run(`find "${dir_path}" -type f ${EXCLUDE_PATTERN} 2>/dev/null | wc -l`),
       run(`find "${dir_path}" -type d ${EXCLUDE_PATTERN} 2>/dev/null | wc -l`),
-      run(machine === 'macbook'
+      run(process.platform === 'darwin' && machine === 'macbook'
         ? `du -sk "${dir_path}" 2>/dev/null | cut -f1`
         : `du -sb "${dir_path}" 2>/dev/null | cut -f1`)
     ])
 
     const raw_size = parseInt(size_result.stdout.trim(), 10) || 0
     // macOS du -sk returns kilobytes, Linux du -sb returns bytes
-    const size_bytes = machine === 'macbook' ? raw_size * 1024 : raw_size
+    const is_macos = process.platform === 'darwin' && machine === 'macbook'
+    const size_bytes = is_macos ? raw_size * 1024 : raw_size
 
     return {
       file_count: parseInt(files_result.stdout.trim(), 10) || 0,
@@ -62,20 +63,24 @@ async function collect_database_sizes({ snapshot_date, pool }) {
   const metrics = []
   const databases = ['finance_production', 'nanodb_production', 'parcels_production', 'epstein_transparency_act', 'stats_production']
 
-  for (const db_name of databases) {
-    try {
-      const result = await pool.query('SELECT pg_database_size($1) as size', [db_name])
+  try {
+    const result = await pool.query(
+      `SELECT datname, pg_database_size(datname) as size
+       FROM pg_database WHERE datname = ANY($1)`,
+      [databases]
+    )
+    for (const row of result.rows) {
       metrics.push({
         snapshot_date,
         category: 'storage',
         metric_name: 'database_size',
-        metric_value: Number(result.rows[0]?.size || 0),
+        metric_value: Number(row.size || 0),
         unit: 'bytes',
-        dimensions: { database: db_name }
+        dimensions: { database: row.datname }
       })
-    } catch (err) {
-      log('Failed to get size for %s: %s', db_name, err.message)
     }
+  } catch (err) {
+    log('Failed to get database sizes: %s', err.message)
   }
   return metrics
 }

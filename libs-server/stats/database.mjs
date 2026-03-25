@@ -75,7 +75,7 @@ export async function upsert_metrics({ pool, metrics }) {
     INSERT INTO metrics (snapshot_date, category, metric_name, metric_value, unit, dimensions)
     VALUES ${placeholders.join(', ')}
     ON CONFLICT (snapshot_date, category, metric_name, dimensions)
-    DO UPDATE SET metric_value = EXCLUDED.metric_value, created_at = NOW()
+    DO UPDATE SET metric_value = EXCLUDED.metric_value
   `
 
   const result = await pool.query(sql, values)
@@ -134,13 +134,15 @@ export async function query_metric_series({
 /**
  * Return distinct snapshot dates ordered descending, with metric counts.
  */
-export async function list_snapshot_dates({ pool }) {
-  const result = await pool.query(`
-    SELECT snapshot_date, COUNT(*) as metric_count
-    FROM metrics
-    GROUP BY snapshot_date
-    ORDER BY snapshot_date DESC
-  `)
+export async function list_snapshot_dates({ pool, limit = 365 }) {
+  const result = await pool.query(
+    `SELECT snapshot_date, COUNT(*) as metric_count
+     FROM metrics
+     GROUP BY snapshot_date
+     ORDER BY snapshot_date DESC
+     LIMIT $1`,
+    [limit]
+  )
   return result.rows
 }
 

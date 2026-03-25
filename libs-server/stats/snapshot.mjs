@@ -6,13 +6,13 @@
 
 import debug from 'debug'
 
-import { collect_entity_metrics } from './collectors/entity-collector.mjs'
-import { collect_git_metrics } from './collectors/git-collector.mjs'
-import { collect_thread_metrics } from './collectors/thread-collector.mjs'
-import { collect_task_metrics } from './collectors/task-collector.mjs'
-import { collect_storage_metrics } from './collectors/storage-collector.mjs'
-import { collect_service_metrics } from './collectors/service-collector.mjs'
-import { collect_schedule_metrics } from './collectors/schedule-collector.mjs'
+import { collect_entity_metrics } from './collector/entity-collector.mjs'
+import { collect_git_metrics } from './collector/git-collector.mjs'
+import { collect_thread_metrics } from './collector/thread-collector.mjs'
+import { collect_task_metrics } from './collector/task-collector.mjs'
+import { collect_storage_metrics } from './collector/storage-collector.mjs'
+import { collect_service_metrics } from './collector/service-collector.mjs'
+import { collect_schedule_metrics } from './collector/schedule-collector.mjs'
 import { upsert_metrics } from './database.mjs'
 
 const log = debug('stats:snapshot')
@@ -51,10 +51,10 @@ export async function run_stats_snapshot({
 
   log('Running snapshot for %s with collectors: %s', date_str, Object.keys(selected).join(', '))
 
+  const collector_names = Object.keys(selected)
   const results = await Promise.allSettled(
     Object.entries(selected).map(async ([name, collect_fn]) => {
       const start = Date.now()
-      // storage collector needs the pool for pg_database_size queries
       const args = { snapshot_date: date_str, config, pool }
       const metrics = await collect_fn(args)
       const duration_ms = Date.now() - start
@@ -66,15 +66,17 @@ export async function run_stats_snapshot({
   const all_metrics = []
   const summary = { collectors: {}, errors: [] }
 
-  for (const result of results) {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i]
     if (result.status === 'fulfilled') {
       const { name, metrics, duration_ms } = result.value
       all_metrics.push(...metrics)
       summary.collectors[name] = { count: metrics.length, duration_ms }
     } else {
+      const name = collector_names[i]
       const error_msg = result.reason?.message || String(result.reason)
-      summary.errors.push(error_msg)
-      log('Collector failed: %s', error_msg)
+      summary.errors.push(`${name}: ${error_msg}`)
+      log('Collector %s failed: %s', name, error_msg)
     }
   }
 

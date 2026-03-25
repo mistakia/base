@@ -6,12 +6,13 @@
 
 import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { get_stats_database_connection, close_stats_pool } from '#libs-server/stats/database.mjs'
-import { run_stats_snapshot } from '#libs-server/stats/snapshot.mjs'
 import {
+  get_stats_database_connection,
+  close_stats_pool,
   query_latest_snapshot,
   list_snapshot_dates
 } from '#libs-server/stats/database.mjs'
+import { run_stats_snapshot } from '#libs-server/stats/snapshot.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'stats <command>'
@@ -63,10 +64,6 @@ export const builder = (yargs) =>
     )
     .demandCommand(1, 'You must specify a subcommand')
 
-async function get_pool() {
-  return get_stats_database_connection({ config })
-}
-
 async function handle_snapshot(argv) {
   try {
     // Initialize DuckDB for collectors that need it
@@ -74,7 +71,7 @@ async function handle_snapshot(argv) {
       await embedded_index_manager.initialize({ read_only: true })
     }
 
-    const pool = await get_pool()
+    const pool = await get_stats_database_connection({ config })
     const collector_list = argv.collectors
       ? argv.collectors.split(',').map((s) => s.trim())
       : undefined
@@ -118,7 +115,7 @@ async function handle_snapshot(argv) {
 
 async function handle_report(argv) {
   try {
-    const pool = await get_pool()
+    const pool = await get_stats_database_connection({ config })
 
     let rows
     if (argv.date) {
@@ -174,7 +171,7 @@ async function handle_report(argv) {
 
 async function handle_list(argv) {
   try {
-    const pool = await get_pool()
+    const pool = await get_stats_database_connection({ config })
     const dates = await list_snapshot_dates({ pool })
 
     if (argv.json) {

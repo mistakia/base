@@ -11,10 +11,6 @@ import {
 const log = debug('api:stats')
 const router = express.Router({ mergeParams: true })
 
-async function get_pool() {
-  return get_stats_database_connection({ config })
-}
-
 /**
  * GET /api/stats/latest
  *
@@ -22,7 +18,7 @@ async function get_pool() {
  */
 router.get('/latest', async (req, res) => {
   try {
-    const pool = await get_pool()
+    const pool = await get_stats_database_connection({ config })
     const rows = await query_latest_snapshot({ pool })
 
     const grouped = {}
@@ -60,7 +56,7 @@ router.get('/series', async (req, res) => {
       return res.status(400).json({ error: 'metric parameter is required' })
     }
 
-    const pool = await get_pool()
+    const pool = await get_stats_database_connection({ config })
     const parsed_dimensions = dimensions ? JSON.parse(dimensions) : undefined
 
     const rows = await query_metric_series({

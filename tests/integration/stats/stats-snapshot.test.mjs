@@ -117,7 +117,7 @@ describe('Stats Pipeline', function () {
       this.timeout(15000)
       try {
         const { collect_entity_metrics } = await import(
-          '#libs-server/stats/collectors/entity-collector.mjs'
+          '#libs-server/stats/collector/entity-collector.mjs'
         )
         const metrics = await collect_entity_metrics({ snapshot_date: TEST_DATE })
         expect(metrics).to.be.an('array')
@@ -141,7 +141,7 @@ describe('Stats Pipeline', function () {
       this.timeout(15000)
       try {
         const { collect_task_metrics } = await import(
-          '#libs-server/stats/collectors/task-collector.mjs'
+          '#libs-server/stats/collector/task-collector.mjs'
         )
         const metrics = await collect_task_metrics({ snapshot_date: TEST_DATE })
         expect(metrics).to.be.an('array')
