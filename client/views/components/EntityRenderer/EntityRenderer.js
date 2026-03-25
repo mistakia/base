@@ -138,12 +138,23 @@ const EntityRenderer = ({
         <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
           <Box
             sx={{ maxWidth: is_tag_entity ? '900px' : '600px', width: '100%' }}>
-            <EntityFrontmatter
-              frontmatter={frontmatter}
-              is_sticky={false}
-              markdown={markdown}
-              path={path}
-            />
+            {is_diff_view_active && git_context ? (
+              <DiffViewer
+                original_content={file_at_ref_data?.content}
+                current_content={content || ''}
+                file_path={path}
+                is_redacted={file_at_ref_data?.is_redacted}
+                is_loading={is_loading_file_at_ref}
+                error={git_error}
+              />
+            ) : (
+              <EntityFrontmatter
+                frontmatter={frontmatter}
+                is_sticky={false}
+                markdown={markdown}
+                path={path}
+              />
+            )}
             <FileActions>
               <CopyPageButton path={path} content={content} />
               <GitFileActions git_context={git_context} path={path} />
