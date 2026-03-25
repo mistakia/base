@@ -191,6 +191,9 @@ api.use('/api/jobs', write_limiter, routes.jobs)
 // Finance API proxy - forwards requests to finance service
 api.use('/api/proxy/finance', read_limiter, routes.finance)
 
+// Stats snapshots and time series
+api.use('/api/stats', read_limiter, routes.stats)
+
 // General error handler
 api.use((err, req, res, next) => {
   log(`Error: ${err.name} - ${err.message}`)

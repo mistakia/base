@@ -13,6 +13,7 @@ import search from './search.mjs'
 import transcribe from './transcribe.mjs'
 import jobs from './jobs.mjs'
 import finance from './finance.mjs'
+import stats from './stats.mjs'
 
 export default {
   users,
@@ -29,5 +30,6 @@ export default {
   search,
   transcribe,
   jobs,
-  finance
+  finance,
+  stats
 }

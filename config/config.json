@@ -97,6 +97,9 @@
   "finance": {
     "api_url": ""
   },
+  "stats_database": {
+    "connection_string": ""
+  },
   "extensions": {
     "discovery_paths": []
   },
