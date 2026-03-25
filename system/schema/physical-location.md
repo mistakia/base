@@ -14,6 +14,10 @@ properties:
     type: number
     required: false
     description: Decimal longitude coordinate
+  - name: geofence_radius
+    type: number
+    required: false
+    description: Geofence monitoring radius in meters (default 75m when not specified)
   - name: mail_address
     type: string
     required: false
