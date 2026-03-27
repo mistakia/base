@@ -54,7 +54,7 @@ router.use(async (req, res) => {
     const data = await response.json()
     res.status(response.status).json(data)
   } catch (error) {
-    log(`Finance proxy error: ${error.message}`)
+    log(`Finance proxy error: ${error.message}`, error.cause)
 
     const is_connection_error =
       error.cause?.code === 'ECONNREFUSED' ||
