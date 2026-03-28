@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import ImmutablePropTypes from 'react-immutable-proptypes'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector, useDispatch, useStore } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { List } from 'immutable'
 
@@ -87,9 +87,10 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   const [threads_collapsed, set_threads_collapsed] = useState(true)
   const [selected_period, set_selected_period] = useState('3d')
 
-  // Create a getter function for thread lookup
-  const state = useSelector((s) => s)
-  const get_thread = (thread_id) => get_thread_by_id(state, thread_id)
+  // Create a getter function for thread lookup (useStore avoids subscribing to all state changes)
+  const store = useStore()
+  const get_thread = (thread_id) =>
+    get_thread_by_id(store.getState(), thread_id)
 
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())

@@ -4,19 +4,21 @@ export function get_active_sessions_state(state) {
   return state.get('active_sessions')
 }
 
-export function get_all_active_sessions(state) {
-  const active_sessions_state = get_active_sessions_state(state)
-  const sessions_map = active_sessions_state.get('sessions')
+export const get_all_active_sessions = createSelector(
+  [get_active_sessions_state],
+  (active_sessions_state) => {
+    const sessions_map = active_sessions_state.get('sessions')
 
-  if (!sessions_map || sessions_map.size === 0) {
-    return []
+    if (!sessions_map || sessions_map.size === 0) {
+      return []
+    }
+
+    return sessions_map
+      .valueSeq()
+      .map((session) => session.toJS())
+      .toArray()
   }
-
-  return sessions_map
-    .valueSeq()
-    .map((session) => session.toJS())
-    .toArray()
-}
+)
 
 export function get_active_session_by_id(state, session_id) {
   const active_sessions_state = get_active_sessions_state(state)
@@ -57,25 +59,29 @@ export function get_active_sessions_error(state) {
   return get_active_sessions_state(state).get('error')
 }
 
-export function get_prompt_snippets(state) {
-  const active_sessions_state = get_active_sessions_state(state)
-  const snippets_map = active_sessions_state.get('prompt_snippets')
-  return snippets_map ? snippets_map.toJS() : {}
-}
-
-export function get_pending_sessions(state) {
-  const active_sessions_state = get_active_sessions_state(state)
-  const pending_map = active_sessions_state.get('pending_sessions')
-
-  if (!pending_map || pending_map.size === 0) {
-    return []
+export const get_prompt_snippets = createSelector(
+  [get_active_sessions_state],
+  (active_sessions_state) => {
+    const snippets_map = active_sessions_state.get('prompt_snippets')
+    return snippets_map ? snippets_map.toJS() : {}
   }
+)
 
-  return pending_map
-    .valueSeq()
-    .map((session) => (session.toJS ? session.toJS() : session))
-    .toArray()
-}
+export const get_pending_sessions = createSelector(
+  [get_active_sessions_state],
+  (active_sessions_state) => {
+    const pending_map = active_sessions_state.get('pending_sessions')
+
+    if (!pending_map || pending_map.size === 0) {
+      return []
+    }
+
+    return pending_map
+      .valueSeq()
+      .map((session) => (session.toJS ? session.toJS() : session))
+      .toArray()
+  }
+)
 
 export const get_all_sessions_with_pending = createSelector(
   [get_active_sessions_state],
