@@ -42,7 +42,7 @@ EXCLUDES=(
 
   # User-base standard exclusions
   '!.system/**'
-  '!thread/**/raw-data/**'
+  '!thread/**'
   '!import-history/**'
   '!repository/archive/**'
 
@@ -76,42 +76,36 @@ build_glob_args() {
   echo "${args[@]}"
 }
 
-# List directories (depth-limited for performance)
-list_directories() {
-  # List directories up to depth 3, applying similar exclusions
-  # Focus on commonly-referenced directories
-  find . -maxdepth 3 -type d \
-    ! -path './.git/*' \
-    ! -path './node_modules/*' \
-    ! -path './.system/*' \
-    ! -path './thread/*/raw-data' \
-    ! -path './import-history/*' \
-    ! -path './repository/archive/*' \
-    ! -path './*-worktrees/*' \
-    ! -path './.cache/*' \
-    ! -name '.git' \
-    2>/dev/null | sed 's|^\./||' | grep -v '^$'
+# List all searchable entries (files + directories) in a single rg pass
+# Avoids the previous find-based directory listing which was slow due to
+# traversing 5000+ thread UUID subdirectories without pruning
+list_entries() {
+  local glob_args
+  read -ra glob_args <<< "$(build_glob_args)"
 
-  # Also list repository/active subdirs explicitly (symlinks, depth may miss them)
+  # Single rg pass: output files, then derive unique directories via tee+sed
+  # Using process substitution to extract dirs from the same file list
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  trap "rm -rf $tmpdir" RETURN
+
+  rg --files --follow --hidden "${glob_args[@]}" 2>/dev/null | \
+    tee "$tmpdir/files" | sed 's|/[^/]*$||' | sort -u > "$tmpdir/dirs"
+
+  # Output directories first (for directory completion), then files
+  cat "$tmpdir/dirs"
+
+  # Also list repository/active subdirs explicitly (top-level repos)
   if [[ -d "repository/active" ]]; then
     find -L repository/active -maxdepth 1 -type d 2>/dev/null | sed 's|^\./||'
   fi
+
+  cat "$tmpdir/files"
 }
 
 # Main file search function
 search_files() {
   local query="$1"
-  local glob_args
-
-  # Build exclusion arguments
-  read -ra glob_args <<< "$(build_glob_args)"
-
-  # Use ripgrep to enumerate files
-  # --files: list files only
-  # --follow: follow symlinks (important for repository/active)
-  # --hidden: include hidden files (but .git excluded above)
-  # --no-ignore-vcs: don't use .gitignore (we have explicit excludes)
-  # Note: Using --no-ignore-vcs because some repos have overly broad .gitignore
 
   # Disable pipefail for the search pipeline - fzf --filter returns exit 1
   # for fuzzy-only matches (no exact match), and head closing the pipe early
@@ -120,25 +114,16 @@ search_files() {
 
   if command -v fzf >/dev/null 2>&1; then
     # Use fzf for fuzzy matching - much better results
-    # Combine directories and files for matching, dedupe with awk
-    {
-      list_directories
-      rg --files --follow --hidden "${glob_args[@]}" 2>/dev/null
-    } | awk '!seen[$0]++' | fzf --filter "$query" 2>/dev/null | \
+    # list_entries provides dirs + files in a single rg pass, dedupe with awk
+    list_entries | awk '!seen[$0]++' | fzf --filter "$query" 2>/dev/null | \
       head -20
   else
     # Fallback: simple grep-based filtering
     if [[ -n "$query" ]]; then
-      {
-        list_directories
-        rg --files --follow --hidden "${glob_args[@]}" 2>/dev/null
-      } | awk '!seen[$0]++' | grep -i "$query" 2>/dev/null | \
+      list_entries | awk '!seen[$0]++' | grep -i "$query" 2>/dev/null | \
         head -20
     else
-      {
-        list_directories
-        rg --files --follow --hidden "${glob_args[@]}" 2>/dev/null
-      } | awk '!seen[$0]++' | head -20
+      list_entries | awk '!seen[$0]++' | head -20
     fi
   fi
 }
