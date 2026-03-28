@@ -377,6 +377,11 @@ export const api = {
     return { url }
   },
 
+  get_physical_items_table(params) {
+    const url = `${API_URL}/physical-items/table`
+    return { url, ...POST(params) }
+  },
+
   get_finance_overview() {
     const url = `${API_URL}/proxy/finance/dashboard/overview`
     return { url }

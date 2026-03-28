@@ -6,6 +6,9 @@ import Homepage from '@pages/Homepage/index.js'
 const DirectoryPage = React.lazy(() => import('@pages/DirectoryPage/index.js'))
 const ThreadsPage = React.lazy(() => import('@pages/ThreadsPage.js'))
 const TasksPage = React.lazy(() => import('@pages/TasksPage.js'))
+const PhysicalItemsPage = React.lazy(
+  () => import('@pages/PhysicalItemsPage.js')
+)
 const FinancePage = React.lazy(() => import('@pages/FinancePage/index.js'))
 
 const Routes = () => {
@@ -33,6 +36,16 @@ const Routes = () => {
         element={
           <Suspense fallback={null}>
             <TasksPage />
+          </Suspense>
+        }
+      />
+
+      {/* Physical items routes */}
+      <Route
+        path='/physical-item/*'
+        element={
+          <Suspense fallback={null}>
+            <PhysicalItemsPage />
           </Suspense>
         }
       />
