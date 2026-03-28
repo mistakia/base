@@ -48,7 +48,7 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
    - The `started_at` timestamp is automatically set when status changes to "In Progress"
 
 3. **Prepare Work Environment**
-   - Navigate to the appropriate working directory
+   - Navigate to the appropriate working directory (do NOT create a git worktree -- this workflow operates directly in the target repository)
    - Verify current state and prerequisites
    - Document working directory path
    - Identify required tools or resources

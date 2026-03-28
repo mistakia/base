@@ -518,13 +518,14 @@ node cli/entity-list.mjs -t task --status "In Progress"
 
 ## Git Workflow Rules
 
-**Use feature branches for non-trivial changes:**
+**Use feature branches for non-trivial changes (default behavior):**
 
 - For feature development, refactoring, or multi-file changes, use worktrees:
   `git worktree add -b feature/description ../base-worktrees/feature-description`
 - Merge feature branches to main when ready, then clean up the worktree
 - Small changes (documentation, single-file fixes) can be committed directly to main
 - Avoid force pushes to main that would disrupt other developers
+- **Workflow override**: When following an implementation workflow (e.g., implement-general-task, implement-software-task), the workflow's environment setup instructions take precedence over these defaults. Only create worktrees if the workflow explicitly prescribes them.
 
 **Never discard uncommitted changes you did not author:**
 
