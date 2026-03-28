@@ -6,6 +6,7 @@
 
 import debug from 'debug'
 import { execute_duckdb_query } from './duckdb-database-client.mjs'
+import { derive_category_from_base_uri } from '../../physical-items/list-physical-items-from-filesystem.mjs'
 
 const log = debug('embedded-index:duckdb:queries')
 
@@ -63,7 +64,23 @@ const VALID_COLUMNS = new Set([
   'directory_references',
   'archived_at',
   'archive_reason',
-  'external_session_id'
+  'external_session_id',
+  // Physical item frontmatter columns
+  'importance',
+  'frequency_of_use',
+  'exist',
+  'consumable',
+  'perishable',
+  'current_quantity',
+  'target_quantity',
+  'manufacturer',
+  'wattage',
+  'voltage',
+  'weight_ounces',
+  'outlets_used',
+  'ethernet_connected',
+  'water_connection',
+  'category'
 ])
 
 /**
@@ -84,6 +101,33 @@ const TASK_FRONTMATTER_COLUMNS = {
   snooze_until: "(frontmatter->>'snooze_until')",
   estimated_total_duration:
     "CAST((frontmatter->>'estimated_total_duration') AS DOUBLE)"
+}
+
+/**
+ * Physical item-specific columns stored in frontmatter JSON
+ */
+const PHYSICAL_ITEM_FRONTMATTER_COLUMNS = {
+  // Derived: extract directory path between 'physical-item/' and the filename
+  category:
+    "REGEXP_REPLACE(REGEXP_REPLACE(base_uri, '^[^:]+:physical-item/', ''), '/[^/]+$', '')",
+  importance: "(frontmatter->>'importance')",
+  frequency_of_use: "(frontmatter->>'frequency_of_use')",
+  exist: "CAST((frontmatter->>'exist') AS BOOLEAN)",
+  consumable: "CAST((frontmatter->>'consumable') AS BOOLEAN)",
+  perishable: "CAST((frontmatter->>'perishable') AS BOOLEAN)",
+  current_quantity:
+    "CAST((frontmatter->>'current_quantity') AS DOUBLE)",
+  target_quantity:
+    "CAST((frontmatter->>'target_quantity') AS DOUBLE)",
+  manufacturer: "(frontmatter->>'manufacturer')",
+  wattage: "CAST((frontmatter->>'wattage') AS DOUBLE)",
+  voltage: "CAST((frontmatter->>'voltage') AS DOUBLE)",
+  weight_ounces: "CAST((frontmatter->>'weight_ounces') AS DOUBLE)",
+  outlets_used: "CAST((frontmatter->>'outlets_used') AS DOUBLE)",
+  ethernet_connected:
+    "CAST((frontmatter->>'ethernet_connected') AS BOOLEAN)",
+  water_connection:
+    "CAST((frontmatter->>'water_connection') AS BOOLEAN)"
 }
 
 // Map client filter operators to SQL operators
@@ -202,6 +246,23 @@ const PRIORITY_CASE_EXPRESSION = `
     ELSE 0
   END`
 
+const IMPORTANCE_CASE_EXPRESSION = `
+  CASE (frontmatter->>'importance')
+    WHEN 'Core' THEN 3
+    WHEN 'Standard' THEN 2
+    WHEN 'Premium' THEN 1
+    WHEN 'Potential' THEN 0
+    ELSE 0
+  END`
+
+const FREQUENCY_CASE_EXPRESSION = `
+  CASE (frontmatter->>'frequency_of_use')
+    WHEN 'Daily' THEN 2
+    WHEN 'Weekly' THEN 1
+    WHEN 'Infrequent' THEN 0
+    ELSE 0
+  END`
+
 /**
  * Combine base WHERE clause with additional conditions
  * Handles the logic of appending AND or creating new WHERE clause
@@ -292,9 +353,15 @@ export function build_duckdb_order_clause({ sort, frontmatter_columns = {} }) {
     .map(({ column_id, desc }) => {
       const direction = desc ? 'DESC' : 'ASC'
 
-      // Use CASE expression for priority to ensure semantic ordering
+      // Use CASE expressions for semantic ordering of priority/importance/frequency
       if (column_id === 'priority') {
         return `${PRIORITY_CASE_EXPRESSION} ${direction} NULLS LAST`
+      }
+      if (column_id === 'importance') {
+        return `${IMPORTANCE_CASE_EXPRESSION} ${direction} NULLS LAST`
+      }
+      if (column_id === 'frequency_of_use') {
+        return `${FREQUENCY_CASE_EXPRESSION} ${direction} NULLS LAST`
       }
 
       // Resolve column reference - use JSON extraction if in frontmatter mapping
@@ -989,6 +1056,164 @@ export async function query_tag_statistics_from_duckdb({
     return stats
   } catch (error) {
     log('Error querying tag statistics: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Extract physical item from entity result
+ * Parses frontmatter JSON and extracts physical item-specific fields
+ */
+function extract_physical_item_from_entity(entity) {
+  let frontmatter = {}
+  if (typeof entity.frontmatter === 'string') {
+    try {
+      frontmatter = JSON.parse(entity.frontmatter)
+    } catch (error) {
+      log(
+        'Failed to parse frontmatter JSON for %s: %s',
+        entity.base_uri,
+        error.message
+      )
+    }
+  } else {
+    frontmatter = entity.frontmatter || {}
+  }
+
+  // Derive category from base_uri path
+  const category = derive_category_from_base_uri(entity.base_uri || '')
+
+  return {
+    entity_id: entity.entity_id,
+    base_uri: entity.base_uri,
+    title: entity.title,
+    status: entity.status,
+    priority: entity.priority,
+    description: entity.description,
+    created_at: entity.created_at,
+    updated_at: entity.updated_at,
+    archived: entity.archived,
+    user_public_key: entity.user_public_key,
+
+    // Physical item-specific fields from frontmatter
+    category,
+    importance: frontmatter.importance || null,
+    frequency_of_use: frontmatter.frequency_of_use || null,
+    exist: frontmatter.exist ?? null,
+    consumable: frontmatter.consumable ?? null,
+    perishable: frontmatter.perishable ?? null,
+    current_quantity: frontmatter.current_quantity ?? null,
+    target_quantity: frontmatter.target_quantity ?? null,
+    manufacturer: frontmatter.manufacturer || null,
+    wattage: frontmatter.wattage ?? null,
+    voltage: frontmatter.voltage ?? null,
+    weight_ounces: frontmatter.weight_ounces ?? null,
+    outlets_used: frontmatter.outlets_used ?? null,
+    ethernet_connected: frontmatter.ethernet_connected ?? null,
+    water_connection: frontmatter.water_connection ?? null,
+
+    tags: entity.tags_aggregated
+      ? entity.tags_aggregated.split('||').filter(Boolean)
+      : []
+  }
+}
+
+/**
+ * Query physical items from entities table with type='physical_item' filter
+ */
+export async function query_physical_items_from_entities({
+  filters = [],
+  sort = [],
+  limit = 1000,
+  offset = 0
+}) {
+  log('Querying physical items from entities table')
+
+  const type_filter = {
+    column_id: 'type',
+    operator: '=',
+    value: 'physical_item'
+  }
+  const filters_with_type = [type_filter, ...filters]
+
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters: filters_with_type,
+    table_alias: 'e'
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters,
+    frontmatter_columns: PHYSICAL_ITEM_FRONTMATTER_COLUMNS
+  })
+  const order_sql = build_duckdb_order_clause({
+    sort,
+    frontmatter_columns: PHYSICAL_ITEM_FRONTMATTER_COLUMNS
+  })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
+
+  const query =
+    build_entity_query({
+      where_clause: final_where,
+      order_clause: order_sql
+    }) + 'LIMIT ? OFFSET ?'
+
+  try {
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...tag_conditions.parameters, limit, offset]
+    })
+
+    const items = results.map(extract_physical_item_from_entity)
+    log('Found %d physical items from entities table', items.length)
+    return items
+  } catch (error) {
+    log('Error querying physical items from entities: %s', error.message)
+    throw error
+  }
+}
+
+/**
+ * Count physical items from entities table with type='physical_item' filter
+ */
+export async function count_physical_items_from_entities({ filters = [] }) {
+  log('Counting physical items from entities table')
+
+  const type_filter = {
+    column_id: 'type',
+    operator: '=',
+    value: 'physical_item'
+  }
+  const filters_with_type = [type_filter, ...filters]
+
+  const { tag_conditions, regular_filters } = separate_and_build_tag_filters({
+    filters: filters_with_type,
+    table_alias: 'e'
+  })
+  const { where_sql, parameters } = build_duckdb_where_clause({
+    filters: regular_filters,
+    frontmatter_columns: PHYSICAL_ITEM_FRONTMATTER_COLUMNS
+  })
+  const final_where = combine_where_clauses({
+    base_where: where_sql,
+    additional_condition: tag_conditions.sql
+  })
+
+  const query = `SELECT COUNT(*) as count FROM entities e ${final_where}`
+
+  try {
+    const results = await execute_duckdb_query({
+      query,
+      parameters: [...parameters, ...tag_conditions.parameters]
+    })
+    const count_value = results[0]?.count
+    const count =
+      typeof count_value === 'bigint' ? Number(count_value) : count_value || 0
+    log('Physical item count from entities: %d', count)
+    return count
+  } catch (error) {
+    log('Error counting physical items from entities: %s', error.message)
     throw error
   }
 }

@@ -40,6 +40,7 @@ import {
   get_commits_actions,
   get_commit_detail_actions
 } from '@core/commits/actions'
+import { get_physical_items_table_actions } from '@core/physical-items/actions'
 import {
   get_git_status_all_actions,
   get_git_status_actions,
@@ -361,4 +362,11 @@ export const get_commit_detail = fetch.bind(
   null,
   api.get_commit_detail,
   get_commit_detail_actions
+)
+
+// Physical items table processing saga
+export const get_physical_items_table = fetch.bind(
+  null,
+  api.get_physical_items_table,
+  get_physical_items_table_actions
 )

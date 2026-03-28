@@ -14,6 +14,7 @@ import transcribe from './transcribe.mjs'
 import jobs from './jobs.mjs'
 import finance from './finance.mjs'
 import stats from './stats.mjs'
+import physical_items from './physical-items.mjs'
 
 export default {
   users,
@@ -31,5 +32,6 @@ export default {
   transcribe,
   jobs,
   finance,
-  stats
+  stats,
+  physical_items
 }

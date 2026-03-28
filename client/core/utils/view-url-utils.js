@@ -8,6 +8,7 @@
 // Default view IDs for each entity type
 export const DEFAULT_TASK_VIEW_ID = 'open'
 export const DEFAULT_THREAD_VIEW_ID = 'active'
+export const DEFAULT_PHYSICAL_ITEM_VIEW_ID = 'default'
 
 // Known view IDs for disambiguation (splat route parsing).
 // These must stay in sync with the view definitions in:
@@ -25,6 +26,15 @@ export const KNOWN_THREAD_VIEW_IDS = new Set([
   'active',
   'last_48_hours',
   'last_7_days'
+])
+export const KNOWN_PHYSICAL_ITEM_VIEW_IDS = new Set([
+  'default',
+  'inventory',
+  'purchase',
+  'home',
+  'overlander',
+  'vehicle',
+  'investment_property'
 ])
 
 /**

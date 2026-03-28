@@ -15,6 +15,7 @@ import { search_reducer } from './search/index.js'
 import { thread_sheet_reducer } from './thread-sheet/index.js'
 import { task_stats_reducer } from './task-stats/index.js'
 import { finance_reducer } from './finance/index.js'
+import { physical_items_reducer } from './physical-items/index.js'
 
 const root_reducer = (router) =>
   combineReducers({
@@ -33,7 +34,8 @@ const root_reducer = (router) =>
     search: search_reducer,
     thread_sheet: thread_sheet_reducer,
     task_stats: task_stats_reducer,
-    finance: finance_reducer
+    finance: finance_reducer,
+    physical_items: physical_items_reducer
   })
 
 export default root_reducer

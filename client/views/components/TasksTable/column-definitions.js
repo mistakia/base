@@ -1,67 +1,18 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { useNavigate } from 'react-router-dom'
-import { Chip, Box, Tooltip } from '@mui/material'
 import {
   TABLE_DATA_TYPES,
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
-import { convert_base_uri_to_path } from '@views/utils/base-uri-constants.js'
 import { COLORS } from '@theme/colors.js'
 import {
   EditableStatusField,
   EditablePriorityField
 } from '@views/components/InlineSelect'
-import { TagChip, extract_tag_title } from '@views/components/primitives/styled'
-
-const TitleCell = ({ row }) => {
-  const navigate = useNavigate()
-  const task = row.original
-
-  const handle_click = (event) => {
-    if (task.is_redacted) {
-      return
-    }
-
-    if (task.base_uri) {
-      // Use the proper base URI conversion utility
-      // base_uri format is like "user:task/base/my-task.md"
-      // convert_base_uri_to_path converts it to proper client path
-      const navigation_path = convert_base_uri_to_path(task.base_uri)
-
-      // Check if command (Mac) or ctrl (Windows/Linux) key is pressed
-      const is_modifier_pressed = event.metaKey || event.ctrlKey
-
-      if (is_modifier_pressed) {
-        // Open in new tab/window
-        window.open(navigation_path, '_blank')
-      } else {
-        // Navigate in same window
-        navigate(navigation_path)
-      }
-    }
-  }
-
-  return (
-    <div
-      className='cell-content'
-      onClick={handle_click}
-      style={{
-        height: 'fit-content',
-        justifyContent: 'flex-start',
-        width: '100%',
-        cursor: 'pointer'
-      }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <div style={{ fontWeight: '500', lineHeight: '1.2' }}>
-          {task.title || 'Untitled'}
-        </div>
-      </div>
-    </div>
-  )
-}
+import TitleCell from '../primitives/cells/TitleCell.js'
+import TagsCell from '../primitives/cells/TagsCell.js'
 
 const StatusCell = ({ row }) => {
   const task = row.original
@@ -113,10 +64,6 @@ const FinishByCell = ({ row }) => {
   )
 }
 
-TitleCell.propTypes = {
-  row: PropTypes.object.isRequired
-}
-
 StatusCell.propTypes = {
   row: PropTypes.object.isRequired
 }
@@ -127,105 +74,6 @@ PriorityCell.propTypes = {
 
 FinishByCell.propTypes = {
   row: PropTypes.object.isRequired
-}
-
-const MAX_VISIBLE_TAGS = 3
-
-const TagsCell = ({ row, column }) => {
-  const task = row.original
-  const tags = task.tags || []
-  // Get available tags from column definition (passed via column_values)
-  const available_tags = column?.columnDef?.column_values || []
-
-  if (tags.length === 0) {
-    return (
-      <div
-        className='cell-content'
-        style={{
-          height: 'fit-content',
-          display: 'flex',
-          justifyContent: 'flex-start'
-        }}>
-        <span style={{ color: COLORS.text_tertiary }}>—</span>
-      </div>
-    )
-  }
-
-  // Build a lookup map for tag metadata (title, color)
-  const tag_lookup = {}
-  for (const tag of available_tags) {
-    if (tag.value) {
-      tag_lookup[tag.value] = tag
-    }
-  }
-
-  const visible_tags = tags.slice(0, MAX_VISIBLE_TAGS)
-  const remaining_count = tags.length - MAX_VISIBLE_TAGS
-  const remaining_tags = tags.slice(MAX_VISIBLE_TAGS)
-
-  return (
-    <div
-      className='cell-content'
-      style={{
-        height: 'fit-content',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        width: '100%'
-      }}>
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 0.5,
-          flexWrap: 'nowrap',
-          alignItems: 'center',
-          overflow: 'hidden'
-        }}>
-        {visible_tags.map((tag_uri) => {
-          const tag_data = tag_lookup[tag_uri]
-          return (
-            <TagChip
-              key={tag_uri}
-              tag={
-                tag_data
-                  ? {
-                      base_uri: tag_uri,
-                      title: tag_data.label,
-                      color: tag_data.color
-                    }
-                  : tag_uri
-              }
-              max_width='none'
-            />
-          )
-        })}
-        {remaining_count > 0 && (
-          <Tooltip
-            title={remaining_tags.map(extract_tag_title).join(', ')}
-            arrow
-            placement='top'>
-            <Chip
-              label={`+${remaining_count}`}
-              size='small'
-              variant='outlined'
-              sx={{
-                fontSize: '10px',
-                height: '20px',
-                minWidth: '32px',
-                '& .MuiChip-label': {
-                  padding: '0 4px'
-                }
-              }}
-            />
-          </Tooltip>
-        )}
-      </Box>
-    </div>
-  )
-}
-
-TagsCell.propTypes = {
-  row: PropTypes.object.isRequired,
-  column: PropTypes.object
 }
 
 export const task_columns = {

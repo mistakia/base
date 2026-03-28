@@ -191,6 +191,9 @@ api.use('/api/jobs', write_limiter, routes.jobs)
 // Finance API proxy - forwards requests to finance service
 api.use('/api/proxy/finance', read_limiter, routes.finance)
 
+// Physical items - read-heavy, no writes
+api.use('/api/physical-items', read_limiter, routes.physical_items)
+
 // Stats snapshots and time series
 api.use('/api/stats', read_limiter, routes.stats)
 
