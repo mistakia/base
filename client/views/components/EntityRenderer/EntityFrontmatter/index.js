@@ -29,6 +29,9 @@ import {
 } from './value-components/index.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 
+const has_value = (value) =>
+  value !== null && value !== undefined && value !== ''
+
 const categorize_fields = (frontmatter) => {
   const entity_type = frontmatter.type || 'default'
   const config = entity_field_config[entity_type] || entity_field_config.default
@@ -47,15 +50,55 @@ const categorize_fields = (frontmatter) => {
   const expandable = {}
   const uncategorized = {}
 
-  Object.entries(other_fields).forEach(([key, value]) => {
-    if (config.always_visible.includes(key)) {
-      always_visible[key] = value
-    } else if (config.expandable.includes(key)) {
-      expandable[key] = value
-    } else {
-      uncategorized[key] = value
+  if (config.show_set_by_default && config.schema_fields) {
+    // Show all set schema fields by default; on expand show empty schema fields
+    const schema_set = new Set(config.schema_fields)
+    const always_set = new Set(config.always_visible)
+    const expandable_set = new Set(config.expandable)
+
+    // Always-visible fields (dates, etc.)
+    for (const key of config.always_visible) {
+      if (key in other_fields) {
+        always_visible[key] = other_fields[key]
+      }
     }
-  })
+
+    // Schema fields with values go to always_visible
+    for (const key of config.schema_fields) {
+      if (key in other_fields && has_value(other_fields[key])) {
+        always_visible[key] = other_fields[key]
+      }
+    }
+
+    // Expandable: system/internal fields that exist + empty schema fields
+    for (const key of config.expandable) {
+      if (key in other_fields) {
+        expandable[key] = other_fields[key]
+      }
+    }
+    for (const key of config.schema_fields) {
+      if (!(key in other_fields) || !has_value(other_fields[key])) {
+        expandable[key] = other_fields[key] ?? null
+      }
+    }
+
+    // Remaining uncategorized fields
+    Object.entries(other_fields).forEach(([key, value]) => {
+      if (!schema_set.has(key) && !always_set.has(key) && !expandable_set.has(key)) {
+        uncategorized[key] = value
+      }
+    })
+  } else {
+    Object.entries(other_fields).forEach(([key, value]) => {
+      if (config.always_visible.includes(key)) {
+        always_visible[key] = value
+      } else if (config.expandable.includes(key)) {
+        expandable[key] = value
+      } else {
+        uncategorized[key] = value
+      }
+    })
+  }
 
   return { always_visible, expandable, uncategorized }
 }

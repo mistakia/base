@@ -81,27 +81,26 @@ export const entity_field_config = {
     ]
   },
   physical_item: {
-    always_visible: [
-      'tags',
-      'manufacturer',
-      'model_number',
-      'current_location',
-      'storage_location',
-      'current_quantity',
-      'importance',
-      'frequency_of_use',
-      'created_at',
-      'updated_at'
-    ],
+    // Show all set fields by default; on expand show all schema fields even if empty
+    show_set_by_default: true,
+    always_visible: ['created_at', 'updated_at'],
     expandable: [
       'entity_id',
       'user_public_key',
       'base_uri',
       'permalink',
-      'external_id',
-      'import_cid',
+      'public_read',
+      'archived_at'
+    ],
+    // All domain fields - shown if set by default, shown empty on expand
+    schema_fields: [
+      'tags',
+      'manufacturer',
+      'model_number',
       'serial_number',
       'acquisition_date',
+      'current_location',
+      'storage_location',
       'target_location',
       'storage_area',
       'home_areas',
@@ -125,7 +124,10 @@ export const entity_field_config = {
       'min_storage_humidity_percent',
       'max_storage_humidity_percent',
       'exist',
+      'current_quantity',
       'target_quantity',
+      'importance',
+      'frequency_of_use',
       'consumable',
       'perishable',
       'kit_name',
@@ -134,8 +136,8 @@ export const entity_field_config = {
       'standard_drawer_units',
       'storage_notes',
       'misc_notes',
-      'public_read',
-      'archived_at'
+      'external_id',
+      'import_cid'
     ]
   },
   physical_location: {
