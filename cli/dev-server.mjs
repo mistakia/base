@@ -21,7 +21,7 @@ async function start_dev_server() {
     const devServerOptions = {
       hot: true,
       host: 'localhost',
-      port: 8081,
+      port: 8090,
       historyApiFallback: {
         rewrites: [{ from: /./, to: '/index.html' }]
       },
@@ -37,7 +37,7 @@ async function start_dev_server() {
 
     // Start server
     await server.start()
-    console.log('Dev server is running on port 8081')
+    console.log('Dev server is running on port 8090')
 
     // Handle graceful shutdown
     const shutdown = async () => {
