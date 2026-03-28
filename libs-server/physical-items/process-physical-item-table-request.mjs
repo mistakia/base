@@ -44,7 +44,15 @@ const CONFIG = {
 
   redaction: {
     preserved_keys: ['type', 'entity_type', 'category'],
-    redacted_keys: ['title', 'description', 'user_public_key']
+    redacted_keys: [
+      'title',
+      'description',
+      'user_public_key',
+      'misc_notes',
+      'home_area',
+      'current_location',
+      'home_activity'
+    ]
   },
 
   defaults: {

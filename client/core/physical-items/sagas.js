@@ -151,7 +151,7 @@ export function* watch_load_physical_items_table() {
 
 export function* watch_load_available_tags() {
   yield takeLatest(
-    physical_items_action_types.LOAD_AVAILABLE_TAGS,
+    physical_items_action_types.LOAD_PHYSICAL_ITEMS_AVAILABLE_TAGS,
     load_available_tags
   )
 }

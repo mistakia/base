@@ -209,13 +209,13 @@ export function physical_items_reducer(
 ) {
   switch (type) {
     // Available tags actions
-    case physical_items_action_types.GET_AVAILABLE_TAGS_PENDING:
+    case physical_items_action_types.GET_PHYSICAL_ITEMS_AVAILABLE_TAGS_PENDING:
       return state.merge({
         is_loading_available_tags: true,
         available_tags_error: null
       })
 
-    case physical_items_action_types.GET_AVAILABLE_TAGS_FULFILLED: {
+    case physical_items_action_types.GET_PHYSICAL_ITEMS_AVAILABLE_TAGS_FULFILLED: {
       const tags = Array.isArray(payload.data) ? payload.data : []
       return state.merge({
         available_tags: new List(tags),
@@ -224,7 +224,7 @@ export function physical_items_reducer(
       })
     }
 
-    case physical_items_action_types.GET_AVAILABLE_TAGS_FAILED:
+    case physical_items_action_types.GET_PHYSICAL_ITEMS_AVAILABLE_TAGS_FAILED:
       return state.merge({
         is_loading_available_tags: false,
         available_tags_error: payload.error

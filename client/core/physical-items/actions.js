@@ -1,14 +1,14 @@
 import { create_api_action_types, create_api_actions } from '@core/utils'
 
 const GET_PHYSICAL_ITEMS_TABLE = 'GET_PHYSICAL_ITEMS_TABLE'
-const GET_AVAILABLE_TAGS = 'GET_AVAILABLE_TAGS'
+const GET_PHYSICAL_ITEMS_AVAILABLE_TAGS = 'GET_PHYSICAL_ITEMS_AVAILABLE_TAGS'
 
 export const physical_items_action_types = {
   ...create_api_action_types(GET_PHYSICAL_ITEMS_TABLE),
-  ...create_api_action_types(GET_AVAILABLE_TAGS),
+  ...create_api_action_types(GET_PHYSICAL_ITEMS_AVAILABLE_TAGS),
 
   LOAD_PHYSICAL_ITEMS_TABLE: 'LOAD_PHYSICAL_ITEMS_TABLE',
-  LOAD_AVAILABLE_TAGS: 'LOAD_AVAILABLE_TAGS',
+  LOAD_PHYSICAL_ITEMS_AVAILABLE_TAGS: 'LOAD_PHYSICAL_ITEMS_AVAILABLE_TAGS',
 
   // Table view management actions
   UPDATE_PHYSICAL_ITEM_TABLE_VIEW: 'UPDATE_PHYSICAL_ITEM_TABLE_VIEW',
@@ -19,7 +19,9 @@ export const physical_items_action_types = {
 export const get_physical_items_table_actions = create_api_actions(
   GET_PHYSICAL_ITEMS_TABLE
 )
-export const get_available_tags_actions = create_api_actions(GET_AVAILABLE_TAGS)
+export const get_available_tags_actions = create_api_actions(
+  GET_PHYSICAL_ITEMS_AVAILABLE_TAGS
+)
 
 export const physical_items_actions = {
   update_physical_item_table_view: ({ view }) => ({
@@ -48,7 +50,7 @@ export const physical_items_actions = {
   }),
 
   load_available_tags: ({ used_by } = {}) => ({
-    type: physical_items_action_types.LOAD_AVAILABLE_TAGS,
+    type: physical_items_action_types.LOAD_PHYSICAL_ITEMS_AVAILABLE_TAGS,
     payload: { used_by }
   })
 }
