@@ -16,7 +16,7 @@ This is a Human-in-the-Loop System - an LLM-powered knowledge base management an
 # Run full development environment (frontend + API)
 yarn dev
 
-# Run only frontend dev server (port 8081)
+# Run only frontend dev server (port 8090)
 yarn start
 
 # Run only API server
