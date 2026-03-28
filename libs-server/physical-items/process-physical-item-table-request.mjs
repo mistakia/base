@@ -86,6 +86,12 @@ function normalize_physical_item_for_table_response(item, defaults) {
     target_quantity: item.target_quantity,
     ethernet_connected: item.ethernet_connected,
     water_connection: item.water_connection,
+    misc_notes: item.misc_notes || null,
+
+    // Relation-derived display fields
+    home_area: item.home_area || null,
+    current_location: item.current_location || null,
+    home_activity: item.home_activity || null,
 
     // Metadata
     tags: item.tags || [],
@@ -97,6 +103,48 @@ function normalize_physical_item_for_table_response(item, defaults) {
 }
 
 /**
+ * Extract display labels from relation strings for physical item table columns.
+ */
+function extract_relation_display_fields(relations) {
+  const fields = {
+    home_area: null,
+    current_location: null,
+    home_activity: null
+  }
+
+  if (!Array.isArray(relations)) return fields
+
+  for (const rel of relations) {
+    if (typeof rel !== 'string') continue
+
+    if (!fields.home_area && rel.startsWith('target_area ')) {
+      fields.home_area = extract_label_from_relation(rel)
+    } else if (
+      !fields.current_location &&
+      rel.startsWith('current_location ')
+    ) {
+      fields.current_location = extract_label_from_relation(rel)
+    } else if (!fields.home_activity && rel.startsWith('used_in ')) {
+      fields.home_activity = extract_label_from_relation(rel)
+    }
+  }
+
+  return fields
+}
+
+function extract_label_from_relation(rel_string) {
+  const match = rel_string.match(/\[\[([^\]]+)\]\]/)
+  if (!match) return null
+
+  const uri = match[1]
+  const filename = uri.split('/').pop()?.replace(/\.md$/, '') || ''
+  return filename
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
  * Process physical item entity for table display
  */
 function process_physical_item_for_table(entity_file) {
@@ -104,8 +152,13 @@ function process_physical_item_for_table(entity_file) {
   const absolute_path =
     entity_file.absolute_path || entity_file.file_info?.absolute_path
 
+  const relation_fields = extract_relation_display_fields(
+    entity_properties.relations
+  )
+
   return {
     ...entity_properties,
+    ...relation_fields,
     absolute_path,
     is_redacted: is_redacted || false,
     can_write: can_write !== false

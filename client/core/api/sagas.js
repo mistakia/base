@@ -40,7 +40,10 @@ import {
   get_commits_actions,
   get_commit_detail_actions
 } from '@core/commits/actions'
-import { get_physical_items_table_actions } from '@core/physical-items/actions'
+import {
+  get_physical_items_table_actions,
+  get_available_tags_actions as get_physical_items_available_tags_actions
+} from '@core/physical-items/actions'
 import {
   get_git_status_all_actions,
   get_git_status_actions,
@@ -369,4 +372,9 @@ export const get_physical_items_table = fetch.bind(
   null,
   api.get_physical_items_table,
   get_physical_items_table_actions
+)
+export const get_physical_items_available_tags = fetch.bind(
+  null,
+  api.get_available_tags,
+  get_physical_items_available_tags_actions
 )

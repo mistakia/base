@@ -24,6 +24,10 @@ export const FILTER_OPERATORS = {
     String(value).toLowerCase().includes(String(filterValue).toLowerCase()),
   [TABLE_OPERATORS.NOT_LIKE]: (value, filterValue) =>
     !String(value).toLowerCase().includes(String(filterValue).toLowerCase()),
+  ILIKE: (value, filterValue) =>
+    String(value).toLowerCase().includes(String(filterValue).toLowerCase()),
+  'NOT ILIKE': (value, filterValue) =>
+    !String(value).toLowerCase().includes(String(filterValue).toLowerCase()),
   [TABLE_OPERATORS.IN]: (value, filterValue) =>
     Array.isArray(filterValue) && filterValue.includes(value),
   [TABLE_OPERATORS.NOT_IN]: (value, filterValue) =>

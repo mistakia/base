@@ -22,13 +22,19 @@ const DEFAULT_PHYSICAL_ITEM_TABLE_STATE = create_default_table_state({
   columns: [
     'title',
     'category',
+    'home_area',
+    'current_location',
+    'home_activity',
     'importance',
     'frequency_of_use',
+    'misc_notes',
     'tags',
     'updated_at'
   ],
   sort: DEFAULT_SORT
 })
+
+const SEARCH_COLUMN = { view_search_column_id: 'title' }
 
 const DEFAULT_VIEWS = {
   default: create_view({
@@ -36,7 +42,7 @@ const DEFAULT_VIEWS = {
     view_id: 'default',
     view_name: 'All Items',
     table_state: DEFAULT_PHYSICAL_ITEM_TABLE_STATE
-  }),
+  }).merge(SEARCH_COLUMN),
   inventory: create_view({
     entity_prefix: 'physical_item',
     view_id: 'inventory',
@@ -45,6 +51,7 @@ const DEFAULT_VIEWS = {
       columns: [
         'title',
         'category',
+        'current_location',
         'exist',
         'consumable',
         'perishable',
@@ -60,7 +67,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_COLUMN),
   purchase: create_view({
     entity_prefix: 'physical_item',
     view_id: 'purchase',
@@ -72,7 +79,8 @@ const DEFAULT_VIEWS = {
         'importance',
         'frequency_of_use',
         'current_quantity',
-        'target_quantity'
+        'target_quantity',
+        'misc_notes'
       ],
       sort: DEFAULT_SORT,
       where: new List([
@@ -83,7 +91,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_COLUMN),
   home: create_view({
     entity_prefix: 'physical_item',
     view_id: 'home',
@@ -92,9 +100,11 @@ const DEFAULT_VIEWS = {
       columns: [
         'title',
         'category',
+        'home_area',
+        'home_activity',
         'importance',
         'frequency_of_use',
-        'consumable',
+        'misc_notes',
         'tags'
       ],
       sort: DEFAULT_SORT,
@@ -106,7 +116,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_COLUMN),
   overlander: create_view({
     entity_prefix: 'physical_item',
     view_id: 'overlander',
@@ -115,6 +125,7 @@ const DEFAULT_VIEWS = {
       columns: [
         'title',
         'category',
+        'current_location',
         'importance',
         'frequency_of_use',
         'consumable',
@@ -129,7 +140,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_COLUMN),
   vehicle: create_view({
     entity_prefix: 'physical_item',
     view_id: 'vehicle',
@@ -138,6 +149,7 @@ const DEFAULT_VIEWS = {
       columns: [
         'title',
         'category',
+        'current_location',
         'importance',
         'frequency_of_use',
         'consumable',
@@ -152,7 +164,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_COLUMN),
   investment_property: create_view({
     entity_prefix: 'physical_item',
     view_id: 'investment_property',
@@ -161,6 +173,7 @@ const DEFAULT_VIEWS = {
       columns: [
         'title',
         'category',
+        'current_location',
         'importance',
         'frequency_of_use',
         'consumable',
@@ -175,7 +188,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  })
+  }).merge(SEARCH_COLUMN)
 }
 
 const PhysicalItemsState = new Record({

@@ -41,12 +41,12 @@ export const physical_item_columns = {
     accessorKey: 'category',
     data_type: TABLE_DATA_TYPES.TEXT,
     operators: [
-      TABLE_OPERATORS.IN,
-      TABLE_OPERATORS.NOT_IN,
       TABLE_OPERATORS.LIKE,
-      TABLE_OPERATORS.NOT_LIKE
+      TABLE_OPERATORS.NOT_LIKE,
+      TABLE_OPERATORS.IN,
+      TABLE_OPERATORS.NOT_IN
     ],
-    size: 180,
+    size: 150,
     minSize: 100,
     maxSize: 250
   },
@@ -278,6 +278,46 @@ export const physical_item_columns = {
     size: 90,
     minSize: 60,
     maxSize: 120
+  },
+  home_area: {
+    column_id: 'home_area',
+    header_label: 'Home Area',
+    accessorKey: 'home_area',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
+    size: 160,
+    minSize: 100,
+    maxSize: 250
+  },
+  current_location: {
+    column_id: 'current_location',
+    header_label: 'Location',
+    accessorKey: 'current_location',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
+    size: 160,
+    minSize: 100,
+    maxSize: 250
+  },
+  home_activity: {
+    column_id: 'home_activity',
+    header_label: 'Activity',
+    accessorKey: 'home_activity',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
+    size: 140,
+    minSize: 100,
+    maxSize: 220
+  },
+  misc_notes: {
+    column_id: 'misc_notes',
+    header_label: 'Notes',
+    accessorKey: 'misc_notes',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
+    size: 200,
+    minSize: 100,
+    maxSize: 400
   },
   tags: {
     column_id: 'tags',

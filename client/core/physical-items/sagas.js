@@ -9,7 +9,7 @@ import {
 
 import {
   get_physical_items_table,
-  get_available_tags
+  get_physical_items_available_tags
 } from '@core/api/sagas'
 import { physical_items_action_types, physical_items_actions } from './actions'
 import { get_physical_items_state } from './selectors'
@@ -127,7 +127,7 @@ export function* load_available_tags({ payload } = {}) {
   const app = yield select(get_app)
   if (!app.get('user_token')) return
   const { used_by } = payload
-  yield call(get_available_tags, { used_by })
+  yield call(get_physical_items_available_tags, { used_by })
 }
 
 //= ====================================

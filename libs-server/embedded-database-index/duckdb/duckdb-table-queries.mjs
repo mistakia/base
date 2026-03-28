@@ -80,7 +80,8 @@ const VALID_COLUMNS = new Set([
   'outlets_used',
   'ethernet_connected',
   'water_connection',
-  'category'
+  'category',
+  'misc_notes'
 ])
 
 /**
@@ -127,7 +128,8 @@ const PHYSICAL_ITEM_FRONTMATTER_COLUMNS = {
   ethernet_connected:
     "CAST((frontmatter->>'ethernet_connected') AS BOOLEAN)",
   water_connection:
-    "CAST((frontmatter->>'water_connection') AS BOOLEAN)"
+    "CAST((frontmatter->>'water_connection') AS BOOLEAN)",
+  misc_notes: "(frontmatter->>'misc_notes')"
 }
 
 // Map client filter operators to SQL operators
@@ -141,6 +143,8 @@ const FILTER_OPERATOR_MAP = {
   '<=': '<=',
   LIKE: 'LIKE',
   'NOT LIKE': 'NOT LIKE',
+  ILIKE: 'ILIKE',
+  'NOT ILIKE': 'NOT ILIKE',
   IN: 'IN',
   'NOT IN': 'NOT IN',
   'IS NULL': 'IS NULL',
@@ -214,8 +218,13 @@ export function build_duckdb_where_clause({
       continue
     }
 
-    // Handle LIKE operators
-    if (operator === 'LIKE' || operator === 'NOT LIKE') {
+    // Handle LIKE and ILIKE operators
+    if (
+      operator === 'LIKE' ||
+      operator === 'NOT LIKE' ||
+      operator === 'ILIKE' ||
+      operator === 'NOT ILIKE'
+    ) {
       conditions.push(`${column_ref} ${sql_operator} ?`)
       parameters.push(`%${value}%`)
       continue
@@ -1061,6 +1070,53 @@ export async function query_tag_statistics_from_duckdb({
 }
 
 /**
+ * Extract display labels from relation strings for physical item table columns.
+ * Converts relation targets like "target_area [[user:text/home/area/store-and-retrieve.md]]"
+ * into human-readable labels like "Store and Retrieve".
+ */
+function extract_relation_display_fields(relations) {
+  const fields = {
+    home_area: null,
+    current_location: null,
+    home_activity: null
+  }
+
+  if (!Array.isArray(relations)) return fields
+
+  for (const rel of relations) {
+    if (typeof rel !== 'string') continue
+
+    if (!fields.home_area && rel.startsWith('target_area ')) {
+      fields.home_area = extract_label_from_relation(rel)
+    } else if (!fields.current_location && rel.startsWith('current_location ')) {
+      fields.current_location = extract_label_from_relation(rel)
+    } else if (!fields.home_activity && rel.startsWith('used_in ')) {
+      fields.home_activity = extract_label_from_relation(rel)
+    }
+  }
+
+  return fields
+}
+
+/**
+ * Extract a human-readable label from a relation string.
+ * e.g. "target_area [[user:text/home/area/store-and-retrieve.md]]" -> "Store and Retrieve"
+ */
+function extract_label_from_relation(rel_string) {
+  const match = rel_string.match(/\[\[([^\]]+)\]\]/)
+  if (!match) return null
+
+  const uri = match[1]
+  // Extract filename without extension
+  const filename = uri.split('/').pop()?.replace(/\.md$/, '') || ''
+  // Convert kebab-case to title case
+  return filename
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
  * Extract physical item from entity result
  * Parses frontmatter JSON and extracts physical item-specific fields
  */
@@ -1111,6 +1167,10 @@ function extract_physical_item_from_entity(entity) {
     outlets_used: frontmatter.outlets_used ?? null,
     ethernet_connected: frontmatter.ethernet_connected ?? null,
     water_connection: frontmatter.water_connection ?? null,
+    misc_notes: frontmatter.misc_notes || null,
+
+    // Relation-derived display fields
+    ...extract_relation_display_fields(frontmatter.relations),
 
     tags: entity.tags_aggregated
       ? entity.tags_aggregated.split('||').filter(Boolean)
