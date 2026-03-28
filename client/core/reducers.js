@@ -15,7 +15,7 @@ import { search_reducer } from './search/index.js'
 import { thread_sheet_reducer } from './thread-sheet/index.js'
 import { task_stats_reducer } from './task-stats/index.js'
 import { finance_reducer } from './finance/index.js'
-import { physical_items_reducer } from './physical_items/index.js'
+import { physical_items_reducer } from './physical-items/index.js'
 
 const root_reducer = (router) =>
   combineReducers({

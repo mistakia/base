@@ -40,7 +40,7 @@ import {
   get_commits_actions,
   get_commit_detail_actions
 } from '@core/commits/actions'
-import { get_physical_items_table_actions } from '@core/physical_items/actions'
+import { get_physical_items_table_actions } from '@core/physical-items/actions'
 import {
   get_git_status_all_actions,
   get_git_status_actions,

@@ -4,13 +4,13 @@ import { useSelector, useDispatch } from 'react-redux'
 import Table from 'react-table/index.js'
 
 import { physical_item_columns } from './column-definitions.js'
-import { physical_items_actions } from '@core/physical_items/actions.js'
+import { physical_items_actions } from '@core/physical-items/actions.js'
 import {
   get_physical_items_table_props,
   get_physical_item_table_views,
   get_selected_physical_item_table_view,
   get_available_tags_for_physical_item_filter
-} from '@core/physical_items/selectors.js'
+} from '@core/physical-items/selectors.js'
 
 import './PhysicalItemsTable.styl'
 

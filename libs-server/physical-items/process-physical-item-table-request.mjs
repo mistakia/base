@@ -18,16 +18,16 @@ const log = debug('physical-items:table')
 
 // Custom sort order maps for SELECT fields
 const IMPORTANCE_ORDER = {
-  Core: 0,
-  Standard: 1,
-  Premium: 2,
-  Potential: 3
+  Core: 3,
+  Standard: 2,
+  Premium: 1,
+  Potential: 0
 }
 
 const FREQUENCY_ORDER = {
-  Daily: 0,
+  Daily: 2,
   Weekly: 1,
-  Infrequent: 2
+  Infrequent: 0
 }
 
 const CONFIG = {
@@ -97,52 +97,15 @@ function normalize_physical_item_for_table_response(item, defaults) {
 }
 
 /**
- * Extract physical item properties from entity
- */
-function extract_physical_item_properties(entity_properties) {
-  const { defaults } = CONFIG
-
-  return {
-    entity_id: entity_properties.entity_id,
-    base_uri: entity_properties.base_uri,
-    title: entity_properties.title || defaults.title,
-    description: entity_properties.description || defaults.description,
-    category: entity_properties.category || defaults.category,
-    created_at: entity_properties.created_at,
-    updated_at: entity_properties.updated_at,
-    user_public_key: entity_properties.user_public_key,
-
-    importance: entity_properties.importance,
-    frequency_of_use: entity_properties.frequency_of_use,
-    exist: entity_properties.exist,
-    consumable: entity_properties.consumable,
-    perishable: entity_properties.perishable,
-    weight_ounces: entity_properties.weight_ounces,
-    wattage: entity_properties.wattage,
-    voltage: entity_properties.voltage,
-    outlets_used: entity_properties.outlets_used,
-    current_quantity: entity_properties.current_quantity,
-    target_quantity: entity_properties.target_quantity,
-    ethernet_connected: entity_properties.ethernet_connected,
-    water_connection: entity_properties.water_connection,
-
-    tags: entity_properties.tags || [],
-    relations: entity_properties.relations || []
-  }
-}
-
-/**
  * Process physical item entity for table display
  */
 function process_physical_item_for_table(entity_file) {
   const { entity_properties, is_redacted, can_write } = entity_file
-
-  const properties = extract_physical_item_properties(entity_properties)
   const absolute_path =
     entity_file.absolute_path || entity_file.file_info?.absolute_path
 
   return {
-    ...properties,
+    ...entity_properties,
     absolute_path,
     is_redacted: is_redacted || false,
     can_write: can_write !== false
@@ -168,50 +131,6 @@ function get_physical_item_value_for_sorting(item, column_id) {
 }
 
 /**
- * Convert react-table filters to DuckDB format
- */
-function convert_table_state_to_duckdb_filters(table_state) {
-  const filters = []
-
-  if (table_state?.where) {
-    for (const filter of table_state.where) {
-      if (filter.column_id && filter.operator) {
-        filters.push({
-          column_id: filter.column_id,
-          operator: filter.operator,
-          value: filter.value
-        })
-      }
-    }
-  }
-
-  return filters
-}
-
-/**
- * Convert react-table sort to DuckDB format
- */
-function convert_table_state_to_duckdb_sort(table_state) {
-  const sort = []
-  const sort_config = table_state?.sort || table_state?.sorting
-
-  if (sort_config) {
-    for (const sort_item of sort_config) {
-      sort.push({
-        column_id: sort_item.column_id || sort_item.id,
-        desc: sort_item.desc || false
-      })
-    }
-  }
-
-  if (sort.length === 0) {
-    sort.push(CONFIG.table.default_sort)
-  }
-
-  return sort
-}
-
-/**
  * Process physical item table request using DuckDB index
  */
 async function process_physical_item_table_request_indexed({
@@ -220,8 +139,11 @@ async function process_physical_item_table_request_indexed({
 }) {
   const start_time = Date.now()
 
-  const filters = convert_table_state_to_duckdb_filters(table_state)
-  const sort = convert_table_state_to_duckdb_sort(table_state)
+  const filters = table_state?.where || []
+  const sort =
+    table_state?.sort?.length > 0
+      ? table_state.sort
+      : [CONFIG.table.default_sort]
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 

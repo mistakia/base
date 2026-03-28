@@ -5,7 +5,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import PageLayout from '@views/layout/PageLayout.js'
 import PhysicalItemsTable from '@views/components/PhysicalItemsTable/index.js'
 import DirectoryPage from '@pages/DirectoryPage/index.js'
-import { physical_items_actions } from '@core/physical_items/actions.js'
+import { physical_items_actions } from '@core/physical-items/actions.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 import {

@@ -13,7 +13,7 @@ import { search_sagas } from './search/index.js'
 import { thread_sheet_sagas } from './thread-sheet/index.js'
 import { task_stats_sagas } from './task-stats/index.js'
 import { finance_sagas } from './finance/index.js'
-import { physical_items_sagas } from './physical_items/index.js'
+import { physical_items_sagas } from './physical-items/index.js'
 
 export default function* root_saga() {
   yield all([

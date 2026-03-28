@@ -6,6 +6,7 @@
 
 import debug from 'debug'
 import { execute_duckdb_query } from './duckdb-database-client.mjs'
+import { derive_category_from_base_uri } from '../../physical-items/list-physical-items-from-filesystem.mjs'
 
 const log = debug('embedded-index:duckdb:queries')
 
@@ -1080,11 +1081,7 @@ function extract_physical_item_from_entity(entity) {
   }
 
   // Derive category from base_uri path
-  const base_uri = entity.base_uri || ''
-  const path = base_uri.replace(/^[^:]+:/, '')
-  const relative = path.replace(/^physical-item\//, '')
-  const last_slash = relative.lastIndexOf('/')
-  const category = last_slash === -1 ? '' : relative.substring(0, last_slash)
+  const category = derive_category_from_base_uri(entity.base_uri || '')
 
   return {
     entity_id: entity.entity_id,

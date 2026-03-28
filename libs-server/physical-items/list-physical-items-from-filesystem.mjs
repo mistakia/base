@@ -58,7 +58,7 @@ export async function list_physical_items_from_filesystem() {
  * e.g. "user:physical-item/home/homelab/rack.md" -> "home/homelab"
  * e.g. "user:physical-item/vehicle/tool.md" -> "vehicle"
  */
-function derive_category_from_base_uri(base_uri) {
+export function derive_category_from_base_uri(base_uri) {
   // Remove scheme prefix (e.g. "user:")
   const path = base_uri.replace(/^[^:]+:/, '')
 
