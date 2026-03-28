@@ -96,6 +96,29 @@ const DEFAULT_VIEWS = {
       ])
     })
   }),
+  finished: create_view({
+    entity_prefix: 'task',
+    view_id: 'finished',
+    view_name: 'Recently Finished',
+    table_state: create_default_table_state({
+      columns: [
+        'title',
+        'status',
+        'priority',
+        'tags',
+        'finished_at',
+        'created_at'
+      ],
+      sort: [{ column_id: 'finished_at', desc: true }],
+      where: new List([
+        new Map({
+          column_id: 'status',
+          operator: TABLE_OPERATORS.IN,
+          value: [TASK_STATUS.COMPLETED, TASK_STATUS.ABANDONED]
+        })
+      ])
+    })
+  }),
   upcoming: create_view({
     entity_prefix: 'task',
     view_id: 'upcoming',

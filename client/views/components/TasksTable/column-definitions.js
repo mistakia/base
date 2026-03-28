@@ -411,6 +411,27 @@ export const task_columns = {
     minSize: 25,
     maxSize: 200
   },
+  finished_at: {
+    column_id: 'finished_at',
+    header_label: 'Finished',
+    accessorKey: 'finished_at',
+    accessorFn: ({ finished_at }) => {
+      if (!finished_at) return '—'
+      return format_shorthand_time(new Date(finished_at))
+    },
+    data_type: TABLE_DATA_TYPES.DATE,
+    operators: [
+      TABLE_OPERATORS.GREATER_THAN,
+      TABLE_OPERATORS.GREATER_THAN_OR_EQUAL,
+      TABLE_OPERATORS.LESS_THAN,
+      TABLE_OPERATORS.LESS_THAN_OR_EQUAL,
+      TABLE_OPERATORS.IS_NULL,
+      TABLE_OPERATORS.IS_NOT_NULL
+    ],
+    size: 60,
+    minSize: 25,
+    maxSize: 100
+  },
   tags: {
     column_id: 'tags',
     header_label: 'Tags',

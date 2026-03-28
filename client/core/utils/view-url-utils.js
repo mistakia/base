@@ -17,6 +17,7 @@ export const KNOWN_TASK_VIEW_IDS = new Set([
   'default',
   'open',
   'active',
+  'finished',
   'upcoming'
 ])
 export const KNOWN_THREAD_VIEW_IDS = new Set([
