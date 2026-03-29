@@ -1,9 +1,12 @@
 import debug from 'debug'
+import config from '#config'
 
 const log = debug('content-review:ollama')
 
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
 const DEFAULT_TIMEOUT_MS = 180000
+const OLLAMA_NUM_CTX = config.ollama?.num_ctx || 16384
+const OLLAMA_KEEP_ALIVE = config.ollama?.keep_alive || '1m'
 const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
 const DEFAULT_EMBEDDING_TIMEOUT_MS = 60000
 
@@ -48,6 +51,8 @@ export async function call_ollama({
         model: model_name,
         prompt,
         stream: false,
+        options: { num_ctx: OLLAMA_NUM_CTX },
+        keep_alive: OLLAMA_KEEP_ALIVE,
         ...(format && { format })
       }),
       signal: controller.signal
