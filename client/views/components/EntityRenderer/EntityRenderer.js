@@ -26,7 +26,8 @@ const EntityRenderer = ({
   content,
   is_redacted,
   path,
-  git_context
+  git_context,
+  can_write
 }) => {
   const dispatch = useDispatch()
   const [is_diff_view_active, set_is_diff_view_active] = useState(false)
@@ -107,6 +108,7 @@ const EntityRenderer = ({
         is_sticky={Boolean(markdown)}
         markdown={markdown}
         path={path}
+        can_write={can_write}
       />
       <FileActions>
         <CopyPageButton path={path} content={content} />
@@ -119,7 +121,7 @@ const EntityRenderer = ({
   // Check if this is a tag entity
   const is_tag_entity = frontmatter?.type === 'tag'
 
-  // If there's no markdown content, center the frontmatter
+  // If there's no markdown content, use full-width layout for frontmatter
   // For tag entities, also render the TagDashboard
   if (!markdown && frontmatter) {
     return (
@@ -135,33 +137,38 @@ const EntityRenderer = ({
           published_time={entity_metadata.published_time}
           modified_time={entity_metadata.modified_time}
         />
-        <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
-          <Box
-            sx={{ maxWidth: is_tag_entity ? '900px' : '600px', width: '100%' }}>
-            {is_diff_view_active && git_context ? (
-              <DiffViewer
-                original_content={file_at_ref_data?.content}
-                current_content={content || ''}
-                file_path={path}
-                is_redacted={file_at_ref_data?.is_redacted}
-                is_loading={is_loading_file_at_ref}
-                error={git_error}
-              />
-            ) : (
-              <EntityFrontmatter
-                frontmatter={frontmatter}
-                is_sticky={false}
-                markdown={markdown}
-                path={path}
-              />
-            )}
-            <FileActions>
-              <CopyPageButton path={path} content={content} />
-              <GitFileActions git_context={git_context} path={path} />
-              {render_diff_toggle()}
-            </FileActions>
-            {is_tag_entity && <TagDashboard frontmatter={frontmatter} />}
-          </Box>
+        <Box
+          sx={{
+            p: 3,
+            maxWidth: is_tag_entity ? '900px' : '1400px',
+            width: '100%',
+            margin: '0 auto'
+          }}>
+          {is_diff_view_active && git_context ? (
+            <DiffViewer
+              original_content={file_at_ref_data?.content}
+              current_content={content || ''}
+              file_path={path}
+              is_redacted={file_at_ref_data?.is_redacted}
+              is_loading={is_loading_file_at_ref}
+              error={git_error}
+            />
+          ) : (
+            <EntityFrontmatter
+              frontmatter={frontmatter}
+              is_sticky={false}
+              markdown={markdown}
+              path={path}
+              layout='full-width'
+              can_write={can_write}
+            />
+          )}
+          <FileActions>
+            <CopyPageButton path={path} content={content} />
+            <GitFileActions git_context={git_context} path={path} />
+            {render_diff_toggle()}
+          </FileActions>
+          {is_tag_entity && <TagDashboard frontmatter={frontmatter} />}
         </Box>
       </>
     )
@@ -206,6 +213,7 @@ EntityRenderer.propTypes = {
   content: PropTypes.string,
   is_redacted: PropTypes.bool,
   path: PropTypes.string,
+  can_write: PropTypes.bool,
   git_context: PropTypes.shape({
     repo_path: PropTypes.string,
     relative_path: PropTypes.string,

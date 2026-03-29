@@ -16,7 +16,7 @@ const container_sx = {
   alignItems: 'center'
 }
 
-const EditableTagsField = ({ value, base_uri }) => {
+const EditableTagsField = ({ value, base_uri, editable = true }) => {
   const dispatch = useDispatch()
   const [dropdown_open, set_dropdown_open] = useState(false)
   const [local_tags, set_local_tags] = useState(value || [])
@@ -31,6 +31,7 @@ const EditableTagsField = ({ value, base_uri }) => {
   }, [value])
 
   const handle_add_click = (event) => {
+    if (!editable) return
     event.stopPropagation()
     // Load available tags if not already loaded
     if (available_tags.length === 0) {
@@ -73,28 +74,33 @@ const EditableTagsField = ({ value, base_uri }) => {
           <TagChip key={index} tag={tag_base_uri} to={tag_path} size='small' />
         )
       })}
-      <span
-        ref={add_ref}
-        className='chip chip--add'
-        onClick={handle_add_click}
-        style={{ cursor: 'pointer' }}>
-        + Add
-      </span>
-      <TagPickerDropdown
-        available_tags={available_tags}
-        selected_tags={local_tags}
-        on_toggle={handle_toggle}
-        on_close={handle_close}
-        anchor_el={add_ref.current}
-        open={dropdown_open}
-      />
+      {editable && (
+        <span
+          ref={add_ref}
+          className='chip chip--add'
+          onClick={handle_add_click}
+          style={{ cursor: 'pointer' }}>
+          + Add
+        </span>
+      )}
+      {editable && (
+        <TagPickerDropdown
+          available_tags={available_tags}
+          selected_tags={local_tags}
+          on_toggle={handle_toggle}
+          on_close={handle_close}
+          anchor_el={add_ref.current}
+          open={dropdown_open}
+        />
+      )}
     </Box>
   )
 }
 
 EditableTagsField.propTypes = {
   value: PropTypes.array,
-  base_uri: PropTypes.string.isRequired
+  base_uri: PropTypes.string.isRequired,
+  editable: PropTypes.bool
 }
 
 export default EditableTagsField

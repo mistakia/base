@@ -138,6 +138,7 @@ const FileView = ({ path }) => {
             is_redacted={file_data?.is_redacted}
             path={path}
             git_context={git_context}
+            can_write={file_data.can_write}
           />
         )
 

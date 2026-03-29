@@ -17,7 +17,9 @@ import {
   EditablePriorityField,
   EditableTagsField
 } from '@views/components/InlineSelect'
+import { EditableEntityField } from '@views/components/EditableField'
 import { entity_field_config } from './field-config.js'
+import { entity_field_schema } from './field-schema-config.js'
 import { resolve_field_type, dual_field_keys } from './field-type-config.js'
 import {
   CopyableValue,
@@ -84,7 +86,11 @@ const categorize_fields = (frontmatter) => {
 
     // Remaining uncategorized fields
     Object.entries(other_fields).forEach(([key, value]) => {
-      if (!schema_set.has(key) && !always_set.has(key) && !expandable_set.has(key)) {
+      if (
+        !schema_set.has(key) &&
+        !always_set.has(key) &&
+        !expandable_set.has(key)
+      ) {
         uncategorized[key] = value
       }
     })
@@ -388,11 +394,89 @@ const compute_base_uri_from_path = (path) => {
   return `user:${normalized_path}`
 }
 
+/**
+ * Render a field value, using EditableEntityField when schema config exists
+ */
+const render_editable_or_static = (
+  key,
+  value,
+  frontmatter,
+  base_uri,
+  editable
+) => {
+  const entity_type = frontmatter.type
+  if (
+    editable &&
+    entity_type &&
+    base_uri &&
+    entity_field_schema[entity_type]?.[key]
+  ) {
+    return (
+      <EditableEntityField
+        field_name={key}
+        value={value}
+        base_uri={base_uri}
+        entity_type={entity_type}
+      />
+    )
+  }
+  return render_field_value(key, value, frontmatter)
+}
+
+// Grid styles for domain fields - auto-fit packs 3-4 small fields per row
+// and stretches the last row to fill the container width.
+// Uses borderTop on children (not borderBottom) so the last row has no
+// trailing border that would double up with the next section's border.
+const field_grid_sx = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  // Each child gets borderTop for row separation and borderRight for column
+  // separation. The container's overflow:hidden clips the rightmost border
+  // so it doesn't double with the container border.
+  '& > *': {
+    borderRight: `1px solid ${COLORS.border_light}`,
+    borderTop: `1px solid ${COLORS.border_light}`
+  }
+}
+
+// Grid cell with natural flow layout (no absolute positioning)
+// so long labels wrap without overlapping the value
+const grid_label_sx = {
+  fontSize: '10px',
+  color: COLORS.text_secondary,
+  fontWeight: 500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  lineHeight: 1.3
+}
+
+const grid_value_sx = {
+  fontSize: '13px',
+  color: COLORS.text,
+  fontWeight: 400,
+  wordBreak: 'break-word',
+  lineHeight: 1.4
+}
+
+const GridCell = ({ label, value }) => (
+  <Box sx={{ px: '12px', py: '6px', minHeight: '48px' }}>
+    <Box sx={grid_label_sx}>{label}</Box>
+    <Box sx={grid_value_sx}>{value}</Box>
+  </Box>
+)
+
+GridCell.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node.isRequired
+}
+
 const EntityFrontmatter = ({
   frontmatter,
   is_sticky = false,
   markdown,
-  path
+  path,
+  layout = 'sidebar',
+  can_write = false
 }) => {
   const [expanded, set_expanded] = useState(false)
 
@@ -412,6 +496,246 @@ const EntityFrontmatter = ({
   const has_expandable_content =
     Object.keys(expandable).length > 0 || Object.keys(uncategorized).length > 0
 
+  const is_full_width = layout === 'full-width'
+
+  // Separate domain fields from date and tag fields for grid layout
+  const domain_fields = Object.entries(always_visible).filter(
+    ([key]) => key !== 'created_at' && key !== 'updated_at' && key !== 'tags'
+  )
+
+  const has_tags = 'tags' in always_visible
+
+  const parsed_forward_relations = parse_relations_for_display({ relations })
+
+  if (is_full_width) {
+    const has_relations = will_related_entities_render(
+      base_uri,
+      parsed_forward_relations
+    )
+    const has_observations =
+      Array.isArray(observations) && observations.length > 0
+
+    // Separate expandable fields into wide (long values) and compact (grid-friendly)
+    const wide_expand_keys = new Set([
+      'entity_id',
+      'user_public_key',
+      'base_uri',
+      'permalink'
+    ])
+    const all_expandable = [
+      ...Object.entries(expandable),
+      ...Object.entries(uncategorized)
+    ]
+    const compact_expand_fields = all_expandable.filter(
+      ([key]) => !wide_expand_keys.has(key)
+    )
+    const wide_expand_fields = all_expandable.filter(([key]) =>
+      wide_expand_keys.has(key)
+    )
+
+    return (
+      <MetadataContainer
+        background_color='white'
+        border_radius={2}
+        sx={{ marginTop: '16px' }}>
+        <EntityTitle
+          title={display_title}
+          type={type}
+          description={description}
+          markdown={markdown}
+        />
+
+        {/* Tags + Relations row */}
+        {(has_tags || has_relations || has_observations) &&
+          (() => {
+            const section_count =
+              (has_tags && base_uri ? 1 : 0) +
+              (has_relations ? 1 : 0) +
+              (has_observations ? 1 : 0)
+            return (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${section_count}, 1fr)`,
+                  borderTop: `1px solid ${COLORS.border_light}`,
+                  '& > *': {
+                    borderRight: `1px solid ${COLORS.border_light}`
+                  }
+                }}>
+                {has_tags && base_uri && (
+                  <Box sx={{ minWidth: 0 }}>
+                    <MetadataRow
+                      label={format_field_label('tags')}
+                      value={
+                        <EditableTagsField
+                          value={always_visible.tags}
+                          base_uri={base_uri}
+                          editable={can_write}
+                        />
+                      }
+                      border_style='none'
+                    />
+                  </Box>
+                )}
+                {has_relations && (
+                  <Box sx={{ minWidth: 0 }}>
+                    <RelatedEntities
+                      base_uri={base_uri}
+                      forward_relations={parsed_forward_relations}
+                      exclude_types={['file', 'directory']}
+                      show_header={true}
+                      header_text='Relations'
+                      is_first={true}
+                    />
+                  </Box>
+                )}
+                {has_observations && (
+                  <Box sx={{ minWidth: 0 }}>
+                    <ObservationsSection observations={observations} />
+                  </Box>
+                )}
+              </Box>
+            )
+          })()}
+
+        {/* Domain fields in auto-fill grid */}
+        {domain_fields.length > 0 && (
+          <Box sx={field_grid_sx}>
+            {domain_fields.map(([key, value]) => {
+              // Task status/priority use specialized components
+              if (type === 'task' && key === 'status' && base_uri) {
+                return (
+                  <GridCell
+                    key={key}
+                    label={format_field_label(key)}
+                    value={
+                      <EditableStatusField
+                        value={value}
+                        base_uri={base_uri}
+                        context='entity-page'
+                        editable={can_write}
+                      />
+                    }
+                  />
+                )
+              }
+
+              if (type === 'task' && key === 'priority' && base_uri) {
+                return (
+                  <GridCell
+                    key={key}
+                    label={format_field_label(key)}
+                    value={
+                      <EditablePriorityField
+                        value={value}
+                        base_uri={base_uri}
+                        context='entity-page'
+                        editable={can_write}
+                      />
+                    }
+                  />
+                )
+              }
+
+              return (
+                <GridCell
+                  key={key}
+                  label={format_field_label(key)}
+                  value={render_editable_or_static(
+                    key,
+                    value,
+                    frontmatter,
+                    base_uri,
+                    can_write
+                  )}
+                />
+              )
+            })}
+          </Box>
+        )}
+
+        {/* Date fields */}
+        {(always_visible.created_at || always_visible.updated_at) && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              borderTop: `1px solid ${COLORS.border_light}`,
+              '& > *': {
+                borderRight: `1px solid ${COLORS.border_light}`
+              }
+            }}>
+            <GridCell
+              label='Created'
+              value={<DateDisplay date={always_visible.created_at} />}
+            />
+            <GridCell
+              label='Updated'
+              value={<DateDisplay date={always_visible.updated_at} />}
+            />
+          </Box>
+        )}
+
+        {/* Expandable section */}
+        <Collapse in={expanded}>
+          <Box>
+            {/* Compact fields in auto-fill grid */}
+            {compact_expand_fields.length > 0 && (
+              <Box sx={field_grid_sx}>
+                {compact_expand_fields.map(([key, value]) => (
+                  <GridCell
+                    key={key}
+                    label={format_field_label(key)}
+                    value={render_field_value(key, value, frontmatter)}
+                  />
+                ))}
+              </Box>
+            )}
+            {/* Wide fields as full-width rows */}
+            {wide_expand_fields.map(([key, value]) => (
+              <MetadataRow
+                key={key}
+                label={format_field_label(key)}
+                value={render_field_value(key, value, frontmatter)}
+                border_style='compact'
+                scrollable={typeof value === 'string' && value.length > 50}
+              />
+            ))}
+          </Box>
+        </Collapse>
+
+        {has_expandable_content && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+            <button
+              onClick={() => set_expanded(!expanded)}
+              style={{
+                all: 'unset',
+                background: 'none',
+                border: 'none',
+                color: COLORS.icon_link,
+                fontSize: '12px',
+                padding: '4px 8px',
+                cursor: 'pointer',
+                transition: 'color 0.2s ease',
+                fontFamily: 'inherit'
+              }}
+              onMouseEnter={(event) => {
+                event.target.style.color = COLORS.info
+                event.target.style.textDecoration = 'underline'
+              }}
+              onMouseLeave={(event) => {
+                event.target.style.color = COLORS.icon_link
+                event.target.style.textDecoration = 'none'
+              }}>
+              {expanded ? 'show less' : 'show more'}
+            </button>
+          </Box>
+        )}
+      </MetadataContainer>
+    )
+  }
+
+  // Sidebar layout (original behavior)
   return (
     <MetadataContainer
       background_color='white'
@@ -435,7 +759,7 @@ const EntityFrontmatter = ({
         {base_uri && (
           <RelatedEntities
             base_uri={base_uri}
-            forward_relations={parse_relations_for_display({ relations })}
+            forward_relations={parsed_forward_relations}
             exclude_types={['file', 'directory']}
             show_header={true}
             header_text='Relations'
@@ -449,9 +773,6 @@ const EntityFrontmatter = ({
             return null // Handle dates separately below
           }
 
-          const parsed_forward_relations = parse_relations_for_display({
-            relations
-          })
           const has_content_above =
             observations ||
             will_related_entities_render(base_uri, parsed_forward_relations)
@@ -498,7 +819,13 @@ const EntityFrontmatter = ({
               <MetadataRow
                 key={key}
                 label={format_field_label(key)}
-                value={<EditableTagsField value={value} base_uri={base_uri} />}
+                value={
+                  <EditableTagsField
+                    value={value}
+                    base_uri={base_uri}
+                    editable={can_write}
+                  />
+                }
                 border_style='compact'
                 is_first={index === 0 && !has_content_above}
               />
@@ -509,7 +836,13 @@ const EntityFrontmatter = ({
             <MetadataRow
               key={key}
               label={format_field_label(key)}
-              value={render_field_value(key, value, frontmatter)}
+              value={render_editable_or_static(
+                key,
+                value,
+                frontmatter,
+                base_uri,
+                can_write
+              )}
               border_style='compact'
               scrollable={
                 resolve_field_type(key, value) === 'default' &&
@@ -601,7 +934,9 @@ EntityFrontmatter.propTypes = {
   frontmatter: PropTypes.object,
   is_sticky: PropTypes.bool,
   markdown: PropTypes.string,
-  path: PropTypes.string
+  path: PropTypes.string,
+  layout: PropTypes.oneOf(['sidebar', 'full-width']),
+  can_write: PropTypes.bool
 }
 
 export default EntityFrontmatter

@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import config from '#config'
 import {
   check_filesystem_permission,
+  check_permission,
   check_permissions_batch,
   PermissionContext
 } from '#server/middleware/permission/index.mjs'
@@ -347,6 +348,25 @@ router.get('/file', async (req, res) => {
       log(`Error getting git context for ${full_path}:`, error.message)
     }
 
+    // Check write permission for entity files
+    let can_write
+    if (frontmatter?.base_uri) {
+      try {
+        const user_public_key = req.user?.user_public_key || null
+        const permission = await check_permission({
+          user_public_key,
+          resource_path: frontmatter.base_uri
+        })
+        can_write = permission.write?.allowed ?? false
+      } catch (error) {
+        log(
+          `Error checking write permission for ${relative_path}:`,
+          error.message
+        )
+        can_write = false
+      }
+    }
+
     res.json({
       path: relative_path,
       type: 'file',
@@ -355,7 +375,8 @@ router.get('/file', async (req, res) => {
       markdown,
       size: stats.size,
       modified: stats.mtime.toISOString(),
-      git_context
+      git_context,
+      ...(can_write !== undefined && { can_write })
     })
   } catch (error) {
     log('Error reading file:', error.message)

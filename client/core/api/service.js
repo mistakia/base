@@ -232,6 +232,18 @@ export const api = {
     }
   },
 
+  patch_entity({ base_uri, properties }) {
+    const url = `${API_URL}/entities`
+    return {
+      url,
+      method: 'PATCH',
+      body: JSON.stringify({ base_uri, properties }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  },
+
   // Git operations
   get_git_status_all() {
     const url = `${API_URL}/git/status/all`
