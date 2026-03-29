@@ -261,10 +261,7 @@ export function physical_items_reducer(
     }
 
     case physical_items_action_types.SELECT_PHYSICAL_ITEM_TABLE_VIEW:
-      return state.set(
-        'selected_physical_item_table_view_id',
-        payload.view_id
-      )
+      return state.set('selected_physical_item_table_view_id', payload.view_id)
 
     case physical_items_action_types.GET_PHYSICAL_ITEMS_TABLE_PENDING: {
       const view_id_pending = payload.opts?.view_id || 'default'

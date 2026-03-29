@@ -1,8 +1,7 @@
 import { createSelector } from 'reselect'
 import { build_table_props } from '@core/utils/table-view-helpers.js'
 
-export const get_physical_items_state = (state) =>
-  state.get('physical_items')
+export const get_physical_items_state = (state) => state.get('physical_items')
 
 export function get_selected_physical_item_table_view_id(state) {
   return (

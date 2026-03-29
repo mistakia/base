@@ -17,7 +17,9 @@ async function collect_pm2_metrics({ snapshot_date, machine }) {
   try {
     let raw
     if (machine === 'macbook') {
-      const { stdout } = await execute_shell_command('pm2 jlist', { timeout: 10000 })
+      const { stdout } = await execute_shell_command('pm2 jlist', {
+        timeout: 10000
+      })
       raw = stdout
     } else {
       raw = await execute_ssh('storage', 'pm2 jlist', { timeout: 10000 })

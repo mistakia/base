@@ -17,7 +17,8 @@ export async function collect_thread_metrics({ snapshot_date }) {
 
   // Thread counts by state
   const state_rows = await execute_duckdb_query({
-    query: 'SELECT thread_state, COUNT(*) as cnt FROM threads GROUP BY thread_state'
+    query:
+      'SELECT thread_state, COUNT(*) as cnt FROM threads GROUP BY thread_state'
   })
 
   let total_threads = 0
@@ -75,12 +76,14 @@ export async function collect_thread_metrics({ snapshot_date }) {
   // Thread directory size
   try {
     const thread_dir = `${config.user_base_directory}/thread`
-    const du_cmd = process.platform === 'darwin'
-      ? `du -sk "${thread_dir}" | cut -f1`
-      : `du -sb "${thread_dir}" | cut -f1`
+    const du_cmd =
+      process.platform === 'darwin'
+        ? `du -sk "${thread_dir}" | cut -f1`
+        : `du -sb "${thread_dir}" | cut -f1`
     const { stdout } = await execute_shell_command(du_cmd, { timeout: 30000 })
     const raw_size = parseInt(stdout.trim(), 10)
-    const size_bytes = process.platform === 'darwin' ? raw_size * 1024 : raw_size
+    const size_bytes =
+      process.platform === 'darwin' ? raw_size * 1024 : raw_size
     if (!isNaN(size_bytes)) {
       metrics.push({
         snapshot_date,

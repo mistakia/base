@@ -1,5 +1,13 @@
 import { join, basename, resolve } from 'path'
-import { mkdir, copyFile, writeFile, access, symlink, readlink, unlink } from 'fs/promises'
+import {
+  mkdir,
+  copyFile,
+  writeFile,
+  access,
+  symlink,
+  readlink,
+  unlink
+} from 'fs/promises'
 import { constants } from 'fs'
 import { homedir } from 'os'
 import debug from 'debug'
@@ -44,7 +52,10 @@ const get_secondary_account_dirs = (user_dir) => {
     const normalized = container_dir.replace(/\/$/, '')
     if (basename(normalized) === '.claude') continue
 
-    const user_account_dir = join(user_dir, basename(normalized).replace(/^\./, ''))
+    const user_account_dir = join(
+      user_dir,
+      basename(normalized).replace(/^\./, '')
+    )
     const admin_source = resolve_config_dir(account.config_dir)
     results.push({ account, user_account_dir, admin_source })
   }
@@ -396,36 +407,46 @@ export const bootstrap_claude_home = async ({
 
   // Bootstrap secondary account directories (if multi-account enabled)
   const secondary_dirs = get_secondary_account_dirs(user_dir)
-  await Promise.all(secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
-    log(`Bootstrapping secondary account dir for ${username}: ${user_account_dir}`)
+  await Promise.all(
+    secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
+      log(
+        `Bootstrapping secondary account dir for ${username}: ${user_account_dir}`
+      )
 
-    await create_claude_dir_structure(user_account_dir)
+      await create_claude_dir_structure(user_account_dir)
 
-    if (admin_source) {
-      await copy_credentials_idempotent({
-        source_dir: admin_source,
-        target_dir: user_account_dir,
-        label: `${username} (${account.namespace})`,
-        required: false
-      })
-    }
+      if (admin_source) {
+        await copy_credentials_idempotent({
+          source_dir: admin_source,
+          target_dir: user_account_dir,
+          label: `${username} (${account.namespace})`,
+          required: false
+        })
+      }
 
-    // Symlink settings.json to primary dir's copy
-    const secondary_settings = join(user_account_dir, 'settings.json')
-    try {
-      const existing_target = await readlink(secondary_settings)
-      if (existing_target === settings_path) return
-    } catch {
-      // Not a symlink or doesn't exist -- create it
-    }
-    try {
-      try { await unlink(secondary_settings) } catch { /* doesn't exist */ }
-      await symlink(settings_path, secondary_settings)
-      log(`Symlinked settings.json for ${username} (${account.namespace})`)
-    } catch (error) {
-      log(`Warning: failed to symlink settings.json for ${account.namespace}: ${error.message}`)
-    }
-  }))
+      // Symlink settings.json to primary dir's copy
+      const secondary_settings = join(user_account_dir, 'settings.json')
+      try {
+        const existing_target = await readlink(secondary_settings)
+        if (existing_target === settings_path) return
+      } catch {
+        // Not a symlink or doesn't exist -- create it
+      }
+      try {
+        try {
+          await unlink(secondary_settings)
+        } catch {
+          /* doesn't exist */
+        }
+        await symlink(settings_path, secondary_settings)
+        log(`Symlinked settings.json for ${username} (${account.namespace})`)
+      } catch (error) {
+        log(
+          `Warning: failed to symlink settings.json for ${account.namespace}: ${error.message}`
+        )
+      }
+    })
+  )
 
   return claude_home
 }
@@ -454,18 +475,22 @@ export const refresh_credentials = async ({
 
   // Refresh secondary accounts
   const secondary_dirs = get_secondary_account_dirs(user_dir)
-  await Promise.all(secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
-    if (!admin_source) return
-    try {
-      const source = join(admin_source, '.credentials.json')
-      await access(source, constants.F_OK)
-      await mkdir(user_account_dir, { recursive: true })
-      await copyFile(source, join(user_account_dir, '.credentials.json'))
-      log(`Refreshed credentials for ${username} (${account.namespace})`)
-    } catch (error) {
-      log(`Warning: failed to refresh credentials for ${account.namespace}: ${error.message}`)
-    }
-  }))
+  await Promise.all(
+    secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
+      if (!admin_source) return
+      try {
+        const source = join(admin_source, '.credentials.json')
+        await access(source, constants.F_OK)
+        await mkdir(user_account_dir, { recursive: true })
+        await copyFile(source, join(user_account_dir, '.credentials.json'))
+        log(`Refreshed credentials for ${username} (${account.namespace})`)
+      } catch (error) {
+        log(
+          `Warning: failed to refresh credentials for ${account.namespace}: ${error.message}`
+        )
+      }
+    })
+  )
 }
 
 /**

@@ -1,7 +1,12 @@
 /* global describe it before after */
 import { expect } from 'chai'
 
-import { upsert_metrics, query_latest_snapshot, query_metric_series, list_snapshot_dates } from '#libs-server/stats/database.mjs'
+import {
+  upsert_metrics,
+  query_latest_snapshot,
+  query_metric_series,
+  list_snapshot_dates
+} from '#libs-server/stats/database.mjs'
 
 /**
  * Stats pipeline integration tests.
@@ -21,14 +26,20 @@ describe('Stats Pipeline', function () {
       this.skip()
       return
     }
-    const { get_stats_database_connection } = await import('#libs-server/stats/database.mjs')
+    const { get_stats_database_connection } = await import(
+      '#libs-server/stats/database.mjs'
+    )
     pool = await get_stats_database_connection({ config })
   })
 
   after(async function () {
     if (pool) {
-      await pool.query('DELETE FROM metrics WHERE snapshot_date = $1', [TEST_DATE])
-      const { close_stats_pool } = await import('#libs-server/stats/database.mjs')
+      await pool.query('DELETE FROM metrics WHERE snapshot_date = $1', [
+        TEST_DATE
+      ])
+      const { close_stats_pool } = await import(
+        '#libs-server/stats/database.mjs'
+      )
       await close_stats_pool()
     }
   })
@@ -36,8 +47,22 @@ describe('Stats Pipeline', function () {
   describe('upsert_metrics', () => {
     it('should insert metrics with required fields', async function () {
       const metrics = [
-        { snapshot_date: TEST_DATE, category: 'test', metric_name: 'test_a', metric_value: 10, unit: 'count', dimensions: {} },
-        { snapshot_date: TEST_DATE, category: 'test', metric_name: 'test_b', metric_value: 20, unit: 'bytes', dimensions: { foo: 'bar' } }
+        {
+          snapshot_date: TEST_DATE,
+          category: 'test',
+          metric_name: 'test_a',
+          metric_value: 10,
+          unit: 'count',
+          dimensions: {}
+        },
+        {
+          snapshot_date: TEST_DATE,
+          category: 'test',
+          metric_name: 'test_b',
+          metric_value: 20,
+          unit: 'bytes',
+          dimensions: { foo: 'bar' }
+        }
       ]
 
       const result = await upsert_metrics({ pool, metrics })
@@ -46,7 +71,14 @@ describe('Stats Pipeline', function () {
 
     it('should be idempotent on conflict', async function () {
       const metrics = [
-        { snapshot_date: TEST_DATE, category: 'test', metric_name: 'test_a', metric_value: 99, unit: 'count', dimensions: {} }
+        {
+          snapshot_date: TEST_DATE,
+          category: 'test',
+          metric_name: 'test_a',
+          metric_value: 99,
+          unit: 'count',
+          dimensions: {}
+        }
       ]
 
       await upsert_metrics({ pool, metrics })
@@ -119,7 +151,9 @@ describe('Stats Pipeline', function () {
         const { collect_entity_metrics } = await import(
           '#libs-server/stats/collector/entity-collector.mjs'
         )
-        const metrics = await collect_entity_metrics({ snapshot_date: TEST_DATE })
+        const metrics = await collect_entity_metrics({
+          snapshot_date: TEST_DATE
+        })
         expect(metrics).to.be.an('array')
         expect(metrics.length).to.be.greaterThan(0)
 

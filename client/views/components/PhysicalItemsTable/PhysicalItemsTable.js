@@ -90,9 +90,7 @@ const PhysicalItemsTable = ({ on_view_select }) => {
   }
 
   if (table_error) {
-    return (
-      <div className='physical-items-table-error'>{table_error}</div>
-    )
+    return <div className='physical-items-table-error'>{table_error}</div>
   }
 
   return (

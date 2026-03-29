@@ -13,8 +13,7 @@ const FileActions = ({ children }) => {
         gap: 1,
         mb: 2,
         minHeight: '24px',
-        maxWidth: '1200px',
-        margin: '8px auto'
+        margin: '8px 0'
       }}>
       {children}
     </Box>

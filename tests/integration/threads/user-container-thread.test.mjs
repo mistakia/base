@@ -168,7 +168,9 @@ describe('User Container Thread Flow', function () {
 
       await mkdir(join(user_base_directory, 'task'), { recursive: true })
       await mkdir(join(user_base_directory, 'text'), { recursive: true })
-      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), { recursive: true })
+      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), {
+        recursive: true
+      })
     })
 
     it('should use container_user_base_path for volume mount destinations', async () => {
@@ -240,7 +242,9 @@ describe('User Container Thread Flow', function () {
       user_base_directory = join(tmp_dir, 'user-base')
       user_data_directory = join(tmp_dir, 'user-data')
       await mkdir(join(user_base_directory, 'task'), { recursive: true })
-      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), { recursive: true })
+      await mkdir(join(user_data_directory, 'testuser', 'claude-home'), {
+        recursive: true
+      })
     })
 
     it('should include claude-home mount at /home/node/.claude when rotation is disabled', async () => {
@@ -270,7 +274,10 @@ describe('User Container Thread Flow', function () {
       const admin_claude_home = join(tmp_dir, 'admin-claude-home')
       await mkdir(admin_claude_home, { recursive: true })
       const { writeFile } = await import('fs/promises')
-      await writeFile(join(admin_claude_home, '.credentials.json'), JSON.stringify({ token: 'test' }))
+      await writeFile(
+        join(admin_claude_home, '.credentials.json'),
+        JSON.stringify({ token: 'test' })
+      )
 
       const user_data_dir = join(tmp_dir, 'user-data')
       await mkdir(user_data_dir, { recursive: true })
@@ -283,7 +290,9 @@ describe('User Container Thread Flow', function () {
         container_user_base_path: '/Users/trashman/user-base'
       })
 
-      const settings = JSON.parse(await readFile(join(claude_home, 'settings.json'), 'utf-8'))
+      const settings = JSON.parse(
+        await readFile(join(claude_home, 'settings.json'), 'utf-8')
+      )
       expect(settings).to.have.property('permissions')
       expect(settings).to.have.property('hooks')
     })

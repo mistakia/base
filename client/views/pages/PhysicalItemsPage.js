@@ -76,9 +76,7 @@ const PhysicalItemsPage = () => {
 
   const handle_view_select = useCallback(
     (view_id) => {
-      navigate(
-        build_data_view_url({ base_path: '/physical-item', view_id })
-      )
+      navigate(build_data_view_url({ base_path: '/physical-item', view_id }))
     },
     [navigate]
   )

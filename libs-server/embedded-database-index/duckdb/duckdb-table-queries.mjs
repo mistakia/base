@@ -116,19 +116,15 @@ const PHYSICAL_ITEM_FRONTMATTER_COLUMNS = {
   exist: "CAST((frontmatter->>'exist') AS BOOLEAN)",
   consumable: "CAST((frontmatter->>'consumable') AS BOOLEAN)",
   perishable: "CAST((frontmatter->>'perishable') AS BOOLEAN)",
-  current_quantity:
-    "CAST((frontmatter->>'current_quantity') AS DOUBLE)",
-  target_quantity:
-    "CAST((frontmatter->>'target_quantity') AS DOUBLE)",
+  current_quantity: "CAST((frontmatter->>'current_quantity') AS DOUBLE)",
+  target_quantity: "CAST((frontmatter->>'target_quantity') AS DOUBLE)",
   manufacturer: "(frontmatter->>'manufacturer')",
   wattage: "CAST((frontmatter->>'wattage') AS DOUBLE)",
   voltage: "CAST((frontmatter->>'voltage') AS DOUBLE)",
   weight_ounces: "CAST((frontmatter->>'weight_ounces') AS DOUBLE)",
   outlets_used: "CAST((frontmatter->>'outlets_used') AS DOUBLE)",
-  ethernet_connected:
-    "CAST((frontmatter->>'ethernet_connected') AS BOOLEAN)",
-  water_connection:
-    "CAST((frontmatter->>'water_connection') AS BOOLEAN)",
+  ethernet_connected: "CAST((frontmatter->>'ethernet_connected') AS BOOLEAN)",
+  water_connection: "CAST((frontmatter->>'water_connection') AS BOOLEAN)",
   misc_notes: "(frontmatter->>'misc_notes')"
 }
 
@@ -1088,7 +1084,10 @@ function extract_relation_display_fields(relations) {
 
     if (!fields.home_area && rel.startsWith('target_area ')) {
       fields.home_area = extract_label_from_relation(rel)
-    } else if (!fields.current_location && rel.startsWith('current_location ')) {
+    } else if (
+      !fields.current_location &&
+      rel.startsWith('current_location ')
+    ) {
       fields.current_location = extract_label_from_relation(rel)
     } else if (!fields.home_activity && rel.startsWith('used_in ')) {
       fields.home_activity = extract_label_from_relation(rel)

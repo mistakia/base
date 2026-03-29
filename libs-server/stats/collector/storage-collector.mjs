@@ -15,20 +15,27 @@ import { execute_ssh } from '#libs-server/database/storage-adapters/ssh-utils.mj
 
 const log = debug('stats:collector:storage')
 
-const EXCLUDE_PATTERN = '-not -path "*/.git/*" -not -path "*/node_modules/*" -not -name ".DS_Store" -not -path "*/__pycache__/*" -not -path "*/.yarn/*" -not -path "*/build/*" -not -path "*/tmp/*" -not -path "*/.next/*"'
+const EXCLUDE_PATTERN =
+  '-not -path "*/.git/*" -not -path "*/node_modules/*" -not -name ".DS_Store" -not -path "*/__pycache__/*" -not -path "*/.yarn/*" -not -path "*/build/*" -not -path "*/tmp/*" -not -path "*/.next/*"'
 
 async function count_files_and_folders({ dir_path, machine = 'macbook' }) {
-  const run = machine === 'macbook'
-    ? (cmd) => execute_shell_command(cmd, { timeout: 30000 })
-    : (cmd) => execute_ssh('storage', cmd, { timeout: 30000 }).then(stdout => ({ stdout }))
+  const run =
+    machine === 'macbook'
+      ? (cmd) => execute_shell_command(cmd, { timeout: 30000 })
+      : (cmd) =>
+          execute_ssh('storage', cmd, { timeout: 30000 }).then((stdout) => ({
+            stdout
+          }))
 
   try {
     const [files_result, folders_result, size_result] = await Promise.all([
       run(`find "${dir_path}" -type f ${EXCLUDE_PATTERN} 2>/dev/null | wc -l`),
       run(`find "${dir_path}" -type d ${EXCLUDE_PATTERN} 2>/dev/null | wc -l`),
-      run(process.platform === 'darwin' && machine === 'macbook'
-        ? `du -sk "${dir_path}" 2>/dev/null | cut -f1`
-        : `du -sb "${dir_path}" 2>/dev/null | cut -f1`)
+      run(
+        process.platform === 'darwin' && machine === 'macbook'
+          ? `du -sk "${dir_path}" 2>/dev/null | cut -f1`
+          : `du -sb "${dir_path}" 2>/dev/null | cut -f1`
+      )
     ])
 
     const raw_size = parseInt(size_result.stdout.trim(), 10) || 0
@@ -47,21 +54,53 @@ async function count_files_and_folders({ dir_path, machine = 'macbook' }) {
   }
 }
 
-async function collect_directory_metrics({ snapshot_date, dir_path, label, machine }) {
+async function collect_directory_metrics({
+  snapshot_date,
+  dir_path,
+  label,
+  machine
+}) {
   const stats = await count_files_and_folders({ dir_path, machine })
   if (!stats) return []
 
   const dims = { machine, path: label }
   return [
-    { snapshot_date, category: 'storage', metric_name: 'file_count', metric_value: stats.file_count, unit: 'count', dimensions: dims },
-    { snapshot_date, category: 'storage', metric_name: 'folder_count', metric_value: stats.folder_count, unit: 'count', dimensions: dims },
-    { snapshot_date, category: 'storage', metric_name: 'directory_size', metric_value: stats.directory_size, unit: 'bytes', dimensions: dims }
+    {
+      snapshot_date,
+      category: 'storage',
+      metric_name: 'file_count',
+      metric_value: stats.file_count,
+      unit: 'count',
+      dimensions: dims
+    },
+    {
+      snapshot_date,
+      category: 'storage',
+      metric_name: 'folder_count',
+      metric_value: stats.folder_count,
+      unit: 'count',
+      dimensions: dims
+    },
+    {
+      snapshot_date,
+      category: 'storage',
+      metric_name: 'directory_size',
+      metric_value: stats.directory_size,
+      unit: 'bytes',
+      dimensions: dims
+    }
   ]
 }
 
 async function collect_database_sizes({ snapshot_date, pool }) {
   const metrics = []
-  const databases = ['finance_production', 'nanodb_production', 'parcels_production', 'epstein_transparency_act', 'stats_production']
+  const databases = [
+    'finance_production',
+    'nanodb_production',
+    'parcels_production',
+    'epstein_transparency_act',
+    'stats_production'
+  ]
 
   try {
     const result = await pool.query(
@@ -88,19 +127,25 @@ async function collect_database_sizes({ snapshot_date, pool }) {
 async function collect_disk_usage({ snapshot_date, machine }) {
   const metrics = []
   try {
-    const run = machine === 'macbook'
-      ? (cmd) => execute_shell_command(cmd, { timeout: 10000 })
-      : (cmd) => execute_ssh('storage', cmd, { timeout: 10000 }).then(stdout => ({ stdout }))
+    const run =
+      machine === 'macbook'
+        ? (cmd) => execute_shell_command(cmd, { timeout: 10000 })
+        : (cmd) =>
+            execute_ssh('storage', cmd, { timeout: 10000 }).then((stdout) => ({
+              stdout
+            }))
 
-    const df_cmd = process.platform === 'darwin' && machine === 'macbook'
-      ? 'df -k / | tail -1'
-      : 'df -B1 / | tail -1'
+    const df_cmd =
+      process.platform === 'darwin' && machine === 'macbook'
+        ? 'df -k / | tail -1'
+        : 'df -B1 / | tail -1'
 
     const { stdout } = await run(df_cmd)
     const parts = stdout.trim().split(/\s+/)
 
     if (parts.length >= 4) {
-      const multiplier = process.platform === 'darwin' && machine === 'macbook' ? 1024 : 1
+      const multiplier =
+        process.platform === 'darwin' && machine === 'macbook' ? 1024 : 1
       metrics.push({
         snapshot_date,
         category: 'storage',
@@ -129,16 +174,18 @@ export async function collect_storage_metrics({ snapshot_date, pool }) {
   const user_base = config.user_base_directory
 
   // Local directories
-  const local_dirs = [
-    { path: user_base, label: 'user-base' }
-  ]
+  const local_dirs = [{ path: user_base, label: 'user-base' }]
 
   // Add active repos
   const active_path = path.join(user_base, 'repository', 'active')
   try {
     const entries = await fs.readdir(active_path, { withFileTypes: true })
     for (const entry of entries) {
-      if (entry.isDirectory() && !entry.name.endsWith('-worktrees') && !entry.name.startsWith('.')) {
+      if (
+        entry.isDirectory() &&
+        !entry.name.endsWith('-worktrees') &&
+        !entry.name.startsWith('.')
+      ) {
         local_dirs.push({
           path: path.join(active_path, entry.name),
           label: `repository/active/${entry.name}`
@@ -150,8 +197,13 @@ export async function collect_storage_metrics({ snapshot_date, pool }) {
   }
 
   // Collect local directory metrics
-  const local_promises = local_dirs.map(d =>
-    collect_directory_metrics({ snapshot_date, dir_path: d.path, label: d.label, machine: 'macbook' })
+  const local_promises = local_dirs.map((d) =>
+    collect_directory_metrics({
+      snapshot_date,
+      dir_path: d.path,
+      label: d.label,
+      machine: 'macbook'
+    })
   )
 
   // Collect remote directory metrics (storage server user-base)
@@ -164,7 +216,10 @@ export async function collect_storage_metrics({ snapshot_date, pool }) {
     })
   ]
 
-  const results = await Promise.allSettled([...local_promises, ...remote_promises])
+  const results = await Promise.allSettled([
+    ...local_promises,
+    ...remote_promises
+  ])
   for (const r of results) {
     if (r.status === 'fulfilled' && r.value) {
       metrics.push(...r.value)

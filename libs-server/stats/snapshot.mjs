@@ -38,18 +38,22 @@ export async function run_stats_snapshot({
   collectors,
   dry_run = false
 }) {
-  const date_str =
-    snapshot_date || new Date().toISOString().split('T')[0]
+  const date_str = snapshot_date || new Date().toISOString().split('T')[0]
 
-  const selected = collectors && collectors.length > 0
-    ? Object.fromEntries(
-        Object.entries(ALL_COLLECTORS).filter(([name]) =>
-          collectors.includes(name)
+  const selected =
+    collectors && collectors.length > 0
+      ? Object.fromEntries(
+          Object.entries(ALL_COLLECTORS).filter(([name]) =>
+            collectors.includes(name)
+          )
         )
-      )
-    : ALL_COLLECTORS
+      : ALL_COLLECTORS
 
-  log('Running snapshot for %s with collectors: %s', date_str, Object.keys(selected).join(', '))
+  log(
+    'Running snapshot for %s with collectors: %s',
+    date_str,
+    Object.keys(selected).join(', ')
+  )
 
   const collector_names = Object.keys(selected)
   const results = await Promise.allSettled(

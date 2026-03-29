@@ -43,7 +43,9 @@ export const generate_volume_mounts = async ({
   container_user_base_path
 }) => {
   if (!container_user_base_path) {
-    throw new Error('container_user_base_path is required for volume mount generation')
+    throw new Error(
+      'container_user_base_path is required for volume mount generation'
+    )
   }
 
   const mounts = []
@@ -59,9 +61,10 @@ export const generate_volume_mounts = async ({
       const dir_basename = basename(container_dir)
       // Primary account (.claude) -> claude-home on host
       // Secondary accounts (.claude-xxx) -> claude-xxx on host (strip leading dot)
-      const host_dir_name = dir_basename === '.claude'
-        ? 'claude-home'
-        : dir_basename.replace(/^\./, '')
+      const host_dir_name =
+        dir_basename === '.claude'
+          ? 'claude-home'
+          : dir_basename.replace(/^\./, '')
       const host_path = join(user_dir, host_dir_name)
       mounts.push(`${host_path}:${container_dir}:cached`)
     }

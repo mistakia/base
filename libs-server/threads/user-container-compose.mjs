@@ -29,7 +29,9 @@ export const generate_compose_config = async ({
   user_public_key = null
 }) => {
   if (!container_user_base_path) {
-    throw new Error('container_user_base_path is required for compose config generation')
+    throw new Error(
+      'container_user_base_path is required for compose config generation'
+    )
   }
 
   const container_name = `base-user-${username}`

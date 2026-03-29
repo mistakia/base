@@ -64,16 +64,23 @@ export async function collect_schedule_metrics({ snapshot_date }) {
       if (!stats) continue
 
       // Count recent successes and failures
-      if (stats.last_success && new Date(stats.last_success) >= thirty_days_ago) {
+      if (
+        stats.last_success &&
+        new Date(stats.last_success) >= thirty_days_ago
+      ) {
         success_count += stats.success_count || 0
       }
-      if (stats.last_failure && new Date(stats.last_failure) >= thirty_days_ago) {
+      if (
+        stats.last_failure &&
+        new Date(stats.last_failure) >= thirty_days_ago
+      ) {
         failure_count += stats.failure_count || 0
       }
     }
 
     const total = success_count + failure_count
-    const rate = total > 0 ? Math.round((success_count / total) * 1000) / 10 : 100
+    const rate =
+      total > 0 ? Math.round((success_count / total) * 1000) / 10 : 100
 
     metrics.push({
       snapshot_date,

@@ -56,12 +56,7 @@ export const builder = (yargs) =>
           }),
       handle_report
     )
-    .command(
-      'list',
-      'List available snapshot dates',
-      () => {},
-      handle_list
-    )
+    .command('list', 'List available snapshot dates', () => {}, handle_list)
     .demandCommand(1, 'You must specify a subcommand')
 
 async function handle_snapshot(argv) {
@@ -85,7 +80,13 @@ async function handle_snapshot(argv) {
     })
 
     if (argv.json) {
-      console.log(JSON.stringify(argv['dry-run'] ? { summary, metrics } : summary, null, 2))
+      console.log(
+        JSON.stringify(
+          argv['dry-run'] ? { summary, metrics } : summary,
+          null,
+          2
+        )
+      )
     } else {
       console.log(`Snapshot: ${summary.snapshot_date}`)
       console.log(`Total metrics: ${summary.total_metrics}`)
@@ -153,10 +154,15 @@ async function handle_report(argv) {
           current_category = row.category
           console.log(`[${current_category}]`)
         }
-        const dims = Object.keys(row.dimensions || {}).length > 0
-          ? ` (${Object.entries(row.dimensions).map(([k, v]) => `${k}=${v}`).join(', ')})`
-          : ''
-        console.log(`  ${row.metric_name}: ${row.metric_value} ${row.unit || ''}${dims}`)
+        const dims =
+          Object.keys(row.dimensions || {}).length > 0
+            ? ` (${Object.entries(row.dimensions)
+                .map(([k, v]) => `${k}=${v}`)
+                .join(', ')})`
+            : ''
+        console.log(
+          `  ${row.metric_name}: ${row.metric_value} ${row.unit || ''}${dims}`
+        )
       }
     }
 
@@ -181,7 +187,9 @@ async function handle_list(argv) {
     } else {
       console.log('Available snapshots:\n')
       for (const row of dates) {
-        console.log(`  ${format_date(row.snapshot_date)}  (${row.metric_count} metrics)`)
+        console.log(
+          `  ${format_date(row.snapshot_date)}  (${row.metric_count} metrics)`
+        )
       }
     }
 

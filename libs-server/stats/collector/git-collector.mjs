@@ -9,18 +9,30 @@ import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
-import { get_total_commits, get_branch_count } from '#libs-server/git/repo-statistics.mjs'
+import {
+  get_total_commits,
+  get_branch_count
+} from '#libs-server/git/repo-statistics.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
 const log = debug('stats:collector:git')
 
 async function get_active_repositories() {
-  const active_path = path.join(config.user_base_directory, 'repository', 'active')
+  const active_path = path.join(
+    config.user_base_directory,
+    'repository',
+    'active'
+  )
   const entries = await fs.readdir(active_path, { withFileTypes: true })
   const repos = []
 
   for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.endsWith('-worktrees') || entry.name.startsWith('.')) continue
+    if (
+      !entry.isDirectory() ||
+      entry.name.endsWith('-worktrees') ||
+      entry.name.startsWith('.')
+    )
+      continue
     const repo_path = path.join(active_path, entry.name)
     try {
       await fs.access(path.join(repo_path, '.git'))
@@ -81,10 +93,10 @@ async function collect_repo_metrics({ snapshot_date, repo }) {
 
   // Lines of code via cloc
   try {
-    const { stdout } = await execute_shell_command(
-      'cloc --json --vcs=git .',
-      { cwd: repo.path, timeout: 60000 }
-    )
+    const { stdout } = await execute_shell_command('cloc --json --vcs=git .', {
+      cwd: repo.path,
+      timeout: 60000
+    })
     const cloc_data = JSON.parse(stdout)
     let repo_total_code = 0
 
@@ -128,7 +140,7 @@ export async function collect_git_metrics({ snapshot_date }) {
   const repos = await get_active_repositories()
 
   const results = await Promise.allSettled(
-    repos.map(repo => collect_repo_metrics({ snapshot_date, repo }))
+    repos.map((repo) => collect_repo_metrics({ snapshot_date, repo }))
   )
 
   const metrics = []
