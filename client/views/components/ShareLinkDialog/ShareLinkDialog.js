@@ -61,7 +61,7 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
 
     try {
       const { request } = api_request(api.post_share_token, { entity_id, exp })
-      const response = await request
+      const response = await request()
       set_share_url(response.share_url)
     } catch (err) {
       set_error(err.message || 'Failed to generate share link')
