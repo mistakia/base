@@ -182,6 +182,22 @@ export function get_thread_pending_resume(state, thread_id) {
   )
 }
 
+export const get_available_tags_for_thread_filter = createSelector(
+  [get_threads_state],
+  (threads_state) => {
+    const available_tags = threads_state.get('available_tags')
+    if (!available_tags) return []
+
+    return available_tags
+      .map((tag) => ({
+        label: tag.title || tag.base_uri,
+        value: tag.base_uri,
+        color: tag.color || null
+      }))
+      .toArray()
+  }
+)
+
 // Memoized selector for thread_all_columns to avoid reference instability
 // This ensures the JS object reference only changes when the underlying Immutable data changes
 export function get_thread_all_columns_immutable(state) {

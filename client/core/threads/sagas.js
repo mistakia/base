@@ -13,6 +13,7 @@ import {
   get_thread,
   get_models,
   get_threads_table,
+  get_threads_available_tags,
   put_thread_state,
   create_thread_session,
   resume_thread_session,
@@ -20,6 +21,7 @@ import {
 } from '@core/api/sagas'
 import { threads_action_types, threads_actions } from './actions'
 import { get_threads_state } from './selectors'
+import { get_app } from '@core/app/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { active_sessions_actions } from '@core/active-sessions/actions'
 import { show_error_notification } from '@core/notification/sagas'
@@ -285,6 +287,17 @@ export function* handle_thread_job_failed({ payload }) {
 }
 
 //= ====================================
+//  TAG LOADING SAGAS
+//= ====================================
+
+export function* load_available_tags({ payload } = {}) {
+  const app = yield select(get_app)
+  if (!app.get('user_token')) return
+  const { used_by } = payload
+  yield call(get_threads_available_tags, { used_by })
+}
+
+//= ====================================
 //  WATCHERS
 //= ====================================
 
@@ -336,6 +349,14 @@ export function* watch_resume_thread_session() {
   )
 }
 
+// Tag loading watchers
+export function* watch_load_available_tags() {
+  yield takeLatest(
+    threads_action_types.LOAD_THREADS_AVAILABLE_TAGS,
+    load_available_tags
+  )
+}
+
 // Job queue event watchers
 export function* watch_thread_job_failed() {
   yield takeEvery(
@@ -360,6 +381,8 @@ export const threads_sagas = [
   // Thread sessions
   fork(watch_create_thread_session),
   fork(watch_resume_thread_session),
+  // Tag loading
+  fork(watch_load_available_tags),
   // Job queue events
   fork(watch_thread_job_failed)
 ]

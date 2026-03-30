@@ -5,13 +5,12 @@ import Table from 'react-table/index.js'
 
 import { thread_columns } from './column-definitions.js'
 import { threads_actions } from '@core/threads/actions.js'
-import { tasks_actions } from '@core/tasks/actions.js'
 import {
   get_threads_table_props,
   get_thread_table_views,
-  get_selected_thread_table_view
+  get_selected_thread_table_view,
+  get_available_tags_for_thread_filter
 } from '@core/threads/selectors.js'
-import { get_available_tags_for_filter } from '@core/tasks/selectors.js'
 import { get_has_valid_session } from '@core/app/selectors.js'
 import './ThreadsTable.styl'
 
@@ -20,13 +19,13 @@ const ThreadsTable = ({ on_view_select }) => {
   const table_props = useSelector(get_threads_table_props)
   const available_views = useSelector(get_thread_table_views)
   const selected_view = useSelector(get_selected_thread_table_view)
-  const available_tags = useSelector(get_available_tags_for_filter)
+  const available_tags = useSelector(get_available_tags_for_thread_filter)
   const has_valid_session = useSelector(get_has_valid_session)
 
   // Load available tags once authenticated
   useEffect(() => {
     if (has_valid_session) {
-      dispatch(tasks_actions.load_available_tags({ used_by: 'thread' }))
+      dispatch(threads_actions.load_available_tags({ used_by: 'thread' }))
     }
   }, [dispatch, has_valid_session])
 

@@ -122,6 +122,7 @@ const DEFAULT_TABLE_COLUMNS = [
   'tool_call_count',
   'total_tokens',
   'cost',
+  'tags',
   'external_session_id'
 ]
 
@@ -196,6 +197,11 @@ const LAST_7_DAYS_VIEW = create_view({
 // ============================================================================
 
 const ThreadsState = new Record({
+  // Available tags for filter dropdown
+  available_tags: new List(),
+  is_loading_available_tags: false,
+  available_tags_error: null,
+
   // Basic threads list for simple get_threads API calls
   threads: new List(),
   selected_thread: null,
@@ -231,6 +237,31 @@ const ThreadsState = new Record({
 
 export function threads_reducer(state = new ThreadsState(), { payload, type }) {
   switch (type) {
+    // ========================================================================
+    // Available Tags Actions
+    // ========================================================================
+
+    case threads_action_types.GET_THREADS_AVAILABLE_TAGS_PENDING:
+      return state.merge({
+        is_loading_available_tags: true,
+        available_tags_error: null
+      })
+
+    case threads_action_types.GET_THREADS_AVAILABLE_TAGS_FULFILLED: {
+      const tags = Array.isArray(payload.data) ? payload.data : []
+      return state.merge({
+        available_tags: new List(tags),
+        is_loading_available_tags: false,
+        available_tags_error: null
+      })
+    }
+
+    case threads_action_types.GET_THREADS_AVAILABLE_TAGS_FAILED:
+      return state.merge({
+        is_loading_available_tags: false,
+        available_tags_error: payload.error
+      })
+
     // ========================================================================
     // Basic Threads List Actions
     // ========================================================================

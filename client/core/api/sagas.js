@@ -23,6 +23,7 @@ import {
 import {
   get_models_actions,
   get_threads_table_actions,
+  get_threads_available_tags_actions,
   create_thread_session_actions,
   resume_thread_session_actions
 } from '@core/threads/actions'
@@ -383,4 +384,9 @@ export const get_physical_items_available_tags = fetch.bind(
   null,
   api.get_available_tags,
   get_physical_items_available_tags_actions
+)
+export const get_threads_available_tags = fetch.bind(
+  null,
+  api.get_available_tags,
+  get_threads_available_tags_actions
 )
