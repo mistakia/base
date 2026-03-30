@@ -69,12 +69,14 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
         public_key_hex,
         exp
       })
-      set_share_url(`${BASE_URL}/s/${token}`)
+      const url = `${BASE_URL}/s/${token}`
+      set_share_url(url)
+      copy_to_clipboard(url)
       set_error(null)
     } catch (err) {
       set_error(err.message || 'Failed to generate share link')
     }
-  }, [entity_id, private_key_hex, public_key_hex, compute_exp])
+  }, [entity_id, private_key_hex, public_key_hex, compute_exp, copy_to_clipboard])
 
   const handle_close = useCallback(() => {
     set_share_url(null)

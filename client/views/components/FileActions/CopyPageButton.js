@@ -61,41 +61,70 @@ function get_file_label(file_path) {
 
 function use_anchored_position(container_ref, is_open) {
   const [position, set_position] = useState(null)
+  const menu_node = useRef(null)
+
+  const update_position = useCallback(() => {
+    if (!container_ref.current) return
+
+    const rect = container_ref.current.getBoundingClientRect()
+    const menu_height = menu_node.current ? menu_node.current.offsetHeight : 0
+    const gap = 4
+    const space_below = window.innerHeight - rect.bottom - gap
+    const space_above = rect.top - gap
+
+    if (menu_height > space_below && space_above > space_below) {
+      set_position({
+        bottom: window.innerHeight - rect.top + gap,
+        right: window.innerWidth - rect.right,
+        placement: 'above'
+      })
+    } else {
+      set_position({
+        top: rect.bottom + gap,
+        right: window.innerWidth - rect.right,
+        placement: 'below'
+      })
+    }
+  }, [container_ref])
+
+  const menu_ref = useCallback(
+    (node) => {
+      menu_node.current = node
+      if (node) update_position()
+    },
+    [update_position]
+  )
 
   useEffect(() => {
-    if (!is_open || !container_ref.current) {
+    if (!is_open) {
       set_position(null)
+      menu_node.current = null
       return
     }
 
-    const update = () => {
-      const rect = container_ref.current.getBoundingClientRect()
-      set_position({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right
-      })
-    }
-
-    update()
-    window.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
+    update_position()
+    window.addEventListener('scroll', update_position, true)
+    window.addEventListener('resize', update_position)
     return () => {
-      window.removeEventListener('scroll', update, true)
-      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update_position, true)
+      window.removeEventListener('resize', update_position)
     }
-  }, [is_open, container_ref])
+  }, [is_open, update_position])
 
-  return position
+  return { position, menu_ref, menu_node }
 }
 
 const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_key }) => {
   const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const [is_menu_open, set_is_menu_open] = useState(false)
   const [is_share_dialog_open, set_is_share_dialog_open] = useState(false)
-  const menu_ref = useRef(null)
   const container_ref = useRef(null)
 
-  const menu_position = use_anchored_position(container_ref, is_menu_open)
+  const {
+    position: menu_position,
+    menu_ref,
+    menu_node
+  } = use_anchored_position(container_ref, is_menu_open)
 
   const app_state = useSelector(get_app)
   const user_public_key = app_state.get('user_public_key')
@@ -153,8 +182,8 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
 
     const handle_click_outside = (e) => {
       if (
-        menu_ref.current &&
-        !menu_ref.current.contains(e.target) &&
+        menu_node.current &&
+        !menu_node.current.contains(e.target) &&
         container_ref.current &&
         !container_ref.current.contains(e.target)
       ) {
@@ -234,6 +263,7 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
             sx={{
               position: 'fixed',
               top: menu_position.top,
+              bottom: menu_position.bottom,
               right: menu_position.right,
               minWidth: 280,
               backgroundColor: 'background.paper',
@@ -243,7 +273,13 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
               zIndex: 1300,
               animation: 'copy-page-menu-enter 0.15s ease',
               '@keyframes copy-page-menu-enter': {
-                from: { opacity: 0, transform: 'translateY(-4px)' },
+                from: {
+                  opacity: 0,
+                  transform:
+                    menu_position.placement === 'above'
+                      ? 'translateY(4px)'
+                      : 'translateY(-4px)'
+                },
                 to: { opacity: 1, transform: 'translateY(0)' }
               }
             }}>
