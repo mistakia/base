@@ -413,7 +413,17 @@ export const api_request = (api_function, opts, token) => {
 }
 
 export const dispatch_fetch = async (options) => {
-  const response = await fetch(options.url, options)
+  let url = options.url
+
+  // Forward share_token from page URL to API requests for shared view access
+  const page_params = new URLSearchParams(window.location.search)
+  const share_token = page_params.get('share_token')
+  if (share_token) {
+    const separator = url.includes('?') ? '&' : '?'
+    url = `${url}${separator}share_token=${encodeURIComponent(share_token)}`
+  }
+
+  const response = await fetch(url, options)
   if (response.status >= 200 && response.status < 300) {
     return response.json()
   } else {
