@@ -15,10 +15,14 @@ import {
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 
+import { useSelector } from 'react-redux'
+
 import Button from '@components/primitives/Button'
 import { COLORS } from '@theme/colors.js'
+import { BASE_URL } from '@core/constants'
+import { get_app } from '@core/app/selectors'
 import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
-import { api, api_request } from '@core/api/service'
+import { create_share_token } from '@views/utils/create-share-token.js'
 
 const EXPIRATION_PRESETS = [
   { label: 'No expiration', value: 0 },
@@ -33,10 +37,12 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
   const [expiration_preset, set_expiration_preset] = useState(0)
   const [custom_date, set_custom_date] = useState('')
   const [share_url, set_share_url] = useState(null)
-  const [is_loading, set_is_loading] = useState(false)
   const [error, set_error] = useState(null)
   const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const is_copied = copied_value === share_url
+  const app_state = useSelector(get_app)
+  const private_key_hex = app_state.get('user_private_key')
+  const public_key_hex = app_state.get('user_public_key')
 
   const compute_exp = useCallback(() => {
     if (expiration_preset === 'custom') {
@@ -49,26 +55,26 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
     return Math.floor(Date.now() / 1000) + expiration_preset
   }, [expiration_preset, custom_date])
 
-  const handle_generate = useCallback(async () => {
+  const handle_generate = useCallback(() => {
     const exp = compute_exp()
     if (exp === null) {
       set_error('Invalid expiration date')
       return
     }
 
-    set_is_loading(true)
-    set_error(null)
-
     try {
-      const { request } = api_request(api.post_share_token, { entity_id, exp })
-      const response = await request()
-      set_share_url(response.share_url)
+      const token = create_share_token({
+        entity_id,
+        private_key_hex,
+        public_key_hex,
+        exp
+      })
+      set_share_url(`${BASE_URL}/s/${token}`)
+      set_error(null)
     } catch (err) {
       set_error(err.message || 'Failed to generate share link')
-    } finally {
-      set_is_loading(false)
     }
-  }, [entity_id, compute_exp])
+  }, [entity_id, private_key_hex, public_key_hex, compute_exp])
 
   const handle_close = useCallback(() => {
     set_share_url(null)
@@ -233,10 +239,7 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
           <Button
             variant='primary'
             onClick={handle_generate}
-            loading={is_loading}
-            disabled={
-              is_loading || (expiration_preset === 'custom' && !custom_date)
-            }>
+            disabled={expiration_preset === 'custom' && !custom_date}>
             Generate Link
           </Button>
         )}

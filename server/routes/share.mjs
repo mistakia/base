@@ -2,9 +2,7 @@ import debug from 'debug'
 import express from 'express'
 import ed25519 from '@trashman/ed25519-blake2b'
 
-import config from '#config'
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'
-import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
 import {
   PAYLOAD_LENGTH,
   TOKEN_TOTAL_LENGTH,
@@ -17,70 +15,6 @@ import {
 
 const log = debug('api:share')
 const router = express.Router({ mergeParams: true })
-
-/**
- * POST /
- *
- * Generate a share token for an entity. Requires authentication.
- * The server signs the token using the configured private key.
- *
- * Body: { entity_id: string, exp?: number }
- *   exp: expiration as epoch seconds (0 or omitted = no expiry)
- */
-router.post('/', async (req, res) => {
-  try {
-    const user_public_key = req.user?.user_public_key
-    if (!user_public_key) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
-    if (!config.user_private_key) {
-      log('Share token generation unavailable: user_private_key not configured')
-      return res.status(503).json({ error: 'Share token generation not configured' })
-    }
-
-    const { entity_id, exp = 0 } = req.body
-    if (!entity_id || typeof entity_id !== 'string') {
-      return res.status(400).json({ error: 'entity_id is required' })
-    }
-
-    // Validate entity exists
-    const entity = await get_entity_by_id({ entity_id })
-    let resource_type = 'entity'
-    if (!entity) {
-      const thread_results = await query_threads_from_duckdb({
-        filters: [{ column_id: 'thread_id', operator: 'eq', value: entity_id }],
-        limit: 1
-      })
-      if (thread_results.length === 0) {
-        return res.status(404).json({ error: 'Entity or thread not found' })
-      }
-      resource_type = 'thread'
-    }
-
-    const token = create_share_token({
-      entity_id,
-      private_key: config.user_private_key,
-      public_key: user_public_key,
-      exp
-    })
-
-    const base_url = config.public_url || `http://localhost:${config.server_port}`
-    const share_url = `${base_url}/s/${token}`
-
-    log('Generated share token for %s %s (exp=%d)', resource_type, entity_id, exp)
-    return res.json({
-      share_url,
-      token,
-      entity_id,
-      resource_type,
-      expires_at: exp || null
-    })
-  } catch (error) {
-    log('Error generating share token: %s', error.message)
-    return res.status(500).json({ error: 'Failed to generate share token' })
-  }
-})
 
 /**
  * GET /:token
