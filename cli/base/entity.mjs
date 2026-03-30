@@ -15,6 +15,7 @@ import { find_threads_relating_to } from '#libs-server/embedded-database-index/d
 import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
 import {
   parse_time_period_date,
+  parse_time_period_ms,
   is_valid_time_period
 } from '#libs-server/utils/parse-time-period.mjs'
 import {
@@ -35,6 +36,7 @@ import {
 } from '../entity-visibility.mjs'
 import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import {
   resolve_base_uri_from_registry,
@@ -455,9 +457,33 @@ export const builder = (yargs) =>
           }),
       handle_convert
     )
+    .command(
+      'share <base_uri>',
+      'Generate a share link for an entity',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe:
+              'Base URI of the entity to share (e.g., user:task/my-task.md)',
+            type: 'string'
+          })
+          .option('expires', {
+            alias: 'e',
+            describe:
+              'Expiration duration (e.g., 7d, 24h, 2w, 1m). Default: no expiry',
+            type: 'string'
+          })
+          .option('private-key', {
+            alias: 'k',
+            describe:
+              'Ed25519 private key hex (or set USER_PRIVATE_KEY env var)',
+            type: 'string'
+          }),
+      handle_share
+    )
     .demandCommand(
       1,
-      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, convert, threads, or visibility'
+      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, convert, threads, visibility, or share'
     )
 
 export const handler = () => {}
@@ -1618,6 +1644,87 @@ async function handle_tree(argv) {
     exit_code = 1
   } finally {
     await embedded_index_manager.shutdown()
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_share(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri } = argv
+    const private_key_hex =
+      argv['private-key'] || process.env.USER_PRIVATE_KEY
+
+    if (!private_key_hex) {
+      console.error(
+        'Error: Private key required. Use --private-key or set USER_PRIVATE_KEY env var'
+      )
+      flush_and_exit(1)
+      return
+    }
+
+    // Resolve entity to get entity_id
+    let absolute_path
+    try {
+      absolute_path = resolve_base_uri_from_registry(base_uri)
+    } catch {
+      console.error(`Error: Could not resolve base URI: ${base_uri}`)
+      flush_and_exit(1)
+      return
+    }
+
+    const entity = await read_entity_from_filesystem({ absolute_path })
+    if (!entity?.success || !entity.entity_properties?.entity_id) {
+      console.error(`Error: Entity not found or missing entity_id: ${base_uri}`)
+      flush_and_exit(1)
+      return
+    }
+
+    // Parse expiration duration
+    let exp = 0
+    if (argv.expires) {
+      const ms = parse_time_period_ms(argv.expires)
+      if (ms === null) {
+        console.error(
+          `Error: Invalid duration "${argv.expires}". Use format like 7d, 24h, 2w, 1m`
+        )
+        flush_and_exit(1)
+        return
+      }
+      exp = Math.floor((Date.now() + ms) / 1000)
+    }
+
+    const entity_id = entity.entity_properties.entity_id
+    const token = create_share_token({
+      entity_id,
+      private_key: private_key_hex,
+      public_key: config.user_public_key,
+      exp
+    })
+
+    const base_url = config.public_url || SERVER_URL
+    const share_url = `${base_url}/s/${token}`
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          {
+            share_url,
+            token,
+            entity_id,
+            base_uri,
+            expires_at: exp || null
+          },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(share_url)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
   }
   flush_and_exit(exit_code)
 }

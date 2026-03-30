@@ -2,6 +2,7 @@ import debug from 'debug'
 
 import user_registry from '#libs-server/users/user-registry.mjs'
 import { evaluate_permission_rules } from '#server/middleware/rule-engine.mjs'
+import { verify_share_token } from '#libs-server/share-token/verify-share-token.mjs'
 import { load_resource_metadata } from './resource-metadata.mjs'
 import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
 
@@ -131,9 +132,10 @@ export class PermissionContext {
    * @param {Object} params - Parameters
    * @param {string} params.resource_path - Base-URI path of the resource
    * @param {Object|null} params.metadata - Optional pre-loaded metadata
+   * @param {string|null} params.share_token - Optional share token from query parameter
    * @returns {Promise<{allowed: boolean, reason: string}>} Permission result
    */
-  async _check_read_permission({ resource_path, metadata = null }) {
+  async _check_read_permission({ resource_path, metadata = null, share_token = null }) {
     // Load metadata if not provided
     const resource_metadata =
       metadata || (await this.get_resource_metadata(resource_path))
@@ -151,7 +153,26 @@ export class PermissionContext {
       }
     }
 
-    // Step 2: Check user-specific rules (authenticated users only)
+    // Step 2: Check share token
+    if (share_token && resource_metadata?.raw?.entity_id) {
+      try {
+        const result = await verify_share_token({
+          token: share_token,
+          resource_entity_id: resource_metadata.raw.entity_id,
+          resource_path,
+          resource_metadata
+        })
+        if (result.valid) {
+          log(`Share token granted read access to ${resource_path}`)
+          return { allowed: true, reason: 'share_token' }
+        }
+        log(`Share token invalid for ${resource_path}: ${result.reason}`)
+      } catch (error) {
+        log(`Share token verification error: ${error.message}`)
+      }
+    }
+
+    // Step 3: Check user-specific rules (authenticated users only)
     if (this.user_public_key && this.user_public_key !== 'public') {
       const user_rules = await this.get_user_rules()
 
@@ -178,7 +199,7 @@ export class PermissionContext {
       }
     }
 
-    // Step 3: Check public_read setting
+    // Step 4: Check public_read setting
     if (resource_metadata?.public_read?.explicit) {
       if (resource_metadata.public_read.value) {
         log(`Public read enabled for ${resource_path}`)
@@ -195,7 +216,7 @@ export class PermissionContext {
       }
     }
 
-    // Step 4: Fall back to public rules
+    // Step 5: Fall back to public rules
     const public_rules = await this.get_public_rules()
     const public_result = await evaluate_permission_rules({
       rules: public_rules,
@@ -297,9 +318,10 @@ export class PermissionContext {
    * @param {Object} params - Parameters
    * @param {string} params.resource_path - Base-URI path of the resource
    * @param {Object|null} params.metadata - Optional pre-loaded metadata
+   * @param {string|null} params.share_token - Optional share token from query parameter
    * @returns {Promise<{read: {allowed: boolean, reason: string}, write: {allowed: boolean, reason: string}}>}
    */
-  async check_permission({ resource_path, metadata = null }) {
+  async check_permission({ resource_path, metadata = null, share_token = null }) {
     log(
       `Checking permission for user: ${this.user_public_key || 'public'}, resource: ${resource_path}`
     )
@@ -311,7 +333,8 @@ export class PermissionContext {
     const [read_result, write_result] = await Promise.all([
       this._check_read_permission({
         resource_path,
-        metadata: resource_metadata
+        metadata: resource_metadata,
+        share_token
       }),
       this._check_write_permission({
         resource_path,
