@@ -16,6 +16,8 @@ import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
 import GitFileActions from '@components/FileActions/GitFileActions.js'
 import CopyPageButton from '@components/FileActions/CopyPageButton.js'
+import ShareLinkButton from '@components/FileActions/ShareLinkButton.js'
+import SharedViewBadge from '@components/SharedViewBadge/SharedViewBadge.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 import { TagDashboard } from './TagDetailSection/index.js'
@@ -110,7 +112,12 @@ const EntityRenderer = ({
         path={path}
         can_write={can_write}
       />
+      <SharedViewBadge />
       <FileActions>
+        <ShareLinkButton
+          entity_id={frontmatter?.entity_id}
+          title={frontmatter?.title}
+        />
         <CopyPageButton path={path} content={content} />
         <GitFileActions git_context={git_context} path={path} />
         {render_diff_toggle()}
@@ -163,7 +170,12 @@ const EntityRenderer = ({
               can_write={can_write}
             />
           )}
+          <SharedViewBadge />
           <FileActions>
+            <ShareLinkButton
+              entity_id={frontmatter?.entity_id}
+              title={frontmatter?.title}
+            />
             <CopyPageButton path={path} content={content} />
             <GitFileActions git_context={git_context} path={path} />
             {render_diff_toggle()}

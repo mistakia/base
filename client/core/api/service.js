@@ -3,7 +3,7 @@
 import qs from 'qs'
 import merge from 'merge-options'
 
-import { API_URL } from '@core/constants'
+import { API_URL, BASE_URL } from '@core/constants'
 
 const POST = (data) => ({
   method: 'POST',
@@ -397,6 +397,11 @@ export const api = {
   get_finance_overview() {
     const url = `${API_URL}/proxy/finance/dashboard/overview`
     return { url }
+  },
+
+  post_share_token({ entity_id, exp }) {
+    const url = `${BASE_URL}/s`
+    return { url, ...POST({ entity_id, exp }) }
   }
 }
 

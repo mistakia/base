@@ -470,7 +470,7 @@ export const builder = (yargs) =>
           .option('expires', {
             alias: 'e',
             describe:
-              'Expiration duration (e.g., 7d, 24h, 2w, 1m). Default: no expiry',
+              'Expiration as duration (7d, 24h, 2w, 1m) or ISO 8601 timestamp (2026-04-15T00:00:00Z). Default: no expiry',
             type: 'string'
           })
           .option('private-key', {
@@ -1680,18 +1680,31 @@ async function handle_share(argv) {
       return
     }
 
-    // Parse expiration duration
+    // Parse expiration: duration string (7d, 24h) or ISO 8601 timestamp
     let exp = 0
     if (argv.expires) {
       const ms = parse_time_period_ms(argv.expires)
-      if (ms === null) {
-        console.error(
-          `Error: Invalid duration "${argv.expires}". Use format like 7d, 24h, 2w, 1m`
-        )
-        flush_and_exit(1)
-        return
+      if (ms !== null) {
+        exp = Math.floor((Date.now() + ms) / 1000)
+      } else {
+        const parsed_date = new Date(argv.expires)
+        if (Number.isNaN(parsed_date.getTime())) {
+          console.error(
+            `Error: Invalid expiration "${argv.expires}". Use duration (7d, 24h, 2w, 1m) or ISO 8601 timestamp (2026-04-15T00:00:00Z)`
+          )
+          flush_and_exit(1)
+          return
+        }
+        const epoch_seconds = Math.floor(parsed_date.getTime() / 1000)
+        if (epoch_seconds <= Math.floor(Date.now() / 1000)) {
+          console.error(
+            `Error: Expiration timestamp "${argv.expires}" is in the past`
+          )
+          flush_and_exit(1)
+          return
+        }
+        exp = epoch_seconds
       }
-      exp = Math.floor((Date.now() + ms) / 1000)
     }
 
     const entity_id = entity.entity_properties.entity_id
