@@ -11,6 +11,7 @@ import {
   get_selected_physical_item_table_view,
   get_available_tags_for_physical_item_filter
 } from '@core/physical-items/selectors.js'
+import { get_has_valid_session } from '@core/app/selectors.js'
 
 import './PhysicalItemsTable.styl'
 
@@ -22,13 +23,16 @@ const PhysicalItemsTable = ({ on_view_select }) => {
   const available_tags = useSelector(
     get_available_tags_for_physical_item_filter
   )
+  const has_valid_session = useSelector(get_has_valid_session)
 
-  // Load available tags on mount (filtered to tags used by physical_item)
+  // Load available tags once authenticated
   useEffect(() => {
-    dispatch(
-      physical_items_actions.load_available_tags({ used_by: 'physical_item' })
-    )
-  }, [dispatch])
+    if (has_valid_session) {
+      dispatch(
+        physical_items_actions.load_available_tags({ used_by: 'physical_item' })
+      )
+    }
+  }, [dispatch, has_valid_session])
 
   const {
     data = [],

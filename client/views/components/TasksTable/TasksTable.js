@@ -11,6 +11,7 @@ import {
   get_selected_task_table_view,
   get_available_tags_for_filter
 } from '@core/tasks/selectors.js'
+import { get_has_valid_session } from '@core/app/selectors.js'
 
 import '@styles/tasks.styl'
 import './TasksTable.styl'
@@ -21,11 +22,14 @@ const TasksTable = ({ on_view_select }) => {
   const available_views = useSelector(get_task_table_views)
   const selected_view = useSelector(get_selected_task_table_view)
   const available_tags = useSelector(get_available_tags_for_filter)
+  const has_valid_session = useSelector(get_has_valid_session)
 
-  // Load available tags on mount (filtered to tags used by tasks)
+  // Load available tags once authenticated
   useEffect(() => {
-    dispatch(tasks_actions.load_available_tags({ used_by: 'task' }))
-  }, [dispatch])
+    if (has_valid_session) {
+      dispatch(tasks_actions.load_available_tags({ used_by: 'task' }))
+    }
+  }, [dispatch, has_valid_session])
   const {
     data = [],
     table_state = {},

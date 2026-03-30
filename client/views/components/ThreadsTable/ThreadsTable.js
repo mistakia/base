@@ -12,6 +12,7 @@ import {
   get_selected_thread_table_view
 } from '@core/threads/selectors.js'
 import { get_available_tags_for_filter } from '@core/tasks/selectors.js'
+import { get_has_valid_session } from '@core/app/selectors.js'
 import './ThreadsTable.styl'
 
 const ThreadsTable = ({ on_view_select }) => {
@@ -20,11 +21,14 @@ const ThreadsTable = ({ on_view_select }) => {
   const available_views = useSelector(get_thread_table_views)
   const selected_view = useSelector(get_selected_thread_table_view)
   const available_tags = useSelector(get_available_tags_for_filter)
+  const has_valid_session = useSelector(get_has_valid_session)
 
-  // Load available tags filtered to tags used by threads
+  // Load available tags once authenticated
   useEffect(() => {
-    dispatch(tasks_actions.load_available_tags({ used_by: 'thread' }))
-  }, [dispatch])
+    if (has_valid_session) {
+      dispatch(tasks_actions.load_available_tags({ used_by: 'thread' }))
+    }
+  }, [dispatch, has_valid_session])
 
   const {
     data = [],
