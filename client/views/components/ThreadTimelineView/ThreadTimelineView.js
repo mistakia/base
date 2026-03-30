@@ -9,7 +9,6 @@ import { COLORS } from '@theme/colors.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
 import FileActions from '@components/FileActions/index.js'
-import ShareLinkButton from '@components/FileActions/ShareLinkButton.js'
 import SharedViewBadge from '@components/SharedViewBadge/SharedViewBadge.js'
 import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import { extract_working_directory } from '@views/utils/thread-metadata-extractor.js'
@@ -107,7 +106,6 @@ const ThreadTimelineView = () => {
       <SharedViewBadge />
       {selected_thread_data && (
         <FileActions>
-          <ShareLinkButton entity_id={thread_id} title='Thread' />
           <button
             className='file-browser-toggle-button'
             onClick={toggle_file_browser}

@@ -16,7 +16,6 @@ import FileActions from '@components/FileActions/index.js'
 import FileDiffToggle from '@components/FileActions/FileDiffToggle.js'
 import GitFileActions from '@components/FileActions/GitFileActions.js'
 import CopyPageButton from '@components/FileActions/CopyPageButton.js'
-import ShareLinkButton from '@components/FileActions/ShareLinkButton.js'
 import SharedViewBadge from '@components/SharedViewBadge/SharedViewBadge.js'
 import DiffViewer from '@components/DiffViewer/index.js'
 import PageHead from '@views/components/PageHead/index.js'
@@ -114,11 +113,13 @@ const EntityRenderer = ({
       />
       <SharedViewBadge />
       <FileActions>
-        <ShareLinkButton
+        <CopyPageButton
+          path={path}
+          content={content}
           entity_id={frontmatter?.entity_id}
-          title={frontmatter?.title}
+          entity_title={frontmatter?.title}
+          entity_owner_key={frontmatter?.user_public_key}
         />
-        <CopyPageButton path={path} content={content} />
         <GitFileActions git_context={git_context} path={path} />
         {render_diff_toggle()}
       </FileActions>
@@ -172,11 +173,13 @@ const EntityRenderer = ({
           )}
           <SharedViewBadge />
           <FileActions>
-            <ShareLinkButton
+            <CopyPageButton
+              path={path}
+              content={content}
               entity_id={frontmatter?.entity_id}
-              title={frontmatter?.title}
+              entity_title={frontmatter?.title}
+              entity_owner_key={frontmatter?.user_public_key}
             />
-            <CopyPageButton path={path} content={content} />
             <GitFileActions git_context={git_context} path={path} />
             {render_diff_toggle()}
           </FileActions>

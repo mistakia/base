@@ -2,14 +2,18 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom'
 import PropTypes from 'prop-types'
 import { Box, ButtonBase } from '@mui/material'
+import { useSelector } from 'react-redux'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import LinkIcon from '@mui/icons-material/Link'
 import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
 import { convert_url_path_to_filesystem_path } from '@views/utils/base-uri-constants.js'
 import CursorLogo from '@components/primitives/logos/CursorLogo.js'
+import ShareLinkDialog from '@components/ShareLinkDialog/ShareLinkDialog.js'
+import { get_app } from '@core/app/selectors'
 import { COLORS } from '@theme/colors.js'
 
 const EXTENSION_LABELS = {
@@ -84,13 +88,19 @@ function use_anchored_position(container_ref, is_open) {
   return position
 }
 
-const CopyPageButton = ({ path, content }) => {
+const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_key }) => {
   const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const [is_menu_open, set_is_menu_open] = useState(false)
+  const [is_share_dialog_open, set_is_share_dialog_open] = useState(false)
   const menu_ref = useRef(null)
   const container_ref = useRef(null)
 
   const menu_position = use_anchored_position(container_ref, is_menu_open)
+
+  const app_state = useSelector(get_app)
+  const user_public_key = app_state.get('user_public_key')
+  const has_private_key = !!app_state.get('user_private_key')
+  const can_share = has_private_key && entity_id && user_public_key === entity_owner_key
 
   const is_copied = copied_value === content
 
@@ -132,6 +142,11 @@ const CopyPageButton = ({ path, content }) => {
     }
     set_is_menu_open(false)
   }, [path])
+
+  const handle_share_link = useCallback(() => {
+    set_is_menu_open(false)
+    set_is_share_dialog_open(true)
+  }, [])
 
   useEffect(() => {
     if (!is_menu_open) return
@@ -277,12 +292,27 @@ const CopyPageButton = ({ path, content }) => {
                 </Box>
               </ButtonBase>
             )}
+
+            {can_share && (
+              <ButtonBase onClick={handle_share_link} sx={menu_item_sx}>
+                <Box sx={icon_container_sx}>
+                  <LinkIcon sx={{ fontSize: 18 }} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Box sx={title_sx}>Share link</Box>
+                  <Box sx={subtitle_sx}>
+                    Generate a read-only share URL
+                  </Box>
+                </Box>
+              </ButtonBase>
+            )}
           </Box>,
           document.body
         )
       : null
 
   return (
+    <>
     <Box ref={container_ref} sx={{ display: 'inline-flex' }}>
       <Box
         sx={{
@@ -346,12 +376,24 @@ const CopyPageButton = ({ path, content }) => {
       </Box>
       {dropdown_menu}
     </Box>
+    {can_share && (
+      <ShareLinkDialog
+        open={is_share_dialog_open}
+        on_close={() => set_is_share_dialog_open(false)}
+        entity_id={entity_id}
+        title={entity_title}
+      />
+    )}
+    </>
   )
 }
 
 CopyPageButton.propTypes = {
   path: PropTypes.string,
-  content: PropTypes.string
+  content: PropTypes.string,
+  entity_id: PropTypes.string,
+  entity_title: PropTypes.string,
+  entity_owner_key: PropTypes.string
 }
 
 export default CopyPageButton
