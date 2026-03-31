@@ -4,6 +4,23 @@ import path from 'path'
 import frontMatter from 'front-matter'
 
 /**
+ * Build the standard extension directory paths from config.
+ *
+ * @param {Object} config - Application config with user_base_directory and system_base_directory
+ * @returns {string[]} Array of extension directory paths
+ */
+export function get_extension_paths(config) {
+  const paths = []
+  if (config.user_base_directory) {
+    paths.push(path.join(config.user_base_directory, 'extension'))
+  }
+  if (config.system_base_directory) {
+    paths.push(path.join(config.system_base_directory, 'system', 'extension'))
+  }
+  return paths
+}
+
+/**
  * Discover extensions from an array of extension directory paths.
  *
  * Each extension is a subdirectory containing an extension.md manifest.
@@ -85,11 +102,26 @@ function parse_extension_manifest(
     existsSync(path.join(extension_path, 'skill')) ||
     existsSync(path.join(extension_path, 'SKILL.md'))
 
+  // Detect provided capabilities from provide/ directory
+  const provide_dir = path.join(extension_path, 'provide')
+  let provided_capabilities = []
+  if (existsSync(provide_dir)) {
+    try {
+      const provide_entries = readdirSync(provide_dir, { withFileTypes: true })
+      provided_capabilities = provide_entries
+        .filter((e) => e.isFile() && e.name.endsWith('.mjs'))
+        .map((e) => e.name.replace(/\.mjs$/, ''))
+    } catch {
+      // Failed to read provide/ directory -- skip
+    }
+  }
+
   return {
     name: attributes.name || extension_name,
     description: attributes.description || '',
-    requires: attributes.requires || {},
-    optional: attributes.optional || {},
+    requires: attributes.requires || [],
+    optional: attributes.optional || [],
+    provided_capabilities,
     has_commands,
     has_skills,
     extension_path,

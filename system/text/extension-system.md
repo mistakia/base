@@ -23,6 +23,7 @@ The extension system enables directories to contribute CLI subcommands and agent
 An extension is a directory that provides any combination of:
 
 - **CLI subcommands** via a Yargs command module (command.mjs)
+- **Capability providers** via modules in the provide/ directory
 - **Agent skills** via workflow-format markdown files (skill/\*.md or SKILL.md)
 - **Supporting code** in lib/ for composition between extensions
 
@@ -43,14 +44,16 @@ For pure agent behaviors without code dependencies, a workflow in the workflow/ 
 
 ```
 extension/
-<name>/
-extension.md # Manifest with entity frontmatter
-command.mjs # Yargs command module (optional)
-skill/ # Agent skills (optional)
-_.md
-SKILL.md # Consensus spec skill (optional)
-lib/ # Supporting code (optional)
-_.mjs
+  <name>/
+    extension.md     # Manifest with entity frontmatter
+    command.mjs      # Yargs command module (optional)
+    provide/         # Capability provider modules (optional)
+      <cap-name>.mjs # One file per capability provided
+    skill/           # Agent skills (optional)
+      *.md
+    SKILL.md         # Consensus spec skill (optional)
+    lib/             # Supporting code (optional)
+      *.mjs
 ```
 
 ## Writing command.mjs
@@ -106,26 +109,109 @@ import { some_function } from '#libs-server/module/file.mjs'
 
 ## Optional Dependencies
 
-Declare optional services in extension.md for documentation:
+Declare optional capabilities in extension.md as a flat array:
 
 ```yaml
 optional:
-services: [ollama]
+  - embedded-index
 ```
 
-At runtime, use dynamic import with try/catch:
+At runtime, check the capability registry or use dynamic import with try/catch for graceful fallback.
+
+## Capability Registration
+
+Extensions can provide subsystem implementations (notifications, queuing, indexing) via the `provide/` directory convention. Core code queries a capability registry instead of hardcoding imports.
+
+### How It Works
+
+1. Each `.mjs` file in `provide/` registers the extension as a provider for the capability named by the filename (e.g., `provide/notification-channel.mjs` provides the `notification-channel` capability)
+2. At startup, discovery scans `provide/` directories and records `provided_capabilities` metadata
+3. The provider loader imports each provide file and registers it in the capability registry
+4. Core code queries the registry at invocation time to find providers
+
+### Capability Naming
+
+Use kebab-case for capability names. The name signals the consumption pattern:
+
+- **Channel/outlet names** (e.g., `notification-channel`): use `get_all()` for fan-out -- all providers fire
+- **Service/backend names** (e.g., `queue`, `embedded-index`): use `get()` for first-match -- one provider handles the request
+
+### Invocation-Time Resolution
+
+Providers must not call `registry.get()` or `registry.get_all()` at module load time -- only at function invocation time. This avoids load-order dependence between extensions without requiring topological sorting.
+
+### Writing a Provide Module
+
+Each provide file exports named functions implementing the capability contract:
 
 ```javascript
-let ollama_available = false
-try {
-  const { embed_texts } = await import(
-    '#libs-server/integrations/ollama-client.mjs'
-  )
-  ollama_available = true
-} catch {
-  console.warn('Ollama not available, semantic features disabled')
+// provide/notification-channel.mjs
+import config from '#config'
+
+export async function notify_failure({ job_id, error_message, timestamp }) {
+  // Send failure notification via this channel
+}
+
+export async function notify_recovery({ job_id, timestamp }) {
+  // Send recovery notification
 }
 ```
+
+### Registry API
+
+Consumer code imports from the registry:
+
+```javascript
+import { get, get_all, has } from '#libs-server/extension/capability-registry.mjs'
+
+// Fan-out: notify all channels
+const channels = get_all('notification-channel')
+for (const channel of channels) {
+  await channel.notify_failure({ job_id, error_message, timestamp })
+}
+
+// First-match: use the installed queue backend
+const queue = get('queue')
+if (queue) {
+  await queue.enqueue(job)
+}
+
+// Graceful absence: empty array when no providers installed
+const channels = get_all('notification-channel')
+// Loop simply doesn't execute if no providers -- no errors
+```
+
+### Graceful Absence
+
+`get_all()` returns an empty array when no provider is installed. Loops over the result don't execute, producing no errors. `get()` returns null. This means core code works correctly whether or not an extension is installed.
+
+### Multi-Provider Capabilities
+
+Multiple extensions can provide the same capability. Registration order follows discovery order (user extensions before system extensions). `get_all()` returns all providers; `get()` returns the first-registered.
+
+### notification-channel Contract
+
+```
+@typedef {Object} NotificationChannelProvider
+@property {function({job_id: string, error_message: string, timestamp: string}): Promise<string|null>} notify_failure - Required. Send failure alert. Returns message_id or null.
+@property {function({job_id: string, timestamp: string}): Promise<string|null>} notify_missed - Required. Send missed-execution alert. Returns message_id or null.
+@property {function({job_id: string, timestamp: string}): Promise<string|null>} notify_recovery - Optional. Send recovery notice. Returns message_id or null.
+```
+
+### Example: Extension with Capability Provider
+
+```
+extension/
+  discord/
+    extension.md
+    command.mjs
+    provide/
+      notification-channel.mjs
+    lib/
+      discord-client.mjs
+```
+
+The `provide/notification-channel.mjs` file exports `notify_failure`, `notify_missed`, and optionally `notify_recovery`. At startup, the extension is discovered, the provide file is imported, and the module is registered under the `notification-channel` capability. Any core code calling `get_all('notification-channel')` will receive this provider.
 
 ## Composition Between Extensions
 

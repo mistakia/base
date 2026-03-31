@@ -17,7 +17,6 @@
  */
 
 import '../polyfills/node25-slow-buffer.cjs'
-import { existsSync, readdirSync } from 'fs'
 import path from 'path'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
@@ -27,6 +26,11 @@ import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
+import {
+  discover_extensions,
+  get_extension_paths
+} from '#libs-server/extension/discover-extensions.mjs'
+import { load_extension_providers } from '#libs-server/extension/load-extension-providers.mjs'
 
 import * as entity_command from './base/entity.mjs'
 import * as relation_command from './base/relation.mjs'
@@ -52,23 +56,29 @@ import * as crontab_command from './base/crontab.mjs'
 import * as stats_command from './base/stats.mjs'
 import * as init_command from './initial-setup.mjs'
 
-const load_extension_commands = async (parser) => {
+const load_extensions = async (parser) => {
   const config = (await import('#config')).default
-  if (!config.user_base_directory) return
+  const extension_paths = get_extension_paths(config)
+  if (extension_paths.length === 0) return
 
-  const dir = path.join(config.user_base_directory, 'extension')
-  if (!existsSync(dir)) return
+  const extensions = discover_extensions(extension_paths)
 
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    const command_path = path.join(dir, entry.name, 'command.mjs')
-    if (!existsSync(command_path)) continue
+  // Load capability providers before commands
+  try {
+    await load_extension_providers(extensions)
+  } catch (error) {
+    console.error(`Warning: Failed to load extension providers: ${error.message}`)
+  }
+
+  // Register extension CLI commands
+  for (const ext of extensions) {
+    if (!ext.has_commands) continue
     try {
-      const mod = await import(command_path)
+      const mod = await import(path.join(ext.extension_path, 'command.mjs'))
       parser.command(mod)
     } catch (error) {
       console.error(
-        `Warning: Failed to load extension "${entry.name}": ${error.message}`
+        `Warning: Failed to load extension "${ext.name}": ${error.message}`
       )
     }
   }
@@ -105,7 +115,7 @@ const main = async () => {
     .command(stats_command)
     .command(init_command)
 
-  await load_extension_commands(parser)
+  await load_extensions(parser)
 
   parser
     .option('json', {
