@@ -7,13 +7,21 @@ entity_id: 43a01a50-b718-4673-8631-efc9d1fb3643
 extends: entity
 properties:
   - name: requires
-    type: object
-    description: Required dependencies (libs, services)
+    type: array
+    description: >-
+      Capability names that must be provided by another installed extension.
+      Extension providers will not load if unmet.
     optional: true
+    items:
+      type: string
   - name: optional
-    type: object
-    description: Optional dependencies that enable additional features
+    type: array
+    description: >-
+      Capability names that enable additional features when available.
+      Extension loads normally without them.
     optional: true
+    items:
+      type: string
 public_read: false
 type_name: extension
 updated_at: '2026-02-24T01:51:01.996Z'
@@ -30,6 +38,7 @@ An extension directory contains:
 
 - **extension.md** (manifest): Entity frontmatter with metadata. Fields: name, description, requires, optional.
 - **command.mjs** (optional): Yargs command module exporting command, describe, builder, handler.
+- **provide/** (optional): Capability provider modules. Each `{capability-name}.mjs` file registers the extension as a provider for that capability.
 - **skill/** (optional): Directory of workflow-format markdown skills.
 - **SKILL.md** (optional): Single skill file following the consensus spec (agentskills.io).
 - **lib/** (optional): Supporting code importable by other extensions.
@@ -53,4 +62,4 @@ Extension code imports libs-server modules via package aliases (#libs-server, #c
 
 ## Graceful Degradation
 
-Optional infrastructure dependencies (e.g., Ollama) are declared in extension.md optional.services for documentation. At runtime, use dynamic import() with try/catch for graceful fallback when services are unavailable.
+Optional capabilities are declared as flat arrays in the `optional` field. At runtime, use dynamic import() with try/catch or check the capability registry for graceful fallback when dependencies are unavailable.

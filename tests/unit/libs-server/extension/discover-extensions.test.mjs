@@ -33,7 +33,7 @@ describe('discover_extensions', () => {
     fs.mkdirSync(ext_dir)
     fs.writeFileSync(
       path.join(ext_dir, 'extension.md'),
-      '---\nname: test-ext\ndescription: A test extension\nrequires:\n  libs: [entity]\n---\n# Test Extension\n'
+      '---\nname: test-ext\ndescription: A test extension\nrequires:\n  - queue\n---\n# Test Extension\n'
     )
     fs.writeFileSync(
       path.join(ext_dir, 'command.mjs'),
@@ -46,7 +46,8 @@ describe('discover_extensions', () => {
     expect(result[0].description).to.equal('A test extension')
     expect(result[0].has_commands).to.be.true
     expect(result[0].has_skills).to.be.false
-    expect(result[0].requires).to.deep.equal({ libs: ['entity'] })
+    expect(result[0].requires).to.deep.equal(['queue'])
+    expect(result[0].provided_capabilities).to.deep.equal([])
   })
 
   it('should discover skills-only extension without command.mjs', () => {
@@ -162,5 +163,83 @@ describe('discover_extensions', () => {
   it('should handle null and empty paths', () => {
     const result = discover_extensions([null, '', undefined])
     expect(result).to.deep.equal([])
+  })
+
+  it('should discover provided_capabilities from provide/ directory', () => {
+    const ext_dir = path.join(temp_dir, 'provider-ext')
+    fs.mkdirSync(ext_dir)
+    fs.mkdirSync(path.join(ext_dir, 'provide'))
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: provider-ext\n---\n'
+    )
+    fs.writeFileSync(
+      path.join(ext_dir, 'provide', 'notification-channel.mjs'),
+      'export function notify() {}\n'
+    )
+    fs.writeFileSync(
+      path.join(ext_dir, 'provide', 'queue.mjs'),
+      'export function enqueue() {}\n'
+    )
+
+    const result = discover_extensions([temp_dir])
+    expect(result).to.have.lengthOf(1)
+    expect(result[0].provided_capabilities).to.have.members([
+      'notification-channel',
+      'queue'
+    ])
+  })
+
+  it('should return empty provided_capabilities when no provide/ directory', () => {
+    const ext_dir = path.join(temp_dir, 'no-provide')
+    fs.mkdirSync(ext_dir)
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: no-provide\n---\n'
+    )
+    fs.writeFileSync(path.join(ext_dir, 'command.mjs'), '')
+
+    const result = discover_extensions([temp_dir])
+    expect(result).to.have.lengthOf(1)
+    expect(result[0].provided_capabilities).to.deep.equal([])
+  })
+
+  it('should ignore non-.mjs files in provide/ directory', () => {
+    const ext_dir = path.join(temp_dir, 'mixed-provide')
+    fs.mkdirSync(ext_dir)
+    fs.mkdirSync(path.join(ext_dir, 'provide'))
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: mixed-provide\n---\n'
+    )
+    fs.writeFileSync(
+      path.join(ext_dir, 'provide', 'valid-cap.mjs'),
+      'export function run() {}\n'
+    )
+    fs.writeFileSync(
+      path.join(ext_dir, 'provide', 'README.md'),
+      '# Docs\n'
+    )
+    fs.writeFileSync(
+      path.join(ext_dir, 'provide', 'notes.txt'),
+      'notes\n'
+    )
+
+    const result = discover_extensions([temp_dir])
+    expect(result[0].provided_capabilities).to.deep.equal(['valid-cap'])
+  })
+
+  it('should default requires and optional to empty arrays', () => {
+    const ext_dir = path.join(temp_dir, 'defaults')
+    fs.mkdirSync(ext_dir)
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: defaults\n---\n'
+    )
+    fs.writeFileSync(path.join(ext_dir, 'command.mjs'), '')
+
+    const result = discover_extensions([temp_dir])
+    expect(result[0].requires).to.deep.equal([])
+    expect(result[0].optional).to.deep.equal([])
   })
 })

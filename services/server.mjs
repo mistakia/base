@@ -55,6 +55,11 @@ import {
   handle_embedding_file_delete
 } from '#libs-server/search/embedding-pipeline.mjs'
 import { broadcast_authenticated } from '#server/websocket.mjs'
+import {
+  discover_extensions,
+  get_extension_paths
+} from '#libs-server/extension/discover-extensions.mjs'
+import { load_extension_providers } from '#libs-server/extension/load-extension-providers.mjs'
 
 // Debounce file path cache invalidation so rapid file changes
 // (git operations, builds) consolidate into a single invalidation
@@ -151,6 +156,16 @@ try {
 } catch (error) {
   logger(`Failed to pre-warm git status cache: ${error.message}`)
   logger(error)
+}
+
+// Discover extensions and load capability providers before accepting connections.
+// Server routes that consume capabilities import from the registry.
+try {
+  const extensions = discover_extensions(get_extension_paths(config))
+  await load_extension_providers(extensions)
+  logger(`Extension providers loaded (${extensions.length} extensions discovered)`)
+} catch (error) {
+  logger(`Failed to load extension providers: ${error.message}`)
 }
 
 try {

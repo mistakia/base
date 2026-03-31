@@ -4,10 +4,11 @@
  * List registered extensions and their metadata.
  */
 
-import path from 'path'
-
 import config from '#config'
-import { discover_extensions } from '#libs-server/extension/discover-extensions.mjs'
+import {
+  discover_extensions,
+  get_extension_paths
+} from '#libs-server/extension/discover-extensions.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'extension <command>'
@@ -20,23 +21,12 @@ export const builder = (yargs) =>
 
 export const handler = () => {}
 
-function get_extension_paths() {
-  const paths = []
-  if (config.user_base_directory) {
-    paths.push(path.join(config.user_base_directory, 'extension'))
-  }
-  if (config.system_base_directory) {
-    paths.push(path.join(config.system_base_directory, 'system', 'extension'))
-  }
-  return paths
-}
-
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const extensions = discover_extensions(get_extension_paths())
+    const extensions = discover_extensions(get_extension_paths(config))
 
-    if (!extensions || extensions.length === 0) {
+    if (extensions.length === 0) {
       if (argv.json) {
         console.log('[]')
       } else {
@@ -46,13 +36,22 @@ async function handle_list(argv) {
       console.log(JSON.stringify(extensions, null, 2))
     } else {
       for (const ext of extensions) {
-        const flags = [
-          ext.has_commands ? 'commands' : null,
-          ext.has_skills ? 'skills' : null
-        ]
-          .filter(Boolean)
-          .join(', ')
-        console.log(`${ext.name}\t${flags || '-'}\t${ext.description || ''}`)
+        console.log(`  ${ext.name.padEnd(18)} ${ext.description || ''}`)
+        if (ext.has_commands) {
+          console.log(`    commands: yes`)
+        }
+        if (ext.has_skills) {
+          console.log(`    skills: yes`)
+        }
+        if (
+          ext.provided_capabilities &&
+          ext.provided_capabilities.length > 0
+        ) {
+          console.log(
+            `    provides: ${ext.provided_capabilities.join(', ')}`
+          )
+        }
+        console.log()
       }
     }
   } catch (error) {
