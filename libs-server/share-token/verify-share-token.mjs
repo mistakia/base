@@ -36,8 +36,12 @@ export function parse_share_token(token) {
       return { valid: false, reason: 'unsupported_version' }
     }
 
-    const entity_id = bytes_to_uuid(buf.subarray(OFFSET_ENTITY_ID, OFFSET_ENTITY_ID + 16))
-    const issuer_public_key = buf.subarray(OFFSET_PUBLIC_KEY, OFFSET_PUBLIC_KEY + 32).toString('hex')
+    const entity_id = bytes_to_uuid(
+      buf.subarray(OFFSET_ENTITY_ID, OFFSET_ENTITY_ID + 16)
+    )
+    const issuer_public_key = buf
+      .subarray(OFFSET_PUBLIC_KEY, OFFSET_PUBLIC_KEY + 32)
+      .toString('hex')
     const expires_at = buf.readUInt32BE(OFFSET_EXPIRATION)
 
     return { valid: true, buf, entity_id, issuer_public_key, expires_at }
@@ -56,7 +60,12 @@ export function parse_share_token(token) {
  * @param {Object|null} params.resource_metadata - Optional pre-loaded resource metadata to avoid re-reading
  * @returns {Promise<{ valid: boolean, entity_id?: string, issuer_public_key?: string, expires_at?: number, reason?: string }>}
  */
-export async function verify_share_token({ token, resource_entity_id, resource_path, resource_metadata = null }) {
+export async function verify_share_token({
+  token,
+  resource_entity_id,
+  resource_path,
+  resource_metadata = null
+}) {
   const parsed = parse_share_token(token)
   if (!parsed.valid) {
     log('Token parse failed: %s', parsed.reason)
@@ -68,7 +77,13 @@ export async function verify_share_token({ token, resource_entity_id, resource_p
   // Check expiration
   if (expires_at > 0 && Math.floor(Date.now() / 1000) > expires_at) {
     log('Token expired for entity %s', entity_id)
-    return { valid: false, entity_id, issuer_public_key, expires_at, reason: 'expired' }
+    return {
+      valid: false,
+      entity_id,
+      issuer_public_key,
+      expires_at,
+      reason: 'expired'
+    }
   }
 
   // Verify signature
@@ -81,26 +96,50 @@ export async function verify_share_token({ token, resource_entity_id, resource_p
 
   if (!signature_valid) {
     log('Invalid signature for entity %s', entity_id)
-    return { valid: false, entity_id, issuer_public_key, expires_at, reason: 'invalid_signature' }
+    return {
+      valid: false,
+      entity_id,
+      issuer_public_key,
+      expires_at,
+      reason: 'invalid_signature'
+    }
   }
 
   // Check entity_id matches the requested resource
   if (entity_id !== resource_entity_id) {
     log('Entity mismatch: token=%s, resource=%s', entity_id, resource_entity_id)
-    return { valid: false, entity_id, issuer_public_key, expires_at, reason: 'entity_mismatch' }
+    return {
+      valid: false,
+      entity_id,
+      issuer_public_key,
+      expires_at,
+      reason: 'entity_mismatch'
+    }
   }
 
   // Check issuer still has read access to the resource
   // Intentionally omit share_token to prevent recursive verification
-  const issuer_context = new PermissionContext({ user_public_key: issuer_public_key })
+  const issuer_context = new PermissionContext({
+    user_public_key: issuer_public_key
+  })
   const issuer_permission = await issuer_context.check_permission({
     resource_path,
     metadata: resource_metadata
   })
 
   if (!issuer_permission.read.allowed) {
-    log('Issuer %s no longer has read access to entity %s', issuer_public_key, entity_id)
-    return { valid: false, entity_id, issuer_public_key, expires_at, reason: 'issuer_access_revoked' }
+    log(
+      'Issuer %s no longer has read access to entity %s',
+      issuer_public_key,
+      entity_id
+    )
+    return {
+      valid: false,
+      entity_id,
+      issuer_public_key,
+      expires_at,
+      reason: 'issuer_access_revoked'
+    }
   }
 
   log('Token verified for entity %s (issuer=%s)', entity_id, issuer_public_key)

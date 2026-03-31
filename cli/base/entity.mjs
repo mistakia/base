@@ -1652,8 +1652,7 @@ async function handle_share(argv) {
   let exit_code = 0
   try {
     const { base_uri } = argv
-    const private_key_hex =
-      argv['private-key'] || process.env.USER_PRIVATE_KEY
+    const private_key_hex = argv['private-key'] || process.env.USER_PRIVATE_KEY
 
     if (!private_key_hex) {
       console.error(

@@ -135,7 +135,11 @@ export class PermissionContext {
    * @param {string|null} params.share_token - Optional share token from query parameter
    * @returns {Promise<{allowed: boolean, reason: string}>} Permission result
    */
-  async _check_read_permission({ resource_path, metadata = null, share_token = null }) {
+  async _check_read_permission({
+    resource_path,
+    metadata = null,
+    share_token = null
+  }) {
     // Load metadata if not provided
     const resource_metadata =
       metadata || (await this.get_resource_metadata(resource_path))
@@ -321,7 +325,11 @@ export class PermissionContext {
    * @param {string|null} params.share_token - Optional share token from query parameter
    * @returns {Promise<{read: {allowed: boolean, reason: string}, write: {allowed: boolean, reason: string}}>}
    */
-  async check_permission({ resource_path, metadata = null, share_token = null }) {
+  async check_permission({
+    resource_path,
+    metadata = null,
+    share_token = null
+  }) {
     log(
       `Checking permission for user: ${this.user_public_key || 'public'}, resource: ${resource_path}`
     )

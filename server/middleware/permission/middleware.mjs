@@ -61,7 +61,10 @@ export const check_thread_permission_middleware = () => {
       const context = get_permission_context(req)
       const resource_path = map_thread_id_to_base_uri(thread_id)
       const share_token = req.query.share_token || null
-      const result = await context.check_permission({ resource_path, share_token })
+      const result = await context.check_permission({
+        resource_path,
+        share_token
+      })
 
       // Defensive check for result structure
       const read_allowed = result?.read?.allowed ?? false
@@ -108,7 +111,10 @@ export const check_filesystem_permission = () => {
 
       const context = get_permission_context(req)
       const share_token = req.query.share_token || null
-      const result = await context.check_permission({ resource_path, share_token })
+      const result = await context.check_permission({
+        resource_path,
+        share_token
+      })
 
       // Defensive check for result structure
       const read_allowed = result?.read?.allowed ?? false

@@ -79,10 +79,7 @@ describe('Share Token Integration', () => {
         public_key: owner.user_public_key
       })
 
-      const res = await chai
-        .request(server)
-        .get(`/s/${token}`)
-        .redirects(0)
+      const res = await chai.request(server).get(`/s/${token}`).redirects(0)
 
       expect(res).to.have.status(302)
       expect(res.headers.location).to.include('/task/shared-task.md')
@@ -193,7 +190,9 @@ describe('Share Token Integration', () => {
 
       const parsed = parse_share_token(token)
       expect(parsed.valid).to.be.true
-      expect(parsed.issuer_public_key).to.equal(other_public_key.toString('hex'))
+      expect(parsed.issuer_public_key).to.equal(
+        other_public_key.toString('hex')
+      )
       expect(parsed.issuer_public_key).to.not.equal(owner.user_public_key)
     })
   })

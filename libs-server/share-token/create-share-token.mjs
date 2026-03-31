@@ -25,7 +25,12 @@ const log = debug('share-token:create')
  * @param {number} params.exp - Expiration as uint32 epoch seconds; 0 = no expiry
  * @returns {string} Base64url-encoded token
  */
-export function create_share_token({ entity_id, private_key, public_key, exp = 0 }) {
+export function create_share_token({
+  entity_id,
+  private_key,
+  public_key,
+  exp = 0
+}) {
   const entity_id_bytes = uuid_to_bytes(entity_id)
   const pk_bytes = to_buffer(public_key, 32, 'public_key')
   const sk_bytes = to_buffer(private_key, 32, 'private_key')
@@ -57,7 +62,9 @@ function uuid_to_bytes(uuid) {
 function to_buffer(value, expected_length, name) {
   const buf = Buffer.isBuffer(value) ? value : Buffer.from(value, 'hex')
   if (buf.length !== expected_length) {
-    throw new Error(`Invalid ${name}: expected ${expected_length} bytes, got ${buf.length}`)
+    throw new Error(
+      `Invalid ${name}: expected ${expected_length} bytes, got ${buf.length}`
+    )
   }
   return buf
 }

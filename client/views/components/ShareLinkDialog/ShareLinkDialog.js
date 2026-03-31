@@ -76,7 +76,13 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
     } catch (err) {
       set_error(err.message || 'Failed to generate share link')
     }
-  }, [entity_id, private_key_hex, public_key_hex, compute_exp, copy_to_clipboard])
+  }, [
+    entity_id,
+    private_key_hex,
+    public_key_hex,
+    compute_exp,
+    copy_to_clipboard
+  ])
 
   const handle_close = useCallback(() => {
     set_share_url(null)
@@ -120,7 +126,10 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <FormControl fullWidth size='small'>
               <InputLabel
-                sx={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px' }}>
+                sx={{
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: '13px'
+                }}>
                 Expiration
               </InputLabel>
               <Select
@@ -136,7 +145,10 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
                   <MenuItem
                     key={preset.value}
                     value={preset.value}
-                    sx={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px' }}>
+                    sx={{
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      fontSize: '13px'
+                    }}>
                     {preset.label}
                   </MenuItem>
                 ))}
@@ -177,7 +189,8 @@ const ShareLinkDialog = ({ open, on_close, entity_id, title }) => {
             )}
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+          <Box
+            sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
             <Box
               sx={{
                 display: 'flex',

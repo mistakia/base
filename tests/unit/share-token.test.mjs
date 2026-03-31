@@ -3,9 +3,7 @@ import crypto from 'crypto'
 import ed25519 from '@trashman/ed25519-blake2b'
 
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
-import {
-  parse_share_token
-} from '#libs-server/share-token/verify-share-token.mjs'
+import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'
 import {
   TOKEN_VERSION,
   PAYLOAD_LENGTH,
@@ -106,7 +104,11 @@ describe('Share Token', function () {
       const buf1 = Buffer.from(create_share_token(params), 'base64url')
       const buf2 = Buffer.from(create_share_token(params), 'base64url')
       // Payloads (first 53 bytes) should be identical
-      expect(buf1.subarray(0, PAYLOAD_LENGTH).equals(buf2.subarray(0, PAYLOAD_LENGTH))).to.be.true
+      expect(
+        buf1
+          .subarray(0, PAYLOAD_LENGTH)
+          .equals(buf2.subarray(0, PAYLOAD_LENGTH))
+      ).to.be.true
     })
 
     it('should accept Buffer keys', () => {
@@ -180,7 +182,7 @@ describe('Share Token', function () {
 
       // Modify version byte
       const buf = Buffer.from(token, 'base64url')
-      buf.writeUInt8(0xFF, 0)
+      buf.writeUInt8(0xff, 0)
       const modified = buf.toString('base64url')
 
       const parsed = parse_share_token(modified)

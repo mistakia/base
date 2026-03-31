@@ -114,7 +114,13 @@ function use_anchored_position(container_ref, is_open) {
   return { position, menu_ref, menu_node }
 }
 
-const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_key }) => {
+const CopyPageButton = ({
+  path,
+  content,
+  entity_id,
+  entity_title,
+  entity_owner_key
+}) => {
   const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const [is_menu_open, set_is_menu_open] = useState(false)
   const [is_share_dialog_open, set_is_share_dialog_open] = useState(false)
@@ -129,7 +135,8 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
   const app_state = useSelector(get_app)
   const user_public_key = app_state.get('user_public_key')
   const has_private_key = !!app_state.get('user_private_key')
-  const can_share = has_private_key && entity_id && user_public_key === entity_owner_key
+  const can_share =
+    has_private_key && entity_id && user_public_key === entity_owner_key
 
   const is_copied = copied_value === content
 
@@ -336,9 +343,7 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <Box sx={title_sx}>Share link</Box>
-                  <Box sx={subtitle_sx}>
-                    Generate a read-only share URL
-                  </Box>
+                  <Box sx={subtitle_sx}>Generate a read-only share URL</Box>
                 </Box>
               </ButtonBase>
             )}
@@ -349,77 +354,77 @@ const CopyPageButton = ({ path, content, entity_id, entity_title, entity_owner_k
 
   return (
     <>
-    <Box ref={container_ref} sx={{ display: 'inline-flex' }}>
-      <Box
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: '8px',
-          overflow: 'hidden'
-        }}>
-        <ButtonBase
-          onClick={handle_copy}
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.75,
-            pl: 1.5,
-            pr: 1,
-            py: 0.625,
-            fontSize: '0.8125rem',
-            transition: 'background-color 0.15s ease',
-            backgroundColor: 'transparent',
-            '&:hover': {
-              backgroundColor: 'action.hover'
-            }
-          }}>
-          {is_copied ? (
-            <CheckIcon sx={{ fontSize: 16, color: '#28a745' }} />
-          ) : (
-            <ContentCopyOutlinedIcon sx={{ fontSize: 16 }} />
-          )}
-          <span>{is_copied ? 'Copied' : 'Copy page'}</span>
-        </ButtonBase>
+      <Box ref={container_ref} sx={{ display: 'inline-flex' }}>
         <Box
           sx={{
-            width: '1px',
-            height: 20,
-            backgroundColor: COLORS.border,
-            flexShrink: 0
-          }}
-        />
-        <ButtonBase
-          onClick={handle_toggle_menu}
-          sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            px: 0.5,
-            py: 0.625,
-            transition: 'background-color 0.15s ease',
-            backgroundColor: is_menu_open ? 'action.selected' : 'transparent',
-            '&:hover': {
-              backgroundColor: 'action.hover'
-            }
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: '8px',
+            overflow: 'hidden'
           }}>
-          {is_menu_open ? (
-            <KeyboardArrowUpIcon sx={{ fontSize: 18 }} />
-          ) : (
-            <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
-          )}
-        </ButtonBase>
+          <ButtonBase
+            onClick={handle_copy}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.75,
+              pl: 1.5,
+              pr: 1,
+              py: 0.625,
+              fontSize: '0.8125rem',
+              transition: 'background-color 0.15s ease',
+              backgroundColor: 'transparent',
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}>
+            {is_copied ? (
+              <CheckIcon sx={{ fontSize: 16, color: '#28a745' }} />
+            ) : (
+              <ContentCopyOutlinedIcon sx={{ fontSize: 16 }} />
+            )}
+            <span>{is_copied ? 'Copied' : 'Copy page'}</span>
+          </ButtonBase>
+          <Box
+            sx={{
+              width: '1px',
+              height: 20,
+              backgroundColor: COLORS.border,
+              flexShrink: 0
+            }}
+          />
+          <ButtonBase
+            onClick={handle_toggle_menu}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: 0.5,
+              py: 0.625,
+              transition: 'background-color 0.15s ease',
+              backgroundColor: is_menu_open ? 'action.selected' : 'transparent',
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}>
+            {is_menu_open ? (
+              <KeyboardArrowUpIcon sx={{ fontSize: 18 }} />
+            ) : (
+              <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+            )}
+          </ButtonBase>
+        </Box>
+        {dropdown_menu}
       </Box>
-      {dropdown_menu}
-    </Box>
-    {can_share && (
-      <ShareLinkDialog
-        open={is_share_dialog_open}
-        on_close={() => set_is_share_dialog_open(false)}
-        entity_id={entity_id}
-        title={entity_title}
-      />
-    )}
+      {can_share && (
+        <ShareLinkDialog
+          open={is_share_dialog_open}
+          on_close={() => set_is_share_dialog_open(false)}
+          entity_id={entity_id}
+          title={entity_title}
+        />
+      )}
     </>
   )
 }
