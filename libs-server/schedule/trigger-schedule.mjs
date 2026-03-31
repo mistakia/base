@@ -1,5 +1,4 @@
 import debug from 'debug'
-import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
 import { parse_schedule } from './parse-schedule.mjs'
 import { write_schedule_trigger } from './schedule-state.mjs'
 
@@ -11,16 +10,17 @@ const log = debug('schedule:trigger')
  * @param {Object} params
  * @param {Object} params.schedule - Schedule entity properties
  * @param {string} params.directory - Root scheduled-command directory (for state file)
+ * @param {Function} params.add_job - Async function to enqueue a CLI job (e.g., add_cli_job)
  * @returns {Promise<Object>} Result with job info and trigger timestamps
  */
-export const trigger_schedule = async ({ schedule, directory }) => {
+export const trigger_schedule = async ({ schedule, directory, add_job }) => {
   const now = new Date().toISOString()
 
   log(`Triggering schedule: ${schedule.title || schedule.command}`)
 
   try {
     // Enqueue command to CLI queue
-    const job = await add_cli_job({
+    const job = await add_job({
       command: schedule.command,
       tags: schedule.queue_tags || [],
       priority: schedule.queue_priority || 10,

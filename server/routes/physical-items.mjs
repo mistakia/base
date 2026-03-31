@@ -1,5 +1,5 @@
 import express from 'express'
-import { process_physical_item_table_request } from '#libs-server/physical-items/process-physical-item-table-request.mjs'
+import { process_physical_item_table_request } from '#server/lib/physical-items/process-physical-item-table-request.mjs'
 
 const router = express.Router({ mergeParams: true })
 

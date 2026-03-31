@@ -7,8 +7,6 @@ import debug from 'debug'
 // See: task/base/reduce-inotify-watch-count.md
 import chokidar from 'chokidar'
 
-import { get_known_repositories } from '#server/routes/git.mjs'
-
 const log = debug('file-subscriptions:git-status-watcher')
 
 const DEBOUNCE_MS = 1000
@@ -76,28 +74,17 @@ async function get_git_dir_for_repo(repo_path) {
  * @param {Object} params
  * @param {Function} params.on_git_status_change - Callback invoked with { repo_path } on debounced change
  * @param {Function} [params.on_repo_list_change] - Callback invoked when .gitmodules or worktrees change
- * @param {string[]} [params.repo_paths] - Repository paths to watch (discovered automatically if not provided)
+ * @param {string[]} params.repo_paths - Repository paths to watch
  * @returns {Promise<Object|null>} Chokidar watcher instance or null if initialization fails
  */
 export async function start_git_status_watcher({
   on_git_status_change,
   on_repo_list_change,
-  repo_paths: provided_repo_paths
+  repo_paths
 }) {
   if (watcher) {
     log('Git status watcher already running')
     return watcher
-  }
-
-  let repo_paths = provided_repo_paths
-  if (!repo_paths) {
-    try {
-      const result = await get_known_repositories()
-      repo_paths = result.repo_paths
-    } catch (error) {
-      log('Failed to discover repositories: %s', error.message)
-      return null
-    }
   }
 
   if (!repo_paths?.length) {

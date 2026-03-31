@@ -9,10 +9,6 @@
 import { execFile } from 'child_process'
 import debug from 'debug'
 
-import {
-  detect_container_sessions,
-  get_container_session_status
-} from '#libs-server/docker/container-sessions.mjs'
 import { DOCKER_CONTAINER_NAME } from '#libs-server/docker/execution-mode.mjs'
 
 const log = debug('docker:safe-stop')
@@ -52,7 +48,8 @@ const stop_container = (container_name) => {
 const wait_for_sessions_to_clear = async (
   container_name,
   wait_timeout_ms,
-  poll_interval_ms
+  poll_interval_ms,
+  detect_sessions
 ) => {
   const start = Date.now()
   log(
@@ -62,7 +59,7 @@ const wait_for_sessions_to_clear = async (
   while (Date.now() - start < wait_timeout_ms) {
     await new Promise((resolve) => setTimeout(resolve, poll_interval_ms))
 
-    const result = await detect_container_sessions(container_name)
+    const result = await detect_sessions(container_name)
     if (result.active_sessions === 0) {
       log('All sessions cleared')
       return true
@@ -88,6 +85,8 @@ const wait_for_sessions_to_clear = async (
  * @param {boolean} [params.wait=false] - Wait for sessions to clear before stopping
  * @param {number} [params.wait_timeout_ms=300000] - Max wait time (5 min default)
  * @param {number} [params.poll_interval_ms=10000] - Poll interval (10s default)
+ * @param {Function} params.detect_sessions - Async function to detect container sessions
+ * @param {Function} params.get_session_status - Async function to get session status
  * @returns {Promise<Object>} Result object with stop outcome details
  */
 export const safe_container_stop = async ({
@@ -95,13 +94,15 @@ export const safe_container_stop = async ({
   force = false,
   wait = false,
   wait_timeout_ms = DEFAULT_WAIT_TIMEOUT_MS,
-  poll_interval_ms = DEFAULT_POLL_INTERVAL_MS
+  poll_interval_ms = DEFAULT_POLL_INTERVAL_MS,
+  detect_sessions,
+  get_session_status
 } = {}) => {
   log(
     `Safe stop requested for ${container_name} (force: ${force}, wait: ${wait})`
   )
 
-  const session_status = await get_container_session_status(container_name)
+  const session_status = await get_session_status(container_name)
 
   if (!session_status.has_active_sessions) {
     log('No active sessions, proceeding with stop')
@@ -132,7 +133,8 @@ export const safe_container_stop = async ({
     const cleared = await wait_for_sessions_to_clear(
       container_name,
       wait_timeout_ms,
-      poll_interval_ms
+      poll_interval_ms,
+      detect_sessions
     )
 
     if (cleared) {

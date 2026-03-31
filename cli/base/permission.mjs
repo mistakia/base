@@ -6,7 +6,7 @@
 
 import { load_identity_by_username } from '#libs-server/users/identity-loader.mjs'
 import { resolve_user_rules } from '#libs-server/users/permission-resolver.mjs'
-import { evaluate_permission_rules } from '#server/middleware/rule-engine.mjs'
+import { evaluate_permission_rules } from '#libs-server/permission/rule-engine.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'permission <command>'

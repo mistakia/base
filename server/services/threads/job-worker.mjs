@@ -6,24 +6,27 @@ import config from '#config'
 import {
   get_redis_connection,
   close_redis_connection
-} from '#libs-server/redis/get-connection.mjs'
-import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
+} from '../redis/get-connection.mjs'
+import { add_cli_job } from '../cli-queue/queue.mjs'
 import {
   emit_thread_job_failed,
   emit_thread_job_started
-} from '#libs-server/active-sessions/index.mjs'
+} from '../active-sessions/session-event-emitter.mjs'
 import {
   create_session_claude_cli,
   get_container_claude_home,
   derive_projects_dir_name
-} from './create-session-claude-cli.mjs'
+} from '#libs-server/threads/create-session-claude-cli.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 import {
   select_account,
   handle_rate_limit_failure
 } from '#libs-server/integrations/claude/account-rotation/index.mjs'
-import { check_account_usage } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
+import {
+  check_account_usage,
+  configure_redis as configure_usage_redis
+} from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 
 const glob = promisify(glob_pkg)
 const log = debug('threads:worker')
@@ -474,6 +477,7 @@ export const start_worker = () => {
     return thread_worker
   }
 
+  configure_usage_redis(get_redis_connection)
   const connection = get_redis_connection()
   const concurrency =
     config.threads?.queue?.max_concurrent_jobs || DEFAULT_CONCURRENCY

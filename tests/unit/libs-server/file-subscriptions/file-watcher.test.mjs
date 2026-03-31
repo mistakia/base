@@ -5,7 +5,7 @@ import { expect } from 'chai'
 import {
   start_file_subscription_watcher,
   stop_file_subscription_watcher
-} from '#libs-server/file-subscriptions/file-watcher.mjs'
+} from '#server/services/file-subscriptions/file-watcher.mjs'
 
 describe('file-watcher', () => {
   describe('start_file_subscription_watcher', () => {

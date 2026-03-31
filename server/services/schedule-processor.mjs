@@ -5,6 +5,7 @@ import config from '#config'
 
 import { load_due_schedules } from '#libs-server/schedule/load-schedules.mjs'
 import { trigger_schedule } from '#libs-server/schedule/trigger-schedule.mjs'
+import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 
 const log = debug('schedule:processor')
 
@@ -47,7 +48,8 @@ const process_due_schedules = async () => {
       try {
         const result = await trigger_schedule({
           schedule,
-          directory
+          directory,
+          add_job: add_cli_job
         })
 
         results.processed++

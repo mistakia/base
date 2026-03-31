@@ -14,7 +14,10 @@ import { trigger_schedule } from '#libs-server/schedule/trigger-schedule.mjs'
 import { parse_schedule } from '#libs-server/schedule/parse-schedule.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { close_cli_queue } from '#libs-server/cli-queue/index.mjs'
+import {
+  add_cli_job,
+  close_cli_queue
+} from '#server/services/cli-queue/queue.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'schedule <command>'
@@ -430,7 +433,8 @@ async function handle_trigger(argv) {
 
     const trigger_result = await trigger_schedule({
       schedule: result.entity_properties,
-      directory
+      directory,
+      add_job: add_cli_job
     })
 
     if (argv.json) {

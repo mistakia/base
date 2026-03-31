@@ -2,13 +2,33 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import debug from 'debug'
 import config from '#config'
-import { get_redis_connection } from '#libs-server/redis/get-connection.mjs'
 
 const exec_file = promisify(execFile)
 const log = debug('claude:usage')
 
 const REDIS_KEY_PREFIX = 'claude:usage:'
 const REDIS_EXHAUSTED_PREFIX = 'claude:exhausted:'
+
+let _get_redis_connection = null
+
+/**
+ * Configure the Redis connection provider. Must be called before any
+ * cache or exhaustion functions are used.
+ *
+ * @param {Function} get_redis - Function that returns a Redis connection
+ */
+export function configure_redis(get_redis) {
+  _get_redis_connection = get_redis
+}
+
+function get_redis() {
+  if (!_get_redis_connection) {
+    throw new Error(
+      'Redis not configured for check-usage -- call configure_redis first'
+    )
+  }
+  return _get_redis_connection()
+}
 
 // CloakBrowser venv paths by platform
 const CLOAKBROWSER_PATHS = {
@@ -26,7 +46,7 @@ const CLOAKBROWSER_SCRIPT = `${config.user_base_directory || process.env.USER_BA
  */
 export const get_cached_usage = async (namespace) => {
   try {
-    const redis = get_redis_connection()
+    const redis = get_redis()
     const data = await redis.get(`${REDIS_KEY_PREFIX}${namespace}`)
     if (data) {
       return JSON.parse(data)
@@ -46,7 +66,7 @@ export const get_cached_usage = async (namespace) => {
  */
 export const set_cached_usage = async (namespace, data, ttl_seconds) => {
   try {
-    const redis = get_redis_connection()
+    const redis = get_redis()
     await redis.set(
       `${REDIS_KEY_PREFIX}${namespace}`,
       JSON.stringify(data),
@@ -66,7 +86,7 @@ export const set_cached_usage = async (namespace, data, ttl_seconds) => {
  */
 export const mark_account_exhausted = async (namespace, resets_at = null) => {
   try {
-    const redis = get_redis_connection()
+    const redis = get_redis()
     const key = `${REDIS_EXHAUSTED_PREFIX}${namespace}`
 
     let ttl_seconds = 3600 // Default 1 hour if no resets_at
@@ -92,7 +112,7 @@ export const mark_account_exhausted = async (namespace, resets_at = null) => {
  */
 export const is_account_exhausted = async (namespace) => {
   try {
-    const redis = get_redis_connection()
+    const redis = get_redis()
     const result = await redis.get(`${REDIS_EXHAUSTED_PREFIX}${namespace}`)
     return result !== null
   } catch (error) {
@@ -108,7 +128,7 @@ export const is_account_exhausted = async (namespace) => {
  */
 export const clear_account_exhausted = async (namespace) => {
   try {
-    const redis = get_redis_connection()
+    const redis = get_redis()
     await redis.del(`${REDIS_EXHAUSTED_PREFIX}${namespace}`)
     log('Cleared exhausted marker for %s', namespace)
   } catch (error) {

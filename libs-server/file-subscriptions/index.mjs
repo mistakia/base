@@ -1,8 +1,8 @@
 /**
  * File Subscriptions
  *
- * Public API for the file subscription system.
- * Provides WebSocket-based file change notifications with subscription-based targeting.
+ * Subscription management for the file subscription system.
+ * WebSocket-based file change notifications are in server/services/file-subscriptions/.
  */
 
 export {
@@ -12,10 +12,3 @@ export {
   remove_connection,
   get_subscriptions
 } from './subscription-manager.mjs'
-
-export {
-  start_file_subscription_watcher,
-  stop_file_subscription_watcher,
-  emit_file_changed,
-  emit_file_deleted
-} from './file-watcher.mjs'

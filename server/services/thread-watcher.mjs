@@ -5,7 +5,7 @@ import {
   emit_thread_created,
   emit_thread_updated,
   emit_thread_timeline_entry_added
-} from '#libs-server/threads/event-emitter.mjs'
+} from './threads/event-emitter.mjs'
 import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'

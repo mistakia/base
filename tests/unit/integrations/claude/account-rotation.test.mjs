@@ -6,14 +6,15 @@ import {
   set_cached_usage,
   mark_account_exhausted,
   is_account_exhausted,
-  clear_account_exhausted
+  clear_account_exhausted,
+  configure_redis
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 import {
   select_account,
   AllAccountsExhaustedError
 } from '#libs-server/integrations/claude/account-rotation/select-account.mjs'
 import config from '#config'
-import { get_redis_connection } from '#libs-server/redis/get-connection.mjs'
+import { get_redis_connection } from '#server/services/redis/get-connection.mjs'
 
 const TEST_NAMESPACE = 'test-account'
 
@@ -25,6 +26,7 @@ describe('Claude Account Rotation', function () {
 
   before(function () {
     try {
+      configure_redis(get_redis_connection)
       redis = get_redis_connection()
     } catch {
       skip = true

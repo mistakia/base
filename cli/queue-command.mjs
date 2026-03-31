@@ -14,7 +14,7 @@ import {
   get_job_status,
   get_queue_stats,
   close_cli_queue
-} from '#libs-server/cli-queue/index.mjs'
+} from '#server/services/cli-queue/queue.mjs'
 
 const VALID_EXECUTION_MODES = ['host', 'container']
 

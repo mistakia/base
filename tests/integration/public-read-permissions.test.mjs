@@ -5,7 +5,7 @@ import path from 'path'
 import { setup_test_directories } from '#tests/utils/index.mjs'
 import { check_user_permission } from '#server/middleware/permission/index.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { process_thread_with_permissions } from '#libs-server/threads/thread-utils.mjs'
+import { process_thread_with_permissions } from '#server/lib/threads/process-thread-with-permissions.mjs'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 
 const expect = chai.expect

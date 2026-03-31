@@ -12,8 +12,8 @@ import {
   write_task_to_filesystem
 } from '#libs-server/task/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
-import { process_task_table_request } from '#libs-server/tasks/process-task-table-request.mjs'
-import { apply_tag_redaction_to_tasks } from '#libs-server/tasks/tag-visibility.mjs'
+import { process_task_table_request } from '#server/lib/tasks/process-task-table-request.mjs'
+import { apply_tag_redaction_to_tasks } from '#server/lib/tasks/tag-visibility.mjs'
 import {
   check_user_permission_for_file,
   check_permission,

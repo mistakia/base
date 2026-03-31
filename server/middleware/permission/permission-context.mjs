@@ -1,15 +1,36 @@
 import debug from 'debug'
 
 import user_registry from '#libs-server/users/user-registry.mjs'
-import { evaluate_permission_rules } from '#server/middleware/rule-engine.mjs'
-import { verify_share_token } from '#libs-server/share-token/verify-share-token.mjs'
+import { evaluate_permission_rules } from '#libs-server/permission/rule-engine.mjs'
+import { verify_share_token } from '#server/middleware/verify-share-token.mjs'
 import { load_resource_metadata } from './resource-metadata.mjs'
 import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
+import { validate_thread_ownership } from './permission-service.mjs'
 
 const log = debug('permission:context')
 
 // Maximum size for resource metadata cache to prevent unbounded memory growth
 const RESOURCE_CACHE_MAX_SIZE = 500
+
+/**
+ * Check resource ownership by parsing the resource path and delegating to
+ * type-specific ownership validators.
+ */
+const check_ownership = async ({ resource_path, user_public_key }) => {
+  if (!resource_path || !user_public_key) return false
+
+  const path_parts = resource_path.split(':')
+  if (path_parts.length !== 2) return false
+
+  const [prefix, resource] = path_parts
+
+  if (prefix === 'user' && resource.startsWith('thread/')) {
+    const thread_id = resource.replace('thread/', '')
+    return validate_thread_ownership({ thread_id, user_public_key })
+  }
+
+  return false
+}
 
 /**
  * Request-scoped permission context for caching and unified permission checking
@@ -184,7 +205,8 @@ export class PermissionContext {
         const user_result = await evaluate_permission_rules({
           rules: user_rules,
           resource_path,
-          user_public_key: this.user_public_key
+          user_public_key: this.user_public_key,
+          check_ownership
         })
 
         if (user_result.matching_rule !== null) {
