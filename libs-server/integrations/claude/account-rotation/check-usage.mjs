@@ -234,8 +234,13 @@ export const check_account_usage = async ({
 
     const usage_data = JSON.parse(raw)
 
-    // Check for API error responses
-    if (usage_data.type === 'permission_error') {
+    // Check for API error responses (top-level or nested)
+    const error_type =
+      usage_data.type === 'error'
+        ? usage_data.error?.type || 'unknown_error'
+        : usage_data.type
+
+    if (error_type === 'permission_error') {
       log('Session expired for %s', namespace)
       return {
         available: false,
@@ -245,13 +250,23 @@ export const check_account_usage = async ({
       }
     }
 
-    if (usage_data.type === 'not_found_error') {
+    if (error_type === 'not_found_error') {
       log('Invalid org UUID for %s', namespace)
       return {
         available: false,
         utilization: null,
         cached: false,
         error: 'invalid_org_uuid'
+      }
+    }
+
+    if (error_type === 'unknown_error') {
+      log('Unknown API error for %s', namespace)
+      return {
+        available: false,
+        utilization: null,
+        cached: false,
+        error: 'unknown_api_error'
       }
     }
 
@@ -290,4 +305,24 @@ const is_usage_available = (usage_data, threshold) => {
   const five_hour = usage_data.five_hour?.utilization ?? 0
   const seven_day = usage_data.seven_day?.utilization ?? 0
   return five_hour < threshold && seven_day < threshold
+}
+
+const SEVEN_DAY_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Compute a time-aware score for account selection.
+ *
+ * Score represents the fraction of the 7-day window remaining (0.0 = about
+ * to reset, 1.0 = full window ahead). Lower scores should be used first
+ * so expiring capacity is consumed before it resets.
+ *
+ * @param {Object} usage_data - Usage API response (with seven_day.resets_at)
+ * @returns {number|null} Score between 0.0 and 1.0, or null if no seven_day data
+ */
+export const compute_account_score = (usage_data) => {
+  const resets_at = usage_data?.seven_day?.resets_at
+  if (!resets_at) return null
+
+  const time_remaining_ms = new Date(resets_at).getTime() - Date.now()
+  return Math.max(0, Math.min(1, time_remaining_ms / SEVEN_DAY_MS))
 }
