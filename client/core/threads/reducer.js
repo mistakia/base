@@ -494,7 +494,26 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const thread_data = payload.data
       const thread_id = thread_data?.thread_id
       if (!thread_id) return state
-      return update_thread_in_basic_list(state, thread_id, thread_data)
+
+      let new_state = update_thread_in_basic_list(state, thread_id, thread_data)
+
+      // Update selected thread data so the detail page reflects the new state
+      new_state = update_selected_thread_if_matches(
+        new_state,
+        thread_id,
+        (current_data) =>
+          current_data ? current_data.merge(thread_data) : current_data
+      )
+
+      // Update thread in all table views
+      const updated_thread = Map(thread_data)
+      new_state = update_thread_in_all_views(
+        new_state,
+        thread_id,
+        () => updated_thread
+      )
+
+      return new_state
     }
 
     // ========================================================================
