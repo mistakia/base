@@ -191,6 +191,10 @@ Debug output can be enabled with:
 DEBUG='module:*' yarn test:unit
 ```
 
+## Testing Philosophy
+
+See [[sys:system/guideline/testing-philosophy.md]] for the full testing philosophy covering real behavior over mocks, infrastructure detection, conditional skipping, pending test hygiene, and parameter injection for testability.
+
 ## Conventions
 
 1. **One describe block per module** - Group related tests under a single top-level `describe`

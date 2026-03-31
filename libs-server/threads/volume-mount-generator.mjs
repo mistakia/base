@@ -40,7 +40,8 @@ export const generate_volume_mounts = async ({
   thread_config,
   user_base_directory,
   user_data_directory,
-  container_user_base_path
+  container_user_base_path,
+  accounts_config = config.claude_accounts
 }) => {
   if (!container_user_base_path) {
     throw new Error(
@@ -52,7 +53,6 @@ export const generate_volume_mounts = async ({
   const user_dir = join(user_data_directory, username)
 
   // Mount credential directories for account rotation
-  const accounts_config = config.claude_accounts
   if (accounts_config?.enabled && accounts_config.accounts?.length > 0) {
     for (const account of accounts_config.accounts) {
       const container_dir = account.container_config_dir?.replace(/\/$/, '')

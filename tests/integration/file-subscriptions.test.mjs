@@ -10,7 +10,9 @@ import {
   get_file_subscribers,
   remove_connection,
   emit_file_changed,
-  emit_file_deleted
+  emit_file_deleted,
+  start_file_subscription_watcher,
+  stop_file_subscription_watcher
 } from '#libs-server/file-subscriptions/index.mjs'
 import {
   reset_all_tables,
@@ -75,6 +77,8 @@ Test content
       system_base_directory: test_repo.system_path,
       user_base_directory: test_repo.user_path
     })
+
+    start_file_subscription_watcher()
   })
 
   after(async () => {
@@ -86,6 +90,7 @@ Test content
       test_repo.cleanup()
     }
 
+    stop_file_subscription_watcher()
     await reset_all_tables()
   })
 

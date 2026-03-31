@@ -34,5 +34,22 @@
   "embedded_database_index": {
     "enabled": true,
     "file_watcher_enabled": false
+  },
+  "claude_accounts": {
+    "enabled": true,
+    "accounts": [
+      {
+        "namespace": "test-primary",
+        "priority": 1,
+        "config_dir": "~/.claude-test-primary/",
+        "container_config_dir": "/home/node/.claude-test-primary/"
+      },
+      {
+        "namespace": "test-secondary",
+        "priority": 2,
+        "config_dir": "~/.claude-test-secondary/",
+        "container_config_dir": "/home/node/.claude-test-secondary/"
+      }
+    ]
   }
 }

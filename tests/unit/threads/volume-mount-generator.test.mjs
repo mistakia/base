@@ -51,7 +51,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       // Should include claude-home mount + 2 config mounts
@@ -74,7 +75,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       expect(mounts).to.have.lengthOf(1)
@@ -98,7 +100,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       // Only claude-home + task should be mounted; config, identity, role rejected
@@ -125,7 +128,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       // Only claude-home mount; config/secrets should be rejected
@@ -146,7 +150,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       // claude-home + task only; nonexistent-dir skipped
@@ -181,7 +186,8 @@ describe('volume-mount-generator', () => {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: CONTAINER_USER_BASE_PATH
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
       })
 
       expect(mounts).to.have.lengthOf(1)

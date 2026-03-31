@@ -255,7 +255,8 @@ describe('User Container Thread Flow', function () {
         thread_config,
         user_base_directory,
         user_data_directory,
-        container_user_base_path: '/Users/trashman/user-base'
+        container_user_base_path: '/Users/trashman/user-base',
+        accounts_config: null
       })
 
       expect(mounts).to.have.lengthOf(1)
@@ -295,25 +296,6 @@ describe('User Container Thread Flow', function () {
       )
       expect(settings).to.have.property('permissions')
       expect(settings).to.have.property('hooks')
-    })
-  })
-
-  // Skip Docker-dependent tests by default
-  describe.skip('full container flow (requires Docker)', () => {
-    it('should create and start user container', () => {
-      // Requires Docker daemon
-    })
-
-    it('should persist container between sessions', () => {
-      // Requires Docker daemon
-    })
-
-    it('should enforce tool restrictions inside container', () => {
-      // Requires Docker daemon
-    })
-
-    it('should enforce PreToolUse hooks inside container', () => {
-      // Requires Docker daemon
     })
   })
 })
