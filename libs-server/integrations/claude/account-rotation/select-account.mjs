@@ -5,6 +5,8 @@ import os from 'os'
 
 import {
   check_account_usage,
+  compute_account_score,
+  get_cached_usage,
   is_account_exhausted,
   mark_account_exhausted
 } from './check-usage.mjs'
@@ -55,12 +57,11 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
     return null
   }
 
-  // Sort by priority (lower = higher priority)
-  const sorted = [...accounts].sort((a, b) => a.priority - b.priority)
   const exhausted_details = []
+  const scored_candidates = []
+  const unscored_candidates = []
 
-  for (const account of sorted) {
-    // Check Redis exhausted marker first (fast path)
+  for (const account of accounts) {
     const exhausted = await is_account_exhausted(account.namespace)
     if (exhausted) {
       log('Account %s marked as exhausted, skipping', account.namespace)
@@ -71,7 +72,41 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
       continue
     }
 
-    // Account not marked exhausted -- use it
+    const cached = await get_cached_usage(account.namespace)
+    const score = cached ? compute_account_score(cached) : null
+
+    // Skip accounts over threshold if we have cached data
+    if (cached) {
+      const threshold = accounts_config.utilization_threshold || 90
+      const five_hour = cached.five_hour?.utilization ?? 0
+      const seven_day = cached.seven_day?.utilization ?? 0
+      if (five_hour >= threshold || seven_day >= threshold) {
+        log('Account %s over threshold (5h: %d%%, 7d: %d%%), skipping', account.namespace, five_hour, seven_day)
+        exhausted_details.push({ namespace: account.namespace, reason: 'over_threshold' })
+        continue
+      }
+    }
+
+    if (score !== null) {
+      scored_candidates.push({ account, score })
+      log('Account %s score: %.3f', account.namespace, score)
+    } else {
+      unscored_candidates.push({ account })
+    }
+  }
+
+  // Sort scored by score ascending (expiring first), priority as tiebreaker
+  scored_candidates.sort(
+    (a, b) => a.score - b.score || a.account.priority - b.account.priority
+  )
+
+  // Sort unscored by priority
+  unscored_candidates.sort((a, b) => a.account.priority - b.account.priority)
+
+  // Scored accounts first (prefer known expiring), then unscored
+  const candidates = [...scored_candidates, ...unscored_candidates]
+
+  for (const { account } of candidates) {
     const raw_dir =
       execution_mode === 'container' || execution_mode === 'container_user'
         ? account.container_config_dir
@@ -109,8 +144,8 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
     }
   }
 
-  // All accounts exhausted -- try usage check to get resets_at for backoff
-  await notify_all_exhausted(sorted)
+  // All accounts exhausted
+  await notify_all_exhausted(accounts)
   throw new AllAccountsExhaustedError(exhausted_details)
 }
 

@@ -7,6 +7,7 @@ import {
   mark_account_exhausted,
   is_account_exhausted,
   clear_account_exhausted,
+  compute_account_score,
   configure_redis
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 import {
@@ -142,9 +143,11 @@ describe('Claude Account Rotation', function () {
   describe('select_account', function () {
     beforeEach(async function () {
       if (skip) this.skip()
-      // Clear all exhausted markers
-      const keys = await redis.keys('claude:exhausted:*')
-      if (keys.length > 0) await redis.del(...keys)
+      // Clear exhausted markers and usage cache
+      const exhausted_keys = await redis.keys('claude:exhausted:*')
+      if (exhausted_keys.length > 0) await redis.del(...exhausted_keys)
+      const usage_keys = await redis.keys('claude:usage:*')
+      if (usage_keys.length > 0) await redis.del(...usage_keys)
     })
 
     it('should return null when feature is disabled', async function () {
@@ -219,6 +222,60 @@ describe('Claude Account Rotation', function () {
       const account = await select_account({ execution_mode: 'container' })
 
       expect(account.config_dir).to.match(/^\/home\/node\//)
+    })
+  })
+
+  describe('compute_account_score', () => {
+    it('should return lower score for accounts near reset', () => {
+      const near_reset = {
+        seven_day: {
+          utilization: 40,
+          resets_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
+        }
+      }
+      const far_from_reset = {
+        seven_day: {
+          utilization: 40,
+          resets_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      }
+
+      expect(compute_account_score(near_reset)).to.be.lessThan(
+        compute_account_score(far_from_reset)
+      )
+    })
+
+    it('should return null when seven_day data is missing', () => {
+      expect(compute_account_score({})).to.be.null
+      expect(compute_account_score({ five_hour: { utilization: 50 } })).to.be.null
+      expect(compute_account_score(null)).to.be.null
+    })
+
+    it('should clamp expired resets_at to 0', () => {
+      const expired = {
+        seven_day: {
+          utilization: 80,
+          resets_at: new Date(Date.now() - 60000).toISOString()
+        }
+      }
+
+      expect(compute_account_score(expired)).to.equal(0)
+    })
+
+    it('should score near 1.0 for a fresh 7-day window', () => {
+      const fresh = {
+        seven_day: {
+          utilization: 5,
+          resets_at: new Date(
+            Date.now() + 6.9 * 24 * 60 * 60 * 1000
+          ).toISOString()
+        }
+      }
+
+      const score = compute_account_score(fresh)
+
+      expect(score).to.be.greaterThan(0.9)
+      expect(score).to.be.at.most(1.0)
     })
   })
 })

@@ -4,7 +4,8 @@ export {
   set_cached_usage,
   mark_account_exhausted,
   is_account_exhausted,
-  clear_account_exhausted
+  clear_account_exhausted,
+  compute_account_score
 } from './check-usage.mjs'
 
 export {
