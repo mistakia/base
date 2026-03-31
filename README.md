@@ -51,6 +51,7 @@ base entity list -t task
 
 | Topic                                                         | Description                                             |
 | ------------------------------------------------------------- | ------------------------------------------------------- |
+| [Setup Guide](system/text/agent-setup-guide.md)               | Step-by-step installation and configuration             |
 | [System Design](system/text/system-design.md)                 | Architecture, primitives, design principles, deployment |
 | [Directory Structure](system/text/directory-structure.md)     | Code and data organization                              |
 | [Knowledge Base Schema](system/text/knowledge-base-schema.md) | Entity types and data models                            |
