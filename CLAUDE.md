@@ -429,7 +429,7 @@ pm2 logs schedule-processor    # View logs
 
 ### Job Tracker
 
-Unified job tracking for both internal scheduled-command executions and external cron jobs. Stores execution results as JSON files on the storage server (`/mnt/md0/job/`).
+Unified job tracking for both internal scheduled-command executions and external cron jobs. Stores execution results as JSON files at the configured `job_tracker.path`.
 
 **Configuration** (`job_tracker` in config):
 
@@ -476,7 +476,7 @@ scp /tmp/crontab.cron <host>:~/crontab/
 ssh <host> 'load_crontab_files'
 ```
 
-**Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. On Linux servers they live in `/etc/environment`. On macOS (MacBook), they are set in `~/crontab/00-env.cron` which is prepended alphabetically by the `load_crontab_files` helper. The storage server uses `JOB_API_URL=https://localhost:8081` (API runs locally); all other servers use `JOB_API_URL=https://storage.localdomain:8081`.
+**Credential distribution for external jobs**: `JOB_API_URL` and `JOB_API_KEY` are set outside crontab files so the preprocessor can strip them from source. Set these environment variables on each server (e.g., via `/etc/environment`, a crontab env file, or shell profile). The server running the API uses `JOB_API_URL=https://localhost:<port>`; remote servers use the API server's hostname.
 
 ### External Session Import
 

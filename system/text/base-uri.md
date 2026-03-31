@@ -65,7 +65,7 @@ Examples:
 
 - `ssh://database/etc/postgresql/config.md`
 - `ssh://league/var/www/api/documentation.md`
-- `ssh://storage.localdomain/mnt/backup/user-data/tasks.md`
+- `ssh://myserver/mnt/backup/user-data/tasks.md`
 - `ssh://nano-dev/opt/applications/docs/api.md`
 
 Authority maps directly to SSH config host entries for seamless connection.
@@ -92,7 +92,7 @@ Standard HTTP/HTTPS for web-accessible resources following RFC 3986.
 Examples:
 
 - `https://api.league.com/documentation/endpoints.md`
-- `https://storage.localdomain:8080/files/shared-notes.md`
+- `https://myserver.local:8080/files/shared-notes.md`
 
 ## RFC 3986 Compliance Notes
 

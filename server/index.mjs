@@ -412,25 +412,24 @@ server.on('clientError', (error, socket) => {
   socket.destroy()
 })
 
-// Periodic missed job check (storage server only)
-if (config.job_tracker?.enabled && config.job_tracker?.path) {
-  const { get_current_machine_id } = await import(
-    '#libs-server/schedule/machine-identity.mjs'
+// Periodic missed job check (opt-in via config)
+if (
+  config.job_tracker?.enabled &&
+  config.job_tracker?.path &&
+  config.job_tracker?.run_missed_check
+) {
+  const { check_missed_jobs } = await import(
+    '#libs-server/jobs/check-missed-jobs.mjs'
   )
-  if (get_current_machine_id() === 'storage') {
-    const { check_missed_jobs } = await import(
-      '#libs-server/jobs/check-missed-jobs.mjs'
-    )
-    const interval_ms = config.job_tracker.missed_check_interval_ms || 300000
-    setInterval(async () => {
-      try {
-        await check_missed_jobs()
-      } catch (error) {
-        log('Missed job check error: %s', error.message)
-      }
-    }, interval_ms)
-    log('Missed job check scheduled every %dms', interval_ms)
-  }
+  const interval_ms = config.job_tracker.missed_check_interval_ms || 300000
+  setInterval(async () => {
+    try {
+      await check_missed_jobs()
+    } catch (error) {
+      log('Missed job check error: %s', error.message)
+    }
+  }, interval_ms)
+  log('Missed job check scheduled every %dms', interval_ms)
 }
 
 export default server

@@ -10,20 +10,16 @@ import { collect_entity_metrics } from './collector/entity-collector.mjs'
 import { collect_git_metrics } from './collector/git-collector.mjs'
 import { collect_thread_metrics } from './collector/thread-collector.mjs'
 import { collect_task_metrics } from './collector/task-collector.mjs'
-import { collect_storage_metrics } from './collector/storage-collector.mjs'
-import { collect_service_metrics } from './collector/service-collector.mjs'
 import { collect_schedule_metrics } from './collector/schedule-collector.mjs'
 import { upsert_metrics } from './database.mjs'
 
 const log = debug('stats:snapshot')
 
-const ALL_COLLECTORS = {
+const CORE_COLLECTORS = {
   entities: collect_entity_metrics,
   git: collect_git_metrics,
   threads: collect_thread_metrics,
   tasks: collect_task_metrics,
-  storage: collect_storage_metrics,
-  services: collect_service_metrics,
   schedules: collect_schedule_metrics
 }
 
@@ -36,18 +32,21 @@ export async function run_stats_snapshot({
   config,
   pool,
   collectors,
+  additional_collectors = {},
   dry_run = false
 }) {
   const date_str = snapshot_date || new Date().toISOString().split('T')[0]
 
+  const all_collectors = { ...CORE_COLLECTORS, ...additional_collectors }
+
   const selected =
     collectors && collectors.length > 0
       ? Object.fromEntries(
-          Object.entries(ALL_COLLECTORS).filter(([name]) =>
+          Object.entries(all_collectors).filter(([name]) =>
             collectors.includes(name)
           )
         )
-      : ALL_COLLECTORS
+      : all_collectors
 
   log(
     'Running snapshot for %s with collectors: %s',

@@ -127,7 +127,8 @@
     "api_url": "",
     "api_key": "",
     "discord_webhook_url": "",
-    "missed_check_interval_ms": 300000
+    "missed_check_interval_ms": 300000,
+    "run_missed_check": false
   },
   "user_containers": {
     "enabled": false,

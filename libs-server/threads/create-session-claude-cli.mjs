@@ -72,7 +72,7 @@ export const get_container_claude_home = () => {
 
 /**
  * Derive the projects directory name from a working directory path
- * Converts /Users/trashman/user-base to -Users-trashman-user-base
+ * Converts /home/user/my-project to -home-user-my-project
  *
  * @param {string} working_directory - Absolute path to working directory
  * @returns {string} Derived projects directory name

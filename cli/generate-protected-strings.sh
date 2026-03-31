@@ -12,7 +12,7 @@
 #   cli/generate-protected-strings.sh /path/to/output.txt      # custom output path
 #
 # The default output path matches what is configured in settings.local.json:
-#   PROTECTED_STRINGS_FILE=/Users/trashman/user-base/config/protected-strings.txt
+#   PROTECTED_STRINGS_FILE=$USER_BASE_DIRECTORY/config/protected-strings.txt
 
 set -euo pipefail
 

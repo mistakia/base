@@ -4,6 +4,8 @@
  * Collect, report, and list system stats snapshots.
  */
 
+import path from 'path'
+
 import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
@@ -13,6 +15,10 @@ import {
   list_snapshot_dates
 } from '#libs-server/stats/database.mjs'
 import { run_stats_snapshot } from '#libs-server/stats/snapshot.mjs'
+import {
+  discover_extensions,
+  get_extension_paths
+} from '#libs-server/extension/discover-extensions.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'stats <command>'
@@ -59,6 +65,30 @@ export const builder = (yargs) =>
     .command('list', 'List available snapshot dates', () => {}, handle_list)
     .demandCommand(1, 'You must specify a subcommand')
 
+async function load_extension_collectors() {
+  const additional = {}
+  try {
+    const extensions = discover_extensions(get_extension_paths(config))
+    for (const ext of extensions) {
+      if (!ext.provided_capabilities.includes('stats-collector')) continue
+      const provider_path = path.join(
+        ext.extension_path,
+        'provide',
+        'stats-collector.mjs'
+      )
+      const mod = await import(provider_path)
+      if (mod.collectors) {
+        Object.assign(additional, mod.collectors)
+      }
+    }
+  } catch (err) {
+    // Extension collectors are optional
+    const log = (await import('debug')).default('stats:extension')
+    log('Failed to load extension collectors: %s', err.message)
+  }
+  return additional
+}
+
 async function handle_snapshot(argv) {
   try {
     // Initialize DuckDB for collectors that need it
@@ -71,11 +101,14 @@ async function handle_snapshot(argv) {
       ? argv.collectors.split(',').map((s) => s.trim())
       : undefined
 
+    const additional_collectors = await load_extension_collectors()
+
     const { summary, metrics } = await run_stats_snapshot({
       snapshot_date: argv.date,
       config,
       pool,
       collectors: collector_list,
+      additional_collectors,
       dry_run: argv['dry-run']
     })
 

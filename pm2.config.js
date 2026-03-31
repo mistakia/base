@@ -135,9 +135,16 @@ function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
   }
 }
 
-const is_macbook = machine_id === 'macbook'
+// Services to run on this machine. Defaults to all services if not configured.
+const machine_services = machine_config.services || [
+  'base-api',
+  'metadata-queue-processor',
+  'cli-queue-worker',
+  'schedule-processor',
+  'transcription-service'
+]
 
-const all_apps = [
+const all_defined_apps = [
   app('base-api', 'services/server.mjs', {
     watch: ['build/bundle-manifest.json'],
     watch_delay: 1000,
@@ -145,20 +152,18 @@ const all_apps = [
     max_memory_restart: '3584M',
     node_args: '--max-old-space-size=3584'
   }),
-  // LLM-dependent: runs on MacBook only (has Ollama models)
-  is_macbook &&
-    app(
-      'metadata-queue-processor',
-      'server/services/metadata-queue-processor.mjs',
-      {
-        log_prefix: 'metadata-processor',
-        max_memory_restart: '512M',
-        env: {
-          DEBUG: 'metadata:*',
-          ...(os.platform() === 'darwin' ? { CHOKIDAR_USEPOLLING: '1' } : {})
-        }
+  app(
+    'metadata-queue-processor',
+    'server/services/metadata-queue-processor.mjs',
+    {
+      log_prefix: 'metadata-processor',
+      max_memory_restart: '512M',
+      env: {
+        DEBUG: 'metadata:*',
+        ...(os.platform() === 'darwin' ? { CHOKIDAR_USEPOLLING: '1' } : {})
       }
-    ),
+    }
+  ),
   app('cli-queue-worker', 'server/services/cli-queue-worker.mjs', {
     max_memory_restart: '512M',
     env: { DEBUG: 'cli-queue:*' }
@@ -176,6 +181,10 @@ const all_apps = [
     env: common_env
   })
 ]
+
+const all_apps = all_defined_apps.filter((a) =>
+  machine_services.includes(a.name)
+)
 
 module.exports = {
   apps: all_apps.filter(Boolean)

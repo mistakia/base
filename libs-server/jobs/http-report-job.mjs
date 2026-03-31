@@ -12,7 +12,7 @@ const MAX_RESPONSE_BYTES = 512
  * Used by non-storage machines to report to the storage server's API.
  *
  * @param {Object} params
- * @param {string} params.api_url - Base URL of the API server (e.g. https://storage.localdomain:8081)
+ * @param {string} params.api_url - Base URL of the API server (e.g. https://localhost:8081)
  * @param {string} params.api_key - Bearer token for authentication
  * @param {Object} params.payload - Job report payload (job_id, success, reason, etc.)
  * @returns {Promise<{success: boolean, error?: string}>}
