@@ -255,39 +255,33 @@ export const close_cli_queue = async () => {
       cli_queue = null
       log('CLI queue closed')
     }
-
-    if (redis_connection) {
-      let timer
-      try {
-        await Promise.race([
-          redis_connection.quit(),
-          new Promise((_resolve, reject) => {
-            timer = setTimeout(
-              () => reject(new Error('quit timeout')),
-              3000
-            )
-          })
-        ])
-      } catch {
-        // quit() timed out or failed -- force disconnect
-        redis_connection.disconnect()
-      } finally {
-        clearTimeout(timer)
-      }
-      redis_connection = null
-      log('Redis connection closed')
-    }
   } catch (error) {
-    log('Error closing queue/connection:', error.message)
-    if (redis_connection) {
-      try {
-        redis_connection.disconnect()
-      } catch {
-        // ignore
-      }
-    }
+    log('Error closing queue:', error.message)
     cli_queue = null
-    redis_connection = null
+  }
+
+  if (!redis_connection) return
+
+  const conn = redis_connection
+  redis_connection = null
+  let timer
+  try {
+    await Promise.race([
+      conn.quit(),
+      new Promise((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('quit timeout')), 3000)
+      })
+    ])
+    log('Redis connection closed')
+  } catch {
+    // quit() timed out or failed -- force disconnect
+    try {
+      conn.disconnect()
+    } catch {
+      // ignore
+    }
+  } finally {
+    clearTimeout(timer)
   }
 }
 

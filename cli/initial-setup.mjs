@@ -173,61 +173,103 @@ function ensure_config(base_path, summary) {
  * Generate an owner identity with ed25519-blake2b keypair and write
  * user_public_key into the user-base config. Skips if user_public_key
  * is already set in config or if the identity file already exists.
+ *
+ * Config is updated before the identity file is written so that a partial
+ * failure (config write succeeds, identity write fails) leaves the system
+ * in a recoverable state -- re-running init will retry identity creation.
  */
 function ensure_owner_identity(base_path, username, summary) {
   const config_path = path.join(base_path, 'config', 'config.json')
   const identity_path = path.join(base_path, 'identity', `${username}.md`)
 
-  // Skip if identity already exists
-  if (fs.existsSync(identity_path)) {
-    summary.files_existed.push(`identity/${username}.md`)
-    return null
-  }
-
-  // Skip if config already has a user_public_key
+  // Load config once for both the existence check and the later update
+  let config_data = null
   if (fs.existsSync(config_path)) {
     try {
-      const existing_config = JSON.parse(
-        fs.readFileSync(config_path, 'utf8')
-      )
-      if (existing_config.user_public_key) {
-        return null
-      }
+      config_data = JSON.parse(fs.readFileSync(config_path, 'utf8'))
     } catch {
       // config parse error -- proceed with generation
     }
   }
 
+  // Skip if identity file exists AND config already has user_public_key.
+  // If identity exists but config is missing user_public_key, repair it.
+  if (fs.existsSync(identity_path)) {
+    if (config_data?.user_public_key) {
+      summary.files_existed.push(`identity/${username}.md`)
+      return null
+    }
+    // Identity exists but config is missing user_public_key -- read the
+    // public key from the identity file and repair config
+    try {
+      const identity_content = fs.readFileSync(identity_path, 'utf8')
+      const match = identity_content.match(/auth_public_key:\s*(\S+)/)
+      if (match && config_data) {
+        config_data.user_public_key = match[1]
+        fs.writeFileSync(
+          config_path,
+          JSON.stringify(config_data, null, 2) + '\n'
+        )
+        summary.config_updated = true
+        summary.files_existed.push(`identity/${username}.md`)
+        return null
+      }
+    } catch {
+      // fall through to regeneration
+    }
+    summary.files_existed.push(`identity/${username}.md`)
+    return null
+  }
+
+  // Skip if config already has a user_public_key (identity may have been
+  // created externally)
+  if (config_data?.user_public_key) {
+    return null
+  }
+
   // Generate keypair
   let public_key_hex
-  const private_key = crypto.randomBytes(32)
-  const private_key_hex = private_key.toString('hex')
+  let private_key_hex
+  const private_key_seed = crypto.randomBytes(32)
 
   try {
     // Use ed25519-blake2b for proper key derivation when available
-    const ed25519 = try_load_ed25519()
-    if (ed25519) {
-      const public_key = ed25519.publicKey(private_key)
-      public_key_hex = public_key.toString('hex')
-    }
+    const require_fn = createRequire(import.meta.url)
+    const ed25519 = require_fn('@trashman/ed25519-blake2b')
+    const public_key = ed25519.publicKey(private_key_seed)
+    public_key_hex = public_key.toString('hex')
+    private_key_hex = private_key_seed.toString('hex')
   } catch {
-    // Fallback: native Ed25519 via Node crypto
-  }
-
-  if (!public_key_hex) {
-    try {
-      const key_pair = crypto.generateKeyPairSync('ed25519')
-      const raw = key_pair.publicKey.export({ type: 'spki', format: 'der' })
-      // DER-encoded SPKI for Ed25519 has 12-byte header, raw key starts at offset 12
-      public_key_hex = raw.subarray(12).toString('hex')
-    } catch {
-      // Last resort: random 32-byte hex (not a real keypair but allows entity creation)
-      public_key_hex = crypto.randomBytes(32).toString('hex')
-    }
+    // Fallback: native Ed25519 via Node crypto (always available on Node 18+).
+    // Note: native Ed25519 keys use RFC 8032 derivation, which differs from
+    // ed25519-blake2b. Authentication features that rely on ed25519-blake2b
+    // verification will not work with these keys.
+    const key_pair = crypto.generateKeyPairSync('ed25519')
+    const spki = key_pair.publicKey.export({ type: 'spki', format: 'der' })
+    // DER-encoded SPKI for Ed25519 has 12-byte header, raw key starts at offset 12
+    public_key_hex = spki.subarray(12).toString('hex')
+    const pkcs8 = key_pair.privateKey.export({ type: 'pkcs8', format: 'der' })
+    // DER-encoded PKCS8 for Ed25519 has 16-byte header, raw seed starts at offset 16
+    private_key_hex = pkcs8.subarray(16).toString('hex')
   }
 
   const now = new Date().toISOString()
   const entity_id = crypto.randomUUID()
+
+  // Update config with user_public_key FIRST so that a failure here
+  // does not leave an orphaned identity file (re-run would retry).
+  if (config_data) {
+    try {
+      config_data.user_public_key = public_key_hex
+      fs.writeFileSync(config_path, JSON.stringify(config_data, null, 2) + '\n')
+      summary.config_updated = true
+    } catch {
+      summary.warnings = summary.warnings || []
+      summary.warnings.push(
+        'Failed to update config/config.json with user_public_key'
+      )
+    }
+  }
 
   // Write identity entity file
   const identity_content = `---
@@ -257,35 +299,7 @@ Owner identity for this user-base instance.
   fs.writeFileSync(identity_path, identity_content)
   summary.files_created.push(`identity/${username}.md`)
 
-  // Update config with user_public_key
-  if (fs.existsSync(config_path)) {
-    try {
-      const config_data = JSON.parse(fs.readFileSync(config_path, 'utf8'))
-      config_data.user_public_key = public_key_hex
-      fs.writeFileSync(config_path, JSON.stringify(config_data, null, 2) + '\n')
-      summary.config_updated = true
-    } catch {
-      summary.warnings = summary.warnings || []
-      summary.warnings.push(
-        'Failed to update config/config.json with user_public_key'
-      )
-    }
-  }
-
   return { public_key_hex, private_key_hex }
-}
-
-/**
- * Try to load ed25519-blake2b synchronously.
- * Returns the module or null if not available (e.g., native addon not built).
- */
-function try_load_ed25519() {
-  try {
-    const require_fn = createRequire(import.meta.url)
-    return require_fn('@trashman/ed25519-blake2b')
-  } catch {
-    return null
-  }
 }
 
 function check_prerequisites() {
@@ -302,7 +316,7 @@ function check_prerequisites() {
 
   // git
   try {
-    const git_version = execSync('git --version', { encoding: 'utf8' }).trim()
+    const git_version = execSync('git --version', { encoding: 'utf8', timeout: 5000 }).trim()
     results.push({ name: 'git', ok: true, detail: git_version })
   } catch {
     results.push({ name: 'git', ok: false, detail: 'not found' })
@@ -310,7 +324,7 @@ function check_prerequisites() {
 
   // ripgrep (used by search)
   try {
-    const rg_version = execSync('rg --version', { encoding: 'utf8' })
+    const rg_version = execSync('rg --version', { encoding: 'utf8', timeout: 5000 })
       .split('\n')[0]
       .trim()
     results.push({ name: 'ripgrep', ok: true, detail: rg_version })

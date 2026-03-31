@@ -15,8 +15,10 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup)
-const is_init_command = process.argv.includes('init')
+// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup).
+// Check only the first positional argument to avoid false-positives from
+// option values like `--status init`.
+const is_init_command = process.argv[2] === 'init'
 
 /**
  * Deep merge two objects. Source values override target values.
@@ -53,9 +55,10 @@ function load_config_file(directory) {
 
   if (has_encrypted_values) {
     if (!process.env.CONFIG_ENCRYPTION_KEY) {
-      log(
-        'WARNING: Config in %s contains ENCRYPTED| values but CONFIG_ENCRYPTION_KEY is not set. Encrypted values will remain as plaintext strings.',
-        directory
+      // Use console.warn (not debug log) because this almost certainly indicates
+      // a misconfiguration that will cause silent credential failures downstream.
+      console.warn(
+        `WARNING: Config in ${directory} contains ENCRYPTED| values but CONFIG_ENCRYPTION_KEY is not set. Encrypted values will remain as plaintext strings.`
       )
       return JSON.parse(raw)
     }
