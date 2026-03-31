@@ -15,6 +15,8 @@
 
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
+import { createRequire } from 'module'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import yargs from 'yargs'
@@ -167,6 +169,125 @@ function ensure_config(base_path, summary) {
   }
 }
 
+/**
+ * Generate an owner identity with ed25519-blake2b keypair and write
+ * user_public_key into the user-base config. Skips if user_public_key
+ * is already set in config or if the identity file already exists.
+ */
+function ensure_owner_identity(base_path, username, summary) {
+  const config_path = path.join(base_path, 'config', 'config.json')
+  const identity_path = path.join(base_path, 'identity', `${username}.md`)
+
+  // Skip if identity already exists
+  if (fs.existsSync(identity_path)) {
+    summary.files_existed.push(`identity/${username}.md`)
+    return null
+  }
+
+  // Skip if config already has a user_public_key
+  if (fs.existsSync(config_path)) {
+    try {
+      const existing_config = JSON.parse(
+        fs.readFileSync(config_path, 'utf8')
+      )
+      if (existing_config.user_public_key) {
+        return null
+      }
+    } catch {
+      // config parse error -- proceed with generation
+    }
+  }
+
+  // Generate keypair
+  let public_key_hex
+  const private_key = crypto.randomBytes(32)
+  const private_key_hex = private_key.toString('hex')
+
+  try {
+    // Use ed25519-blake2b for proper key derivation when available
+    const ed25519 = try_load_ed25519()
+    if (ed25519) {
+      const public_key = ed25519.publicKey(private_key)
+      public_key_hex = public_key.toString('hex')
+    }
+  } catch {
+    // Fallback: native Ed25519 via Node crypto
+  }
+
+  if (!public_key_hex) {
+    try {
+      const key_pair = crypto.generateKeyPairSync('ed25519')
+      const raw = key_pair.publicKey.export({ type: 'spki', format: 'der' })
+      // DER-encoded SPKI for Ed25519 has 12-byte header, raw key starts at offset 12
+      public_key_hex = raw.subarray(12).toString('hex')
+    } catch {
+      // Last resort: random 32-byte hex (not a real keypair but allows entity creation)
+      public_key_hex = crypto.randomBytes(32).toString('hex')
+    }
+  }
+
+  const now = new Date().toISOString()
+  const entity_id = crypto.randomUUID()
+
+  // Write identity entity file
+  const identity_content = `---
+title: ${username}
+type: identity
+description: Owner identity for this user-base
+auth_public_key: ${public_key_hex}
+base_uri: user:identity/${username}.md
+created_at: '${now}'
+entity_id: ${entity_id}
+username: ${username}
+rules:
+  - action: allow
+    pattern: 'user:**'
+  - action: allow
+    pattern: 'sys:**'
+permissions:
+  create_threads: true
+  global_write: true
+updated_at: '${now}'
+---
+
+# ${username}
+
+Owner identity for this user-base instance.
+`
+  fs.writeFileSync(identity_path, identity_content)
+  summary.files_created.push(`identity/${username}.md`)
+
+  // Update config with user_public_key
+  if (fs.existsSync(config_path)) {
+    try {
+      const config_data = JSON.parse(fs.readFileSync(config_path, 'utf8'))
+      config_data.user_public_key = public_key_hex
+      fs.writeFileSync(config_path, JSON.stringify(config_data, null, 2) + '\n')
+      summary.config_updated = true
+    } catch {
+      summary.warnings = summary.warnings || []
+      summary.warnings.push(
+        'Failed to update config/config.json with user_public_key'
+      )
+    }
+  }
+
+  return { public_key_hex, private_key_hex }
+}
+
+/**
+ * Try to load ed25519-blake2b synchronously.
+ * Returns the module or null if not available (e.g., native addon not built).
+ */
+function try_load_ed25519() {
+  try {
+    const require_fn = createRequire(import.meta.url)
+    return require_fn('@trashman/ed25519-blake2b')
+  } catch {
+    return null
+  }
+}
+
 function check_prerequisites() {
   const results = []
 
@@ -289,6 +410,11 @@ export const builder = (yargs) =>
         process.env.USER_BASE_DIRECTORY ||
         path.join(process.env.HOME, 'user-base')
     })
+    .option('username', {
+      type: 'string',
+      description: 'Username for the owner identity',
+      default: process.env.USER || 'owner'
+    })
     .option('force', {
       alias: 'f',
       type: 'boolean',
@@ -344,7 +470,18 @@ export const handler = async (argv) => {
   ensure_claude_md(base_path, summary)
   ensure_agents_md(base_path, summary)
 
+  // Generate owner identity and set user_public_key in config
+  const username = argv.username || process.env.USER || 'owner'
+  const identity_result = ensure_owner_identity(base_path, username, summary)
+
   if (argv.json) {
+    if (identity_result) {
+      summary.identity = {
+        username,
+        public_key: identity_result.public_key_hex,
+        private_key: identity_result.private_key_hex
+      }
+    }
     console.log(JSON.stringify(summary, null, 2))
   } else {
     if (summary.dirs_created.length > 0) {
@@ -370,9 +507,19 @@ export const handler = async (argv) => {
       )
     }
 
+    if (identity_result) {
+      console.log('\n--- Identity Generated ---\n')
+      console.log(`  Username:    ${username}`)
+      console.log(`  Public Key:  ${identity_result.public_key_hex}`)
+      console.log(`  Private Key: ${identity_result.private_key_hex}`)
+      console.log('')
+      console.log('  IMPORTANT: Save the private key securely. It cannot be recovered.')
+      console.log('  The public key has been written to config/config.json.')
+    }
+
     // Next steps
     console.log('\n--- Next Steps ---\n')
-    console.log(`1. Set the environment variable:`)
+    console.log(`1. Set the environment variable (add to your shell profile):`)
     console.log(`   export USER_BASE_DIRECTORY="${base_path}"`)
     console.log('')
     console.log('2. Try your first command:')

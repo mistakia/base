@@ -33,7 +33,15 @@ const initialize_redis_connection = () => {
 
   const connection = new IORedis(QUEUE_CONFIG.redis_url, {
     maxRetriesPerRequest: null,
-    enableReadyCheck: false
+    enableReadyCheck: false,
+    connectTimeout: 5000,
+    retryStrategy(times) {
+      // For long-running workers, retry with backoff up to 10s.
+      // CLI commands check connectivity via test_redis_connection() first
+      // so they won't hang here -- they disconnect on failure.
+      if (times > 10) return null // stop retrying
+      return Math.min(times * 500, 10000)
+    }
   })
 
   connection.on('error', (error) => {
@@ -236,7 +244,9 @@ export const test_redis_connection = async (timeout_ms = 3000) => {
 }
 
 /**
- * Close queue and Redis connection
+ * Close queue and Redis connection.
+ * Uses quit() with a timeout fallback to disconnect() to avoid hanging
+ * when Redis is unreachable.
  */
 export const close_cli_queue = async () => {
   try {
@@ -247,12 +257,35 @@ export const close_cli_queue = async () => {
     }
 
     if (redis_connection) {
-      await redis_connection.quit()
+      let timer
+      try {
+        await Promise.race([
+          redis_connection.quit(),
+          new Promise((_resolve, reject) => {
+            timer = setTimeout(
+              () => reject(new Error('quit timeout')),
+              3000
+            )
+          })
+        ])
+      } catch {
+        // quit() timed out or failed -- force disconnect
+        redis_connection.disconnect()
+      } finally {
+        clearTimeout(timer)
+      }
       redis_connection = null
       log('Redis connection closed')
     }
   } catch (error) {
     log('Error closing queue/connection:', error.message)
+    if (redis_connection) {
+      try {
+        redis_connection.disconnect()
+      } catch {
+        // ignore
+      }
+    }
     cli_queue = null
     redis_connection = null
   }
