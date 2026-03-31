@@ -69,4 +69,4 @@ base entity list -t task
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Elastic License 2.0 — see [LICENSE](LICENSE).
