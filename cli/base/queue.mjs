@@ -4,13 +4,19 @@
  * Wraps CLI command queue operations for background execution.
  */
 
-import {
-  add_cli_job,
-  get_job_status,
-  get_queue_stats,
-  close_cli_queue
-} from '#server/services/cli-queue/queue.mjs'
 import { flush_and_exit } from './lib/format.mjs'
+
+async function get_queue() {
+  const mod = await import('#server/services/cli-queue/queue.mjs')
+  const available = await mod.test_redis_connection()
+  if (!available) {
+    throw new Error(
+      `Redis unavailable. Queue operations require a running Redis server. ` +
+        `Configure redis_url in config or set REDIS_URL env var.`
+    )
+  }
+  return mod
+}
 
 export const command = 'queue <command>'
 export const describe = 'Command queue operations'
@@ -65,7 +71,9 @@ export const handler = () => {}
 
 async function handle_add(argv) {
   let exit_code = 0
+  let queue_mod = null
   try {
+    queue_mod = await get_queue()
     const job_options = {
       command: argv.cmd,
       tags: argv.tags ? argv.tags.split(',').map((t) => t.trim()) : [],
@@ -77,7 +85,7 @@ async function handle_add(argv) {
       job_options.timeout_ms = argv.timeout
     }
 
-    const result = await add_cli_job(job_options)
+    const result = await queue_mod.add_cli_job(job_options)
 
     if (argv.json) {
       console.log(JSON.stringify(result, null, 2))
@@ -88,15 +96,17 @@ async function handle_add(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    await close_cli_queue()
+    if (queue_mod) await queue_mod.close_cli_queue()
   }
   flush_and_exit(exit_code)
 }
 
 async function handle_status(argv) {
   let exit_code = 0
+  let queue_mod = null
   try {
-    const status = await get_job_status(argv.job_id)
+    queue_mod = await get_queue()
+    const status = await queue_mod.get_job_status(argv.job_id)
 
     if (!status) {
       console.log(`Job ${argv.job_id} not found`)
@@ -117,15 +127,17 @@ async function handle_status(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    await close_cli_queue()
+    if (queue_mod) await queue_mod.close_cli_queue()
   }
   flush_and_exit(exit_code)
 }
 
 async function handle_stats(argv) {
   let exit_code = 0
+  let queue_mod = null
   try {
-    const stats = await get_queue_stats()
+    queue_mod = await get_queue()
+    const stats = await queue_mod.get_queue_stats()
 
     if (argv.json) {
       console.log(JSON.stringify(stats, null, 2))
@@ -138,7 +150,7 @@ async function handle_stats(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    await close_cli_queue()
+    if (queue_mod) await queue_mod.close_cli_queue()
   }
   flush_and_exit(exit_code)
 }

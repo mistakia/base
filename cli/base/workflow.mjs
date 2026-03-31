@@ -16,10 +16,6 @@ import {
   resolve_base_uri_from_registry,
   is_valid_base_uri
 } from '#libs-server/base-uri/index.mjs'
-import {
-  add_cli_job,
-  close_cli_queue
-} from '#server/services/cli-queue/queue.mjs'
 import { SERVER_URL, with_api_fallback, flush_and_exit } from './lib/format.mjs'
 import { authenticated_fetch } from './lib/auth.mjs'
 
@@ -274,13 +270,22 @@ async function handle_run(argv) {
     }
 
     if (argv.queue) {
-      // Enqueue to CLI queue
+      // Enqueue to CLI queue (requires Redis)
+      const queue_mod = await import('#server/services/cli-queue/queue.mjs')
+      const available = await queue_mod.test_redis_connection()
+      if (!available) {
+        throw new Error(
+          'Redis unavailable. The --queue flag requires a running Redis server. ' +
+            'Run without --queue to execute directly.'
+        )
+      }
+
       const tags = argv.tags
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean)
 
-      const job = await add_cli_job({
+      const job = await queue_mod.add_cli_job({
         command: run_command,
         tags,
         priority: argv.priority,
@@ -324,7 +329,12 @@ async function handle_run(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    await close_cli_queue().catch(() => {})
+    try {
+      const queue_mod = await import('#server/services/cli-queue/queue.mjs')
+      await queue_mod.close_cli_queue()
+    } catch {
+      // Queue module not loaded or Redis not available
+    }
   }
   flush_and_exit(exit_code)
 }

@@ -13,7 +13,8 @@ import {
   add_cli_job,
   get_job_status,
   get_queue_stats,
-  close_cli_queue
+  close_cli_queue,
+  test_redis_connection
 } from '#server/services/cli-queue/queue.mjs'
 
 const VALID_EXECUTION_MODES = ['host', 'container']
@@ -170,6 +171,14 @@ const main = async () => {
     ) {
       print_help()
       return
+    }
+
+    const available = await test_redis_connection()
+    if (!available) {
+      throw new Error(
+        'Redis unavailable. Queue operations require a running Redis server. ' +
+          'Configure redis_url in config or set REDIS_URL env var.'
+      )
     }
 
     if (parsed.subcommand === 'status') {

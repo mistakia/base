@@ -14,10 +14,6 @@ import { trigger_schedule } from '#libs-server/schedule/trigger-schedule.mjs'
 import { parse_schedule } from '#libs-server/schedule/parse-schedule.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import {
-  add_cli_job,
-  close_cli_queue
-} from '#server/services/cli-queue/queue.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'schedule <command>'
@@ -420,7 +416,16 @@ async function handle_disable(argv) {
 
 async function handle_trigger(argv) {
   let exit_code = 0
+  let queue_mod = null
   try {
+    queue_mod = await import('#server/services/cli-queue/queue.mjs')
+    const available = await queue_mod.test_redis_connection()
+    if (!available) {
+      throw new Error(
+        'Redis unavailable. Schedule trigger requires a running Redis server.'
+      )
+    }
+
     const directory = get_schedule_directory()
     const file_path = resolve_schedule_path(argv.file)
     const result = await read_entity_from_filesystem({
@@ -434,7 +439,7 @@ async function handle_trigger(argv) {
     const trigger_result = await trigger_schedule({
       schedule: result.entity_properties,
       directory,
-      add_job: add_cli_job
+      add_job: queue_mod.add_cli_job
     })
 
     if (argv.json) {
@@ -452,7 +457,7 @@ async function handle_trigger(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    await close_cli_queue()
+    if (queue_mod) await queue_mod.close_cli_queue()
   }
   flush_and_exit(exit_code)
 }

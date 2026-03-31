@@ -213,6 +213,26 @@ export const get_queue_stats = async () => {
 }
 
 /**
+ * Test Redis connectivity. Returns true if Redis is reachable, false otherwise.
+ * @param {number} [timeout_ms=3000] - Connection timeout
+ * @returns {Promise<boolean>}
+ */
+export const test_redis_connection = async (timeout_ms = 3000) => {
+  try {
+    const connection = get_redis_connection()
+    await Promise.race([
+      connection.ping(),
+      new Promise((_resolve, reject) =>
+        setTimeout(() => reject(new Error('timeout')), timeout_ms)
+      )
+    ])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Close queue and Redis connection
  */
 export const close_cli_queue = async () => {
