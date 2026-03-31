@@ -568,7 +568,7 @@ User accounts are stored as **identity entities** in the `identity/` directory, 
 ```
 user-base/
   identity/                    # User account entities
-    trashman.md
+    alice.md
     arrin.md
     _public.md                 # Special: fallback for unauthenticated
   role/                        # Role definition entities
@@ -1132,7 +1132,7 @@ import {
 const identity = await load_identity_by_public_key({ public_key: 'abc123...' })
 
 // Load by username
-const identity = await load_identity_by_username({ username: 'trashman' })
+const identity = await load_identity_by_username({ username: 'alice' })
 
 // List all identities
 const identities = await load_all_identities()
@@ -1188,7 +1188,7 @@ base identity list --json
 
 # Get identity details
 base identity get <username>
-base identity get trashman --json
+base identity get alice --json
 ```
 
 **Role Commands:**
@@ -1208,7 +1208,7 @@ base role get admin --json
 ```bash
 # Check permission for user on resource
 base permission check <username> <resource>
-base permission check trashman user:task/my-task.md
+base permission check alice user:task/my-task.md
 ```
 
 ## 11. Migration from users.json

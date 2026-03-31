@@ -23,8 +23,9 @@ visibility_analyzed_at: '2026-02-16T04:35:28.869Z'
 
 # Cross-Machine Sessions
 
-Base supports thread continuity across machines by combining queued execution,
-git-based thread sync, and state restoration before resume.
+Base optionally supports thread continuity across machines by combining queued execution,
+git-based thread sync, and state restoration before resume. This is only relevant for
+multi-machine deployments; single-machine setups can ignore this document.
 
 ## Execution Modes
 
