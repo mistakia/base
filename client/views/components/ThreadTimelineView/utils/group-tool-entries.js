@@ -129,7 +129,10 @@ export const group_tool_entries = (timeline_events) => {
     'TaskCreate',
     'TaskUpdate',
     'TaskList',
-    'TaskGet'
+    'TaskGet',
+    'TaskOutput',
+    'TaskStop',
+    'AgentOutputTool'
   ])
 
   const sorted = grouped_entries.sort((a, b) => {
