@@ -5,8 +5,11 @@ import config from '#config'
 import os from 'os'
 
 import { get_redis_connection, QUEUE_CONFIG } from './queue.mjs'
-import { execute_command } from './execute-command.mjs'
-import { try_acquire_tags, unregister_job_tags } from './tag-limiter.mjs'
+import { execute_command } from '#libs-server/cli-queue/execute-command.mjs'
+import {
+  try_acquire_tags,
+  unregister_job_tags
+} from '#libs-server/cli-queue/tag-limiter.mjs'
 import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 import { http_report_job } from '#libs-server/jobs/http-report-job.mjs'
 import {

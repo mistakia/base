@@ -8,7 +8,6 @@
 import debug from 'debug'
 
 import embedded_index_manager from '../embedded-index-manager.mjs'
-import { invalidate_tasks_cache } from '#server/services/cache-warmer.mjs'
 import {
   start_index_file_watcher,
   stop_index_file_watcher,
@@ -107,7 +106,7 @@ export const thread_sync_forwarding_hooks = {
   }
 }
 
-export function start_index_sync_watcher() {
+export function start_index_sync_watcher({ on_task_change } = {}) {
   log('Starting index sync watcher')
 
   start_index_file_watcher({
@@ -123,8 +122,8 @@ export function start_index_sync_watcher() {
         }
 
         // Invalidate appropriate caches
-        if (entity_type === 'task') {
-          invalidate_tasks_cache()
+        if (entity_type === 'task' && on_task_change) {
+          on_task_change()
         }
 
         const result = await read_entity_from_filesystem({
@@ -158,8 +157,8 @@ export function start_index_sync_watcher() {
         }
 
         // Invalidate appropriate caches
-        if (entity_type === 'task') {
-          invalidate_tasks_cache()
+        if (entity_type === 'task' && on_task_change) {
+          on_task_change()
         }
 
         await embedded_index_manager.remove_entity({ base_uri })

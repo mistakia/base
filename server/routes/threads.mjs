@@ -8,11 +8,12 @@ import {
 } from '#server/constants/http-cache.mjs'
 import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
 import * as threads from '#libs-server/threads/index.mjs'
-import { get_active_session_for_thread } from '#libs-server/active-sessions/index.mjs'
+import { process_thread_with_permissions } from '#server/lib/threads/process-thread-with-permissions.mjs'
+import { get_active_session_for_thread } from '#server/services/active-sessions/active-session-store.mjs'
 import {
   process_thread_table_request,
   normalize_duckdb_thread
-} from '#libs-server/threads/process-thread-table-request.mjs'
+} from '#server/lib/threads/process-thread-table-request.mjs'
 import {
   check_thread_permission_middleware,
   check_thread_permission,
@@ -23,8 +24,8 @@ import {
 } from '#server/middleware/permission/index.mjs'
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
-import { add_thread_creation_job } from '#libs-server/threads/job-queue.mjs'
-import { add_cli_job } from '#libs-server/cli-queue/queue.mjs'
+import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
+import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
@@ -445,7 +446,8 @@ router.get('/:thread_id', async (req, res) => {
       take_first,
       limit: timeline_limit,
       offset: timeline_offset,
-      exclude_types
+      exclude_types,
+      process_thread: process_thread_with_permissions
     })
 
     set_cached_thread(cache_key, response_thread)

@@ -10,7 +10,7 @@ import {
   count_threads_in_duckdb,
   query_tags_used_by
 } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { normalize_duckdb_thread } from '#libs-server/threads/process-thread-table-request.mjs'
+import { normalize_duckdb_thread } from '#server/lib/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'

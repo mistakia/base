@@ -3,7 +3,7 @@
  */
 
 import debug from 'debug'
-import { list_physical_items_from_filesystem } from './list-physical-items-from-filesystem.mjs'
+import { list_physical_items_from_filesystem } from '#libs-server/physical-items/list-physical-items-from-filesystem.mjs'
 import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
 import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
 import { check_permissions_batch } from '#server/middleware/permission/index.mjs'

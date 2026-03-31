@@ -16,7 +16,10 @@ import {
   resolve_base_uri_from_registry,
   is_valid_base_uri
 } from '#libs-server/base-uri/index.mjs'
-import { add_cli_job, close_cli_queue } from '#libs-server/cli-queue/index.mjs'
+import {
+  add_cli_job,
+  close_cli_queue
+} from '#server/services/cli-queue/queue.mjs'
 import { SERVER_URL, with_api_fallback, flush_and_exit } from './lib/format.mjs'
 import { authenticated_fetch } from './lib/auth.mjs'
 

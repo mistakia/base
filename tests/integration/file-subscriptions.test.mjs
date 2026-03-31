@@ -8,12 +8,14 @@ import {
   subscribe_to_file,
   unsubscribe_from_file,
   get_file_subscribers,
-  remove_connection,
+  remove_connection
+} from '#libs-server/file-subscriptions/index.mjs'
+import {
   emit_file_changed,
   emit_file_deleted,
   start_file_subscription_watcher,
   stop_file_subscription_watcher
-} from '#libs-server/file-subscriptions/index.mjs'
+} from '#server/services/file-subscriptions/file-watcher.mjs'
 import {
   reset_all_tables,
   create_test_user,

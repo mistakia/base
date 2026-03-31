@@ -6,7 +6,7 @@ import server from '#server'
 import {
   remove_active_session,
   close_session_store
-} from '#libs-server/active-sessions/active-session-store.mjs'
+} from '#server/services/active-sessions/active-session-store.mjs'
 
 chai.should()
 chai.use(chaiHttp)

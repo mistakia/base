@@ -12,7 +12,7 @@ import debug from 'debug'
 import { WebSocket } from 'ws'
 
 import config from '#config'
-import { get_file_subscribers } from './subscription-manager.mjs'
+import { get_file_subscribers } from '#libs-server/file-subscriptions/subscription-manager.mjs'
 import { check_user_permission } from '#server/middleware/permission/index.mjs'
 import { create_user_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 

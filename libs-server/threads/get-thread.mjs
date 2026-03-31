@@ -9,7 +9,7 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import {
   read_thread_data,
-  process_thread_with_permissions
+  add_backward_compatibility_fields
 } from './thread-utils.mjs'
 import {
   validate_filter_parameters,
@@ -41,6 +41,7 @@ const log = debug('threads:get')
  * @param {number} [params.skip_last] Skip last N entries (position-based)
  * @param {number} [params.start_index] Start index for slicing (index-based)
  * @param {number} [params.end_index] End index for slicing (index-based)
+ * @param {Function} [params.process_thread] Optional async function to apply permission checking/redaction. When omitted, returns raw thread data.
  * @returns {Promise<Object>} Thread data object with filtered timeline
  * @throws {Error} If thread is not found, access denied, or invalid filter parameters
  */
@@ -62,7 +63,8 @@ export default async function get_thread({
   skip_first,
   skip_last,
   start_index,
-  end_index
+  end_index,
+  process_thread
 }) {
   if (!thread_id || typeof thread_id !== 'string') {
     throw new Error('thread_id is required')
@@ -120,15 +122,21 @@ export default async function get_thread({
       slice_criteria
     )
 
-    const thread_data = await process_thread_with_permissions({
-      thread_id,
-      metadata,
-      timeline: filtered_timeline,
-      thread_dir,
-      user_public_key
-    })
+    if (process_thread) {
+      return process_thread({
+        thread_id,
+        metadata,
+        timeline: filtered_timeline,
+        thread_dir,
+        user_public_key
+      })
+    }
 
-    return thread_data
+    return add_backward_compatibility_fields({
+      metadata,
+      thread_dir,
+      timeline: filtered_timeline
+    })
   } catch (error) {
     log(`Error getting thread ${thread_id}: ${error.message}`)
     throw error

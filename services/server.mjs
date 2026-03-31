@@ -10,7 +10,10 @@ import {
   stop_thread_watcher,
   set_thread_watcher_hooks
 } from '#server/services/thread-watcher.mjs'
-import { start_worker, stop_worker } from '#libs-server/threads/job-worker.mjs'
+import {
+  start_worker,
+  stop_worker
+} from '#server/services/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   thread_index_sync_hooks,
@@ -21,7 +24,8 @@ import {
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_cache_warmer,
-  stop_cache_warmer
+  stop_cache_warmer,
+  invalidate_tasks_cache
 } from '#server/services/cache-warmer.mjs'
 import { set_watcher_status } from '#libs-server/watcher-state.mjs'
 import {
@@ -29,7 +33,7 @@ import {
   stop_file_subscription_watcher,
   emit_file_changed,
   emit_file_deleted
-} from '#libs-server/file-subscriptions/index.mjs'
+} from '#server/services/file-subscriptions/file-watcher.mjs'
 import {
   start_git_status_watcher,
   stop_git_status_watcher,
@@ -43,6 +47,7 @@ import {
 } from '#libs-server/file-subscriptions/user-base-watcher.mjs'
 import {
   initialize_cache,
+  get_cached_status_all,
   invalidate_repo,
   invalidate_repo_list,
   destroy_cache
@@ -245,7 +250,9 @@ try {
     if (file_watcher_config.git_status_watcher_enabled !== false) {
       try {
         const start_time = Date.now()
+        const { repo_paths } = get_cached_status_all()
         const git_watcher = await start_git_status_watcher({
+          repo_paths,
           on_git_status_change: async ({ repo_path }) => {
             await invalidate_repo(repo_path)
             broadcast_authenticated({
@@ -291,7 +298,7 @@ try {
       const index_config = embedded_index_manager.get_index_config()
       if (index_config.file_watcher_enabled) {
         try {
-          start_index_sync_watcher()
+          start_index_sync_watcher({ on_task_change: invalidate_tasks_cache })
           set_watcher_status('entity_file_watcher', 'ready')
           logger('Entity file watcher started')
         } catch (error) {

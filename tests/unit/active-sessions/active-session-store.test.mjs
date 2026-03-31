@@ -8,7 +8,7 @@ import {
   remove_active_session,
   get_active_session_for_thread,
   close_session_store
-} from '#libs-server/active-sessions/active-session-store.mjs'
+} from '#server/services/active-sessions/active-session-store.mjs'
 
 describe('active-session-store', function () {
   // Allow longer timeout for Redis operations

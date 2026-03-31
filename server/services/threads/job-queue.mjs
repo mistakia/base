@@ -5,7 +5,7 @@ import debug from 'debug'
 import {
   get_redis_connection,
   close_redis_connection
-} from '#libs-server/redis/get-connection.mjs'
+} from '../redis/get-connection.mjs'
 
 const log = debug('threads:queue')
 

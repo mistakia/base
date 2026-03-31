@@ -2,9 +2,9 @@ import debug from 'debug'
 
 import {
   start_cli_queue_worker,
-  stop_cli_queue_worker,
-  close_cli_queue
-} from '#libs-server/cli-queue/index.mjs'
+  stop_cli_queue_worker
+} from './cli-queue/worker.mjs'
+import { close_cli_queue } from './cli-queue/queue.mjs'
 
 const log = debug('cli-queue:service')
 

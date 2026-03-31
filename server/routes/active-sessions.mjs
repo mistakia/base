@@ -6,12 +6,14 @@ import {
   update_active_session,
   get_active_session,
   get_all_active_sessions,
-  get_and_remove_active_session,
-  find_thread_for_session,
+  get_and_remove_active_session
+} from '#server/services/active-sessions/active-session-store.mjs'
+import { find_thread_for_session } from '#libs-server/active-sessions/session-thread-matcher.mjs'
+import {
   emit_active_session_started,
   emit_active_session_updated,
   emit_active_session_ended
-} from '#libs-server/active-sessions/index.mjs'
+} from '#server/services/active-sessions/session-event-emitter.mjs'
 import path from 'path'
 import { read_json_file } from '#libs-server/threads/thread-utils.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'

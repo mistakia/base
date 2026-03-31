@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import {
   sync_session_fallback_by_file,
   sync_session_fallback_by_glob
-} from '#libs-server/threads/job-worker.mjs'
+} from '#server/services/threads/job-worker.mjs'
 
 describe('job-worker sync_session_fallback', function () {
   this.timeout(10000)
