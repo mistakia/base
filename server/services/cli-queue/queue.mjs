@@ -218,17 +218,20 @@ export const get_queue_stats = async () => {
  * @returns {Promise<boolean>}
  */
 export const test_redis_connection = async (timeout_ms = 3000) => {
+  let timer
   try {
     const connection = get_redis_connection()
     await Promise.race([
       connection.ping(),
-      new Promise((_resolve, reject) =>
-        setTimeout(() => reject(new Error('timeout')), timeout_ms)
-      )
+      new Promise((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('timeout')), timeout_ms)
+      })
     ])
     return true
   } catch {
     return false
+  } finally {
+    clearTimeout(timer)
   }
 }
 

@@ -142,9 +142,10 @@ export const check_missed_jobs = async () => {
     })
 
     // Send notification and update suppression timestamp
-    for (const channel of get_all('notification-channel')) {
-      try {
-        await channel.notify_missed({
+    const channels = get_all('notification-channel')
+    const results = await Promise.allSettled(
+      channels.map((channel) =>
+        channel.notify_missed({
           job_id: job.job_id,
           name: job.name,
           source: job.source,
@@ -152,8 +153,11 @@ export const check_missed_jobs = async () => {
           schedule: job.schedule,
           last_execution_timestamp: job.last_execution?.timestamp
         })
-      } catch (error) {
-        log('Error alerting missed job %s: %s', job.job_id, error.message)
+      )
+    )
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        log('Error alerting missed job %s: %s', job.job_id, result.reason?.message)
       }
     }
 

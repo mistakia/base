@@ -258,19 +258,6 @@ base search "query"
   }
 }
 
-function ensure_agents_md(base_path, summary) {
-  const agents_md_path = path.join(base_path, 'AGENTS.md')
-  if (!fs.existsSync(agents_md_path)) {
-    const content = `# AGENTS.md
-
-See [CLAUDE.md](./CLAUDE.md) for project context and conventions.
-`
-    fs.writeFileSync(agents_md_path, content)
-    summary.files_created.push('AGENTS.md')
-  } else {
-    summary.files_existed.push('AGENTS.md')
-  }
-}
 
 export const command = 'init'
 export const describe = 'Initialize or update a user-base directory structure'
@@ -338,7 +325,6 @@ export const handler = async (argv) => {
   ensure_config(base_path, summary)
   ensure_git_repo(base_path, summary)
   ensure_claude_md(base_path, summary)
-  ensure_agents_md(base_path, summary)
 
   if (argv.json) {
     console.log(JSON.stringify(summary, null, 2))
@@ -377,7 +363,6 @@ export const handler = async (argv) => {
     console.log('')
     console.log('3. Connect an AI assistant:')
     console.log('   Claude Code: run `claude` in this directory (CLAUDE.md provides context)')
-    console.log('   Other tools: AGENTS.md provides the same context')
     console.log('')
     console.log('4. Explore:')
     console.log('   base --help              # See all commands')

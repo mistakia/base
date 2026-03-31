@@ -10,6 +10,7 @@ async function get_queue() {
   const mod = await import('#server/services/cli-queue/queue.mjs')
   const available = await mod.test_redis_connection()
   if (!available) {
+    await mod.close_cli_queue()
     throw new Error(
       `Redis unavailable. Queue operations require a running Redis server. ` +
         `Configure redis_url in config or set REDIS_URL env var.`

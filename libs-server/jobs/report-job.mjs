@@ -296,14 +296,12 @@ export const report_job = async ({
     // matters for investigation (imports, backups) should leave alerts for triage.
     if (job.cleanup_alerts_on_success && job.discord_message_ids.length > 0) {
       for (const channel of get_all('notification-channel')) {
-        try {
-          channel.notify_recovery({
+        channel
+          .notify_recovery({
             job_id,
             previous_alert_ids: [...job.discord_message_ids]
           })
-        } catch (error) {
-          log('Alert cleanup error: %s', error.message)
-        }
+          .catch((error) => log('Alert cleanup error: %s', error.message))
       }
     }
     job.discord_message_ids = []
@@ -350,9 +348,10 @@ export const report_job = async ({
 
   // Send notification before save so we only set last_alerted_at on actual delivery
   if (should_notify) {
-    for (const channel of get_all('notification-channel')) {
-      try {
-        const message_id = await channel.notify_failure({
+    const channels = get_all('notification-channel')
+    const results = await Promise.allSettled(
+      channels.map((channel) =>
+        channel.notify_failure({
           job_id,
           name: job.name,
           source: job.source,
@@ -366,19 +365,22 @@ export const report_job = async ({
           command,
           consecutive_failures: job.consecutive_failures
         })
+      )
+    )
 
-        if (message_id) {
-          job.last_alerted_at = now
-          job.discord_message_ids.push(message_id)
-          if (job.discord_message_ids.length > MAX_DISCORD_MESSAGE_IDS) {
-            job.discord_message_ids = job.discord_message_ids.slice(
-              -MAX_DISCORD_MESSAGE_IDS
-            )
-          }
-        }
-      } catch (error) {
-        log('Notification error: %s', error.message)
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        job.last_alerted_at = now
+        job.discord_message_ids.push(result.value)
+      } else if (result.status === 'rejected') {
+        log('Notification error: %s', result.reason?.message)
       }
+    }
+
+    if (job.discord_message_ids.length > MAX_DISCORD_MESSAGE_IDS) {
+      job.discord_message_ids = job.discord_message_ids.slice(
+        -MAX_DISCORD_MESSAGE_IDS
+      )
     }
   }
 

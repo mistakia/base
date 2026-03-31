@@ -235,6 +235,7 @@ async function handle_list(argv) {
 
 async function handle_run(argv) {
   let exit_code = 0
+  let queue_used = false
   try {
     const { base_uri, absolute_path } = resolve_workflow(argv.workflow)
 
@@ -271,6 +272,7 @@ async function handle_run(argv) {
 
     if (argv.queue) {
       // Enqueue to CLI queue (requires Redis)
+      queue_used = true
       const queue_mod = await import('#server/services/cli-queue/queue.mjs')
       const available = await queue_mod.test_redis_connection()
       if (!available) {
@@ -329,11 +331,13 @@ async function handle_run(argv) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
   } finally {
-    try {
-      const queue_mod = await import('#server/services/cli-queue/queue.mjs')
-      await queue_mod.close_cli_queue()
-    } catch {
-      // Queue module not loaded or Redis not available
+    if (queue_used) {
+      try {
+        const queue_mod = await import('#server/services/cli-queue/queue.mjs')
+        await queue_mod.close_cli_queue()
+      } catch {
+        // Redis not available
+      }
     }
   }
   flush_and_exit(exit_code)
