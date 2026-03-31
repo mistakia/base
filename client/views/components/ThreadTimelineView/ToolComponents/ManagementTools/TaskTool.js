@@ -187,6 +187,25 @@ const get_items_for_tool_pair = (
         }
       ]
 
+    case 'TaskOutput':
+    case 'AgentOutputTool':
+      return [
+        {
+          key: `output-${call_id}`,
+          status: CHECKBOX_STATUS.COMPLETED,
+          text: resolve_subject(params.taskId)
+        }
+      ]
+
+    case 'TaskStop':
+      return [
+        {
+          key: `stop-${call_id}`,
+          status: CHECKBOX_STATUS.PENDING,
+          text: resolve_subject(params.taskId)
+        }
+      ]
+
     default:
       return []
   }

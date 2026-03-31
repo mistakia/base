@@ -3,55 +3,24 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 
 import TimelineEvent from './TimelineEvent'
-import CollapsibleEventGroup from './CollapsibleEventGroup'
+import CollapsibleToolGroup from './CollapsibleToolGroup'
 import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
 import { group_tool_entries } from './utils/group-tool-entries'
 import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
 import './Timeline.styl'
 
-// Length threshold for considering an assistant message as "notable"
-const NOTABLE_ASSISTANT_MESSAGE_LENGTH = 500
-
 // Auto-scroll configuration
-const SCROLL_THRESHOLD_PX = 100 // Distance from bottom to consider "near bottom"
-const AUTO_SCROLL_DELAY_MS = 100 // Delay before auto-scrolling after timeline update
-const SMOOTH_SCROLL_COMPLETE_MS = 500 // Time to wait for smooth scroll to complete
+const SCROLL_THRESHOLD_PX = 100
+const AUTO_SCROLL_DELAY_MS = 100
+const SMOOTH_SCROLL_COMPLETE_MS = 500
 
-/**
- * Calculate the content length of a timeline event message
- */
-const get_message_content_length = (content) => {
-  if (typeof content === 'string') {
-    return content.length
-  }
-  return JSON.stringify(content).length
-}
+// Entry types that should be collapsible (not always visible)
+const COLLAPSIBLE_ENTRY_TYPES = new Set(['tool_pair', 'task_group', 'orphaned_result'])
 
-/**
- * Check if an entry is a "notable" event worthy of display in notable events view
- * - All user messages are notable
- * - Assistant messages are notable if they exceed the length threshold
- * - Tool pairs and other events are not notable
- */
-const is_notable_event = (entry) => {
-  if (entry.type === 'tool_pair') {
-    return false
-  }
-
-  const timeline_event = entry.timeline_event
-  if (timeline_event?.type !== 'message') {
-    return false
-  }
-
-  if (timeline_event.role === 'user') {
-    return true
-  }
-
-  if (timeline_event.role === 'assistant') {
-    const content_length = get_message_content_length(timeline_event.content)
-    return content_length >= NOTABLE_ASSISTANT_MESSAGE_LENGTH
-  }
-
+const is_collapsible_entry = (entry) => {
+  if (COLLAPSIBLE_ENTRY_TYPES.has(entry.type)) return true
+  // Thinking events collapse alongside tool calls
+  if (entry.type === 'regular' && entry.timeline_event?.type === 'thinking') return true
   return false
 }
 
@@ -62,13 +31,6 @@ const TimelineList = ({
   active_session = null,
   scroll_container_ref = null
 }) => {
-  /**
-   * View mode state:
-   * - 'default': Shows first user messages, last assistant message, everything between collapsed
-   * - 'notable_events': Shows all notable events (user messages + long assistant messages)
-   *                     with smaller collapsible sections for non-notable events between them
-   */
-  const [view_mode, set_view_mode] = useState('default')
   const [auto_scroll, set_auto_scroll] = useState(false)
   const [show_scroll_button, set_show_scroll_button] = useState(false)
   const timeline_container_ref = useRef(null)
@@ -93,7 +55,7 @@ const TimelineList = ({
     [timeline_main]
   )
 
-  // find the last assistant message entry index (by original timeline index)
+  // Find the last assistant message entry index (by original timeline index)
   const last_assistant_entry_index = useMemo(() => {
     let last_index = null
     timeline_main.forEach((event, index) => {
@@ -104,93 +66,30 @@ const TimelineList = ({
     return last_index
   }, [timeline_main])
 
-  // Find last consecutive user message and last assistant message in grouped entries
-  const {
-    last_consecutive_user_message_group_index,
-    last_assistant_message_group_index
-  } = useMemo(() => {
-    let last_consecutive_user = null
-    let last_assistant = null
-    let consecutive_user_messages_ended = false
-
-    grouped_entries.forEach((entry, group_index) => {
-      if (entry.type === 'tool_pair') {
-        consecutive_user_messages_ended = true
-        return
-      }
-
-      const timeline_event = entry.timeline_event
-      if (timeline_event?.type === 'message') {
-        if (timeline_event.role === 'user') {
-          if (!consecutive_user_messages_ended) {
-            last_consecutive_user = group_index
-          }
-        } else if (timeline_event.role === 'assistant') {
-          consecutive_user_messages_ended = true
-          if (entry.index === last_assistant_entry_index) {
-            last_assistant = group_index
-          }
-        }
-      } else {
-        consecutive_user_messages_ended = true
-      }
-    })
-
-    return {
-      last_consecutive_user_message_group_index: last_consecutive_user,
-      last_assistant_message_group_index: last_assistant
-    }
-  }, [grouped_entries, last_assistant_entry_index])
-
-  /**
-   * Group collapsible entries into sections for notable events view.
-   * Creates alternating sections of notable events and collapsible groups.
-   * Returns array of: { type: 'notable', event, original_index } | { type: 'collapsible', events }
-   */
-  const group_by_notable_events = useCallback((entries) => {
+  // Single-pass grouping: alternate between always-visible entries and collapsible tool groups
+  const display_sections = useMemo(() => {
     const sections = []
-    let hidden_events_buffer = []
+    let collapsible_buffer = []
 
-    entries.forEach((entry, index) => {
-      if (is_notable_event(entry)) {
-        if (hidden_events_buffer.length > 0) {
-          sections.push({ type: 'collapsible', events: hidden_events_buffer })
-          hidden_events_buffer = []
-        }
-        sections.push({ type: 'notable', event: entry, original_index: index })
-      } else {
-        hidden_events_buffer.push(entry)
+    const flush_collapsible = () => {
+      if (collapsible_buffer.length > 0) {
+        sections.push({ type: 'collapsible', entries: collapsible_buffer })
+        collapsible_buffer = []
       }
-    })
-
-    if (hidden_events_buffer.length > 0) {
-      sections.push({ type: 'collapsible', events: hidden_events_buffer })
     }
+
+    for (const entry of grouped_entries) {
+      if (is_collapsible_entry(entry)) {
+        collapsible_buffer.push(entry)
+      } else {
+        flush_collapsible()
+        sections.push({ type: 'visible', entry })
+      }
+    }
+    flush_collapsible()
 
     return sections
-  }, [])
-
-  // Split entries into three sections: before, collapsible, after
-  const entries_before_collapsible =
-    last_consecutive_user_message_group_index !== null
-      ? grouped_entries.slice(0, last_consecutive_user_message_group_index + 1)
-      : []
-
-  const collapsible_entries =
-    last_consecutive_user_message_group_index !== null &&
-    last_assistant_message_group_index !== null
-      ? grouped_entries.slice(
-          last_consecutive_user_message_group_index + 1,
-          last_assistant_message_group_index
-        )
-      : []
-
-  const entries_after_collapsible =
-    last_assistant_message_group_index !== null
-      ? grouped_entries.slice(last_assistant_message_group_index)
-      : grouped_entries
-
-  const should_use_collapsible = collapsible_entries.length > 0
+  }, [grouped_entries])
 
   // ============================================================================
   // AUTO-SCROLL UTILITIES
@@ -437,102 +336,22 @@ const TimelineList = ({
     [timeline, last_assistant_entry_index, working_directory]
   )
 
-  /**
-   * Render a single section from the notable events view
-   */
-  const render_notable_section = (section, section_index) => {
-    if (section.type === 'notable') {
-      return render_timeline_event(
-        section.event,
-        entries_before_collapsible.length + section.original_index
-      )
-    }
-
-    if (section.type === 'collapsible') {
-      // If only one event, render it directly without collapsing
-      if (section.events.length === 1) {
-        return render_timeline_event(
-          section.events[0],
-          entries_before_collapsible.length + section_index
-        )
+  const render_content = () => {
+    return display_sections.map((section, section_index) => {
+      if (section.type === 'visible') {
+        return render_timeline_event(section.entry, section_index)
       }
 
-      // Multiple events: render as collapsible group
+      // Collapsible tool group
       return (
-        <CollapsibleEventGroup
-          key={`collapsible-${section_index}`}
-          events={section.events}
-          renderEvent={render_timeline_event}
-          mode='notable_events'
+        <CollapsibleToolGroup
+          key={`tool-group-${section_index}`}
+          entries={section.entries}
+          render_event={render_timeline_event}
+          group_key={`tg-${section_index}`}
         />
       )
-    }
-
-    return null
-  }
-
-  // Render content based on view mode
-  const render_content = () => {
-    if (view_mode === 'default') {
-      // Default view: first user messages, last assistant, everything between collapsed
-      if (should_use_collapsible) {
-        return (
-          <>
-            {/* Render entries before collapsible section */}
-            {entries_before_collapsible.map((entry, index) =>
-              render_timeline_event(entry, index)
-            )}
-
-            {/* Render collapsible section with mode="default" */}
-            <CollapsibleEventGroup
-              events={collapsible_entries}
-              renderEvent={render_timeline_event}
-              mode='default'
-              onExpand={() => set_view_mode('notable_events')}
-            />
-
-            {/* Render entries after collapsible section */}
-            {entries_after_collapsible.map((entry, index) =>
-              render_timeline_event(
-                entry,
-                index +
-                  entries_before_collapsible.length +
-                  collapsible_entries.length
-              )
-            )}
-          </>
-        )
-      } else {
-        return grouped_entries.map((entry, index) =>
-          render_timeline_event(entry, index)
-        )
-      }
-    } else if (view_mode === 'notable_events') {
-      // Notable events view: show all notable events with collapsible sections between them
-      const notable_sections = group_by_notable_events(collapsible_entries)
-
-      return (
-        <>
-          {/* Render entries before collapsible section */}
-          {entries_before_collapsible.map((entry, index) =>
-            render_timeline_event(entry, index)
-          )}
-
-          {/* Render notable sections (alternating notable events and collapsible groups) */}
-          {notable_sections.map(render_notable_section)}
-
-          {/* Render entries after collapsible section */}
-          {entries_after_collapsible.map((entry, index) =>
-            render_timeline_event(
-              entry,
-              index +
-                entries_before_collapsible.length +
-                collapsible_entries.length
-            )
-          )}
-        </>
-      )
-    }
+    })
   }
 
   return (
