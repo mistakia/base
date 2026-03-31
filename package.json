@@ -1,5 +1,13 @@
 {
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mistakia/base.git"
+  },
+  "homepage": "https://github.com/mistakia/base",
+  "bugs": {
+    "url": "https://github.com/mistakia/base/issues"
+  },
   "bin": {
     "base": "./cli/base.mjs"
   },

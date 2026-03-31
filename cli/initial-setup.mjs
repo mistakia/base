@@ -15,11 +15,13 @@
 
 import fs from 'fs'
 import path from 'path'
+import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const BASE_DIR = path.resolve(__dirname, '..')
 const TEMPLATE_CONFIG_PATH = path.resolve(__dirname, '../config/config.json')
 
 // Standard entity type directories for a user-base
@@ -165,24 +167,159 @@ function ensure_config(base_path, summary) {
   }
 }
 
+function check_prerequisites() {
+  const results = []
+
+  // Node.js 18+
+  const node_version = process.versions.node
+  const major = parseInt(node_version.split('.')[0], 10)
+  results.push({
+    name: 'Node.js 18+',
+    ok: major >= 18,
+    detail: `v${node_version}`
+  })
+
+  // git
+  try {
+    const git_version = execSync('git --version', { encoding: 'utf8' }).trim()
+    results.push({ name: 'git', ok: true, detail: git_version })
+  } catch {
+    results.push({ name: 'git', ok: false, detail: 'not found' })
+  }
+
+  // ripgrep (used by search)
+  try {
+    const rg_version = execSync('rg --version', { encoding: 'utf8' })
+      .split('\n')[0]
+      .trim()
+    results.push({ name: 'ripgrep', ok: true, detail: rg_version })
+  } catch {
+    results.push({
+      name: 'ripgrep',
+      ok: false,
+      detail: 'not found (install: https://github.com/BurntSushi/ripgrep)'
+    })
+  }
+
+  return results
+}
+
+function ensure_git_repo(base_path, summary) {
+  const git_dir = path.join(base_path, '.git')
+  if (!fs.existsSync(git_dir)) {
+    try {
+      execSync('git init', { cwd: base_path, stdio: 'pipe' })
+      summary.files_created.push('.git/ (initialized)')
+    } catch {
+      summary.warnings = summary.warnings || []
+      summary.warnings.push('Failed to initialize git repository')
+    }
+  }
+}
+
+function ensure_claude_md(base_path, summary) {
+  const claude_md_path = path.join(base_path, 'CLAUDE.md')
+  if (!fs.existsSync(claude_md_path)) {
+    const base_claude_md = path.join(BASE_DIR, 'CLAUDE.md')
+    const has_base_claude = fs.existsSync(base_claude_md)
+
+    const content = `# CLAUDE.md
+
+This is a user-base directory for the [Base](${has_base_claude ? 'repository/active/base/' : 'https://github.com/mistakia/base'}) knowledge base system.
+
+For project architecture, CLI reference, entity system, and development commands, see the base project CLAUDE.md:
+${has_base_claude ? '- [[repository/active/base/CLAUDE.md]]' : '- See the base repository CLAUDE.md'}
+
+## User-Base Overview
+
+This directory contains your personal knowledge base data:
+- **Entities**: markdown files with YAML frontmatter in \`task/\`, \`workflow/\`, \`text/\`, etc.
+- **Config**: \`config/config.json\` overlays the base defaults with your settings
+- **Extensions**: \`extension/\` for custom CLI commands and capabilities
+- **CLI**: \`cli/\` for user-specific scripts
+
+## Quick Start
+
+\`\`\`bash
+# List all entities
+base entity list
+
+# Create a task
+base entity create "user:task/my-first-task.md" --type task --title "My First Task"
+
+# Search your knowledge base
+base search "query"
+\`\`\`
+`
+    fs.writeFileSync(claude_md_path, content)
+    summary.files_created.push('CLAUDE.md')
+  } else {
+    summary.files_existed.push('CLAUDE.md')
+  }
+}
+
+function ensure_agents_md(base_path, summary) {
+  const agents_md_path = path.join(base_path, 'AGENTS.md')
+  if (!fs.existsSync(agents_md_path)) {
+    const content = `# AGENTS.md
+
+See [CLAUDE.md](./CLAUDE.md) for project context and conventions.
+`
+    fs.writeFileSync(agents_md_path, content)
+    summary.files_created.push('AGENTS.md')
+  } else {
+    summary.files_existed.push('AGENTS.md')
+  }
+}
+
 export const command = 'init'
 export const describe = 'Initialize or update a user-base directory structure'
 
 export const builder = (yargs) =>
-  yargs.option('user-base-directory', {
-    alias: 'u',
-    type: 'string',
-    description: 'Path to user-base directory',
-    default:
-      process.env.USER_BASE_DIRECTORY ||
-      path.join(process.env.HOME, 'user-base')
-  })
+  yargs
+    .option('user-base-directory', {
+      alias: 'u',
+      type: 'string',
+      description: 'Path to user-base directory',
+      default:
+        process.env.USER_BASE_DIRECTORY ||
+        path.join(process.env.HOME, 'user-base')
+    })
+    .option('force', {
+      alias: 'f',
+      type: 'boolean',
+      description: 'Skip prerequisite checks',
+      default: false
+    })
 
 export const handler = async (argv) => {
   const base_path = path.resolve(argv.userBaseDirectory)
 
+  // Check prerequisites
+  const prereqs = check_prerequisites()
+  const failed_prereqs = prereqs.filter((p) => !p.ok)
+
+  if (!argv.json) {
+    console.log('Prerequisites:')
+    for (const p of prereqs) {
+      console.log(`  ${p.ok ? '[ok]' : '[missing]'} ${p.name}: ${p.detail}`)
+    }
+    console.log('')
+  }
+
+  if (failed_prereqs.length > 0 && !argv.force) {
+    if (argv.json) {
+      console.log(JSON.stringify({ prerequisites: prereqs, error: 'missing prerequisites' }, null, 2))
+    } else {
+      console.error('Missing prerequisites. Install them and retry, or use --force to skip.')
+    }
+    process.exitCode = 1
+    return
+  }
+
   const summary = {
     base_path,
+    prerequisites: prereqs,
     dirs_created: [],
     dirs_existed: [],
     files_created: [],
@@ -199,6 +336,9 @@ export const handler = async (argv) => {
 
   ensure_gitignore(base_path, summary)
   ensure_config(base_path, summary)
+  ensure_git_repo(base_path, summary)
+  ensure_claude_md(base_path, summary)
+  ensure_agents_md(base_path, summary)
 
   if (argv.json) {
     console.log(JSON.stringify(summary, null, 2))
@@ -225,6 +365,24 @@ export const handler = async (argv) => {
         `\n${summary.dirs_existed.length} directories already existed.`
       )
     }
+
+    // Next steps
+    console.log('\n--- Next Steps ---\n')
+    console.log(`1. Set the environment variable:`)
+    console.log(`   export USER_BASE_DIRECTORY="${base_path}"`)
+    console.log('')
+    console.log('2. Try your first command:')
+    console.log('   base entity create "user:task/hello-world.md" --type task --title "Hello World" --description "My first task"')
+    console.log('   base entity list -t task')
+    console.log('')
+    console.log('3. Connect an AI assistant:')
+    console.log('   Claude Code: run `claude` in this directory (CLAUDE.md provides context)')
+    console.log('   Other tools: AGENTS.md provides the same context')
+    console.log('')
+    console.log('4. Explore:')
+    console.log('   base --help              # See all commands')
+    console.log('   base search "query"      # Search your knowledge base')
+    console.log('   base entity list         # List all entities')
   }
 }
 

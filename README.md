@@ -24,11 +24,28 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 - **Workflows** — structured prompts that compose tools into agent behaviors.
 - **Two-layer architecture** — this repo is the generic engine; a separate user-base directory provides user-specific config, data, workflows, and guidelines.
 
+## Quick Start
+
+```bash
+# Clone and install
+git clone https://github.com/mistakia/base.git && cd base
+yarn install
+
+# Initialize a user-base directory
+base init --user-base-directory ~/my-knowledge-base
+
+# Create your first entity
+export USER_BASE_DIRECTORY=~/my-knowledge-base
+base entity create "user:task/hello.md" --type task --title "Hello World"
+base entity list -t task
+```
+
 ## Prerequisites
 
 - Node.js 18+ / Yarn
-- Redis (BullMQ job queues)
+- git
 - `ripgrep` (`rg`)
+- Redis (optional, required for job queue and scheduling)
 
 ## Documentation
 
