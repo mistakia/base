@@ -5,7 +5,7 @@ import config from '#config'
 
 import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 import { execute_ssh } from '#libs-server/database/storage-adapters/ssh-utils.mjs'
-import { notify_job_failure, delete_failure_alerts } from './notify-discord.mjs'
+import { get_all } from '#libs-server/extension/capability-registry.mjs'
 import { parse_interval_ms } from './job-utils.mjs'
 
 const log = debug('jobs:report')
@@ -290,21 +290,20 @@ export const report_job = async ({
     job.stats.success_count += 1
     job.stats.last_success = now
 
-    // Clean up previous failure alerts from Discord on recovery (fire and forget).
+    // Clean up previous failure alerts on recovery (fire and forget).
     // Only for jobs with cleanup_alerts_on_success enabled -- health checks and
     // monitors where recovery confirms resolution. Jobs where failure history
     // matters for investigation (imports, backups) should leave alerts for triage.
     if (job.cleanup_alerts_on_success && job.discord_message_ids.length > 0) {
-      try {
-        delete_failure_alerts({
-          message_ids: [...job.discord_message_ids],
-          discord_config: {
-            user_api_token: config.discord?.user_api_token,
-            alerts_channel_id: config.discord?.channels?.alerts
-          }
-        })
-      } catch (error) {
-        log('Discord cleanup error: %s', error.message)
+      for (const channel of get_all('notification-channel')) {
+        try {
+          channel.notify_recovery({
+            job_id,
+            previous_alert_ids: [...job.discord_message_ids]
+          })
+        } catch (error) {
+          log('Alert cleanup error: %s', error.message)
+        }
       }
     }
     job.discord_message_ids = []
@@ -351,34 +350,35 @@ export const report_job = async ({
 
   // Send notification before save so we only set last_alerted_at on actual delivery
   if (should_notify) {
-    try {
-      const message_id = await notify_job_failure({
-        job_id,
-        name: job.name,
-        source: job.source,
-        project: job.project,
-        server: job.server,
-        reason,
-        duration_ms,
-        exit_code,
-        schedule: job.schedule,
-        schedule_entity_uri,
-        command,
-        consecutive_failures: job.consecutive_failures,
-        discord_webhook_url: config.job_tracker?.discord_webhook_url
-      })
+    for (const channel of get_all('notification-channel')) {
+      try {
+        const message_id = await channel.notify_failure({
+          job_id,
+          name: job.name,
+          source: job.source,
+          project: job.project,
+          server: job.server,
+          reason,
+          duration_ms,
+          exit_code,
+          schedule: job.schedule,
+          schedule_entity_uri,
+          command,
+          consecutive_failures: job.consecutive_failures
+        })
 
-      if (message_id) {
-        job.last_alerted_at = now
-        job.discord_message_ids.push(message_id)
-        if (job.discord_message_ids.length > MAX_DISCORD_MESSAGE_IDS) {
-          job.discord_message_ids = job.discord_message_ids.slice(
-            -MAX_DISCORD_MESSAGE_IDS
-          )
+        if (message_id) {
+          job.last_alerted_at = now
+          job.discord_message_ids.push(message_id)
+          if (job.discord_message_ids.length > MAX_DISCORD_MESSAGE_IDS) {
+            job.discord_message_ids = job.discord_message_ids.slice(
+              -MAX_DISCORD_MESSAGE_IDS
+            )
+          }
         }
+      } catch (error) {
+        log('Notification error: %s', error.message)
       }
-    } catch (error) {
-      log('Discord notification error: %s', error.message)
     }
   }
 

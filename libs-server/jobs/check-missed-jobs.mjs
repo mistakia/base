@@ -1,9 +1,8 @@
 import debug from 'debug'
 import cronParser from 'cron-parser'
-import config from '#config'
 
 import { load_all_jobs, save_job } from './report-job.mjs'
-import { notify_missed_job } from './notify-discord.mjs'
+import { get_all } from '#libs-server/extension/capability-registry.mjs'
 import { parse_interval_ms } from './job-utils.mjs'
 
 const { CronExpressionParser } = cronParser
@@ -82,7 +81,6 @@ export const check_missed_jobs = async () => {
   const jobs = await load_all_jobs()
   const missed = []
   const now = new Date()
-  const discord_webhook_url = config.job_tracker?.discord_webhook_url
 
   for (const job of jobs) {
     if (!job.schedule || !job.schedule_type) {
@@ -144,22 +142,27 @@ export const check_missed_jobs = async () => {
     })
 
     // Send notification and update suppression timestamp
-    try {
-      await notify_missed_job({
-        job_id: job.job_id,
-        name: job.name,
-        source: job.source,
-        project: job.project,
-        schedule: job.schedule,
-        last_execution_timestamp: job.last_execution?.timestamp,
-        discord_webhook_url
-      })
+    for (const channel of get_all('notification-channel')) {
+      try {
+        await channel.notify_missed({
+          job_id: job.job_id,
+          name: job.name,
+          source: job.source,
+          project: job.project,
+          schedule: job.schedule,
+          last_execution_timestamp: job.last_execution?.timestamp
+        })
+      } catch (error) {
+        log('Error alerting missed job %s: %s', job.job_id, error.message)
+      }
+    }
 
+    try {
       job.last_alerted_at = now.toISOString()
       job.updated_at = now.toISOString()
       await save_job({ job_id: job.job_id, data: job })
     } catch (error) {
-      log('Error alerting missed job %s: %s', job.job_id, error.message)
+      log('Error saving missed job %s: %s', job.job_id, error.message)
     }
   }
 

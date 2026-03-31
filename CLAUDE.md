@@ -465,7 +465,6 @@ base job check-missed        # Check for missed executions
 
 - `report-job.mjs` - Job reporting, loading, saving (atomic writes)
 - `check-missed-jobs.mjs` - Missed execution detection with grace periods
-- `notify-discord.mjs` - Discord webhook notifications
 
 **Crontab build preprocessor** (`base crontab build`): Thin shim that delegates to `build-crontab` (pure bash/awk script from the bootstrap repo, deployed to `~/bin/`). Reads a crontab source file and produces a deploy-ready crontab on stdout. Auto-injects `JOB_SCHEDULE` and `JOB_SCHEDULE_TYPE=expr` from cron timing fields. Strips `JOB_API_URL`, `JOB_API_KEY`, and standalone `JOB_SCHEDULE_TYPE` lines. Idempotent. Typical deploy pattern: process source files, copy built `.cron` files to `~/crontab/` on the target server, then run `load_crontab_files` to rebuild the active crontab from all files in that directory.
 

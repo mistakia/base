@@ -105,6 +105,7 @@
   },
   "machine_registry": {},
   "discord": {
+    "webhook_url": "",
     "user_api_token": "",
     "channels": {},
     "server_id": ""
