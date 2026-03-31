@@ -132,7 +132,7 @@ base schedule list --verbose --json
 
 # Create a schedule
 base schedule add "yarn test:all" --type expr --schedule "0 2 * * *" \
-  --title "Nightly Tests" --timezone America/Los_Angeles \
+  --title "Nightly Tests" --timezone America/New_York \
   --folder base --tags user:tag/ci.md --priority 5 --timeout 600000
 
 # Enable/disable
@@ -186,11 +186,11 @@ timeout_ms: 30000
 ### Machine-Specific Sync
 
 ```yaml
-command: rsync -av $USER_BASE_DIRECTORY/data/ storage:/backup/data/
+command: rsync -av $USER_BASE_DIRECTORY/data/ server:/backup/data/
 schedule_type: every
 schedule: 6h
 run_on_machines:
-  - macbook
+  - laptop
 ```
 
 ## Troubleshooting

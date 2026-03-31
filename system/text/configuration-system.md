@@ -72,16 +72,16 @@ The `machine_registry` object in user-base config maps machine identifiers to th
 ```json
 {
   "machine_registry": {
-    "macbook": {
-      "hostname": "machine-hostname.local",
+    "laptop": {
+      "hostname": "my-laptop.local",
       "platform": "darwin",
       "server_port": 8081,
       "ssl_key_path": "/path/to/key.pem",
       "ssl_cert_path": "/path/to/cert.pem",
       "transcription_args": "--port 8089 --model base.en"
     },
-    "storage": {
-      "hostname": "storage-server",
+    "server": {
+      "hostname": "my-server",
       "platform": "linux",
       "server_port": 8080
     }

@@ -4,8 +4,8 @@ Persistent Docker container providing Claude Code CLI, OpenCode CLI, and develop
 
 ## Prerequisites
 
-- **MacBook**: Docker Desktop for macOS, Node.js 20+, PM2 (`npm install -g pm2`)
-- **Storage server**: Docker Engine (user in `docker` group), Node.js 20+, PM2
+- **Primary machine (macOS)**: Docker Desktop for macOS, Node.js 20+, PM2 (`npm install -g pm2`)
+- **Secondary machine (Linux)**: Docker Engine (user in `docker` group), Node.js 20+, PM2
 - `CONFIG_ENCRYPTION_KEY` environment variable set in shell profile (required for base CLI)
 
 ## File Structure
@@ -74,17 +74,17 @@ Each machine has a local data directory for persistent `~/.claude` and `~/.openc
 
 | Machine        | Path                            |
 | -------------- | ------------------------------- |
-| Storage server | `/mnt/md0/base-container-data/` |
-| MacBook        | `$HOME/.base-container-data/`   |
+| Linux server | Configurable (e.g., `/data/base-container-data/`) |
+| macOS        | `$HOME/.base-container-data/`                     |
 
 One-time setup:
 
 ```bash
-# Storage server
-mkdir -p /mnt/md0/base-container-data/{claude-home/projects,opencode-data}
-chown -R user:user /mnt/md0/base-container-data
+# Linux server (adjust path as needed)
+mkdir -p $DATA_DIR/base-container-data/{claude-home/projects,opencode-data}
+chown -R $USER:$USER $DATA_DIR/base-container-data
 
-# MacBook
+# macOS
 mkdir -p $HOME/.base-container-data/{claude-home/projects,opencode-data}
 ```
 
@@ -122,13 +122,13 @@ todos, plans, and statsig are container-owned and must not be synced.
 
 ## Per-Machine Differences
 
-| Aspect             | Storage Server                   | MacBook                                           |
+| Aspect             | Linux Server                     | macOS                                             |
 | ------------------ | -------------------------------- | ------------------------------------------------- |
 | Container network  | `host` (localhost reaches host)  | Bridge (`host.docker.internal`)                   |
 | Thread rsync       | Skipped (`SKIP_THREAD_RSYNC=1`)  | Required (syncs via SSH)                          |
-| SSH config         | Mounted from `/home/user/.ssh`   | Mounted from host `~/.ssh`                        |
+| SSH config         | Mounted from `~/.ssh`            | Mounted from host `~/.ssh`                        |
 | SSH agent          | Not used                         | Proxied via socat (auto-configured by entrypoint) |
-| PM2 log directory  | `/home/user/logs/`               | `~/logs/`                                         |
+| PM2 log directory  | `~/logs/`                        | `~/logs/`                                         |
 | Machine identifier | `BASE_CONTAINER_MACHINE=storage` | `BASE_CONTAINER_MACHINE=macbook`                  |
 
 ## Container Context for Claude Code

@@ -24,28 +24,34 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 - **Workflows** — structured prompts that compose tools into agent behaviors.
 - **Two-layer architecture** — this repo is the generic engine; a separate user-base directory provides user-specific config, data, workflows, and guidelines.
 
+## Prerequisites
+
+- **Node.js 18+** and **Corepack** (for Yarn): `corepack enable`
+- **git**
+- **ripgrep** (`rg`) -- [install](https://github.com/BurntSushi/ripgrep#installation)
+- **Build tools** (for native dependencies): `python3`, `make`, `g++` / Xcode CLI tools
+- **Redis** (optional) -- only needed for job queue and scheduling
+
 ## Quick Start
 
 ```bash
 # Clone and install
 git clone https://github.com/mistakia/base.git && cd base
+corepack enable
 yarn install
 
-# Initialize a user-base directory
+# Set user-base directory (add to your shell profile)
+export USER_BASE_DIRECTORY=~/my-knowledge-base
+
+# Initialize -- creates directories, config, and owner identity
 base init --user-base-directory ~/my-knowledge-base
 
 # Create your first entity
-export USER_BASE_DIRECTORY=~/my-knowledge-base
 base entity create "user:task/hello.md" --type task --title "Hello World"
 base entity list -t task
 ```
 
-## Prerequisites
-
-- Node.js 18+ / Yarn
-- git
-- `ripgrep` (`rg`)
-- Redis (optional, required for job queue and scheduling)
+`base init` generates an owner identity with an ed25519 keypair and writes the `user_public_key` to your config. Save the private key it prints -- it cannot be recovered.
 
 ## Documentation
 
@@ -63,4 +69,4 @@ base entity list -t task
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Elastic License 2.0 — see [LICENSE](LICENSE).

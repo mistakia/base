@@ -15,6 +15,11 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
+// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup).
+// Check only the first positional argument to avoid false-positives from
+// option values like `--status init`.
+const is_init_command = process.argv[2] === 'init'
+
 /**
  * Deep merge two objects. Source values override target values.
  * Arrays are replaced, not concatenated.
@@ -35,6 +40,33 @@ function deep_merge(target, source) {
   }
 
   return result
+}
+
+/**
+ * Load a JSON config file, using @tsmx/secure-config for decryption when
+ * CONFIG_ENCRYPTION_KEY is set and the file contains ENCRYPTED| values.
+ * Falls back to plain JSON.parse when decryption is not needed or not available.
+ */
+function load_config_file(directory) {
+  const config_path = join(directory, 'config.json')
+  const raw = readFileSync(config_path, 'utf8')
+
+  const has_encrypted_values = raw.includes('ENCRYPTED|')
+
+  if (has_encrypted_values) {
+    if (!process.env.CONFIG_ENCRYPTION_KEY) {
+      // Use console.warn (not debug log) because this almost certainly indicates
+      // a misconfiguration that will cause silent credential failures downstream.
+      console.warn(
+        `WARNING: Config in ${directory} contains ENCRYPTED| values but CONFIG_ENCRYPTION_KEY is not set. Encrypted values will remain as plaintext strings.`
+      )
+      return JSON.parse(raw)
+    }
+    return secure_config({ directory })
+  }
+
+  // No encrypted values -- plain JSON parse (no key required)
+  return JSON.parse(raw)
 }
 
 // 1. Always load defaults from base repo (plain JSON, no encryption)
@@ -59,7 +91,7 @@ if (process.env.NODE_ENV === 'test') {
   log('Loaded test config from %s', config_dir)
 } else if (user_base_config_dir) {
   // Production/development: load user-base config and deep merge over defaults
-  const user_config = secure_config({ directory: user_base_config_dir })
+  const user_config = load_config_file(user_base_config_dir)
   config = deep_merge(defaults, user_config)
   log('Loaded user config from %s (merged with defaults)', user_base_config_dir)
 } else {
@@ -72,16 +104,21 @@ if (process.env.NODE_ENV === 'test') {
 config.system_base_directory =
   process.env.SYSTEM_BASE_DIRECTORY || derived_system_base_directory
 
-// user_base_directory: required from environment (except in test).
+// user_base_directory: required from environment (except in test and init).
 // Set by PM2, docker-compose, or the shell profile.
 if (process.env.NODE_ENV === 'test') {
   // Tests use a random temp path to avoid touching real user data
   config.user_base_directory = join(tmpdir(), `base_data_${randomUUID()}`)
-} else {
-  if (!process.env.USER_BASE_DIRECTORY) {
-    throw new Error('USER_BASE_DIRECTORY environment variable is not set')
-  }
+} else if (process.env.USER_BASE_DIRECTORY) {
   config.user_base_directory = process.env.USER_BASE_DIRECTORY
+} else if (is_init_command) {
+  // init command can run without USER_BASE_DIRECTORY -- it creates the directory
+  config.user_base_directory = ''
+  log('Running init command without USER_BASE_DIRECTORY')
+} else {
+  throw new Error(
+    'USER_BASE_DIRECTORY environment variable is not set. Run "base init" first to create a user-base directory.'
+  )
 }
 
 // Derive notification script path from user_base_directory

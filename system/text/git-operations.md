@@ -84,12 +84,12 @@ Ephemeral worktrees are created and destroyed for each operation, preventing res
 
 ### Dual-Machine Workflow
 
-**MacBook (Primary)**:
+**Primary Machine**:
 
 - Commits to thread and import-history submodules independently
 - Periodically runs `update-submodule-pointers.sh` to snapshot current HEAD in parent repo
 
-**Storage Server (Secondary)**:
+**Secondary Machine**:
 
 - Receives push via post-receive hook
 - Hook stashes local changes, resets to remote, restores stash
@@ -97,8 +97,8 @@ Ephemeral worktrees are created and destroyed for each operation, preventing res
 
 ### Conflict Prevention
 
-- MacBook is authoritative for committed history
-- Storage server prioritizes local session data (stash/unstash pattern)
+- Primary machine is authoritative for committed history
+- Secondary machine prioritizes local session data (stash/unstash pattern)
 - No force pushes; standard merge/rebase flow
 - Submodules synced via explicit pointer updates in parent repo
 
