@@ -247,11 +247,12 @@ case "${1:-}" in
         SESSION_DIR="projects/$(echo "$USER_BASE_DIR" | tr '/' '-' | sed 's/^-//')"
         if [ "$MACHINE" = "macbook" ]; then
             LOCAL_PATH="$HOME/.base-container-data/claude-home/$SESSION_DIR/"
-            REMOTE_PATH="storage:/mnt/md0/base-container-data/claude-home/$SESSION_DIR/"
-            echo "Syncing sessions from MacBook to storage server..."
+            REMOTE_CONTAINER_DATA="${REMOTE_CONTAINER_DATA_PATH:-storage:${REMOTE_USER_BASE_DIRECTORY:-/mnt/md0}/base-container-data}"
+            REMOTE_PATH="$REMOTE_CONTAINER_DATA/claude-home/$SESSION_DIR/"
+            echo "Syncing sessions to remote storage..."
             rsync -av --include='*.jsonl' --exclude='*' "$LOCAL_PATH" "$REMOTE_PATH"
         else
-            echo "Sessions are local on storage server. Use MacBook to push sessions here."
+            echo "Sessions are local on this server. Use the primary machine to push sessions here."
         fi
         ;;
     *)

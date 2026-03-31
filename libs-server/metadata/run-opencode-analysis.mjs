@@ -19,7 +19,7 @@ const OLLAMA_BASE_URL =
 const BINARY_PATH =
   process.env.OPENCODE_BINARY_PATH ||
   config.opencode?.binary_path ||
-  '/opt/homebrew/bin/opencode'
+  'opencode'
 
 // Use direct ollama API by default (faster, more reliable)
 const USE_DIRECT_OLLAMA = config.opencode?.use_direct !== false

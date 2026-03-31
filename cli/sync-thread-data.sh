@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# sync-thread-data.sh - Rsync thread bulk data between macbook and storage
+# sync-thread-data.sh - Rsync thread bulk data between primary and secondary machines
 #
 # Syncs timeline, raw-data, memory, and plans directories via rsync with
 # --append-verify for efficient incremental transfer of append-only files.
@@ -9,12 +9,17 @@
 # Usage:
 #   sync-thread-data.sh [--verbose]
 #
+# Environment variables:
+#   REMOTE_THREAD_PATH       - Full rsync target (e.g., storage:/data/user-base/thread/)
+#   REMOTE_USER_BASE_DIRECTORY - Remote user-base path (default: /mnt/md0/user-base)
+#   SYNC_ROLE                - "primary" or "secondary" (default: auto-detect from platform)
+#
 # Called by:
 #   - sync-all.sh Step 1 (after thread git sync completes)
 #
 # Key invariants:
-#   - MacBook-initiated: macbook pushes to storage AND pulls from storage.
-#     Storage never initiates connections to macbook (laptop may be unreachable).
+#   - Primary-initiated: primary pushes to secondary AND pulls from secondary.
+#     Secondary never initiates connections to primary (laptop may be unreachable).
 #   - No lock needed: sync-all.sh's global lock prevents concurrent instances.
 #   - Non-fatal: failures are logged but do not abort the caller.
 
@@ -58,7 +63,8 @@ elif [ -z "$SSH_AUTH_SOCK" ]; then
     fi
 fi
 
-REMOTE_STORAGE_THREAD_PATH="storage:/mnt/md0/user-base/thread/"
+# Remote thread path: set via REMOTE_THREAD_PATH env var or derive from SSH host alias + path
+REMOTE_STORAGE_THREAD_PATH="${REMOTE_THREAD_PATH:-storage:${REMOTE_USER_BASE_DIRECTORY:-/mnt/md0/user-base}/thread/}"
 
 # Common rsync filter flags for thread bulk data.
 # Filter order matters (first match wins):
@@ -81,12 +87,20 @@ RSYNC_COMMON_OPTS=(
     --exclude='*'
 )
 
-# Detect current host
-CURRENT_HOSTNAME=$(hostname)
+# Determine machine role.
+# SYNC_ROLE can be set explicitly to "primary" or "secondary".
+# Falls back to platform detection: darwin = primary, linux = secondary.
+if [ -n "$SYNC_ROLE" ]; then
+    MACHINE_ROLE="$SYNC_ROLE"
+elif [ "$(uname)" = "Darwin" ]; then
+    MACHINE_ROLE="primary"
+else
+    MACHINE_ROLE="secondary"
+fi
 
-case "$CURRENT_HOSTNAME" in
-    macbook2025)
-        # MacBook: push local data to storage, then pull storage data locally
+case "$MACHINE_ROLE" in
+    primary)
+        # Primary machine: push local data to storage, then pull storage data locally
         RSYNC_EXIT=0
 
         log_verbose "Pushing thread bulk data to storage"
@@ -109,13 +123,13 @@ case "$CURRENT_HOSTNAME" in
             log_verbose "Pull from storage completed"
         fi
         ;;
-    storage)
-        # Storage: no-op. MacBook initiates all connections.
-        log_verbose "Running on storage -- skipping (macbook initiates sync)"
+    secondary)
+        # Secondary machine: no-op. Primary machine initiates all connections.
+        log_verbose "Running on secondary machine -- skipping (primary initiates sync)"
         RSYNC_EXIT=0
         ;;
     *)
-        log_error "Unknown hostname '$CURRENT_HOSTNAME', cannot determine sync target"
+        log_error "Unknown SYNC_ROLE '$MACHINE_ROLE', set to 'primary' or 'secondary'"
         exit 1
         ;;
 esac

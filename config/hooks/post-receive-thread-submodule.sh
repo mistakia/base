@@ -1,20 +1,24 @@
 #!/bin/bash
 # post-receive hook for user-base-threads bare repository
 #
-# Deployment: /mnt/md0/git-repos/user-base-threads.git/hooks/post-receive (storage server)
+# Deployment: Copy to <bare-repo>/hooks/post-receive on the secondary machine.
 #
-# This hook runs when the MacBook pushes thread commits to the storage server's
-# bare repo. It updates the working directory (/mnt/md0/user-base/thread) to
-# match the pushed state, preserving any uncommitted changes from active
-# storage-server sessions via stash/unstash.
+# This hook runs when the primary machine pushes thread commits to the secondary
+# machine's bare repo. It updates the working directory to match the pushed
+# state, preserving any uncommitted changes from active sessions via stash/unstash.
 #
 # Key behavior:
 #   - Ensures the working tree is on `main` (not detached HEAD) before resetting
 #   - Stashes uncommitted changes, resets to origin/main, then restores stash
-#   - Local machine (MacBook) is authoritative for committed history
+#   - Primary machine is authoritative for committed history
+#
+# Configuration: Set these variables for your deployment, or override via
+# environment variables in the bare repo's hooks/environment file.
 
-WORKING_DIR="/mnt/md0/user-base/thread"
-LOG_FILE="/mnt/md0/logs/user-base-threads-post-receive.log"
+WORKING_DIR="${HOOK_THREAD_WORKING_DIR:-${USER_BASE_DIRECTORY:-/mnt/md0/user-base}/thread}"
+LOG_FILE="${HOOK_LOG_FILE:-${HOME}/logs/user-base-threads-post-receive.log}"
+
+mkdir -p "$(dirname "$LOG_FILE")"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
