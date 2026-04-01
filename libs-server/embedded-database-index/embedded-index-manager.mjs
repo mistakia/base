@@ -495,7 +495,7 @@ class EmbeddedIndexManager {
 
     try {
       const entities = await list_entity_files_from_filesystem({
-        include_entity_types: ENTITY_DIRECTORIES
+        include_path_patterns: ENTITY_DIRECTORIES.map((dir) => `${dir}/**`)
       })
 
       log(

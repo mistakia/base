@@ -106,7 +106,7 @@ export async function resync_full_index({ index_manager }) {
     log('Phase 1: Syncing entities from filesystem')
 
     const entities = await list_entity_files_from_filesystem({
-      include_entity_types: ENTITY_DIRECTORIES,
+      include_path_patterns: ENTITY_DIRECTORIES.map((dir) => `${dir}/**`),
       exclude_path_patterns: DEFAULT_EXCLUDE_PATTERNS
     })
 
