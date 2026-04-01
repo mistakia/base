@@ -390,8 +390,13 @@ export const provision_skills = async ({
   }
 
   // Determine which skills to provision
+  // Accept both string "*" and array ["*"] (YAML `- '*'` produces the latter)
+  const is_wildcard =
+    skills_config === '*' ||
+    (Array.isArray(skills_config) && skills_config.length === 1 && skills_config[0] === '*')
+
   let skill_names
-  if (skills_config === '*') {
+  if (is_wildcard) {
     const entries = await readdir(host_skills_dir)
     skill_names = []
     for (const entry of entries) {
