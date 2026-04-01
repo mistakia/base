@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Bun (required by base CLI -- all shebangs use #!/usr/bin/env bun)
-RUN curl -fsSL https://bun.sh/install | bash \
+RUN curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.18 \
     && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
     && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
@@ -27,9 +27,6 @@ RUN GH_ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') \
     && GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/') \
     && curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${GH_ARCH}.tar.gz" \
     | tar -xz --strip-components=1 -C /usr/local
-
-# Enable corepack for yarn
-RUN corepack enable
 
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code

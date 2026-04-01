@@ -869,7 +869,7 @@ class EmbeddedIndexManager {
   get_index_status() {
     return {
       initialized: this.initialized,
-      duckdb_ready: this.sqlite_ready,
+      sqlite_ready: this.sqlite_ready,
       config: this.index_config
     }
   }
@@ -878,7 +878,7 @@ class EmbeddedIndexManager {
     return this.initialized && this.sqlite_ready
   }
 
-  is_duckdb_ready() {
+  is_sqlite_ready() {
     return this.initialized && this.sqlite_ready
   }
 

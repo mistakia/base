@@ -128,8 +128,8 @@ async function remove_server_lock_file() {
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
 
-// Initialize embedded index (DuckDB) BEFORE accepting connections.
-// This ensures thread list queries use DuckDB instead of expensive filesystem
+// Initialize embedded index (SQLite) BEFORE accepting connections.
+// This ensures thread list queries use SQLite instead of expensive filesystem
 // reads (which would read all timeline.jsonl files on first request).
 let embedded_index_ready = false
 
@@ -137,12 +137,12 @@ try {
   logger('Initializing embedded index before server start...')
   await embedded_index_manager.initialize()
   const status = embedded_index_manager.get_index_status()
-  logger(`Embedded index initialized (duckdb: ${status.duckdb_ready})`)
-  embedded_index_ready = status.duckdb_ready
+  logger(`Embedded index initialized (sqlite: ${status.sqlite_ready})`)
+  embedded_index_ready = status.sqlite_ready
 
-  if (!status.duckdb_ready) {
+  if (!status.sqlite_ready) {
     logger(
-      'WARNING: DuckDB not ready - queries will use slower filesystem fallback'
+      'WARNING: SQLite not ready - queries will use slower filesystem fallback'
     )
   }
 } catch (error) {
