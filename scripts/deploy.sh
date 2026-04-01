@@ -89,8 +89,9 @@ build_binaries() {
 deploy_releases() {
   info "Deploying release binaries..."
 
-  # Upload all binaries and version.json
-  rsync -avz --progress "$DIST_DIR/" "$SSH_HOST:$REMOTE_BASE/releases/latest/"
+  # Upload only binaries and version.json (not system/ or content/ subdirs)
+  rsync -avz --progress --include='base-*' --include='version.json' --exclude='*' \
+    "$DIST_DIR/" "$SSH_HOST:$REMOTE_BASE/releases/latest/"
 
   # Upload install script to root
   scp "$SCRIPT_DIR/install.sh" "$SSH_HOST:$REMOTE_BASE/install.sh"
